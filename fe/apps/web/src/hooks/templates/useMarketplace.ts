@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { slotOfSwr } from "@/hooks/slot"
-import type { MarketplaceListingsData } from "@/modules/api/graphql"
 import type { DataSlot } from "@/modules/types"
 import {
     useMutateInstallTemplateListingSwr,
@@ -11,6 +10,7 @@ import {
     useQueryMarketplaceListingsSwr,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
+import type { MarketplaceListingsData } from "./templates.shared"
 
 /** What the buyer sees of the order of a paid listing: the transfer to make. */
 export interface PlacedOrder {

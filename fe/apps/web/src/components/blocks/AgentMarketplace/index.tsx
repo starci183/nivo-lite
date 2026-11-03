@@ -11,13 +11,19 @@ const PLACEHOLDER: AgentMarketplaceBaseProps["props"]["placeholder"] = [
     { id: "-", name: "-", summary: "-", meta: "-", priceLabel: "-", isPaid: false, parameters: [], needs: "-" },
 ]
 
+/** A text in both product languages. */
+interface LocalizedText {
+    readonly vi: string
+    readonly en: string
+}
+
 /** The connected marketplace: approved listings with their settings, the free install in shadow mode, and the order of a paid one. */
 export const AgentMarketplace = () => {
     const t = useTranslations("agentMarketplace")
     const locale = useLocale()
     const slotLabels = useSlotLabels()
     const market = useMarketplace()
-    const pick = (text: { readonly vi: string; readonly en: string }) => (locale === "vi" ? text.vi : text.en)
+    const pick = (text: LocalizedText): string => (locale === "vi" ? text.vi : text.en)
     const order = market.order
     return (
         <AgentMarketplaceBase

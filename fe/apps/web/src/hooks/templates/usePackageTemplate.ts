@@ -6,12 +6,13 @@ import { slotOfSwr } from "@/hooks/slot"
 import type { DataSlot } from "@/modules/types"
 import {
     useMutatePackageAgentTemplateSwr,
+    useQueryAgentTemplatePreviewSwr,
     useQueryAgentGraphVersionsSwr,
     useQueryModuleInstallationsSwr,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { queryAgentTemplatePreview } from "@/modules/api/graphql/queries/query-agent-template-preview"
-import type { QueryAgentTemplatePreviewRequest } from "@/modules/api/graphql/queries/query-agent-template-preview"
+import { isTextField } from "./templates.shared"
+import type { PackagePreviewData, PackagePreviewRequest } from "./templates.shared"
 
 /** The fields the creator writes to package a version. */
 export interface PackageFields {
@@ -26,19 +27,6 @@ export interface PackageFields {
     readonly breaking: boolean
 }
 
-/** The text fields of the card, in reading order. */
-export const TEXT_FIELDS: readonly ["key", "nameVi", "nameEn", "summaryVi", "summaryEn", "category"] = [
-    "key",
-    "nameVi",
-    "nameEn",
-    "summaryVi",
-    "summaryEn",
-    "category",
-]
-
-/** True when the name is one of the text fields of the card. */
-const isTextField = (name: string): name is (typeof TEXT_FIELDS)[number] => TEXT_FIELDS.some((known) => known === name)
-
 const EMPTY: PackageFields = {
     key: "",
     nameVi: "",
@@ -50,11 +38,6 @@ const EMPTY: PackageFields = {
     changelog: "",
     breaking: false,
 }
-
-/** The preview a creator reads before packaging: what the package keeps, what it leaves out and why it is refused. */
-export type PackagePreviewData = NonNullable<
-    Awaited<ReturnType<typeof queryAgentTemplatePreview>>["data"]
->["agentTemplatePreview"]
 
 /** What the packaging form reads and does. */
 export interface PackageTemplateController {
@@ -87,11 +70,11 @@ export const usePackageTemplate = (installationId: string): PackageTemplateContr
     const versions = useQueryAgentGraphVersionsSwr(agentId === null ? null : { agentId })
     const packager = useMutatePackageAgentTemplateSwr()
     const [fields, setFields] = useState<PackageFields>(EMPTY)
-    const [preview, setPreview] = useState<PackagePreviewData | undefined>(undefined)
-    const [isPreviewing, setIsPreviewing] = useState(false)
+    const [asked, setAsked] = useState<PackagePreviewRequest | null>(null)
+    const previewRead = useQueryAgentTemplatePreviewSwr(asked)
     const newest = versions.data?.reduce((best, version) => (version.version > best.version ? version : best))
     const slot = slotOfSwr({ data: newest, error: versions.error, isLoading: versions.isLoading })
-    const requestOf = (): QueryAgentTemplatePreviewRequest | null =>
+    const requestOf = (): PackagePreviewRequest | null =>
         agentId === null || newest === undefined
             ? null
             : {
@@ -108,13 +91,11 @@ export const usePackageTemplate = (installationId: string): PackageTemplateContr
                   changelog: fields.changelog,
                   breaking: fields.breaking,
               }
-    const showPreview = async () => {
+    const showPreview = async (): Promise<void> => {
         const request = requestOf()
         if (request === null) return
-        setIsPreviewing(true)
-        const answered = await run(() => queryAgentTemplatePreview({ request }))
-        setIsPreviewing(false)
-        setPreview(answered?.data?.agentTemplatePreview)
+        setAsked(request)
+        await previewRead.mutate()
     }
     const savePackage = async () => {
         const request = requestOf()
@@ -129,8 +110,8 @@ export const usePackageTemplate = (installationId: string): PackageTemplateContr
             setFields((current) => ({ ...current, [name]: value })),
         setText: (name: string, value: string) =>
             setFields((current) => (isTextField(name) ? { ...current, [name]: value } : current)),
-        preview,
-        isPending: isPreviewing || packager.isMutating,
+        preview: previewRead.data,
+        isPending: previewRead.isLoading || packager.isMutating,
         showPreview,
         savePackage,
     }

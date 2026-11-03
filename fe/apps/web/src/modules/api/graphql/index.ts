@@ -85,6 +85,16 @@ import type {
     MentionDirectoryQuery,
     WorkChainQuery,
     WorkThreadQuery,
+    MyAgentTemplatesQuery,
+    MarketplaceListingsQuery,
+    TemplateUpdateOffersQuery,
+    AgentTemplatePreviewQuery,
+    PackageAgentTemplateMutation,
+    ImportAgentTemplateMutation,
+    InstallTemplateListingMutation,
+    OrderTemplateListingMutation,
+    AcceptTemplateUpdateMutation,
+    SubmitTemplateListingMutation,
 } from "./__generated__/graphql"
 import type { WireInput } from "./types"
 
@@ -394,8 +404,8 @@ export type WorkChainType = WorkChainQuery["workChain"]
 export type ThreadMessageType = WorkThreadQuery["workThread"]["messages"][number]
 /** The `PublicDocumentType` object of the back end contract, as the operations of this app select it. */
 export type PublicDocumentType = PublicDocumentsQuery["publicDocuments"][number]
+
 // --- agent template marketplace ---
-import type { MyAgentTemplatesQuery, MarketplaceListingsQuery, TemplateUpdateOffersQuery, AgentTemplatePreviewQuery, PackageAgentTemplateMutation, ImportAgentTemplateMutation, InstallTemplateListingMutation, OrderTemplateListingMutation, AcceptTemplateUpdateMutation, SubmitTemplateListingMutation } from "./__generated__/graphql"
 /** The answer of the myAgentTemplates operation. */
 export type MyAgentTemplatesData = MyAgentTemplatesQuery["myAgentTemplates"]
 /** The answer of the marketplaceListings operation. */

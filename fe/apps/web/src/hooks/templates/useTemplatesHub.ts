@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { slotOfSwr } from "@/hooks/slot"
-import type { MyAgentTemplatesData, TemplateUpdateOffersData } from "@/modules/api/graphql"
 import type { DataSlot } from "@/modules/types"
 import {
     useMutateAcceptTemplateUpdateSwr,
@@ -14,6 +13,7 @@ import {
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { acceptInputOf, safeUnitIds, valuesOfText } from "./templates.shared"
+import type { MyAgentTemplatesData, TemplateUpdateOffersData } from "./templates.shared"
 
 /** What the hub of templates reads and does. */
 export interface TemplatesHubController {

@@ -1,5 +1,4 @@
 export { useMarketplace } from "./useMarketplace"
-export type { PlacedOrder } from "./useMarketplace"
-export { TEXT_FIELDS, usePackageTemplate } from "./usePackageTemplate"
-export type { PackageFields, PackagePreviewData } from "./usePackageTemplate"
+export { usePackageTemplate } from "./usePackageTemplate"
+export { TEXT_FIELDS } from "./templates.shared"
 export { useTemplatesHub } from "./useTemplatesHub"

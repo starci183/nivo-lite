@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import type { BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
-import { APP_ROUTES } from "@/modules/routes"
+import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 
 /** What the header of a console page says. */
 interface PageHeadingInput {
@@ -91,3 +91,20 @@ export const knowledgeHeadingOf = (input: KnowledgeHeadingInput): PageHeaderCont
         title: input.title,
         description: input.description,
     })
+
+/** The words of the trail of a page under the agents page. */
+interface AgentsSubpageLabels {
+    /** The dashboard. */
+    readonly home: string
+    /** The agents page. */
+    readonly agents: string
+    /** The page itself. */
+    readonly current: string
+}
+
+/** The trail of a page under the agents page: the dashboard, the agents and the page itself. */
+export const agentsSubpageCrumbsOf = (labels: AgentsSubpageLabels): ReadonlyArray<BreadcrumbItem> => [
+    { id: "home", label: labels.home, href: APP_ROUTES.dashboard },
+    { id: "agents", label: labels.agents, href: AGENTS_ROUTE },
+    { id: "current", label: labels.current },
+]
