@@ -15,6 +15,8 @@ export enum OrdersErrorCode {
     NotNumbered = "ORDERS_NOT_NUMBERED",
     /** The order no longer waits for money: it was paid, cancelled or never confirmed. */
     NotAwaitingPayment = "ORDERS_NOT_AWAITING_PAYMENT",
+    /** The order is not in this workspace. */
+    NotFound = "ORDERS_NOT_FOUND",
 }
 
 /** How each orders code travels. */
@@ -25,6 +27,7 @@ export const ORDERS_ERROR_KINDS: Record<OrdersErrorCode, ErrorKind> = {
     [OrdersErrorCode.AlreadyInvoiced]: "conflict",
     [OrdersErrorCode.NotNumbered]: "internal",
     [OrdersErrorCode.NotAwaitingPayment]: "conflict",
+    [OrdersErrorCode.NotFound]: "not-found",
 }
 
 /** The one error class of the orders capability. */

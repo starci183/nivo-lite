@@ -10,6 +10,7 @@ import type {
     ThreadWorkHistory,
     WorkChainsHistory,
     WorkItemClosedHook,
+    WorkRaisedHook,
     WorkThreadsHistory,
 } from "./work-engine.port"
 
@@ -70,3 +71,9 @@ export const InjectWorkThreadsHistory = (): TypedParameterDecorator<WorkThreadsH
 /** Injects the closed-item hook. Parameter type: WorkItemClosedHook. */
 export const InjectWorkItemClosed = (): TypedParameterDecorator<WorkItemClosedHook> =>
     injector<WorkItemClosedHook>(WORK_ITEM_CLOSED)
+
+/** Token of the raised-for-a-claim hook. */
+export const WORK_RAISED: unique symbol = Symbol("domain.decisions.work-raised")
+
+/** Injects the raised-for-a-claim hook. Parameter type: WorkRaisedHook. */
+export const InjectWorkRaised = (): TypedParameterDecorator<WorkRaisedHook> => injector<WorkRaisedHook>(WORK_RAISED)

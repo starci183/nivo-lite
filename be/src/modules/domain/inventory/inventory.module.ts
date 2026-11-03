@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { InventoryReplenishModule } from "@modules/queues/inventory-replenish"
 import { InventoryAutomationService } from "./inventory-automation.service"
 import { InventoryCatalogService } from "./inventory-catalog.service"
+import { InventoryGraphService } from "./inventory-graph.service"
 import { InventoryImportService } from "./inventory-import.service"
 import { InventoryDispatchService } from "./inventory-dispatch.service"
 import { InventoryLocationsService } from "./inventory-locations.service"
@@ -38,6 +39,7 @@ export class InventoryModule extends ConfigurableModuleClass {
                 InventoryReplenishService,
                 InventoryReceivingService,
                 InventoryCatalogService,
+                InventoryGraphService,
                 InventoryImportService,
                 InventoryDeductionService,
                 InventoryStockService,

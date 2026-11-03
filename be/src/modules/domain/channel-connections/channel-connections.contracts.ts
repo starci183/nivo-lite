@@ -186,6 +186,8 @@ export interface WorkspacePaymentAccount {
     readonly holder: string | null
     /** The feed the account comes from (sepay or casso). */
     readonly provider: string
+    /** The connection of that feed. */
+    readonly connectionId: string
 }
 
 /** The account a VietQR is drawn for. */

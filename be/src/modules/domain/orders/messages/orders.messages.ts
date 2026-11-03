@@ -10,6 +10,7 @@ export const ORDERS_MESSAGES: MessageBundle = {
         "sales.shipped": "{{who}} đã giao đơn {{no}} cho {{carrier}}.",
         "errors.ORDERS_NOT_NUMBERED": "Không tạo được mã đơn hàng.",
         "errors.ORDERS_NOT_AWAITING_PAYMENT": "Đơn hàng không còn chờ thanh toán.",
+        "errors.ORDERS_NOT_FOUND": "Không tìm thấy đơn hàng.",
     },
     en: {
         "errors.ORDERS_SHIPMENT_INVALID": "Enter a valid carrier and tracking code.",
@@ -19,5 +20,6 @@ export const ORDERS_MESSAGES: MessageBundle = {
         "sales.shipped": "{{who}} handed order {{no}} to {{carrier}}.",
         "errors.ORDERS_NOT_NUMBERED": "The order number could not be created.",
         "errors.ORDERS_NOT_AWAITING_PAYMENT": "The order no longer waits for payment.",
+        "errors.ORDERS_NOT_FOUND": "The order was not found.",
     },
 }
