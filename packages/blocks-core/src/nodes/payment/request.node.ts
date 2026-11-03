@@ -1,5 +1,6 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import type { PaymentInstruction } from "../../vocabulary"
 import type { OrderLine } from "./payment-request.policy"
@@ -37,6 +38,16 @@ interface PayableOrder {
 
 /** The NIVO MCP tool that answers how to pay: the account of the connected provider and the QR link of the transfer. */
 const INSTRUCTION_TOOL = "payment.instruction" as const
+
+/** The agent grant the sending example runs under: the node own rights and the rights of its effect and its tool. */
+const SENDING_GRANT: RightsGrant = {
+    rights: [
+        { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
+        { kind: "message", access: "write", scope: "turn", fields: ["body"] },
+        { kind: "payment-account", access: "read", scope: "workspace", fields: ["bankName", "bankCode", "accountNumber", "accountHolder"] },
+    ],
+    tools: [INSTRUCTION_TOOL],
+}
 
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
@@ -79,12 +90,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
     params,
     input,
     output,
-    rights: [
-        { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
-        { kind: "message", access: "write", scope: "turn", fields: ["body"] },
-        // The grant must cover the rights of the tool it calls; the node itself never reads the account.
-        { kind: "payment-account", access: "read", scope: "workspace", fields: ["bankName", "bankCode", "accountNumber", "accountHolder"] },
-    ],
+    rights: [{ kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] }],
     effects: ["channel.send", "work-item.raise"],
     tools: [INSTRUCTION_TOOL],
     run: async (given, context) => {
@@ -139,6 +145,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                     },
                 },
             ],
+            grant: SENDING_GRANT,
             tools: [
                 {
                     bankName: "MB Bank",

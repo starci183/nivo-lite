@@ -1,5 +1,6 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import { mergedItems, recordedItemsOf, resolvedItems, totalOf } from "./order.policy"
 import type { CatalogueRow } from "./order.policy"
@@ -32,6 +33,9 @@ export interface OrderRecordOutput {
 /** The most catalogue rows one record reads. */
 const CATALOGUE_LIMIT = 500
 
+/** The agent grant the examples run under: the node own rights and the rights of the effect it runs. */
+const EXAMPLE_GRANT: RightsGrant = { rights: [{ kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] }, { kind: "order", access: "write", scope: "turn", fields: ["leadId", "items", "amountVnd"] }] }
+
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
 const input: NodeSchema<OrderRecordInput> = z.object({
@@ -55,10 +59,7 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
     params,
     input,
     output,
-    rights: [
-        { kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] },
-        { kind: "order", access: "write", scope: "turn", fields: ["leadId", "items", "amountVnd"] },
-    ],
+    rights: [{ kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] }],
     effects: ["order.record"],
     run: async (given, context) => {
         const catalogue = await context.data.read<CatalogueRow>("catalogue-item", {
@@ -94,6 +95,7 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
                 items: [{ name: "Trà sen", quantity: 3, priceVnd: 120_000, catalogueItemId: "c1" }],
                 amountVnd: 360_000,
             },
+            grant: EXAMPLE_GRANT,
             effects: [
                 {
                     kind: "order.record",
@@ -112,6 +114,7 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
             params: {},
             input: { leadId: "lead-1", items: [{ name: "Bánh", quantity: 2, priceVnd: null }], address: null, note: null },
             output: { orderId: "order.record-1", items: [{ name: "Bánh", quantity: 2, priceVnd: null }], amountVnd: null },
+            grant: EXAMPLE_GRANT,
             effects: [
                 {
                     kind: "order.record",

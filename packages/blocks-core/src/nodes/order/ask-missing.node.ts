@@ -1,5 +1,6 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import { askTextOf } from "./order.policy"
 import { orderGapSchema } from "./order.schema"
@@ -25,6 +26,9 @@ export interface AskMissingOutput {
     readonly text: string | null
 }
 
+/** The agent grant the examples run under: the rights of the effect the node runs. */
+const EXAMPLE_GRANT: RightsGrant = { rights: [{ kind: "message", access: "write", scope: "turn", fields: ["body"] }] }
+
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
 const input: NodeSchema<AskMissingInput> = z.object({
@@ -43,7 +47,7 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
     params,
     input,
     output,
-    rights: [{ kind: "message", access: "write", scope: "turn", fields: ["body"] }],
+    rights: [],
     effects: ["channel.send"],
     run: async (given, context) => {
         if (given.missing.length === 0) return { asked: false, text: null }
@@ -60,6 +64,7 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
                 asked: true,
                 text: "Để ghi nhận đơn, shop cần thêm thông tin:\nBạn cho shop xin địa chỉ nhận hàng nhé?",
             },
+            grant: EXAMPLE_GRANT,
             effects: [
                 {
                     kind: "channel.send",
@@ -82,6 +87,7 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
                 asked: true,
                 text: "To note down the order, we need a little more:\nWe do not have “Rượu”; could you pick another item?",
             },
+            grant: EXAMPLE_GRANT,
             effects: ["channel.send"],
         },
         {
@@ -89,6 +95,7 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
             params: {},
             input: { conversationId: "conv-1", missing: [], locale: "en" },
             output: { asked: false, text: null },
+            grant: EXAMPLE_GRANT,
             effects: [],
         },
     ],
