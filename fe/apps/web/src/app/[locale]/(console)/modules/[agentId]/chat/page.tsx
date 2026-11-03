@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { AgentChatPage } from "@/features/pages/AgentChatPage"
 
 export { agentChatMetadata as generateMetadata } from "@/features/pages/AgentChatPage"
@@ -8,7 +9,7 @@ interface PageProps {
 }
 
 /** Agent chat: owner test conversation and the test customer channel (`?tab=customer`). */
-const Page = async (props: PageProps) => {
+const Page = async (props: PageProps): Promise<ReactElement> => {
     const { agentId } = await props.params
     const { tab, c, welcome } = await props.searchParams
     return <AgentChatPage agentId={agentId} tab={tab} conversationId={c} welcome={welcome} />

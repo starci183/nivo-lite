@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { ChatbotWorkbenchPageBase } from "./component"
 
@@ -12,7 +13,7 @@ interface ChatbotWorkbenchPageProps {
 }
 
 /** /agents/chatbot/workbench: the server shell words the tabs and hands the page the ids; every panel reads its own data. */
-export const ChatbotWorkbenchPage = async (props: ChatbotWorkbenchPageProps) => {
+export const ChatbotWorkbenchPage = async (props: ChatbotWorkbenchPageProps): Promise<ReactElement> => {
     const t = await getTranslations("workbenchChatbot")
     return (
         <ChatbotWorkbenchPageBase

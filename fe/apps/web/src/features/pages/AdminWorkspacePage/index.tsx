@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { AdminWorkspacePageBase } from "./component"
@@ -14,7 +15,7 @@ export const adminWorkspaceMetadata = async (): Promise<Metadata> => {
 }
 
 /** The /admin/[id] screen body: the read-only overview of one workspace and the confirmed support actions, read in the browser. */
-export const AdminWorkspacePage = async (props: AdminWorkspacePageProps) => {
+export const AdminWorkspacePage = async (props: AdminWorkspacePageProps): Promise<ReactElement> => {
     const { id } = await props.params
     const t = await getTranslations("admin")
     return (

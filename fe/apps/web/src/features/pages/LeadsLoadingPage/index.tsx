@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { Button, Page } from "@starci/grammar/common"
 import { getTranslations } from "next-intl/server"
 import { LeadsBoard } from "@/components/blocks/LeadsBoard"
@@ -5,7 +6,7 @@ import { LeadsPageLayout } from "@/components/composites/LeadsPageLayout"
 import { LEADS_ROUTES, newLeadPath } from "@/modules/routes"
 
 /** The Leads page with no data yet: the same heading, filters and tabs, the list as skeleton rows. */
-export const LeadsLoadingPage = async () => {
+export const LeadsLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("leads")
     return (
         <Page

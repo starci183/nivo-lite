@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { EmptyNotice } from "@starci/grammar/common"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -60,7 +60,7 @@ const errorNotice = (
  * Composite: the ONE recipe for a slot's data status. No block writes its own
  * loading / forbidden / error / empty branch; each one renders through here.
  */
-export const SlotView = <T,>(props: SlotViewProps<T>) => {
+export const SlotView = <T,>(props: SlotViewProps<T>): ReactElement | null => {
     const { slot, labels } = props
     if ("isLoading" in slot) return <>{props.render(props.placeholder, true)}</>
     if ("isForbidden" in slot)

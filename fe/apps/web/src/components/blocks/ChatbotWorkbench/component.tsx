@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "@/modules/types"
 import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
@@ -14,7 +15,7 @@ import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWaitingList } from "@/components/composites/WorkbenchWaitingList"
 import { CHATBOT_WORKBENCH_TABS as CHATBOT_TABS } from "@/modules/types"
 /** The actual Chatbot list, conversation, gaps and explanation drawings. */
-export const CHATBOT_WORKBENCH_SHAPES = [...CHATBOT_TABS, "conversation", "explanation"] as const
+export const CHATBOT_WORKBENCH_SHAPES: readonly [...typeof CHATBOT_TABS, "conversation", "explanation"] = [...CHATBOT_TABS, "conversation", "explanation"]
 type ChatbotWorkbenchShape = (typeof CHATBOT_WORKBENCH_SHAPES)[number]
 /** Supplies the selected drawing, resolved workbench data, and customer actions. */
 export interface ChatbotWorkbenchBaseProps {
@@ -209,7 +210,7 @@ const Explanation = (props: Omit<ChatbotWorkbenchBaseProps, "shape">) => {
     )
 }
 /** The four real drawings of the Chatbot workbench. */
-export const ChatbotWorkbenchBase = (props: ChatbotWorkbenchBaseProps) => {
+export const ChatbotWorkbenchBase = (props: ChatbotWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "customers":
         case "gaps":

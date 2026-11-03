@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import { LoyaltyWorkbenchPageBase } from "./component"
@@ -11,7 +12,7 @@ interface LoyaltyWorkbenchPageProps {
 }
 
 /** /agents/loyalty/workbench: the programme overview, members, rewards, promotions and the decisions waiting for a person. */
-export const LoyaltyWorkbenchPage = async (props: LoyaltyWorkbenchPageProps) => {
+export const LoyaltyWorkbenchPage = async (props: LoyaltyWorkbenchPageProps): Promise<ReactElement> => {
     if (props.installationId === undefined) notFound()
     const t = await getTranslations("loyalty")
     return (

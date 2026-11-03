@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { isAdminWorkspaceFilter } from "@/hooks/admin"
@@ -18,7 +19,7 @@ export const adminWorkspacesMetadata = async (): Promise<Metadata> => {
 }
 
 /** The /admin screen body: every customer workspace the filter and the search keep, read in the browser from the back end. */
-export const AdminWorkspacesPage = async (props: AdminWorkspacesPageProps) => {
+export const AdminWorkspacesPage = async (props: AdminWorkspacesPageProps): Promise<ReactElement> => {
     const { f, q } = await props.searchParams
     return (
         <AdminWorkspacesPageBase

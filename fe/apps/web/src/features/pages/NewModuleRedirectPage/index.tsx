@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { isModuleKey } from "@/modules/catalog"
@@ -15,7 +16,7 @@ type NewModuleRedirectPageProps = {
 }
 
 /** Moved: adding a module is the Install button of its agent type under /agents, so the old url forwards there. */
-export const NewModuleRedirectPage = async (props: NewModuleRedirectPageProps) => {
+export const NewModuleRedirectPage = async (props: NewModuleRedirectPageProps): Promise<ReactElement> => {
     const locale = (await getLocale()) === "en" ? "en" : "vi"
     return navigation.redirect({ href: isModuleKey(props.module) ? `/agents/${props.module}` : "/agents", locale })
 }

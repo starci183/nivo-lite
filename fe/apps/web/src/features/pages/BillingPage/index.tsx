@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { creditsContactHref } from "@/modules/config"
@@ -15,7 +16,7 @@ interface BillingPageProps {
 }
 
 /** Server shell for the connected billing overview. */
-export const BillingPage = async (props: BillingPageProps) => {
+export const BillingPage = async (props: BillingPageProps): Promise<ReactElement> => {
     const t = await getTranslations("billing")
     return (
         <BillingPageBase

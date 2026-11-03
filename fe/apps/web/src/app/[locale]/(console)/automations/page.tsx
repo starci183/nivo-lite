@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { AutomationsPage } from "@/features/pages/AutomationsPage"
 
 export { automationsMetadata as generateMetadata } from "@/features/pages/AutomationsPage"
@@ -5,6 +6,6 @@ export { automationsMetadata as generateMetadata } from "@/features/pages/Automa
 type PageProps = { searchParams: Promise<{ focus?: string }> }
 
 /** Automations: ready-made jobs the owner switches on. Owner and manager only. `?focus=<key>` opens that card. */
-const Page = async ({ searchParams }: PageProps) => <AutomationsPage focus={(await searchParams).focus} />
+const Page = async ({ searchParams }: PageProps): Promise<ReactElement> => <AutomationsPage focus={(await searchParams).focus} />
 
 export default Page

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { moduleFilterOf } from "@/modules/documents"
@@ -17,7 +18,7 @@ interface KnowledgeRedirectPageProps {
 }
 
 /** Moved: the documents are the sources tab of the Second Brain, so the old address forwards there and keeps its filter and its drawer. */
-export const KnowledgeRedirectPage = async (props: KnowledgeRedirectPageProps) => {
+export const KnowledgeRedirectPage = async (props: KnowledgeRedirectPageProps): Promise<ReactElement> => {
     const filter = moduleFilterOf(props.module)
     return navigation.redirect({
         href: brainTabHref("sources", { module: filter === "all" ? undefined : filter, add: props.add }),

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { AgentTypeRedirectPage } from "@/features/pages/AgentTypeRedirectPage"
 
 export { agentSetupMetadata as generateMetadata } from "@/features/pages/AgentSetupPage"
@@ -8,7 +9,7 @@ type PageProps = {
 }
 
 /** The url of the setup tab before agents became instances. */
-const Page = async (props: PageProps) => (
+const Page = async (props: PageProps): Promise<ReactElement> => (
     <AgentTypeRedirectPage module={(await props.params).module} tab="setup" search={await props.searchParams} />
 )
 

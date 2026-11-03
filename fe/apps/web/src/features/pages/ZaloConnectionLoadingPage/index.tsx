@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { ZaloConnectionLoadingPageBase } from "./component"
@@ -5,7 +6,7 @@ import { ZaloConnectionLoadingPageBase } from "./component"
 const STEPS = ["stepApp", "stepPaste", "stepAuthorize", "stepCheck", "stepAgents"] as const
 
 /** The loading view of one Zalo OA connection: the frame of the page itself with only what is read unresolved. */
-export const ZaloConnectionLoadingPage = async () => {
+export const ZaloConnectionLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("zaloConnection")
     return (
         <ZaloConnectionLoadingPageBase

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { HiringOfferReplyPageBase } from "./component"
@@ -14,7 +15,7 @@ export const hiringOfferReplyMetadata = async (): Promise<Metadata> => {
 }
 
 /** The candidate's own link: read the offer and accept or decline it. The token in the link is the secret. */
-export const HiringOfferReplyPage = async (props: HiringOfferReplyPageProps) => {
+export const HiringOfferReplyPage = async (props: HiringOfferReplyPageProps): Promise<ReactElement> => {
     const [{ token }, t] = await Promise.all([props.params, getTranslations("hiring")])
     return <HiringOfferReplyPageBase props={{ token, label: t("replyOfferTitle"), foot: t("replyFoot") }} />
 }

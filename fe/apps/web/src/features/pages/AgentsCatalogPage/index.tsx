@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { APP_ROUTES } from "@/modules/routes"
@@ -10,7 +11,7 @@ export const agentsCatalogMetadata = async (): Promise<Metadata> => {
 }
 
 /** /agents: the trail and heading; the catalogue block under them reads the installed agents in the browser. */
-export const AgentsCatalogPage = async () => {
+export const AgentsCatalogPage = async (): Promise<ReactElement> => {
     const [t, ts] = await Promise.all([getTranslations("modulesCore"), getTranslations("shell")])
     return (
         <AgentsCatalogPageBase

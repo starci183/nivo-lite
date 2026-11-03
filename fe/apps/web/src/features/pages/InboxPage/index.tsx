@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { CONSOLE_ROUTES } from "@/modules/routes"
@@ -10,7 +11,7 @@ export const inboxMetadata = async (): Promise<Metadata> => {
 }
 
 /** Server shell for the GraphQL inbox feed. */
-export const InboxPage = async () => {
+export const InboxPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("inbox")
     return (
         <InboxPageBase

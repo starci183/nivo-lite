@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { SalesWorkbenchViewData, SalesWorkbenchActions } from "@/modules/types"
 import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
 import { Button, Grid, Stack, Tabs, Text } from "@starci/grammar/common"
@@ -20,7 +21,7 @@ import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWaitingList } from "@/components/composites/WorkbenchWaitingList"
 import { SALES_WORKBENCH_TABS as SALES_TABS } from "@/modules/types"
 /** The six Sales areas, optional customer conversation and explanation drawings. */
-export const SALES_WORKBENCH_SHAPES = [...SALES_TABS, "conversation", "explanation"] as const
+export const SALES_WORKBENCH_SHAPES: readonly [...typeof SALES_TABS, "conversation", "explanation"] = [...SALES_TABS, "conversation", "explanation"]
 type SalesWorkbenchShape = (typeof SALES_WORKBENCH_SHAPES)[number]
 interface SalesWorkbenchBaseProps {
     readonly shape: SalesWorkbenchShape
@@ -274,7 +275,7 @@ const Explanation = (props: Omit<SalesWorkbenchBaseProps, "shape">) => {
     )
 }
 /** Each actual product drawing remains a pure composition of resolved data and native commands. */
-export const SalesWorkbenchBase = (props: SalesWorkbenchBaseProps) => {
+export const SalesWorkbenchBase = (props: SalesWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "attention":
         case "pipeline":

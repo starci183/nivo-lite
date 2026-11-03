@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { LEADS_ROUTES, newLeadPath } from "@/modules/routes"
@@ -12,7 +13,7 @@ interface LeadsPageProps {
 export const leadsPageMetadata = async (): Promise<Metadata> => ({ title: (await getTranslations("leads"))("title") })
 
 /** A server shell for browser-owned lead data and mutations. */
-export const LeadsPage = async (props: LeadsPageProps) => {
+export const LeadsPage = async (props: LeadsPageProps): Promise<ReactElement> => {
     const t = await getTranslations("leads")
     return (
         <LeadsPageBase

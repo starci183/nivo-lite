@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { EmptyNotice, SurfaceCard, type BadgeTone, type ListRowData } from "@starci/grammar/common"
 
 /** One badge of a dossier row. */
@@ -41,8 +42,17 @@ const placeholderDossierRows = (key: string): ReadonlyArray<DossierRowView> =>
         action: null,
     }))
 
+/** One category of dossiers as the card draws it. */
+export interface DossierCategoryView {
+    readonly id: string
+    readonly label: string
+    readonly meta: string
+    readonly title: string
+    readonly dossiers: ReadonlyArray<DossierRowView>
+}
+
 /** One category of placeholder rows, the same shape as a ready one. */
-export const placeholderDossierCategory = (n: number) => ({
+export const placeholderDossierCategory = (n: number): DossierCategoryView => ({
     id: `placeholder-${n}`,
     label: "-",
     meta: "-",
@@ -61,7 +71,7 @@ interface DossierRowsCardProps {
 }
 
 /** The dossiers of one category as the rows of one card: the badges say where each stands, the button what to do next. */
-export const DossierRowsCard = (props: DossierRowsCardProps) => (
+export const DossierRowsCard = (props: DossierRowsCardProps): ReactElement => (
     <SurfaceCard
         kind="list"
         label={props.label}

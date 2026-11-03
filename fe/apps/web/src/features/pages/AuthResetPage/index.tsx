@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { navigation } from "@/modules/i18n"
@@ -17,7 +18,7 @@ export const authResetMetadata = async (): Promise<Metadata> => {
 }
 
 /** `/auth/reset?token=`: the mailed link to set a password opens the reset page, which spends the token with the new password. */
-export const AuthResetPage = async (props: AuthResetPageProps) => {
+export const AuthResetPage = async (props: AuthResetPageProps): Promise<ReactElement> => {
     const { token, next } = await props.searchParams
     const locale = (await getLocale()) === "en" ? "en" : "vi"
     const search = new URLSearchParams()

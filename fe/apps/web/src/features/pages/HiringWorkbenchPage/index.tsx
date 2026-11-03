@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { HiringWorkbenchPageBase } from "./component"
 
@@ -12,7 +13,7 @@ interface HiringWorkbenchPageProps {
 }
 
 /** The Hiring workbench slot: a server shell that hands the route ids and the words to the page, whose blocks read their own data. */
-export const HiringWorkbenchPage = async (props: HiringWorkbenchPageProps) => {
+export const HiringWorkbenchPage = async (props: HiringWorkbenchPageProps): Promise<ReactElement> => {
     const t = await getTranslations("workbenchFigures")
     return (
         <HiringWorkbenchPageBase

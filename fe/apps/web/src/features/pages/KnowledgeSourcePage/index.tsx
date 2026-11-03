@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getTranslations } from "next-intl/server"
@@ -38,14 +39,14 @@ const copyOf = (t: Translate): ClientCopy => ({
 })
 
 /** One document with its passages: the connected body reads it through GraphQL; a bad id is not found. */
-export const KnowledgeSourcePage = async (props: KnowledgeSourcePageProps) => {
+export const KnowledgeSourcePage = async (props: KnowledgeSourcePageProps): Promise<ReactElement> => {
     const t = await getTranslations("knowledge")
     if (!isKnowledgeId(props.sourceId)) notFound()
     return <KnowledgeSourcePageBase props={{ header: knowledgeHeadingOf(copyOf(t)), sourceId: props.sourceId }} />
 }
 
 /** The same page while it loads: the overview draws its own skeleton. */
-export const KnowledgeSourceLoadingPage = async () => {
+export const KnowledgeSourceLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("knowledge")
     return <KnowledgeSourcePageBase props={{ header: knowledgeHeadingOf(copyOf(t)), sourceId: undefined }} />
 }

@@ -1,10 +1,11 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { APP_ROUTES } from "@/modules/routes"
 import { AppNotFoundPageBase } from "./component"
 
 /** Shown when a route does not exist. */
-export const AppNotFoundPage = async () => {
+export const AppNotFoundPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("app")
     return (
         <AppNotFoundPageBase

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { URL_PARAMS } from "@/hooks/connections"
@@ -19,7 +20,7 @@ export const connectionsMetadata = async (): Promise<Metadata> => {
  * library are read in the browser from the back end GraphQL API by the feature host, and the wizard and the connector detail
  * open as drawers driven by the URL.
  */
-export const ConnectionsPage = async (props: ConnectionsPageProps) => {
+export const ConnectionsPage = async (props: ConnectionsPageProps): Promise<ReactElement> => {
     const params = (await props.searchParams) ?? {}
     const tab = params[URL_PARAMS.tab]
     return <ConnectionsPageBase props={{ tab: typeof tab === "string" ? tab : undefined }} />

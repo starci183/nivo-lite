@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { PublicBookingPage } from "@/features/pages/PublicBookingPage"
 import messages from "@/modules/i18n/messages/en.json"
@@ -19,6 +20,6 @@ interface PageProps {
 }
 
 /** Public booking page of one shop. */
-const Page = async (props: PageProps) => <PublicBookingPage slug={(await props.params).slug} />
+const Page = async (props: PageProps): Promise<ReactElement> => <PublicBookingPage slug={(await props.params).slug} />
 
 export default Page

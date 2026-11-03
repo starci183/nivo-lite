@@ -1,9 +1,10 @@
+import type { ReactElement } from "react"
 import { Alert, Button, Disclosure, Fieldset, Input, PaneSection, Grid } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZnsRenewalForm } from "@/modules/types"
 
 /** The fields of the form, in the order they are drawn. */
-export const ZNS_FIELDS = [
+export const ZNS_FIELDS: readonly ["templateId", "customerName", "plan", "endDate", "amount", "transferContent", "invoiceNumber"] = [
     "templateId",
     "customerName",
     "plan",
@@ -11,7 +12,7 @@ export const ZNS_FIELDS = [
     "amount",
     "transferContent",
     "invoiceNumber",
-] as const satisfies ReadonlyArray<keyof ZnsRenewalForm>
+]
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
 export const ZNS_PLACEHOLDER: ZnsRenewalForm = {
@@ -53,7 +54,7 @@ export interface ZaloConnectionZnsBaseProps {
  * Draws the ZNS renewal template as a closed band under the setup steps (LAYOUT-1: an option that rarely changes sits in one
  * disclosure, its summary saying what it is set to): the approved template id and the parameter name of each renewal field.
  */
-export const ZaloConnectionZnsBase = (props: ZaloConnectionZnsBaseProps) => {
+export const ZaloConnectionZnsBase = (props: ZaloConnectionZnsBaseProps): ReactElement => {
     const view = props.props
     const isLocked = !view.canEdit || view.isPending
     return (

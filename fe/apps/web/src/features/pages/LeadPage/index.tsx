@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { LEADS_ROUTES } from "@/modules/routes"
@@ -13,7 +14,7 @@ export const leadPageMetadata = async (): Promise<Metadata> => ({
 })
 
 /** A server shell: the trail is resolved here, the connected head slots and panels share the lead's SWR query. */
-export const LeadPage = async (props: LeadPageProps) => {
+export const LeadPage = async (props: LeadPageProps): Promise<ReactElement> => {
     const t = await getTranslations("leads")
     return (
         <LeadPageBase

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { LeadContext } from "@/components/blocks/LeadContext"
 import { LeadExecution } from "@/components/blocks/LeadExecution"
@@ -11,7 +12,7 @@ import { LeadPageLayout } from "@/components/composites/LeadPageLayout"
 import { LEADS_ROUTES } from "@/modules/routes"
 
 /** The lead page with no data yet: the same trail, panels and section titles, every value a skeleton. */
-export const LeadLoadingPage = async () => {
+export const LeadLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("leads")
     return (
         <LeadPageHead

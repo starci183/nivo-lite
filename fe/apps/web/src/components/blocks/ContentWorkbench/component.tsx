@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { CONTENT_TABS, type ContentViews, type ContentActions } from "@/modules/types"
 import { Alert, Cluster, Grid, Stack } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
@@ -22,7 +23,7 @@ import { ContentBrandSettings } from "@/components/composites/ContentBrandSettin
 import { ContentAutomationSettings } from "@/components/composites/ContentAutomationSettings"
 
 /** Only actual content tabs and the recorded-explanation arrangement are shapes. */
-export const CONTENT_WORKBENCH_SHAPES = [...CONTENT_TABS, "explanation"] as const
+export const CONTENT_WORKBENCH_SHAPES: readonly [...typeof CONTENT_TABS, "explanation"] = [...CONTENT_TABS, "explanation"]
 type ContentShape = (typeof CONTENT_WORKBENCH_SHAPES)[number]
 
 /** One Content world, resolved atomic data slots and commands. */
@@ -261,7 +262,7 @@ const Explanation = (props: Pick<ContentWorkbenchBaseProps, "props" | "on">) => 
 }
 
 /** Keeps data-status recipes in the world Base and every lower drawing below its lawful tier. */
-export const ContentWorkbenchBase = (props: ContentWorkbenchBaseProps) => {
+export const ContentWorkbenchBase = (props: ContentWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "calendar":
         case "list":

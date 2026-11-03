@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { AgentSetupPage } from "@/features/pages/AgentSetupPage"
 
 /** The document title of the setup tab. */
@@ -9,7 +10,7 @@ type PageProps = { readonly params: Promise<{ module: string; installation: stri
 export const maxDuration = 60
 
 /** The setup alias of an instance shows the instance itself. */
-const Page = async (props: PageProps) => {
+const Page = async (props: PageProps): Promise<ReactElement> => {
     const { module, installation } = await props.params
     return <AgentSetupPage module={module} installationId={installation} />
 }

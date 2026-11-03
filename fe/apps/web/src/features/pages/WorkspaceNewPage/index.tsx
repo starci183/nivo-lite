@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { WorkspaceNewPageBase } from "./component"
@@ -9,7 +10,7 @@ export const workspaceNewMetadata = async (): Promise<Metadata> => {
 }
 
 /** /workspaces/new: a step of the first-run wizard; the proxy sends the signed-out to the sign-in page. */
-export const WorkspaceNewPage = async () => {
+export const WorkspaceNewPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("onboarding")
     return (
         <WorkspaceNewPageBase

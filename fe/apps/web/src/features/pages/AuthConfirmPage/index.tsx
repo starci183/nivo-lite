@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { confirmEmail } from "@/modules/auth"
@@ -24,7 +25,7 @@ const loginHref = (query: Readonly<Record<string, string | undefined>>): string 
 }
 
 /** `/auth/confirm?token=`: spends the confirmation link of a new account, then opens the sign-in page with the outcome. */
-export const AuthConfirmPage = async (props: AuthConfirmPageProps) => {
+export const AuthConfirmPage = async (props: AuthConfirmPageProps): Promise<ReactElement> => {
     const { token, next } = await props.searchParams
     const locale = (await getLocale()) === "en" ? "en" : "vi"
     if (token === undefined || token === "") {

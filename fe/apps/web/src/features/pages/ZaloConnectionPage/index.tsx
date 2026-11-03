@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { ZaloConnectionPageBase } from "./component"
@@ -17,7 +18,7 @@ export const zaloConnectionMetadata = async (): Promise<Metadata> => {
  * The page of one Zalo OA connection (owner | manager): a server shell. The header, the health tiles, the setup steps, the ZNS template
  * and the live events each read their own data in the browser.
  */
-export const ZaloConnectionPage = async (props: ZaloConnectionPageProps) => {
+export const ZaloConnectionPage = async (props: ZaloConnectionPageProps): Promise<ReactElement> => {
     const { id } = await props.params
     return <ZaloConnectionPageBase props={{ connectionId: id }} />
 }

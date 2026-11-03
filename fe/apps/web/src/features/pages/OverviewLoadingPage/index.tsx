@@ -1,8 +1,9 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { OverviewLoadingPageBase } from "./component"
 
 /** The overview while its data is unresolved: the real headings and labels with skeleton content. */
-export const OverviewLoadingPage = async () => {
+export const OverviewLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("overview")
     return (
         <OverviewLoadingPageBase

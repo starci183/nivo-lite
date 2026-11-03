@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { navigation } from "@/modules/i18n"
@@ -10,5 +11,5 @@ export const homeRedirectMetadata = async (): Promise<Metadata> => {
 }
 
 /** The front address of the console forwards to the dashboard. */
-export const HomeRedirectPage = async () =>
+export const HomeRedirectPage = async (): Promise<ReactElement> =>
     navigation.redirect({ href: CONSOLE_ROUTES.dashboard, locale: (await getLocale()) === "en" ? "en" : "vi" })

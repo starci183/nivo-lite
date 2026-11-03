@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { type LeadGenWorkbenchDataView, type LeadGenWorkbenchActions, LEADGEN_TABS } from "@/modules/types"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
@@ -12,7 +13,7 @@ import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 
 /** The four actual Lead Gen panels and the recorded-explanation arrangement. */
-export const LEADGEN_WORKBENCH_SHAPES = [...LEADGEN_TABS, "explanation"] as const
+export const LEADGEN_WORKBENCH_SHAPES: readonly [...typeof LEADGEN_TABS, "explanation"] = [...LEADGEN_TABS, "explanation"]
 type LeadGenWorkbenchShape = (typeof LEADGEN_WORKBENCH_SHAPES)[number]
 
 /** Plain resolved read models and atomic commands; shape never carries render trees. */
@@ -161,7 +162,7 @@ const Explanation = (props: Omit<LeadGenWorkbenchBaseProps, "shape">) => {
 }
 
 /** The only shapes are real Lead Gen panels and the explanation layout; all statuses stay in their own SlotViews. */
-export const LeadGenWorkbenchBase = (props: LeadGenWorkbenchBaseProps) => {
+export const LeadGenWorkbenchBase = (props: LeadGenWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "leads":
         case "sources":

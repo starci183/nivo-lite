@@ -7,7 +7,7 @@ import * as StarciOutline from "@starci/heroicons/24/outline"
 import { Icon as GrammarIcon } from "@starci/grammar/common"
 import type { IconUsage } from "@starci/grammar/common"
 import Image from "next/image"
-import type { SVGProps } from "react"
+import type { SVGProps, ReactElement } from "react"
 import { GOOGLE_MARK } from "./classNames"
 
 /** Every source in this registry is callable (Heroicons are forward-ref callables; custom marks are functions). */
@@ -38,8 +38,95 @@ const cuts = (outline: GlyphComponent, chip: GlyphComponent): GlyphCuts => ({
     chip,
 })
 
+/** What an icon MEANS on these screens. The glyph that draws it is this file business. */
+export type IconName =
+    | "moduleAccounting"
+    | "moduleBooking"
+    | "moduleChatbot"
+    | "moduleContent"
+    | "moduleHiring"
+    | "moduleInventory"
+    | "moduleLeadGen"
+    | "moduleLoyalty"
+    | "moduleSales"
+    | "moduleShifts"
+    | "moduleVideo"
+    | "brand"
+    | "streak"
+    | "credit"
+    | "reward"
+    | "course"
+    | "email"
+    | "password"
+    | "revealPassword"
+    | "hidePassword"
+    | "code"
+    | "complete"
+    | "pending"
+    | "signIn"
+    | "signOut"
+    | "signUp"
+    | "close"
+    | "trash"
+    | "next"
+    | "brain"
+    | "back"
+    | "more"
+    | "trigger"
+    | "disclosure"
+    | "edit"
+    | "add"
+    | "retry"
+    | "send"
+    | "attach"
+    | "home"
+    | "explore"
+    | "community"
+    | "league"
+    | "review"
+    | "light"
+    | "dark"
+    | "locale"
+    | "search"
+    | "cart"
+    | "notification"
+    | "account"
+    | "profile"
+    | "saved"
+    | "blog"
+    | "talents"
+    | "jobs"
+    | "practice"
+    | "overview"
+    | "apps"
+    | "agentos"
+    | "servers"
+    | "domains"
+    | "wallet"
+    | "support"
+    | "sidebar"
+    | "copy"
+    | "copied"
+    | "reply"
+    | "mention"
+    | "openLead"
+    | "chat"
+    | "menu"
+    | "expand"
+    | "collapseRail"
+    | "google"
+    | "muted"
+    | "unmuted"
+    | "messageSending"
+    | "messageSent"
+    | "messageDelivered"
+    | "messageSeen"
+    | "failure"
+    | "warning"
+    | "info"
+
 /** The app answer to "which glyph means this": every semantic name resolves to the cuts Grammar's Icon may ask for. */
-const ICON_SOURCES = {
+const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     moduleAccounting: cuts(Outline.DocumentTextIcon, Solid.DocumentTextIcon),
     moduleBooking: cuts(Outline.CalendarDaysIcon, Solid.CalendarDaysIcon),
     moduleChatbot: cuts(Outline.ChatBubbleLeftIcon, Solid.ChatBubbleLeftIcon),
@@ -124,16 +211,14 @@ const ICON_SOURCES = {
     failure: cuts(Outline.XCircleIcon, Solid.XCircleIcon),
     warning: cuts(Outline.ExclamationTriangleIcon, Solid.ExclamationTriangleIcon),
     info: cuts(Outline.InformationCircleIcon, Solid.InformationCircleIcon),
-} satisfies Record<string, GlyphCuts>
+}
 
-/** What an icon MEANS on these screens. The glyph that draws it is this file business. */
-export type IconName = keyof typeof ICON_SOURCES
 
 /** Resolve an app-owned semantic icon name to the glyph cut Grammar's Icon asks for in a given usage. */
-export const nivoIconSource = (name: IconName, usage: IconUsage = "chip") => ICON_SOURCES[name][usage]
+export const nivoIconSource = (name: IconName, usage: IconUsage = "chip"): GlyphComponent => ICON_SOURCES[name][usage]
 
 /** A client component reference lets the server console shell supply its drawer glyph without invoking client code. */
-export const ConsoleDrawerIcon = ICON_SOURCES.more.leading
+export const ConsoleDrawerIcon: GlyphComponent = ICON_SOURCES.more.leading
 
 /** What the glyph draws: a meaning, never a component, so a Server Component caller crosses the boundary with a plain name. */
 type IconProps = {
@@ -145,7 +230,7 @@ type IconProps = {
 }
 
 /** The app glyph: resolves the meaning to its source already on the client side, where a function never needs to serialise. */
-export const Icon = (props: IconProps) => (
+export const Icon = (props: IconProps): ReactElement => (
     <GrammarIcon
         source={nivoIconSource(props.props.name, props.props.usage)}
         {...(props.props.usage === undefined ? {} : { usage: props.props.usage })}

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { ResetPasswordPageBase } from "./component"
@@ -14,7 +15,7 @@ export const resetPasswordMetadata = async (): Promise<Metadata> => {
 }
 
 /** Set a new password. The recovery link carries its one-time token; with an error code, or without a token, the link is expired. */
-export const ResetPasswordPage = async (props: ResetPasswordPageProps) => {
+export const ResetPasswordPage = async (props: ResetPasswordPageProps): Promise<ReactElement> => {
     const { error, token } = await props.searchParams
     const hasToken = token !== undefined && token !== ""
     return (

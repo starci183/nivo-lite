@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { isUuid } from "@/modules/video"
 import { VideoWorkbenchPageBase } from "./component"
@@ -10,7 +11,7 @@ interface VideoWorkbenchPageProps {
 }
 
 /** Server shell of the video workbench: words the tabs and hands the ids; every block below it reads its own data in the browser. */
-export const VideoWorkbenchPage = async (props: VideoWorkbenchPageProps) => {
+export const VideoWorkbenchPage = async (props: VideoWorkbenchPageProps): Promise<ReactElement> => {
     const t = await getTranslations("video")
     const focus = props.focus ?? null
     return (

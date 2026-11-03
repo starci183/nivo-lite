@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { FirstRunLayoutBase } from "./component"
 
@@ -6,7 +6,7 @@ import { FirstRunLayoutBase } from "./component"
 type FirstRunLayoutProps = { readonly children: ReactNode }
 
 /** The frame of the first-run steps: the workspaces bar over the routed step. */
-export const FirstRunLayout = async (props: FirstRunLayoutProps) => {
+export const FirstRunLayout = async (props: FirstRunLayoutProps): Promise<ReactElement> => {
     const t = await getTranslations("onboarding")
     return <FirstRunLayoutBase props={{ mainLabel: t("pageTitle") }}>{props.children}</FirstRunLayoutBase>
 }

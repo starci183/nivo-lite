@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { type AccountingWorkbenchDataView, type AccountingWorkbenchActions, ACCOUNTING_TABS } from "@/modules/types"
 import { AccountingRecordSection } from "@/components/frames/AccountingRecordSection"
 import { AccountingBlock } from "@/components/frames/AccountingBlock"
@@ -19,7 +20,7 @@ import { SlotView } from "@/components/composites/SlotView"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 
 /** The real Accounting areas and the explanation arrangement. */
-export const ACCOUNTING_WORKBENCH_SHAPES = [...ACCOUNTING_TABS, "explanation"] as const
+export const ACCOUNTING_WORKBENCH_SHAPES: readonly [...typeof ACCOUNTING_TABS, "explanation"] = [...ACCOUNTING_TABS, "explanation"]
 type AccountingWorkbenchShape = (typeof ACCOUNTING_WORKBENCH_SHAPES)[number]
 
 /** Resolved read models and atomic commands; no render tree crosses the block boundary. */
@@ -267,7 +268,7 @@ const Explanation = (props: Omit<AccountingWorkbenchBaseProps, "shape">) => {
 }
 
 /** Draws each Accounting area or its explanation from the same module-owned world. */
-export const AccountingWorkbenchBase = (props: AccountingWorkbenchBaseProps) => {
+export const AccountingWorkbenchBase = (props: AccountingWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "overview":
         case "evidence":

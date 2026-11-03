@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { InventoryWorkbenchPage as WorkbenchInventory } from "@/features/pages/InventoryWorkbenchPage"
 import { LoyaltyWorkbenchPage as WorkbenchLoyalty } from "@/features/pages/LoyaltyWorkbenchPage"
 import { HiringWorkbenchPage as WorkbenchHiring } from "@/features/pages/HiringWorkbenchPage"
@@ -43,7 +44,7 @@ const first = (value: string | string[] | undefined): string | null =>
     (Array.isArray(value) ? (value[0] ?? null) : (value ?? null)) || null
 
 /** The workbench slot of one agent instance; the tab and focus of the query are the deep link contract of the agent dashboard frame. */
-const Page = async (props: PageProps) => {
+const Page = async (props: PageProps): Promise<ReactElement> => {
     const [{ module, installation }, query] = await Promise.all([props.params, props.searchParams])
     return (
         <AgentWorkbenchPage
