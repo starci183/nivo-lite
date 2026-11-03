@@ -21,3 +21,10 @@ entries:
     after: [nivo-workspace]
     schema: be/src/modules/domain/channel-provisioning/test-accounts-seed.schema.json
     reason: The sign-ins the dev stack is tested with (owner and staff of the NIVO workspace and of the demo workspace, @example.test addresses); their addresses and passwords are sealed in seeds-test-accounts, never typed.
+  - id: catalogue
+    kind: data
+    path: data/catalogue.json
+    target: [node, be/dist/apps/cli/src/main.js, seed-catalogue, --workspace, NIVO]
+    mode: upsert
+    after: [nivo-workspace]
+    schema: be/src/modules/domain/channel-provisioning/catalogue-seed.schema.json

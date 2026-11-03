@@ -423,6 +423,18 @@ environments:
         where: "secrets/seeds-test-accounts"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev test seats (owner and staff of the NIVO and demo workspaces, @example.test addresses) the seed test-accounts creates, sealed by the harness without anyone reading the passwords"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-test-accounts-demo-manager-email"
+        member: "seeds-test-accounts"
+        key: "DEMO_MANAGER_EMAIL"
+        where: "secrets/seeds-test-accounts"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev test seats (owner and staff of the NIVO and demo workspaces, @example.test addresses) the seed test-accounts creates, sealed by the harness without anyone reading the passwords"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-test-accounts-demo-manager-password"
+        member: "seeds-test-accounts"
+        key: "DEMO_MANAGER_PASSWORD"
+        where: "secrets/seeds-test-accounts"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev test seats (owner and staff of the NIVO and demo workspaces, @example.test addresses) the seed test-accounts creates, sealed by the harness without anyone reading the passwords"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
     # `starci app stack up --env dev --execute` reads this block (PROJECT-STACKS-6). One command brings up the db (own role per environment),
     # Redis, MinIO and the OpenClaw gateway in containers, migrates, and runs the api, the mcp gateway, the console and the landing natively.
     local:

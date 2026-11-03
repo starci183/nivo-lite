@@ -43,3 +43,4 @@ export type {
     ReceivePoOutput,
 } from "./inventory-operations.contracts"
 export { inventoryEntities } from "./persistence/entities"
+export { InventoryItemEntity } from "./persistence/entities"
