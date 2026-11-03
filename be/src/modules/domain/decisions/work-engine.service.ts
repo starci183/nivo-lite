@@ -105,7 +105,7 @@ export class WorkEngineService {
         return this.process(
             ctx,
             claimed,
-            { preset: spec.preset, noChain: spec.noChain, forceAsk: spec.forceAsk },
+            { preset: spec.preset, noChain: spec.noChain, forceAsk: spec.forceAsk, tagGrant: spec.tagGrant },
             spec.origin ?? null,
         )
     }
@@ -301,7 +301,8 @@ export class WorkEngineService {
         opts: ProcessOptions,
         origin: WorkOrigin | null,
     ): Promise<Judgement> {
-        const rule = await this.rules.ruleFor(ctx, item.action, item.installation_id)
+        const stored = await this.rules.ruleFor(ctx, item.action, item.installation_id)
+        const rule = stored ?? (opts.tagGrant === true ? await this.modules.tagRuleOf(item.action) : null)
         const {
             proposal: judged,
             verdict: base,

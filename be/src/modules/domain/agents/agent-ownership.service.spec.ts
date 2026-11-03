@@ -464,7 +464,10 @@ describe("AgentOwnershipService setOwnership refusals", () => {
 describe("AgentOwnershipService grantTags", () => {
     it("adds the tag rights an agent lacks and leaves the ones it holds", async () => {
         const em = mockEntityManager({
-            find: [AgentEntity, [ownedAgentOf({ id: "a1", canTagAgentIds: ["a2"] }), ownedAgentOf({ id: "a3", canTagAgentIds: [] })]],
+            find: [
+                AgentEntity,
+                [ownedAgentOf({ id: "a1", canTagAgentIds: ["a2"] }), ownedAgentOf({ id: "a3", canTagAgentIds: [] })],
+            ],
             update: [AgentEntity, { affected: 1 }],
         })
         const { service } = await build(em)
@@ -475,7 +478,11 @@ describe("AgentOwnershipService grantTags", () => {
             { from: "a3", to: "a1" },
         ])
 
-        expect(em.update).toHaveBeenCalledWith(AgentEntity, { id: "a1", workspaceId: "w1" }, { canTagAgentIds: ["a2", "a4"] })
+        expect(em.update).toHaveBeenCalledWith(
+            AgentEntity,
+            { id: "a1", workspaceId: "w1" },
+            { canTagAgentIds: ["a2", "a4"] },
+        )
         expect(em.update).toHaveBeenCalledWith(AgentEntity, { id: "a3", workspaceId: "w1" }, { canTagAgentIds: ["a1"] })
     })
 

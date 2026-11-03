@@ -14,13 +14,14 @@ export interface WakeOriginInput {
 }
 
 /**
- * Where a wake came from: a clock slot is a schedule, an internal event or a feed is an event, a person who wrote the tagging message
+ * Where a wake came from: a clock slot is a schedule, an internal event or a feed is an event, an agent named as the tagger is an agent, a person who wrote the tagging message
  * (a group thread or a chat) is a person, a customer message or a tag on a conversation with nobody behind it is the channel, and a tag
  * with neither is another agent's end node.
  */
 export const wakeOriginOf = ({ source, context, actorMemberId }: WakeOriginInput): WakeOrigin => {
     if (source === "schedule") return "schedule"
     if (source === "internal") return "event"
+    if (context.fromAgentId !== undefined) return "agent"
     if (actorMemberId !== null || context.authorUserId !== undefined) return "person"
     if (source === "customer" || context.conversationId !== undefined) return "channel"
     return "agent"

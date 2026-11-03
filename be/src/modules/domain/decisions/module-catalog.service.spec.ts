@@ -45,6 +45,22 @@ describe("ModuleCatalogService", () => {
         })
     })
 
+    describe("tagRuleOf", () => {
+        it("stands for an automatic rule with the fields the catalogue lists, null for an unknown action", async () => {
+            const service = await build()
+            const definition = catalogued?.authorityActions[0]
+
+            await expect(service.tagRuleOf(definition?.action ?? "")).resolves.toMatchObject({
+                department: catalogued?.key,
+                action: definition?.action,
+                mode: "auto",
+                limit_vnd: null,
+                required_fields: definition?.requiredFields,
+            })
+            await expect(service.tagRuleOf("no-such-action")).resolves.toBeNull()
+        })
+    })
+
     describe("nameOf", () => {
         it("answers the module's name in the language, the key when the module is unknown", async () => {
             const service = await build()

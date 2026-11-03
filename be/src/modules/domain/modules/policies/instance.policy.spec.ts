@@ -286,18 +286,18 @@ describe("tagGrantsOf", () => {
     it("lets a new tagging agent tag the peers its module lists", async () => {
         const { subject } = await buildSubject()
 
-        expect(
-            subject.tagGrantsOf(tagging, "a1", [{ agentId: "a2", moduleKey: "sales" }], tagsOf),
-        ).toEqual([{ from: "a1", to: "a2" }])
+        expect(subject.tagGrantsOf(tagging, "a1", [{ agentId: "a2", moduleKey: "sales" }], tagsOf)).toEqual([
+            { from: "a1", to: "a2" },
+        ])
     })
 
     it("lets the peers whose module lists the new agent tag it", async () => {
         const { subject } = await buildSubject()
         const sales = { ...moduleOf([]), key: "sales" }
 
-        expect(
-            subject.tagGrantsOf(sales, "a2", [{ agentId: "a1", moduleKey: "chatbot" }], tagsOf),
-        ).toEqual([{ from: "a1", to: "a2" }])
+        expect(subject.tagGrantsOf(sales, "a2", [{ agentId: "a1", moduleKey: "chatbot" }], tagsOf)).toEqual([
+            { from: "a1", to: "a2" },
+        ])
     })
 
     it("grants nothing to itself, to an unlisted module or without peers", async () => {
