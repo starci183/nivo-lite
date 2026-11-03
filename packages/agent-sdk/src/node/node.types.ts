@@ -1,6 +1,6 @@
 import type { z } from "zod"
 import type { Namespaced, SpecText } from "../schema/schema.types"
-import type { DataRight, RightsGrant } from "../rights/rights.types"
+import type { DataRight } from "../rights/rights.types"
 
 /** The role of a step in an agent's graph. */
 export type NodeRole = "trigger" | "condition" | "execute" | "output"
@@ -32,36 +32,14 @@ export interface RightsBoundData {
     readonly write: (kind: string, record: Readonly<Record<string, unknown>>) => Promise<SubjectRef>
 }
 
-/** The model port of the host: the agents' AiTasksService path, metered. */
-export interface NodeModel {
-    /** A text answer. */
-    readonly text: (request: ModelRequest) => Promise<string>
-    /** A typed answer, read with the schema. */
-    readonly json: <T>(schema: z.ZodType<T>, request: ModelRequest) => Promise<T>
-}
-
-/** What a node asks the model. */
-export interface ModelRequest {
-    /** A short kebab tag of what the call is for. */
-    readonly purpose: string
-    readonly instructions: string
-    readonly input: unknown
-}
-
 /** What a node's `run` receives. */
 export interface NodeContext {
     readonly turn: TurnRef
-    /** The per-graph settings the owner set, read with the node's `params` schema. */
-    readonly params: Readonly<Record<string, unknown>>
     readonly data: RightsBoundData
-    /** Records an effect that happened in this turn, with its payload. An undeclared kind throws. */
-    readonly effect: (kind: Namespaced, subject: SubjectRef, payload?: unknown) => Promise<SubjectRef>
-    readonly model: NodeModel
+    /** Records an effect that happened in this turn. An undeclared kind throws. */
+    readonly effect: (kind: Namespaced, subject: SubjectRef) => void
     readonly now: () => Date
 }
-
-/** An effect an example expects: the kind, and its payload when the example pins it. */
-export type ExampleEffect = Namespaced | { readonly kind: Namespaced; readonly payload?: unknown }
 
 /** A stored rows fixture by data kind. */
 export type NodeStore = Readonly<Record<string, ReadonlyArray<Readonly<Record<string, unknown>>>>>
@@ -71,12 +49,7 @@ export interface NodeExample<I extends z.ZodType, O extends z.ZodType> {
     readonly name: string
     readonly input: z.input<I>
     readonly output: z.output<O>
-    readonly effects: ReadonlyArray<ExampleEffect>
-    readonly params?: Readonly<Record<string, unknown>>
-    /** The canned answers of the model, in call order. */
-    readonly model?: ReadonlyArray<unknown>
-    /** The grant the agent holds in this example; the node's own rights when absent. */
-    readonly grant?: RightsGrant
+    readonly effects: ReadonlyArray<Namespaced>
     readonly store?: NodeStore
 }
 
@@ -85,8 +58,6 @@ export interface NodeConfig<I extends z.ZodType, O extends z.ZodType> {
     readonly id: Namespaced
     readonly role: NodeRole
     readonly title: SpecText
-    /** The per-graph settings, a zod object; absent means none. */
-    readonly params?: z.ZodType
     readonly input: I
     readonly output: O
     /** Required rights: an agent whose grant misses one cannot run the node. */
