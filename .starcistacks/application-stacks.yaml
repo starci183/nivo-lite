@@ -321,7 +321,7 @@ environments:
         - {name: nivo-redis, wait: healthy}
         - {name: nivo-minio, wait: tcp, port: minio}
         - {name: nivo-openclaw, wait: healthy}
-      dirs: [openclaw-state, ai-router]
+      dirs: [openclaw-state, ai-router, mail-outbox]
       database:
         service: db
         port: db
@@ -382,6 +382,7 @@ environments:
             MAIL_SECURITY: starttls
             MAIL_FROM_NAME: NIVO
             MAIL_DEFAULT_LANGUAGE: vi
+            MAIL_SUPPRESS: "*.example.test,*.example.com,*.invalid"
         # The buckets of the environment (cli storage bootstrap: creates the missing ones, opens the picture bucket to anonymous reads):
         # without them every upload and media read answers OBJECT_STORAGE_UNAVAILABLE. Safe to run again.
         - name: buckets
@@ -400,6 +401,7 @@ environments:
             MAIL_SECURITY: starttls
             MAIL_FROM_NAME: NIVO
             MAIL_DEFAULT_LANGUAGE: vi
+            MAIL_SUPPRESS: "*.example.test,*.example.com,*.invalid"
       processes:
         - name: api
           argv: [node, dist/apps/api/src/main.js]
@@ -420,6 +422,8 @@ environments:
             MAIL_SECURITY: starttls
             MAIL_FROM_NAME: NIVO
             MAIL_DEFAULT_LANGUAGE: vi
+            MAIL_SUPPRESS: "*.example.test,*.example.com,*.invalid"
+            MAIL_OUTBOX_DIR: "${data}/mail-outbox"
             QUEUE_ENABLED: "true"
             QUEUE_REDIS_HOST: 127.0.0.1
             QUEUE_REDIS_PORT: "${port.redis}"

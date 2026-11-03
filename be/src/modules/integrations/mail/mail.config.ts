@@ -1,5 +1,6 @@
 import type { MailSecurity } from "@starci/mail"
 import type { EnvSource } from "@modules/platform/config"
+import { DEFAULT_SUPPRESS, parseSuppressList } from "./mail-suppress.policy"
 import type { MailLanguage, MailOptions } from "./mail.options"
 
 const DEFAULT_PORT = 587
@@ -20,7 +21,7 @@ const isPublicSite = (siteUrl: string | undefined): boolean => {
 
 /**
  * Reads the mail configuration with no credential or server defaults; the login is optional and its password reads `<KEY>_FILE`
- * first. A workspace's own SMTP account may use a private target on a development site or by the explicit flag.
+ * first. The platform sender holds back the recipients of `MAIL_SUPPRESS` and, in development, keeps them in the folder `MAIL_OUTBOX_DIR`. A workspace's own SMTP account may use a private target on a development site or by the explicit flag.
  */
 export const parseMailConfig = (env: EnvSource): MailOptions => ({
     host: env.string("MAIL_HOST"),
@@ -35,4 +36,6 @@ export const parseMailConfig = (env: EnvSource): MailOptions => ({
     confirmTtlSeconds: env.int("MAIL_CONFIRM_TTL_SECONDS", CONFIRM_TTL_SECONDS),
     resetTtlSeconds: env.int("MAIL_RESET_TTL_SECONDS", RESET_TTL_SECONDS),
     allowPrivateHosts: !isPublicSite(env.optional("SITE_URL")) || env.bool("SMTP_ALLOW_PRIVATE_HOSTS", false),
+    suppress: parseSuppressList(env.optional("MAIL_SUPPRESS") ?? DEFAULT_SUPPRESS),
+    outboxDir: env.optional("MAIL_OUTBOX_DIR") ?? null,
 })

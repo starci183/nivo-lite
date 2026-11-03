@@ -125,6 +125,8 @@ export type BuildWiringProofResultOptionsMailShape = {
     confirmTtlSeconds: number
     resetTtlSeconds: number
     allowPrivateHosts: boolean
+    suppress: Array<string>
+    outboxDir: null
 }
 /** The build wiring proof result options zalo record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsZaloShape = {

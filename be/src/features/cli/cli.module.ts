@@ -4,6 +4,7 @@ import { CleanupWorkspacesModule } from "./cleanup-workspaces/cleanup-workspaces
 import { CreateOwnerModule } from "./create-owner/create-owner.module"
 import { ConnectChannelModule } from "./connect-channel/connect-channel.module"
 import { CliJobsModule } from "./jobs/jobs.module"
+import { MailCliModule } from "./mail/mail.module"
 import { MigrateModule } from "./migrate/migrate.module"
 import { PruneWorkspacesModule } from "./prune-workspaces/prune-workspaces.module"
 import { SeedModule } from "./seed/seed.module"
@@ -21,6 +22,7 @@ import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
         ConnectChannelModule.register({}),
         CreateOwnerModule.register({}),
         CliJobsModule.register({}),
+        MailCliModule.register({}),
         MigrateModule.register({}),
         PruneWorkspacesModule.register({}),
         SeedModule.register({}),

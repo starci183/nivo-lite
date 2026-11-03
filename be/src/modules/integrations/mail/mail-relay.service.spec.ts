@@ -19,6 +19,8 @@ const PUBLIC: MailOptions = {
     confirmTtlSeconds: 86_400,
     resetTtlSeconds: 3_600,
     allowPrivateHosts: false,
+    suppress: ["*.invalid"],
+    outboxDir: null,
 }
 
 const NAMED: MailOptions = { ...PUBLIC, helloName: "nivo.test" }

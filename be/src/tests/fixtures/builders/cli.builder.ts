@@ -46,6 +46,8 @@ const wiringSettings = {
         confirmTtlSeconds: 60,
         resetTtlSeconds: 60,
         allowPrivateHosts: true,
+        suppress: ["*.invalid"],
+        outboxDir: null,
     },
     ai: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
     storage: {

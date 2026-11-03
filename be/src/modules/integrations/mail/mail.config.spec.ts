@@ -24,7 +24,18 @@ describe("mail config / parseMailConfig", () => {
             confirmTtlSeconds: 86_400,
             resetTtlSeconds: 3_600,
             allowPrivateHosts: true,
+            suppress: ["*.example.test", "*.example.com", "*.invalid"],
+            outboxDir: null,
         })
+    })
+    it("reads the suppress list and the development outbox folder", () => {
+        const options = read({
+            MAIL_SUPPRESS: " *.Example.test, someone@x.test ,",
+            MAIL_OUTBOX_DIR: "/data/mail-outbox",
+        })
+
+        expect(options.suppress).toEqual(["*.example.test", "someone@x.test"])
+        expect(options.outboxDir).toBe("/data/mail-outbox")
     })
     it("reads every tunable and the login, whose password stays a secret", () => {
         const options = read({

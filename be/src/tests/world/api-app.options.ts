@@ -77,6 +77,8 @@ const localMail: ApiOptions["mail"] = {
     confirmTtlSeconds: 60,
     resetTtlSeconds: 60,
     allowPrivateHosts: false,
+    suppress: ["*.invalid"],
+    outboxDir: null,
 }
 
 /** An AI pool with no keys: no router and no gateway are registered, so the api boots and its AI callers fall back without a provider call. */

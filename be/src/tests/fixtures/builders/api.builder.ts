@@ -114,6 +114,8 @@ const options = {
         confirmTtlSeconds: 60,
         resetTtlSeconds: 60,
         allowPrivateHosts: false,
+        suppress: ["*.invalid"],
+        outboxDir: null,
     },
     dataSources: { allowPrivateHosts: false },
     telegramUser: { app: null },

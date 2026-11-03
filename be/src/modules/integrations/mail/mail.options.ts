@@ -22,4 +22,8 @@ export interface MailOptions extends MailSettings {
     readonly resetTtlSeconds: number
     /** True on a development site: a local mail catcher on a private address may receive a workspace's mail. */
     readonly allowPrivateHosts: boolean
+    /** The patterns of the recipients the platform sender never mails (`MAIL_SUPPRESS`): an exact address, `*.domain` for the domain and its subdomains, or a bare domain. */
+    readonly suppress: ReadonlyArray<string>
+    /** The folder that keeps the held messages for a test run (`MAIL_OUTBOX_DIR`, development only), or null: nothing is kept. */
+    readonly outboxDir: string | null
 }

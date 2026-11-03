@@ -5,7 +5,17 @@ export { MAIL_MESSAGES } from "./messages/mail.messages"
 export { renderEmail } from "./mail-layout.policy"
 export { parseMailConfig } from "./mail.config"
 export type { MailDelivery, SmtpConfig } from "./mail.contracts"
-export { InjectMailRelay, InjectMailSettings, InjectMailer, MAIL_RELAY, MAIL_SETTINGS } from "./mail.decorators"
+export {
+    InjectMailOutbox,
+    InjectMailRelay,
+    InjectMailSettings,
+    InjectMailer,
+    MAIL_OUTBOX,
+    MAIL_RELAY,
+    MAIL_SETTINGS,
+} from "./mail.decorators"
 export { MailModule } from "./mail.module"
 export type { MailLanguage, MailOptions } from "./mail.options"
 export type { MailRelayService } from "./mail-relay.service"
+export type { MailOutboxService } from "./mail-outbox.service"
+export type { OutboxEntry, OutboxQuery } from "./mail-outbox.policy"

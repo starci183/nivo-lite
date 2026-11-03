@@ -42,6 +42,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `MAIL_SECURITY` | `api-public.conf` | `starttls` (a server without STARTTLS fails the send), `tls` or `none` (a local sink only; refused with a login). |
 | `MAIL_FROM_NAME` | `api-public.conf` | The sender name and the product name in the header of every mail. |
 | `MAIL_DEFAULT_LANGUAGE` | `api-public.conf` | `vi` or `en`: the language of a mail whose request names none (default `vi`). |
+| `MAIL_SUPPRESS` | `api-public.conf` | Comma-separated patterns of recipients the platform sender never mails (default `*.example.test,*.example.com,*.invalid`): logged as `mail.suppressed` with the recipient masked, nothing stored, the send answers success. |
 | `PORT` | stack environment | The listener port (`8787`). |
 | `QUEUE_REDIS_PASSWORD` | its sealed member (granted in `application-stacks.yaml`) | The password of the declared Redis (the BullMQ broker): the api reads it as `QUEUE_REDIS_PASSWORD_FILE`, the `nivo-redis` service starts with `--requirepass` from the same Swarm secret, and holds no trailing newline. Never printed, never read from a file by hand: `starci app secret set production api QUEUE_REDIS_PASSWORD --generate 32`. |
 | `QUEUE_REDIS_HOST` | stack environment | `nivo-redis`, the one Redis service on the private `agents` network. |
