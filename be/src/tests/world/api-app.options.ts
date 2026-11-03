@@ -43,7 +43,6 @@ const providerOptions = () => ({
         businessBase: "https://zalo.invalid",
         timeoutMs: 1000,
     },
-    mail: { allowPrivateHosts: false, platform: null, helloName: "world.invalid" },
     dataSources: { allowPrivateHosts: false },
     telegramUser: { app: null },
     platformAdmin: { admins: [] },
@@ -63,10 +62,21 @@ const localPassport: ApiOptions["passport"] = {
     budget: { loginAttempts: 5, resetAttempts: 5, windowMs: 60000 },
 }
 
-const localIdentityAuth: ApiOptions["identityAuth"] = {
+const localIdentityAuth: ApiOptions["identityAuth"] = { inviteTtlSeconds: 60 }
+
+/** Mail for a proof: a sink address nothing listens on, and the settings of the app's own mail. */
+const localMail: ApiOptions["mail"] = {
+    host: "127.0.0.1",
+    port: 2525,
+    security: "none",
+    from: { name: "World", address: "no-reply@world.invalid" },
+    helloName: "world.invalid",
     webOrigin: SITE,
+    brandName: "World",
+    defaultLanguage: "en",
+    confirmTtlSeconds: 60,
     resetTtlSeconds: 60,
-    inviteTtlSeconds: 60,
+    allowPrivateHosts: false,
 }
 
 /** An AI pool with no keys: no router and no gateway are registered, so the api boots and its AI callers fall back without a provider call. */
@@ -104,6 +114,7 @@ const localApiOptions = (): ApiOptions => ({
     aiGateway: keylessAiGateway,
     passport: localPassport,
     identityAuth: localIdentityAuth,
+    mail: localMail,
     documents: {
         driveBase: "https://drive.invalid",
         oauthBase: null,
