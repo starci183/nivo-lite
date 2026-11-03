@@ -810,7 +810,7 @@ environments:
         version: 1
         where: secrets/seeds-test-accounts
         keys: [TEST_OWNER_EMAIL, TEST_OWNER_PASSWORD]
-        recipientPolicy: SOPS/age, one member (seeds-test-accounts.enc.yaml) for the ONE production test account (owner decision): the address and password of the owner seat the seed test-accounts creates; sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time. Not sealed yet: the owner seals the values himself.
+        recipientPolicy: SOPS/age, one member (seeds-test-accounts.enc.yaml) for the ONE production test account (owner decision), the address and password of the owner seat the seed test-accounts creates; sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time. Not sealed yet, the owner seals the values himself.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the operator CLI receives the values at seed time, never an argument or a log.
       - name: seeds-nivo-workspace
         runtimeName: nivo-custody-seeds-nivo-workspace-v1
