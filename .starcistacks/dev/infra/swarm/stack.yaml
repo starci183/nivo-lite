@@ -37,11 +37,12 @@ services:
       QUEUE_REDIS_PREFIX: nivo
       REALTIME_HUB: redis
       REALTIME_REDIS_PREFIX: nivo-realtime
-      MAIL_HOST: nivo-mail
-      MAIL_PORT: "1025"
-      MAIL_SECURITY: none
-      MAIL_FROM: no-reply@nivo.localhost
+      # Platform mail is the owner own SMTP server, the same as production: MAIL_HOST, MAIL_USER, MAIL_PASSWORD and MAIL_FROM are the sealed
+      # dev member mail (pointers in the untracked api.dev.env); the rest is plain configuration. mail-catcher.override.yaml is the test-run override.
+      MAIL_PORT: "587"
+      MAIL_SECURITY: starttls
       MAIL_FROM_NAME: NIVO
+      MAIL_DEFAULT_LANGUAGE: en
     extra_hosts:
       - host.docker.internal:host-gateway
     healthcheck:
@@ -169,33 +170,6 @@ services:
       placement: { constraints: [node.role == manager] }
       update_config: { parallelism: 1, order: stop-first, failure_action: rollback, monitor: 30s }
       rollback_config: { parallelism: 1, order: stop-first, monitor: 30s }
-      restart_policy: { condition: any, delay: 5s }
-
-  # The development mail catcher (Mailpit, the sink the harness lite starter runs for sign-in mail): the api sends the confirmation, reset and
-  # invitation mail to nivo-mail:1025 with no login and no encryption, and reads it at http://mail.localhost. Memory only: a restart empties the inbox.
-  nivo-mail:
-    image: axllent/mailpit:v1.31.6@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
-    environment:
-      MP_SMTP_BIND_ADDR: 0.0.0.0:1025
-      MP_UI_BIND_ADDR: 0.0.0.0:8025
-      MP_MAX_MESSAGES: "500"
-    healthcheck:
-      test: ["CMD", "/mailpit", "readyz"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 5s
-    deploy:
-      replicas: 1
-      labels:
-        traefik.enable: "true"
-        traefik.http.routers.dev-mail.entrypoints: web
-        traefik.http.routers.dev-mail.rule: Host(`mail.localhost`)
-        traefik.http.routers.dev-mail.priority: "100"
-        traefik.http.routers.dev-mail.service: dev-mail
-        traefik.http.services.dev-mail.loadbalancer.server.port: "8025"
-      update_config: { order: stop-first, failure_action: rollback, monitor: 30s }
-      rollback_config: { order: stop-first, monitor: 30s }
       restart_policy: { condition: any, delay: 5s }
 
   ingress:

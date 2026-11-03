@@ -84,8 +84,8 @@ components:
   nivo-mail:
     role: service
     image: axllent/mailpit:v1.31.6@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
-    compose: infra/swarm/stack.yaml
-    purpose: The development mail catcher (Mailpit, the harness lite sink); the api sends sign-in and invitation mail to nivo-mail:1025 with no login and no encryption, and the inbox is read at http://mail.localhost. Development only, memory only, never in production.
+    compose: infra/swarm/mail-catcher.override.yaml
+    purpose: The development mail catcher (Mailpit, the harness lite sink), a TEST-RUN OVERRIDE the A-E kit adds as a second compose file; the default dev mail is the owner SMTP server. The api then sends to nivo-mail:1025 with no login and no encryption and the inbox is read at http://mail.localhost. Development only, memory only, never in production.
     required: false
   db:
     role: stateful
@@ -225,6 +225,13 @@ environments:
         version: 1
         where: secrets/auth
         recipientPolicy: SOPS/age, one member per provider (auth.enc.yaml), sealed to the owner key per .sops.yaml; keys AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
+      - name: mail
+        runtimeName: nivo-dev-mail-v1
+        version: 1
+        where: secrets/mail
+        keys: [MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
+        recipientPolicy: SOPS/age, one member per provider (mail.enc.yaml), sealed to the owner key per .sops.yaml; keys MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM of the owner own SMTP server (the same server as production). MAIL_PORT, MAIL_SECURITY, MAIL_FROM_NAME, MAIL_DEFAULT_LANGUAGE and AUTH_WEB_ORIGIN are plain configuration in infra/swarm/stack.yaml.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
       - name: ai
         runtimeName: nivo-dev-ai-v1
@@ -415,6 +422,13 @@ environments:
         where: secrets/test-accounts
         recipientPolicy: SOPS/age, one member per provider (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys DEMO_EMAIL, DEMO_PASSWORD, DEMO_STAFF_PASSWORD, READY_OWNER_EMAIL, READY_OWNER_PASSWORD, READY_STAFF_EMAIL, READY_STAFF_PASSWORD.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: seeds-nivo-workspace
+        runtimeName: nivo-custody-seeds-nivo-workspace-v1
+        version: 1
+        where: secrets/seeds-nivo-workspace
+        keys: [WORKSPACE_SMTP_HOST, WORKSPACE_SMTP_PORT, WORKSPACE_SMTP_USER, WORKSPACE_SMTP_PASSWORD, WORKSPACE_SMTP_FROM, WORKSPACE_OWNER_EMAIL]
+        recipientPolicy: SOPS/age, one member (seeds-nivo-workspace.enc.yaml) for the seeded NIVO management workspace (its own per-workspace SMTP connection and its owner address); sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the operator CLI receives the values at seed time, never an argument or a log.
       - name: channel-token-key
         member: nivo
         key: CHANNEL_TOKEN_KEY
