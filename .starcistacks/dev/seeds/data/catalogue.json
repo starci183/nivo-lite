@@ -1,0 +1,10 @@
+{
+  "schema": "nivo/catalogue-seed@1",
+  "items": [
+    { "sku": "CHAU-MINI", "name": "Chậu hoa mini", "unit": "chậu", "sellPriceVnd": 5000 },
+    { "sku": "BO-HONG-20", "name": "Bó hồng đỏ 20 bông", "unit": "bó", "sellPriceVnd": 350000 },
+    { "sku": "GIO-CHUC-MUNG", "name": "Giỏ hoa chúc mừng", "unit": "giỏ", "sellPriceVnd": 800000 },
+    { "sku": "LAN-HO-DIEP-3", "name": "Lan hồ điệp 3 cành", "unit": "chậu", "sellPriceVnd": 1200000 },
+    { "sku": "KE-KHAI-TRUONG", "name": "Kệ hoa khai trương", "unit": "kệ", "sellPriceVnd": 2500000 }
+  ]
+}

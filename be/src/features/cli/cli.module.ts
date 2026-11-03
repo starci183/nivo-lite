@@ -8,6 +8,7 @@ import { MailCliModule } from "./mail/mail.module"
 import { MigrateModule } from "./migrate/migrate.module"
 import { PruneWorkspacesModule } from "./prune-workspaces/prune-workspaces.module"
 import { SeedModule } from "./seed/seed.module"
+import { SeedCatalogueModule } from "./seed-catalogue/seed-catalogue.module"
 import { SeedKnowledgeModule } from "./seed-knowledge/seed-knowledge.module"
 import { SeedAutomationsModule } from "./seed-automations/seed-automations.module"
 import { SeedManagementModule } from "./seed-management/seed-management.module"
@@ -28,6 +29,7 @@ import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
         MigrateModule.register({}),
         PruneWorkspacesModule.register({}),
         SeedModule.register({}),
+        SeedCatalogueModule.register({}),
         SeedKnowledgeModule.register({}),
         SeedManagementModule.register({}),
         SeedMediaModule.register({}),
