@@ -16,7 +16,8 @@ import { cursorOf } from "./connection-poll.policy"
 import { ConnectionPollError, ConnectionPollErrorCode } from "./errors/connection-poll.error"
 import { PollLimiterService } from "./poll-limiter.service"
 import { PollOwnerNoticeService } from "./poll-owner-notice.service"
-import { interleavedByWorkspace, jittered, planAfterFailure, planAfterRead, probeOf } from "./poll-schedule.policy"
+import { authReasonOf, interleavedByWorkspace, jittered, planAfterFailure, planAfterRead, probeOf } from "./poll-schedule.policy"
+import type { PollFailure } from "./connection-poll.contracts"
 import type { PollPlan } from "./poll-schedule.policy"
 import { PollScheduleService } from "./poll-schedule.service"
 import type { DueConnection } from "./poll-schedule.service"
@@ -180,16 +181,16 @@ export class PollSchedulerService {
         tally.fatal += failure.kind === "fatal" ? 1 : 0
         const plan = planAfterFailure(row, failure, now, this.options.schedule, unit)
         await this.schedule.settle(row.connectionId, plan)
-        await this.report(record, failure.kind, plan, now)
+        await this.report(record, failure, plan, now)
     }
 
-    private async report(record: ConnectionRecord, kind: string, plan: PollPlan, now: number): Promise<void> {
+    private async report(record: ConnectionRecord, failure: PollFailure, plan: PollPlan, now: number): Promise<void> {
         if (plan.breakerState === "open") {
-            this.logger.warn(ConnectionPollLogEvent.BreakerOpened, { connectionId: record.id, provider: record.provider, kind })
+            this.logger.warn(ConnectionPollLogEvent.BreakerOpened, { connectionId: record.id, provider: record.provider, kind: failure.kind })
         }
         if (!plan.raiseOwnerNotice) return
         this.logger.warn(ConnectionPollLogEvent.NeedsReauth, { connectionId: record.id, provider: record.provider })
-        await this.notice.needsReauth(record, now)
+        await this.notice.needsReauth(record, now, authReasonOf(failure))
     }
 
     private defer(connectionId: string, afterMs: number): Promise<void> {

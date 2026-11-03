@@ -2,6 +2,7 @@ import type { PollFailure } from "./connection-poll.contracts"
 import type { PollScheduleOptions, PollScheduleRow } from "./poll-schedule.contracts"
 import {
     DEFAULT_POLL_SCHEDULE,
+    authReasonOf,
     backoffMs,
     cooldownMs,
     intervalFor,
@@ -307,5 +308,16 @@ describe("interleavedByWorkspace", () => {
 
     it("answers nothing for nothing", () => {
         expect(interleavedByWorkspace([])).toEqual([])
+    })
+})
+
+describe("authReasonOf", () => {
+    it("names why a refusal happened", () => {
+        expect(authReasonOf({ kind: "auth_failed", reason: "permission" })).toBe("permission")
+        expect(authReasonOf({ kind: "auth_failed" })).toBeUndefined()
+    })
+
+    it("names nothing for a failure that is not a refusal", () => {
+        expect(authReasonOf({ kind: "transient" })).toBeUndefined()
     })
 })
