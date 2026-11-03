@@ -175,7 +175,7 @@ services:
       # Where the nivo-bridge plugin posts a tool call: the api on the private `agents` network. OPENCLAW_BRIDGE_SECRET comes from /run/secrets
       # (the runtime wrapper exports the STARCI_SECRETS it names besides the gateway token).
       OPENCLAW_BRIDGE_URL: http://nivo-api:8787/agent-tools
-      STARCI_SECRETS: OPENCLAW_BRIDGE_SECRET STARCI_AI_KEY
+      STARCI_SECRETS: "OPENCLAW_BRIDGE_SECRET STARCI_AI_KEY"
       OPENCLAW_PROVIDER: nivo-ai
     volumes:
       - openclaw-data:/home/node/.openclaw
