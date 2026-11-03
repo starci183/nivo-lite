@@ -66,6 +66,7 @@ const requestOf = (act: string, overrides: Partial<NodeRunRequest> = {}): NodeRu
     turn: EXAMPLE_TURN,
     grant: { rights: [READ_ORDERS, WRITE_ORDERS] },
     effects: new Map([[notify.id, notify as unknown as typeof notify]]),
+    tools: new Map(),
     key: "run-1:step",
     ...overrides,
 })

@@ -16,6 +16,26 @@ export interface EffectDefinition<P extends z.ZodType = z.ZodType> extends Effec
     readonly entry: "effect"
 }
 
+/**
+ * What `defineTool` takes: a NIVO MCP tool a node may call, named by capability (`payment.instruction`), never by provider. The host
+ * routes it through the NIVO MCP door to whatever provider the workspace connected.
+ */
+export interface ToolConfig<A extends z.ZodType, R extends z.ZodType> {
+    readonly id: Namespaced
+    readonly title: SpecText
+    readonly args: A
+    readonly result: R
+    /** True when a call changes the world; a condition node may only call tools that do not. */
+    readonly mutates: boolean
+    /** The agent's grant must cover these, besides naming the tool. */
+    readonly rights: ReadonlyArray<DataRight>
+}
+
+/** A tool definition. */
+export interface ToolDefinition<A extends z.ZodType = z.ZodType, R extends z.ZodType = z.ZodType> extends ToolConfig<A, R> {
+    readonly entry: "tool"
+}
+
 /** What `defineDataKind` takes: a kind of record the host's data ports serve, and the fields a right may name. */
 export interface DataKindConfig<F extends z.ZodObject> {
     /** Kebab-case, not namespaced: the name rights use (`order`, `sales-lead`). */

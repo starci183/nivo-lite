@@ -10,7 +10,7 @@ export const BRANCH_FIELD = "branch"
 const holdsBranch = (output: z.ZodType): boolean => output instanceof z.ZodObject && BRANCH_FIELD in output.shape
 
 /**
- * Defines an executable step. Throws `SdkDefinitionError` at module load: `ID_MALFORMED` for a bad node or effect id,
+ * Defines an executable step. Throws `SdkDefinitionError` at module load: `ID_MALFORMED` for a bad node, effect or tool id,
  * `NODE_CONDITION_BRANCH` for a condition whose output holds no `branch`, `NODE_CONDITION_EFFECTS` for a condition that declares effects:
  * a condition is pure, so a graph can re-run its branching at no cost.
  */
@@ -18,7 +18,7 @@ export const defineNode = <I extends z.ZodType, O extends z.ZodType, P extends z
     config: NodeConfig<I, O, P>,
 ): NodeDefinition<I, O, P> => {
     assertNamespaced(config.id)
-    for (const effect of config.effects) assertNamespaced(effect)
+    for (const name of [...config.effects, ...(config.tools ?? [])]) assertNamespaced(name)
     if (config.role === "condition" && !holdsBranch(config.output)) {
         throw new SdkDefinitionError("NODE_CONDITION_BRANCH", config.id)
     }
