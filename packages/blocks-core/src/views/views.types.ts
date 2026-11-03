@@ -1,4 +1,4 @@
-import type { BadgeTone } from "@starci/grammar/common"
+import type { BadgeTone } from "@starci/grammar/common" with { "resolution-mode": "import" }
 
 /** A recorded dashboard item linking to its existing subject. */
 export interface DashboardRow {
@@ -77,10 +77,10 @@ export interface TraceView {
 export interface CommandView {
     readonly id: string
     readonly label: string
-    readonly isPending?: boolean
-    readonly isDisabled?: boolean
-    readonly disabledReason?: string
-    readonly isDanger?: boolean
+    readonly isPending?: boolean | undefined
+    readonly isDisabled?: boolean | undefined
+    readonly disabledReason?: string | undefined
+    readonly isDanger?: boolean | undefined
 }
 
 /** One state or age mark on a row. */
