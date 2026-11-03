@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import { AGENT_TAG_RIGHTS } from "@modules/domain/agent-work"
+import { AgentTagEffectService } from "./agent-tag-effect.service"
 import type { DynamicModule } from "@nestjs/common"
 import { OFFICE_ROOMS_AGENTS } from "@modules/domain/office-rooms"
 import { AgentsQueueModule } from "@modules/queues/agents"
@@ -78,6 +79,7 @@ export class AgentsModule extends ConfigurableModuleClass {
                           { provide: AGENTS_WORK, useExisting: options.ports.work },
                           { provide: AGENTS_KNOWLEDGE, useClass: options.ports.knowledge },
                           AgentLensesService,
+                          AgentTagEffectService,
                       ],
                       exports: [AGENTS_KNOWLEDGE, AgentLensesService],
                   }

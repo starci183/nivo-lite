@@ -1,6 +1,8 @@
 import type { GraphSpecNode, GraphTagSource } from "@nivo-lite/agent-sdk/graph"
 import type { NodeSaga } from "@nivo-lite/agent-sdk/node"
 import type { StepEffect, StepJson, StepSpec } from "@modules/domain/agent-runs"
+import { tagPayloadOf } from "@modules/domain/agent-work"
+import type { AgentWakeContext } from "@modules/domain/agent-work"
 import type { Locale } from "@modules/platform/i18n"
 
 /** The step kind a node of a graph runs as. */
@@ -15,7 +17,7 @@ const DEFAULT_LOCALE: Locale = "vi"
 /** A wake as the flow reads it: its source, the context its door wrote and the member behind it. */
 export interface FlowWake {
     readonly source: string
-    readonly context: object
+    readonly context: AgentWakeContext
     readonly actorMemberId: string | null
 }
 
@@ -26,40 +28,34 @@ export interface GraphNodeStepInput {
     readonly trigger: StepJson
 }
 
-/** A wake's context as plain members. */
-const membersOf = (context: object): Readonly<Record<string, unknown>> => Object.fromEntries(Object.entries(context))
-
-/** The plain data a tag handed over: the JSON object the wake keeps as text, or an empty object when it holds none or no object. */
-const tagDataOf = (text: unknown): StepJson => {
-    if (typeof text !== "string") return {}
-    try {
-        const parsed: unknown = JSON.parse(text)
-        return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? membersOf(parsed) : {}
-    } catch {
-        return {}
-    }
-}
-
 /**
- * Where a wake came from, in the words of a graph's tag trigger: a clock slot is a schedule, an internal event or a feed a system event,
- * an agent that tagged an agent, a person who wrote in a group a chats group, and a customer message or a tag on a conversation a channel.
+ * Where a wake came from, in the words of a graph's tag trigger: a clock slot is a schedule, an internal event or a system tag a system
+ * event, an agent that tagged an agent, a person who wrote in a group a chats group, and a customer message or a tag on a conversation a
+ * channel.
  */
-export const tagSourceOf = (wake: FlowWake): GraphTagSource => {
-    const context = membersOf(wake.context)
-    if (wake.source === "schedule") return "schedule"
-    if (wake.source === "internal" || context.tagSource !== undefined) return "system-event"
-    if (context.fromAgentId !== undefined) return "agent"
-    if (wake.actorMemberId !== null || context.authorUserId !== undefined) return "chats-group"
-    return wake.source === "customer" || context.conversationId !== undefined ? "channel" : "agent"
+export const tagSourceOf = ({ source, context, actorMemberId }: FlowWake): GraphTagSource => {
+    if (source === "schedule") return "schedule"
+    if (source === "internal" || context.tagSource !== undefined) return "system-event"
+    if (context.authorAgentId !== undefined) return "agent"
+    if (actorMemberId !== null || context.authorUserId !== undefined) return "chats-group"
+    return source === "customer" || context.conversationId !== undefined ? "channel" : "agent"
 }
 
 /**
- * The trigger scope the nodes read as `trigger.*`: every member of the wake's context as its door wrote it, the tag's data as
- * `context`, where the wake came from as `source`, and the language as `locale`.
+ * The trigger scope the nodes read as `trigger.*`: every member of the wake's flat context as its door wrote it, the tag's plain data
+ * as `context`, the system source that tagged (or where the wake came from) as `source`, where it came from as `origin`, and the
+ * language as `locale`.
  */
 export const triggerScopeOf = (wake: FlowWake): StepJson => {
-    const { tagContext, ...members } = membersOf(wake.context)
-    return { ...members, context: tagDataOf(tagContext), source: tagSourceOf(wake), locale: localeOf(members) }
+    const members = Object.fromEntries(Object.entries(wake.context).filter(([name]) => name !== "tagContext"))
+    const origin = tagSourceOf(wake)
+    return {
+        ...members,
+        context: tagPayloadOf(wake.context),
+        source: wake.context.tagSource ?? origin,
+        origin,
+        locale: localeOf(members),
+    }
 }
 
 /** The language of a trigger scope; Vietnamese when it names none the product speaks. */
