@@ -242,11 +242,16 @@ packages/
 
 - **Naming**: directory `packages/module-<key>`, package `@nivo/module-<key>`, key = catalogue key = workbench key = message namespace.
   Constants: `<KEY>_TEMPLATE`, `<KEY>_SERVER`, `<KEY>_WORKBENCH`, `<KEY>_VIEW_IDS`; components `<Key><Thing>`, pure halves `<Key>…View`.
-- **package.json**: `private`, no `"type"` (the back end compiles CommonJS under `nodenext`), `exports` per subpath to
-  `dist/<subpath>/index.{js,d.ts}`, `build: tsc -p tsconfig.build.json` with `isolatedDeclarations`, `dependencies: { "@nivo/agent-sdk": "*" }`,
-  `peerDependencies: react, @starci/grammar` at the stack pins.
-- **Build**: root `workspaces` gains `packages/*`; turbo `build` already depends on `^build`, so `agent-sdk` → `module-*` → `modules`
-  build before `fe/apps/*` and the back end; the back end's build resolves `@nivo/*` to `dist` (its checks resolve the source).
+- **package.json**: `private`, no `"type"`, `exports` per subpath; the React-free subpaths point at `dist/<subpath>/index.{js,d.ts}`
+  (CommonJS, `tsconfig.build.json`, module `node16`, for the back end), `./workbench` at `dist/esm/workbench/index.{js,d.ts}` (ES modules,
+  `tsconfig.build.workbench.json`, for the front end, because `@starci/grammar` is ESM only); `build` runs both, both with
+  `isolatedDeclarations`; `dependencies: { "@nivo/agent-sdk": "*" }`; `peerDependencies: react, @starci/grammar` at the stack pins. A
+  React-free file imports a Grammar type with `with { "resolution-mode": "import" }`.
+- **Build and resolution**: root `workspaces` gains `packages/*` (done; the lockfile carries the three links), so `npm ci` links
+  `node_modules/@nivo/*` and the back end resolves the packages like any dependency: no tsconfig path and no jest alias (the jest preset
+  admits none). turbo `build` depends on `^build`, so `agent-sdk` → `module-*` → `modules` build first; the back end's `typecheck`,
+  `test` and `build:be` must run after that build (harness item 5). The web app reads the sources through its own tsconfig paths, which
+  Next compiles.
 - **Registry**: adding a module is one line in `packages/modules/src/template/index.ts` and one in `manifest/index.ts`. The app's back
   end builds `MODULE_CATALOG` from `templatesOf(MODULE_SERVERS)` plus the modules not yet moved; the front end reads
   `MODULE_WORKBENCHES` and pairs each key with its component.
@@ -291,8 +296,11 @@ Follow it for one module per agent; the Loyalty commits on `feat/agent-sdk-workb
    current component left in place. Replace the copied `DashboardCards` and `Explanation` by `WorkbenchDashboardCards` and
    `WorkbenchExplanation`. Give every exported component `: ReactNode`.
 7. **App wiring.** In `fe/apps/web/src/modules/types/index.ts` re-export the moved types from `@nivo/module-<key>/workbench`; the
-   connected blocks import the package's views. Add the tsconfig paths `@nivo/module-<key>/*` to `fe/apps/web/tsconfig.json`,
-   `be/tsconfig.json` (source) and `be/tsconfig.build.json` (dist) until the workspace link replaces them.
+   connected blocks import the package's views. Add the path `@nivo/module-<key>/*` to `fe/apps/web/tsconfig.json` and the package to
+   `packages/modules/package.json` dependencies, then `npm install --package-lock-only --ignore-scripts` (the lockfile alone, never
+   through the shared node_modules). In a lane worktree whose `node_modules` is a junction, link locally for the checks: junctions
+   `be/node_modules/@nivo/<pkg>` and `packages/node_modules/@nivo/<pkg>` to `packages/<pkg>` (both ignored by git), and build the
+   packages (`npm run build` in each, in dependency order).
 8. **Prove.** `tsc --noEmit` in `be/`, `fe/apps/web`, and every package; `tsc -p tsconfig.build.json` in each package (isolated
    declarations); the package specs at 100% per file; `npx starci app check --gate lint --json` with no new finding outside the
    expected harness items; the back-end build still emits `dist/apps/api/src/main.js`.
@@ -312,9 +320,9 @@ Follow it for one module per agent; the Loyalty commits on `feat/agent-sdk-workb
 4. **Coverage scope** (owner ruling 2, BE-TEST-13 / R273): `packages/*/src/**/*.ts` logic at 100% per file (excluding `*.types.ts`,
    `index.ts`, `*.spec.ts`), a `packages` component in `codecov.yml`, and `be/packages/*/**` leaves the `ignore` list for module packages;
    the unit jest project gains `packages/` roots (here proven with a scratch config).
-5. **Managed files**: `starci app sync` renders `be/tsconfig.json`, `be/tsconfig.build.json` (and the web tsconfig) with the `@nivo/*`
-   paths of the declared shared packages, or the root `workspaces` gains `packages/*` and the CI installs the links. Today the sync gate
-   reports the pilot's tsconfig paths as drift.
+5. **Managed scripts and CI order**: the rendered `typecheck`, `test` and `build:be` scripts (and the CI jobs) build `./packages/*` with
+   turbo before the back end runs, since the back end now imports the packages' `dist`; the rendered `lint` builds them too. The root
+   `workspaces` entry `packages/*` must be part of the package-scripts render so `starci app sync` keeps it.
 6. **Generator** `starci app add module <key>`: writes the package skeleton of the layout above, the two registry lines, the tsconfig
    paths and the spec files.
 7. **Hooks in worktrees**: a lane worktree has `core.hooksPath=.husky/_` but no `.husky/_`, so commits run no hook. The worktree setup

@@ -13,8 +13,8 @@
       "default": "./dist/module/index.js"
     },
     "./workbench": {
-      "types": "./dist/workbench/index.d.ts",
-      "default": "./dist/workbench/index.js"
+      "types": "./dist/esm/workbench/index.d.ts",
+      "default": "./dist/esm/workbench/index.js"
     },
     "./workbench/contract": {
       "types": "./dist/workbench/contract/index.d.ts",
@@ -22,7 +22,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.workbench.json",
     "typecheck": "tsc --noEmit --pretty false"
   },
   "peerDependencies": {

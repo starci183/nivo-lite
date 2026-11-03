@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist/esm",
+    "noEmit": false,
+    "declaration": true,
+    "isolatedDeclarations": true,
+    "types": [],
+    "paths": {
+      "@nivo/agent-sdk/*": ["../agent-sdk/dist/esm/*/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json"],
+  "exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
+}

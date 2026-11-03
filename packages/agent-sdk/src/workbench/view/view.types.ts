@@ -1,4 +1,4 @@
-import type { BadgeTone } from "@starci/grammar/common"
+import type { BadgeTone } from "@starci/grammar/common" with { "resolution-mode": "import" }
 import type { SlotPanelProps } from "../slot/slot.types"
 
 /** Where a list of waiting rows stands: a card on a card page, or an app-owned list inside a pane. */
