@@ -487,3 +487,53 @@ describe("AgentGraphsService.ensure (continued)", () => {
         )
     })
 })
+
+describe("AgentGraphsService.activeVersionIdOf", () => {
+    it("answers the id of the version that decides, reading no document, and none for an agent with no graph or no version", async () => {
+        const withVersion = await build(mockEntityManager({ findOne: [AgentGraphEntity, graphRow("enforced")] }))
+        const noVersion = await build(
+            mockEntityManager({ findOne: [AgentGraphEntity, { ...graphRow("enforced"), activeVersionId: null }] }),
+        )
+        const noGraph = await build(mockEntityManager({ findOne: [AgentGraphEntity, null] }))
+
+        await expect(withVersion.activeVersionIdOf("ws-1", "agent-1")).resolves.toEqual(expect.any(String))
+        await expect(noVersion.activeVersionIdOf("ws-1", "agent-1")).resolves.toBeNull()
+        await expect(noGraph.activeVersionIdOf("ws-1", "agent-1")).resolves.toBeNull()
+    })
+})
+
+describe("AgentGraphsService.hasLiveFlow", () => {
+    it("is true when the live version carries a flow of nodes, false with none or with no graph", async () => {
+        const flow = {
+            ...DOCUMENT,
+            flow: {
+                schema: "nivo/agent-graph@1",
+                moduleKey: "chatbot",
+                trigger: { kind: "tag", sources: ["channel"] },
+                grant: { rights: [], tools: [], effects: [] },
+                nodes: [{ key: "end", kind: "output", step: "stop" }],
+            },
+        } as unknown as typeof DOCUMENT
+        const withFlow = await build(
+            mockEntityManager({
+                findOne: [
+                    [AgentGraphEntity, graphRow("enforced")],
+                    [AgentGraphVersionEntity, versionRow(2, flow)],
+                ],
+            }),
+        )
+        const rulesOnly = await build(
+            mockEntityManager({
+                findOne: [
+                    [AgentGraphEntity, graphRow("enforced")],
+                    [AgentGraphVersionEntity, versionRow()],
+                ],
+            }),
+        )
+        const noGraph = await build(mockEntityManager({ findOne: [AgentGraphEntity, null] }))
+
+        await expect(withFlow.hasLiveFlow("ws-1", "agent-1")).resolves.toBe(true)
+        await expect(rulesOnly.hasLiveFlow("ws-1", "agent-1")).resolves.toBe(false)
+        await expect(noGraph.hasLiveFlow("ws-1", "agent-1")).resolves.toBe(false)
+    })
+})

@@ -1,7 +1,11 @@
 {
   "schema": "nivo/agent-graph@1",
   "moduleKey": "chatbot",
-  "trigger": { "kind": "tag", "sources": ["channel", "chats-group", "agent", "system-event", "schedule"] },
+  "trigger": {
+    "kind": "tag",
+    "sources": ["channel", "chats-group", "agent", "system-event", "schedule"],
+    "burst": { "channel": { "window": "6s", "maxWait": "20s" } }
+  },
   "grant": {
     "rights": [
       { "kind": "knowledge-document", "access": "read", "scope": "workspace", "fields": ["id", "title", "body", "visibility"] },

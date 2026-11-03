@@ -1,4 +1,8 @@
 import { wakeSources } from "./agent-wake-source.policy"
+import { wakeOriginOf } from "./wake-origin.policy"
+import type { WakeOrigin, WakeOriginInput } from "./wake-origin.policy"
+import type { AgentBurstSetting } from "./agent-work.port"
+import type { AgentWorkOptions } from "./agent-work.options"
 import type {
     AgentWakeContext,
     AgentWakeSource,
@@ -105,6 +109,15 @@ export const wakeProgressOf = (status: AgentWakeStatus): "queued" | "running" | 
     return status === "failed" || status === "dead" ? "failed" : "queued"
 }
 
+/** The word a flow's trigger uses for each origin of a wake. */
+const BURST_SOURCES: Readonly<Record<WakeOrigin, string>> = {
+    channel: "channel",
+    person: "chats-group",
+    agent: "agent",
+    event: "system-event",
+    schedule: "schedule",
+}
+
 /** The burst window of a conversation when the app root names none, milliseconds. */
 export const DEFAULT_DEBOUNCE_MS = 6000
 
@@ -118,6 +131,14 @@ export const debounceMsOf = (named: number | undefined): number => Math.max(0, n
 export const debounceMaxMsOf = (named: number | undefined, windowMs: number): number =>
     Math.max(windowMs, named ?? DEFAULT_DEBOUNCE_MAX_MS)
 
-/** How long the drain of a new wake waits: the burst window for a wake locked to a conversation, none for any other. */
-export const drainDelayMsOf = (scopeKey: string, windowMs: number): number =>
-    scopeKey.startsWith(CONVERSATION_SCOPE_PREFIX) ? windowMs : 0
+/** The kind of tag a wake is, as a flow's trigger names it: the origin of the wake in the words of the graph. */
+export const burstSourceOf = (wake: WakeOriginInput): string => BURST_SOURCES[wakeOriginOf(wake)]
+
+/** The window and the longest wait a wake takes: what its flow asked, else the app's defaults; the wait is never shorter than the window. */
+export const burstFor = (
+    asked: AgentBurstSetting | null,
+    options: AgentWorkOptions | null,
+): { readonly windowMs: number; readonly maxWaitMs: number } => {
+    const windowMs = asked?.windowMs ?? debounceMsOf(options?.debounceMs)
+    return { windowMs, maxWaitMs: debounceMaxMsOf(asked?.maxWaitMs ?? options?.debounceMaxMs, windowMs) }
+}

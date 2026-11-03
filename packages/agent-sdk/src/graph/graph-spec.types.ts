@@ -8,10 +8,21 @@ export type GraphSpecSchemaId = "nivo/agent-graph@1"
 /** What can tag an agent: a customer channel, a /chats group, another agent, a system event or a schedule. */
 export type GraphTagSource = "channel" | "chats-group" | "agent" | "system-event" | "schedule"
 
-/** What wakes the graph: a tag, from any of its sources; one run per tag. */
+/**
+ * How long a burst of tags from one source is gathered into one run: the quiet time after the last tag before the run starts (`window`,
+ * "0s" turns it off), and the longest the burst may keep the run waiting from its first tag (`maxWait`, no shorter than the window).
+ * Durations are written like "1500ms", "6s" or "1m".
+ */
+export interface GraphBurst {
+    readonly window: string
+    readonly maxWait?: string | undefined
+}
+
+/** What wakes the graph: a tag, from any of its sources; one run per tag. A source without a `burst` takes the app's default. */
 export interface GraphSpecTrigger {
     readonly kind: "tag"
     readonly sources: ReadonlyArray<GraphTagSource>
+    readonly burst?: { readonly [Source in GraphTagSource]?: GraphBurst | undefined } | undefined
 }
 
 /** The minimum an agent holds to run its graph: data rights, NIVO MCP tools and effects. Everything else is denied. */
@@ -55,6 +66,7 @@ export type GraphSpecProblemCode =
     | "GRAPH_EFFECTS_MISMATCH"
     | "GRAPH_TOOLS_MISMATCH"
     | "GRAPH_COMPENSABLE_AFTER_PIVOT"
+    | "GRAPH_BURST_INVALID"
 
 /** One problem of a graph spec and where it is: a node key, or a granted right, tool or effect. */
 export interface GraphSpecProblem {

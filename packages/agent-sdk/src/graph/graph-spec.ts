@@ -1,3 +1,4 @@
+import { burstIsSound } from "./graph-burst"
 import { BRANCH_FIELD, graphNodeProblems, inputSourcesOf, nodeSagaOf, TRIGGER_SOURCE } from "../node"
 import type { NodeDefinition, NodeIndex } from "../node"
 import type { DataRight } from "../rights/rights.types"
@@ -43,15 +44,18 @@ const shapeProblems = (spec: GraphSpec, nodes: ReadonlyMap<string, GraphSpecNode
     const first = spec.nodes[0]
     const reached = first === undefined ? new Set<string>() : reachedFrom(nodes, [first.key])
     return [
-        ...[...new Set(keys.filter((key, index) => keys.indexOf(key) !== index))].map(
-            (at): GraphSpecProblem => ({ code: "GRAPH_NODE_DUPLICATE", at }),
-        ),
+        ...[...new Set(keys.filter((key, index) => keys.indexOf(key) !== index))].map((at): GraphSpecProblem => ({
+            code: "GRAPH_NODE_DUPLICATE",
+            at,
+        })),
         ...spec.nodes.flatMap((node) =>
             edgesOf(node)
                 .filter((target) => !nodes.has(target))
                 .map((target): GraphSpecProblem => ({ code: "GRAPH_TARGET_UNKNOWN", at: `${node.key}->${target}` })),
         ),
-        ...keys.filter((key) => !reached.has(key)).map((at): GraphSpecProblem => ({ code: "GRAPH_NODE_UNREACHABLE", at })),
+        ...keys
+            .filter((key) => !reached.has(key))
+            .map((at): GraphSpecProblem => ({ code: "GRAPH_NODE_UNREACHABLE", at })),
     ]
 }
 
@@ -91,6 +95,16 @@ const sagaProblems = (
         .map((at): GraphSpecProblem => ({ code: "GRAPH_COMPENSABLE_AFTER_PIVOT", at }))
 }
 
+/** The problems of the trigger's burst: an entry that is not sound durations, or one for a source the trigger does not list. */
+const burstProblems = (spec: GraphSpec): ReadonlyArray<GraphSpecProblem> =>
+    Object.entries(spec.trigger.burst ?? {})
+        .filter(
+            ([source, burst]) =>
+                !spec.trigger.sources.some((listed) => listed === source) ||
+                (burst !== undefined && !burstIsSound(burst)),
+        )
+        .map(([at]): GraphSpecProblem => ({ code: "GRAPH_BURST_INVALID", at: `burst.${at}` }))
+
 /** What a node needs the agent to hold: its own rights and those of every effect and tool it may use. */
 const requiredRights = (node: NodeDefinition, index: NodeIndex): ReadonlyArray<DataRight> => [
     ...node.rights,
@@ -117,12 +131,10 @@ const minimumProblems = (
             .flatMap((right) => right.fields)
     return [
         ...spec.grant.rights.flatMap((granted) =>
-            surplus(granted.fields, fieldsOf(granted)).map(
-                (field): GraphSpecProblem => ({
-                    code: "GRAPH_GRANT_EXCESS",
-                    at: `${granted.kind}:${granted.access}.${field}`,
-                }),
-            ),
+            surplus(granted.fields, fieldsOf(granted)).map((field): GraphSpecProblem => ({
+                code: "GRAPH_GRANT_EXCESS",
+                at: `${granted.kind}:${granted.access}.${field}`,
+            })),
         ),
         ...surplus(spec.grant.effects, effects).map((at): GraphSpecProblem => ({ code: "GRAPH_GRANT_EXCESS", at })),
         ...surplus(spec.grant.tools, tools).map((at): GraphSpecProblem => ({ code: "GRAPH_GRANT_EXCESS", at })),
@@ -147,6 +159,7 @@ export const graphSpecProblems = (spec: GraphSpec, index: NodeIndex): ReadonlyAr
     const installed = working.flatMap((node) => index.nodes.get(node.step) ?? [])
     return [
         ...shapeProblems(spec, nodes),
+        ...burstProblems(spec),
         ...refProblems(spec, nodes),
         ...sagaProblems(spec, nodes, index),
         ...judged,

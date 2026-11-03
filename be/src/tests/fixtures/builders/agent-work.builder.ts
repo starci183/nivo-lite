@@ -127,6 +127,8 @@ export const agentWakeRowOf: (overrides?: Partial<AgentWakeEntity>) => AgentWake
     maxAttempts: 2,
     background: false,
     context: {},
+    burstWindowMs: null,
+    burstMaxMs: null,
     actorMemberId: null,
     status: "held",
     reason: "killed",

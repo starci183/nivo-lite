@@ -7,9 +7,10 @@ import { InjectAgentTurnQueue } from "@modules/queues/agent-turn"
 import type { AgentTurnQueue } from "@modules/queues/agent-turn"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
 import { wakeSources } from "./agent-wake-source.policy"
-import { InjectAgentWorkOptions } from "./agent-work.decorators"
-import { debounceMsOf, drainDelayMsOf, scopeKeyOf } from "./agent-work.policy"
+import { InjectAgentBurstPolicy, InjectAgentWorkOptions } from "./agent-work.decorators"
+import { burstFor, burstSourceOf, CONVERSATION_SCOPE_PREFIX, scopeKeyOf } from "./agent-work.policy"
 import type { AgentWorkOptions } from "./agent-work.options"
+import type { AgentBurstPolicy } from "./agent-work.port"
 import { AgentWakeEntity } from "./persistence/entities"
 import type { AgentWake } from "./agent-work.contracts"
 import type { OptionalWakeId } from "./agent-work-source.contracts"
@@ -33,6 +34,7 @@ export class AgentWakeService {
         @InjectAgentTurnQueue() private readonly queue: AgentTurnQueue,
         @InjectLogger() private readonly logger: Logger,
         @Optional() @InjectAgentWorkOptions() private readonly options: AgentWorkOptions | null = null,
+        @Optional() @InjectAgentBurstPolicy() private readonly bursts: AgentBurstPolicy | null = null,
     ) {}
 
     /** Writes the wake and its drain job in `tx`; answers false when the fact was already written, in which case nothing is enqueued. */
@@ -44,6 +46,7 @@ export class AgentWakeService {
     async write(tx: EntityManager, wake: AgentWake): Promise<OptionalWakeId> {
         const traits = wakeSources.of(wake.source)
         const scopeKey = wake.scopeKey ?? scopeKeyOf(wake.source, wake.context)
+        const burst = scopeKey.startsWith(CONVERSATION_SCOPE_PREFIX) ? await this.burstOf(wake) : null
         const inserted = await tx
             .createQueryBuilder(AgentWakeEntity, "w")
             .insert()
@@ -57,6 +60,8 @@ export class AgentWakeService {
                 maxAttempts: traits.maxAttempts,
                 background: traits.background,
                 context: wake.context,
+                burstWindowMs: burst?.windowMs ?? null,
+                burstMaxMs: burst?.maxWaitMs ?? null,
                 actorMemberId: wake.actorMemberId,
             })
             .orIgnore()
@@ -69,9 +74,23 @@ export class AgentWakeService {
             wake.source,
             wake.eventKey,
             tx,
-            drainDelayMsOf(scopeKey, debounceMsOf(this.options?.debounceMs)),
+            burst?.windowMs ?? 0,
         )
         this.logger.info(AgentWorkLogEvent.WakeWritten, { agentId: wake.agentId, source: wake.source, scopeKey })
         return id
+    }
+
+    /**
+     * What the wake waits for in its conversation, resolved once, when it is written: the live flow of the agent asks for it by the kind of
+     * tag the wake is, else the app's defaults apply.
+     */
+    private async burstOf(wake: AgentWake): Promise<{ readonly windowMs: number; readonly maxWaitMs: number }> {
+        const source = burstSourceOf({
+            source: wake.source,
+            context: wake.context,
+            actorMemberId: wake.actorMemberId,
+        })
+        const asked = (await this.bursts?.burstOf(wake.workspaceId, wake.agentId, source)) ?? null
+        return burstFor(asked, this.options)
     }
 }
