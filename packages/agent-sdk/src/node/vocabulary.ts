@@ -1,15 +1,15 @@
+import { SdkError } from "../sdk-error"
 import type { NodeDefinition, NodeRole } from "./node.types"
 
 /** The error of the registry: a stable code and the word that caused it. */
-export class VocabularyError extends Error {
+export class VocabularyError extends SdkError {
     /** The code. */
-    readonly code: "KIND_UNKNOWN" | "KIND_DUPLICATE"
+    declare readonly code: "KIND_UNKNOWN" | "KIND_DUPLICATE"
     /** The kind, step or provider that caused it. */
     readonly word: string
 
     constructor(code: "KIND_UNKNOWN" | "KIND_DUPLICATE", word: string) {
-        super(`${code}: ${word}`)
-        this.code = code
+        super(code, `${code}: ${word}`)
         this.word = word
     }
 }

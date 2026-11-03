@@ -11,16 +11,20 @@ FROM node:22.14.0-alpine3.21 AS manifests
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY fe fe
+COPY packages packages
 # The install stages hold manifests only, so a workspace `prepare` (it builds dist from sources) has nothing to compile; npm runs it for workspace
 # links even under --ignore-scripts. Drop it from these throwaway manifest copies; the build stages copy the sources and manifests back.
-RUN find fe -type f ! -name package.json -delete \
- && find fe -name package.json -exec node -e "const fs=require('fs');const f=process.argv[1];const p=JSON.parse(fs.readFileSync(f,'utf8'));if(p.scripts&&p.scripts.prepare){delete p.scripts.prepare;fs.writeFileSync(f,JSON.stringify(p,null,2))}" {} \;
+RUN find fe packages -type f ! -name package.json -delete \
+ && find fe packages -name package.json -exec node -e "const fs=require('fs');const f=process.argv[1];const p=JSON.parse(fs.readFileSync(f,'utf8'));if(p.scripts&&p.scripts.prepare){delete p.scripts.prepare;fs.writeFileSync(f,JSON.stringify(p,null,2))}" {} \;
 
 FROM node:22.14.0-alpine3.21 AS build
 WORKDIR /app
 COPY --from=manifests /app ./
 RUN npm ci --ignore-scripts
 
+# The back end imports the root packages (@nivo-lite/agent-sdk, @nivo-lite/modules, ...): `build:be` builds them first, through turbo.
+COPY turbo.json ./
+COPY packages packages
 COPY be/tsconfig.json be/tsconfig.build.json be/
 COPY be/src be/src
 COPY be/apps/mcp be/apps/mcp
@@ -34,6 +38,9 @@ ENV PORT=8790
 
 COPY --from=manifests /app ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+
+# The workspace links of the root packages point here: their package.json files and the dist the build produced.
+COPY --from=build /app/packages packages
 
 COPY --from=build /app/be/dist be/dist
 

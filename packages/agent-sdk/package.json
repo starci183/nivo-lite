@@ -71,5 +71,15 @@
   "devDependencies": {
     "@types/react": "19.3.0",
     "typescript": "5.9.3"
+  },
+  "starci": {
+    "errorBase": {
+      "name": "SdkError",
+      "file": "src/sdk-error.ts"
+    },
+    "outcome": {
+      "name": "WorkbenchOutcome",
+      "file": "src/workbench/host/host.types.ts"
+    }
   }
 }
