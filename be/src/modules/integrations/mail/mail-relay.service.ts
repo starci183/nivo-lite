@@ -31,15 +31,16 @@ export class MailRelayService {
     }
 
     /** Sends one message through a workspace SMTP account. Throws a MailError. */
-    async sendThroughSmtp(config: SmtpConfig, delivery: MailDelivery): Promise<SentMail> {
+    sendThroughSmtp(config: SmtpConfig, delivery: MailDelivery): Promise<SentMail> {
         const mailer = this.mailers(this.optionsOf(config))
-        try {
-            return await mailer.send(delivery)
-        } catch (cause) {
-            throw mailErrorOf(cause)
-        } finally {
-            mailer.onModuleDestroy()
-        }
+        return mailer
+            .send(delivery)
+            .catch((cause: unknown) => {
+                throw mailErrorOf(cause)
+            })
+            .finally(() => {
+                mailer.onModuleDestroy()
+            })
     }
 
     /** Sends one owner notice through the platform sender. Throws a MailError. */

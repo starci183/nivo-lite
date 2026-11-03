@@ -50,7 +50,13 @@ export class IdentityInviteService {
             const next = this.nextPathOf(redirectTo)
             const known = await accountDoors.userByEmail(this.entityManager, address)
             if (known !== undefined) {
-                await this.send(address, inviteExistingMail(this.mail.defaultLanguage, { brand: this.mail.brandName, url: `${this.mail.webOrigin}${next}` }))
+                await this.send(
+                    address,
+                    inviteExistingMail(this.mail.defaultLanguage, {
+                        brand: this.mail.brandName,
+                        url: `${this.mail.webOrigin}${next}`,
+                    }),
+                )
                 return "existing"
             }
             const created = await accountDoors.createUser(this.entityManager, {
@@ -65,7 +71,10 @@ export class IdentityInviteService {
             const token = await this.mint(created)
             const url = `${this.mail.webOrigin}/auth/reset?token=${encodeURIComponent(token)}&next=${encodeURIComponent(next)}`
             const hours = Math.ceil(this.options.inviteTtlSeconds / SECONDS_PER_HOUR)
-            await this.send(address, inviteAccountMail(this.mail.defaultLanguage, { brand: this.mail.brandName, url, hours }))
+            await this.send(
+                address,
+                inviteAccountMail(this.mail.defaultLanguage, { brand: this.mail.brandName, url, hours }),
+            )
             return "invited"
         } catch (cause) {
             this.logger.error(IdentityAuthLogEvent.MailFailed, cause, { kind: "invite" })

@@ -145,7 +145,9 @@ describe("IdentityAccountsService / deliverInvite", () => {
         const { service, invites } = await build([])
         invites.deliver.mockResolvedValue("invited")
 
-        await expect(service.deliverInvite("An@Example.test", "https://app.example.test/invite/token-1")).resolves.toBe("invited")
+        await expect(service.deliverInvite("An@Example.test", "https://app.example.test/invite/token-1")).resolves.toBe(
+            "invited",
+        )
 
         expect(invites.deliver).toHaveBeenCalledWith("An@Example.test", "https://app.example.test/invite/token-1")
     })
@@ -300,9 +302,7 @@ describe("IdentityAccountsService / principal sessions and tokens", () => {
 
     it("refuses a wrong password without opening a session, and lets an unexpected failure through", async () => {
         const { service, authenticator, sessions } = await build([])
-        authenticator.verifyPassword.mockRejectedValueOnce(
-            new IdentityError({ code: IdentityErrorCode.PairRefused }),
-        )
+        authenticator.verifyPassword.mockRejectedValueOnce(new IdentityError({ code: IdentityErrorCode.PairRefused }))
 
         await expect(service.openPasswordPrincipal("an@example.test", "wrong")).resolves.toBeNull()
         expect(sessions.start).not.toHaveBeenCalled()

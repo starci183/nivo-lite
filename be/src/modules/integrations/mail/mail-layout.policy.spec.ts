@@ -42,7 +42,12 @@ describe("mail-layout policy / renderEmail", () => {
     it("keeps the title and the shop name on one line and bounds the shop name", async () => {
         const subject = await build()
 
-        const mail = subject.renderEmail({ ...base, shopName: "S".repeat(120), title: " Hello\r\nthere\n\nall ", body: "x" })
+        const mail = subject.renderEmail({
+            ...base,
+            shopName: "S".repeat(120),
+            title: " Hello\r\nthere\n\nall ",
+            body: "x",
+        })
 
         expect(mail.html).toContain("<title>Hello there all</title>")
         expect(mail.text.startsWith(`${"S".repeat(80)}\n\n`)).toBe(true)

@@ -30,9 +30,7 @@ export const InjectMailer = (): TypedParameterDecorator<Mailer> => injector<Mail
 export const InjectMailSettings = (): TypedParameterDecorator<MailOptions> => injector<MailOptions>(MAIL_SETTINGS)
 
 /** Injects the relay. Parameter type: MailRelayService. */
-export const InjectMailRelay = (): TypedParameterDecorator<MailRelayService> =>
-    injector<MailRelayService>(MAIL_RELAY)
+export const InjectMailRelay = (): TypedParameterDecorator<MailRelayService> => injector<MailRelayService>(MAIL_RELAY)
 
 /** Injects the mailer factory. Parameter type: MailerFactory. */
-export const InjectMailerFactory = (): TypedParameterDecorator<MailerFactory> =>
-    injector<MailerFactory>(MAILER_FACTORY)
+export const InjectMailerFactory = (): TypedParameterDecorator<MailerFactory> => injector<MailerFactory>(MAILER_FACTORY)

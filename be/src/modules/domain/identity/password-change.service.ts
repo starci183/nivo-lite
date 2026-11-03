@@ -39,6 +39,12 @@ export class IdentityPasswordChangeService {
             }),
         )
         if (!proved) throw new IdentityError({ code: IdentityErrorCode.PairRefused })
-        await accountDoors.setPassword(this.entityManager, userId, await this.passwords.hash(next), false, this.clock.now())
+        await accountDoors.setPassword(
+            this.entityManager,
+            userId,
+            await this.passwords.hash(next),
+            false,
+            this.clock.now(),
+        )
     }
 }

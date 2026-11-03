@@ -23,13 +23,16 @@ export const IDENTITY_SIGN_IN_BUDGET: unique symbol = Symbol("domain.identity.si
 export const InjectAuthDoors = (): TypedParameterDecorator<AuthDoors> => injector<AuthDoors>(IDENTITY_AUTH_DOORS)
 
 /** Injects the rotating sessions. Parameter type: AuthSessions. */
-export const InjectAuthSessions = (): TypedParameterDecorator<AuthSessions> => injector<AuthSessions>(IDENTITY_AUTH_SESSIONS)
+export const InjectAuthSessions = (): TypedParameterDecorator<AuthSessions> =>
+    injector<AuthSessions>(IDENTITY_AUTH_SESSIONS)
 
 /** Injects the password hasher. Parameter type: AuthPasswords. */
-export const InjectAuthPasswords = (): TypedParameterDecorator<AuthPasswords> => injector<AuthPasswords>(IDENTITY_AUTH_PASSWORDS)
+export const InjectAuthPasswords = (): TypedParameterDecorator<AuthPasswords> =>
+    injector<AuthPasswords>(IDENTITY_AUTH_PASSWORDS)
 
 /** Injects the failures-only sign-in budget. Parameter type: SignInBudget. */
-export const InjectSignInBudget = (): TypedParameterDecorator<SignInBudget> => injector<SignInBudget>(IDENTITY_SIGN_IN_BUDGET)
+export const InjectSignInBudget = (): TypedParameterDecorator<SignInBudget> =>
+    injector<SignInBudget>(IDENTITY_SIGN_IN_BUDGET)
 
 /** Token of the access-token verifier the composition root hands to identity. */
 export const ACCESS_TOKEN_VERIFIER: unique symbol = Symbol("domain.identity.access-token-verifier")

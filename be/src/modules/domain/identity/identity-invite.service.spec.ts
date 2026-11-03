@@ -85,7 +85,14 @@ describe("IdentityInviteService.deliver", () => {
 
         await expect(subject.deliver("new@example.test", REDIRECT)).resolves.toBe("invited")
 
-        expect(entityManager.query).toHaveBeenCalledWith(CREATE_USER, [CREATED, "new@example.test", null, false, "{}", NOW])
+        expect(entityManager.query).toHaveBeenCalledWith(CREATE_USER, [
+            CREATED,
+            "new@example.test",
+            null,
+            false,
+            "{}",
+            NOW,
+        ])
         const sent = mailer.send.mock.calls[0]?.[0]
         const url = new URL(/https:\/\/[^\s"<]+/u.exec(sent?.message.text ?? "")?.[0] ?? "")
         const token = url.searchParams.get("token") ?? ""
@@ -117,7 +124,9 @@ describe("IdentityInviteService.deliver", () => {
         ])
         const { subject, mailer } = await build(entityManager)
 
-        await expect(subject.deliver("new@example.test", "https://app.example.test/invite/token-2?x=1")).resolves.toBe("invited")
+        await expect(subject.deliver("new@example.test", "https://app.example.test/invite/token-2?x=1")).resolves.toBe(
+            "invited",
+        )
 
         const url = new URL(/https:\/\/[^\s"<]+/u.exec(mailer.send.mock.calls[0]?.[0].message.text ?? "")?.[0] ?? "")
         expect(url.searchParams.get("next")).toBe("/invite/token-2?x=1")

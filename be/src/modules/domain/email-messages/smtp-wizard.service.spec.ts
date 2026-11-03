@@ -68,7 +68,9 @@ const SMTP_CONFIG = {
 const build = async (found: ConnectionRecord | null = connectionOf()) => {
     const mail = mock<MailRelayService>({
         assertSmtpTarget: jest.fn(() => Promise.resolve()),
-        sendThroughSmtp: jest.fn(() => Promise.resolve({ messageId: "<msg-1@gmail.com>", accepted: ["lan@example.test"] })),
+        sendThroughSmtp: jest.fn(() =>
+            Promise.resolve({ messageId: "<msg-1@gmail.com>", accepted: ["lan@example.test"] }),
+        ),
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const logger = mock<Logger>()
