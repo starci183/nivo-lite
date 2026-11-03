@@ -45,15 +45,23 @@ export const paymentClaimAckNode: NodeDefinition<
     ],
     effects: ["payment-claim.record", "channel.send"],
     run: async (given, context) => {
-        const claim = await context.effect("payment-claim.record", {
-            leadId: given.leadId,
-            conversationId: given.conversationId,
-            ...(given.amountVnd === null ? {} : { amountVnd: given.amountVnd }),
-            names: given.payerName === null ? [] : [given.payerName],
-            body: given.body,
-        })
+        const claim = await context.effect(
+            "payment-claim.record",
+            {
+                leadId: given.leadId,
+                conversationId: given.conversationId,
+                ...(given.amountVnd === null ? {} : { amountVnd: given.amountVnd }),
+                names: given.payerName === null ? [] : [given.payerName],
+                body: given.body,
+            },
+            { dedupeKey: `payment-claim:${context.turn.turnId}` },
+        )
         const reply = claimAckOf(given.amountVnd, context.params.locale)
-        await context.effect("channel.send", { conversationId: given.conversationId, text: reply })
+        await context.effect(
+            "channel.send",
+            { conversationId: given.conversationId, text: reply },
+            { dedupeKey: `payment-claim-ack:${context.turn.turnId}` },
+        )
         return { reply, claim }
     },
     examples: [

@@ -13,5 +13,22 @@
   "slotEmpty": "Chưa có gì ở đây",
   "slotForbidden": "Bạn không có quyền xem mục này",
   "slotError": "Không tải được mục này",
-  "slotRetry": "Thử lại"
+  "slotRetry": "Thử lại",
+  "dataKindOrder": "Đơn hàng",
+  "dataKindSalesLead": "Khách hàng tiềm năng",
+  "dataKindCatalogueItem": "Mặt hàng",
+  "dataKindBankTransaction": "Giao dịch ngân hàng",
+  "dataKindPaymentClaim": "Báo đã chuyển khoản",
+  "dataKindPaymentAccount": "Tài khoản nhận tiền",
+  "dataKindConversation": "Hội thoại",
+  "dataKindMessage": "Tin nhắn",
+  "dataKindKnowledgeDocument": "Tài liệu kiến thức",
+  "effectChannelSend": "Gửi tin nhắn",
+  "effectOrderRecord": "Ghi đơn hàng",
+  "effectOrderConfirm": "Xác nhận đơn hàng",
+  "effectPaymentMarkPaid": "Đánh dấu đã thanh toán",
+  "effectPaymentClaimRecord": "Ghi báo chuyển khoản",
+  "effectAgentTag": "Gắn thẻ trợ lý",
+  "effectWorkItemRaise": "Tạo việc cần xử lý",
+  "toolPaymentInstruction": "Hướng dẫn thanh toán"
 }

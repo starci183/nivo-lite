@@ -11,7 +11,7 @@ const CONTEXT_KEYS_MAX = 40
 
 const contextValue: NodeSchema<ContextValue> = z.union([z.string().max(TEXT_MAX), z.number(), z.boolean(), z.null()])
 
-const params: NodeSchema<HandoffParams> = z.object({ toAgentKey: z.string().min(1).max(TARGET_MAX) })
+const params: NodeSchema<HandoffParams> = z.object({ toModuleKey: z.string().min(1).max(TARGET_MAX) })
 
 const input: NodeSchema<HandoffInput> = z.object({
     text: z.string().min(1).max(TEXT_MAX),
@@ -23,7 +23,7 @@ const input: NodeSchema<HandoffInput> = z.object({
 })
 
 const output: NodeSchema<HandoffOutput> = z.object({
-    toAgentKey: z.string(),
+    toModuleKey: z.string(),
     tag: z.object({ kind: z.string(), id: z.string() }),
 })
 
@@ -42,24 +42,28 @@ export const coreHandoffNode: NodeDefinition<
     rights: [],
     effects: ["agent.tag"],
     run: async (given, context) => {
-        const tag = await context.effect("agent.tag", {
-            toModuleKey: context.params.toAgentKey,
-            text: tagTextOf(given),
-            ...(given.conversationId === null ? {} : { conversationId: given.conversationId }),
-            ...(context.turn.subject === null ? {} : { subject: context.turn.subject }),
-        })
-        return { toAgentKey: context.params.toAgentKey, tag }
+        const tag = await context.effect(
+            "agent.tag",
+            {
+                toModuleKey: context.params.toModuleKey,
+                text: tagTextOf(given),
+                ...(given.conversationId === null ? {} : { conversationId: given.conversationId }),
+                ...(context.turn.subject === null ? {} : { subject: context.turn.subject }),
+            },
+            { dedupeKey: `agent-tag:${context.turn.turnId}:${context.params.toModuleKey}` },
+        )
+        return { toModuleKey: context.params.toModuleKey, tag }
     },
     examples: [
         {
             name: "tags the target agent with the note and the context",
-            params: { toAgentKey: "sales" },
+            params: { toModuleKey: "sales" },
             input: {
                 text: "Khách muốn đặt 1 chậu hoa",
                 conversationId: "c1",
                 context: { intent: "order", address: "69 Hàng Xanh" },
             },
-            output: { toAgentKey: "sales", tag: { kind: "agent.tag", id: "agent.tag-1" } },
+            output: { toModuleKey: "sales", tag: { kind: "agent.tag", id: "agent.tag-1" } },
             effects: [
                 {
                     kind: "agent.tag",
@@ -73,9 +77,9 @@ export const coreHandoffNode: NodeDefinition<
         },
         {
             name: "tags with the note alone",
-            params: { toAgentKey: "care" },
+            params: { toModuleKey: "care" },
             input: { text: "Khách cần hỗ trợ sau mua", conversationId: null, context: null },
-            output: { toAgentKey: "care", tag: { kind: "agent.tag", id: "agent.tag-1" } },
+            output: { toModuleKey: "care", tag: { kind: "agent.tag", id: "agent.tag-1" } },
             effects: [
                 {
                     kind: "agent.tag",

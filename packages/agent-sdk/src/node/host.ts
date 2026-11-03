@@ -4,8 +4,9 @@ import type { DataAccess, DataRight, RightScope, RightsGrant } from "../rights/r
 import type { Namespaced } from "../schema/schema.types"
 import type { NodeHostPorts, NodeRun, NodeRunEffect, NodeRunRequest } from "./host.types"
 import { NodeRunError } from "./node-run-error"
-import type { EffectOptions, EffectPayload, NodeContext, NodeQuery, NodeModelRequest, SubjectRef } from "./node.types"
+import type { EffectOptions, EffectPayload, NodeContext, NodeTools, NodeQuery, NodeModelRequest, SubjectRef } from "./node.types"
 import { RightsDeniedError } from "./rights-denied-error"
+import { ToolUndeclaredError } from "./tool-undeclared-error"
 
 /** Whether a grant covers one right. */
 const covers = (grant: RightsGrant, right: DataRight): boolean => rightsGaps(grant, [right]).length === 0
@@ -42,6 +43,29 @@ const parsed = <S extends z.ZodType>(schema: S, value: unknown, code: NodeRunErr
     const result = schema.safeParse(value)
     if (!result.success) throw new NodeRunError(code, at)
     return result.data
+}
+
+/**
+ * The tools a node reaches: declared, installed, granted by name and by right, never mutating from a condition, args and answer
+ * parsed. Each call is keyed by the run step and its order, so the door can replay instead of calling again.
+ */
+const toolsOf = (request: NodeRunRequest, ports: NodeHostPorts): NodeTools => {
+    const { node } = request
+    let calls = 0
+    return {
+        call: async <R>(name: Namespaced, args: Readonly<Record<string, unknown>>): Promise<R> => {
+            if (!(node.tools ?? []).includes(name)) throw new ToolUndeclaredError(name)
+            const tool = request.tools.get(name)
+            if (tool === undefined) throw new NodeRunError("TOOL_UNKNOWN", name)
+            if (tool.mutates && node.role === "condition") throw new NodeRunError("TOOL_MUTATES", name)
+            const named = (request.grant.tools ?? []).includes(name)
+            if (!named || rightsGaps(request.grant, tool.rights).length > 0) throw new RightsDeniedError(name)
+            const checked = parsed(tool.args, args, "TOOL_ARGS_INVALID", name) as Readonly<Record<string, unknown>>
+            const key = `${request.key}:tool:${calls}`
+            calls += 1
+            return parsed(tool.result, await ports.callTool(tool, checked, key), "TOOL_RESULT_INVALID", name) as R
+        },
+    }
 }
 
 /** The context a node runs with: every call checked, every effect counted. */
@@ -81,6 +105,7 @@ const contextOf = (
             text: (model) => ports.model.text(purpose(model)),
             json: (schema, model) => ports.model.json(schema, purpose(model)),
         },
+        tools: toolsOf(request, ports),
         now: ports.now,
     }
 }
@@ -88,7 +113,7 @@ const contextOf = (
 /**
  * Runs one node the way every host must: params and input parsed by the node's schemas, the agent's grant covering every right the
  * node requires, each read and write checked against both the node's declared rights and the grant, each effect declared, installed,
- * its payload parsed and its rights granted before the port acts, and the output parsed. Default deny throughout.
+ * its payload parsed and its rights granted before the port acts, each tool the same through the NIVO MCP door, and the output parsed. Default deny throughout.
  */
 export const runNode = async (request: NodeRunRequest, ports: NodeHostPorts): Promise<NodeRun> => {
     const { node } = request

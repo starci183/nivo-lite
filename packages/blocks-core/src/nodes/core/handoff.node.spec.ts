@@ -14,7 +14,7 @@ describe("core.handoff", () => {
     it("names the agent the params set, not one of its own", async () => {
         const changed = {
             ...example,
-            params: { toAgentKey: "billing" },
+            params: { toModuleKey: "billing" },
             effects: [
                 {
                     kind: "agent.tag" as const,
@@ -25,7 +25,7 @@ describe("core.handoff", () => {
                     },
                 },
             ],
-            output: { toAgentKey: "billing", tag: { kind: "agent.tag", id: "agent.tag-1" } },
+            output: { toModuleKey: "billing", tag: { kind: "agent.tag", id: "agent.tag-1" } },
         }
         await expect(nodeExampleMismatches(coreHandoffNode, changed, coreEffects)).resolves.toEqual([])
     })
@@ -40,6 +40,7 @@ describe("core.handoff", () => {
                 turn: { ...EXAMPLE_TURN, subject: { kind: "conversation", id: "c1" } },
                 grant: { rights: [] },
                 effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
+                tools: new Map(),
                 key: "k",
             },
             fake.ports,
@@ -48,7 +49,7 @@ describe("core.handoff", () => {
     })
 
     it("refuses a target that is empty, and a context that is too large", () => {
-        expect(coreHandoffNode.params.safeParse({ toAgentKey: "" }).success).toBe(false)
+        expect(coreHandoffNode.params.safeParse({ toModuleKey: "" }).success).toBe(false)
         const context = Object.fromEntries(Array.from({ length: 41 }, (_, index) => [`k${index}`, index]))
         expect(coreHandoffNode.input.safeParse({ text: "x", conversationId: null, context }).success).toBe(false)
     })

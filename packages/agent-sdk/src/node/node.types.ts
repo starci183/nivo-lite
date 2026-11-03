@@ -59,6 +59,12 @@ export interface EffectOptions {
     readonly dedupeKey?: string
 }
 
+/** The NIVO MCP tools as a node reaches them: only the ones it declared, parsed both ways. */
+export interface NodeTools {
+    /** Calls a declared tool; the answer is parsed by the tool's result schema. */
+    readonly call: <R = unknown>(name: Namespaced, args: Readonly<Record<string, unknown>>) => Promise<R>
+}
+
 /** What a node's `run` receives. */
 export interface NodeContext<P extends z.ZodType = z.ZodType> {
     readonly turn: TurnRef
@@ -68,6 +74,7 @@ export interface NodeContext<P extends z.ZodType = z.ZodType> {
     /** Runs an effect now and answers the subject it touched. An undeclared kind or a payload its schema refuses throws. */
     readonly effect: (kind: Namespaced, payload: EffectPayload, options?: EffectOptions) => Promise<SubjectRef>
     readonly model: NodeModel
+    readonly tools: NodeTools
     readonly now: () => Date
 }
 
@@ -87,6 +94,8 @@ export interface NodeExample<I extends z.ZodType, O extends z.ZodType, P extends
     readonly store?: NodeStore
     /** The model's answers, in call order: a text for `text`, a value for `json`. */
     readonly model?: ReadonlyArray<unknown>
+    /** The tools' results, in call order. */
+    readonly tools?: ReadonlyArray<unknown>
     /** The agent's grant; the node's own rights when absent. */
     readonly grant?: RightsGrant
 }
@@ -105,6 +114,8 @@ export interface NodeConfig<I extends z.ZodType, O extends z.ZodType, P extends 
     readonly rights: ReadonlyArray<DataRight>
     /** The effect kinds it may run. */
     readonly effects: ReadonlyArray<Namespaced>
+    /** The NIVO MCP tools it may call, by capability name; none when absent. */
+    readonly tools?: ReadonlyArray<Namespaced>
     /** The work of the node. A method, so a list of nodes of different shapes holds together. */
     run(input: z.output<I>, context: NodeContext<P>): Promise<z.input<O>>
     readonly examples: readonly [NodeExample<I, O, P>, ...Array<NodeExample<I, O, P>>]

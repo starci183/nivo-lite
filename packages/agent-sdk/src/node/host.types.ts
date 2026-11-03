@@ -1,6 +1,6 @@
 import type { RightScope, RightsGrant } from "../rights/rights.types"
 import type { Namespaced } from "../schema/schema.types"
-import type { EffectDefinition } from "./effect.types"
+import type { EffectDefinition, ToolDefinition } from "./effect.types"
 import type { EffectPayload, NodeDefinition, NodeModel, NodeQuery, SubjectRef, TurnRef } from "./node.types"
 
 /**
@@ -16,6 +16,8 @@ export interface NodeHostPorts {
     readonly write: (kind: string, record: Readonly<Record<string, unknown>>) => Promise<SubjectRef>
     /** Runs an effect once per call key and, when given, once per workspace dedupe key: a repeat answers the first subject. */
     readonly execute: (effect: EffectDefinition, payload: EffectPayload, call: EffectCall) => Promise<SubjectRef>
+    /** Calls a tool through the NIVO MCP door; the runner has parsed the args and parses the answer. */
+    readonly callTool: (tool: ToolDefinition, args: Readonly<Record<string, unknown>>, key: string) => Promise<unknown>
     /** The model; the runner prefixes each purpose with the node id. */
     readonly model: NodeModel
     readonly now: () => Date
@@ -37,6 +39,8 @@ export interface NodeRunRequest {
     readonly grant: RightsGrant
     /** The installed effects by id. */
     readonly effects: ReadonlyMap<string, EffectDefinition>
+    /** The installed tools by id. */
+    readonly tools: ReadonlyMap<string, ToolDefinition>
     /** The idempotency key of the run (run and step); each effect's key adds its order. */
     readonly key: string
 }

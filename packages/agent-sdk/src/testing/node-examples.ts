@@ -1,4 +1,4 @@
-import type { EffectDefinition } from "../node/effect.types"
+import type { EffectDefinition, ToolDefinition } from "../node/effect.types"
 import { runNode } from "../node/host"
 import type { NodeDefinition, NodeExample, NodeExampleEffect, TurnRef } from "../node/node.types"
 import { canonicalJson } from "../template/canonical"
@@ -30,15 +30,16 @@ const effectMismatches = (
 }
 
 /**
- * Runs one example of a node through the real runner over fake ports, with the example's grant (the node's own rights when absent),
+ * Runs one example of a node through the real runner over fake ports, with the example's grant (the node's own rights and tools when absent),
  * store and model script, and answers what differs from what it promised: its output and its effects in order. Empty means it holds.
  */
 export const nodeExampleMismatches = async (
     node: NodeDefinition,
     example: NodeExample<NodeDefinition["input"], NodeDefinition["output"], NodeDefinition["params"]>,
     effects: ReadonlyArray<EffectDefinition>,
+    tools: ReadonlyArray<ToolDefinition> = [],
 ): Promise<ReadonlyArray<string>> => {
-    const fake = fakeNodePorts({ store: example.store, model: example.model })
+    const fake = fakeNodePorts({ store: example.store, model: example.model, tools: example.tools })
     try {
         const run = await runNode(
             {
@@ -46,8 +47,9 @@ export const nodeExampleMismatches = async (
                 params: example.params,
                 input: example.input,
                 turn: EXAMPLE_TURN,
-                grant: example.grant ?? { rights: node.rights },
+                grant: example.grant ?? { rights: node.rights, tools: node.tools ?? [] },
                 effects: new Map(effects.map((effect) => [effect.id, effect])),
+                tools: new Map(tools.map((tool) => [tool.id, tool])),
                 key: `${node.id}:${example.name}`,
             },
             fake.ports,
@@ -63,12 +65,13 @@ export const nodeExampleMismatches = async (
 export const nodeListMismatches = async (
     nodes: ReadonlyArray<NodeDefinition>,
     effects: ReadonlyArray<EffectDefinition>,
+    tools: ReadonlyArray<ToolDefinition> = [],
 ): Promise<Readonly<Record<string, ReadonlyArray<string>>>> => {
     const runs = await Promise.all(
         nodes.flatMap((node) =>
             node.examples.map(
                 async (example) =>
-                    [`${node.id} / ${example.name}`, await nodeExampleMismatches(node, example, effects)] as const,
+                    [`${node.id} / ${example.name}`, await nodeExampleMismatches(node, example, effects, tools)] as const,
             ),
         ),
     )
