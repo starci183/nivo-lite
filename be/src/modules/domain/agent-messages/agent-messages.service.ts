@@ -18,6 +18,7 @@ import type {
     StoredReply,
     StoredReplyBody,
     TranscriptLine,
+    MessageStamp,
 } from "./agent-messages.contracts"
 import type { ConversationMessage, ConversationMessagesQuery } from "./conversation-messages.contracts"
 import { AgentMessagesError, AgentMessagesErrorCode } from "./errors/agent-messages.error"
@@ -43,6 +44,13 @@ const isStoredMessage = (value: unknown): value is { readonly id: string } =>
 /** The ids a write answered. */
 const returnedIds = (raw: unknown): ReadonlyArray<string> =>
     Array.isArray(raw) ? raw.filter(isStoredMessage).map((row) => row.id) : []
+
+/** Moves a stored message to the time it happened; the column is written by the database at insert, so this is the one place it is set. */
+export const RESTAMP_SQL = `
+UPDATE public.agent_messages
+SET created_at = $2::timestamptz + make_interval(secs => $3::double precision / 1000000)
+WHERE id = $1
+`
 
 @Injectable()
 /** The messages of a conversation between a customer and an agent; the only writer of agent_messages. */
@@ -145,17 +153,22 @@ export class AgentMessagesService {
         return this.storeHumanMessage(workspaceId, conversationId, body, authorName, manager, null, authorUserId)
     }
 
-    /** Stores what the customer wrote and answers the message id. */
+    /**
+     * Stores what the customer wrote and answers the message id. A channel that timed the message itself passes `stamp`, so the message sits at
+     * the time it happened, not the time it was stored: an imported or polled burst keeps its order.
+     */
     async storeCustomer(
         workspaceId: string,
         conversationId: string,
         body: string,
         manager: EntityManager,
         authorUserId: AuthorUserId = null,
+        stamp?: MessageStamp,
     ): Promise<string> {
         const id = this.required(
             await this.insert(manager, { workspaceId, conversationId, role: "user", body, authorUserId }),
         )
+        if (stamp !== undefined) await manager.query(RESTAMP_SQL, [id, stamp.at, stamp.tieMicros])
         await this.announce(workspaceId, conversationId, authorUserId, manager)
         return id
     }

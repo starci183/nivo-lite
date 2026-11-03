@@ -2,7 +2,7 @@ import { isRecord, ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import type { InboundAttachment, ZaloInbound } from "./conversations.contracts"
 import { ConversationsErrorCode } from "./errors/conversations.error"
-import { listField, readJsonObject, textField } from "./inbound-body.policy"
+import { epochMillisField, listField, readJsonObject, textField } from "./inbound-body.policy"
 
 /** The event of a customer writing text to the OA. */
 const TEXT_EVENT = "user_send_text"
@@ -47,12 +47,13 @@ export const readZaloEvent = (raw?: Buffer, options: ZaloReadOptions = {}): Outc
     const messageId = textField(event.message, "msg_id")
     const text = textField(event.message, "text").trim()
     const appId = textField(event, "app_id")
+    const sentAt = epochMillisField(event, "timestamp")
     const kind = ATTACHMENT_EVENTS.get(name)
     if (userId === "" || messageId === "") return refused(ConversationsErrorCode.NotAnswered)
-    if (name === TEXT_EVENT && text !== "") return ok({ appId, userId, messageId, text, attachments: [] })
+    if (name === TEXT_EVENT && text !== "") return ok({ appId, userId, messageId, text, attachments: [], sentAt })
     if (kind === undefined) return refused(ConversationsErrorCode.NotAnswered)
     const attachments = attachmentsOf(event.message, kind, options.allowLocalPath === true)
-    return attachments.length === 0 ? refused(ConversationsErrorCode.NotAnswered) : ok({ appId, userId, messageId, text, attachments })
+    return attachments.length === 0 ? refused(ConversationsErrorCode.NotAnswered) : ok({ appId, userId, messageId, text, attachments, sentAt })
 }
 
 /** True when the event is a picture or a file: the events whose shape is worth a log line when no attachment can be read from them. */

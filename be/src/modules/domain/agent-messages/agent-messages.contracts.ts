@@ -85,3 +85,11 @@ export interface NodeMessage {
     /** Creation instant, ISO 8601. */
     readonly createdAt: string
 }
+
+/** When a message happened, if that is not when it was stored: the event's own time, and a tie-break for messages of the same millisecond. */
+export interface MessageStamp {
+    /** The time the message happened, never later than when it was stored. */
+    readonly at: Date
+    /** Microseconds added to `at`, 0 to 999: a stable order for messages that share a millisecond. */
+    readonly tieMicros: number
+}

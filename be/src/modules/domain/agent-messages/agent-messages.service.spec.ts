@@ -13,7 +13,7 @@ import { Test } from "@nestjs/testing"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { ChatActivityService } from "@modules/domain/chat-activity"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { AgentMessagesService } from "./agent-messages.service"
+import { AgentMessagesService, RESTAMP_SQL } from "./agent-messages.service"
 
 import { In, MoreThanOrEqual, Not } from "typeorm"
 
@@ -195,6 +195,26 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
             ["ws-1", "conversation:conv-1", "user-1", inside],
             ["ws-1", "conversation:conv-1", null, inside],
         ])
+    })
+
+    it("moves the message to the time the channel gave it, with the tie-break, in the same transaction", async () => {
+        const { service } = await build()
+        const { em: inside } = withStatements(mockEntityManager({ query: [RESTAMP_SQL, []] }), stored("m-1"))
+        const at = new Date("2026-11-04T00:50:00.000Z")
+
+        await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside, null, { at, tieMicros: 417 })).resolves.toBe("m-1")
+
+        expect(inside.query).toHaveBeenCalledWith(RESTAMP_SQL, ["m-1", at, 417])
+        expect(RESTAMP_SQL).toContain("created_at = $2::timestamptz + make_interval")
+    })
+
+    it("leaves the time of arrival alone when the channel gave none", async () => {
+        const { service } = await build()
+        const { em: inside } = withStatements(mockEntityManager(), stored("m-1"))
+
+        await service.storeCustomer("ws-1", "conv-1", "Hello", inside)
+
+        expect(inside.query).not.toHaveBeenCalled()
     })
 
     it("fail loudly when the insert answers no row", async () => {

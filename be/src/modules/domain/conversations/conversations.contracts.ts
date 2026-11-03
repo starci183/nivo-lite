@@ -43,6 +43,8 @@ export interface ZaloInbound {
     readonly text: string
     /** The pictures and files sent with the message; empty for a text message. */
     readonly attachments: ReadonlyArray<InboundAttachment>
+    /** When the customer sent it, in epoch milliseconds, as the event says; null when the event carries no usable time. */
+    readonly sentAt: number | null
 }
 
 /** The customer's direct message of one Facebook or Instagram event. */

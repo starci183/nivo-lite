@@ -149,7 +149,7 @@ describe("ZaloInboxService deferred effects", () => {
         expect(conversations.acceptZalo).toHaveBeenCalledTimes(1)
         expect(conversations.acceptZalo).toHaveBeenCalledWith(
             "c-1",
-            { appId: "app-1", userId: "user-1", messageId: "m-1", text: "Hello", attachments: [] },
+            { appId: "app-1", userId: "user-1", messageId: "m-1", text: "Hello", attachments: [], sentAt: null },
             conversations.acceptZalo.mock.calls[0]?.[2],
             [],
         )

@@ -33,3 +33,10 @@ export const listField = (source: unknown, name: string): ReadonlyArray<unknown>
     const value = isRecord(source) ? source[name] : undefined
     return Array.isArray(value) ? value : []
 }
+
+/** A time field of an object in epoch milliseconds, given as a number or as the digits of one; null when it is missing or is not a positive time. */
+export const epochMillisField = (source: unknown, name: string): number | null => {
+    const value = isRecord(source) ? source[name] : undefined
+    const millis = typeof value === "string" && value.trim() !== "" ? Number(value) : value
+    return typeof millis === "number" && Number.isFinite(millis) && millis > 0 ? millis : null
+}
