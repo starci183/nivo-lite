@@ -12,6 +12,12 @@ export {
     AgentConversationsErrorCode,
 } from "./errors/agent-conversations.error"
 export { AGENT_CONVERSATIONS_MESSAGES } from "./messages/agent-conversations.messages"
-export type { ConversationRef, ConversationTarget, TurnConversation } from "./agent-conversations.contracts"
+export type {
+    ConversationRef,
+    ConversationTarget,
+    NodeConversation,
+    NodeConversationFilter,
+    TurnConversation,
+} from "./agent-conversations.contracts"
 export type { ChatConversation, CustomerChat } from "./agent-conversations.contracts"
 export { agentConversationsEntities } from "./persistence/entities"

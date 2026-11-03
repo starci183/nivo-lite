@@ -11,7 +11,7 @@ export { AgentMessagesService } from "./agent-messages.service"
 export { AGENT_MESSAGES_ERROR_KINDS, AgentMessagesErrorCode } from "./errors/agent-messages.error"
 export { AGENT_MESSAGES_MESSAGES } from "./messages/agent-messages.messages"
 export type { TranscriptLine } from "./agent-messages.contracts"
-export type { AgentThreadMessage } from "./agent-messages.contracts"
+export type { AgentThreadMessage, NodeMessage } from "./agent-messages.contracts"
 export { agentMessagesEntities } from "./persistence/entities"
 
 export { DELIVERY_OUTCOME_UNKNOWN } from "./agent-messages.policy"

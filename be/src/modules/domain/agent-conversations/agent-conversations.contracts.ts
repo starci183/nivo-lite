@@ -226,3 +226,25 @@ export interface CustomerChat {
 
 /** An installation id, or null when there is none. */
 export type OptionalInstallationId = string | null
+
+/** A customer conversation as a graph node reads it. */
+export interface NodeConversation {
+    /** The conversation id. */
+    readonly id: string
+    /** The lead the customer became, or null. */
+    readonly leadId: string | null
+    /** The channel key. */
+    readonly channel: string
+    /** Who holds the conversation when a person took it over, else null. */
+    readonly handledBy: string | null
+}
+
+/** What a graph node narrows the conversations it reads by; an absent member does not narrow. */
+export interface NodeConversationFilter {
+    /** One conversation. */
+    readonly id?: string | undefined
+    /** The conversations of one lead. */
+    readonly leadId?: string | undefined
+    /** The conversations on one channel. */
+    readonly channel?: string | undefined
+}

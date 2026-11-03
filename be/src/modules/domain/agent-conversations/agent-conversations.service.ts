@@ -21,6 +21,8 @@ import type {
     OptionalConversationParty,
     OptionalInstallationId,
     RememberPartyParams,
+    NodeConversation,
+    NodeConversationFilter,
 } from "./agent-conversations.contracts"
 import { AgentConversationsError, AgentConversationsErrorCode } from "./errors/agent-conversations.error"
 import { AgentConversationEntity } from "./persistence/entities"
@@ -408,5 +410,31 @@ export class AgentConversationsService {
             agent,
             speaksAs: front?.name ?? null,
         })
+    }
+
+    /** The customer conversations of a workspace a graph node reads, newest first, narrowed by the filter. */
+    async nodeRows(
+        workspaceId: string,
+        filter: NodeConversationFilter,
+        limit: number,
+    ): Promise<ReadonlyArray<NodeConversation>> {
+        const rows = await this.entityManager.find(AgentConversationEntity, {
+            select: { id: true, leadId: true, channel: true, handledBy: true },
+            where: {
+                workspaceId,
+                kind: "customer",
+                ...(filter.id === undefined ? {} : { id: filter.id }),
+                ...(filter.leadId === undefined ? {} : { leadId: filter.leadId }),
+                ...(filter.channel === undefined ? {} : { channel: filter.channel }),
+            },
+            order: { createdAt: "DESC" },
+            take: limit,
+        })
+        return rows.map((row) => ({
+            id: row.id,
+            leadId: row.leadId,
+            channel: row.channel,
+            handledBy: row.handledBy,
+        }))
     }
 }
