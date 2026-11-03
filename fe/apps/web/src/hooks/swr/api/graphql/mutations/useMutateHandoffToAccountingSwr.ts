@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateHandoffToAccounting } from "@/modules/api/graphql/mutations/mutation-handoff-to-accounting"
-import type { MutateHandoffToAccountingRequest } from "@/modules/api/graphql/mutations/mutation-handoff-to-accounting"
+import {
+    mutateHandoffToAccounting,
+    type MutateHandoffToAccountingRequest,
+} from "@/modules/api/graphql/mutations/mutation-handoff-to-accounting"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { HandoffToAccountingMutation } from "@/modules/api"
 
 /** What the handoffToAccounting mutation is triggered with. */
 interface HandoffToAccountingArg {
@@ -16,7 +18,7 @@ export const MUTATE_HANDOFF_TO_ACCOUNTING_SWR_KEY = "MUTATE_HANDOFF_TO_ACCOUNTIN
 
 /** SWR mutation for {@link mutateHandoffToAccounting}: `trigger(request)` answers the result and rejects with the back end failure. */
 export const useMutateHandoffToAccountingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateHandoffToAccounting>["handoffToAccounting"],
+    HandoffToAccountingMutation["handoffToAccounting"],
     Error,
     typeof MUTATE_HANDOFF_TO_ACCOUNTING_SWR_KEY,
     HandoffToAccountingArg["arg"]

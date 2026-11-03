@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateTransferInventoryStock } from "@/modules/api/graphql/mutations/mutation-transfer-inventory-stock"
-import type { MutateTransferInventoryStockRequest } from "@/modules/api/graphql/mutations/mutation-transfer-inventory-stock"
+import {
+    mutateTransferInventoryStock,
+    type MutateTransferInventoryStockRequest,
+} from "@/modules/api/graphql/mutations/mutation-transfer-inventory-stock"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { TransferInventoryStockMutation } from "@/modules/api"
 
 /** What the transferInventoryStock mutation is triggered with. */
 interface TransferInventoryStockArg {
@@ -16,7 +18,7 @@ export const MUTATE_TRANSFER_INVENTORY_STOCK_SWR_KEY = "MUTATE_TRANSFER_INVENTOR
 
 /** SWR mutation for {@link mutateTransferInventoryStock}: `trigger(request)` answers `transferInventoryStock` and rejects with the back end failure. */
 export const useMutateTransferInventoryStockSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateTransferInventoryStock>["transferInventoryStock"],
+    TransferInventoryStockMutation["transferInventoryStock"],
     Error,
     typeof MUTATE_TRANSFER_INVENTORY_STOCK_SWR_KEY,
     TransferInventoryStockArg["arg"]

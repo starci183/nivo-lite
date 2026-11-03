@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDecideBrainFact } from "@/modules/api/graphql/mutations/mutation-decide-brain-fact"
-import type { MutateDecideBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-decide-brain-fact"
+import {
+    mutateDecideBrainFact,
+    type MutateDecideBrainFactRequest,
+} from "@/modules/api/graphql/mutations/mutation-decide-brain-fact"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DecideBrainFactMutation } from "@/modules/api"
 
 /** What the DecideBrainFact mutation is triggered with. */
 interface DecideBrainFactArg {
@@ -16,7 +18,7 @@ export const MUTATE_DECIDE_BRAIN_FACT_SWR_KEY = "MUTATE_DECIDE_BRAIN_FACT_SWR"
 
 /** SWR mutation for {@link mutateDecideBrainFact}: Applies, rejects, chooses or retires a fact proposal of the shared brain. `trigger(input)` rejects with the back end failure. */
 export const useMutateDecideBrainFactSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDecideBrainFact>["decideBrainFact"],
+    DecideBrainFactMutation["decideBrainFact"],
     Error,
     typeof MUTATE_DECIDE_BRAIN_FACT_SWR_KEY,
     DecideBrainFactArg["arg"]

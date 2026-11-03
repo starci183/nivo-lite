@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryConnectionFirstEvent } from "@/modules/api/graphql/queries/query-connection-first-event"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ConnectionFirstEventQuery } from "@/modules/api"
 
 /** The SWR key of the connectionFirstEvent query. */
 export const QUERY_CONNECTION_FIRST_EVENT_SWR_KEY = "QUERY_CONNECTION_FIRST_EVENT_SWR"
@@ -13,7 +13,7 @@ export const QUERY_CONNECTION_FIRST_EVENT_SWR_KEY = "QUERY_CONNECTION_FIRST_EVEN
 export const useQueryConnectionFirstEventSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryConnectionFirstEvent>["connectionFirstEvent"]> =>
+): ReadResponse<ConnectionFirstEventQuery["connectionFirstEvent"]> =>
     useSWR(
         argumentKey(QUERY_CONNECTION_FIRST_EVENT_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

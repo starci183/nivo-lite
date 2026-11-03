@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCreateWorkspace } from "@/modules/api/graphql/mutations/mutation-create-workspace"
-import type { MutateCreateWorkspaceRequest } from "@/modules/api/graphql/mutations/mutation-create-workspace"
+import {
+    mutateCreateWorkspace,
+    type MutateCreateWorkspaceRequest,
+} from "@/modules/api/graphql/mutations/mutation-create-workspace"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CreateWorkspaceMutation } from "@/modules/api"
 
 /** What the create workspace mutation is triggered with. */
 interface CreateWorkspaceArg {
@@ -16,7 +18,7 @@ export const MUTATE_CREATE_WORKSPACE_SWR_KEY = "MUTATE_CREATE_WORKSPACE_SWR"
 
 /** SWR mutation for {@link mutateCreateWorkspace}: `trigger({ name })` answers the new workspace id and rejects with the back end failure. */
 export const useMutateCreateWorkspaceSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCreateWorkspace>["createWorkspace"],
+    CreateWorkspaceMutation["createWorkspace"],
     Error,
     typeof MUTATE_CREATE_WORKSPACE_SWR_KEY,
     CreateWorkspaceArg["arg"]

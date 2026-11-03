@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDraftLeadExecution } from "@/modules/api/graphql/mutations/mutation-draft-lead-execution"
-import type { MutateDraftLeadExecutionRequest } from "@/modules/api/graphql/mutations/mutation-draft-lead-execution"
+import {
+    mutateDraftLeadExecution,
+    type MutateDraftLeadExecutionRequest,
+} from "@/modules/api/graphql/mutations/mutation-draft-lead-execution"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DraftLeadExecutionMutation } from "@/modules/api"
 
 /** What the draft lead execution mutation is triggered with. */
 interface DraftLeadExecutionArg {
@@ -16,7 +18,7 @@ export const MUTATE_DRAFT_LEAD_EXECUTION_SWR_KEY = "MUTATE_DRAFT_LEAD_EXECUTION_
 
 /** SWR mutation for {@link mutateDraftLeadExecution}: `trigger({ responsibilityId })` answers the queued draft and rejects with the back end failure. */
 export const useMutateDraftLeadExecutionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDraftLeadExecution>["draftLeadExecution"],
+    DraftLeadExecutionMutation["draftLeadExecution"],
     Error,
     typeof MUTATE_DRAFT_LEAD_EXECUTION_SWR_KEY,
     DraftLeadExecutionArg["arg"]

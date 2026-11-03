@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveContract } from "@/modules/api/graphql/mutations/mutation-save-contract"
-import type { MutateSaveContractRequest } from "@/modules/api/graphql/mutations/mutation-save-contract"
+import {
+    mutateSaveContract,
+    type MutateSaveContractRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-contract"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveContractMutation } from "@/modules/api"
 
 /** What the saveContract mutation is triggered with. */
 interface SaveContractArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_CONTRACT_SWR_KEY = "MUTATE_SAVE_CONTRACT_SWR"
 
 /** SWR mutation for {@link mutateSaveContract}: `trigger(request)` answers the result and rejects with the back end failure. */
 export const useMutateSaveContractSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveContract>["saveContract"],
+    SaveContractMutation["saveContract"],
     Error,
     typeof MUTATE_SAVE_CONTRACT_SWR_KEY,
     SaveContractArg["arg"]

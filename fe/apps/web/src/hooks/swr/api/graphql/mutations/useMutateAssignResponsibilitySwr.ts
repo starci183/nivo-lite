@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateAssignResponsibility } from "@/modules/api/graphql/mutations/mutation-assign-responsibility"
-import type { MutateAssignResponsibilityRequest } from "@/modules/api/graphql/mutations/mutation-assign-responsibility"
+import {
+    mutateAssignResponsibility,
+    type MutateAssignResponsibilityRequest,
+} from "@/modules/api/graphql/mutations/mutation-assign-responsibility"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { AssignResponsibilityMutation } from "@/modules/api"
 
 /** What the assignResponsibility mutation is triggered with. */
 interface AssignResponsibilityArg {
@@ -16,7 +18,7 @@ export const MUTATE_ASSIGN_RESPONSIBILITY_SWR_KEY = "MUTATE_ASSIGN_RESPONSIBILIT
 
 /** SWR mutation for {@link mutateAssignResponsibility}: `trigger(request)` answers the result and rejects with the back end failure. */
 export const useMutateAssignResponsibilitySwr = (): SWRMutationResponse<
-    OperationData<typeof mutateAssignResponsibility>["assignResponsibility"],
+    AssignResponsibilityMutation["assignResponsibility"],
     Error,
     typeof MUTATE_ASSIGN_RESPONSIBILITY_SWR_KEY,
     AssignResponsibilityArg["arg"]

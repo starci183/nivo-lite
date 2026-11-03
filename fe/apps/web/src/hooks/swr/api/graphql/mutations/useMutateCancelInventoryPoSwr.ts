@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCancelInventoryPo } from "@/modules/api/graphql/mutations/mutation-cancel-inventory-po"
-import type { MutateCancelInventoryPoRequest } from "@/modules/api/graphql/mutations/mutation-cancel-inventory-po"
+import {
+    mutateCancelInventoryPo,
+    type MutateCancelInventoryPoRequest,
+} from "@/modules/api/graphql/mutations/mutation-cancel-inventory-po"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CancelInventoryPoMutation } from "@/modules/api"
 
 /** What the cancelInventoryPo mutation is triggered with. */
 interface CancelInventoryPoArg {
@@ -16,7 +18,7 @@ export const MUTATE_CANCEL_INVENTORY_PO_SWR_KEY = "MUTATE_CANCEL_INVENTORY_PO_SW
 
 /** SWR mutation for {@link mutateCancelInventoryPo}: `trigger(request)` answers `cancelInventoryPo` and rejects with the back end failure. */
 export const useMutateCancelInventoryPoSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCancelInventoryPo>["cancelInventoryPo"],
+    CancelInventoryPoMutation["cancelInventoryPo"],
     Error,
     typeof MUTATE_CANCEL_INVENTORY_PO_SWR_KEY,
     CancelInventoryPoArg["arg"]

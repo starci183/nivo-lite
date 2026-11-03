@@ -1,11 +1,10 @@
 "use client"
 
-import { argumentKey } from "@/hooks/workspaceread"
+import { argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import { useRef } from "react"
 import useSWR from "swr"
-import type { AgentGenerationStatusType } from "@/modules/api"
+import type { AgentGenerationStatusType, AgentGenerationStatusQuery } from "@/modules/api"
 import { queryAgentGenerationStatus } from "@/modules/api/graphql/queries/query-agent-generation-status"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** SWR identity of the state of a queued text. */
 const QUERY_AGENT_GENERATION_STATUS_SWR_KEY = "QUERY_AGENT_GENERATION_STATUS_SWR"
@@ -27,7 +26,7 @@ interface GenerationStatusListeners {
 export const useQueryAgentGenerationStatusSwr = (
     generationId: string | undefined,
     listeners: GenerationStatusListeners,
-): ReadResponse<OperationData<typeof queryAgentGenerationStatus>["agentGenerationStatus"]> => {
+): ReadResponse<AgentGenerationStatusQuery["agentGenerationStatus"]> => {
     const failures = useRef(0)
     return useSWR(
         argumentKey(QUERY_AGENT_GENERATION_STATUS_SWR_KEY, generationId),

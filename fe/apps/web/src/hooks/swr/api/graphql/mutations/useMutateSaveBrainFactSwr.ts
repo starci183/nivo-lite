@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveBrainFact } from "@/modules/api/graphql/mutations/mutation-save-brain-fact"
-import type { MutateSaveBrainFactRequest } from "@/modules/api/graphql/mutations/mutation-save-brain-fact"
+import {
+    mutateSaveBrainFact,
+    type MutateSaveBrainFactRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-brain-fact"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveBrainFactMutation } from "@/modules/api"
 
 /** What the SaveBrainFact mutation is triggered with. */
 interface SaveBrainFactArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_BRAIN_FACT_SWR_KEY = "MUTATE_SAVE_BRAIN_FACT_SWR"
 
 /** SWR mutation for {@link mutateSaveBrainFact}: Writes a fact of the shared brain and answers the saved fact and its outcome. `trigger(input)` rejects with the back end failure. */
 export const useMutateSaveBrainFactSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveBrainFact>["saveBrainFact"],
+    SaveBrainFactMutation["saveBrainFact"],
     Error,
     typeof MUTATE_SAVE_BRAIN_FACT_SWR_KEY,
     SaveBrainFactArg["arg"]

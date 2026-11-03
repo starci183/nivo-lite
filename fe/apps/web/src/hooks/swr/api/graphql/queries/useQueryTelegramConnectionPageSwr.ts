@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryTelegramConnectionPage } from "@/modules/api/graphql/queries/query-telegram-connection-page"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { TelegramConnectionPageQuery } from "@/modules/api"
 
 /** The SWR key of the telegramPage query. */
 export const QUERY_TELEGRAM_CONNECTION_PAGE_SWR_KEY = "QUERY_TELEGRAM_CONNECTION_PAGE_SWR_KEY"
@@ -13,7 +13,7 @@ export const QUERY_TELEGRAM_CONNECTION_PAGE_SWR_KEY = "QUERY_TELEGRAM_CONNECTION
 export const useQueryTelegramConnectionPageSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryTelegramConnectionPage>["telegramPage"]> =>
+): ReadResponse<TelegramConnectionPageQuery["telegramPage"]> =>
     useSWR(
         argumentKey(QUERY_TELEGRAM_CONNECTION_PAGE_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

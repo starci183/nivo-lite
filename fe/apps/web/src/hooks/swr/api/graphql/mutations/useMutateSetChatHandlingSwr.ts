@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSetChatHandling } from "@/modules/api/graphql/mutations/mutation-set-chat-handling"
-import type { mutateSetChatHandling as MutateSetChatHandlingOperation } from "@/modules/api/graphql/mutations/mutation-set-chat-handling"
+import {
+    mutateSetChatHandling,
+    type mutateSetChatHandling as MutateSetChatHandlingOperation,
+} from "@/modules/api/graphql/mutations/mutation-set-chat-handling"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetChatHandlingMutation } from "@/modules/api"
 
 /** The SWR key of the setChatHandling mutation. */
 export const MUTATE_SET_CHAT_HANDLING_SWR_KEY = "MUTATE_SET_CHAT_HANDLING_SWR"
 
 /** SWR mutation for {@link mutateSetChatHandling}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSetChatHandlingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetChatHandling>["setChatHandling"],
+    SetChatHandlingMutation["setChatHandling"],
     Error,
     typeof MUTATE_SET_CHAT_HANDLING_SWR_KEY,
     TriggerArg["arg"]

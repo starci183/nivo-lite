@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRedraftPublicDocument } from "@/modules/api/graphql/mutations/mutation-redraft-public-document"
-import type { MutateRedraftPublicDocumentRequest } from "@/modules/api/graphql/mutations/mutation-redraft-public-document"
+import {
+    mutateRedraftPublicDocument,
+    type MutateRedraftPublicDocumentRequest,
+} from "@/modules/api/graphql/mutations/mutation-redraft-public-document"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RedraftPublicDocumentMutation } from "@/modules/api"
 
 /** What the RedraftPublicDocument mutation is triggered with. */
 interface RedraftPublicDocumentArg {
@@ -16,7 +18,7 @@ export const MUTATE_REDRAFT_PUBLIC_DOCUMENT_SWR_KEY = "MUTATE_REDRAFT_PUBLIC_DOC
 
 /** SWR mutation for {@link mutateRedraftPublicDocument}: NIVO drafts a public document again from its internal sources. `trigger(input)` rejects with the back end failure. */
 export const useMutateRedraftPublicDocumentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRedraftPublicDocument>["redraftPublicDocument"],
+    RedraftPublicDocumentMutation["redraftPublicDocument"],
     Error,
     typeof MUTATE_REDRAFT_PUBLIC_DOCUMENT_SWR_KEY,
     RedraftPublicDocumentArg["arg"]

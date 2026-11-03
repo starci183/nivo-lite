@@ -1,10 +1,9 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCreateLead } from "@/modules/api/graphql/mutations/mutation-create-lead"
-import type { MutateCreateLeadRequest } from "@/modules/api/graphql/mutations/mutation-create-lead"
+import { mutateCreateLead, type MutateCreateLeadRequest } from "@/modules/api/graphql/mutations/mutation-create-lead"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CreateLeadMutation } from "@/modules/api"
 
 /** What the createLead mutation is triggered with. */
 interface CreateLeadArg {
@@ -16,7 +15,7 @@ export const MUTATE_CREATE_LEAD_SWR_KEY = "MUTATE_CREATE_LEAD_SWR"
 
 /** SWR mutation for {@link mutateCreateLead}: `trigger(request)` answers the result and rejects with the back end failure. */
 export const useMutateCreateLeadSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCreateLead>["createLead"],
+    CreateLeadMutation["createLead"],
     Error,
     typeof MUTATE_CREATE_LEAD_SWR_KEY,
     CreateLeadArg["arg"]

@@ -3,14 +3,14 @@
 import useSWRMutation from "swr/mutation"
 import { mutateLogoutOtherSessions } from "@/modules/api/graphql/mutations/mutation-logout-other-sessions"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { LogoutOtherSessionsMutation } from "@/modules/api"
 
 /** The SWR key of the logoutOtherSessions mutation. */
 export const MUTATE_LOGOUT_OTHER_SESSIONS_SWR_KEY = "MUTATE_LOGOUT_OTHER_SESSIONS_SWR"
 
 /** SWR mutation for {@link mutateLogoutOtherSessions}: Signs the caller out of every other device. `trigger()` rejects with the back end failure. */
 export const useMutateLogoutOtherSessionsSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateLogoutOtherSessions>["logoutOtherSessions"],
+    LogoutOtherSessionsMutation["logoutOtherSessions"],
     Error,
     typeof MUTATE_LOGOUT_OTHER_SESSIONS_SWR_KEY,
     never

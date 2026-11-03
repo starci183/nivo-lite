@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateStartZaloConnection } from "@/modules/api/graphql/mutations/mutation-start-zalo-connection"
-import type { mutateStartZaloConnection as MutateStartZaloConnectionOperation } from "@/modules/api/graphql/mutations/mutation-start-zalo-connection"
+import {
+    mutateStartZaloConnection,
+    type mutateStartZaloConnection as MutateStartZaloConnectionOperation,
+} from "@/modules/api/graphql/mutations/mutation-start-zalo-connection"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { StartZaloConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the startZaloConnection mutation. */
 export const MUTATE_START_ZALO_CONNECTION_SWR_KEY = "MUTATE_START_ZALO_CONNECTION_SWR"
 
 /** SWR mutation for {@link mutateStartZaloConnection}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateStartZaloConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateStartZaloConnection>["startZaloConnection"],
+    StartZaloConnectionMutation["startZaloConnection"],
     Error,
     typeof MUTATE_START_ZALO_CONNECTION_SWR_KEY,
     TriggerArg["arg"]

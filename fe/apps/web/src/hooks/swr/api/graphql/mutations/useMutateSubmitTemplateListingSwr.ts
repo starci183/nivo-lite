@@ -2,9 +2,11 @@
 
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { SubmitTemplateListingData } from "@/modules/api/graphql"
-import { mutateSubmitTemplateListing } from "@/modules/api/graphql/mutations/mutation-submit-template-listing"
-import type { MutateSubmitTemplateListingRequest } from "@/modules/api/graphql/mutations/mutation-submit-template-listing"
+import type { SubmitTemplateListingMutation } from "@/modules/api"
+import {
+    mutateSubmitTemplateListing,
+    type MutateSubmitTemplateListingRequest,
+} from "@/modules/api/graphql/mutations/mutation-submit-template-listing"
 
 /** The SWR key of the `submitTemplateListing` mutation. */
 export const MUTATE_SUBMIT_TEMPLATE_LISTING_SWR_KEY = "MUTATE_SUBMIT_TEMPLATE_LISTING_SWR"
@@ -16,7 +18,7 @@ interface TriggerArg {
 
 /** The back end `submitTemplateListing` mutation. */
 export const useMutateSubmitTemplateListingSwr = (): SWRMutationResponse<
-    SubmitTemplateListingData,
+    SubmitTemplateListingMutation["submitTemplateListing"],
     Error,
     string,
     MutateSubmitTemplateListingRequest

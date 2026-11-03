@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { answeredData, argumentKey } from "@/hooks/workspaceread"
 import { mutateCheckConnection } from "@/modules/api/graphql/mutations/mutation-check-connection"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CheckConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the check of one Telegram connection; every block of its page reads the same answer under it. */
 export const MUTATE_CHECK_TELEGRAM_CONNECTION_SWR_KEY = "MUTATE_CHECK_TELEGRAM_CONNECTION_SWR"
@@ -16,12 +16,7 @@ export const MUTATE_CHECK_TELEGRAM_CONNECTION_SWR_KEY = "MUTATE_CHECK_TELEGRAM_C
  */
 export const useMutateCheckTelegramConnectionSwr = (
     connectionId: string | undefined,
-): SWRMutationResponse<
-    OperationData<typeof mutateCheckConnection>["checkConnection"],
-    Error,
-    readonly [string, string] | null,
-    never
-> =>
+): SWRMutationResponse<CheckConnectionMutation["checkConnection"], Error, readonly [string, string] | null, never> =>
     useSWRMutation(
         argumentKey(MUTATE_CHECK_TELEGRAM_CONNECTION_SWR_KEY, connectionId),
         async ([, id]: readonly [string, string]) =>

@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryTelegramConnectionEvents } from "@/modules/api/graphql/queries/query-telegram-connection-events"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { TelegramConnectionEventsQuery } from "@/modules/api"
 
 /** The SWR key of the telegramEvents query. */
 export const QUERY_TELEGRAM_CONNECTION_EVENTS_SWR_KEY = "QUERY_TELEGRAM_CONNECTION_EVENTS_SWR_KEY"
@@ -13,7 +13,7 @@ export const QUERY_TELEGRAM_CONNECTION_EVENTS_SWR_KEY = "QUERY_TELEGRAM_CONNECTI
 export const useQueryTelegramConnectionEventsSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryTelegramConnectionEvents>["telegramEvents"]> =>
+): ReadResponse<TelegramConnectionEventsQuery["telegramEvents"]> =>
     useSWR(
         argumentKey(QUERY_TELEGRAM_CONNECTION_EVENTS_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

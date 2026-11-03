@@ -1,10 +1,12 @@
 "use client"
 
-import { queryPreviewContractImport } from "@/modules/api/graphql/queries/query-preview-contract-import"
-import type { QueryPreviewContractImportRequest } from "@/modules/api/graphql/queries/query-preview-contract-import"
+import {
+    queryPreviewContractImport,
+    type QueryPreviewContractImportRequest,
+} from "@/modules/api/graphql/queries/query-preview-contract-import"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { PreviewContractImportQuery } from "@/modules/api"
 
 /** The SWR key of the previewContractImport query. */
 export const QUERY_PREVIEW_CONTRACT_IMPORT_SWR_KEY = "QUERY_PREVIEW_CONTRACT_IMPORT_SWR"
@@ -16,7 +18,7 @@ interface TriggerArg {
 
 /** Lazily previews a contract sheet; `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useQueryPreviewContractImportSwr = (): SWRMutationResponse<
-    OperationData<typeof queryPreviewContractImport>["previewContractImport"],
+    PreviewContractImportQuery["previewContractImport"],
     Error,
     typeof QUERY_PREVIEW_CONTRACT_IMPORT_SWR_KEY,
     TriggerArg["arg"]

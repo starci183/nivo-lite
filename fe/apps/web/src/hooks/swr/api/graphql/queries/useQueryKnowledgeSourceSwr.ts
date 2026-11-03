@@ -1,10 +1,10 @@
 "use client"
 
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryKnowledgeSource } from "@/modules/api/graphql/queries/query-knowledge-source"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { KnowledgeSourceQuery } from "@/modules/api"
 
 /** The SWR key of the document detail; mutations that change it revalidate the keys that lead with it. */
 export const QUERY_KNOWLEDGE_SOURCE_SWR_KEY = "QUERY_KNOWLEDGE_SOURCE_SWR"
@@ -17,14 +17,13 @@ const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "queued", "read
  */
 export const useQueryKnowledgeSourceSwr = (
     id: string | undefined,
-): ReadResponse<OperationData<typeof queryKnowledgeSource>["knowledgeSource"]> => {
+): ReadResponse<KnowledgeSourceQuery["knowledgeSource"]> => {
     const key = useWorkspaceKey(QUERY_KNOWLEDGE_SOURCE_SWR_KEY, [id ?? ""], id !== undefined)
     return useSWR(
         key,
         async ([, , sourceId]: WorkspaceReadKey<string>) => {
-            const result = await queryKnowledgeSource({ request: { id: sourceId } })
-            if (!result.data) throw new Error("knowledgeSource answered no data")
-            return result.data.knowledgeSource
+            return answeredData(await queryKnowledgeSource({ request: { id: sourceId } }), "knowledgeSource")
+                .knowledgeSource
         },
         {
             refreshInterval: (data) => (data !== undefined && ACTIVE_STATUSES.has(data.source.status) ? 3_000 : 0),

@@ -1,10 +1,9 @@
 "use client"
 
-import { argumentKey } from "@/hooks/workspaceread"
+import { argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryDataSyncRun } from "@/modules/api/graphql/queries/query-data-sync-run"
-import type { DataSyncRunType } from "@/modules/api"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { DataSyncRunType, DataSyncRunQuery } from "@/modules/api"
 
 /** The SWR key of the dataSyncRun query. */
 export const QUERY_DATA_SYNC_RUN_SWR_KEY = "QUERY_DATA_SYNC_RUN_SWR"
@@ -21,7 +20,7 @@ interface DataSyncRunOptions {
 export const useQueryDataSyncRunSwr = (
     runId: string | undefined,
     options?: DataSyncRunOptions,
-): ReadResponse<OperationData<typeof queryDataSyncRun>["dataSyncRun"]> =>
+): ReadResponse<DataSyncRunQuery["dataSyncRun"]> =>
     useSWR(
         argumentKey(QUERY_DATA_SYNC_RUN_SWR_KEY, runId),
         async ([, id]) => {

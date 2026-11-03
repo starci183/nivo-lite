@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRevokeApiKey } from "@/modules/api/graphql/mutations/mutation-revoke-api-key"
-import type { MutateRevokeApiKeyRequest } from "@/modules/api/graphql/mutations/mutation-revoke-api-key"
+import {
+    mutateRevokeApiKey,
+    type MutateRevokeApiKeyRequest,
+} from "@/modules/api/graphql/mutations/mutation-revoke-api-key"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RevokeApiKeyMutation } from "@/modules/api"
 
 /** What the revoke API key mutation is triggered with. */
 interface RevokeApiKeyArg {
@@ -16,7 +18,7 @@ export const MUTATE_REVOKE_API_KEY_SWR_KEY = "MUTATE_REVOKE_API_KEY_SWR"
 
 /** SWR mutation for {@link mutateRevokeApiKey}: `trigger({ keyId })` answers the revoked key and rejects with the back end failure. */
 export const useMutateRevokeApiKeySwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRevokeApiKey>["revokeApiKey"],
+    RevokeApiKeyMutation["revokeApiKey"],
     Error,
     typeof MUTATE_REVOKE_API_KEY_SWR_KEY,
     RevokeApiKeyArg["arg"]

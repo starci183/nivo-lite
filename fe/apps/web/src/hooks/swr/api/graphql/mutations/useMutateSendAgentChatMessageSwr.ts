@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSendAgentChatMessage } from "@/modules/api/graphql/mutations/mutation-send-agent-chat-message"
-import type { MutateSendAgentChatMessageRequest } from "@/modules/api/graphql/mutations/mutation-send-agent-chat-message"
+import {
+    mutateSendAgentChatMessage,
+    type MutateSendAgentChatMessageRequest,
+} from "@/modules/api/graphql/mutations/mutation-send-agent-chat-message"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SendAgentChatMessageMutation } from "@/modules/api"
 
 /** What the SendAgentChatMessage mutation is triggered with. */
 interface SendAgentChatMessageArg {
@@ -18,7 +20,7 @@ export const MUTATE_SEND_AGENT_CHAT_MESSAGE_SWR_KEY = "MUTATE_SEND_AGENT_CHAT_ME
 export const useMutateSendAgentChatMessageSwr = (
     workspaceId: string,
 ): SWRMutationResponse<
-    OperationData<typeof mutateSendAgentChatMessage>["sendAgentChatMessage"],
+    SendAgentChatMessageMutation["sendAgentChatMessage"],
     Error,
     [string, string],
     SendAgentChatMessageArg["arg"]

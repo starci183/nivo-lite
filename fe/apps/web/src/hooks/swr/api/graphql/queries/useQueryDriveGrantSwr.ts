@@ -3,15 +3,14 @@
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryDriveGrant } from "@/modules/api/graphql/queries/query-drive-grant"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ReadResponse } from "@/hooks/workspaceread"
+import type { DriveGrantQuery } from "@/modules/api"
 
 /** The SWR key of the Google Drive read grant of the workspace. */
 export const QUERY_DRIVE_GRANT_SWR_KEY = "QUERY_DRIVE_GRANT_SWR"
 
 /** The Google Drive read grant of the active workspace (the back end `driveGrant` query); nothing is read while `enabled` is false. */
-export const useQueryDriveGrantSwr = (
-    enabled = true,
-): ReadResponse<OperationData<typeof queryDriveGrant>["driveGrant"]> =>
+export const useQueryDriveGrantSwr = (enabled = true): ReadResponse<DriveGrantQuery["driveGrant"]> =>
     useSWR(
         useWorkspaceKey(QUERY_DRIVE_GRANT_SWR_KEY, [], enabled),
         async ({ signal }: { signal?: AbortSignal } = {}) => {

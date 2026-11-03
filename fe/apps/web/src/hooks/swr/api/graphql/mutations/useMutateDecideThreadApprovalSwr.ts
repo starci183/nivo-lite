@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDecideThreadApproval } from "@/modules/api/graphql/mutations/mutation-decide-thread-approval"
-import type { MutateDecideThreadApprovalRequest } from "@/modules/api/graphql/mutations/mutation-decide-thread-approval"
+import {
+    mutateDecideThreadApproval,
+    type MutateDecideThreadApprovalRequest,
+} from "@/modules/api/graphql/mutations/mutation-decide-thread-approval"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DecideThreadApprovalMutation } from "@/modules/api"
 
 /** What the DecideThreadApproval mutation is triggered with. */
 interface DecideThreadApprovalArg {
@@ -16,7 +18,7 @@ export const MUTATE_DECIDE_THREAD_APPROVAL_SWR_KEY = "MUTATE_DECIDE_THREAD_APPRO
 
 /** SWR mutation for {@link mutateDecideThreadApproval}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateDecideThreadApprovalSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDecideThreadApproval>["decideThreadApproval"],
+    DecideThreadApprovalMutation["decideThreadApproval"],
     Error,
     typeof MUTATE_DECIDE_THREAD_APPROVAL_SWR_KEY,
     DecideThreadApprovalArg["arg"]

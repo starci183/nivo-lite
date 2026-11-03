@@ -1,9 +1,12 @@
 "use client"
 
 import useSWR from "swr"
-import { queryWorkspaceShell } from "@/modules/api/graphql/queries/query-workspace-shell"
-import type { QueryWorkspaceShellRequest } from "@/modules/api/graphql/queries/query-workspace-shell"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { SWRResponse } from "swr"
+import {
+    queryWorkspaceShell,
+    type QueryWorkspaceShellRequest,
+} from "@/modules/api/graphql/queries/query-workspace-shell"
+import type { WorkspaceShellQuery } from "@/modules/api"
 
 /** The SWR key of the workspaceShell query; mutations that change it call `mutate` with it. */
 export const QUERY_WORKSPACE_SHELL_SWR_KEY = "QUERY_WORKSPACE_SHELL_SWR"
@@ -12,7 +15,7 @@ export const QUERY_WORKSPACE_SHELL_SWR_KEY = "QUERY_WORKSPACE_SHELL_SWR"
 export const useQueryWorkspaceShellSwr = (
     workspaceId: string | undefined,
     request: QueryWorkspaceShellRequest,
-): ReadResponse<OperationData<typeof queryWorkspaceShell>["workspaceShell"]> =>
+): SWRResponse<WorkspaceShellQuery["workspaceShell"], Error> =>
     useSWR(
         workspaceId === undefined
             ? null

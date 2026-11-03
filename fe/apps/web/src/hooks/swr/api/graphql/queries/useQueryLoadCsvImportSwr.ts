@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryLoadCsvImport } from "@/modules/api/graphql/queries/query-load-csv-import"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { LoadCsvImportQuery } from "@/modules/api"
 
 /** The SWR key of the loadCsvImport query. */
 export const QUERY_LOAD_CSV_IMPORT_SWR_KEY = "QUERY_LOAD_CSV_IMPORT_SWR"
@@ -13,7 +13,7 @@ export const QUERY_LOAD_CSV_IMPORT_SWR_KEY = "QUERY_LOAD_CSV_IMPORT_SWR"
 export const useQueryLoadCsvImportSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryLoadCsvImport>["loadCsvImport"]> =>
+): ReadResponse<LoadCsvImportQuery["loadCsvImport"]> =>
     useSWR(
         argumentKey(QUERY_LOAD_CSV_IMPORT_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

@@ -6,7 +6,8 @@ import {
     queryKnowledgeSources,
     type QueryKnowledgeSourcesRequest,
 } from "@/modules/api/graphql/queries/query-knowledge-sources"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ReadResponse } from "@/hooks/workspaceread"
+import type { KnowledgeSourcesQuery } from "@/modules/api"
 
 /** The SWR key of the documents list; mutations that change it revalidate the keys that lead with it. */
 export const QUERY_KNOWLEDGE_SOURCES_SWR_KEY = "QUERY_KNOWLEDGE_SOURCES_SWR"
@@ -29,7 +30,7 @@ export const useQueryKnowledgeSourcesSwr = (
     input?: QueryKnowledgeSourcesRequest,
     pollMs: number = ACTIVE_POLL_MS,
     enabled = true,
-): ReadResponse<OperationData<typeof queryKnowledgeSources>["knowledgeSources"]> => {
+): ReadResponse<KnowledgeSourcesQuery["knowledgeSources"]> => {
     const key = useWorkspaceKey(
         QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
         [input?.module ?? null, input?.origin ?? null],

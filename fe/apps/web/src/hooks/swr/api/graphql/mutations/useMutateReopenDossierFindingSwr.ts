@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateReopenDossierFinding } from "@/modules/api/graphql/mutations/mutation-reopen-dossier-finding"
-import type { MutateReopenDossierFindingRequest } from "@/modules/api/graphql/mutations/mutation-reopen-dossier-finding"
+import {
+    mutateReopenDossierFinding,
+    type MutateReopenDossierFindingRequest,
+} from "@/modules/api/graphql/mutations/mutation-reopen-dossier-finding"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ReopenDossierFindingMutation } from "@/modules/api"
 
 /** What the ReopenDossierFinding mutation is triggered with. */
 interface ReopenDossierFindingArg {
@@ -16,7 +18,7 @@ export const MUTATE_REOPEN_DOSSIER_FINDING_SWR_KEY = "MUTATE_REOPEN_DOSSIER_FIND
 
 /** SWR mutation for {@link mutateReopenDossierFinding}: opens a dismissed or resolved finding again. `trigger(input)` rejects with the back end failure. */
 export const useMutateReopenDossierFindingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateReopenDossierFinding>["reopenDossierFinding"],
+    ReopenDossierFindingMutation["reopenDossierFinding"],
     Error,
     typeof MUTATE_REOPEN_DOSSIER_FINDING_SWR_KEY,
     ReopenDossierFindingArg["arg"]

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateExplainShiftsSchedule } from "@/modules/api/graphql/mutations/mutation-explain-shifts-schedule"
-import type { MutateExplainShiftsScheduleRequest } from "@/modules/api/graphql/mutations/mutation-explain-shifts-schedule"
+import {
+    mutateExplainShiftsSchedule,
+    type MutateExplainShiftsScheduleRequest,
+} from "@/modules/api/graphql/mutations/mutation-explain-shifts-schedule"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ExplainShiftsScheduleMutation } from "@/modules/api"
 
 /** What the explainShiftsSchedule mutation is triggered with. */
 interface ExplainShiftsScheduleArg {
@@ -16,7 +18,7 @@ export const MUTATE_EXPLAIN_SHIFTS_SCHEDULE_SWR_KEY = "MUTATE_EXPLAIN_SHIFTS_SCH
 
 /** SWR mutation for {@link mutateExplainShiftsSchedule}: `trigger(request)` answers `explainShiftsSchedule` and rejects with the back end failure. */
 export const useMutateExplainShiftsScheduleSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateExplainShiftsSchedule>["explainShiftsSchedule"],
+    ExplainShiftsScheduleMutation["explainShiftsSchedule"],
     Error,
     typeof MUTATE_EXPLAIN_SHIFTS_SCHEDULE_SWR_KEY,
     ExplainShiftsScheduleArg["arg"]

@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateResendTelegramCode } from "@/modules/api/graphql/mutations/mutation-resend-telegram-code"
-import type { mutateResendTelegramCode as MutateResendTelegramCodeOperation } from "@/modules/api/graphql/mutations/mutation-resend-telegram-code"
+import {
+    mutateResendTelegramCode,
+    type mutateResendTelegramCode as MutateResendTelegramCodeOperation,
+} from "@/modules/api/graphql/mutations/mutation-resend-telegram-code"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ResendTelegramCodeMutation } from "@/modules/api"
 
 /** The SWR key of the resendTelegramCode mutation. */
 export const MUTATE_RESEND_TELEGRAM_CODE_SWR_KEY = "MUTATE_RESEND_TELEGRAM_CODE_SWR"
 
 /** SWR mutation for {@link mutateResendTelegramCode}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateResendTelegramCodeSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateResendTelegramCode>["resendTelegramCode"],
+    ResendTelegramCodeMutation["resendTelegramCode"],
     Error,
     typeof MUTATE_RESEND_TELEGRAM_CODE_SWR_KEY,
     TriggerArg["arg"]

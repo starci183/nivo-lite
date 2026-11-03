@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCreateHiringCvUpload } from "@/modules/api/graphql/mutations/mutation-create-hiring-cv-upload"
-import type { MutateCreateHiringCvUploadRequest } from "@/modules/api/graphql/mutations/mutation-create-hiring-cv-upload"
+import {
+    mutateCreateHiringCvUpload,
+    type MutateCreateHiringCvUploadRequest,
+} from "@/modules/api/graphql/mutations/mutation-create-hiring-cv-upload"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CreateHiringCvUploadMutation } from "@/modules/api"
 
 /** What the createHiringCvUpload mutation is triggered with. */
 interface CreateHiringCvUploadArg {
@@ -16,7 +18,7 @@ export const MUTATE_CREATE_HIRING_CV_UPLOAD_SWR_KEY = "MUTATE_CREATE_HIRING_CV_U
 
 /** SWR mutation for {@link mutateCreateHiringCvUpload}: `trigger(request)` answers `createHiringCvUpload` and rejects with the back end failure. */
 export const useMutateCreateHiringCvUploadSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCreateHiringCvUpload>["createHiringCvUpload"],
+    CreateHiringCvUploadMutation["createHiringCvUpload"],
     Error,
     typeof MUTATE_CREATE_HIRING_CV_UPLOAD_SWR_KEY,
     CreateHiringCvUploadArg["arg"]

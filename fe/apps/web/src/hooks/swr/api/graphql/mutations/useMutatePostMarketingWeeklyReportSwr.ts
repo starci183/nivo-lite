@@ -4,14 +4,14 @@ import { mutatePostMarketingWeeklyReport } from "@/modules/api/graphql/mutations
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { PostMarketingWeeklyReportMutation } from "@/modules/api"
 
 /** The SWR key of the postMarketingWeeklyReport mutation. */
 export const MUTATE_POST_MARKETING_WEEKLY_REPORT_SWR_KEY = "MUTATE_POST_MARKETING_WEEKLY_REPORT_SWR"
 
 /** SWR mutation for {@link mutatePostMarketingWeeklyReport}: posts the last week's report into the Marketing room (no input). */
 export const useMutatePostMarketingWeeklyReportSwr = (): SWRMutationResponse<
-    OperationData<typeof mutatePostMarketingWeeklyReport>["postMarketingWeeklyReport"],
+    PostMarketingWeeklyReportMutation["postMarketingWeeklyReport"],
     Error,
     typeof MUTATE_POST_MARKETING_WEEKLY_REPORT_SWR_KEY,
     never

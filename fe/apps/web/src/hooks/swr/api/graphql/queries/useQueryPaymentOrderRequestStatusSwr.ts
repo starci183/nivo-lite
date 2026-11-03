@@ -1,12 +1,13 @@
 "use client"
 
-import { queryPaymentOrderRequestStatus } from "@/modules/api/graphql/queries/query-payment-order-request-status"
-import type { queryPaymentOrderRequestStatus as PaymentOrderRequestStatusOperation } from "@/modules/api/graphql/queries/query-payment-order-request-status"
-import { workspaceArgumentKey } from "@/hooks/workspaceread"
+import {
+    queryPaymentOrderRequestStatus,
+    type queryPaymentOrderRequestStatus as PaymentOrderRequestStatusOperation,
+} from "@/modules/api/graphql/queries/query-payment-order-request-status"
+import { workspaceArgumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { isForbiddenFailure, isUnauthenticatedFailure } from "@/modules/failure"
-import type { ReadResponse } from "@/hooks/workspaceread"
 
 type PaymentOrderRequestStatusResponse = NonNullable<
     Awaited<ReturnType<typeof PaymentOrderRequestStatusOperation>>["data"]

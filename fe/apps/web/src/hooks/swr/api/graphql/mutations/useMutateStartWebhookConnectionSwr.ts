@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateStartWebhookConnection } from "@/modules/api/graphql/mutations/mutation-start-webhook-connection"
-import type { MutateStartWebhookConnectionRequest } from "@/modules/api/graphql/mutations/mutation-start-webhook-connection"
+import {
+    mutateStartWebhookConnection,
+    type MutateStartWebhookConnectionRequest,
+} from "@/modules/api/graphql/mutations/mutation-start-webhook-connection"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { StartWebhookConnectionMutation } from "@/modules/api"
 
 /** What the startWebhookConnection mutation is triggered with. */
 interface StartWebhookConnectionArg {
@@ -16,7 +18,7 @@ export const MUTATE_START_WEBHOOK_CONNECTION_SWR_KEY = "MUTATE_START_WEBHOOK_CON
 
 /** SWR mutation for {@link mutateStartWebhookConnection}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateStartWebhookConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateStartWebhookConnection>["startWebhookConnection"],
+    StartWebhookConnectionMutation["startWebhookConnection"],
     Error,
     typeof MUTATE_START_WEBHOOK_CONNECTION_SWR_KEY,
     StartWebhookConnectionArg["arg"]

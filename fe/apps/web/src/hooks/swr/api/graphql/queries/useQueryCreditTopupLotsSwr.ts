@@ -2,8 +2,9 @@
 
 import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
+import type { SWRResponse } from "swr"
 import { queryCreditTopupLots } from "@/modules/api/graphql/queries/query-credit-topup-lots"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { CreditTopupLotsQuery } from "@/modules/api"
 
 /** Cache identity of creditTopupLots within a workspace. */
 export const QUERY_CREDIT_TOPUP_LOTS_SWR_KEY = "QUERY_CREDIT_TOPUP_LOTS_SWR"
@@ -12,7 +13,7 @@ export const QUERY_CREDIT_TOPUP_LOTS_SWR_KEY = "QUERY_CREDIT_TOPUP_LOTS_SWR"
 export const useQueryCreditTopupLotsSwr = (
     workspaceId: string | undefined,
     enabled = true,
-): ReadResponse<OperationData<typeof queryCreditTopupLots>["creditTopupLots"]> =>
+): SWRResponse<CreditTopupLotsQuery["creditTopupLots"], Error> =>
     useSWR(argumentKey(QUERY_CREDIT_TOPUP_LOTS_SWR_KEY, enabled ? workspaceId : undefined), async () => {
         const result = await queryCreditTopupLots({})
         if (!result.data) throw new Error("creditTopupLots answered no data")

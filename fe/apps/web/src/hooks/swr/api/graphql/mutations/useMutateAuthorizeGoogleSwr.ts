@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateAuthorizeGoogle } from "@/modules/api/graphql/mutations/mutation-authorize-google"
-import type { mutateAuthorizeGoogle as MutateAuthorizeGoogleOperation } from "@/modules/api/graphql/mutations/mutation-authorize-google"
+import {
+    mutateAuthorizeGoogle,
+    type mutateAuthorizeGoogle as MutateAuthorizeGoogleOperation,
+} from "@/modules/api/graphql/mutations/mutation-authorize-google"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { AuthorizeGoogleMutation } from "@/modules/api"
 
 /** The SWR key of the authorizeGoogle mutation. */
 export const MUTATE_AUTHORIZE_GOOGLE_SWR_KEY = "MUTATE_AUTHORIZE_GOOGLE_SWR"
 
 /** SWR mutation for {@link mutateAuthorizeGoogle}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateAuthorizeGoogleSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateAuthorizeGoogle>["authorizeGoogle"],
+    AuthorizeGoogleMutation["authorizeGoogle"],
     Error,
     typeof MUTATE_AUTHORIZE_GOOGLE_SWR_KEY,
     TriggerArg["arg"]

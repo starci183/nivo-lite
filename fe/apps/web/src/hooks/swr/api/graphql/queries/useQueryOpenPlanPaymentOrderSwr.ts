@@ -2,8 +2,9 @@
 
 import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
+import type { SWRResponse } from "swr"
 import { queryOpenPlanPaymentOrder } from "@/modules/api/graphql/queries/query-open-plan-payment-order"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { OpenPlanPaymentOrderQuery } from "@/modules/api"
 
 /** Cache identity of openPlanPaymentOrder. */
 export const QUERY_OPEN_PLAN_PAYMENT_ORDER_SWR_KEY = "QUERY_OPEN_PLAN_PAYMENT_ORDER_SWR"
@@ -11,7 +12,7 @@ export const QUERY_OPEN_PLAN_PAYMENT_ORDER_SWR_KEY = "QUERY_OPEN_PLAN_PAYMENT_OR
 /** Reads the open plan payment order of the selected workspace. */
 export const useQueryOpenPlanPaymentOrderSwr = (
     workspaceId: string | undefined,
-): ReadResponse<OperationData<typeof queryOpenPlanPaymentOrder>["openPlanPaymentOrder"]> =>
+): SWRResponse<OpenPlanPaymentOrderQuery["openPlanPaymentOrder"], Error> =>
     useSWR(argumentKey(QUERY_OPEN_PLAN_PAYMENT_ORDER_SWR_KEY, workspaceId), async () => {
         const result = await queryOpenPlanPaymentOrder()
         if (!result.data) throw new Error("openPlanPaymentOrder answered no data")

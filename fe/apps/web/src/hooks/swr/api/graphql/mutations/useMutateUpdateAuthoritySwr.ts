@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateUpdateAuthority } from "@/modules/api/graphql/mutations/mutation-update-authority"
-import type { MutateUpdateAuthorityRequest } from "@/modules/api/graphql/mutations/mutation-update-authority"
+import {
+    mutateUpdateAuthority,
+    type MutateUpdateAuthorityRequest,
+} from "@/modules/api/graphql/mutations/mutation-update-authority"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { UpdateAuthorityMutation } from "@/modules/api"
 
 /** What the UpdateAuthority mutation is triggered with. */
 interface UpdateAuthorityArg {
@@ -16,7 +18,7 @@ export const MUTATE_UPDATE_AUTHORITY_SWR_KEY = "MUTATE_UPDATE_AUTHORITY_SWR"
 
 /** SWR mutation for {@link mutateUpdateAuthority}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateUpdateAuthoritySwr = (): SWRMutationResponse<
-    OperationData<typeof mutateUpdateAuthority>["updateAuthority"],
+    UpdateAuthorityMutation["updateAuthority"],
     Error,
     typeof MUTATE_UPDATE_AUTHORITY_SWR_KEY,
     UpdateAuthorityArg["arg"]

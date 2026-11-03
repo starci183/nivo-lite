@@ -1,13 +1,11 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { queryAgentWork } from "@/modules/api/graphql/queries/query-agent-work"
-import type { QueryAgentWorkRequest } from "@/modules/api/graphql/queries/query-agent-work"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import { queryAgentWork, type QueryAgentWorkRequest } from "@/modules/api/graphql/queries/query-agent-work"
+import type { AgentWorkQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryAgentWorkSwr}. */
 export const QUERY_AGENT_WORK_SWR_KEY = "QUERY_AGENT_WORK_SWR"
@@ -16,7 +14,7 @@ export const QUERY_AGENT_WORK_SWR_KEY = "QUERY_AGENT_WORK_SWR"
 export const useQueryAgentWorkSwr = (
     request: QueryAgentWorkRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryAgentWork>["agentWork"]> =>
+): ReadResponse<AgentWorkQuery["agentWork"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_AGENT_WORK_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryAgentWorkRequest>) =>

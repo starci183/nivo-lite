@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateCheckInBooking } from "@/modules/api/graphql/mutations/mutation-check-in-booking"
 import type { MutateCheckInBookingRequest } from "@/modules/api/graphql/mutations/types/check-in-booking"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CheckInBookingMutation } from "@/modules/api"
 
 /** The SWR key of the `checkInBooking` mutation. */
 export const MUTATE_CHECK_IN_BOOKING_SWR_KEY = "MUTATE_CHECK_IN_BOOKING_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Checks a confirmed booking in. */
 export const useMutateCheckInBookingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCheckInBooking>["checkInBooking"],
+    CheckInBookingMutation["checkInBooking"],
     Error,
     typeof MUTATE_CHECK_IN_BOOKING_SWR_KEY,
     TriggerArg["arg"]

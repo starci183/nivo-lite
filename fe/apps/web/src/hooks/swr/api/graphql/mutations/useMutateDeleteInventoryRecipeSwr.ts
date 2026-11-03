@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDeleteInventoryRecipe } from "@/modules/api/graphql/mutations/mutation-delete-inventory-recipe"
-import type { MutateDeleteInventoryRecipeRequest } from "@/modules/api/graphql/mutations/mutation-delete-inventory-recipe"
+import {
+    mutateDeleteInventoryRecipe,
+    type MutateDeleteInventoryRecipeRequest,
+} from "@/modules/api/graphql/mutations/mutation-delete-inventory-recipe"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DeleteInventoryRecipeMutation } from "@/modules/api"
 
 /** What the deleteInventoryRecipe mutation is triggered with. */
 interface DeleteInventoryRecipeArg {
@@ -16,7 +18,7 @@ export const MUTATE_DELETE_INVENTORY_RECIPE_SWR_KEY = "MUTATE_DELETE_INVENTORY_R
 
 /** SWR mutation for {@link mutateDeleteInventoryRecipe}: `trigger(request)` answers `deleteInventoryRecipe` and rejects with the back end failure. */
 export const useMutateDeleteInventoryRecipeSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDeleteInventoryRecipe>["deleteInventoryRecipe"],
+    DeleteInventoryRecipeMutation["deleteInventoryRecipe"],
     Error,
     typeof MUTATE_DELETE_INVENTORY_RECIPE_SWR_KEY,
     DeleteInventoryRecipeArg["arg"]

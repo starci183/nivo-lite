@@ -1,11 +1,10 @@
 "use client"
 
-import { argumentKey } from "@/hooks/workspaceread"
+import { argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import type { LoadOpenApiConnectionQuery } from "@/modules/api"
 import { queryLoadOpenApiConnection } from "@/modules/api/graphql/queries/query-load-open-api-connection"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the loadOpenApiConnection query. */
 export const QUERY_LOAD_OPEN_API_CONNECTION_SWR_KEY = "QUERY_LOAD_OPEN_API_CONNECTION_SWR"
@@ -14,7 +13,7 @@ export const QUERY_LOAD_OPEN_API_CONNECTION_SWR_KEY = "QUERY_LOAD_OPEN_API_CONNE
 export const useQueryLoadOpenApiConnectionSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration<LoadOpenApiConnectionQuery["loadOpenApiConnection"]>,
-): ReadResponse<OperationData<typeof queryLoadOpenApiConnection>["loadOpenApiConnection"]> =>
+): ReadResponse<LoadOpenApiConnectionQuery["loadOpenApiConnection"]> =>
     useSWR(
         argumentKey(QUERY_LOAD_OPEN_API_CONNECTION_SWR_KEY, connectionId),
         async ([, id]) => {

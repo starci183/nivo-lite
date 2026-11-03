@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateCopyInviteLink } from "@/modules/api/graphql/mutations/mutation-copy-invite-link"
-import type { mutateCopyInviteLink as MutateCopyInviteLinkOperation } from "@/modules/api/graphql/mutations/mutation-copy-invite-link"
+import {
+    mutateCopyInviteLink,
+    type mutateCopyInviteLink as MutateCopyInviteLinkOperation,
+} from "@/modules/api/graphql/mutations/mutation-copy-invite-link"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CopyInviteLinkMutation } from "@/modules/api"
 
 /** The SWR key of the copyInviteLink mutation. */
 export const MUTATE_COPY_INVITE_LINK_SWR_KEY = "MUTATE_COPY_INVITE_LINK_SWR"
 
 /** SWR mutation for {@link mutateCopyInviteLink}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateCopyInviteLinkSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCopyInviteLink>["copyInviteLink"],
+    CopyInviteLinkMutation["copyInviteLink"],
     Error,
     typeof MUTATE_COPY_INVITE_LINK_SWR_KEY,
     TriggerArg["arg"]

@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateShareVideoProject } from "@/modules/api/graphql/mutations/mutation-share-video-project"
-import type { mutateShareVideoProject as MutateShareVideoProjectOperation } from "@/modules/api/graphql/mutations/mutation-share-video-project"
+import {
+    mutateShareVideoProject,
+    type mutateShareVideoProject as MutateShareVideoProjectOperation,
+} from "@/modules/api/graphql/mutations/mutation-share-video-project"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ShareVideoProjectMutation } from "@/modules/api"
 
 /** The SWR key of the shareVideoProject mutation. */
 export const MUTATE_SHARE_VIDEO_PROJECT_SWR_KEY = "MUTATE_SHARE_VIDEO_PROJECT_SWR"
 
 /** SWR mutation for {@link mutateShareVideoProject}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateShareVideoProjectSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateShareVideoProject>["shareVideoProject"],
+    ShareVideoProjectMutation["shareVideoProject"],
     Error,
     typeof MUTATE_SHARE_VIDEO_PROJECT_SWR_KEY,
     TriggerArg["arg"]

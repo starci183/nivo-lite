@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateAdminSetWorkspacePlan } from "@/modules/api/graphql/mutations/mutation-admin-set-workspace-plan"
-import type { MutateAdminSetWorkspacePlanRequest } from "@/modules/api/graphql/mutations/mutation-admin-set-workspace-plan"
+import {
+    mutateAdminSetWorkspacePlan,
+    type MutateAdminSetWorkspacePlanRequest,
+} from "@/modules/api/graphql/mutations/mutation-admin-set-workspace-plan"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { AdminSetWorkspacePlanMutation } from "@/modules/api"
 
 /** What the admin set workspace plan mutation is triggered with. */
 interface AdminSetWorkspacePlanArg {
@@ -16,7 +18,7 @@ export const MUTATE_ADMIN_SET_WORKSPACE_PLAN_SWR_KEY = "MUTATE_ADMIN_SET_WORKSPA
 
 /** SWR mutation for {@link mutateAdminSetWorkspacePlan}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateAdminSetWorkspacePlanSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateAdminSetWorkspacePlan>["adminSetWorkspacePlan"],
+    AdminSetWorkspacePlanMutation["adminSetWorkspacePlan"],
     Error,
     typeof MUTATE_ADMIN_SET_WORKSPACE_PLAN_SWR_KEY,
     AdminSetWorkspacePlanArg["arg"]

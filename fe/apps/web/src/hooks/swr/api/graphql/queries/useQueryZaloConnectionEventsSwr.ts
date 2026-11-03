@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryZaloConnectionEvents } from "@/modules/api/graphql/queries/query-zalo-connection-events"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ZaloConnectionEventsQuery } from "@/modules/api"
 
 /** The SWR key of the zaloConnectionEvents query. */
 export const QUERY_ZALO_CONNECTION_EVENTS_SWR_KEY = "QUERY_ZALO_CONNECTION_EVENTS_SWR_KEY"
@@ -13,7 +13,7 @@ export const QUERY_ZALO_CONNECTION_EVENTS_SWR_KEY = "QUERY_ZALO_CONNECTION_EVENT
 export const useQueryZaloConnectionEventsSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryZaloConnectionEvents>["zaloConnectionEvents"]> =>
+): ReadResponse<ZaloConnectionEventsQuery["zaloConnectionEvents"]> =>
     useSWR(
         argumentKey(QUERY_ZALO_CONNECTION_EVENTS_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

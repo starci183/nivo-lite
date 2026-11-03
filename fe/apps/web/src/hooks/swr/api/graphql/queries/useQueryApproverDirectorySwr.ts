@@ -4,7 +4,8 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryApproverDirectory } from "@/modules/api/graphql/queries/query-approver-directory"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ReadResponse } from "@/hooks/workspaceread"
+import type { ApproverDirectoryQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryApproverDirectorySwr}. */
 export const QUERY_APPROVER_DIRECTORY_SWR_KEY = "QUERY_APPROVER_DIRECTORY_SWR"
@@ -12,7 +13,7 @@ export const QUERY_APPROVER_DIRECTORY_SWR_KEY = "QUERY_APPROVER_DIRECTORY_SWR"
 /** The back end `approverDirectory` query. */
 export const useQueryApproverDirectorySwr = (
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryApproverDirectory>["approverDirectory"]> =>
+): ReadResponse<ApproverDirectoryQuery["approverDirectory"]> =>
     useSWR(
         useWorkspaceKey(QUERY_APPROVER_DIRECTORY_SWR_KEY, []),
         async () => {

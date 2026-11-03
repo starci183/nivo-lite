@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateRequestContentDraft } from "@/modules/api/graphql/mutations/mutation-request-content-draft"
-import type { mutateRequestContentDraft as MutateRequestContentDraftOperation } from "@/modules/api/graphql/mutations/mutation-request-content-draft"
+import {
+    mutateRequestContentDraft,
+    type mutateRequestContentDraft as MutateRequestContentDraftOperation,
+} from "@/modules/api/graphql/mutations/mutation-request-content-draft"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestContentDraftMutation } from "@/modules/api"
 
 /** The SWR key of the requestContentDraft mutation. */
 export const MUTATE_REQUEST_CONTENT_DRAFT_SWR_KEY = "MUTATE_REQUEST_CONTENT_DRAFT_SWR"
 
 /** SWR mutation for {@link mutateRequestContentDraft}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateRequestContentDraftSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestContentDraft>["requestContentDraft"],
+    RequestContentDraftMutation["requestContentDraft"],
     Error,
     typeof MUTATE_REQUEST_CONTENT_DRAFT_SWR_KEY,
     TriggerArg["arg"]

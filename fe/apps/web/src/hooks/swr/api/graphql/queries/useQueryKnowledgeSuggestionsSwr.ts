@@ -3,7 +3,8 @@
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryKnowledgeSuggestions } from "@/modules/api/graphql/queries/query-knowledge-suggestions"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ReadResponse } from "@/hooks/workspaceread"
+import type { KnowledgeSuggestionsQuery } from "@/modules/api"
 
 /** The SWR key of the suggestions read; `setKnowledgeSuggestionState` revalidates the keys that lead with it. */
 export const QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY = "QUERY_KNOWLEDGE_SUGGESTIONS_SWR"
@@ -14,7 +15,7 @@ export const QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY = "QUERY_KNOWLEDGE_SUGGESTIONS_
  */
 export const useQueryKnowledgeSuggestionsSwr = (
     enabled: boolean,
-): ReadResponse<OperationData<typeof queryKnowledgeSuggestions>["knowledgeSuggestions"]> => {
+): ReadResponse<KnowledgeSuggestionsQuery["knowledgeSuggestions"]> => {
     const key = useWorkspaceKey(QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY, [], enabled)
     return useSWR(key, async ({ signal }: { signal?: AbortSignal } = {}) => {
         const result = await queryKnowledgeSuggestions({ signal })

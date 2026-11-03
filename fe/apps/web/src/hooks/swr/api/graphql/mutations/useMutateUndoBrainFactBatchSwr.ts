@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateUndoBrainFactBatch } from "@/modules/api/graphql/mutations/mutation-undo-brain-fact-batch"
-import type { MutateUndoBrainFactBatchRequest } from "@/modules/api/graphql/mutations/mutation-undo-brain-fact-batch"
+import {
+    mutateUndoBrainFactBatch,
+    type MutateUndoBrainFactBatchRequest,
+} from "@/modules/api/graphql/mutations/mutation-undo-brain-fact-batch"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { UndoBrainFactBatchMutation } from "@/modules/api"
 
 /** What the UndoBrainFactBatch mutation is triggered with. */
 interface UndoBrainFactBatchArg {
@@ -16,7 +18,7 @@ export const MUTATE_UNDO_BRAIN_FACT_BATCH_SWR_KEY = "MUTATE_UNDO_BRAIN_FACT_BATC
 
 /** SWR mutation for {@link mutateUndoBrainFactBatch}: takes a batch of facts applied together back to review; answers how many went back and how many stayed. `trigger(input)` rejects with the back end failure. */
 export const useMutateUndoBrainFactBatchSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateUndoBrainFactBatch>["undoBrainFactBatch"],
+    UndoBrainFactBatchMutation["undoBrainFactBatch"],
     Error,
     typeof MUTATE_UNDO_BRAIN_FACT_BATCH_SWR_KEY,
     UndoBrainFactBatchArg["arg"]
