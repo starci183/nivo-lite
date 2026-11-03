@@ -412,6 +412,23 @@ describe("AgentMessagesService transcript", () => {
         })
     })
 })
+describe("AgentMessagesService customerLinesOf", () => {
+    it("answers the customer's messages among the ids in the order they were said, and reads nothing for no id", async () => {
+        const at = new Date("2026-11-04T01:00:00.000Z")
+        const em = mockEntityManager({ find: [AgentMessageEntity, [Object.assign(new AgentMessageEntity(), { id: "m-1", body: "Chào", createdAt: at })]] })
+        const { service } = await build(em)
+
+        await expect(service.customerLinesOf("conv-1", ["m-1", "m-2"])).resolves.toEqual([{ id: "m-1", body: "Chào", at }])
+        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
+            select: { id: true, body: true, createdAt: true },
+            where: { conversationId: "conv-1", id: In(["m-1", "m-2"]), role: "user" },
+            order: { createdAt: "ASC", id: "ASC" },
+        })
+        await expect(service.customerLinesOf("conv-1", [])).resolves.toEqual([])
+        expect(em.find).toHaveBeenCalledTimes(1)
+    })
+})
+
 describe("AgentMessagesService lastCustomerAt", () => {
     it("answers when the customer last wrote, or a refusal when they never did", async () => {
         const wrote = await build(mockEntityManager({ findOne: [AgentMessageEntity, messageOf()] }))

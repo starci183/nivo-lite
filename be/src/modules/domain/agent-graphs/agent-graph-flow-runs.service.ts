@@ -1,17 +1,22 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { nodeSagaOf } from "@nivo-lite/agent-sdk/node"
 import { AgentRunsService } from "@modules/domain/agent-runs"
-import type { StepSpec } from "@modules/domain/agent-runs"
+import type { StepJson, StepSpec } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import type { AgentHandlerEnding, AgentTurnView, AgentWorkFlow } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectFlowTriggerMessages } from "./agent-graphs.decorators"
+import type { FlowTriggerMessages } from "./agent-graphs.port"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { GRAPH_FLOW_TRIGGER, graphNodeStepOf, tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
 import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
+
+/** What joins the customer messages of a burst into one text. */
+const LINE = "\n"
 
 /** The active node graph of an agent and the version it is frozen in, or null when the agent runs no node graph. */
 interface ActiveFlow {
@@ -32,6 +37,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         private readonly runs: AgentRunsService,
         private readonly handlers: AgentWorkHandlersService,
         private readonly nodes: GraphNodeRegistryService,
+        @Optional() @InjectFlowTriggerMessages() private readonly messages: FlowTriggerMessages | null = null,
     ) {}
 
     /** Sets itself as the flow the drain asks before any handler, once the app has started. */
@@ -50,7 +56,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         const active = await this.activeOf(turn.workspaceId, turn.agentId)
         const first = active?.flow.nodes[0]
         if (active === null || first === undefined) return { status: "skipped", reason: "no_flow", outcome: null }
-        const trigger = triggerScopeOf(turn)
+        const trigger = await this.triggerOf(turn)
         const runId = await this.entityManager.transaction(async (tx) => {
             const opened = await this.runs.open(tx, {
                 workspaceId: turn.workspaceId,
@@ -66,6 +72,33 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
             return opened.id
         })
         return { status: "done", reason: null, outcome: { runId } }
+    }
+
+    /**
+     * The trigger scope of a wake. A channel wake carries the ids of the customer messages it answers (the message and the burst merged
+     * into it), never the words, so they are read from the store: `text` joins them in the order they were said, `messages` keeps each
+     * with its time and files, `messageIds` their ids, and `leadId` and `channel` come from the conversation. A tag keeps the words its
+     * tagger gave.
+     */
+    async triggerOf(turn: AgentTurnView): Promise<StepJson> {
+        const scope = triggerScopeOf(turn)
+        const { conversationId, messageId, mergedMessageIds } = turn.context
+        if (scope.text !== undefined || conversationId === undefined || messageId === undefined || this.messages === null) {
+            return scope
+        }
+        const ids = [messageId, ...(mergedMessageIds === undefined ? [] : mergedMessageIds.split(","))]
+        const [said, conversation] = await Promise.all([
+            this.messages.messagesOf(turn.workspaceId, conversationId, ids),
+            this.messages.conversationOf(conversationId),
+        ])
+        return {
+            ...scope,
+            leadId: scope.leadId ?? conversation?.leadId ?? null,
+            channel: scope.channel ?? conversation?.channel ?? null,
+            text: said.map((message) => message.text).join(LINE),
+            messages: said.map((message) => ({ ...message, attachments: [...message.attachments] })),
+            messageIds: said.map((message) => message.id),
+        }
     }
 
     /** The step of a node, with its saga kind: a read, compensable when every effect it runs can be undone, else a pivot. */

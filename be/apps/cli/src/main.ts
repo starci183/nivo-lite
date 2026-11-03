@@ -13,7 +13,7 @@ import { readCliEnv } from "./cli.env"
 async function bootstrap(): Promise<void> {
     const logger = createJsonLogger(new SystemClockService())
     await CommandFactory.run(AppModule.register(readCliEnv(EnvSource.fromProcess())), {
-        logger: false,
+        logger: ["error", "warn"],
         abortOnError: false,
         ...createCliFailureHandlers(logger),
     })

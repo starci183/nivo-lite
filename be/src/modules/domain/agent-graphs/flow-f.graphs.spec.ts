@@ -11,6 +11,9 @@ import type { NodeModelRequest as NodeAsk } from "@nivo-lite/agent-sdk/node"
 import { AgentRunHandlersService, AgentRunsService } from "@modules/domain/agent-runs"
 import type { StepJson, StepSpec, StepView } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
+import { tagContextOf, tagPayloadTextOf } from "@modules/domain/agent-work"
+import type { AgentTurnView } from "@modules/domain/agent-work"
+import { customerWakeContextOf } from "@modules/domain/conversations"
 import {
     GRAPH_NODE_MODEL,
     GRAPH_NODE_TOOL_DOOR,
@@ -21,12 +24,15 @@ import {
 } from "@modules/domain/graph-nodes"
 import type { NodeModelDoor, NodeRow, NodeToolDoor, NodeTurn } from "@modules/domain/graph-nodes"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
+import { GRAPH_FLOW_TRIGGER_MESSAGES } from "./agent-graphs.decorators"
+import type { FlowTriggerMessages } from "./agent-graphs.port"
 import type { FlowWake } from "./policies/graph-flow.policy"
 
 /** The flow F graphs as the seed ships them. */
@@ -72,7 +78,17 @@ const worldOf = (store: Record<string, Array<NodeRow>>, failOn: string | null = 
             rows.slice(0, query.limit).map((row) => Object.fromEntries(query.fields.map((field) => [field, row[field]]))),
         )
     }
-    return { ran, execute, read }
+    /** The conversation the customer wrote in, as the store answers a channel wake: the words, the times and the files. */
+    const conversation: FlowTriggerMessages = {
+        messagesOf: (_workspace, _conversation, ids) =>
+            Promise.resolve(
+                (store.messages ?? [])
+                    .filter((row) => ids.includes(String(row.id)))
+                    .map((row) => ({ id: String(row.id), text: String(row.body), at: String(row.at), attachments: [] })),
+            ),
+        conversationOf: () => Promise.resolve({ leadId: "lead-1", channel: "zalo" }),
+    }
+    return { ran, execute, read, conversation }
 }
 
 const build = async (world: ReturnType<typeof worldOf>, graph: GraphSpec, model: Record<string, Array<unknown>>) => {
@@ -119,6 +135,8 @@ const build = async (world: ReturnType<typeof worldOf>, graph: GraphSpec, model:
             { provide: AgentRunHandlersService, useValue: mock<AgentRunHandlersService>() },
             { provide: AgentWorkHandlersService, useValue: mock<AgentWorkHandlersService>() },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: {} },
+            { provide: GRAPH_FLOW_TRIGGER_MESSAGES, useValue: world.conversation },
+            { provide: MESSAGE_CATALOG, useValue: { get: (key: string) => key } },
         ],
     }).compile()
     const registry = moduleRef.get(GraphNodeRegistryService)
@@ -148,7 +166,7 @@ interface Drive {
  * first, as the engine's compensation does.
  */
 const drive = async (built: Awaited<ReturnType<typeof build>>, graph: GraphSpec, wake: FlowWake): Promise<Drive> => {
-    const trigger = triggerScopeOf(wake)
+    const trigger = await built.flows.triggerOf({ ...wake, workspaceId: "ws-1", agentId: "agent-1", wakeId: "wake-1" } as AgentTurnView)
     const first = graph.nodes[0]
     if (first === undefined) throw new Error("empty graph")
     const pending: Array<StepSpec> = [built.flows.stepOf(first, { versionId: "version-1", nodeKey: first.key, trigger })]
@@ -173,16 +191,21 @@ const drive = async (built: Awaited<ReturnType<typeof build>>, graph: GraphSpec,
 
 const CATALOGUE = [{ id: "c1", name: "Chậu hoa", priceVnd: 150_000, active: true }]
 
+/** The tag Chatbot's hand-off writes for Sales, built by the tag door's own policy. */
+const SALES_TAG = {
+    fromAgentId: "chatbot-1",
+    workspaceId: "ws-1",
+    toAgentId: "agent-1",
+    text: "Khách muốn đặt 1 chậu hoa",
+    conversationId: "conv-1",
+    leadId: "lead-1",
+    context: { items: [{ name: "chậu hoa", quantity: 1, priceVnd: null }], address: "69 Hàng Xanh" },
+}
+
 const SALES_WAKE: FlowWake = {
     source: "tag",
     actorMemberId: null,
-    context: {
-        text: "Khách muốn đặt 1 chậu hoa",
-        conversationId: "conv-1",
-        leadId: "lead-1",
-        authorAgentId: "chatbot-1",
-        tagContext: JSON.stringify({ items: [{ name: "chậu hoa", quantity: 1, priceVnd: null }], address: "69 Hàng Xanh" }),
-    },
+    context: tagContextOf(SALES_TAG, tagPayloadTextOf(SALES_TAG) ?? undefined),
 }
 
 describe("flow F graphs on fake ports", () => {
@@ -228,7 +251,9 @@ describe("flow F graphs on fake ports", () => {
 
     it("Chatbot answers nothing and hands an order to Sales with its items as context", async () => {
         const graph = graphOf("chatbot")
-        const world = worldOf({})
+        const world = worldOf({
+            messages: [{ id: "msg-1", body: "Đặt 1 chậu hoa, giao 69 Hàng Xanh", at: "2026-11-04T01:00:00.000Z" }],
+        })
         const model = {
             "intent.classify:intent-classify": [
                 {
@@ -241,7 +266,7 @@ describe("flow F graphs on fake ports", () => {
         const wake: FlowWake = {
             source: "customer",
             actorMemberId: null,
-            context: { text: "Đặt 1 chậu hoa, giao 69 Hàng Xanh", conversationId: "conv-1", leadId: "lead-1", channel: "zalo" },
+            context: customerWakeContextOf({ conversationId: "conv-1", messageId: "msg-1", channelEventId: "zalo:1", lookupName: false }),
         }
         const run = await drive(await build(world, graph, model), graph, wake)
 

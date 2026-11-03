@@ -54,3 +54,46 @@ export interface AgentGraphBrief {
     /** Raises the gap a turn found as a proposal for the owner, once per agent and question; false when it was already raised. */
     raiseGap(gap: IntentGap): Promise<boolean>
 }
+
+/** A file a customer sent with a message, as a node reads it: a short-lived address, never the bytes. */
+export interface FlowTriggerFile {
+    /** The file. */
+    readonly id: string
+    /** Its name. */
+    readonly name: string
+    /** Its type. */
+    readonly contentType: string
+    /** A short-lived address. */
+    readonly url: string
+}
+
+/** One customer message a node graph's run answers. */
+export interface FlowTriggerMessage {
+    /** The message. */
+    readonly id: string
+    /** What the customer said. */
+    readonly text: string
+    /** When they said it, ISO. */
+    readonly at: string
+    /** The files they sent with it. */
+    readonly attachments: ReadonlyArray<FlowTriggerFile>
+}
+
+/** The conversation a channel wake belongs to, as a trigger reads it: the customer it is with and the channel it runs on. */
+export interface FlowTriggerConversation {
+    /** The customer, or null when none is known yet. */
+    readonly leadId: string | null
+    /** The channel. */
+    readonly channel: string
+}
+
+/**
+ * The customer messages a run answers, read from the store: a channel wake carries ids only, never the words. The capability that owns
+ * the conversations binds it; without it a channel wake's trigger holds no words.
+ */
+export interface FlowTriggerMessages {
+    /** The customer's messages among the ids, in the order they were said, with their files. */
+    messagesOf(workspaceId: string, conversationId: string, messageIds: ReadonlyArray<string>): Promise<ReadonlyArray<FlowTriggerMessage>>
+    /** The conversation's customer and channel, or null when it is gone. */
+    conversationOf(conversationId: string): Promise<FlowTriggerConversation | null>
+}

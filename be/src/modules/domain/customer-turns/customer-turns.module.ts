@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { GRAPH_FLOW_TRIGGER_MESSAGES } from "@modules/domain/agent-graphs"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import { INBOX, InboxService } from "@modules/platform/inbox"
@@ -27,6 +28,7 @@ import { TurnGatewayToolsService } from "./turn-gateway-tools.service"
 import { TurnHandoffService } from "./turn-handoff.service"
 import { TurnSourcesService } from "./turn-sources.service"
 import { TurnToolAccessService } from "./turn-tool-access.service"
+import { FlowTriggerMessagesService } from "./flow-trigger-messages.service"
 
 @Module({})
 /**
@@ -71,8 +73,14 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
         return {
             ...base,
             imports: [...(base.imports ?? []), knowledge],
-            providers: [...(base.providers ?? []), { provide: INBOX, useClass: InboxService }, ...services],
-            exports: [...services, knowledge],
+            providers: [
+                ...(base.providers ?? []),
+                { provide: INBOX, useClass: InboxService },
+                ...services,
+                FlowTriggerMessagesService,
+                { provide: GRAPH_FLOW_TRIGGER_MESSAGES, useExisting: FlowTriggerMessagesService },
+            ],
+            exports: [...services, knowledge, GRAPH_FLOW_TRIGGER_MESSAGES],
         }
     }
 }

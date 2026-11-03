@@ -1,5 +1,0 @@
-{"data":{},"findings":[],"hash":"b8934fc1155da0c09a6d8910797954653daf875ff0b7cbaf78ba031c3a99e55a","path":"fe/packages/nivo-offer/package.json","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"fe/packages/nivo-offer/package.json has a lint script; a workspace has none, the app is linted once from the root with `starci app check --gate lint`.","path":"fe/packages/nivo-offer/package.json","rule":"HFS_MONO_FE_WORKSPACE"}],"hash":"6a20d83df824fe73036e0e4cae2d14b2ef8f7b2640efebe00ebbec8da43a3636","path":"fe/packages/nivo-offer/package.json","step":"hfs"}
-{"data":{},"findings":[],"hash":"6bdbd011861b821516c17dd726c3322eb05cfb48264b9169647a349b9e423320","path":"fe/packages/nivo-offer/src/index.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"f28ba0af1502e4fc2ff8fb674ee3b6b79efe12c7fdb3af9f41cfd3e17bf1f71e","path":"fe/packages/nivo-offer/tsconfig.build.json","step":"file-rules"}
-{"data":{},"findings":[],"hash":"f2388b528bf9cddb2e94bd8a76066f56cfc4ce7ad712e76d8ac8f4c0156ceb43","path":"fe/packages/nivo-offer/tsconfig.json","step":"file-rules"}

@@ -1,3 +1,13 @@
+/** One message a customer said, with the time they said it. */
+export interface CustomerLine {
+    /** The message. */
+    readonly id: string
+    /** What they said. */
+    readonly body: string
+    /** When they said it. */
+    readonly at: Date
+}
+
 /** One stored message of a conversation. */
 export interface StoredMessage {
     /** The message id. */

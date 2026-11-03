@@ -7,12 +7,18 @@ import { NodeRunError, resolveInput, RightsDeniedError, ToolUndeclaredError } fr
 import type { NodeRun } from "@nivo-lite/agent-sdk/node"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import type { AgentStepHandler, StepAnswer, StepJson, StepView } from "@modules/domain/agent-runs"
-import { GraphNodeHostService } from "@modules/domain/graph-nodes"
+import { GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
+import { InjectMessageCatalog } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { GRAPH_NODE_STEP_KIND, localeOf, outputsOf } from "./policies/graph-flow.policy"
 import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
+
+/** The effect a dead run raises the owner's review through, and the action of that work. */
+const RAISE_EFFECT = "work-item.raise"
+const RUN_REVIEW_ACTION = "review_agent_run"
 
 /** Why a step cannot run: its row does not hold what a node step needs, or its version holds no such node. */
 const INVALID_INPUT = "invalid_step_input"
@@ -74,6 +80,8 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
         private readonly graphs: AgentGraphsService,
         private readonly host: GraphNodeHostService,
         private readonly flows: AgentGraphFlowRunsService,
+        private readonly nodes: GraphNodeRegistryService,
+        @InjectMessageCatalog() private readonly catalog: MessageCatalog,
     ) {}
 
     /** Registers with the run engine once the app has started. */
@@ -107,6 +115,24 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
         const input = stepInputSchema.parse(step.input)
         const { effects } = doneSchema.parse(step.result)
         await this.host.undo({ turn: turnOf(step, input.trigger), done: effects, key: `${step.runId}:${step.stepKey}` })
+    }
+
+    /**
+     * A run that died at a node step is never silent to the owner: one work item a person reviews, raised through `work-item.raise`
+     * once per run, names the run, the node and why. The customer hears nothing from here.
+     */
+    async deadLetter(step: StepView, code: string): Promise<void> {
+        const raise = this.nodes.optionalExecutorOf(RAISE_EFFECT)
+        if (raise === undefined) return
+        const input = stepInputSchema.safeParse(step.input)
+        const turn = turnOf(step, input.success ? input.data.trigger : {})
+        const payload = {
+            action: RUN_REVIEW_ACTION,
+            title: this.catalog.get("agentGraphs.runDead.title", {}, turn.locale),
+            payload: { runId: step.runId, nodeKey: step.nodeKey, code, conversationId: turn.conversationId },
+        }
+        const dedupeKey = `graph-run-dead:${step.runId}`
+        await raise.execute(turn, payload, { key: dedupeKey, dedupeKey })
     }
 
     private async ran(

@@ -11,8 +11,16 @@ export { AgentGraphAsksService } from "./agent-graph-asks.service"
 export type { GraphWorkClaim, GraphWorkDecisions, GraphWorkResume, GraphWorkOutcome } from "./graph-work-decisions.port"
 export { AgentGraphWatchService } from "./agent-graph-watch.service"
 export type { FactSpec, FactValues, GraphContext, GraphDocument } from "./agent-graphs.contracts"
-export type { FactSubject, GraphFactReader, AgentGraphBrief } from "./agent-graphs.port"
-export { AGENT_GRAPH_BRIEF, InjectAgentGraphBrief } from "./agent-graphs.decorators"
+export type {
+    FactSubject,
+    FlowTriggerConversation,
+    FlowTriggerFile,
+    FlowTriggerMessage,
+    FlowTriggerMessages,
+    GraphFactReader,
+    AgentGraphBrief,
+} from "./agent-graphs.port"
+export { AGENT_GRAPH_BRIEF, GRAPH_FLOW_TRIGGER_MESSAGES, InjectAgentGraphBrief } from "./agent-graphs.decorators"
 export { graphDocumentSchema } from "./agent-graphs.schema"
 export { baseGraphOf } from "./policies/base-graph.policy"
 export type { SeedRule } from "./agent-graphs-seed.contracts"

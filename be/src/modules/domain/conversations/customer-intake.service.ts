@@ -5,6 +5,7 @@ import { AgentWakeService, AgentWorkSettingsService } from "@modules/domain/agen
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
 import type { CustomerIntake, MessageIntake } from "./conversations.contracts"
+import { customerWakeContextOf } from "./customer-wake.policy"
 
 @Injectable()
 /**
@@ -45,12 +46,7 @@ export class CustomerIntakeService {
             agentId: intake.agentId,
             source: "customer",
             eventKey: intake.messageId,
-            context: {
-                conversationId: intake.conversationId,
-                messageId: intake.messageId,
-                channelEventId: intake.channelEventId,
-                lookupName: intake.lookupName,
-            },
+            context: customerWakeContextOf(intake),
             actorMemberId: null,
         })
     }

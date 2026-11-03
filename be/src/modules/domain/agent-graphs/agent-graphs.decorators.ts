@@ -2,7 +2,7 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import type { AgentGraphsOptions } from "./agent-graphs.options"
-import type { AgentGraphBrief, GraphFactReader } from "./agent-graphs.port"
+import type { AgentGraphBrief, FlowTriggerMessages, GraphFactReader } from "./agent-graphs.port"
 import type { GraphWorkDecisions } from "./graph-work-decisions.port"
 
 /** Token of the agent-graphs options. */
@@ -39,3 +39,10 @@ export const AGENT_GRAPH_BRIEF: unique symbol = Symbol("domain.agent-graphs.grap
 /** Injects the action graph brief port. Parameter type: AgentGraphBrief. */
 export const InjectAgentGraphBrief = (): TypedParameterDecorator<AgentGraphBrief> =>
     injector<AgentGraphBrief>(AGENT_GRAPH_BRIEF)
+
+/** Token of the port that reads the customer messages a node graph's run answers. Absent until the conversations capability binds it. */
+export const GRAPH_FLOW_TRIGGER_MESSAGES: unique symbol = Symbol("domain.agent-graphs.flow-trigger-messages")
+
+/** Injects the flow trigger messages port. Parameter type: FlowTriggerMessages. */
+export const InjectFlowTriggerMessages = (): TypedParameterDecorator<FlowTriggerMessages> =>
+    injector<FlowTriggerMessages>(GRAPH_FLOW_TRIGGER_MESSAGES)

@@ -8,6 +8,7 @@ import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import type {
     AgentThreadMessage,
+    CustomerLine,
     DeliveryClaim,
     NodeMessage,
     ApprovedMessageId,
@@ -294,6 +295,17 @@ export class AgentMessagesService {
         })
         if (row === null) return refused(AgentMessagesErrorCode.NotFound)
         return ok({ id: row.id, role: row.role ?? "", body: row.body, deliveryStatus: row.deliveryStatus })
+    }
+
+    /** The customer's messages of a conversation among the ids, in the order they were said; an id that is gone or no customer's is left out. */
+    async customerLinesOf(conversationId: string, ids: ReadonlyArray<string>): Promise<ReadonlyArray<CustomerLine>> {
+        if (ids.length === 0) return []
+        const rows = await this.entityManager.find(AgentMessageEntity, {
+            select: { id: true, body: true, createdAt: true },
+            where: { conversationId, id: In([...ids]), role: "user" },
+            order: { createdAt: "ASC", id: "ASC" },
+        })
+        return rows.map((row) => ({ id: row.id, body: row.body, at: row.createdAt }))
     }
 
     /** The recent transcript of the conversation without system lines, oldest first. */

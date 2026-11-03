@@ -4,7 +4,9 @@ import { NodeRunError } from "@nivo-lite/agent-sdk/node"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import type { StepSpec, StepView } from "@modules/domain/agent-runs"
-import { GraphNodeHostService } from "@modules/domain/graph-nodes"
+import { GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -39,10 +41,13 @@ const stepOf = (nodeKey: string, overrides: Partial<StepView> = {}): StepView =>
         ...overrides,
     }) as unknown as StepView
 
+const raise = { effect: "work-item.raise", execute: jest.fn().mockResolvedValue({ kind: "work-item", id: "w-1" }) }
+
 const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FLOW }) => {
     const handlers = mock<AgentRunHandlersService>()
     const graphs = mock<AgentGraphsService>({ documentOf: jest.fn().mockResolvedValue(document) })
     const host = mock<GraphNodeHostService>()
+    const nodes = mock<GraphNodeRegistryService>({ optionalExecutorOf: jest.fn().mockReturnValue(raise) })
     const flows = mock<AgentGraphFlowRunsService>({
         stepOf: jest.fn(
             (node: GraphSpecNode, input: GraphNodeStepInput): StepSpec => ({
@@ -61,9 +66,11 @@ const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FL
             { provide: AgentGraphsService, useValue: graphs },
             { provide: GraphNodeHostService, useValue: host },
             { provide: AgentGraphFlowRunsService, useValue: flows },
+            { provide: GraphNodeRegistryService, useValue: nodes },
+            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
         ],
     }).compile()
-    return { steps: moduleRef.get(AgentGraphNodeStepService), handlers, host }
+    return { steps: moduleRef.get(AgentGraphNodeStepService), handlers, host, nodes }
 }
 
 describe("AgentGraphNodeStepService", () => {
@@ -140,5 +147,36 @@ describe("AgentGraphNodeStepService", () => {
             done,
             key: "run-1:keep",
         })
+    })
+})
+
+describe("AgentGraphNodeStepService dead letters", () => {
+    beforeEach(() => raise.execute.mockClear())
+
+    it("raises one owner review per dead run, naming the run, the node and why, in the trigger's language", async () => {
+        const { steps } = await build()
+
+        await steps.deadLetter(stepOf("keep"), "INPUT_INVALID")
+        await steps.deadLetter(stepOf("keep"), "INPUT_INVALID")
+
+        const [turn, payload, call] = raise.execute.mock.calls[0] ?? []
+        expect(turn).toMatchObject({ workspaceId: "ws-1", agentId: "agent-1", conversationId: "c-1", locale: "en" })
+        expect(payload).toEqual({
+            action: "review_agent_run",
+            title: "[agentGraphs.runDead.title]",
+            payload: { runId: "run-1", nodeKey: "keep", code: "INPUT_INVALID", conversationId: "c-1" },
+        })
+        expect(call).toEqual({ key: "graph-run-dead:run-1", dedupeKey: "graph-run-dead:run-1" })
+        expect(new Set(raise.execute.mock.calls.map((each) => each[2].dedupeKey)).size).toBe(1)
+    })
+
+    it("raises for a row it cannot read, and stays quiet where no module raises work", async () => {
+        const { steps, nodes } = await build()
+        await steps.deadLetter(stepOf("keep", { input: {} }), "invalid_step_input")
+        expect(raise.execute.mock.calls[0]?.[0]).toMatchObject({ conversationId: null, locale: "vi" })
+
+        nodes.optionalExecutorOf.mockReturnValue(undefined)
+        await steps.deadLetter(stepOf("keep"), "x")
+        expect(raise.execute).toHaveBeenCalledTimes(1)
     })
 })

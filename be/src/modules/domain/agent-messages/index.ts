@@ -10,7 +10,7 @@ export { AgentMessagesModule } from "./agent-messages.module"
 export { AgentMessagesService } from "./agent-messages.service"
 export { AGENT_MESSAGES_ERROR_KINDS, AgentMessagesErrorCode } from "./errors/agent-messages.error"
 export { AGENT_MESSAGES_MESSAGES } from "./messages/agent-messages.messages"
-export type { TranscriptLine } from "./agent-messages.contracts"
+export type { CustomerLine, TranscriptLine } from "./agent-messages.contracts"
 export type { AgentThreadMessage, MessageStamp, NodeMessage } from "./agent-messages.contracts"
 export { agentMessagesEntities } from "./persistence/entities"
 
