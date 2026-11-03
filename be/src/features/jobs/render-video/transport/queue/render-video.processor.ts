@@ -7,7 +7,7 @@ import { RenderStep } from "../../steps/render.step"
 @Injectable()
 /** The processor of the render-video job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class RenderVideoProcessor extends FencedProcessor {
-    readonly queue = VIDEO_RENDER_QUEUE
+    readonly queue: "video_render" = VIDEO_RENDER_QUEUE
 
     constructor(private readonly render: RenderStep) {
         super()

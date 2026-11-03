@@ -7,9 +7,9 @@ import { SweepAgentWorkStep } from "../../steps/sweep-agent-work.step"
 @Injectable()
 /** The processor of the minute tick of the agent-turn queue: the runner claims and settles it; `process` delegates to the one step. */
 export class SweepAgentWorkProcessor extends FencedProcessor {
-    readonly queue = AGENT_TURN_QUEUE
+    readonly queue: "agent_turn" = AGENT_TURN_QUEUE
 
-    override readonly job = AgentTurnJob.Sweep
+    override readonly job: AgentTurnJob.Sweep = AgentTurnJob.Sweep
 
     constructor(private readonly sweep: SweepAgentWorkStep) {
         super()

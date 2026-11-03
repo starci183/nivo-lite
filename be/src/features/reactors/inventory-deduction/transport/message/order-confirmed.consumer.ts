@@ -8,7 +8,7 @@ import { DeductConfirmedOrderCommand } from "../../application/deduct-confirmed-
 @Injectable()
 /** The consumer door of the order_confirmed event in the inventory-deduction reactor: it dispatches one command and forwards the event id. */
 export class OrderConfirmedConsumer implements EventConsumer<OrderConfirmedEvent> {
-    readonly event = OrderConfirmedEvent
+    readonly event: typeof OrderConfirmedEvent = OrderConfirmedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

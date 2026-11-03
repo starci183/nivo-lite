@@ -7,7 +7,7 @@ import { DeliverEventStep } from "../../steps/deliver-event.step"
 @Injectable()
 /** The processor of the accept-meta-event job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class AcceptMetaEventProcessor extends FencedProcessor {
-    readonly queue = META_INBOUND_QUEUE
+    readonly queue: "meta_inbound" = META_INBOUND_QUEUE
 
     constructor(private readonly deliverEvent: DeliverEventStep) {
         super()

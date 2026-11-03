@@ -8,7 +8,7 @@ import { ReactToOrderShippedCommand } from "../../application/react-to-order-shi
 @Injectable()
 /** The consumer door of the order_shipped event in the automation-triggers reactor: it dispatches one command and forwards the event id. */
 export class OrderShippedConsumer implements EventConsumer<OrderShippedEvent> {
-    readonly event = OrderShippedEvent
+    readonly event: typeof OrderShippedEvent = OrderShippedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

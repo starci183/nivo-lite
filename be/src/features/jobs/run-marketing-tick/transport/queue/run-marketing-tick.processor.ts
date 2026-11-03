@@ -7,7 +7,7 @@ import { RunMarketingTickStep } from "../../steps/run.step"
 @Injectable()
 /** The processor of the AI Marketing tick job: the one step runs it. */
 export class RunMarketingTickProcessor extends FencedProcessor {
-    readonly queue = MARKETING_TICK_QUEUE
+    readonly queue: "marketing_tick" = MARKETING_TICK_QUEUE
 
     constructor(private readonly step: RunMarketingTickStep) {
         super()

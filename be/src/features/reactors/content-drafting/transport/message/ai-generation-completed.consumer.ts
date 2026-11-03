@@ -8,7 +8,7 @@ import { CompleteContentDraftCommand } from "../../application/complete-content-
 @Injectable()
 /** The consumer door of the ai_generation_completed event in the content-drafting reactor: it dispatches one command and forwards the event id. */
 export class AiGenerationCompletedConsumer implements EventConsumer<AiGenerationCompletedEvent> {
-    readonly event = AiGenerationCompletedEvent
+    readonly event: typeof AiGenerationCompletedEvent = AiGenerationCompletedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

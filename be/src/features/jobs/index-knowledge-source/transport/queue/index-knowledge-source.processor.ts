@@ -9,8 +9,8 @@ import { IndexSourceStep } from "../../steps/index-source.step"
 @Injectable()
 /** The processor of the index-knowledge-source job: the runner claims and settles it; `process` delegates to the one step. */
 export class IndexKnowledgeSourceProcessor extends FencedProcessor {
-    override readonly queue = KNOWLEDGE_QUEUE
-    override readonly job = KnowledgeJob.Index
+    override readonly queue: "knowledge" = KNOWLEDGE_QUEUE
+    override readonly job: KnowledgeJob.Index = KnowledgeJob.Index
 
     constructor(
         private readonly indexSource: IndexSourceStep,

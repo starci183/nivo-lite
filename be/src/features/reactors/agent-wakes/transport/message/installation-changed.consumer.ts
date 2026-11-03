@@ -8,7 +8,7 @@ import { SeedAgentTriggersCommand } from "../../application/seed-agent-triggers.
 @Injectable()
 /** The consumer door of the installation_changed event in the agent-wakes reactor: it dispatches one command and forwards the event id. */
 export class InstallationChangedConsumer implements EventConsumer<InstallationChangedEvent> {
-    readonly event = InstallationChangedEvent
+    readonly event: typeof InstallationChangedEvent = InstallationChangedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

@@ -10,11 +10,11 @@ const DRAIN_CONCURRENCY = 4
 @Injectable()
 /** The processor of the drain job of the agent-turn queue: the runner claims and settles it; `process` delegates to the one step. */
 export class RunAgentTurnProcessor extends FencedProcessor {
-    readonly queue = AGENT_TURN_QUEUE
+    readonly queue: "agent_turn" = AGENT_TURN_QUEUE
 
-    override readonly job = AgentTurnJob.Drain
+    override readonly job: AgentTurnJob.Drain = AgentTurnJob.Drain
 
-    override readonly concurrency = DRAIN_CONCURRENCY
+    override readonly concurrency: 4 = DRAIN_CONCURRENCY
 
     constructor(private readonly drain: DrainStep) {
         super()

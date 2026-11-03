@@ -10,11 +10,11 @@ const ADVANCE_CONCURRENCY = 4
 @Injectable()
 /** The processor of the advance job of the agent-step queue: the runner claims and settles it; `process` delegates to the one step. */
 export class RunAgentStepProcessor extends FencedProcessor {
-    readonly queue = AGENT_STEP_QUEUE
+    readonly queue: "agent_step" = AGENT_STEP_QUEUE
 
-    override readonly job = AgentStepJob.Advance
+    override readonly job: AgentStepJob.Advance = AgentStepJob.Advance
 
-    override readonly concurrency = ADVANCE_CONCURRENCY
+    override readonly concurrency: 4 = ADVANCE_CONCURRENCY
 
     constructor(private readonly advance: AdvanceStep) {
         super()

@@ -10,11 +10,11 @@ const DELIVER_CONCURRENCY = 4
 @Injectable()
 /** The processor of the deliver job of the generic-webhook queue: the runner claims and settles it; `process` delegates to the one step. */
 export class DeliverGenericWebhookProcessor extends FencedProcessor {
-    readonly queue = GENERIC_WEBHOOK_QUEUE
+    readonly queue: "generic_webhook" = GENERIC_WEBHOOK_QUEUE
 
-    override readonly job = GenericWebhookJob.Deliver
+    override readonly job: GenericWebhookJob.Deliver = GenericWebhookJob.Deliver
 
-    override readonly concurrency = DELIVER_CONCURRENCY
+    override readonly concurrency: 4 = DELIVER_CONCURRENCY
 
     constructor(private readonly deliver: DeliverStep) {
         super()

@@ -7,9 +7,9 @@ import { WatchAgentGraphsStep } from "../../steps/watch-agent-graphs.step"
 @Injectable()
 /** The processor of the graphs tick of the decisions queue: the runner claims and settles it; `process` delegates to the one step. */
 export class WatchAgentGraphsProcessor extends FencedProcessor {
-    readonly queue = DECISIONS_QUEUE
+    readonly queue: "decisions" = DECISIONS_QUEUE
 
-    override readonly job = DecisionsJob.AgentGraphWatch
+    override readonly job: DecisionsJob.AgentGraphWatch = DecisionsJob.AgentGraphWatch
 
     constructor(private readonly step: WatchAgentGraphsStep) {
         super()

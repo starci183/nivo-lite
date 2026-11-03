@@ -7,7 +7,7 @@ import { ProcessZaloDeliveryStep } from "../../steps/process-zalo-delivery.step"
 @Injectable()
 /** Consumes the committed zalo receipt using the app's existing fenced job runner. */
 export class ZaloDeliveryProcessor extends FencedProcessor {
-    readonly queue = ZALO_DELIVERY_QUEUE
+    readonly queue: "zalo-delivery" = ZALO_DELIVERY_QUEUE
 
     constructor(private readonly delivery: ProcessZaloDeliveryStep) {
         super()

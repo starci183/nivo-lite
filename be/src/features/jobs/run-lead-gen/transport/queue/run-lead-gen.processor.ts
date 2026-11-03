@@ -7,8 +7,8 @@ import { ContinueLeadGenStep } from "../../steps/continue-lead-gen.step"
 @Injectable()
 /** The lead generation queue consumer, with the standard fencing. */
 export class RunLeadGenProcessor extends FencedProcessor {
-    readonly queue = LEAD_GEN_QUEUE
-    override readonly job = CONTINUE_LEAD_GEN_JOB
+    readonly queue: "lead_gen" = LEAD_GEN_QUEUE
+    override readonly job: "lead-gen.continue" = CONTINUE_LEAD_GEN_JOB
 
     constructor(private readonly step: ContinueLeadGenStep) {
         super()

@@ -8,7 +8,7 @@ import { WakeAgentsCommand } from "../../application/wake-agents.command"
 @Injectable()
 /** The consumer door of the bank_credit_booked event in the agent-wakes reactor: it names the fact and dispatches one command. */
 export class BankCreditBookedConsumer implements EventConsumer<BankCreditBookedEvent> {
-    readonly event = BankCreditBookedEvent
+    readonly event: typeof BankCreditBookedEvent = BankCreditBookedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

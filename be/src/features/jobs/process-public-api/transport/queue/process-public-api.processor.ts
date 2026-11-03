@@ -9,7 +9,7 @@ import { ProcessPublicApiStep } from "../../steps/process-public-api.step"
 @Injectable()
 /** Runs public API requests with the standard claim, retry and dead-letter lifecycle. */
 export class PublicApiRequestProcessor extends FencedProcessor {
-    readonly queue = PUBLIC_API_QUEUE
+    readonly queue: "public_api" = PUBLIC_API_QUEUE
     override readonly job: string = PublicApiQueueJob.Request
     /** Each fulfillment holds a database connection until its domain transaction commits. */
     override readonly concurrency = 1
@@ -35,8 +35,8 @@ export class PublicApiRequestProcessor extends FencedProcessor {
 @Injectable()
 /** Retains the original implicit job name while using the same fenced fulfillment and retry lifecycle. */
 export class LegacyPublicApiRequestProcessor extends FencedProcessor {
-    readonly queue = PUBLIC_API_QUEUE
-    override readonly job = PUBLIC_API_QUEUE
+    readonly queue: "public_api" = PUBLIC_API_QUEUE
+    override readonly job: "public_api" = PUBLIC_API_QUEUE
     /** Keeps historical deliveries within the same single-connection fulfillment budget. */
     override readonly concurrency = 1
 

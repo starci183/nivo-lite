@@ -9,8 +9,8 @@ import { RunCommandStep } from "../../steps/run-command.step"
 @Injectable()
 /** The processor of the run-brain-command job: the runner claims and settles it; `process` delegates to the one step. */
 export class RunBrainCommandProcessor extends FencedProcessor {
-    override readonly queue = KNOWLEDGE_QUEUE
-    override readonly job = KnowledgeJob.BrainCommand
+    override readonly queue: "knowledge" = KNOWLEDGE_QUEUE
+    override readonly job: KnowledgeJob.BrainCommand = KnowledgeJob.BrainCommand
 
     constructor(
         private readonly runCommand: RunCommandStep,

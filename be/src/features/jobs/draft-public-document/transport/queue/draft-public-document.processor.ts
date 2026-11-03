@@ -9,8 +9,8 @@ import { DraftPublicDocumentStep } from "../../steps/draft-public-document.step"
 @Injectable()
 /** The processor of the draft-public-document job: the runner claims and settles it; `process` delegates to the one step. */
 export class DraftPublicDocumentProcessor extends FencedProcessor {
-    override readonly queue = KNOWLEDGE_QUEUE
-    override readonly job = KnowledgeJob.PublicDraft
+    override readonly queue: "knowledge" = KNOWLEDGE_QUEUE
+    override readonly job: KnowledgeJob.PublicDraft = KnowledgeJob.PublicDraft
 
     constructor(
         private readonly draftDocument: DraftPublicDocumentStep,

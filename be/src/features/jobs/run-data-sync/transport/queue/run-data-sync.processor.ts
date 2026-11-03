@@ -8,7 +8,7 @@ import { RunDataSyncStep } from "../../steps/run-data-sync.step"
 @Injectable()
 /** The processor of the run-data-sync job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class RunDataSyncProcessor extends FencedProcessor {
-    readonly queue = DATA_SYNC_QUEUE
+    readonly queue: "data_sync" = DATA_SYNC_QUEUE
 
     constructor(private readonly run: RunDataSyncStep) {
         super()

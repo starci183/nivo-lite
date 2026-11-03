@@ -7,7 +7,7 @@ import { RunCommandStep } from "../../steps/run-command.step"
 @Injectable()
 /** The processor of the connection-commands job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class ConnectionCommandsProcessor extends FencedProcessor {
-    readonly queue = CONNECTION_COMMANDS_QUEUE
+    readonly queue: "connection_commands" = CONNECTION_COMMANDS_QUEUE
 
     constructor(private readonly runCommand: RunCommandStep) {
         super()

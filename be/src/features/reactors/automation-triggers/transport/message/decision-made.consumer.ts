@@ -8,7 +8,7 @@ import { ReactToDecisionMadeCommand } from "../../application/react-to-decision-
 @Injectable()
 /** The consumer door of the decision_made event in the automation-triggers reactor: it dispatches one command and forwards the event id. */
 export class DecisionMadeConsumer implements EventConsumer<DecisionMadeEvent> {
-    readonly event = DecisionMadeEvent
+    readonly event: typeof DecisionMadeEvent = DecisionMadeEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

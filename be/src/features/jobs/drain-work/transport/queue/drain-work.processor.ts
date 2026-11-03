@@ -7,9 +7,9 @@ import { DrainWorkStep } from "../../steps/drain-work.step"
 @Injectable()
 /** The processor of the drain tick of the decisions queue: the runner claims and settles it; `process` delegates to the one step. */
 export class DrainWorkProcessor extends FencedProcessor {
-    readonly queue = DECISIONS_QUEUE
+    readonly queue: "decisions" = DECISIONS_QUEUE
 
-    override readonly job = DecisionsJob.DrainWork
+    override readonly job: DecisionsJob.DrainWork = DecisionsJob.DrainWork
 
     constructor(private readonly step: DrainWorkStep) {
         super()

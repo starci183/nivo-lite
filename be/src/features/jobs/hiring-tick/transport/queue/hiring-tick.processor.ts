@@ -7,7 +7,7 @@ import { RunHiringTickStep } from "../../steps/run-hiring-tick.step"
 @Injectable()
 /** The processor of the hiring-tick job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class HiringTickProcessor extends FencedProcessor {
-    readonly queue = HIRING_TICK_QUEUE
+    readonly queue: "hiring_tick" = HIRING_TICK_QUEUE
 
     constructor(private readonly tick: RunHiringTickStep) {
         super()

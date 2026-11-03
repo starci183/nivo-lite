@@ -8,7 +8,7 @@ import { HandBackConversationCommand } from "../../application/hand-back-convers
 @Injectable()
 /** The consumer door of the deal_won event in the conversation-handback reactor: it dispatches one command and forwards the event id. */
 export class DealWonConsumer implements EventConsumer<DealWonEvent> {
-    readonly event = DealWonEvent
+    readonly event: typeof DealWonEvent = DealWonEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

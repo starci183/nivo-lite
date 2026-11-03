@@ -7,7 +7,7 @@ import { ReplyStep } from "../../steps/reply.step"
 @Injectable()
 /** The processor of the run-chat-turn job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class RunChatTurnProcessor extends FencedProcessor {
-    readonly queue = CHAT_TURN_QUEUE
+    readonly queue: "chat_turn" = CHAT_TURN_QUEUE
 
     constructor(private readonly reply: ReplyStep) {
         super()

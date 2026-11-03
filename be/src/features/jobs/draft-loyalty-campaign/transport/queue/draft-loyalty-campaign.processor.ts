@@ -9,8 +9,8 @@ import { DraftLoyaltyCampaignStep } from "../../steps/draft-loyalty-campaign.ste
 @Injectable()
 /** Routes only campaign draft jobs from the existing agents queue into the fenced step. */
 export class DraftLoyaltyCampaignProcessor extends FencedProcessor {
-    readonly queue = AGENTS_QUEUE
-    override readonly job = DRAFT_LOYALTY_CAMPAIGN_JOB
+    readonly queue: "agents" = AGENTS_QUEUE
+    override readonly job: "loyalty.campaign.draft" = DRAFT_LOYALTY_CAMPAIGN_JOB
 
     constructor(private readonly draft: DraftLoyaltyCampaignStep) {
         super()

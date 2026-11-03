@@ -8,7 +8,7 @@ import { SyncInstallationCommand } from "../../application/sync-installation.com
 @Injectable()
 /** The consumer door of the installation_changed event in the agent-sync reactor: it dispatches one command and forwards the event id. */
 export class InstallationChangedConsumer implements EventConsumer<InstallationChangedEvent> {
-    readonly event = InstallationChangedEvent
+    readonly event: typeof InstallationChangedEvent = InstallationChangedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

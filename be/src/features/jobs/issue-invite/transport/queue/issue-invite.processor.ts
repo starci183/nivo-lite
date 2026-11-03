@@ -8,7 +8,7 @@ import { IssueInviteStep } from "../../steps/issue-invite.step"
 @Injectable()
 /** The processor of the issue-invite job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class IssueInviteProcessor extends FencedProcessor {
-    readonly queue = INVITE_COMMAND_QUEUE
+    readonly queue: "invite_command" = INVITE_COMMAND_QUEUE
 
     constructor(private readonly issue: IssueInviteStep) {
         super()
