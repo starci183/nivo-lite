@@ -37,6 +37,11 @@ export class BankFeedPollService {
         this.run = new ConnectionPollRun({ clock, logger, timer, connections })
     }
 
+    /** True when connections of the provider can be read back. */
+    polls(provider: string): boolean {
+        return this.pollerOf(provider) !== undefined
+    }
+
     /** Runs the reconcile a queued job asks for: one connection when the payload names it, else every connection of a polled provider. */
     reconcileFromJob(payload: BankFeedPollPayload): Promise<PollSummary> {
         return payload.connectionId === undefined || payload.workspaceId === undefined

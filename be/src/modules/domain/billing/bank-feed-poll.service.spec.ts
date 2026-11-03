@@ -98,6 +98,15 @@ describe("BankFeedPollService reconcileAll", () => {
     })
 })
 
+describe("BankFeedPollService polls", () => {
+    it("knows which providers it can read back", async () => {
+        const { service } = await build()
+
+        expect(service.polls("sepay")).toBe(true)
+        expect(service.polls("telegram")).toBe(false)
+    })
+})
+
 describe("BankFeedPollService reconcileFromJob", () => {
     it("polls everything when the payload names no connection", async () => {
         const { service, connections } = await build()
