@@ -50,7 +50,7 @@ describe("OrdersGraphService", () => {
 
         expect(registry.addDataPort).toHaveBeenCalledTimes(1)
         expect(port.kind).toBe("order")
-        expect([...executors.keys()]).toEqual(["order.record", "order.confirm"])
+        expect([...executors.keys()]).toEqual(["order.record", "order.confirm", "order.unconfirm"])
     })
 
     it("serves nothing when the app hosts no graph nodes", async () => {
@@ -209,5 +209,17 @@ describe("OrdersGraphService", () => {
         await expect(executors.get("order.confirm")?.execute(TURN, { orderId: "x" }, CALL)).rejects.toMatchObject({
             code: OrdersErrorCode.NotFound,
         })
+    })
+
+    it("takes the confirmation back in the turn workspace, and leaves an order that is not confirmed as it is", async () => {
+        const { orders, executors } = await build()
+        orders.unconfirm.mockResolvedValueOnce(orderOf({ status: "draft" })).mockResolvedValueOnce(null)
+
+        const first = await executors.get("order.unconfirm")?.execute(TURN, { id: "ord-1" }, CALL)
+        const again = await executors.get("order.unconfirm")?.execute(TURN, { id: "ord-1" }, CALL)
+
+        expect(orders.unconfirm).toHaveBeenCalledWith("ws-1", "ord-1")
+        expect(first).toEqual({ kind: "order", id: "ord-1" })
+        expect(again).toEqual(first)
     })
 })

@@ -285,6 +285,30 @@ export class OrdersService {
         return firstWritten(cancelled.raw)
     }
 
+    /** Takes the confirmation back: a confirmed order is a draft again; null when the order is not confirmed. */
+    async unconfirm(workspaceId: string, orderId: string): Promise<OptionalOrder> {
+        const reopened = await this.entityManager
+            .createQueryBuilder(OrderEntity, "o")
+            .update()
+            .set({ status: "draft", confirmedBy: null, confirmedAt: null })
+            .where({ workspaceId, id: orderId, status: "confirmed" })
+            .returning("*")
+            .execute()
+        return firstWritten(reopened.raw)
+    }
+
+    /** Marks an order a system failure cut short and keeps every other field; null when it already is, or is gone. */
+    async markFailedSystem(workspaceId: string, orderId: string): Promise<OptionalOrder> {
+        const failed = await this.entityManager
+            .createQueryBuilder(OrderEntity, "o")
+            .update()
+            .set({ status: "failed_system" })
+            .where({ workspaceId, id: orderId, status: Not("failed_system") })
+            .returning("*")
+            .execute()
+        return firstWritten(failed.raw)
+    }
+
     /** The order has an invoice. */
     async markInvoiced(workspaceId: string, orderId: string): Promise<void> {
         await this.entityManager.update(

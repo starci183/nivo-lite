@@ -68,6 +68,7 @@ const build = async (door: NodeToolDoor | null, port: NodeDataPort) => {
     registry.installed.mockReturnValue(nodeIndexOf({ nodes: [probe], effects: [ping], tools: [look], dataKinds: [] }))
     registry.nodeOf.mockReturnValue(probe)
     registry.portOf.mockReturnValue(port)
+    registry.subjectResolvers.mockReturnValue([])
     const executor = mock<NodeEffectExecutor>({ effect: "core.ping" })
     executor.execute.mockResolvedValue({ kind: "record", id: "e-1" })
     registry.executorOf.mockReturnValue(executor)
