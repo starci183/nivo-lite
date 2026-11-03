@@ -105,7 +105,6 @@
     "start:web": "npm run start -w @nivo-lite/web",
     "start:landing": "npm run start -w @nivo-lite/landing",
     "build:modules": "turbo run build --filter=./packages/*",
-    "test:modules": "turbo run test --filter=./packages/module-*",
     "docker:build": "npm run docker:build:api && npm run docker:build:cli && npm run docker:build:mcp && npm run docker:build:web && npm run docker:build:landing",
     "docker:build:api": "docker build -f be/apps/api/Dockerfile -t nivo-lite/api:dev .",
     "docker:build:cli": "docker build -f be/apps/cli/Dockerfile -t nivo-lite/cli:dev .",

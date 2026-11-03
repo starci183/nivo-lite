@@ -37,4 +37,23 @@ module.exports = require("@starci/jest-preset").starciJestConfig({
             "src/modules/projections/*/persistence/**",
         ],
     },
+    packages: {
+        folders: ["packages/agent-sdk", "packages/blocks-core", "packages/module-loyalty"],
+        files: [
+            "packages/agent-sdk/src/**/*.ts",
+            "packages/blocks-core/src/**/*.ts",
+            "packages/module-loyalty/src/**/*.ts",
+        ],
+        excludes: [
+            "packages/agent-sdk/src/workbench/**",
+            "packages/agent-sdk/src/public/**",
+            "packages/agent-sdk/src/**/index.ts",
+            "packages/blocks-core/src/workbench/**",
+            "packages/blocks-core/src/public/**",
+            "packages/blocks-core/src/**/index.ts",
+            "packages/module-loyalty/src/workbench/**",
+            "packages/module-loyalty/src/public/**",
+            "packages/module-loyalty/src/**/index.ts",
+        ],
+    },
 })

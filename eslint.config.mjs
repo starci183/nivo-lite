@@ -5,4 +5,8 @@ import { coreGrammarPackagesConfig } from "@starci/eslint-grammar-core"
 const be = loadBePackages(import.meta.url)
 const fe = loadFePackages(import.meta.url)
 
-export default [...(await starciBePackagesConfig({ hfs: be })), ...starciFePackagesConfig({ hfs: fe }), ...coreGrammarPackagesConfig({ hfs: fe })]
+export default [
+    ...(await starciBePackagesConfig({ hfs: be })),
+    ...starciFePackagesConfig({ hfs: fe }),
+    ...coreGrammarPackagesConfig({ hfs: fe }),
+]

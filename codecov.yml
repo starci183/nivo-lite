@@ -16,8 +16,9 @@ coverage:
           - "be/src/modules/integrations/*/**"
           - "be/src/modules/platform/*/**"
           - "be/src/modules/projections/*/**"
-          - "packages/module-loyalty/src/manifest/**"
-          - "packages/module-loyalty/src/template/**"
+          - "packages/agent-sdk/src/**"
+          - "packages/blocks-core/src/**"
+          - "packages/module-loyalty/src/**"
     patch:
       default:
         target: 100%
@@ -27,8 +28,9 @@ coverage:
           - "be/src/modules/integrations/*/**"
           - "be/src/modules/platform/*/**"
           - "be/src/modules/projections/*/**"
-          - "packages/module-loyalty/src/manifest/**"
-          - "packages/module-loyalty/src/template/**"
+          - "packages/agent-sdk/src/**"
+          - "packages/blocks-core/src/**"
+          - "packages/module-loyalty/src/**"
 component_management:
   default_rules:
     statuses:
@@ -360,5 +362,12 @@ ignore:
   - "be/tsconfig.build.json"
   - "be/tsconfig.json"
   - "fe/**"
+  - "packages/agent-sdk/src/workbench/**"
+  - "packages/agent-sdk/src/public/**"
+  - "packages/agent-sdk/src/**/index.ts"
+  - "packages/blocks-core/src/workbench/**"
+  - "packages/blocks-core/src/public/**"
+  - "packages/blocks-core/src/**/index.ts"
   - "packages/module-loyalty/src/workbench/**"
+  - "packages/module-loyalty/src/public/**"
   - "packages/module-loyalty/src/**/index.ts"

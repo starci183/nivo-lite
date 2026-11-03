@@ -115,8 +115,6 @@ jobs:
         run: npm run typecheck
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-      - name: module packages
-        run: npm run test:modules
 
   lint:
     needs: plan
@@ -126,7 +124,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        side: [be, fe]
+        side: [be, fe, packages]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -409,7 +407,7 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
-          const files = ['reports/lint.be.sonar.json', 'reports/lint.fe.sonar.json'];
+          const files = ['reports/lint.be.sonar.json', 'reports/lint.fe.sonar.json', 'reports/lint.packages.sonar.json'];
           const reports = files.filter(file => fs.existsSync(file)).map(file => JSON.parse(fs.readFileSync(file, 'utf8')));
           const rules = [...new Map(reports.flatMap(report => report.rules).map(rule => [rule.id, rule])).values()];
           const issues = reports.flatMap(report => report.issues);

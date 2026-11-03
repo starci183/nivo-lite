@@ -17,6 +17,11 @@ export class SignupHandler extends ICQRSHandler<SignupCommand, void> {
     }
 
     protected override process(command: SignupCommand): Promise<void> {
-        return this.email.signup(command.params.request.email, command.params.request.password, command.params.request.language)
+        return this.email.signup(
+            command.params.request.email,
+            command.params.request.password,
+            command.params.request.language,
+            command.params.request.name,
+        )
     }
 }

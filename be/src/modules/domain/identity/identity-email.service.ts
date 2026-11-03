@@ -51,8 +51,11 @@ export class IdentityEmailService {
         private readonly sessions: IdentitySessionStoreService,
     ) {}
 
-    /** Creates an unconfirmed password account and mails the confirmation link; an address that already has an account is answered the same way. */
-    async signup(email: string, password: string, language?: string): Promise<void> {
+    /**
+     * Creates an unconfirmed password account, its full name (when given) in the profile keys a Google sign-in fills too, and mails the
+     * confirmation link; an address that already has an account is answered the same way and its profile is left as it is.
+     */
+    async signup(email: string, password: string, language?: string, name?: string): Promise<void> {
         const address = normalizeEmail(email)
         await this.admit("signup", address)
         if (!isAcceptablePassword(password)) throw new IdentityError({ code: IdentityErrorCode.PasswordInvalid })
@@ -64,7 +67,14 @@ export class IdentityEmailService {
         const now = this.clock.now()
         const id = this.ids.next()
         const hash = await this.passwords.hash(password)
-        const created = await accountDoors.createUser(this.entityManager, { id, email: address, hash, confirmed: false, meta: "{}", now })
+        const created = await accountDoors.createUser(this.entityManager, {
+            id,
+            email: address,
+            hash,
+            confirmed: false,
+            meta: JSON.stringify(name === undefined ? {} : { full_name: name, name }),
+            now,
+        })
         await this.sendConfirmation(created ?? id, address, language)
     }
 
@@ -82,7 +92,11 @@ export class IdentityEmailService {
         const now = this.clock.now()
         await this.entityManager.transaction(async (scoped) => {
             const row = await this.spendable(scoped, token, CONFIRM, now)
-            await scoped.update(IdentityEmailTokenEntity, { userId: row.userId, purpose: CONFIRM, usedAt: IsNull() }, { usedAt: now })
+            await scoped.update(
+                IdentityEmailTokenEntity,
+                { userId: row.userId, purpose: CONFIRM, usedAt: IsNull() },
+                { usedAt: now },
+            )
             await accountDoors.confirmUser(scoped, row.userId, now)
         })
     }
@@ -95,7 +109,11 @@ export class IdentityEmailService {
         if (user === undefined || user.disabled) return
         const token = await this.mint(user.id, RESET, this.options.resetTtlSeconds)
         const url = `${this.options.webOrigin}/auth/reset?token=${encodeURIComponent(token)}`
-        const mail = resetPasswordMail(this.languageOf(language), { brand: this.options.brandName, url, hours: this.hoursOf(this.options.resetTtlSeconds) })
+        const mail = resetPasswordMail(this.languageOf(language), {
+            brand: this.options.brandName,
+            url,
+            hours: this.hoursOf(this.options.resetTtlSeconds),
+        })
         await this.deliver(address, mail, RESET)
     }
 
@@ -122,7 +140,12 @@ export class IdentityEmailService {
         }
     }
 
-    private async spendable(scoped: EntityManager, token: string, purpose: Purpose, now: Date): Promise<IdentityEmailTokenEntity> {
+    private async spendable(
+        scoped: EntityManager,
+        token: string,
+        purpose: Purpose,
+        now: Date,
+    ): Promise<IdentityEmailTokenEntity> {
         const row = await scoped.findOne(IdentityEmailTokenEntity, {
             where: { tokenHash: digestOf(token), purpose, usedAt: IsNull(), expiresAt: MoreThan(now) },
             lock: { mode: "pessimistic_write" },
@@ -139,7 +162,11 @@ export class IdentityEmailService {
     private async sendConfirmation(userId: string, address: string, language: string | undefined): Promise<void> {
         const token = await this.mint(userId, CONFIRM, this.options.confirmTtlSeconds)
         const url = `${this.options.webOrigin}/auth/confirm?token=${encodeURIComponent(token)}`
-        const mail = confirmEmailMail(this.languageOf(language), { brand: this.options.brandName, url, hours: this.hoursOf(this.options.confirmTtlSeconds) })
+        const mail = confirmEmailMail(this.languageOf(language), {
+            brand: this.options.brandName,
+            url,
+            hours: this.hoursOf(this.options.confirmTtlSeconds),
+        })
         await this.deliver(address, mail, CONFIRM)
     }
 

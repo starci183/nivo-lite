@@ -46,7 +46,12 @@ describe("SeedRunnerService", () => {
     })
 
     it("runs the shared files first and then those of the environment, each in name order", async () => {
-        const em = mockEntityManager({ query: [REFERENCE, []] })
+        const em = mockEntityManager({
+            query: [
+                [REFERENCE, []],
+                [OWN_ROWS, []],
+            ],
+        })
         const runner = await build(em, {
             [SHARED]: { "reference.sql": REFERENCE, "readme.md": "ignored" },
             [OWN]: { "demo.sql": OWN_ROWS },
