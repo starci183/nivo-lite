@@ -1,13 +1,11 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+import { STOP_STEP, graphSpecProblems, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
-import { isNamespaced } from "@nivo-lite/agent-sdk/schema"
-import { coreDataKinds, coreEffects, coreNodes, coreTools } from "../index"
-import { graphSpecProblems } from "./graph-spec.policy"
-import { graphSpecSchema } from "./graph-spec.schema"
-import type { GraphSpec } from "./graph-spec.types"
+import { coreDataKinds, coreEffects, coreNodes, coreTools } from "./index"
 
-const GRAPHS_DIR = join(__dirname, "../../../../.starcistacks/dev/seeds/data/graphs")
+const GRAPHS_DIR = join(__dirname, "../../../.starcistacks/dev/seeds/data/graphs")
 const MODULE_KEYS: ReadonlyArray<string> = ["chatbot", "sales", "accounting"]
 
 const index = nodeIndexOf({ nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds })
@@ -19,7 +17,7 @@ const stepsOf = (spec: GraphSpec): ReadonlyArray<string> => spec.nodes.map((node
 
 describe("agent graph specs of flow F", () => {
     it("names only installed nodes (the built-in `stop` apart)", () => {
-        const missing = [...new Set(MODULE_KEYS.flatMap((key) => stepsOf(loaded(key))))].filter((step) => isNamespaced(step) && !index.nodes.has(step))
+        const missing = [...new Set(MODULE_KEYS.flatMap((key) => stepsOf(loaded(key))))].filter((step) => step !== STOP_STEP && !index.nodes.has(step))
 
         expect(missing).toEqual([])
     })
