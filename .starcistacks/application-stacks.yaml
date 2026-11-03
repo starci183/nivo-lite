@@ -81,6 +81,12 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: The BullMQ broker of the job queue (owner ruling 2026-11-05, the queue is BullMQ on Redis in both editions). Internal only on the private agents network as nivo-redis:6379, no published port. AOF with appendfsync everysec on the persisted named volume nivo-engine_redis-data; the PostgreSQL outbox relay republishes any committed row the broker loses, so no admitted job is lost on a Redis restart.
     required: true
+  nivo-mail:
+    role: service
+    image: axllent/mailpit:v1.31.6@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
+    compose: infra/swarm/stack.yaml
+    purpose: The development mail catcher (Mailpit, the harness lite sink): the api sends sign-in and invitation mail to nivo-mail:1025 with no login and no encryption, and the inbox is read at http://mail.localhost. Development only, memory only, never in production.
+    required: false
   db:
     role: stateful
     image: ghcr.io/starci183/nivo-lite-db:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
@@ -168,17 +174,23 @@ environments:
       nivo-redis:
         replicas: 1
         port: 6379
+      nivo-mail:
+        replicas: 1
+        port: 1025
     runbook: README.md
     # The one local ingress publishes port 80 in ingress mode; the hosts below resolve to the loopback address by themselves (RFC 6761),
     # so no DNS record or certificate exists. The console answers on every other host (http://localhost).
     ingress:
       component: ingress
-      hosts: [api.localhost, landing.localhost]
+      hosts: [api.localhost, landing.localhost, mail.localhost]
     dns:
       - host: api.localhost
         owner: Development operator
         receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
       - host: landing.localhost
+        owner: Development operator
+        receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
+      - host: mail.localhost
         owner: Development operator
         receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
     tls:
@@ -193,6 +205,7 @@ environments:
         - The mcp gateway task is healthy (its container healthcheck probes /healthz; it has no host route).
         - The console answers /health/live on http://localhost.
         - The landing answers /health/live on http://landing.localhost.
+        - The mail catcher task is healthy (its container healthcheck probes /mailpit readyz) and its inbox answers on http://mail.localhost.
     backup:
       - component: db
         target: The local db container's volume is disposable development data; `starci app db migrate` rebuilds it from db/bootstrap.sql and db/migrations.
@@ -327,11 +340,12 @@ environments:
         where: secrets/nivo
         recipientPolicy: SOPS/age, one member per provider (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys CHANNEL_TOKEN_KEY, OTP_PEPPER, WEBHOOK_SIGNING_SECRET, NIVO_PLATFORM_ADMINS.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
-      - name: smtp
-        runtimeName: nivo-custody-smtp-v1
+      - name: mail
+        runtimeName: nivo-custody-mail-v1
         version: 1
-        where: secrets/smtp
-        recipientPolicy: SOPS/age, one member per provider (smtp.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys SMTP_URL, SMTP_FROM.
+        where: secrets/mail
+        keys: [MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
+        recipientPolicy: SOPS/age, one member per provider (mail.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM of the platform sender (sign-in, invitation and owner-notice mail over @starci/mail). The other mail settings (MAIL_PORT, MAIL_SECURITY, MAIL_FROM_NAME, MAIL_DEFAULT_LANGUAGE) are public configuration in infra/swarm/api-public.conf.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: sepay
         runtimeName: nivo-custody-sepay-v1
@@ -550,7 +564,7 @@ environments:
             filePointers: true
             from:
               - {member: nivo}
-              - {member: smtp}
+              - {member: mail}
               - {member: sepay}
               - {member: postgres}
               - {member: redis}

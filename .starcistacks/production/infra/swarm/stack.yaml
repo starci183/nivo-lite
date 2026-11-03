@@ -381,7 +381,7 @@ configs:
 # KEY, named nivo-<key>-v<keyed hash of the value> by `starci app stack deploy` and added to the rendered stack by the generated override.
 secrets:
   nivo: { external: true, name: nivo-custody-nivo-v1 }
-  smtp: { external: true, name: nivo-custody-smtp-v1 }
+  mail: { external: true, name: nivo-custody-mail-v1 }
   sepay: { external: true, name: nivo-custody-sepay-v1 }
   n8n: { external: true, name: nivo-custody-n8n-v1 }
   openclaw: { external: true, name: nivo-custody-openclaw-v1 }

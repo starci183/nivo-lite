@@ -19,6 +19,8 @@ local ones.
 | `PUBLIC_API_URL` | The local api origin (`http://api.localhost`): plain http is accepted only for a loopback host; the agents' tool door is `<origin>/agent-tools`. |
 | `AUTH_WEB_ORIGIN` | The local console origin (`http://localhost`) the own auth returns browsers to. |
 | `AUTH_GOOGLE_CALLBACK_URL` | The local Google callback (`http://api.localhost/auth/google/callback`). |
+| `MAIL_HOST` | The development mail catcher of the stack (`nivo-mail`, Mailpit; `127.0.0.1` natively), set by `stack.yaml`: the sign-in, invitation and notice mail of the api land there and are read at `http://mail.localhost`. |
+| `MAIL_PORT` | `1025`, the catcher's SMTP port; `MAIL_SECURITY` is `none` (a sink takes mail with no login), `MAIL_FROM` and `MAIL_FROM_NAME` name the sender. |
 | `STORAGE_ENDPOINT` | The local S3 address of the operator's MinIO (`http://host.docker.internal:9000` from the container (`http://localhost:9000` natively)); not a secret. |
 | `STORAGE_BUCKET_PREFIX` | `nivo-dev`: the prefix of the local buckets. |
 | `OPENCLAW_TOOL_SECRET` | Read only through `OPENCLAW_TOOL_SECRET_FILE` (a file outside the repository, never plaintext env): signs the per-turn tool token; without it a turn of an agent holding connector grants answers `tools_not_configured`. |
