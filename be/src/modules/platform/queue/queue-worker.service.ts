@@ -1,5 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import { Inject, Injectable, Optional } from "@nestjs/common"
 import type { OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common"
+import { CqrsReadinessService } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -20,11 +21,13 @@ import type { QueueTransport } from "./queue-transport.port"
  */
 export class QueueWorkerService implements QueueWorkerRegistry, OnApplicationBootstrap, OnApplicationShutdown {
     private readonly handlers: Array<QueueHandler> = []
+    private starting: Promise<void> = Promise.resolve()
 
     constructor(
         @InjectQueueOptions() private readonly options: QueueOptions,
         @InjectQueueTransport() private readonly transport: QueueTransport,
         @InjectLogger() private readonly logger: Logger,
+        @Optional() @Inject(CqrsReadinessService) private readonly cqrs: CqrsReadinessService | null = null,
     ) {}
 
     /** Registers the handler under the queue and job it names; a second handler for the same queue and job is a wiring bug. */
@@ -38,15 +41,36 @@ export class QueueWorkerService implements QueueWorkerRegistry, OnApplicationBoo
         this.handlers.push(handler)
     }
 
-    /** Starts one worker per registered queue (unless the consumer is off). */
+    /**
+     * Starts one worker per registered queue (unless the consumer is off). A worker runs jobs that execute command handlers, so it starts
+     * only once the handlers are registered: at once when they are (or the app has no CQRS), else as soon as they are, without holding the
+     * bootstrap hooks of the other modules, which are what registers them.
+     */
     async onApplicationBootstrap(): Promise<void> {
-        if (this.options.enabled) await eachInOrder(this.queues(), (queue) => this.work(queue))
-        else this.logger.warn(QueueLogEvent.ConsumerDisabled, { queues: this.queues() })
+        if (!this.options.enabled) {
+            this.logger.warn(QueueLogEvent.ConsumerDisabled, { queues: this.queues() })
+            return
+        }
+        if (this.cqrs === null || this.cqrs.isReady()) {
+            await this.startAll()
+            return
+        }
+        this.starting = this.cqrs
+            .whenReady()
+            .then(() => this.startAll())
+            .catch((cause: unknown) => {
+                this.logger.error(QueueLogEvent.WorkersFailed, cause, { queues: this.queues() })
+            })
     }
 
     /** Stops the workers and waits for the deliveries they run. */
     async onApplicationShutdown(): Promise<void> {
+        await this.starting
         await this.transport.close()
+    }
+
+    private startAll(): Promise<void> {
+        return eachInOrder(this.queues(), (queue) => this.work(queue))
     }
 
     /** The queues that have a handler, once each. */
