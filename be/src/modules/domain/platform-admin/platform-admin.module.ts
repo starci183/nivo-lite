@@ -21,7 +21,7 @@ export class PlatformAdminModule extends ConfigurableModuleClass {
                 AdminDirectoryService,
                 AdminSupportService,
             ],
-            exports: [AdminDirectoryService, AdminSupportService],
+            exports: [AdminAccessService, AdminDirectoryService, AdminSupportService],
         }
     }
 }
