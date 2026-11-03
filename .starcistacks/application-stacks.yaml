@@ -1154,7 +1154,7 @@ services:
       container: starci-sonarqube
       publishedBy: cloudflared.yaml
     auth: token
-    qualityGate: starci-quality
+    qualityGate: starci-quality-lite
     credentials:
       - id: analysis
         project: nivo-lite
