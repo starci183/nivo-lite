@@ -9,6 +9,14 @@ const ID_MAX = 100
 const BODY_MAX = 4000
 const NAME_MAX = 200
 
+/** What the agent must hold for the two effects: the host checks it, the node itself reads and writes no data. */
+const EFFECT_GRANT = {
+    rights: [
+        { kind: "payment-claim", access: "write", scope: "turn", fields: ["leadId", "amountVnd", "names", "body"] },
+        { kind: "message", access: "write", scope: "turn", fields: ["body"] },
+    ],
+} as const
+
 const params: NodeSchema<ClaimAckParams> = z.object({ locale: z.enum(["vi", "en"]) })
 
 const input: NodeSchema<ClaimAckInput> = z.object({
@@ -39,10 +47,7 @@ export const paymentClaimAckNode: NodeDefinition<
     params,
     input,
     output,
-    rights: [
-        { kind: "payment-claim", access: "write", scope: "turn", fields: ["leadId", "amountVnd", "names", "body"] },
-        { kind: "message", access: "write", scope: "turn", fields: ["body"] },
-    ],
+    rights: [],
     effects: ["payment-claim.record", "channel.send"],
     run: async (given, context) => {
         const claim = await context.effect(
@@ -67,6 +72,7 @@ export const paymentClaimAckNode: NodeDefinition<
     examples: [
         {
             name: "records the claim of 5k and says the transaction is being checked",
+            grant: EFFECT_GRANT,
             params: { locale: "vi" },
             input: {
                 conversationId: "c1",
@@ -98,6 +104,7 @@ export const paymentClaimAckNode: NodeDefinition<
         },
         {
             name: "a claim with no amount gets the plain line",
+            grant: EFFECT_GRANT,
             params: { locale: "en" },
             input: { conversationId: "c1", leadId: "l1", body: "I paid already", amountVnd: null, payerName: null },
             output: {
