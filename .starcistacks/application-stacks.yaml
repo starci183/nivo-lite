@@ -327,12 +327,6 @@ environments:
         where: "secrets/seeds-nivo-workspace"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
-      - name: "seeds-workspace-sepay-api-token"
-        member: "seeds-nivo-workspace"
-        key: "WORKSPACE_SEPAY_API_TOKEN"
-        where: "secrets/seeds-nivo-workspace"
-        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
-        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
       - name: "seeds-workspace-payos-client-id"
         member: "seeds-nivo-workspace"
         key: "WORKSPACE_PAYOS_CLIENT_ID"
@@ -372,6 +366,12 @@ environments:
       - name: "seeds-workspace-zalo-oa-secret-key"
         member: "seeds-nivo-workspace"
         key: "WORKSPACE_ZALO_OA_SECRET_KEY"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-sepay-api-token"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_SEPAY_API_TOKEN"
         where: "secrets/seeds-nivo-workspace"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
@@ -1160,7 +1160,7 @@ services:
       container: starci-sonarqube
       publishedBy: cloudflared.yaml
     auth: token
-    qualityGate: starci-quality
+    qualityGate: starci-quality-lite
     credentials:
       - id: analysis
         project: nivo-lite

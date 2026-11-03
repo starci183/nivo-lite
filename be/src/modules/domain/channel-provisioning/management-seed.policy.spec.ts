@@ -127,9 +127,12 @@ describe("readManagementSeed > a development document", () => {
         expect(seed.channels.payos.apiKey).toBeUndefined()
     })
 
-    it("refuses an owner named both in the document and in the sealed values", () => {
-        expect(() => readManagementSeed({ ...dev, values: { WORKSPACE_OWNER_EMAIL: "owner@nivo.test" } })).toThrow(
-            refused("ownerEmail"),
+    it("takes the owner from the sealed values when both name one, and from the document when the member lacks it", () => {
+        const both = { ...dev, values: { WORKSPACE_OWNER_EMAIL: "owner@nivo.test" } }
+
+        expect(readManagementSeed(both).ownerEmail).toBe("owner@nivo.test")
+        expect(readManagementSeed({ ...dev, values: { WORKSPACE_TELEGRAM_BOT_TOKEN: "t" } }).ownerEmail).toBe(
+            "dev-owner@nivo.test",
         )
     })
 })

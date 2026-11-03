@@ -172,8 +172,11 @@ services:
     # reach the loopback-only gateway. The digest is written by the deploy like the other own images (the images workflow publishes it).
     image: ghcr.io/starci183/nivo-lite-openclaw@sha256:0000000000000000000000000000000000000000000000000000000000000000
     environment:
-      # Where the nivo-bridge plugin posts a tool call: the api on the private `agents` network. OPENCLAW_BRIDGE_SECRET comes from /run/secrets (entrypoint.sh).
+      # Where the nivo-bridge plugin posts a tool call: the api on the private `agents` network. OPENCLAW_BRIDGE_SECRET comes from /run/secrets
+      # (the runtime wrapper exports the STARCI_SECRETS it names besides the gateway token).
       OPENCLAW_BRIDGE_URL: http://nivo-api:8787/agent-tools
+      STARCI_SECRETS: "OPENCLAW_BRIDGE_SECRET STARCI_AI_KEY"
+      OPENCLAW_PROVIDER: nivo-ai
     volumes:
       - openclaw-data:/home/node/.openclaw
     networks: [agents]
