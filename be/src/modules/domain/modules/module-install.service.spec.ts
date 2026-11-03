@@ -138,6 +138,22 @@ describe("ModuleInstallService > install", () => {
         expect(agents.grantTags).toHaveBeenCalledWith("ws-1", [{ from: "agent-1", to: "agent-sales" }])
     })
 
+    it("skips installations without an agent and modules that list no tags", async () => {
+        const { service, installations, agents, catalog } = await build()
+        installations.firstOfModule.mockResolvedValue(recordOf())
+        installations.list.mockResolvedValue([
+            recordOf({ id: "inst-empty", agentId: null }),
+            recordOf({ id: "inst-acc", moduleKey: "accounting", agentId: "agent-acc" }),
+        ])
+        catalog.find.mockImplementation((key) =>
+            Promise.resolve(key === "accounting" ? ACCOUNTING_MODULE : CHATBOT_MODULE),
+        )
+
+        await service.install("u1", requestOf())
+
+        expect(agents.grantTags).toHaveBeenCalledWith("ws-1", [{ from: "agent-1", to: "agent-acc" }])
+    })
+
     it("installs the first instance on an agent no installation drives yet", async () => {
         const { service, installations, agents, events } = await build()
         installations.firstOfModule.mockResolvedValue(null)

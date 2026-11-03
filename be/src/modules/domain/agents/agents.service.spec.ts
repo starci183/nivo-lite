@@ -462,4 +462,13 @@ describe("AgentsService ownership questions", () => {
         expect(ownership.canTag).toHaveBeenCalledWith("a1", "a2")
         expect(ownership.canAssign).toHaveBeenCalledWith("m1", "a1")
     })
+
+    it("delegates the tag grants to the ownership service", async () => {
+        const { service, ownership } = await build(mockEntityManager({}))
+        ownership.grantTags.mockResolvedValue(undefined)
+
+        await service.grantTags("w1", [{ from: "a1", to: "a2" }])
+
+        expect(ownership.grantTags).toHaveBeenCalledWith("w1", [{ from: "a1", to: "a2" }])
+    })
 })
