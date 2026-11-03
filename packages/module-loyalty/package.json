@@ -29,7 +29,7 @@
     "@nivo-lite/agent-sdk": "*"
   },
   "peerDependencies": {
-    "@starci/grammar": "0.21.15",
+    "@starci/grammar": "0.21.16",
     "react": "19.2.3"
   },
   "devDependencies": {
