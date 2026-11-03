@@ -8,6 +8,7 @@ import type { AiService } from "@modules/integrations/ai"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AiTasksService } from "./ai-tasks.service"
+import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"
 import type { AiTaskScope } from "./ai-tasks.contracts"
 import { AI_TASKS_METER, AI_TASKS_OPTIONS, AI_TASKS_TEXT_GENERATOR } from "./ai-tasks.decorators"
@@ -29,6 +30,11 @@ const build = async (jsonRetries = 1, available = false) => {
     meter.blockedBy.mockResolvedValue(null)
     meter.record.mockResolvedValue(undefined)
     const logger = mock<Logger>()
+    const images = mock<NodeImagesService>({
+        inline: jest.fn((urls: ReadonlyArray<string>) =>
+            Promise.resolve({ images: urls.map((url) => `data:image/png;base64,${url}`), dropped: 0 }),
+        ),
+    })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -38,11 +44,12 @@ const build = async (jsonRetries = 1, available = false) => {
             { provide: AI, useValue: ai },
             { provide: AI_TASKS_METER, useValue: meter },
             { provide: NotesService, useValue: notes },
+            { provide: NodeImagesService, useValue: images },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { client: moduleRef.get(AiTasksService), generator, ai, meter, notes, logger, catalog }
+    return { client: moduleRef.get(AiTasksService), generator, ai, meter, notes, logger, catalog, images }
 }
 
 describe("AiTasksService", () => {
@@ -274,6 +281,28 @@ describe("AiTasksService", () => {
                 ],
             })
             expect(generator.generate.mock.calls[1]?.[0].messages[1]?.content).toBe("null")
+        })
+
+        it("carries a node's pictures as bytes to the AI endpoint", async () => {
+            const { client, ai, images } = await build(1, true)
+            ai.chat.mockResolvedValue({ text: "ok", parsed: null, usage: {}, model: "m" } as never)
+
+            await client.nodeText(scope, { purpose: "intent.classify:x", instructions: "i", input: {}, images: ["u1"] })
+
+            expect(images.inline).toHaveBeenCalledWith(["u1"])
+            expect(ai.chat.mock.calls[0]?.[0].messages[1]).toMatchObject({ images: ["data:image/png;base64,u1"] })
+        })
+
+        it("tells the fallback model it cannot see the pictures, and never hands it a picture to drop silently", async () => {
+            const { client, generator, logger } = await build()
+            generator.generate.mockResolvedValue("ok")
+
+            await client.nodeText(scope, { purpose: "intent.classify:x", instructions: "i", input: {}, images: ["u1", "u2"] })
+
+            const sent = generator.generate.mock.calls[0]?.[0]
+            expect(sent?.messages.some((message) => message.images !== undefined)).toBe(false)
+            expect(sent?.messages.at(-1)).toEqual({ role: "system", content: "[prompts.imagesUnsupported]" })
+            expect(logger.warn).toHaveBeenCalledWith("ai_tasks.images_unsupported", { workspaceId: "ws-1", images: 2 })
         })
 
         it("reads the owner's authority chat", async () => {

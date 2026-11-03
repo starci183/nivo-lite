@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AiTasksService } from "./ai-tasks.service"
+import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"
 import {
     AI_TASKS,
@@ -27,6 +28,7 @@ export class AiTasksModule extends ConfigurableModuleClass {
                 { provide: AI_TASKS_METER, useExisting: meter },
                 { provide: AI_TASKS_RECALL, useExisting: recall },
                 NotesService,
+                NodeImagesService,
                 AiTasksService,
                 { provide: AI_TASKS, useExisting: AiTasksService },
             ],

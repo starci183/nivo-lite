@@ -21,6 +21,8 @@ export const AI_TASKS_MESSAGES: MessageBundle = {
         "prompts.careAddress": CARE_ADDRESS,
         "prompts.authorityMoney": AUTHORITY_MONEY,
         "prompts.authorityHints": AUTHORITY_HINTS,
+        "prompts.imagesUnsupported":
+            "Khách đã gửi kèm hình ảnh, nhưng lần trả lời này không xem được hình. Đừng đoán nội dung hình; hãy nói rằng chưa xem được hình.",
         "prompts.orderMoney": ORDER_MONEY,
         "prompts.leadVoice": LEAD_VOICE,
     },
@@ -33,6 +35,8 @@ export const AI_TASKS_MESSAGES: MessageBundle = {
         "prompts.careAddress": CARE_ADDRESS,
         "prompts.authorityMoney": AUTHORITY_MONEY,
         "prompts.authorityHints": AUTHORITY_HINTS,
+        "prompts.imagesUnsupported":
+            "The customer sent pictures, but this answer cannot see them. Do not guess what they show; say you could not view the pictures yet.",
         "prompts.orderMoney": ORDER_MONEY,
         "prompts.leadVoice": LEAD_VOICE,
     },

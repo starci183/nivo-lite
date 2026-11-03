@@ -38,6 +38,7 @@ import {
 } from "./ai-tasks.schema"
 import type { TaskSchema } from "./ai-tasks.schema"
 import { AiTasksError, AiTasksErrorCode } from "./errors/ai-tasks.error"
+import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"
 import { embeddedObject, isJsonRecord, unfenced } from "./json.mapper"
 import { nodeMessagesOf, nodeMetaOf } from "./node-prompt.policy"
@@ -97,6 +98,7 @@ export class AiTasksService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
         private readonly notes: NotesService,
+        private readonly images: NodeImagesService,
     ) {}
 
     /** A customer context brief: 3-5 short bullet points. */
@@ -332,13 +334,19 @@ Current rules: ${currentRules}`,
     }
 
     /** A graph node's free-text call: its instructions and input, metered as engine work of the node's namespace. */
-    nodeText(scope: AiTaskScope, ask: NodeAsk): Promise<string> {
-        return this.complete(scope, nodeMessagesOf(ask), false, nodeMetaOf(ask))
+    async nodeText(scope: AiTaskScope, ask: NodeAsk): Promise<string> {
+        return this.complete(scope, nodeMessagesOf(await this.inlined(ask)), false, nodeMetaOf(ask))
     }
 
     /** A graph node's structured call: the answer the schema asks for, asked again as often as the options allow. */
-    nodeJson(scope: AiTaskScope, ask: NodeAsk, schema: TaskSchema): Promise<JsonRecord> {
-        return this.completeJson(scope, nodeMessagesOf(ask), nodeMetaOf(ask), schema)
+    async nodeJson(scope: AiTaskScope, ask: NodeAsk, schema: TaskSchema): Promise<JsonRecord> {
+        return this.completeJson(scope, nodeMessagesOf(await this.inlined(ask)), nodeMetaOf(ask), schema)
+    }
+
+    /** The node's call with its pictures carried as bytes: a provider outside the deployment cannot fetch the store's own addresses. */
+    private async inlined(ask: NodeAsk): Promise<NodeAsk> {
+        if (ask.images === undefined || ask.images.length === 0) return ask
+        return { ...ask, images: (await this.images.inline(ask.images)).images }
     }
 
     private phrase(key: string, locale: Locale): string {
@@ -372,8 +380,20 @@ Current rules: ${currentRules}`,
             kind: scope.kind ?? meta.kind,
             module: scope.module ?? meta.module,
         }
-        if (!this.ai.available()) return { text: await this.generator.generate(request), parsed: null }
+        if (!this.ai.available()) return { text: await this.generator.generate(this.withoutImages(request, scope)), parsed: null }
         return this.metered(scope, request, options)
+    }
+
+    /**
+     * The request for the fallback path, which reads no pictures: they are taken out and the model is told it cannot see them, so it
+     * never answers about a picture as if it had looked. Logged, never silent.
+     */
+    private withoutImages(request: TextRequest, scope: AiTaskScope): TextRequest {
+        const count = request.messages.reduce((sum, message) => sum + (message.images?.length ?? 0), 0)
+        if (count === 0) return request
+        this.logger.warn(AiTasksLogEvent.ImagesUnsupported, { workspaceId: request.workspaceId, images: count })
+        const messages = request.messages.map(({ images: _images, ...message }) => message)
+        return { ...request, messages: [...messages, { role: "system", content: this.phrase("imagesUnsupported", scope.locale) }] }
     }
 
     /** One prompt on the AI endpoint: refused when the workspace is over its allowance, metered once it answered. */
