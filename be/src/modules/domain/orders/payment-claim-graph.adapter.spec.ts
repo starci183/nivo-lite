@@ -3,6 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { OrderPaymentClaimsService } from "./order-payment-claims.service"
+import { PaymentDemandService } from "./payment-demand.service"
 import type { PaymentClaimRow } from "./orders.contracts"
 import { PaymentClaimGraphAdapter } from "./payment-claim-graph.adapter"
 
@@ -31,14 +32,16 @@ const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
     const claims = mock<OrderPaymentClaimsService>()
     claims.query.mockResolvedValue([claimRow])
+    const demand = mock<PaymentDemandService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             PaymentClaimGraphAdapter,
             { provide: GraphNodeRegistryService, useValue: registry },
             { provide: OrderPaymentClaimsService, useValue: claims },
+            { provide: PaymentDemandService, useValue: demand },
         ],
     }).compile()
-    return { adapter: moduleRef.get(PaymentClaimGraphAdapter), registry, claims }
+    return { adapter: moduleRef.get(PaymentClaimGraphAdapter), registry, claims, demand }
 }
 
 describe("PaymentClaimGraphAdapter", () => {
@@ -81,7 +84,7 @@ describe("PaymentClaimGraphAdapter", () => {
     })
 
     it("records what the customer said once per business key, falling back to the step key", async () => {
-        const { adapter, claims } = await build()
+        const { adapter, claims, demand } = await build()
         claims.record.mockResolvedValue("claim-new")
         const payload = { leadId: "lead-dinh", conversationId: "conversation-dinh", amountVnd: 5000, names: ["BUI NGUYEN DINH"], body: "5k" }
 
@@ -91,6 +94,7 @@ describe("PaymentClaimGraphAdapter", () => {
         })
         await adapter.execute(turn, { leadId: "lead-dinh", body: "ck rồi" }, { key: "run:2", dedupeKey: null })
 
+        expect(demand.claimOpen).toHaveBeenCalledWith("ws-1")
         expect(claims.record).toHaveBeenNthCalledWith(1, {
             workspaceId: "ws-1",
             leadId: "lead-dinh",

@@ -5,6 +5,7 @@ import type { RightScope } from "@nivo-lite/agent-sdk/rights"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeDataPort, NodeEffectExecutor, NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
 import { OrderPaymentClaimsService } from "./order-payment-claims.service"
+import { PaymentDemandService } from "./payment-demand.service"
 import type { PaymentClaimRow, PaymentClaimStatus, PaymentClaimWhere } from "./orders.contracts"
 
 /** The most rows one read of the port answers. */
@@ -39,7 +40,7 @@ const cut = (row: NodeRow, fields: ReadonlyArray<string>): NodeRow =>
 /**
  * The graph nodes' door to what customers said about paying: the data port of the `payment-claim` kind (a `turn` read keeps to the
  * conversation of the turn, a `workspace` read reaches the workspace's claims) and the executor of `payment-claim.record`, which writes the
- * claim once per business key. Escalating a claim whose money never came is `escalate`, which the work-item executor calls for the
+ * claim once per business key and has the bank-feed connections polled fast for a while. Escalating a claim whose money never came is `escalate`, which the work-item executor calls for the
  * `claimId` of its payload.
  */
 export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecutor, OnModuleInit {
@@ -49,6 +50,7 @@ export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecuto
     constructor(
         private readonly registry: GraphNodeRegistryService,
         private readonly claims: OrderPaymentClaimsService,
+        private readonly demand: PaymentDemandService,
     ) {}
 
     /** Registers the port and the executor with the node host once the app has started. */
@@ -77,6 +79,7 @@ export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecuto
             body: String(payload.body),
             dedupeKey: call.dedupeKey ?? call.key,
         })
+        await this.demand.claimOpen(turn.workspaceId)
         return { kind: "payment-claim", id }
     }
 

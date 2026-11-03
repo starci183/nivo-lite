@@ -11,6 +11,7 @@ import { normalizePage } from "@modules/platform/pagination"
 import { OrdersErrorCode } from "./errors/orders.error"
 import type { NewOrderDraft, OrderConfirmation, OrdersWorkbenchRow, SalesOrderListRow } from "./orders.contracts"
 import { OrdersService } from "./orders.service"
+import { PaymentDemandService } from "./payment-demand.service"
 import { OrderEntity } from "./persistence/entities"
 
 const NOW = "2026-10-13T02:00:00.000Z"
@@ -34,15 +35,17 @@ const confirmationOf = builder<OrderConfirmation>({
 
 const build = async (entityManager: MockEntityManager, cards: ReadonlyArray<typeof MINH> = [MINH]) => {
     const leads = mock<LeadReadService>({ cardsOf: jest.fn(() => Promise.resolve([...cards])) })
+    const demand = mock<PaymentDemandService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             OrdersService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LeadReadService, useValue: leads },
+            { provide: PaymentDemandService, useValue: demand },
         ],
     }).compile()
-    return Object.assign(moduleRef.get(OrdersService), { doubles: { leads } })
+    return Object.assign(moduleRef.get(OrdersService), { doubles: { leads, demand } })
 }
 
 /** Makes the successive query builders of `em` each answer a write with the given `RETURNING` rows. */
@@ -414,10 +417,24 @@ const registerTransitions = () => {
             expect(update.argsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "order-1", status: "draft" }]])
         })
 
-        it("answers null for an order that is no longer a draft", async () => {
+        it("answers null for an order that is no longer a draft, and awaits no money for it", async () => {
             const orders = await build(writing([]).em)
 
             await expect(orders.confirm(confirmationOf({ amountVnd: null }))).resolves.toBeNull()
+            expect(orders.doubles.demand.orderAwaitingPayment).not.toHaveBeenCalled()
+        })
+
+        it("has the bank feed polled fast for a confirmed order with an amount to pay, and not for one without", async () => {
+            const priced = orderOf({ status: "confirmed", amount_vnd: 90000 })
+            const free = orderOf({ status: "confirmed", amount_vnd: null })
+            const unpaid = orderOf({ status: "confirmed", amount_vnd: 0 })
+            const orders = await build(writing([writtenOf(priced)], [writtenOf(free)], [writtenOf(unpaid)]).em)
+
+            await orders.confirm(confirmationOf())
+            expect(orders.doubles.demand.orderAwaitingPayment).toHaveBeenCalledWith(priced.workspace_id)
+            await orders.confirm(confirmationOf())
+            await orders.confirm(confirmationOf())
+            expect(orders.doubles.demand.orderAwaitingPayment).toHaveBeenCalledTimes(1)
         })
     })
 }

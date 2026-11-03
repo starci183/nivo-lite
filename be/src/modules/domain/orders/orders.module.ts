@@ -4,6 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orders.module-definitio
 import { OrderPaymentClaimsService } from "./order-payment-claims.service"
 import { OrdersService } from "./orders.service"
 import { WORK_RAISED } from "@modules/domain/decisions/work-engine.decorators"
+import { PaymentDemandService } from "./payment-demand.service"
 import { PaymentClaimGraphAdapter } from "./payment-claim-graph.adapter"
 import { PaymentClaimWorkRaisedAdapter } from "./payment-claim-work-raised.adapter"
 import { PaymentMarkPaidGraphAdapter } from "./payment-mark-paid-graph.adapter"
@@ -26,6 +27,7 @@ export class OrdersModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 OrdersService,
                 OrderPaymentClaimsService,
+                PaymentDemandService,
                 PaymentClaimGraphAdapter,
                 PaymentClaimWorkRaisedAdapter,
                 { provide: WORK_RAISED, useExisting: PaymentClaimWorkRaisedAdapter },
