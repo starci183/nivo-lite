@@ -1,8 +1,13 @@
 export type {
+    EffectOptions,
+    EffectPayload,
     NodeConfig,
     NodeContext,
     NodeDefinition,
     NodeExample,
+    NodeExampleEffect,
+    NodeModel,
+    NodeModelRequest,
     NodeQuery,
     NodeRole,
     NodeStore,
@@ -10,7 +15,17 @@ export type {
     SubjectRef,
     TurnRef,
 } from "./node.types"
+export type { DataKindConfig, DataKindDefinition, EffectConfig, EffectDefinition } from "./effect.types"
+export type { EffectCall, NodeHostPorts, NodeRun, NodeRunEffect, NodeRunRequest } from "./host.types"
+export type { NodeInputBinding, NodeInputBindings, NodeInputRef, NodeInputScope } from "./binding"
+export type { GraphNodeRef, NodeIndex, NodeInstall, NodeProblem, NodeProblemCode } from "./problems"
+export type { NodeRunErrorCode } from "./node-run-error"
 export { RightsDeniedError } from "./rights-denied-error"
-export { defineNode } from "./node"
+export { NodeRunError } from "./node-run-error"
+export { BRANCH_FIELD, defineNode } from "./node"
+export { defineDataKind, defineEffect } from "./effect"
+export { runNode } from "./host"
+export { TRIGGER_SOURCE, inputSourcesOf, isInputRef, resolveInput, sourceOfRef } from "./binding"
+export { branchesOf, graphNodeProblems, nodeIndexOf, nodeListProblems } from "./problems"
 export { NodeVocabulary, VocabularyError } from "./vocabulary"
 export type { FactSchema, NodeKindRegistration, NodeVocabularyManifest } from "./vocabulary"
