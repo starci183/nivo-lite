@@ -15,6 +15,7 @@ import { parseTelegramUserConfig } from "@modules/integrations/telegram-user"
 import { parseMailConfig } from "@modules/integrations/mail"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
 import { parseZaloConfig } from "@modules/integrations/zalo"
+import { parseZaloInboxConfig } from "@modules/domain/zalo-inbox"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
 import { parseMcpConfig } from "@modules/integrations/mcp"
 import { parsePlatformAdminConfig } from "@modules/domain/platform-admin"
@@ -80,6 +81,8 @@ export interface ApiOptions {
     readonly telegram: ReturnType<typeof parseTelegramConfig>
     /** The Zalo OAuth and Open API hosts. */
     readonly zalo: ReturnType<typeof parseZaloConfig>
+    /** The reply window, the stale age and the backfill window of the Zalo inbox reconcile job. */
+    readonly zaloInbox: ReturnType<typeof parseZaloInboxConfig>
     /** The MCP gateway: the credential NAMES remote connectors may use (each read through <NAME>_FILE) and the call limit. */
     readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
     /** Outgoing mail: the platform sender and the private-host policy. */
@@ -144,6 +147,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     channels: parseChannelsConfig(env),
     telegram: parseTelegramConfig(env),
     zalo: parseZaloConfig(env),
+    zaloInbox: parseZaloInboxConfig(env),
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
     mail: parseMailConfig(env),
     dataSources: parseDataSourcesConfig(env),

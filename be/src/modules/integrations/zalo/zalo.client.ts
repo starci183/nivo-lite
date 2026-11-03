@@ -5,7 +5,14 @@ import { isRecord } from "@modules/platform/primitives"
 import { ZaloError, ZaloErrorCode } from "./errors/zalo.error"
 import { InjectZaloOptions } from "./zalo.decorators"
 import { RENEWAL_GRANT_FIELD } from "./zalo.contracts"
-import type { ZaloArticle, ZaloArticleStats, ZaloTokens, ZnsMessage, ZnsReceipt } from "./zalo.contracts"
+import type {
+    ZaloArticle,
+    ZaloArticleStats,
+    ZaloChatMessage,
+    ZaloTokens,
+    ZnsMessage,
+    ZnsReceipt,
+} from "./zalo.contracts"
 import type { ZaloOptions } from "./zalo.options"
 import { zaloErrorCodeOf } from "./zalo-failure.policy"
 import { challengeOf } from "./zalo-oauth.policy"
@@ -23,6 +30,34 @@ const ZNS_PATH = "/message/template"
 
 /** The most articles one list call reads (one Zalo page). */
 const ARTICLES_LIMIT = 50
+
+/** The most chats or messages one OA list call reads (one Zalo page). */
+const CHAT_PAGE_LIMIT = 10
+
+/** A string or number field of a row as text, or an empty text. */
+const scalarOf = (row: Record<string, unknown>, key: string): string => {
+    const value = row[key]
+    return typeof value === "string" || typeof value === "number" ? String(value) : ""
+}
+
+/** One row of a chat list: src 1 is the customer writing, src 0 the OA; null when it lacks the id, the customer or the time. */
+const chatMessageOf = (row: unknown): ZaloChatMessage | null => {
+    if (!isRecord(row)) return null
+    const fromUser = row.src === 1
+    const userId = scalarOf(row, fromUser ? "from_id" : "to_id")
+    const messageId = scalarOf(row, "message_id")
+    const sentAt = row.time
+    if (messageId === "" || userId === "" || typeof sentAt !== "number" || !Number.isFinite(sentAt)) return null
+    return {
+        messageId,
+        userId,
+        userName: scalarOf(row, fromUser ? "from_display_name" : "to_display_name"),
+        fromUser,
+        kind: scalarOf(row, "type"),
+        text: typeof row.message === "string" ? row.message : "",
+        sentAt,
+    }
+}
 
 const numberOf = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0)
 
@@ -195,6 +230,36 @@ export class ZaloClient {
         })
     }
 
+    /**
+     * The OA's recent chats (Open API v2.0 `listrecentchat`): the newest message of each conversation, newest first, `count` at most ten per
+     * call from `offset`. A row the answer cannot read is left out.
+     */
+    async recentChats(accessToken: string, offset: number, count: number = CHAT_PAGE_LIMIT): Promise<ReadonlyArray<ZaloChatMessage>> {
+        return this.chatRows(accessToken, "/v2.0/oa/listrecentchat", { offset, count })
+    }
+
+    /** The messages of one customer's conversation with the OA (Open API v2.0 `conversation`), newest first, `count` at most ten per call from `offset`. */
+    async conversation(
+        accessToken: string,
+        userId: string,
+        offset: number,
+        count: number = CHAT_PAGE_LIMIT,
+    ): Promise<ReadonlyArray<ZaloChatMessage>> {
+        return this.chatRows(accessToken, "/v2.0/oa/conversation", { user_id: userId, offset, count })
+    }
+
+    private async chatRows(
+        accessToken: string,
+        path: string,
+        query: Record<string, string | number>,
+    ): Promise<ReadonlyArray<ZaloChatMessage>> {
+        const rows = await this.apiData(accessToken, "GET", `${path}?data=${encodeURIComponent(JSON.stringify(query))}`)
+        return (Array.isArray(rows) ? rows : []).flatMap((row: unknown) => {
+            const message = chatMessageOf(row)
+            return message === null ? [] : [message]
+        })
+    }
+
     private async tokenCall(secret: string, form: Record<string, string>): Promise<ZaloTokens> {
         const answer = await this.http
             .request({
@@ -236,6 +301,18 @@ export class ZaloClient {
         body?: unknown,
         base: string = this.options.apiBase,
     ): Promise<Record<string, unknown>> {
+        const data = await this.apiData(accessToken, method, path, body, base)
+        return isRecord(data) ? data : {}
+    }
+
+    /** The `data` of a successful answer as Zalo sent it: an object for most calls, a list for the chat lists. */
+    private async apiData(
+        accessToken: string,
+        method: "GET" | "POST",
+        path: string,
+        body?: unknown,
+        base: string = this.options.apiBase,
+    ): Promise<unknown> {
         const answer = await this.http
             .request({
                 method,
@@ -263,7 +340,7 @@ export class ZaloClient {
         if (((path === CS_PATH || path === ZNS_PATH) && failure !== 0) || answer.status < 200 || answer.status >= 300) {
             throw new ZaloError({ code: ZaloErrorCode.Unavailable, params: { path, reason: `HTTP ${answer.status}` } })
         }
-        return isRecord(answer.body.data) ? answer.body.data : {}
+        return answer.body.data
     }
 
     private reasonOf(body: Record<string, unknown>, status: number): string {

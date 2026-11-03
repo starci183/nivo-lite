@@ -10,6 +10,7 @@ import { MARKETING_TICK_QUEUE } from "@modules/queues/marketing-tick"
 import { REALTIME_RETENTION_QUEUE } from "@modules/queues/realtime-retention"
 import { SYSTEM_HISTORY_RETENTION_QUEUE } from "@modules/queues/system-history-retention"
 import { SHIFTS_QUEUE, SHIFTS_TICK_JOB } from "@modules/queues/shifts"
+import { RECONCILE_ZALO_INBOX_JOB, ZALO_INBOX_POLL_QUEUE } from "@modules/queues/zalo-inbox-poll"
 import { ZALO_REFRESH_QUEUE } from "@modules/queues/zalo-refresh"
 
 /** A manually triggered migration-owned tick and its idempotency window. */
@@ -57,6 +58,12 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
         job: SYSTEM_HISTORY_RETENTION_QUEUE,
         payload: { doneDays: 1, failedDays: 7, batch: 5000 },
         minutes: 1440,
+    },
+    "zalo-inbox-reconcile-tick": {
+        queue: ZALO_INBOX_POLL_QUEUE,
+        job: RECONCILE_ZALO_INBOX_JOB,
+        payload: {},
+        minutes: 5,
     },
     "zalo-refresh-tick": {
         queue: ZALO_REFRESH_QUEUE,

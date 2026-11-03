@@ -25,7 +25,10 @@ import { InboundEventEntity } from "./persistence/entities"
 /** The columns a new inbound event is written with; every other column keeps its default. */
 type NewInboundEvent = Pick<InboundEventEntity, "workspaceId" | "channel" | "kind" | "body" | "dedupeKey"> &
     Partial<
-        Pick<InboundEventEntity, "senderName" | "senderContact" | "amountVnd" | "externalRef" | "eventId" | "leadId">
+        Pick<
+            InboundEventEntity,
+            "senderName" | "senderContact" | "amountVnd" | "externalRef" | "eventId" | "leadId" | "status"
+        >
     >
 
 /** Writes one inbound event once per workspace and dedupe key; answers its id, or undefined when the key was taken. */
@@ -96,6 +99,20 @@ export class InboundEventsService {
             body: message.body,
             eventId: message.eventId,
             dedupeKey: `${message.channel}:message:${message.eventId}`,
+        })
+    }
+
+    /** Keeps a customer message that came too late for an agent to answer as an event the owner decides on; the same event twice is one row. It writes in the caller's transaction. */
+    async keepForOwner(manager: EntityManager, message: UnroutedMessage): Promise<void> {
+        await insertOnce(manager, {
+            workspaceId: message.workspaceId,
+            channel: message.channel,
+            kind: "message",
+            senderName: message.sender,
+            body: message.body,
+            eventId: message.eventId,
+            dedupeKey: `${message.channel}:message:${message.eventId}`,
+            status: "needs_decision",
         })
     }
 

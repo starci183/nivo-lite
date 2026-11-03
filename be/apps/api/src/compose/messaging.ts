@@ -74,7 +74,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
     TelegramInboxModule.register({ isGlobal: true }),
-    ZaloInboxModule.register({ isGlobal: true }),
+    ZaloInboxModule.register({ isGlobal: true, ...options.zaloInbox }),
     ZaloWizardDraftsModule.register({ isGlobal: true }),
 ]
 

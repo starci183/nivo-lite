@@ -1,7 +1,7 @@
 import { Column, Entity } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
-import type { ZaloReceiptPayload } from "../../zalo-inbox.contracts"
+import type { ZaloInboxState, ZaloReceiptPayload } from "../../zalo-inbox.contracts"
 
 @Entity({ schema: "public", name: "zalo_inbox" })
 /** One Zalo webhook delivery receipt: `(provider, delivery_id)` is unique, so a redelivery inserts nothing. */
@@ -25,4 +25,8 @@ export class ZaloInboxEntity extends UuidAbstractEntity {
     /** When the deferred consumer finished the receipt; null while it is pending. */
     @Column({ name: "processed_at", type: "timestamptz", nullable: true })
     processedAt!: Date | null
+
+    /** Where the message stands: owed an answer, handled, failed on its last attempt, or expired (see `ZaloInboxState`). */
+    @Column({ name: "state", type: "text", default: "received" })
+    state!: ZaloInboxState
 }

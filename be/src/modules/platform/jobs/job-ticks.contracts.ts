@@ -97,6 +97,14 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         payload: { withinMs: 25200000 },
     },
     {
+        name: "zalo-inbox-reconcile-tick",
+        cron: "*/5 * * * *",
+        timeZone: "UTC",
+        queue: "zalo-inbox-poll",
+        job: "reconcile-zalo-inbox",
+        payload: {},
+    },
+    {
         name: "accounting-desk-morning",
         cron: "30 23 * * *",
         timeZone: "UTC",

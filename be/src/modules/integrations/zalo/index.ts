@@ -7,4 +7,4 @@ export { isZaloRefusal, isZaloMessageRefusal, isZaloTokenRejection, zaloFailureO
 export { newVerifier } from "./zalo-oauth.policy"
 export { isValidZaloMac } from "./zalo-signature.policy"
 export type { ZaloClient } from "./zalo.client"
-export type { ZaloArticle, ZaloFailure } from "./zalo.contracts"
+export type { ZaloArticle, ZaloChatMessage, ZaloFailure } from "./zalo.contracts"

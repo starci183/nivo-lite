@@ -103,3 +103,21 @@ export interface ZaloArticleStats {
     /** How many times it was shared. */
     readonly shares: number
 }
+
+/** One message of an OA conversation as the chat lists report it. */
+export interface ZaloChatMessage {
+    /** Zalo's id of the message: the `msg_id` its webhook event carries. */
+    readonly messageId: string
+    /** The customer of the conversation. */
+    readonly userId: string
+    /** The customer's display name, or an empty text when Zalo gives none. */
+    readonly userName: string
+    /** True when the customer wrote it, false when the OA did. */
+    readonly fromUser: boolean
+    /** The message kind Zalo reports, for example `text` or `photo`. */
+    readonly kind: string
+    /** The text of the message; empty for a kind without text. */
+    readonly text: string
+    /** When it was sent, in epoch milliseconds. */
+    readonly sentAt: number
+}
