@@ -54,6 +54,7 @@ describe("AgentTagEffectService", () => {
             leadId: "l-1",
             channel: "zalo",
             context: { items: [{ name: "Lan" }] },
+            visibility: "redirect" as const,
         }
 
         await expect(executor.execute(TURN, payload, CALL)).resolves.toEqual({ kind: "wake", id: "wake-9" })
@@ -71,6 +72,7 @@ describe("AgentTagEffectService", () => {
             leadId: "l-1",
             channel: "zalo",
             context: { items: [{ name: "Lan" }] },
+            visibility: "redirect",
         })
     })
 
