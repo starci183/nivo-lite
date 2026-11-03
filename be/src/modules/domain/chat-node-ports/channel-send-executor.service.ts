@@ -9,8 +9,11 @@ import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { textWithLinks } from "./chat-node-ports.policy"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
+import { RECIPIENT_NOT_LINKED, recipientLinked, textWithLinks } from "./chat-node-ports.policy"
 import { channelSendSchema } from "./chat-node-ports.schema"
+import { ChatNodePortsLogEvent } from "./chat-node-ports.log-events"
 import { ChatNodePortsError, ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
 
 const EFFECT = "channel.send"
@@ -28,6 +31,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
 
     constructor(
         @InjectClock() private readonly clock: Clock,
+        @InjectLogger() private readonly logger: Logger,
         private readonly registry: GraphNodeRegistryService,
         private readonly conversations: AgentConversationsService,
         private readonly messages: AgentMessagesService,
@@ -50,11 +54,13 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         if (conversation.agent.id !== turn.agentId) {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.NotSpeaking })
         }
-        if (conversation.channel === "zalo" && (await this.windowClosed(conversation.id))) {
+        const linked = recipientLinked(conversation)
+        if (linked && conversation.channel === "zalo" && (await this.windowClosed(conversation.id))) {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.ZaloWindowExpired })
         }
         const text = textWithLinks(parsed.data)
         const messageId = await this.messages.storeAgentMessage(conversation.workspaceId, conversation.id, text)
+        if (!linked) return this.keptUndelivered(conversation, messageId)
         const receipt = await this.delivery.deliver({ conversationId: conversation.id, messageId, text })
         if (!receipt.delivered) {
             const code =
@@ -63,6 +69,17 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
                     : ChatNodePortsErrorCode.DeliveryUnconfirmed
             throw new ChatNodePortsError({ code })
         }
+        return { kind: "message", id: messageId }
+    }
+
+    /** The message stays in the conversation for the owner to see, marked as not sent; the customer cannot be reached yet, which is not a failure of the step. */
+    private async keptUndelivered(conversation: TurnConversation, messageId: string): Promise<SubjectRef> {
+        await this.messages.markDelivery(messageId, false, RECIPIENT_NOT_LINKED)
+        this.logger.info(ChatNodePortsLogEvent.Undelivered, {
+            conversationId: conversation.id,
+            channel: conversation.channel,
+            reason: RECIPIENT_NOT_LINKED,
+        })
         return { kind: "message", id: messageId }
     }
 
