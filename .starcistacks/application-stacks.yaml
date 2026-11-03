@@ -807,7 +807,12 @@ services:
       container: starci-sonarqube
       publishedBy: cloudflared.yaml
     auth: token
-    qualityGate: starci-quality-lite
+    qualityGate: starci-quality
+    credentials:
+      - id: analysis
+        project: nivo-lite
+        key: SONAR_TOKEN
+        custody: {repository: nivo-lite, path: .starcistacks/dev/secrets/sonar.enc.yaml}
     projects:
       - {repository: nivo-lite, key: nivo-lite}
     ci:
@@ -815,6 +820,7 @@ services:
       wiring: required
       token: SONAR_TOKEN
       hostVar: SONAR_HOST_URL
+      secrets: [{name: SONAR_TOKEN, credential: analysis}]
       provisioning: >-
         ci.yml scans release tags on sonar.starci.org with the repository secret SONAR_TOKEN and the repository variable SONAR_HOST_URL (both declared in the top-level ci block). The host owns the Sonar server; the owner creates the nivo-lite project token.
     ownerAction:
