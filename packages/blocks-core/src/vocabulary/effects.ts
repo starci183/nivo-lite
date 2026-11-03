@@ -53,6 +53,12 @@ export interface AgentTagPayload {
     readonly text: string
     readonly conversationId?: string | undefined
     readonly subject?: { readonly kind: string; readonly id: string } | undefined
+    /** The customer the tag is about, which the target's turn is scoped to. */
+    readonly leadId?: string | undefined
+    /** The channel the conversation runs on. */
+    readonly channel?: string | undefined
+    /** Plain data for the target's graph, which reads it as `trigger.context`. */
+    readonly context?: Readonly<Record<string, unknown>> | undefined
 }
 
 /** A piece of work raised for a person or the gate. */
@@ -119,6 +125,9 @@ const agentTagPayload: z.ZodType<AgentTagPayload> = z
         text: z.string().min(1),
         conversationId: id.optional(),
         subject: z.object({ kind: id, id }).optional(),
+        leadId: id.optional(),
+        channel: id.optional(),
+        context: z.record(z.string(), z.unknown()).optional(),
     })
     .refine((payload) => (payload.toAgentId === undefined) !== (payload.toModuleKey === undefined))
 
