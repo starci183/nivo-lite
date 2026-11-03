@@ -59,6 +59,22 @@ const chatMessageOf = (row: unknown): ZaloChatMessage | null => {
     }
 }
 
+/** The most characters of an error answer that travel in the params of an error. */
+const BODY_LOG_LIMIT = 500
+
+/** Keys whose value never travels in an error: a credential Zalo might echo back. */
+const SECRET_KEY = /token|secret|password|authorization|code_verifier/iu
+
+/** The path of a call without its query: the query names a customer or a page, and the path alone says which endpoint failed. */
+const pathOf = (path: string): string => path.split("?")[0] ?? path
+
+/** An error answer of Zalo as short text for the log, with every credential-looking field blanked, so the next failure says exactly what Zalo answered. */
+const bodyTextOf = (body: unknown): string =>
+    (JSON.stringify(body, (key, value: unknown) => (SECRET_KEY.test(key) ? "[redacted]" : value)) ?? "").slice(
+        0,
+        BODY_LOG_LIMIT,
+    )
+
 const numberOf = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0)
 
 /** The article fields Zalo takes on create and on update. */
@@ -282,6 +298,8 @@ export class ZaloClient {
                 params: {
                     path: TOKEN_PATH,
                     reason: this.reasonOf(body, answer.status),
+                    status: answer.status,
+                    body: bodyTextOf(body),
                     ...(Number.isFinite(code) ? { zaloCode: code } : {}),
                 },
             })
@@ -327,18 +345,37 @@ export class ZaloClient {
         if (!isRecord(answer.body)) {
             throw new ZaloError({
                 code: ZaloErrorCode.Unavailable,
-                params: { path, reason: `HTTP ${answer.status}` },
+                params: {
+                    path: pathOf(path),
+                    reason: `HTTP ${answer.status}`,
+                    status: answer.status,
+                    body: bodyTextOf(answer.body),
+                },
             })
         }
         const failure = answer.body.error
         if (typeof failure === "number" && failure !== 0) {
             throw new ZaloError({
                 code: zaloErrorCodeOf(failure),
-                params: { path, reason: this.reasonOf(answer.body, answer.status), zaloCode: failure },
+                params: {
+                    path: pathOf(path),
+                    reason: this.reasonOf(answer.body, answer.status),
+                    zaloCode: failure,
+                    status: answer.status,
+                    body: bodyTextOf(answer.body),
+                },
             })
         }
         if (((path === CS_PATH || path === ZNS_PATH) && failure !== 0) || answer.status < 200 || answer.status >= 300) {
-            throw new ZaloError({ code: ZaloErrorCode.Unavailable, params: { path, reason: `HTTP ${answer.status}` } })
+            throw new ZaloError({
+                code: ZaloErrorCode.Unavailable,
+                params: {
+                    path: pathOf(path),
+                    reason: `HTTP ${answer.status}`,
+                    status: answer.status,
+                    body: bodyTextOf(answer.body),
+                },
+            })
         }
         return answer.body.data
     }

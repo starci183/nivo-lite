@@ -360,8 +360,14 @@ describe("PollSchedulerService failures", () => {
         expect(tallies.get("sepay")?.authFailed).toBe(1)
         expect(schedule.settle).toHaveBeenCalledWith("c-1", expect.objectContaining({ needsReauth: true, breakerState: "open" }))
         expect(notice.needsReauth).toHaveBeenCalledTimes(1)
-        expect(notice.needsReauth).toHaveBeenCalledWith(expect.objectContaining({ id: "c-1" }), NOW_MS)
+        expect(notice.needsReauth).toHaveBeenCalledWith(expect.objectContaining({ id: "c-1" }), NOW_MS, undefined)
         expect(logger.warn).toHaveBeenCalledWith(ConnectionPollLogEvent.NeedsReauth, expect.objectContaining({ connectionId: "c-1" }))
+    })
+
+    it("tells the owner when the credential lacks the permission the poll needs", async () => {
+        const { notice } = await failing({ kind: "auth_failed", reason: "permission" })
+
+        expect(notice.needsReauth).toHaveBeenCalledWith(expect.objectContaining({ id: "c-1" }), NOW_MS, "permission")
     })
 
     it("raises no second owner work item for a connection that is already parked", async () => {

@@ -1,5 +1,6 @@
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { eachInOrder } from "@modules/platform/primitives"
+import { failureFieldsOf } from "./poll-failure-fields.policy"
 import { ConnectionPollLogEvent } from "./connection-poll.log-events"
 import type { PollOutcome, PollWalkOptions } from "./poll-schedule.contracts"
 import type {
@@ -71,6 +72,7 @@ export class ConnectionPollRun {
             this.deps.logger.error(ConnectionPollLogEvent.Failed, cause, {
                 connectionId: record.id,
                 provider: record.provider,
+                ...failureFieldsOf(cause),
             })
             return { kind: "failed", cause }
         }

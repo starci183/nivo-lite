@@ -44,13 +44,16 @@ export interface ConnectionPoller<Item> {
     store(connection: ConnectionRecord, item: Item): Promise<boolean>
 }
 
+/** Why a provider refused a credential: it is bad (expired, revoked) or it lacks the permission the poll needs, which only the owner can grant. */
+export type AuthFailureReason = "credential" | "permission"
+
 /**
  * How a failed provider call must be treated by the scheduler: wait the named seconds, stop using the credential, retry later, or give up.
  * The provider classifies its own errors; core never reads a provider error code.
  */
 export type PollFailure =
     | { readonly kind: "rate_limited"; readonly retryAfterSeconds: number }
-    | { readonly kind: "auth_failed" }
+    | { readonly kind: "auth_failed"; readonly reason?: AuthFailureReason | undefined }
     | { readonly kind: "transient" }
     | { readonly kind: "fatal" }
 

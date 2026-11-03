@@ -1,4 +1,4 @@
-import type { PollFailure } from "./connection-poll.contracts"
+import type { AuthFailureReason, PollFailure } from "./connection-poll.contracts"
 import type { PollOutcome, PollScheduleOptions, PollScheduleRow } from "./poll-schedule.contracts"
 
 /** The intervals and caps a scheduler runs with when the environment names none. */
@@ -218,3 +218,7 @@ export const interleavedByWorkspace = <Row extends { readonly workspaceId: strin
     const turns = Math.max(0, ...[...queues.values()].map((queue) => queue.length))
     return Array.from({ length: turns }, (_turn, index) => [...queues.values()].flatMap((queue) => queue[index] ?? [])).flat()
 }
+
+/** Why the provider refused the credential, when the failure is a refusal; undefined for any other failure and for a refusal that does not say. */
+export const authReasonOf = (failure: PollFailure): AuthFailureReason | undefined =>
+    failure.kind === "auth_failed" ? failure.reason : undefined

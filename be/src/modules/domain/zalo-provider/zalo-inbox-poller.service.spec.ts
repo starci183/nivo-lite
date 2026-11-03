@@ -199,23 +199,30 @@ describe("ZaloInboxPoller limits and the limiter", () => {
 
 describe("ZaloInboxPoller classify", () => {
     it.each([
-        ["a refused access token", new ZaloError({ code: ZaloErrorCode.TokenRejected }), { kind: "auth_failed" }],
+        ["a refused access token", new ZaloError({ code: ZaloErrorCode.TokenRejected }), { kind: "auth_failed", reason: "credential" }],
+        ["an app or OA without the permission", new ZaloError({ code: ZaloErrorCode.NotPermitted }), { kind: "auth_failed", reason: "permission" }],
+        [
+            "a refusal that says in words the permission is missing",
+            new ZaloError({ code: ZaloErrorCode.Rejected, params: { reason: "Application does not have permission" } }),
+            { kind: "auth_failed", reason: "permission" },
+        ],
+        ["a refusal that explains nothing", new ZaloError({ code: ZaloErrorCode.Rejected }), { kind: "fatal" }],
         [
             "an exhausted quota",
             new ZaloError({ code: ZaloErrorCode.QuotaExhausted }),
             { kind: "rate_limited", retryAfterSeconds: 0 },
         ],
         ["an unreachable Zalo", new ZaloError({ code: ZaloErrorCode.Unavailable }), { kind: "transient" }],
-        ["any other Zalo refusal", new ZaloError({ code: ZaloErrorCode.NotPermitted }), { kind: "fatal" }],
+        ["any other Zalo refusal", new ZaloError({ code: ZaloErrorCode.TemplateRejected }), { kind: "fatal" }],
         [
             "a connection that was never authorised",
             new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized }),
-            { kind: "auth_failed" },
+            { kind: "auth_failed", reason: "credential" },
         ],
         [
             "an unreadable credential",
             new ChannelsError({ code: ChannelsErrorCode.SecretUnreadable }),
-            { kind: "auth_failed" },
+            { kind: "auth_failed", reason: "credential" },
         ],
         ["a token refresh in progress", new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy }), { kind: "transient" }],
         ["a missing connection", new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound }), { kind: "fatal" }],

@@ -13,6 +13,7 @@ export { PollSourceRegistry } from "./poll-source-registry.service"
 export type {
     ConnectionPollDeps,
     ConnectionPoller,
+    AuthFailureReason,
     PollFailure,
     PollLimits,
     PollPage,

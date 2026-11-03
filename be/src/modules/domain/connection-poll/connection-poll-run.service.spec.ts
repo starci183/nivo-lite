@@ -4,6 +4,7 @@ import type { Logger } from "@modules/platform/logging"
 import type { Timer } from "@modules/platform/retry"
 import { ConnectionPollRun, emptyPollSummary } from "./connection-poll-run.service"
 import { ConnectionPollLogEvent } from "./connection-poll.log-events"
+import { ConnectionPollError, ConnectionPollErrorCode } from "./errors/connection-poll.error"
 import type { ConnectionPoller, PollPage } from "./connection-poll.contracts"
 import { POLL_CURSOR_KEY, POLL_MAX_PAGES, POLL_PAGE_SIZE, POLL_PAUSE_MS } from "./connection-poll.policy"
 
@@ -244,6 +245,23 @@ describe("ConnectionPollRun the outcome a scheduler plans with", () => {
         expect(outcome.kind).toBe("done")
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "conn-1", {
             meta: expect.objectContaining({ [POLL_CURSOR_KEY]: carried.toISOString() }),
+        })
+    })
+})
+
+describe("ConnectionPollRun why a provider refused", () => {
+    it("logs the code and the params of a domain error next to the connection, so the refusal can be read", async () => {
+        const { run, logger, poller } = build()
+        const failure = new ConnectionPollError({ code: ConnectionPollErrorCode.Deferred, params: { waitMs: 7000 } })
+        poller.fetch.mockRejectedValue(failure)
+
+        await run.poll(poller, recordOf(), emptyPollSummary())
+
+        expect(logger.error).toHaveBeenCalledWith(ConnectionPollLogEvent.Failed, failure, {
+            connectionId: "conn-1",
+            provider: "sepay",
+            errorCode: "CONNECTION_POLL_DEFERRED",
+            waitMs: 7000,
         })
     })
 })

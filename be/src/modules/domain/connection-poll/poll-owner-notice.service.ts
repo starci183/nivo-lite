@@ -4,7 +4,8 @@ import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { POLL_NEEDS_REAUTH_REASON } from "./messages/connection-poll.messages"
+import type { AuthFailureReason } from "./connection-poll.contracts"
+import { POLL_NEEDS_PERMISSION_REASON, POLL_NEEDS_REAUTH_REASON } from "./messages/connection-poll.messages"
 
 @Injectable()
 /** Tells the owner that a connection must be connected again: the connection shows the reason, and one owner work item is kept per outage. */
@@ -15,15 +16,19 @@ export class PollOwnerNoticeService {
         private readonly inboundEvents: InboundEventsService,
     ) {}
 
-    /** Marks the connection failing and keeps one owner work item for the outage that began at `openedAt`; a repeat of the same outage is no new item. */
-    async needsReauth(record: ConnectionRecord, openedAt: number): Promise<void> {
-        await this.connections.markFailing(record.id, POLL_NEEDS_REAUTH_REASON)
+    /**
+     * Marks the connection failing with the reason (a bad credential, or one without the permission to read) and keeps one owner work item for the
+     * outage that began at `openedAt`; a repeat of the same outage is no new item.
+     */
+    async needsReauth(record: ConnectionRecord, openedAt: number, why: AuthFailureReason = "credential"): Promise<void> {
+        const reason = why === "permission" ? POLL_NEEDS_PERMISSION_REASON : POLL_NEEDS_REAUTH_REASON
+        await this.connections.markFailing(record.id, reason)
         await this.entityManager.transaction((manager) =>
             this.inboundEvents.keepForOwner(manager, {
                 workspaceId: record.workspaceId,
                 channel: record.provider,
                 sender: record.name,
-                body: POLL_NEEDS_REAUTH_REASON,
+                body: reason,
                 eventId: `reauth:${record.id}:${openedAt}`,
             }),
         )
