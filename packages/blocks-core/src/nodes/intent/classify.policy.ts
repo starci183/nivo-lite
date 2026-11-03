@@ -1,4 +1,6 @@
 import type {
+    AttachmentSlot,
+    ClassifyInput,
     ClassifyOutput,
     Intent,
     ModelClaim,
@@ -7,6 +9,7 @@ import type {
     OrderLine,
     OrderSlot,
     PaymentClaimSlot,
+    TriggerFile,
 } from "./classify.types"
 
 const NAME_MAX = 200
@@ -23,13 +26,13 @@ const MILLION_UNIT = /(?:tr|triệu|trieu)$/u
 /** The pending messages of a batch: one per non-blank line. */
 export const messagesOf = (text: string): ReadonlyArray<string> => text.split("\n").filter((line) => line.trim() !== "")
 
-const textOrNull = (value: string | null, max: number): string | null => {
+const textOrNull = (value: string | null | undefined, max: number): string | null => {
     const text = value?.trim().slice(0, max) ?? ""
     return text === "" ? null : text
 }
 
 /** An amount of VND from what the customer wrote ("5k", "5.000đ", "1,5tr", 5000); null when it is no positive amount. */
-export const vndOf = (value: number | string | null): number | null => {
+export const vndOf = (value: number | string | null | undefined): number | null => {
     if (typeof value === "number") return Number.isFinite(value) && value >= 1 ? Math.round(value) : null
     const text = (value ?? "").toLowerCase().replace(CURRENCY_TAIL, "").trim()
     if (WITH_UNIT.test(text)) {
@@ -62,18 +65,38 @@ const intentsOf = (
     listed: ReadonlyArray<Intent>,
     order: OrderSlot | null,
     claim: PaymentClaimSlot | null,
+    attachment: AttachmentSlot | null,
 ): ReadonlyArray<Intent> => {
-    const implied: ReadonlyArray<Intent> = [
-        order === null ? "other" : "order",
-        claim === null ? "other" : "payment_claim",
-    ]
+    const slots = [
+        ["order", order],
+        ["payment_claim", claim],
+        ["attachment", attachment],
+    ] as const
+    const implied = slots.filter(([, slot]) => slot !== null).map(([intent]) => intent)
     const raised = [...new Set([...listed, ...implied])].filter((intent) => intent !== "other")
     return raised.length === 0 ? ["other"] : raised
 }
 
-/** The classification the model's reply comes to: slots cleaned, intents reconciled with the slots. */
-export const classificationOf = (reply: ModelReply): ClassifyOutput => {
-    const order = reply.order === null ? null : orderOf(reply.order)
-    const paymentClaim = reply.payment_claim === null ? null : claimOf(reply.payment_claim)
-    return { intents: intentsOf(reply.intents, order, paymentClaim), order, paymentClaim }
+/** The most pictures the model is shown in one call. */
+export const IMAGES_SHOWN_MAX = 4
+
+/** The pictures the customer sent in the burst, in the order of the messages. */
+export const imagesOf = (messages: ClassifyInput["messages"]): ReadonlyArray<TriggerFile> =>
+    (messages ?? []).flatMap((message) => message.attachments).filter((file) => file.contentType.startsWith("image/"))
+
+/**
+ * The classification the model reply comes to for a burst with `imageCount` pictures: slots cleaned (what the customer did not say is
+ * null), a receipt picture is a payment claim, any other picture, and one the model gave no kind for, is an `attachment`, so a burst of
+ * a picture alone is never `other`.
+ */
+export const classificationOf = (reply: ModelReply, imageCount: number): ClassifyOutput => {
+    const kinds = Array.from({ length: imageCount }, (_, index) => reply.images[index] ?? "unreadable")
+    const receipts = kinds.filter((kind) => kind === "payment_receipt").length
+    const others = kinds.filter((kind) => kind !== "payment_receipt")
+    const order = reply.order == null ? null : orderOf(reply.order)
+    const stated = reply.payment_claim == null ? null : claimOf(reply.payment_claim)
+    const paymentClaim = stated ?? (receipts > 0 ? { amountVnd: null, payerName: null } : null)
+    const attachment =
+        others.length === 0 ? null : { count: others.length, understood: others.every((kind) => kind === "other") }
+    return { intents: intentsOf(reply.intents, order, paymentClaim, attachment), order, paymentClaim, attachment }
 }

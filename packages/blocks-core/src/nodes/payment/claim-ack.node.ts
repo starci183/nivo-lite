@@ -21,7 +21,7 @@ const params: NodeSchema<ClaimAckParams> = z.object({ locale: z.enum(["vi", "en"
 
 const input: NodeSchema<ClaimAckInput> = z.object({
     conversationId: z.string().min(1).max(ID_MAX),
-    leadId: z.string().min(1).max(ID_MAX),
+    leadId: z.string().min(1).max(ID_MAX).nullable(),
     body: z.string().min(1).max(BODY_MAX),
     amountVnd: z.number().int().min(1).nullable(),
     payerName: z.string().max(NAME_MAX).nullable(),
@@ -103,10 +103,10 @@ export const paymentClaimAckNode: NodeDefinition<
             ],
         },
         {
-            name: "a claim with no amount gets the plain line",
+            name: "a claim of a new customer, with no lead yet and no amount, belongs to the conversation and gets the plain line",
             grant: EFFECT_GRANT,
             params: { locale: "en" },
-            input: { conversationId: "c1", leadId: "l1", body: "I paid already", amountVnd: null, payerName: null },
+            input: { conversationId: "c1", leadId: null, body: "I paid already", amountVnd: null, payerName: null },
             output: {
                 reply: "We are checking your transaction.",
                 claim: { kind: "payment-claim.record", id: "payment-claim.record-1" },
@@ -114,7 +114,7 @@ export const paymentClaimAckNode: NodeDefinition<
             effects: [
                 {
                     kind: "payment-claim.record",
-                    payload: { leadId: "l1", conversationId: "c1", names: [], body: "I paid already" },
+                    payload: { leadId: null, conversationId: "c1", names: [], body: "I paid already" },
                 },
                 { kind: "channel.send", payload: { conversationId: "c1", text: "We are checking your transaction." } },
             ],

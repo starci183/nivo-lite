@@ -70,7 +70,7 @@ export const paymentClaimKind: DataKindDefinition = defineDataKind({
     title: { key: "dataKindPaymentClaim" },
     fields: z.object({
         id,
-        leadId: id,
+        leadId: id.nullable(),
         conversationId: id.nullable(),
         amountVnd: amount,
         names: z.array(text),

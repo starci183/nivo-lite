@@ -9,14 +9,49 @@
       { "kind": "payment-claim", "access": "write", "scope": "turn", "fields": ["leadId", "amountVnd", "names", "body"] }
     ],
     "tools": [],
-    "effects": ["channel.send", "payment-claim.record", "agent.tag"]
+    "effects": ["channel.send", "payment-claim.record", "agent.tag", "work-item.raise"]
   },
   "nodes": [
     {
       "key": "classify",
       "kind": "execute",
       "step": "intent.classify",
-      "input": { "text": { "$ref": "trigger.text" } },
+      "input": { "text": { "$ref": "trigger.text" }, "messages": { "$ref": "trigger.messages" } },
+      "next": "has-attachment"
+    },
+    {
+      "key": "has-attachment",
+      "kind": "condition",
+      "step": "intent.has",
+      "params": { "intent": "attachment" },
+      "input": { "intents": { "$ref": "classify.intents" } },
+      "routes": { "yes": "staff-attachment", "no": "has-question" }
+    },
+    {
+      "key": "staff-attachment",
+      "kind": "output",
+      "step": "core.raise-work-item",
+      "params": { "action": "handoff_lead", "title": "Khách gửi ảnh cần nhân viên xem" },
+      "input": {
+        "payload": {
+          "conversationId": { "$ref": "trigger.conversationId" },
+          "leadId": { "$ref": "trigger.leadId" },
+          "channel": { "$ref": "trigger.channel" },
+          "attachmentCount": { "$ref": "classify.attachment.count" }
+        },
+        "amountVnd": null,
+        "claimId": null
+      },
+      "next": "ack-attachment"
+    },
+    {
+      "key": "ack-attachment",
+      "kind": "output",
+      "step": "core.reply",
+      "input": {
+        "conversationId": { "$ref": "trigger.conversationId" },
+        "text": "Em đã nhận ảnh, em kiểm tra và phản hồi ngay ạ"
+      },
       "next": "has-question"
     },
     {

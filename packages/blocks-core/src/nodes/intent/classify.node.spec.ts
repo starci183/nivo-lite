@@ -1,7 +1,9 @@
-import { nodeExampleMismatches } from "@nivo-lite/agent-sdk/testing"
+import { runNode } from "@nivo-lite/agent-sdk/node"
+import type { NodeModelRequest } from "@nivo-lite/agent-sdk/node"
+import { EXAMPLE_TURN, fakeNodePorts, nodeExampleMismatches } from "@nivo-lite/agent-sdk/testing"
 import { coreEffects } from "../../vocabulary/effects"
 import { intentClassifyNode } from "./classify.node"
-import { classificationOf, messagesOf, vndOf } from "./classify.policy"
+import { classificationOf, imagesOf, messagesOf, vndOf } from "./classify.policy"
 
 describe("intent.classify", () => {
     it.each(intentClassifyNode.examples.map((each) => [each.name, each] as const))(
@@ -37,22 +39,29 @@ describe("vndOf", () => {
     })
 })
 
+const IMG = { name: "a.jpg", contentType: "image/jpeg", url: "https://files/a.jpg" }
+const PDF = { name: "a.pdf", contentType: "application/pdf", url: "https://files/a.pdf" }
+
 describe("classificationOf", () => {
     it("cleans the slots: blank items dropped, quantity bounded, blank strings null", () => {
-        const output = classificationOf({
-            intents: ["order", "other", "order"],
-            order: {
-                items: [
-                    { name: " hoa ", quantity: 0 },
-                    { name: "  ", quantity: 3 },
-                    { name: "chậu", quantity: null },
-                    { name: "đèn", quantity: 99_999 },
-                ],
-                address: "   ",
-                customer: " Lan ",
+        const output = classificationOf(
+            {
+                intents: ["order", "other", "order"],
+                order: {
+                    items: [
+                        { name: " hoa ", quantity: 0 },
+                        { name: "  ", quantity: 3 },
+                        { name: "chậu", quantity: null },
+                        { name: "đèn", quantity: 99_999 },
+                    ],
+                    address: "   ",
+                    customer: " Lan ",
+                },
+                payment_claim: { amount_vnd: "abc", payer_name: "" },
+                images: [],
             },
-            payment_claim: { amount_vnd: "abc", payer_name: "" },
-        })
+            0,
+        )
         expect(output).toEqual({
             intents: ["order", "payment_claim"],
             order: {
@@ -65,14 +74,118 @@ describe("classificationOf", () => {
                 customer: "Lan",
             },
             paymentClaim: { amountVnd: null, payerName: null },
+            attachment: null,
         })
     })
 
     it("keeps an order intent whose slot is absent, and drops other beside a real intent", () => {
-        expect(classificationOf({ intents: ["other", "order"], order: null, payment_claim: null })).toEqual({
+        expect(
+            classificationOf({ intents: ["other", "order"], order: null, payment_claim: null, images: [] }, 0),
+        ).toEqual({
             intents: ["order"],
             order: null,
             paymentClaim: null,
+            attachment: null,
         })
+    })
+
+    it("turns every field the model left out into null, whatever the slot", () => {
+        const output = classificationOf(
+            { intents: [], order: { items: [{ name: "hoa" }] }, payment_claim: {}, images: [] },
+            0,
+        )
+        expect(output.order).toEqual({
+            items: [{ name: "hoa", quantity: 1, priceVnd: null }],
+            address: null,
+            customer: null,
+        })
+        expect(output.paymentClaim).toEqual({ amountVnd: null, payerName: null })
+        expect(classificationOf({ intents: [], images: [] }, 0)).toEqual({
+            intents: ["other"],
+            order: null,
+            paymentClaim: null,
+            attachment: null,
+        })
+    })
+
+    it("reads a receipt picture as a payment claim even when the model gave no claim, and keeps what it read", () => {
+        expect(classificationOf({ intents: ["other"], images: ["payment_receipt"] }, 1)).toMatchObject({
+            intents: ["payment_claim"],
+            paymentClaim: { amountVnd: null, payerName: null },
+            attachment: null,
+        })
+        expect(
+            classificationOf({ intents: [], payment_claim: { amount_vnd: 5000 }, images: ["payment_receipt"] }, 1)
+                .paymentClaim,
+        ).toEqual({ amountVnd: 5000, payerName: null })
+    })
+
+    it("counts the pictures that are no receipt as an attachment, understood only when every one is", () => {
+        expect(
+            classificationOf({ intents: ["question"], images: ["other", "payment_receipt", "other"] }, 3),
+        ).toMatchObject({
+            intents: ["question", "payment_claim", "attachment"],
+            attachment: { count: 2, understood: true },
+        })
+        expect(classificationOf({ intents: [], images: ["other", "unreadable"] }, 2).attachment).toEqual({
+            count: 2,
+            understood: false,
+        })
+        expect(classificationOf({ intents: [], images: [] }, 2).attachment).toEqual({ count: 2, understood: false })
+        expect(classificationOf({ intents: [], images: ["other"] }, 0).attachment).toBeNull()
+    })
+})
+
+describe("imagesOf", () => {
+    it("lists the pictures of the burst in order and leaves other files out", () => {
+        expect(imagesOf(null)).toEqual([])
+        expect(
+            imagesOf([
+                { text: "a", attachments: [IMG, PDF] },
+                { text: "b", attachments: [] },
+                { text: "c", attachments: [{ ...IMG, url: "https://files/c.jpg" }] },
+            ]).map((file) => file.url),
+        ).toEqual(["https://files/a.jpg", "https://files/c.jpg"])
+    })
+})
+
+describe("what intent.classify shows the model", () => {
+    const askOf = async (messages: Array<{ text: string; attachments: Array<typeof IMG> }> | null) => {
+        const fake = fakeNodePorts()
+        const asks: Array<NodeModelRequest> = []
+        await runNode(
+            {
+                node: intentClassifyNode,
+                params: {},
+                input: { text: "[ảnh]", messages },
+                turn: EXAMPLE_TURN,
+                grant: { rights: [] },
+                effects: new Map(),
+                tools: new Map(),
+                key: "k",
+            },
+            {
+                ...fake.ports,
+                model: {
+                    text: () => Promise.reject(new Error("no text")),
+                    json: (schema, ask) => {
+                        asks.push(ask)
+                        return Promise.resolve(schema.parse({ intents: ["other"] }))
+                    },
+                },
+            },
+        )
+        return asks[0]
+    }
+
+    it("gives the pictures as addresses, at most four, and the words without them", async () => {
+        const many = Array.from({ length: 6 }, (_, index) => ({ ...IMG, url: `https://files/${index}.jpg` }))
+        const ask = await askOf([{ text: "[ảnh]", attachments: [...many, PDF] }])
+        expect(ask?.images).toEqual(many.slice(0, 4).map((file) => file.url))
+        expect(ask?.input).toEqual({ messages: ["[ảnh]"] })
+    })
+
+    it("gives no picture when the burst has none", async () => {
+        expect((await askOf(null))?.images).toEqual([])
     })
 })

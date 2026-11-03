@@ -57,7 +57,11 @@ describe("PaymentClaimGraphAdapter", () => {
         const { adapter, claims } = await build()
 
         await expect(
-            adapter.read(turn, { where: { status: "open", ignored: "x" }, fields: ["id", "claimedAt", "names"] }, "workspace"),
+            adapter.read(
+                turn,
+                { where: { status: "open", ignored: "x" }, fields: ["id", "claimedAt", "names"] },
+                "workspace",
+            ),
         ).resolves.toEqual([{ id: "claim-dinh", claimedAt: "2026-11-04T00:54:00.000Z", names: ["BUI NGUYEN DINH"] }])
 
         expect(claims.query).toHaveBeenCalledWith("ws-1", { status: "open" }, 200)
@@ -72,7 +76,11 @@ describe("PaymentClaimGraphAdapter", () => {
     it("keeps a turn read to the conversation of the turn, and reads nothing for a turn with none", async () => {
         const { adapter, claims } = await build()
 
-        await adapter.read(turn, { where: { leadId: "lead-dinh", id: "claim-dinh", conversationId: "other" }, fields: ["id"], limit: 5 }, "turn")
+        await adapter.read(
+            turn,
+            { where: { leadId: "lead-dinh", id: "claim-dinh", conversationId: "other" }, fields: ["id"], limit: 5 },
+            "turn",
+        )
         await expect(adapter.read({ ...turn, conversationId: null }, { fields: ["id"] }, "turn")).resolves.toEqual([])
 
         expect(claims.query).toHaveBeenCalledTimes(1)
@@ -86,7 +94,13 @@ describe("PaymentClaimGraphAdapter", () => {
     it("records what the customer said once per business key, falling back to the step key", async () => {
         const { adapter, claims, demand } = await build()
         claims.record.mockResolvedValue("claim-new")
-        const payload = { leadId: "lead-dinh", conversationId: "conversation-dinh", amountVnd: 5000, names: ["BUI NGUYEN DINH"], body: "5k" }
+        const payload = {
+            leadId: "lead-dinh",
+            conversationId: "conversation-dinh",
+            amountVnd: 5000,
+            names: ["BUI NGUYEN DINH"],
+            body: "5k",
+        }
 
         await expect(adapter.execute(turn, payload, { key: "run:1", dedupeKey: "claim:zalo:1" })).resolves.toEqual({
             kind: "payment-claim",
@@ -113,6 +127,21 @@ describe("PaymentClaimGraphAdapter", () => {
             body: "ck rồi",
             dedupeKey: "run:2",
         })
+    })
+
+    it("records the claim of a conversation whose customer is no lead yet, with no lead", async () => {
+        const { adapter, claims } = await build()
+        claims.record.mockResolvedValue("claim-new")
+
+        await adapter.execute(
+            turn,
+            { leadId: null, conversationId: "conversation-new", body: "ck rồi" },
+            { key: "run:3", dedupeKey: null },
+        )
+
+        expect(claims.record).toHaveBeenCalledWith(
+            expect.objectContaining({ leadId: null, conversationId: "conversation-new", dedupeKey: "run:3" }),
+        )
     })
 
     it("escalates a claim through the ledger, once", async () => {

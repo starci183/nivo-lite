@@ -72,7 +72,7 @@ export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecuto
     async execute(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef> {
         const id = await this.claims.record({
             workspaceId: turn.workspaceId,
-            leadId: String(payload.leadId),
+            leadId: textOf(payload.leadId) ?? null,
             conversationId: textOf(payload.conversationId) ?? null,
             amountVnd: typeof payload.amountVnd === "number" ? payload.amountVnd : null,
             names: Array.isArray(payload.names) ? payload.names.map(String) : [],

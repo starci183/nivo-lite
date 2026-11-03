@@ -74,7 +74,7 @@ const candidateOf = (order: PricedOrder, name: string | null): Candidate => ({
 
 const claimOf = (row: ClaimRow): Claim => ({
     id: row.id,
-    partyKey: row.leadId,
+    partyKey: row.leadId ?? `conversation:${row.conversationId ?? row.id}`,
     amount: row.amountVnd,
     names: row.names,
     text: row.body,

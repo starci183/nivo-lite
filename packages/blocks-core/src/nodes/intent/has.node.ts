@@ -2,6 +2,7 @@ import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
+import { intentSchema } from "./classify.schema"
 import type { Intent } from "./classify.types"
 
 /** The per-graph settings: the intent to look for. */
@@ -19,7 +20,7 @@ interface HasOutput {
     readonly branch: "yes" | "no"
 }
 
-const intent: NodeSchema<Intent> = z.enum(["question", "order", "payment_claim", "other"])
+const intent: NodeSchema<Intent> = intentSchema
 const INTENTS_MAX = 8
 
 const params: NodeSchema<HasParams> = z.object({ intent })

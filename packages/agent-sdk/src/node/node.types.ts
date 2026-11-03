@@ -40,6 +40,8 @@ export interface NodeModelRequest {
     readonly purpose: string
     readonly instructions: string
     readonly input: unknown
+    /** Pictures the model should look at, as short-lived addresses the model host can fetch; none when absent. */
+    readonly images?: ReadonlyArray<string> | undefined
 }
 
 /** The model as a node reaches it: through the host's metered path, never a provider of its own. */

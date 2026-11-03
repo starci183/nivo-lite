@@ -10,8 +10,8 @@ export interface ClaimAckParams {
 export interface ClaimAckInput {
     /** The conversation to answer in. */
     readonly conversationId: string
-    /** The lead the claim is about. */
-    readonly leadId: string
+    /** The lead the claim is about, or null while the conversation has none yet (a new customer): the claim then belongs to the conversation. */
+    readonly leadId: string | null
     /** The message in which the customer claimed. */
     readonly body: string
     /** The amount claimed, VND, or null. */
