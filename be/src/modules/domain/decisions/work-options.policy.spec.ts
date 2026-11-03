@@ -25,6 +25,7 @@ describe("durable work options", () => {
             preset: undefined,
             noChain: undefined,
             forceAsk: undefined,
+            tagGrant: undefined,
         })
     })
 
@@ -32,11 +33,18 @@ describe("durable work options", () => {
         { preset: true },
         { noChain: true },
         { forceAsk: "over_authority" },
+        { tagGrant: true },
         { preset: false, noChain: false },
     ])("stores and recovers execution choices %o", async (options) => {
         const subject = await buildSubject()
         const stored = subject.proposalWithOptions(proposal, options)
-        expect(stored.execution).toEqual({ preset: undefined, noChain: undefined, forceAsk: undefined, ...options })
+        expect(stored.execution).toEqual({
+            preset: undefined,
+            noChain: undefined,
+            forceAsk: undefined,
+            tagGrant: undefined,
+            ...options,
+        })
         expect(subject.processOptionsOf(stored)).toEqual(stored.execution)
         expect(stored.draft).toBe("Exact caller text")
     })

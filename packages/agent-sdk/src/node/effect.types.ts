@@ -9,6 +9,11 @@ export interface EffectConfig<P extends z.ZodType> {
     readonly payload: P
     /** The agent's grant must cover these before any node may run the effect for it. */
     readonly rights: ReadonlyArray<DataRight>
+    /**
+     * The effect that undoes this one, given `{ id }` of the subject this one touched; it must be idempotent. Without one the effect is
+     * a pivot: it cannot be undone, so a run that failed after it goes forward or to a person, never back.
+     */
+    readonly compensation?: Namespaced | undefined
 }
 
 /** An effect definition. */

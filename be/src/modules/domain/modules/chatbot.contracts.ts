@@ -34,6 +34,7 @@ export const CHATBOT_MODULE: ModuleDefinition = {
     connectionProviders: ["telegram", "zalo_oa", "meta"],
     defaultOperatingMode: "assist",
     multiInstance: true,
+    tags: ["sales", "accounting"],
     agent: {
         label: catalogText("modulesCatalog.chatbot.agent.label"),
         handle: "chatbot",

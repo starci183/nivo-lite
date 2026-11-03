@@ -1,5 +1,6 @@
 import { mock } from "@starci/jest-preset"
 import type { MockOf } from "@starci/jest-preset"
+import type { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AgentConversationsService } from "@modules/domain/agent-conversations"
@@ -28,11 +29,12 @@ interface CustomerOutcomeDoubles {
     readonly rules: MockOf<AuthorityRulesService>
     readonly hiring: MockOf<HiringPublicService>
     readonly staff: MockOf<Dependencies[14]>
+    readonly directory: MockOf<AgentDirectoryService>
 }
 
 /** Arranges the exact kit-created ports supplied by the colocated owner spec. */
 export const arrangeCustomerOutcomes = (doubles: CustomerOutcomeDoubles): void => {
-    const { engine, bus, inbound, invoices, purchases, gaps, modules, items, bindings, rules, staff } = doubles
+    const { engine, bus, inbound, invoices, purchases, gaps, modules, items, bindings, rules, staff, directory } = doubles
     engine.runWork.mockResolvedValue(mock<WorkItem>({ id: "w1", status: "waiting_decision", lead_id: null }))
     engine.startOrderWork.mockResolvedValue(mock<WorkItem>({ id: "w2", status: "done", lead_id: "l9" }))
     engine.runQueued.mockResolvedValue(0)
@@ -51,4 +53,5 @@ export const arrangeCustomerOutcomes = (doubles: CustomerOutcomeDoubles): void =
     bindings.agentsFor.mockResolvedValue([])
     staff.escalate.mockResolvedValue(true)
     rules.ruleFor.mockResolvedValue(null)
+    directory.activeOf.mockResolvedValue([])
 }

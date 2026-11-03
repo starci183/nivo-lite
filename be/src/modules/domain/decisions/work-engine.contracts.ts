@@ -50,6 +50,8 @@ export interface ProcessOptions {
     readonly noChain?: boolean | undefined
     /** Always ask a person, with this reason. */
     readonly forceAsk?: ReasonCode | undefined
+    /** The tag right of the sender already let this work in: with no rule stored it runs under the action's catalogue default; a stored rule still decides. */
+    readonly tagGrant?: boolean | undefined
 }
 
 /** Who decided an item: a policy, the owner or a staff member. */

@@ -169,3 +169,16 @@ describe("turnRefOf", () => {
         expect(subject.turnRefOf({})).toBeNull()
     })
 })
+
+describe("turnRefOf merged messages", () => {
+    it("carries the messages the burst window took into the turn, and none when there are none", async () => {
+        const subject = await build()
+        const base = { conversationId: "conv-1", messageId: "msg-1", channelEventId: "x" }
+
+        expect(subject.turnRefOf({ ...base, mergedMessageIds: "msg-2,msg-3" })).toEqual({
+            ...base,
+            mergedMessageIds: ["msg-2", "msg-3"],
+        })
+        expect(subject.turnRefOf(base)).toEqual(base)
+    })
+})

@@ -1,3 +1,5 @@
+import { AGENT_WORK_OPTIONS } from "./agent-work.decorators"
+import type { AgentWorkOptions } from "./agent-work.options"
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { agentWakeOf as wake } from "@tests/fixtures/builders/agent-work.builder"
@@ -11,7 +13,7 @@ import { AgentWakeService } from "./agent-wake.service"
 
 const inserted = (...ids: Array<string>): QueryBuilderAnswers => ({ execute: { raw: ids.map((id) => ({ id })) } })
 
-const build = async (answer: QueryBuilderAnswers) => {
+const build = async (answer: QueryBuilderAnswers, options?: AgentWorkOptions) => {
     const queue = mock<AgentTurnQueue>({ enqueueDrain: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>()
     const tx = mockEntityManager()
@@ -21,6 +23,7 @@ const build = async (answer: QueryBuilderAnswers) => {
             AgentWakeService,
             { provide: AGENT_TURN_QUEUE_PRODUCER, useValue: queue },
             { provide: LOGGER, useValue: logger },
+            ...(options === undefined ? [] : [{ provide: AGENT_WORK_OPTIONS, useValue: options }]),
         ],
     }).compile()
     return { service: container.get(AgentWakeService), queue, logger, tx, fake }
@@ -54,6 +57,7 @@ describe("AgentWakeService.wake", () => {
             "tag",
             "msg-1",
             tx,
+            0,
         )
     })
 
@@ -72,7 +76,32 @@ describe("AgentWakeService.wake", () => {
             "customer",
             "msg-1",
             tx,
+            3000,
         )
+    })
+})
+
+describe("AgentWakeService burst window", () => {
+    const customer = wake({
+        source: "customer",
+        eventKey: "msg-2",
+        context: { conversationId: "conv-1", messageId: "msg-2" },
+    })
+
+    it("makes the drain of a conversation wake wait the window the app root named", async () => {
+        const { service, queue, tx } = await build(inserted("wake-1"), { debounceMs: 5000 })
+
+        await service.wake(tx, customer)
+
+        expect(queue.enqueueDrain).toHaveBeenCalledWith(expect.anything(), "customer", "msg-2", tx, 5000)
+    })
+
+    it("drains a conversation wake at once when the window is off", async () => {
+        const { service, queue, tx } = await build(inserted("wake-1"), { debounceMs: 0 })
+
+        await service.wake(tx, customer)
+
+        expect(queue.enqueueDrain).toHaveBeenCalledWith(expect.anything(), "customer", "msg-2", tx, 0)
     })
 })
 
@@ -94,6 +123,7 @@ describe("AgentWakeService.write", () => {
             "tag",
             "evt-9",
             tx,
+            0,
         )
     })
 

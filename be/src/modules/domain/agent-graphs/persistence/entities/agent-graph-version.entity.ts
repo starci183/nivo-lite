@@ -1,6 +1,6 @@
 import { Column, Entity } from "typeorm"
 import { UuidAbstractEntity } from "@modules/platform/database"
-import type { GraphChangeKind, GraphDocument } from "../../agent-graphs.contracts"
+import type { GraphChangeKind, StoredGraphDocument } from "../../agent-graphs.contracts"
 
 @Entity({ schema: "public", name: "agent_graph_versions" })
 /** One frozen version of a graph. The application role may only read and insert it, so the database refuses a change. */
@@ -19,7 +19,7 @@ export class AgentGraphVersionEntity extends UuidAbstractEntity {
 
     /** The frozen graph. */
     @Column({ name: "document", type: "jsonb" })
-    document!: GraphDocument
+    document!: StoredGraphDocument
 
     /** The hash of the document. */
     @Column({ name: "document_hash", type: "text" })

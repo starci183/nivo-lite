@@ -12,6 +12,8 @@ export interface QueueRelayRow {
     readonly lease_token: string
     /** True when an operator requested a fresh broker retry budget. */
     readonly retry_requested: boolean
+    /** The milliseconds the broker waits before it runs the job; zero runs it at once. */
+    readonly delay_ms: number
 }
 
 /** A nonterminal outbox row leased for reconciliation against the broker. */

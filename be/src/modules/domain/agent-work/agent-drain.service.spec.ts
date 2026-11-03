@@ -15,7 +15,7 @@ import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentTurnUsage } from "./agent-work.contracts"
-import type { AgentTurnExecutor, AgentTurnPlan, AgentWorkHandler } from "./agent-work.port"
+import type { AgentTurnExecutor, AgentTurnPlan, AgentWorkFlow, AgentWorkHandler } from "./agent-work.port"
 
 const PAYLOAD = { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" }
 
@@ -78,6 +78,41 @@ const build = async ({ handler = true }: Options = {}) => {
 }
 
 type Fixture = Awaited<ReturnType<typeof build>>
+
+describe("AgentDrainService.drain, a wake its agent's graph runs", () => {
+    it("lets the flow run a wake it takes, with no handler and no model turn", async () => {
+        const { service, turns, handler, handlers, executor } = await build()
+        const flow = mock<AgentWorkFlow>({
+            takes: jest.fn().mockResolvedValue(true),
+            run: jest.fn().mockResolvedValue({ status: "done", reason: null, outcome: { ran: "graph" } }),
+        })
+        handlers.flowOf.mockReturnValue(flow)
+
+        await service.drain(PAYLOAD)
+
+        expect(flow.run).toHaveBeenCalledWith(turn(), expect.any(AbortSignal))
+        expect(handler.prepare).not.toHaveBeenCalled()
+        expect(executor.run).not.toHaveBeenCalled()
+        expect(turns.finish).toHaveBeenCalledWith(turn(), {
+            status: "done",
+            reason: null,
+            outcome: { ran: "graph" },
+            errorCode: null,
+            usage: null,
+        })
+    })
+
+    it("leaves a wake the flow does not take to the handler of its source", async () => {
+        const { service, handler, handlers } = await build()
+        const flow = mock<AgentWorkFlow>({ takes: jest.fn().mockResolvedValue(false) })
+        handlers.flowOf.mockReturnValue(flow)
+
+        await service.drain(PAYLOAD)
+
+        expect(flow.run).not.toHaveBeenCalled()
+        expect(handler.prepare).toHaveBeenCalled()
+    })
+})
 
 describe("AgentDrainService.drain, a turn that runs", () => {
     it("takes a turn as one worker and runs the handler, the executor, the proposal and the settle in that order", async () => {
