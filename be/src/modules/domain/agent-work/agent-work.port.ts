@@ -111,3 +111,17 @@ export interface AgentTagVisibilityPort {
     /** Moves the conversation to the target agent with no line in it. */
     redirect(notice: AgentTagNotice): Promise<void>
 }
+
+/** The burst a flow asks of one kind of tag, in milliseconds; the longest wait is null when the flow names none. */
+export interface AgentBurstSetting {
+    /** The quiet time after the last tag before the run starts; zero turns the window off. */
+    readonly windowMs: number
+    /** The longest the burst may keep the run waiting; null leaves it to the app's default. */
+    readonly maxWaitMs: number | null
+}
+
+/** The one question the wake door asks the graphs: what the live flow of an agent asks of a kind of tag (`channel`, `agent`, `system-event`...). */
+export interface AgentBurstPolicy {
+    /** The setting of the live flow for the source, or null when the agent has no flow or the flow asks nothing. */
+    burstOf(workspaceId: string, agentId: string, source: string): Promise<AgentBurstSetting | null>
+}

@@ -1,7 +1,11 @@
 {
   "schema": "nivo/agent-graph@1",
   "moduleKey": "accounting",
-  "trigger": { "kind": "tag", "sources": ["channel", "chats-group", "agent", "system-event", "schedule"] },
+  "trigger": {
+    "kind": "tag",
+    "sources": ["channel", "chats-group", "agent", "system-event", "schedule"],
+    "burst": { "agent": { "window": "0s" }, "system-event": { "window": "0s" } }
+  },
   "grant": {
     "rights": [
       { "kind": "bank-transaction", "access": "read", "scope": "workspace", "fields": ["id", "amountVnd", "content", "counterpartName", "receivedAt", "orderId", "status"] },

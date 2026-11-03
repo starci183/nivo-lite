@@ -1,3 +1,5 @@
+import { AGENT_BURST_POLICY } from "@modules/domain/agent-work"
+import { AgentGraphBurstService } from "./agent-graph-burst.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule, Provider, Type } from "@nestjs/common"
 import { SETUP_GRAPH } from "@modules/domain/modules"
@@ -137,6 +139,7 @@ const WHOLE: Part = {
         AgentGraphWaitTimeoutService,
         AgentGraphFlowRunsService,
         AgentGraphNodeStepService,
+        AgentGraphBurstService,
     ],
     ports: [
         { provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService },
@@ -148,6 +151,7 @@ const WHOLE: Part = {
         { provide: SETUP_GRAPH, useExisting: AgentGraphSetupService },
         { provide: AGENT_RUN_WAIT_TIMEOUT, useExisting: AgentGraphWaitTimeoutService },
         { provide: BANK_FEED_FLOW, useExisting: AgentGraphsService },
+        { provide: AGENT_BURST_POLICY, useExisting: AgentGraphBurstService },
     ],
 }
 

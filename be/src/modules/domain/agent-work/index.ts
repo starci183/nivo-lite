@@ -17,6 +17,7 @@ export { AgentWorkHandlersService } from "./agent-work-handlers.service"
 export { AgentWorkReadService } from "./agent-work-read.service"
 export { AgentWorkSettingsService } from "./agent-work-settings.service"
 export {
+    AGENT_BURST_POLICY,
     AGENT_TAG_RIGHTS,
     AGENT_TAG_VISIBILITY,
     AGENT_TURN_EXECUTOR,
@@ -72,4 +73,4 @@ export type {
     AgentTaggedByPerson,
     AgentTaggedBySource,
 } from "./agent-tag.contracts"
-export type { AgentTagRights, AgentTagVisibilityPort } from "./agent-work.port"
+export type { AgentBurstPolicy, AgentBurstSetting, AgentTagRights, AgentTagVisibilityPort } from "./agent-work.port"

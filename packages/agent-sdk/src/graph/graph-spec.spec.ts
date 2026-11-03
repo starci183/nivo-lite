@@ -52,7 +52,12 @@ const SPEC: GraphSpec = {
     grant: { rights: [READ, SEND], tools: ["order.look"], effects: ["channel.send"] },
     nodes: [
         { key: "check", kind: "condition", step: "order.check", routes: { yes: "say", no: "say-no" } },
-        { key: "say", kind: "output", step: "core.reply", input: { at: { $ref: "check.branch" }, text: { $ref: "trigger.text" } } },
+        {
+            key: "say",
+            kind: "output",
+            step: "core.reply",
+            input: { at: { $ref: "check.branch" }, text: { $ref: "trigger.text" } },
+        },
         { key: "say-no", kind: "output", step: "core.reply", next: "end" },
         { key: "end", kind: "output", step: "stop" },
     ],
@@ -60,7 +65,10 @@ const SPEC: GraphSpec = {
 
 describe("graphSpecSchema", () => {
     it("takes a spec with nested bindings and refuses an unknown member", () => {
-        const nested = { ...SPEC, nodes: [{ ...SPEC.nodes[0], input: { a: { b: [{ $ref: "trigger.x" }, 1, null, true] } } }] }
+        const nested = {
+            ...SPEC,
+            nodes: [{ ...SPEC.nodes[0], input: { a: { b: [{ $ref: "trigger.x" }, 1, null, true] } } }],
+        }
         expect(graphSpecSchema.safeParse(nested).success).toBe(true)
         expect(graphSpecSchema.safeParse({ ...SPEC, extra: 1 }).success).toBe(false)
     })
@@ -104,7 +112,11 @@ describe("graphSpecProblems", () => {
     })
 
     it("names an uninstalled step and judges no minimum while one is missing", () => {
-        const spec: GraphSpec = { ...SPEC, grant: { ...SPEC.grant, effects: [] }, nodes: [{ key: "a", kind: "output", step: "reply" }] }
+        const spec: GraphSpec = {
+            ...SPEC,
+            grant: { ...SPEC.grant, effects: [] },
+            nodes: [{ key: "a", kind: "output", step: "reply" }],
+        }
         expect(graphSpecProblems(spec, index)).toEqual([{ code: "NODE_UNKNOWN", at: "a" }])
     })
 
@@ -134,9 +146,22 @@ describe("graphSpecProblems", () => {
     })
 
     it("names a compensable node a pivot can reach, which could never be undone", () => {
-        const undo = defineEffect({ id: "order.void", title: { key: "v" }, payload: z.object({ id: z.string() }), rights: [] })
+        const undo = defineEffect({
+            id: "order.void",
+            title: { key: "v" },
+            payload: z.object({ id: z.string() }),
+            rights: [],
+        })
         const record = defineEffect({ ...undo, id: "order.record", compensation: "order.void" })
-        const keep = defineNode({ ...base, id: "order.keep", role: "output", output: z.object({}), rights: [], effects: ["order.record"], examples: [example] }) as unknown as NodeDefinition
+        const keep = defineNode({
+            ...base,
+            id: "order.keep",
+            role: "output",
+            output: z.object({}),
+            rights: [],
+            effects: ["order.record"],
+            examples: [example],
+        }) as unknown as NodeDefinition
         const saga = nodeIndexOf({ nodes: [keep, reply], effects: [send, undo, record], tools: [], dataKinds: [] })
         const spec: GraphSpec = {
             ...SPEC,
@@ -149,9 +174,12 @@ describe("graphSpecProblems", () => {
             ],
         }
         expect(graphSpecProblems(spec, saga)).toEqual([{ code: "GRAPH_COMPENSABLE_AFTER_PIVOT", at: "again" }])
-        expect(graphSpecProblems({ ...spec, nodes: [...spec.nodes.slice(0, 2), { key: "again", kind: "output", step: "order.gone" }] }, saga)).toEqual([
-            { code: "NODE_UNKNOWN", at: "again" },
-        ])
+        expect(
+            graphSpecProblems(
+                { ...spec, nodes: [...spec.nodes.slice(0, 2), { key: "again", kind: "output", step: "order.gone" }] },
+                saga,
+            ),
+        ).toEqual([{ code: "NODE_UNKNOWN", at: "again" }])
     })
 
     it("judges nothing reachable in an empty spec", () => {
@@ -160,6 +188,48 @@ describe("graphSpecProblems", () => {
             { code: "GRAPH_GRANT_EXCESS", at: "message:write.body" },
             { code: "GRAPH_GRANT_EXCESS", at: "channel.send" },
             { code: "GRAPH_GRANT_EXCESS", at: "order.look" },
+        ])
+    })
+})
+
+describe("graph spec burst", () => {
+    const withBurst = (burst: unknown, sources: ReadonlyArray<string> = ["channel", "agent", "schedule"]) => ({
+        ...SPEC,
+        trigger: { kind: "tag", sources, burst },
+    })
+
+    it("takes sound durations per source, zero to turn one off, and a spec with none", () => {
+        const sound = withBurst({
+            channel: { window: "6s", maxWait: "20s" },
+            agent: { window: "0s" },
+            schedule: undefined,
+        })
+
+        expect(graphSpecSchema.safeParse(sound).success).toBe(true)
+        expect(graphSpecSchema.safeParse(SPEC).success).toBe(true)
+        expect(graphSpecProblems(sound as unknown as GraphSpec, index)).toEqual([])
+    })
+
+    it.each([
+        ["a duration that is not one", { channel: { window: "soon" } }],
+        ["a window past a minute", { channel: { window: "61s" } }],
+        ["a longest wait past two minutes", { channel: { window: "6s", maxWait: "3m" } }],
+        ["a longest wait below the window", { channel: { window: "6s", maxWait: "5s" } }],
+        ["a longest wait that is not a duration", { channel: { window: "6s", maxWait: "later" } }],
+        ["a source the schema does not know", { fax: { window: "6s" } }],
+    ])("refuses %s in the schema", (_case, burst) => {
+        expect(graphSpecSchema.safeParse(withBurst(burst)).success).toBe(false)
+    })
+
+    it("names a bad entry, and one for a source the trigger does not list, as problems", () => {
+        const bad = withBurst({ channel: { window: "soon" }, schedule: { window: "6s" } }, [
+            "channel",
+            "agent",
+        ]) as unknown as GraphSpec
+
+        expect(graphSpecProblems(bad, index)).toEqual([
+            { code: "GRAPH_BURST_INVALID", at: "burst.channel" },
+            { code: "GRAPH_BURST_INVALID", at: "burst.schedule" },
         ])
     })
 })

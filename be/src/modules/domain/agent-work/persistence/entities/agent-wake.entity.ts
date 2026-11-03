@@ -41,6 +41,12 @@ export class AgentWakeEntity extends UuidAbstractEntity {
     @Column({ name: "context", type: "jsonb", default: () => "'{}'::jsonb" })
     context!: AgentWakeContext
 
+    /** The quiet time this wake waits for in its conversation, resolved from its flow when the wake was written; null when no window applies. */
+    @Column({ name: "burst_window_ms", type: "integer", nullable: true })
+    burstWindowMs!: number | null
+    /** The longest this wake may keep its conversation waiting, resolved with the window; null when no window applies. */
+    @Column({ name: "burst_max_ms", type: "integer", nullable: true })
+    burstMaxMs!: number | null
     /** The member behind the wake, or null. */
     @Column({ name: "actor_member_id", type: "uuid", nullable: true })
     actorMemberId!: string | null

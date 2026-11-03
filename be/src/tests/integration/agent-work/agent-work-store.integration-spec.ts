@@ -1,4 +1,7 @@
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+import { burstOf, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentDrainService } from "../../../modules/domain/agent-work/agent-drain.service"
@@ -23,6 +26,8 @@ import {
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
+
+const CHATBOT_FLOW = join(__dirname, "../../../../../.starcistacks/dev/seeds/data/graphs/chatbot.json")
 
 const world = useTestWorld({ modules: AGENT_WORK_MODULES })
 
@@ -292,15 +297,28 @@ describe("agent-work/kill-switch: held, never dropped", () => {
 })
 
 describe("agent-work/burst: a sliding window per conversation", () => {
-    const WINDOW_MS = 6000
-    const MAX_MS = 20_000
+    // The window and the longest wait are the ones the chatbot flow asks for its channel; the wakes carry them, as the wake door resolves them.
+    const asked = burstOf(graphSpecSchema.parse(JSON.parse(readFileSync(CHATBOT_FLOW, "utf8"))).trigger, "channel")
+    assert(asked !== null && asked.maxWaitMs !== null)
+    const WINDOW_MS = asked.windowMs
+    const MAX_MS = asked.maxWaitMs
+    const resolved = async (...wakes: ReadonlyArray<AgentWake>): Promise<void> => {
+        await eachInOrder(wakes, async (wake) => {
+            const { id } = await rowOf(wake)
+            await em().query("UPDATE public.agent_wakes SET burst_window_ms = $2, burst_max_ms = $3 WHERE id = $1", [
+                id,
+                WINDOW_MS,
+                MAX_MS,
+            ])
+        })
+    }
     const messageWake = (eventKey: string, conversationId: string): AgentWake =>
         wakeOf(eventKey, { source: "customer", context: { conversationId, messageId: `${world.prefix}:${eventKey}` } })
     const begin = async (conversationId: string): Promise<Record<string, unknown>> => {
         const [row] = await callDbFunction<{ agent_turn_begin: Record<string, unknown> }>(
             em(),
             "public.agent_turn_begin",
-            [AGENT, `conversation:${conversationId}`, "burst-worker", 90, WINDOW_MS, MAX_MS],
+            [AGENT, `conversation:${conversationId}`, "burst-worker", 90, 0, 0],
         )
         assert(row !== undefined)
         return row.agent_turn_begin
@@ -318,6 +336,7 @@ describe("agent-work/burst: a sliding window per conversation", () => {
         const image = messageWake("burst-image", "conv-burst")
         await post(text)
         await post(image)
+        await resolved(text, image)
         await older(text, 4000)
 
         // Four seconds in, the image is inside the window: the turn waits for more.
@@ -338,6 +357,7 @@ describe("agent-work/burst: a sliding window per conversation", () => {
         const last = messageWake("cap-2", "conv-cap")
         await post(first)
         await post(last)
+        await resolved(first, last)
         await older(first, MAX_MS + 1000)
 
         const begun = await begin("conv-cap")

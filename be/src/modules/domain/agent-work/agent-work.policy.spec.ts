@@ -11,7 +11,8 @@ import {
     breakerOpen,
     debounceMaxMsOf,
     debounceMsOf,
-    drainDelayMsOf,
+    burstFor,
+    burstSourceOf,
     isBackground,
     priorityOf,
     restoresHeldWake,
@@ -35,7 +36,8 @@ const buildSubject = async () => {
                     breakerOpen,
                     debounceMaxMsOf,
                     debounceMsOf,
-                    drainDelayMsOf,
+                    burstFor,
+                    burstSourceOf,
                     isBackground,
                     priorityOf,
                     restoresHeldWake,
@@ -239,11 +241,34 @@ describe("burst window", () => {
         expect(debounceMaxMsOf(2000, 6000)).toBe(6000)
     })
 
-    it("delays the drain of a wake locked to a conversation and no other", async () => {
-        const { drainDelayMsOf } = await buildSubject()
+    it("names a wake by the kind of tag a flow's trigger lists", async () => {
+        const { burstSourceOf } = await buildSubject()
 
-        expect(drainDelayMsOf("conversation:c1", 3000)).toBe(3000)
-        expect(drainDelayMsOf("agent", 3000)).toBe(0)
-        expect(drainDelayMsOf("order:o-1", 3000)).toBe(0)
+        expect(burstSourceOf({ source: "customer", context: { conversationId: "c1" }, actorMemberId: null })).toBe(
+            "channel",
+        )
+        expect(burstSourceOf({ source: "tag", context: { authorUserId: "u1" }, actorMemberId: "m1" })).toBe(
+            "chats-group",
+        )
+        expect(burstSourceOf({ source: "tag", context: { authorAgentId: "a1" }, actorMemberId: null })).toBe("agent")
+        expect(burstSourceOf({ source: "internal", context: {}, actorMemberId: null })).toBe("system-event")
+        expect(burstSourceOf({ source: "schedule", context: {}, actorMemberId: null })).toBe("schedule")
+    })
+
+    it("takes the window and the longest wait of the flow, else the app's, else the defaults, and never a wait below the window", async () => {
+        const { burstFor } = await buildSubject()
+
+        expect(burstFor({ windowMs: 4000, maxWaitMs: 9000 }, { debounceMs: 8000, debounceMaxMs: 30_000 })).toEqual({
+            windowMs: 4000,
+            maxWaitMs: 9000,
+        })
+        expect(burstFor({ windowMs: 4000, maxWaitMs: null }, { debounceMs: 8000, debounceMaxMs: 30_000 })).toEqual({
+            windowMs: 4000,
+            maxWaitMs: 30_000,
+        })
+        expect(burstFor({ windowMs: 0, maxWaitMs: null }, null)).toEqual({ windowMs: 0, maxWaitMs: 20_000 })
+        expect(burstFor(null, { debounceMs: 8000 })).toEqual({ windowMs: 8000, maxWaitMs: 20_000 })
+        expect(burstFor(null, null)).toEqual({ windowMs: 6000, maxWaitMs: 20_000 })
+        expect(burstFor({ windowMs: 40_000, maxWaitMs: null }, null)).toEqual({ windowMs: 40_000, maxWaitMs: 40_000 })
     })
 })

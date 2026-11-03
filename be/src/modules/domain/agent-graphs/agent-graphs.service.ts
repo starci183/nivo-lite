@@ -125,6 +125,15 @@ export class AgentGraphsService {
         return row === null ? null : this.stateOf(row)
     }
 
+    /** The id of the version that decides for the agent, or null when it has none; a light lookup that reads no document. */
+    async activeVersionIdOf(workspaceId: string, agentId: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(AgentGraphEntity, {
+            select: { activeVersionId: true },
+            where: { workspaceId, agentId },
+        })
+        return row?.activeVersionId ?? null
+    }
+
     /** Whether the live version of the agent's graph has a flow of nodes, so a tag or a message can start it. */
     async hasLiveFlow(workspaceId: string, agentId: string): Promise<boolean> {
         const state = await this.stateOfAgent(workspaceId, agentId)
