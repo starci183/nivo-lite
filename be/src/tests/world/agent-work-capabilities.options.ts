@@ -148,6 +148,6 @@ export const AGENT_WORK_MODULES: Array<DynamicModule> = [
     ...OFFICE_CHAIN_MODULES,
     ...QUEUE_MODULES,
     IdsModule.register({ isGlobal: true }),
-    AgentWorkModule.register({ isGlobal: true }),
+    AgentWorkModule.register({ isGlobal: true, debounceMs: 0 }),
     ScriptedAgentWorkModule.register(),
 ]

@@ -92,7 +92,7 @@ export const agentRoadModules = (prefix: string): Array<DynamicModule> => [
     InvoicesModule.register({ isGlobal: true }),
     ModuleInstallationsModule.register({ isGlobal: true }),
     KnowledgeReadModule.register(),
-    AgentWorkModule.register({ isGlobal: true }),
+    AgentWorkModule.register({ isGlobal: true, debounceMs: 0 }),
     AgentSchedulesModule.register({ isGlobal: true }),
     RoadWorkModule.register(),
 ]

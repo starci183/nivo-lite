@@ -26,6 +26,7 @@ import {
     IntentContractsModule,
 } from "@modules/domain/intent-contracts"
 import type { ErrorKind } from "@modules/platform/errors"
+import type { ApiOptions } from "../api.options"
 import type { MessageBundle } from "@modules/platform/i18n"
 
 /** The nodes this app installs: the core library's nodes and the effects, tools and data kinds they may use. */
@@ -37,8 +38,8 @@ const installedNodes: NodeInstall = {
 }
 
 /** The agent work area of the API: the store that lets an agent be woken by an event or a clock and run one turn at a time per scope, the durable run of each wake, and the clock that wakes it. */
-export const agentWorkModules = (): Array<DynamicModule> => [
-    AgentWorkModule.register({ isGlobal: true }),
+export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
+    AgentWorkModule.register({ isGlobal: true, ...options.agentWork }),
     AgentRunsModule.register({ isGlobal: true }),
     GraphNodesModule.register({
         isGlobal: true,

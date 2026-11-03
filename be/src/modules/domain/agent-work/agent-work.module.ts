@@ -34,7 +34,10 @@ export class AgentWorkModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), AgentTurnQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
-                { provide: AGENT_WORK_OPTIONS, useValue: { debounceMs: options.debounceMs } },
+                {
+                    provide: AGENT_WORK_OPTIONS,
+                    useValue: { debounceMs: options.debounceMs, debounceMaxMs: options.debounceMaxMs },
+                },
                 AgentWorkAccessService,
                 AgentTurnsService,
                 AgentWorkHandlersService,

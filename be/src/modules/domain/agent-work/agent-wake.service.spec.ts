@@ -76,7 +76,7 @@ describe("AgentWakeService.wake", () => {
             "customer",
             "msg-1",
             tx,
-            3000,
+            6000,
         )
     })
 })

@@ -7,6 +7,7 @@ import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
 import { parseHttpSecurityConfig } from "@modules/platform/http-security"
 import { parseJobsConfig } from "@modules/platform/jobs"
 import { parseJobsAlertConfig } from "@modules/domain/job-ops"
+import { parseAgentWorkConfig } from "@modules/domain/agent-work"
 import { parseQueueConfig } from "@modules/platform/queue"
 import { parseRealtimeConfig } from "@modules/platform/realtime"
 import { parseChannelsConfig } from "@modules/domain/channels"
@@ -106,6 +107,8 @@ export interface ApiOptions {
     readonly realtime: ReturnType<typeof parseRealtimeConfig>
     /** How the BullMQ workers and the outbox relay run. */
     readonly queue: ReturnType<typeof parseQueueConfig>
+    /** The burst window of a conversation and the longest it may keep a turn waiting. */
+    readonly agentWork: ReturnType<typeof parseAgentWorkConfig>
     /** Who this worker is and how long a job claim lasts. */
     readonly jobs: ReturnType<typeof parseJobsConfig>
     /** The independent monitor of failed jobs and stale queued work. */
@@ -166,6 +169,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     telegramUser: parseTelegramUserConfig(env),
     realtime: parseRealtimeConfig(env),
     queue: parseQueueConfig(env),
+    agentWork: parseAgentWorkConfig(env),
     jobs: parseJobsConfig(env),
     jobsAlert: parseJobsAlertConfig(env),
     connections: parseConnectionsConfig(env),

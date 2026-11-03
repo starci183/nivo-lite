@@ -106,10 +106,17 @@ export const wakeProgressOf = (status: AgentWakeStatus): "queued" | "running" | 
 }
 
 /** The burst window of a conversation when the app root names none, milliseconds. */
-export const DEFAULT_DEBOUNCE_MS = 3000
+export const DEFAULT_DEBOUNCE_MS = 6000
+
+/** The longest a burst may keep a turn waiting when the app root names none, milliseconds. */
+export const DEFAULT_DEBOUNCE_MAX_MS = 20_000
 
 /** The window in force: what the app root named, never below zero, or the default. */
 export const debounceMsOf = (named: number | undefined): number => Math.max(0, named ?? DEFAULT_DEBOUNCE_MS)
+
+/** The longest wait in force: what the app root named or the default, never shorter than the window itself. */
+export const debounceMaxMsOf = (named: number | undefined, windowMs: number): number =>
+    Math.max(windowMs, named ?? DEFAULT_DEBOUNCE_MAX_MS)
 
 /** How long the drain of a new wake waits: the burst window for a wake locked to a conversation, none for any other. */
 export const drainDelayMsOf = (scopeKey: string, windowMs: number): number =>
