@@ -1,15 +1,18 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
 import { tagTextOf } from "./handoff.policy"
-import type { ContextValue, HandoffInput, HandoffOutput, HandoffParams } from "./handoff.types"
+import type { HandoffInput, HandoffOutput, HandoffParams } from "./handoff.types"
 
 const TARGET_MAX = 120
 const TEXT_MAX = 2000
 const CONTEXT_KEYS_MAX = 40
+const CONTEXT_JSON_MAX = 8000
 
-const contextValue: NodeSchema<ContextValue> = z.union([z.string().max(TEXT_MAX), z.number(), z.boolean(), z.null()])
+/** Plain data only: strings, numbers, booleans, null, arrays and objects of them. */
+const contextValue: NodeSchema<JsonValue> = z.json()
 
 const params: NodeSchema<HandoffParams> = z.object({ toModuleKey: z.string().min(1).max(TARGET_MAX) })
 
@@ -18,7 +21,10 @@ const input: NodeSchema<HandoffInput> = z.object({
     conversationId: z.string().min(1).max(TARGET_MAX).nullable(),
     context: z
         .record(z.string().max(TARGET_MAX), contextValue)
-        .refine((entries) => Object.keys(entries).length <= CONTEXT_KEYS_MAX)
+        .refine(
+            (entries) =>
+                Object.keys(entries).length <= CONTEXT_KEYS_MAX && JSON.stringify(entries).length <= CONTEXT_JSON_MAX,
+        )
         .nullable(),
 })
 

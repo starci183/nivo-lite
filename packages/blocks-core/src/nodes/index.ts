@@ -1,20 +1,24 @@
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { coreHandoffNode } from "./core/handoff.node"
 import { raiseWorkItemNode } from "./core/raise-work-item.node"
+import { coreReplyNode } from "./core/reply.node"
 import { intentClassifyNode } from "./intent/classify.node"
+import { intentHasNode } from "./intent/has.node"
 import { knowledgeAnswerNode } from "./knowledge/answer.node"
 import { orderAskMissingNode } from "./order/ask-missing.node"
 import { orderCompleteNode } from "./order/complete.node"
 import { orderConfirmNode } from "./order/confirm.node"
 import { orderNeedsApprovalNode } from "./order/needs-approval.node"
 import { orderRecordNode } from "./order/record.node"
-import { paymentClaimAckNode } from "./payment/claim-ack.node"
 import { paymentNodes } from "./payment"
+import { paymentClaimAckNode } from "./payment/claim-ack.node"
 import { paymentRequestNode } from "./payment/request.node"
 
 export {
     coreHandoffNode,
+    coreReplyNode,
     intentClassifyNode,
+    intentHasNode,
     knowledgeAnswerNode,
     orderAskMissingNode,
     orderCompleteNode,
@@ -33,8 +37,10 @@ export {
  */
 export const coreNodes: ReadonlyArray<NodeDefinition> = [
     intentClassifyNode,
+    intentHasNode,
     knowledgeAnswerNode,
     coreHandoffNode,
+    coreReplyNode,
     paymentClaimAckNode,
     orderRecordNode,
     orderCompleteNode,

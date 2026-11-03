@@ -68,7 +68,7 @@
       "step": "intent.has",
       "params": { "intent": "payment_claim" },
       "input": { "intents": { "$ref": "classify.intents" } },
-      "routes": { "yes": "claim-ack" }
+      "routes": { "yes": "claim-ack", "no": "end" }
     },
     {
       "key": "claim-ack",
@@ -94,6 +94,7 @@
         "conversationId": { "$ref": "trigger.conversationId" },
         "context": { "claimKind": { "$ref": "claim-ack.claim.kind" }, "claimId": { "$ref": "claim-ack.claim.id" } }
       }
-    }
+    },
+    { "key": "end", "kind": "output", "step": "stop" }
   ]
 }

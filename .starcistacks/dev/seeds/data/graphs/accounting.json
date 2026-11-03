@@ -42,7 +42,7 @@
       },
       "input": {
         "transactionId": { "$ref": "trigger.subject.id" },
-        "claimId": null,
+        "claimId": { "$ref": "evidence.claims.0.id" },
         "mode": "apply",
         "candidateIds": { "$ref": "match-code.candidateIds" },
         "reasons": { "$ref": "match-code.reasons" }
@@ -58,7 +58,7 @@
       },
       "input": {
         "transactionId": { "$ref": "trigger.subject.id" },
-        "claimId": null,
+        "claimId": { "$ref": "evidence.claims.0.id" },
         "mode": "ask",
         "candidateIds": { "$ref": "match-code.candidateIds" },
         "reasons": { "$ref": "match-code.reasons" }
@@ -85,7 +85,7 @@
       },
       "input": {
         "transactionId": { "$ref": "trigger.subject.id" },
-        "claimId": null,
+        "claimId": { "$ref": "evidence.claims.0.id" },
         "mode": "apply",
         "candidateIds": { "$ref": "judge.candidateIds" },
         "reasons": { "$ref": "judge.reasons" }
