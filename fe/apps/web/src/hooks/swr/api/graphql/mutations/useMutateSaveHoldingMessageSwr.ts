@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveHoldingMessage } from "@/modules/api/graphql/mutations/mutation-save-holding-message"
 import type { MutateSaveHoldingMessageRequest } from "@/modules/api/graphql/mutations/mutation-save-holding-message"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the SaveHoldingMessage mutation is triggered with. */
 interface SaveHoldingMessageArg {
@@ -13,7 +15,12 @@ interface SaveHoldingMessageArg {
 export const MUTATE_SAVE_HOLDING_MESSAGE_SWR_KEY = "MUTATE_SAVE_HOLDING_MESSAGE_SWR"
 
 /** SWR mutation for {@link mutateSaveHoldingMessage}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateSaveHoldingMessageSwr = () =>
+export const useMutateSaveHoldingMessageSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveHoldingMessage>["saveHoldingMessage"],
+    Error,
+    typeof MUTATE_SAVE_HOLDING_MESSAGE_SWR_KEY,
+    SaveHoldingMessageArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_HOLDING_MESSAGE_SWR_KEY, async (_key: string, { arg }: SaveHoldingMessageArg) => {
         const result = await mutateSaveHoldingMessage({ request: arg })
         if (!result.data) throw new Error("saveHoldingMessage answered no data")

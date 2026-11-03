@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateMarkOfficeConversationRead } from "@/modules/api/graphql/mutations/mutation-mark-office-conversation-read"
 import type { MutateMarkOfficeConversationReadRequest } from "@/modules/api/graphql/mutations/mutation-mark-office-conversation-read"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the MarkOfficeConversationRead mutation is triggered with. */
 interface MarkOfficeConversationReadArg {
@@ -13,7 +15,12 @@ interface MarkOfficeConversationReadArg {
 export const MUTATE_MARK_OFFICE_CONVERSATION_READ_SWR_KEY = "MUTATE_MARK_OFFICE_CONVERSATION_READ_SWR"
 
 /** SWR mutation for {@link mutateMarkOfficeConversationRead}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateMarkOfficeConversationReadSwr = () =>
+export const useMutateMarkOfficeConversationReadSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateMarkOfficeConversationRead>["markOfficeConversationRead"],
+    Error,
+    typeof MUTATE_MARK_OFFICE_CONVERSATION_READ_SWR_KEY,
+    MarkOfficeConversationReadArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_MARK_OFFICE_CONVERSATION_READ_SWR_KEY,
         async (_key: string, { arg }: MarkOfficeConversationReadArg) => {

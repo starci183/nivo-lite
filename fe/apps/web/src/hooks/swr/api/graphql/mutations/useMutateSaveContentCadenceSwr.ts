@@ -4,12 +4,19 @@ import { mutateSaveContentCadence } from "@/modules/api/graphql/mutations/mutati
 import type { mutateSaveContentCadence as MutateSaveContentCadenceOperation } from "@/modules/api/graphql/mutations/mutation-save-content-cadence"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the saveContentCadence mutation. */
 export const MUTATE_SAVE_CONTENT_CADENCE_SWR_KEY = "MUTATE_SAVE_CONTENT_CADENCE_SWR"
 
 /** SWR mutation for {@link mutateSaveContentCadence}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateSaveContentCadenceSwr = () =>
+export const useMutateSaveContentCadenceSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveContentCadence>["saveContentCadence"],
+    Error,
+    typeof MUTATE_SAVE_CONTENT_CADENCE_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SAVE_CONTENT_CADENCE_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

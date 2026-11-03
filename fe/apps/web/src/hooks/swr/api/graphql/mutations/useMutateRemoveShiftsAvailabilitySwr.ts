@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRemoveShiftsAvailability } from "@/modules/api/graphql/mutations/mutation-remove-shifts-availability"
 import type { MutateRemoveShiftsAvailabilityRequest } from "@/modules/api/graphql/mutations/mutation-remove-shifts-availability"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the removeShiftsAvailability mutation is triggered with. */
 interface RemoveShiftsAvailabilityArg {
@@ -13,7 +15,12 @@ interface RemoveShiftsAvailabilityArg {
 export const MUTATE_REMOVE_SHIFTS_AVAILABILITY_SWR_KEY = "MUTATE_REMOVE_SHIFTS_AVAILABILITY_SWR"
 
 /** SWR mutation for {@link mutateRemoveShiftsAvailability}: `trigger(request)` answers `removeShiftsAvailability` and rejects with the back end failure. */
-export const useMutateRemoveShiftsAvailabilitySwr = () =>
+export const useMutateRemoveShiftsAvailabilitySwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRemoveShiftsAvailability>["removeShiftsAvailability"],
+    Error,
+    typeof MUTATE_REMOVE_SHIFTS_AVAILABILITY_SWR_KEY,
+    RemoveShiftsAvailabilityArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_REMOVE_SHIFTS_AVAILABILITY_SWR_KEY,
         async (_key: string, { arg }: RemoveShiftsAvailabilityArg) => {

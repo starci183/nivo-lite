@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRecordManualEvidence } from "@/modules/api/graphql/mutations/mutation-record-manual-evidence"
 import type { MutateRecordManualEvidenceRequest } from "@/modules/api/graphql/mutations/mutation-record-manual-evidence"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the RecordManualEvidence mutation is triggered with. */
 interface RecordManualEvidenceArg {
@@ -13,7 +15,12 @@ interface RecordManualEvidenceArg {
 export const MUTATE_RECORD_MANUAL_EVIDENCE_SWR_KEY = "MUTATE_RECORD_MANUAL_EVIDENCE_SWR"
 
 /** SWR mutation for {@link mutateRecordManualEvidence}: Admits one piece of manual evidence; answers whether it was a duplicate. `trigger(input)` rejects with the back end failure. */
-export const useMutateRecordManualEvidenceSwr = () =>
+export const useMutateRecordManualEvidenceSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRecordManualEvidence>["recordManualEvidence"],
+    Error,
+    typeof MUTATE_RECORD_MANUAL_EVIDENCE_SWR_KEY,
+    RecordManualEvidenceArg["arg"]
+> =>
     useSWRMutation(MUTATE_RECORD_MANUAL_EVIDENCE_SWR_KEY, async (_key: string, { arg }: RecordManualEvidenceArg) => {
         const result = await mutateRecordManualEvidence({ request: arg })
         if (!result.data) throw new Error("recordManualEvidence answered no data")

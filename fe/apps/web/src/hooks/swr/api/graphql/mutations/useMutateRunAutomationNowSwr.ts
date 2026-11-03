@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRunAutomationNow } from "@/modules/api/graphql/mutations/mutation-run-automation-now"
 import type { MutateRunAutomationNowRequest } from "@/modules/api/graphql/mutations/mutation-run-automation-now"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the RunAutomationNow mutation is triggered with. */
 interface RunAutomationNowArg {
@@ -13,7 +15,12 @@ interface RunAutomationNowArg {
 export const MUTATE_RUN_AUTOMATION_NOW_SWR_KEY = "MUTATE_RUN_AUTOMATION_NOW_SWR"
 
 /** SWR mutation for {@link mutateRunAutomationNow}: `trigger({ templateKey })` answers true once the run is queued. */
-export const useMutateRunAutomationNowSwr = () =>
+export const useMutateRunAutomationNowSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRunAutomationNow>["runAutomationNow"],
+    Error,
+    typeof MUTATE_RUN_AUTOMATION_NOW_SWR_KEY,
+    RunAutomationNowArg["arg"]
+> =>
     useSWRMutation(MUTATE_RUN_AUTOMATION_NOW_SWR_KEY, async (_key: string, { arg }: RunAutomationNowArg) => {
         const result = await mutateRunAutomationNow({ request: arg })
         if (!result.data) throw new Error("runAutomationNow answered no data")

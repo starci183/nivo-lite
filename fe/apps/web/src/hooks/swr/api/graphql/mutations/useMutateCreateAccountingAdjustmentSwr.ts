@@ -4,12 +4,19 @@ import { mutateCreateAccountingAdjustment } from "@/modules/api/graphql/mutation
 import type { MutateCreateAccountingAdjustmentRequest } from "@/modules/api/graphql/mutations/mutation-create-accounting-adjustment"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the createAccountingAdjustment mutation. */
 export const MUTATE_CREATE_ACCOUNTING_ADJUSTMENT_SWR_KEY = "MUTATE_CREATE_ACCOUNTING_ADJUSTMENT_SWR"
 
 /** SWR mutation for {@link mutateCreateAccountingAdjustment}: Appends an accounting correction. `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateCreateAccountingAdjustmentSwr = () =>
+export const useMutateCreateAccountingAdjustmentSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateCreateAccountingAdjustment>["createAccountingAdjustment"],
+    Error,
+    typeof MUTATE_CREATE_ACCOUNTING_ADJUSTMENT_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_CREATE_ACCOUNTING_ADJUSTMENT_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

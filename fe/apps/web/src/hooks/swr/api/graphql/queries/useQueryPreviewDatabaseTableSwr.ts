@@ -3,6 +3,8 @@
 import { queryPreviewDatabaseTable } from "@/modules/api/graphql/queries/query-preview-database-table"
 import type { queryPreviewDatabaseTable as QueryPreviewDatabaseTableOperation } from "@/modules/api/graphql/queries/query-preview-database-table"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the previewDatabaseTable query. */
 export const QUERY_PREVIEW_DATABASE_TABLE_SWR_KEY = "QUERY_PREVIEW_DATABASE_TABLE_SWR"
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** Lazily reads the first rows of one mapped table; `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useQueryPreviewDatabaseTableSwr = () =>
+export const useQueryPreviewDatabaseTableSwr = (): SWRMutationResponse<
+    OperationData<typeof queryPreviewDatabaseTable>["previewDatabaseTable"],
+    Error,
+    typeof QUERY_PREVIEW_DATABASE_TABLE_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(QUERY_PREVIEW_DATABASE_TABLE_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await queryPreviewDatabaseTable({ request: arg })
         if (!result.data) throw new Error("previewDatabaseTable answered no data")

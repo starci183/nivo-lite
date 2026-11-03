@@ -3,12 +3,16 @@
 import { workspaceArgumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryPaymentOrder } from "@/modules/api/graphql/queries/query-payment-order"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** Cache identity of paymentOrder. */
 export const QUERY_PAYMENT_ORDER_SWR_KEY = "QUERY_PAYMENT_ORDER_SWR"
 
 /** Reads and revalidates a pending payment order. */
-export const useQueryPaymentOrderSwr = (workspaceId: string | undefined, id: string | undefined) =>
+export const useQueryPaymentOrderSwr = (
+    workspaceId: string | undefined,
+    id: string | undefined,
+): ReadResponse<OperationData<typeof queryPaymentOrder>["paymentOrder"]> =>
     useSWR(
         workspaceArgumentKey(QUERY_PAYMENT_ORDER_SWR_KEY, workspaceId, id),
         async ([, , requestedId]) => {

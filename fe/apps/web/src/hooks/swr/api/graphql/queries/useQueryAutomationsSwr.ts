@@ -4,6 +4,7 @@ import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryAutomations } from "@/modules/api/graphql/queries/query-automations"
 import { automationsOverviewOf } from "@/modules/automations"
+import type { ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the automations overview; pipeline mutations revalidate with `matchesSwrKey(QUERY_AUTOMATIONS_SWR_KEY)`. */
 export const QUERY_AUTOMATIONS_SWR_KEY = "QUERY_AUTOMATIONS_SWR"
@@ -18,7 +19,7 @@ const ACTIVE_RUNS: ReadonlySet<string> = new Set(["queued", "running"])
  * runs, the shop and the preview sample, already mapped to the view model. While a run is queued or running the answer
  * refreshes until the run settles.
  */
-export const useQueryAutomationsSwr = () =>
+export const useQueryAutomationsSwr = (): ReadResponse<ReturnType<typeof automationsOverviewOf>> =>
     useSWR(
         useWorkspaceKey(QUERY_AUTOMATIONS_SWR_KEY, []),
         async ({ signal }: { signal?: AbortSignal } = {}) => {

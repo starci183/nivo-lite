@@ -4,6 +4,7 @@ import useSWR from "swr"
 import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryDossierRemedyDraft } from "@/modules/api/graphql/queries/query-dossier-remedy-draft"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of one remedy draft; a write that changes the draft revalidates the keys that lead with it. */
 export const QUERY_DOSSIER_REMEDY_DRAFT_SWR_KEY = "QUERY_DOSSIER_REMEDY_DRAFT_SWR"
@@ -12,7 +13,9 @@ export const QUERY_DOSSIER_REMEDY_DRAFT_SWR_KEY = "QUERY_DOSSIER_REMEDY_DRAFT_SW
 const GENERATING_REFRESH_MS = 4_000
 
 /** One remedy draft of the active workspace (the back end `dossierRemedyDraft` query); null when it is gone. Asked again every few seconds only while NIVO is writing it. */
-export const useQueryDossierRemedyDraftSwr = (id: string | undefined) => {
+export const useQueryDossierRemedyDraftSwr = (
+    id: string | undefined,
+): ReadResponse<OperationData<typeof queryDossierRemedyDraft>["dossierRemedyDraft"]> => {
     const key = useWorkspaceKey(QUERY_DOSSIER_REMEDY_DRAFT_SWR_KEY, [id ?? ""], id !== undefined)
     return useSWR(
         key,

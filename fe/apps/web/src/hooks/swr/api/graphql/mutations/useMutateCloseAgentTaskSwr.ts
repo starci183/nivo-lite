@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateCloseAgentTask } from "@/modules/api/graphql/mutations/mutation-close-agent-task"
 import type { MutateCloseAgentTaskRequest } from "@/modules/api/graphql/mutations/mutation-close-agent-task"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the CloseAgentTask mutation is triggered with. */
 interface CloseAgentTaskArg {
@@ -13,7 +15,12 @@ interface CloseAgentTaskArg {
 export const MUTATE_CLOSE_AGENT_TASK_SWR_KEY = "MUTATE_CLOSE_AGENT_TASK_SWR"
 
 /** SWR mutation for {@link mutateCloseAgentTask}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateCloseAgentTaskSwr = () =>
+export const useMutateCloseAgentTaskSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateCloseAgentTask>["closeAgentTask"],
+    Error,
+    typeof MUTATE_CLOSE_AGENT_TASK_SWR_KEY,
+    CloseAgentTaskArg["arg"]
+> =>
     useSWRMutation(MUTATE_CLOSE_AGENT_TASK_SWR_KEY, async (_key: string, { arg }: CloseAgentTaskArg) => {
         const result = await mutateCloseAgentTask({ request: arg })
         if (!result.data) throw new Error("closeAgentTask answered no data")

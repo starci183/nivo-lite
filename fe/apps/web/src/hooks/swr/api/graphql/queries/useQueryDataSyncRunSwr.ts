@@ -4,6 +4,7 @@ import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryDataSyncRun } from "@/modules/api/graphql/queries/query-data-sync-run"
 import type { DataSyncRunType } from "@/modules/api"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the dataSyncRun query. */
 export const QUERY_DATA_SYNC_RUN_SWR_KEY = "QUERY_DATA_SYNC_RUN_SWR"
@@ -17,7 +18,10 @@ interface DataSyncRunOptions {
 }
 
 /** One sync run of a data connection, asked about every two seconds until it is no longer running. `undefined` pauses it. */
-export const useQueryDataSyncRunSwr = (runId: string | undefined, options?: DataSyncRunOptions) =>
+export const useQueryDataSyncRunSwr = (
+    runId: string | undefined,
+    options?: DataSyncRunOptions,
+): ReadResponse<OperationData<typeof queryDataSyncRun>["dataSyncRun"]> =>
     useSWR(
         argumentKey(QUERY_DATA_SYNC_RUN_SWR_KEY, runId),
         async ([, id]) => {

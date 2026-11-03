@@ -4,12 +4,19 @@ import { mutateUpdateVideoProject } from "@/modules/api/graphql/mutations/mutati
 import type { MutateUpdateVideoProjectRequest } from "@/modules/api/graphql/mutations/mutation-update-video-project"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the updateVideoProject mutation. */
 export const MUTATE_UPDATE_VIDEO_PROJECT_SWR_KEY = "MUTATE_UPDATE_VIDEO_PROJECT_SWR"
 
 /** SWR mutation for {@link mutateUpdateVideoProject}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateUpdateVideoProjectSwr = () =>
+export const useMutateUpdateVideoProjectSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateUpdateVideoProject>["updateVideoProject"],
+    Error,
+    typeof MUTATE_UPDATE_VIDEO_PROJECT_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_UPDATE_VIDEO_PROJECT_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

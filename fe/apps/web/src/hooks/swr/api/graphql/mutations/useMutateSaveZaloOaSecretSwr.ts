@@ -4,12 +4,19 @@ import { mutateSaveZaloOaSecret } from "@/modules/api/graphql/mutations/mutation
 import type { mutateSaveZaloOaSecret as MutateSaveZaloOaSecretOperation } from "@/modules/api/graphql/mutations/mutation-save-zalo-oa-secret"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the saveZaloOaSecret mutation. */
 export const MUTATE_SAVE_ZALO_OA_SECRET_SWR_KEY = "MUTATE_SAVE_ZALO_OA_SECRET_SWR"
 
 /** SWR mutation for {@link mutateSaveZaloOaSecret}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateSaveZaloOaSecretSwr = () =>
+export const useMutateSaveZaloOaSecretSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveZaloOaSecret>["saveZaloOaSecret"],
+    Error,
+    typeof MUTATE_SAVE_ZALO_OA_SECRET_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SAVE_ZALO_OA_SECRET_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

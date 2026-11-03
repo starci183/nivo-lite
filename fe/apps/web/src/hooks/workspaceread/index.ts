@@ -10,3 +10,5 @@ export type { WorkspaceReadKey } from "./workspaceread.shared"
 export { readField, readRequiredField } from "./workspaceread.shared"
 
 export type { JobStatusCallbacks } from "./workspaceread.shared"
+
+export type { OperationData, ReadResponse } from "./workspaceread.shared"

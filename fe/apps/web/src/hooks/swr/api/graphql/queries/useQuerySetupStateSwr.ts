@@ -7,12 +7,16 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { querySetupState } from "@/modules/api/graphql/queries/query-setup-state"
 import type { QuerySetupStateRequest } from "@/modules/api/graphql/queries/query-setup-state"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQuerySetupStateSwr}. */
 export const QUERY_SETUP_STATE_SWR_KEY = "QUERY_SETUP_STATE_SWR"
 
 /** The back end `setupState` query. Pass `null` to wait for the arguments. */
-export const useQuerySetupStateSwr = (request: QuerySetupStateRequest | null, config?: SWRConfiguration) =>
+export const useQuerySetupStateSwr = (
+    request: QuerySetupStateRequest | null,
+    config?: SWRConfiguration,
+): ReadResponse<OperationData<typeof querySetupState>["setupState"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_SETUP_STATE_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QuerySetupStateRequest>) =>

@@ -7,6 +7,7 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryAgentGraphVersions } from "@/modules/api/graphql/queries/query-agent-graph-versions"
 import type { QueryAgentGraphVersionsRequest } from "@/modules/api/graphql/queries/query-agent-graph-versions"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQueryAgentGraphVersionsSwr}. */
 export const QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY = "QUERY_AGENT_GRAPH_VERSIONS_SWR"
@@ -15,7 +16,7 @@ export const QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY = "QUERY_AGENT_GRAPH_VERSIONS_SW
 export const useQueryAgentGraphVersionsSwr = (
     request: QueryAgentGraphVersionsRequest | null,
     config?: SWRConfiguration,
-) =>
+): ReadResponse<OperationData<typeof queryAgentGraphVersions>["listAgentGraphVersions"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryAgentGraphVersionsRequest>) =>

@@ -4,12 +4,19 @@ import { mutateDecideBrandProposal } from "@/modules/api/graphql/mutations/mutat
 import type { mutateDecideBrandProposal as MutateDecideBrandProposalOperation } from "@/modules/api/graphql/mutations/mutation-decide-brand-proposal"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the decideBrandProposal mutation. */
 export const MUTATE_DECIDE_BRAND_PROPOSAL_SWR_KEY = "MUTATE_DECIDE_BRAND_PROPOSAL_SWR"
 
 /** SWR mutation for {@link mutateDecideBrandProposal}: `trigger(input)` confirms or rejects a brand proposal. */
-export const useMutateDecideBrandProposalSwr = () =>
+export const useMutateDecideBrandProposalSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateDecideBrandProposal>["decideBrandProposal"],
+    Error,
+    typeof MUTATE_DECIDE_BRAND_PROPOSAL_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_DECIDE_BRAND_PROPOSAL_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

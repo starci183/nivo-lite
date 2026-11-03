@@ -4,12 +4,19 @@ import { mutateSetContentAutomation } from "@/modules/api/graphql/mutations/muta
 import type { mutateSetContentAutomation as MutateSetContentAutomationOperation } from "@/modules/api/graphql/mutations/mutation-set-content-automation"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the setContentAutomation mutation. */
 export const MUTATE_SET_CONTENT_AUTOMATION_SWR_KEY = "MUTATE_SET_CONTENT_AUTOMATION_SWR"
 
 /** SWR mutation for {@link mutateSetContentAutomation}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateSetContentAutomationSwr = () =>
+export const useMutateSetContentAutomationSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSetContentAutomation>["setContentAutomation"],
+    Error,
+    typeof MUTATE_SET_CONTENT_AUTOMATION_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SET_CONTENT_AUTOMATION_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

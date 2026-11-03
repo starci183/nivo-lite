@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveBrainLesson } from "@/modules/api/graphql/mutations/mutation-save-brain-lesson"
 import type { MutateSaveBrainLessonRequest } from "@/modules/api/graphql/mutations/mutation-save-brain-lesson"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the SaveBrainLesson mutation is triggered with. */
 interface SaveBrainLessonArg {
@@ -13,7 +15,12 @@ interface SaveBrainLessonArg {
 export const MUTATE_SAVE_BRAIN_LESSON_SWR_KEY = "MUTATE_SAVE_BRAIN_LESSON_SWR"
 
 /** SWR mutation for {@link mutateSaveBrainLesson}: Writes a lesson of the shared brain. `trigger(input)` rejects with the back end failure. */
-export const useMutateSaveBrainLessonSwr = () =>
+export const useMutateSaveBrainLessonSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveBrainLesson>["saveBrainLesson"],
+    Error,
+    typeof MUTATE_SAVE_BRAIN_LESSON_SWR_KEY,
+    SaveBrainLessonArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_BRAIN_LESSON_SWR_KEY, async (_key: string, { arg }: SaveBrainLessonArg) => {
         const result = await mutateSaveBrainLesson({ request: arg })
         if (!result.data) throw new Error("saveBrainLesson answered no data")

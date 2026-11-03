@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateReceiveInventoryPo } from "@/modules/api/graphql/mutations/mutation-receive-inventory-po"
 import type { MutateReceiveInventoryPoRequest } from "@/modules/api/graphql/mutations/mutation-receive-inventory-po"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the receiveInventoryPo mutation is triggered with. */
 interface ReceiveInventoryPoArg {
@@ -13,7 +15,12 @@ interface ReceiveInventoryPoArg {
 export const MUTATE_RECEIVE_INVENTORY_PO_SWR_KEY = "MUTATE_RECEIVE_INVENTORY_PO_SWR"
 
 /** SWR mutation for {@link mutateReceiveInventoryPo}: `trigger(request)` answers `receiveInventoryPo` and rejects with the back end failure. */
-export const useMutateReceiveInventoryPoSwr = () =>
+export const useMutateReceiveInventoryPoSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateReceiveInventoryPo>["receiveInventoryPo"],
+    Error,
+    typeof MUTATE_RECEIVE_INVENTORY_PO_SWR_KEY,
+    ReceiveInventoryPoArg["arg"]
+> =>
     useSWRMutation(MUTATE_RECEIVE_INVENTORY_PO_SWR_KEY, async (_key: string, { arg }: ReceiveInventoryPoArg) => {
         const result = await mutateReceiveInventoryPo({ request: arg })
         if (!result.data) throw new Error("receiveInventoryPo answered no data")

@@ -4,12 +4,19 @@ import { mutateResendInvite } from "@/modules/api/graphql/mutations/mutation-res
 import type { mutateResendInvite as MutateResendInviteOperation } from "@/modules/api/graphql/mutations/mutation-resend-invite"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the resendInvite mutation. */
 export const MUTATE_RESEND_INVITE_SWR_KEY = "MUTATE_RESEND_INVITE_SWR"
 
 /** SWR mutation for {@link mutateResendInvite}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateResendInviteSwr = () =>
+export const useMutateResendInviteSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateResendInvite>["resendInvite"],
+    Error,
+    typeof MUTATE_RESEND_INVITE_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_RESEND_INVITE_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

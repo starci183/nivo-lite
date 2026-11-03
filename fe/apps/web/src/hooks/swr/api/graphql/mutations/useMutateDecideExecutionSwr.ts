@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateDecideExecution } from "@/modules/api/graphql/mutations/mutation-decide-execution"
 import type { MutateDecideExecutionRequest } from "@/modules/api/graphql/mutations/mutation-decide-execution"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the DecideExecution mutation is triggered with. */
 interface DecideExecutionArg {
@@ -13,7 +15,12 @@ interface DecideExecutionArg {
 export const MUTATE_DECIDE_EXECUTION_SWR_KEY = "MUTATE_DECIDE_EXECUTION_SWR"
 
 /** SWR mutation for {@link mutateDecideExecution}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateDecideExecutionSwr = () =>
+export const useMutateDecideExecutionSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateDecideExecution>["decideExecution"],
+    Error,
+    typeof MUTATE_DECIDE_EXECUTION_SWR_KEY,
+    DecideExecutionArg["arg"]
+> =>
     useSWRMutation(MUTATE_DECIDE_EXECUTION_SWR_KEY, async (_key: string, { arg }: DecideExecutionArg) => {
         const result = await mutateDecideExecution({ request: arg })
         if (!result.data) throw new Error("decideExecution answered no data")

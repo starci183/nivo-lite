@@ -4,6 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateUpdateAutomationPipeline } from "@/modules/api/graphql/mutations/mutation-update-automation-pipeline"
 import type { MutateUpdateAutomationPipelineRequest } from "@/modules/api/graphql/mutations/mutation-update-automation-pipeline"
 import { automationCardViewOf } from "@/modules/automations"
+import type { SWRMutationResponse } from "swr/mutation"
 
 /** What the UpdateAutomationPipeline mutation is triggered with. */
 interface UpdateAutomationPipelineArg {
@@ -14,7 +15,12 @@ interface UpdateAutomationPipelineArg {
 export const MUTATE_UPDATE_AUTOMATION_PIPELINE_SWR_KEY = "MUTATE_UPDATE_AUTOMATION_PIPELINE_SWR"
 
 /** SWR mutation for {@link mutateUpdateAutomationPipeline}: `trigger({ templateKey, ...patch })` answers the card as it stands afterwards. */
-export const useMutateUpdateAutomationPipelineSwr = () =>
+export const useMutateUpdateAutomationPipelineSwr = (): SWRMutationResponse<
+    ReturnType<typeof automationCardViewOf>,
+    Error,
+    typeof MUTATE_UPDATE_AUTOMATION_PIPELINE_SWR_KEY,
+    UpdateAutomationPipelineArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_UPDATE_AUTOMATION_PIPELINE_SWR_KEY,
         async (_key: string, { arg }: UpdateAutomationPipelineArg) => {

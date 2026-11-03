@@ -4,12 +4,19 @@ import { mutateAuthorizeZalo } from "@/modules/api/graphql/mutations/mutation-au
 import type { mutateAuthorizeZalo as MutateAuthorizeZaloOperation } from "@/modules/api/graphql/mutations/mutation-authorize-zalo"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the authorizeZalo mutation. */
 export const MUTATE_AUTHORIZE_ZALO_SWR_KEY = "MUTATE_AUTHORIZE_ZALO_SWR"
 
 /** SWR mutation for {@link mutateAuthorizeZalo}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateAuthorizeZaloSwr = () =>
+export const useMutateAuthorizeZaloSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateAuthorizeZalo>["authorizeZalo"],
+    Error,
+    typeof MUTATE_AUTHORIZE_ZALO_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_AUTHORIZE_ZALO_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

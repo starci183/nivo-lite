@@ -3,12 +3,16 @@
 import useSWR from "swr"
 import { queryWorkspaceShell } from "@/modules/api/graphql/queries/query-workspace-shell"
 import type { QueryWorkspaceShellRequest } from "@/modules/api/graphql/queries/query-workspace-shell"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the workspaceShell query; mutations that change it call `mutate` with it. */
 export const QUERY_WORKSPACE_SHELL_SWR_KEY = "QUERY_WORKSPACE_SHELL_SWR"
 
 /** Everything the console frame draws, in one read. */
-export const useQueryWorkspaceShellSwr = (workspaceId: string | undefined, request: QueryWorkspaceShellRequest) =>
+export const useQueryWorkspaceShellSwr = (
+    workspaceId: string | undefined,
+    request: QueryWorkspaceShellRequest,
+): ReadResponse<OperationData<typeof queryWorkspaceShell>["workspaceShell"]> =>
     useSWR(
         workspaceId === undefined
             ? null

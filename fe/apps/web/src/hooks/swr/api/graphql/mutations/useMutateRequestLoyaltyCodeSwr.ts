@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRequestLoyaltyCode } from "@/modules/api/graphql/mutations/mutation-request-loyalty-code"
 import type { MutateRequestLoyaltyCodeRequest } from "@/modules/api/graphql/mutations/types/request-loyalty-code"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the `requestLoyaltyCode` mutation. */
 export const MUTATE_REQUEST_LOYALTY_CODE_SWR_KEY = "MUTATE_REQUEST_LOYALTY_CODE_SWR"
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** Asks the back end to send the verification code to the customer's own chat. */
-export const useMutateRequestLoyaltyCodeSwr = () =>
+export const useMutateRequestLoyaltyCodeSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRequestLoyaltyCode>["requestLoyaltyCode"],
+    Error,
+    typeof MUTATE_REQUEST_LOYALTY_CODE_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(MUTATE_REQUEST_LOYALTY_CODE_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateRequestLoyaltyCode({ request: arg })
         if (!result.data) throw new Error("requestLoyaltyCode answered no data")

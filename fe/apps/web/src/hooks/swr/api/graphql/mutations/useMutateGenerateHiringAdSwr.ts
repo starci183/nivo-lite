@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateGenerateHiringAd } from "@/modules/api/graphql/mutations/mutation-generate-hiring-ad"
 import type { MutateGenerateHiringAdRequest } from "@/modules/api/graphql/mutations/mutation-generate-hiring-ad"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the generateHiringAd mutation is triggered with. */
 interface GenerateHiringAdArg {
@@ -13,7 +15,12 @@ interface GenerateHiringAdArg {
 export const MUTATE_GENERATE_HIRING_AD_SWR_KEY = "MUTATE_GENERATE_HIRING_AD_SWR"
 
 /** SWR mutation for {@link mutateGenerateHiringAd}: `trigger(request)` answers `generateHiringAd` and rejects with the back end failure. */
-export const useMutateGenerateHiringAdSwr = () =>
+export const useMutateGenerateHiringAdSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateGenerateHiringAd>["generateHiringAd"],
+    Error,
+    typeof MUTATE_GENERATE_HIRING_AD_SWR_KEY,
+    GenerateHiringAdArg["arg"]
+> =>
     useSWRMutation(MUTATE_GENERATE_HIRING_AD_SWR_KEY, async (_key: string, { arg }: GenerateHiringAdArg) => {
         const result = await mutateGenerateHiringAd({ request: arg })
         if (!result.data) throw new Error("generateHiringAd answered no data")

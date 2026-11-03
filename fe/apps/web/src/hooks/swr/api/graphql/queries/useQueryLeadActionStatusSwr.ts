@@ -5,6 +5,7 @@ import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryLeadActionStatus } from "@/modules/api/graphql/queries/query-lead-action-status"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** Workspace-scoped cache identity for the leadActionStatus query. */
 export const QUERY_LEAD_ACTION_STATUS_SWR_KEY = "QUERY_LEAD_ACTION_STATUS_SWR"
@@ -14,7 +15,7 @@ export const useQueryLeadActionStatusSwr = (
     workspaceId: string | undefined,
     id: string | undefined,
     options?: SWRConfiguration,
-) =>
+): ReadResponse<NonNullable<OperationData<typeof queryLeadActionStatus>["leadActionStatus"]>> =>
     useSWR(
         workspaceArgumentKey(QUERY_LEAD_ACTION_STATUS_SWR_KEY, workspaceId, id),
         async ([, , input]: WorkspaceReadKey<string>) =>

@@ -4,12 +4,19 @@ import { mutateSaveVideoBrand } from "@/modules/api/graphql/mutations/mutation-s
 import type { mutateSaveVideoBrand as MutateSaveVideoBrandOperation } from "@/modules/api/graphql/mutations/mutation-save-video-brand"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the saveVideoBrand mutation. */
 export const MUTATE_SAVE_VIDEO_BRAND_SWR_KEY = "MUTATE_SAVE_VIDEO_BRAND_SWR"
 
 /** SWR mutation for {@link mutateSaveVideoBrand}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateSaveVideoBrandSwr = () =>
+export const useMutateSaveVideoBrandSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveVideoBrand>["saveVideoBrand"],
+    Error,
+    typeof MUTATE_SAVE_VIDEO_BRAND_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SAVE_VIDEO_BRAND_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

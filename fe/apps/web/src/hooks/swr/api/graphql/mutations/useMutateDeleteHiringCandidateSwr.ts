@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateDeleteHiringCandidate } from "@/modules/api/graphql/mutations/mutation-delete-hiring-candidate"
 import type { MutateDeleteHiringCandidateRequest } from "@/modules/api/graphql/mutations/mutation-delete-hiring-candidate"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the deleteHiringCandidate mutation is triggered with. */
 interface DeleteHiringCandidateArg {
@@ -13,7 +15,12 @@ interface DeleteHiringCandidateArg {
 export const MUTATE_DELETE_HIRING_CANDIDATE_SWR_KEY = "MUTATE_DELETE_HIRING_CANDIDATE_SWR"
 
 /** SWR mutation for {@link mutateDeleteHiringCandidate}: `trigger(request)` answers `deleteHiringCandidate` and rejects with the back end failure. */
-export const useMutateDeleteHiringCandidateSwr = () =>
+export const useMutateDeleteHiringCandidateSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateDeleteHiringCandidate>["deleteHiringCandidate"],
+    Error,
+    typeof MUTATE_DELETE_HIRING_CANDIDATE_SWR_KEY,
+    DeleteHiringCandidateArg["arg"]
+> =>
     useSWRMutation(MUTATE_DELETE_HIRING_CANDIDATE_SWR_KEY, async (_key: string, { arg }: DeleteHiringCandidateArg) => {
         const result = await mutateDeleteHiringCandidate({ request: arg })
         if (!result.data) throw new Error("deleteHiringCandidate answered no data")

@@ -4,12 +4,19 @@ import { mutateRevealSepayKey } from "@/modules/api/graphql/mutations/mutation-r
 import type { mutateRevealSepayKey as MutateRevealSepayKeyOperation } from "@/modules/api/graphql/mutations/mutation-reveal-sepay-key"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the revealSepayKey mutation. */
 export const MUTATE_REVEAL_SEPAY_KEY_SWR_KEY = "MUTATE_REVEAL_SEPAY_KEY_SWR"
 
 /** SWR mutation for {@link mutateRevealSepayKey}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateRevealSepayKeySwr = () =>
+export const useMutateRevealSepayKeySwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRevealSepayKey>["revealSepayKey"],
+    Error,
+    typeof MUTATE_REVEAL_SEPAY_KEY_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_REVEAL_SEPAY_KEY_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

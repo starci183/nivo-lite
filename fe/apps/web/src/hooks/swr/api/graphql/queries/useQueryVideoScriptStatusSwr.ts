@@ -6,6 +6,7 @@ import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import { queryVideoScriptStatus } from "@/modules/api/graphql/queries/query-video-script-status"
 import type { VideoScriptStatusType } from "@/modules/api"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the videoScriptStatus query. */
 export const QUERY_VIDEO_SCRIPT_STATUS_SWR_KEY = "QUERY_VIDEO_SCRIPT_STATUS_SWR"
@@ -14,7 +15,10 @@ export const QUERY_VIDEO_SCRIPT_STATUS_SWR_KEY = "QUERY_VIDEO_SCRIPT_STATUS_SWR"
 type VideoScriptStatusCallbacks = JobStatusCallbacks<VideoScriptStatusType>
 
 /** A queued script, read every two seconds until it is done. */
-export const useQueryVideoScriptStatusSwr = (id: string | undefined, callbacks: VideoScriptStatusCallbacks) =>
+export const useQueryVideoScriptStatusSwr = (
+    id: string | undefined,
+    callbacks: VideoScriptStatusCallbacks,
+): ReadResponse<OperationData<typeof queryVideoScriptStatus>["videoScriptStatus"]> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_SCRIPT_STATUS_SWR_KEY, id ? ([id] as const) : null),
         ([name, , id]: WorkspaceReadKey<string>) =>

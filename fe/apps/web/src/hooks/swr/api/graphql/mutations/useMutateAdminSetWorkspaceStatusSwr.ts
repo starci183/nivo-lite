@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateAdminSetWorkspaceStatus } from "@/modules/api/graphql/mutations/mutation-admin-set-workspace-status"
 import type { MutateAdminSetWorkspaceStatusRequest } from "@/modules/api/graphql/mutations/mutation-admin-set-workspace-status"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the admin set workspace status mutation is triggered with. */
 interface AdminSetWorkspaceStatusArg {
@@ -13,7 +15,12 @@ interface AdminSetWorkspaceStatusArg {
 export const MUTATE_ADMIN_SET_WORKSPACE_STATUS_SWR_KEY = "MUTATE_ADMIN_SET_WORKSPACE_STATUS_SWR"
 
 /** SWR mutation for {@link mutateAdminSetWorkspaceStatus}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateAdminSetWorkspaceStatusSwr = () =>
+export const useMutateAdminSetWorkspaceStatusSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateAdminSetWorkspaceStatus>["adminSetWorkspaceStatus"],
+    Error,
+    typeof MUTATE_ADMIN_SET_WORKSPACE_STATUS_SWR_KEY,
+    AdminSetWorkspaceStatusArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_ADMIN_SET_WORKSPACE_STATUS_SWR_KEY,
         async (_key: string, { arg }: AdminSetWorkspaceStatusArg) => {

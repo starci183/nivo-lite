@@ -13,7 +13,9 @@ import type { WorkThreadsQuery } from "@/modules/api"
 /** The SWR key of {@link useQueryWorkThreadsSwr}. */
 export const QUERY_WORK_THREADS_SWR_KEY = "QUERY_WORK_THREADS_SWR"
 
-type WorkThreadsPage = ConnectionPage<WorkThreadsQuery["workThreads"]["nodes"][number]>
+type WorkThreadsNode = WorkThreadsQuery["workThreads"]["nodes"][number]
+
+type WorkThreadsPage = ConnectionPage<WorkThreadsNode>
 
 /** The cadence of the work thread rail. */
 interface WorkThreadsReadOptions {
@@ -21,7 +23,9 @@ interface WorkThreadsReadOptions {
 }
 
 /** The back end `workThreads` query: the newest threads of the active workspace. */
-export const useQueryWorkThreadsSwr = (config?: WorkThreadsReadOptions) => {
+export const useQueryWorkThreadsSwr = (
+    config?: WorkThreadsReadOptions,
+): ReturnType<typeof connectionPageView<WorkThreadsNode>> => {
     const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
     const getKey: SWRInfiniteKeyLoader<WorkThreadsPage, ConnectionPageKey | null> = (index, previous) =>
         connectionPageKey(QUERY_WORK_THREADS_SWR_KEY, workspaceId, index, previous)

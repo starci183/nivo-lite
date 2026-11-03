@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateAdminResendWorkspaceInvite } from "@/modules/api/graphql/mutations/mutation-admin-resend-workspace-invite"
 import type { MutateAdminResendWorkspaceInviteRequest } from "@/modules/api/graphql/mutations/mutation-admin-resend-workspace-invite"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the admin resend workspace invite mutation is triggered with. */
 interface AdminResendWorkspaceInviteArg {
@@ -13,7 +15,12 @@ interface AdminResendWorkspaceInviteArg {
 export const MUTATE_ADMIN_RESEND_WORKSPACE_INVITE_SWR_KEY = "MUTATE_ADMIN_RESEND_WORKSPACE_INVITE_SWR"
 
 /** SWR mutation for {@link mutateAdminResendWorkspaceInvite}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateAdminResendWorkspaceInviteSwr = () =>
+export const useMutateAdminResendWorkspaceInviteSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateAdminResendWorkspaceInvite>["adminResendWorkspaceInvite"],
+    Error,
+    typeof MUTATE_ADMIN_RESEND_WORKSPACE_INVITE_SWR_KEY,
+    AdminResendWorkspaceInviteArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_ADMIN_RESEND_WORKSPACE_INVITE_SWR_KEY,
         async (_key: string, { arg }: AdminResendWorkspaceInviteArg) => {

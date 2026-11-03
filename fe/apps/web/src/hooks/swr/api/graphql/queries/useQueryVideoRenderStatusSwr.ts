@@ -6,6 +6,7 @@ import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import { queryVideoRenderStatus } from "@/modules/api/graphql/queries/query-video-render-status"
 import type { VideoRenderStatusType } from "@/modules/api"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the videoRenderStatus query. */
 export const QUERY_VIDEO_RENDER_STATUS_SWR_KEY = "QUERY_VIDEO_RENDER_STATUS_SWR"
@@ -14,7 +15,10 @@ export const QUERY_VIDEO_RENDER_STATUS_SWR_KEY = "QUERY_VIDEO_RENDER_STATUS_SWR"
 type VideoRenderStatusCallbacks = JobStatusCallbacks<VideoRenderStatusType>
 
 /** A queued render, read every two seconds until it is done. */
-export const useQueryVideoRenderStatusSwr = (id: string | undefined, callbacks: VideoRenderStatusCallbacks) =>
+export const useQueryVideoRenderStatusSwr = (
+    id: string | undefined,
+    callbacks: VideoRenderStatusCallbacks,
+): ReadResponse<OperationData<typeof queryVideoRenderStatus>["videoRenderStatus"]> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_RENDER_STATUS_SWR_KEY, id ? ([id] as const) : null),
         ([name, , id]: WorkspaceReadKey<string>) =>

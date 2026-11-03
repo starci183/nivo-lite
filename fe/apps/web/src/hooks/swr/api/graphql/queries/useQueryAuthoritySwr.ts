@@ -4,12 +4,15 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryAuthority } from "@/modules/api/graphql/queries/query-authority"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQueryAuthoritySwr}. */
 export const QUERY_AUTHORITY_SWR_KEY = "QUERY_AUTHORITY_SWR"
 
 /** The back end `authority` query. */
-export const useQueryAuthoritySwr = (config?: SWRConfiguration) =>
+export const useQueryAuthoritySwr = (
+    config?: SWRConfiguration,
+): ReadResponse<OperationData<typeof queryAuthority>["authority"]> =>
     useSWR(
         useWorkspaceKey(QUERY_AUTHORITY_SWR_KEY, []),
         async () => {

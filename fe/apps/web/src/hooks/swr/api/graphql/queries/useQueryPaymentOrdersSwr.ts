@@ -3,12 +3,15 @@
 import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryPaymentOrders } from "@/modules/api/graphql/queries/query-payment-orders"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** Cache identity of paymentOrders. */
 export const QUERY_PAYMENT_ORDERS_SWR_KEY = "QUERY_PAYMENT_ORDERS_SWR"
 
 /** Reads the payment orders of the selected workspace. */
-export const useQueryPaymentOrdersSwr = (workspaceId: string | undefined) =>
+export const useQueryPaymentOrdersSwr = (
+    workspaceId: string | undefined,
+): ReadResponse<OperationData<typeof queryPaymentOrders>["paymentOrders"]> =>
     useSWR(argumentKey(QUERY_PAYMENT_ORDERS_SWR_KEY, workspaceId), async () => {
         const result = await queryPaymentOrders()
         if (!result.data) throw new Error("paymentOrders answered no data")

@@ -4,12 +4,19 @@ import { mutateAssignAgentWork } from "@/modules/api/graphql/mutations/mutation-
 import type { mutateAssignAgentWork as MutateAssignAgentWorkOperation } from "@/modules/api/graphql/mutations/mutation-assign-agent-work"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the assignAgentWork mutation. */
 export const MUTATE_ASSIGN_AGENT_WORK_SWR_KEY = "MUTATE_ASSIGN_AGENT_WORK_SWR"
 
 /** SWR mutation for {@link mutateAssignAgentWork}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateAssignAgentWorkSwr = () =>
+export const useMutateAssignAgentWorkSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateAssignAgentWork>["assignAgentWork"],
+    Error,
+    typeof MUTATE_ASSIGN_AGENT_WORK_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_ASSIGN_AGENT_WORK_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

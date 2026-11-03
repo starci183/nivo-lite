@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateMarkChatDelivered } from "@/modules/api/graphql/mutations/mutation-mark-chat-delivered"
 import type { MutateMarkChatDeliveredRequest } from "@/modules/api/graphql/mutations/mutation-mark-chat-delivered"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the MarkChatDelivered mutation is triggered with. */
 interface MarkChatDeliveredArg {
@@ -13,7 +15,12 @@ interface MarkChatDeliveredArg {
 export const MUTATE_MARK_CHAT_DELIVERED_SWR_KEY = "MUTATE_MARK_CHAT_DELIVERED_SWR"
 
 /** SWR mutation for {@link mutateMarkChatDelivered}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateMarkChatDeliveredSwr = () =>
+export const useMutateMarkChatDeliveredSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateMarkChatDelivered>["markChatDelivered"],
+    Error,
+    typeof MUTATE_MARK_CHAT_DELIVERED_SWR_KEY,
+    MarkChatDeliveredArg["arg"]
+> =>
     useSWRMutation(MUTATE_MARK_CHAT_DELIVERED_SWR_KEY, async (_key: string, { arg }: MarkChatDeliveredArg) => {
         const result = await mutateMarkChatDelivered({ request: arg })
         if (!result.data) throw new Error("markChatDelivered answered no data")

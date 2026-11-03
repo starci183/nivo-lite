@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSetWorkspaceAgentWork } from "@/modules/api/graphql/mutations/mutation-set-workspace-agent-work"
 import type { MutateSetWorkspaceAgentWorkRequest } from "@/modules/api/graphql/mutations/mutation-set-workspace-agent-work"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the SetWorkspaceAgentWork mutation is triggered with. */
 interface SetWorkspaceAgentWorkArg {
@@ -13,7 +15,12 @@ interface SetWorkspaceAgentWorkArg {
 export const MUTATE_SET_WORKSPACE_AGENT_WORK_SWR_KEY = "MUTATE_SET_WORKSPACE_AGENT_WORK_SWR"
 
 /** SWR mutation for {@link mutateSetWorkspaceAgentWork}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateSetWorkspaceAgentWorkSwr = () =>
+export const useMutateSetWorkspaceAgentWorkSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSetWorkspaceAgentWork>["setWorkspaceAgentWork"],
+    Error,
+    typeof MUTATE_SET_WORKSPACE_AGENT_WORK_SWR_KEY,
+    SetWorkspaceAgentWorkArg["arg"]
+> =>
     useSWRMutation(MUTATE_SET_WORKSPACE_AGENT_WORK_SWR_KEY, async (_key: string, { arg }: SetWorkspaceAgentWorkArg) => {
         const result = await mutateSetWorkspaceAgentWork({ request: arg })
         if (!result.data) throw new Error("setWorkspaceAgentWork answered no data")

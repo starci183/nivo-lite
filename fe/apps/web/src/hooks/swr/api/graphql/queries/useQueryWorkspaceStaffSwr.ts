@@ -3,12 +3,15 @@
 import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryWorkspaceStaff } from "@/modules/api/graphql/queries/query-workspace-staff"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the workspaceStaff query; mutations that change it call `mutate` with it. */
 export const QUERY_WORKSPACE_STAFF_SWR_KEY = "QUERY_WORKSPACE_STAFF_SWR"
 
 /** The active staff rows of the active workspace. */
-export const useQueryWorkspaceStaffSwr = (workspaceId: string | undefined) =>
+export const useQueryWorkspaceStaffSwr = (
+    workspaceId: string | undefined,
+): ReadResponse<OperationData<typeof queryWorkspaceStaff>["workspaceStaff"]> =>
     useSWR(argumentKey(QUERY_WORKSPACE_STAFF_SWR_KEY, workspaceId), async () => {
         const result = await queryWorkspaceStaff()
         if (!result.data) throw new Error("workspaceStaff answered no data")

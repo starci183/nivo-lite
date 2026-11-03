@@ -3,6 +3,7 @@
 import { workspaceArgumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryBillingReviewTransactions } from "@/modules/api/graphql/queries/query-billing-review-transactions"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** Cache identity of billingReviewTransactions. */
 export const QUERY_BILLING_REVIEW_TRANSACTIONS_SWR_KEY = "QUERY_BILLING_REVIEW_TRANSACTIONS_SWR"
@@ -11,7 +12,7 @@ export const QUERY_BILLING_REVIEW_TRANSACTIONS_SWR_KEY = "QUERY_BILLING_REVIEW_T
 export const useQueryBillingReviewTransactionsSwr = (
     workspaceId: string | undefined,
     orderIds: ReadonlyArray<string> | undefined,
-) =>
+): ReadResponse<OperationData<typeof queryBillingReviewTransactions>["billingReviewTransactions"]> =>
     useSWR(
         workspaceArgumentKey(QUERY_BILLING_REVIEW_TRANSACTIONS_SWR_KEY, workspaceId, orderIds),
         async ([, , requestedOrderIds]) => {

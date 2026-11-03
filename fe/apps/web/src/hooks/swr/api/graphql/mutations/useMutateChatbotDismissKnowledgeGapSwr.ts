@@ -4,12 +4,19 @@ import { mutateChatbotDismissKnowledgeGap } from "@/modules/api/graphql/mutation
 import type { mutateChatbotDismissKnowledgeGap as MutateChatbotDismissKnowledgeGapOperation } from "@/modules/api/graphql/mutations/mutation-chatbot-dismiss-knowledge-gap"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the dismissKnowledgeGap mutation. */
 export const MUTATE_CHATBOT_DISMISS_KNOWLEDGE_GAP_SWR_KEY = "MUTATE_CHATBOT_DISMISS_KNOWLEDGE_GAP_SWR"
 
 /** SWR mutation for {@link mutateChatbotDismissKnowledgeGap}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateChatbotDismissKnowledgeGapSwr = () =>
+export const useMutateChatbotDismissKnowledgeGapSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateChatbotDismissKnowledgeGap>["dismissKnowledgeGap"],
+    Error,
+    typeof MUTATE_CHATBOT_DISMISS_KNOWLEDGE_GAP_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_CHATBOT_DISMISS_KNOWLEDGE_GAP_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

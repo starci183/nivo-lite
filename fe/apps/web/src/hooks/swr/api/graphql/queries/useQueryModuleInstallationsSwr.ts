@@ -3,12 +3,15 @@
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryModuleInstallations } from "@/modules/api/graphql/queries/query-module-installations"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the installations list. */
 export const QUERY_MODULE_INSTALLATIONS_SWR_KEY = "QUERY_MODULE_INSTALLATIONS_SWR"
 
 /** The installed agents (instances) of the active workspace (the back end `moduleInstallations` query). */
-export const useQueryModuleInstallationsSwr = () => {
+export const useQueryModuleInstallationsSwr = (): ReadResponse<
+    OperationData<typeof queryModuleInstallations>["moduleInstallations"]
+> => {
     const key = useWorkspaceKey(QUERY_MODULE_INSTALLATIONS_SWR_KEY, [])
     return useSWR(key, async ({ signal }: { signal?: AbortSignal } = {}) => {
         const result = await queryModuleInstallations({ signal })

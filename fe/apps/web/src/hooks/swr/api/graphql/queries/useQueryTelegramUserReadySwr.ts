@@ -3,12 +3,15 @@
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryTelegramUserReady } from "@/modules/api/graphql/queries/query-telegram-user-ready"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the telegramUserReady query. */
 export const QUERY_TELEGRAM_USER_READY_SWR_KEY = "QUERY_TELEGRAM_USER_READY_SWR"
 
 /** Whether personal Telegram login is available on this deployment. */
-export const useQueryTelegramUserReadySwr = (options?: SWRConfiguration) =>
+export const useQueryTelegramUserReadySwr = (
+    options?: SWRConfiguration,
+): ReadResponse<OperationData<typeof queryTelegramUserReady>["telegramUserReady"]> =>
     useSWR(
         QUERY_TELEGRAM_USER_READY_SWR_KEY,
         async () => {

@@ -4,12 +4,19 @@ import { mutateCancelTelegramLogin } from "@/modules/api/graphql/mutations/mutat
 import type { mutateCancelTelegramLogin as MutateCancelTelegramLoginOperation } from "@/modules/api/graphql/mutations/mutation-cancel-telegram-login"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the cancelTelegramLogin mutation. */
 export const MUTATE_CANCEL_TELEGRAM_LOGIN_SWR_KEY = "MUTATE_CANCEL_TELEGRAM_LOGIN_SWR"
 
 /** SWR mutation for {@link mutateCancelTelegramLogin}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateCancelTelegramLoginSwr = () =>
+export const useMutateCancelTelegramLoginSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateCancelTelegramLogin>["cancelTelegramLogin"],
+    Error,
+    typeof MUTATE_CANCEL_TELEGRAM_LOGIN_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_CANCEL_TELEGRAM_LOGIN_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

@@ -3,12 +3,15 @@
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryConnectionAgents } from "@/modules/api/graphql/queries/query-connection-agents"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the connectionAgents query. */
 export const QUERY_CONNECTION_AGENTS_SWR_KEY = "QUERY_CONNECTION_AGENTS_SWR"
 
 /** The agents of the workspace the connections console names. */
-export const useQueryConnectionAgentsSwr = () =>
+export const useQueryConnectionAgentsSwr = (): ReadResponse<
+    OperationData<typeof queryConnectionAgents>["connectionAgents"]
+> =>
     useSWR(useWorkspaceKey(QUERY_CONNECTION_AGENTS_SWR_KEY, []), async ({ signal }: { signal?: AbortSignal } = {}) => {
         const result = await queryConnectionAgents({ signal })
         if (!result.data) throw new Error("connectionAgents answered no data")

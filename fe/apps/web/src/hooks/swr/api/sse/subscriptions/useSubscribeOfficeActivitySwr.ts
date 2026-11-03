@@ -9,6 +9,7 @@ import { QUERY_CHAT_MARKER_STATE_SWR_KEY } from "../../graphql/queries/useQueryC
 import { QUERY_OFFICE_CONVERSATION_UNREAD_SWR_KEY } from "../../graphql/queries/useQueryOfficeConversationUnreadSwr"
 import { QUERY_OFFICE_MESSAGES_SWR_KEY } from "../../graphql/queries/useQueryOfficeMessagesSwr"
 import { QUERY_OFFICE_ROOMS_SWR_KEY } from "../../graphql/queries/useQueryOfficeRoomsSwr"
+import type { SWRSubscriptionResponse } from "swr/subscription"
 
 /** The SWR key of the office-activity stream; the full key carries the workspace and the signed-in reader, the identity of the stream. */
 export const SUBSCRIBE_OFFICE_ACTIVITY_SWR_KEY = "SUBSCRIBE_OFFICE_ACTIVITY_SWR"
@@ -37,7 +38,7 @@ const ALL_READS: ReadonlyArray<string> = [
  * the office reads of the active workspace it makes stale, and each (re)open revalidates all of them once, which closes the gap
  * since the last frame. A refused or broken attempt is the hook's error until the next frame.
  */
-export const useSubscribeOfficeActivitySwr = () => {
+export const useSubscribeOfficeActivitySwr = (): SWRSubscriptionResponse<OfficeActivityPush, Error> => {
     const viewerId = useViewerKeyId()
     const { mutate } = useSWRConfig()
     const key = useWorkspaceKey(

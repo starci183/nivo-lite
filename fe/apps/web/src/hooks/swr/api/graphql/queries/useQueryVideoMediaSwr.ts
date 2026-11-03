@@ -4,12 +4,15 @@ import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import { answeredData } from "@/hooks/workspaceread"
 import { queryVideoMedia } from "@/modules/api/graphql/queries/query-video-media"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the videoMedia query. */
 export const QUERY_VIDEO_MEDIA_SWR_KEY = "QUERY_VIDEO_MEDIA_SWR"
 
 /** The media library of the video editor. */
-export const useQueryVideoMediaSwr = (isActive = true) =>
+export const useQueryVideoMediaSwr = (
+    isActive = true,
+): ReadResponse<OperationData<typeof queryVideoMedia>["videoMedia"]> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_MEDIA_SWR_KEY, isActive ? ([] as const) : null),
         async () => answeredData(await queryVideoMedia(), QUERY_VIDEO_MEDIA_SWR_KEY).videoMedia,

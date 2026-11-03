@@ -4,12 +4,19 @@ import { mutateRequestContentMonthPlan } from "@/modules/api/graphql/mutations/m
 import type { mutateRequestContentMonthPlan as MutateRequestContentMonthPlanOperation } from "@/modules/api/graphql/mutations/mutation-request-content-month-plan"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the requestContentMonthPlan mutation. */
 export const MUTATE_REQUEST_CONTENT_MONTH_PLAN_SWR_KEY = "MUTATE_REQUEST_CONTENT_MONTH_PLAN_SWR"
 
 /** SWR mutation for {@link mutateRequestContentMonthPlan}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateRequestContentMonthPlanSwr = () =>
+export const useMutateRequestContentMonthPlanSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRequestContentMonthPlan>["requestContentMonthPlan"],
+    Error,
+    typeof MUTATE_REQUEST_CONTENT_MONTH_PLAN_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_REQUEST_CONTENT_MONTH_PLAN_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

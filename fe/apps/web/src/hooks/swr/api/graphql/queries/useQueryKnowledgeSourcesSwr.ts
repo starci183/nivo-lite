@@ -6,6 +6,7 @@ import {
     queryKnowledgeSources,
     type QueryKnowledgeSourcesRequest,
 } from "@/modules/api/graphql/queries/query-knowledge-sources"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the documents list; mutations that change it revalidate the keys that lead with it. */
 export const QUERY_KNOWLEDGE_SOURCES_SWR_KEY = "QUERY_KNOWLEDGE_SOURCES_SWR"
@@ -26,9 +27,9 @@ const ACTIVE_STATUSES: ReadonlySet<string> = new Set(["pending", "queued", "read
  */
 export const useQueryKnowledgeSourcesSwr = (
     input?: QueryKnowledgeSourcesRequest,
-    pollMs = ACTIVE_POLL_MS,
+    pollMs: number = ACTIVE_POLL_MS,
     enabled = true,
-) => {
+): ReadResponse<OperationData<typeof queryKnowledgeSources>["knowledgeSources"]> => {
     const key = useWorkspaceKey(
         QUERY_KNOWLEDGE_SOURCES_SWR_KEY,
         [input?.module ?? null, input?.origin ?? null],

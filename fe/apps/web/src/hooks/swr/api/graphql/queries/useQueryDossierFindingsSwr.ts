@@ -16,7 +16,9 @@ export const QUERY_DOSSIER_FINDINGS_SWR_KEY = "QUERY_DOSSIER_FINDINGS_SWR"
 /** What narrows the findings read: the request without its paging. */
 export type DossierFindingsFilter = Omit<QueryDossierFindingsRequest, "first" | "after">
 
-type DossierFindingsPage = ConnectionPage<DossierFindingsQuery["dossierFindings"]["nodes"][number]>
+type DossierFindingsNode = DossierFindingsQuery["dossierFindings"]["nodes"][number]
+
+type DossierFindingsPage = ConnectionPage<DossierFindingsNode>
 
 /** The identity of one page: its name, workspace, position and the filter it answers. */
 type DossierFindingsPageKey = readonly [name: string, workspaceId: string, after: string | null, filter: string]
@@ -29,7 +31,7 @@ export const useQueryDossierFindingsSwr = (
     workspaceId: string | undefined,
     filter: DossierFindingsFilter,
     revision = "",
-) => {
+): ReturnType<typeof connectionPageView<DossierFindingsNode>> => {
     const filterKey = JSON.stringify([filter, revision])
     const getKey: SWRInfiniteKeyLoader<DossierFindingsPage, DossierFindingsPageKey | null> = (index, previous) => {
         const page = connectionPageKey(QUERY_DOSSIER_FINDINGS_SWR_KEY, workspaceId, index, previous)

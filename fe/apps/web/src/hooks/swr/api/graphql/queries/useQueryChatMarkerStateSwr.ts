@@ -6,6 +6,7 @@ import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import type { ChatMarkerWire } from "@/modules/office"
 import { queryChatMarkerState } from "@/modules/api/graphql/queries/query-chat-marker-state"
 import type { QueryChatMarkerStateRequest } from "@/modules/api/graphql/queries/query-chat-marker-state"
+import type { ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQueryChatMarkerStateSwr}. */
 export const QUERY_CHAT_MARKER_STATE_SWR_KEY = "QUERY_CHAT_MARKER_STATE_SWR"
@@ -20,7 +21,7 @@ interface ChatMarkerStateAnswer {
 export const useQueryChatMarkerStateSwr = (
     targets: ReadonlyArray<QueryChatMarkerStateRequest>,
     config?: SWRConfiguration<ReadonlyArray<ChatMarkerStateAnswer>>,
-) =>
+): ReadResponse<ReadonlyArray<ChatMarkerStateAnswer>> =>
     useSWR(
         useWorkspaceKey(QUERY_CHAT_MARKER_STATE_SWR_KEY, [JSON.stringify(targets)]),
         async (): Promise<ReadonlyArray<ChatMarkerStateAnswer>> =>

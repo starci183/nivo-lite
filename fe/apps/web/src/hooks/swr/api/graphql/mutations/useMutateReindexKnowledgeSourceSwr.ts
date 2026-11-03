@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateReindexKnowledgeSource } from "@/modules/api/graphql/mutations/mutation-reindex-knowledge-source"
 import type { MutateReindexKnowledgeSourceRequest } from "@/modules/api/graphql/mutations/mutation-reindex-knowledge-source"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the ReindexKnowledgeSource mutation is triggered with. */
 interface ReindexKnowledgeSourceArg {
@@ -13,7 +15,12 @@ interface ReindexKnowledgeSourceArg {
 export const MUTATE_REINDEX_KNOWLEDGE_SOURCE_SWR_KEY = "MUTATE_REINDEX_KNOWLEDGE_SOURCE_SWR"
 
 /** SWR mutation for {@link mutateReindexKnowledgeSource}: Reads a document again and indexes it from scratch. `trigger(input)` rejects with the back end failure. */
-export const useMutateReindexKnowledgeSourceSwr = () =>
+export const useMutateReindexKnowledgeSourceSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateReindexKnowledgeSource>["reindexKnowledgeSource"],
+    Error,
+    typeof MUTATE_REINDEX_KNOWLEDGE_SOURCE_SWR_KEY,
+    ReindexKnowledgeSourceArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_REINDEX_KNOWLEDGE_SOURCE_SWR_KEY,
         async (_key: string, { arg }: ReindexKnowledgeSourceArg) => {

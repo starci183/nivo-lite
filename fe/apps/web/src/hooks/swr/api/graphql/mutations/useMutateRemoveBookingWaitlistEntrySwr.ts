@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRemoveBookingWaitlistEntry } from "@/modules/api/graphql/mutations/mutation-remove-booking-waitlist-entry"
 import type { MutateRemoveBookingWaitlistEntryRequest } from "@/modules/api/graphql/mutations/types/remove-booking-waitlist-entry"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the `removeBookingWaitlistEntry` mutation. */
 export const MUTATE_REMOVE_BOOKING_WAITLIST_ENTRY_SWR_KEY = "MUTATE_REMOVE_BOOKING_WAITLIST_ENTRY_SWR"
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** Removes one entry of the waiting list. */
-export const useMutateRemoveBookingWaitlistEntrySwr = () =>
+export const useMutateRemoveBookingWaitlistEntrySwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRemoveBookingWaitlistEntry>["removeBookingWaitlistEntry"],
+    Error,
+    typeof MUTATE_REMOVE_BOOKING_WAITLIST_ENTRY_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(MUTATE_REMOVE_BOOKING_WAITLIST_ENTRY_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateRemoveBookingWaitlistEntry({ request: arg })
         if (!result.data) throw new Error("removeBookingWaitlistEntry answered no data")

@@ -7,6 +7,7 @@ import { QUERY_CHAT_MARKER_STATE_SWR_KEY } from "../../graphql/queries/useQueryC
 import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
 import { streamChatTyping } from "@/modules/api/sse/office/stream-chat-typing"
 import type { ChatTypingPush, ChatTypingTarget } from "@/modules/api/sse/office/stream-chat-typing"
+import type { SWRSubscriptionResponse } from "swr/subscription"
 
 /** The signal payload of one pushed frame, as `typingSignalOf` reads it: the sender, whether they type, and the deadline. */
 export interface ChatTypingSignalPayload {
@@ -46,7 +47,7 @@ type ChatTypingStreamKey = readonly [string, string, string | null, string] | nu
 export const useSubscribeChatTypingSwr = (
     target: ChatTypingTarget,
     onSignal: (payload: ChatTypingSignalPayload) => void,
-) => {
+): SWRSubscriptionResponse<ChatTypingPush, Error> => {
     const userId = useViewerKeyId()
     const key = useWorkspaceKey(
         SUBSCRIBE_CHAT_TYPING_SWR_KEY,

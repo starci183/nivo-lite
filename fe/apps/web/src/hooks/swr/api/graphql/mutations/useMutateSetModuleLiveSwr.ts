@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSetModuleLive } from "@/modules/api/graphql/mutations/mutation-set-module-live"
 import type { MutateSetModuleLiveRequest } from "@/modules/api/graphql/mutations/mutation-set-module-live"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the SetModuleLive mutation is triggered with. */
 interface SetModuleLiveArg {
@@ -13,7 +15,12 @@ interface SetModuleLiveArg {
 export const MUTATE_SET_MODULE_LIVE_SWR_KEY = "MUTATE_SET_MODULE_LIVE_SWR"
 
 /** SWR mutation for {@link mutateSetModuleLive}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateSetModuleLiveSwr = () =>
+export const useMutateSetModuleLiveSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSetModuleLive>["setModuleLive"],
+    Error,
+    typeof MUTATE_SET_MODULE_LIVE_SWR_KEY,
+    SetModuleLiveArg["arg"]
+> =>
     useSWRMutation(MUTATE_SET_MODULE_LIVE_SWR_KEY, async (_key: string, { arg }: SetModuleLiveArg) => {
         const result = await mutateSetModuleLive({ request: arg })
         if (!result.data) throw new Error("setModuleLive answered no data")

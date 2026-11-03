@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveDatabaseConnection } from "@/modules/api/graphql/mutations/mutation-save-database-connection"
 import type { MutateSaveDatabaseConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-database-connection"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the saveDatabaseConnection mutation is triggered with. */
 interface SaveDatabaseConnectionArg {
@@ -13,7 +15,12 @@ interface SaveDatabaseConnectionArg {
 export const MUTATE_SAVE_DATABASE_CONNECTION_SWR_KEY = "MUTATE_SAVE_DATABASE_CONNECTION_SWR"
 
 /** SWR mutation for {@link mutateSaveDatabaseConnection}: `trigger(input)` answers the connection id and rejects with the back end failure. */
-export const useMutateSaveDatabaseConnectionSwr = () =>
+export const useMutateSaveDatabaseConnectionSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveDatabaseConnection>["saveDatabaseConnection"],
+    Error,
+    typeof MUTATE_SAVE_DATABASE_CONNECTION_SWR_KEY,
+    SaveDatabaseConnectionArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SAVE_DATABASE_CONNECTION_SWR_KEY,
         async (_key: string, { arg }: SaveDatabaseConnectionArg) => {

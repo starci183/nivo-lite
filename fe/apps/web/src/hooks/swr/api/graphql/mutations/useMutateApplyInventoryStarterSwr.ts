@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateApplyInventoryStarter } from "@/modules/api/graphql/mutations/mutation-apply-inventory-starter"
 import type { MutateApplyInventoryStarterRequest } from "@/modules/api/graphql/mutations/mutation-apply-inventory-starter"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the applyInventoryStarter mutation is triggered with. */
 interface ApplyInventoryStarterArg {
@@ -13,7 +15,12 @@ interface ApplyInventoryStarterArg {
 export const MUTATE_APPLY_INVENTORY_STARTER_SWR_KEY = "MUTATE_APPLY_INVENTORY_STARTER_SWR"
 
 /** SWR mutation for {@link mutateApplyInventoryStarter}: `trigger(request)` answers `applyInventoryStarter` and rejects with the back end failure. */
-export const useMutateApplyInventoryStarterSwr = () =>
+export const useMutateApplyInventoryStarterSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateApplyInventoryStarter>["applyInventoryStarter"],
+    Error,
+    typeof MUTATE_APPLY_INVENTORY_STARTER_SWR_KEY,
+    ApplyInventoryStarterArg["arg"]
+> =>
     useSWRMutation(MUTATE_APPLY_INVENTORY_STARTER_SWR_KEY, async (_key: string, { arg }: ApplyInventoryStarterArg) => {
         const result = await mutateApplyInventoryStarter({ request: arg })
         if (!result.data) throw new Error("applyInventoryStarter answered no data")

@@ -5,6 +5,7 @@ import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { StatusPollOptions } from "@/hooks/reuseables"
 import { queryLeadGenCommentStatus } from "@/modules/api/graphql/queries/query-lead-gen-comment-status"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the leadGenCommentStatus query. */
 export const QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY = "QUERY_LEAD_GEN_COMMENT_STATUS_SWR"
@@ -17,7 +18,7 @@ export const useQueryLeadGenCommentStatusSwr = (
     workspaceId: string | undefined,
     workItemId: string | undefined,
     options: StatusPollOptions = {},
-) =>
+): ReadResponse<OperationData<typeof queryLeadGenCommentStatus>["leadGenCommentStatus"]> =>
     useSWR(
         workspaceArgumentKey(QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, workspaceId, workItemId),
         async ([, , id]: WorkspaceReadKey<string>) => {

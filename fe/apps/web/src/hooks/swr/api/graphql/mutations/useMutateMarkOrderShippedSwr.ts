@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateMarkOrderShipped } from "@/modules/api/graphql/mutations/mutation-mark-order-shipped"
 import type { MutateMarkOrderShippedRequest } from "@/modules/api/graphql/mutations/mutation-mark-order-shipped"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the markOrderShipped mutation is triggered with. */
 interface MarkOrderShippedArg {
@@ -13,7 +15,12 @@ interface MarkOrderShippedArg {
 export const MUTATE_MARK_ORDER_SHIPPED_SWR_KEY = "MUTATE_MARK_ORDER_SHIPPED_SWR"
 
 /** SWR mutation for {@link mutateMarkOrderShipped}: `trigger(request)` answers the result and rejects with the back end failure. */
-export const useMutateMarkOrderShippedSwr = () =>
+export const useMutateMarkOrderShippedSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateMarkOrderShipped>["markOrderShipped"],
+    Error,
+    typeof MUTATE_MARK_ORDER_SHIPPED_SWR_KEY,
+    MarkOrderShippedArg["arg"]
+> =>
     useSWRMutation(MUTATE_MARK_ORDER_SHIPPED_SWR_KEY, async (_key: string, { arg }: MarkOrderShippedArg) => {
         const result = await mutateMarkOrderShipped({ request: arg })
         if (!result.data) throw new Error("markOrderShipped answered no data")
