@@ -20,13 +20,18 @@ import { digestOf } from "./password.policy"
 import { authDoors } from "./persistence/auth-doors.port"
 import { IdentityRefreshTokenEntity } from "./persistence/entities"
 
-/** A rotated token presented again this soon after its rotation is a racing tab, not a theft: answered with an access token only (no rotation, no cookie change) and the session stays. */
+/**
+ * A rotated token presented again this soon after its rotation is a racing request or a browser that never received the successor (the
+ * response was cut by a navigation): it gets a successor of its own, set as the cookie, so the browser never keeps a spent token. Later,
+ * it is a replay and ends the session.
+ */
 const REUSE_GRACE_MS = 30_000
+/** How many successors one rotated token may obtain within the grace window; one more is a replay and ends the session. */
+const RACED_SUCCESSORS_MAX = 3
 
 type Rotation =
     | { readonly kind: "rotated"; readonly row: IdentityRefreshTokenEntity; readonly next: string }
     | { readonly kind: "invalid" }
-    | { readonly kind: "raced"; readonly row: IdentityRefreshTokenEntity }
     | { readonly kind: "reused"; readonly sessionId: string }
 
 @Injectable()
@@ -67,8 +72,8 @@ export class IdentitySessionsService {
 
     /**
      * Exchanges a refresh token for a new pair; the presented token is spent. Throws when it is unknown, expired, or rotated long ago (reuse ends the
-     * session). A token a sibling request rotated within the grace window answers an access token marked `cookieKept`, so the
-     * caller leaves the cookie alone: the sibling already wrote the successor.
+     * session). A token rotated within the grace window gets a successor of its own in the same session (its cookie is set: the response of the
+     * first rotation may never have reached the browser), at most RACED_SUCCESSORS_MAX times; one more replay is reuse.
      */
     async refresh(presented: string): Promise<SessionTokens> {
         if (presented === "") throw new IdentityError({ code: IdentityErrorCode.RefreshInvalid })
@@ -81,11 +86,13 @@ export class IdentitySessionsService {
             })
             if (row === null || row.expiresAt <= now) return { kind: "invalid" }
             if (row.usedAt !== null) {
-                return now.getTime() - row.usedAt.getTime() <= REUSE_GRACE_MS
-                    ? { kind: "raced", row }
-                    : { kind: "reused", sessionId: row.sessionId }
+                const raced = now.getTime() - row.usedAt.getTime() <= REUSE_GRACE_MS
+                if (!raced || row.racedCount >= RACED_SUCCESSORS_MAX)
+                    return { kind: "reused", sessionId: row.sessionId }
+                await scoped.update(IdentityRefreshTokenEntity, { id: row.id }, { racedCount: row.racedCount + 1 })
+            } else {
+                await scoped.update(IdentityRefreshTokenEntity, { id: row.id }, { usedAt: now })
             }
-            await scoped.update(IdentityRefreshTokenEntity, { id: row.id }, { usedAt: now })
             await scoped.insert(IdentityRefreshTokenEntity, {
                 id: this.ids.next(),
                 sessionId: row.sessionId,
@@ -102,7 +109,6 @@ export class IdentitySessionsService {
             throw new IdentityError({ code: IdentityErrorCode.RefreshReused })
         }
         if (rotation.kind === "invalid") throw new IdentityError({ code: IdentityErrorCode.RefreshInvalid })
-        if (rotation.kind === "raced") return this.accessOf(rotation.row, presented, now)
         const user = await authDoors.userById(this.entityManager, rotation.row.userId)
         if (user === undefined || user.disabled || user.email === null) {
             await authDoors.closeSession(this.entityManager, rotation.row.sessionId)
@@ -138,8 +144,7 @@ export class IdentitySessionsService {
             await authDoors.closeSession(this.entityManager, row.sessionId)
             throw new IdentityError({ code: IdentityErrorCode.AccountDisabled })
         }
-        const tokens = await this.tokensFor({ userId: user.id, email: user.email }, row.sessionId, presented, now)
-        return { ...tokens, cookieKept: true }
+        return this.tokensFor({ userId: user.id, email: user.email }, row.sessionId, presented, now)
     }
 
     /** The public key document access tokens verify against. */

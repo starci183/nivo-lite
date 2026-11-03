@@ -36,7 +36,7 @@ const OPTIONS: IdentityAuthOptions = {
 const SUBJECT = { userId: "u1", email: "an@example.test" }
 const DEVICE = { userAgent: "Mozilla", ip: "203.0.113.9" }
 
-const tokenRow = (usedAt: string | null, expiresAt = "2026-11-09T11:00:00.000Z") =>
+const tokenRow = (usedAt: string | null, expiresAt = "2026-11-09T11:00:00.000Z", racedCount = 0) =>
     builder<IdentityRefreshTokenEntity>({
         id: "t1",
         sessionId: "s1",
@@ -45,6 +45,7 @@ const tokenRow = (usedAt: string | null, expiresAt = "2026-11-09T11:00:00.000Z")
         createdAt: new Date("2026-11-09T08:00:00.000Z"),
         expiresAt: new Date(expiresAt),
         usedAt: usedAt === null ? null : new Date(usedAt),
+        racedCount,
         updatedAt: new Date("2026-11-09T08:00:00.000Z"),
     })()
 
@@ -175,31 +176,72 @@ describe("IdentitySessionsService / refresh", () => {
 })
 
 describe("IdentitySessionsService / refresh racing a sibling", () => {
-    it("answers a racing tab that replays the token within seconds of its rotation, without rotating again or ending the session", async () => {
-        const { service, em } = await build([[USER_BY_ID, person()]], tokenRow("2026-11-09T09:59:55.000Z"))
+    it("gives a replay within the grace window a successor of its own and sets it as the cookie", async () => {
+        const { service, em } = await build(
+            [
+                [USER_BY_ID, person()],
+                [TOUCH_SESSION, [{ be_auth_touch_session: true }]],
+            ],
+            tokenRow("2026-11-09T09:59:55.000Z"),
+        )
 
         const raced = await service.refresh("raced-token")
 
-        expect(raced).toMatchObject({ accessToken: "access.jwt", cookieKept: true })
-        expect(em.update).not.toHaveBeenCalled()
-        expect(em.insert).not.toHaveBeenCalled()
+        expect(raced.cookieToken).not.toBe("raced-token")
+        expect(em.update).toHaveBeenCalledWith(IdentityRefreshTokenEntity, { id: "t1" }, { racedCount: 1 })
+        expect(em.insert).toHaveBeenCalledWith(
+            IdentityRefreshTokenEntity,
+            expect.objectContaining({ tokenHash: digestOf(raced.cookieToken), sessionId: "s1", userId: "u1" }),
+        )
         expect(em.query).not.toHaveBeenCalledWith(CLOSE_SESSION, expect.anything())
     })
 
-    it("answers every one of several parallel refreshes of a token rotated moments ago and keeps refusing it once the grace is over", async () => {
-        const { service, em } = await build([[USER_BY_ID, person()]], tokenRow("2026-11-09T09:59:58.000Z"))
+    it("leaves the successor of the first rotation alone, so whichever cookie the browser kept still refreshes", async () => {
+        const { service, em } = await build(
+            [
+                [USER_BY_ID, person()],
+                [TOUCH_SESSION, [{ be_auth_touch_session: true }]],
+            ],
+            tokenRow("2026-11-09T09:59:55.000Z"),
+        )
 
-        const answers = await Promise.all(Array.from({ length: 8 }, () => service.refresh("raced-token")))
+        await service.refresh("raced-token")
 
-        expect(answers.every((answer) => answer.cookieKept === true)).toBe(true)
-        expect(em.update).not.toHaveBeenCalled()
-        const late = await build(
+        expect(em.update).toHaveBeenCalledTimes(1)
+        expect(em.update).toHaveBeenCalledWith(IdentityRefreshTokenEntity, { id: "t1" }, expect.anything())
+        expect(em.delete).toHaveBeenCalledWith(IdentityRefreshTokenEntity, expect.objectContaining({ userId: "u1" }))
+    })
+
+    it("treats a replay after the grace window as reuse and ends the session", async () => {
+        const { service, em } = await build(
             [[CLOSE_SESSION, [{ be_auth_close_session: true }]]],
             tokenRow("2026-11-09T09:59:00.000Z"),
         )
-        await expect(late.service.refresh("raced-token")).rejects.toMatchObject({
-            code: IdentityErrorCode.RefreshReused,
-        })
+
+        await expect(service.refresh("raced-token")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshReused })
+        expect(em.insert).not.toHaveBeenCalled()
+    })
+
+    it("treats a fourth replay within the grace window as reuse, so a stolen token cannot keep minting successors", async () => {
+        const { service, em } = await build(
+            [[CLOSE_SESSION, [{ be_auth_close_session: true }]]],
+            tokenRow("2026-11-09T09:59:55.000Z", "2026-11-09T11:00:00.000Z", 3),
+        )
+
+        await expect(service.refresh("raced-token")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshReused })
+        expect(em.insert).not.toHaveBeenCalled()
+        expect(em.update).not.toHaveBeenCalled()
+    })
+
+    it("revokes every successor of the session when reuse is detected (the session and its tokens are closed together)", async () => {
+        const { service, em, logger } = await build(
+            [[CLOSE_SESSION, [{ be_auth_close_session: true }]]],
+            tokenRow("2026-11-09T09:59:55.000Z", "2026-11-09T11:00:00.000Z", 3),
+        )
+
+        await expect(service.refresh("raced-token")).rejects.toMatchObject({ code: IdentityErrorCode.RefreshReused })
+        expect(em.query).toHaveBeenCalledWith(CLOSE_SESSION, ["s1"])
+        expect(logger.warn).toHaveBeenCalledTimes(1)
     })
 })
 
