@@ -85,7 +85,7 @@ components:
     role: service
     image: axllent/mailpit:v1.31.6@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
     compose: infra/swarm/stack.yaml
-    purpose: The development mail catcher (Mailpit, the harness lite sink): the api sends sign-in and invitation mail to nivo-mail:1025 with no login and no encryption, and the inbox is read at http://mail.localhost. Development only, memory only, never in production.
+    purpose: The development mail catcher (Mailpit, the harness lite sink); the api sends sign-in and invitation mail to nivo-mail:1025 with no login and no encryption, and the inbox is read at http://mail.localhost. Development only, memory only, never in production.
     required: false
   db:
     role: stateful

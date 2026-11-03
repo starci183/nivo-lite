@@ -1,5 +1,5 @@
 import { createEventStream, type EventStream } from "@starci/event-stream"
-import { renewSessionToken, sessionAccessToken } from "@/modules/auth"
+import { renewSessionToken, sessionAccessToken } from "@/modules/auth-session"
 
 /** Where a stream reports one failed attempt, as one line (the app's observability, when it wires one). */
 export type StreamReporter = (line: string) => void
