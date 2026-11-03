@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { listField, numberField, readJsonObject, textField } from "./inbound-body.policy"
+import { epochMillisField, listField, numberField, readJsonObject, textField } from "./inbound-body.policy"
 
 const textLike = (text: string): unknown => expect.stringContaining(text)
 
@@ -7,7 +7,7 @@ const SUBJECT = Symbol("inbound-body.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { readJsonObject, textField, numberField, listField } }],
+        providers: [{ provide: SUBJECT, useValue: { readJsonObject, textField, numberField, listField, epochMillisField } }],
     }).compile()
     return moduleRef.get<typeof import("./inbound-body.policy")>(SUBJECT)
 }
@@ -71,6 +71,25 @@ describe("inbound-body policy", () => {
             expect(subject.listField({ items: "x" }, "items")).toEqual([])
             expect(subject.listField("x", "items")).toEqual([])
             expect(subject.listField(undefined, "items")).toEqual([])
+        })
+    })
+
+    describe("epochMillisField", () => {
+        it("reads a time given as a number or as the digits of one", async () => {
+            const subject = await buildSubject()
+
+            expect(subject.epochMillisField({ at: 1_762_217_400_123 }, "at")).toBe(1_762_217_400_123)
+            expect(subject.epochMillisField({ at: "1762217400123" }, "at")).toBe(1_762_217_400_123)
+        })
+
+        it("is null for anything that is not a positive time", async () => {
+            const subject = await buildSubject()
+
+            for (const at of ["", "  ", "soon", 0, -1, Number.NaN, Number.POSITIVE_INFINITY, null, [], {}]) {
+                expect(subject.epochMillisField({ at }, "at")).toBeNull()
+            }
+            expect(subject.epochMillisField({}, "at")).toBeNull()
+            expect(subject.epochMillisField("x", "at")).toBeNull()
         })
     })
 })

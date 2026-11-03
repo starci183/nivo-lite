@@ -486,6 +486,7 @@ const zaloMessage = (patch: Record<string, unknown> = {}) => ({
     messageId: "m-1",
     text: "Hello",
     attachments: [],
+    sentAt: null,
     ...patch,
 })
 
@@ -577,7 +578,46 @@ const registerZaloAttachments = () => {
     })
 }
 
+const registerZaloEventTime = () => {
+    const BURST_AT = new Date(NOW).getTime() - 60_000
+
+    it("stores a message at the time the event says it was sent, with a stable tie-break from its id", async () => {
+        const manager = mockEntityManager()
+        const { service, messages } = await build({}, [FRONT_AGENT])
+
+        await service.acceptZalo(CONNECTION, zaloMessage({ sentAt: BURST_AT }), manager)
+
+        expect(messages.storeCustomer).toHaveBeenCalledWith("ws-1", "conv-1", "Hello", manager, null, {
+            at: new Date(BURST_AT),
+            tieMicros: expect.any(Number),
+        })
+        const stamp = messages.storeCustomer.mock.calls[0]?.[5]
+        expect(stamp?.tieMicros).toBeGreaterThanOrEqual(0)
+        expect(stamp?.tieMicros).toBeLessThan(1000)
+    })
+
+    it("never stores a message in the future", async () => {
+        const manager = mockEntityManager()
+        const { service, messages } = await build({}, [FRONT_AGENT])
+
+        await service.acceptZalo(CONNECTION, zaloMessage({ sentAt: new Date(NOW).getTime() + 86_400_000 }), manager)
+
+        expect(messages.storeCustomer.mock.calls[0]?.[5]?.at).toEqual(new Date(NOW))
+    })
+
+    it("stores a message at the time it arrived when the event carries no time", async () => {
+        const manager = mockEntityManager()
+        const { service, messages } = await build({}, [FRONT_AGENT])
+
+        await service.acceptZalo(CONNECTION, zaloMessage({ sentAt: null }), manager)
+
+        expect(messages.storeCustomer).toHaveBeenCalledWith("ws-1", "conv-1", "Hello", manager)
+    })
+}
+
 describe("ConversationsService", () => {
+    describe("acceptZaloEventTime", registerZaloEventTime)
+
     describe("acceptZaloAttachments", registerZaloAttachments)
 
     describe("acceptTelegram", registerTelegramRouting)

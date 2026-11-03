@@ -6,7 +6,7 @@ import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { InboundFilesService } from "@modules/domain/chat-files"
 import type { DownloadedChatFile } from "@modules/domain/chat-files"
 import type { ConversationRef } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentMessagesService, messageStampOf } from "@modules/domain/agent-messages"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { IntakeConnection } from "@modules/domain/connections"
@@ -38,6 +38,8 @@ interface Hearing extends Meeting {
     readonly channelEventId: string
     /** The pictures and files that came with the message, already read. */
     readonly files?: ReadonlyArray<DownloadedChatFile>
+    /** When the channel says the customer sent it, in epoch milliseconds; absent or null stores it at the time it arrived. */
+    readonly sentAt?: number | null
 }
 
 @Injectable()
@@ -148,6 +150,7 @@ export class ConversationsService {
                 text: words,
                 channelEventId: `zalo:${inbound.messageId}`,
                 files,
+                sentAt: inbound.sentAt,
             },
             manager,
         )
@@ -201,6 +204,14 @@ export class ConversationsService {
         )
     }
 
+    /** Stores the customer's message at the time the channel says it was sent (never in the future), or at the time it arrived when the channel gave none. */
+    private storeCustomer(hearing: Hearing, conversationId: string, manager: EntityManager): Promise<string> {
+        const { workspaceId, text, sentAt, channelEventId } = hearing
+        if (sentAt === undefined || sentAt === null) return this.messages.storeCustomer(workspaceId, conversationId, text, manager)
+        const stamp = messageStampOf(sentAt, this.clock.now().getTime(), channelEventId)
+        return this.messages.storeCustomer(workspaceId, conversationId, text, manager, null, stamp)
+    }
+
     /** What the customer wrote as the turn reads it: the text, or a label for the picture or file with its caption after it. */
     private wordsOf(inbound: ZaloInbound): string {
         const first = inbound.attachments[0]
@@ -211,7 +222,7 @@ export class ConversationsService {
 
     private async hear(hearing: Hearing, manager: EntityManager): Promise<void> {
         const { conversation, created } = await this.meet(hearing, manager)
-        const messageId = await this.messages.storeCustomer(hearing.workspaceId, conversation.id, hearing.text, manager)
+        const messageId = await this.storeCustomer(hearing, conversation.id, manager)
         const scope = { workspaceId: hearing.workspaceId, conversationId: conversation.id }
         await eachInOrder(hearing.files ?? [], (file) =>
             this.inboundFiles.keep(scope, file, hearing.channelEventId, messageId, manager).then(() => undefined),

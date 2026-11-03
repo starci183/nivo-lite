@@ -13,6 +13,7 @@ import { Test } from "@nestjs/testing"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { ChatActivityService } from "@modules/domain/chat-activity"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { AgentMessagesService } from "./agent-messages.service"
 
 import { In, MoreThanOrEqual, Not } from "typeorm"
@@ -195,6 +196,45 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
             ["ws-1", "conversation:conv-1", "user-1", inside],
             ["ws-1", "conversation:conv-1", null, inside],
         ])
+    })
+
+    it("inserts the message at the time the channel gave it, with the tie-break, through the normal insert", async () => {
+        const { service, activity } = await build()
+        const { em: inside, fakes } = withStatements(mockEntityManager(), stored("m-1"))
+        const at = new Date("2026-11-04T00:50:00.000Z")
+
+        await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside, "user-1", { at, tieMicros: 417 })).resolves.toBe("m-1")
+
+        const values = evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])
+        expect(values).toEqual({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            role: "user",
+            body: "Hello",
+            authorUserId: "user-1",
+            createdAt: "CAST(:stampAt AS timestamptz) + make_interval(secs => CAST(:stampTie AS double precision) / 1000000)",
+        })
+        expect(fakes[0]?.callsOf("setParameters")).toEqual([[{ stampAt: at, stampTie: 417 }]])
+        expect(inside.update).not.toHaveBeenCalled()
+        expect(activity.message).toHaveBeenCalledWith("ws-1", "conversation:conv-1", "user-1", inside)
+    })
+
+    it("fails loudly when the stamped insert answers no row", async () => {
+        const { service } = await build()
+        const { em: inside } = withStatements(mockEntityManager(), stored())
+
+        await expect(
+            service.storeCustomer("ws-1", "conv-1", "Hello", inside, null, { at: new Date(), tieMicros: 1 }),
+        ).rejects.toMatchObject({ code: AgentMessagesErrorCode.NotStored })
+    })
+
+    it("leaves the time of arrival alone when the channel gave none", async () => {
+        const { service } = await build()
+        const { em: inside } = withStatements(mockEntityManager(), stored("m-1"))
+
+        await service.storeCustomer("ws-1", "conv-1", "Hello", inside)
+
+        expect(inside.query).not.toHaveBeenCalled()
     })
 
     it("fail loudly when the insert answers no row", async () => {

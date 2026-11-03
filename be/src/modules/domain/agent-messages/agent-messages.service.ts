@@ -18,6 +18,7 @@ import type {
     StoredReply,
     StoredReplyBody,
     TranscriptLine,
+    MessageStamp,
 } from "./agent-messages.contracts"
 import type { ConversationMessage, ConversationMessagesQuery } from "./conversation-messages.contracts"
 import { AgentMessagesError, AgentMessagesErrorCode } from "./errors/agent-messages.error"
@@ -43,6 +44,13 @@ const isStoredMessage = (value: unknown): value is { readonly id: string } =>
 /** The ids a write answered. */
 const returnedIds = (raw: unknown): ReadonlyArray<string> =>
     Array.isArray(raw) ? raw.filter(isStoredMessage).map((row) => row.id) : []
+
+/**
+ * The time a stamped message is inserted at: the time the channel gave plus the tie-break microseconds, worked out by the database, because a JS date
+ * holds no microseconds. The two values travel as parameters (`stampAt`, `stampTie`).
+ */
+const STAMPED_AT = (): string =>
+    "CAST(:stampAt AS timestamptz) + make_interval(secs => CAST(:stampTie AS double precision) / 1000000)"
 
 @Injectable()
 /** The messages of a conversation between a customer and an agent; the only writer of agent_messages. */
@@ -145,16 +153,20 @@ export class AgentMessagesService {
         return this.storeHumanMessage(workspaceId, conversationId, body, authorName, manager, null, authorUserId)
     }
 
-    /** Stores what the customer wrote and answers the message id. */
+    /**
+     * Stores what the customer wrote and answers the message id. A channel that timed the message itself passes `stamp`, so the row is inserted at
+     * the time it happened, not the time it was stored: an imported or polled burst keeps its order. Nothing is updated after the insert.
+     */
     async storeCustomer(
         workspaceId: string,
         conversationId: string,
         body: string,
         manager: EntityManager,
         authorUserId: AuthorUserId = null,
+        stamp?: MessageStamp,
     ): Promise<string> {
         const id = this.required(
-            await this.insert(manager, { workspaceId, conversationId, role: "user", body, authorUserId }),
+            await this.insert(manager, { workspaceId, conversationId, role: "user", body, authorUserId }, false, stamp),
         )
         await this.announce(workspaceId, conversationId, authorUserId, manager)
         return id
@@ -349,8 +361,11 @@ export class AgentMessagesService {
         manager: EntityManager,
         values: Partial<AgentMessageEntity>,
         orIgnore = false,
+        stamp?: MessageStamp,
     ): Promise<ReadonlyArray<string>> {
-        const insert = manager.createQueryBuilder(AgentMessageEntity, "am").insert().values(values)
+        const timed = stamp === undefined ? values : { ...values, createdAt: STAMPED_AT }
+        const base = manager.createQueryBuilder(AgentMessageEntity, "am").insert().values(timed)
+        const insert = stamp === undefined ? base : base.setParameters({ stampAt: stamp.at, stampTie: stamp.tieMicros })
         const written = await (orIgnore ? insert.orIgnore() : insert).returning("id").execute()
         return returnedIds(written.raw)
     }

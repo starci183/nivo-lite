@@ -27,7 +27,7 @@ describe("readZaloEvent", () => {
 
         expect(subject.readZaloEvent(event())).toEqual({
             kind: "ok",
-            value: { appId: "app-1", userId: "user-1", messageId: "m-1", text: "Hello", attachments: [] },
+            value: { appId: "app-1", userId: "user-1", messageId: "m-1", text: "Hello", attachments: [], sentAt: null },
         })
     })
 
@@ -69,6 +69,24 @@ const imageEvent = (message: Record<string, unknown> = {}, patch: Record<string,
         ...patch,
     })
 
+describe("readZaloEvent the time of the event", () => {
+    it("reads the timestamp Zalo sends as digits or as a number", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.readZaloEvent(event({ timestamp: "1762217400123" }))).toMatchObject({ value: { sentAt: 1_762_217_400_123 } })
+        expect(subject.readZaloEvent(event({ timestamp: 1_762_217_400_123 }))).toMatchObject({ value: { sentAt: 1_762_217_400_123 } })
+        expect(subject.readZaloEvent(imageEvent({}, { timestamp: "1762217400123" }))).toMatchObject({ value: { sentAt: 1_762_217_400_123 } })
+    })
+
+    it("has no time when the event carries none that is usable", async () => {
+        const subject = await buildSubject()
+
+        for (const timestamp of ["", "  ", "soon", 0, -5, null, {}]) {
+            expect(subject.readZaloEvent(event({ timestamp }))).toMatchObject({ value: { sentAt: null } })
+        }
+    })
+})
+
 describe("readZaloEvent pictures and files", () => {
     it("reads a picture event with its caption, every address and the thumbnail", async () => {
         const subject = await buildSubject()
@@ -80,6 +98,7 @@ describe("readZaloEvent pictures and files", () => {
                 userId: "user-1",
                 messageId: "m-2",
                 text: "Em chuyen khoan roi",
+                sentAt: null,
                 attachments: [
                     { kind: "image", url: "https://cdn.test/a.jpg", thumbnailUrl: "https://cdn.test/t.jpg", name: "", localPath: "" },
                     { kind: "image", url: "https://cdn.test/b.jpg", thumbnailUrl: "", name: "", localPath: "" },
