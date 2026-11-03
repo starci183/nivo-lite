@@ -1,6 +1,7 @@
 import { graphNodeProblems, isInputRef, sourceOfRef, TRIGGER_SOURCE } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition, NodeIndex, NodeInputBinding } from "@nivo-lite/agent-sdk/node"
 import type { DataRight } from "@nivo-lite/agent-sdk/rights"
+import { isNamespaced } from "@nivo-lite/agent-sdk/schema"
 import type { GraphSpec, GraphSpecNode, GraphSpecProblem } from "./graph-spec.types"
 
 /** The keys a node goes to next. */
@@ -90,18 +91,19 @@ const minimumProblems = (spec: GraphSpec, installed: ReadonlyArray<NodeDefinitio
 
 /**
  * The problems of a graph spec against the installed nodes: its shape (keys, edges, references), every node as `graphNodeProblems`
- * judges it under the spec's own grant (a missing right is raised there), and a grant that holds more than its nodes need. A node whose
+ * judges it under the spec's own grant (a missing right is raised there), and a grant that holds more than its nodes need. A built-in step (`stop`) is not judged. A node whose
  * step is not installed is `NODE_UNKNOWN`, and the minimum is not judged while one is missing, since its needs are not known.
  */
 export const graphSpecProblems = (spec: GraphSpec, index: NodeIndex): ReadonlyArray<GraphSpecProblem> => {
     const nodes = new Map(spec.nodes.map((node) => [node.key, node]))
     const grant = { rights: spec.grant.rights, tools: spec.grant.tools }
     const judged = spec.nodes.flatMap((node) => graphNodeProblems(node, index, grant))
-    const installed = spec.nodes.flatMap((node) => index.nodes.get(node.step) ?? [])
+    const steps = spec.nodes.filter((node) => isNamespaced(node.step))
+    const installed = steps.flatMap((node) => index.nodes.get(node.step) ?? [])
     return [
         ...shapeProblems(spec, nodes),
         ...refProblems(spec, nodes),
         ...judged,
-        ...(installed.length === spec.nodes.length ? minimumProblems(spec, installed, index) : []),
+        ...(installed.length === steps.length ? minimumProblems(spec, installed, index) : []),
     ]
 }

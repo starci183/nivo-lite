@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
+import { isNamespaced } from "@nivo-lite/agent-sdk/schema"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "../index"
 import { graphSpecProblems } from "./graph-spec.policy"
 import { graphSpecSchema } from "./graph-spec.schema"
@@ -8,13 +9,6 @@ import type { GraphSpec } from "./graph-spec.types"
 
 const GRAPHS_DIR = join(__dirname, "../../../../.starcistacks/dev/seeds/data/graphs")
 const MODULE_KEYS: ReadonlyArray<string> = ["chatbot", "sales", "accounting"]
-
-/**
- * PENDING NODES: steps the graphs name that no lane has landed in coreNodes yet. A graph with a pending node is still checked for its
- * shape and for every node that exists, but not for the minimum of its grant, since the needs of a missing node are not known. When a
- * node lands, this test fails until its id is removed here; when the list is empty every graph is fully judged.
- */
-const PENDING_NODE_IDS: ReadonlyArray<string> = ["intent.has", "core.reply"]
 
 const index = nodeIndexOf({ nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds })
 
@@ -24,10 +18,10 @@ const loaded = (moduleKey: string): GraphSpec =>
 const stepsOf = (spec: GraphSpec): ReadonlyArray<string> => spec.nodes.map((node) => node.step)
 
 describe("agent graph specs of flow F", () => {
-    it("names exactly the pending nodes that are not installed", () => {
-        const missing = [...new Set(MODULE_KEYS.flatMap((key) => stepsOf(loaded(key))))].filter((step) => !index.nodes.has(step))
+    it("names only installed nodes (the built-in `stop` apart)", () => {
+        const missing = [...new Set(MODULE_KEYS.flatMap((key) => stepsOf(loaded(key))))].filter((step) => isNamespaced(step) && !index.nodes.has(step))
 
-        expect([...missing].sort()).toEqual([...PENDING_NODE_IDS].sort())
+        expect(missing).toEqual([])
     })
 
     it.each(MODULE_KEYS)("%s: is the graph of its own module, woken by a tag from every source", (moduleKey) => {
@@ -37,12 +31,8 @@ describe("agent graph specs of flow F", () => {
         expect(spec.trigger.sources).toHaveLength(5)
     })
 
-    it.each(MODULE_KEYS)("%s: has no problem beyond its pending nodes", (moduleKey) => {
-        const problems = graphSpecProblems(loaded(moduleKey), index).filter(
-            (problem) => !(problem.code === "NODE_UNKNOWN" && PENDING_NODE_IDS.includes(stepOfKey(loaded(moduleKey), problem.at))),
-        )
-
-        expect(problems).toEqual([])
+    it.each(MODULE_KEYS)("%s: has no problem, and its grant is the minimum its nodes need", (moduleKey) => {
+        expect(graphSpecProblems(loaded(moduleKey), index)).toEqual([])
     })
 
     it("refuses a graph whose branch has no route, whose grant is short or whose reference is not upstream", () => {
@@ -60,5 +50,3 @@ describe("agent graph specs of flow F", () => {
         )
     })
 })
-
-const stepOfKey = (spec: GraphSpec, key: string): string => spec.nodes.find((node) => node.key === key)?.step ?? ""
