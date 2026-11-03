@@ -33,6 +33,8 @@ import type { CardDecision } from "./module-setup.contracts"
 import { ModulesService } from "./modules.service"
 import { SetupBranchCardsService } from "./setup-branch-cards.service"
 import { SetupCardsService } from "./setup-cards.service"
+import { SETUP_GRAPH } from "./modules.decorators"
+import type { SetupGraphPort } from "./modules.port"
 const NOW = "2026-10-13T02:00:00.000Z"
 const build = async () => {
     const writes = mock<SetupWritesService>()
@@ -66,6 +68,7 @@ const build = async () => {
     const events = mock<EventsService>()
     const sync = mock<InstallationChangesService>()
     const branches = mock<SetupBranchCardsService>()
+    const graph = mock<SetupGraphPort>({ followRules: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             SetupCardsService,
@@ -84,6 +87,7 @@ const build = async () => {
             { provide: EventsService, useValue: events },
             { provide: InstallationChangesService, useValue: sync },
             { provide: SetupBranchCardsService, useValue: branches },
+            { provide: SETUP_GRAPH, useValue: graph },
         ],
     }).compile()
     return {
@@ -99,6 +103,7 @@ const build = async () => {
         events,
         sync,
         branches,
+        graph,
     }
 }
 describe("SetupCardsService > openGapsOf", () => {
@@ -472,5 +477,17 @@ describe("SetupCardsService > branch cards", () => {
 
         expect(branches.confirm).not.toHaveBeenCalled()
         expect(writes.close.mock.calls[0]?.[2]).toMatchObject({ status: "rejected" })
+    })
+})
+
+describe("SetupCardsService > decide > rule", () => {
+    it("brings the graph of the installation along after the save and before the card closes", async () => {
+        const { service, writes, rules, graph } = await build()
+        writes.find.mockResolvedValue(ruleCard())
+        rules.save.mockResolvedValue(ruleOf({ id: "rule-9", mode: "auto", limit_vnd: 3000000 }))
+        await service.decide("u1", "ws-1", "card-1", { decision: "confirm", limitVnd: 3000000 }, "en")
+        expect(graph.followRules).toHaveBeenCalledWith("ws-1", installationOf().id)
+        const order = [rules.save, graph.followRules, writes.close].map((f) => f.mock.invocationCallOrder[0] ?? 0)
+        expect(order).toEqual([...order].sort((a, b) => a - b))
     })
 })

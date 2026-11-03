@@ -50,6 +50,8 @@ export interface SetupGraphPort {
     firstGap(workspaceId: string, installationId: string): Promise<string>
     /** The seat of a person the owner named, or an empty text when nobody is found. */
     seatNamed(workspaceId: string, name: string): Promise<string>
+    /** Brings a graph that still follows the rules it was seeded from up to the rules now saved; a graph a person changed is left alone. */
+    followRules(workspaceId: string, installationId: string): Promise<void>
     /** Refuses before the setup writes anything when the publish would be refused; answers the newest graph version number, 0 with no graph. */
     checkPublish(applicant: SetupApplicant): Promise<number>
     /** Publishes the draft of the graph as the version the setup became, with its context version, even when the map did not change. */

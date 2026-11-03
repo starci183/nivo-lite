@@ -49,6 +49,7 @@ interface Options {
     readonly seeded?: OptionalGraphState
     readonly people?: ReadonlyArray<DirectoryMember>
     readonly seat?: boolean
+    readonly installed?: boolean
 }
 
 const build = async (options: Options = {}) => {
@@ -57,9 +58,14 @@ const build = async (options: Options = {}) => {
         saveDraft: jest.fn().mockResolvedValue(undefined),
         latestVersionOf: jest.fn().mockResolvedValue(7),
     })
-    const seed = mock<AgentGraphSeedService>({ ensureFor: jest.fn().mockResolvedValue(options.seeded ?? null) })
+    const seed = mock<AgentGraphSeedService>({
+        ensureFor: jest.fn().mockResolvedValue(options.seeded ?? null),
+        refresh: jest.fn().mockResolvedValue(true),
+    })
     const installations = mock<InstallationRecordsService>({
-        findById: jest.fn().mockResolvedValue({ id: "inst-1", moduleKey: "accounting" }),
+        findById: jest
+            .fn()
+            .mockResolvedValue(options.installed === false ? null : { id: "inst-1", moduleKey: "accounting" }),
     })
     const context = mock<AgentGraphContextService>({ contextOf: jest.fn().mockResolvedValue(contextOf()) })
     const publishing = mock<AgentGraphPublishService>({
@@ -152,6 +158,31 @@ describe("AgentGraphSetupService.firstGap", () => {
 
         await expect(none.service.firstGap("ws-1", "inst-1")).resolves.toBe("")
         await expect(other.service.firstGap("ws-1", "inst-1")).resolves.toBe("")
+    })
+})
+
+describe("AgentGraphSetupService.followRules", () => {
+    it("brings the seed of the installation up to the rules just saved, in the language of the seed", async () => {
+        const state = stateOf()
+        const { service, seed } = await build({ state })
+
+        await service.followRules("ws-1", "inst-1")
+
+        expect(seed.refresh).toHaveBeenCalledWith(state, "accounting", "vi")
+    })
+
+    it("leaves alone an installation with no graph, a graph of another workspace and an installation that is gone", async () => {
+        const none = await build({ state: null })
+        const other = await build({ state: stateOf({ workspaceId: "ws-2" }) })
+        const gone = await build({ installed: false })
+
+        await none.service.followRules("ws-1", "inst-1")
+        await other.service.followRules("ws-1", "inst-1")
+        await gone.service.followRules("ws-1", "inst-1")
+
+        expect(none.seed.refresh).not.toHaveBeenCalled()
+        expect(other.seed.refresh).not.toHaveBeenCalled()
+        expect(gone.seed.refresh).not.toHaveBeenCalled()
     })
 })
 

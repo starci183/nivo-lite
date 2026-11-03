@@ -57,6 +57,18 @@ export class AgentGraphSetupService implements SetupGraphPort {
         await this.graphs.saveDraft(state.workspaceId, state.agentId, state.draftRev, document)
     }
 
+    /**
+     * Brings the seed of the installation up to the rules just saved, as the graph tick would on its next run: a seed never published by
+     * a person and with no unpublished edit follows the rule it came from; any other graph is left as it is.
+     */
+    async followRules(workspaceId: string, installationId: string): Promise<void> {
+        const state = await this.graphs.stateOfInstallation(installationId)
+        if (state?.workspaceId !== workspaceId) return
+        const installation = await this.installations.findById(installationId)
+        if (installation === null) return
+        await this.seed.refresh(state, installation.moduleKey, SEED_LOCALE)
+    }
+
     /** The code of the first vague place of the draft, or an empty text when it has none or the installation has no graph yet. */
     async firstGap(workspaceId: string, installationId: string): Promise<string> {
         const state = await this.graphs.stateOfInstallation(installationId)
