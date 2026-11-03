@@ -222,6 +222,8 @@ export interface ModuleDefinition {
     readonly authorityActions: ReadonlyArray<AuthorityActionDefinition>
     /** The commands other agents may ask the module to run. */
     readonly accepts: ReadonlyArray<AcceptedCommand>
+    /** The module keys whose agents this module's agent may tag, granted when either side is installed; none when absent. */
+    readonly tags?: ReadonlyArray<string> | undefined
     /** The clock triggers seeded for the module's agent; none when absent. */
     readonly triggers?: ReadonlyArray<ModuleTrigger> | undefined
 }

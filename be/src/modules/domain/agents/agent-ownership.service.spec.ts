@@ -460,3 +460,32 @@ describe("AgentOwnershipService setOwnership refusals", () => {
         })
     })
 })
+
+describe("AgentOwnershipService grantTags", () => {
+    it("adds the tag rights an agent lacks and leaves the ones it holds", async () => {
+        const em = mockEntityManager({
+            find: [AgentEntity, [ownedAgentOf({ id: "a1", canTagAgentIds: ["a2"] }), ownedAgentOf({ id: "a3", canTagAgentIds: [] })]],
+            update: [AgentEntity, { affected: 1 }],
+        })
+        const { service } = await build(em)
+
+        await service.grantTags("w1", [
+            { from: "a1", to: "a2" },
+            { from: "a1", to: "a4" },
+            { from: "a3", to: "a1" },
+        ])
+
+        expect(em.update).toHaveBeenCalledWith(AgentEntity, { id: "a1", workspaceId: "w1" }, { canTagAgentIds: ["a2", "a4"] })
+        expect(em.update).toHaveBeenCalledWith(AgentEntity, { id: "a3", workspaceId: "w1" }, { canTagAgentIds: ["a1"] })
+    })
+
+    it("writes nothing when every right is held or none is asked", async () => {
+        const em = mockEntityManager({ find: [AgentEntity, [ownedAgentOf({ id: "a1", canTagAgentIds: ["a2"] })]] })
+        const { service } = await build(em)
+
+        await service.grantTags("w1", [{ from: "a1", to: "a2" }])
+        await service.grantTags("w1", [])
+
+        expect(em.update).not.toHaveBeenCalled()
+    })
+})

@@ -10,6 +10,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
+import { SALES_MODULE } from "./sales.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
 import { ModuleInstallService } from "./module-install.service"
 import { ModuleReadinessService } from "./module-readiness.service"
@@ -29,6 +30,7 @@ import {
 const build = async () => {
     const tx = fakeTransaction(mockEntityManager())
     const installations = mock<InstallationRecordsService>()
+    installations.list.mockResolvedValue([])
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(MEMBER)
     const catalog = mock<ModulesService>()
@@ -106,6 +108,34 @@ describe("ModuleInstallService > install", () => {
         expect(installations.insert).not.toHaveBeenCalled()
         expect(rules.seedDefaults).toHaveBeenCalledWith("ws-1", "chatbot", expect.any(Array))
         expect(sync.announceNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: "inst-1", force: true })
+    })
+
+    it("grants the tag rights Chatbot and Sales need when Chatbot joins a workspace that has Sales", async () => {
+        const { service, installations, agents, catalog } = await build()
+        installations.firstOfModule.mockResolvedValue(recordOf())
+        installations.list.mockResolvedValue([
+            recordOf(),
+            recordOf({ id: "inst-sales", moduleKey: "sales", agentId: "agent-sales" }),
+        ])
+        catalog.find.mockImplementation((key) => Promise.resolve(key === "sales" ? SALES_MODULE : CHATBOT_MODULE))
+
+        await service.install("u1", requestOf())
+
+        expect(agents.grantTags).toHaveBeenCalledWith("ws-1", [{ from: "agent-1", to: "agent-sales" }])
+    })
+
+    it("grants the tag right in the other direction when Sales joins a workspace that has Chatbot", async () => {
+        const { service, installations, agents, catalog } = await build()
+        installations.firstOfModule.mockResolvedValue(recordOf({ moduleKey: "sales", agentId: "agent-sales" }))
+        installations.list.mockResolvedValue([
+            recordOf(),
+            recordOf({ id: "inst-sales", moduleKey: "sales", agentId: "agent-sales" }),
+        ])
+        catalog.find.mockImplementation((key) => Promise.resolve(key === "sales" ? SALES_MODULE : CHATBOT_MODULE))
+
+        await service.install("u1", requestOf({ moduleKey: "sales" }))
+
+        expect(agents.grantTags).toHaveBeenCalledWith("ws-1", [{ from: "agent-1", to: "agent-sales" }])
     })
 
     it("installs the first instance on an agent no installation drives yet", async () => {
