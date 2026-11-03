@@ -62,6 +62,9 @@ services:
     image: nivo-lite-openclaw:dev
     environment:
       OPENCLAW_BRIDGE_URL: http://host.docker.internal:${STACK_PORT_API}/agent-tools
+      # The secrets the runtime wrapper exports besides the gateway token, and the provider name of the agents' model ids.
+      STARCI_SECRETS: "OPENCLAW_BRIDGE_SECRET STARCI_AI_KEY"
+      OPENCLAW_PROVIDER: nivo-ai
       AI_BASE_URL: http://host.docker.internal:${STACK_PORT_GATEWAY}/v1
       # The primary model, as production's OPENCLAW_MODEL setting.
       OPENCLAW_MODEL: nivo-ai/work
