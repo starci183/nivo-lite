@@ -1,0 +1,99 @@
+{
+  "schema": "nivo/agent-graph@1",
+  "moduleKey": "chatbot",
+  "trigger": { "kind": "tag", "sources": ["channel", "chats-group", "agent", "system-event", "schedule"] },
+  "grant": {
+    "rights": [
+      { "kind": "knowledge-document", "access": "read", "scope": "workspace", "fields": ["id", "title", "body", "visibility"] },
+      { "kind": "message", "access": "write", "scope": "turn", "fields": ["body"] },
+      { "kind": "payment-claim", "access": "write", "scope": "turn", "fields": ["leadId", "amountVnd", "names", "body"] }
+    ],
+    "tools": [],
+    "effects": ["channel.send", "payment-claim.record", "agent.tag"]
+  },
+  "nodes": [
+    {
+      "key": "classify",
+      "kind": "execute",
+      "step": "intent.classify",
+      "input": { "text": { "$ref": "trigger.text" } },
+      "next": "has-question"
+    },
+    {
+      "key": "has-question",
+      "kind": "condition",
+      "step": "intent.has",
+      "params": { "intent": "question" },
+      "input": { "intents": { "$ref": "classify.intents" } },
+      "routes": { "yes": "answer", "no": "has-order" }
+    },
+    {
+      "key": "answer",
+      "kind": "execute",
+      "step": "knowledge.answer",
+      "params": { "locale": "vi", "claims": null },
+      "input": { "question": { "$ref": "trigger.text" }, "recordedEffects": [] },
+      "next": "reply"
+    },
+    {
+      "key": "reply",
+      "kind": "output",
+      "step": "core.reply",
+      "input": { "conversationId": { "$ref": "trigger.conversationId" }, "text": { "$ref": "answer.reply" } },
+      "next": "has-order"
+    },
+    {
+      "key": "has-order",
+      "kind": "condition",
+      "step": "intent.has",
+      "params": { "intent": "order" },
+      "input": { "intents": { "$ref": "classify.intents" } },
+      "routes": { "yes": "handoff-sales", "no": "has-claim" }
+    },
+    {
+      "key": "handoff-sales",
+      "kind": "output",
+      "step": "core.handoff",
+      "params": { "toModuleKey": "sales" },
+      "input": {
+        "text": { "$ref": "trigger.text" },
+        "conversationId": { "$ref": "trigger.conversationId" },
+        "context": { "$ref": "classify.order" }
+      },
+      "next": "has-claim"
+    },
+    {
+      "key": "has-claim",
+      "kind": "condition",
+      "step": "intent.has",
+      "params": { "intent": "payment_claim" },
+      "input": { "intents": { "$ref": "classify.intents" } },
+      "routes": { "yes": "claim-ack" }
+    },
+    {
+      "key": "claim-ack",
+      "kind": "output",
+      "step": "payment.claim-ack",
+      "params": { "locale": "vi" },
+      "input": {
+        "conversationId": { "$ref": "trigger.conversationId" },
+        "leadId": { "$ref": "trigger.leadId" },
+        "body": { "$ref": "trigger.text" },
+        "amountVnd": { "$ref": "classify.paymentClaim.amountVnd" },
+        "payerName": { "$ref": "classify.paymentClaim.payerName" }
+      },
+      "next": "handoff-accounting"
+    },
+    {
+      "key": "handoff-accounting",
+      "kind": "output",
+      "step": "core.handoff",
+      "params": { "toModuleKey": "accounting" },
+      "input": {
+        "text": { "$ref": "trigger.text" },
+        "conversationId": { "$ref": "trigger.conversationId" },
+        "context": { "claimKind": { "$ref": "claim-ack.claim.kind" }, "claimId": { "$ref": "claim-ack.claim.id" } }
+      }
+    }
+  ]
+}
