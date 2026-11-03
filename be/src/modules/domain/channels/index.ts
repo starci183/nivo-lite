@@ -1,5 +1,6 @@
 export { CHANNEL_SENDER_REGISTRY, InjectChannelSenderRegistry } from "./channels.decorators"
 export { ChannelDeliveryService } from "./channel-delivery.service"
+export { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
 export { ConnectionHealthService } from "./connection-health.service"
 export { parseChannelsConfig } from "./channels.config"
 export { ChannelsModule } from "./channels.module"

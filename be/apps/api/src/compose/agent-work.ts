@@ -10,6 +10,11 @@ import { AGENT_WORK_ERROR_KINDS, AGENT_WORK_MESSAGES, AgentWorkModule } from "@m
 import { GRAPH_NODES_ERROR_KINDS, GRAPH_NODES_MESSAGES, GraphNodesModule } from "@modules/domain/graph-nodes"
 import type { NodeInstall } from "@modules/domain/graph-nodes"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
+import {
+    CHAT_NODE_PORTS_ERROR_KINDS,
+    CHAT_NODE_PORTS_MESSAGES,
+    ChatNodePortsModule,
+} from "@modules/domain/chat-node-ports"
 import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES } from "@modules/domain/agent-graphs"
 import { AGENT_PLUGINS_ERROR_KINDS, AGENT_PLUGINS_MESSAGES, AgentPluginsModule } from "@modules/domain/agent-plugins"
 import { CUSTOMER_INTENTS_MESSAGES } from "@modules/domain/customer-turns"
@@ -22,13 +27,19 @@ import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 
 /** The nodes this app installs: the core library's nodes and the effects, tools and data kinds they may use. */
-const installedNodes: NodeInstall = { nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds }
+const installedNodes: NodeInstall = {
+    nodes: coreNodes,
+    effects: coreEffects,
+    tools: coreTools,
+    dataKinds: coreDataKinds,
+}
 
 /** The agent work area of the API: the store that lets an agent be woken by an event or a clock and run one turn at a time per scope, the durable run of each wake, and the clock that wakes it. */
 export const agentWorkModules = (): Array<DynamicModule> => [
     AgentWorkModule.register({ isGlobal: true }),
     AgentRunsModule.register({ isGlobal: true }),
     GraphNodesModule.register({ isGlobal: true, install: installedNodes }),
+    ChatNodePortsModule.register({ isGlobal: true }),
     IntentContractsModule.register({ isGlobal: true }),
     AgentPluginsModule.register({ isGlobal: true }),
     AgentInboundModule.register({ isGlobal: true }),
@@ -40,6 +51,7 @@ export const agentWorkErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     AGENT_WORK_ERROR_KINDS,
     AGENT_RUNS_ERROR_KINDS,
     GRAPH_NODES_ERROR_KINDS,
+    CHAT_NODE_PORTS_ERROR_KINDS,
     INTENT_CONTRACTS_ERROR_KINDS,
     AGENT_PLUGINS_ERROR_KINDS,
     AGENT_INBOUND_ERROR_KINDS,
@@ -52,6 +64,7 @@ export const agentWorkMessages: ReadonlyArray<MessageBundle> = [
     AGENT_WORK_MESSAGES,
     AGENT_RUNS_MESSAGES,
     GRAPH_NODES_MESSAGES,
+    CHAT_NODE_PORTS_MESSAGES,
     AGENT_INBOUND_MESSAGES,
     AGENT_SCHEDULES_MESSAGES,
     AGENT_GRAPHS_MESSAGES,

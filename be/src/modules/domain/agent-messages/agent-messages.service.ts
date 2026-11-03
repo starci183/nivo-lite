@@ -9,6 +9,7 @@ import type { Outcome } from "@modules/platform/primitives"
 import type {
     AgentThreadMessage,
     DeliveryClaim,
+    NodeMessage,
     ApprovedMessageId,
     AuthorUserId,
     ConversationDayCount,
@@ -352,6 +353,33 @@ export class AgentMessagesService {
         const insert = manager.createQueryBuilder(AgentMessageEntity, "am").insert().values(values)
         const written = await (orIgnore ? insert.orIgnore() : insert).returning("id").execute()
         return returnedIds(written.raw)
+    }
+
+    /** The newest messages of a conversation of the workspace a graph node reads, newest first. */
+    async nodeRows(workspaceId: string, conversationId: string, limit: number): Promise<ReadonlyArray<NodeMessage>> {
+        const rows = await this.entityManager.find(AgentMessageEntity, {
+            select: { id: true, conversationId: true, role: true, authorKind: true, body: true, createdAt: true },
+            where: { workspaceId, conversationId },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: limit,
+        })
+        return rows.map((row) => ({
+            id: row.id,
+            conversationId: row.conversationId,
+            authorKind: row.authorKind ?? row.role,
+            body: row.body,
+            createdAt: row.createdAt.toISOString(),
+        }))
+    }
+
+    /** When the latest message of a conversation was written, or null when it has none. */
+    async latestAt(conversationId: string): Promise<Date | null> {
+        const row = await this.entityManager.findOne(AgentMessageEntity, {
+            select: { createdAt: true },
+            where: { conversationId },
+            order: { createdAt: "DESC" },
+        })
+        return row?.createdAt ?? null
     }
 
     private announce(

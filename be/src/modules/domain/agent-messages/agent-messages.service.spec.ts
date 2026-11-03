@@ -496,3 +496,51 @@ describe("AgentMessagesService storeFinalReply", () => {
         expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, em]])
     })
 })
+
+describe("AgentMessagesService node reads", () => {
+    it("answers the newest messages of a conversation as rows, the author kind falling back to the role", async () => {
+        const em = mockEntityManager({
+            find: [
+                AgentMessageEntity,
+                [
+                    {
+                        id: "m2",
+                        conversationId: "c1",
+                        role: "agent",
+                        authorKind: "bot",
+                        body: "b",
+                        createdAt: new Date(2000),
+                    },
+                    {
+                        id: "m1",
+                        conversationId: "c1",
+                        role: "user",
+                        authorKind: null,
+                        body: "a",
+                        createdAt: new Date(1000),
+                    },
+                ] as never,
+            ],
+        })
+        const { service } = await build(em)
+
+        await expect(service.nodeRows("ws-1", "c1", 5)).resolves.toEqual([
+            { id: "m2", conversationId: "c1", authorKind: "bot", body: "b", createdAt: "1970-01-01T00:00:02.000Z" },
+            { id: "m1", conversationId: "c1", authorKind: "user", body: "a", createdAt: "1970-01-01T00:00:01.000Z" },
+        ])
+        expect(em.find).toHaveBeenCalledWith(
+            AgentMessageEntity,
+            expect.objectContaining({ where: { workspaceId: "ws-1", conversationId: "c1" }, take: 5 }),
+        )
+    })
+
+    it("answers when the latest message was written, or null when there is none", async () => {
+        const wrote = await build(
+            mockEntityManager({ findOne: [AgentMessageEntity, { createdAt: new Date(3000) } as never] }),
+        )
+        const silent = await build(mockEntityManager({ findOne: [AgentMessageEntity, null] }))
+
+        await expect(wrote.service.latestAt("c1")).resolves.toEqual(new Date(3000))
+        await expect(silent.service.latestAt("c1")).resolves.toBeNull()
+    })
+})

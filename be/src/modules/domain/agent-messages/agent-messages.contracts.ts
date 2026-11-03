@@ -71,3 +71,17 @@ export interface ConversationDayCount {
 
 /** Whether the stored message grants one outbound attempt, or already holds a delivery fact. */
 export type DeliveryClaim = "send" | "acknowledged" | "ambiguous" | "missing"
+
+/** One message of a conversation as a graph node reads it. */
+export interface NodeMessage {
+    /** The message id. */
+    readonly id: string
+    /** The conversation. */
+    readonly conversationId: string
+    /** Who wrote it: the author kind when stored, else the role. */
+    readonly authorKind: string
+    /** The text. */
+    readonly body: string
+    /** Creation instant, ISO 8601. */
+    readonly createdAt: string
+}

@@ -495,3 +495,30 @@ describe("AgentConversationsService installationIdOf", () => {
         await expect((await build(bare)).service.installationIdOf("ws-1", "rec-1")).resolves.toBeNull()
     })
 })
+
+describe("AgentConversationsService nodeRows", () => {
+    it("answers the customer conversations of the workspace, narrowed by the filter, newest first", async () => {
+        const rows = [{ id: "c1", leadId: "l1", channel: "zalo", handledBy: null, workspaceId: "ws-1" }]
+        const em = mockEntityManager({ find: [AgentConversationEntity, rows as never] })
+        const { service } = await build(em)
+
+        await expect(service.nodeRows("ws-1", { id: "c1", leadId: "l1", channel: "zalo" }, 3)).resolves.toEqual([
+            { id: "c1", leadId: "l1", channel: "zalo", handledBy: null },
+        ])
+        await service.nodeRows("ws-1", {}, 3)
+
+        expect(em.find).toHaveBeenNthCalledWith(
+            1,
+            AgentConversationEntity,
+            expect.objectContaining({
+                where: { workspaceId: "ws-1", kind: "customer", id: "c1", leadId: "l1", channel: "zalo" },
+                take: 3,
+            }),
+        )
+        expect(em.find).toHaveBeenNthCalledWith(
+            2,
+            AgentConversationEntity,
+            expect.objectContaining({ where: { workspaceId: "ws-1", kind: "customer" } }),
+        )
+    })
+})
