@@ -124,7 +124,7 @@ export interface AgentGraphEvidenceData {
 }
 
 /** What a proposal is about. */
-export type AgentGraphProposalKind = "conflict" | "learned" | "template_update"
+export type AgentGraphProposalKind = "conflict" | "learned" | "template_update" | "gap" | "contract"
 
 /** A thing NIVO proposes: a Brain conflict, a learned change or a template update. */
 export interface AgentGraphProposalData {

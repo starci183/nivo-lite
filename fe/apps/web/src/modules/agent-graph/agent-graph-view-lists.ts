@@ -16,10 +16,15 @@ import type { AgentGraphContext, AgentGraphT } from "./agent-graph-words"
 /** How many rows of evidence show before "See all". */
 export const EVIDENCE_PREVIEW = 3
 
-const kindWordOf = (t: AgentGraphT, kind: AgentGraphProposalData["kind"]): string => {
-    if (kind === "conflict") return t("proposal_conflict")
-    return kind === "learned" ? t("proposal_learned") : t("proposal_template")
-}
+const KIND_WORDS = {
+    conflict: "proposal_conflict",
+    learned: "proposal_learned",
+    template_update: "proposal_template",
+    gap: "proposal_gap",
+    contract: "proposal_contract",
+} as const satisfies Record<AgentGraphProposalData["kind"], string>
+
+const kindWordOf = (t: AgentGraphT, kind: AgentGraphProposalData["kind"]): string => t(KIND_WORDS[kind])
 
 /** Why this person may not add a proposal to the draft; empty when they may. */
 const blockedOf = (proposal: AgentGraphProposalData, ctx: AgentGraphContext): string => {

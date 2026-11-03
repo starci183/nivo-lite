@@ -90,7 +90,7 @@ const gapSchema = z.object({ code: z.string(), nodeKey: z.string(), branchKey: z
 
 const proposalSchema = z.object({
     id: z.string(),
-    kind: z.enum(["conflict", "learned", "template_update"]),
+    kind: z.enum(["conflict", "learned", "template_update", "gap", "contract"]),
     status: z.enum(["open", "confirmed", "declined", "superseded"]),
     nodeKey: z.string().nullable(),
     branchKey: z.string().nullable(),
