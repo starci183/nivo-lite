@@ -104,3 +104,13 @@ export const wakeProgressOf = (status: AgentWakeStatus): "queued" | "running" | 
     if (status === "done" || status === "skipped") return "done"
     return status === "failed" || status === "dead" ? "failed" : "queued"
 }
+
+/** The burst window of a conversation when the app root names none, milliseconds. */
+export const DEFAULT_DEBOUNCE_MS = 3000
+
+/** The window in force: what the app root named, never below zero, or the default. */
+export const debounceMsOf = (named: number | undefined): number => Math.max(0, named ?? DEFAULT_DEBOUNCE_MS)
+
+/** How long the drain of a new wake waits: the burst window for a wake locked to a conversation, none for any other. */
+export const drainDelayMsOf = (scopeKey: string, windowMs: number): number =>
+    scopeKey.startsWith(CONVERSATION_SCOPE_PREFIX) ? windowMs : 0

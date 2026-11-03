@@ -177,6 +177,7 @@ export class CommandPlannerService {
             preset: input.preset,
             noChain: input.noChain,
             forceAsk: input.forceAsk,
+            tagGrant: input.tagGrant,
             chainId: position.chainId,
             depth: position.depth,
             installationId: instance?.id ?? null,

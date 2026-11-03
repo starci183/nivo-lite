@@ -319,6 +319,7 @@ export const arrangeEngineDoubles = (options: WorkEngineFixtureOptions, doubles:
     const { catalog, modules, items, access, rules } = doubles
     catalog.get.mockImplementation((key, params) => `${key}(${Object.values(params ?? {}).join(",")})`)
     modules.actionOf.mockResolvedValue(options.action === undefined ? actionEntry() : options.action)
+    modules.tagRuleOf.mockResolvedValue(ruleOf({ id: "tag:quote", mode: "auto" }))
     items.claim.mockResolvedValue(itemOf())
     items.nextQueued.mockResolvedValue(null)
     items.nextInboundQueued.mockResolvedValue(null)

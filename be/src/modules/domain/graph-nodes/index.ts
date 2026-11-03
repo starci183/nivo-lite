@@ -4,6 +4,7 @@ export { GRAPH_NODES_MESSAGES } from "./messages/graph-nodes.messages"
 export { GRAPH_NODE_TOOL_DOOR } from "./graph-nodes.decorators"
 export { GraphNodesModule } from "./graph-nodes.module"
 export { GraphNodeHostService } from "./graph-node-host.service"
+export { ledgerKeyOf } from "./graph-node-effects.service"
 export { GraphNodeRegistryService } from "./graph-node-registry.service"
 export type {
     NodeDataPort,
@@ -11,7 +12,9 @@ export type {
     NodeInstall,
     NodeRow,
     NodeRunInput,
+    NodeSubjectResolver,
     NodeToolDoor,
     NodeTurn,
+    NodeUndoInput,
 } from "./graph-nodes.contracts"
 export { rowsAnswering } from "./node-rows.policy"

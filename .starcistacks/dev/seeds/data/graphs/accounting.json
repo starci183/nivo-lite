@@ -1,0 +1,117 @@
+{
+  "schema": "nivo/agent-graph@1",
+  "moduleKey": "accounting",
+  "trigger": { "kind": "tag", "sources": ["channel", "chats-group", "agent", "system-event", "schedule"] },
+  "grant": {
+    "rights": [
+      { "kind": "bank-transaction", "access": "read", "scope": "workspace", "fields": ["id", "amountVnd", "content", "counterpartName", "receivedAt", "orderId", "status"] },
+      { "kind": "bank-transaction", "access": "write", "scope": "workspace", "fields": ["orderId"] },
+      { "kind": "order", "access": "read", "scope": "workspace", "fields": ["id", "orderNo", "leadId", "items", "amountVnd", "status", "confirmedAt", "createdAt"] },
+      { "kind": "order", "access": "write", "scope": "workspace", "fields": ["status"] },
+      { "kind": "payment-claim", "access": "read", "scope": "workspace", "fields": ["id", "leadId", "conversationId", "amountVnd", "names", "body", "claimedAt", "status"] },
+      { "kind": "sales-lead", "access": "read", "scope": "workspace", "fields": ["id", "contactName"] },
+      { "kind": "conversation", "access": "read", "scope": "workspace", "fields": ["id", "leadId", "lastMessageAt"] },
+      { "kind": "message", "access": "write", "scope": "turn", "fields": ["body"] }
+    ],
+    "tools": [],
+    "effects": ["payment.mark-paid", "channel.send", "work-item.raise"]
+  },
+  "nodes": [
+    {
+      "key": "evidence",
+      "kind": "execute",
+      "step": "payment.evidence",
+      "params": { "windowHours": 72 },
+      "input": { "transactionId": { "$ref": "trigger.subject.id" } },
+      "next": "match-code"
+    },
+    {
+      "key": "match-code",
+      "kind": "condition",
+      "step": "payment.match-code",
+      "input": { "evidenced": { "$ref": "evidence.evidenced" } },
+      "routes": { "matched": "settle-code", "mismatch": "settle-ask", "no-code": "judge" }
+    },
+    {
+      "key": "settle-code",
+      "kind": "output",
+      "step": "payment.settle",
+      "params": {
+        "confirmationText": "Shop đã nhận {amount} đ cho đơn {orderNo}. Cảm ơn bạn!",
+        "reviewTitle": "Kiểm tra khoản tiền"
+      },
+      "input": {
+        "transactionId": { "$ref": "trigger.subject.id" },
+        "claimId": { "$ref": "evidence.claims.0.id" },
+        "mode": "apply",
+        "candidateIds": { "$ref": "match-code.candidateIds" },
+        "reasons": { "$ref": "match-code.reasons" }
+      }
+    },
+    {
+      "key": "settle-ask",
+      "kind": "output",
+      "step": "payment.settle",
+      "params": {
+        "confirmationText": "Shop đã nhận {amount} đ cho đơn {orderNo}. Cảm ơn bạn!",
+        "reviewTitle": "Kiểm tra khoản tiền"
+      },
+      "input": {
+        "transactionId": { "$ref": "trigger.subject.id" },
+        "claimId": { "$ref": "evidence.claims.0.id" },
+        "mode": "ask",
+        "candidateIds": { "$ref": "match-code.candidateIds" },
+        "reasons": { "$ref": "match-code.reasons" }
+      }
+    },
+    {
+      "key": "judge",
+      "kind": "condition",
+      "step": "payment.judge",
+      "input": {
+        "arrival": { "$ref": "evidence.arrival" },
+        "evidenced": { "$ref": "evidence.evidenced" },
+        "claims": { "$ref": "evidence.claims" }
+      },
+      "routes": { "match": "settle-judged", "ambiguous": "raise-ambiguous", "no_match": "claim-wait" }
+    },
+    {
+      "key": "settle-judged",
+      "kind": "output",
+      "step": "payment.settle",
+      "params": {
+        "confirmationText": "Shop đã nhận {amount} đ cho đơn {orderNo}. Cảm ơn bạn!",
+        "reviewTitle": "Kiểm tra khoản tiền"
+      },
+      "input": {
+        "transactionId": { "$ref": "trigger.subject.id" },
+        "claimId": { "$ref": "evidence.claims.0.id" },
+        "mode": "apply",
+        "candidateIds": { "$ref": "judge.candidateIds" },
+        "reasons": { "$ref": "judge.reasons" }
+      }
+    },
+    {
+      "key": "raise-ambiguous",
+      "kind": "output",
+      "step": "core.raise-work-item",
+      "params": { "action": "reconcile_payment", "title": "Match a bank credit to an order" },
+      "input": {
+        "payload": { "transactionId": { "$ref": "trigger.subject.id" } },
+        "amountVnd": null,
+        "claimId": null
+      }
+    },
+    {
+      "key": "claim-wait",
+      "kind": "output",
+      "step": "payment.claim-wait",
+      "params": {
+        "timeoutMinutes": 30,
+        "neutralText": "Shop đang kiểm tra giao dịch của bạn, sẽ báo lại ngay khi nhận được tiền.",
+        "overdueTitle": "Đối soát khoản chuyển chưa thấy tiền"
+      },
+      "input": { "claimId": { "$ref": "evidence.claims.0.id" }, "timedOut": false }
+    }
+  ]
+}

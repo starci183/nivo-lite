@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { GraphSeedService } from "./graph-seed.service"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { SEED_OFFICE_AUTHORITY } from "./office-seed.decorators"
 import { OfficeSeedService } from "./office-seed.service"
@@ -35,8 +36,9 @@ export class WorkspaceSeedModule extends ConfigurableModuleClass {
                 WorkspaceProfileService,
                 ProfileActivationService,
                 OfficeSeedService,
+                GraphSeedService,
             ],
-            exports: [WorkspaceSeedService, WorkspaceProfileService, OfficeSeedService],
+            exports: [WorkspaceSeedService, WorkspaceProfileService, OfficeSeedService, GraphSeedService],
         }
     }
 }

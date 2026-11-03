@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orders.module-definition"
+import { OrderPaymentClaimsService } from "./order-payment-claims.service"
 import { OrdersService } from "./orders.service"
 import { OrdersLabelReadService } from "./orders-label-read.service"
 import { OrderFactReaderService } from "./order-fact-reader.service"
@@ -21,6 +22,7 @@ export class OrdersModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 OrdersService,
+                OrderPaymentClaimsService,
                 OrdersReadService,
                 OrdersFiguresService,
                 OrderFactReaderService,
@@ -31,6 +33,7 @@ export class OrdersModule extends ConfigurableModuleClass {
             ],
             exports: [
                 OrdersService,
+                OrderPaymentClaimsService,
                 OrdersReadService,
                 OrdersFiguresService,
                 OrderFactReaderService,

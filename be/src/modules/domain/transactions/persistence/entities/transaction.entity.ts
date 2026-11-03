@@ -53,6 +53,10 @@ export class TransactionEntity extends UuidAbstractEntity {
     @Column({ name: "invoice_id", type: "uuid", nullable: true })
     invoiceId!: string | null
 
+    /** The sales order it paid. */
+    @Column({ name: "order_id", type: "uuid", nullable: true })
+    orderId!: string | null
+
     /** The lifecycle state. */
     @Column({ name: "status", type: "text", default: () => "'unmatched'" })
     status!: TransactionState

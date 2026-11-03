@@ -10,7 +10,7 @@ export interface QueueTransport extends QueueSchedules {
      * Adds the job to its queue under the outbox row id `jobId`; an id BullMQ already holds makes the add a no-op, so a
      * repeated relay pass is harmless. The retry budget and backoff of the platform are fixed here.
      */
-    add(queue: string, job: string, jobId: string, payload: object): Promise<void>
+    add(queue: string, job: string, jobId: string, payload: object, delayMs?: number): Promise<void>
     /** The Redis-side state of the job `jobId`. */
     stateOf(queue: string, jobId: string): Promise<QueueTransportState>
     /**
@@ -77,6 +77,8 @@ export interface BullmqRetention {
 export interface BullmqJobOptions {
     /** The id BullMQ dedupes on: the outbox row id. */
     readonly jobId: string
+    /** The milliseconds BullMQ waits before it runs the job; absent runs it at once. */
+    readonly delay?: number
     /** How many times BullMQ tries the job. */
     readonly attempts: number
     /** The wait between two tries. */

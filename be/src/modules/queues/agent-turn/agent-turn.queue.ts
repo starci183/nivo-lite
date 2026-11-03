@@ -17,10 +17,17 @@ export class AgentTurnQueue {
     constructor(@InjectQueueOutbox() private readonly outbox: QueueOutbox) {}
 
     /** Enqueues the drain a new wake needs in the caller's transaction: the job exists exactly when the wake does, once per fact. */
-    enqueueDrain(payload: AgentTurnDrainPayload, source: string, eventKey: string, tx: EntityManager): Promise<void> {
+    enqueueDrain(
+        payload: AgentTurnDrainPayload,
+        source: string,
+        eventKey: string,
+        tx: EntityManager,
+        delayMs = 0,
+    ): Promise<void> {
         return this.outbox.write(tx, AGENT_TURN_QUEUE, payload, {
             job: AgentTurnJob.Drain,
             dedupeKey: agentTurnWakeKey(payload.agentId, source, eventKey),
+            delayMs,
         })
     }
 

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentBindingsService, PURPOSES } from "@modules/domain/agent-connections"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import { KnowledgeGapNotesService, viewOf } from "@modules/domain/agent-knowledge"
@@ -22,6 +23,7 @@ import { handoffTranscriptOf, isRecentlyPaid, latestQuestionOf } from "./custome
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import type { CustomerChannel, CustomerReply, TurnSettled } from "./customer-turns.contracts"
 import { isKnownPrice } from "./knowledge-price.policy"
+import { HANDOFF_AGENTS_MAX, handoffTagGranted } from "./handoff-tag.policy"
 import { REPLY_ACTION, evidenceOfTurn, replyCheckOf } from "./reply-graph.policy"
 import type { Judged, OpenedReplyItem, ReplyItemSpec, ReplyScope } from "./reply-graph.policy"
 import { findingsOf, humanReasonOf } from "./reply-reading.policy"
@@ -74,6 +76,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         private readonly staff: StaffEscalationService,
         private readonly gaps: KnowledgeGapNotesService,
         private readonly modules: TurnModulesService,
+        private readonly directory: AgentDirectoryService,
     ) {}
 
     /** Interprets the proposed reply through the gate and answers what leaves and which lines the workbench shows. */
@@ -362,6 +365,11 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             reason: "the chatbot captured a lead",
             inboundEventId: recorded.inboundEventId,
             dedupeKey: `handoff_lead:conversation:${conversation.id}`,
+            // The hand-off is a tag: the tag right lets it in, and only a rule the owner stored (ask, never) can still hold it.
+            tagGrant: handoffTagGranted(
+                conversation.agent.id,
+                await this.directory.activeOf(ctx.workspaceId, HANDOFF_AGENTS_MAX),
+            ),
             payload: {
                 subject_type: "conversation",
                 subject_id: conversation.id,

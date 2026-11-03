@@ -8,6 +8,7 @@ import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/pla
 import { readConnection } from "@modules/platform/pagination"
 import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { OrdersError, OrdersErrorCode } from "./errors/orders.error"
+import { AWAITING_PAYMENT_STATUSES } from "./orders.contracts"
 import type {
     NewOrderDraft,
     OptionalOrder,
@@ -296,6 +297,16 @@ export class OrdersService {
     /** The order is paid; a supplied manager keeps the write in the caller's transaction. */
     async markPaid(workspaceId: string, orderId: string, manager: EntityManager = this.entityManager): Promise<void> {
         await manager.update(OrderEntity, { workspaceId, id: orderId, status: Not("cancelled") }, { status: "paid" })
+    }
+
+    /** Marks an order paid only while it still waits for money; false when it was paid already, cancelled or never confirmed. */
+    async settle(workspaceId: string, orderId: string, manager: EntityManager = this.entityManager): Promise<boolean> {
+        const paid = await manager.update(
+            OrderEntity,
+            { workspaceId, id: orderId, status: In([...AWAITING_PAYMENT_STATUSES]) },
+            { status: "paid" },
+        )
+        return (paid.affected ?? 0) > 0
     }
 
     private takenToday(workspaceId: string, prefix: string): Promise<number> {

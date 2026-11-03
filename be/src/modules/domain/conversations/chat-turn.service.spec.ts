@@ -7,7 +7,7 @@ import {
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -245,6 +245,25 @@ const registerDeliveryFailures = () => {
             text: "Fixed price 55k",
         })
         expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Lead handed to Sales")
+    })
+
+    it("reads the messages of the burst window in the same turn, oldest first, and leaves out one that is gone", async () => {
+        const { service, messages } = await build()
+        const found = (body: string) => ({
+            kind: "ok" as const,
+            value: { id: body, role: "customer", body, deliveryStatus: null },
+        })
+        messages.find.mockImplementation((id) =>
+            Promise.resolve(
+                id === "msg-gone"
+                    ? { kind: "refused" as const, code: AgentMessagesErrorCode.NotFound }
+                    : found(`body of ${id}`),
+            ),
+        )
+
+        const turn = await service.turnOf({ ...turnPayload, mergedMessageIds: ["msg-2", "msg-gone", "msg-3"] })
+
+        expect(turn?.body).toBe("body of msg-1\nbody of msg-2\nbody of msg-3")
     })
 
     it("sends none of the model's text when the final reply is owed, and still shows the lines", async () => {

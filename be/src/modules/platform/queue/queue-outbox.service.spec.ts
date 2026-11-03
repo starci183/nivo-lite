@@ -4,6 +4,7 @@ import { QueueErrorCode } from "./errors/queue.error"
 import { QueueOutboxService } from "./queue-outbox.service"
 
 const ENQUEUE = 'SELECT * FROM "public"."job_enqueue"($1, $2, $3, $4, $5)'
+const ENQUEUE_DELAYED = 'SELECT * FROM "public"."job_enqueue"($1, $2, $3, $4, $5, $6)'
 const MINT = 'SELECT * FROM "pg_catalog"."gen_random_uuid"()'
 
 const WORKSPACE = "3f0c7a52-8d1e-4b6a-9c2d-5e7f10a4b8c6"
@@ -37,6 +38,24 @@ describe("QueueOutboxService", () => {
                 "knowledge.index:s-1",
             ])
             expect(tx.commits).toBe(1)
+        })
+
+        it("writes the delay through the overload only when the job waits", async () => {
+            const outbox = await build()
+            const tx = fakeTransaction(mockEntityManager({ query: [[ENQUEUE_DELAYED, [{ job_enqueue: "row-1" }]]] }))
+
+            await tx.em.transaction((manager) =>
+                outbox.write(manager, "mail", { id: "m-1" }, { dedupeKey: "mail:m-1", delayMs: 3000 }),
+            )
+
+            expect(tx.em.query).toHaveBeenCalledWith(ENQUEUE_DELAYED, [
+                null,
+                "mail",
+                "mail",
+                JSON.stringify({ id: "m-1" }),
+                "mail:m-1",
+                3000,
+            ])
         })
 
         it("names the job after the queue and leaves its workspace null, and gives a job with no identity a fresh one the database mints", async () => {

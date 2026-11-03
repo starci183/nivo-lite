@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AuthorityService } from "@modules/domain/authority"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import type { CreatedWorkspace, NamedBusinessType } from "@modules/domain/workspaces"
+import type { CreatedWorkspace, FirstWorkspace, NamedBusinessType } from "@modules/domain/workspaces"
 import { eachInOrder } from "@modules/platform/primitives"
 import { ModulesService } from "./modules.service"
 import { defaultRulesOf } from "./policies/instance.policy"
@@ -27,6 +27,13 @@ export class WorkspaceSetupService {
         const created = await this.workspaces.createFree(userId, name, businessType)
         await this.ensureGovernance(created.id)
         return created
+    }
+
+    /** The first workspace of a person with none, with the governance a created one starts with; its id is null when none was made. */
+    async startFirst(userId: string): Promise<FirstWorkspace> {
+        const first = await this.workspaces.startFirst(userId)
+        if (first.id !== null) await this.ensureGovernance(first.id)
+        return first
     }
 
     /** Lays down the authority sheet and the default rules of a workspace that has no sheet yet; answers true when it did. */

@@ -9,6 +9,7 @@ import {
     instanceNameKey as realInstanceNameKey,
     nextInstanceName as realNextInstanceName,
     settingOf as realSettingOf,
+    tagGrantsOf as realTagGrantsOf,
     withSetting as realWithSetting,
 } from "./instance.policy"
 
@@ -21,6 +22,7 @@ type Subject = {
     instanceNameKey: typeof realInstanceNameKey
     nextInstanceName: typeof realNextInstanceName
     settingOf: typeof realSettingOf
+    tagGrantsOf: typeof realTagGrantsOf
     withSetting: typeof realWithSetting
 }
 
@@ -37,6 +39,7 @@ const buildSubject = async () => {
                     instanceNameKey: realInstanceNameKey,
                     nextInstanceName: realNextInstanceName,
                     settingOf: realSettingOf,
+                    tagGrantsOf: realTagGrantsOf,
                     withSetting: realWithSetting,
                 },
             },
@@ -273,5 +276,44 @@ describe("withSetting", () => {
             other: 1,
             openclawTimeoutSec: 30,
         })
+    })
+})
+
+describe("tagGrantsOf", () => {
+    const tagging = { ...moduleOf([]), key: "chatbot", tags: ["sales"] }
+    const tagsOf = (key: string): ReadonlyArray<string> => (key === "chatbot" ? ["sales"] : [])
+
+    it("lets a new tagging agent tag the peers its module lists", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.tagGrantsOf(tagging, "a1", [{ agentId: "a2", moduleKey: "sales" }], tagsOf)).toEqual([
+            { from: "a1", to: "a2" },
+        ])
+    })
+
+    it("lets the peers whose module lists the new agent tag it", async () => {
+        const { subject } = await buildSubject()
+        const sales = { ...moduleOf([]), key: "sales" }
+
+        expect(subject.tagGrantsOf(sales, "a2", [{ agentId: "a1", moduleKey: "chatbot" }], tagsOf)).toEqual([
+            { from: "a1", to: "a2" },
+        ])
+    })
+
+    it("grants nothing to itself, to an unlisted module or without peers", async () => {
+        const { subject } = await buildSubject()
+
+        expect(
+            subject.tagGrantsOf(
+                tagging,
+                "a1",
+                [
+                    { agentId: "a1", moduleKey: "chatbot" },
+                    { agentId: "a3", moduleKey: "video" },
+                ],
+                tagsOf,
+            ),
+        ).toEqual([])
+        expect(subject.tagGrantsOf(tagging, "a1", [], tagsOf)).toEqual([])
     })
 })

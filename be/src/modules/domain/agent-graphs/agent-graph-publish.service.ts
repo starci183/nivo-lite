@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { AgentGraphContextService } from "./agent-graph-context.service"
@@ -7,6 +8,7 @@ import { AgentGraphsService } from "./agent-graphs.service"
 import type { GraphState } from "./agent-graphs.service"
 import type { GraphChangeKind, GraphDocument, GraphMode, GraphVersionView } from "./agent-graphs.contracts"
 import { graphDiff } from "./policies/graph-diff.policy"
+import { flowChanged, requireSoundFlow } from "./policies/flow.policy"
 import { graphProblems } from "./policies/graph-problems.policy"
 
 /** Who publishes. */
@@ -23,7 +25,8 @@ const EMPTY: GraphDocument = { nodes: [], rights: [] }
 /**
  * The only road a graph changes what an agent does. The draft is checked first (no cycle or dead end, an `else` that never runs
  * alone, no gap or overlap, nothing above the ceiling of the authority rules, every tool and datum with a right, every approver with a
- * grant), a change that widens the reach of the agent needs the owner, and the frozen version is a new row. Publishing never writes
+ * grant, a node graph whose spec the installed nodes take), a change that widens the reach of the agent or changes its node graph
+ * needs the owner, and the frozen version is a new row. Publishing never writes
  * a grant: the graph only narrows what the grants allow.
  */
 export class AgentGraphPublishService {
@@ -31,6 +34,7 @@ export class AgentGraphPublishService {
         private readonly graphs: AgentGraphsService,
         private readonly context: AgentGraphContextService,
         private readonly installations: InstallationRecordsService,
+        private readonly nodes: GraphNodeRegistryService,
     ) {}
 
     /**
@@ -150,6 +154,7 @@ export class AgentGraphPublishService {
         const installation = await this.installations.findById(state.installationId)
         if (installation === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
         const context = await this.context.contextOf({ ...state, moduleKey: installation.moduleKey }, document)
+        if (document.flow !== undefined) requireSoundFlow(document.flow, this.nodes.installed())
         const problems = graphProblems(document, context)
         if (problems.length > 0)
             throw new AgentGraphsError({
@@ -157,7 +162,7 @@ export class AgentGraphPublishService {
                 params: { count: problems.length },
             })
         const diff = graphDiff(state.active ?? EMPTY, document, { actorMemberId: by.memberId, facts: context.facts })
-        if (diff.widens && by.role !== "owner")
+        if ((diff.widens || flowChanged(state.active?.flow, document.flow)) && by.role !== "owner")
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.WidensNeedsOwner })
     }
 }

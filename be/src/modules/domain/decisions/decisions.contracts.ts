@@ -97,6 +97,8 @@ export interface WorkSpec {
     readonly noChain?: boolean | undefined
     /** Always ask a person, with this reason. */
     readonly forceAsk?: ReasonCode | undefined
+    /** The tag right of the sender already let this work in: with no rule stored it runs under the action's catalogue default; a stored rule still decides. */
+    readonly tagGrant?: boolean | undefined
     /** The command chain this item joins. */
     readonly chainId?: string | null
     /** Its depth in the chain. */
@@ -222,6 +224,8 @@ export interface SendCommandInput {
     readonly noChain?: boolean
     /** Always ask, with this reason. */
     readonly forceAsk?: ReasonCode
+    /** The tag right of the sender already let this work in: with no rule stored it runs under the action's catalogue default; a stored rule still decides. */
+    readonly tagGrant?: boolean
 }
 
 /** What the command bus answers. */

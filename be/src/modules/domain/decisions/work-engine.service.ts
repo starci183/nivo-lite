@@ -106,7 +106,7 @@ export class WorkEngineService {
         return this.process(
             ctx,
             claimed,
-            { preset: spec.preset, noChain: spec.noChain, forceAsk: spec.forceAsk },
+            { preset: spec.preset, noChain: spec.noChain, forceAsk: spec.forceAsk, tagGrant: spec.tagGrant },
             spec.origin ?? null,
         )
     }
@@ -302,7 +302,7 @@ export class WorkEngineService {
         opts: ProcessOptions,
         origin: WorkOrigin | null,
     ): Promise<Judgement> {
-        const rule = await this.ruleOf(ctx, item)
+        const rule = await this.ruleOf(ctx, item, opts)
         const {
             proposal: judged,
             verdict: base,
@@ -320,10 +320,14 @@ export class WorkEngineService {
         return { verdict: accessLetsRunAlone(access) ? forced : askBecause(forced, "over_authority"), rule, ...carried }
     }
 
-    /** The stored rule of the action; an action nobody listed and nobody gave a rule is a generic owner decision. */
-    private async ruleOf(ctx: WorkContext, item: WorkItem): Promise<OptionalAuthorityRule> {
+    /**
+     * The rule of the action: the stored one, else the tag right when the item runs by a tag grant; an action nobody listed and nobody
+     * gave a rule is a generic owner decision.
+     */
+    private async ruleOf(ctx: WorkContext, item: WorkItem, opts?: ProcessOptions): Promise<OptionalAuthorityRule> {
         const stored = await this.rules.ruleFor(ctx, item.action, item.installation_id)
-        if (stored !== null) return stored
+        const rule = stored ?? (opts?.tagGrant === true ? await this.modules.tagRuleOf(item.action) : null)
+        if (rule !== null) return rule
         return (await this.modules.actionOf(item.action)) === null ? genericOwnerRule(item.action) : null
     }
 

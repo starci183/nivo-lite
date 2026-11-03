@@ -83,13 +83,22 @@ export class ChatTurnService {
             this.logger.warn(ConversationsLogEvent.TurnTargetGone, { conversationId: ref.conversationId })
             return undefined
         }
+        const merged = await this.mergedBodies(ref)
         return {
             conversation: conversation.value,
             messageId: message.value.id,
-            body: message.value.body,
+            body: [message.value.body, ...merged].join("\n"),
             channelEventId: ref.channelEventId,
             transcript: await this.messages.transcript(ref.conversationId),
         }
+    }
+
+    /** The words of the messages that arrived within the burst window, oldest first; one that is gone is left out. */
+    private async mergedBodies(ref: TurnRef): Promise<ReadonlyArray<string>> {
+        const found = await Promise.all(
+            (ref.mergedMessageIds ?? []).map((id) => this.messages.find(id, ref.conversationId)),
+        )
+        return found.flatMap((message) => (message.kind === "ok" ? [message.value.body] : []))
     }
 
     /** True when a person who took the conversation over answers it themselves. (The engine own hand-off still delivers the turn it was made in.) */

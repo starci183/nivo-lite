@@ -12,6 +12,7 @@ export type {
     AgentStepHandler,
     StepAnswer,
     StepDecision,
+    StepEffect,
     StepJson,
     StepLink,
     StepSpec,

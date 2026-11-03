@@ -12,6 +12,10 @@
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
     },
+    "./reconcile": {
+      "types": "./dist/reconcile/index.d.ts",
+      "default": "./dist/reconcile/index.js"
+    },
     "./rights": {
       "types": "./dist/rights/index.d.ts",
       "default": "./dist/rights/index.js"
@@ -23,6 +27,10 @@
     "./node": {
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
+    },
+    "./graph": {
+      "types": "./dist/graph/index.d.ts",
+      "default": "./dist/graph/index.js"
     },
     "./spec": {
       "types": "./dist/spec/index.d.ts",

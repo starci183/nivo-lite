@@ -9,6 +9,8 @@ import {
     backgroundCapSpent,
     boundedWakeAt,
     breakerOpen,
+    debounceMsOf,
+    drainDelayMsOf,
     isBackground,
     priorityOf,
     restoresHeldWake,
@@ -30,6 +32,8 @@ const buildSubject = async () => {
                     backgroundCapSpent,
                     boundedWakeAt,
                     breakerOpen,
+                    debounceMsOf,
+                    drainDelayMsOf,
                     isBackground,
                     priorityOf,
                     restoresHeldWake,
@@ -215,5 +219,21 @@ describe("awaitsAnswer", () => {
         const { awaitsAnswer } = await buildSubject()
 
         expect(["customer", "tag", "internal", "schedule"].map(awaitsAnswer)).toEqual([true, false, false, false])
+    })
+})
+
+describe("burst window", () => {
+    it("is three seconds unless the app root names another, and never below zero", async () => {
+        const { debounceMsOf } = await buildSubject()
+
+        expect([undefined, 5000, 0, -10].map(debounceMsOf)).toEqual([3000, 5000, 0, 0])
+    })
+
+    it("delays the drain of a wake locked to a conversation and no other", async () => {
+        const { drainDelayMsOf } = await buildSubject()
+
+        expect(drainDelayMsOf("conversation:c1", 3000)).toBe(3000)
+        expect(drainDelayMsOf("agent", 3000)).toBe(0)
+        expect(drainDelayMsOf("order:o-1", 3000)).toBe(0)
     })
 })
