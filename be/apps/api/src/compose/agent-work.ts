@@ -9,6 +9,7 @@ import { AGENT_RUNS_ERROR_KINDS, AGENT_RUNS_MESSAGES, AgentRunsModule } from "@m
 import { AGENT_WORK_ERROR_KINDS, AGENT_WORK_MESSAGES, AgentWorkModule } from "@modules/domain/agent-work"
 import { GRAPH_NODES_ERROR_KINDS, GRAPH_NODES_MESSAGES, GraphNodesModule } from "@modules/domain/graph-nodes"
 import type { NodeInstall } from "@modules/domain/graph-nodes"
+import { AiTasksService } from "@modules/domain/ai-tasks"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
 import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES } from "@modules/domain/agent-graphs"
 import { AGENT_PLUGINS_ERROR_KINDS, AGENT_PLUGINS_MESSAGES, AgentPluginsModule } from "@modules/domain/agent-plugins"
@@ -28,7 +29,7 @@ const installedNodes: NodeInstall = { nodes: coreNodes, effects: coreEffects, to
 export const agentWorkModules = (): Array<DynamicModule> => [
     AgentWorkModule.register({ isGlobal: true }),
     AgentRunsModule.register({ isGlobal: true }),
-    GraphNodesModule.register({ isGlobal: true, install: installedNodes }),
+    GraphNodesModule.register({ isGlobal: true, install: installedNodes, model: AiTasksService }),
     IntentContractsModule.register({ isGlobal: true }),
     AgentPluginsModule.register({ isGlobal: true }),
     AgentInboundModule.register({ isGlobal: true }),
