@@ -29,6 +29,9 @@ import { WorkApprovalService } from "./work-approval.service"
 import { WorkItemViewsService } from "./work-item-views.service"
 import { WorkBranchService } from "./work-branch.service"
 import { WorkItemClosedService } from "./work-item-closed.service"
+import { OrderVoidExecutorService } from "./order-void-executor.service"
+import { WorkItemRaiseExecutorService } from "./work-item-raise-executor.service"
+import { WorkItemWithdrawExecutorService } from "./work-item-withdraw-executor.service"
 import { WorkChainService } from "./work-chain.service"
 import { WorkDecisionService } from "./work-decision.service"
 import { WorkDrainService } from "./work-drain.service"
@@ -105,6 +108,9 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 WorkApprovalService,
                 WorkBranchService,
                 WorkItemClosedService,
+                WorkItemRaiseExecutorService,
+                WorkItemWithdrawExecutorService,
+                OrderVoidExecutorService,
                 WorkChainService,
                 WorkDecisionService,
                 WorkDecisionTimeoutService,

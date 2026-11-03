@@ -19,6 +19,7 @@ const orderOf = builder<SalesOrderRow>({
     inbound_event_id: "event-1",
     order_no: "DH-0001",
     items: "2 x Tea",
+    note: "",
     amount_vnd: 90000,
     status: "confirmed",
     confirmed_by: "Lan",

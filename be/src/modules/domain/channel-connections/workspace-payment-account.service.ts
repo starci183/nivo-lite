@@ -17,7 +17,13 @@ const accountOfFeed = (feed: ConnectionRecord): WorkspacePaymentAccount | null =
     const bankCode = feed.meta.bank_code ?? ""
     if (!isAccountNumber(accountNumber) || bankCode === "") return null
     const holder = feed.meta.account_holder ?? ""
-    return { accountNumber, bankCode, holder: holder === "" ? null : holder, provider: feed.provider }
+    return {
+        accountNumber,
+        bankCode,
+        holder: holder === "" ? null : holder,
+        provider: feed.provider,
+        connectionId: feed.id,
+    }
 }
 
 @Injectable()

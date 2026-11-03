@@ -47,6 +47,7 @@ import {
     askBecause,
     blockingReasons,
     failureText,
+    genericOwnerRule,
     isCustomerOutbound,
     mergeEdits,
     reviewedByPerson,
@@ -301,8 +302,7 @@ export class WorkEngineService {
         opts: ProcessOptions,
         origin: WorkOrigin | null,
     ): Promise<Judgement> {
-        const stored = await this.rules.ruleFor(ctx, item.action, item.installation_id)
-        const rule = stored ?? (opts.tagGrant === true ? await this.modules.tagRuleOf(item.action) : null)
+        const rule = await this.ruleOf(ctx, item, opts)
         const {
             proposal: judged,
             verdict: base,
@@ -318,6 +318,17 @@ export class WorkEngineService {
         if (forced.verdict !== "auto" || !isCustomerOutbound(item.action)) return { verdict: forced, rule, ...carried }
         const access = await this.access.accessOf(ctx, item, judged)
         return { verdict: accessLetsRunAlone(access) ? forced : askBecause(forced, "over_authority"), rule, ...carried }
+    }
+
+    /**
+     * The rule of the action: the stored one, else the tag right when the item runs by a tag grant; an action nobody listed and nobody
+     * gave a rule is a generic owner decision.
+     */
+    private async ruleOf(ctx: WorkContext, item: WorkItem, opts?: ProcessOptions): Promise<OptionalAuthorityRule> {
+        const stored = await this.rules.ruleFor(ctx, item.action, item.installation_id)
+        const rule = stored ?? (opts?.tagGrant === true ? await this.modules.tagRuleOf(item.action) : null)
+        if (rule !== null) return rule
+        return (await this.modules.actionOf(item.action)) === null ? genericOwnerRule(item.action) : null
     }
 
     private async gate(
@@ -436,7 +447,7 @@ export class WorkEngineService {
         note: string | null,
     ): Promise<WorkItem> {
         const reviewed = reviewedByPerson(merged)
-        const rule = await this.rules.ruleFor(ctx, item.action, item.installation_id)
+        const rule = await this.ruleOf(ctx, item)
         // humanApproved covers THIS item only (its own action, department and amount): an approval never carries to the next step.
         const verdict = await this.gate(item, rule, reviewed, true)
         const [blocking] = blockingReasons(verdict.reasons)

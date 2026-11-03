@@ -24,6 +24,7 @@ const orderOf = builder<OrdersWorkbenchRow>({
     inbound_event_id: null,
     order_no: "SO-1",
     items: "Tea",
+    note: "",
     amount_vnd: 250000,
     status: "confirmed",
     confirmed_by: "Bao",

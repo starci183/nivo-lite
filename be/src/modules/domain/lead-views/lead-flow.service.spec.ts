@@ -73,6 +73,7 @@ const ORDER: OrdersWorkbenchRow = {
     inbound_event_id: null,
     order_no: "ORD-1",
     items: "Menu",
+    note: "",
     amount_vnd: 120000,
     status: "confirmed",
     confirmed_by: "An",

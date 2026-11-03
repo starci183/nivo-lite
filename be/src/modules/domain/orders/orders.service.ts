@@ -45,6 +45,7 @@ const toOrderRow = (order: OrderEntity): SalesOrderRow => ({
     inbound_event_id: order.inboundEventId,
     order_no: order.orderNo,
     items: order.items,
+    note: order.note,
     amount_vnd: order.amountVnd,
     status: order.status,
     confirmed_by: order.confirmedBy,
@@ -63,6 +64,7 @@ const isWrittenOrder = rowShape({
     inbound_event_id: "string?",
     order_no: "string",
     items: "string",
+    note: "string",
     amount_vnd: "json",
     status: "string",
     confirmed_by: "string?",
@@ -84,6 +86,7 @@ const fromWritten = (row: WrittenOrder): SalesOrderRow => ({
     inbound_event_id: row.inbound_event_id,
     order_no: row.order_no,
     items: row.items,
+    note: row.note,
     amount_vnd: row.amount_vnd === null ? null : Number(row.amount_vnd),
     status: row.status,
     confirmed_by: row.confirmed_by,
@@ -170,6 +173,7 @@ export class OrdersService {
                 .addSelect("o.inbound_event_id", "inbound_event_id")
                 .addSelect("o.order_no", "order_no")
                 .addSelect("o.items", "items")
+                .addSelect("o.note", "note")
                 .addSelect("o.amount_vnd::float8", "amount_vnd")
                 .addSelect("o.status", "status")
                 .addSelect("o.confirmed_by", "confirmed_by")
@@ -281,6 +285,30 @@ export class OrdersService {
         return firstWritten(cancelled.raw)
     }
 
+    /** Takes the confirmation back: a confirmed order is a draft again; null when the order is not confirmed. */
+    async unconfirm(workspaceId: string, orderId: string): Promise<OptionalOrder> {
+        const reopened = await this.entityManager
+            .createQueryBuilder(OrderEntity, "o")
+            .update()
+            .set({ status: "draft", confirmedBy: null, confirmedAt: null })
+            .where({ workspaceId, id: orderId, status: "confirmed" })
+            .returning("*")
+            .execute()
+        return firstWritten(reopened.raw)
+    }
+
+    /** Marks an order a system failure cut short and keeps every other field; null when it already is, or is gone. */
+    async markFailedSystem(workspaceId: string, orderId: string): Promise<OptionalOrder> {
+        const failed = await this.entityManager
+            .createQueryBuilder(OrderEntity, "o")
+            .update()
+            .set({ status: "failed_system" })
+            .where({ workspaceId, id: orderId, status: Not("failed_system") })
+            .returning("*")
+            .execute()
+        return firstWritten(failed.raw)
+    }
+
     /** The order has an invoice. */
     async markInvoiced(workspaceId: string, orderId: string): Promise<void> {
         await this.entityManager.update(
@@ -325,6 +353,7 @@ export class OrdersService {
                 inboundEventId: input.inboundEventId,
                 orderNo: orderNumberOf(input.orderNo, prefix, taken, attempt),
                 items: input.items,
+                note: input.note ?? "",
                 amountVnd: input.amountVnd,
                 status: "draft",
             })

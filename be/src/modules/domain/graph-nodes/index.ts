@@ -17,3 +17,4 @@ export type {
     NodeTurn,
     NodeUndoInput,
 } from "./graph-nodes.contracts"
+export { rowsAnswering } from "./node-rows.policy"

@@ -34,7 +34,13 @@ const INVOICE: InvoiceRow = {
     contract_id: "c-1",
     period_ends_on: "2026-10-20",
 }
-const ACCOUNT = { accountNumber: "0123456789", bankCode: "VCB", holder: "TIEM HOA", provider: "sepay" }
+const ACCOUNT = {
+    accountNumber: "0123456789",
+    bankCode: "VCB",
+    holder: "TIEM HOA",
+    provider: "sepay",
+    connectionId: "c1",
+}
 const QR = "https://qr.sepay.vn/img?acc=0123456789&bank=VCB&amount=1620000&des=INV2026110003&template=compact"
 /** The dong sign, from its code point so the source stays ASCII. */
 const MONEY = `1.620.000${String.fromCodePoint(0x111)}`

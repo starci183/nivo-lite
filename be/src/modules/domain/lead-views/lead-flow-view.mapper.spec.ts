@@ -73,6 +73,7 @@ const RECORDS: LeadFlowRecords = {
             inbound_event_id: "event-1",
             order_no: "ORD-1",
             items: "Annual menu",
+            note: "",
             amount_vnd: 120000,
             status: "paid",
             confirmed_by: "An",

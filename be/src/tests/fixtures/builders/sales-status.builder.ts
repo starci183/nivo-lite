@@ -8,6 +8,7 @@ export interface StatusOrderRow {
     readonly inbound_event_id: string | null
     readonly order_no: string
     readonly items: string
+    readonly note: string
     readonly amount_vnd: number | null
     readonly status: string
     readonly confirmed_by: string | null
@@ -25,6 +26,7 @@ const orderRow = builder<StatusOrderRow>({
     inbound_event_id: null,
     order_no: "DH-1",
     items: "2 chairs",
+    note: "",
     amount_vnd: null,
     status: "confirmed",
     confirmed_by: null,

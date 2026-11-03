@@ -4,7 +4,7 @@ import { AgentsService } from "@modules/domain/agents"
 import { EvidenceService } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { LeadRecordsService } from "@modules/domain/leads"
-import { OrdersService } from "@modules/domain/orders"
+import { OrderConfirmationService, OrdersService } from "@modules/domain/orders"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { DealWonEvent, LeadCapturedEvent, OrderConfirmedEvent } from "@modules/events/api"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -52,6 +52,7 @@ const build = async () => {
             ConfirmOrderPerformerService,
             { provide: PerformerKitService, useValue: kit },
             { provide: OrdersService, useValue: orders },
+            OrderConfirmationService,
             { provide: LeadRecordsService, useValue: leads },
             { provide: InboundEventsService, useValue: inbound },
             { provide: AgentsService, useValue: agents },

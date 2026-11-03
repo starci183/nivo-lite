@@ -5,6 +5,7 @@ import { RESPONSIBILITY_LEAD_DESK } from "@modules/domain/responsibilities"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./leads.module-definition"
 import { LeadDeskService } from "./lead-desk.service"
 import { LeadRecordsService } from "./lead-records.service"
+import { LeadsGraphService } from "./leads-graph.service"
 import { LeadsService } from "./leads.service"
 import { LeadReadService } from "./lead-read.service"
 import { LeadAutomationReadService } from "./lead-automation-read.service"
@@ -24,6 +25,7 @@ export class LeadsModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 LeadsService,
                 LeadRecordsService,
+                LeadsGraphService,
                 LeadReadService,
                 LeadAutomationReadService,
                 LeadDeskService,
