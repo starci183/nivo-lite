@@ -17,6 +17,57 @@
           "type": "array",
           "minItems": 1,
           "items": { "enum": ["channel", "chats-group", "agent", "system-event", "schedule"] }
+        },
+        "burst": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "channel": {
+              "type": "object",
+              "required": ["window"],
+              "additionalProperties": false,
+              "properties": {
+                "window": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" },
+                "maxWait": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" }
+              }
+            },
+            "chats-group": {
+              "type": "object",
+              "required": ["window"],
+              "additionalProperties": false,
+              "properties": {
+                "window": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" },
+                "maxWait": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" }
+              }
+            },
+            "agent": {
+              "type": "object",
+              "required": ["window"],
+              "additionalProperties": false,
+              "properties": {
+                "window": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" },
+                "maxWait": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" }
+              }
+            },
+            "system-event": {
+              "type": "object",
+              "required": ["window"],
+              "additionalProperties": false,
+              "properties": {
+                "window": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" },
+                "maxWait": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" }
+              }
+            },
+            "schedule": {
+              "type": "object",
+              "required": ["window"],
+              "additionalProperties": false,
+              "properties": {
+                "window": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" },
+                "maxWait": { "type": "string", "pattern": "^[0-9]{1,6}(ms|s|m)$" }
+              }
+            }
+          }
         }
       }
     },
