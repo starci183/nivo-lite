@@ -1,7 +1,7 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentWorkOptions } from "./agent-work.options"
-import type { AgentTagRights, AgentTurnExecutor, WakeInterruptions } from "./agent-work.port"
+import type { AgentTagRights, AgentTagVisibilityPort, AgentTurnExecutor, WakeInterruptions } from "./agent-work.port"
 
 /** Token of the turn executor port: absent until a capability binds one, and then every wake is held for want of it. */
 export const AGENT_TURN_EXECUTOR: unique symbol = Symbol("domain.agent-work.turn-executor")
@@ -30,3 +30,10 @@ export const AGENT_WORK_OPTIONS: unique symbol = Symbol("domain.agent-work.optio
 /** Injects the options of the agent-work capability. Parameter type: AgentWorkOptions. */
 export const InjectAgentWorkOptions = (): TypedParameterDecorator<AgentWorkOptions> =>
     injector<AgentWorkOptions>(AGENT_WORK_OPTIONS)
+
+/** Token of the tag visibility port: absent until the conversations side binds one, and then a tag shows nothing and moves nothing. */
+export const AGENT_TAG_VISIBILITY: unique symbol = Symbol("domain.agent-work.tag-visibility")
+
+/** Injects the tag visibility port. Parameter type: AgentTagVisibilityPort. */
+export const InjectAgentTagVisibility = (): TypedParameterDecorator<AgentTagVisibilityPort> =>
+    injector<AgentTagVisibilityPort>(AGENT_TAG_VISIBILITY)

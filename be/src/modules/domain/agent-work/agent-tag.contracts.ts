@@ -1,5 +1,8 @@
 import type { AgentLocale } from "./agent-work.contracts"
 
+/** How a hand-off shows to the people in the conversation. */
+export type AgentTagVisibility = "chat" | "redirect"
+
 /** What a tag is about, whoever tags: the words, and the record or conversation it concerns. */
 export interface AgentTagBody {
     /** The workspace of both agents. */
@@ -20,6 +23,11 @@ export interface AgentTagBody {
     readonly locale?: AgentLocale | undefined
     /** Plain data for the target's graph (objects and arrays allowed): it becomes trigger.context there. Kept as JSON text, at most 8000 characters. */
     readonly context?: Readonly<Record<string, unknown>> | undefined
+    /**
+     * How the hand-off shows: `chat` posts a visible tag line in the conversation so people see it (the default); `redirect` posts nothing and
+     * moves the conversation to the target silently. Both write the same wake, so the run records the same origin.
+     */
+    readonly visibility?: AgentTagVisibility | undefined
     /** Stable for one fact, so the same tag written twice wakes once; a fresh key per call when absent. */
     readonly eventKey?: string | undefined
 }
@@ -49,3 +57,17 @@ export type AgentTagRequest = AgentTaggedByAgent | AgentTaggedByPerson | AgentTa
 export type AgentTagResult =
     | { readonly tagged: true; readonly wakeId: string }
     | { readonly tagged: false; readonly reason: "not_allowed" | "duplicate" | "too_large" }
+
+/** What the visibility port is told about a hand-off that has a conversation. */
+export interface AgentTagNotice {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The conversation the hand-off belongs to. */
+    readonly conversationId: string
+    /** The agent that hands off, when an agent does. */
+    readonly fromAgentId: string | null
+    /** The agent that takes over. */
+    readonly toAgentId: string
+    /** What the tagger said. */
+    readonly text: string
+}
