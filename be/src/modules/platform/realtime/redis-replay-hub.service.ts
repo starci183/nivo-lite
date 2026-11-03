@@ -30,7 +30,10 @@ const idOf = (frame: object): string | null => {
  * a client on any replica reads the stream and resumes after its `Last-Event-ID` (the newest match).
  */
 export class RedisReplayHubService extends SubscribedRealtimeHub {
-    protected override readonly subscriptions = new RealtimeSubscriptionsPolicy(compareStreamIds, "0-0")
+    protected override readonly subscriptions: RealtimeSubscriptionsPolicy = new RealtimeSubscriptionsPolicy(
+        compareStreamIds,
+        "0-0",
+    )
 
     constructor(
         @InjectRedisPublisher() protected readonly publisher: RedisConnection,

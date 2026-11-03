@@ -4,7 +4,7 @@ import type { AvatarFile, AvatarOwner } from "./avatars.contracts"
 export const AVATAR_BUCKET = "avatars_public"
 
 /** The largest picture, in bytes (the bucket's own file_size_limit). */
-export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+export const AVATAR_MAX_BYTES: number = 2 * 1024 * 1024
 
 /** The accepted picture types and the extension each is stored under (the bucket's own allowed_mime_types). */
 const AVATAR_EXTENSIONS: Readonly<Record<string, string>> = {

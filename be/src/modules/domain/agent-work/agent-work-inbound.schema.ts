@@ -56,7 +56,56 @@ const wakeEvidenceSchema = z.strictObject({
 })
 
 /** The normalized inbound event as the context of a wake keeps it; anything outside this shape is dropped when a wake is read back. */
-export const wakeInboundSchema = z.strictObject({
+export const wakeInboundSchema: z.ZodObject<
+    {
+        eventType: z.ZodString
+        actor: z.ZodObject<
+            {
+                kind: z.ZodString
+                id: z.ZodNullable<z.ZodString>
+                role: z.ZodNullable<z.ZodString>
+            },
+            z.core.$strict
+        >
+        trust: z.ZodString
+        chain: z.ZodNullable<
+            z.ZodObject<
+                {
+                    id: z.ZodString
+                    depth: z.ZodNumber
+                    agentIds: z.ZodArray<z.ZodString>
+                    cause: z.ZodNullable<z.ZodString>
+                },
+                z.core.$strict
+            >
+        >
+        payload: z.ZodRecord<
+            z.ZodString,
+            z.ZodType<PayloadValue, unknown, z.core.$ZodTypeInternals<PayloadValue, unknown>>
+        >
+        attachments: z.ZodArray<
+            z.ZodObject<
+                {
+                    fileId: z.ZodString
+                    mimeType: z.ZodString
+                },
+                z.core.$strict
+            >
+        >
+        evidence: z.ZodArray<
+            z.ZodObject<
+                {
+                    key: z.ZodString
+                    value: z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean]>
+                    kind: z.ZodString
+                    via: z.ZodString
+                },
+                z.core.$strict
+            >
+        >
+    },
+    z.core.$strict
+> = z.strictObject({
     eventType: z.string().min(1).max(KEY_MAX),
     actor: wakeActorSchema,
     trust: z.string().min(1).max(KEY_MAX),

@@ -3,7 +3,7 @@ import { editorScenesOf, videoRecord } from "./video-workbench.policy"
 import type { VideoScriptQuoteState } from "./types/video-scripting.contracts"
 
 /** Maximum age of a script operation before a fresh request may replace it. */
-export const VIDEO_SCRIPT_STALE_MS = 5 * 60_000
+export const VIDEO_SCRIPT_STALE_MS: number = 5 * 60_000
 
 /** A validated agent answer containing a title and editable scenes. */
 export interface ParsedVideoScript {

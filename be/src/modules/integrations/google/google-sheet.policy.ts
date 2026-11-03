@@ -73,7 +73,87 @@ const valueCell = (value: SheetCell) =>
 const columnSizes = (pixels: ReadonlyArray<number>) => pixels.map((pixelSize) => ({ pixelSize }))
 
 /** The body of spreadsheets.create: two tabs, bold frozen header rows, column widths and the sample row. */
-export const buildCreateBody = (title: string, now: Date) => {
+export const buildCreateBody = (
+    title: string,
+    now: Date,
+): {
+    properties: {
+        title: string
+        locale: string
+        timeZone: string
+    }
+    sheets: (
+        | {
+              properties: {
+                  sheetId: number
+                  title: string
+                  index: number
+                  gridProperties: {
+                      frozenRowCount: number
+                      rowCount: number
+                      columnCount: 9
+                  }
+              }
+              data: {
+                  startRow: number
+                  startColumn: number
+                  columnMetadata: {
+                      pixelSize: number
+                  }[]
+                  rowData: {
+                      values: (
+                          | {
+                                userEnteredFormat?: {
+                                    textFormat: {
+                                        bold: boolean
+                                    }
+                                }
+                                userEnteredValue: {
+                                    stringValue: string
+                                }
+                            }
+                          | {
+                                userEnteredValue: {
+                                    numberValue: number
+                                }
+                            }
+                      )[]
+                  }[]
+              }[]
+          }
+        | {
+              properties: {
+                  sheetId: number
+                  title: string
+                  index: number
+                  gridProperties: {
+                      frozenRowCount: number
+                      rowCount: number
+                      columnCount: 7
+                  }
+              }
+              data: {
+                  startRow: number
+                  startColumn: number
+                  columnMetadata: {
+                      pixelSize: number
+                  }[]
+                  rowData: {
+                      values: {
+                          userEnteredFormat?: {
+                              textFormat: {
+                                  bold: boolean
+                              }
+                          }
+                          userEnteredValue: {
+                              stringValue: string
+                          }
+                      }[]
+                  }[]
+              }[]
+          }
+    )[]
+} => {
     const sample: ReadonlyArray<SheetCell> = [
         formatVnTime(now.toISOString(), now),
         "MAU-001",
@@ -131,7 +211,28 @@ export const buildCreateBody = (title: string, now: Date) => {
  * The follow-up batchUpdate: the money column (E) shows thousands separators and the dong sign for every row below the
  * header.
  */
-export const buildFormatBody = () => ({
+export const buildFormatBody = (): {
+    requests: {
+        repeatCell: {
+            range: {
+                sheetId: number
+                startRowIndex: number
+                startColumnIndex: number
+                endColumnIndex: number
+            }
+            cell: {
+                userEnteredFormat: {
+                    numberFormat: {
+                        type: string
+                        pattern: string
+                    }
+                    horizontalAlignment: string
+                }
+            }
+            fields: string
+        }
+    }[]
+} => ({
     requests: [
         {
             repeatCell: {

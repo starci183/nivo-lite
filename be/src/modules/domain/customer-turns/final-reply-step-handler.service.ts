@@ -28,7 +28,7 @@ const DELIVERY_UNAVAILABLE = "delivery_unavailable"
  */
 export class FinalReplyStepHandlerService implements AgentStepHandler, OnModuleInit {
     /** The kind it runs. */
-    readonly kind = FINAL_REPLY_STEP_KIND
+    readonly kind: "final_reply" = FINAL_REPLY_STEP_KIND
 
     constructor(
         private readonly handlers: AgentRunHandlersService,

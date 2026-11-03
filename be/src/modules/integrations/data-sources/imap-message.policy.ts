@@ -2,7 +2,7 @@ import type { AddressObject, ParsedMail } from "mailparser"
 import type { ImapAddress, ImapMessageRow } from "./imap-mailbox.contracts"
 
 /** The most text kept from one message. */
-export const IMAP_MAX_TEXT = 20 * 1024
+export const IMAP_MAX_TEXT: number = 20 * 1024
 
 /** The folder cursor `<uidvalidity>:<uid>`, parsed. */
 export interface ImapCursor {

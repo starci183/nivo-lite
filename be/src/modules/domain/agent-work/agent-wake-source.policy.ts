@@ -47,7 +47,7 @@ const sameTraits = (a: AgentWakeTraits, b: AgentWakeTraits): boolean =>
     a.awaitsAnswer === b.awaitsAnswer
 
 /** The shape of a source key: it is stored as the wake's source, so the database checks the same shape. */
-export const WAKE_SOURCE_KEY = /^[a-z][a-z0-9_]{0,39}$/u
+export const WAKE_SOURCE_KEY: RegExp = /^[a-z][a-z0-9_]{0,39}$/u
 
 /** The sources the work core knows, each with its traits. The four built-in ones are always there; an inbound adapter adds its own. */
 export class WakeSourcesPolicy {
@@ -91,4 +91,4 @@ export class WakeSourcesPolicy {
 }
 
 /** The one table of the process: adapters add to it when they register, the policies read it. */
-export const wakeSources = new WakeSourcesPolicy()
+export const wakeSources: WakeSourcesPolicy = new WakeSourcesPolicy()

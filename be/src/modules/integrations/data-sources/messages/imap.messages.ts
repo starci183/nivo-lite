@@ -1,5 +1,5 @@
 /** Letters that only Vietnamese text carries: a message with one of them is already written for the owner. */
-export const VIETNAMESE_LETTER = /[ạảãàáâấầẩẫậắằẳẵặđêếềểễệôốồổỗộơớờởỡợưứừửữựíìỉĩịúùủũụýỳỷỹỵ]/iu
+export const VIETNAMESE_LETTER: RegExp = /[ạảãàáâấầẩẫậắằẳẵặđêếềểễệôốồổỗộơớờởỡợưứừửữựíìỉĩịúùủũụýỳỷỹỵ]/iu
 
 /** The sentences shown to the owner when a mailbox cannot be read. */
 export const IMAP_TEXT = {

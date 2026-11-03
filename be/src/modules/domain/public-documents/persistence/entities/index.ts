@@ -5,8 +5,8 @@ import { PublicDocumentApprovalEntity } from "./public-document-approval.entity"
 export { PublicDocumentEntity, PublicDocumentSourceEntity, PublicDocumentApprovalEntity }
 
 /** Every entity the public-documents capability owns, collected by the database connection. */
-export const publicDocumentsEntities = [
-    PublicDocumentEntity,
-    PublicDocumentSourceEntity,
-    PublicDocumentApprovalEntity,
-] as const
+export const publicDocumentsEntities: readonly [
+    typeof PublicDocumentEntity,
+    typeof PublicDocumentSourceEntity,
+    typeof PublicDocumentApprovalEntity,
+] = [PublicDocumentEntity, PublicDocumentSourceEntity, PublicDocumentApprovalEntity] as const

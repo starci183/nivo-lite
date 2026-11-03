@@ -38,7 +38,7 @@ export const CUSTOMER_MANIFEST: NativeConnectorManifest = {
  * neither reads the other's turns or memory.
  */
 export class CustomerNativeService implements NativeAdapter {
-    readonly manifest = CUSTOMER_MANIFEST
+    readonly manifest: NativeConnectorManifest = CUSTOMER_MANIFEST
 
     constructor(
         private readonly conversations: AgentConversationsReadService,

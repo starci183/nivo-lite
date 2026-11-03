@@ -4,7 +4,23 @@ import { z } from "zod"
 const placeholder = z.object({ label: z.string().max(120), reason: z.string().max(200) })
 
 /** The JSON a remedy draft answers: the document in Markdown and the blanks it leaves. */
-export const REMEDY_SCHEMA = z.object({
+export const REMEDY_SCHEMA: z.ZodObject<
+    {
+        title: z.ZodString
+        documentType: z.ZodString
+        body: z.ZodString
+        placeholders: z.ZodArray<
+            z.ZodObject<
+                {
+                    label: z.ZodString
+                    reason: z.ZodString
+                },
+                z.core.$strip
+            >
+        >
+    },
+    z.core.$strip
+> = z.object({
     title: z.string().min(1).max(160),
     documentType: z.string().max(80),
     body: z.string().min(1).max(40_000),

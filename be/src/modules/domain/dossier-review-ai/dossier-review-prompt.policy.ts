@@ -4,7 +4,7 @@ import type { BundleItem, DossierBundle } from "@modules/domain/dossier-review"
 export const PROMPT_VERSION = "dossier-review@1"
 
 /** The standing instructions of the dossier review. */
-export const SYSTEM_PROMPT = [
+export const SYSTEM_PROMPT: string = [
     "You review the corporate dossier of a Vietnamese limited liability company as a careful compliance reviewer. You receive one dossier: its documents as numbered passages (S1.P1 ...), the facts read from them (F1 ...), the checklist row (C1), the legal bases the dossier rests on, and the issues already found (K...).",
     "Find what is inconsistent, missing, expired, unsigned, out of date after an event, or unreasonable, across these documents and facts.",
     "Rules: cite only the keys given; every finding cites at least one S or F key, a contradiction cites at least two items from different documents or facts; each cited quote is copied verbatim from the cited passage or fact, at most 300 characters; do not repeat an issue listed under ALREADY FOUND; do not invent laws, numbers, dates or people; legal grounds may only be the bases listed; when unsure, leave it out; at most 8 findings.",

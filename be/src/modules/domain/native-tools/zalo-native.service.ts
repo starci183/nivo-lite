@@ -29,7 +29,7 @@ const ROUTE: ProviderRoute = { provider: "zalo_oa", channel: "zalo", line: lineO
 @Injectable()
 /** Runs the Zalo OA tools: `status` and `events`, read through the connections and the message feed of the workspace. */
 export class ZaloNativeService implements NativeAdapter {
-    readonly manifest = ZALO_MANIFEST
+    readonly manifest: NativeConnectorManifest = ZALO_MANIFEST
 
     constructor(private readonly tools: ProviderToolsService) {}
 

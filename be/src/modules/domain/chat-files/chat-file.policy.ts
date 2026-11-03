@@ -4,7 +4,7 @@ import type { ChatFileFacts, ChatFileScope, ChatFileView } from "./chat-files.co
 export const CHAT_FILE_BUCKET = "media"
 
 /** The largest chat file, in bytes. */
-export const CHAT_FILE_MAX_BYTES = 10 * 1024 * 1024
+export const CHAT_FILE_MAX_BYTES: number = 10 * 1024 * 1024
 
 /** The longest file name kept. */
 const NAME_MAX = 255

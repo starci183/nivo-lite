@@ -29,10 +29,10 @@ export const MAX_SOURCE_CHARS = 120_000
 export const KNOWLEDGE_UPLOAD_BUCKET = "knowledge-uploads"
 
 /** The largest uploaded document, in bytes: 50 MB. */
-export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+export const MAX_UPLOAD_BYTES: number = 50 * 1024 * 1024
 
 /** The most raw document data one workspace may index in total, in bytes: 50 MB. */
-export const WORKSPACE_SOURCE_BYTES = 50 * 1024 * 1024
+export const WORKSPACE_SOURCE_BYTES: number = 50 * 1024 * 1024
 
 /** How much of its raw document allowance a workspace has used. */
 export interface KnowledgeUsage {

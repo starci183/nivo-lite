@@ -35,7 +35,7 @@ export class LeadCapturedEvent extends BaseEvent {
     static readonly eventName = "lead_captured"
     static readonly version = 1
 
-    readonly eventName = LeadCapturedEvent.eventName
+    readonly eventName: "lead_captured" = LeadCapturedEvent.eventName
 
     private constructor(
         readonly eventId: string,

@@ -112,7 +112,7 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
  * to the public. Facts about customers and people are never served and evidence leaves as kind and label only.
  */
 export class BrainNativeService implements NativeAdapter {
-    readonly manifest = BRAIN_MANIFEST
+    readonly manifest: NativeConnectorManifest = BRAIN_MANIFEST
 
     constructor(
         @InjectClock() private readonly clock: Clock,

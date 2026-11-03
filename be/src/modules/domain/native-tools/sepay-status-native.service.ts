@@ -31,7 +31,7 @@ const ROUTE: ProviderRoute = { provider: "sepay", channel: null, line: lineOf }
  * ledger, and `status` reads the bank connections. It takes the place of the gateway's own SePay adapter, which has no status.
  */
 export class SepayStatusNativeService implements NativeAdapter {
-    readonly manifest = SEPAY_STATUS_MANIFEST
+    readonly manifest: NativeConnectorManifest = SEPAY_STATUS_MANIFEST
 
     constructor(
         private readonly views: NativeViewService,

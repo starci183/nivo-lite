@@ -1,5 +1,12 @@
 /** The outgoing events a webhook connection can receive. */
-export const WEBHOOK_EVENTS = [
+export const WEBHOOK_EVENTS: readonly [
+    "lead.created",
+    "deal.won",
+    "order.confirmed",
+    "payment.received",
+    "handoff.requested",
+    "decision.made",
+] = [
     "lead.created",
     "deal.won",
     "order.confirmed",

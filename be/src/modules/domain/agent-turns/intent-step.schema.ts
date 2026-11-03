@@ -31,8 +31,131 @@ const idSchema = z.string().min(1).max(ID_MAX)
 const triggerSchema = z.string().min(1).max(INTENT_TRIGGER_MAX).regex(INTENT_TRIGGER_PATTERN)
 const trustSchema = z.enum(["outsider", "member", "manager", "system"])
 
+type StrictObject<Shape extends z.core.$ZodShape> = z.ZodObject<Shape, z.core.$strict>
+type TrustSchema = z.ZodEnum<{ outsider: "outsider"; member: "member"; manager: "manager"; system: "system" }>
+type ContractSchema = StrictObject<{
+    intent: z.ZodString
+    label: z.ZodString
+    ownTurn: z.ZodBoolean
+    task: z.ZodString
+    limits: z.ZodArray<z.ZodString>
+    result: z.ZodString
+    owns: z.ZodArray<z.ZodString>
+    checks: z.ZodArray<z.ZodString>
+}>
+type PlanRowSchema = StrictObject<{
+    versionId: z.ZodString
+    trigger: z.ZodString
+    trust: TrustSchema
+    pinned: z.ZodNullable<z.ZodString>
+    contracts: z.ZodArray<ContractSchema>
+}>
+type TurnRowSchema = StrictObject<{ text: z.ZodString }>
+type ReadInputSchema = StrictObject<{ plan: PlanRowSchema; text: z.ZodString }>
+type ReadingRowSchema = z.ZodDiscriminatedUnion<
+    [
+        StrictObject<{
+            kind: z.ZodLiteral<"picked">
+            contract: ContractSchema
+            resultText: z.ZodString
+            dropped: z.ZodArray<z.ZodString>
+        }>,
+        StrictObject<{ kind: z.ZodLiteral<"split">; contract: ContractSchema }>,
+        StrictObject<{
+            kind: z.ZodLiteral<"safe">
+            cause: z.ZodEnum<{ no_intent: "no_intent"; invalid_output: "invalid_output"; check_failed: "check_failed" }>
+            detail: z.ZodString
+            intent: z.ZodNullable<z.ZodString>
+            gap: z.ZodNullable<StrictObject<{ question: z.ZodString; topic: z.ZodString }>>
+            draft: z.ZodString
+        }>,
+    ],
+    "kind"
+>
+type TraceRowSchema = StrictObject<{
+    versionId: z.ZodString
+    trigger: z.ZodString
+    trust: TrustSchema
+    offered: z.ZodArray<z.ZodString>
+    intent: z.ZodNullable<z.ZodString>
+    result: z.ZodEnum<{
+        picked: "picked"
+        split: "split"
+        no_intent: "no_intent"
+        invalid_output: "invalid_output"
+        check_failed: "check_failed"
+    }>
+    detail: z.ZodString
+    dropped: z.ZodArray<z.ZodString>
+}>
+type ReadResultSchema = StrictObject<{ reading: ReadingRowSchema; trace: TraceRowSchema }>
+type WakeObjectSchema = StrictObject<{
+    inbound: z.ZodOptional<typeof wakeInboundSchema>
+    workspaceId: z.ZodString
+    agentId: z.ZodString
+    scopeKey: z.ZodString
+    wakeId: z.ZodString
+    turnId: z.ZodString
+    source: z.ZodString
+    eventKey: z.ZodString
+    context: z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodBoolean]>>
+    actorMemberId: z.ZodNullable<z.ZodString>
+    attempts: z.ZodNumber
+    maxAttempts: z.ZodNumber
+    wakeCreatedAt: z.ZodString
+}>
+type WakeRowSchema = z.ZodPipe<WakeObjectSchema, z.ZodTransform<WakeRow, z.output<WakeObjectSchema>>>
+type DoorInputSchema = StrictObject<{
+    wake: WakeRowSchema
+    reading: ReadingRowSchema
+    trace: TraceRowSchema
+    moneyText: z.ZodOptional<z.ZodString>
+}>
+type RequestDoorInputSchema = StrictObject<{
+    wake: WakeRowSchema
+    reading: ReadingRowSchema
+    trace: TraceRowSchema
+    settle: StrictObject<{
+        module: z.ZodString
+        actorName: z.ZodString
+        locale: z.ZodEnum<{ vi: "vi"; en: "en" }>
+        installationId: z.ZodNullable<z.ZodString>
+    }>
+}>
+type ActionRowSchema = z.ZodDiscriminatedUnion<
+    [
+        StrictObject<{
+            index: z.ZodNumber
+            action: z.ZodString
+            outcome: z.ZodLiteral<"requested">
+            workItemId: z.ZodString
+        }>,
+        StrictObject<{
+            index: z.ZodNumber
+            action: z.ZodString
+            outcome: z.ZodLiteral<"dropped">
+            reason: z.ZodString
+        }>,
+    ],
+    "outcome"
+>
+type SettledRowSchema = StrictObject<{
+    reply: z.ZodString
+    needsHuman: z.ZodBoolean
+    reason: z.ZodString
+    tasks: z.ZodNumber
+    actions: z.ZodArray<ActionRowSchema>
+}>
+type TagDoorResultSchema = z.ZodDiscriminatedUnion<
+    [
+        StrictObject<{ split: z.ZodLiteral<true>; fired: z.ZodBoolean }>,
+        StrictObject<{ split: z.ZodLiteral<false>; settled: SettledRowSchema }>,
+    ],
+    "split"
+>
+
 /** One contract as a step row keeps it. */
-export const contractSchema = z.strictObject({
+export const contractSchema: ContractSchema = z.strictObject({
     intent: z.string().min(1).max(INTENT_MAX),
     label: z.string().max(LABEL_MAX),
     ownTurn: z.boolean(),
@@ -44,7 +167,7 @@ export const contractSchema = z.strictObject({
 })
 
 /** What a turn settles against, as a step row keeps it. */
-export const planRowSchema = z.strictObject({
+export const planRowSchema: PlanRowSchema = z.strictObject({
     versionId: idSchema,
     trigger: triggerSchema,
     trust: trustSchema,
@@ -53,10 +176,13 @@ export const planRowSchema = z.strictObject({
 })
 
 /** The model's text, the input of the `turn` step and its result. */
-export const turnRowSchema = z.strictObject({ text: z.string().max(TURN_TEXT_MAX) })
+export const turnRowSchema: TurnRowSchema = z.strictObject({ text: z.string().max(TURN_TEXT_MAX) })
 
 /** The input of the `read_result` step. */
-export const readInputSchema = z.strictObject({ plan: planRowSchema, text: z.string().max(TURN_TEXT_MAX) })
+export const readInputSchema: ReadInputSchema = z.strictObject({
+    plan: planRowSchema,
+    text: z.string().max(TURN_TEXT_MAX),
+})
 
 const gapTextSchema = z.strictObject({
     question: z.string().max(QUESTION_MAX),
@@ -64,7 +190,7 @@ const gapTextSchema = z.strictObject({
 })
 
 /** An `IntentReading` as a step row keeps it. */
-export const readingRowSchema = z.discriminatedUnion("kind", [
+export const readingRowSchema: ReadingRowSchema = z.discriminatedUnion("kind", [
     z.strictObject({
         kind: z.literal("picked"),
         contract: contractSchema,
@@ -83,7 +209,7 @@ export const readingRowSchema = z.discriminatedUnion("kind", [
 ])
 
 /** An `IntentTrace` as a step row keeps it. */
-export const traceRowSchema = z.strictObject({
+export const traceRowSchema: TraceRowSchema = z.strictObject({
     versionId: idSchema,
     trigger: triggerSchema,
     trust: trustSchema,
@@ -95,10 +221,10 @@ export const traceRowSchema = z.strictObject({
 })
 
 /** The result of the `read_result` step. */
-export const readResultSchema = z.strictObject({ reading: readingRowSchema, trace: traceRowSchema })
+export const readResultSchema: ReadResultSchema = z.strictObject({ reading: readingRowSchema, trace: traceRowSchema })
 
 /** The wake and turn a door acts for: everything a handler needs to settle from the row alone. */
-export const wakeRowSchema = z
+export const wakeRowSchema: WakeRowSchema = z
     .strictObject({
         inbound: wakeInboundSchema.optional(),
         workspaceId: idSchema,
@@ -119,7 +245,7 @@ export const wakeRowSchema = z
     .transform(({ inbound, ...wake }): WakeRow => (inbound === undefined ? wake : { ...wake, inbound }))
 
 /** The input of a door step. */
-export const doorInputSchema = z.strictObject({
+export const doorInputSchema: DoorInputSchema = z.strictObject({
     wake: wakeRowSchema,
     reading: readingRowSchema,
     trace: traceRowSchema,
@@ -134,7 +260,7 @@ const settleInputSchema = z.strictObject({
 })
 
 /** The input of a request door step: the door input and the settle input it applies the proposal under. */
-export const requestDoorInputSchema = z.strictObject({
+export const requestDoorInputSchema: RequestDoorInputSchema = z.strictObject({
     wake: wakeRowSchema,
     reading: readingRowSchema,
     trace: traceRowSchema,
@@ -157,7 +283,7 @@ const actionRowSchema = z.discriminatedUnion("outcome", [
 ])
 
 /** What the tag door answers: the proposal as it was applied. */
-export const settledRowSchema = z.strictObject({
+export const settledRowSchema: SettledRowSchema = z.strictObject({
     reply: z.string().max(REPLY_MAX),
     needsHuman: z.boolean(),
     reason: z.string().max(DETAIL_MAX),
@@ -166,7 +292,7 @@ export const settledRowSchema = z.strictObject({
 })
 
 /** What the tag door stores: a split that wrote its follow-up, or the proposal as it was applied. */
-export const tagDoorResultSchema = z.discriminatedUnion("split", [
+export const tagDoorResultSchema: TagDoorResultSchema = z.discriminatedUnion("split", [
     z.strictObject({ split: z.literal(true), fired: z.boolean() }),
     z.strictObject({ split: z.literal(false), settled: settledRowSchema }),
 ])

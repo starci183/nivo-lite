@@ -29,7 +29,7 @@ const ROUTE: ProviderRoute = { provider: "telegram", channel: "telegram", line: 
 @Injectable()
 /** Runs the Telegram tools: `status` and `events`, read through the connections and the message feed of the workspace. */
 export class TelegramNativeService implements NativeAdapter {
-    readonly manifest = TELEGRAM_MANIFEST
+    readonly manifest: NativeConnectorManifest = TELEGRAM_MANIFEST
 
     constructor(private readonly tools: ProviderToolsService) {}
 

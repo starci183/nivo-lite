@@ -24,7 +24,7 @@ export class InstallationChangedEvent extends BaseEvent {
     static readonly eventName = "installation_changed"
     static readonly version = 1
 
-    readonly eventName = InstallationChangedEvent.eventName
+    readonly eventName: "installation_changed" = InstallationChangedEvent.eventName
 
     private constructor(
         readonly eventId: string,

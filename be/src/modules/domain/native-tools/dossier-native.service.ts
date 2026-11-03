@@ -56,7 +56,7 @@ export const DOSSIER_MANIFEST: NativeConnectorManifest = {
  * and an agent whose view is the customer's is refused `internal_only` even when it holds a key outside a conversation.
  */
 export class DossierNativeService implements NativeAdapter {
-    readonly manifest = DOSSIER_MANIFEST
+    readonly manifest: NativeConnectorManifest = DOSSIER_MANIFEST
 
     constructor(
         private readonly views: NativeViewService,

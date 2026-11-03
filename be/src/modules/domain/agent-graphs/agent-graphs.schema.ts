@@ -188,7 +188,92 @@ const businessLimitSchema = z
     .strict()
 
 /** The business half of one contract: the task and limits of this shop, frozen in a version. */
-export const intentBusinessSchema = z
+export const intentBusinessSchema: z.ZodObject<
+    {
+        intent: z.ZodString
+        task: z.ZodString
+        limits: z.ZodArray<
+            z.ZodObject<
+                {
+                    text: z.ZodString
+                    triggers: z.ZodArray<z.ZodString>
+                    trusts: z.ZodArray<
+                        z.ZodEnum<{
+                            outsider: "outsider"
+                            member: "member"
+                            manager: "manager"
+                            system: "system"
+                        }>
+                    >
+                    sources: z.ZodArray<
+                        z.ZodDiscriminatedUnion<
+                            [
+                                z.ZodObject<
+                                    {
+                                        kind: z.ZodLiteral<"brain">
+                                        factId: z.ZodString
+                                        passage: z.ZodString
+                                        valueHash: z.ZodString
+                                    },
+                                    z.core.$strict
+                                >,
+                                z.ZodObject<
+                                    {
+                                        kind: z.ZodLiteral<"chat">
+                                        messageId: z.ZodString
+                                        quote: z.ZodString
+                                    },
+                                    z.core.$strict
+                                >,
+                                z.ZodObject<
+                                    {
+                                        kind: z.ZodLiteral<"owner">
+                                        memberId: z.ZodString
+                                    },
+                                    z.core.$strict
+                                >,
+                            ],
+                            "kind"
+                        >
+                    >
+                },
+                z.core.$strict
+            >
+        >
+        sources: z.ZodArray<
+            z.ZodDiscriminatedUnion<
+                [
+                    z.ZodObject<
+                        {
+                            kind: z.ZodLiteral<"brain">
+                            factId: z.ZodString
+                            passage: z.ZodString
+                            valueHash: z.ZodString
+                        },
+                        z.core.$strict
+                    >,
+                    z.ZodObject<
+                        {
+                            kind: z.ZodLiteral<"chat">
+                            messageId: z.ZodString
+                            quote: z.ZodString
+                        },
+                        z.core.$strict
+                    >,
+                    z.ZodObject<
+                        {
+                            kind: z.ZodLiteral<"owner">
+                            memberId: z.ZodString
+                        },
+                        z.core.$strict
+                    >,
+                ],
+                "kind"
+            >
+        >
+    },
+    z.core.$strict
+> = z
     .object({
         intent: z.string().min(1).max(100),
         task: z.string().max(MAX_TASK_LENGTH),

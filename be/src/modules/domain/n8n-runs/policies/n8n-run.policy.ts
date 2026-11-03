@@ -3,7 +3,7 @@ import { isRecord } from "@modules/platform/primitives"
 import type { EmailRefs, EmailVariables, N8nAttachment } from "../n8n-runs.contracts"
 
 /** How long a run token works. */
-export const RUN_TOKEN_TTL_MS = 30 * 60_000
+export const RUN_TOKEN_TTL_MS: number = 30 * 60_000
 
 const BEARER = /^Bearer\s+(\S+)$/i
 const RUN_ID = /^[0-9a-f-]{36}$/i

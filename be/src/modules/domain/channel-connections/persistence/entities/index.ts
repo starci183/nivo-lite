@@ -3,4 +3,6 @@ import { ChannelConnectionsSepayEventEntity } from "./channel-connections-sepay-
 export { ChannelConnectionsSepayEventEntity }
 
 /** The entities the channel connections capability owns, for the app's connection. */
-export const channelConnectionsEntities = [ChannelConnectionsSepayEventEntity] as const
+export const channelConnectionsEntities: readonly [typeof ChannelConnectionsSepayEventEntity] = [
+    ChannelConnectionsSepayEventEntity,
+] as const

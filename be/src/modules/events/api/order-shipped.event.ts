@@ -33,7 +33,7 @@ export class OrderShippedEvent extends BaseEvent {
     static readonly eventName = "order_shipped"
     static readonly version = 1
 
-    readonly eventName = OrderShippedEvent.eventName
+    readonly eventName: "order_shipped" = OrderShippedEvent.eventName
 
     private constructor(
         readonly eventId: string,

@@ -34,7 +34,7 @@ export class DecisionMadeEvent extends BaseEvent {
     static readonly eventName = "decision_made"
     static readonly version = 1
 
-    readonly eventName = DecisionMadeEvent.eventName
+    readonly eventName: "decision_made" = DecisionMadeEvent.eventName
 
     private constructor(
         readonly eventId: string,

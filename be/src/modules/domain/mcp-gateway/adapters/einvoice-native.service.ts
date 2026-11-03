@@ -114,7 +114,7 @@ const detailOf = (entry: MailInvoice): GatewayJson => {
 @Injectable()
 /** Runs the e-invoice tools for a workspace, through the gateway like any other connector; parsing is deterministic (TT78). */
 export class EinvoiceNativeService implements NativeAdapter {
-    readonly manifest = EINVOICE_MANIFEST
+    readonly manifest: NativeConnectorManifest = EINVOICE_MANIFEST
 
     constructor(private readonly mails: DataRecordsReadService) {}
 

@@ -4,7 +4,7 @@ import type { ChatFileTurn } from "@modules/domain/chat-files"
 import type { CustomerTurn, TurnRef } from "@modules/domain/conversations"
 
 /** A paid invoice counts as "just confirmed" for a customer's late "I have paid" within this window. */
-export const RECENTLY_PAID_MS = 14 * 86_400_000
+export const RECENTLY_PAID_MS: number = 14 * 86_400_000
 
 /** The order statuses that mean the order is still open (not paid, not cancelled). */
 export const OPEN_ORDER_STATUSES: ReadonlySet<string> = new Set(["draft", "confirmed", "invoiced"])
@@ -46,7 +46,7 @@ export const handoffTranscriptOf = (
         .join("\n")
 
 /** A customer wake older than this when its turn begins is not answered: the question was asked a long time ago. */
-export const STALE_WAKE_MS = 10 * 60_000
+export const STALE_WAKE_MS: number = 10 * 60_000
 
 /** How the reasons the drain and the executor give map to the ones the outcome handler knows from the legacy road. */
 const HOLD_REASONS: Readonly<Record<string, string>> = {

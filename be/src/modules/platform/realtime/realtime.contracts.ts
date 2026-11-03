@@ -5,7 +5,7 @@ export const REPLAY_FRAMES = 64
 export const REPLAY_TOPICS = 1024
 
 /** How long a shared hub keeps a frame for a reconnecting client: the fenced sweep deletes rows older than this. */
-export const REPLAY_TTL_MS = 15 * 60 * 1000
+export const REPLAY_TTL_MS: number = 15 * 60 * 1000
 
 /** The most rows one batch of the retention sweep deletes. */
 export const SWEEP_BATCH = 1000
@@ -42,7 +42,7 @@ export const REDIS_DEFAULT_PREFIX = "realtime"
  * replica, all in one atomic step (KEYS[1] stream key; ARGV: max length, frame id, frame JSON, time to live ms, channel, topic).
  * It answers the stream id.
  */
-export const RETAIN_AND_PUBLISH_SCRIPT = [
+export const RETAIN_AND_PUBLISH_SCRIPT: string = [
     "local id = redis.call('XADD', KEYS[1], 'MAXLEN', '~', ARGV[1], '*', 'id', ARGV[2], 'data', ARGV[3])",
     "redis.call('PEXPIRE', KEYS[1], ARGV[4])",
     "redis.call('PUBLISH', ARGV[5], cjson.encode({ topic = ARGV[6], position = id, frame = ARGV[3] }))",

@@ -3,4 +3,6 @@ import { ConversationOwnershipEventEntity } from "./conversation-ownership-event
 export { ConversationOwnershipEventEntity }
 
 /** The entities the conversation ownership events capability owns, for the app's connection. */
-export const conversationOwnershipEventsEntities = [ConversationOwnershipEventEntity] as const
+export const conversationOwnershipEventsEntities: readonly [typeof ConversationOwnershipEventEntity] = [
+    ConversationOwnershipEventEntity,
+] as const

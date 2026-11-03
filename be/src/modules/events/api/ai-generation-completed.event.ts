@@ -29,7 +29,7 @@ export class AiGenerationCompletedEvent extends BaseEvent {
     static readonly eventName = "ai_generation_completed"
     static readonly version = 1
 
-    readonly eventName = AiGenerationCompletedEvent.eventName
+    readonly eventName: "ai_generation_completed" = AiGenerationCompletedEvent.eventName
 
     private constructor(
         readonly eventId: string,

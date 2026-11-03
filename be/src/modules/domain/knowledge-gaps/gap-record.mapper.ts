@@ -37,7 +37,21 @@ export const toGapRecord = (row: GapFields): GapRecord => ({
 })
 
 /** The columns a write answers, as the database returns them (the RETURNING list names them as the entity does). */
-export const isGapReturned = rowShape({
+export const isGapReturned: (value: unknown) => value is {
+    readonly id: string
+    readonly module: string
+    readonly question: string
+    readonly questionKey: string
+    readonly keywords: unknown
+    readonly topic: string | null
+    readonly attributeGuess: string | null
+    readonly count: number
+    readonly firstSeenAt: Date
+    readonly lastSeenAt: Date
+    readonly exampleConversationId: string | null
+    readonly status: string
+    readonly reopenedCount: number
+} = rowShape({
     id: "string",
     module: "string",
     question: "string",

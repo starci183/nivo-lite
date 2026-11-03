@@ -7,7 +7,7 @@ import type { BrainFactEntity } from "./persistence/entities"
 export type FactChanges = Parameters<UpdateQueryBuilder<BrainFactEntity>["set"]>[0]
 
 /** The columns a write answers, named as the entity properties so the answer reads as an entity. */
-export const RETURNED = [
+export const RETURNED: string = [
     "id",
     'workspace_id AS "workspaceId"',
     'installation_id AS "installationId"',
@@ -57,7 +57,12 @@ export const factKeyOf = (
     subjectKey: string,
     attribute: string,
     installationId: InstallationScope,
-) => ({
+): {
+    workspaceId: string
+    subjectKey: string
+    attribute: string
+    installationId: string | FindOperator<string>
+} => ({
     workspaceId,
     subjectKey,
     attribute,

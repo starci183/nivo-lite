@@ -11,4 +11,9 @@ export { JobSlotEntity } from "./job-slot.entity"
 export { JobTickEntity } from "./job-tick.entity"
 
 /** Every entity of the jobs capability. */
-export const jobsEntities = [JobEntity, JobOutboxEntity, JobSlotEntity, JobTickEntity] as const
+export const jobsEntities: readonly [
+    typeof JobEntity,
+    typeof JobOutboxEntity,
+    typeof JobSlotEntity,
+    typeof JobTickEntity,
+] = [JobEntity, JobOutboxEntity, JobSlotEntity, JobTickEntity] as const

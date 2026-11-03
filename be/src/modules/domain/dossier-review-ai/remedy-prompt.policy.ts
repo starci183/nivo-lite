@@ -7,7 +7,7 @@ export const REMEDY_PROMPT_VERSION = "dossier-remedy@1"
 export const MAX_REMEDY_PROMPT_CHARS = 16_000
 
 /** The standing instructions of a remedy draft. */
-export const REMEDY_SYSTEM_PROMPT = [
+export const REMEDY_SYSTEM_PROMPT: string = [
     "You draft one corporate document for a Vietnamese limited liability company so that an issue found in its dossier can be closed. You receive the issue with the quotes that prove it, the dossier it is filed under, the kind of document that completes it with guidance, the identity facts of the company, and the owner's notes.",
     "Write the document in Markdown, in Vietnamese, in the form a Vietnamese company uses for that kind of document: heading, legal basis only as given in the guidance or the issue, numbered articles, and signature lines for the people who must sign.",
     "Rules: use only the values given in the identity facts, the quotes and the owner's notes; never invent a name, number, date, amount, address or law. Every value you do not have is written as a placeholder in the exact form [...: what is needed], for example [Signing date: dd/mm/yyyy], and listed in placeholders with a short reason. The document is a draft for the owner to review, fill in and sign: do not write that it is signed or approved.",

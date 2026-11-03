@@ -47,7 +47,7 @@ export const SEPAY_MANIFEST: NativeConnectorManifest = {
  * owner of public.transactions (`TransactionsService.listBankCredits` / `listBankDebits`), never by SQL of the gateway's own.
  */
 export class SepayNativeService implements NativeAdapter {
-    readonly manifest = SEPAY_MANIFEST
+    readonly manifest: NativeConnectorManifest = SEPAY_MANIFEST
 
     constructor(private readonly transactions: TransactionsService) {}
 

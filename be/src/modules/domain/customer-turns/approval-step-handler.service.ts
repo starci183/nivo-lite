@@ -16,7 +16,7 @@ const INVALID_INPUT = "invalid_input"
  */
 export class ApprovalStepHandlerService implements AgentStepHandler, OnModuleInit {
     /** The kind it runs. */
-    readonly kind = APPROVAL_STEP_KIND
+    readonly kind: "approval" = APPROVAL_STEP_KIND
 
     constructor(private readonly handlers: AgentRunHandlersService) {}
 

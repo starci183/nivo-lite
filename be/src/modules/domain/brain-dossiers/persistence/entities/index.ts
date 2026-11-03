@@ -4,4 +4,4 @@ export { BrainDossierEntity }
 export type { BrainDossierStatus } from "./brain-dossier.entity"
 
 /** The entities the brain-dossiers capability owns, collected by the database module. */
-export const brainDossiersEntities = [BrainDossierEntity] as const
+export const brainDossiersEntities: readonly [typeof BrainDossierEntity] = [BrainDossierEntity] as const

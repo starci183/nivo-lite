@@ -17,7 +17,16 @@ export { AgentWorkSettingsEntity } from "./agent-work-settings.entity"
 export { AgentWorkStateEntity } from "./agent-work-state.entity"
 
 /** Every entity of the agent-work capability. */
-export const agentWorkEntities = [
+export const agentWorkEntities: readonly [
+    typeof AgentWorkSettingsEntity,
+    typeof AgentWorkStateEntity,
+    typeof AgentWorkLeaseEntity,
+    typeof AgentGoalEntity,
+    typeof AgentTaskEntity,
+    typeof AgentTriggerEntity,
+    typeof AgentWakeEntity,
+    typeof AgentTurnEntity,
+] = [
     AgentWorkSettingsEntity,
     AgentWorkStateEntity,
     AgentWorkLeaseEntity,

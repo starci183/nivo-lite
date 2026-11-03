@@ -24,6 +24,6 @@ const acceptLanguageOf = (context: ExecutionContext): AcceptLanguage =>
     ).headers["accept-language"]
 
 /** The locale of the request, picked from its `Accept-Language` header: Vietnamese or English, Vietnamese by default. */
-export const AcceptedLocale = createParamDecorator((_data: unknown, context: ExecutionContext): Locale =>
-    pickLocale(acceptLanguageOf(context)),
+export const AcceptedLocale: (...dataOrPipes: unknown[]) => ParameterDecorator = createParamDecorator(
+    (_data: unknown, context: ExecutionContext): Locale => pickLocale(acceptLanguageOf(context)),
 )

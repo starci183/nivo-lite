@@ -15,7 +15,10 @@ const literalOf = (node: ValueNode): unknown => {
 }
 
 /** A free-form JSON object whose keys the owning operation defines (settings by key, the data of an event, a command payload). Anything that is not an object is refused by the schema. */
-export const GraphqlJsonObject = new GraphQLScalarType<object | undefined, object>({
+export const GraphqlJsonObject: GraphQLScalarType<object | undefined, object> = new GraphQLScalarType<
+    object | undefined,
+    object
+>({
     name: "JsonObject",
     serialize: (value) => (isPlainObject(value) ? value : {}),
     parseValue: (value) => (isPlainObject(value) ? value : undefined),

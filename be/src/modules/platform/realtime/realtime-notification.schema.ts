@@ -1,7 +1,13 @@
 import { z } from "zod"
 
 /** The notification the hub publishes after it wrote a row: the topic and the sequence number of the `realtime_events` row, bounded as the hub bounds them. */
-export const RealtimeNotificationSchema = z.object({
+export const RealtimeNotificationSchema: z.ZodObject<
+    {
+        topic: z.ZodString
+        seq: z.ZodNumber
+    },
+    z.core.$strip
+> = z.object({
     topic: z.string().max(256),
     seq: z.number().int().nonnegative(),
 })

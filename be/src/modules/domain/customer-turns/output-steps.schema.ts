@@ -11,7 +11,15 @@ const CALLS_MAX = 10
 
 const keyText = z.string().max(KEY_MAX)
 
-const outputCallSchema = z.object({
+const outputCallSchema: z.ZodObject<
+    {
+        stepKey: z.ZodString
+        tool: z.ZodString
+        argsJson: z.ZodString
+        opKey: z.ZodString
+    },
+    z.core.$strip
+> = z.object({
     /** The step key of this call. */
     stepKey: keyText.min(1),
     /** The full name of the tool. */
@@ -26,7 +34,20 @@ const outputCallSchema = z.object({
 export type OutputCall = z.infer<typeof outputCallSchema>
 
 /** The conversation and graph nodes persisted with every output. */
-export const outputScopeSchema = z.object({
+export const outputScopeSchema: z.ZodObject<
+    {
+        conversationId: z.ZodString
+        messageId: z.ZodString
+        approvedBy: z.ZodNullable<z.ZodString>
+        workItemId: z.ZodNullable<z.ZodString>
+        planned: z.ZodString
+        declined: z.ZodDefault<z.ZodBoolean>
+        outputNode: z.ZodString
+        approvalNode: z.ZodString
+        replyNode: z.ZodString
+    },
+    z.core.$strip
+> = z.object({
     /** The conversation it serves. */
     conversationId: keyText.min(1),
     /** The customer message it answers. */
@@ -51,7 +72,40 @@ export const outputScopeSchema = z.object({
 export type OutputScope = z.infer<typeof outputScopeSchema>
 
 /** The input of an output step: the call, where it runs, and the calls of the sequence that follow it. */
-export const outputInputSchema = outputCallSchema.extend({
+export const outputInputSchema: z.ZodObject<
+    {
+        stepKey: z.ZodString
+        tool: z.ZodString
+        argsJson: z.ZodString
+        opKey: z.ZodString
+        scope: z.ZodObject<
+            {
+                conversationId: z.ZodString
+                messageId: z.ZodString
+                approvedBy: z.ZodNullable<z.ZodString>
+                workItemId: z.ZodNullable<z.ZodString>
+                planned: z.ZodString
+                declined: z.ZodDefault<z.ZodBoolean>
+                outputNode: z.ZodString
+                approvalNode: z.ZodString
+                replyNode: z.ZodString
+            },
+            z.core.$strip
+        >
+        rest: z.ZodArray<
+            z.ZodObject<
+                {
+                    stepKey: z.ZodString
+                    tool: z.ZodString
+                    argsJson: z.ZodString
+                    opKey: z.ZodString
+                },
+                z.core.$strip
+            >
+        >
+    },
+    z.core.$strip
+> = outputCallSchema.extend({
     scope: outputScopeSchema,
     rest: z.array(outputCallSchema).max(CALLS_MAX),
 })
@@ -60,13 +114,48 @@ export const outputInputSchema = outputCallSchema.extend({
 export type OutputInput = z.infer<typeof outputInputSchema>
 
 /** One call a person is asked about. */
-const heldCallSchema = z.object({ tool: keyText.min(1), argsJson: z.string().max(ARGS_MAX) })
+const heldCallSchema: z.ZodObject<
+    {
+        tool: z.ZodString
+        argsJson: z.ZodString
+    },
+    z.core.$strip
+> = z.object({ tool: keyText.min(1), argsJson: z.string().max(ARGS_MAX) })
 
 /** A call a person is asked about. */
 export type HeldCall = z.infer<typeof heldCallSchema>
 
 /** The input of the step a held call waits on: the exact calls, and what they run under once approved. */
-export const approvalInputSchema = z.object({
+export const approvalInputSchema: z.ZodObject<
+    {
+        workItemId: z.ZodString
+        deadlineAt: z.ZodString
+        calls: z.ZodArray<
+            z.ZodObject<
+                {
+                    tool: z.ZodString
+                    argsJson: z.ZodString
+                },
+                z.core.$strip
+            >
+        >
+        scope: z.ZodObject<
+            {
+                conversationId: z.ZodString
+                messageId: z.ZodString
+                approvedBy: z.ZodNullable<z.ZodString>
+                workItemId: z.ZodNullable<z.ZodString>
+                planned: z.ZodString
+                declined: z.ZodDefault<z.ZodBoolean>
+                outputNode: z.ZodString
+                approvalNode: z.ZodString
+                replyNode: z.ZodString
+            },
+            z.core.$strip
+        >
+    },
+    z.core.$strip
+> = z.object({
     workItemId: keyText.min(1),
     deadlineAt: keyText,
     calls: z.array(heldCallSchema).min(1).max(CALLS_MAX),
@@ -77,7 +166,20 @@ export const approvalInputSchema = z.object({
 export type ApprovalInput = z.infer<typeof approvalInputSchema>
 
 /** The replay fields and reply a person approved, read from the closed work item's durable proposal. */
-export const approvedProposalSchema = z.object({
+export const approvedProposalSchema: z.ZodObject<
+    {
+        fields: z.ZodObject<
+            {
+                tool: z.ZodOptional<z.ZodString>
+                args_json: z.ZodOptional<z.ZodString>
+                steps_json: z.ZodOptional<z.ZodString>
+            },
+            z.core.$strip
+        >
+        draft: z.ZodNullable<z.ZodString>
+    },
+    z.core.$strip
+> = z.object({
     fields: z.object({
         tool: keyText.optional(),
         args_json: z.string().max(ARGS_MAX).optional(),
@@ -93,7 +195,33 @@ export const approvedProposalSchema = z.object({
 export type ApprovedProposal = z.infer<typeof approvedProposalSchema>
 
 /** A persisted, bounded output with its scope, read by the final reply. */
-export const outputStepSchema = z.object({
+export const outputStepSchema: z.ZodObject<
+    {
+        tool: z.ZodString
+        status: z.ZodEnum<{
+            failed: "failed"
+            ok: "ok"
+            held: "held"
+        }>
+        code: z.ZodNullable<z.ZodString>
+        summary: z.ZodString
+        scope: z.ZodObject<
+            {
+                conversationId: z.ZodString
+                messageId: z.ZodString
+                approvedBy: z.ZodNullable<z.ZodString>
+                workItemId: z.ZodNullable<z.ZodString>
+                planned: z.ZodString
+                declined: z.ZodDefault<z.ZodBoolean>
+                outputNode: z.ZodString
+                approvalNode: z.ZodString
+                replyNode: z.ZodString
+            },
+            z.core.$strip
+        >
+    },
+    z.core.$strip
+> = z.object({
     tool: keyText,
     status: z.enum(["ok", "failed", "held"]),
     code: keyText.nullable(),

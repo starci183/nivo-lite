@@ -28,7 +28,7 @@ import type {
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 /** The largest guideline file read. */
-export const BRAND_FILE_MAX_BYTES = 20 * 1024 * 1024
+export const BRAND_FILE_MAX_BYTES: number = 20 * 1024 * 1024
 const READ_TIMEOUT_MS = 90_000
 const EMPTY_KIT: GuidelineKit = { brandName: "", colors: [], fonts: [], tone: "", address: "", imagery: [], avoid: [] }
 

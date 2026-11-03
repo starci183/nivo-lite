@@ -35,7 +35,10 @@ const idOf = (frame: object): string | null => {
  * table after its `Last-Event-ID`.
  */
 export class PostgresReplayHubService extends SubscribedRealtimeHub {
-    protected override readonly subscriptions = new RealtimeSubscriptionsPolicy(comparePositions, "0")
+    protected override readonly subscriptions: RealtimeSubscriptionsPolicy = new RealtimeSubscriptionsPolicy(
+        comparePositions,
+        "0",
+    )
 
     constructor(@InjectRealtimeManagers() protected readonly managers: ReadonlyArray<EntityManager>) {
         super()

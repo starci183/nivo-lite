@@ -21,7 +21,7 @@ export const signBody = (secret: string, rawBody: Buffer): string =>
  * the connection, so a delivery only ever reaches the workspace that owns the endpoint.
  */
 export class GenericWebhookProofService implements WebhookProof, OnModuleInit {
-    readonly provider = GENERIC_WEBHOOK
+    readonly provider: "generic_webhook" = GENERIC_WEBHOOK
 
     constructor(
         @InjectWebhookProofRegistry() private readonly registry: WebhookProofRegistry,

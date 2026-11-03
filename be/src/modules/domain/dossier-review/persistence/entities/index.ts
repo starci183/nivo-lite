@@ -8,9 +8,9 @@ export type { DossierRunStats } from "./dossier-review-run.entity"
 export type { DraftPlaceholder } from "./dossier-remedy-draft.entity"
 
 /** The entities the dossier-review capability owns, collected by the database module. */
-export const dossierReviewEntities = [
-    DossierReviewRunEntity,
-    DossierFindingEntity,
-    DossierReviewEntity,
-    DossierRemedyDraftEntity,
-] as const
+export const dossierReviewEntities: readonly [
+    typeof DossierReviewRunEntity,
+    typeof DossierFindingEntity,
+    typeof DossierReviewEntity,
+    typeof DossierRemedyDraftEntity,
+] = [DossierReviewRunEntity, DossierFindingEntity, DossierReviewEntity, DossierRemedyDraftEntity] as const

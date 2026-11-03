@@ -14,10 +14,10 @@ export const RETENTION_BATCH = 500
 export const PROBE_BUDGET_MS = 2000
 
 /** How late a slot must be before the sweep treats it as missed; the database function uses the same two minutes. */
-export const MISSED_AFTER_MS = 2 * MINUTE_MS
+export const MISSED_AFTER_MS: number = 2 * MINUTE_MS
 
 /** How far back the probes of money and documents look, in milliseconds. */
-export const PROBE_WINDOW_MS = 24 * 60 * MINUTE_MS
+export const PROBE_WINDOW_MS: number = 24 * 60 * MINUTE_MS
 
 /** The most items a probe names in its brief. */
 export const BRIEF_ITEMS = 5
