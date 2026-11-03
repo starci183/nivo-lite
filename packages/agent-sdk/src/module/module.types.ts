@@ -120,6 +120,14 @@ export interface ModuleTemplateAgent {
     readonly instructions: Bilingual
 }
 
+/** The connector roles an agent needs and the ones it uses when present. */
+export interface ModuleTemplateRoles {
+    /** The roles the agent cannot work without. */
+    readonly requires: ReadonlyArray<ModuleCapabilityRole>
+    /** The roles the agent uses when the workspace has them. */
+    readonly uses: ReadonlyArray<ModuleCapabilityRole>
+}
+
 /** What a workspace should have for the module to work well; never blocks installing. */
 export interface ModuleTemplateRequirements {
     /** The capability names the workspace should provide. */
@@ -127,10 +135,7 @@ export interface ModuleTemplateRequirements {
     /** The connection providers the workspace should have connected. */
     readonly connections: ReadonlyArray<string>
     /** The connector roles the agent needs and uses; absent means none. */
-    readonly roles?: {
-        readonly requires: ReadonlyArray<ModuleCapabilityRole>
-        readonly uses: ReadonlyArray<ModuleCapabilityRole>
-    }
+    readonly roles?: ModuleTemplateRoles
 }
 
 /** A clock trigger a module seeds for its agent. */
@@ -206,6 +211,14 @@ export interface ModuleTemplate {
     readonly triggers?: ReadonlyArray<ModuleTemplateTrigger>
 }
 
+/** The words a module adds to the vocabulary a graph may use. */
+export interface ModuleServerVocabulary {
+    /** The tool providers the module adds; none when absent. */
+    readonly providers?: ReadonlyArray<string>
+    /** The steps the module adds, by provider; none when absent. */
+    readonly steps?: Readonly<Record<string, ReadonlyArray<string>>>
+}
+
 /** The server half of a module: its template and the words it adds to a graph, React-free so a back end loads it. */
 export interface ModuleServer {
     /** The module key; equal to the template's. */
@@ -213,10 +226,7 @@ export interface ModuleServer {
     /** The template the host seeds the module's agent from. */
     readonly template: ModuleTemplate
     /** Tool providers and steps the module adds to the words a graph may use; none when absent. */
-    readonly vocabulary?: {
-        readonly providers?: ReadonlyArray<string>
-        readonly steps?: Readonly<Record<string, ReadonlyArray<string>>>
-    }
+    readonly vocabulary?: ModuleServerVocabulary
 }
 
 /** The codes a module list is refused with. */
@@ -225,6 +235,8 @@ export type ModuleListProblemCode =
 
 /** Why a module list was refused, and the key it is about. */
 export interface ModuleListProblem {
+    /** Which rule of the list the module broke. */
     readonly code: ModuleListProblemCode
+    /** The module key, or the action or command the problem is about. */
     readonly key: string
 }

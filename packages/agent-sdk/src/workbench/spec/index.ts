@@ -1,0 +1,25 @@
+export type {
+    WorkbenchActionDefinition,
+    WorkbenchBlockDefinition,
+    WorkbenchDataShape,
+    WorkbenchPropDefinition,
+    WorkbenchPropType,
+    WorkbenchReadDefinition,
+    WorkbenchSlotDefinition,
+    WorkbenchSpecActionBinding,
+    WorkbenchSpecBinding,
+    WorkbenchSpecDocument,
+    WorkbenchSpecNode,
+    WorkbenchSpecProblem,
+    WorkbenchSpecProblemCode,
+    WorkbenchSpecReadBinding,
+    WorkbenchSpecRegistry,
+    WorkbenchSpecRegistryParts,
+    WorkbenchSpecSchema,
+    WorkbenchSpecText,
+    WorkbenchSpecValue,
+    WorkbenchSpecView,
+    WorkbenchStoredSpec,
+} from "./spec.types"
+export { SPEC_MAX_DEPTH, isSpecText, specProblems, specRegistryOf, textOf, valueAt, variablesOf, wordsOf } from "./spec"
+export { SDK_SPEC_BLOCKS } from "./blocks"

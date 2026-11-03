@@ -6,6 +6,7 @@ import type {
     WorkbenchSpecNode,
     WorkbenchSpecProblem,
     WorkbenchSpecRegistry,
+    WorkbenchSpecRegistryParts,
     WorkbenchSpecText,
     WorkbenchSpecValue,
     WorkbenchStoredSpec,
@@ -132,8 +133,10 @@ const walk = (context: WalkContext, node: WorkbenchSpecNode, depth: number): voi
         context.problems.push({ code: "SPEC_BLOCK_UNKNOWN", at })
         return
     }
-    context.problems.push(...propProblems(block, node.props ?? {}, at))
-    context.problems.push(...slotProblems(context.registry, context.module, block, node.bind ?? {}, at))
+    context.problems.push(
+        ...propProblems(block, node.props ?? {}, at),
+        ...slotProblems(context.registry, context.module, block, node.bind ?? {}, at),
+    )
     const children = node.children ?? []
     if (children.length > 0 && !block.children) context.problems.push({ code: "SPEC_CHILDREN_REFUSED", at })
     for (const child of children) walk(context, child, depth + 1)
@@ -194,23 +197,19 @@ export const variablesOf = (
         ]),
     )
 
-/** A registry from its parts; two definitions under one name are refused, so a module can never shadow an SDK block. */
-export const specRegistryOf = (parts: {
-    readonly blocks: ReadonlyArray<WorkbenchBlockDefinition>
-    readonly reads: ReadonlyArray<WorkbenchSpecRegistry["reads"][string]>
-    readonly actions: ReadonlyArray<WorkbenchSpecRegistry["actions"][string]>
-}): WorkbenchSpecRegistry => {
-    const keyed = <T extends { readonly name: string }>(kind: string, items: ReadonlyArray<T>): Record<string, T> => {
-        const out: Record<string, T> = {}
-        for (const item of items) {
-            if (out[item.name] !== undefined) throw new Error(`SPEC_REGISTRY_DUPLICATE: ${kind} ${item.name}`)
-            out[item.name] = item
-        }
-        return out
+/** The definitions of one kind by name; two under one name are refused. */
+const keyed = <T extends { readonly name: string }>(kind: string, items: ReadonlyArray<T>): Record<string, T> => {
+    const out: Record<string, T> = {}
+    for (const item of items) {
+        if (out[item.name] !== undefined) throw new Error(`SPEC_REGISTRY_DUPLICATE: ${kind} ${item.name}`)
+        out[item.name] = item
     }
-    return {
-        blocks: keyed("block", parts.blocks),
-        reads: keyed("read", parts.reads),
-        actions: keyed("action", parts.actions),
-    }
+    return out
 }
+
+/** A registry from its parts; two definitions under one name are refused, so a module can never shadow an SDK block. */
+export const specRegistryOf = (parts: WorkbenchSpecRegistryParts): WorkbenchSpecRegistry => ({
+    blocks: keyed("block", parts.blocks),
+    reads: keyed("read", parts.reads),
+    actions: keyed("action", parts.actions),
+})

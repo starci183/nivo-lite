@@ -32,7 +32,7 @@ const forbiddenNotice = (
     description: string | undefined,
     action: ReactNode,
 ) => {
-    if (mode === "hide") return null
+    if (mode === "hide") return <></>
     return (
         <>
             <EmptyNotice message={message} {...(description === undefined ? {} : { description })} />
@@ -67,7 +67,9 @@ export const SlotView = <T,>(props: SlotViewProps<T>): ReactNode => {
         return forbiddenNotice(props.forbidden, labels.forbidden, props.forbiddenDescription, props.forbiddenAction)
     if ("isError" in slot) return errorNotice(labels.error, props.errorDescription, labels.retry, props.onRetry)
     if ("isEmpty" in slot) {
-        return props.empty === "collapse" ? null : (
+        return props.empty === "collapse" ? (
+            <></>
+        ) : (
             <EmptyNotice
                 message={labels.empty}
                 {...(props.emptyDescription === undefined ? {} : { description: props.emptyDescription })}

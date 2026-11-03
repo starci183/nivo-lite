@@ -117,6 +117,16 @@ export interface WorkbenchSpecRegistry {
     readonly actions: Readonly<Record<string, WorkbenchActionDefinition>>
 }
 
+/** The parts a registry is assembled from. */
+export interface WorkbenchSpecRegistryParts {
+    /** The blocks of the SDK and of every module. */
+    readonly blocks: ReadonlyArray<WorkbenchBlockDefinition>
+    /** The reads every module exposes. */
+    readonly reads: ReadonlyArray<WorkbenchReadDefinition>
+    /** The actions every module exposes. */
+    readonly actions: ReadonlyArray<WorkbenchActionDefinition>
+}
+
 /** The codes a spec is refused with. */
 export type WorkbenchSpecProblemCode =
     | "SPEC_SCHEMA_UNKNOWN"

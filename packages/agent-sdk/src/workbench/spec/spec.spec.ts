@@ -1,6 +1,9 @@
 import { SDK_SPEC_BLOCKS } from "./blocks"
 import { SPEC_MAX_DEPTH, isSpecText, specProblems, specRegistryOf, textOf, valueAt, variablesOf, wordsOf } from "./spec"
-import type { WorkbenchSpecDocument, WorkbenchSpecNode, WorkbenchSpecRegistry } from "./spec.types"
+import type { WorkbenchSpecDocument, WorkbenchSpecNode, WorkbenchSpecRegistry, WorkbenchSpecText } from "./spec.types"
+
+/** An owner-written text in both languages. */
+const ownerText = (vi: string, en: string): WorkbenchSpecText => ({ vi, en })
 
 const REGISTRY: WorkbenchSpecRegistry = specRegistryOf({
     blocks: SDK_SPEC_BLOCKS,
@@ -36,7 +39,7 @@ const REGISTRY: WorkbenchSpecRegistry = specRegistryOf({
 const LIST: WorkbenchSpecNode = {
     id: "members",
     block: "record-list",
-    props: { label: { key: "members" }, empty: { vi: "Trống", en: "Empty" }, idPath: "id", titlePath: "name" },
+    props: { label: { key: "members" }, empty: ownerText("Empty in vi", "Empty"), idPath: "id", titlePath: "name" },
     bind: { rows: { read: "loyalty.board", path: "members" }, open: { action: "loyalty.open" } },
 }
 
@@ -125,7 +128,9 @@ describe("specProblems", () => {
             { code: "SPEC_PROP_MISSING", at: "overview/s.title" },
         ])
     })
+})
 
+describe("specProblems against typed props and the depth bound", () => {
     it("checks every prop type it declares", () => {
         const registry = specRegistryOf({
             blocks: [
@@ -153,6 +158,29 @@ describe("specProblems", () => {
         ])
     })
 
+    it("admits any shape on a read slot that names none", () => {
+        const registry = specRegistryOf({
+            blocks: [{ name: "any", props: {}, slots: { data: { kind: "read", required: true } }, children: false }],
+            reads: REGISTRY.reads["loyalty.board"] === undefined ? [] : [REGISTRY.reads["loyalty.board"]],
+            actions: [],
+        })
+        expect(
+            specProblems(
+                documentOf({ id: "a", block: "any", bind: { data: { read: "loyalty.board", path: "members" } } }),
+                registry,
+            ),
+        ).toEqual([])
+    })
+
+    it("refuses a tree deeper than the bound", () => {
+        let node: WorkbenchSpecNode = { id: "leaf", block: "waiting" }
+        for (let depth = 0; depth < SPEC_MAX_DEPTH; depth += 1)
+            node = { id: `n${depth}`, block: "stack", props: { gap: "row" }, children: [node] }
+        expect(specProblems(documentOf(node), REGISTRY)).toEqual([{ code: "SPEC_TOO_DEEP", at: "overview/leaf" }])
+    })
+})
+
+describe("specProblems against bindings", () => {
     it("refuses unknown and missing slots, and bindings of the wrong kind, module, name or shape", () => {
         const bound = (bind: NonNullable<WorkbenchSpecNode["bind"]>): WorkbenchSpecDocument =>
             documentOf({ ...LIST, bind })
@@ -185,27 +213,6 @@ describe("specProblems", () => {
         expect(specProblems(bound({ rows: { read: "loyalty.board" } }), REGISTRY)).toEqual([
             { code: "SPEC_BINDING_SHAPE", at: "overview/members.rows" },
         ])
-    })
-
-    it("admits any shape on a read slot that names none", () => {
-        const registry = specRegistryOf({
-            blocks: [{ name: "any", props: {}, slots: { data: { kind: "read", required: true } }, children: false }],
-            reads: REGISTRY.reads["loyalty.board"] === undefined ? [] : [REGISTRY.reads["loyalty.board"]],
-            actions: [],
-        })
-        expect(
-            specProblems(
-                documentOf({ id: "a", block: "any", bind: { data: { read: "loyalty.board", path: "members" } } }),
-                registry,
-            ),
-        ).toEqual([])
-    })
-
-    it("refuses a tree deeper than the bound", () => {
-        let node: WorkbenchSpecNode = { id: "leaf", block: "waiting" }
-        for (let depth = 0; depth < SPEC_MAX_DEPTH; depth += 1)
-            node = { id: `n${depth}`, block: "stack", props: { gap: "row" }, children: [node] }
-        expect(specProblems(documentOf(node), REGISTRY)).toEqual([{ code: "SPEC_TOO_DEEP", at: "overview/leaf" }])
     })
 })
 
@@ -243,7 +250,7 @@ describe("the helpers a renderer draws with", () => {
     it("words a key through the translator and owner words in the viewer's language", () => {
         const translate = (key: string): string => `t:${key}`
         expect(wordsOf({ key: "a" }, translate, "vi")).toBe("t:a")
-        expect(wordsOf({ vi: "Xin chào", en: "Hello" }, translate, "en")).toBe("Hello")
+        expect(wordsOf(ownerText("Hello in vi", "Hello"), translate, "en")).toBe("Hello")
     })
 
     it("puts the route's installation in and keeps every other variable", () => {

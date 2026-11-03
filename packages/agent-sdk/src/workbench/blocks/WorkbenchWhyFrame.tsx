@@ -1,8 +1,7 @@
 import type { ReactNode } from "react"
 import { Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
 import { WorkbenchWhy } from "./WorkbenchWhy"
-import type { WorkbenchWhyLabels } from "../view/view.types"
-import type { WorkbenchWhyView } from "../view/view.types"
+import type { WorkbenchWhyLabels, WorkbenchWhyView } from "../view/view.types"
 
 /** The resolved explanation and labels framing the owner's list content. */
 interface WorkbenchWhyFrameProps {

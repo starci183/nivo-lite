@@ -2,7 +2,7 @@
   "name": "@nivo/agent-sdk",
   "version": "0.1.0",
   "private": true,
-  "description": "The one SDK every Nivo agent kind is built on. This branch carries the module template contract (./module), the React-free workbench contract and spec validator (./workbench/contract) and the Grammar-only workbench blocks, host provider and spec renderer (./workbench); ./node, ./template and ./testing arrive from the marketplace branch.",
+  "description": "The one SDK every Nivo agent kind is built on. This branch carries the module template contract (./module), the React-free workbench contract (./workbench/contract), spec validator (./workbench/spec) and view shapes (./workbench/view) and the Grammar-only workbench blocks, host provider and spec renderer (./workbench); ./node, ./template and ./testing arrive from the marketplace branch.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -19,6 +19,14 @@
     "./workbench/contract": {
       "types": "./dist/workbench/contract/index.d.ts",
       "default": "./dist/workbench/contract/index.js"
+    },
+    "./workbench/spec": {
+      "types": "./dist/workbench/spec/index.d.ts",
+      "default": "./dist/workbench/spec/index.js"
+    },
+    "./workbench/view": {
+      "types": "./dist/workbench/view/index.d.ts",
+      "default": "./dist/workbench/view/index.js"
     }
   },
   "scripts": {

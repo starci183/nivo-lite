@@ -8,6 +8,7 @@ import type {
 
 /** One view of a workbench: a tab of its route (`?tab=<id>`), its label key in the module's namespace and who may open it. */
 export interface WorkbenchViewDefinition {
+    /** The view id: the value of `?tab=` that opens it, unique in its workbench. */
     readonly id: string
     /** The message key of the tab label, in the module's namespace. */
     readonly labelKey: string
@@ -17,6 +18,7 @@ export interface WorkbenchViewDefinition {
 
 /** What the host's workbench route hands a module: the instance, the deep link and the tab labels it resolved on the server. */
 export interface WorkbenchRouteProps {
+    /** The installation of the module the route opens. */
     readonly installationId: string
     /** `?tab=`: a view id, anything else opens the first view. */
     readonly tab: string | null
@@ -36,6 +38,16 @@ export type WorkbenchRender =
     | { readonly kind: "component"; readonly Component: ComponentType<WorkbenchRouteProps> }
     | { readonly kind: "spec"; readonly document: WorkbenchSpecDocument }
 
+/** What a module offers a spec: its reviewed blocks and the reads and actions a spec may bind. */
+export interface WorkbenchExposes {
+    /** The reviewed blocks a spec may place. */
+    readonly blocks: ReadonlyArray<WorkbenchBlockDefinition>
+    /** The reads a spec may bind. */
+    readonly reads: ReadonlyArray<WorkbenchReadDefinition>
+    /** The actions a spec may bind. */
+    readonly actions: ReadonlyArray<WorkbenchActionDefinition>
+}
+
 /** What a module declares about its workbench, without how it draws: the registry lists it, the host checks it. */
 export interface WorkbenchDeclaration {
     /** The workbench key of the module's catalogue entry (`template.workbench`). */
@@ -43,21 +55,18 @@ export interface WorkbenchDeclaration {
     /** The message namespace the module's words live in. */
     readonly namespace: string
     /** The views, in strip order; the first is the default. */
-    readonly views: readonly [WorkbenchViewDefinition, ...WorkbenchViewDefinition[]]
+    readonly views: readonly [WorkbenchViewDefinition, ...Array<WorkbenchViewDefinition>]
     /** Every permission the module checks; the host maps each to its own roles. */
     readonly permissions: ReadonlyArray<string>
     /** Every host operation the module runs; the host refuses any other for this module. */
     readonly operations: ReadonlyArray<string>
     /** What the module offers a spec: its reviewed blocks and the reads and actions a spec may bind; nothing when absent. */
-    readonly exposes?: {
-        readonly blocks: ReadonlyArray<WorkbenchBlockDefinition>
-        readonly reads: ReadonlyArray<WorkbenchReadDefinition>
-        readonly actions: ReadonlyArray<WorkbenchActionDefinition>
-    }
+    readonly exposes?: WorkbenchExposes
 }
 
 /** A declaration and how it draws: what the workbench route mounts. */
 export interface WorkbenchModule extends WorkbenchDeclaration {
+    /** How the workbench draws by default. */
     readonly render: WorkbenchRender
 }
 
@@ -71,6 +80,8 @@ export type WorkbenchProblemCode =
 
 /** Why a workbench registration was refused, and where. */
 export interface WorkbenchProblem {
+    /** Which rule of the registration the module broke. */
     readonly code: WorkbenchProblemCode
+    /** Where: the module key, or the key and the view, action or read it is about. */
     readonly at: string
 }

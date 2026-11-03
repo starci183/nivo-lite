@@ -1,34 +1,6 @@
 export type { DataSlot, ForbiddenTest, SlotLabels, SlotPanelProps, SlotRead } from "../slot/slot.types"
 export { loadingSlot, mapSlot, slotOfRead, slotOfReads } from "../slot/slot"
 export type {
-    WorkbenchApproverView,
-    WorkbenchBadgeView,
-    WorkbenchCommandData,
-    WorkbenchCommandView,
-    WorkbenchConnectionsRegionView,
-    WorkbenchDashboardRegions,
-    WorkbenchDashboardRow,
-    WorkbenchDoneRegionView,
-    WorkbenchExplanationView,
-    WorkbenchFactView,
-    WorkbenchFigureData,
-    WorkbenchFigureRegion,
-    WorkbenchKnowledgeGapsView,
-    WorkbenchKnowledgeRegionView,
-    WorkbenchPathStepView,
-    WorkbenchRegionSlot,
-    WorkbenchRowData,
-    WorkbenchRowView,
-    WorkbenchSourceView,
-    WorkbenchSurface,
-    WorkbenchTraceView,
-    WorkbenchWaitingCardView,
-    WorkbenchWaitingListWords,
-    WorkbenchWaitingRegionView,
-    WorkbenchWhyLabels,
-    WorkbenchWhyView,
-} from "../view/view.types"
-export type {
     WorkbenchCommand,
     WorkbenchDataPort,
     WorkbenchFailureReason,
@@ -49,6 +21,7 @@ export type {
 } from "../host/host.types"
 export type {
     WorkbenchDeclaration,
+    WorkbenchExposes,
     WorkbenchModule,
     WorkbenchProblem,
     WorkbenchProblemCode,
@@ -57,36 +30,3 @@ export type {
     WorkbenchViewDefinition,
 } from "./workbench.types"
 export { defineWorkbench, specRegistryFrom, viewIdOf, workbenchProblems, workbenchRegistryOf } from "./workbench"
-export type {
-    WorkbenchActionDefinition,
-    WorkbenchBlockDefinition,
-    WorkbenchDataShape,
-    WorkbenchPropDefinition,
-    WorkbenchPropType,
-    WorkbenchReadDefinition,
-    WorkbenchSlotDefinition,
-    WorkbenchSpecActionBinding,
-    WorkbenchSpecBinding,
-    WorkbenchSpecDocument,
-    WorkbenchSpecNode,
-    WorkbenchSpecProblem,
-    WorkbenchSpecProblemCode,
-    WorkbenchSpecReadBinding,
-    WorkbenchSpecRegistry,
-    WorkbenchSpecSchema,
-    WorkbenchSpecText,
-    WorkbenchSpecValue,
-    WorkbenchSpecView,
-    WorkbenchStoredSpec,
-} from "../spec/spec.types"
-export {
-    SPEC_MAX_DEPTH,
-    isSpecText,
-    specProblems,
-    specRegistryOf,
-    textOf,
-    valueAt,
-    variablesOf,
-    wordsOf,
-} from "../spec/spec"
-export { SDK_SPEC_BLOCKS } from "../spec/blocks"

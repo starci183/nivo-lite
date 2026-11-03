@@ -1,5 +1,3 @@
-"use client"
-
 import { Badge, DescriptionList, EmptyNotice, Grid, Stack, SurfaceCard, Tabs } from "@starci/grammar/common"
 import type { GapRole, ListRowData } from "@starci/grammar/common"
 import type { ComponentType, ReactNode } from "react"
@@ -46,18 +44,11 @@ const panelId = (id: string): string => `agent-dashboard-panel-${id}`
 const textProp = (value: WorkbenchSpecValue | undefined): WorkbenchSpecText =>
     isSpecText(value) ? value : { vi: "", en: "" }
 
+/** The gaps a spec stack may name besides the widest. */
+const SPEC_GAPS: ReadonlyArray<GapRole> = ["identity", "inline", "row", "section"]
+
 /** The gap a stack names; the validator admits only these, so anything else is the widest. */
-const gapOf = (value: WorkbenchSpecValue | undefined): GapRole => {
-    switch (value) {
-        case "identity":
-        case "inline":
-        case "row":
-        case "section":
-            return value
-        default:
-            return "region"
-    }
-}
+const gapOf = (value: WorkbenchSpecValue | undefined): GapRole => SPEC_GAPS.find((gap) => gap === value) ?? "region"
 
 /** A string prop, or empty. */
 const stringProp = (value: WorkbenchSpecValue | undefined): string => (typeof value === "string" ? value : "")
@@ -272,7 +263,7 @@ const SpecNodeView = (props: SpecBlockProps): ReactNode => {
             return <WorkbenchDashboardCards regions={shell.regions} onRetry={shell.retryDashboard} />
         default: {
             const Block = props.context.moduleBlocks[props.node.block]
-            return Block === undefined ? null : <Block {...props} />
+            return Block === undefined ? <></> : <Block {...props} />
         }
     }
 }
