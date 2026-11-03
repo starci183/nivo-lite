@@ -1,8 +1,10 @@
 import type { AvatarUpload } from "@modules/domain/avatars"
+import type { ChangePasswordRequest } from "../../application/change-password.contracts"
 import type { RequestMyAvatarUploadRequest } from "../../application/request-my-avatar-upload.contracts"
 import type { RevokeSessionRequest } from "../../application/revoke-session.contracts"
 import type { SetMyAvatarRequest } from "../../application/set-my-avatar.contracts"
 import type { UpdateProfileRequest } from "../../application/update-profile.contracts"
+import type { ChangePasswordInput } from "./dto/change-password.input"
 import type { MyAvatarUploadType } from "./dto/my-avatar-upload.type"
 import type { RequestMyAvatarUploadInput } from "./dto/request-my-avatar-upload.input"
 import type { RevokeSessionInput } from "./dto/revoke-session.input"
@@ -30,3 +32,9 @@ export const toMyAvatarUploadType = (upload: AvatarUpload): MyAvatarUploadType =
 
 /** Maps the GraphQL input to the request that sets or removes the picture. */
 export const toSetMyAvatarRequest = (input: SetMyAvatarInput): SetMyAvatarRequest => ({ path: input.path })
+
+/** The application request of a password change from its GraphQL input. */
+export const toChangePasswordRequest = (input: ChangePasswordInput): ChangePasswordRequest => ({
+    current: input.currentPassword,
+    next: input.newPassword,
+})

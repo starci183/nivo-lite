@@ -1,9 +1,6 @@
 /** How an invitation left: a new-account email, a sign-in email, or not at all. */
 export type InviteSent = "invited" | "existing" | "none"
 
-/** What a single-use emailed token is for. */
-export type PasswordPurpose = "reset" | "invite" | "confirm"
-
 /** What an operator account call answers when it failed. */
 export interface AccountAdminFailure {
     /** What went wrong. */

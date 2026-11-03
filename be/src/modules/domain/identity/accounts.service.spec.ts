@@ -1,8 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeIds, mock, mockEntityManager } from "@starci/jest-preset"
-import { MAIL } from "@modules/integrations/mail"
-import type { MailClient } from "@modules/integrations/mail"
-import { AUTH_ERROR_CODES, AuthError, PASSPORT_PASSWORDS, PASSPORT_SESSIONS } from "@modules/integrations/passport"
+import { AUTH_ERROR_CODES, AuthError } from "@modules/integrations/passport"
 import type { AuthPasswords, AuthSessions } from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -12,14 +10,11 @@ import type { Logger } from "@modules/platform/logging"
 import { IdentityAccountsService } from "./accounts.service"
 import { IdentityAuthenticatorService } from "./authenticator.service"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
-import { ACCESS_TOKEN_VERIFIER } from "./identity.decorators"
+import { ACCESS_TOKEN_VERIFIER, IDENTITY_AUTH_PASSWORDS, IDENTITY_AUTH_SESSIONS } from "./identity.decorators"
 import type { VerifyAccessToken } from "./identity.contracts"
-import { IDENTITY_AUTH_OPTIONS } from "./identity-auth.decorators"
-import type { IdentityAuthOptions } from "./identity-auth.options"
-import { IdentityPasswordResetService } from "./password-reset.service"
+import { IdentityInviteService } from "./identity-invite.service"
 
 /** The statements `callDbFunction` sends for the account doors. */
-const USER_BY_EMAIL = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
 const USER_BY_ID = 'SELECT * FROM "public"."be_auth_user_by_id"($1)'
 const CREATE_USER = 'SELECT * FROM "public"."be_auth_create_user"($1, $2, $3, $4, $5, $6)'
 const SET_AVATAR = 'SELECT * FROM "public"."be_auth_set_avatar"($1, $2)'
@@ -28,12 +23,6 @@ const DELETE_USER = 'SELECT * FROM "public"."be_auth_delete_user"($1)'
 
 const NOW = "2026-11-09T10:00:00.000Z"
 const CREATED = "00000000-0000-4000-8000-000000000001"
-const OPTIONS: IdentityAuthOptions = {
-    webOrigin: "https://app.example.test",
-    resetTtlSeconds: 3600,
-    inviteTtlSeconds: 7200,
-}
-const REDIRECT = "https://app.example.test/auth/confirm?next=%2Finvite%2Ftoken-1"
 const person = (meta: Record<string, unknown>, email: string | null = "an@example.test") => ({
     id: "u1",
     email,
@@ -42,18 +31,9 @@ const person = (meta: Record<string, unknown>, email: string | null = "an@exampl
     disabled: false,
 })
 
-const EXISTING_ACCOUNT: ReadonlyArray<readonly [string, unknown]> = [
-    [
-        USER_BY_EMAIL,
-        [{ id: "u1", email: "an@example.test", encrypted_password: "h", email_confirmed_at: NOW, disabled: false }],
-    ],
-]
 const build = async (stubs: ReadonlyArray<readonly [string, unknown]>) => {
     const em = mockEntityManager({ query: stubs })
-    const mail = mock<MailClient>()
-    mail.sendThroughPlatform.mockResolvedValue({ messageId: "m1" })
-    const resets = mock<IdentityPasswordResetService>()
-    resets.mint.mockResolvedValue("minted-token")
+    const invites = mock<IdentityInviteService>()
     const authenticator = mock<IdentityAuthenticatorService>()
     const sessions = mock<AuthSessions>()
     const passwords = mock<AuthPasswords>()
@@ -63,24 +43,21 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]>) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             IdentityAccountsService,
-            { provide: IdentityPasswordResetService, useValue: resets },
+            { provide: IdentityInviteService, useValue: invites },
             { provide: IdentityAuthenticatorService, useValue: authenticator },
-            { provide: PASSPORT_SESSIONS, useValue: sessions },
-            { provide: PASSPORT_PASSWORDS, useValue: passwords },
+            { provide: IDENTITY_AUTH_SESSIONS, useValue: sessions },
+            { provide: IDENTITY_AUTH_PASSWORDS, useValue: passwords },
             { provide: ACCESS_TOKEN_VERIFIER, useValue: verifier },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: MAIL, useValue: mail },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: IDS, useValue: fakeIds() },
-            { provide: IDENTITY_AUTH_OPTIONS, useValue: OPTIONS },
             { provide: LOGGER, useValue: mock<Logger>() },
         ],
     }).compile()
     return {
         service: moduleRef.get(IdentityAccountsService),
         em,
-        mail,
-        resets,
+        invites,
         authenticator,
         sessions,
         passwords,
@@ -164,59 +141,13 @@ describe("IdentityAccountsService / setUploadedAvatar", () => {
 })
 
 describe("IdentityAccountsService / deliverInvite", () => {
-    it("mails a person who already has an account the invitation link on the web origin", async () => {
-        const { service, mail } = await build(EXISTING_ACCOUNT)
+    it("hands the invitation to the invite service and answers how it left", async () => {
+        const { service, invites } = await build([])
+        invites.deliver.mockResolvedValue("invited")
 
-        await expect(service.deliverInvite("An@Example.test", REDIRECT)).resolves.toBe("existing")
+        await expect(service.deliverInvite("An@Example.test", "https://app.example.test/invite/token-1")).resolves.toBe("invited")
 
-        expect(mail.sendThroughPlatform.mock.calls[0]?.[0].text).toContain("https://app.example.test/invite/token-1")
-    })
-
-    it("creates an account for a new person and mails a link to set a password that continues to the invitation", async () => {
-        const { service, mail, em, resets } = await build([
-            [USER_BY_EMAIL, []],
-            [CREATE_USER, [{ be_auth_create_user: CREATED }]],
-        ])
-
-        await expect(service.deliverInvite("new@example.test", REDIRECT)).resolves.toBe("invited")
-
-        expect(em.query).toHaveBeenCalledWith(CREATE_USER, [
-            CREATED,
-            "new@example.test",
-            null,
-            false,
-            "{}",
-            new Date(NOW),
-        ])
-        expect(resets.mint).toHaveBeenCalledWith(CREATED, "invite", 7200)
-        expect(mail.sendThroughPlatform.mock.calls[0]?.[0].text).toContain("token=minted-token")
-        expect(mail.sendThroughPlatform.mock.calls[0]?.[0].text).toContain("next=%2Finvite%2Ftoken-1")
-    })
-
-    it("continues to the path of the link itself when it carries no next value", async () => {
-        const { service, mail } = await build([
-            [USER_BY_EMAIL, []],
-            [CREATE_USER, [{ be_auth_create_user: CREATED }]],
-        ])
-
-        await expect(
-            service.deliverInvite("new@example.test", "https://app.example.test/invite/token-2?x=1"),
-        ).resolves.toBe("invited")
-
-        expect(mail.sendThroughPlatform.mock.calls[0]?.[0].text).toContain("next=%2Finvite%2Ftoken-2%3Fx%3D1")
-    })
-
-    it("falls back to the root when the invitation address is not a link, and answers none when mail fails", async () => {
-        const { service, mail } = await build([
-            [USER_BY_EMAIL, []],
-            [CREATE_USER, []],
-        ])
-        await expect(service.deliverInvite("x@example.test", "not a url")).resolves.toBe("none")
-
-        const failing = await build(EXISTING_ACCOUNT)
-        failing.mail.sendThroughPlatform.mockRejectedValue(new Error("smtp down"))
-        await expect(failing.service.deliverInvite("an@example.test", "not a url")).resolves.toBe("none")
-        expect(mail.sendThroughPlatform).not.toHaveBeenCalled()
+        expect(invites.deliver).toHaveBeenCalledWith("An@Example.test", "https://app.example.test/invite/token-1")
     })
 })
 
@@ -370,7 +301,7 @@ describe("IdentityAccountsService / principal sessions and tokens", () => {
     it("refuses a wrong password without opening a session, and lets an unexpected failure through", async () => {
         const { service, authenticator, sessions } = await build([])
         authenticator.verifyPassword.mockRejectedValueOnce(
-            new IdentityError({ code: IdentityErrorCode.InvalidCredentials }),
+            new IdentityError({ code: IdentityErrorCode.PairRefused }),
         )
 
         await expect(service.openPasswordPrincipal("an@example.test", "wrong")).resolves.toBeNull()

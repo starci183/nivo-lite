@@ -3,11 +3,11 @@ import { IdentitySignInService } from "@modules/domain/identity"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { LogoutOthersCommand } from "./logout-others.command"
+import { LogoutOtherSessionsCommand } from "./logout-other-sessions.command"
 
-@CommandHandler(LogoutOthersCommand)
+@CommandHandler(LogoutOtherSessionsCommand)
 /** Ends the other sessions of the caller. */
-export class LogoutOthersHandler extends ICQRSHandler<LogoutOthersCommand, void> {
+export class LogoutOtherSessionsHandler extends ICQRSHandler<LogoutOtherSessionsCommand, void> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly signIn: IdentitySignInService,
@@ -15,7 +15,7 @@ export class LogoutOthersHandler extends ICQRSHandler<LogoutOthersCommand, void>
         super(logger)
     }
 
-    protected override process(command: LogoutOthersCommand): Promise<void> {
+    protected override process(command: LogoutOtherSessionsCommand): Promise<void> {
         return this.signIn.endOthers(command.params.principal)
     }
 }

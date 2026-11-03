@@ -2,34 +2,46 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule, Provider } from "@nestjs/common"
 import {
     PASSPORT_ACCOUNTS,
+    PASSPORT_DOORS,
+    PASSPORT_PASSWORDS,
     PASSPORT_PRINCIPAL_VERIFIER,
     PASSPORT_RATE_COUNTER,
+    PASSPORT_SESSIONS,
     PASSPORT_SESSION_STORE,
+    PASSPORT_SIGN_IN_BUDGET,
 } from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
-import { RATE_LIMIT_STORE } from "@modules/platform/database"
 import { IdentityAccountsService } from "./accounts.service"
-import { IdentityAccountDirectoryService } from "./identity-account-directory.service"
+import { IdentityAccountDirectoryService } from "./account-directory.service"
 import { createAccessTokenVerifier, refuseSessions } from "./access-token.policy"
 import { AuthGuard } from "./auth.guard"
 import { IdentityAuthenticatorService } from "./authenticator.service"
 import { CredentialGuard } from "./credential.guard"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
-import { ACCESS_TOKEN_VERIFIER, CREDENTIAL_AUTHENTICATOR } from "./identity.decorators"
+import {
+    ACCESS_TOKEN_VERIFIER,
+    CREDENTIAL_AUTHENTICATOR,
+    IDENTITY_AUTH_DOORS,
+    IDENTITY_AUTH_PASSWORDS,
+    IDENTITY_AUTH_SESSIONS,
+    IDENTITY_SIGN_IN_BUDGET,
+} from "./identity.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./identity.module-definition"
 import { IDENTITY_ACCOUNTS, IDENTITY_AUTHENTICATOR, IDENTITY_AUTH_OPTIONS } from "./identity-auth.decorators"
 import type { IdentityAuthOptions } from "./identity-auth.options"
-import { IdentityPasswordResetService } from "./password-reset.service"
-import { IdentitySessionStoreService } from "./identity-session-store.service"
+import { IdentityEmailService } from "./identity-email.service"
+import { IdentityInviteService } from "./identity-invite.service"
+import { IdentityPasswordChangeService } from "./password-change.service"
+import { IdentityRateCounterService } from "./rate-counter.service"
+import { IdentitySessionStoreService } from "./session-store.service"
 import { IdentitySignInService } from "./sign-in.service"
-import { IdentitySignupService } from "./signup.service"
 
 const SIGN_IN_EXPORTS = [
     IDENTITY_AUTHENTICATOR,
     IDENTITY_ACCOUNTS,
-    IdentityPasswordResetService,
+    IdentityEmailService,
+    IdentityPasswordChangeService,
     IdentitySignInService,
-    IdentitySignupService,
     PASSPORT_SESSION_STORE,
     PASSPORT_ACCOUNTS,
     PASSPORT_RATE_COUNTER,
@@ -41,14 +53,20 @@ const signInProviders = (auth: IdentityAuthOptions): Array<Provider> => [
     IdentityAccountDirectoryService,
     { provide: PASSPORT_SESSION_STORE, useExisting: IdentitySessionStoreService },
     { provide: PASSPORT_ACCOUNTS, useExisting: IdentityAccountDirectoryService },
-    { provide: PASSPORT_RATE_COUNTER, useExisting: RATE_LIMIT_STORE },
+    IdentityRateCounterService,
+    { provide: PASSPORT_RATE_COUNTER, useExisting: IdentityRateCounterService },
+    { provide: IDENTITY_AUTH_DOORS, useExisting: PASSPORT_DOORS },
+    { provide: IDENTITY_AUTH_SESSIONS, useExisting: PASSPORT_SESSIONS },
+    { provide: IDENTITY_AUTH_PASSWORDS, useExisting: PASSPORT_PASSWORDS },
+    { provide: IDENTITY_SIGN_IN_BUDGET, useExisting: PASSPORT_SIGN_IN_BUDGET },
     IdentityAuthenticatorService,
     { provide: IDENTITY_AUTHENTICATOR, useExisting: IdentityAuthenticatorService },
-    IdentityPasswordResetService,
+    IdentityInviteService,
     IdentityAccountsService,
     { provide: IDENTITY_ACCOUNTS, useExisting: IdentityAccountsService },
     IdentitySignInService,
-    IdentitySignupService,
+    IdentityEmailService,
+    IdentityPasswordChangeService,
 ]
 
 @Module({})

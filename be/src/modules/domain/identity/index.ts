@@ -9,9 +9,9 @@ export { IdentityModule } from "./identity.module"
 export { parseIdentityAuthConfig } from "./identity-auth.config"
 export type { AccessGrant, GoogleRedirect } from "@modules/integrations/passport"
 export { IDENTITY_ACCOUNTS, IDENTITY_AUTHENTICATOR } from "./identity-auth.decorators"
-export { IdentityPasswordResetService } from "./password-reset.service"
+export { IdentityEmailService } from "./identity-email.service"
+export { IdentityPasswordChangeService } from "./password-change.service"
 export { IdentitySignInService } from "./sign-in.service"
-export { IdentitySignupService } from "./signup.service"
 export type {
     CredentialAuthenticator,
     CredentialMetadata,

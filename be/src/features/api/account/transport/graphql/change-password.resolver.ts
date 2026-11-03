@@ -4,7 +4,7 @@ import { CurrentPrincipal } from "@modules/domain/identity"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
 import { ChangePasswordCommand } from "../../application/change-password.command"
-import { toChangePasswordRequest } from "./auth-graphql.mapper"
+import { toChangePasswordRequest } from "./account-change.mapper"
 import { ChangePasswordInput } from "./dto/change-password.input"
 
 @Resolver()

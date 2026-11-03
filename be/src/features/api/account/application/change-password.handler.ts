@@ -1,5 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { IdentityPasswordResetService } from "@modules/domain/identity"
+import { IdentityPasswordChangeService } from "@modules/domain/identity"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -10,7 +10,7 @@ import { ChangePasswordCommand } from "./change-password.command"
 export class ChangePasswordHandler extends ICQRSHandler<ChangePasswordCommand, void> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly resets: IdentityPasswordResetService,
+        private readonly resets: IdentityPasswordChangeService,
     ) {
         super(logger)
     }

@@ -13,7 +13,6 @@ const PUBLIC: MailOptions = {
     host: "smtp.platform.test",
     port: 587,
     from: { name: "Nivo", address: "no-reply@nivo.test" },
-    helloName: "nivo.test",
     webOrigin: "https://app.nivo.test",
     brandName: "Nivo",
     defaultLanguage: "en",
@@ -21,6 +20,8 @@ const PUBLIC: MailOptions = {
     resetTtlSeconds: 3_600,
     allowPrivateHosts: false,
 }
+
+const NAMED: MailOptions = { ...PUBLIC, helloName: "nivo.test" }
 
 const DEV: MailOptions = { ...PUBLIC, allowPrivateHosts: true }
 
@@ -88,7 +89,7 @@ describe("MailRelayService / assertSmtpTarget", () => {
 
 describe("MailRelayService / sendThroughSmtp", () => {
     it("sends through the account with its login, sender and reply-to, then closes the connection", async () => {
-        const { relay, account, factory } = await build(PUBLIC)
+        const { relay, account, factory } = await build(NAMED)
 
         await expect(relay.sendThroughSmtp(config, delivery)).resolves.toEqual(sentOf)
 
@@ -107,7 +108,7 @@ describe("MailRelayService / sendThroughSmtp", () => {
         expect(account.onModuleDestroy).toHaveBeenCalledTimes(1)
     })
     it("keeps implicit TLS and leaves out an empty login, an empty reply-to and a missing hello name", async () => {
-        const { relay, factory } = await build({ ...PUBLIC, helloName: undefined })
+        const { relay, factory } = await build(PUBLIC)
 
         await relay.sendThroughSmtp({ ...config, security: "tls", user: "", pass: "", replyTo: "" }, delivery)
 

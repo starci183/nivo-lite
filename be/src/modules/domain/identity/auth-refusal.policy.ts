@@ -4,7 +4,7 @@ import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 /** The codes of @starci/auth that are identity errors of this app. */
 const IDENTITY_REFUSALS: ReadonlyArray<IdentityErrorCode> = [
     IdentityErrorCode.Unauthenticated,
-    IdentityErrorCode.InvalidCredentials,
+    IdentityErrorCode.PairRefused,
     IdentityErrorCode.AccountDisabled,
     IdentityErrorCode.RefreshInvalid,
     IdentityErrorCode.RefreshReused,
