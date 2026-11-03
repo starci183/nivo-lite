@@ -1,12 +1,10 @@
 import type { useTranslations } from "next-intl"
 import type { useInventoryFormat } from "./useInventoryFormat"
+import type { AdjustMode, AdjustmentCopyOfResult } from "@/hooks/inventoryAdjustView"
 import type { InventoryWorkbenchData, ItemView, PoStatus, StockStatus, InventorySay } from "@/modules/types"
 
 /** The stock filter of the item list. */
 export type StockFilter = "all" | "low" | "out" | "over"
-
-/** The ways to change a quantity by hand. */
-export type AdjustMode = "set" | "delta" | "move"
 
 /** The stock filters in display order. */
 export const STOCK_FILTERS: ReadonlyArray<StockFilter> = ["all", "low", "out", "over"]
@@ -170,25 +168,11 @@ export const stockToggleLabel = (
     if (!isAvailable) return null
     return t(showInactive ? "stockShowActive" : "stockShowInactive")
 }
+
 /** Resolved facts needed to word a quantity adjustment, without a hook or drawer dependency. */
 interface AdjustmentCopyFacts {
     readonly mode: AdjustMode
     readonly item: { readonly name: string; readonly unit: string }
-}
-
-/** What `adjustmentCopyOf` returns. */
-export interface AdjustmentCopyOfResult {
-    readonly adjustTitle: string
-    readonly close: string
-    readonly adjustMode: string
-    readonly adjustFrom: string
-    readonly adjustAt: string
-    readonly adjustTo: string
-    readonly adjustToHint: string
-    readonly adjustNote: string
-    readonly adjustReason: string
-    readonly adjustReasonHint: string
-    readonly valueLabel: string
 }
 
 /** Resolves the exact adjust drawer copy in its domain owner. */

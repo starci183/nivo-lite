@@ -13,6 +13,9 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"
 
+/** The offer for one installation, or null when it is up to date. */
+export type OfferOrNone = UpdateOffer | null
+
 /** The most installations a workspace lists offers for. */
 const LIST_MAX = 100
 
@@ -45,7 +48,7 @@ export class TemplateUpdatesService {
     }
 
     /** The offer for one installation, or null when it is up to date. */
-    async offer(userId: string, workspaceId: string, installationId: string): Promise<UpdateOffer | null> {
+    async offer(userId: string, workspaceId: string, installationId: string): Promise<OfferOrNone> {
         await this.members.require(userId, workspaceId)
         return this.offerOf(await this.requireInstall(workspaceId, installationId))
     }
@@ -59,7 +62,7 @@ export class TemplateUpdatesService {
         workspaceId: string,
         installationId: string,
         unitIds: ReadonlyArray<string>,
-    ): Promise<UpdateOffer | null> {
+    ): Promise<OfferOrNone> {
         const member = await this.members.require(userId, workspaceId, ["owner", "manager"])
         const install = await this.requireInstall(workspaceId, installationId)
         const merged = await this.mergeOf(install)
@@ -108,7 +111,7 @@ export class TemplateUpdatesService {
             install.licenseId === null
                 ? null
                 : await this.entityManager.findOne(TemplateLicenseEntity, { where: { id: install.licenseId } })
-        if (license === null || license.status !== "active") return null
+        if (license?.status !== "active") return null
         const offered =
             license.kind === "private"
                 ? await this.versions.latestNumber(install.templateKey)

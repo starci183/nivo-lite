@@ -15,18 +15,13 @@ import { navigation } from "@/modules/i18n"
 import { APP_ROUTES, workspaceBillingPath } from "@/modules/routes"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
 import { readError } from "@/hooks/workspaceread"
+import { messageOf } from "./billing.shared"
 
 /** Selectors retained by the payment route. */
 export interface WorkspacePaymentSelectors {
     readonly workspaceId?: string | undefined
     readonly orderId?: string | undefined
     readonly renewing: boolean
-}
-
-const messageOf = (error: unknown, fallback: string) => {
-    if (error instanceof Error) return error.message
-    if (typeof error === "string") return error
-    return error ? fallback : undefined
 }
 
 /** The view `useWorkspacePayment` returns. */

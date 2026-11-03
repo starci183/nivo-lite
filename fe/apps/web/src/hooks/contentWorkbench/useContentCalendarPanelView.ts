@@ -13,14 +13,15 @@ import {
     type ContentNote,
 } from "@/hooks/content"
 import {
-    contentCalendarFields,
+    currentContentCalendarEpoch,
     freshContentCalendar,
     sameContentCalendarOwner,
-    currentContentCalendarEpoch,
-} from "./contentWorkbench.shared"
-import type { ContentViewInput, ContentCalendarState, ContentCalendarReceipt } from "./contentWorkbench.shared"
+    type ContentCalendarReceipt,
+    type ContentCalendarState,
+} from "@/hooks/contentCalendar"
+import { contentCalendarFields } from "./contentWorkbench.shared"
+import type { ContentViewInput, ContentCalendarCell } from "./contentWorkbench.shared"
 import type { ContentWorkbenchCopy, PostView } from "@/modules/types"
-import type { BadgeTone } from "@starci/grammar/common"
 
 interface CalendarActionsInput {
     readonly calendar: ContentCalendarState
@@ -107,50 +108,7 @@ export interface ContentCalendarPanelView {
               y: number
               m: number
               title: string
-              cells: (
-                  | {
-                        label: string
-                        posts: {
-                            pickLabel: string
-                            id: string
-                            title: string
-                            time: string
-                            when: string
-                            brief: string | null
-                            statusLabel: string
-                            tone: BadgeTone
-                            isSkipped: boolean
-                            canMove: boolean
-                            channels: ReadonlyArray<string>
-                            pillar: string | null
-                        }[]
-                        moreLabel: string | null
-                        key: string
-                        day: number
-                        dateKey: string
-                    }
-                  | {
-                        label: string
-                        posts: {
-                            pickLabel: string
-                            id: string
-                            title: string
-                            time: string
-                            when: string
-                            brief: string | null
-                            statusLabel: string
-                            tone: BadgeTone
-                            isSkipped: boolean
-                            canMove: boolean
-                            channels: ReadonlyArray<string>
-                            pillar: string | null
-                        }[]
-                        moreLabel: string | null
-                        key: string
-                        day: null
-                        dateKey: string
-                    }
-              )[]
+              cells: ContentCalendarCell[]
               monthItems: PostView[]
               isMonthEmpty: boolean
               unscheduled: PostView[]

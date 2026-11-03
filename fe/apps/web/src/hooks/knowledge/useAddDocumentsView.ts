@@ -4,20 +4,22 @@ import { useFormatter, useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref } from "@/modules/routes"
 import { useQueryKnowledgeUsageSwr } from "@/hooks/swr"
-import { buildAddDocumentsView, type ZoneView } from "./knowledge.shared"
-import type { AddDocumentsViewInput } from "./knowledge.shared"
-import { useAddDocuments, type AddMode } from "./useAddDocuments"
+import { buildAddDocumentsView, type ZoneView, type AddDocumentsViewInput } from "./knowledge.shared"
+import { useAddDocuments } from "./useAddDocuments"
 import { useAddDropZone } from "./useAddDropZone"
 import { useAddInstances } from "./useAddInstances"
 import { useQueueActions } from "./useQueueActions"
 import { useUsageView } from "./useUsageView"
-import type { QueuedDoc } from "./useQueuedDocs"
 import type { UsageView } from "@/modules/documents"
-import type { FaqEntry } from "./useNoteDraft"
-import type { AddQueue } from "./useAddQueue"
-import type { LinkRows } from "./useLinkRows"
-import type { NoteDraft } from "./useNoteDraft"
-import type { BatchOptions } from "./useBatchOptions"
+import type {
+    AddMode,
+    BatchOptions,
+    FaqEntry,
+    LinkRows,
+    NoteDraft,
+    QueuedDoc,
+    AddQueue,
+} from "@/hooks/knowledgeAddTypes"
 
 /** The view `useAddDocumentsView` returns. */
 export interface AddDocumentsViewShape {

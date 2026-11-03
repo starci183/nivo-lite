@@ -2,8 +2,8 @@ import type { ContentNoteView, ContentViews, PostView } from "@/modules/types"
 import type { ContentWorkbenchData } from "@/modules/content"
 import { parseDate } from "@internationalized/date"
 import type { useFormatter, useTranslations } from "next-intl"
-import { calendarMonthView } from "@/hooks/contentCalendar"
-import { postView, vietnamClock, vnDateKey } from "@/hooks/content"
+import { calendarMonthView, type ContentCalendarState } from "@/hooks/contentCalendar"
+import { postView, vnDateKey } from "@/hooks/content"
 import { i18n } from "@/modules/i18n"
 import type { BadgeTone } from "@starci/grammar/common"
 
@@ -83,58 +83,6 @@ export const contentSettingsLifetimeOf = (
 export const canManageContentSettings = (input: ContentViewInput): boolean =>
     input.isActive && input.isReady && input.data?.canManage === true
 
-/** One immutable calendar owner and its actual local selection/drag state. */
-export interface ContentCalendarState {
-    readonly scope: string
-    readonly isActive: boolean
-    readonly isReady: boolean
-    readonly epoch: number
-    readonly ym: { readonly y: number; readonly m: number }
-    readonly dragId: string | null
-    readonly overKey: string | null
-    readonly expandedKey: string | null
-}
-
-/** A commit receipt carries the immutable bundle's identity, never a second source of UI values. */
-export type ContentCalendarReceipt = Pick<ContentCalendarState, "scope" | "isActive" | "isReady" | "epoch">
-
-/** Fresh activation uses the incoming source's real month and the original empty drag/expansion defaults. */
-export const freshContentCalendar = (
-    input: Pick<ContentViewInput, "scope" | "isActive" | "isReady">,
-    now: Date,
-    epoch: number,
-): ContentCalendarState => {
-    const here = vietnamClock(now)
-    return {
-        scope: input.scope,
-        isActive: input.isActive,
-        isReady: input.isReady,
-        epoch,
-        ym: { y: here.y, m: here.m },
-        dragId: null,
-        overKey: null,
-        expandedKey: null,
-    }
-}
-
-/** Background data identity does not own a user's selected month. */
-export const sameContentCalendarOwner = (
-    current: ContentCalendarState,
-    input: Pick<ContentViewInput, "scope" | "isActive" | "isReady">,
-): boolean => current.scope === input.scope && current.isActive === input.isActive && current.isReady === input.isReady
-
-/** Captured events can affect only the exact active, ready activation that produced them. */
-export const currentContentCalendarEpoch = (
-    current: ContentCalendarReceipt,
-    expected: ContentCalendarReceipt,
-): boolean =>
-    current.scope === expected.scope &&
-    current.epoch === expected.epoch &&
-    current.isActive === expected.isActive &&
-    current.isReady === expected.isReady &&
-    current.isActive &&
-    current.isReady
-
 const CONTENT_CALENDAR_MAX_CHIPS = 3
 
 interface ContentCalendarFieldsInput {
@@ -146,52 +94,38 @@ interface ContentCalendarFieldsInput {
     expandedKey: string | null
 }
 
+/** One post chip of a calendar cell. */
+export interface ContentCalendarPost {
+    pickLabel: string
+    id: string
+    title: string
+    time: string
+    when: string
+    brief: string | null
+    statusLabel: string
+    tone: BadgeTone
+    isSkipped: boolean
+    canMove: boolean
+    channels: ReadonlyArray<string>
+    pillar: string | null
+}
+
+/** The fields every calendar cell has. */
+interface ContentCalendarCellBase {
+    label: string
+    posts: ContentCalendarPost[]
+    moreLabel: string | null
+    key: string
+    dateKey: string
+}
+
+/** One cell of the month grid: a day of the month, or a blank before the first or after the last. */
+export type ContentCalendarCell =
+    (ContentCalendarCellBase & { day: number }) | (ContentCalendarCellBase & { day: null })
+
 /** What `contentCalendarFields` returns. */
 export interface ContentCalendarFieldsResult {
-    cells: (
-        | {
-              label: string
-              posts: {
-                  pickLabel: string
-                  id: string
-                  title: string
-                  time: string
-                  when: string
-                  brief: string | null
-                  statusLabel: string
-                  tone: BadgeTone
-                  isSkipped: boolean
-                  canMove: boolean
-                  channels: ReadonlyArray<string>
-                  pillar: string | null
-              }[]
-              moreLabel: string | null
-              key: string
-              day: number
-              dateKey: string
-          }
-        | {
-              label: string
-              posts: {
-                  pickLabel: string
-                  id: string
-                  title: string
-                  time: string
-                  when: string
-                  brief: string | null
-                  statusLabel: string
-                  tone: BadgeTone
-                  isSkipped: boolean
-                  canMove: boolean
-                  channels: ReadonlyArray<string>
-                  pillar: string | null
-              }[]
-              moreLabel: string | null
-              key: string
-              day: null
-              dateKey: string
-          }
-    )[]
+    cells: ContentCalendarCell[]
     monthItems: PostView[]
     unscheduled: PostView[]
     hasSetup: boolean

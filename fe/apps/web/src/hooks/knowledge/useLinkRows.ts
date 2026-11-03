@@ -4,23 +4,9 @@ import { useState } from "react"
 import type { ClipboardEvent } from "react"
 import { linkProblemOf, nextId, splitLinks } from "@/modules/documents"
 import type { LinkInput } from "@/modules/documents"
+import type { LinkRows } from "@/hooks/knowledgeAddTypes"
 
 const newRow = (value = ""): LinkInput => ({ id: nextId(), value })
-
-/** What the links list gives the drawer. */
-export interface LinkRows {
-    readonly rows: ReadonlyArray<LinkInput>
-    /** Why each row cannot be added, by row id (the catalog key). */
-    readonly errors: Readonly<Record<string, string>>
-    /** The links typed or pasted, one per line. */
-    readonly links: string
-    readonly setValue: (id: string, value: string) => void
-    readonly add: () => void
-    readonly remove: (id: string) => void
-    readonly validate: (id: string) => void
-    readonly paste: (id: string, event: ClipboardEvent<HTMLInputElement>) => void
-    readonly clear: () => void
-}
 
 /** The list of link inputs of the Add documents drawer: one input per link, a paste of several links fills several rows. */
 export const useLinkRows = (): LinkRows => {

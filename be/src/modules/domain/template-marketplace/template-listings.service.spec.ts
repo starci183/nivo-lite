@@ -2,7 +2,11 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { AgentPluginsService } from "@modules/domain/agent-plugins"
-import { AgentTemplateVersionsService } from "@modules/domain/agent-templates"
+import {
+    AgentTemplateVersionsService,
+    AgentTemplatesError,
+    AgentTemplatesErrorCode,
+} from "@modules/domain/agent-templates"
 import type { StoredVersion } from "@modules/domain/agent-templates"
 import { ModulesService } from "@modules/domain/modules"
 import { AdminAccessService } from "@modules/domain/platform-admin"
@@ -10,33 +14,19 @@ import type { Principal } from "@modules/platform/cqrs"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { CREATOR, draftOf, leakyGraph, packageOf } from "@tests/fixtures/builders/agent-template.builder"
+import { plain } from "@tests/fixtures/builders/entity-row.builder"
+import { ROW_AT, listingRow } from "@tests/fixtures/builders/template-rows.builder"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateLikenessService } from "./template-likeness.service"
 import { TemplateListingsService } from "./template-listings.service"
 import { TemplateListingEntity } from "./persistence/entities"
 
 const ADMIN: Principal = { id: "admin-1", email: "admin@nivo.vn", role: "authenticated" }
-const AT = new Date("2026-11-03T02:00:00.000Z")
 
 const PASSING = [
     { id: "schema", ok: true, detail: "" },
     { id: "likeness_consent", ok: true, detail: "" },
 ]
-
-const rowOf = (over: Partial<TemplateListingEntity> = {}): TemplateListingEntity =>
-    Object.assign(new TemplateListingEntity(), {
-        id: "listing-1",
-        templateKey: "spa-booking-by-linh",
-        version: 1,
-        status: "draft",
-        priceVnd: 0,
-        revenueSharePct: 70,
-        checks: [],
-        reviewNote: "",
-        firstParty: false,
-        updatedAt: AT,
-        ...over,
-    })
 
 const stored = (pkg = packageOf(), over: Partial<StoredVersion> = {}): StoredVersion => ({
     key: pkg.key,
@@ -64,7 +54,9 @@ const build = async (options: Options = {}) => {
         require: jest
             .fn()
             .mockImplementation(() =>
-                version === null ? Promise.reject(new Error("no version")) : Promise.resolve(version),
+                version === null
+                    ? Promise.reject(new AgentTemplatesError({ code: AgentTemplatesErrorCode.VersionNotFound }))
+                    : Promise.resolve(version),
             ),
         find: jest.fn().mockResolvedValue(version),
         listOf: jest.fn().mockResolvedValue([{ key: "spa-booking-by-linh" }]),
@@ -82,7 +74,7 @@ const build = async (options: Options = {}) => {
         requireAdmin:
             options.notAdmin === true
                 ? jest.fn().mockImplementation(() => {
-                      throw new Error("not an admin")
+                      throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.NotAvailable })
                   })
                 : jest.fn().mockReturnValue({ userId: "admin-1", email: "admin@nivo.vn" }),
     })
@@ -90,7 +82,7 @@ const build = async (options: Options = {}) => {
         providers: [
             TemplateListingsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: CLOCK, useValue: new FakeClock(AT) },
+            { provide: CLOCK, useValue: new FakeClock(ROW_AT) },
             { provide: AgentTemplateVersionsService, useValue: versions },
             { provide: TemplateLikenessService, useValue: likeness },
             { provide: ModulesService, useValue: modules },
@@ -110,6 +102,7 @@ const codeOf = async (work: Promise<unknown>): Promise<unknown> => {
     }
 }
 
+const REVIEW = { listingId: "listing-1", decision: "approve" as const, note: "Good", revenueSharePct: null }
 const SUBMIT = { key: "spa-booking-by-linh", version: 1, priceVnd: 0 }
 
 describe("TemplateListingsService.submit", () => {
@@ -122,7 +115,7 @@ describe("TemplateListingsService.submit", () => {
         })
         em.findOne
             .mockResolvedValueOnce(null)
-            .mockResolvedValue(rowOf({ status: "submitted", priceVnd: 99_000, checks: PASSING }))
+            .mockResolvedValue(listingRow({ status: "submitted", priceVnd: 99_000, checks: PASSING }))
 
         const view = await service.submit(CREATOR.accountId, { ...SUBMIT, priceVnd: 99_000 })
 
@@ -159,7 +152,7 @@ describe("TemplateListingsService.submit", () => {
                 ),
             ),
             em: mockEntityManager({
-                findOne: [TemplateListingEntity, rowOf({ status: "rejected" })],
+                findOne: [TemplateListingEntity, listingRow({ status: "rejected" })],
                 update: [TemplateListingEntity, { affected: 1 }],
             }),
         })
@@ -171,7 +164,45 @@ describe("TemplateListingsService.submit", () => {
             { id: "listing-1" },
             expect.objectContaining({
                 status: "draft",
-                checks: expect.arrayContaining([expect.objectContaining({ id: "likeness_consent", ok: false })]),
+                checks: plain(expect.arrayContaining([expect.objectContaining({ id: "likeness_consent", ok: false })])),
+            }),
+        )
+    })
+})
+
+describe("TemplateListingsService.submit refusals", () => {
+    it("writes down a tool the gateway does not know as a failing check and keeps the listing a draft", async () => {
+        const graph = leakyGraph()
+        const tooled = packageOf(
+            {
+                ...graph,
+                nodes: graph.nodes.map((node) =>
+                    node.key === "start"
+                        ? {
+                              ...node,
+                              uses: [{ provider: "ghost", tool: "ghost.secret", scope: "read" as const, label: "x" }],
+                          }
+                        : node,
+                ),
+            },
+            draftOf(),
+        )
+        const { service, em } = await build({
+            version: stored(tooled),
+            em: mockEntityManager({
+                findOne: [TemplateListingEntity, listingRow({ status: "rejected" })],
+                update: [TemplateListingEntity, { affected: 1 }],
+            }),
+        })
+
+        await service.submit(CREATOR.accountId, SUBMIT)
+
+        expect(em.update).toHaveBeenCalledWith(
+            TemplateListingEntity,
+            { id: "listing-1" },
+            expect.objectContaining({
+                status: "draft",
+                checks: plain(expect.arrayContaining([expect.objectContaining({ id: "tools", ok: false })])),
             }),
         )
     })
@@ -180,7 +211,7 @@ describe("TemplateListingsService.submit", () => {
         const price = await build()
         const foreign = await build({ version: stored(packageOf(), { creatorAccountId: "someone-else" }) })
         const approved = await build({
-            em: mockEntityManager({ findOne: [TemplateListingEntity, rowOf({ status: "approved" })] }),
+            em: mockEntityManager({ findOne: [TemplateListingEntity, listingRow({ status: "approved" })] }),
         })
 
         expect(await codeOf(price.service.submit(CREATOR.accountId, { ...SUBMIT, priceVnd: -1 }))).toBe(
@@ -199,12 +230,10 @@ describe("TemplateListingsService.submit", () => {
 })
 
 describe("TemplateListingsService.review", () => {
-    const REVIEW = { listingId: "listing-1", decision: "approve" as const, note: "Good", revenueSharePct: null }
-
     it("approves a submitted listing for a platform reviewer, running the checks again, and keeps who and when", async () => {
         const { service, em } = await build({
             em: mockEntityManager({
-                findOne: [TemplateListingEntity, rowOf({ status: "submitted" })],
+                findOne: [TemplateListingEntity, listingRow({ status: "submitted" })],
                 update: [TemplateListingEntity, { affected: 1 }],
             }),
         })
@@ -217,7 +246,7 @@ describe("TemplateListingsService.review", () => {
             expect.objectContaining({
                 status: "approved",
                 reviewedBy: "admin-1",
-                reviewedAt: AT,
+                reviewedAt: ROW_AT,
                 reviewNote: "Good",
                 revenueSharePct: 60,
             }),
@@ -227,7 +256,7 @@ describe("TemplateListingsService.review", () => {
     it("rejects a submitted listing with the note and the checks it had, and keeps the share", async () => {
         const { service, em } = await build({
             em: mockEntityManager({
-                findOne: [TemplateListingEntity, rowOf({ status: "submitted", checks: PASSING })],
+                findOne: [TemplateListingEntity, listingRow({ status: "submitted", checks: PASSING })],
                 update: [TemplateListingEntity, { affected: 1 }],
             }),
         })
@@ -245,7 +274,9 @@ describe("TemplateListingsService.review", () => {
             }),
         )
     })
+})
 
+describe("TemplateListingsService.review refusals", () => {
     it("never approves a listing with a check failing now: the consent gate for a persona of a real person", async () => {
         const persona = {
             soul: "x",
@@ -254,11 +285,11 @@ describe("TemplateListingsService.review", () => {
         const consent = await build({
             consented: false,
             version: stored(packageOf(leakyGraph(), draftOf({ persona }))),
-            em: mockEntityManager({ findOne: [TemplateListingEntity, rowOf({ status: "submitted" })] }),
+            em: mockEntityManager({ findOne: [TemplateListingEntity, listingRow({ status: "submitted" })] }),
         })
         const plugin = await build({
             version: stored(packageOf(leakyGraph(), draftOf({ requiresPlugins: [{ key: "ghost", minVersion: 1 }] }))),
-            em: mockEntityManager({ findOne: [TemplateListingEntity, rowOf({ status: "submitted" })] }),
+            em: mockEntityManager({ findOne: [TemplateListingEntity, listingRow({ status: "submitted" })] }),
         })
 
         expect(await codeOf(consent.service.review(ADMIN, REVIEW))).toBe(TemplateMarketplaceErrorCode.ConsentMissing)
@@ -268,14 +299,14 @@ describe("TemplateListingsService.review", () => {
 
     it("refuses a listing that is not submitted, one that does not exist, and a caller who is not a platform reviewer", async () => {
         const draft = await build({
-            em: mockEntityManager({ findOne: [TemplateListingEntity, rowOf({ status: "draft" })] }),
+            em: mockEntityManager({ findOne: [TemplateListingEntity, listingRow({ status: "draft" })] }),
         })
         const none = await build({ em: mockEntityManager({ findOne: [TemplateListingEntity, null] }) })
         const user = await build({ notAdmin: true })
 
         expect(await codeOf(draft.service.review(ADMIN, REVIEW))).toBe(TemplateMarketplaceErrorCode.BadTransition)
         expect(await codeOf(none.service.review(ADMIN, REVIEW))).toBe(TemplateMarketplaceErrorCode.ListingNotFound)
-        await expect(user.service.review(ADMIN, REVIEW)).rejects.toThrow("not an admin")
+        await expect(user.service.review(ADMIN, REVIEW)).rejects.toBeInstanceOf(TemplateMarketplaceError)
         expect(user.em.update).not.toHaveBeenCalled()
     })
 })
@@ -283,31 +314,33 @@ describe("TemplateListingsService.review", () => {
 describe("TemplateListingsService reads", () => {
     it("lists the submitted listings for a reviewer, and refuses anyone else", async () => {
         const reviewer = await build({
-            em: mockEntityManager({ find: [TemplateListingEntity, [rowOf({ status: "submitted" })]] }),
+            em: mockEntityManager({ find: [TemplateListingEntity, [listingRow({ status: "submitted" })]] }),
         })
         const user = await build({ notAdmin: true })
 
         await expect(reviewer.service.queue(ADMIN)).resolves.toHaveLength(1)
-        expect(() => user.service.queue(ADMIN)).rejects.toThrow("not an admin")
+        await expect(user.service.queue(ADMIN)).rejects.toBeInstanceOf(TemplateMarketplaceError)
     })
 
     it("lists the listings of the templates of the caller, and none when the caller has no template", async () => {
-        const some = await build({ em: mockEntityManager({ find: [TemplateListingEntity, [rowOf()]] }) })
+        const some = await build({ em: mockEntityManager({ find: [TemplateListingEntity, [listingRow()]] }) })
         const none = await build()
         none.versions.listOf.mockResolvedValueOnce([])
 
         await expect(some.service.mine(CREATOR.accountId)).resolves.toHaveLength(1)
         await expect(none.service.mine(CREATOR.accountId)).resolves.toEqual([])
     })
+})
 
+describe("TemplateListingsService catalogue", () => {
     it("puts only approved listings into the catalogue, as cards a buyer reads, and drops one whose package is gone", async () => {
         const { service, versions } = await build({
             em: mockEntityManager({
                 find: [
                     TemplateListingEntity,
                     [
-                        rowOf({ status: "approved", priceVnd: 99_000, firstParty: true }),
-                        rowOf({ id: "listing-2", status: "approved" }),
+                        listingRow({ status: "approved", priceVnd: 99_000, firstParty: true }),
+                        listingRow({ id: "listing-2", status: "approved" }),
                     ],
                 ],
             }),
@@ -328,17 +361,34 @@ describe("TemplateListingsService reads", () => {
         expect(cards[0]?.parameters).toHaveLength(3)
     })
 
+    it("names the person a persona stands for on the card", async () => {
+        const persona = {
+            soul: "x",
+            likeness: { personName: "Ngoc Trinh", allowedUses: ["name" as const], disclosure: "AI" },
+        }
+        const { service } = await build({
+            version: stored(packageOf(leakyGraph(), draftOf({ persona }))),
+            em: mockEntityManager({ find: [TemplateListingEntity, [listingRow({ status: "approved" })]] }),
+        })
+
+        const [card] = await service.catalogue()
+
+        expect(card?.personName).toBe("Ngoc Trinh")
+    })
+})
+
+describe("TemplateListingsService approved listings", () => {
     it("hands a buyer an approved listing, and refuses one that is not approved or whose package is gone", async () => {
         const approved = await build({
-            em: mockEntityManager({ findOne: [TemplateListingEntity, rowOf({ status: "approved" })] }),
+            em: mockEntityManager({ findOne: [TemplateListingEntity, listingRow({ status: "approved" })] }),
         })
         const draft = await build({
-            em: mockEntityManager({ findOne: [TemplateListingEntity, rowOf({ status: "submitted" })] }),
+            em: mockEntityManager({ findOne: [TemplateListingEntity, listingRow({ status: "submitted" })] }),
         })
         const none = await build({ em: mockEntityManager({ findOne: [TemplateListingEntity, null] }) })
         const gone = await build({
             version: null,
-            em: mockEntityManager({ findOne: [TemplateListingEntity, rowOf({ status: "approved" })] }),
+            em: mockEntityManager({ findOne: [TemplateListingEntity, listingRow({ status: "approved" })] }),
         })
 
         await expect(approved.service.approved("listing-1")).resolves.toMatchObject({ card: { id: "listing-1" } })
@@ -348,7 +398,9 @@ describe("TemplateListingsService reads", () => {
     })
 
     it("answers the newest approved version of a template, zero when none is approved", async () => {
-        const some = await build({ em: mockEntityManager({ findOne: [TemplateListingEntity, rowOf({ version: 4 })] }) })
+        const some = await build({
+            em: mockEntityManager({ findOne: [TemplateListingEntity, listingRow({ version: 4 })] }),
+        })
         const none = await build({ em: mockEntityManager({ findOne: [TemplateListingEntity, null] }) })
 
         await expect(some.service.latestApproved("spa-booking-by-linh")).resolves.toBe(4)
@@ -357,7 +409,7 @@ describe("TemplateListingsService reads", () => {
 
     it("names a listing by its key when its package cannot be read", async () => {
         const { service, versions } = await build({
-            em: mockEntityManager({ find: [TemplateListingEntity, [rowOf({ status: "submitted" })]] }),
+            em: mockEntityManager({ find: [TemplateListingEntity, [listingRow({ status: "submitted" })]] }),
         })
         versions.find.mockResolvedValue(null)
 

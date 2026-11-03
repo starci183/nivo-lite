@@ -22,11 +22,12 @@ import {
     packageOf,
     withExtraBranch,
 } from "@tests/fixtures/builders/agent-template.builder"
+import { INSTALL_VALUES, installRow, licenseRow } from "@tests/fixtures/builders/template-rows.builder"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"
 import { TemplateUpdatesService } from "./template-updates.service"
 
-const VALUES = { autoLimit: 5_000_000, waitMinutes: 240, shop: "Spa Hoa" }
+const VALUES = INSTALL_VALUES
 const BUYER = "99999999-9999-4999-8999-999999999999"
 
 const v1 = packageOf()
@@ -62,20 +63,6 @@ const storedOf = (pkg: typeof v1, breaking = false): StoredVersion => ({
     firstParty: false,
 })
 
-const installRow = (over: Partial<TemplateInstallEntity> = {}): TemplateInstallEntity =>
-    Object.assign(new TemplateInstallEntity(), {
-        installationId: "inst-1",
-        workspaceId: "ws-buyer",
-        templateKey: "spa-booking-by-linh",
-        version: 1,
-        parameterValues: VALUES,
-        licenseId: "license-1",
-        ...over,
-    })
-
-const licenseRow = (over: Partial<TemplateLicenseEntity> = {}): TemplateLicenseEntity =>
-    Object.assign(new TemplateLicenseEntity(), { id: "license-1", kind: "free", status: "active", ...over })
-
 const memberOf = builder<WorkspaceMember>({
     userId: BUYER,
     workspaceId: "ws-buyer",
@@ -110,6 +97,9 @@ interface Options {
     readonly latestApproved?: number
     readonly latestPrivate?: number
     readonly breaking?: boolean
+    readonly installs?: ReadonlyArray<TemplateInstallEntity>
+    readonly agentless?: boolean
+    readonly vanishing?: boolean
 }
 
 const build = async (options: Options = {}) => {
@@ -118,7 +108,10 @@ const build = async (options: Options = {}) => {
             ? editedSmall(graphDocumentSchema.parse(instantiate(v1, VALUES)))
             : options.current
     const em = mockEntityManager({
-        find: [TemplateInstallEntity, options.install === null ? [] : [options.install ?? installRow()]],
+        find: [
+            TemplateInstallEntity,
+            options.installs ?? (options.install === null ? [] : [options.install ?? installRow()]),
+        ],
         findOne: [
             [TemplateInstallEntity, options.install === undefined ? installRow() : options.install],
             [TemplateLicenseEntity, options.license === undefined ? licenseRow() : options.license],
@@ -136,13 +129,18 @@ const build = async (options: Options = {}) => {
     const listings = mock<TemplateListingsService>({
         latestApproved: jest.fn().mockResolvedValue(options.latestApproved ?? 2),
     })
+    const stateOfAgent = jest
+        .fn()
+        .mockResolvedValue(
+            current === null ? stateOf({ active: null }) : stateOf({ active: current, activeKind: "template" }),
+        )
+    if (options.vanishing === true)
+        stateOfAgent.mockResolvedValueOnce(stateOf({ active: current })).mockResolvedValue(null)
     const graphs = mock<AgentGraphsService>({
-        stateOfAgent: jest
+        stateOfAgent,
+        stateOfInstallation: jest
             .fn()
-            .mockResolvedValue(
-                current === null ? stateOf({ active: null }) : stateOf({ active: current, activeKind: "template" }),
-            ),
-        stateOfInstallation: jest.fn().mockResolvedValue(stateOf({ agentId: "agent-new" })),
+            .mockResolvedValue(options.agentless === true ? null : stateOf({ agentId: "agent-new" })),
     })
     const publish = mock<AgentGraphPublishService>({ publishTemplate: jest.fn().mockResolvedValue({ id: "v-new" }) })
     const members = mock<WorkspaceMembersService>({
@@ -206,7 +204,9 @@ describe("TemplateUpdatesService.offer", () => {
 
         await expect(service.offer(BUYER, "ws-buyer", "inst-1")).resolves.toMatchObject({ breaking: true })
     })
+})
 
+describe("TemplateUpdatesService.offer by kind of license", () => {
     it("takes the newest approved version for an install from a listing and the newest saved one for a private install", async () => {
         const listed = await build({ latestApproved: 1 })
         const privately = await build({ license: licenseRow({ kind: "private" }), latestPrivate: 2, latestApproved: 1 })
@@ -237,6 +237,12 @@ describe("TemplateUpdatesService.offer", () => {
         await expect(service.offer(BUYER, "ws-buyer", "inst-1")).resolves.toBeNull()
     })
 
+    it("offers nothing for an installation that has no agent any more", async () => {
+        const { service } = await build({ agentless: true })
+
+        await expect(service.offer(BUYER, "ws-buyer", "inst-1")).resolves.toBeNull()
+    })
+
     it("lists the offers of every installation of the workspace that has one, for any member", async () => {
         const { service, members } = await build()
 
@@ -244,6 +250,16 @@ describe("TemplateUpdatesService.offer", () => {
 
         expect(offers).toHaveLength(1)
         expect(members.require).toHaveBeenCalledWith(BUYER, "ws-buyer")
+    })
+
+    it("leaves out the installation that is up to date from the list of offers", async () => {
+        const { service } = await build({
+            installs: [installRow(), installRow({ installationId: "inst-2", licenseId: null })],
+        })
+
+        const offers = await service.offers(BUYER, "ws-buyer")
+
+        expect(offers.map((offer) => offer.installationId)).toEqual(["inst-1"])
     })
 })
 
@@ -281,7 +297,9 @@ describe("TemplateUpdatesService.accept", () => {
             { version: 2, parameterValues: VALUES },
         )
     })
+})
 
+describe("TemplateUpdatesService.accept refusals", () => {
     it("refuses an empty choice, a unit that is not on offer and an install with nothing to offer, and publishes nothing", async () => {
         const { service, publish } = await build()
         const nothing = await build({ latestApproved: 1 })
@@ -297,6 +315,15 @@ describe("TemplateUpdatesService.accept", () => {
             TemplateMarketplaceErrorCode.UpdateUnavailable,
         )
         expect(await codeOf(bare.service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"]))).toBe(
+            TemplateMarketplaceErrorCode.UpdateUnavailable,
+        )
+        expect(publish.publishTemplate).not.toHaveBeenCalled()
+    })
+
+    it("refuses, publishing nothing, when the agent has no active graph any more by the time it is taken", async () => {
+        const { service, publish } = await build({ vanishing: true })
+
+        expect(await codeOf(service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"]))).toBe(
             TemplateMarketplaceErrorCode.UpdateUnavailable,
         )
         expect(publish.publishTemplate).not.toHaveBeenCalled()

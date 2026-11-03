@@ -3,12 +3,12 @@
 import { decisionsHref } from "@/hooks/decisions"
 import type { ModuleKey } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { maskPhones } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import { PENDING_DASHBOARD, type AgentDashboardView, type DashboardRow } from "./agentDashboard.shared"
 import { useAgentDashboardConnections } from "./useAgentDashboardConnections"
+import { useAgentDashboardKnowledge, type KnowledgeBody } from "./useAgentDashboardKnowledge"
 import { actionWordOf } from "@/hooks/actionWord"
 import type { BadgeTone } from "@starci/grammar/common"
 
@@ -44,196 +44,75 @@ const regionSlotOf = <V>(
     return isRegionFailed(slot.items) ? { isError: true } : mapSlot(slot, viewOf)
 }
 
-/** The knowledge region: the lens of the agent and, when the reader may see it and the module has none of its own, the open gaps. */
-const knowledgeOf = (
-    t: ReturnType<typeof useTranslations<"agentDashboard">>,
-    dashboard: AgentDashboardView,
-    hasOwnGaps: boolean,
-    whenOf: (iso: string | null) => string,
-) => {
-    const isInternal = dashboard.knowledge.audience === "internal"
-    const gaps = dashboard.knowledge.gaps
-    const restricted = dashboard.knowledge.facts.restricted
-    const counts = (kind: "public" | "internal") =>
-        t("knowCounts", { docs: dashboard.knowledge.documents[kind], facts: dashboard.knowledge.facts[kind] })
-    return {
-        openLabel: t("knowOpen"),
-        openHref: KNOWLEDGE_ROUTES.library,
-        footer: isInternal ? t("knowAudienceInternal") : t("knowAudienceCustomer"),
-        publicTitle: t("knowPublic"),
-        publicDescription: counts("public"),
-        internalTitle: t("knowInternal"),
-        internalDescription: isInternal
-            ? [counts("internal"), restricted > 0 ? t("knowRestricted", { n: restricted }) : ""]
-                  .filter(Boolean)
-                  .join(" · ")
-            : t("knowInternalOff"),
-        gaps:
-            gaps && !hasOwnGaps
-                ? {
-                      label: t("gapsTitle"),
-                      count: gaps.openCount > 0 ? String(gaps.openCount) : null,
-                      openLabel: t("gapsOpen"),
-                      openHref: KNOWLEDGE_ROUTES.library,
-                      rows: gaps.items.map((gap) => ({
-                          id: gap.id,
-                          title: maskPhones(gap.question),
-                          description: whenOf(gap.lastSeenAt),
-                          asked: t("gapAsked", { n: gap.count }),
-                      })),
-                      emptyMessage: t("gapsEmpty"),
-                      emptyDescription: t("gapsEmptyBody"),
-                  }
-                : null,
-    }
+/** One row of the lists of waiting and done decisions. */
+interface DashboardListRow {
+    id: string
+    title: string
+    description: string
+    href: string
+}
+
+/** What every list region says when it has nothing to list. */
+interface EmptyWords {
+    emptyMessage: string
+    emptyDescription: string
+}
+
+/** The body of the waiting region. */
+interface WaitingBody extends EmptyWords {
+    count: string | null
+    rows: DashboardListRow[]
+    openLabel: string
+    more: string | null
+}
+
+/** The body of the done region. */
+interface DoneBody extends EmptyWords {
+    count: string
+    logLabel: string
+    logHref: string
+    rows: DashboardListRow[]
+}
+
+/** One connection row as the region draws it. */
+interface ConnectionRowView {
+    id: string
+    name: string
+    description: string
+    statusLabel: string
+    statusTone: BadgeTone
+    accessLabel: string
+}
+
+/** The blank row that stands for a connection while the read is pending. */
+interface BlankConnectionRow extends DashboardListRow {
+    name: string
+    statusLabel: string
+    statusTone: "neutral"
+    accessLabel: string
+}
+
+/** The body of the connections region. */
+interface ConnectionsBody extends EmptyWords {
+    manageLabel: string
+    manageHref: "/connections"
+    rows: ConnectionRowView[]
+}
+
+/** One region: its title, its slot, the same-shape placeholder and the words of its status. */
+interface DashboardRegion<Body, Placeholder = Body> {
+    label: string
+    slot: DataSlot<Body>
+    placeholder: Placeholder
+    labels: SlotLabels
 }
 
 /** The view `useAgentDashboardRegions` returns. */
 export interface AgentDashboardRegionsView {
-    waiting: {
-        label: string
-        slot: DataSlot<{
-            count: string | null
-            rows: {
-                id: string
-                title: string
-                description: string
-                href: string
-            }[]
-            openLabel: string
-            more: string | null
-            emptyMessage: string
-            emptyDescription: string
-        }>
-        placeholder: {
-            count: string
-            rows: {
-                id: string
-                title: string
-                description: string
-                href: string
-            }[]
-            openLabel: string
-            more: string | null
-            emptyMessage: string
-            emptyDescription: string
-        }
-        labels: SlotLabels
-    }
-    done: {
-        label: string
-        slot: DataSlot<{
-            count: string
-            logLabel: string
-            logHref: string
-            rows: {
-                id: string
-                title: string
-                description: string
-                href: string
-            }[]
-            emptyMessage: string
-            emptyDescription: string
-        }>
-        placeholder: {
-            rows: {
-                id: string
-                title: string
-                description: string
-                href: string
-            }[]
-            count: string
-            logLabel: string
-            logHref: string
-            emptyMessage: string
-            emptyDescription: string
-        }
-        labels: SlotLabels
-    }
-    connections: {
-        label: string
-        slot: DataSlot<{
-            manageLabel: string
-            manageHref: "/connections"
-            rows: {
-                id: string
-                name: string
-                description: string
-                statusLabel: string
-                statusTone: BadgeTone
-                accessLabel: string
-            }[]
-            emptyMessage: string
-            emptyDescription: string
-        }>
-        placeholder: {
-            rows: {
-                name: string
-                statusLabel: string
-                statusTone: "neutral"
-                accessLabel: string
-                id: string
-                title: string
-                description: string
-                href: string
-            }[]
-            manageLabel: string
-            manageHref: "/connections"
-            emptyMessage: string
-            emptyDescription: string
-        }
-        labels: SlotLabels
-    }
-    knowledge: {
-        label: string
-        slot: DataSlot<{
-            openLabel: string
-            openHref: string
-            footer: string
-            publicTitle: string
-            publicDescription: string
-            internalTitle: string
-            internalDescription: string
-            gaps: {
-                label: string
-                count: string | null
-                openLabel: string
-                openHref: string
-                rows: {
-                    id: string
-                    title: string
-                    description: string
-                    asked: string
-                }[]
-                emptyMessage: string
-                emptyDescription: string
-            } | null
-        }>
-        placeholder: {
-            openLabel: string
-            openHref: string
-            footer: string
-            publicTitle: string
-            publicDescription: string
-            internalTitle: string
-            internalDescription: string
-            gaps: {
-                label: string
-                count: string | null
-                openLabel: string
-                openHref: string
-                rows: {
-                    id: string
-                    title: string
-                    description: string
-                    asked: string
-                }[]
-                emptyMessage: string
-                emptyDescription: string
-            } | null
-        }
-        labels: SlotLabels
-    }
+    waiting: DashboardRegion<WaitingBody, Omit<WaitingBody, "count"> & { count: string }>
+    done: DashboardRegion<DoneBody>
+    connections: DashboardRegion<ConnectionsBody, Omit<ConnectionsBody, "rows"> & { rows: BlankConnectionRow[] }>
+    knowledge: DashboardRegion<KnowledgeBody>
 }
 
 /** The four common regions of an agent workbench (waiting, done, connections, knowledge): each one a slot, its same-shape placeholder and the words of its status. */
@@ -272,7 +151,7 @@ export const useAgentDashboardRegions = (
         emptyMessage: t("doneEmpty"),
         emptyDescription: t("doneEmptyBody"),
     })
-    const knowledgeViewOf = (dashboard: AgentDashboardView) => knowledgeOf(t, dashboard, input.hasOwnGaps, whenOf)
+    const knowledgeViewOf = useAgentDashboardKnowledge(input.hasOwnGaps, whenOf)
     const blankConnection = {
         ...PLACEHOLDER_ROW,
         name: "-",
