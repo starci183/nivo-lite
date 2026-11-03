@@ -2,3 +2,4 @@ export type { ExecuteParams, Principal, PublicExecuteParams } from "./cqrs.contr
 export { InjectCommandBus, InjectQueryBus } from "./cqrs.decorators"
 export { ICQRSHandler } from "./cqrs.handler"
 export { CqrsModule } from "./cqrs.module"
+export { CqrsReadinessService } from "./cqrs-readiness.service"

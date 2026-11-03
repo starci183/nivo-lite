@@ -4,6 +4,8 @@ export enum QueueLogEvent {
     RedisFailed = "queue.redis.failed",
     /** Shutdown hit its deadline with deliveries that have not settled; resources stay open. */
     ShutdownDeadline = "queue.shutdown.deadline",
+    /** Starting the workers failed after the app had booted; the queues are not consumed until a restart. */
+    WorkersFailed = "queue.workers.failed",
     /** The workers are off (QUEUE_ENABLED=0): jobs wait in the outbox and nothing opens a Redis connection. */
     ConsumerDisabled = "queue.consumer.disabled",
     /** A relay pass failed before it could hand the committed rows to the broker; the rows stay waiting. */

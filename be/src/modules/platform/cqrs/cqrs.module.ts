@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { CqrsModule as NestCqrsModule } from "@nestjs/cqrs"
+import { CqrsReadinessService } from "./cqrs-readiness.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./cqrs.module-definition"
 
 @Module({})
@@ -12,7 +13,8 @@ export class CqrsModule extends ConfigurableModuleClass {
         return {
             ...base,
             imports: [...(base.imports ?? []), NestCqrsModule.forRoot()],
-            exports: [NestCqrsModule],
+            providers: [...(base.providers ?? []), CqrsReadinessService],
+            exports: [NestCqrsModule, CqrsReadinessService],
         }
     }
 }

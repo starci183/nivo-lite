@@ -14,6 +14,8 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
         "conversations.holdingReply": "Dạ em đã ghi nhận, nhân viên sẽ phản hồi anh/chị sớm ạ",
         "conversations.chatUnavailable":
             "AI chưa trả lời kịp: khách đã nhận tin nhắn giữ chỗ và câu hỏi được chuyển cho nhân viên",
+        "conversations.chatPaused":
+            "AI đang tạm dừng: tin nhắn của khách được giữ lại cho nhân viên, khách chưa nhận phản hồi nào",
         "conversations.chatNeedsHuman":
             "Câu trả lời chi tiết cần người duyệt — NIVO đã gửi đề xuất cho chủ doanh nghiệp",
     },
@@ -29,6 +31,8 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
         "conversations.holdingReply": "We have noted your message and the team will get back to you soon",
         "conversations.chatUnavailable":
             "The AI could not answer in time: the customer got the holding message and the question is handed to a person",
+        "conversations.chatPaused":
+            "The AI is paused: the customer message is held for a person and the customer has received no reply",
         "conversations.chatNeedsHuman":
             "The detailed answer needs a person: NIVO sent its proposed answer to the owner to approve",
     },

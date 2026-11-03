@@ -33,6 +33,8 @@ const HOLDING_WINDOW_MS = 3_600_000
 const HOLDING_MAX = 400
 /** The name under which the engine itself holds a conversation; any other holder is a person. */
 const ENGINE_ACTOR = "OpenClaw"
+/** Why a turn is held when the agent or the workspace work is switched off: paused means silent to the customer. */
+const PAUSED = "installation_not_running"
 /** Why a turn falls back to the holding line when the AI step is missing or fails. */
 const UNAVAILABLE = "openclaw_unavailable"
 
@@ -158,21 +160,25 @@ export class ChatTurnService {
         return verdict
     }
 
-    /** The AI could not answer: the question goes to a person, and the customer hears the holding line at most once per hour. */
+    /**
+     * The AI could not answer: the question goes to a person. The first held message of a burst (none held in the last hour) is the one that
+     * marks it: the customer hears the holding line and the conversation gets one notice line; the rest of the burst only hand their question
+     * to a person. A paused agent or workspace is silent to the customer unless the owner wrote a holding message of their own.
+     */
     async holdOver(turn: CustomerTurn, reason: string): Promise<void> {
         const outcomes = this.extensions.outcomes()
         const lines = outcomes === undefined ? [] : await outcomes.holdOver(turn, reason)
         const since = new Date(this.clock.now().getTime() - HOLDING_WINDOW_MS)
-        // A reply already stored for this message is a retry: finish delivering it. Otherwise one holding line per conversation per hour.
+        const fresh = !(await this.receipts.heldSince(turn.conversation.workspaceId, turn.conversation.id, since))
+        // A reply already stored for this message is a retry: finish delivering it.
         const retry = await this.messages.replyExists(turn.conversation.id, turn.messageId)
-        if (retry || !(await this.receipts.heldSince(turn.conversation.workspaceId, turn.conversation.id, since))) {
-            await this.sendReply(turn, await this.holdingText(turn.conversation))
+        const words = retry || fresh ? await this.holdingText(turn.conversation, reason === PAUSED) : null
+        if (words !== null) await this.sendReply(turn, words)
+        if (fresh) {
             await this.receipts.rememberHolding(turn.conversation.workspaceId, turn.conversation.id, this.clock.now())
         }
-        await this.writeLines(turn.conversation, [
-            this.catalog.get("conversations.chatUnavailable", {}, LOCALE),
-            ...lines,
-        ])
+        const notice = words === null ? "conversations.chatPaused" : "conversations.chatUnavailable"
+        await this.writeLines(turn.conversation, [...(fresh ? [this.catalog.get(notice, {}, LOCALE)] : []), ...lines])
     }
 
     /** Stores the reply once and reports whether the channel accepted it, including a website's persisted reply. */
@@ -192,12 +198,13 @@ export class ChatTurnService {
         return result.outcome
     }
 
-    /** The owner own words (module settings), else the default holding line. */
-    private async holdingText(conversation: TurnConversation): Promise<string> {
+    /** The owner own words (module settings), else the default holding line; none when paused and the owner wrote none. */
+    private async holdingText(conversation: TurnConversation, paused: boolean): Promise<string | null> {
         const installation = await this.installations.ofAgent(conversation.workspaceId, conversation.agent.id)
         const holding = installation?.settings.holdingMessage
         const custom = typeof holding === "string" ? holding.trim() : ""
-        return custom === "" ? this.catalog.get("conversations.holdingReply", {}, LOCALE) : custom.slice(0, HOLDING_MAX)
+        if (custom !== "") return custom.slice(0, HOLDING_MAX)
+        return paused ? null : this.catalog.get("conversations.holdingReply", {}, LOCALE)
     }
 
     private async writeLines(conversation: TurnConversation, lines: ReadonlyArray<string>): Promise<void> {

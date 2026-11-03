@@ -383,7 +383,33 @@ const registerHoldingReplies = () => {
         )
         expect(delivery.deliver).not.toHaveBeenCalled()
         expect(receipts.rememberHolding).not.toHaveBeenCalled()
+        expect(messages.storeLine).toHaveBeenCalledTimes(1)
         expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Handed to Lan")
+    })
+
+    it("is silent to the customer while paused, unless the owner wrote a holding message, and notes it once per burst", async () => {
+        const silent = await build()
+        const written = await build({ setting: { holdingMessage: "We are closed" } })
+        const later = await build({ held: true })
+        const turn = async (world: typeof silent) => {
+            const found = await world.service.turnOf(turnPayload)
+            assert(found !== undefined)
+            return found
+        }
+
+        await silent.service.holdOver(await turn(silent), "installation_not_running")
+        await written.service.holdOver(await turn(written), "installation_not_running")
+        await later.service.holdOver(await turn(later), "installation_not_running")
+
+        expect(silent.messages.storeReply).not.toHaveBeenCalled()
+        expect(silent.delivery.deliver).not.toHaveBeenCalled()
+        expect(silent.receipts.rememberHolding).toHaveBeenCalledTimes(1)
+        expect(silent.messages.storeLine).toHaveBeenCalledTimes(1)
+        expect(silent.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatPaused>")
+        expect(written.messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "We are closed", "msg-1")
+        expect(written.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatUnavailable>")
+        expect(later.messages.storeReply).not.toHaveBeenCalled()
+        expect(later.messages.storeLine).not.toHaveBeenCalled()
     })
 
     it("finishes delivering the holding line a previous attempt stored, even inside the hour", async () => {

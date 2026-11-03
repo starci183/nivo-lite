@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { CqrsReadinessService } from "@modules/platform/cqrs"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import type { QueueDelivery, QueueHandler } from "./queue.contracts"
 import { QUEUE_OPTIONS, QUEUE_TRANSPORT } from "./queue.decorators"
@@ -42,7 +43,7 @@ const deliveryOf = (queue: string, job: string): QueueDelivery => ({
     signal: new AbortController().signal,
 })
 
-const build = async (overrides: Partial<QueueOptions> = {}) => {
+const build = async (overrides: Partial<QueueOptions> = {}, readiness?: CqrsReadinessService) => {
     const transport = mock<QueueTransport>()
     transport.work.mockResolvedValue(undefined)
     transport.workFires.mockResolvedValue(undefined)
@@ -53,6 +54,7 @@ const build = async (overrides: Partial<QueueOptions> = {}) => {
             { provide: QUEUE_OPTIONS, useValue: { ...options, ...overrides } },
             { provide: QUEUE_TRANSPORT, useValue: transport },
             { provide: LOGGER, useValue: logger },
+            ...(readiness === undefined ? [] : [{ provide: CqrsReadinessService, useValue: readiness }]),
         ],
     }).compile()
     return { workers: moduleRef.get(QueueWorkerService), transport, logger }
@@ -123,6 +125,66 @@ describe("onApplicationBootstrap", () => {
 
         expect(transport.work).not.toHaveBeenCalled()
         expect(logger.warn).toHaveBeenCalledWith(QueueLogEvent.ConsumerDisabled, { queues: ["knowledge"] })
+    })
+})
+
+/** A readiness the spec opens by hand, standing for the registration of the handlers. */
+const readinessOf = () => {
+    let ready = false
+    let open = (): void => undefined
+    const gate = new Promise<void>((resolve) => {
+        open = resolve
+    })
+    return {
+        isReady: () => ready,
+        whenReady: () => gate,
+        release: () => {
+            ready = true
+            open()
+        },
+    } as unknown as CqrsReadinessService & { release: () => void }
+}
+
+describe("onApplicationBootstrap before the handlers are registered", () => {
+    it("starts no worker until the handlers are registered, without holding the other bootstrap hooks", async () => {
+        const readiness = readinessOf()
+        const { workers, transport } = await build({}, readiness)
+        workers.add(handlerOf("knowledge"))
+
+        await workers.onApplicationBootstrap()
+        expect(transport.work).not.toHaveBeenCalled()
+
+        readiness.release()
+        await workers.onApplicationShutdown()
+
+        expect(transport.work).toHaveBeenCalledTimes(1)
+        expect(transport.close).toHaveBeenCalledTimes(1)
+    })
+
+    it("starts the workers at once when the handlers are registered already", async () => {
+        const readiness = readinessOf()
+        readiness.release()
+        const { workers, transport } = await build({}, readiness)
+        workers.add(handlerOf("knowledge"))
+
+        await workers.onApplicationBootstrap()
+
+        expect(transport.work).toHaveBeenCalledTimes(1)
+    })
+
+    it("logs a start that fails after the app has booted, and still shuts down", async () => {
+        const readiness = readinessOf()
+        const { workers, transport, logger } = await build({}, readiness)
+        workers.add(handlerOf("knowledge"))
+        const failure = new Error("redis down")
+        transport.work.mockRejectedValue(failure)
+
+        await workers.onApplicationBootstrap()
+        readiness.release()
+        await workers.onApplicationShutdown()
+
+        expect(logger.error).toHaveBeenCalledWith(QueueLogEvent.WorkersFailed, failure, { queues: ["knowledge"] })
+        expect(transport.close).toHaveBeenCalledTimes(1)
     })
 })
 
