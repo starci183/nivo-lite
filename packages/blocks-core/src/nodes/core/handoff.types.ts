@@ -1,5 +1,4 @@
-/** A value of the context a hand-off carries. */
-export type ContextValue = string | number | boolean | null
+import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 
 /** The per-graph settings of the hand-off. */
 export interface HandoffParams {
@@ -14,7 +13,7 @@ export interface HandoffInput {
     /** The conversation the tagged agent takes over, or null. */
     readonly conversationId: string | null
     /** The facts of the turn the agent needs, or null. */
-    readonly context: Readonly<Record<string, ContextValue>> | null
+    readonly context: Readonly<Record<string, JsonValue>> | null
 }
 
 /** Whom the node tagged. */

@@ -48,6 +48,31 @@ describe("core.handoff", () => {
         expect(fake.executed[0]?.payload).toMatchObject({ subject: { kind: "conversation", id: "c1" } })
     })
 
+    it("carries the order slot, nested items included, as plain data", async () => {
+        const context = { order: { items: [{ name: "chậu hoa", quantity: 1 }], address: null }, intents: ["order"] }
+        const text = tagTextOf({ text: "n", conversationId: null, context })
+        expect(text).toBe(`n
+${JSON.stringify(context)}`)
+        expect(coreHandoffNode.input.safeParse({ text: "n", conversationId: null, context }).success).toBe(true)
+    })
+
+    it("refuses a context that is not plain data or is too long", () => {
+        const base = { text: "n", conversationId: null }
+        expect(coreHandoffNode.input.safeParse({ ...base, context: { when: new Date(0) } }).success).toBe(false)
+        expect(
+            coreHandoffNode.input.safeParse({
+                ...base,
+                context: {
+                    long: "x".repeat(1900),
+                    more: "y".repeat(1900),
+                    again: "z".repeat(1900),
+                    last: "w".repeat(1900),
+                    end: "v".repeat(1900),
+                },
+            }).success,
+        ).toBe(false)
+    })
+
     it("refuses a target that is empty, and a context that is too large", () => {
         expect(coreHandoffNode.params.safeParse({ toModuleKey: "" }).success).toBe(false)
         const context = Object.fromEntries(Array.from({ length: 41 }, (_, index) => [`k${index}`, index]))
