@@ -6,9 +6,9 @@ import { TemplateLicenseEntity } from "./template-license.entity"
 export { AgentTemplateEntity, AgentTemplateVersionEntity, TemplateInstallEntity, TemplateLicenseEntity }
 
 /** Every entity the agent-templates capability owns, collected by the database connection. */
-export const agentTemplatesEntities = [
-    AgentTemplateEntity,
-    AgentTemplateVersionEntity,
-    TemplateInstallEntity,
-    TemplateLicenseEntity,
-] as const
+export const agentTemplatesEntities: readonly [
+    typeof AgentTemplateEntity,
+    typeof AgentTemplateVersionEntity,
+    typeof TemplateInstallEntity,
+    typeof TemplateLicenseEntity,
+] = [AgentTemplateEntity, AgentTemplateVersionEntity, TemplateInstallEntity, TemplateLicenseEntity]

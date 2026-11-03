@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
+import type { ApolloClient, TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { PackageAgentTemplateMutation, PackageAgentTemplateMutationVariables } from "../__generated__/graphql"
@@ -46,7 +46,7 @@ export const mutatePackageAgentTemplate = async ({
     mutation = MutationPackageAgentTemplate.Mutation1,
     request,
     signal,
-}: MutatePackageAgentTemplateParams) => {
+}: MutatePackageAgentTemplateParams): Promise<ApolloClient.MutateResult<MutatePackageAgentTemplateResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

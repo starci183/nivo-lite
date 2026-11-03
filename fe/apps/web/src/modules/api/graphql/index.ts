@@ -394,3 +394,25 @@ export type WorkChainType = WorkChainQuery["workChain"]
 export type ThreadMessageType = WorkThreadQuery["workThread"]["messages"][number]
 /** The `PublicDocumentType` object of the back end contract, as the operations of this app select it. */
 export type PublicDocumentType = PublicDocumentsQuery["publicDocuments"][number]
+// --- agent template marketplace ---
+import type { MyAgentTemplatesQuery, MarketplaceListingsQuery, TemplateUpdateOffersQuery, AgentTemplatePreviewQuery, PackageAgentTemplateMutation, ImportAgentTemplateMutation, InstallTemplateListingMutation, OrderTemplateListingMutation, AcceptTemplateUpdateMutation, SubmitTemplateListingMutation } from "./__generated__/graphql"
+/** The answer of the myAgentTemplates operation. */
+export type MyAgentTemplatesData = MyAgentTemplatesQuery["myAgentTemplates"]
+/** The answer of the marketplaceListings operation. */
+export type MarketplaceListingsData = MarketplaceListingsQuery["marketplaceListings"]
+/** The answer of the templateUpdateOffers operation. */
+export type TemplateUpdateOffersData = TemplateUpdateOffersQuery["templateUpdateOffers"]
+/** The answer of the agentTemplatePreview operation. */
+export type AgentTemplatePreviewData = AgentTemplatePreviewQuery["agentTemplatePreview"]
+/** The answer of the packageAgentTemplate operation. */
+export type PackageAgentTemplateData = PackageAgentTemplateMutation["packageAgentTemplate"]
+/** The answer of the importAgentTemplate operation. */
+export type ImportAgentTemplateData = ImportAgentTemplateMutation["importAgentTemplate"]
+/** The answer of the installTemplateListing operation. */
+export type InstallTemplateListingData = InstallTemplateListingMutation["installTemplateListing"]
+/** The answer of the orderTemplateListing operation. */
+export type OrderTemplateListingData = OrderTemplateListingMutation["orderTemplateListing"]
+/** The answer of the acceptTemplateUpdate operation. */
+export type AcceptTemplateUpdateData = AcceptTemplateUpdateMutation["acceptTemplateUpdate"]
+/** The answer of the submitTemplateListing operation. */
+export type SubmitTemplateListingData = SubmitTemplateListingMutation["submitTemplateListing"]

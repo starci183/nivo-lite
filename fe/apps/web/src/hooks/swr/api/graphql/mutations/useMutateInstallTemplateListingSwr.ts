@@ -1,6 +1,8 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { InstallTemplateListingData } from "@/modules/api/graphql"
 import { mutateInstallTemplateListing } from "@/modules/api/graphql/mutations/mutation-install-template-listing"
 import type { MutateInstallTemplateListingRequest } from "@/modules/api/graphql/mutations/mutation-install-template-listing"
 
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** The back end `installTemplateListing` mutation. */
-export const useMutateInstallTemplateListingSwr = () =>
+export const useMutateInstallTemplateListingSwr = (): SWRMutationResponse<
+    InstallTemplateListingData,
+    Error,
+    string,
+    MutateInstallTemplateListingRequest
+> =>
     useSWRMutation(MUTATE_INSTALL_TEMPLATE_LISTING_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateInstallTemplateListing({ request: arg })
         if (!result.data) throw new Error("installTemplateListing answered no data")

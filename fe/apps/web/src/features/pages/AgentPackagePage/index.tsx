@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { APP_ROUTES } from "@/modules/routes"
 import { AGENTS_ROUTE } from "@/modules/routes"
@@ -11,7 +12,7 @@ export const agentPackageMetadata = async (): Promise<Metadata> => {
 }
 
 /** The AgentPackage page: the trail and heading; the block under them reads its data in the browser. */
-export const AgentPackagePage = async (props: { readonly installationId: string }) => {
+export const AgentPackagePage = async (props: { readonly installationId: string }): Promise<ReactElement> => {
     const [t, ts] = await Promise.all([getTranslations("agentTemplates"), getTranslations("shell")])
     return (
         <AgentPackagePageBase
