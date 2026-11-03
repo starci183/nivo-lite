@@ -22,6 +22,9 @@ interface MatchCodeOutput extends Named {
     readonly branch: "matched" | "mismatch" | "no-code"
 }
 
+/** The node takes no settings. */
+type NoParams = Record<string, never>
+
 const input: z.ZodType<MatchCodeInput, MatchCodeInput> = z.object({ evidenced: z.array(evidencedSchema) })
 const output: z.ZodType<MatchCodeOutput, MatchCodeOutput> = z.object({
     branch: z.enum(["matched", "mismatch", "no-code"]),
@@ -34,7 +37,11 @@ const output: z.ZodType<MatchCodeOutput, MatchCodeOutput> = z.object({
  * amount routes to `matched`. A code with another amount, or the codes of several orders, routes to `mismatch`: never marked paid
  * automatically, a person decides. A content that names no order routes to `no-code`, where the evidence and the judge decide.
  */
-export const paymentMatchCodeNode: NodeDefinition<z.ZodType<MatchCodeInput, MatchCodeInput>, z.ZodType<MatchCodeOutput, MatchCodeOutput>> = defineNode({
+export const paymentMatchCodeNode: NodeDefinition<
+    z.ZodType<MatchCodeInput, MatchCodeInput>,
+    z.ZodType<MatchCodeOutput, MatchCodeOutput>,
+    z.ZodType<NoParams>
+> = defineNode({
     id: "payment.match-code",
     role: "condition",
     title: { key: "paymentMatchCode" },

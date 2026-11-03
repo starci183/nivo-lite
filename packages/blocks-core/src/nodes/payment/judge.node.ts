@@ -24,6 +24,9 @@ interface JudgeOutput extends Named {
     readonly branch: "match" | "ambiguous" | "no_match"
 }
 
+/** The node takes no settings. */
+type NoParams = Record<string, never>
+
 const input: z.ZodType<JudgeInput, JudgeInput> = z.object({
     arrival: arrivalSchema,
     evidenced: z.array(evidencedSchema),
@@ -84,7 +87,11 @@ const outputOf = (outcome: Outcome): JudgeOutput => {
  * A match is taken only when it names an order that was offered and whose amount is the amount due; a match with another amount, a model
  * that is unavailable and an answer in a shape that does not fit all route to `ambiguous`, so money is never matched on a guess.
  */
-export const paymentJudgeNode: NodeDefinition<z.ZodType<JudgeInput, JudgeInput>, z.ZodType<JudgeOutput, JudgeOutput>> = defineNode({
+export const paymentJudgeNode: NodeDefinition<
+    z.ZodType<JudgeInput, JudgeInput>,
+    z.ZodType<JudgeOutput, JudgeOutput>,
+    z.ZodType<NoParams>
+> = defineNode({
     id: "payment.judge",
     role: "condition",
     title: { key: "paymentJudge" },

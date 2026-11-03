@@ -41,7 +41,11 @@ const output: z.ZodType<ClaimWaitOutput, ClaimWaitOutput> = z.object({
  * transaction (the evidence node then reads the claim) or, with `timedOut`, when the configured wait ran out, which raises a work item for the
  * owner (`work-item.raise`). A claim that was settled meanwhile is closed and says nothing.
  */
-export const paymentClaimWaitNode: NodeDefinition<z.ZodType<ClaimWaitInput, ClaimWaitInput>, z.ZodType<ClaimWaitOutput, ClaimWaitOutput>> = defineNode({
+export const paymentClaimWaitNode: NodeDefinition<
+    z.ZodType<ClaimWaitInput, ClaimWaitInput>,
+    z.ZodType<ClaimWaitOutput, ClaimWaitOutput>,
+    z.ZodType<ClaimWaitParams>
+> = defineNode({
     id: "payment.claim-wait",
     role: "output",
     title: { key: "paymentClaimWait" },
@@ -51,7 +55,7 @@ export const paymentClaimWaitNode: NodeDefinition<z.ZodType<ClaimWaitInput, Clai
     rights: [READ_CLAIMS],
     effects: ["channel.send", "work-item.raise"],
     run: async (given, context) => {
-        const settings = params.parse(context.params)
+        const settings = context.params
         const [claim] = await context.data.read<ClaimRow>("payment-claim", {
             where: { id: given.claimId },
             fields: READ_CLAIMS.fields,
@@ -61,21 +65,21 @@ export const paymentClaimWaitNode: NodeDefinition<z.ZodType<ClaimWaitInput, Clai
         if (given.timedOut) {
             await context.effect(
                 "work-item.raise",
-                { kind: "work-item", id: `payment-claim:${claim.id}` },
                 {
                     action: "reconcile_payment",
                     title: settings.overdueTitle,
                     payload: { target: "order", claimId: claim.id, leadId: claim.leadId, body: claim.body },
                     amountVnd: claim.amountVnd,
                 },
+                { dedupeKey: `payment-claim:${claim.id}` },
             )
             return { state: "escalated", resumeAfterMinutes: null }
         }
         if (claim.conversationId !== null) {
             await context.effect(
                 "channel.send",
-                { kind: "message", id: `payment-claim-reply:${claim.id}` },
                 { conversationId: claim.conversationId, text: settings.neutralText },
+                { dedupeKey: `payment-claim-reply:${claim.id}` },
             )
         }
         return { state: "waiting", resumeAfterMinutes: settings.timeoutMinutes }

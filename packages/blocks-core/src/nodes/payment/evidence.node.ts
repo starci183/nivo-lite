@@ -104,7 +104,11 @@ const nameOf = async (context: NodeContext, leadId: string | null): Promise<stri
  * before it, with their customer's name, and what customers said about having paid. Every candidate comes back with the evidence checked
  * for it (code, amount, name, recency, claim) and a score; nothing is decided here.
  */
-export const paymentEvidenceNode: NodeDefinition<z.ZodType<EvidenceInput, EvidenceInput>, z.ZodType<EvidenceOutput, EvidenceOutput>> = defineNode({
+export const paymentEvidenceNode: NodeDefinition<
+    z.ZodType<EvidenceInput, EvidenceInput>,
+    z.ZodType<EvidenceOutput, EvidenceOutput>,
+    z.ZodType<EvidenceParams>
+> = defineNode({
     id: "payment.evidence",
     role: "execute",
     title: { key: "paymentEvidence" },
@@ -121,7 +125,7 @@ export const paymentEvidenceNode: NodeDefinition<z.ZodType<EvidenceInput, Eviden
         })
         if (transaction === undefined) return { arrival: null, evidenced: [], claims: [] }
         const arrival = arrivalOf(transaction)
-        const windowMs = params.parse(context.params).windowHours * HOUR_MS
+        const windowMs = context.params.windowHours * HOUR_MS
         const orders = (await openOrders(context)).filter(
             (order) => atOf(order.confirmedAt ?? order.createdAt) >= arrival.at - windowMs,
         )

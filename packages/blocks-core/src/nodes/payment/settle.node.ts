@@ -63,13 +63,13 @@ const raise = async (
 ): Promise<SettleOutput> => {
     await context.effect(
         "work-item.raise",
-        { kind: "work-item", id: `payment-review:${given.transactionId}` },
         {
             action: "reconcile_payment",
             title: settings.reviewTitle,
             payload: { target: "order", transactionId: given.transactionId, candidateIds: given.candidateIds, reasons },
             amountVnd,
         },
+        { dedupeKey: `payment-review:${given.transactionId}` },
     )
     return { result: "raised", orderId: null }
 }
@@ -80,7 +80,11 @@ const raise = async (
  * transaction pays one order only. Whatever is not clean (the mode is `ask`, the order is not one, is no longer open, has another amount,
  * or the transaction already paid another order) is never marked paid: it raises a work item for the owner (`work-item.raise`).
  */
-export const paymentSettleNode: NodeDefinition<z.ZodType<SettleInput, SettleInput>, z.ZodType<SettleOutput, SettleOutput>> = defineNode({
+export const paymentSettleNode: NodeDefinition<
+    z.ZodType<SettleInput, SettleInput>,
+    z.ZodType<SettleOutput, SettleOutput>,
+    z.ZodType<SettleParams>
+> = defineNode({
     id: "payment.settle",
     role: "output",
     title: { key: "paymentSettle" },
@@ -90,7 +94,7 @@ export const paymentSettleNode: NodeDefinition<z.ZodType<SettleInput, SettleInpu
     rights: [READ_TRANSACTIONS, READ_ORDERS, READ_CONVERSATIONS],
     effects: ["payment.mark-paid", "channel.send", "work-item.raise"],
     run: async (given, context) => {
-        const settings = params.parse(context.params)
+        const settings = context.params
         const [transaction] = await context.data.read<TransactionRow>("bank-transaction", {
             where: { id: given.transactionId },
             fields: READ_TRANSACTIONS.fields,
@@ -113,15 +117,15 @@ export const paymentSettleNode: NodeDefinition<z.ZodType<SettleInput, SettleInpu
         }
         await context.effect(
             "payment.mark-paid",
-            { kind: "order", id: order.id },
             { orderId: order.id, transactionId: transaction.id, evidence: given.reasons },
+            { dedupeKey: `paid:${transaction.id}` },
         )
         const conversation = await conversationOf(context, order.leadId)
         if (conversation !== undefined) {
             await context.effect(
                 "channel.send",
-                { kind: "message", id: `payment-confirmation:${order.id}` },
                 { conversationId: conversation.id, text: filled(settings.confirmationText, order) },
+                { dedupeKey: `payment-confirmation:${order.id}` },
             )
         }
         return { result: "paid", orderId: order.id }

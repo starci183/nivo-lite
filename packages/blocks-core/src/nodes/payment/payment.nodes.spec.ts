@@ -1,10 +1,10 @@
-import { fakeNodeContext, runNodeExamples } from "@nivo-lite/agent-sdk/testing"
-import type { EffectVocabularyEntry } from "@nivo-lite/agent-sdk/testing"
+import { defineEffect } from "@nivo-lite/agent-sdk/node"
+import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { EXAMPLE_TURN, fakeNodePorts, nodeListMismatches } from "@nivo-lite/agent-sdk/testing"
+import type { FakeNodePortsOptions } from "@nivo-lite/agent-sdk/testing"
+import { runNode } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { coreNodes, paymentNodes } from ".."
-import { paymentEvidenceNode } from "./evidence.node"
-import { paymentJudgeNode } from "./judge.node"
-import { paymentSettleNode } from "./settle.node"
 import {
     ARRIVAL_DINH,
     CLAIM_OF_DINH,
@@ -15,26 +15,60 @@ import {
 } from "./payment.fixtures"
 
 /** The effects the host's vocabulary defines for these nodes (the payloads of the node contract). */
-const EFFECTS: ReadonlyArray<EffectVocabularyEntry> = [
-    {
+const EFFECTS = [
+    defineEffect({
         id: "payment.mark-paid",
+        title: { key: "paymentMarkPaid" },
         payload: z.object({ orderId: z.string(), transactionId: z.string(), evidence: z.array(z.string()) }),
-    },
-    { id: "channel.send", payload: z.object({ conversationId: z.string(), text: z.string() }) },
-    {
+        rights: [],
+    }),
+    defineEffect({
+        id: "channel.send",
+        title: { key: "channelSend" },
+        payload: z.object({ conversationId: z.string(), text: z.string() }),
+        rights: [],
+    }),
+    defineEffect({
         id: "work-item.raise",
+        title: { key: "workItemRaise" },
         payload: z.object({
             action: z.string(),
             title: z.string(),
             payload: z.record(z.string(), z.unknown()),
-            amountVnd: z.number().nullable().optional(),
+            amountVnd: z.number().nullable(),
         }),
-    },
+        rights: [],
+    }),
 ]
 
+const SETTLE_PARAMS = { confirmationText: "Đã nhận {amount} đ cho {orderNo}", reviewTitle: "Kiểm tra" }
+
+/** Runs one node as the host does, over fake ports: rights, declarations and payloads are enforced by the runner. */
+const run = (node: NodeDefinition, params: unknown, input: unknown, options: FakeNodePortsOptions) => {
+    const fake = fakeNodePorts(options)
+    return runNode(
+        {
+            node,
+            params,
+            input,
+            turn: EXAMPLE_TURN,
+            grant: { rights: paymentNodes.flatMap((one) => one.rights) },
+            effects: new Map(EFFECTS.map((effect) => [effect.id, effect])),
+            key: `${node.id}:real-case`,
+        },
+        fake.ports,
+    ).then((result) => ({ ...result, executed: fake.executed }))
+}
+
+const byId = (id: string): NodeDefinition => {
+    const found = paymentNodes.find((node) => node.id === id)
+    if (found === undefined) throw new Error(`no node ${id}`)
+    return found
+}
+
 describe("the payment nodes", () => {
-    it.each(paymentNodes.map((node) => [node.id, node] as const))("%s conforms to its examples", async (_id, node) => {
-        await expect(runNodeExamples(node, EFFECTS)).resolves.toEqual([])
+    it("conform to every example of theirs", async () => {
+        await expect(nodeListMismatches(paymentNodes, EFFECTS)).resolves.toEqual({})
     })
 
     it("are listed among the core nodes with distinct kebab-case ids", () => {
@@ -48,54 +82,62 @@ describe("the payment nodes", () => {
         ])
         expect(new Set(ids).size).toBe(ids.length)
     })
+
+    it("keep conditions pure: the code rule and the judge run no effect", () => {
+        expect(byId("payment.match-code").effects).toEqual([])
+        expect(byId("payment.judge").effects).toEqual([])
+    })
 })
 
 describe("the real case end to end", () => {
-    const grant = { rights: paymentNodes.flatMap((node) => node.rights) }
-    const settleParams = { confirmationText: "Đã nhận {amount} đ cho {orderNo}", reviewTitle: "Kiểm tra" }
-
     it("matches the 5,000 transfer to Định's order when his claim came first, and leaves the 2,000 MoMo unmatched", async () => {
-        const evidence = fakeNodeContext({ grant, store: STORE_REAL_CASE, params: { windowHours: 72 } })
-        const dinh = await paymentEvidenceNode.run({ transactionId: TRANSACTION_DINH.id }, evidence)
-        expect(dinh.arrival).toEqual(ARRIVAL_DINH)
-        expect(dinh.claims).toEqual([CLAIM_OF_DINH])
+        const evidence = await run(byId("payment.evidence"), { windowHours: 72 }, { transactionId: TRANSACTION_DINH.id }, { store: STORE_REAL_CASE })
+        expect(evidence.output).toMatchObject({ arrival: ARRIVAL_DINH, claims: [CLAIM_OF_DINH] })
+        expect(evidence.output).toMatchObject({ evidenced: [...EVIDENCED_FOR_DINH] })
 
-        const judged = await paymentJudgeNode.run(
-            { arrival: ARRIVAL_DINH, evidenced: [...dinh.evidenced], claims: [...dinh.claims] },
-            fakeNodeContext({
-                model: [{ verdict: "match", candidate_id: "order-dinh", reasons: ["khớp"] }],
-            }),
+        const code = await run(byId("payment.match-code"), {}, { evidenced: EVIDENCED_FOR_DINH }, {})
+        expect(code.output).toMatchObject({ branch: "no-code" })
+
+        const judged = await run(
+            byId("payment.judge"),
+            {},
+            { arrival: ARRIVAL_DINH, evidenced: EVIDENCED_FOR_DINH, claims: [CLAIM_OF_DINH] },
+            { model: [{ verdict: "match", candidate_id: "order-dinh", reasons: ["khớp"] }] },
         )
-        expect(judged.branch).toBe("match")
+        expect(judged.output).toMatchObject({ branch: "match", candidateIds: ["order-dinh"] })
 
-        const settle = fakeNodeContext({ grant, store: STORE_REAL_CASE, params: settleParams })
-        const settled = await paymentSettleNode.run(
-            { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: [...judged.candidateIds], reasons: [...judged.reasons] },
-            settle,
+        const settled = await run(
+            byId("payment.settle"),
+            SETTLE_PARAMS,
+            { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: ["order-dinh"], reasons: ["khớp"] },
+            { store: STORE_REAL_CASE },
         )
-        expect(settled).toEqual({ result: "paid", orderId: "order-dinh" })
-        expect(settle.effects.map((one) => one.kind)).toEqual(["payment.mark-paid", "channel.send"])
-
-        const momo = await paymentEvidenceNode.run({ transactionId: TRANSACTION_MOMO.id }, evidence)
-        const ask = fakeNodeContext({})
-        const left = await paymentJudgeNode.run(
-            { arrival: momo.arrival ?? ARRIVAL_DINH, evidenced: [...momo.evidenced], claims: [...momo.claims] },
-            ask,
-        )
-        expect(left.branch).toBe("no_match")
-    })
-
-    it("does not run past its rights: the evidence node cannot read without the grant", async () => {
-        const context = fakeNodeContext({ store: STORE_REAL_CASE, params: { windowHours: 72 } })
-        await expect(paymentEvidenceNode.run({ transactionId: TRANSACTION_DINH.id }, context)).rejects.toThrow()
-    })
-
-    it("keeps the evidence of the real case as the examples state it", () => {
-        expect(EVIDENCED_FOR_DINH[0]?.evidence.filter((one) => one.met).map((one) => one.key)).toEqual([
-            "amount",
-            "name",
-            "recency",
-            "claim",
+        expect(settled.output).toEqual({ result: "paid", orderId: "order-dinh" })
+        expect(settled.executed.map((one) => [one.id, one.dedupeKey])).toEqual([
+            ["payment.mark-paid", `paid:${TRANSACTION_DINH.id}`],
+            ["channel.send", "payment-confirmation:order-dinh"],
         ])
+
+        const momo = await run(byId("payment.evidence"), { windowHours: 72 }, { transactionId: TRANSACTION_MOMO.id }, { store: STORE_REAL_CASE })
+        const left = await run(byId("payment.judge"), {}, momo.output, {})
+        expect(left.output).toMatchObject({ branch: "no_match", candidateIds: [] })
+    })
+
+    it("refuses an agent whose grant does not cover the evidence node's rights", async () => {
+        const fake = fakeNodePorts({ store: STORE_REAL_CASE })
+        await expect(
+            runNode(
+                {
+                    node: byId("payment.evidence"),
+                    params: { windowHours: 72 },
+                    input: { transactionId: TRANSACTION_DINH.id },
+                    turn: EXAMPLE_TURN,
+                    grant: { rights: [] },
+                    effects: new Map(),
+                    key: "denied",
+                },
+                fake.ports,
+            ),
+        ).rejects.toThrow()
     })
 })
