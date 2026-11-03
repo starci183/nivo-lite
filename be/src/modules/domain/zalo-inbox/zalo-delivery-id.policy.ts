@@ -11,13 +11,16 @@ const scalarOf = (source: Readonly<Record<string, unknown>> | null, key: string)
     return typeof value === "string" || typeof value === "number" ? String(value) : ""
 }
 
+/** The events of a customer writing to the OA: each keeps the id of its message, so the same message from another door is the same delivery. */
+const CUSTOMER_MESSAGE_EVENTS: ReadonlySet<string> = new Set(["user_send_text", "user_send_image", "user_send_file"])
+
 const bodyOf = (rawBody: Buffer): Readonly<Record<string, unknown>> | null => {
     const read = parseJsonText(rawBody.toString("utf8"))
     return read.ok ? objectOf(read.value) : null
 }
 
 /**
- * The id a Zalo delivery is claimed under, always scoped by the connection. A customer text keeps its message id. Any other event (follow,
+ * The id a Zalo delivery is claimed under, always scoped by the connection. A customer text, picture or file keeps its message id. Any other event (follow,
  * unfollow, image, seen) takes its name, timestamp, sender and message id; a body without the name or the timestamp takes the hash of
  * its bytes, so two different events never share an id and a redelivery of the same bytes always does.
  */
@@ -26,7 +29,7 @@ export const zaloDeliveryIdOf = (connection: string, rawBody: Buffer): string =>
     const event = scalarOf(body, "event_name")
     const message = objectOf(body?.message)
     const messageId = scalarOf(message, "msg_id")
-    if (event === "user_send_text" && messageId !== "") return `${connection}:${messageId}`
+    if (CUSTOMER_MESSAGE_EVENTS.has(event) && messageId !== "") return `${connection}:${messageId}`
     const stamp = scalarOf(body, "timestamp")
     const who =
         scalarOf(objectOf(body?.sender), "id") ||

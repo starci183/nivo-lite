@@ -21,6 +21,15 @@ describe("zaloDeliveryIdOf", () => {
         expect(subject.zaloDeliveryIdOf("c-1", bytes(text))).toBe("c-1:m-1")
     })
 
+    it("keeps the message id of a picture or a file too, so the same message from another door is the same delivery", async () => {
+        const subject = await buildSubject()
+        const image = { event_name: "user_send_image", sender: { id: "u" }, message: { msg_id: "m-2" }, timestamp: 9 }
+        const file = { event_name: "user_send_file", sender: { id: "u" }, message: { msg_id: "m-3" }, timestamp: 9 }
+
+        expect(subject.zaloDeliveryIdOf("c-1", bytes(image))).toBe("c-1:m-2")
+        expect(subject.zaloDeliveryIdOf("c-1", bytes(file))).toBe("c-1:m-3")
+    })
+
     it("derives the id of another event from its name, timestamp and sender", async () => {
         const subject = await buildSubject()
         const follow = bytes({ event_name: "follow", timestamp: 5, follower: { id: "u-1" } })

@@ -5,6 +5,8 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
     vi: {
         "errors.CONVERSATIONS_NOT_ANSWERED": "Tin nhắn này không cần trả lời.",
         "conversations.photoSent": "Khách gửi một ảnh",
+        "conversations.imageLabel": "[ảnh]",
+        "conversations.fileLabel": "[tệp]",
         "conversations.zaloGuest": "Khách Zalo",
         "conversations.facebookGuest": "Khách Facebook",
         "conversations.instagramGuest": "Khách Instagram",
@@ -18,6 +20,8 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
     en: {
         "errors.CONVERSATIONS_NOT_ANSWERED": "This message does not need an answer.",
         "conversations.photoSent": "The customer sent a photo",
+        "conversations.imageLabel": "[image]",
+        "conversations.fileLabel": "[file]",
         "conversations.zaloGuest": "Zalo customer",
         "conversations.facebookGuest": "Facebook customer",
         "conversations.instagramGuest": "Instagram customer",

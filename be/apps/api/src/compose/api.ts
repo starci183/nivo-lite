@@ -17,7 +17,7 @@ import { ChatMarkersGraphqlModule } from "@features/api/chatmarkers"
 import { ChattypingGraphqlModule } from "@features/api/chattyping"
 import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@modules/domain/agent-chat"
 import { CHAT_FILES_ERROR_KINDS, CHAT_FILES_MESSAGES, ChatFilesModule } from "@modules/domain/chat-files"
-import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import { STORAGE_ASSETS, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
@@ -35,10 +35,11 @@ import { ConnectionsGraphqlModule } from "@features/api/connections"
 import { SepayConnectionGraphqlModule } from "@features/api/sepay-connection"
 import { ZaloConnectionPageGraphqlModule } from "@features/api/zalo-connection-page"
 import { TelegramConnectionPageGraphqlModule } from "@features/api/telegram-connection-page"
+import type { ApiOptions } from "../api.options"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The api area of the API, in registration order. */
-export const apiModules = (): Array<DynamicModule> => [
+export const apiModules = (options: ApiOptions): Array<DynamicModule> => [
     WorkspacesGraphqlModule.register({}),
     ApiKeysGraphqlModule.register({}),
     InventoryGraphqlModule.register({}),
@@ -57,7 +58,12 @@ export const apiModules = (): Array<DynamicModule> => [
     AgentWorkGraphqlModule.register({}),
     ChatMarkersGraphqlModule.register({}),
     ChattypingGraphqlModule.register({}),
-    ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
+    ChatFilesModule.register({
+        isGlobal: true,
+        storage: STORAGE_OBJECTS,
+        assets: STORAGE_ASSETS,
+        importRoot: options.chatFilesImportRoot,
+    }),
     AgentChatModule.register({ isGlobal: true }),
     KnowledgeGraphqlModule.register({}),
     PublicDocumentsGraphqlModule.register({}),

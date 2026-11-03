@@ -65,7 +65,7 @@ export class AppModule {
                 ...billingModules(options),
                 ...webhooksModules(),
                 ...loyaltyModules(options),
-                ...apiModules(),
+                ...apiModules(options),
                 ...realtimeModules(),
             ],
             providers: [

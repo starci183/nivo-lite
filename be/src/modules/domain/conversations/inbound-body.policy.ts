@@ -27,3 +27,9 @@ export const numberField = (source: unknown, name: string): number => {
     const value = isRecord(source) ? source[name] : undefined
     return typeof value === "number" && Number.isFinite(value) ? value : Number.NaN
 }
+
+/** A list field of an object, or an empty list when the field is missing or is not a list. */
+export const listField = (source: unknown, name: string): ReadonlyArray<unknown> => {
+    const value = isRecord(source) ? source[name] : undefined
+    return Array.isArray(value) ? value : []
+}

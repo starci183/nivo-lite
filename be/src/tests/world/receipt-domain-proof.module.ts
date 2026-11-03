@@ -8,6 +8,7 @@ import { ZaloCredentialsService, ZaloWebhookGateService } from "@modules/domain/
 import { CHANNELS_OPTIONS } from "../../modules/domain/channels/channels.decorators"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
+import { InboundFilesService } from "@modules/domain/chat-files"
 import { ConversationsService } from "@modules/domain/conversations"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
@@ -44,6 +45,7 @@ const billingOptions = (): BillingOptions => ({
         ZaloCredentialsService,
         ZaloWebhookGateService,
         ConversationsService,
+        { provide: InboundFilesService, useValue: { download: () => Promise.resolve(null), keep: () => Promise.resolve(false) } },
         InboundEventsService,
         PaymentSecretsService,
         PaymentProofService,

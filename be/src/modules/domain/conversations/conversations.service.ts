@@ -3,6 +3,8 @@ import type { EntityManager } from "typeorm"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { InboundFilesService } from "@modules/domain/chat-files"
+import type { DownloadedChatFile } from "@modules/domain/chat-files"
 import type { ConversationRef } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ZaloCredentialsService } from "@modules/domain/channels"
@@ -11,11 +13,12 @@ import type { IntakeConnection } from "@modules/domain/connections"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import { eachInOrder } from "@modules/platform/primitives"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
 import { CustomerIntakeService } from "./customer-intake.service"
-import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
+import type { FrontAgent, InboundAttachment, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
 
 const LOCALE = "vi"
 
@@ -33,6 +36,8 @@ interface Meeting {
 interface Hearing extends Meeting {
     readonly text: string
     readonly channelEventId: string
+    /** The pictures and files that came with the message, already read. */
+    readonly files?: ReadonlyArray<DownloadedChatFile>
 }
 
 @Injectable()
@@ -54,6 +59,7 @@ export class ConversationsService {
         private readonly zaloCredentials: ZaloCredentialsService,
         private readonly bindings: AgentBindingsService,
         private readonly agents: AgentDirectoryService,
+        private readonly inboundFiles: InboundFilesService,
     ) {}
 
     /** One Telegram message: answered by the front-door agent of the connection, or only stored when none is bound. "/start" opens a new visit with the greeting. */
@@ -100,7 +106,13 @@ export class ConversationsService {
      * One Zalo text message: the connection turns connected on its first event, then the message is answered or only stored like a Telegram one.
      * Answers true when it went to the agent turn of its conversation or to the person who owns it, false when it was only kept or not for this connection.
      */
-    async acceptZalo(connectionId: string, inbound: ZaloInbound, manager: EntityManager): Promise<boolean> {
+    async acceptZalo(
+        connectionId: string,
+        inbound: ZaloInbound,
+        manager: EntityManager,
+        files: ReadonlyArray<DownloadedChatFile> = [],
+    ): Promise<boolean> {
+        const words = this.wordsOf(inbound)
         const connection = await this.connections.intakeOf(connectionId, "zalo_oa", manager)
         if (connection.kind !== "ok" || (await this.isOtherApp(connectionId, inbound.appId))) return false
         const workspaceId = connection.value.workspaceId
@@ -119,7 +131,7 @@ export class ConversationsService {
                 connection.value,
                 "zalo",
                 visitor,
-                inbound.text,
+                words,
                 `zalo:${connectionId}:${inbound.messageId}`,
                 manager,
             )
@@ -133,12 +145,27 @@ export class ConversationsService {
                 customerId: inbound.userId,
                 visitor,
                 agent,
-                text: inbound.text,
+                text: words,
                 channelEventId: `zalo:${inbound.messageId}`,
+                files,
             },
             manager,
         )
         return true
+    }
+
+    /**
+     * Reads the pictures and files of a message before it is stored, so no download happens inside the database transaction that stores it. One that
+     * cannot be read, is too large or is not an accepted type is left out (and logged): the message still reaches its turn. `imported` is true only for a
+     * row of a manual import, the one source whose attachments may name a local file.
+     */
+    async readFiles(attachments: ReadonlyArray<InboundAttachment>, imported: boolean): Promise<ReadonlyArray<DownloadedChatFile>> {
+        const read: Array<DownloadedChatFile> = []
+        await eachInOrder(attachments, async (attachment) => {
+            const file = await this.inboundFiles.download(attachment, imported)
+            if (file !== null) read.push(file)
+        })
+        return read
     }
 
     /** One Facebook or Instagram direct message: answered by the front-door agent of the connection, or only stored when none is bound. */
@@ -174,9 +201,21 @@ export class ConversationsService {
         )
     }
 
+    /** What the customer wrote as the turn reads it: the text, or a label for the picture or file with its caption after it. */
+    private wordsOf(inbound: ZaloInbound): string {
+        const first = inbound.attachments[0]
+        if (first === undefined) return inbound.text
+        const label = this.catalog.get(first.kind === "image" ? "conversations.imageLabel" : "conversations.fileLabel", {}, LOCALE)
+        return `${label} ${inbound.text}`.trim()
+    }
+
     private async hear(hearing: Hearing, manager: EntityManager): Promise<void> {
         const { conversation, created } = await this.meet(hearing, manager)
         const messageId = await this.messages.storeCustomer(hearing.workspaceId, conversation.id, hearing.text, manager)
+        const scope = { workspaceId: hearing.workspaceId, conversationId: conversation.id }
+        await eachInOrder(hearing.files ?? [], (file) =>
+            this.inboundFiles.keep(scope, file, hearing.channelEventId, messageId, manager).then(() => undefined),
+        )
         // A person who took the conversation over answers it themselves: the message is stored and the AI stays quiet.
         if (conversation.handledBy !== null) return
         await this.intake.answer(
