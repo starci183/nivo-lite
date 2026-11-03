@@ -4,7 +4,6 @@ import { Secret } from "@modules/platform/config"
 import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueModule } from "@modules/platform/queue"
-import { ObjectStorageModule } from "@modules/integrations/object-storage"
 
 const PRIMARY_DATA_SOURCE = "primaryDataSource"
 const wiringIds = fakeIds()
@@ -114,20 +113,6 @@ const resourceDoubles = (): ReadonlyMap<string, unknown> => {
         ],
         ["platform.database.primary-entity-manager", manager],
         ["platform.http.client", { request: refuseWiringOperation }],
-        [
-            "integrations.object-storage.client",
-            {
-                put: refuseWiringOperation,
-                get: refuseWiringOperation,
-                head: refuseWiringOperation,
-                remove: refuseWiringOperation,
-                list: refuseWiringOperation,
-                walk: refuseWiringOperation,
-                presignGet: refuseWiringOperation,
-                presignPut: refuseWiringOperation,
-                ensureBucket: refuseWiringOperation,
-            },
-        ],
         ["platform.queue.transport", transport],
         ["BullmqQueueTransportClient", transport],
     ])
@@ -145,7 +130,6 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
     const resources = resourceDoubles()
     const overrides: Array<{ token: InjectionToken; value: unknown }> = []
     const definitions = [
-        ObjectStorageModule.register(wiringSettings.storage),
         QueueModule.register({
             enabled: false,
             redisHost: "redis.invalid",

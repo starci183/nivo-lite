@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common"
+import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError } from "@starci/object-storage"
+import type { ObjectStorage } from "@starci/object-storage"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder, ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
-import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
-import type { SignedObjectUrl, StorageClient, StorageFailureCode } from "./object-storage.contracts"
-import { InjectStorageClient, InjectStorageOptions } from "./object-storage.decorators"
+import type { SignedObjectUrl, StorageFailureCode } from "./object-storage.contracts"
+import { InjectObjectStorage, InjectStorageOptions } from "./object-storage.decorators"
 import { StorageLogEvent } from "./object-storage.log-events"
 import type { ObjectStorageOptions } from "./object-storage.options"
 import type {
@@ -17,32 +18,39 @@ import type {
     StorageObjectsPort,
     StoredObjectOutcome,
 } from "./object-storage.port"
-import { UPLOAD_URL_SECONDS, bucketNameOf, objectKeyOf, presignSecondsOf, publicUrlOf } from "./object-storage.policy"
+import { UPLOAD_URL_SECONDS, bucketNameOf, presignSecondsOf } from "./object-storage.policy"
 
 const SIGN_PARALLEL = 16
 
+/** The failure of an object that is not there. */
+const missing = (bucket: string): ObjectStorageError =>
+    new ObjectStorageError(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound, { context: { bucket } })
+
 @Injectable()
-/** Issues upload addresses and reads objects through the S3 store; the only door domains have to storage. */
+/** Issues upload addresses and reads objects through the object storage port; the only door domains have to storage. */
 export class StorageObjectsService implements StorageObjectsPort {
     constructor(
-        @InjectStorageClient() private readonly client: StorageClient,
+        @InjectObjectStorage() private readonly storage: ObjectStorage,
         @InjectStorageOptions() private readonly options: ObjectStorageOptions,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** A short-lived address a browser PUTs one object to at `path` of `bucket`. */
-    signedUpload(bucket: string, path: string): Promise<SignedUploadOutcome> {
+    /** A short-lived address a browser PUTs one object of `contentType` to at `path` of `bucket`. */
+    signedUpload(bucket: string, path: string, contentType: string): Promise<SignedUploadOutcome> {
         return this.guard(bucket, async () => {
-            const signedUrl = await this.client.presignPut(this.bucketOf(bucket), objectKeyOf(path), UPLOAD_URL_SECONDS)
-            return { path, token: "", signedUrl }
+            const signed = await this.storage.presignPut(this.bucketOf(bucket), path, {
+                contentType,
+                expiresIn: UPLOAD_URL_SECONDS,
+            })
+            return { path, token: "", signedUrl: signed.url }
         })
     }
 
     /** The bytes and content type of the object at `path` of `bucket`. */
     download(bucket: string, path: string): Promise<StoredObjectOutcome> {
         return this.guard(bucket, async () => {
-            const found = await this.client.get(this.bucketOf(bucket), objectKeyOf(path))
-            if (found === null) throw new ObjectStorageError({ code: ObjectStorageErrorCode.ObjectNotFound })
+            const found = await this.storage.get(this.bucketOf(bucket), path)
+            if (found === null) throw missing(bucket)
             return found
         })
     }
@@ -50,15 +58,18 @@ export class StorageObjectsService implements StorageObjectsPort {
     /** The size in bytes of the object at `path` of `bucket`; the object is not read. */
     sizeOf(bucket: string, path: string): Promise<ObjectSizeOutcome> {
         return this.guard(bucket, async () => {
-            const found = await this.client.head(this.bucketOf(bucket), objectKeyOf(path))
-            if (found === null) throw new ObjectStorageError({ code: ObjectStorageErrorCode.ObjectNotFound })
+            const found = await this.storage.head(this.bucketOf(bucket), path)
+            if (found === null) throw missing(bucket)
             return found.size
         })
     }
 
     /** Lists files of one folder, newest first. */
     list(bucket: string, prefix: string, limit: number): Promise<ListedObjectsOutcome> {
-        return this.guard(bucket, () => this.client.list(this.bucketOf(bucket), prefix, limit))
+        return this.guard(bucket, async () => {
+            const listed = await this.storage.list(this.bucketOf(bucket), prefix, limit)
+            return listed.map((file) => ({ name: file.name, createdAt: file.lastModified }))
+        })
     }
 
     /** Signs read addresses; an object that is not there has no address. */
@@ -78,9 +89,9 @@ export class StorageObjectsService implements StorageObjectsPort {
             await eachInOrder(groups, async (group) => {
                 const answers = await Promise.all(
                     group.map(async (path) => {
-                        const key = objectKeyOf(path)
-                        if ((await this.client.head(physical, key)) === null) return []
-                        return [{ path, signedUrl: await this.client.presignGet(physical, key, seconds) }]
+                        if ((await this.storage.head(physical, path)) === null) return []
+                        const address = await this.storage.presignGet(physical, path, { expiresIn: seconds })
+                        return [{ path, signedUrl: address.url }]
                     }),
                 )
                 signed.push(...answers.flat())
@@ -92,12 +103,12 @@ export class StorageObjectsService implements StorageObjectsPort {
     /** Removes the objects at the paths of `bucket`; answers how many were removed. */
     async remove(bucket: string, paths: ReadonlyArray<string>): Promise<RemovedObjectsOutcome> {
         if (paths.length === 0) return ok(0)
-        return this.guard(bucket, () => this.client.remove(this.bucketOf(bucket), paths.map(objectKeyOf)))
+        return this.guard(bucket, () => this.storage.removeMany(this.bucketOf(bucket), paths))
     }
 
     /** The address anyone reads the object at `path` of a public bucket at; no request is made. */
     publicUrl(bucket: string, path: string): string {
-        return publicUrlOf(this.options.publicUrl, this.bucketOf(bucket), objectKeyOf(path))
+        return this.storage.publicUrl(this.bucketOf(bucket), path)
     }
 
     private bucketOf(purpose: string): string {
@@ -109,13 +120,11 @@ export class StorageObjectsService implements StorageObjectsPort {
         try {
             return ok(await run())
         } catch (failure) {
-            const notThere =
-                failure instanceof ObjectStorageError &&
-                (failure.code === ObjectStorageErrorCode.ObjectNotFound ||
-                    failure.code === ObjectStorageErrorCode.KeyInvalid)
-            if (notThere) return refused("OBJECT_STORAGE_NOT_FOUND")
+            if (failure instanceof ObjectStorageError && failure.kind !== "unavailable") {
+                return refused(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound)
+            }
             this.logger.error(StorageLogEvent.Failed, failure, { bucket })
-            return refused("OBJECT_STORAGE_UNAVAILABLE")
+            return refused(OBJECT_STORAGE_ERROR_CODES.Unavailable)
         }
     }
 }

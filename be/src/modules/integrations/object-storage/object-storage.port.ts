@@ -1,10 +1,10 @@
+import type { StoredObject } from "@starci/object-storage"
 import type { Outcome } from "@modules/platform/primitives"
 import type {
     ListedObject,
     SignedObjectUrl,
     SignedUpload,
     StorageFailureCode,
-    StoredObject,
 } from "./object-storage.contracts"
 
 /** The outcome of asking storage for an upload address. */
@@ -27,8 +27,8 @@ export type RemovedObjectsOutcome = Outcome<number, StorageFailureCode>
 
 /** The storage door of the back end: upload addresses for browsers and object reads for workers. Buckets are purposes (`media`), never physical names. */
 export interface StorageObjectsPort {
-    /** A short-lived address a browser PUTs one object to at `path` of `bucket`. */
-    signedUpload(bucket: string, path: string): Promise<SignedUploadOutcome>
+    /** A short-lived address a browser PUTs one object of `contentType` to at `path` of `bucket`; the browser must send that content type. */
+    signedUpload(bucket: string, path: string, contentType: string): Promise<SignedUploadOutcome>
     /** The bytes and content type of the object at `path` of `bucket`. */
     download(bucket: string, path: string): Promise<StoredObjectOutcome>
     /** The size in bytes of the object at `path` of `bucket`, without reading it. */

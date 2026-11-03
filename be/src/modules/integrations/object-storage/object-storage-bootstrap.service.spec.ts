@@ -1,12 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { OBJECT_STORAGE } from "@starci/object-storage"
+import { createMemoryObjectStorage } from "@starci/object-storage/testing"
 import { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { fakeStorage } from "@tests/fixtures/doubles/fake-storage.client"
-import type { StorageClient } from "./object-storage.contracts"
 import { StorageBootstrapService } from "./object-storage-bootstrap.service"
-import { STORAGE_CLIENT, STORAGE_OPTIONS } from "./object-storage.decorators"
+import { STORAGE_OPTIONS } from "./object-storage.decorators"
 import type { ObjectStorageOptions } from "./object-storage.options"
 
 const options: ObjectStorageOptions = {
@@ -21,12 +21,11 @@ const options: ObjectStorageOptions = {
 
 describe("StorageBootstrapService", () => {
     it("creates every bucket of the environment, the pictures public and the rest private", async () => {
-        const client = mock<StorageClient>()
-        const { buckets } = fakeStorage(client)
+        const storage = createMemoryObjectStorage()
         const moduleRef = await Test.createTestingModule({
             providers: [
                 StorageBootstrapService,
-                { provide: STORAGE_CLIENT, useValue: client },
+                { provide: OBJECT_STORAGE, useValue: storage },
                 { provide: STORAGE_OPTIONS, useValue: options },
                 { provide: LOGGER, useValue: mock<Logger>() },
             ],
@@ -34,12 +33,13 @@ describe("StorageBootstrapService", () => {
 
         await moduleRef.get(StorageBootstrapService).bootstrap()
 
-        expect(Object.fromEntries(buckets)).toEqual({
-            "nivo-avatars-public": true,
-            "nivo-media": false,
-            "nivo-videos": false,
-            "nivo-hiring": false,
-            "nivo-knowledge-uploads": false,
-        })
+        expect([...storage.store.buckets.keys()]).toEqual([
+            "nivo-avatars-public",
+            "nivo-media",
+            "nivo-videos",
+            "nivo-hiring",
+            "nivo-knowledge-uploads",
+        ])
+        expect([...storage.store.publicBuckets]).toEqual(["nivo-avatars-public"])
     })
 })
