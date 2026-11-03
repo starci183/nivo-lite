@@ -114,3 +114,36 @@ describe("OwnersService", () => {
         expect(lines).toEqual([])
     })
 })
+
+describe("OwnersService > ensureAccount", () => {
+    it("answers the id of the account the address already has and writes nothing", async () => {
+        const { service, em, lines } = await build([[FIND_ACCOUNT, [{ id: "u1" }]]])
+
+        await expect(service.ensureAccount(" Owner@Example.test ")).resolves.toBe("u1")
+
+        expect(em.query).toHaveBeenCalledWith(FIND_ACCOUNT, ["owner@example.test"])
+        expect(em.query).not.toHaveBeenCalledWith(CREATE_OWNER, expect.anything())
+        expect(lines).toEqual([])
+    })
+
+    it("makes a missing account confirmed with a password nobody is told", async () => {
+        const { service, em, lines } = await build([
+            [FIND_ACCOUNT, []],
+            ...HASHING,
+            [CREATE_OWNER, [{ be_auth_create_user: CREATED }]],
+        ])
+
+        await expect(service.ensureAccount("owner@example.test")).resolves.toBe(CREATED)
+
+        expect(em.query).toHaveBeenCalledWith(CRYPT, [expect.stringMatching(/^[A-Za-z0-9_-]{32}$/u), SALT])
+        expect(em.query).toHaveBeenCalledWith(CREATE_OWNER, [
+            CREATED,
+            "owner@example.test",
+            HASH,
+            true,
+            "{}",
+            new Date(NOW),
+        ])
+        expect(lines).toEqual(["owner account created"])
+    })
+})

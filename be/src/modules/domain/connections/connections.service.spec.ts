@@ -251,6 +251,15 @@ describe("ConnectionsService > create", () => {
         expect(tx.commits).toBe(1)
     })
 
+    it("takes the id a seed names and keeps it in the row and in the secret", async () => {
+        const tx = fakeTransaction(mockEntityManager())
+        const { fakes } = withBuilders([{ execute: { raw: [{ id: "fixed-1" }] } }], tx.em)
+        const { service, secrets } = await buildWith(tx.em)
+        await expect(service.create({ ...input, id: "fixed-1" })).resolves.toBe("fixed-1")
+        expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).toMatchObject({ id: "fixed-1" })
+        expect(secrets.create).toHaveBeenCalledWith("fixed-1", "token", "hook", expect.anything())
+    })
+
     it("rolls the row back when the secret cannot be stored", async () => {
         const tx = fakeTransaction(mockEntityManager())
         withBuilders([{ execute: { raw: [{ id: "c1" }] } }], tx.em)

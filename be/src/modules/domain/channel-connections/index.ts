@@ -9,8 +9,11 @@ export type {
     ZaloWizardConnection,
 } from "./channel-connections.contracts"
 export { ChannelConnectionsService } from "./channel-connections.service"
+export type { ChannelSeed, SeededConnection } from "./channel-seed.contracts"
+export { ChannelSeedService } from "./channel-seed.service"
 export type { SepayConnectionView, SepayWebhookEvent } from "./sepay-connection.contracts"
 export { SepayConnectionService } from "./sepay-connection.service"
+export { sepayFeedSecret } from "./money-provider.policy"
 export { vietQrUrl } from "./viet-qr.policy"
 export { parseZaloSecret } from "./zalo-secret.policy"
 export { WorkspacePaymentAccountService } from "./workspace-payment-account.service"

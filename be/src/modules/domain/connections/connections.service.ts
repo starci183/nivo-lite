@@ -217,6 +217,7 @@ export class ConnectionsService {
                 .createQueryBuilder(ConnectionEntity, "co")
                 .insert()
                 .values({
+                    ...(input.id === undefined ? {} : { id: input.id }),
                     workspaceId: input.workspaceId,
                     provider: input.provider,
                     name,

@@ -1,3 +1,4 @@
+import { sha256 } from "@modules/domain/connections"
 import type { Environment } from "@modules/domain/connections"
 import type { MoneyProvider } from "./channel-connections.contracts"
 
@@ -59,6 +60,12 @@ export const isAccountNumber = (value: string): boolean => ACCOUNT.test(value)
 
 /** True for a SePay API key (16 to 128 letters, digits, dashes or underscores). */
 export const isSepayKey = (value: string): boolean => SEPAY_KEY.test(value)
+
+/** The secret of a SePay feed for its API key: the key itself, sealed for re-display, and its hash, which an inbound webhook is verified against. */
+export const sepayFeedSecret = (apiKey: string): Readonly<Record<"plain" | "webhookSecret", string>> => ({
+    plain: apiKey,
+    webhookSecret: sha256(apiKey),
+})
 
 /** True for a Telegram bot token. */
 export const isTelegramToken = (value: string): boolean => TELEGRAM_TOKEN.test(value)

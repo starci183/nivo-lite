@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type * as SubjectModule from "./money-provider.policy"
 import { Test } from "@nestjs/testing"
 import {
@@ -12,6 +13,7 @@ import {
     isSepayKey,
     isTelegramToken,
     clean,
+    sepayFeedSecret,
 } from "./money-provider.policy"
 
 const SUBJECT = Symbol("money-provider.policy")
@@ -88,5 +90,17 @@ describe("isAccountNumber", () => {
         expect(subject.isAccountNumber("1".repeat(21))).toBe(false)
         expect(subject.isAccountNumber("12 3456")).toBe(false)
         expect(subject.isAccountNumber("12345a")).toBe(false)
+    })
+})
+
+describe("sepayFeedSecret", () => {
+    it("seals the key itself and keeps its SHA-256 as the secret a webhook is verified against", () => {
+        const key = ["nivo", "0f".repeat(32)].join("_")
+
+        expect(sepayFeedSecret(key)).toEqual({
+            plain: key,
+            webhookSecret: createHash("sha256").update(key).digest("hex"),
+        })
+        expect(isSepayKey(key)).toBe(true)
     })
 })

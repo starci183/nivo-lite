@@ -93,6 +93,8 @@ export interface ConnectionSecretInput {
 
 /** What creating a connection takes. */
 export interface CreateConnectionInput {
+    /** The id the row takes: only a seed names one, so its connection keeps the same id in every environment. */
+    readonly id?: string
     /** The workspace that owns it. */
     readonly workspaceId: string
     /** The user creating it. */

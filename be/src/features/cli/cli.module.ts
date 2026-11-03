@@ -10,6 +10,7 @@ import { PruneWorkspacesModule } from "./prune-workspaces/prune-workspaces.modul
 import { SeedModule } from "./seed/seed.module"
 import { SeedKnowledgeModule } from "./seed-knowledge/seed-knowledge.module"
 import { SeedAutomationsModule } from "./seed-automations/seed-automations.module"
+import { SeedManagementModule } from "./seed-management/seed-management.module"
 import { SeedMediaModule } from "./seed-media/seed-media.module"
 import { SeedModulesModule } from "./seed-modules/seed-modules.module"
 import { SeedWorkspaceModule } from "./seed-workspace/seed-workspace.module"
@@ -27,6 +28,7 @@ import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
         PruneWorkspacesModule.register({}),
         SeedModule.register({}),
         SeedKnowledgeModule.register({}),
+        SeedManagementModule.register({}),
         SeedMediaModule.register({}),
         SeedModulesModule.register({}),
         SeedWorkspaceModule.register({}),

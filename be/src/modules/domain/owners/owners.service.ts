@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { IdentityError, IdentityErrorCode } from "@modules/domain/identity"
@@ -13,6 +14,9 @@ import type { OwnersOptions } from "./owners.options"
 
 /** The bcrypt cost of the password hash the database writes. */
 const BCRYPT_COST = 10
+
+/** The bytes of the password an account made without one is given: nobody is told it. */
+const UNKNOWN_PASSWORD_BYTES = 24
 
 /** The account that has a sign-in address. */
 interface AccountRow {
@@ -53,6 +57,30 @@ export class OwnersService {
         }
         await callDbFunction(this.entityManager, "public.be_auth_set_password", [existing.id, hash, now])
         this.options.print("owner password updated")
+    }
+
+    /**
+     * The id of the account that has the address. A missing one is made confirmed, with a password nobody knows, so the person it
+     * belongs to opens it by resetting the password or by `create-owner run`; an existing one is left as it is.
+     */
+    async ensureAccount(email: string): Promise<string> {
+        const address = normalizeEmail(email)
+        const [existing] = await callDbFunction<AccountRow>(this.entityManager, "public.be_auth_user_by_email", [
+            address,
+        ])
+        if (existing !== undefined) return existing.id
+        const id = this.ids.next()
+        const hash = await this.hashPassword(randomBytes(UNKNOWN_PASSWORD_BYTES).toString("base64url"))
+        await callDbFunction(this.entityManager, "public.be_auth_create_user", [
+            id,
+            address,
+            hash,
+            true,
+            "{}",
+            this.clock.now(),
+        ])
+        this.options.print("owner account created")
+        return id
     }
 
     /** The bcrypt hash of a password, computed by the database so it matches the hashes the sign-in verifies. */

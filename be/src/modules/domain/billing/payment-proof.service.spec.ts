@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto"
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
+import { sepayFeedSecret } from "@modules/domain/channel-connections"
 import { Secret } from "@modules/platform/config"
 import { BILLING_OPTIONS } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
@@ -197,6 +198,17 @@ describe("PaymentProofService > proveSepayFeed", () => {
             body: { id: 3, transferType: "in", transferAmount: 1000 },
         })
         expect(secrets.load).toHaveBeenCalledWith(CONNECTION_ID, "sepay")
+    })
+
+    it("proves a delivery that carries the nivo_ key a workspace seed stored", async () => {
+        const seeded = ["nivo", "ab12".repeat(16)].join("_")
+        const { plain, webhookSecret } = sepayFeedSecret(seeded)
+        const { proof } = await build(OPTIONS, secretOf(plain, webhookSecret))
+
+        await expect(proof.proveSepayFeed(delivery(`Apikey ${seeded}`))).resolves.toMatchObject({
+            connection: { connectionId: CONNECTION_ID, workspaceId: "ws-9" },
+        })
+        await expect(proof.proveSepayFeed(delivery(`Apikey ${seeded}0`))).rejects.toEqual(REFUSED)
     })
 
     it("refuses another key, an unknown connection and a header that is not an Apikey", async () => {

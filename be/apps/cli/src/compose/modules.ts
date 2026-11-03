@@ -9,6 +9,7 @@ import { ConnectionsModule } from "@modules/domain/connections"
 import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
 import { N8nHostModule } from "@modules/integrations/n8n-host"
 import { DataRecordsModule } from "@modules/domain/data-records"
+import { EmailMessagesModule } from "@modules/domain/email-messages"
 import { EventsModule } from "@modules/domain/events"
 import { JobOpsModule } from "@modules/domain/job-ops"
 import { StaffModule } from "@modules/domain/staff"
@@ -136,6 +137,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
         readOnly: false,
         ports: { agents: AgentBindingsService },
     }),
+    EmailMessagesModule.register({ isGlobal: true }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     ConnectionGrantsModule.register({ isGlobal: true }),
     ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),

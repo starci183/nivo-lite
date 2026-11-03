@@ -38,6 +38,7 @@ import {
     isSepayKey,
     isTelegramToken,
     moneyRules,
+    sepayFeedSecret,
     squeeze,
 } from "./money-provider.policy"
 import { maskApiKey } from "./sepay-connection.policy"
@@ -164,10 +165,7 @@ export class ChannelConnectionsService {
             status: "pending",
             environment,
             meta,
-            secret: {
-                plain: apiKey || EMPTY_CREDENTIAL,
-                webhookSecret: apiKey ? sha256(apiKey) : randomSecret(),
-            },
+            secret: apiKey ? sepayFeedSecret(apiKey) : { plain: EMPTY_CREDENTIAL, webhookSecret: randomSecret() },
         })
         return this.wizardView(await this.connections.get(actor.workspaceId, id), apiKey, false)
     }
