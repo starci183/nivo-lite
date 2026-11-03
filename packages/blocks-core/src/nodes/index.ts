@@ -9,6 +9,7 @@ import { orderConfirmNode } from "./order/confirm.node"
 import { orderNeedsApprovalNode } from "./order/needs-approval.node"
 import { orderRecordNode } from "./order/record.node"
 import { paymentClaimAckNode } from "./payment/claim-ack.node"
+import { paymentNodes } from "./payment"
 import { paymentRequestNode } from "./payment/request.node"
 
 export {
@@ -21,6 +22,7 @@ export {
     orderNeedsApprovalNode,
     orderRecordNode,
     paymentClaimAckNode,
+    paymentNodes,
     paymentRequestNode,
     raiseWorkItemNode,
 }
@@ -41,4 +43,5 @@ export const coreNodes: ReadonlyArray<NodeDefinition> = [
     orderConfirmNode,
     raiseWorkItemNode,
     paymentRequestNode,
+    ...paymentNodes,
 ] as unknown as ReadonlyArray<NodeDefinition>

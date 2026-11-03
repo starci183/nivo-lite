@@ -247,6 +247,19 @@ export class TransactionsService {
         await manager.update(TransactionEntity, { workspaceId, id: transactionId }, { status: "matched", invoiceId })
     }
 
+    /**
+     * The payment settled a sales order. One transaction pays one order and one order is paid by one transaction (a unique index), so a
+     * second link for either side is refused by the database.
+     */
+    async matchOrder(
+        workspaceId: string,
+        transactionId: string,
+        orderId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
+        await manager.update(TransactionEntity, { workspaceId, id: transactionId }, { status: "matched", orderId })
+    }
+
     /** The payment goes back to the owner's review. */
     async sendToReview(workspaceId: string, transactionId: string): Promise<void> {
         await this.entityManager.update(

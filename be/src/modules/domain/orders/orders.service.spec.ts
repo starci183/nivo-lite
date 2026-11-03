@@ -433,6 +433,38 @@ const registerSettlement = () => {
         })
     })
 
+    describe("settle", () => {
+        it("marks an order paid only while it waits for money and says whether it did", async () => {
+            const em = mockEntityManager({
+                update: [
+                    [OrderEntity, { affected: 1 }],
+                    [OrderEntity, { affected: 0 }],
+                ],
+            })
+            const orders = await build(em)
+
+            await expect(orders.settle("ws-1", "order-1")).resolves.toBe(true)
+            await expect(orders.settle("ws-1", "order-1")).resolves.toBe(false)
+
+            expect(em.update).toHaveBeenCalledWith(
+                OrderEntity,
+                { workspaceId: "ws-1", id: "order-1", status: In(["confirmed", "invoiced"]) },
+                { status: "paid" },
+            )
+        })
+
+        it("settles through the manager of the caller's transaction", async () => {
+            const own = mockEntityManager()
+            const callers = mockEntityManager({ update: [OrderEntity, { affected: 1 }] })
+            const orders = await build(own)
+
+            await orders.settle("ws-1", "order-1", callers)
+
+            expect(callers.update).toHaveBeenCalledTimes(1)
+            expect(own.update).not.toHaveBeenCalled()
+        })
+    })
+
     describe("markInvoiced and markPaid", () => {
         it("moves the order to invoiced and then paid", async () => {
             const em = mockEntityManager({ update: [OrderEntity, { affected: 1 }] })

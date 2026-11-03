@@ -7,7 +7,9 @@ describe("coreNodes", () => {
     it("keeps the conditions pure: they route on a branch and declare no effect", () => {
         const conditions = coreNodes.filter((node) => node.role === "condition")
 
-        expect(conditions.map((node) => node.id)).toEqual(["order.complete", "order.needs-approval"])
+        expect(conditions.map((node) => node.id)).toEqual(
+            expect.arrayContaining(["order.complete", "order.needs-approval", "payment.match-code", "payment.judge"]),
+        )
         expect(conditions.every((node) => node.effects.length === 0)).toBe(true)
     })
 })

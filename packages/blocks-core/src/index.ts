@@ -11,7 +11,7 @@ import { sectionBlock } from "./blocks/section.block"
 import { stackBlock } from "./blocks/stack.block"
 import { waitingBlock } from "./blocks/waiting.block"
 
-export { coreNodes } from "./nodes"
+export { coreNodes, paymentNodes } from "./nodes"
 export {
     agentTagEffect,
     bankTransactionKind,
