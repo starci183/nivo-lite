@@ -33,4 +33,20 @@ export class PollOwnerNoticeService {
             }),
         )
     }
+
+    /**
+     * Keeps one owner work item that the provider's plan does not let the connection be read back. The connection itself stays connected, because
+     * its webhook still works; `text` is the provider's own words, and `at` makes the item one per time it became unavailable.
+     */
+    async unavailable(record: ConnectionRecord, text: string, at: number): Promise<void> {
+        await this.entityManager.transaction((manager) =>
+            this.inboundEvents.keepForOwner(manager, {
+                workspaceId: record.workspaceId,
+                channel: record.provider,
+                sender: record.name,
+                body: text,
+                eventId: `unavailable:${record.id}:${at}`,
+            }),
+        )
+    }
 }

@@ -36,6 +36,7 @@ const entityOf = (over: Partial<ConnectionPollScheduleEntity> = {}): ConnectionP
         needsReauth: false,
         hotUntil: null,
         hotReason: null,
+        unavailableReason: null,
         lastSuccessAt: null,
         lastWebhookAt: null,
         backfillTo: null,
@@ -52,6 +53,7 @@ const planOf = (over: Partial<PollPlan> = {}): PollPlan => ({
     needsReauth: false,
     raiseOwnerNotice: false,
     succeeded: true,
+    unavailableReason: null,
     backfillTo: null,
     backfillNewest: null,
     ...over,
@@ -116,6 +118,7 @@ describe("PollScheduleService claimDue", () => {
                         failures: 5,
                         needsReauth: false,
                         hotUntil: hot,
+                        unavailableReason: "plan",
                         lastSuccessAt: DUE,
                         lastWebhookAt: DUE,
                         backfillTo: DUE,
@@ -138,6 +141,7 @@ describe("PollScheduleService claimDue", () => {
             breakerOpenedAt: DUE,
             needsReauth: false,
             hotUntil: hot,
+            unavailableReason: "plan",
             lastSuccessAt: DUE,
             lastWebhookAt: DUE,
             backfillTo: DUE,
@@ -162,6 +166,7 @@ describe("PollScheduleService settle and defer", () => {
             breakerState: "closed",
             breakerOpenedAt: DUE,
             needsReauth: false,
+            unavailableReason: null,
             backfillTo: DUE,
             backfillNewest: DUE,
             lastSuccessAt: "now()",
@@ -223,7 +228,7 @@ describe("PollScheduleService signals", () => {
         expect(em.update).toHaveBeenCalledWith(
             ConnectionPollScheduleEntity,
             { connectionId: "c-1" },
-            { failures: 0, breakerState: "closed", breakerOpenedAt: null, needsReauth: false },
+            { failures: 0, breakerState: "closed", breakerOpenedAt: null, needsReauth: false, unavailableReason: null },
         )
         expect(em.query.mock.calls[0]?.[1]).toEqual(["c-1", DEFAULT_POLL_SCHEDULE.hotIntervalMs, DEFAULT_POLL_SCHEDULE.hotTtlMs, "connection_ready"])
     })

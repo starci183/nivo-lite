@@ -14,6 +14,8 @@ export enum ConnectionPollLogEvent {
     Deferred = "connection_poll.deferred",
     /** The circuit breaker of a connection opened; the failure class rides in the fields. */
     BreakerOpened = "connection_poll.breaker_opened",
+    /** The provider's plan lacks the capability: the connection is tried again rarely and the owner was told once. */
+    Unavailable = "connection_poll.unavailable",
     /** The provider refused the credential: polling stopped and the owner was asked to connect again. */
     NeedsReauth = "connection_poll.needs_reauth",
 }

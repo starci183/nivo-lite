@@ -1,4 +1,10 @@
-import type { ConnectionPoller, PollFailure, PollLimits, PollSkipReason } from "./connection-poll.contracts"
+import type {
+    ConnectionPoller,
+    PollFailure,
+    PollLimits,
+    PollSkipReason,
+    UnavailableReason,
+} from "./connection-poll.contracts"
 
 /** How one poll of a connection ended, in the terms a scheduler plans the next one with. */
 export type PollOutcome =
@@ -78,6 +84,8 @@ export interface PollScheduleRow {
     readonly lastSuccessAt: Date | null
     /** The last delivery the webhook of the provider made for this connection. */
     readonly lastWebhookAt: Date | null
+    /** Why the provider cannot be read for this connection although it is connected (its plan lacks the capability); null while it can. */
+    readonly unavailableReason: UnavailableReason | null
     /** Where an unfinished backfill resumes: the end of the next older page. */
     readonly backfillTo: Date | null
     /** The newest instant the unfinished backfill read. */
@@ -108,6 +116,8 @@ export interface PollScheduleOptions {
     readonly breakerCooldownMs: number
     /** The longest cool-down a breaker that keeps failing reaches. */
     readonly breakerCooldownCapMs: number
+    /** How long a connection whose provider plan lacks the capability waits before it is tried again. */
+    readonly unavailableRecheckMs: number
     /** How many due connections one tick claims. */
     readonly batchSize: number
     /** How long a claimed connection is kept from other workers; a worker that dies frees it by then. */

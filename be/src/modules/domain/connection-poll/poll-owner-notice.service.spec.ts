@@ -58,4 +58,30 @@ describe("PollOwnerNoticeService needsReauth", () => {
         )
         expect(POLL_NEEDS_PERMISSION_REASON).not.toBe(POLL_NEEDS_REAUTH_REASON)
     })
+
+    it("keeps one owner work item in the provider's words that the plan does not let the connection be read back, and leaves it connected", async () => {
+        const connections = mock<ConnectionsService>()
+        const inboundEvents = mock<InboundEventsService>()
+        const tx = fakeTransaction(mockEntityManager())
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                PollOwnerNoticeService,
+                { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+                { provide: ConnectionsService, useValue: connections },
+                { provide: InboundEventsService, useValue: inboundEvents },
+            ],
+        }).compile()
+
+        await moduleRef.get(PollOwnerNoticeService).unavailable(record, "upgrade the plan", 1_762_240_000_000)
+
+        expect(connections.markFailing).not.toHaveBeenCalled()
+        expect(inboundEvents.keepForOwner).toHaveBeenCalledWith(expect.anything(), {
+            workspaceId: "ws-1",
+            channel: "sepay",
+            sender: "SePay VCB",
+            body: "upgrade the plan",
+            eventId: "unavailable:c-1:1762240000000",
+        })
+        expect(tx.commits).toBe(1)
+    })
 })

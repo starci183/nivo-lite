@@ -25,6 +25,7 @@ const rowOf = (entity: ConnectionPollScheduleEntity): PollScheduleRow => ({
     breakerOpenedAt: entity.breakerOpenedAt,
     needsReauth: entity.needsReauth,
     hotUntil: entity.hotUntil,
+    unavailableReason: entity.unavailableReason,
     lastSuccessAt: entity.lastSuccessAt,
     lastWebhookAt: entity.lastWebhookAt,
     backfillTo: entity.backfillTo,
@@ -107,6 +108,7 @@ export class PollScheduleService {
                 breakerState: plan.breakerState,
                 breakerOpenedAt: plan.breakerOpenedAt === null ? null : new Date(plan.breakerOpenedAt),
                 needsReauth: plan.needsReauth,
+                unavailableReason: plan.unavailableReason,
                 backfillTo: plan.backfillTo === null ? null : new Date(plan.backfillTo),
                 backfillNewest: plan.backfillNewest === null ? null : new Date(plan.backfillNewest),
                 ...(plan.succeeded ? { lastSuccessAt: () => "now()" } : {}),
@@ -127,12 +129,15 @@ export class PollScheduleService {
         await this.entityManager.query(MARK_HOT_SQL, [connectionId, this.options.schedule.hotIntervalMs, ttlMs, reason])
     }
 
-    /** The connection can be read back now (its credential was just saved): the breaker and the owner request are cleared and it is polled hot. */
+    /**
+     * The connection can be read back now (its credential was just saved, or the owner says the provider plan was upgraded): the breaker, the owner
+     * request and the unavailable capability are cleared and it is polled hot.
+     */
     async markReady(connectionId: string): Promise<void> {
         await this.entityManager.update(
             ConnectionPollScheduleEntity,
             { connectionId },
-            { failures: 0, breakerState: "closed", breakerOpenedAt: null, needsReauth: false },
+            { failures: 0, breakerState: "closed", breakerOpenedAt: null, needsReauth: false, unavailableReason: null },
         )
         await this.markHot(connectionId, "connection_ready")
     }
