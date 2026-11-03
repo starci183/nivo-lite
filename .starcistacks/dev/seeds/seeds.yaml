@@ -4,5 +4,5 @@ entries:
     kind: data
     path: data/nivo-workspace.json
     target: [node, be/dist/apps/cli/src/main.js, seed-management]
-    mode: once
+    mode: upsert
     schema: be/src/modules/domain/channel-provisioning/management-seed.schema.json

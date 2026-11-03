@@ -431,9 +431,10 @@ environments:
           cwd: fe/apps/web
           heavy: build
           env:
-            NEXT_PUBLIC_API_URL: "http://localhost:${port.api}"
-            NEXT_PUBLIC_DEVELOPER_API_URL: "http://localhost:${port.api}"
-            NEXT_PUBLIC_SITE_URL: "http://localhost:${port.web}"
+            NEXT_PUBLIC_API_URL: "https://nivo-local.starci.org"
+            NEXT_PUBLIC_LOCAL_API_URL: "http://localhost:${port.api}"
+            NEXT_PUBLIC_DEVELOPER_API_URL: "https://nivo-local.starci.org"
+            NEXT_PUBLIC_SITE_URL: "https://nivo-local-app.starci.org"
             NEXT_PUBLIC_LANDING_URL: "http://localhost:${port.landing}"
       seed:
         # The module/action catalogue, as the production deploy runs it (verify exec "catalogue synced"): without it public.authority_actions
@@ -445,8 +446,9 @@ environments:
           files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
           env:
             PRIMARY_DB_SCHEMA: public
-            SITE_URL: "http://localhost:${port.web}"
-            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            SITE_URL: "https://nivo-local-app.starci.org"
+            PUBLIC_SITE_URL: "https://nivo-local-app.starci.org"
+            AUTH_WEB_ORIGIN: "https://nivo-local-app.starci.org"
             PUBLIC_API_URL: "https://nivo-local.starci.org"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
@@ -464,8 +466,9 @@ environments:
           files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
           env:
             PRIMARY_DB_SCHEMA: public
-            SITE_URL: "http://localhost:${port.web}"
-            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            SITE_URL: "https://nivo-local-app.starci.org"
+            PUBLIC_SITE_URL: "https://nivo-local-app.starci.org"
+            AUTH_WEB_ORIGIN: "https://nivo-local-app.starci.org"
             PUBLIC_API_URL: "https://nivo-local.starci.org"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
@@ -483,11 +486,15 @@ environments:
           env:
             PORT: "${port.api}"
             PRIMARY_DB_SCHEMA: public
-            SITE_URL: "http://localhost:${port.web}"
-            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            SITE_URL: "https://nivo-local-app.starci.org"
+            PUBLIC_SITE_URL: "https://nivo-local-app.starci.org"
+            AUTH_WEB_ORIGIN: "https://nivo-local-app.starci.org"
             AUTH_GOOGLE_CALLBACK_URL: "http://localhost:${port.api}/auth/google/callback"
             PUBLIC_API_URL: "https://nivo-local.starci.org"
-            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing}"
+            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing},https://nivo-local-app.starci.org"
+            # SITE_URL is the public tunnel origin, so the private-target guards of a workspace SMTP account and a data source no longer see a development site.
+            DATA_ALLOW_PRIVATE_HOSTS: "true"
+            SMTP_ALLOW_PRIVATE_HOSTS: "true"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
             MAIL_PORT: "587"
@@ -518,7 +525,7 @@ environments:
           env:
             PORT: "${port.mcp}"
             PRIMARY_DB_SCHEMA: public
-            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web}"
+            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},https://nivo-local-app.starci.org"
             QUEUE_ENABLED: "true"
             QUEUE_REDIS_HOST: 127.0.0.1
             QUEUE_REDIS_PORT: "${port.redis}"

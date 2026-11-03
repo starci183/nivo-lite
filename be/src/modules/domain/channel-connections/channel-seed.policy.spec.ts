@@ -1,5 +1,5 @@
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
-import { bankFactsOf, filled, invalidSeed, oaSecretOf, payosKeysOf, sepayKeyOf } from "./channel-seed.policy"
+import { bankFactsOf, filled, invalidSeed, issuedOf, payosKeysOf, sepayKeyOf } from "./channel-seed.policy"
 
 const ID = "44c471c0-1a75-42e2-ac4b-09dded78c263"
 const KEY = ["nivo", "ab12".repeat(16)].join("_")
@@ -22,14 +22,14 @@ describe("filled", () => {
     })
 })
 
-describe("oaSecretOf", () => {
+describe("issuedOf", () => {
     it.each([undefined, "", "PENDING-zalo", "  PENDING-until-issued"])("never stores %j", (value) => {
-        expect(oaSecretOf(value)).toBeUndefined()
+        expect(issuedOf(value)).toBeUndefined()
     })
 
-    it("keeps an OA secret key that was issued", () => {
-        expect(oaSecretOf(" issued-key ")).toBe("issued-key")
-        expect(oaSecretOf("a-PENDING-in-the-middle")).toBe("a-PENDING-in-the-middle")
+    it("keeps a Zalo value that was issued", () => {
+        expect(issuedOf(" issued-key ")).toBe("issued-key")
+        expect(issuedOf("a-PENDING-in-the-middle")).toBe("a-PENDING-in-the-middle")
     })
 })
 
