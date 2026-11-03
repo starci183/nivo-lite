@@ -6248,6 +6248,7 @@
     "err_zalo_token": "Zalo từ chối quyền truy cập của NIVO: hãy kết nối lại Zalo OA trong Kết nối",
     "err_zalo_not_connected": "Hội thoại này không có kết nối Zalo để gửi",
     "err_zalo_error": "Zalo từ chối tin nhắn này",
+    "err_recipient_not_linked": "Khách chưa liên kết kênh chat này (chưa có tài khoản Zalo để gửi tới)",
     "channelFacebook": "Facebook",
     "channelInstagram": "Instagram",
     "channelFacebookLine": "Chat Facebook Messenger",

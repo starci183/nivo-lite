@@ -6243,6 +6243,7 @@
     "err_zalo_token": "NIVO's Zalo access was refused: reconnect the Zalo OA in Connections",
     "err_zalo_not_connected": "This conversation has no Zalo connection to send through",
     "err_zalo_error": "Zalo refused the message",
+    "err_recipient_not_linked": "The customer has not linked this chat channel yet (no Zalo account to send to)",
     "channelFacebook": "Facebook",
     "channelInstagram": "Instagram",
     "channelFacebookLine": "Facebook Messenger chat",

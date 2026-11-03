@@ -7,6 +7,8 @@ import { ChannelDeliveryService, ZALO_FREE_WINDOW_MS } from "@modules/domain/cha
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { ChannelSendExecutorService } from "./channel-send-executor.service"
 import { ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
 
@@ -42,10 +44,12 @@ const build = async () => {
     const conversations = mock<AgentConversationsService>()
     const messages = mock<AgentMessagesService>()
     const delivery = mock<ChannelDeliveryService>()
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelSendExecutorService,
             { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: LOGGER, useValue: logger },
             { provide: GraphNodeRegistryService, useValue: registry },
             { provide: AgentConversationsService, useValue: conversations },
             { provide: AgentMessagesService, useValue: messages },
@@ -55,7 +59,7 @@ const build = async () => {
     conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation() })
     messages.storeAgentMessage.mockResolvedValue("m1")
     delivery.deliver.mockResolvedValue({ delivered: true, failure: null, outcome: "acknowledged" })
-    return { executor: moduleRef.get(ChannelSendExecutorService), registry, conversations, messages, delivery }
+    return { executor: moduleRef.get(ChannelSendExecutorService), registry, conversations, messages, delivery, logger }
 }
 
 const SEND = { conversationId: "c1", text: "Xin chào" }
@@ -162,5 +166,31 @@ describe("ChannelSendExecutorService", () => {
             kind: "message",
             id: "m1",
         })
+    })
+
+    it("keeps the message in the conversation, marked not sent, when the customer has no recipient yet, and raises no error", async () => {
+        const { executor, conversations, messages, delivery, logger } = await build()
+        conversations.turnOf.mockResolvedValueOnce({
+            kind: "ok",
+            value: conversation({ channel: "zalo", externalId: null }),
+        })
+        conversations.turnOf.mockResolvedValueOnce({
+            kind: "ok",
+            value: conversation({ channel: "telegram", connectionId: null }),
+        })
+
+        await expect(executor.execute(TURN, SEND)).resolves.toEqual({ kind: "message", id: "m1" })
+        await expect(executor.execute(TURN, SEND)).resolves.toEqual({ kind: "message", id: "m1" })
+
+        expect(messages.storeAgentMessage).toHaveBeenCalledTimes(2)
+        expect(messages.markDelivery).toHaveBeenCalledWith("m1", false, "recipient_not_linked")
+        expect(messages.lastCustomerAt).not.toHaveBeenCalled()
+        expect(delivery.deliver).not.toHaveBeenCalled()
+        expect(logger.info).toHaveBeenNthCalledWith(1, "chat_node_ports.undelivered", {
+            conversationId: "c1",
+            channel: "zalo",
+            reason: "recipient_not_linked",
+        })
+        expect(logger.info).toHaveBeenCalledTimes(2)
     })
 })

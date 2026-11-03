@@ -1,5 +1,6 @@
 import {
     NODE_ROWS_MAX,
+    recipientLinked,
     cutFields,
     limitOf,
     matchesWhere,
@@ -50,6 +51,13 @@ describe("chat-node-ports policy", () => {
         expect(turnConversationOf(TURN, "c1")).toBe("c1")
         expect(turnConversationOf(TURN, "c2")).toBeNull()
         expect(turnConversationOf({ ...TURN, conversationId: null }, undefined)).toBeNull()
+    })
+
+    it("needs a customer id and a connection to push to, except on the website chat", () => {
+        expect(recipientLinked({ channel: "website", externalId: null, connectionId: null })).toBe(true)
+        expect(recipientLinked({ channel: "zalo", externalId: "u1", connectionId: "k1" })).toBe(true)
+        expect(recipientLinked({ channel: "zalo", externalId: null, connectionId: "k1" })).toBe(false)
+        expect(recipientLinked({ channel: "zalo", externalId: "u1", connectionId: null })).toBe(false)
     })
 
     it("admits a conversation id and a text, and refuses anything else", () => {
