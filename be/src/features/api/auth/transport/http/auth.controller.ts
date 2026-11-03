@@ -1,32 +1,33 @@
+// Managed by starci app sync (slot be.feature.auth); do not edit: run "npx starci app sync --execute".
 import { Body, Controller, Get, HttpCode, Post, Query, Redirect, Req, Res } from "@nestjs/common"
 import type { CommandBus, QueryBus } from "@nestjs/cqrs"
 import type { Request, Response } from "express"
 import { Public, PublicReason } from "@modules/domain/identity"
-import type { AccessGrant, GoogleRedirect } from "@modules/domain/identity"
-import type { JwksDocument } from "@modules/integrations/passport"
+import type { AccessGrant, GoogleRedirect, JwksDocument } from "@modules/integrations/passport"
 import { InjectCommandBus, InjectQueryBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
+import { SignupCommand } from "../../application/signup.command"
+import { ResendCommand } from "../../application/resend.command"
 import { ConfirmCommand } from "../../application/confirm.command"
 import { ForgotCommand } from "../../application/forgot.command"
+import { ResetCommand } from "../../application/reset.command"
 import { GetJwksQuery } from "../../application/get-jwks.query"
 import { GoogleBeginCommand } from "../../application/google-begin.command"
 import { GoogleCompleteCommand } from "../../application/google-complete.command"
 import { LoginCommand } from "../../application/login.command"
 import { LogoutCommand } from "../../application/logout.command"
 import { RefreshCommand } from "../../application/refresh.command"
-import { ResendCommand } from "../../application/resend.command"
-import { ResetCommand } from "../../application/reset.command"
 import { SessionCommand } from "../../application/session.command"
-import { SignupCommand } from "../../application/signup.command"
-import { ConfirmRequest } from "./dto/confirm.request"
-import { EmailRequest } from "./dto/email.request"
+import { ForgotRequest } from "./dto/forgot.request"
 import { GoogleStartRequest } from "./dto/google-start.request"
 import { LoginRequest } from "./dto/login.request"
+import { ResendRequest } from "./dto/resend.request"
 import { ResetRequest } from "./dto/reset.request"
 import { SignupRequest } from "./dto/signup.request"
+import { TokenRequest } from "./dto/token.request"
 
 @Controller("auth")
-/** The cookie doors of sign-in: email and password, signup, Google, refresh, sign-out, emailed links and the public keys. */
+/** The cookie doors of sign-in: email and password, the email doors (sign up, confirm, resend, forgot, reset), Google, refresh, session, sign-out and the public keys. */
 export class AuthController {
     constructor(
         @InjectCommandBus() private readonly commandBus: CommandBus,
@@ -44,33 +45,6 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ): Promise<AccessGrant> {
         return this.commandBus.execute(new LoginCommand({ request: { exchange: { req, res } } }))
-    }
-
-    /** Creates an unconfirmed account and mails its confirmation link; the answer is the same for an address that already has one. */
-    @Post("signup")
-    @HttpCode(202)
-    @Public({ reason: PublicReason.AuthHandshake })
-    @RateLimit(RateTier.Strict)
-    signup(@Body() body: SignupRequest): Promise<void> {
-        return this.commandBus.execute(new SignupCommand({ request: body }))
-    }
-
-    /** Mails the confirmation link again. */
-    @Post("resend")
-    @HttpCode(202)
-    @Public({ reason: PublicReason.AuthHandshake })
-    @RateLimit(RateTier.Strict)
-    resend(@Body() body: EmailRequest): Promise<void> {
-        return this.commandBus.execute(new ResendCommand({ request: body }))
-    }
-
-    /** Spends a confirmation link. */
-    @Post("confirm")
-    @HttpCode(204)
-    @Public({ reason: PublicReason.AuthHandshake })
-    @RateLimit(RateTier.Strict)
-    confirm(@Body() body: ConfirmRequest): Promise<void> {
-        return this.commandBus.execute(new ConfirmCommand({ request: body }))
     }
 
     /** Rotates the refresh cookie and answers a new access token; a bad cookie is cleared. */
@@ -99,24 +73,6 @@ export class AuthController {
         return this.commandBus.execute(new LogoutCommand({ request: { exchange: { req, res } } }))
     }
 
-    /** Emails a password link; the answer is the same whether or not the address has an account. */
-    @Post("forgot")
-    @HttpCode(202)
-    @Public({ reason: PublicReason.AuthHandshake })
-    @RateLimit(RateTier.Strict)
-    forgot(@Body() body: EmailRequest): Promise<void> {
-        return this.commandBus.execute(new ForgotCommand({ request: body }))
-    }
-
-    /** Spends a password link and sets the new password; the person signs in afterwards. */
-    @Post("reset")
-    @HttpCode(204)
-    @Public({ reason: PublicReason.AuthHandshake })
-    @RateLimit(RateTier.Strict)
-    reset(@Body() body: ResetRequest): Promise<void> {
-        return this.commandBus.execute(new ResetCommand({ request: body }))
-    }
-
     /** Sends the browser to Google (authorization code with state and PKCE); `returnTo` is an absolute address on the web origin or a path. */
     @Get("google")
     @Public({ reason: PublicReason.AuthHandshake })
@@ -132,6 +88,51 @@ export class AuthController {
     @RateLimit(RateTier.Strict)
     googleCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<GoogleRedirect> {
         return this.commandBus.execute(new GoogleCompleteCommand({ request: { exchange: { req, res } } }))
+    }
+
+    /** Creates an unconfirmed account and mails the confirmation link; always answers 204. */
+    @Post("signup")
+    @HttpCode(204)
+    @Public({ reason: PublicReason.AuthHandshake })
+    @RateLimit(RateTier.Strict)
+    signup(@Body() body: SignupRequest): Promise<void> {
+        return this.commandBus.execute(new SignupCommand({ request: { email: body.email, password: body.password, language: body.language } }))
+    }
+
+    /** Mails a new confirmation link; always answers 204. */
+    @Post("resend")
+    @HttpCode(204)
+    @Public({ reason: PublicReason.AuthHandshake })
+    @RateLimit(RateTier.Strict)
+    resend(@Body() body: ResendRequest): Promise<void> {
+        return this.commandBus.execute(new ResendCommand({ request: { email: body.email, language: body.language } }))
+    }
+
+    /** Spends a confirmation link; a spent, expired or unknown link is refused with IDENTITY_RESET_TOKEN_INVALID. */
+    @Post("confirm")
+    @HttpCode(204)
+    @Public({ reason: PublicReason.AuthHandshake })
+    @RateLimit(RateTier.Strict)
+    confirm(@Body() body: TokenRequest): Promise<void> {
+        return this.commandBus.execute(new ConfirmCommand({ request: { token: body.token } }))
+    }
+
+    /** Mails a password reset link when the address has an account; always answers 204. */
+    @Post("forgot")
+    @HttpCode(204)
+    @Public({ reason: PublicReason.AuthHandshake })
+    @RateLimit(RateTier.Strict)
+    forgot(@Body() body: ForgotRequest): Promise<void> {
+        return this.commandBus.execute(new ForgotCommand({ request: { email: body.email, language: body.language } }))
+    }
+
+    /** Spends a reset link and sets the new password; every session of the person ends. */
+    @Post("reset")
+    @HttpCode(204)
+    @Public({ reason: PublicReason.AuthHandshake })
+    @RateLimit(RateTier.Strict)
+    reset(@Body() body: ResetRequest): Promise<void> {
+        return this.commandBus.execute(new ResetCommand({ request: { token: body.token, password: body.password } }))
     }
 
     /** The public keys access tokens verify against. */

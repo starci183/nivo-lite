@@ -1,3 +1,4 @@
+// Managed by starci app sync (slot be.feature.auth); do not edit: run "npx starci app sync --execute".
 import { CommandHandler } from "@nestjs/cqrs"
 import { IdentitySignInService } from "@modules/domain/identity"
 import { ICQRSHandler } from "@modules/platform/cqrs"
@@ -6,7 +7,7 @@ import type { Logger } from "@modules/platform/logging"
 import { LogoutCommand } from "./logout.command"
 
 @CommandHandler(LogoutCommand)
-/** Revokes the session of the cookie token. */
+/** Ends the session of the refresh cookie and clears it. */
 export class LogoutHandler extends ICQRSHandler<LogoutCommand, void> {
     constructor(
         @InjectLogger() logger: Logger,

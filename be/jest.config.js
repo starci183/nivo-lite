@@ -25,11 +25,7 @@ module.exports = require("@starci/jest-preset").starciJestConfig({
             "consumer",
             "webhook",
         ],
-        files: [
-            "src/modules/integrations/passport/passport.cookie.ts",
-            "src/modules/integrations/passport/passport.password.ts",
-            "src/modules/integrations/passport/passport.tokens.ts",
-        ],
+        files: ["src/modules/integrations/passport/passport.kit.ts"],
         excludes: [
             "src/modules/domain/*/errors/**",
             "src/modules/domain/*/messages/**",

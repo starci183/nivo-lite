@@ -1,10 +1,11 @@
+// Managed by starci app sync (slot be.feature.auth); do not edit: run "npx starci app sync --execute".
 import { Command } from "@nestjs/cqrs"
 import type { PublicExecuteParams } from "@modules/platform/cqrs"
-import type { SignupRequest } from "./auth.contracts"
+import type { SignupData } from "./auth.contracts"
 
-/** Creates an unconfirmed account and mails its confirmation link. */
+/** Creates an unconfirmed password account and mails the confirmation link; the answer never says whether the address already had an account. */
 export class SignupCommand extends Command<void> {
-    constructor(readonly params: PublicExecuteParams<SignupRequest>) {
+    constructor(readonly params: PublicExecuteParams<SignupData>) {
         super()
     }
 }

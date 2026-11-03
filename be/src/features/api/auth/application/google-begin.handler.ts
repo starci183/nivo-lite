@@ -1,3 +1,4 @@
+// Managed by starci app sync (slot be.feature.auth); do not edit: run "npx starci app sync --execute".
 import { CommandHandler } from "@nestjs/cqrs"
 import { IdentitySignInService } from "@modules/domain/identity"
 import { ICQRSHandler } from "@modules/platform/cqrs"

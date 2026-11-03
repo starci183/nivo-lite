@@ -1,6 +1,7 @@
+// Managed by starci app sync (slot be.feature.auth); do not edit: run "npx starci app sync --execute".
 import { CommandHandler } from "@nestjs/cqrs"
 import { IdentitySignInService } from "@modules/domain/identity"
-import type { GoogleRedirect } from "@modules/domain/identity"
+import type { GoogleRedirect } from "@modules/integrations/passport"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"

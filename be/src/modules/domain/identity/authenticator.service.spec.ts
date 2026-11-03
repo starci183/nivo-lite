@@ -1,17 +1,22 @@
+// Managed by starci app sync (slot be.identity.sign-in); do not edit: run "npx starci app sync --execute".
+import "reflect-metadata"
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { PASSPORT_PASSWORDS, PASSPORT_SIGN_IN_BUDGET } from "@modules/integrations/passport"
+import type { MockEntityManager } from "@starci/jest-preset"
+import { PassportErrorCode } from "@modules/integrations/passport"
 import type { AuthPasswords, GoogleProfile, SignInBudget } from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
+import { IDENTITY_AUTH_PASSWORDS, IDENTITY_SIGN_IN_BUDGET } from "./identity.decorators"
+import { IdentitySignInLogEvent } from "./identity-sign-in.log-events"
+import { accountByEmailRow, accountByIdRow } from "@tests/fixtures/builders/identity.builder"
 import { IdentityAuthenticatorService } from "./authenticator.service"
-import { behaveAsSignInBudget } from "@tests/fixtures/builders/sign-in-budget.builder"
-import { IdentityErrorCode } from "./errors/identity.error"
 
-/** The statements `callDbFunction` sends for the account doors. */
+/** The statements callDbFunction sends for the account doors. */
 const USER_BY_EMAIL = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
 const USER_BY_ID = 'SELECT * FROM "public"."be_auth_user_by_id"($1)'
 const USER_BY_GOOGLE = 'SELECT * FROM "public"."be_auth_user_by_google"($1)'
@@ -19,290 +24,186 @@ const CREATE_USER = 'SELECT * FROM "public"."be_auth_create_user"($1, $2, $3, $4
 const LINK_GOOGLE = 'SELECT * FROM "public"."be_auth_link_google"($1, $2, $3, $4)'
 const TOUCH_USER = 'SELECT * FROM "public"."be_auth_touch_user"($1, $2, $3, $4)'
 
-const NOW = "2026-11-09T10:00:00.000Z"
-const ACCOUNT = {
-    id: "u1",
-    email: "an@example.test",
-    encrypted_password: "$2a$10$stored",
-    email_confirmed_at: NOW,
-    disabled: false,
-}
-const GOOGLE: GoogleProfile = {
+const NEW_ID = "00000000-0000-4000-8000-000000000001"
+const AT = "2026-02-03T04:05:06.000Z"
+const NOW = new Date(AT)
+
+const profile = (patch: Partial<GoogleProfile> = {}): GoogleProfile => ({
     subject: "g-1",
-    email: "An@Example.test",
+    email: "A@Example.test",
     emailVerified: true,
-    name: "An Nguyen",
-    picture: "https://img.example.test/an.png",
-}
-const PERSON = {
-    id: "u9",
-    email: "an@example.test",
-    last_sign_in_at: null,
-    meta: {},
-    disabled: false,
-}
+    name: "A",
+    picture: null,
+    ...patch,
+})
 
-interface Stubs {
-    readonly query?: ReadonlyArray<readonly [string, unknown]>
-}
+type Stubs = ReadonlyArray<readonly [string, unknown]>
 
-const build = async (stubs: Stubs, allowed = true, matches = true) => {
-    const em = mockEntityManager({ query: stubs.query ?? [] })
-    fakeTransaction(em)
+const build = async (answers: Stubs, matches = true) => {
+    const entityManager: MockEntityManager = answers.length === 0 ? mockEntityManager() : mockEntityManager({ query: answers })
+    fakeTransaction(entityManager)
     const passwords = mock<AuthPasswords>()
     passwords.verify.mockResolvedValue(matches)
     const budget = mock<SignInBudget>()
-    behaveAsSignInBudget(budget, allowed)
+    budget.counted.mockImplementation(async (_kind, _address, check) => (await check()).value)
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             IdentityAuthenticatorService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            { provide: PASSPORT_PASSWORDS, useValue: passwords },
-            { provide: PASSPORT_SIGN_IN_BUDGET, useValue: budget },
-            { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
+            { provide: IDENTITY_AUTH_PASSWORDS, useValue: passwords },
+            { provide: IDENTITY_SIGN_IN_BUDGET, useValue: budget },
+            { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: IDS, useValue: fakeIds() },
-            { provide: LOGGER, useValue: mock<Logger>() },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(IdentityAuthenticatorService), em, passwords, budget }
+    return { subject: moduleRef.get(IdentityAuthenticatorService), entityManager, passwords, budget, logger }
 }
 
-describe("IdentityAuthenticatorService / verifyPassword", () => {
-    it("admits the right password and counts the attempt against the hashed address", async () => {
-        const { service, em, passwords, budget } = await build({
-            query: [
-                [USER_BY_EMAIL, [ACCOUNT]],
-                [TOUCH_USER, []],
-            ],
-        })
+const refusal = (code: string): unknown => expect.objectContaining({ code })
 
-        await expect(service.verifyPassword("  An@Example.test ", "right-pw")).resolves.toEqual({
-            userId: "u1",
-            email: "an@example.test",
-        })
+describe("IdentityAuthenticatorService.verifyPassword", () => {
+    it("answers the person of a right pair, normalising the address, and records the sign-in through the door", async () => {
+        const { subject, entityManager, passwords, budget } = await build([
+            [USER_BY_EMAIL, [accountByEmailRow()]],
+            [TOUCH_USER, []],
+        ])
 
-        expect(budget.admit).toHaveBeenCalledWith("login", "an@example.test")
-        expect(budget.clear.mock.calls).toEqual([["login", "an@example.test"]])
-        expect(em.query).toHaveBeenCalledWith(USER_BY_EMAIL, ["an@example.test"])
-        expect(passwords.verify).toHaveBeenCalledWith("right-pw", "$2a$10$stored")
+        expect(await subject.verifyPassword("  A@Example.test ", "correct horse")).toEqual({ userId: "u-1", email: "a@example.test" })
+
+        expect(budget.counted).toHaveBeenCalledWith("login", "a@example.test", expect.any(Function))
+        expect(passwords.verify).toHaveBeenCalledWith("correct horse", "hash")
+        expect(entityManager.query).toHaveBeenCalledWith(USER_BY_EMAIL, ["a@example.test"])
+        expect(entityManager.query).toHaveBeenCalledWith(TOUCH_USER, ["u-1", NOW, false, "{}"])
     })
 
-    it("answers the same refusal for a wrong password and for an unknown address", async () => {
-        const wrong = await build({ query: [[USER_BY_EMAIL, [ACCOUNT]]] }, true, false)
-        await expect(wrong.service.verifyPassword("an@example.test", "bad")).rejects.toMatchObject({
-            code: IdentityErrorCode.InvalidCredentials,
-        })
-        expect(wrong.budget.clear).not.toHaveBeenCalled()
+    it("refuses an unknown address and a wrong password with the same code, and still spends the check on a decoy", async () => {
+        const unknown = await build([[USER_BY_EMAIL, []]])
+        const wrong = await build([[USER_BY_EMAIL, [accountByEmailRow()]]], false)
 
-        const unknown = await build({ query: [[USER_BY_EMAIL, []]] }, true, false)
-        await expect(unknown.service.verifyPassword("ghost@example.test", "bad")).rejects.toMatchObject({
-            code: IdentityErrorCode.InvalidCredentials,
-        })
-        expect(unknown.passwords.verify).toHaveBeenCalledWith("bad", "")
-        expect(unknown.budget.clear).not.toHaveBeenCalled()
+        await expect(unknown.subject.verifyPassword("a@example.test", "pw")).rejects.toEqual(refusal(IdentityErrorCode.PairRefused))
+        await expect(wrong.subject.verifyPassword("a@example.test", "pw")).rejects.toBeInstanceOf(IdentityError)
+        expect(unknown.passwords.verify).toHaveBeenCalledWith("pw", "")
+        expect(wrong.entityManager.query).not.toHaveBeenCalledWith(TOUCH_USER, expect.anything())
+    })
+
+    it("compares an empty password for one bcrypt cannot read, an account without a hash against the decoy", async () => {
+        const { subject, passwords } = await build([[USER_BY_EMAIL, [accountByEmailRow("passwordless")]]], false)
+
+        await expect(subject.verifyPassword("a@example.test", "x".repeat(100))).rejects.toBeInstanceOf(IdentityError)
+
+        expect(passwords.verify).toHaveBeenCalledWith("", "")
+    })
+
+    it("refuses a disabled account and an unconfirmed one after the password was right, recording no sign-in", async () => {
+        const disabled = await build([[USER_BY_EMAIL, [accountByEmailRow("disabled")]]])
+        const unconfirmed = await build([[USER_BY_EMAIL, [accountByEmailRow("unconfirmed")]]])
+
+        await expect(disabled.subject.verifyPassword("a@example.test", "pw")).rejects.toEqual(refusal(IdentityErrorCode.AccountDisabled))
+        await expect(unconfirmed.subject.verifyPassword("a@example.test", "pw")).rejects.toEqual(refusal(IdentityErrorCode.EmailNotConfirmed))
+        expect(disabled.entityManager.query).not.toHaveBeenCalledWith(TOUCH_USER, expect.anything())
+        expect(unconfirmed.entityManager.query).not.toHaveBeenCalledWith(TOUCH_USER, expect.anything())
     })
 })
 
-describe("IdentityAuthenticatorService / verifyPassword refusals", () => {
-    it("refuses a disabled account even with the right password", async () => {
-        const { service } = await build({ query: [[USER_BY_EMAIL, [{ ...ACCOUNT, disabled: true }]]] })
+describe("IdentityAuthenticatorService.signInWithGoogle", () => {
+    it("refuses a profile without a verified address, and calls no door", async () => {
+        const { subject, entityManager } = await build([])
 
-        await expect(service.verifyPassword("an@example.test", "right-pw")).rejects.toMatchObject({
-            code: IdentityErrorCode.AccountDisabled,
-        })
+        await expect(subject.signInWithGoogle(profile({ emailVerified: false }))).rejects.toEqual(refusal(PassportErrorCode.GoogleRejected))
+        await expect(subject.signInWithGoogle(profile({ email: null }))).rejects.toEqual(refusal(PassportErrorCode.GoogleRejected))
+        expect(entityManager.query).not.toHaveBeenCalled()
     })
 
-    it("refuses an account whose mailbox was never confirmed, even with the right password", async () => {
-        const { service } = await build({ query: [[USER_BY_EMAIL, [{ ...ACCOUNT, email_confirmed_at: null }]]] })
+    it("signs in the account a Google subject is already linked to, confirming its mailbox", async () => {
+        const { subject, entityManager } = await build([
+            [USER_BY_GOOGLE, [{ be_auth_user_by_google: "u-1" }]],
+            [LINK_GOOGLE, []],
+            [TOUCH_USER, []],
+            [USER_BY_ID, [accountByIdRow()]],
+        ])
 
-        await expect(service.verifyPassword("an@example.test", "right-pw")).rejects.toMatchObject({
-            code: IdentityErrorCode.EmailNotConfirmed,
-        })
+        expect(await subject.signInWithGoogle(profile())).toEqual({ userId: "u-1", email: "a@example.test" })
+
+        expect(entityManager.query).not.toHaveBeenCalledWith(USER_BY_EMAIL, expect.anything())
+        expect(entityManager.query).not.toHaveBeenCalledWith(CREATE_USER, expect.anything())
+        expect(entityManager.query).toHaveBeenCalledWith(TOUCH_USER, ["u-1", NOW, true, expect.stringContaining('"full_name":"A"')])
     })
 
-    it("clears the count of an address whose password is right even when the account is refused", async () => {
-        const { service, budget } = await build({ query: [[USER_BY_EMAIL, [{ ...ACCOUNT, disabled: true }]]] })
+    it("links an existing account by its verified address", async () => {
+        const { subject, entityManager } = await build([
+            [USER_BY_GOOGLE, [{ be_auth_user_by_google: null }]],
+            [USER_BY_EMAIL, [accountByEmailRow()]],
+            [LINK_GOOGLE, []],
+            [TOUCH_USER, []],
+            [USER_BY_ID, [accountByIdRow()]],
+        ])
 
-        await expect(service.verifyPassword("an@example.test", "right-pw")).rejects.toMatchObject({
-            code: IdentityErrorCode.AccountDisabled,
-        })
+        expect(await subject.signInWithGoogle(profile())).toEqual({ userId: "u-1", email: "a@example.test" })
 
-        expect(budget.clear.mock.calls).toEqual([["login", "an@example.test"]])
+        expect(entityManager.query).toHaveBeenCalledWith(USER_BY_EMAIL, ["a@example.test"])
+        expect(entityManager.query).toHaveBeenCalledWith(LINK_GOOGLE, ["u-1", "g-1", expect.stringContaining('"sub":"g-1"'), NOW])
+        expect(entityManager.query).not.toHaveBeenCalledWith(CREATE_USER, expect.anything())
     })
 
-    it("rate limits an address before it reads the account", async () => {
-        const { service, em, passwords, budget } = await build({}, false)
-
-        await expect(service.verifyPassword("an@example.test", "guess")).rejects.toMatchObject({
-            code: IdentityErrorCode.TooManyAttempts,
-        })
-
-        expect(em.query).not.toHaveBeenCalled()
-        expect(passwords.verify).not.toHaveBeenCalled()
-        expect(budget.clear).not.toHaveBeenCalled()
-    })
-
-    it("refuses a password longer than bcrypt reads without comparing it", async () => {
-        const { service, passwords } = await build({ query: [[USER_BY_EMAIL, [ACCOUNT]]] }, true, false)
-
-        await expect(service.verifyPassword("an@example.test", "x".repeat(200))).rejects.toMatchObject({
-            code: IdentityErrorCode.InvalidCredentials,
-        })
-        expect(passwords.verify).toHaveBeenCalledWith("", "$2a$10$stored")
-    })
 })
 
-describe("IdentityAuthenticatorService / signInWithGoogle", () => {
-    it("signs in the account a Google subject is already linked to", async () => {
-        const { service, em } = await build({
-            query: [
-                [USER_BY_GOOGLE, [{ be_auth_user_by_google: "u9" }]],
-                [LINK_GOOGLE, []],
-                [TOUCH_USER, []],
-                [USER_BY_ID, [PERSON]],
-            ],
-        })
+describe("IdentityAuthenticatorService.signInWithGoogle (new accounts and refusals)", () => {
+    it("creates the account of a new person, links their Google identity and logs the id alone", async () => {
+        const { subject, entityManager, logger } = await build([
+            [USER_BY_GOOGLE, [{ be_auth_user_by_google: null }]],
+            [USER_BY_EMAIL, []],
+            [CREATE_USER, [{ be_auth_create_user: NEW_ID }]],
+            [LINK_GOOGLE, []],
+            [TOUCH_USER, []],
+            [USER_BY_ID, [accountByIdRow("live", NEW_ID)]],
+        ])
 
-        await expect(service.signInWithGoogle(GOOGLE)).resolves.toEqual({ userId: "u9", email: "an@example.test" })
+        expect(await subject.signInWithGoogle(profile())).toEqual({ userId: NEW_ID, email: "a@example.test" })
 
-        expect(em.query).not.toHaveBeenCalledWith(USER_BY_EMAIL, expect.anything())
-        expect(em.query).not.toHaveBeenCalledWith(CREATE_USER, expect.anything())
+        expect(entityManager.query).toHaveBeenCalledWith(CREATE_USER, [NEW_ID, "a@example.test", null, true, expect.stringContaining('"full_name":"A"'), NOW])
+        expect(entityManager.query).toHaveBeenCalledWith(LINK_GOOGLE, [NEW_ID, "g-1", expect.stringContaining("g-1"), NOW])
+        expect(logger.info).toHaveBeenCalledWith(IdentitySignInLogEvent.AccountCreated, { userId: NEW_ID })
     })
 
-    it("links an existing account by its verified email and confirms the mailbox", async () => {
-        const { service, em } = await build({
-            query: [
-                [USER_BY_GOOGLE, [{ be_auth_user_by_google: null }]],
-                [USER_BY_EMAIL, [{ ...ACCOUNT, id: "u9" }]],
-                [LINK_GOOGLE, []],
-                [TOUCH_USER, []],
-                [USER_BY_ID, [PERSON]],
-            ],
-        })
-
-        await expect(service.signInWithGoogle(GOOGLE)).resolves.toMatchObject({ userId: "u9" })
-
-        expect(em.query).toHaveBeenCalledWith(USER_BY_EMAIL, ["an@example.test"])
-        expect(em.query).toHaveBeenCalledWith(LINK_GOOGLE, [
-            "u9",
-            "g-1",
-            expect.stringContaining('"sub":"g-1"'),
-            new Date(NOW),
+    it("fills only the profile keys the Google profile has", async () => {
+        const { subject, entityManager } = await build([
+            [USER_BY_GOOGLE, [{ be_auth_user_by_google: "u-1" }]],
+            [LINK_GOOGLE, []],
+            [TOUCH_USER, []],
+            [USER_BY_ID, [accountByIdRow()]],
         ])
-        expect(em.query).toHaveBeenCalledWith(TOUCH_USER, [
-            "u9",
-            new Date(NOW),
-            true,
-            expect.stringContaining("An Nguyen"),
-        ])
-        expect(em.query).not.toHaveBeenCalledWith(CREATE_USER, expect.anything())
-    })
-})
 
-describe("IdentityAuthenticatorService / signInWithGoogle (new accounts and refusals)", () => {
-    it("creates a confirmed account without a password when nobody has that email", async () => {
-        const created = "00000000-0000-4000-8000-000000000001"
-        const { service, em } = await build({
-            query: [
-                [USER_BY_GOOGLE, [{ be_auth_user_by_google: null }]],
-                [USER_BY_EMAIL, []],
-                [CREATE_USER, [{ be_auth_create_user: created }]],
-                [LINK_GOOGLE, []],
-                [TOUCH_USER, []],
-                [USER_BY_ID, [PERSON]],
-            ],
-        })
+        await subject.signInWithGoogle(profile({ name: null, picture: "https://img.example.test/a.png" }))
 
-        await service.signInWithGoogle(GOOGLE)
-
-        expect(em.query).toHaveBeenCalledWith(CREATE_USER, [
-            created,
-            "an@example.test",
-            null,
-            true,
-            expect.stringContaining('"full_name":"An Nguyen"'),
-            new Date(NOW),
-        ])
-        expect(em.query).toHaveBeenCalledWith(LINK_GOOGLE, [
-            created,
-            "g-1",
-            expect.stringContaining("g-1"),
-            new Date(NOW),
-        ])
+        const keys = { avatar_url: "https://img.example.test/a.png", picture: "https://img.example.test/a.png", email: "A@Example.test", email_verified: true }
+        expect(entityManager.query).toHaveBeenCalledWith(TOUCH_USER, ["u-1", NOW, true, JSON.stringify(keys)])
     })
 
-    it("refuses a profile whose email Google did not verify, and touches nothing", async () => {
-        const { service, em } = await build({})
-
-        await expect(service.signInWithGoogle({ ...GOOGLE, emailVerified: false })).rejects.toMatchObject({
-            code: IdentityErrorCode.GoogleEmailUnverified,
-        })
-        await expect(service.signInWithGoogle({ ...GOOGLE, email: null })).rejects.toMatchObject({
-            code: IdentityErrorCode.GoogleEmailUnverified,
-        })
-        expect(em.query).not.toHaveBeenCalled()
-    })
-
-    it("refuses a disabled account", async () => {
-        const { service } = await build({
-            query: [
-                [USER_BY_GOOGLE, [{ be_auth_user_by_google: "u9" }]],
-                [LINK_GOOGLE, []],
-                [TOUCH_USER, []],
-                [USER_BY_ID, [{ ...PERSON, disabled: true }]],
-            ],
-        })
-
-        await expect(service.signInWithGoogle(GOOGLE)).rejects.toMatchObject({
-            code: IdentityErrorCode.AccountDisabled,
-        })
-    })
-})
-
-describe("IdentityAuthenticatorService / signInWithGoogle (sparse profiles and lost accounts)", () => {
-    const created = "00000000-0000-4000-8000-000000000001"
-    const sparse = [
-        [USER_BY_GOOGLE, [{ be_auth_user_by_google: null }]],
-        [USER_BY_EMAIL, []],
-        [LINK_GOOGLE, []],
-        [TOUCH_USER, []],
-        [USER_BY_ID, [PERSON]],
-    ] as const
-
-    it("keeps only the verified keys of a profile without a name or a picture, and the generated id when the door answers none", async () => {
-        const { service, em } = await build({ query: [...sparse, [CREATE_USER, []]] })
-
-        await expect(service.signInWithGoogle({ ...GOOGLE, name: null, picture: null })).resolves.toMatchObject({
-            userId: "u9",
-        })
-
-        expect(em.query).toHaveBeenCalledWith(CREATE_USER, [
-            created,
-            "an@example.test",
-            null,
-            true,
-            '{"email":"An@Example.test","email_verified":true}',
-            new Date(NOW),
+    it("refuses when the create door answers no account", async () => {
+        const { subject, entityManager } = await build([
+            [USER_BY_GOOGLE, [{ be_auth_user_by_google: null }]],
+            [USER_BY_EMAIL, []],
+            [CREATE_USER, []],
         ])
-        expect(em.query).toHaveBeenCalledWith(LINK_GOOGLE, [
-            created,
-            "g-1",
-            expect.stringContaining("g-1"),
-            new Date(NOW),
-        ])
+
+        await expect(subject.signInWithGoogle(profile())).rejects.toEqual(refusal(PassportErrorCode.GoogleRejected))
+        expect(entityManager.query).not.toHaveBeenCalledWith(LINK_GOOGLE, expect.anything())
     })
 
-    it("refuses an account that vanished or has no email once it is linked", async () => {
-        const gone = await build({ query: [...sparse.slice(0, 4), [USER_BY_ID, []], [CREATE_USER, []]] })
-        await expect(gone.service.signInWithGoogle(GOOGLE)).rejects.toMatchObject({
-            code: IdentityErrorCode.AccountNotFound,
-        })
+    it("refuses a disabled account and an account that cannot be read back", async () => {
+        const linked: Stubs = [
+            [USER_BY_GOOGLE, [{ be_auth_user_by_google: "u-1" }]],
+            [LINK_GOOGLE, []],
+            [TOUCH_USER, []],
+        ]
+        const disabled = await build([...linked, [USER_BY_ID, [accountByIdRow("disabled")]]])
+        const gone = await build([...linked, [USER_BY_ID, []]])
+        const addressless = await build([...linked, [USER_BY_ID, [accountByIdRow("addressless")]]])
 
-        const mailless = await build({
-            query: [...sparse.slice(0, 4), [USER_BY_ID, [{ ...PERSON, email: null }]], [CREATE_USER, []]],
-        })
-        await expect(mailless.service.signInWithGoogle(GOOGLE)).rejects.toMatchObject({
-            code: IdentityErrorCode.AccountNotFound,
-        })
+        await expect(disabled.subject.signInWithGoogle(profile())).rejects.toEqual(refusal(IdentityErrorCode.AccountDisabled))
+        await expect(gone.subject.signInWithGoogle(profile())).rejects.toEqual(refusal(PassportErrorCode.GoogleRejected))
+        await expect(addressless.subject.signInWithGoogle(profile())).rejects.toEqual(refusal(PassportErrorCode.GoogleRejected))
     })
 })

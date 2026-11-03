@@ -1,107 +1,95 @@
+// Managed by starci app sync (slot be.identity.sign-in); do not edit: run "npx starci app sync --execute".
+import "reflect-metadata"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import type { Request, Response } from "express"
-import { AUTH_ERROR_CODES, AuthError, PASSPORT_DOORS, PASSPORT_SESSIONS } from "@modules/integrations/passport"
-import type { AuthDoors, AuthSessions, HttpExchange } from "@modules/integrations/passport"
-import type { Principal } from "@modules/platform/cqrs"
-import { IdentityError } from "./errors/identity.error"
+import { AuthError, PassportError, PassportErrorCode } from "@modules/integrations/passport"
+import type { AccessGrant, AuthDoors, AuthSessions, GoogleRedirect, HttpExchange } from "@modules/integrations/passport"
+import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
+import { IDENTITY_AUTH_DOORS, IDENTITY_AUTH_SESSIONS } from "./identity.decorators"
 import { IdentitySignInService } from "./sign-in.service"
 
-const GRANT = {
-    accessToken: "jwt",
-    expiresIn: 900,
-    expiresAt: "2026-11-09T10:15:00.000Z",
-    user: { id: "u1", email: "an@example.test" },
-}
-const REDIRECT = { url: "https://app.example.test/inbox", statusCode: 303 }
+const GRANT: AccessGrant = { accessToken: "token", expiresIn: 900, expiresAt: "2026-02-03T04:20:06.000Z", user: { id: "u-1", email: "a@example.test" } }
+const REDIRECT: GoogleRedirect = { url: "https://app.example.test/", statusCode: 303 }
+const EXCHANGE = mock<HttpExchange>()
 
 const build = async () => {
     const doors = mock<AuthDoors>()
     const sessions = mock<AuthSessions>()
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            IdentitySignInService,
-            { provide: PASSPORT_DOORS, useValue: doors },
-            { provide: PASSPORT_SESSIONS, useValue: sessions },
-        ],
+        providers: [IdentitySignInService, { provide: IDENTITY_AUTH_DOORS, useValue: doors }, { provide: IDENTITY_AUTH_SESSIONS, useValue: sessions }],
     }).compile()
-    const exchange: HttpExchange = { req: mock<Request>(), res: mock<Response>() }
-    return { service: moduleRef.get(IdentitySignInService), doors, sessions, exchange }
+    return { subject: moduleRef.get(IdentitySignInService), doors, sessions }
 }
 
-describe("IdentitySignInService / doors", () => {
-    it("hands each cookie door to the package and answers what it answers", async () => {
-        const { service, doors, exchange } = await build()
+describe("IdentitySignInService", () => {
+    it("hands each cookie door the exchange and answers what the package answers", async () => {
+        const { subject, doors } = await build()
         doors.login.mockResolvedValue(GRANT)
         doors.refresh.mockResolvedValue(GRANT)
         doors.session.mockResolvedValue(GRANT)
-        doors.logout.mockResolvedValue(undefined)
-        doors.beginGoogle.mockResolvedValue(undefined)
+        doors.logout.mockResolvedValue()
+        doors.beginGoogle.mockResolvedValue()
         doors.completeGoogle.mockResolvedValue(REDIRECT)
 
-        await expect(service.login(exchange)).resolves.toEqual(GRANT)
-        await expect(service.refresh(exchange)).resolves.toEqual(GRANT)
-        await expect(service.session(exchange)).resolves.toEqual(GRANT)
-        await expect(service.logout(exchange)).resolves.toBeUndefined()
-        await expect(service.beginGoogle(exchange)).resolves.toBeUndefined()
-        await expect(service.completeGoogle(exchange)).resolves.toEqual(REDIRECT)
+        expect(await subject.login(EXCHANGE)).toBe(GRANT)
+        expect(await subject.refresh(EXCHANGE)).toBe(GRANT)
+        expect(await subject.session(EXCHANGE)).toBe(GRANT)
+        await subject.logout(EXCHANGE)
+        await subject.beginGoogle(EXCHANGE)
+        expect(await subject.completeGoogle(EXCHANGE)).toBe(REDIRECT)
 
-        for (const door of [
-            doors.login,
-            doors.refresh,
-            doors.session,
-            doors.logout,
-            doors.beginGoogle,
-            doors.completeGoogle,
-        ]) {
-            expect(door).toHaveBeenCalledWith(exchange)
-        }
+        for (const door of [doors.login, doors.refresh, doors.session, doors.logout, doors.beginGoogle, doors.completeGoogle]) expect(door).toHaveBeenCalledWith(EXCHANGE)
     })
 
-    it("turns a refusal of the package into the identity error the errors filter maps", async () => {
-        const { service, doors, exchange } = await build()
-        doors.refresh.mockRejectedValue(new AuthError(AUTH_ERROR_CODES.RefreshReused))
+    it("serves the public keys", async () => {
+        const { subject, sessions } = await build()
+        sessions.jwks.mockResolvedValue({ keys: [] })
 
-        const refusal: unknown = await service.refresh(exchange).catch((cause: unknown) => cause)
-
-        expect(refusal).toBeInstanceOf(IdentityError)
-        expect(refusal).toMatchObject({ code: "IDENTITY_REFRESH_REUSED" })
+        expect(await subject.jwks()).toEqual({ keys: [] })
     })
 
-    it("lets the domain refusal of a sign-in decision through as it is", async () => {
-        const { service, doors, exchange } = await build()
-        const refusal = new Error("identity refused")
-        doors.login.mockRejectedValue(refusal)
+    it("signs the caller out of every other device, keeping the session of the token", async () => {
+        const { subject, sessions } = await build()
+        sessions.endOthers.mockResolvedValue()
 
-        await expect(service.login(exchange)).rejects.toBe(refusal)
-    })
-})
+        await subject.endOthers({ id: "u-1", role: "authenticated", sessionId: "s-1" })
 
-describe("IdentitySignInService / keys and other devices", () => {
-    const principal: Principal = { id: "u1", role: "authenticated", sessionId: "s1" }
-
-    it("answers the public key document of the package", async () => {
-        const { service, sessions } = await build()
-        sessions.jwks.mockResolvedValue({ keys: [{ kid: "k1" }] })
-
-        await expect(service.jwks()).resolves.toEqual({ keys: [{ kid: "k1" }] })
+        expect(sessions.endOthers).toHaveBeenCalledWith("u-1", "s-1")
     })
 
-    it("signs the caller out of every other device but the session of the token", async () => {
-        const { service, sessions } = await build()
-        sessions.endOthers.mockResolvedValue(undefined)
+    it("refuses to sign out the other devices of a token that names no session", async () => {
+        const { subject, sessions } = await build()
+        sessions.endOthers.mockRejectedValue(new AuthError("IDENTITY_UNAUTHENTICATED"))
 
-        await service.endOthers(principal)
-
-        expect(sessions.endOthers).toHaveBeenCalledWith("u1", "s1")
+        await expect(subject.endOthers({ id: "u-1", role: "authenticated" })).rejects.toMatchObject({ code: IdentityErrorCode.Unauthenticated })
+        expect(sessions.endOthers).toHaveBeenCalledWith("u-1", undefined)
     })
 
-    it("refuses with the passport error when the token names no session", async () => {
-        const { service, sessions } = await build()
-        sessions.endOthers.mockRejectedValue(new AuthError(AUTH_ERROR_CODES.Unauthenticated))
+    it("turns a refusal of the package into the error family that owns its code", async () => {
+        const { subject, doors } = await build()
+        doors.refresh.mockRejectedValue(new AuthError("IDENTITY_REFRESH_REUSED"))
+        doors.login.mockRejectedValue(new AuthError("PASSPORT_GOOGLE_REJECTED"))
 
-        await expect(service.endOthers({ id: "u1", role: "authenticated" })).rejects.toMatchObject({
-            code: "IDENTITY_UNAUTHENTICATED",
-        })
+        const identity: unknown = await subject.refresh(EXCHANGE).catch((error: unknown) => error)
+        const passport: unknown = await subject.login(EXCHANGE).catch((error: unknown) => error)
+
+        expect(identity).toBeInstanceOf(IdentityError)
+        expect(identity).toMatchObject({ code: IdentityErrorCode.RefreshReused })
+        expect(passport).toBeInstanceOf(PassportError)
+        expect(passport).toMatchObject({ code: PassportErrorCode.GoogleRejected })
+    })
+
+    it("reads a code neither family names as unauthenticated", async () => {
+        const { subject, doors } = await build()
+        doors.login.mockRejectedValue(Object.assign(new AuthError("IDENTITY_REFRESH_REUSED"), { code: "NOT_A_CODE" }))
+
+        await expect(subject.login(EXCHANGE)).rejects.toMatchObject({ code: IdentityErrorCode.Unauthenticated })
+    })
+
+    it("rethrows a failure that is not a sign-in refusal as it is", async () => {
+        const { subject, doors } = await build()
+        doors.login.mockRejectedValue(new Error("boom"))
+
+        await expect(subject.login(EXCHANGE)).rejects.toThrow("boom")
     })
 })

@@ -1,18 +1,8 @@
+// Managed by starci app sync (slot be.identity.sign-in); do not edit: run "npx starci app sync --execute".
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import {
-    InjectAuthPasswords,
-    InjectSignInBudget,
-    isPresentablePassword,
-    normalizeEmail,
-} from "@modules/integrations/passport"
-import type {
-    AuthAuthenticator,
-    AuthPasswords,
-    AuthSubject,
-    GoogleProfile,
-    SignInBudget,
-} from "@modules/integrations/passport"
+import { PassportError, PassportErrorCode, isPresentablePassword, normalizeEmail } from "@modules/integrations/passport"
+import type { AuthAuthenticator, AuthPasswords, AuthSubject, GoogleProfile, SignInBudget } from "@modules/integrations/passport"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -21,8 +11,9 @@ import type { Ids } from "@modules/platform/ids"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
-import { IdentityAuthLogEvent } from "./identity-auth.log-events"
-import { authDoors } from "./persistence/auth-doors.port"
+import { InjectAuthPasswords, InjectSignInBudget } from "./identity.decorators"
+import { IdentitySignInLogEvent } from "./identity-sign-in.log-events"
+import { accountDoors } from "./persistence/account-doors.port"
 
 /** A Google profile whose email Google verified, so it has one. */
 type VerifiedProfile = GoogleProfile & { readonly email: string }
@@ -36,7 +27,7 @@ const profileKeysOf = (profile: VerifiedProfile): Record<string, string | boolea
 })
 
 @Injectable()
-/** The two sign-in decisions: is this email and password right, and which account does this Google profile stand for. */
+/** The two sign-in decisions over the account doors: is this email and password right, and which account does this Google profile stand for. */
 export class IdentityAuthenticatorService implements AuthAuthenticator {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -47,77 +38,47 @@ export class IdentityAuthenticatorService implements AuthAuthenticator {
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Verifies the pair (existing GoTrue bcrypt hashes included). An unknown address and a wrong password answer the same refusal; only wrong passwords count against the budget. */
+    /** Verifies the pair. An unknown address and a wrong password answer the same refusal; only wrong passwords count against the budget. */
     async verifyPassword(email: string, password: string): Promise<AuthSubject> {
         const address = normalizeEmail(email)
-        const row = await this.budget.counted("login", address, async () => {
-            const found = await authDoors.userByEmail(this.entityManager, address)
-            const matches = await this.passwords.verify(
-                isPresentablePassword(password) ? password : "",
-                found?.encrypted_password ?? "",
-            )
+        const account = await this.budget.counted("login", address, async () => {
+            const found = await accountDoors.userByEmail(this.entityManager, address)
+            const matches = await this.passwords.verify(isPresentablePassword(password) ? password : "", found?.encrypted_password ?? "")
             return { passed: found !== undefined && matches, value: found !== undefined && matches ? found : undefined }
         })
-        if (row === undefined) throw new IdentityError({ code: IdentityErrorCode.InvalidCredentials })
-        if (row.disabled) throw new IdentityError({ code: IdentityErrorCode.AccountDisabled })
-        if (row.email_confirmed_at === null) throw new IdentityError({ code: IdentityErrorCode.EmailNotConfirmed })
-        await authDoors.touchUser(this.entityManager, row.id, this.clock.now(), false, "{}")
-        return { userId: row.id, email: row.email }
+        if (account === undefined) throw new IdentityError({ code: IdentityErrorCode.PairRefused })
+        if (account.disabled) throw new IdentityError({ code: IdentityErrorCode.AccountDisabled })
+        if (account.email_confirmed_at === null) throw new IdentityError({ code: IdentityErrorCode.EmailNotConfirmed })
+        await accountDoors.touchUser(this.entityManager, account.id, this.clock.now(), false, "{}")
+        return { userId: account.id, email: account.email }
     }
 
     /** Finds the account a Google subject is linked to, else links by a verified email, else creates the account. */
     async signInWithGoogle(profile: GoogleProfile): Promise<AuthSubject> {
-        if (profile.email === null || !profile.emailVerified) {
-            throw new IdentityError({ code: IdentityErrorCode.GoogleEmailUnverified })
-        }
+        if (profile.email === null || !profile.emailVerified) throw new PassportError({ code: PassportErrorCode.GoogleRejected })
         const address = normalizeEmail(profile.email)
         const verified: VerifiedProfile = { ...profile, email: profile.email }
         const now = this.clock.now()
         const userId = await this.entityManager.transaction(async (scoped) => {
-            const linked = await authDoors.userByGoogle(scoped, profile.subject)
-            const byEmail = linked === null ? await authDoors.userByEmail(scoped, address) : undefined
-            const known = linked ?? byEmail?.id
-            const id = known ?? (await this.createFor(scoped, address, verified, now))
-            await authDoors.linkGoogle(
-                scoped,
-                id,
-                profile.subject,
-                JSON.stringify({
-                    sub: profile.subject,
-                    email: address,
-                    name: profile.name,
-                    picture: profile.picture,
-                    email_verified: true,
-                }),
-                now,
-            )
-            await authDoors.touchUser(scoped, id, now, true, JSON.stringify(profileKeysOf(verified)))
+            const linked = await accountDoors.userByGoogle(scoped, profile.subject)
+            const byEmail = linked === null ? await accountDoors.userByEmail(scoped, address) : undefined
+            const id = linked ?? byEmail?.id ?? (await this.createFor(scoped, address, verified, now))
+            const identityData = { sub: profile.subject, email: address, name: profile.name, picture: profile.picture, email_verified: true }
+            await accountDoors.linkGoogle(scoped, id, profile.subject, JSON.stringify(identityData), now)
+            await accountDoors.touchUser(scoped, id, now, true, JSON.stringify(profileKeysOf(verified)))
             return id
         })
-        const user = await authDoors.userById(this.entityManager, userId)
-        if (user?.email === undefined || user.email === null) {
-            throw new IdentityError({ code: IdentityErrorCode.AccountNotFound })
-        }
-        if (user.disabled) throw new IdentityError({ code: IdentityErrorCode.AccountDisabled })
-        return { userId: user.id, email: user.email }
+        const account = await accountDoors.userById(this.entityManager, userId)
+        if (account?.email === undefined || account.email === null) throw new PassportError({ code: PassportErrorCode.GoogleRejected })
+        if (account.disabled) throw new IdentityError({ code: IdentityErrorCode.AccountDisabled })
+        return { userId: account.id, email: account.email }
     }
 
-    private async createFor(
-        scoped: EntityManager,
-        address: string,
-        profile: VerifiedProfile,
-        now: Date,
-    ): Promise<string> {
+    private async createFor(scoped: EntityManager, address: string, profile: VerifiedProfile, now: Date): Promise<string> {
         const id = this.ids.next()
-        const created = await authDoors.createUser(scoped, {
-            id,
-            email: address,
-            hash: null,
-            confirmed: true,
-            meta: JSON.stringify(profileKeysOf(profile)),
-            now,
-        })
-        this.logger.info(IdentityAuthLogEvent.AccountCreated, { userId: id })
-        return created ?? id
+        const created = await accountDoors.createUser(scoped, { id, email: address, hash: null, confirmed: true, meta: JSON.stringify(profileKeysOf(profile)), now })
+        if (created === undefined) throw new PassportError({ code: PassportErrorCode.GoogleRejected })
+        this.logger.info(IdentitySignInLogEvent.AccountCreated, { userId: created })
+        return created
     }
 }

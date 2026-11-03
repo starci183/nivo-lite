@@ -1,9 +1,13 @@
-import { UuidAbstractEntity } from "@modules/platform/database"
-import { Column, Entity } from "typeorm"
+// Managed by starci app sync (slot be.identity.sign-in); do not edit: run "npx starci app sync --execute".
+import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "identity_refresh_tokens" })
-/** One refresh token of a device session; only its digest is stored, and a spent token is kept for replay detection. */
-export class IdentityRefreshTokenEntity extends UuidAbstractEntity {
+/** One refresh token of a device session, mapped from public.identity_refresh_tokens; only its digest is stored, and a spent token is kept for replay detection. */
+export class IdentityRefreshTokenEntity {
+    /** The row id. */
+    @PrimaryColumn({ name: "id", type: "uuid" })
+    id!: string
+
     /** The device session the token belongs to. */
     @Column({ name: "session_id", type: "uuid" })
     sessionId!: string
@@ -15,6 +19,10 @@ export class IdentityRefreshTokenEntity extends UuidAbstractEntity {
     /** The digest of the token, unique. */
     @Column({ name: "token_hash", type: "text" })
     tokenHash!: string
+
+    /** When the row was written. */
+    @Column({ name: "created_at", type: "timestamptz" })
+    createdAt!: Date
 
     /** When the token stops working. */
     @Column({ name: "expires_at", type: "timestamptz" })

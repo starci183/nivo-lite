@@ -1,7 +1,8 @@
+// Managed by starci app sync (slot be.identity.sign-in); do not edit: run "npx starci app sync --execute".
 import { Column, Entity, PrimaryColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "identity_sessions" })
-/** One device session, mapped from public.identity_sessions (the tables of @starci/auth). */
+/** One device session, mapped from public.identity_sessions of the baseline migration (the tables of @starci/auth). */
 export class IdentitySessionEntity {
     /** The session id. */
     @PrimaryColumn({ name: "id", type: "uuid" })

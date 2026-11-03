@@ -1,13 +1,9 @@
-import { IsEmail, IsString, MaxLength, MinLength } from "class-validator"
+// Managed by starci app sync (slot be.feature.auth); do not edit: run "npx starci app sync --execute".
+import { IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator"
+import type { MailLanguage } from "@modules/integrations/mail"
 
-/** A signup. */
+/** The posted sign-up data. */
 export class SignupRequest {
-    /** The display name. */
-    @IsString()
-    @MinLength(1)
-    @MaxLength(120)
-    name!: string
-
     /** The sign-in address. */
     @IsEmail()
     @MaxLength(254)
@@ -15,7 +11,12 @@ export class SignupRequest {
 
     /** The password. */
     @IsString()
-    @MinLength(8)
+    @MinLength(1)
     @MaxLength(128)
     password!: string
+
+    /** The language of the mail; the app's default when left out. */
+    @IsOptional()
+    @IsIn(["vi", "en"])
+    language?: MailLanguage
 }
