@@ -279,6 +279,30 @@ environments:
         where: "secrets/telegram"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the Telegram application (my.telegram.org) of the personal-account connection, sealed by the owner, never generated; optional at boot (parseTelegramUserConfig)"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "sepay-webhook-api-key"
+        member: "sepay"
+        key: "SEPAY_WEBHOOK_API_KEY"
+        where: "secrets/sepay"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the platform billing feed (parseBillingConfig), development test values sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "sepay-bank-account"
+        member: "sepay"
+        key: "SEPAY_BANK_ACCOUNT"
+        where: "secrets/sepay"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the platform billing feed (parseBillingConfig), development test values sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "sepay-bank-code"
+        member: "sepay"
+        key: "SEPAY_BANK_CODE"
+        where: "secrets/sepay"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the platform billing feed (parseBillingConfig), development test values sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "sepay-account-name"
+        member: "sepay"
+        key: "SEPAY_ACCOUNT_NAME"
+        where: "secrets/sepay"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the platform billing feed (parseBillingConfig), development test values sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
     # `starci app stack up --env dev --execute` reads this block (PROJECT-STACKS-6). One command brings up the db (own role per environment),
     # Redis, MinIO and the OpenClaw gateway in containers, migrates, and runs the api, the mcp gateway, the console and the landing natively.
     local:
@@ -381,7 +405,7 @@ environments:
           argv: [node, dist/apps/api/src/main.js]
           cwd: be
           port: api
-          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM, TELEGRAM_API_ID, TELEGRAM_API_HASH]
           env:
             PORT: "${port.api}"
             PRIMARY_DB_SCHEMA: public
@@ -654,8 +678,8 @@ environments:
         runtimeName: nivo-custody-seeds-nivo-workspace-v1
         version: 1
         where: secrets/seeds-nivo-workspace
-        keys: [WORKSPACE_SMTP_HOST, WORKSPACE_SMTP_PORT, WORKSPACE_SMTP_USER, WORKSPACE_SMTP_PASSWORD, WORKSPACE_SMTP_FROM, WORKSPACE_OWNER_EMAIL, WORKSPACE_TELEGRAM_BOT_TOKEN, WORKSPACE_ZALO_OA_APP_ID, WORKSPACE_ZALO_OA_APP_SECRET, WORKSPACE_ZALO_OA_SECRET_KEY]
-        recipientPolicy: SOPS/age, one member (seeds-nivo-workspace.enc.yaml) for the seeded NIVO management workspace (its own per-workspace SMTP connection and its owner address, its Telegram bot token, and the Zalo OA app id, app secret and OA secret key the connect-channel tool seals into the workspace connection; the Zalo access and refresh tokens are not here (the OA owner authorises in the console and the rotating tokens live in the encrypted connection store)); sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time.
+        keys: [WORKSPACE_SMTP_HOST, WORKSPACE_SMTP_PORT, WORKSPACE_SMTP_USER, WORKSPACE_SMTP_PASSWORD, WORKSPACE_SMTP_FROM, WORKSPACE_OWNER_EMAIL, WORKSPACE_TELEGRAM_BOT_TOKEN, WORKSPACE_ZALO_OA_APP_ID, WORKSPACE_ZALO_OA_APP_SECRET, WORKSPACE_ZALO_OA_SECRET_KEY, WORKSPACE_SEPAY_BANK_ACCOUNT, WORKSPACE_SEPAY_BANK_CODE, WORKSPACE_SEPAY_ACCOUNT_HOLDER, WORKSPACE_PAYOS_CLIENT_ID, WORKSPACE_PAYOS_API_KEY, WORKSPACE_PAYOS_CHECKSUM_KEY]
+        recipientPolicy: SOPS/age, one member (seeds-nivo-workspace.enc.yaml) for the seeded NIVO management workspace (its own per-workspace SMTP connection and its owner address, its Telegram bot token, and the Zalo OA app id, app secret and OA secret key the connect-channel tool seals into the workspace connection; the Zalo access and refresh tokens are not here (the OA owner authorises in the console and the rotating tokens live in the encrypted connection store)), and the bank account of its SePay feed and the payOS client id, api key and checksum key (the SePay webhook API key is generated by NIVO and never seeded); sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the operator CLI receives the values at seed time, never an argument or a log.
       - name: channel-token-key
         member: nivo
