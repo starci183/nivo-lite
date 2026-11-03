@@ -11,6 +11,8 @@ describe("core vocabulary", () => {
         expect(agentTagEffect.payload.safeParse({ toModuleKey: "sales", text: "hi" }).success).toBe(true)
         expect(agentTagEffect.payload.safeParse({ text: "hi" }).success).toBe(false)
         expect(agentTagEffect.payload.safeParse({ toAgentId: "a", toModuleKey: "s", text: "hi" }).success).toBe(false)
+        expect(agentTagEffect.payload.safeParse({ toAgentId: "a", text: "hi", visibility: "redirect" }).success).toBe(true)
+        expect(agentTagEffect.payload.safeParse({ toAgentId: "a", text: "hi", visibility: "page" }).success).toBe(false)
     })
 
     it("asks a payment instruction for a positive amount and reads only", () => {
