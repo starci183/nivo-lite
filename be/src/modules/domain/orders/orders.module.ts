@@ -6,6 +6,7 @@ import { OrdersService } from "./orders.service"
 import { WORK_RAISED } from "@modules/domain/decisions/work-engine.decorators"
 import { PaymentDemandService } from "./payment-demand.service"
 import { PaymentClaimGraphAdapter } from "./payment-claim-graph.adapter"
+import { PaymentClaimWithdrawGraphAdapter } from "./payment-claim-withdraw-graph.adapter"
 import { PaymentClaimWorkRaisedAdapter } from "./payment-claim-work-raised.adapter"
 import { PaymentMarkPaidGraphAdapter } from "./payment-mark-paid-graph.adapter"
 import { OrdersLabelReadService } from "./orders-label-read.service"
@@ -29,6 +30,7 @@ export class OrdersModule extends ConfigurableModuleClass {
                 OrderPaymentClaimsService,
                 PaymentDemandService,
                 PaymentClaimGraphAdapter,
+                PaymentClaimWithdrawGraphAdapter,
                 PaymentClaimWorkRaisedAdapter,
                 { provide: WORK_RAISED, useExisting: PaymentClaimWorkRaisedAdapter },
                 PaymentMarkPaidGraphAdapter,

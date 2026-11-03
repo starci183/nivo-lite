@@ -148,7 +148,7 @@ export interface OrdersWorkbenchRow extends SalesOrderRow {
 export const AWAITING_PAYMENT_STATUSES: ReadonlyArray<OrderStatus> = ["confirmed", "invoiced"]
 
 /** Where a customer's payment claim stands. */
-export type PaymentClaimStatus = "open" | "settled" | "escalated"
+export type PaymentClaimStatus = "open" | "settled" | "escalated" | "withdrawn"
 
 /** A customer's word that they paid an order, kept until the money is seen. */
 export interface PaymentClaimRow {

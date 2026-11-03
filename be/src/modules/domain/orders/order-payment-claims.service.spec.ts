@@ -143,6 +143,19 @@ describe("OrderPaymentClaimsService", () => {
         await expect(claims.escalate("ws-1", "claim-1")).resolves.toBe(false)
     })
 
+    it("withdraws only a claim that is still open", async () => {
+        const em = mockEntityManager({ update: [PaymentClaimEntity, { affected: 1, raw: [], generatedMaps: [] }] })
+        const claims = await build(em)
+
+        await claims.withdraw("ws-1", "claim-1")
+
+        expect(em.update).toHaveBeenCalledWith(
+            PaymentClaimEntity,
+            { workspaceId: "ws-1", id: "claim-1", status: "open" },
+            { status: "withdrawn" },
+        )
+    })
+
     it("escalates an open claim once", async () => {
         const em = mockEntityManager({
             update: [

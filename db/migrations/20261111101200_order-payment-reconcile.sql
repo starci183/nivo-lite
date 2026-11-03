@@ -2,7 +2,7 @@
 -- Expand only: one nullable column and one new table, nothing existing changes.
 -- transactions.order_id: the sales order a bank credit paid. One transaction pays one order and one order is paid by one transaction (the partial unique index).
 -- payment_claims: the ledger of what a customer said ("I transferred 5k, name X") before any matching credit was seen. A claim waits as `open`; an arriving credit
--- that matches settles it (`settled`); one that waited past the configured timeout is given to the owner (`escalated`). dedupe_key makes a repeated message one claim.
+-- that matches settles it (`settled`); one that waited past the configured timeout is given to the owner (`escalated`); one a failed run recorded and then undid is `withdrawn`. dedupe_key makes a repeated message one claim.
 
 ALTER TABLE public.transactions
     ADD COLUMN order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL;
@@ -22,7 +22,7 @@ CREATE TABLE public.payment_claims (
     dedupe_key text NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT payment_claims_status_check CHECK (status IN ('open', 'settled', 'escalated')),
+    CONSTRAINT payment_claims_status_check CHECK (status IN ('open', 'settled', 'escalated', 'withdrawn')),
     CONSTRAINT payment_claims_amount_check CHECK (amount_vnd IS NULL OR amount_vnd > 0)
 );
 CREATE UNIQUE INDEX payment_claims_dedupe_key ON public.payment_claims USING btree (workspace_id, dedupe_key);

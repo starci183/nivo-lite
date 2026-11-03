@@ -5,7 +5,7 @@ import { PaymentInstructionRegistry } from "@modules/domain/provider-registry"
 import { PAYMENT_MANIFEST, PaymentNativeService } from "./payment-native.service"
 
 const ARGS = { orderNo: "DH-7", amountVnd: 5000, transferContent: "DH7 thanh toan" }
-const ACCOUNT = { accountNumber: "525209999", bankCode: "VCB", holder: "NIVO", provider: "sepay" }
+const ACCOUNT = { accountNumber: "525209999", bankCode: "VCB", holder: "NIVO", provider: "sepay", connectionId: "connection-sepay" }
 
 const build = () => {
     const accounts = mock<WorkspacePaymentAccountService>()
