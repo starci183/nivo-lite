@@ -28,24 +28,53 @@ const gatewayRecordSchema = z
     .meta({ maxProperties: GATEWAY_ARGUMENT_LIMITS.properties })
 
 /** Bounded JSON arguments, without accepting arbitrary JavaScript values or an unbounded recursive tree. */
-export const gatewayArgumentsSchema = z
+export const gatewayArgumentsSchema: z.ZodPreprocess<
+    z.ZodRecord<z.ZodString, z.ZodType<GatewayArgument, unknown, z.core.$ZodTypeInternals<GatewayArgument, unknown>>>,
+    unknown
+> = z
     .preprocess((input: unknown) => (isAdmissibleArgumentTree(input) ? input : undefined), gatewayRecordSchema)
     .refine((args) => JSON.stringify(args).length <= GATEWAY_ARGUMENT_LIMITS.json)
 
 /** The longest full name accepted by the gateway's connector/tool grammar is 31 + 1 + 81 characters. */
-export const gatewayToolNameSchema = z.string().min(1).max(113)
+export const gatewayToolNameSchema: z.ZodString = z.string().min(1).max(113)
 
 /** Discovery requires a query; an empty query lists the caller's granted tools. */
-export const gatewaySearchSchema = z.strictObject({
+export const gatewaySearchSchema: z.ZodObject<
+    {
+        query: z.ZodString
+        limit: z.ZodOptional<z.ZodNumber>
+    },
+    z.core.$strict
+> = z.strictObject({
     query: z.string().max(200),
     limit: z.number().int().min(1).max(10).optional(),
 })
 
 /** Describing a tool requires its full name. */
-export const gatewayDescribeSchema = z.strictObject({ name: gatewayToolNameSchema })
+export const gatewayDescribeSchema: z.ZodObject<
+    {
+        name: z.ZodString
+    },
+    z.core.$strict
+> = z.strictObject({ name: gatewayToolNameSchema })
 
 /** Calling a connector requires its name; omitted arguments mean an empty object. */
-export const gatewayCallSchema = z.strictObject({
+export const gatewayCallSchema: z.ZodObject<
+    {
+        name: z.ZodString
+        arguments: z.ZodOptional<
+            z.ZodPreprocess<
+                z.ZodRecord<
+                    z.ZodString,
+                    z.ZodType<GatewayArgument, unknown, z.core.$ZodTypeInternals<GatewayArgument, unknown>>
+                >,
+                unknown
+            >
+        >
+        opKey: z.ZodOptional<z.ZodString>
+    },
+    z.core.$strict
+> = z.strictObject({
     name: gatewayToolNameSchema,
     arguments: gatewayArgumentsSchema.optional(),
     opKey: z.string().max(200).optional(),
@@ -55,6 +84,38 @@ export const gatewayCallSchema = z.strictObject({
 export type GatewayCall = z.infer<typeof gatewayCallSchema>
 
 /** The schemas advertised by tools/list are generated from the validators used by tools/call. */
-export const GATEWAY_SEARCH_INPUT_SCHEMA = z.toJSONSchema(gatewaySearchSchema, { reused: "ref" })
-export const GATEWAY_DESCRIBE_INPUT_SCHEMA = z.toJSONSchema(gatewayDescribeSchema, { reused: "ref" })
-export const GATEWAY_CALL_INPUT_SCHEMA = z.toJSONSchema(gatewayCallSchema, { reused: "ref" })
+export const GATEWAY_SEARCH_INPUT_SCHEMA: z.core.ZodStandardJSONSchemaPayload<
+    z.ZodObject<
+        {
+            query: z.ZodString
+            limit: z.ZodOptional<z.ZodNumber>
+        },
+        z.core.$strict
+    >
+> = z.toJSONSchema(gatewaySearchSchema, { reused: "ref" })
+export const GATEWAY_DESCRIBE_INPUT_SCHEMA: z.core.ZodStandardJSONSchemaPayload<
+    z.ZodObject<
+        {
+            name: z.ZodString
+        },
+        z.core.$strict
+    >
+> = z.toJSONSchema(gatewayDescribeSchema, { reused: "ref" })
+export const GATEWAY_CALL_INPUT_SCHEMA: z.core.ZodStandardJSONSchemaPayload<
+    z.ZodObject<
+        {
+            name: z.ZodString
+            arguments: z.ZodOptional<
+                z.ZodPreprocess<
+                    z.ZodRecord<
+                        z.ZodString,
+                        z.ZodType<GatewayArgument, unknown, z.core.$ZodTypeInternals<GatewayArgument, unknown>>
+                    >,
+                    unknown
+                >
+            >
+            opKey: z.ZodOptional<z.ZodString>
+        },
+        z.core.$strict
+    >
+> = z.toJSONSchema(gatewayCallSchema, { reused: "ref" })

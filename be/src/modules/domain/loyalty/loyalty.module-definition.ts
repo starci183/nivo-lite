@@ -1,7 +1,19 @@
-import { ConfigurableModuleBuilder } from "@nestjs/common"
+import { ConfigurableModuleBuilder, ConfigurableModuleCls } from "@nestjs/common"
 import type { LoyaltyOptions } from "./loyalty.options"
 
 /** The configurable-module base of the loyalty capability; `isGlobal` is decided by the importer. */
-export const { ConfigurableModuleClass, OPTIONS_TYPE } = new ConfigurableModuleBuilder<LoyaltyOptions>()
+const definition = new ConfigurableModuleBuilder<LoyaltyOptions>()
     .setExtras({ isGlobal: false }, (definition, extras) => ({ ...definition, global: extras.isGlobal }))
     .build()
+export const ConfigurableModuleClass: ConfigurableModuleCls<
+    LoyaltyOptions,
+    "register",
+    "create",
+    {
+        isGlobal: boolean
+    }
+> = definition.ConfigurableModuleClass
+export const OPTIONS_TYPE: LoyaltyOptions &
+    Partial<{
+        isGlobal: boolean
+    }> = definition.OPTIONS_TYPE

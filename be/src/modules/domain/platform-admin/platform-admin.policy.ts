@@ -12,7 +12,7 @@ import type { QuotaOverrideFacts, QuotaFacts } from "./platform-admin-facts.cont
 const DAY_MS = 86_400_000
 
 /** A live connection with no event for this long counts as silent. */
-export const SILENT_AFTER_MS = 3 * DAY_MS
+export const SILENT_AFTER_MS: number = 3 * DAY_MS
 
 /** How healthy one connection looks. */
 export type ConnectionHealth = "ok" | "error" | "silent"

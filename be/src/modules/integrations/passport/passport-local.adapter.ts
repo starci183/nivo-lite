@@ -4,9 +4,14 @@ import { Strategy } from "passport-local"
 import type { AuthSubject, PassportAuthenticator } from "./passport.contracts"
 import { InjectPassportAuthenticator } from "./passport.decorators"
 
+const PassportLocalStrategyBase: ReturnType<typeof PassportStrategy<typeof Strategy>> = PassportStrategy(
+    Strategy,
+    "local",
+)
+
 @Injectable()
 /** The email and password strategy; the domain decides whether the pair is right. */
-export class PassportLocalStrategy extends PassportStrategy(Strategy, "local") {
+export class PassportLocalStrategy extends PassportLocalStrategyBase {
     constructor(@InjectPassportAuthenticator() private readonly authenticator: PassportAuthenticator) {
         super({ usernameField: "email", passwordField: "password", session: false })
     }

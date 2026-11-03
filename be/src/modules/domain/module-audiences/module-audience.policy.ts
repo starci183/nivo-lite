@@ -1,7 +1,19 @@
 import type { ModuleAudience, OptionalModuleAudience } from "./module-audiences.contracts"
 
 /** The audience of every catalogued module by key; the catalogue and the knowledge search both read it, so neither needs the other. */
-export const MODULE_AUDIENCES = {
+export const MODULE_AUDIENCES: {
+    readonly chatbot: "customer"
+    readonly lead_gen: "customer"
+    readonly sales: "internal"
+    readonly accounting: "internal"
+    readonly shifts: "internal"
+    readonly booking: "customer"
+    readonly inventory: "internal"
+    readonly loyalty: "customer"
+    readonly video: "internal"
+    readonly content: "internal"
+    readonly hiring: "internal"
+} = {
     chatbot: "customer",
     lead_gen: "customer",
     sales: "internal",

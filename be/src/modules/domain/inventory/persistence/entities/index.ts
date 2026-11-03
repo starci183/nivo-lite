@@ -25,7 +25,18 @@ export type { InventoryItemUnit } from "./inventory-item.entity"
 export type { SupplierChannel } from "./inventory-supplier.entity"
 
 /** The entities the inventory capability owns, collected by the database module. */
-export const inventoryEntities = [
+export const inventoryEntities: readonly [
+    typeof InventoryLocationEntity,
+    typeof InventorySupplierEntity,
+    typeof InventoryItemEntity,
+    typeof InventoryStockLevelEntity,
+    typeof InventoryMovementEntity,
+    typeof InventoryRecipeEntity,
+    typeof InventoryRecipeLineEntity,
+    typeof InventoryPurchaseOrderEntity,
+    typeof InventoryPoLineEntity,
+    typeof InventoryReceiptEntity,
+] = [
     InventoryLocationEntity,
     InventorySupplierEntity,
     InventoryItemEntity,

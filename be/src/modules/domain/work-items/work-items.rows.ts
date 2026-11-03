@@ -7,7 +7,7 @@ export const FREE_TO_TAKE_UNALIASED =
     "(leased_at IS NULL OR leased_at < CAST(:now AS timestamptz) - make_interval(secs => CAST(:lease AS int)))"
 
 /** The columns of the accounting book's lineage read. */
-export const ACCOUNTING_COLUMNS = [
+export const ACCOUNTING_COLUMNS: string[] = [
     "w.id AS id",
     "w.action AS action",
     "w.status AS status",

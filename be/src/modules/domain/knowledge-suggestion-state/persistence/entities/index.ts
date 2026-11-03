@@ -3,4 +3,6 @@ import { KnowledgeSuggestionStateEntity } from "./knowledge-suggestion-state.ent
 export { KnowledgeSuggestionStateEntity }
 
 /** The entities the knowledge-suggestion-state capability owns, collected by the database module. */
-export const knowledgeSuggestionStateEntities = [KnowledgeSuggestionStateEntity] as const
+export const knowledgeSuggestionStateEntities: readonly [typeof KnowledgeSuggestionStateEntity] = [
+    KnowledgeSuggestionStateEntity,
+] as const

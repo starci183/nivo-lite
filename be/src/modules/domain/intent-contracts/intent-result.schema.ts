@@ -39,7 +39,44 @@ const subjectSchema = z.strictObject({
 })
 
 /** The result of a tag turn: one request for the one intent that was picked, in the members of the internal contract of today. */
-export const agentRequestSchema = z.strictObject({
+export const agentRequestSchema: z.ZodObject<
+    {
+        action: z.ZodString
+        subject: z.ZodOptional<
+            z.ZodObject<
+                {
+                    type: z.ZodString
+                    id: z.ZodString
+                },
+                z.core.$strict
+            >
+        >
+        leadId: z.ZodDefault<z.ZodNullable<z.ZodString>>
+        fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodNull]>>>
+        summary: z.ZodDefault<z.ZodString>
+        reply: z.ZodDefault<z.ZodString>
+        tasks: z.ZodDefault<
+            z.ZodArray<
+                z.ZodObject<
+                    {
+                        op: z.ZodEnum<{
+                            add: "add"
+                            done: "done"
+                            wait: "wait"
+                        }>
+                        key: z.ZodString
+                        title: z.ZodOptional<z.ZodString>
+                        nextActionAt: z.ZodOptional<z.ZodISODateTime>
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+        needsHuman: z.ZodDefault<z.ZodBoolean>
+        reason: z.ZodDefault<z.ZodString>
+    },
+    z.core.$strict
+> = z.strictObject({
     action: z.string().trim().min(1).max(ACTION_MAX),
     subject: subjectSchema.optional(),
     leadId: z.string().trim().max(ID_MAX).nullable().default(null),
@@ -55,10 +92,27 @@ export const agentRequestSchema = z.strictObject({
 })
 
 /** The first answer of an intent that runs in a turn of its own: nothing but the intent. */
-export const ownTurnPickSchema = z.strictObject({})
+export const ownTurnPickSchema: z.ZodObject<{}, z.core.$strict> = z.strictObject({})
 
 /** What the answer of the model must be around the result: the intent, the result, whose shape the intent picks, and the gap. */
-export const intentEnvelopeSchema = z.strictObject({
+export const intentEnvelopeSchema: z.ZodObject<
+    {
+        intent: z.ZodString
+        result: z.ZodOptional<z.ZodNullable<z.ZodObject<{}, z.core.$loose>>>
+        gap: z.ZodOptional<
+            z.ZodNullable<
+                z.ZodObject<
+                    {
+                        question: z.ZodString
+                        topic: z.ZodDefault<z.ZodString>
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+    },
+    z.core.$strict
+> = z.strictObject({
     intent: z.string().trim().min(1).max(KEY_MAX),
     result: z.looseObject({}).nullish(),
     gap: gapSchema.nullish(),

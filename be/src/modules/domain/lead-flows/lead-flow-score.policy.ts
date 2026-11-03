@@ -64,7 +64,7 @@ const questionsIn = (line: string): Array<string> => {
  * The qualification questions the owner wrote (one fact, one or many lines): at most four, in order. Accepts a numbered or bulleted list,
  * one per line, or one paragraph of questions ending in "?".
  */
-export const parseQuestions = (raw: string, max = MAX_QUESTIONS): Array<string> => {
+export const parseQuestions = (raw: string, max: number = MAX_QUESTIONS): Array<string> => {
     let parts = raw
         .split(/\r?\n+/)
         .map(cleanQuestion)

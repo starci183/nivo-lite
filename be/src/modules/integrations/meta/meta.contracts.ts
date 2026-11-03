@@ -25,13 +25,13 @@ export const META_STATE_PURPOSE = "meta"
 export const HOUR_MS = 3_600_000
 
 /** Standard messaging: a Page may answer within 24 hours of the person's last message. */
-export const STANDARD_WINDOW_MS = 24 * HOUR_MS
+export const STANDARD_WINDOW_MS: number = 24 * HOUR_MS
 
 /** The HUMAN_AGENT tag extends that to 7 days, for a real person's reply only. */
-export const HUMAN_AGENT_WINDOW_MS = 7 * 24 * HOUR_MS
+export const HUMAN_AGENT_WINDOW_MS: number = 7 * 24 * HOUR_MS
 
 /** A private reply to a comment must be sent within 7 days of the comment, once per comment. */
-export const PRIVATE_REPLY_WINDOW_MS = 7 * 24 * HOUR_MS
+export const PRIVATE_REPLY_WINDOW_MS: number = 7 * 24 * HOUR_MS
 
 /** Messenger text messages are limited to 2000 characters. */
 export const MESSENGER_MAX_CHARS = 2000

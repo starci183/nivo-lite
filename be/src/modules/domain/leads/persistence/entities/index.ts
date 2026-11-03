@@ -4,4 +4,4 @@ export { LeadEntity }
 export type { LeadStage } from "./lead.entity"
 
 /** The entities the leads capability owns, collected by the database module. */
-export const leadsEntities = [LeadEntity] as const
+export const leadsEntities: readonly [typeof LeadEntity] = [LeadEntity] as const

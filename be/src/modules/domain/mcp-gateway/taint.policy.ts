@@ -1,7 +1,7 @@
 import type { GatewayCaller } from "./mcp-gateway.contracts"
 
 /** How long a turn stays tainted after a tool answered with text a stranger may have written, milliseconds. */
-export const TAINT_WINDOW_MS = 15 * 60_000
+export const TAINT_WINDOW_MS: number = 15 * 60_000
 
 /**
  * The turn a call belongs to: the agent turn when the caller names one, else the customer conversation, else the work item, else the

@@ -35,22 +35,22 @@ export const BREAKER_SECONDS = 900
 export const MAX_TRIGGERS = 8
 
 /** The earliest an agent may ask to be woken again for a task, in milliseconds from now. */
-export const TASK_WAKE_MIN_MS = 5 * 60_000
+export const TASK_WAKE_MIN_MS: number = 5 * 60_000
 
 /** The latest an agent may ask to be woken again for a task, in milliseconds from now. */
-export const TASK_WAKE_MAX_MS = 7 * 24 * 60 * 60_000
+export const TASK_WAKE_MAX_MS: number = 7 * 24 * 60 * 60_000
 
 /** How old a held customer or tag wake may be and still run when work is switched back on, in milliseconds. */
-export const RESTORE_WINDOW_MS = 24 * 60 * 60_000
+export const RESTORE_WINDOW_MS: number = 24 * 60 * 60_000
 
 /** How long a wake that was skipped is kept, in milliseconds. */
-export const SKIPPED_WAKE_RETENTION_MS = 2 * 24 * 60 * 60_000
+export const SKIPPED_WAKE_RETENTION_MS: number = 2 * 24 * 60 * 60_000
 
 /** How long any other ended wake is kept, in milliseconds. */
-export const WAKE_RETENTION_MS = 30 * 24 * 60 * 60_000
+export const WAKE_RETENTION_MS: number = 30 * 24 * 60 * 60_000
 
 /** How long the lease row of an idle customer conversation is kept, in milliseconds. */
-export const IDLE_LEASE_RETENTION_MS = 2 * 24 * 60 * 60_000
+export const IDLE_LEASE_RETENTION_MS: number = 2 * 24 * 60 * 60_000
 
 /** The default time zone of a schedule. */
 export const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh"

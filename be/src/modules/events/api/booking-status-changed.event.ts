@@ -35,7 +35,7 @@ export class BookingStatusChangedEvent extends BaseEvent {
     static readonly eventName = "booking_status_changed"
     static readonly version = 1
 
-    readonly eventName = BookingStatusChangedEvent.eventName
+    readonly eventName: "booking_status_changed" = BookingStatusChangedEvent.eventName
 
     private constructor(
         readonly eventId: string,

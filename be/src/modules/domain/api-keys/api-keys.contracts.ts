@@ -1,5 +1,13 @@
 /** The scopes a key can carry, one per operation family of the public API. */
-export const API_KEY_SCOPES = [
+export const API_KEY_SCOPES: readonly [
+    "leads:read",
+    "leads:write",
+    "messages:write",
+    "knowledge:write",
+    "events:read",
+    "loyalty:read",
+    "loyalty:write",
+] = [
     "leads:read",
     "leads:write",
     "messages:write",

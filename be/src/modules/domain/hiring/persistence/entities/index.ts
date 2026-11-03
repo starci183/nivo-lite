@@ -27,7 +27,18 @@ export type { HiringJobQuestion, HiringJobRequirements } from "./hiring-job.enti
 export type { HiringOfferTerms } from "./hiring-offer.entity"
 
 /** The entities the hiring capability owns, collected by the database module. */
-export const hiringEntities = [
+export const hiringEntities: readonly [
+    typeof HiringAvailabilityEntity,
+    typeof HiringCandidateEntity,
+    typeof HiringConsentEntity,
+    typeof HiringEventEntity,
+    typeof HiringInterviewEntity,
+    typeof HiringJobEntity,
+    typeof HiringOfferEntity,
+    typeof HiringOnboardingEntity,
+    typeof HiringRetentionLogEntity,
+    typeof HiringSettingEntity,
+] = [
     HiringAvailabilityEntity,
     HiringCandidateEntity,
     HiringConsentEntity,

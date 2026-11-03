@@ -5,7 +5,7 @@ import type { AgentInput, AuthorityInput, ChatMessage, ChatTurn, CommandProposal
 export type OptionalAuthorityInput = AuthorityInput | null
 
 /** The preamble every NIVO prompt starts with. */
-export const NIVO =
+export const NIVO: string =
     "You work inside NIVO OS, a responsibility operating system for founder-led service SMEs in Vietnam. " +
     "Every piece of work has one accountable owner, one explicit next action, and evidence of its outcome. " +
     "Act within the authority the owner granted; ask when data is missing, the action is over the limit, or the outcome is unclear. " +

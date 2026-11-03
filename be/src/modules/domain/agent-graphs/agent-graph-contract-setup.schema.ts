@@ -23,7 +23,43 @@ const contractSchema = z.object({
 })
 
 /** What the model answers when NIVO asks it, at setup, for the task and the business limits of each intent: the facts it cites are checked by code. */
-export const setupContractsSchema = z.object({ contracts: z.array(contractSchema).max(INTENTS_MAX) })
+export const setupContractsSchema: z.ZodObject<
+    {
+        contracts: z.ZodArray<
+            z.ZodObject<
+                {
+                    intent: z.ZodString
+                    task: z.ZodDefault<z.ZodString>
+                    task_fact_ids: z.ZodDefault<z.ZodArray<z.ZodString>>
+                    limits: z.ZodDefault<
+                        z.ZodArray<
+                            z.ZodObject<
+                                {
+                                    text: z.ZodString
+                                    triggers: z.ZodDefault<z.ZodArray<z.ZodString>>
+                                    trusts: z.ZodDefault<
+                                        z.ZodArray<
+                                            z.ZodEnum<{
+                                                outsider: "outsider"
+                                                member: "member"
+                                                manager: "manager"
+                                                system: "system"
+                                            }>
+                                        >
+                                    >
+                                    fact_ids: z.ZodDefault<z.ZodArray<z.ZodString>>
+                                },
+                                z.core.$strip
+                            >
+                        >
+                    >
+                },
+                z.core.$strip
+            >
+        >
+    },
+    z.core.$strip
+> = z.object({ contracts: z.array(contractSchema).max(INTENTS_MAX) })
 
 /** The contracts the model proposed, as the schema parsed them. */
 export type SetupProposal = z.infer<typeof setupContractsSchema>

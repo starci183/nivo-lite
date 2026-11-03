@@ -78,7 +78,122 @@ const applicationSchema = z.strictObject({
 const replyText = z.string().trim().max(REPLY_SCHEMA_MAX)
 
 /** The result of a customer turn. Its members are the members of the reply contract of today, so the reader of the findings works on it. */
-export const customerReplySchema = z.strictObject({
+export const customerReplySchema: z.ZodObject<
+    {
+        reply: z.ZodString
+        lead: z.ZodDefault<
+            z.ZodNullable<
+                z.ZodObject<
+                    {
+                        contact_name: z.ZodString
+                        company: z.ZodDefault<z.ZodString>
+                        need: z.ZodString
+                        phone: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                        email: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+        needs_human: z.ZodDefault<z.ZodBoolean>
+        reason: z.ZodDefault<
+            z.ZodNullable<
+                z.ZodEnum<{
+                    over_authority: "over_authority"
+                    unclear_outcome: "unclear_outcome"
+                }>
+            >
+        >
+        proposed_answer: z.ZodDefault<z.ZodNullable<z.ZodString>>
+        order: z.ZodDefault<
+            z.ZodNullable<
+                z.ZodObject<
+                    {
+                        items: z.ZodString
+                        amount_vnd: z.ZodNumber
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+        payment_claim: z.ZodDefault<z.ZodBoolean>
+        knowledge_gap: z.ZodDefault<
+            z.ZodNullable<
+                z.ZodObject<
+                    {
+                        question: z.ZodString
+                        topic: z.ZodDefault<z.ZodString>
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+        booking_request: z.ZodDefault<
+            z.ZodNullable<
+                z.ZodObject<
+                    {
+                        intent: z.ZodEnum<{
+                            book: "book"
+                            reschedule: "reschedule"
+                            cancel: "cancel"
+                            availability: "availability"
+                            waitlist: "waitlist"
+                        }>
+                        service: z.ZodDefault<z.ZodString>
+                        date: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                        time: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                        from: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                        to: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                        party_size: z.ZodDefault<z.ZodNumber>
+                        contact_name: z.ZodDefault<z.ZodString>
+                        phone: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                        email: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                        note: z.ZodDefault<z.ZodNullable<z.ZodString>>
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+        loyalty: z.ZodDefault<
+            z.ZodNullable<
+                z.ZodObject<
+                    {
+                        intent: z.ZodLiteral<"redeem">
+                        reward_key: z.ZodString
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+        application: z.ZodDefault<
+            z.ZodNullable<
+                z.ZodObject<
+                    {
+                        job: z.ZodString
+                        name: z.ZodString
+                        phone: z.ZodDefault<z.ZodString>
+                        email: z.ZodDefault<z.ZodString>
+                        consent: z.ZodBoolean
+                        availability: z.ZodDefault<z.ZodString>
+                        answers: z.ZodDefault<
+                            z.ZodArray<
+                                z.ZodObject<
+                                    {
+                                        question_id: z.ZodString
+                                        answer: z.ZodString
+                                    },
+                                    z.core.$strict
+                                >
+                            >
+                        >
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+    },
+    z.core.$strict
+> = z.strictObject({
     reply: replyText,
     lead: leadSchema.nullable().default(null),
     needs_human: z.boolean().default(false),

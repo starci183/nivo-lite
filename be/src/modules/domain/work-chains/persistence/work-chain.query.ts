@@ -1,5 +1,5 @@
 /** The columns a step read selects, as the contract carries them. */
-export const STEP_COLUMNS = [
+export const STEP_COLUMNS: string[] = [
     "s.id AS id",
     "s.seq AS seq",
     "s.actor_kind AS actor_kind",

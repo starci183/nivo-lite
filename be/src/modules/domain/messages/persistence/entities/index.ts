@@ -4,4 +4,4 @@ export { MessageEntity }
 export type { MessageAuthorKind } from "./message.entity"
 
 /** The entities the messages capability owns, collected by the database module. */
-export const messagesEntities = [MessageEntity] as const
+export const messagesEntities: readonly [typeof MessageEntity] = [MessageEntity] as const

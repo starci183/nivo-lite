@@ -33,7 +33,7 @@ export class ApprovalResolvedEvent extends BaseEvent {
     static readonly eventName = "approval_resolved"
     static readonly version = 1
 
-    readonly eventName = ApprovalResolvedEvent.eventName
+    readonly eventName: "approval_resolved" = ApprovalResolvedEvent.eventName
 
     private constructor(
         readonly eventId: string,

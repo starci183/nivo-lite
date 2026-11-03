@@ -25,9 +25,14 @@ export const googleProfileOf = (profile: Profile): GoogleProfile => {
     }
 }
 
+const PassportGoogleStrategyBase: ReturnType<typeof PassportStrategy<typeof Strategy>> = PassportStrategy(
+    Strategy,
+    "google",
+)
+
 @Injectable()
 /** The Google OAuth 2.0 strategy: authorization code with `state` and PKCE (S256), the round trip held in a signed cookie. */
-export class PassportGoogleStrategy extends PassportStrategy(Strategy, "google") {
+export class PassportGoogleStrategy extends PassportGoogleStrategyBase {
     private readonly authenticator: PassportAuthenticator
 
     constructor(

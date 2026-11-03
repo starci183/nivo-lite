@@ -25,7 +25,20 @@ export { ShiftsAttendanceEntity } from "./shifts-attendance.entity"
 export { ShiftsNotificationEntity } from "./shifts-notification.entity"
 
 /** Every entity of the shifts capability. */
-export const shiftsEntities = [
+export const shiftsEntities: readonly [
+    typeof ShiftsPositionEntity,
+    typeof ShiftsStaffEntity,
+    typeof ShiftsStaffPayEntity,
+    typeof ShiftsCoverageEntity,
+    typeof ShiftsSettingsEntity,
+    typeof ShiftsAvailabilityEntity,
+    typeof ShiftsLeaveRequestEntity,
+    typeof ShiftsSwapRequestEntity,
+    typeof ShiftsScheduleEntity,
+    typeof ShiftsShiftEntity,
+    typeof ShiftsAttendanceEntity,
+    typeof ShiftsNotificationEntity,
+] = [
     ShiftsPositionEntity,
     ShiftsStaffEntity,
     ShiftsStaffPayEntity,

@@ -31,7 +31,19 @@ export const moved = (
     requestId: string | null = null,
     memberId: string | null = null,
     missing: Array<string> = [],
-) =>
+): readonly [
+    typeof ThreadWorkEntity,
+    {
+        readonly workspaceId: "ws-1"
+        readonly id: "work-1"
+    },
+    {
+        readonly waitingMemberId: string | null
+        readonly missingFields: string[]
+        readonly approvalRequestId?: string
+        readonly state: string
+    },
+] =>
     [
         ThreadWorkEntity,
         { workspaceId: "ws-1", id: "work-1" },

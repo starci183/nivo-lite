@@ -6,4 +6,7 @@ export type { LoyaltyCampaignStatus } from "./loyalty-campaign.entity"
 export type { LoyaltySendStatus } from "./loyalty-send.entity"
 
 /** The entities the loyalty-campaigns capability owns, collected by the database module. */
-export const loyaltyCampaignsEntities = [LoyaltyCampaignEntity, LoyaltySendEntity] as const
+export const loyaltyCampaignsEntities: readonly [typeof LoyaltyCampaignEntity, typeof LoyaltySendEntity] = [
+    LoyaltyCampaignEntity,
+    LoyaltySendEntity,
+] as const

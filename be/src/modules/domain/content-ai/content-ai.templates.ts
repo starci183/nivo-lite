@@ -45,7 +45,11 @@ export const CONTENT_AI_GUARDRAILS = [
 ] as const
 
 /** Vietnamese claim expressions retained from the content pre-approval policy. */
-export const CONTENT_AI_CLAIMS = {
+export const CONTENT_AI_CLAIMS: {
+    readonly promise: readonly [string, string, string, string, string]
+    readonly figure: string
+    readonly offer: string
+} = {
     promise: [
         String.raw`cam k\u1ebft`,
         String.raw`\u0111\u1ea3m b\u1ea3o (?:k\u1ebft qu\u1ea3|hi\u1ec7u qu\u1ea3|kh\u1ecfi)`,

@@ -15,7 +15,7 @@ export const BACKOFF_MS = 5000
 export const KEEP_COMPLETED_SECONDS = 3600
 
 /** Failed broker copies are bounded independently of the durable failure history. */
-export const KEEP_FAILED_SECONDS = 7 * 24 * 3600
+export const KEEP_FAILED_SECONDS: number = 7 * 24 * 3600
 
 /** Every producer command and the final shutdown settlement have a finite deadline. */
 export const REDIS_DEADLINE_MS = 5000

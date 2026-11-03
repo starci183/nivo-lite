@@ -24,7 +24,7 @@ export class KnowledgeSourceIndexedEvent extends BaseEvent {
     static readonly eventName = "knowledge_source_indexed"
     static readonly version = 1
 
-    readonly eventName = KnowledgeSourceIndexedEvent.eventName
+    readonly eventName: "knowledge_source_indexed" = KnowledgeSourceIndexedEvent.eventName
 
     private constructor(
         readonly eventId: string,

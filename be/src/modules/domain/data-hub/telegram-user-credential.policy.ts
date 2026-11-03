@@ -3,7 +3,7 @@ import { readJson } from "./telegram-user-json.policy"
 import type { TelegramCredential, TelegramLoginState } from "./telegram-user-wizard.contracts"
 
 /** How long a login waits for its code and password. */
-export const LOGIN_TTL_MS = 10 * 60_000
+export const LOGIN_TTL_MS: number = 10 * 60_000
 
 const loginOf = (value: unknown): TelegramLoginState | undefined => {
     if (!isRecord(value)) return undefined

@@ -31,7 +31,7 @@ const nextOf = (input: OutputInput, ran: boolean): ReadonlyArray<StepSpec> => {
  */
 export class OutputStepHandlerService implements AgentStepHandler, OnModuleInit {
     /** The kind it runs. */
-    readonly kind = OUTPUT_STEP_KIND
+    readonly kind: "output" = OUTPUT_STEP_KIND
 
     constructor(
         private readonly handlers: AgentRunHandlersService,

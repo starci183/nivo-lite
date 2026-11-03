@@ -11,7 +11,7 @@ export const DRIVE_READ_SCOPE = "https://www.googleapis.com/auth/drive.readonly 
 export const DRIVE_PURPOSE = "drive_read"
 
 /** How long a signed OAuth state stays valid, in milliseconds. */
-export const STATE_TTL_MS = 10 * 60 * 1000
+export const STATE_TTL_MS: number = 10 * 60 * 1000
 
 /** The decoded, signature-checked OAuth state. */
 export interface OAuthState {

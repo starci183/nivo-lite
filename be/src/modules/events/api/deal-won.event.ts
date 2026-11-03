@@ -55,7 +55,7 @@ export class DealWonEvent extends BaseEvent {
     static readonly eventName = "deal_won"
     static readonly version = 1
 
-    readonly eventName = DealWonEvent.eventName
+    readonly eventName: "deal_won" = DealWonEvent.eventName
 
     private constructor(
         readonly eventId: string,

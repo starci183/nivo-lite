@@ -23,7 +23,7 @@ export class BankCreditBookedEvent extends BaseEvent {
     static readonly eventName = "bank_credit_booked"
     static readonly version = 1
 
-    readonly eventName = BankCreditBookedEvent.eventName
+    readonly eventName: "bank_credit_booked" = BankCreditBookedEvent.eventName
 
     private constructor(
         readonly eventId: string,

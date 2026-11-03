@@ -50,7 +50,7 @@ export class PaymentReconciledEvent extends BaseEvent {
     static readonly eventName = "payment_reconciled"
     static readonly version = 1
 
-    readonly eventName = PaymentReconciledEvent.eventName
+    readonly eventName: "payment_reconciled" = PaymentReconciledEvent.eventName
 
     private constructor(
         readonly eventId: string,

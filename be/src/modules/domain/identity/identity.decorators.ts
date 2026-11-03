@@ -29,11 +29,13 @@ export const Public = (metadata: PublicMetadata): DoorDecorator =>
         : applyDecorators(SetMetadata(PUBLIC_KEY, metadata))
 
 /** The authenticated caller established by the default-deny guard. */
-export const CurrentPrincipal = createParamDecorator((_data: unknown, context: ExecutionContext): Principal => {
-    const principal = requestOf(context).principal
-    if (!principal) throw new IdentityError({ code: IdentityErrorCode.Unauthenticated })
-    return principal
-})
+export const CurrentPrincipal: (...dataOrPipes: unknown[]) => ParameterDecorator = createParamDecorator(
+    (_data: unknown, context: ExecutionContext): Principal => {
+        const principal = requestOf(context).principal
+        if (!principal) throw new IdentityError({ code: IdentityErrorCode.Unauthenticated })
+        return principal
+    },
+)
 
 /** Metadata for a door authenticated by its own credential rather than a user session. */
 export const CREDENTIAL_KEY: unique symbol = Symbol("domain.identity.credential")
@@ -53,7 +55,7 @@ export const Credential = (metadata: CredentialMetadata): DoorDecorator =>
     applyDecorators(SetMetadata(CREDENTIAL_KEY, metadata), ServerToServer())
 
 /** The stored link record established by the credential guard. */
-export const CurrentCredentialPrincipal = createParamDecorator(
+export const CurrentCredentialPrincipal: (...dataOrPipes: unknown[]) => ParameterDecorator = createParamDecorator(
     (_data: unknown, context: ExecutionContext): CredentialPrincipal => {
         const principal = requestOf(context).credentialPrincipal
         if (!principal) throw new IdentityError({ code: IdentityErrorCode.Unauthenticated })

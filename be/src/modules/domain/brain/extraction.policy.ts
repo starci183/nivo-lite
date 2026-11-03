@@ -21,7 +21,7 @@ export const MAX_FACTS_PER_WINDOW = 40
 export const windowsOf = (content: string): Array<string> => chunkText(content, WINDOW_CHARS, 0).slice(0, MAX_WINDOWS)
 
 /** The standing instructions of the fact reading. */
-export const SYSTEM_PROMPT = [
+export const SYSTEM_PROMPT: string = [
     "You read ONE excerpt of a business document and list the FACTS it states about the business.",
     'Reply with ONLY a JSON object, no markdown, no comments: {"facts":[{"subjectType":"business|product|service|policy|customer|person|supplier|place|other","subjectLabel":string,"attributeLabel":string,"value":string,"unit":string (optional),"validFrom":"YYYY-MM-DD" (optional),"scope":"public|internal","quote":string}]}. Nothing stated: {"facts":[]}.',
     "RULES",

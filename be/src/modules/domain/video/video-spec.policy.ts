@@ -67,7 +67,7 @@ export const MEDIA_BUCKET = "media"
 export const VIDEOS_BUCKET = "videos"
 
 /** The biggest asset one render reads, in bytes. */
-export const MEDIA_MAX_BYTES = 50 * 1024 * 1024
+export const MEDIA_MAX_BYTES: number = 50 * 1024 * 1024
 
 /** What a scene shows behind its words. */
 export type SceneBackground =

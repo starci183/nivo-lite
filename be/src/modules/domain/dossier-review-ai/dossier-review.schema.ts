@@ -24,7 +24,68 @@ const stillOpenAnswer = z.object({
 })
 
 /** The JSON a dossier review answers: new findings and the verdict on each open AI finding. */
-export const DOSSIER_REVIEW_SCHEMA = z.object({
+export const DOSSIER_REVIEW_SCHEMA: z.ZodObject<
+    {
+        findings: z.ZodArray<
+            z.ZodObject<
+                {
+                    kind: z.ZodEnum<{
+                        contradiction: "contradiction"
+                        missing: "missing"
+                        expired: "expired"
+                        unsigned: "unsigned"
+                        outdated: "outdated"
+                        unreasonable: "unreasonable"
+                    }>
+                    severity: z.ZodEnum<{
+                        high: "high"
+                        medium: "medium"
+                        low: "low"
+                    }>
+                    title: z.ZodString
+                    detail: z.ZodString
+                    evidence: z.ZodArray<
+                        z.ZodObject<
+                            {
+                                key: z.ZodString
+                                quote: z.ZodString
+                            },
+                            z.core.$strip
+                        >
+                    >
+                    relatedRefs: z.ZodArray<z.ZodString>
+                    remedyAction: z.ZodEnum<{
+                        upload: "upload"
+                        draft: "draft"
+                        decide: "decide"
+                        external: "external"
+                    }>
+                    documentType: z.ZodNullable<z.ZodString>
+                },
+                z.core.$strip
+            >
+        >
+        stillOpen: z.ZodArray<
+            z.ZodObject<
+                {
+                    key: z.ZodString
+                    applies: z.ZodBoolean
+                    evidence: z.ZodArray<
+                        z.ZodObject<
+                            {
+                                key: z.ZodString
+                                quote: z.ZodString
+                            },
+                            z.core.$strip
+                        >
+                    >
+                },
+                z.core.$strip
+            >
+        >
+    },
+    z.core.$strip
+> = z.object({
     findings: z.array(reasonedFinding).max(8),
     stillOpen: z.array(stillOpenAnswer).max(20),
 })

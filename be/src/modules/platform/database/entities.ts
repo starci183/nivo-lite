@@ -133,6 +133,7 @@ import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
 import { zaloInboxEntities } from "@modules/domain/zalo-inbox"
 import { zaloWizardDraftsEntities } from "@modules/domain/zalo-wizard-drafts"
+import type { DatabaseOptions } from "./database.options"
 import { databaseEntities } from "./persistence/entities"
 import { inboxEntities } from "@modules/platform/inbox"
 import { jobsEntities } from "@modules/platform/jobs"
@@ -143,7 +144,7 @@ import { realtimeEntities } from "@modules/platform/realtime"
  * worlds import it by this deep path; DatabaseModule and the database barrel never do. Each capability contributes its
  * `<c>Entities` array through its barrel. No globs.
  */
-export const PRIMARY_ENTITIES = [
+export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...accountingAdjustmentsEntities,
     ...appErrorsEntities,
     ...agentAccessLogEntities,

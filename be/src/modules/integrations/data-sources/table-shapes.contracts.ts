@@ -1,5 +1,5 @@
 /** The largest file or download one import reads: ten megabytes. */
-export const TABLE_MAX_BYTES = 10 * 1024 * 1024
+export const TABLE_MAX_BYTES: number = 10 * 1024 * 1024
 
 /** The most data rows one table import takes. */
 export const TABLE_MAX_ROWS = 20_000

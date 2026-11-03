@@ -2,7 +2,7 @@ import { Secret } from "@modules/platform/config"
 import type { EnvSource } from "@modules/platform/config"
 import { libraryReadersOf } from "./library-readers.client"
 import type { DocumentsGoogleClient, DocumentsOptions } from "./documents.options"
-import type { DocumentLibrarySdks } from "./documents.contracts"
+import type { DocumentFileReaders, DocumentLibrarySdks } from "./documents.contracts"
 
 /** The SDKs load on first use, so a process that never reads a document never loads them. */
 const librarySdks: DocumentLibrarySdks = {
@@ -11,7 +11,7 @@ const librarySdks: DocumentLibrarySdks = {
 }
 
 /** The readers every documents consumer shares. */
-export const libraryReaders = libraryReadersOf(librarySdks)
+export const libraryReaders: DocumentFileReaders = libraryReadersOf(librarySdks)
 
 const DEFAULT_DRIVE_BASE = "https://www.googleapis.com/drive/v3"
 

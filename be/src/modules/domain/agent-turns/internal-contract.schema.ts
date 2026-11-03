@@ -49,7 +49,20 @@ const taskSchema = z.strictObject({
 })
 
 /** The ids of an action, read on their own: an action that fails here is refused alone, and the rest of the proposal stands. */
-export const actionIdsSchema = z.looseObject({
+export const actionIdsSchema: z.ZodObject<
+    {
+        subject: z.ZodOptional<
+            z.ZodObject<
+                {
+                    id: z.ZodUUID
+                },
+                z.core.$loose
+            >
+        >
+        leadId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>
+    },
+    z.core.$loose
+> = z.looseObject({
     subject: z.looseObject({ id: recordIdSchema }).optional(),
     leadId: recordIdSchema.nullish(),
 })
@@ -66,7 +79,75 @@ const actionSchema = z.strictObject({
 })
 
 /** What a tag or background turn may answer; a list over its bound is cut before this reads it. */
-export const internalProposalSchema = z.strictObject({
+export const internalProposalSchema: z.ZodObject<
+    {
+        reply: z.ZodDefault<z.ZodString>
+        tasks: z.ZodDefault<
+            z.ZodArray<
+                z.ZodObject<
+                    {
+                        op: z.ZodEnum<{
+                            add: "add"
+                            done: "done"
+                            wait: "wait"
+                        }>
+                        key: z.ZodString
+                        title: z.ZodOptional<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>
+                        nextActionAt: z.ZodOptional<z.ZodISODateTime>
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+        actions: z.ZodDefault<
+            z.ZodArray<
+                z.ZodObject<
+                    {
+                        action: z.ZodString
+                        subject: z.ZodOptional<
+                            z.ZodObject<
+                                {
+                                    type: z.ZodEnum<{
+                                        inbound: "inbound"
+                                        lead: "lead"
+                                        order: "order"
+                                        invoice: "invoice"
+                                        transaction: "transaction"
+                                        conversation: "conversation"
+                                        purchase_order: "purchase_order"
+                                        stock: "stock"
+                                        video_project: "video_project"
+                                    }>
+                                    id: z.ZodUUID
+                                },
+                                z.core.$strict
+                            >
+                        >
+                        leadId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>
+                        fields: z.ZodDefault<
+                            z.ZodRecord<
+                                z.ZodString,
+                                z.ZodUnion<
+                                    readonly [
+                                        z.ZodString,
+                                        z.ZodNumber,
+                                        z.ZodNull,
+                                        z.ZodPipe<z.ZodBoolean, z.ZodTransform<"true" | "false", boolean>>,
+                                    ]
+                                >
+                            >
+                        >
+                        summary: z.ZodDefault<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>
+                    },
+                    z.core.$strict
+                >
+            >
+        >
+        needsHuman: z.ZodDefault<z.ZodBoolean>
+        reason: z.ZodDefault<z.ZodString>
+    },
+    z.core.$strict
+> = z.strictObject({
     reply: z.string().max(REPLY_MAX).default(""),
     tasks: z.array(taskSchema).max(TASKS_MAX).default([]),
     actions: z.array(actionSchema).max(ACTIONS_MAX).default([]),

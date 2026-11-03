@@ -34,7 +34,7 @@ export class OrderConfirmedEvent extends BaseEvent {
     static readonly eventName = "order_confirmed"
     static readonly version = 1
 
-    readonly eventName = OrderConfirmedEvent.eventName
+    readonly eventName: "order_confirmed" = OrderConfirmedEvent.eventName
 
     private constructor(
         readonly eventId: string,

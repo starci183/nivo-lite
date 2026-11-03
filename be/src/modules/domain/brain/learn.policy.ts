@@ -5,7 +5,7 @@ import { fieldsOf } from "./extraction.policy"
 export const MIN_CORRECTIONS = 3
 
 /** The standing instructions of the lesson mining. */
-export const LEARN_SYSTEM = [
+export const LEARN_SYSTEM: string = [
     "You study how a business owner corrects an AI assistant's work, to find lessons the assistant should follow next time.",
     "Only report a pattern that appears in at least TWO corrections. Ignore one-off changes and anything about a single customer.",
     "A lesson is a short instruction the assistant can follow, specific and testable, written in the language the owner uses in the corrections.",

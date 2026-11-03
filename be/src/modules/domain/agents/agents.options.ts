@@ -68,4 +68,4 @@ export type AgentsRunOptions = AgentsFullOptions | AgentsSetupOptions
 export type AgentsOptions = AgentsRunOptions | AgentsDirectoryOptions
 
 /** The default freshness of a sync check: 15 minutes (the scheduled sync touches it every five). */
-export const AGENTS_SYNC_FRESH_MS = 15 * 60_000
+export const AGENTS_SYNC_FRESH_MS: number = 15 * 60_000

@@ -75,7 +75,7 @@ const countsOf = (sources: ReadonlyArray<OriginSource>): SourceCounts => ({
  * `brain.search`. These tools say whether the grant holds and where the files fed in stand; the account leaves masked.
  */
 export class DriveNativeService implements NativeAdapter {
-    readonly manifest = DRIVE_MANIFEST
+    readonly manifest: NativeConnectorManifest = DRIVE_MANIFEST
 
     constructor(
         private readonly views: NativeViewService,

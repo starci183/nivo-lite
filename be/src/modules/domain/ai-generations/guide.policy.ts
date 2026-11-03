@@ -46,7 +46,7 @@ export const GUIDE_TURN_MAX = 300
 /** The guide questions one member may send to the model per window. */
 export const GUIDE_ASKS_PER_WINDOW = 20
 /** The window of the per-member limit, ms. */
-export const GUIDE_WINDOW_MS = 10 * 60_000
+export const GUIDE_WINDOW_MS: number = 10 * 60_000
 /** How long the guide waits for the model, ms. */
 export const GUIDE_TIMEOUT_MS = 25_000
 

@@ -11,7 +11,13 @@ export { AgentGraphSourceEntity } from "./agent-graph-source.entity"
 export { AgentGraphVersionEntity } from "./agent-graph-version.entity"
 
 /** Every entity of the agent-graphs capability. */
-export const agentGraphsEntities = [
+export const agentGraphsEntities: readonly [
+    typeof AgentGraphEntity,
+    typeof AgentGraphVersionEntity,
+    typeof AgentGraphSourceEntity,
+    typeof AgentGraphProposalEntity,
+    typeof AgentGraphDecisionEntity,
+] = [
     AgentGraphEntity,
     AgentGraphVersionEntity,
     AgentGraphSourceEntity,
