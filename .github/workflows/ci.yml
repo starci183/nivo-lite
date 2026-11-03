@@ -388,6 +388,7 @@ jobs:
         if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
         run: |
           if [ -z "$SONAR_TOKEN" ]; then echo "::error::SONAR_TOKEN is not set: Sonar is required, so a missing token fails this job (secret SONAR_TOKEN)"; exit 1; fi
+          if [ -z "$SONAR_HOST_URL" ]; then echo "::error::SONAR_HOST_URL is not set: the declared analysis endpoint is required"; exit 1; fi
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
         with:
