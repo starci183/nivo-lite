@@ -1,6 +1,15 @@
 import { isIP } from "node:net"
 import { resolve, sep } from "node:path"
 
+/** How many redirects a download follows; every hop is checked like the first address. */
+export const INBOUND_FILE_MAX_REDIRECTS = 3
+
+/** The request headers of a download: what a browser fetching a picture sends, which the CDNs of the channels expect. */
+export const INBOUND_FILE_HEADERS: Readonly<Record<string, string>> = {
+    accept: "image/*,application/pdf;q=0.9,*/*;q=0.5",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+}
+
 /** How long a download of a file a channel brought in may take. */
 export const INBOUND_FILE_TIMEOUT_MS = 15_000
 
@@ -30,4 +39,21 @@ export const importPathOf = (root: string, localPath: string): string | null => 
     const base = resolve(root)
     const target = resolve(base, localPath)
     return target.startsWith(base + sep) ? target : null
+}
+
+const REDIRECT_STATUSES: ReadonlySet<number> = new Set([301, 302, 303, 307, 308])
+
+/** True for the statuses that send the client to another address. */
+export const isRedirectStatus = (status: number): boolean => REDIRECT_STATUSES.has(status)
+
+/** Where a redirect leads, as an absolute address (the `location` may be relative to the address that answered); null when it names none. */
+export const redirectTargetOf = (location: string | undefined, from: string): string | null => {
+    if (location === undefined || location === "" || !URL.canParse(location, from)) return null
+    return new URL(location, from).toString()
+}
+
+/** The name a stored file gets when the sender gave none: the id of the message (kept to safe characters) and, when it is not the first file, its place. */
+export const inboundFileNameOf = (given: string, ref: string, index: number, extension: string): string => {
+    const stem = ref.replace(/[^A-Za-z0-9_-]/gu, "_").slice(0, 80)
+    return given !== "" ? given : `${stem === "" ? "file" : stem}${index > 0 ? `-${index + 1}` : ""}.${extension}`
 }

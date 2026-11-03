@@ -1,5 +1,13 @@
 import { resolve, sep } from "node:path"
-import { importPathOf, isAcceptedDeclaredType, isFetchableFileUrl } from "./inbound-file.policy"
+import {
+    INBOUND_FILE_HEADERS,
+    importPathOf,
+    inboundFileNameOf,
+    isAcceptedDeclaredType,
+    isFetchableFileUrl,
+    isRedirectStatus,
+    redirectTargetOf,
+} from "./inbound-file.policy"
 
 describe("isFetchableFileUrl", () => {
     it("accepts an https address of a named host", () => {
@@ -50,5 +58,48 @@ describe("importPathOf", () => {
 
     it("does not take a sibling folder whose name starts like the import folder", () => {
         expect(importPathOf(root, `..${sep}.starciwork-other${sep}a.jpg`)).toBeNull()
+    })
+})
+
+describe("isRedirectStatus", () => {
+    it("is true for the statuses that send the client elsewhere and false for the rest", () => {
+        expect([301, 302, 303, 307, 308].every(isRedirectStatus)).toBe(true)
+        expect([200, 304, 404, 500].some(isRedirectStatus)).toBe(false)
+    })
+})
+
+describe("redirectTargetOf", () => {
+    it("resolves an absolute and a relative location against the address that answered", () => {
+        expect(redirectTargetOf("https://cdn.example.test/b.jpg", "https://photo.example.test/a")).toBe("https://cdn.example.test/b.jpg")
+        expect(redirectTargetOf("/b.jpg", "https://photo.example.test/a")).toBe("https://photo.example.test/b.jpg")
+    })
+
+    it("is null when the answer names no usable location", () => {
+        expect(redirectTargetOf(undefined, "https://photo.example.test/a")).toBeNull()
+        expect(redirectTargetOf("", "https://photo.example.test/a")).toBeNull()
+        expect(redirectTargetOf("http://[bad", "https://photo.example.test/a")).toBeNull()
+    })
+})
+
+describe("inboundFileNameOf", () => {
+    it("keeps the name the sender gave", () => {
+        expect(inboundFileNameOf("bill.pdf", "m-1", 0, "pdf")).toBe("bill.pdf")
+    })
+
+    it("names a file with no name after the message and its real type", () => {
+        expect(inboundFileNameOf("", "ab12-CD_3", 0, "webp")).toBe("ab12-CD_3.webp")
+    })
+
+    it("tells the files of one message apart and keeps the id to safe characters", () => {
+        expect(inboundFileNameOf("", "a/b c", 1, "jpg")).toBe("a_b_c-2.jpg")
+        expect(inboundFileNameOf("", "", 0, "png")).toBe("file.png")
+        expect(inboundFileNameOf("", "x".repeat(200), 0, "png")).toBe(`${"x".repeat(80)}.png`)
+    })
+})
+
+describe("INBOUND_FILE_HEADERS", () => {
+    it("asks for a picture the way a browser does", () => {
+        expect(INBOUND_FILE_HEADERS.accept).toContain("image/*")
+        expect(INBOUND_FILE_HEADERS["user-agent"]).toContain("Mozilla/5.0")
     })
 })

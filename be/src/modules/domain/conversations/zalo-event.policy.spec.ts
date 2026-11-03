@@ -185,3 +185,49 @@ describe("zalo attachment events", () => {
     })
 })
 
+describe("readZaloEvent a live picture event", () => {
+    /** The shape of a real `user_send_image`, redacted: no caption, no name, addresses without a query or an extension. */
+    const live = Buffer.from(
+        JSON.stringify({
+            event_name: "user_send_image",
+            app_id: "app-1",
+            sender: { id: "user-1" },
+            recipient: { id: "oa-1" },
+            message: {
+                msg_id: "m-live",
+                attachments: [
+                    {
+                        type: "image",
+                        payload: { url: "https://photo-stal-34.zdn.vn/jpg/aaaa/bbbb", thumbnail: "https://photo-stal-34.zdn.vn/jpg/aaaa/thumb" },
+                    },
+                ],
+            },
+            timestamp: "1762217400123",
+            user_id_by_app: "uid-1",
+        }),
+    )
+
+    it("reads the full address and the preview, with no caption and no name, and the time of the event", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.readZaloEvent(live)).toEqual({
+            kind: "ok",
+            value: {
+                appId: "app-1",
+                userId: "user-1",
+                messageId: "m-live",
+                text: "",
+                sentAt: 1_762_217_400_123,
+                attachments: [
+                    {
+                        kind: "image",
+                        url: "https://photo-stal-34.zdn.vn/jpg/aaaa/bbbb",
+                        thumbnailUrl: "https://photo-stal-34.zdn.vn/jpg/aaaa/thumb",
+                        name: "",
+                        localPath: "",
+                    },
+                ],
+            },
+        })
+    })
+})

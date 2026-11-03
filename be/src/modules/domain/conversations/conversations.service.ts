@@ -162,10 +162,14 @@ export class ConversationsService {
      * cannot be read, is too large or is not an accepted type is left out (and logged): the message still reaches its turn. `imported` is true only for a
      * row of a manual import, the one source whose attachments may name a local file.
      */
-    async readFiles(attachments: ReadonlyArray<InboundAttachment>, imported: boolean): Promise<ReadonlyArray<DownloadedChatFile>> {
+    async readFiles(
+        attachments: ReadonlyArray<InboundAttachment>,
+        imported: boolean,
+        ref: string,
+    ): Promise<ReadonlyArray<DownloadedChatFile>> {
         const read: Array<DownloadedChatFile> = []
-        await eachInOrder(attachments, async (attachment) => {
-            const file = await this.inboundFiles.download(attachment, imported)
+        await eachInOrder(attachments, async (attachment, index) => {
+            const file = await this.inboundFiles.download(attachment, imported, ref, index)
             if (file !== null) read.push(file)
         })
         return read

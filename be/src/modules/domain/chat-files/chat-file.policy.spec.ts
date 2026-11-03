@@ -1,11 +1,13 @@
 import { Test } from "@nestjs/testing"
 import {
     CHAT_FILE_MAX_BYTES,
+    chatFileExtensionOf,
     chatFileNameOf,
     chatFilePathOf,
     isAcceptedChatFile,
     isChatFilePath,
     sniffChatFile,
+    sniffUnsupportedImage,
 } from "./chat-file.policy"
 
 const POLICY = Symbol("chat-file.policy")
@@ -16,7 +18,15 @@ const build = async () => {
         providers: [
             {
                 provide: POLICY,
-                useValue: { chatFileNameOf, chatFilePathOf, isAcceptedChatFile, isChatFilePath, sniffChatFile },
+                useValue: {
+                    chatFileExtensionOf,
+                    chatFileNameOf,
+                    chatFilePathOf,
+                    isAcceptedChatFile,
+                    isChatFilePath,
+                    sniffChatFile,
+                    sniffUnsupportedImage,
+                },
             },
         ],
     }).compile()
@@ -108,5 +118,38 @@ describe("chatFileNameOf", () => {
 
     it("retains the empty object name when both supplied names are empty", async () => {
         expect((await build()).chatFileNameOf("", "")).toBe("")
+    })
+})
+
+describe("chatFileExtensionOf", () => {
+    it("names the extension of an accepted type and nothing for any other", async () => {
+        const policy = await build()
+
+        expect(["image/jpeg", "image/png", "image/webp", "application/pdf"].map(policy.chatFileExtensionOf)).toEqual(["jpg", "png", "webp", "pdf"])
+        expect(policy.chatFileExtensionOf("image/gif")).toBe("")
+    })
+})
+
+describe("sniffUnsupportedImage", () => {
+    const ftyp = (brand: string): Uint8Array => Uint8Array.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, ...Buffer.from(brand), 0, 0])
+
+    it.each(["heic", "heix", "mif1", "avif", "avis"])("knows an ISO media picture of brand %s", async (brand) => {
+        expect((await build()).sniffUnsupportedImage(ftyp(brand))).toBe("image/heif")
+    })
+
+    it("knows a GIF of either version", async () => {
+        const policy = await build()
+
+        expect(policy.sniffUnsupportedImage(Buffer.from("GIF89a....."))).toBe("image/gif")
+        expect(policy.sniffUnsupportedImage(Buffer.from("GIF87a....."))).toBe("image/gif")
+    })
+
+    it("knows nothing about an ISO media file of another brand, a page or an accepted picture", async () => {
+        const policy = await build()
+
+        expect(policy.sniffUnsupportedImage(ftyp("mp42"))).toBeNull()
+        expect(policy.sniffUnsupportedImage(Buffer.from("<html></html>"))).toBeNull()
+        expect(policy.sniffUnsupportedImage(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]))).toBeNull()
+        expect(policy.sniffUnsupportedImage(new Uint8Array(0))).toBeNull()
     })
 })

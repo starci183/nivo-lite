@@ -60,6 +60,28 @@ export const sniffChatFile = (bytes: Uint8Array): string | null => {
     return startsWith(bytes, RIFF_SIGNATURE) && startsWith(bytes, WEBP_SIGNATURE, WEBP_OFFSET) ? "image/webp" : null
 }
 
+/** The extension an accepted type is stored under; empty for a type that is not accepted. */
+export const chatFileExtensionOf = (contentType: string): string => EXTENSION_OF[contentType] ?? ""
+
+const GIF_SIGNATURES: ReadonlyArray<ReadonlyArray<number>> = [
+    [0x47, 0x49, 0x46, 0x38, 0x37, 0x61],
+    [0x47, 0x49, 0x46, 0x38, 0x39, 0x61],
+]
+const FTYP_MARK: ReadonlyArray<number> = [0x66, 0x74, 0x79, 0x70]
+/** Where the `ftyp` mark and the brand sit in an ISO media file (HEIC, HEIF, AVIF). */
+const FTYP_OFFSET = 4
+const BRAND_OFFSET = 8
+const BRAND_LENGTH = 4
+const MODERN_IMAGE_BRANDS: ReadonlyArray<string> = ["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1", "avif", "avis"]
+
+/** A picture format the bytes prove that the store does not accept (GIF, HEIC, HEIF, AVIF), or null for anything else. */
+export const sniffUnsupportedImage = (bytes: Uint8Array): string | null => {
+    if (GIF_SIGNATURES.some((signature) => startsWith(bytes, signature))) return "image/gif"
+    if (!startsWith(bytes, FTYP_MARK, FTYP_OFFSET)) return null
+    const brand = String.fromCharCode(...bytes.slice(BRAND_OFFSET, BRAND_OFFSET + BRAND_LENGTH))
+    return MODERN_IMAGE_BRANDS.includes(brand) ? "image/heif" : null
+}
+
 /** The files of one message among those of a thread. */
 export const filesOfMessage = (files: ReadonlyArray<ChatFileView>, messageId: string): ReadonlyArray<ChatFileView> =>
     files.filter((file) => file.messageId === messageId)
