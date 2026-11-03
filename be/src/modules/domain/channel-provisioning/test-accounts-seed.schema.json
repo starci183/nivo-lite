@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NIVO test accounts seed",
+  "type": "object",
+  "required": ["schema", "workspaces", "values"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "nivo/test-accounts-seed@1"
+    },
+    "workspaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "seats"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "seats": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["role", "name", "emailKey", "passwordKey"],
+              "additionalProperties": false,
+              "properties": {
+                "role": { "enum": ["owner", "manager", "staff"] },
+                "name": { "type": "string", "minLength": 1 },
+                "emailKey": { "type": "string", "minLength": 1 },
+                "passwordKey": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "values": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    }
+  }
+}

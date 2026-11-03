@@ -1,0 +1,20 @@
+{
+  "schema": "nivo/test-accounts-seed@1",
+  "workspaces": [
+    {
+      "name": "NIVO",
+      "seats": [
+        { "role": "owner", "name": "NIVO test owner", "emailKey": "NIVO_OWNER_EMAIL", "passwordKey": "NIVO_OWNER_PASSWORD" },
+        { "role": "staff", "name": "NIVO test staff", "emailKey": "NIVO_STAFF_EMAIL", "passwordKey": "NIVO_STAFF_PASSWORD" }
+      ]
+    },
+    {
+      "name": "NIVO Demo",
+      "seats": [
+        { "role": "owner", "name": "Demo owner", "emailKey": "DEMO_OWNER_EMAIL", "passwordKey": "DEMO_OWNER_PASSWORD" },
+        { "role": "staff", "name": "Demo staff", "emailKey": "DEMO_STAFF_EMAIL", "passwordKey": "DEMO_STAFF_PASSWORD" }
+      ]
+    }
+  ],
+  "values": { "secret": "seeds-test-accounts" }
+}
