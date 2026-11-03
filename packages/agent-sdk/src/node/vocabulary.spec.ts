@@ -85,12 +85,13 @@ describe("NodeVocabulary", () => {
             id: "sales.total",
             role: "execute",
             title: { key: "t" },
+            params: z.object({}),
             input: z.object({}),
             output: z.object({}),
             rights: [],
             effects: [],
             run: () => Promise.resolve({}),
-            examples: [{ name: "one", input: {}, output: {}, effects: [] }],
+            examples: [{ name: "one", params: {}, input: {}, output: {}, effects: [] }],
         })
 
         vocabulary.registerNode(node)

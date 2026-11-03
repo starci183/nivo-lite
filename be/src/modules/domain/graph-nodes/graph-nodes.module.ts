@@ -1,0 +1,31 @@
+import { Module } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
+import { GraphNodeEffectsService } from "./graph-node-effects.service"
+import { GraphNodeHostService } from "./graph-node-host.service"
+import { GraphNodeRegistryService } from "./graph-node-registry.service"
+import { GRAPH_NODES_OPTIONS } from "./graph-nodes.decorators"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./graph-nodes.module-definition"
+
+@Module({})
+/**
+ * The host of the graph nodes: the install the app assembled, the registry where modules add the data port of each kind and the
+ * executor of each effect, the ledger that makes an effect act once, and the host that runs a node through the SDK's runner. It names
+ * no domain; the NIVO MCP capability binds the tool door.
+ */
+export class GraphNodesModule extends ConfigurableModuleClass {
+    /** Registers the capability once per app. */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
+        const base = super.register(options)
+        return {
+            ...base,
+            providers: [
+                ...(base.providers ?? []),
+                { provide: GRAPH_NODES_OPTIONS, useValue: { install: options.install } },
+                GraphNodeRegistryService,
+                GraphNodeEffectsService,
+                GraphNodeHostService,
+            ],
+            exports: [GraphNodeRegistryService, GraphNodeHostService],
+        }
+    }
+}
