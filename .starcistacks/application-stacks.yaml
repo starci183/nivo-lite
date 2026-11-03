@@ -303,6 +303,72 @@ environments:
         where: "secrets/sepay"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the platform billing feed (parseBillingConfig), development test values sealed by the owner, never generated"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-sepay-bank-account"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_SEPAY_BANK_ACCOUNT"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-sepay-bank-code"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_SEPAY_BANK_CODE"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-sepay-account-holder"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_SEPAY_ACCOUNT_HOLDER"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-sepay-api-key"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_SEPAY_API_KEY"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-payos-client-id"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_PAYOS_CLIENT_ID"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-payos-api-key"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_PAYOS_API_KEY"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-payos-checksum-key"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_PAYOS_CHECKSUM_KEY"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-telegram-bot-token"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_TELEGRAM_BOT_TOKEN"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-zalo-oa-app-id"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_ZALO_OA_APP_ID"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-zalo-oa-app-secret"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_ZALO_OA_APP_SECRET"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "seeds-workspace-zalo-oa-secret-key"
+        member: "seeds-nivo-workspace"
+        key: "WORKSPACE_ZALO_OA_SECRET_KEY"
+        where: "secrets/seeds-nivo-workspace"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the dev seed of the NIVO management workspace (mirrors production's member for the providers reached through the dev tunnel), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
     # `starci app stack up --env dev --execute` reads this block (PROJECT-STACKS-6). One command brings up the db (own role per environment),
     # Redis, MinIO and the OpenClaw gateway in containers, migrates, and runs the api, the mcp gateway, the console and the landing natively.
     local:
@@ -375,7 +441,7 @@ environments:
             PRIMARY_DB_SCHEMA: public
             SITE_URL: "http://localhost:${port.web}"
             AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
-            PUBLIC_API_URL: "http://localhost:${port.api}"
+            PUBLIC_API_URL: "https://nivo-local.starci.org"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
             MAIL_PORT: "587"
@@ -394,7 +460,7 @@ environments:
             PRIMARY_DB_SCHEMA: public
             SITE_URL: "http://localhost:${port.web}"
             AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
-            PUBLIC_API_URL: "http://localhost:${port.api}"
+            PUBLIC_API_URL: "https://nivo-local.starci.org"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
             MAIL_PORT: "587"
@@ -414,7 +480,7 @@ environments:
             SITE_URL: "http://localhost:${port.web}"
             AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
             AUTH_GOOGLE_CALLBACK_URL: "http://localhost:${port.api}/auth/google/callback"
-            PUBLIC_API_URL: "http://localhost:${port.api}"
+            PUBLIC_API_URL: "https://nivo-local.starci.org"
             HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing}"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
@@ -683,7 +749,7 @@ environments:
         version: 1
         where: secrets/seeds-nivo-workspace
         keys: [WORKSPACE_SMTP_HOST, WORKSPACE_SMTP_PORT, WORKSPACE_SMTP_USER, WORKSPACE_SMTP_PASSWORD, WORKSPACE_SMTP_FROM, WORKSPACE_OWNER_EMAIL, WORKSPACE_TELEGRAM_BOT_TOKEN, WORKSPACE_ZALO_OA_APP_ID, WORKSPACE_ZALO_OA_APP_SECRET, WORKSPACE_ZALO_OA_SECRET_KEY, WORKSPACE_SEPAY_BANK_ACCOUNT, WORKSPACE_SEPAY_BANK_CODE, WORKSPACE_SEPAY_ACCOUNT_HOLDER, WORKSPACE_PAYOS_CLIENT_ID, WORKSPACE_PAYOS_API_KEY, WORKSPACE_PAYOS_CHECKSUM_KEY, WORKSPACE_SEPAY_API_KEY]
-        recipientPolicy: SOPS/age, one member (seeds-nivo-workspace.enc.yaml) for the seeded NIVO management workspace (its own per-workspace SMTP connection and its owner address, its Telegram bot token, and the Zalo OA app id, app secret and OA secret key the connect-channel tool seals into the workspace connection; the Zalo access and refresh tokens are not here (the OA owner authorises in the console and the rotating tokens live in the encrypted connection store)), and the bank account of its SePay feed, its fixed SePay webhook API key (nivo_ and 64 hex, which the seed stores as NIVO stores a generated one) and the payOS client id, api key and checksum key (a Zalo OA secret key that starts with PENDING- is not stored); sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time.
+        recipientPolicy: SOPS/age, one member (seeds-nivo-workspace.enc.yaml) for the seeded NIVO management workspace (its own per-workspace SMTP connection and its owner address, its Telegram bot token, and the Zalo OA app id, app secret and OA secret key the connect-channel tool seals into the workspace connection; the Zalo access and refresh tokens are not here (the OA owner authorises in the console and the rotating tokens live in the encrypted connection store)), and the bank account of its SePay feed and the payOS client id, api key and checksum key (the SePay webhook API key is generated by NIVO and never seeded); sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the operator CLI receives the values at seed time, never an argument or a log.
       - name: channel-token-key
         member: nivo
