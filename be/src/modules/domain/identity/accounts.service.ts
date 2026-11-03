@@ -31,9 +31,6 @@ import { IdentityInviteService } from "./identity-invite.service"
 import { accountDoors } from "./persistence/account-doors.port"
 import { authDoors } from "./persistence/auth-doors.port"
 
-/** The longest full name a sign-up keeps. */
-const MAX_NAME_CHARACTERS = 120
-
 /** The metadata key of the picture a person uploaded; the Google sign-in never rewrites it. */
 const UPLOADED_AVATAR_KEY = "nivo_avatar_url"
 
@@ -91,20 +88,6 @@ export class IdentityAccountsService {
     async setUploadedAvatar(userId: string, avatarUrl: string | null): Promise<Outcome<true, IdentityErrorCode>> {
         const changed = await authDoors.setAvatar(this.entityManager, userId, avatarUrl)
         return changed ? ok(true) : refused(IdentityErrorCode.AccountNotFound)
-    }
-
-    /**
-     * Keeps the full name typed at sign-up on the account, once: only an account whose mailbox is still unconfirmed and that has no
-     * name takes it. The answer never says whether an account was changed. A failure of the door is logged, not thrown.
-     */
-    async setSignupName(email: string, name: string): Promise<void> {
-        const trimmed = name.trim().slice(0, MAX_NAME_CHARACTERS)
-        if (trimmed === "") return
-        try {
-            await authDoors.setSignupName(this.entityManager, normalizeEmail(email), trimmed)
-        } catch (cause) {
-            this.failureOf(cause)
-        }
     }
 
     /** One page of accounts for the operator commands. A failure of the door is answered, not thrown. */

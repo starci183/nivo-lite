@@ -147,7 +147,7 @@ export { useMutateToggleHiringOnboardingSwr, useMutateTransferInventoryStockSwr 
 export { useMutateTransitionContentItemSwr, useMutateUpdateAuthoritySwr } from "./api"
 export { useMutateUpdateAutomationPipelineSwr, useMutateUpdateInventoryPoDraftSwr } from "./api"
 export { useMutateUpdateLoyaltyMemberSwr } from "./api"
-export { useMutateSetSignupNameSwr, useMutateUpdateMoneyConnectionSwr, useMutateUpdateProfileSwr, useMutateUpdateVideoProjectSwr } from "./api"
+export { useMutateUpdateMoneyConnectionSwr, useMutateUpdateProfileSwr, useMutateUpdateVideoProjectSwr } from "./api"
 export { useMutateVerifyLoyaltyCodeSwr, useMutateWantConnectorSwr, useQueryAccountingWorkbenchSwr } from "./api"
 export { useQueryAdminHealthSwr, useQueryAdminSessionSwr, useQueryAdminWorkspaceSwr } from "./api"
 export { useQueryAdminWorkspacesSwr, useQueryAgentChatConversationsSwr, useQueryAgentChatMessagesSwr } from "./api"

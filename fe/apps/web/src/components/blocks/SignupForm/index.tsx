@@ -11,7 +11,6 @@ import {
     authActionsOf,
 } from "@/hooks/auth"
 import { useSignupForm } from "@/hooks/rhf"
-import { useMutateSetSignupNameSwr } from "@/hooks/swr"
 import { loginPath } from "@/modules/routes"
 import { SignupFormBase } from "./component"
 
@@ -36,11 +35,10 @@ type SignupFormControllerInput = {
     readonly isPending: ReturnType<typeof useTransition>[0]
     readonly startTransition: ReturnType<typeof useTransition>[1]
     readonly resending: ReturnType<typeof useResendEmail>
-    readonly keepName: ReturnType<typeof useMutateSetSignupNameSwr>["trigger"]
 }
 
 const createSignupFormController = (input: SignupFormControllerInput) => {
-    const { props, auth, t, form, setSubmitError, setSentTo, startTransition, resending, keepName } = input
+    const { props, auth, t, form, setSubmitError, setSentTo, startTransition, resending } = input
 
     const set = (key: "name" | "email" | "password" | "confirm") => (value: string) => {
         form.setValue(key, value, { shouldValidate: form.formState.isSubmitted })
@@ -54,10 +52,6 @@ const createSignupFormController = (input: SignupFormControllerInput) => {
                 setSubmitError(t(authErrorKey(outcome.error ?? "")))
                 return
             }
-            // The sign-up door takes no name: the name goes to the account in a call of its own, best effort.
-            await keepName({ email: values.email.trim().toLowerCase(), name: values.name.trim() }).catch(
-                () => undefined,
-            )
             setSentTo(values.email.trim().toLowerCase())
             resending.arm()
         })
@@ -79,7 +73,6 @@ export const SignupForm = (props: SignupFormProps) => {
     const [submitError, setSubmitError] = useState<string>()
     const [sentTo, setSentTo] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
-    const { trigger: keepName } = useMutateSetSignupNameSwr()
     const resending = useResendEmail(() => auth.resendConfirmation({ email: sentTo, next: props.next }), {
         sentTitle: t("resentTitle"),
         sentText: t("resentText"),
@@ -100,7 +93,6 @@ export const SignupForm = (props: SignupFormProps) => {
         isPending,
         startTransition,
         resending,
-        keepName,
     })
 
     return <SignupFormBase {...createSignupFormView(context)} />

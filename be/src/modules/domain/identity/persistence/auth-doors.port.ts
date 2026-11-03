@@ -46,15 +46,6 @@ export const authDoors = {
         ])
         return row?.be_auth_set_avatar === true
     },
-    /** Writes the full name of an unconfirmed account that has none; whether an account was changed. */
-    async setSignupName(manager: EntityManager, email: string, name: string): Promise<boolean> {
-        const [row] = await callDbFunction<{ be_auth_set_signup_name: boolean }>(
-            manager,
-            "public.be_auth_set_signup_name",
-            [email, name],
-        )
-        return row?.be_auth_set_signup_name === true
-    },
     /** One bounded page of accounts (the door holds a page to 1000 people), oldest first. */
     listUsers(manager: EntityManager, page: number, perPage: number): Promise<ReadonlyArray<AuthUserListed>> {
         return callDbFunction<AuthUserListed>(manager, "public.be_auth_list_users", [page, perPage])

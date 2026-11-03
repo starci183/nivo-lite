@@ -17,7 +17,6 @@ import { IdentityInviteService } from "./identity-invite.service"
 /** The statements `callDbFunction` sends for the account doors. */
 const USER_BY_ID = 'SELECT * FROM "public"."be_auth_user_by_id"($1)'
 const CREATE_USER = 'SELECT * FROM "public"."be_auth_create_user"($1, $2, $3, $4, $5, $6)'
-const SET_SIGNUP_NAME = 'SELECT * FROM "public"."be_auth_set_signup_name"($1, $2)'
 const SET_AVATAR = 'SELECT * FROM "public"."be_auth_set_avatar"($1, $2)'
 const LIST_USERS = 'SELECT * FROM "public"."be_auth_list_users"($1, $2)'
 const DELETE_USER = 'SELECT * FROM "public"."be_auth_delete_user"($1)'
@@ -121,31 +120,6 @@ describe("IdentityAccountsService / accountOf", () => {
             kind: "refused",
             code: IdentityErrorCode.AccountNotFound,
         })
-    })
-})
-
-describe("IdentityAccountsService / setSignupName", () => {
-    it("keeps the trimmed, bounded name on the account of the normalised address", async () => {
-        const { service, em } = await build([[SET_SIGNUP_NAME, [{ be_auth_set_signup_name: true }]]])
-
-        await expect(service.setSignupName(" An@Example.test ", `  ${"n".repeat(130)} `)).resolves.toBeUndefined()
-
-        expect(em.query).toHaveBeenCalledWith(SET_SIGNUP_NAME, ["an@example.test", "n".repeat(120)])
-    })
-
-    it("does nothing for a blank name", async () => {
-        const { service, em } = await build([])
-
-        await expect(service.setSignupName("an@example.test", "   ")).resolves.toBeUndefined()
-
-        expect(em.query).not.toHaveBeenCalled()
-    })
-
-    it("swallows a failure of the door so the answer stays the same", async () => {
-        const { service, em } = await build([])
-        em.query.mockRejectedValue(new Error("db down"))
-
-        await expect(service.setSignupName("an@example.test", "An")).resolves.toBeUndefined()
     })
 })
 
