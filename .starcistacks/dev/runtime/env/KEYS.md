@@ -1,31 +1,38 @@
 # Environment keys (development)
 
-Names only. Local development has no sealed member: the operator writes the local database URL and the local keys to the untracked
-`.starcistacks/dev/api.dev.env`. The api reads the same keys as in production (see the production KEYS.md); the public build values below are the
-local ones.
+Names only. Dev values are sealed in `.starcistacks/dev/secrets/<member>.enc.yaml`, generated once by the owner-armed
+`starci app secret init --env dev --execute` (except the owner's `ai` and `auth` members) and opened by `starci app stack up --env dev --execute`
+into private files outside the repository (`<KEY>_FILE`, which the back end reads first). Non-secret values are the manifest's
+`local.processes.<name>.env`. The api reads the same keys as in production (see the production KEYS.md).
 
-| Key | Semantics |
+| Key | Member / source | Consumer |
+| --- | --- | --- |
+| `POSTGRES_PASSWORD` | `db` | the db container's superuser (compose value) |
+| `DEV_DB_OWNER_PASSWORD` | `db` | the environment's own owner role `nivo_lite_dev`, which runs the migrations |
+| `DEV_DB_APP_PASSWORD` | `db` | the `app_be` role of this environment; composed into `PRIMARY_DB_URL` (read through `PRIMARY_DB_URL_FILE`) |
+| `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | `storage` | MinIO's root user and password (compose values) and the api's S3 credentials |
+| `CHANNEL_TOKEN_KEY` | `platform` | base64 of 32 bytes: seals the connection credentials; preserve it for existing encrypted data |
+| `OTP_PEPPER` | `platform` | the pepper of the loyalty code hashes |
+| `N8N_SIGNING_SECRET` | `platform` | signs the n8n webhook calls |
+| `OPENCLAW_GATEWAY_TOKEN`, `OPENCLAW_BRIDGE_SECRET`, `OPENCLAW_TOOL_SECRET` | `openclaw` | the gateway token (api and gateway), the bridge plugin's signing secret and the per-turn tool token secret; the gateway container sees the first two through its least grant |
+| `OPENROUTER_API_KEY`, `STARCI_AI_KEY` | `ai` (the owner's) | the AI gateway's upstream key and the virtual key the api and OpenClaw use |
+| `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY` | `auth` (the owner's) | the api's access-token signing pair |
+
+| Non-secret key | Value in dev |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | The api origin, `http://api.localhost`. |
-| `NEXT_PUBLIC_DEVELOPER_API_URL` | The api origin, `http://api.localhost`. |
-| `NEXT_PUBLIC_SITE_URL` | The console `http://localhost` and the landing `http://landing.localhost`. |
-| `NEXT_PUBLIC_LANDING_URL` | The console `http://localhost` and the landing `http://landing.localhost`. |
-| `NEXT_PUBLIC_APP_URL` | The console `http://localhost` and the landing `http://landing.localhost`. |
-
-## api: local secrets and origins
-
-| Key | Semantics |
-| --- | --- |
-| `PUBLIC_API_URL` | The local api origin (`http://api.localhost`): plain http is accepted only for a loopback host; the agents' tool door is `<origin>/agent-tools`. |
-| `AUTH_WEB_ORIGIN` | The local console origin (`http://localhost`) the own auth returns browsers to. |
-| `AUTH_GOOGLE_CALLBACK_URL` | The local Google callback (`http://api.localhost/auth/google/callback`). |
-| `STORAGE_ENDPOINT` | The local S3 address of the operator's MinIO (`http://host.docker.internal:9000` from the container (`http://localhost:9000` natively)); not a secret. |
-| `STORAGE_BUCKET_PREFIX` | `nivo-dev`: the prefix of the local buckets. |
-| `OPENCLAW_TOOL_SECRET` | Read only through `OPENCLAW_TOOL_SECRET_FILE` (a file outside the repository, never plaintext env): signs the per-turn tool token; without it a turn of an agent holding connector grants answers `tools_not_configured`. |
+| `PUBLIC_API_URL`, `AUTH_GOOGLE_CALLBACK_URL` | the api origin `http://localhost:18787` |
+| `SITE_URL`, `AUTH_WEB_ORIGIN` | the console origin `http://localhost:3000` |
+| `STORAGE_ENDPOINT`, `STORAGE_BUCKET_PREFIX` | `http://127.0.0.1:59000`, `nivo-dev` |
+| `QUEUE_REDIS_HOST`, `QUEUE_REDIS_PORT`, `REALTIME_REDIS_URL` | the Redis container on `127.0.0.1:56379` |
+| `AI_BASE_URL` | the api's in-process AI gateway, `http://127.0.0.1:18788/v1` (the OpenClaw container reaches it through `host.docker.internal`) |
+| `OPENCLAW_GATEWAY_URL`, `OPENCLAW_CONFIG_DIR`, `OPENCLAW_MANAGE_AGENTS` | `ws://127.0.0.1:58790`, the agent workspace under the state base, `true` |
+| `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_DEVELOPER_API_URL` | `http://localhost:18787` |
+| `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_LANDING_URL`, `NEXT_PUBLIC_APP_URL` | the console `http://localhost:3000` and the landing `http://localhost:3002` |
 
 ## api: optional executable paths
 
-These nonsecret keys select operator-installed executables. Omission retains the platform installation defaults. Paths must be absolute and local; the executable and every parent directory must be unwritable by untrusted users. PATH is never searched.
+These nonsecret keys select operator-installed executables. Omission retains the platform installation defaults. Paths must be absolute and local;
+the executable and every parent directory must be unwritable by other users.
 
 | Key | Semantics |
 | --- | --- |

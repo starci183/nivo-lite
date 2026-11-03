@@ -1,6 +1,7 @@
 # NIVO (nivo-lite) application stack, schema starci/application-stacks@1.
 #
-# dev        docker-swarm: the api, console and landing in containers over the local db container (npm run db:create), Redis and MinIO.
+# dev        docker-compose: the db (an own role per environment), Redis, MinIO and the OpenClaw gateway in containers; the api, the mcp gateway,
+#            the console and the landing run natively against them. One command: starci app stack up --env dev --execute (runbook .starcistacks/dev/README.md).
 # production docker-swarm on ONE Ubuntu VPS (single-manager swarm: orchestration without manager failover). The database is the self-hosted
 #            db service of the stack (owner ruling 2026-10-29); production starts on an empty database. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
 #
@@ -69,6 +70,12 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: The OpenClaw agent gateway. Private network only; the api reaches it by service DNS through the loopback relay of the entrypoint wrapper.
     required: true
+  nivo-minio:
+    role: stateful
+    image: ghcr.io/starci183/minio:RELEASE.2025-10-15T17-29-55Z-starci.1
+    compose: infra/compose/compose.yaml
+    purpose: The S3-compatible object store of the dev environment (production uses the host's MinIO through STORAGE_ENDPOINT). Loopback only, on the persisted volume minio-data.
+    required: false
   nivo-n8n:
     role: stateful
     image: docker.n8n.io/n8nio/n8n:1.64.3@sha256:4d9116228d426ce24c442a744e9c11ee7c1187713f93f21dd5a34a12584708c1
@@ -146,79 +153,155 @@ jobs:
 environments:
   dev:
     status: supported
-    runtime: docker-swarm
+    runtime: docker-compose
     composeFiles:
-      - infra/swarm/stack.yaml
+      - infra/compose/compose.yaml
     components:
+      db:
+        port: 54332
+      nivo-redis:
+        port: 56379
+      nivo-minio:
+        port: 59000
+      nivo-openclaw:
+        port: 58790
       nivo-api:
-        replicas: 1
-        port: 8787
+        port: 18787
       nivo-mcp:
-        replicas: 1
-        port: 8790
+        port: 18790
       nivo-web-app:
-        replicas: 1
         port: 3000
       nivo-landing:
-        replicas: 1
-        port: 3000
-      ingress:
-        replicas: 1
-        port: 80
-      nivo-redis:
-        replicas: 1
-        port: 6379
+        port: 3002
     runbook: README.md
-    # The one local ingress publishes port 80 in ingress mode; the hosts below resolve to the loopback address by themselves (RFC 6761),
-    # so no DNS record or certificate exists. The console answers on every other host (http://localhost).
-    ingress:
-      component: ingress
-      hosts: [api.localhost, landing.localhost]
-    dns:
-      - host: api.localhost
-        owner: Development operator
-        receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
-      - host: landing.localhost
-        owner: Development operator
-        receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
-    tls:
-      owner: Development operator
-      receipt: "README.md (local development serves plain HTTP on the loopback address; no certificate is issued or persisted)"
-    release:
-      imagesLock: .starcistacks/dev/infra/swarm/release/images.lock.yaml
-      pointer: .starcistacks/dev/infra/swarm/release/current.yaml
-      previous: .starcistacks/dev/infra/swarm/release/previous.yaml
-      healthAssertions:
-        - The api answers /healthz and /readyz on http://api.localhost.
-        - The mcp gateway task is healthy (its container healthcheck probes /healthz; it has no host route).
-        - The console answers /health/live on http://localhost.
-        - The landing answers /health/live on http://landing.localhost.
-    backup:
-      - component: db
-        target: The local db container's volume is disposable development data; `starci app db migrate` rebuilds it from db/bootstrap.sql and db/migrations.
-        retention: None; the repository migrations are the source, the local volume is recreated on demand.
-        owner: Development operator
-        restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
-      - component: nivo-redis
-        target: The local Redis volume only mirrors the broker copy of queued jobs; the PostgreSQL job_outbox of the local db is the record and the relay republishes any row the broker lost, so the volume is disposable.
-        retention: None; the volume is recreated on demand and the relay refills it from the outbox.
-        owner: Development operator
-        restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
-    # Local development holds no sealed secret: the operator owns the local backing containers (db, Redis, MinIO) and supplies their
-    # development configuration through the untracked .starcistacks/dev/api.dev.env. It is not a deployed Swarm component.
-    secrets:
-      - name: auth
-        runtimeName: nivo-dev-auth-v1
-        version: 1
-        where: secrets/auth
-        recipientPolicy: SOPS/age, one member per provider (auth.enc.yaml), sealed to the owner key per .sops.yaml; keys AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY.
-        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
-      - name: ai
-        runtimeName: nivo-dev-ai-v1
-        version: 1
-        where: secrets/ai
-        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the owner key per .sops.yaml; keys STARCI_AI_KEY (dev's own virtual key) and OPENROUTER_API_KEY.
-        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
+    # Dev values are generated once, dev-only, by `starci app secret init --env dev --execute`, which declares each key here; the sealed
+    # members `ai` (the upstream OPENROUTER_API_KEY and STARCI_AI_KEY) and `auth` (the JWT pair) are the owner's and are never regenerated.
+    secrets: []
+    # `starci app stack up --env dev --execute` reads this block (PROJECT-STACKS-6). One command brings up the db (own role per environment),
+    # Redis, MinIO and the OpenClaw gateway in containers, migrates, and runs the api, the mcp gateway, the console and the landing natively.
+    local:
+      ports:
+        db: 54332
+        redis: 56379
+        minio: 59000
+        openclaw: 58790
+        api: 18787
+        gateway: 18788
+        mcp: 18790
+        web: 3000
+        landing: 3002
+      services:
+        - {name: db, wait: healthy}
+        - {name: nivo-redis, wait: healthy}
+        - {name: nivo-minio, wait: tcp, port: minio}
+        - {name: nivo-openclaw, wait: healthy}
+      dirs: [openclaw, ai-router]
+      database:
+        service: db
+        port: db
+        urlEnv: PRIMARY_DB_URL
+        appRole: app_be
+        password: {member: db, key: DEV_DB_OWNER_PASSWORD}
+        adminPassword: {member: db, key: POSTGRES_PASSWORD}
+        appPassword: {member: db, key: DEV_DB_APP_PASSWORD}
+      grants:
+        - {name: db, keys: [POSTGRES_PASSWORD]}
+        - {name: minio, keys: [STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY]}
+        - {name: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, STARCI_AI_KEY]}
+      custody:
+        - {member: db, key: POSTGRES_PASSWORD, kind: password}
+        - {member: db, key: DEV_DB_OWNER_PASSWORD, kind: password}
+        - {member: db, key: DEV_DB_APP_PASSWORD, kind: password}
+        - {member: storage, key: STORAGE_ACCESS_KEY, kind: hex, bytes: 12}
+        - {member: storage, key: STORAGE_SECRET_KEY, kind: hex, bytes: 24}
+        - {member: platform, key: CHANNEL_TOKEN_KEY, kind: base64, bytes: 32}
+        - {member: platform, key: OTP_PEPPER, kind: hex, bytes: 32}
+        - {member: platform, key: N8N_SIGNING_SECRET, kind: hex, bytes: 32}
+        - {member: openclaw, key: OPENCLAW_GATEWAY_TOKEN, kind: hex, bytes: 32}
+        - {member: openclaw, key: OPENCLAW_BRIDGE_SECRET, kind: hex, bytes: 32}
+        - {member: openclaw, key: OPENCLAW_TOOL_SECRET, kind: hex, bytes: 32}
+      setup:
+        - {name: install, argv: [npm, ci], heavy: install, skipIfExists: node_modules}
+        - {name: codegen, argv: [npm, run, codegen, --silent], heavy: build}
+      processes:
+        - name: api
+          # Transpile only: the type check is the typecheck and lint gates' job, not the dev loop's.
+          argv: [npx, ts-node-dev, --transpile-only, --respawn, -r, tsconfig-paths/register, apps/api/src/main.ts]
+          cwd: be
+          port: api
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET]
+          env:
+            PORT: "${port.api}"
+            PRIMARY_DB_SCHEMA: public
+            SITE_URL: "http://localhost:${port.web}"
+            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            AUTH_GOOGLE_CALLBACK_URL: "http://localhost:${port.api}/auth/google/callback"
+            PUBLIC_API_URL: "http://localhost:${port.api}"
+            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing}"
+            STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
+            STORAGE_BUCKET_PREFIX: nivo-dev
+            QUEUE_ENABLED: "true"
+            QUEUE_REDIS_HOST: 127.0.0.1
+            QUEUE_REDIS_PORT: "${port.redis}"
+            QUEUE_REDIS_PREFIX: nivo
+            REALTIME_HUB: redis
+            REALTIME_REDIS_URL: "redis://127.0.0.1:${port.redis}"
+            REALTIME_REDIS_PREFIX: nivo-realtime
+            AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
+            AI_ROUTER_KEYS_PATH: "${data}/ai-router/keys.db"
+            OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:${port.openclaw}"
+            OPENCLAW_CONFIG_DIR: "${data}/openclaw"
+            OPENCLAW_MANAGE_AGENTS: "true"
+            WORKSPACE_SIGNUP_ENABLED: "true"
+          health: {url: "http://localhost:${port.api}/healthz"}
+        - name: mcp
+          argv: [npx, ts-node-dev, --transpile-only, --respawn, -r, tsconfig-paths/register, apps/mcp/src/main.ts]
+          cwd: be
+          port: mcp
+          files: [CHANNEL_TOKEN_KEY, STARCI_AI_KEY]
+          env:
+            PORT: "${port.mcp}"
+            PRIMARY_DB_SCHEMA: public
+            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web}"
+            QUEUE_ENABLED: "true"
+            QUEUE_REDIS_HOST: 127.0.0.1
+            QUEUE_REDIS_PORT: "${port.redis}"
+            QUEUE_REDIS_PREFIX: nivo
+            AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
+          health: {url: "http://localhost:${port.mcp}/healthz"}
+        - name: web
+          argv: [npm, run, dev:fe:web]
+          port: web
+          env:
+            PORT: "${port.web}"
+            NEXT_PUBLIC_API_URL: "http://localhost:${port.api}"
+            NEXT_PUBLIC_DEVELOPER_API_URL: "http://localhost:${port.api}"
+            NEXT_PUBLIC_SITE_URL: "http://localhost:${port.web}"
+            NEXT_PUBLIC_LANDING_URL: "http://localhost:${port.landing}"
+          health: {url: "http://localhost:${port.web}/health/live"}
+        - name: landing
+          argv: [npm, run, dev:fe:landing]
+          port: landing
+          env:
+            PORT: "${port.landing}"
+            NEXT_PUBLIC_SITE_URL: "http://localhost:${port.landing}"
+            NEXT_PUBLIC_APP_URL: "http://localhost:${port.web}"
+          health: {url: "http://localhost:${port.landing}/health/live"}
+      ready:
+        - {name: api-live, url: "http://localhost:${port.api}/healthz"}
+        - {name: api-ready, url: "http://localhost:${port.api}/readyz"}
+        - {name: web-live, url: "http://localhost:${port.web}/health/live"}
+        - {name: landing-live, url: "http://localhost:${port.landing}/health/live"}
+      verify:
+        - {name: api-live, url: "http://localhost:${port.api}/healthz"}
+        - {name: api-ready, url: "http://localhost:${port.api}/readyz"}
+        - {name: web-live, url: "http://localhost:${port.web}/health/live"}
+        - {name: landing-live, url: "http://localhost:${port.landing}/health/live"}
+      origins:
+        - {name: web, url: "http://localhost:${port.web}"}
+        - {name: landing, url: "http://localhost:${port.landing}"}
+        - {name: api, url: "http://localhost:${port.api}"}
+        - {name: mcp, url: "http://localhost:${port.mcp}"}
   production:
     status: supported
     runtime: docker-swarm
