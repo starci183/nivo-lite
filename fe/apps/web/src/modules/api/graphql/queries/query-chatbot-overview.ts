@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -74,7 +74,7 @@ export const queryChatbotOverview = async ({
     query = QueryChatbotOverview.Query1,
     request = {},
     signal,
-}: QueryChatbotOverviewParams = {}) => {
+}: QueryChatbotOverviewParams = {}): Promise<ApolloClient.QueryResult<QueryChatbotOverviewResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

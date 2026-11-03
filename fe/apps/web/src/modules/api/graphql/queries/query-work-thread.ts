@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -86,7 +86,11 @@ const queryMap: Record<
 type QueryWorkThreadParams = QueryParams<QueryWorkThread, QueryWorkThreadRequest> & { request: QueryWorkThreadRequest }
 
 /** The back end `workThread` query: one thread with its newest messages. Rejects with the back end failure (message localized by the server). */
-export const queryWorkThread = async ({ query = QueryWorkThread.Query1, request, signal }: QueryWorkThreadParams) => {
+export const queryWorkThread = async ({
+    query = QueryWorkThread.Query1,
+    request,
+    signal,
+}: QueryWorkThreadParams): Promise<ApolloClient.QueryResult<QueryWorkThreadResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }

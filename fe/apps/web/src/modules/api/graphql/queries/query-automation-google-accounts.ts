@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -35,7 +35,9 @@ type QueryAutomationGoogleAccountsParams = QueryParams<QueryAutomationGoogleAcco
 export const queryAutomationGoogleAccounts = async ({
     query = QueryAutomationGoogleAccounts.Query1,
     signal,
-}: QueryAutomationGoogleAccountsParams = {}) => {
+}: QueryAutomationGoogleAccountsParams = {}): Promise<
+    ApolloClient.QueryResult<QueryAutomationGoogleAccountsResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

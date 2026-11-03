@@ -1,5 +1,5 @@
 import type { LoyaltyBoardQuery } from "../__generated__/graphql"
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -184,7 +184,10 @@ const queryMap: Record<QueryLoyaltyBoard, DocumentNode> = {
 type QueryLoyaltyBoardParams = QueryParams<QueryLoyaltyBoard>
 
 /** The loyalty workbench board of the active workspace: programme, config, members, rewards, campaigns and figures. */
-export const queryLoyaltyBoard = async ({ query = QueryLoyaltyBoard.Query1, signal }: QueryLoyaltyBoardParams = {}) => {
+export const queryLoyaltyBoard = async ({
+    query = QueryLoyaltyBoard.Query1,
+    signal,
+}: QueryLoyaltyBoardParams = {}): Promise<ApolloClient.QueryResult<LoyaltyBoardQuery>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query<LoyaltyBoardQuery>({ query: queryMap[query] })
 }

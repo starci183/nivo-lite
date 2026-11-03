@@ -31,7 +31,7 @@ export const createNoAuthApolloClient = ({
     cache = true,
     headers = {},
     signal,
-}: CreateNoAuthApolloClientOptions = {}) =>
+}: CreateNoAuthApolloClientOptions = {}): ApolloClient =>
     new ApolloClient({
         link: ApolloLink.from([
             createRetryLink(),

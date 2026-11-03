@@ -10,7 +10,7 @@ const localeOfCookie = (): string | undefined => {
 }
 
 /** Attaches the reader locale (from the locale cookie) as `Accept-Language`, so every failure comes back localized by the back end. */
-export const createAttachLocaleLink = () =>
+export const createAttachLocaleLink = (): SetContextLink =>
     new SetContextLink((previous) => {
         const locale = localeOfCookie()
         return {

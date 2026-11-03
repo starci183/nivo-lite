@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -95,7 +95,11 @@ const queryMap: Record<
 type QuerySetupStateParams = QueryParams<QuerySetupState, QuerySetupStateRequest> & { request: QuerySetupStateRequest }
 
 /** The back end `setupState` query. Rejects with the back end failure (message localized by the server). */
-export const querySetupState = async ({ query = QuerySetupState.Query1, request, signal }: QuerySetupStateParams) => {
+export const querySetupState = async ({
+    query = QuerySetupState.Query1,
+    request,
+    signal,
+}: QuerySetupStateParams): Promise<ApolloClient.QueryResult<QuerySetupStateResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }

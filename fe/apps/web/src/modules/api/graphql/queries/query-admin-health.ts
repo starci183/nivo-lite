@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -68,7 +68,10 @@ type QueryAdminHealthParams = QueryParams<QueryAdminHealth>
  * Reads sign-ups, billing events, application errors and the latest console activity (the back end `adminHealth` query).
  * Rejects with the back end failure (`CombinedGraphQLErrors`, message localized by the server) instead of answering partial data.
  */
-export const queryAdminHealth = async ({ query = QueryAdminHealth.Query1, signal }: QueryAdminHealthParams = {}) => {
+export const queryAdminHealth = async ({
+    query = QueryAdminHealth.Query1,
+    signal,
+}: QueryAdminHealthParams = {}): Promise<ApolloClient.QueryResult<AdminHealthQuery>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

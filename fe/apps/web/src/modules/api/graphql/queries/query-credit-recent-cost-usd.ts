@@ -1,4 +1,4 @@
-import { gql, type TypedDocumentNode } from "@apollo/client"
+import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
 import type { CreditRecentCostUsdQuery, CreditRecentCostUsdQueryVariables } from "../__generated__/graphql"
@@ -31,7 +31,7 @@ export const queryCreditRecentCostUsd = async ({
     query = QueryCreditRecentCostUsd.Query1,
     signal,
     request,
-}: QueryCreditRecentCostUsdParams) => {
+}: QueryCreditRecentCostUsdParams): Promise<ApolloClient.QueryResult<QueryCreditRecentCostUsdResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

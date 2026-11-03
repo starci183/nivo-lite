@@ -59,5 +59,5 @@ const refreshOperation = (
  */
 export const createRefreshOnUnauthenticatedLink = ({
     refresh = renewSessionToken,
-}: CreateRefreshOnUnauthenticatedLinkParams = {}) =>
+}: CreateRefreshOnUnauthenticatedLinkParams = {}): ApolloLink =>
     new ApolloLink((operation, forward) => refreshOperation(operation, forward, refresh))

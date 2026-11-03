@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -46,7 +46,7 @@ type QueryOfficePendingApprovalsParams = QueryParams<QueryOfficePendingApprovals
 export const queryOfficePendingApprovals = async ({
     query = QueryOfficePendingApprovals.Query1,
     signal,
-}: QueryOfficePendingApprovalsParams = {}) => {
+}: QueryOfficePendingApprovalsParams = {}): Promise<ApolloClient.QueryResult<QueryOfficePendingApprovalsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

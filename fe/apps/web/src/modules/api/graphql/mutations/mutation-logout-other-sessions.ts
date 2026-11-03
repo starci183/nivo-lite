@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
@@ -32,7 +32,7 @@ type MutateLogoutOtherSessionsParams = Omit<MutateParams<MutationLogoutOtherSess
 export const mutateLogoutOtherSessions = async ({
     mutation = MutationLogoutOtherSessions.Mutation1,
     signal,
-}: MutateLogoutOtherSessionsParams) => {
+}: MutateLogoutOtherSessionsParams): Promise<ApolloClient.MutateResult<MutateLogoutOtherSessionsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation] })
 }

@@ -1,4 +1,4 @@
-import { gql, type TypedDocumentNode } from "@apollo/client"
+import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
 import type { BrainDossiersQuery } from "../__generated__/graphql"
@@ -32,7 +32,7 @@ const queryMap: Record<QueryBrainDossiers, typeof query1> = { [QueryBrainDossier
 export const queryBrainDossiers = async ({
     query = QueryBrainDossiers.Query1,
     signal,
-}: QueryParams<QueryBrainDossiers> = {}) => {
+}: QueryParams<QueryBrainDossiers> = {}): Promise<ApolloClient.QueryResult<QueryBrainDossiersResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

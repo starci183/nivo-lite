@@ -1,5 +1,5 @@
 import type { RemoveBookingResourceMutation } from "../__generated__/graphql"
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
@@ -32,7 +32,7 @@ export const mutateRemoveBookingResource = async ({
     mutation = MutationRemoveBookingResource.Mutation1,
     request,
     signal,
-}: MutationRemoveBookingResourceParams) => {
+}: MutationRemoveBookingResourceParams): Promise<ApolloClient.MutateResult<RemoveBookingResourceMutation>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate<RemoveBookingResourceMutation, InputVariables<MutateRemoveBookingResourceRequest>>({
         mutation: mutationMap[mutation],

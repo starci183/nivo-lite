@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createNoAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams, WireInput } from "../types"
@@ -44,7 +44,7 @@ export const mutateRespondHiringInterview = async ({
     mutation = MutationRespondHiringInterview.Mutation1,
     request,
     signal,
-}: MutateRespondHiringInterviewParams) => {
+}: MutateRespondHiringInterviewParams): Promise<ApolloClient.MutateResult<MutateRespondHiringInterviewResponse>> => {
     const apollo = createNoAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

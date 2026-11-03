@@ -1,5 +1,5 @@
 import type { DraftLoyaltyCampaignMutation } from "../__generated__/graphql"
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
@@ -33,7 +33,7 @@ export const mutateDraftLoyaltyCampaign = async ({
     mutation = MutationDraftLoyaltyCampaign.Mutation1,
     request,
     signal,
-}: MutationDraftLoyaltyCampaignParams) => {
+}: MutationDraftLoyaltyCampaignParams): Promise<ApolloClient.MutateResult<DraftLoyaltyCampaignMutation>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate<DraftLoyaltyCampaignMutation, InputVariables<MutateDraftLoyaltyCampaignRequest>>({
         mutation: mutationMap[mutation],

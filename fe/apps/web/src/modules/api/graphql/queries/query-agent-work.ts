@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -84,7 +84,11 @@ const queryMap: Record<
 type QueryAgentWorkParams = QueryParams<QueryAgentWork, QueryAgentWorkRequest> & { request: QueryAgentWorkRequest }
 
 /** The back end `agentWork` query. The work of one agent: its switch, goals, open tasks, triggers and the last turns. Rejects with the back end failure (message localized by the server). */
-export const queryAgentWork = async ({ query = QueryAgentWork.Query1, request, signal }: QueryAgentWorkParams) => {
+export const queryAgentWork = async ({
+    query = QueryAgentWork.Query1,
+    request,
+    signal,
+}: QueryAgentWorkParams): Promise<ApolloClient.QueryResult<QueryAgentWorkResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request }, fetchPolicy: "no-cache" })
 }

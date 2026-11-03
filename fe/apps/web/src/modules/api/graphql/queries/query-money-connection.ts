@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -55,7 +55,7 @@ export const queryMoneyConnection = async ({
     query = QueryMoneyConnection.Query1,
     request,
     signal,
-}: QueryMoneyConnectionParams) => {
+}: QueryMoneyConnectionParams): Promise<ApolloClient.QueryResult<QueryMoneyConnectionResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

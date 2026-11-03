@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -41,7 +41,9 @@ const queryMap: Record<QueryMyAccount, Document> = {
 type QueryMyAccountParams = QueryParams<QueryMyAccount>
 
 /** The signed-in account: profile, linked sign-in methods and device sessions (the back end `myAccount` query). Rejects with the back end failure instead of answering partial data. */
-export const queryMyAccount = async ({ query = QueryMyAccount.Query1, signal }: QueryMyAccountParams = {}) => {
+export const queryMyAccount = async ({ query = QueryMyAccount.Query1, signal }: QueryMyAccountParams = {}): Promise<
+    ApolloClient.QueryResult<QueryMyAccountResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

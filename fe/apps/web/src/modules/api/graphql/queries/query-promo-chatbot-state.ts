@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -30,7 +30,7 @@ const queryMap: Record<QueryPromoChatbotState, Document> = { [QueryPromoChatbotS
 export const queryPromoChatbotState = async ({
     query = QueryPromoChatbotState.Query1,
     signal,
-}: QueryParams<QueryPromoChatbotState> = {}) => {
+}: QueryParams<QueryPromoChatbotState> = {}): Promise<ApolloClient.QueryResult<QueryPromoChatbotStateResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createNoAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -42,7 +42,7 @@ export const queryInvitePreview = async ({
     query = QueryInvitePreview.Query1,
     request,
     signal,
-}: QueryInvitePreviewParams) => {
+}: QueryInvitePreviewParams): Promise<ApolloClient.QueryResult<QueryInvitePreviewResponse>> => {
     const apollo = createNoAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }

@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -34,7 +34,10 @@ const queryMap: Record<QueryVideoFigures, Document> = {
 type QueryVideoFiguresParams = QueryParams<QueryVideoFigures>
 
 /** Reads `videoFigures` through the authenticated back end GraphQL API. */
-export const queryVideoFigures = async ({ query = QueryVideoFigures.Query1, signal }: QueryVideoFiguresParams = {}) => {
+export const queryVideoFigures = async ({
+    query = QueryVideoFigures.Query1,
+    signal,
+}: QueryVideoFiguresParams = {}): Promise<ApolloClient.QueryResult<QueryVideoFiguresResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

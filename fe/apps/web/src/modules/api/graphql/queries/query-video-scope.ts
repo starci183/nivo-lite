@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -30,7 +30,9 @@ const queryMap: Record<QueryVideoScope, Document> = {
 type QueryVideoScopeParams = QueryParams<QueryVideoScope>
 
 /** Reads `videoScope` through the authenticated back end GraphQL API. */
-export const queryVideoScope = async ({ query = QueryVideoScope.Query1, signal }: QueryVideoScopeParams = {}) => {
+export const queryVideoScope = async ({ query = QueryVideoScope.Query1, signal }: QueryVideoScopeParams = {}): Promise<
+    ApolloClient.QueryResult<QueryVideoScopeResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

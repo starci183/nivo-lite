@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -101,7 +101,9 @@ const queryMap: Record<QueryShiftsMine, TypedDocumentNode<QueryShiftsMineRespons
 type QueryShiftsMineParams = QueryParams<QueryShiftsMine>
 
 /** Runs the `shiftsMine` query. */
-export const queryShiftsMine = async ({ query = QueryShiftsMine.Query1, signal }: QueryShiftsMineParams = {}) => {
+export const queryShiftsMine = async ({ query = QueryShiftsMine.Query1, signal }: QueryShiftsMineParams = {}): Promise<
+    ApolloClient.QueryResult<QueryShiftsMineResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

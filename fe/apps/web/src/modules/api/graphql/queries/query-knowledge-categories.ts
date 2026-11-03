@@ -1,4 +1,4 @@
-import { gql, type TypedDocumentNode } from "@apollo/client"
+import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
 import type { KnowledgeCategoriesQuery } from "../__generated__/graphql"
@@ -25,7 +25,7 @@ const queryMap: Record<QueryKnowledgeCategories, typeof query1> = { [QueryKnowle
 export const queryKnowledgeCategories = async ({
     query = QueryKnowledgeCategories.Query1,
     signal,
-}: QueryParams<QueryKnowledgeCategories> = {}) => {
+}: QueryParams<QueryKnowledgeCategories> = {}): Promise<ApolloClient.QueryResult<QueryKnowledgeCategoriesResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

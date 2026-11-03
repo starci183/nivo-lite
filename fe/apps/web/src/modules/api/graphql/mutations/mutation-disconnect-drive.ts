@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
@@ -28,7 +28,7 @@ type MutateDisconnectDriveParams = Omit<MutateParams<MutationDisconnectDrive, un
 export const mutateDisconnectDrive = async ({
     mutation = MutationDisconnectDrive.Mutation1,
     signal,
-}: MutateDisconnectDriveParams) => {
+}: MutateDisconnectDriveParams): Promise<ApolloClient.MutateResult<MutateDisconnectDriveResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation] })
 }

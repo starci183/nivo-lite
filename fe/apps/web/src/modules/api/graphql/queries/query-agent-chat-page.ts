@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -46,7 +46,7 @@ export const queryAgentChatPage = async ({
     request,
     signal,
     headers,
-}: QueryAgentChatPageParams) => {
+}: QueryAgentChatPageParams): Promise<ApolloClient.QueryResult<QueryAgentChatPageResponse>> => {
     const apollo = createAuthApolloClient({ signal, headers })
     return apollo.query({
         query: queryMap[query],

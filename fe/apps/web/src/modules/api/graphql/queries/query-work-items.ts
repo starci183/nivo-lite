@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -72,7 +72,11 @@ const queryMap: Record<QueryWorkItems, TypedDocumentNode<WorkItemsQuery, InputVa
 type QueryWorkItemsParams = QueryParams<QueryWorkItems, QueryWorkItemsRequest> & { request: QueryWorkItemsRequest }
 
 /** The back end `workItems` query. Rejects with the back end failure (message localized by the server). */
-export const queryWorkItems = async ({ query = QueryWorkItems.Query1, request, signal }: QueryWorkItemsParams) => {
+export const queryWorkItems = async ({
+    query = QueryWorkItems.Query1,
+    request,
+    signal,
+}: QueryWorkItemsParams): Promise<ApolloClient.QueryResult<WorkItemsQuery>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }

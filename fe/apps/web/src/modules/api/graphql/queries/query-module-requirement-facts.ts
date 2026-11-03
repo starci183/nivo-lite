@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -34,7 +34,7 @@ type QueryModuleRequirementFactsParams = QueryParams<QueryModuleRequirementFacts
 export const queryModuleRequirementFacts = async ({
     query = QueryModuleRequirementFacts.Query1,
     signal,
-}: QueryModuleRequirementFactsParams = {}) => {
+}: QueryModuleRequirementFactsParams = {}): Promise<ApolloClient.QueryResult<QueryModuleRequirementFactsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

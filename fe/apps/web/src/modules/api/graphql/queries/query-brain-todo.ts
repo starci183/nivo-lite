@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -28,7 +28,10 @@ enum QueryBrainTodo {
 const queryMap: Record<QueryBrainTodo, Document> = { [QueryBrainTodo.Query1]: query1 }
 
 /** Calls the back end brainTodo query: three counts of what needs the owner in the Second Brain and their sum, never the lists. */
-export const queryBrainTodo = async ({ query = QueryBrainTodo.Query1, signal }: QueryParams<QueryBrainTodo> = {}) => {
+export const queryBrainTodo = async ({
+    query = QueryBrainTodo.Query1,
+    signal,
+}: QueryParams<QueryBrainTodo> = {}): Promise<ApolloClient.QueryResult<QueryBrainTodoResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

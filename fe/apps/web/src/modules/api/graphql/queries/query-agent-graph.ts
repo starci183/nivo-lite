@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -42,7 +42,11 @@ const queryMap: Record<
 type QueryAgentGraphParams = QueryParams<QueryAgentGraph, QueryAgentGraphRequest> & { request: QueryAgentGraphRequest }
 
 /** The back end `getAgentGraph` query. Rejects with the back end failure (message localized by the server). */
-export const queryAgentGraph = async ({ query = QueryAgentGraph.Query1, request, signal }: QueryAgentGraphParams) => {
+export const queryAgentGraph = async ({
+    query = QueryAgentGraph.Query1,
+    request,
+    signal,
+}: QueryAgentGraphParams): Promise<ApolloClient.QueryResult<QueryAgentGraphResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }

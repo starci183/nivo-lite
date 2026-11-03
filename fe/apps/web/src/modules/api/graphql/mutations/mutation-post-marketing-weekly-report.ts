@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
@@ -72,7 +72,9 @@ type MutatePostMarketingWeeklyReportParams = Omit<MutateParams<MutationPostMarke
 export const mutatePostMarketingWeeklyReport = async ({
     mutation = MutationPostMarketingWeeklyReport.Mutation1,
     signal,
-}: MutatePostMarketingWeeklyReportParams = {}) => {
+}: MutatePostMarketingWeeklyReportParams = {}): Promise<
+    ApolloClient.MutateResult<PostMarketingWeeklyReportMutation>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({ mutation: mutationMap[mutation] })
 }

@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -32,7 +32,9 @@ const queryMap: Record<QueryApiKeys, TypedDocumentNode<QueryApiKeysResponse>> = 
 type QueryApiKeysParams = QueryParams<QueryApiKeys>
 
 /** Lists the API keys of the active workspace, never their secrets (the back end `apiKeys` query). */
-export const queryApiKeys = async ({ query = QueryApiKeys.Query1, signal }: QueryApiKeysParams = {}) => {
+export const queryApiKeys = async ({ query = QueryApiKeys.Query1, signal }: QueryApiKeysParams = {}): Promise<
+    ApolloClient.QueryResult<QueryApiKeysResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], fetchPolicy: "no-cache" })
 }

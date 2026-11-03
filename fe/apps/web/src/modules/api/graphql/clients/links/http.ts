@@ -27,7 +27,7 @@ export interface CreateHttpLinkParams {
  *
  * @see {@link https://www.apollographql.com/docs/react/api/link/apollo-link-http | HttpLink API}
  */
-export const createHttpLink = ({ headers = {}, uri, signal }: CreateHttpLinkParams = {}) =>
+export const createHttpLink = ({ headers = {}, uri, signal }: CreateHttpLinkParams = {}): HttpLink =>
     new HttpLink({
         uri: uri ?? graphqlUrl(),
         credentials: "omit",

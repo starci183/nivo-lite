@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -35,7 +35,7 @@ type QueryMcpToolGrantsParams = QueryParams<QueryMcpToolGrants>
 export const queryMcpToolGrants = async ({
     query = QueryMcpToolGrants.Query1,
     signal,
-}: QueryMcpToolGrantsParams = {}) => {
+}: QueryMcpToolGrantsParams = {}): Promise<ApolloClient.QueryResult<QueryMcpToolGrantsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],
