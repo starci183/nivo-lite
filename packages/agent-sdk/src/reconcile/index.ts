@@ -18,5 +18,13 @@ export type {
 } from "./reconcile.types"
 export { EVIDENCE_WEIGHTS, claimsFor, gatherEvidence, hasSignal, holds, scoreCandidates } from "./evidence"
 export { claimKeyOf, escalateClaim, openClaims, openClaimsOf, overdueClaims, settleClaim } from "./claim-ledger"
-export { REASON, judgeAndEffect, runEffect } from "./judge"
+export {
+    REASON,
+    decideByCode,
+    judgeAndEffect,
+    outcomeOfJudgement,
+    outcomeWithoutEvidence,
+    outcomeWithoutJudge,
+    runEffect,
+} from "./judge"
 export { foldText, mentionsCode, mentionsName } from "./text-match"

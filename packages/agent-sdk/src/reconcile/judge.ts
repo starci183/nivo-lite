@@ -32,7 +32,7 @@ const outcomeOf = (candidates: ReadonlyArray<Evidenced>, rest: Omit<Outcome, "ca
 })
 
 /** The first pass, with no model: a code in the text that names exactly one candidate decides, if the amount is the amount due. */
-const byCode = (candidates: ReadonlyArray<Evidenced>): Outcome | null => {
+export const decideByCode = (candidates: ReadonlyArray<Evidenced>): Outcome | null => {
     const named = codeNamed(candidates)
     const [only] = named
     if (only === undefined) return null
@@ -57,7 +57,7 @@ const byCode = (candidates: ReadonlyArray<Evidenced>): Outcome | null => {
 }
 
 /** A match is only taken when it names a candidate that was offered and whose amount is the amount due: anything else is for a person. */
-const effectOfJudgement = (candidates: ReadonlyArray<Evidenced>, judgement: Judgement): Outcome => {
+export const outcomeOfJudgement = (candidates: ReadonlyArray<Evidenced>, judgement: Judgement): Outcome => {
     const reasons = judgement.reasons
     if (judgement.verdict === "no_match") {
         return outcomeOf(candidates, { stage: "judge", effect: { kind: "leave" }, reasons })
@@ -77,6 +77,18 @@ const effectOfJudgement = (candidates: ReadonlyArray<Evidenced>, judgement: Judg
     return outcomeOf(candidates, { stage: "judge", effect: { kind: "ask", candidateIds: idsOf(pool) }, reasons })
 }
 
+/** The case for a person when the judge could not answer: every candidate that shows evidence is offered. */
+export const outcomeWithoutJudge = (candidates: ReadonlyArray<Evidenced>): Outcome =>
+    outcomeOf(candidates, {
+        stage: "judge_unavailable",
+        effect: { kind: "ask", candidateIds: idsOf(candidates.filter(hasSignal)) },
+        reasons: [REASON.judgeUnavailable],
+    })
+
+/** The outcome when no candidate shows any evidence: the arrival is left as it is, with no judge asked. */
+export const outcomeWithoutEvidence = (candidates: ReadonlyArray<Evidenced>): Outcome =>
+    outcomeOf(candidates, { stage: "no_evidence", effect: { kind: "leave" }, reasons: [REASON.noEvidence] })
+
 /**
  * Decides what to do about an arrival: the code and amount rule first; when no candidate shows any evidence at all, leave it with no
  * model call; otherwise the judge reads the evidence and a match, an ambiguity or a refusal becomes an effect. A judge that cannot
@@ -90,21 +102,13 @@ export const judgeAndEffect = async (
     options: EvidenceOptions,
 ): Promise<Outcome> => {
     const scored = scoreCandidates(arrival, candidates, claims, options)
-    const decided = byCode(scored)
+    const decided = decideByCode(scored)
     if (decided !== null) return decided
     const signalled = scored.filter(hasSignal)
-    if (signalled.length === 0) {
-        return outcomeOf(scored, { stage: "no_evidence", effect: { kind: "leave" }, reasons: [REASON.noEvidence] })
-    }
+    if (signalled.length === 0) return outcomeWithoutEvidence(scored)
     const judgement = await judge({ arrival, candidates: signalled, claims })
-    if (judgement === null) {
-        return outcomeOf(scored, {
-            stage: "judge_unavailable",
-            effect: { kind: "ask", candidateIds: idsOf(signalled) },
-            reasons: [REASON.judgeUnavailable],
-        })
-    }
-    return effectOfJudgement(scored, judgement)
+    if (judgement === null) return outcomeWithoutJudge(scored)
+    return outcomeOfJudgement(scored, judgement)
 }
 
 /** Runs the handler the host registered for the outcome's effect. */
