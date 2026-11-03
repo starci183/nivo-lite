@@ -58,7 +58,9 @@ describe("sepayBankTransaction", () => {
     })
 
     it("maps money out to a debit and falls back to the code and to SePay", () => {
-        expect(sepayBankTransaction({ ...REAL, amountIn: 0, amountOut: 120, content: "", code: "DH7", bank: null })).toMatchObject({
+        expect(
+            sepayBankTransaction({ ...REAL, amountIn: 0, amountOut: 120, content: "", code: "DH7", bank: null }),
+        ).toMatchObject({
             direction: "debit",
             amountVnd: 120,
             content: "DH7",

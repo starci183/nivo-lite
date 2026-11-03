@@ -80,7 +80,8 @@ export class GraphNodeHostService {
             read: (kind, query, rightScope) => this.registry.portOf(kind).read(turn, query, rightScope),
             write: (kind, record) => {
                 const port = this.registry.portOf(kind)
-                if (port.write === undefined) throw new GraphNodesError({ code: GraphNodesErrorCode.PortMissing, params: { kind } })
+                if (port.write === undefined)
+                    throw new GraphNodesError({ code: GraphNodesErrorCode.PortMissing, params: { kind } })
                 return port.write(turn, record)
             },
             execute: (effect, payload, call) => {

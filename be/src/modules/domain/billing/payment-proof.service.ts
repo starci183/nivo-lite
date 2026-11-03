@@ -1,4 +1,6 @@
 import { Injectable } from "@nestjs/common"
+import { FeedWebhookRegistry } from "@modules/domain/provider-registry"
+import { isValidApiKey } from "@modules/domain/sepay-provider"
 import { InjectBillingOptions } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
 import type {
@@ -7,14 +9,13 @@ import type {
     PayosDelivery,
     PayosProof,
     ProvenDelivery,
-    SepayFeedDelivery,
+    FeedDelivery,
 } from "./billing.contracts"
 import { isCassoAuthentic } from "./casso.policy"
 import { sameText, sha256Hex } from "./channel-secret.policy"
 import { PaymentSecretsService } from "./payment-secrets.service"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { isPayosAuthentic, isPayosSample, payosBodyOf } from "./payos.policy"
-import { isValidApiKey, presentedApiKey } from "./sepay.policy"
 import { parseJsonObject } from "./webhook-body.policy"
 
 const unauthorized = (cause?: unknown): BillingError =>
@@ -30,6 +31,7 @@ export class PaymentProofService {
     constructor(
         @InjectBillingOptions() private readonly options: BillingOptions,
         private readonly secrets: PaymentSecretsService,
+        private readonly webhooks: FeedWebhookRegistry,
     ) {}
 
     /** NIVO's own billing feed from SePay: `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>`. */
@@ -71,11 +73,14 @@ export class PaymentProofService {
         }
     }
 
-    /** A workspace's own SePay feed: `Authorization: Apikey <key>` whose SHA-256 equals the stored webhook secret of the connection. */
-    async proveSepayFeed(delivery: SepayFeedDelivery): Promise<ProvenDelivery> {
-        const presented = presentedApiKey(delivery.authorization)
+    /**
+     * A workspace's own key-authenticated bank feed: the key its provider presents in the `Authorization` header, whose SHA-256 equals the
+     * stored webhook secret of the connection. A provider that registered no feed webhook proves nothing.
+     */
+    async proveFeed(provider: string, delivery: FeedDelivery): Promise<ProvenDelivery> {
+        const presented = this.webhooks.of(provider)?.keyOf(delivery.authorization)
         if (presented === undefined) throw unauthorized()
-        const connection = await this.secrets.load(delivery.connectionId, "sepay")
+        const connection = await this.secrets.load(delivery.connectionId, provider)
         if (connection === null || !sameText(sha256Hex(presented), connection.webhookSecret)) throw unauthorized()
         return {
             connection: { connectionId: delivery.connectionId, workspaceId: connection.workspaceId },

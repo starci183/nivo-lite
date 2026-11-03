@@ -83,12 +83,18 @@ describe("GraphNodeRegistryService", () => {
         registry.addDataPort(port)
         registry.addExecutor(executor)
 
-        expect(() => registry.addDataPort(port)).toThrow(expect.objectContaining({ code: GraphNodesErrorCode.PortDuplicate }))
+        expect(() => registry.addDataPort(port)).toThrow(
+            expect.objectContaining({ code: GraphNodesErrorCode.PortDuplicate }),
+        )
         expect(() => registry.addExecutor(executor)).toThrow(
             expect.objectContaining({ code: GraphNodesErrorCode.PortDuplicate }),
         )
-        expect(() => registry.nodeOf("core.ghost")).toThrow(expect.objectContaining({ code: GraphNodesErrorCode.NodeUnknown }))
-        expect(() => registry.portOf("ghost")).toThrow(expect.objectContaining({ code: GraphNodesErrorCode.PortMissing }))
+        expect(() => registry.nodeOf("core.ghost")).toThrow(
+            expect.objectContaining({ code: GraphNodesErrorCode.NodeUnknown }),
+        )
+        expect(() => registry.portOf("ghost")).toThrow(
+            expect.objectContaining({ code: GraphNodesErrorCode.PortMissing }),
+        )
         expect(() => registry.executorOf("core.ghost")).toThrow(
             expect.objectContaining({ code: GraphNodesErrorCode.ExecutorMissing }),
         )

@@ -45,17 +45,37 @@ const probe = defineNode({
     title: { key: "t" },
     params: z.object({}),
     input: z.object({ write: z.boolean() }),
-    output: z.object({ rows: z.number(), ref: z.string(), text: z.string(), n: z.number(), seen: z.boolean(), at: z.number() }),
+    output: z.object({
+        rows: z.number(),
+        ref: z.string(),
+        text: z.string(),
+        n: z.number(),
+        seen: z.boolean(),
+        at: z.number(),
+    }),
     rights: [READ, WRITE],
     effects: ["core.ping"],
     tools: ["core.look"],
     run: async (input, context) => {
         const rows = await context.data.read("record", { fields: ["id"] })
-        const ref = input.write ? await context.data.write("record", { id: "r" }) : await context.effect("core.ping", { n: 1 })
+        const ref = input.write
+            ? await context.data.write("record", { id: "r" })
+            : await context.effect("core.ping", { n: 1 })
         const text = await context.model.text({ purpose: "say", instructions: "", input: null })
-        const json = await context.model.json(z.object({ n: z.number() }), { purpose: "count", instructions: "", input: null })
+        const json = await context.model.json(z.object({ n: z.number() }), {
+            purpose: "count",
+            instructions: "",
+            input: null,
+        })
         const tool = await context.tools.call<{ seen: boolean }>("core.look", {})
-        return { rows: rows.length, ref: ref.id, text, n: json.n, seen: tool.seen, at: context.now().getTime() > 0 ? 1 : 0 }
+        return {
+            rows: rows.length,
+            ref: ref.id,
+            text,
+            n: json.n,
+            seen: tool.seen,
+            at: context.now().getTime() > 0 ? 1 : 0,
+        }
     },
     examples: [
         {
@@ -119,7 +139,12 @@ describe("GraphNodeHostService", () => {
             effects: [{ id: "core.ping", subject: { kind: "record", id: "e-1" } }],
         })
         expect(port.read).toHaveBeenCalledWith(INPUT.turn, { fields: ["id"] }, "turn")
-        expect(effects.once).toHaveBeenCalledWith("ws-1", "core.ping", { key: "run-1:node:0", dedupeKey: null }, expect.any(Function))
+        expect(effects.once).toHaveBeenCalledWith(
+            "ws-1",
+            "core.ping",
+            { key: "run-1:node:0", dedupeKey: null },
+            expect.any(Function),
+        )
         expect(executor.execute).toHaveBeenCalledWith(INPUT.turn, { n: 1 }, { key: "run-1:node:0", dedupeKey: null })
         expect(ai.nodeText).toHaveBeenCalledWith(
             { workspaceId: "ws-1", locale: "vi" },
@@ -131,7 +156,9 @@ describe("GraphNodeHostService", () => {
     it("writes through a port that writes, and refuses a kind whose port does not", async () => {
         const write = jest.fn().mockResolvedValue({ kind: "record", id: "w-1" })
         const writing = await build(door(), { kind: "record", read: () => Promise.resolve([]), write })
-        await expect(writing.host.run({ ...INPUT, input: { write: true } })).resolves.toMatchObject({ output: { ref: "w-1" } })
+        await expect(writing.host.run({ ...INPUT, input: { write: true } })).resolves.toMatchObject({
+            output: { ref: "w-1" },
+        })
         expect(write).toHaveBeenCalledWith(INPUT.turn, { id: "r" })
 
         const readOnly = await build(door(), { kind: "record", read: () => Promise.resolve([]) })

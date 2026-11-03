@@ -1,5 +1,8 @@
 import { createHmac } from "node:crypto"
 import { Test } from "@nestjs/testing"
+import { SepayConnectionService } from "@modules/domain/channel-connections"
+import { FeedWebhookRegistry } from "@modules/domain/provider-registry"
+import { SepayFeedWebhookService } from "@modules/domain/sepay-provider/sepay-feed-webhook.service"
 import { builder, mock } from "@starci/jest-preset"
 import { sepayFeedSecret } from "@modules/domain/channel-connections"
 import { Secret } from "@modules/platform/config"
@@ -34,11 +37,14 @@ const OPTIONS: BillingOptions = {
 const build = async (options: Partial<BillingOptions> = {}, loaded: PaymentSecret | null = null) => {
     const secrets = mock<PaymentSecretsService>()
     secrets.load.mockResolvedValue(loaded)
+    const webhooks = new FeedWebhookRegistry()
+    webhooks.register(new SepayFeedWebhookService(mock<SepayConnectionService>()))
     const moduleRef = await Test.createTestingModule({
         providers: [
             PaymentProofService,
             { provide: BILLING_OPTIONS, useValue: builder<BillingOptions>(OPTIONS)(options) },
             { provide: PaymentSecretsService, useValue: secrets },
+            { provide: FeedWebhookRegistry, useValue: webhooks },
         ],
     }).compile()
     return { proof: moduleRef.get(PaymentProofService), secrets }
@@ -183,7 +189,7 @@ describe("PaymentProofService > provePayos", () => {
     })
 })
 
-describe("PaymentProofService > proveSepayFeed", () => {
+describe("PaymentProofService > proveFeed", () => {
     const raw = rawOf({ id: 3, transferType: "in", transferAmount: 1000 })
     const delivery = (authorization: string | undefined, rawBody: Buffer | undefined = raw) => ({
         connectionId: CONNECTION_ID,
@@ -193,7 +199,7 @@ describe("PaymentProofService > proveSepayFeed", () => {
     it("proves a delivery whose key hashes to the webhook secret of the connection", async () => {
         const { proof, secrets } = await build(OPTIONS, secretOf({}, sha256Hex("feed-key")))
 
-        await expect(proof.proveSepayFeed(delivery("Apikey feed-key"))).resolves.toEqual({
+        await expect(proof.proveFeed("sepay", delivery("Apikey feed-key"))).resolves.toEqual({
             connection: { connectionId: CONNECTION_ID, workspaceId: "ws-9" },
             body: { id: 3, transferType: "in", transferAmount: 1000 },
         })
@@ -205,26 +211,27 @@ describe("PaymentProofService > proveSepayFeed", () => {
         const { plain, webhookSecret } = sepayFeedSecret(seeded)
         const { proof } = await build(OPTIONS, secretOf(plain, webhookSecret))
 
-        await expect(proof.proveSepayFeed(delivery(`Apikey ${seeded}`))).resolves.toMatchObject({
+        await expect(proof.proveFeed("sepay", delivery(`Apikey ${seeded}`))).resolves.toMatchObject({
             connection: { connectionId: CONNECTION_ID, workspaceId: "ws-9" },
         })
-        await expect(proof.proveSepayFeed(delivery(`Apikey ${seeded}0`))).rejects.toEqual(REFUSED)
+        await expect(proof.proveFeed("sepay", delivery(`Apikey ${seeded}0`))).rejects.toEqual(REFUSED)
     })
 
     it("refuses another key, an unknown connection and a header that is not an Apikey", async () => {
         const wrong = await build(OPTIONS, secretOf({}, sha256Hex("feed-key")))
         const unknown = await build(OPTIONS, null)
 
-        await expect(wrong.proof.proveSepayFeed(delivery("Apikey other"))).rejects.toEqual(REFUSED)
-        await expect(unknown.proof.proveSepayFeed(delivery("Apikey feed-key"))).rejects.toEqual(REFUSED)
-        await expect(wrong.proof.proveSepayFeed(delivery("Bearer feed-key"))).rejects.toEqual(REFUSED)
-        await expect(wrong.proof.proveSepayFeed(delivery(undefined))).rejects.toEqual(REFUSED)
+        await expect(wrong.proof.proveFeed("sepay", delivery("Apikey other"))).rejects.toEqual(REFUSED)
+        await expect(unknown.proof.proveFeed("sepay", delivery("Apikey feed-key"))).rejects.toEqual(REFUSED)
+        await expect(wrong.proof.proveFeed("sepay", delivery("Bearer feed-key"))).rejects.toEqual(REFUSED)
+        await expect(wrong.proof.proveFeed("sepay", delivery(undefined))).rejects.toEqual(REFUSED)
+        await expect(wrong.proof.proveFeed("casso", delivery("Apikey feed-key"))).rejects.toEqual(REFUSED)
         expect(wrong.secrets.load).toHaveBeenCalledTimes(1)
     })
 
     it("refuses a proven delivery whose body is not a JSON object", async () => {
         const { proof } = await build(OPTIONS, secretOf({}, sha256Hex("feed-key")))
 
-        await expect(proof.proveSepayFeed(delivery("Apikey feed-key", Buffer.from("x")))).rejects.toEqual(INVALID)
+        await expect(proof.proveFeed("sepay", delivery("Apikey feed-key", Buffer.from("x")))).rejects.toEqual(INVALID)
     })
 })

@@ -3,14 +3,21 @@ import type { DynamicModule, OnModuleInit } from "@nestjs/common"
 import {
     BankFeedPollerRegistry,
     BankTransactionsRegistry,
+    FeedWebhookRegistry,
     PaymentInstructionRegistry,
 } from "@modules/domain/provider-registry"
 import { SepayBankTransactionsService } from "./sepay-bank-transactions.service"
+import { SepayFeedWebhookService } from "./sepay-feed-webhook.service"
 import { SepayFeedPoller } from "./sepay-feed-poller.service"
 import { SepayPaymentInstructionService } from "./sepay-payment-instruction.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay-provider.module-definition"
 
-const PROVIDERS = [SepayFeedPoller, SepayBankTransactionsService, SepayPaymentInstructionService]
+const PROVIDERS = [
+    SepayFeedPoller,
+    SepayBankTransactionsService,
+    SepayPaymentInstructionService,
+    SepayFeedWebhookService,
+]
 
 @Module({})
 /**
@@ -22,9 +29,11 @@ export class SepayProviderModule extends ConfigurableModuleClass implements OnMo
         private readonly pollers: BankFeedPollerRegistry,
         private readonly transactions: BankTransactionsRegistry,
         private readonly instructions: PaymentInstructionRegistry,
+        private readonly webhooks: FeedWebhookRegistry,
         private readonly poller: SepayFeedPoller,
         private readonly lister: SepayBankTransactionsService,
         private readonly instruction: SepayPaymentInstructionService,
+        private readonly webhook: SepayFeedWebhookService,
     ) {
         super()
     }
@@ -40,5 +49,6 @@ export class SepayProviderModule extends ConfigurableModuleClass implements OnMo
         this.pollers.register(this.poller)
         this.transactions.register(this.lister)
         this.instructions.register(this.instruction)
+        this.webhooks.register(this.webhook)
     }
 }

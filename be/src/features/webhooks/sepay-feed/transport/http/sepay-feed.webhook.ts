@@ -2,8 +2,12 @@ import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req } from "@ne
 import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
 import { BankFeedService } from "@modules/domain/billing"
+import { PollScheduleService } from "@modules/domain/connection-poll"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
+
+/** The provider this door speaks for: the key of its webhook in the registry. */
+const PROVIDER = "sepay"
 
 /** The fixed response SePay requires for an accepted delivery. */
 export const PROVIDER_ACK = { success: true } as const
@@ -15,7 +19,10 @@ export const PROVIDER_ACK = { success: true } as const
  * digest, then the delivery goes to one feed intake that books the credit once per SePay transaction id.
  */
 export class SepayFeedWebhook {
-    constructor(private readonly feed: BankFeedService) {}
+    constructor(
+        private readonly feed: BankFeedService,
+        private readonly schedule: PollScheduleService,
+    ) {}
 
     /** Answers `{"success": true}` for every accepted, repeated or ignored delivery, so SePay stops retrying it. */
     @Post(":connectionId")
@@ -27,8 +34,9 @@ export class SepayFeedWebhook {
         @Param("connectionId") connectionId: string,
         @Headers("authorization") authorization: string | undefined,
     ): Promise<typeof PROVIDER_ACK> {
-        await this.feed.verifySepayFeedDelivery(authorization, connectionId, request.rawBody)
-        await this.feed.acceptSepayFeedDelivery(request.rawBody, connectionId)
+        await this.feed.verifyFeedDelivery(authorization, connectionId, request.rawBody, PROVIDER)
+        await this.feed.acceptFeedDelivery(request.rawBody, connectionId, PROVIDER)
+        await this.schedule.recordWebhook(connectionId)
         return PROVIDER_ACK
     }
 }

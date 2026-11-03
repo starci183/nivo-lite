@@ -3,6 +3,7 @@ import { ProviderRegistry } from "./provider-registry.service"
 import type {
     BankFeedPoller,
     BankTransactionsPort,
+    FeedWebhookPort,
     MessageInboxPoller,
     PaymentInstructionPort,
 } from "./provider-ports.contracts"
@@ -18,6 +19,10 @@ export class PaymentInstructionRegistry extends ProviderRegistry<PaymentInstruct
 @Injectable()
 /** The bank providers that list a connection's transactions to nodes and agents. */
 export class BankTransactionsRegistry extends ProviderRegistry<BankTransactionsPort> {}
+
+@Injectable()
+/** The bank providers whose webhook feeds a workspace bank feed. */
+export class FeedWebhookRegistry extends ProviderRegistry<FeedWebhookPort> {}
 
 @Injectable()
 /** The messaging providers whose inbox can be read back to catch the customer messages the webhook never delivered. */

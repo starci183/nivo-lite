@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing"
 import type { RawBodyRequest } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import type { Request } from "express"
+import { PollScheduleService } from "@modules/domain/connection-poll"
 import { ZaloInboxService } from "@modules/domain/zalo-inbox"
 import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 import { ZaloWebhook } from "./zalo.webhook"
@@ -17,14 +18,17 @@ const build = async () => {
     signature.verify.mockResolvedValue(undefined)
     const deliveries = mock<ZaloInboxService>()
     deliveries.acceptZaloDelivery.mockResolvedValue(undefined)
+    const schedule = mock<PollScheduleService>()
+    schedule.recordWebhook.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloWebhook,
             { provide: ScopedWebhookVerifier, useValue: signature },
             { provide: ZaloInboxService, useValue: deliveries },
+            { provide: PollScheduleService, useValue: schedule },
         ],
     }).compile()
-    return { webhook: moduleRef.get(ZaloWebhook), signature, deliveries }
+    return { webhook: moduleRef.get(ZaloWebhook), signature, deliveries, schedule }
 }
 
 /** A request whose `rawBody` is present and undefined, which a typed partial cannot spell under exact optional property types. */
@@ -36,7 +40,7 @@ const requestWithRaw = (rawBody: Buffer | undefined): RawBodyRequest<Request> =>
 
 describe("ZaloWebhook", () => {
     it("verifies the scoped MAC first, waits for proof, then accepts exactly one delivery", async () => {
-        const { webhook, signature, deliveries } = await build()
+        const { webhook, signature, deliveries, schedule } = await build()
         const request = mock<RawBodyRequest<Request>>({ rawBody: BODY })
         const effects: Array<string> = []
         let prove: () => void = () => undefined
@@ -71,10 +75,11 @@ describe("ZaloWebhook", () => {
         expect(effects).toEqual(["verify", "acceptZaloDelivery"])
         expect(deliveries.acceptZaloDelivery).toHaveBeenCalledTimes(1)
         expect(deliveries.acceptZaloDelivery).toHaveBeenCalledWith(BODY, CONNECTION)
+        expect(schedule.recordWebhook).toHaveBeenCalledWith(CONNECTION)
     })
 
     it("propagates a signature refusal without calling the domain", async () => {
-        const { webhook, signature, deliveries } = await build()
+        const { webhook, signature, deliveries, schedule } = await build()
         const failure = new Error("invalid MAC")
         signature.verify.mockRejectedValue(failure)
 
@@ -91,6 +96,7 @@ describe("ZaloWebhook", () => {
             timestamp: undefined,
         })
         expect(deliveries.acceptZaloDelivery).not.toHaveBeenCalled()
+        expect(schedule.recordWebhook).not.toHaveBeenCalled()
     })
 })
 

@@ -25,6 +25,28 @@ export interface BankFeedPoller {
     classify(error: unknown): PollFailure
 }
 
+/** What a workspace feed webhook delivery means. */
+export type FeedWebhookReading =
+    | { readonly kind: "transaction"; readonly credit: IncomingCredit }
+    | { readonly kind: "ignored" }
+    | { readonly kind: "invalid" }
+
+/** A bank provider whose webhook feeds a workspace bank feed: how its key is presented and what a delivery means. */
+export interface FeedWebhookPort {
+    /** The provider key of the connections it feeds. */
+    readonly provider: string
+    /** The provider identity the inbox stores its rows under. */
+    readonly inboxProvider: BankFeedDeliveryRecorded["provider"]
+    /** The key a sender presented in the `Authorization` header, or undefined when none was. */
+    keyOf(authorization: string | undefined): string | undefined
+    /** Reads one parsed delivery body. */
+    read(body: Readonly<Record<string, unknown>>): FeedWebhookReading
+    /** Remembers a delivery whose key was proven, around the intake the host runs for it (the connection page of the provider). */
+    traceIntake(connection: string, rawBody: Buffer | undefined, intake: () => Promise<void>): Promise<void>
+    /** Remembers a delivery whose key was refused. */
+    traceRefusal(connection: string): Promise<void>
+}
+
 /** The bank account a payment instruction is drawn for. */
 export interface InstructionAccount {
     /** The full account number. */

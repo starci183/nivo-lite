@@ -7,7 +7,8 @@ import type { BankFeedDeliveryRecorded } from "@modules/queues/bank-feed-deliver
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { SepayConnectionService } from "@modules/domain/channel-connections"
+import { FeedWebhookRegistry } from "@modules/domain/provider-registry"
+import type { FeedWebhookPort } from "@modules/domain/provider-registry"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { TransactionsService } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -35,7 +36,6 @@ import { cassoCredits, isCassoError } from "./casso.policy"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 import { payosBodyOf, readPayosDelivery } from "./payos.policy"
-import { isSepayPing, sepayPayloadOf } from "./sepay.policy"
 import { parseJsonObject } from "./webhook-body.policy"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 
@@ -83,7 +83,7 @@ export class BankFeedService {
         private readonly events: EventsService,
         private readonly transactions: TransactionsService,
         private readonly bankFeedInbox: BankFeedReceiptService,
-        private readonly sepayPage: SepayConnectionService,
+        private readonly webhooks: FeedWebhookRegistry,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly bindings: AgentBindingsService,
         private readonly connections: ConnectionBindingsReadService,
@@ -158,42 +158,42 @@ export class BankFeedService {
         ])
     }
 
-    /** Proves the workspace feed credential before its HTTP door admits the raw delivery to receipt intake. */
-    async verifySepayFeedDelivery(authorization: HeaderValue, connection: string, rawBody: RawBody): Promise<void> {
+    /**
+     * Proves the workspace feed credential of a provider before its HTTP door admits the raw delivery to receipt intake. A refused key
+     * is remembered by the provider for the connection page; any other failure is not the sender's doing.
+     */
+    async verifyFeedDelivery(
+        authorization: HeaderValue,
+        connection: string,
+        rawBody: RawBody,
+        provider: string,
+    ): Promise<void> {
         try {
-            await this.proof.proveSepayFeed({ authorization, connectionId: connection, rawBody })
+            await this.proof.proveFeed(provider, { authorization, connectionId: connection, rawBody })
         } catch (error) {
-            // A refused key is remembered for the connection page; any other failure is not the sender's doing.
             if (error instanceof BillingError && error.code === BillingErrorCode.WebhookUnauthorized) {
-                await this.sepayPage.traceRefusal(connection)
+                await this.webhooks.of(provider)?.traceRefusal(connection)
             }
             throw error
         }
     }
 
     /**
-     * Records one verified SePay feed transaction for deferred booking: money in (`in`) as a credit, money out (`out`) as a
-     * debit; any other transfer, or an amount that is not above 0, is acknowledged without a receipt.
+     * Records one verified feed transaction of a provider for deferred booking: money in as a credit, money out as a debit; anything its
+     * provider reads as no money move (a test ping, a zero amount) is acknowledged without a receipt, and a delivery it cannot read is invalid.
      */
-    acceptSepayFeedDelivery(rawBody: RawBody, connection: string): Promise<void> {
-        return this.sepayPage.traceIntake(connection, rawBody, () => this.bookSepayFeedDelivery(rawBody, connection))
+    acceptFeedDelivery(rawBody: RawBody, connection: string, provider: string): Promise<void> {
+        const port = this.webhooks.of(provider)
+        if (port === undefined) return Promise.reject(new BillingError({ code: BillingErrorCode.WebhookInvalid }))
+        return port.traceIntake(connection, rawBody, () => this.bookFeedDelivery(port, rawBody, connection))
     }
 
-    private bookSepayFeedDelivery(rawBody: RawBody, connection: string): Promise<void> {
-        const body = parseJsonObject(rawBody)
-        if (isSepayPing(body)) return Promise.resolve()
-        const payload = sepayPayloadOf(body)
-        const amount = payload.transferAmount
-        const moves = payload.transferType === "in" || payload.transferType === "out"
-        if (!moves || amount === undefined || amount <= 0) return Promise.resolve()
-        return this.recordFeedDelivery("sepay-feed", `${connection}:sepay:${payload.id}`, connection, [
-            {
-                amount,
-                content: (payload.content ?? payload.description ?? payload.code ?? "").trim(),
-                eventId: `sepay:${payload.id}`,
-                fallbackBankName: payload.gateway ?? "SePay",
-                ...(payload.transferType === "out" ? { direction: "debit" as const } : {}),
-            },
+    private async bookFeedDelivery(port: FeedWebhookPort, rawBody: RawBody, connection: string): Promise<void> {
+        const reading = port.read(parseJsonObject(rawBody))
+        if (reading.kind === "invalid") throw new BillingError({ code: BillingErrorCode.WebhookInvalid })
+        if (reading.kind === "ignored") return
+        await this.recordFeedDelivery(port.inboxProvider, `${connection}:${reading.credit.eventId}`, connection, [
+            reading.credit,
         ])
     }
 

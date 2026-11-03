@@ -110,8 +110,16 @@ describe("SepayFeedPoller limits and classification", () => {
     })
 
     it.each([
-        ["asked to slow down with a wait", new SepayError({ code: SepayErrorCode.RateLimited, params: { retryAfterSeconds: 7 } }), { kind: "rate_limited", retryAfterSeconds: 7 }],
-        ["asked to slow down with no wait", new SepayError({ code: SepayErrorCode.RateLimited }), { kind: "rate_limited", retryAfterSeconds: 0 }],
+        [
+            "asked to slow down with a wait",
+            new SepayError({ code: SepayErrorCode.RateLimited, params: { retryAfterSeconds: 7 } }),
+            { kind: "rate_limited", retryAfterSeconds: 7 },
+        ],
+        [
+            "asked to slow down with no wait",
+            new SepayError({ code: SepayErrorCode.RateLimited }),
+            { kind: "rate_limited", retryAfterSeconds: 0 },
+        ],
         ["a refused token", new SepayError({ code: SepayErrorCode.AuthFailed }), { kind: "auth_failed" }],
         ["an unreachable API", new SepayError({ code: SepayErrorCode.Unavailable }), { kind: "transient" }],
         ["a refusal retrying cannot change", new SepayError({ code: SepayErrorCode.Rejected }), { kind: "fatal" }],
