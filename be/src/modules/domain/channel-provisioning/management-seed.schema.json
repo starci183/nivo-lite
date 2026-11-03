@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NIVO management workspace seed",
+  "type": "object",
+  "required": ["schema", "workspaceName"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "nivo/management-seed@1"
+    },
+    "workspaceName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ownerEmail": {
+      "type": "string",
+      "minLength": 3
+    },
+    "values": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "WORKSPACE_SMTP_HOST": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_SMTP_PORT": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_SMTP_USER": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_SMTP_PASSWORD": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_SMTP_FROM": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_OWNER_EMAIL": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_TELEGRAM_BOT_TOKEN": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_ZALO_OA_APP_ID": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_ZALO_OA_APP_SECRET": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_ZALO_OA_SECRET_KEY": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_SEPAY_BANK_ACCOUNT": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_SEPAY_BANK_CODE": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_SEPAY_ACCOUNT_HOLDER": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_SEPAY_API_KEY": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_PAYOS_CLIENT_ID": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_PAYOS_API_KEY": {
+          "type": "string",
+          "minLength": 1
+        },
+        "WORKSPACE_PAYOS_CHECKSUM_KEY": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

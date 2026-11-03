@@ -1,6 +1,6 @@
 export { DatabaseModule } from "./database.module"
 export { MigrationRunnerService } from "./migration-runner.service"
-export { SeedRunnerService } from "./seed-runner.service"
+export { DEFAULT_SEED_ENV, SeedRunnerService } from "./seed-runner.service"
 export { AbstractEntity, UuidAbstractEntity } from "./abstract.entity"
 export { databaseEntities } from "./persistence/entities"
 export { sql } from "./database.sql"

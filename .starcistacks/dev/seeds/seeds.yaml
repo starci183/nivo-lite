@@ -1,0 +1,8 @@
+schema: starci/seeds@1
+entries:
+  - id: nivo-workspace
+    kind: data
+    path: data/nivo-workspace.json
+    target: [node, be/dist/apps/cli/src/main.js, seed-management]
+    mode: once
+    schema: be/src/modules/domain/channel-provisioning/management-seed.schema.json

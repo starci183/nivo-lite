@@ -2,6 +2,7 @@
   "hfs": 3,
   "kind": "app",
   "edition": "lite",
+  "modules": "data",
   "project": "nivo-lite",
   "sides": {
     "be": {
