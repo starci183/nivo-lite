@@ -8,4 +8,6 @@ export enum AgentGraphsLogEvent {
     DecideFailed = "agent_graphs.decide_failed",
     /** The contracts and gaps of a setup could not be proposed; the setup itself stands. */
     ContractSetupFailed = "agent_graphs.contract_setup_failed",
+    /** An intent the published graph reaches has no frame, so a turn is offered the other intents without it. */
+    IntentUnframed = "agent_graphs.intent_unframed",
 }

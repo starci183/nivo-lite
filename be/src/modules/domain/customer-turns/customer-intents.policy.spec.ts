@@ -172,6 +172,11 @@ describe("the customer reply as a domain > the words", () => {
             "confirm_booking",
             "redeem_reward",
             "screen_candidate",
+            "classify_lead",
+            "send_follow_up",
+            "send_quote",
+            "send_care",
+            "give_discount",
         ].flatMap((intent) => {
             const frame = registry.frameOf(intent, catalogue, "customer_message")
             return frame === null ? [] : [{ frame, label: intent, business: null }]
@@ -183,4 +188,18 @@ describe("the customer reply as a domain > the words", () => {
             contracts.flatMap((contract) => [contract.task, ...contract.limits]).filter((text) => text.startsWith("?")),
         ).toEqual([])
     })
+})
+
+describe("the customer reply as a domain > the Sales intents its graph reaches", () => {
+    it.each(["classify_lead", "send_follow_up", "send_quote", "send_care", "give_discount"])(
+        "frames %s as a customer reply that answers and owns no member",
+        async (intent) => {
+            const { registry } = await build()
+
+            const frame = registry.frameOf(intent, catalogue, "customer_message")
+
+            expect(frame).toMatchObject({ intent, answers: true, ownTurn: false, owns: [], result: "customer_reply" })
+            expect(frame?.taskKey).toBe(`intentContracts.task.${intent}`)
+        },
+    )
 })

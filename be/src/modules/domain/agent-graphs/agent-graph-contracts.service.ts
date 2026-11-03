@@ -13,7 +13,10 @@ import { ModulesService } from "@modules/domain/modules"
 import { wakeSources } from "@modules/domain/agent-work"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { AgentGraphsService } from "./agent-graphs.service"
+import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import type { GraphDocument } from "./agent-graphs.contracts"
 import { reachableIntents } from "./policies/intent-of-step.policy"
 import type { ReachedIntent } from "./policies/intent-of-step.policy"
@@ -28,13 +31,16 @@ const UNIVERSAL_EVENT = "tag"
 /**
  * The contracts of a turn, merged from the two halves: the frames of the registry for the intents the event reaches in the published
  * graph, and the task and limits of the shop the owner approved into that version. Nothing here is read at runtime from the Brain or
- * written by a model. A turn gets no contracts (and so stays on the prompt it had) when the agent has no graph, the graph only records,
- * no version is published, an intent the event reaches has no frame, no intent is left to pick from, or the registry says the turn needs
- * an intent that answers and none is offered.
+ * written by a model. Only framed intents are offered: an intent the event reaches with no frame is left out of the turn and logged, and
+ * never takes the turn off its contracts. A turn gets no contracts (and so stays on the prompt it had) when the agent has no graph, the
+ * graph only records, no version is published, no intent is left to pick from, or the registry says the turn needs an intent that answers
+ * and none is offered. The selection rule's future home is the agent SDK (`@nivo-lite/agent-sdk`, the generic selection over the frames
+ * each domain registers).
  */
 export class AgentGraphContractsService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        @InjectLogger() private readonly logger: Logger,
         private readonly graphs: AgentGraphsService,
         private readonly installations: InstallationRecordsService,
         private readonly modules: ModulesService,
@@ -63,9 +69,8 @@ export class AgentGraphContractsService {
             action: entry.action,
             amountLimit: entry.amountLimit,
         }))
-        const reached = reachableIntents(state.active, trigger, source)
-        const unframed = reached.some((entry) => this.intents.frameOf(entry.intent, actions, UNIVERSAL_EVENT) === null)
-        if (reached.length === 0 || unframed) return null
+        const reached = this.framedOf(agentId, reachableIntents(state.active, trigger, source), actions)
+        if (reached.length === 0) return null
         const requestAllowed = source === null ? trigger === UNIVERSAL_EVENT : source !== "customer"
         const sources = this.sourcesOf(state.active, reached, actions, trigger, requestAllowed)
         const answers = !this.intents.needsAnswer(trigger) || sources.some((entry) => entry.frame.answers)
@@ -73,6 +78,19 @@ export class AgentGraphContractsService {
         const say = (key: string, params?: Readonly<Record<string, string | number>>): string =>
             this.catalog.get(key, params ?? {}, LOCALE)
         return { versionId: state.activeVersionId, contracts: resolveContracts(sources, trigger, trust, say) }
+    }
+
+    /** The reached intents that have a frame; each one left out is logged by its key, never the turn's words. */
+    private framedOf(
+        agentId: string,
+        reached: ReadonlyArray<ReachedIntent>,
+        actions: ReadonlyArray<FrameAction>,
+    ): ReadonlyArray<ReachedIntent> {
+        const framed = reached.filter((entry) => this.intents.frameOf(entry.intent, actions, UNIVERSAL_EVENT) !== null)
+        for (const entry of reached.filter((one) => !framed.includes(one))) {
+            this.logger.warn(AgentGraphsLogEvent.IntentUnframed, { agentId, intent: entry.intent })
+        }
+        return framed
     }
 
     /** The sources of the contracts of one trigger: each reached intent with its frame and the business half the version holds. */

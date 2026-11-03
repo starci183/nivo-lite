@@ -58,6 +58,20 @@ const replyFrame = (
 })
 
 /**
+ * The customer-message frames of the Sales intents its published graph reaches besides the order: each is a customer reply worded for its
+ * own task, owning no member, so the lead and the reply rules stay on every one of them and the order stays with `confirm_order`. Frames
+ * are data a domain registers; their future home is the agent SDK (`@nivo-lite/agent-sdk`, contract frames registered per domain), where
+ * the Sales domain registers this list and the core holds no domain words.
+ */
+const SALES_CUSTOMER_FRAMES: ReadonlyArray<IntentFrame> = [
+    "classify_lead",
+    "send_follow_up",
+    "send_quote",
+    "send_care",
+    "give_discount",
+].map((intent) => replyFrame(intent, `intentContracts.task.${intent}`, [], [], false, true))
+
+/**
  * The intents of a customer turn, each with its own words. A member of the reply that one of them owns is dropped from the others when
  * the graph holds the owner, and stays allowed on `reply_customer` when it does not. A write through the tools runs in a turn of its own,
  * for a customer message and for a tag alike.
@@ -71,6 +85,7 @@ const CUSTOMER_FRAMES: ReadonlyArray<IntentFrame> = [
     replyFrame("redeem_reward", "intentContracts.task.redeem_reward", ["loyalty"], [LOYALTY_RULE]),
     replyFrame("screen_candidate", "intentContracts.task.screen_candidate", ["application"], [APPLICATION_RULE]),
     requestFrameOf("gateway_call", true),
+    ...SALES_CUSTOMER_FRAMES,
 ]
 
 const filled = (value: unknown): boolean => typeof value === "string" && value.trim() !== ""
