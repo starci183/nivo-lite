@@ -1,14 +1,16 @@
+import type { OptionalRunTrace } from "@modules/domain/agent-runs"
+import type { AgentTurnView, AgentHandlerEnding, AgentBegin } from "@modules/domain/agent-work"
+import type { InboundEvent, InboundAccepted } from "../../modules/domain/agent-inbound/agent-inbound.contracts"
+import type { IntentPlan, IntentRead } from "../../modules/domain/agent-turns/agent-turns.contracts"
 import assert from "node:assert/strict"
 import { randomBytes } from "node:crypto"
 import { In } from "typeorm"
 import { AgentTurnsService, AgentTriggersService } from "@modules/domain/agent-work"
-import type { AgentTurnView } from "@modules/domain/agent-work"
 import {
     GenericWebhookIntakeService,
     GenericWebhookJobService,
     InboundDoorService,
 } from "@modules/domain/agent-inbound"
-import type { InboundEvent } from "../../modules/domain/agent-inbound/agent-inbound.contracts"
 import { ConnectionsService } from "@modules/domain/connections"
 import { workItemsEntities } from "@modules/domain/work-items"
 import { agentMessagesEntities } from "@modules/domain/agent-messages"
@@ -35,17 +37,20 @@ import {
     publishAlternativeInboundVersion,
 } from "../fixtures/builders/backbone-inbound.builder"
 import type { InboundIdentity } from "../fixtures/builders/backbone-inbound.builder"
-import type { IntentPlan } from "../../modules/domain/agent-turns/agent-turns.contracts"
 import { lapseLease, removeDrainJobs, settleAgentWork, wakeOfFact, wakesOfFact } from "./agent-work-database.service"
 import { removeAuthUsers, removeWorkspace } from "./proof-accounts.service"
 import { removeStepJobs } from "./agent-runs-database.service"
 import type { useTestWorld } from "./use-test-world"
 
-const [WorkItemEntity] = workItemsEntities
-const [MessageEntity] = agentMessagesEntities
-const [MemberEntity] = workspaceMembersEntities
-const [, JobOutboxEntity] = jobsEntities
-const [InboxEntity] = inboxEntities
+const WorkItemEntity: (typeof workItemsEntities)[0] = workItemsEntities[0]
+type WorkItemEntity = InstanceType<typeof WorkItemEntity>
+const MessageEntity: (typeof agentMessagesEntities)[0] = agentMessagesEntities[0]
+const MemberEntity: (typeof workspaceMembersEntities)[0] = workspaceMembersEntities[0]
+type AgentMessageEntity = InstanceType<typeof MessageEntity>
+type WorkspaceMemberEntity = InstanceType<typeof MemberEntity>
+const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
+type JobOutboxEntity = InstanceType<typeof JobOutboxEntity>
+const InboxEntity: (typeof inboxEntities)[0] = inboxEntities[0]
 const ROWS_MAX = 20
 const NO_ABORT = new AbortController().signal
 
@@ -78,7 +83,7 @@ const eventsOf =
     })
 
 const turnsOf = (world: World, who: InboundIdentity) => {
-    const tryBegin = async (event: InboundEvent) => {
+    const tryBegin = async (event: InboundEvent): Promise<AgentBegin> => {
         const wake = await wakeOfFact(world.db.primary, who.agentId, event.adapter, event.idempotencyKey)
         return world.resolve(AgentTurnsService).begin(who.agentId, wake.scopeKey, "inbound-proof-worker")
     }
@@ -99,26 +104,26 @@ const turnsOf = (world: World, who: InboundIdentity) => {
         begin,
         tryBegin,
         planOf,
-        async settle(turn: AgentTurnView, text: string) {
+        async settle(turn: AgentTurnView, text: string): Promise<AgentHandlerEnding> {
             const turns = world.resolve(AgentTurnsService)
             assert.equal(await turns.propose(turn, { text }), "stored")
             const ending = await world.resolve(InboundWorkHandlerService).settle(turn, { text }, NO_ABORT)
             await turns.finish(turn, { ...ending, errorCode: null, usage: null })
             return ending
         },
-        replay: (turn: AgentTurnView, text: string) =>
+        replay: (turn: AgentTurnView, text: string): Promise<AgentHandlerEnding> =>
             world.resolve(InboundWorkHandlerService).settle(turn, { text }, NO_ABORT),
-        async read(turn: AgentTurnView, event: InboundEvent, text: string) {
+        async read(turn: AgentTurnView, event: InboundEvent, text: string): Promise<IntentRead> {
             const plan = await planOf(event)
             assert(plan !== null, "The persisted graph must offer the actual event contract")
             return world.resolve(IntentPipelineService).read(turn, plan, text, NO_ABORT)
         },
-        async storeText(turn: AgentTurnView, event: InboundEvent, text: string) {
+        async storeText(turn: AgentTurnView, event: InboundEvent, text: string): Promise<string> {
             const plan = await planOf(event)
             assert(plan !== null, "The persisted graph must offer the actual event contract")
             return world.resolve(IntentPipelineService).storeText(turn, plan, text, NO_ABORT)
         },
-        publishAlternative: () => publishAlternativeInboundVersion(world.db.primary, who, world.id()),
+        publishAlternative: (): Promise<void> => publishAlternativeInboundVersion(world.db.primary, who, world.id()),
         async recover(turn: AgentTurnView, event: InboundEvent): Promise<AgentTurnView> {
             await lapseLease(world.db.primary, turn.agentId, turn.scopeKey)
             return begin(event)
@@ -127,7 +132,7 @@ const turnsOf = (world: World, who: InboundIdentity) => {
 }
 
 const runtimeOf = (world: World) => ({
-    async runtimeDown(turn: AgentTurnView) {
+    async runtimeDown(turn: AgentTurnView): Promise<AgentHandlerEnding> {
         const run = await world.resolve(AgentTurnExecutorService).run(
             turn,
             {
@@ -144,19 +149,21 @@ const runtimeOf = (world: World) => ({
         await world.resolve(AgentTurnsService).finish(turn, { ...ending, errorCode: null, usage: null })
         return ending
     },
-    holdAgain: (turn: AgentTurnView) =>
+    holdAgain: (turn: AgentTurnView): Promise<AgentHandlerEnding> =>
         world.resolve(CustomerWorkHandlerService).holdOver(turn, "openclaw_not_configured"),
 })
 
 const readsOf = (world: World, who: InboundIdentity) => ({
-    owner: () => world.db.primary.findOneByOrFail(MemberEntity, { workspaceId: who.workspaceId, userId: who.userId }),
-    async trace(event: InboundEvent) {
+    owner: (): Promise<WorkspaceMemberEntity> =>
+        world.db.primary.findOneByOrFail(MemberEntity, { workspaceId: who.workspaceId, userId: who.userId }),
+    async trace(event: InboundEvent): Promise<OptionalRunTrace> {
         const wake = await wakeOfFact(world.db.primary, who.agentId, event.adapter, event.idempotencyKey)
         return world.resolve(AgentRunTraceService).ofWake(wake.id)
     },
-    wakes: (event: InboundEvent) => wakesOfFact(world.db.primary, who.agentId, event.idempotencyKey),
-    items: () => world.db.primary.find(WorkItemEntity, { where: { workspaceId: who.workspaceId }, take: ROWS_MAX }),
-    replies: () =>
+    wakes: (event: InboundEvent): Promise<number> => wakesOfFact(world.db.primary, who.agentId, event.idempotencyKey),
+    items: (): Promise<Array<WorkItemEntity>> =>
+        world.db.primary.find(WorkItemEntity, { where: { workspaceId: who.workspaceId }, take: ROWS_MAX }),
+    replies: (): Promise<Array<AgentMessageEntity>> =>
         world.db.primary.find(MessageEntity, {
             where: { conversationId: who.conversationId, role: "agent" },
             take: ROWS_MAX,
@@ -233,11 +240,14 @@ const webhooksOf = (world: World, who: InboundIdentity, eventOf: ReturnType<type
             state.endpoint = seeded.endpoint
             state.signingKey = seeded.signingKey
         },
-        clean: () => cleanInbound(world, who, state.deliveryIds),
+        clean: (): Promise<void> => cleanInbound(world, who, state.deliveryIds),
         /** Proves the real signature and processes the persisted inbox/outbox delivery. */
-        webhook: (key: string, valid = true, claims: Readonly<Record<string, unknown>> = {}) =>
-            deliverWebhook(world, eventOf, state, key, valid, claims),
-        receipts: () =>
+        webhook: (
+            key: string,
+            valid = true,
+            claims: Readonly<Record<string, unknown>> = {},
+        ): Promise<InboundEvent | null> => deliverWebhook(world, eventOf, state, key, valid, claims),
+        receipts: (): Promise<Array<JobOutboxEntity>> =>
             world.db.primary.find(JobOutboxEntity, {
                 where: { queue: "generic_webhook", dedupeKey: In([...state.deliveryIds].map(genericWebhookKey)) },
                 take: ROWS_MAX,
@@ -245,8 +255,37 @@ const webhooksOf = (world: World, who: InboundIdentity, eventOf: ReturnType<type
     }
 }
 
+type BackboneInboundOfResultShape = {
+    /** compile() does not start module lifecycles: register the real capabilities used by these proofs explicitly. */
+    initialize(): void
+    deliver: (event: InboundEvent) => Promise<InboundAccepted>
+    seed(): Promise<void>
+    clean: () => Promise<void>
+    /** Proves the real signature and processes the persisted inbox/outbox delivery. */
+    webhook: (key: string, valid?: boolean, claims?: Readonly<Record<string, unknown>>) => Promise<InboundEvent | null>
+    receipts: () => Promise<Array<JobOutboxEntity>>
+    owner: () => Promise<WorkspaceMemberEntity>
+    trace(event: InboundEvent): Promise<OptionalRunTrace>
+    wakes: (event: InboundEvent) => Promise<number>
+    items: () => Promise<Array<WorkItemEntity>>
+    replies: () => Promise<Array<AgentMessageEntity>>
+    runtimeDown(turn: AgentTurnView): Promise<AgentHandlerEnding>
+    holdAgain: (turn: AgentTurnView) => Promise<AgentHandlerEnding>
+    begin: (event: InboundEvent) => Promise<AgentTurnView>
+    tryBegin: (event: InboundEvent) => Promise<AgentBegin>
+    planOf: (event: InboundEvent) => Promise<IntentPlan | null>
+    settle(turn: AgentTurnView, text: string): Promise<AgentHandlerEnding>
+    replay: (turn: AgentTurnView, text: string) => Promise<AgentHandlerEnding>
+    read(turn: AgentTurnView, event: InboundEvent, text: string): Promise<IntentRead>
+    storeText(turn: AgentTurnView, event: InboundEvent, text: string): Promise<string>
+    publishAlternative: () => Promise<void>
+    recover(turn: AgentTurnView, event: InboundEvent): Promise<AgentTurnView>
+    who: InboundIdentity
+    eventOf: (key: string, over?: Partial<InboundEvent>) => InboundEvent
+}
+
 /** Runs real inbound and pipeline services; model answers enter as external data at IntentPipelineService.read's public boundary. */
-export const backboneInboundOf = (world: World) => {
+export const backboneInboundOf = (world: World): BackboneInboundOfResultShape => {
     const who = identityOf(world)
     const eventOf = eventsOf(world, who)
     return {
@@ -264,7 +303,7 @@ export const backboneInboundOf = (world: World) => {
             world.resolve(IntentTagDoorStepService).onModuleInit()
             world.resolve(WebhookDoorStepService).onModuleInit()
         },
-        deliver: (event: InboundEvent) =>
+        deliver: (event: InboundEvent): Promise<InboundAccepted> =>
             world.db.primary.transaction((tx) => world.resolve(InboundDoorService).accept(tx, event)),
     }
 }

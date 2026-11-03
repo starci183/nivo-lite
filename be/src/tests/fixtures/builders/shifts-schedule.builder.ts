@@ -5,7 +5,7 @@ import type { ProposeWeekOutput, Block, Shift, ShiftStaff } from "@modules/domai
 export const text = (key: string, params: Record<string, string | number> = {}): string =>
     `${key}${JSON.stringify(params)}`
 
-export const staffOf = builder<ShiftStaff>({
+export const staffOf: (overrides?: Partial<ShiftStaff>) => ShiftStaff = builder<ShiftStaff>({
     id: "staff-1",
     name: "Alex",
     positionIds: ["position-1"],
@@ -21,7 +21,7 @@ export const staffOf = builder<ShiftStaff>({
     active: true,
 })
 
-export const blockOf = builder<Block>({
+export const blockOf: (overrides?: Partial<Block>) => Block = builder<Block>({
     id: "block-1",
     weekday: 0,
     start: "08:00",
@@ -32,7 +32,7 @@ export const blockOf = builder<Block>({
     peak: false,
 })
 
-export const shiftOf = builder<Shift>({
+export const shiftOf: (overrides?: Partial<Shift>) => Shift = builder<Shift>({
     id: "shift-1",
     date: "2026-10-12",
     start: "08:00",
@@ -42,7 +42,7 @@ export const shiftOf = builder<Shift>({
     status: "draft",
 })
 
-export const proposalOf = builder<ProposeWeekOutput>({
+export const proposalOf: (overrides?: Partial<ProposeWeekOutput>) => ProposeWeekOutput = builder<ProposeWeekOutput>({
     scheduleId: "schedule-1",
     version: 3,
     shifts: 1,
@@ -53,16 +53,16 @@ export const proposalOf = builder<ProposeWeekOutput>({
     iterations: 6,
 })
 
-export const savedCoverage =
+export const savedCoverage: string =
     `{"coverage":[{"blockId":"block-1","date":"2026-10-12","positionId":"position-1",` +
     `"start":"08:00","end":"10:00","min":1,"ideal":1,"peak":false,"have":1,"status":"ok"}],` +
     `"hours":[{"staffId":"staff-1","hours":2}]}`
 
-export const savedSolver =
+export const savedSolver: string =
     `{"solver":{"ms":0,"iterations":6,"costVnd":60000,"shiftCount":1,"openCount":0,"shortages":[],` +
     `"hoursByStaff":[{"staffId":"staff-1","hours":2}],"askCandidates":[]}}`
 
-export const emptyExplanation = text("shifts.explain.fallback", {
+export const emptyExplanation: string = text("shifts.explain.fallback", {
     week: "week:2026-10-12",
     version: 1,
     shifts: 0,
@@ -71,7 +71,7 @@ export const emptyExplanation = text("shifts.explain.fallback", {
     short: "shifts.explain.shortNone{}",
 })
 
-export const shortageShiftParams = [
+export const shortageShiftParams: Array<string | Array<string | null>> = [
     "ws-1",
     "schedule-1",
     ["2026-10-12", "2026-10-12"],

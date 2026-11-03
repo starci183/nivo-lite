@@ -1,8 +1,24 @@
 import { builder } from "@starci/jest-preset"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 
+type ShiftStaffShape = {
+    id: string
+    name: string
+    positionIds: Array<string>
+    skills: Array<never>
+    wage: number
+    maxWeek: number
+    maxDay: number
+    minRest: number
+    staffRowId: null
+    telegramChatId: null
+    zaloUserId: null
+    phone: null
+    active: boolean
+}
+
 /** A staff profile shared by the workbench setup. */
-export const SHIFT_STAFF = {
+export const SHIFT_STAFF: ShiftStaffShape = {
     id: "profile-1",
     name: "Alex",
     positionIds: ["position-1"],
@@ -18,7 +34,7 @@ export const SHIFT_STAFF = {
     active: true,
 }
 
-export const memberOf = builder<WorkspaceMember>({
+export const memberOf: (overrides?: Partial<WorkspaceMember>) => WorkspaceMember = builder<WorkspaceMember>({
     userId: "user-1",
     workspaceId: "ws-1",
     role: "manager",

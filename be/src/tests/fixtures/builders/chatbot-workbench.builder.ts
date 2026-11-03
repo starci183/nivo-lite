@@ -14,20 +14,21 @@ export const MEMBER: WorkspaceMember = {
     status: "active",
 }
 
-export const conversationOf = builder<CustomerConversationRow>({
-    id: "c-1",
-    channel: "zalo",
-    agent_id: "agent-1",
-    front_agent_id: null,
-    visitor_name: null,
-    lead_id: "l-1",
-    handled_by: null,
-    handled_at: null,
-    external_id: "zalo-9",
-    created_at: "2026-10-13T01:00:00.000Z",
-})
+export const conversationOf: (overrides?: Partial<CustomerConversationRow>) => CustomerConversationRow =
+    builder<CustomerConversationRow>({
+        id: "c-1",
+        channel: "zalo",
+        agent_id: "agent-1",
+        front_agent_id: null,
+        visitor_name: null,
+        lead_id: "l-1",
+        handled_by: null,
+        handled_at: null,
+        external_id: "zalo-9",
+        created_at: "2026-10-13T01:00:00.000Z",
+    })
 
-export const briefOf = builder<MessageBrief>({
+export const briefOf: (overrides?: Partial<MessageBrief>) => MessageBrief = builder<MessageBrief>({
     id: "m-1",
     conversation_id: "c-1",
     role: "user",
@@ -35,7 +36,7 @@ export const briefOf = builder<MessageBrief>({
     created_at: "2026-10-13T01:00:00.000Z",
 })
 
-export const messageOf = builder<ChatThreadLine>({
+export const messageOf: (overrides?: Partial<ChatThreadLine>) => ChatThreadLine = builder<ChatThreadLine>({
     ...briefOf(),
     author_kind: null,
     author_name: null,
@@ -43,7 +44,7 @@ export const messageOf = builder<ChatThreadLine>({
     delivery_error: null,
 })
 
-export const waitingOf = builder<WaitingRow>({
+export const waitingOf: (overrides?: Partial<WaitingRow>) => WaitingRow = builder<WaitingRow>({
     id: "w-1",
     subject_id: "c-2",
     proposal: null,

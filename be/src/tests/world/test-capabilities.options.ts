@@ -4,6 +4,7 @@ import { JobsModule } from "@modules/platform/jobs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MetaModule } from "@modules/integrations/meta"
 import { Secret } from "@modules/platform/config"
+import type { DynamicModule } from "@nestjs/common"
 
 /** The producer stays idle until a proof explicitly starts its worker. */
 export const queueOptions: QueueOptions = {
@@ -22,9 +23,9 @@ export const queueOptions: QueueOptions = {
     schedulers: [],
 }
 /** Public modules used by the queue proofs. */
-export const QUEUE_MODULES = [QueueModule.register({ ...queueOptions, isGlobal: true })]
+export const QUEUE_MODULES: Array<DynamicModule> = [QueueModule.register({ ...queueOptions, isGlobal: true })]
 /** Public modules used by the claim proofs. */
-export const JOBS_MODULES = [
+export const JOBS_MODULES: Array<DynamicModule> = [
     ...QUEUE_MODULES,
     JobsModule.register({
         connection: PRIMARY_ENTITY_MANAGER,
@@ -36,7 +37,7 @@ export const JOBS_MODULES = [
 /** The local provider signing key; this is synthetic test data. */
 export const signingFixture = "integration-meta-provider-fixture"
 /** The real provider verifies and parses every delivery. No provider network operation is needed. */
-export const WEBHOOK_MODULES = [
+export const WEBHOOK_MODULES: Array<DynamicModule> = [
     ...QUEUE_MODULES,
     MetaModule.register({
         app: { appId: "integration-meta", appSecret: new Secret(signingFixture) },

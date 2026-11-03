@@ -14,8 +14,18 @@ export interface BillingRow {
     readonly billed_monthly_vnd: number | null
 }
 
+type FactsOfResultShape = {
+    status: string
+    planCode: string | null
+    paidUntil: Date | null
+    tierCredits: number | null
+    seatCount: number | null
+    billingCycle: "monthly" | "annual" | null
+    billedMonthlyVnd: number | null
+}
+
 /** The billing facts the workspaces owner answers for that row. */
-export const factsOf = (row: BillingRow) => ({
+export const factsOf = (row: BillingRow): FactsOfResultShape => ({
     status: row.status,
     planCode: row.plan_code,
     paidUntil: row.paid_until === null ? null : new Date(row.paid_until),

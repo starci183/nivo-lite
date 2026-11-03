@@ -14,23 +14,24 @@ export const INSTALLING_MEMBER: WorkspaceMember = {
 }
 
 /** An installed chatbot agent, ready and not live. */
-export const installationRecordOf = builder<InstallationRecord>({
-    id: "inst-1",
-    workspaceId: "ws-1",
-    moduleKey: "chatbot",
-    name: "Front desk",
-    isMulti: true,
-    agentId: "agent-1",
-    status: "ready",
-    operatingMode: "assist",
-    liveEnabled: false,
-    activeContextVersionId: "version-1",
-    settings: { openclawTimeoutSec: 30 },
-    createdAt: "2026-10-01T00:00:00.000Z",
-})
+export const installationRecordOf: (overrides?: Partial<InstallationRecord>) => InstallationRecord =
+    builder<InstallationRecord>({
+        id: "inst-1",
+        workspaceId: "ws-1",
+        moduleKey: "chatbot",
+        name: "Front desk",
+        isMulti: true,
+        agentId: "agent-1",
+        status: "ready",
+        operatingMode: "assist",
+        liveEnabled: false,
+        activeContextVersionId: "version-1",
+        settings: { openclawTimeoutSec: 30 },
+        createdAt: "2026-10-01T00:00:00.000Z",
+    })
 
 /** The agent of the installed chatbot. */
-export const installAgentOf = builder<AgentSummary>({
+export const installAgentOf: (overrides?: Partial<AgentSummary>) => AgentSummary = builder<AgentSummary>({
     id: "agent-1",
     module: "chatbot",
     name: "Chatbot",

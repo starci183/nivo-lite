@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentRunItemVerdictsService, DecisionLogReadService } from "@modules/domain/decisions"
 import { WorkItemsDecisionsReadService, WorkItemsService } from "@modules/domain/work-items"
 import { AGENT_RUN_ITEM_VERDICTS, AgentRunsModule } from "@modules/domain/agent-runs"
@@ -20,7 +20,7 @@ import { API_APP_MODULES } from "./api-app.options"
 class RecordedDecisionsModule {}
 
 /** The agent work store with the runs on top, as the api composes them, and a scripted world for the steps to act on. */
-export const AGENT_RUNS_MODULES = [
+export const AGENT_RUNS_MODULES: Array<DynamicModule> = [
     ...AGENT_WORK_MODULES,
     { module: RecordedDecisionsModule, global: true },
     AgentRunsModule.register({ isGlobal: true }),
@@ -28,4 +28,4 @@ export const AGENT_RUNS_MODULES = [
 ]
 
 /** The actual API owners with new engine-extension subjects; no verdict or timeout substitution. */
-export const WAIT_RUNS_MODULES = [...API_APP_MODULES, WaitsExtensionModule.register()]
+export const WAIT_RUNS_MODULES: Array<DynamicModule> = [...API_APP_MODULES, WaitsExtensionModule.register()]

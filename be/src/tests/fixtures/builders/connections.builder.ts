@@ -6,7 +6,11 @@ type ConnectionsOptions = ConstructorParameters<typeof ConnectionsService>[1]
 /** URL precedence overrides accepted by the connection subject. */
 export type Urls = Partial<Pick<ConnectionsOptions, "siteUrl" | "publicSiteUrl" | "publicApiUrl">>
 /** Plain URLs, short suffixes and long suffixes keep the same site path. */
-export const siteUrlCases = [
+export const siteUrlCases: readonly [
+    readonly ["https://site.example.com", "https://site.example.com"],
+    readonly ["https://nivo.vn/app///", "https://nivo.vn/app"],
+    readonly [string, "https://site.example.com/path"],
+] = [
     ["https://site.example.com", "https://site.example.com"],
     ["https://nivo.vn/app///", "https://nivo.vn/app"],
     ["https://site.example.com/path" + "/".repeat(20_000), "https://site.example.com/path"],
@@ -29,8 +33,45 @@ export const ROW = {
     createdAt: "2026-10-01T00:00:00.000Z",
 }
 
+type ConnectionsCaseMissingShape = {
+    code: ConnectionsErrorCode
+}
+
+type ConnectionsCaseActorShape = {
+    principalId: string
+    workspaceId: string
+}
+
+type ConnectionsCaseCreateInputSecretShape = {
+    plain: string
+    webhookSecret: string
+}
+
+type ConnectionsCaseCreateInputMetaShape = {
+    bot_id: string
+}
+
+type ConnectionsCaseCreateInputShape = {
+    workspaceId: string
+    createdBy: string
+    provider: "telegram"
+    name: string
+    status: "connected"
+    environment: "live"
+    meta: ConnectionsCaseCreateInputMetaShape
+    secret: ConnectionsCaseCreateInputSecretShape
+}
+
+type ConnectionsCaseShape = {
+    createInput: ConnectionsCaseCreateInputShape
+    actor: ConnectionsCaseActorShape
+    forbidden: ConnectionsCaseMissingShape
+    invalidName: ConnectionsCaseMissingShape
+    missing: ConnectionsCaseMissingShape
+}
+
 /** The actor, membership and refusal identities shared by connection scenarios. */
-export const connectionsCase = {
+export const connectionsCase: ConnectionsCaseShape = {
     createInput: {
         workspaceId: "ws-1",
         createdBy: "user-1",
@@ -48,10 +89,11 @@ export const connectionsCase = {
     missing: { code: ConnectionsErrorCode.NotFound },
 }
 
-const [ConnectionEntity] = connectionsEntities
+const ConnectionEntity: (typeof connectionsEntities)[0] = connectionsEntities[0]
+type ConnectionEntity = InstanceType<typeof ConnectionEntity>
 
 /** A connected Telegram bot as the bindings read answers it, with a padded username and a blank masked account. */
-export const botConnectionOf = entityOf(ConnectionEntity, {
+export const botConnectionOf: (overrides?: Partial<ConnectionEntity>) => ConnectionEntity = entityOf(ConnectionEntity, {
     id: "c1",
     provider: "telegram",
     name: "Shop bot",
@@ -61,18 +103,21 @@ export const botConnectionOf = entityOf(ConnectionEntity, {
 })
 
 /** The same bot whose reported username is not text. */
-export const numericUsernameConnectionOf = () => botConnectionOf({ publicMeta: { bot_username: 5 } })
+export const numericUsernameConnectionOf = (): ConnectionEntity => botConnectionOf({ publicMeta: { bot_username: 5 } })
 
 /** The same bot, live, in workspace w1. */
-export const liveBotConnectionOf = () => botConnectionOf({ workspaceId: "w1", environment: "live" })
+export const liveBotConnectionOf = (): ConnectionEntity => botConnectionOf({ workspaceId: "w1", environment: "live" })
 
 /** A connected Telegram connection of workspace ws-1 as the secret reads find it. */
-export const secretConnectionOf = entityOf(ConnectionEntity, {
-    id: "c-1",
-    workspaceId: "ws-1",
-    provider: "telegram",
-    status: "connected",
-})
+export const secretConnectionOf: (overrides?: Partial<ConnectionEntity>) => ConnectionEntity = entityOf(
+    ConnectionEntity,
+    {
+        id: "c-1",
+        workspaceId: "ws-1",
+        provider: "telegram",
+        status: "connected",
+    },
+)
 
 /** The second connection of that workspace. */
-export const secondSecretConnectionOf = () => secretConnectionOf({ id: "c-2" })
+export const secondSecretConnectionOf = (): ConnectionEntity => secretConnectionOf({ id: "c-2" })

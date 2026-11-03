@@ -2,7 +2,8 @@ import { builder } from "@starci/jest-preset"
 import { agentRunsEntities } from "@modules/domain/agent-runs"
 import type { RunStepView, RunView, StepSpec, StepView } from "@modules/domain/agent-runs"
 
-const [AgentRunEntity, AgentRunStepEntity] = agentRunsEntities
+const AgentRunEntity: (typeof agentRunsEntities)[0] = agentRunsEntities[0]
+const AgentRunStepEntity: (typeof agentRunsEntities)[1] = agentRunsEntities[1]
 type AgentRunEntity = InstanceType<typeof AgentRunEntity>
 type AgentRunStepEntity = InstanceType<typeof AgentRunStepEntity>
 
@@ -70,7 +71,7 @@ export const stepSpecOf = (over: Partial<StepSpec> = {}): StepSpec => ({
 })
 
 /** A run row that is going on, with no trigger context beyond a conversation. */
-export const runRowOf = builder<AgentRunEntity>({
+export const runRowOf: (overrides?: Partial<AgentRunEntity>) => AgentRunEntity = builder<AgentRunEntity>({
     id: "run-1",
     workspaceId: "ws-1",
     agentId: "agent-1",
@@ -87,7 +88,7 @@ export const runRowOf = builder<AgentRunEntity>({
 })
 
 /** A step row that is done, the first of run-1. */
-export const stepRowOf = builder<AgentRunStepEntity>({
+export const stepRowOf: (overrides?: Partial<AgentRunStepEntity>) => AgentRunStepEntity = builder<AgentRunStepEntity>({
     id: "s-1",
     runId: "run-1",
     workspaceId: "ws-1",

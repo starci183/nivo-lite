@@ -9,7 +9,8 @@ import type { QueueTransport } from "../../modules/platform/queue/queue-transpor
 import type { EntityManager } from "typeorm"
 import type { LiteWorld } from "./lite-world.service"
 
-const [JobEntity, JobOutboxEntity] = jobsEntities
+const JobEntity: (typeof jobsEntities)[0] = jobsEntities[0]
+const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
 
 /** How long ago a crashed holder's lease ended. */
 const LAPSED_MS = 1000
@@ -96,8 +97,13 @@ export const startQueueRelay = (world: LiteWorld): QueueRelayService => {
     return relay
 }
 
+type RedisJobProofResultShape = {
+    rowOf: (key: string) => Promise<PersistedRedisJob>
+    enqueue: (queue: string, key: string) => Promise<PersistedRedisJob>
+}
+
 /** Writes proof jobs through the real outbox and reads back their durable admission. */
-export const redisJobProof = (world: LiteWorld) => {
+export const redisJobProof = (world: LiteWorld): RedisJobProofResultShape => {
     const rowOf = async (key: string): Promise<PersistedRedisJob> => {
         const row = await world.db.primary.findOne(JobOutboxEntity, { where: { dedupeKey: key } })
         assert(row !== null)

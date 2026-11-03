@@ -1,6 +1,16 @@
+import {
+    EMPTY_SIGNALS,
+    parseAnalysis,
+    type Sentiment,
+    type Flags,
+    type TurnGap,
+    type Signals,
+    type LeadFlow,
+    type Analysis,
+    type FlowFields,
+} from "@modules/domain/lead-flows"
 import { builder } from "@starci/jest-preset"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
-import { EMPTY_SIGNALS, parseAnalysis, type LeadFlow, type Analysis, type FlowFields } from "@modules/domain/lead-flows"
 /** Shared, complete test data for the capability cases. */
 export const NOW = "2026-10-12T10:00:00.000Z"
 
@@ -8,7 +18,7 @@ export const NOW = "2026-10-12T10:00:00.000Z"
 export const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 /** Shared, complete test data for the capability cases. */
-export const flowOf = builder<LeadFlow>({
+export const flowOf: (overrides?: Partial<LeadFlow>) => LeadFlow = builder<LeadFlow>({
     id: "flow-1",
     workspace_id: "ws-1",
     lead_id: "lead-1",
@@ -44,7 +54,7 @@ export const flowOf = builder<LeadFlow>({
 })
 
 /** Shared, complete test data for the capability cases. */
-export const itemOf = builder<WorkItem>({
+export const itemOf: (overrides?: Partial<WorkItem>) => WorkItem = builder<WorkItem>({
     id: "item-1",
     workspace_id: "ws-1",
     department: "lead_gen",
@@ -74,35 +84,85 @@ export const itemOf = builder<WorkItem>({
 })
 
 /** Shared, complete test data for the capability cases. */
-export const DOT = String.fromCodePoint(0x00b7)
+export const DOT: string = String.fromCodePoint(0x00b7)
 
 /** Shared, complete test data for the capability cases. */
-export const turnItem = (text: string) =>
+export const turnItem = (text: string): WorkItem =>
     itemOf({ proposal: { summary: "", fields: { turn: "t:1", source_kind: "dm", text } } })
 
 /** Shared, complete test data for the capability cases. */
-export const cold = parseAnalysis({ confidence: 1 }, "manual:item-1")
+export const cold: Analysis = parseAnalysis({ confidence: 1 }, "manual:item-1")
 
 /** Shared, complete test data for the capability cases. */
-export const warm = parseAnalysis({ confidence: 1, signals: { need: "Tea" } }, "manual:item-1")
+export const warm: Analysis = parseAnalysis({ confidence: 1, signals: { need: "Tea" } }, "manual:item-1")
 
 /** Shared, complete test data for the capability cases. */
-export const emptyForm = parseAnalysis(
+export const emptyForm: Analysis = parseAnalysis(
     { confidence: 1, signals: { need: null, contact: "", interest: "medium" } },
     "manual:item-1",
 )
 
-/** Shared, complete test data for the capability cases. */
-export const filledForm = { ...emptyForm, signals: { ...emptyForm.signals, need: "Tea" } }
+type FilledFormSignalsShape = {
+    need: string
+    contact: string | null
+    budget: "fit" | "low" | "unknown"
+    timeline: "soon" | "later" | "unknown"
+    area: "fit" | "outside" | "unknown"
+    asks_price_or_schedule: boolean
+    wants_meeting: boolean
+    interest: "high" | "medium" | "low" | "none"
+}
+
+type FilledFormShape = {
+    signals: FilledFormSignalsShape
+    turn: string
+    sentiment: Sentiment
+    flags: Flags
+    confidence: number
+    reply: string
+    answer: string | null
+    knowledge_gap: TurnGap | null
+    public_reply: string
+    private_reply: string
+}
 
 /** Shared, complete test data for the capability cases. */
-export const coffeeForm = { ...emptyForm, signals: { ...emptyForm.signals, need: "Coffee" } }
+export const filledForm: FilledFormShape = { ...emptyForm, signals: { ...emptyForm.signals, need: "Tea" } }
+
+type CoffeeFormShape = {
+    signals: FilledFormSignalsShape
+    turn: string
+    sentiment: Sentiment
+    flags: Flags
+    confidence: number
+    reply: string
+    answer: string | null
+    knowledge_gap: TurnGap | null
+    public_reply: string
+    private_reply: string
+}
 
 /** Shared, complete test data for the capability cases. */
-export const answered = { ...warm, answer: "Tomorrow" }
+export const coffeeForm: CoffeeFormShape = { ...emptyForm, signals: { ...emptyForm.signals, need: "Coffee" } }
+
+type AnsweredShape = {
+    answer: string
+    turn: string
+    signals: Signals
+    sentiment: Sentiment
+    flags: Flags
+    confidence: number
+    reply: string
+    knowledge_gap: TurnGap | null
+    public_reply: string
+    private_reply: string
+}
 
 /** Shared, complete test data for the capability cases. */
-export const hot = parseAnalysis(
+export const answered: AnsweredShape = { ...warm, answer: "Tomorrow" }
+
+/** Shared, complete test data for the capability cases. */
+export const hot: Analysis = parseAnalysis(
     {
         confidence: 1,
         signals: { need: "Tea", contact: "lan@example.com", asks_price_or_schedule: true },
@@ -112,13 +172,25 @@ export const hot = parseAnalysis(
 )
 
 /** Shared, complete test data for the capability cases. */
-export const gap = parseAnalysis(
+export const gap: Analysis = parseAnalysis(
     { confidence: 1, knowledge_gap: { question: "Does it ship?", topic: "delivery" } },
     "manual:item-1",
 )
 
+type SourceShape = {
+    readonly kind: "mention"
+    readonly platform: "instagram"
+    readonly at: "2026-10-12T10:00:00.000Z"
+    readonly post_id: null
+    readonly ad_id: null
+    readonly form_id: null
+    readonly comment_id: null
+    readonly leadgen_id: null
+    readonly referral: null
+}
+
 /** Shared, complete test data for the capability cases. */
-export const source = {
+export const source: SourceShape = {
     kind: "mention",
     platform: "instagram",
     at: NOW,
@@ -154,8 +226,18 @@ export const gapFields = { source_kind: "comment", text: "Does it ship?" }
 /** Shared, complete test data for the capability cases. */
 export const unreadable = { step: "escalate", escalation: "unreadable", confidence: 0 }
 
+type LowConfidenceShape = {
+    step: string
+    escalation: string
+    confidence: number
+}
+
 /** Shared, complete test data for the capability cases. */
-export const lowConfidence = { step: "escalate", escalation: "low_confidence", confidence: 0.6 - 0.05 }
+export const lowConfidence: LowConfidenceShape = {
+    step: "escalate",
+    escalation: "low_confidence",
+    confidence: 0.6 - 0.05,
+}
 
 /** Shared, complete test data for the capability cases. */
 export const hotComment = { step: "comment", score: "hot", handoff: "1", negative: "1" }
@@ -169,20 +251,42 @@ export const form = { source_kind: "leadgen", need: "Tea\nCoffee" }
 /** Shared, complete test data for the capability cases. */
 export const formResult = { step: "follow_up", need: "Tea", confidence: 1, score: "warm" }
 
+type CoffeeResultShape = {
+    need: string
+    step: string
+    confidence: number
+    score: string
+}
+
 /** Shared, complete test data for the capability cases. */
-export const coffeeResult = { ...formResult, need: "Coffee" }
+export const coffeeResult: CoffeeResultShape = { ...formResult, need: "Coffee" }
 
 /** Shared, complete test data for the capability cases. */
 export const blankForm = { source_kind: "leadgen" }
 
-/** Shared, complete test data for the capability cases. */
-export const nullForm = { ...blankForm, need: null }
+type NullFormShape = {
+    need: null
+    source_kind: string
+}
 
 /** Shared, complete test data for the capability cases. */
-export const numericForm = { ...blankForm, need: 12 }
+export const nullForm: NullFormShape = { ...blankForm, need: null }
+
+type NumericFormShape = {
+    need: number
+    source_kind: string
+}
 
 /** Shared, complete test data for the capability cases. */
-export const newlineForm = { ...blankForm, need: "\nCoffee" }
+export const numericForm: NumericFormShape = { ...blankForm, need: 12 }
+
+type NewlineFormShape = {
+    need: string
+    source_kind: string
+}
+
+/** Shared, complete test data for the capability cases. */
+export const newlineForm: NewlineFormShape = { ...blankForm, need: "\nCoffee" }
 
 /** Shared, complete test data for the capability cases. */
 export const blankResult = { step: "close", need: "", confidence: 1, score: "cold" }
@@ -194,7 +298,7 @@ export const noChannel: Partial<LeadFlow> = { ...unread, connection_id: null, co
 export const held: Partial<LeadFlow> = { state: "handed_off", asked: 2, contact_asked_at: NOW, greeted_at: NOW }
 
 /** Shared, complete test data for the capability cases. */
-export const resumed = flowOf({ analysis: cold, state: "qualifying", source })
+export const resumed: LeadFlow = flowOf({ analysis: cold, state: "qualifying", source })
 
 /** Shared, complete test data for the capability cases. */
 export const cases: ReadonlyArray<PrepareCase> = [

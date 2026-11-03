@@ -1,12 +1,13 @@
-import type { FakeClock, MockOf } from "@starci/jest-preset"
-import { eachInOrder } from "@modules/platform/primitives"
-import { SEPAY_MANIFEST } from "@modules/domain/mcp-gateway"
 import type {
     GatewayCaller,
     McpGatewayService,
     NativeAdapter,
     NativeConnectorManifest,
+    GatewayCallResult,
 } from "@modules/domain/mcp-gateway"
+import type { FakeClock, MockOf } from "@starci/jest-preset"
+import { eachInOrder } from "@modules/platform/primitives"
+import { SEPAY_MANIFEST } from "@modules/domain/mcp-gateway"
 import type { McpRemote } from "@modules/integrations/mcp"
 import { GATEWAY_CALLER } from "./mcp-gateway.builder"
 
@@ -32,8 +33,28 @@ export const TAINTING_MANIFEST: NativeConnectorManifest = {
     ]),
 }
 
+type TaintedTurnExpectedShape2 = {
+    ok: boolean
+    code: string
+    reason: string
+    value?: never
+    summary?: never
+}
+
+type TaintedTurnExpectedValueShape = {
+    transactions: Array<never>
+}
+
+type TaintedTurnExpectedShape = {
+    ok: boolean
+    value: TaintedTurnExpectedValueShape
+    summary: string
+    code?: never
+    reason?: never
+}
+
 /** What a turn that read tainted text came to: the plain read, the write asked for a person, the approved write, and the write after the window. */
-export const taintedTurnExpected = [
+export const taintedTurnExpected: Array<TaintedTurnExpectedShape | TaintedTurnExpectedShape2> = [
     { ok: true, value: { transactions: [] }, summary: '{"transactions":[]}' },
     { ok: false, code: "approval_required", reason: "tainted_input" },
     { ok: true, value: { transactions: [] }, summary: '{"transactions":[]}' },
@@ -41,7 +62,11 @@ export const taintedTurnExpected = [
 ]
 
 /** Runs that turn: a tainting read, a write (asked), the same write approved by a person, and the write again after the window. */
-export const taintedTurnOf = async (gateway: McpGatewayService, clock: FakeClock, caller: GatewayCaller) => {
+export const taintedTurnOf = async (
+    gateway: McpGatewayService,
+    clock: FakeClock,
+    caller: GatewayCaller,
+): Promise<Array<GatewayCallResult>> => {
     const writer = { ...caller, opKey: "step-1" }
     await gateway.call(writer, "sepay.read", {})
     const asked = await gateway.call(writer, "sepay.act", {})
@@ -56,7 +81,7 @@ export const replayedHoldKeysOf = async (
     gateway: McpGatewayService,
     remote: MockOf<McpRemote>,
     caller: GatewayCaller,
-) => {
+): Promise<Array<unknown>> => {
     const step = { ...caller, workItemId: "item-1" }
     const hold = { roomType: "deluxe", checkIn: "2026-10-24", nights: 2, guests: 2, guestId: "g1" }
     await gateway.call(step, "hakuen.booking.hold", hold)
@@ -66,8 +91,34 @@ export const replayedHoldKeysOf = async (
     return remote.call.mock.calls.map(([request]) => request.args.idempotencyKey)
 }
 
+type ReplayedConfirmationOfResultArgsShape = {
+    holdId: string
+    discountPct: number
+}
+
+type ReplayedConfirmationOfResultCallerShape = {
+    opKey: string
+    workspaceId: string
+    agentId: string
+    conversationId: string | null
+    workItemId: string | null
+    audience?: "customer" | "internal"
+    approvedBy?: string
+    turnId?: string | undefined
+}
+
+type ReplayedConfirmationOfResultShape = {
+    caller: ReplayedConfirmationOfResultCallerShape
+    args: ReplayedConfirmationOfResultArgsShape
+    first: GatewayCallResult
+    retried: GatewayCallResult
+}
+
 /** Makes two semantically equal confirmation requests under the same operation, retaining both results for the spec. */
-export const replayedConfirmationOf = async (gateway: McpGatewayService, original: GatewayCaller) => {
+export const replayedConfirmationOf = async (
+    gateway: McpGatewayService,
+    original: GatewayCaller,
+): Promise<ReplayedConfirmationOfResultShape> => {
     const caller = { ...original, opKey: "customer-message:confirm" }
     const args = { holdId: "hold-1", discountPct: 0 }
     const first = await gateway.call(caller, "hakuen.booking.confirm", args)
@@ -87,8 +138,22 @@ export const openNativeGatewayBreaker = async (
     clock.advance(120_000)
 }
 
+type HiddenReplyValueTransactionsShape = {
+    id: string
+}
+
+type HiddenReplyValueShape = {
+    transactions: Array<HiddenReplyValueTransactionsShape>
+}
+
+type HiddenReplyShape = {
+    ok: boolean
+    value: HiddenReplyValueShape
+    summary: string
+}
+
 /** A successful read whose account field was hidden by the caller's payment right. */
-export const HIDDEN_REPLY = {
+export const HIDDEN_REPLY: HiddenReplyShape = {
     ok: true,
     value: { transactions: [{ id: "t1" }] },
     summary: '{"transactions":[{"id":"t1"}]}',
@@ -97,8 +162,19 @@ export const HIDDEN_REPLY = {
 /** The workspace payment right that hides the account field. */
 export const PAYMENT_RIGHT = { kind: "payments", scope: "workspace", hide: ["account"], mask: [] } as const
 
+type GraphCallerShape = {
+    workItemId: string
+    turnId: string
+    workspaceId: string
+    agentId: string
+    conversationId: string | null
+    audience?: "customer" | "internal"
+    approvedBy?: string
+    opKey?: string | undefined
+}
+
 /** A work-item write in an agent turn governed by its graph. */
-export const GRAPH_CALLER = { ...GATEWAY_CALLER, workItemId: "item-1", turnId: "turn-1" }
+export const GRAPH_CALLER: GraphCallerShape = { ...GATEWAY_CALLER, workItemId: "item-1", turnId: "turn-1" }
 
 /** The masked response of the held booking. */
 export const HELD_REPLY = { ok: true, value: { holdId: "h1" }, summary: '{"holdId":"h1"}' }

@@ -1,12 +1,12 @@
+import type { JobClaims, JobProcessorRegistry, FencedProcessor, ClaimedJob, AdvanceWrite } from "@modules/platform/jobs"
 import assert from "node:assert/strict"
 import { ZaloInboxService } from "@modules/domain/zalo-inbox"
 import { JOB_CLAIMS, JOB_PROCESSOR_REGISTRY, JobsModule } from "@modules/platform/jobs"
-import type { JobClaims, JobProcessorRegistry } from "@modules/platform/jobs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import type { QueueOutbox, QueueWriteOptions } from "@modules/platform/queue"
 import { ZALO_DELIVERY_QUEUE } from "@modules/queues/zalo-delivery"
-import { ZaloDeliveryQueue } from "../../modules/queues/zalo-delivery/zalo-delivery.queue"
+import { ZaloDeliveryQueue, type ZaloDeliveryRecorded } from "../../modules/queues/zalo-delivery/zalo-delivery.queue"
 import { ZaloDeliveryProcessor } from "../../features/jobs/zalo-delivery/transport/queue/zalo-delivery.processor"
 import { ZaloDeliveryQueueModule } from "../../features/jobs/zalo-delivery/transport/queue/zalo-delivery-queue.module"
 import type { LiteWorld } from "./lite-world.service"
@@ -14,9 +14,12 @@ import { QUEUE_MODULES } from "./test-capabilities.options"
 import { RECEIPT_DOMAIN_MODULES } from "./receipt-domain-proof.module"
 import { deliveryEnvelopes, deliveryPublications, removeDeliveryOutbox } from "./proof-database.service"
 import { receiptsOf, removeReceipts } from "./receipts-database.service"
+import type { DynamicModule } from "@nestjs/common"
+import type { ReceiptRow, WebhookJobRow, WebhookMessageRow } from "@tests/fixtures/persistence/proof.rows"
+import type { EntityManager } from "typeorm"
 
 /** Real database, queue, claims and receipt owners shared by the delivery proofs. */
-export const RECEIPT_DELIVERY_MODULES = [
+export const RECEIPT_DELIVERY_MODULES: Array<DynamicModule> = [
     ...QUEUE_MODULES,
     JobsModule.register({
         isGlobal: true,
@@ -28,15 +31,42 @@ export const RECEIPT_DELIVERY_MODULES = [
     ...RECEIPT_DOMAIN_MODULES,
 ]
 
+type ZaloDeliveryStateResultShape = {
+    receipts: ReadonlyArray<ReceiptRow>
+    jobs: Array<WebhookJobRow>
+    messages: Array<WebhookMessageRow>
+}
+
 /** Observes the committed receipt and its durable outbox handoff. */
-export const zaloDeliveryState = async (world: LiteWorld, deliveryId: string) => ({
+export const zaloDeliveryState = async (
+    world: LiteWorld,
+    deliveryId: string,
+): Promise<ZaloDeliveryStateResultShape> => ({
     receipts: await receiptsOf(world.db.primary, "zalo", deliveryId),
     jobs: await deliveryPublications(world.db.primary, ZALO_DELIVERY_QUEUE, deliveryId),
     messages: await deliveryEnvelopes(world.db.primary, ZALO_DELIVERY_QUEUE, deliveryId),
 })
 
+type ZaloPublicationBuilderResultOutboxShape = {
+    write: jest.SpyInstance<
+        Promise<void>,
+        [tx: EntityManager, queue: string, payload: object, options?: QueueWriteOptions | undefined]
+    >
+}
+
+type ZaloPublicationBuilderResultMessageShape = {
+    deliveryId: string
+}
+
+type ZaloPublicationBuilderResultShape = {
+    message: ZaloPublicationBuilderResultMessageShape
+    queue: ZaloDeliveryQueue
+    service: ZaloInboxService
+    outbox: ZaloPublicationBuilderResultOutboxShape
+}
+
 /** Isolates a real producer and registers cleanup before publication can occur. */
-export const zaloPublicationBuilder = (world: LiteWorld) => {
+export const zaloPublicationBuilder = (world: LiteWorld): ZaloPublicationBuilderResultShape => {
     const message = { deliveryId: `${world.id()}:m-1` }
     world.cleanup(async () => {
         await removeDeliveryOutbox(world.db.primary, ZALO_DELIVERY_QUEUE, message.deliveryId)
@@ -51,8 +81,26 @@ export const zaloPublicationBuilder = (world: LiteWorld) => {
     }
 }
 
+type ZaloDeliveryBuilderResultClaimsShape = {
+    advance: jest.SpyInstance<Promise<void>, [write: AdvanceWrite]>
+}
+
+type ZaloDeliveryBuilderResultInboxShape = {
+    processRecordedDelivery: jest.SpyInstance<Promise<void>, [message: ZaloDeliveryRecorded]>
+}
+
+type ZaloDeliveryBuilderResultShape = {
+    processor: ZaloDeliveryProcessor
+    job: ClaimedJob
+    jobKey: string
+    message: ZaloPublicationBuilderResultMessageShape
+    inbox: ZaloDeliveryBuilderResultInboxShape
+    claims: ZaloDeliveryBuilderResultClaimsShape
+    advance: (write: AdvanceWrite) => Promise<void>
+}
+
 /** Persists a committed receipt and a third live fence using the real claim service. */
-export const zaloDeliveryBuilder = async (world: LiteWorld) => {
+export const zaloDeliveryBuilder = async (world: LiteWorld): Promise<ZaloDeliveryBuilderResultShape> => {
     const publication = zaloPublicationBuilder(world)
     const connection = publication.message.deliveryId.split(":")[0]
     assert(connection !== undefined)
@@ -95,8 +143,17 @@ export const zaloDeliveryBuilder = async (world: LiteWorld) => {
     }
 }
 
+type RegisterZaloDeliveryResultRegistryShape = {
+    add: jest.SpyInstance<void, [processor: FencedProcessor]>
+}
+
+type RegisterZaloDeliveryResultShape = {
+    registry: RegisterZaloDeliveryResultRegistryShape
+    processor: ZaloDeliveryProcessor
+}
+
 /** Observes registration while running the composed module's real initialization hook. */
-export const registerZaloDelivery = (world: LiteWorld) => {
+export const registerZaloDelivery = (world: LiteWorld): RegisterZaloDeliveryResultShape => {
     const registry = world.resolve<JobProcessorRegistry>(JOB_PROCESSOR_REGISTRY)
     const add = jest.spyOn(registry, "add")
     world.resolve(ZaloDeliveryQueueModule).onModuleInit()

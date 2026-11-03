@@ -187,4 +187,4 @@ export const apiAppModules = (options: ApiProofOptions = {}): Array<DynamicModul
 ]
 
 /** The api's own composition as one module of the world. */
-export const API_APP_MODULES = apiAppModules()
+export const API_APP_MODULES: Array<DynamicModule> = apiAppModules()

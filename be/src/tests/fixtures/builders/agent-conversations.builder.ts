@@ -1,30 +1,31 @@
 import { builder } from "@starci/jest-preset"
 import { agentConversationsEntities } from "@modules/domain/agent-conversations"
 
-const [AgentConversationEntity] = agentConversationsEntities
+const AgentConversationEntity: (typeof agentConversationsEntities)[0] = agentConversationsEntities[0]
 type AgentConversationEntity = InstanceType<typeof AgentConversationEntity>
 
 /** A customer's Telegram conversation with the fields a spec rarely changes filled. */
-export const conversationOf = builder<AgentConversationEntity>({
-    id: "conv-1",
-    workspaceId: "ws-1",
-    agentId: "agent-1",
-    frontAgentId: null,
-    kind: "customer",
-    visitorName: "Minh",
-    leadId: null,
-    createdAt: new Date("2026-10-13T02:00:00.000Z"),
-    handledBy: null,
-    handledAt: null,
-    channel: "telegram",
-    externalId: "555",
-    connectionId: "c-1",
-    installationId: null,
-    connectorPartyId: null,
-    connectorPartyName: null,
-    connectorPartyAt: null,
-    updatedAt: new Date("2026-10-13T02:00:00.000Z"),
-})
+export const conversationOf: (overrides?: Partial<AgentConversationEntity>) => AgentConversationEntity =
+    builder<AgentConversationEntity>({
+        id: "conv-1",
+        workspaceId: "ws-1",
+        agentId: "agent-1",
+        frontAgentId: null,
+        kind: "customer",
+        visitorName: "Minh",
+        leadId: null,
+        createdAt: new Date("2026-10-13T02:00:00.000Z"),
+        handledBy: null,
+        handledAt: null,
+        channel: "telegram",
+        externalId: "555",
+        connectionId: "c-1",
+        installationId: null,
+        connectorPartyId: null,
+        connectorPartyName: null,
+        connectorPartyAt: null,
+        updatedAt: new Date("2026-10-13T02:00:00.000Z"),
+    })
 
 /** The conversation of the customer 555 on the connection c-1. */
 export const telegramConversation = (): AgentConversationEntity => conversationOf()
@@ -65,8 +66,18 @@ export const unnamedPartyConversation = (): AgentConversationEntity =>
 /** An owner's test chat. */
 export const testConversation = (): AgentConversationEntity => conversationOf({ kind: "test" })
 
+type InsertedChatRowShape = {
+    id: string
+    kind: string
+    channel: string
+    visitor_name: string
+    lead_id: string
+    handled_by: string
+    created_at: Date
+}
+
 /** The row a chat insert returns for {@link heldWebsiteChat} (snake case columns, as the database answers). */
-export const insertedChatRow = {
+export const insertedChatRow: InsertedChatRowShape = {
     id: "chat-1",
     kind: "customer",
     channel: "website",
@@ -90,13 +101,14 @@ export const turnConversation = (): AgentConversationEntity =>
     conversationOf({ leadId: "lead-1", handledBy: "Lan", installationId: "inst-1" })
 
 /** A customer conversation of agent a-1 as the conversation read specs see it, without a lead. */
-export const chatOf = builder<AgentConversationEntity>({
-    ...conversationOf(),
-    id: "c-1",
-    agentId: "a-1",
-    kind: "customer",
-    leadId: null,
-})
+export const chatOf: (overrides?: Partial<AgentConversationEntity>) => AgentConversationEntity =
+    builder<AgentConversationEntity>({
+        ...conversationOf(),
+        id: "c-1",
+        agentId: "a-1",
+        kind: "customer",
+        leadId: null,
+    })
 
 /** An owner's test chat of agent a-1. */
 export const testChatOf = (): AgentConversationEntity => chatOf({ kind: "test" })

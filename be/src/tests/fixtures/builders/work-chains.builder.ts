@@ -1,11 +1,11 @@
 import { ANY_FUNCTION } from "./any-function.builder"
 import { builderOf } from "./entity-query-builder-fake.builder"
-import { mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
+import { mockEntityManager, fakeQueryBuilder, type MockEntityManager, type FakeQueryBuilder } from "@starci/jest-preset"
 import { workChainsEntities } from "@modules/domain/work-chains"
 import type { ChainStepRead, ChainStepRecord, NewChainStep } from "@modules/domain/work-chains"
 import type { WorkThread } from "@modules/domain/work-threads"
 
-const [WorkChainEntity] = workChainsEntities
+const WorkChainEntity: (typeof workChainsEntities)[0] = workChainsEntities[0]
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
 export const anyFunction = (): unknown => ANY_FUNCTION
@@ -103,12 +103,17 @@ const answersByManager = new WeakMap<object, Answers>()
 /** The answers a manager double from {@link managerOf} was made with. */
 export const answersOf = (manager: object): Answers => answersByManager.get(manager) ?? {}
 
+type ManagerOfResultShape = {
+    em: MockEntityManager
+    steps: FakeQueryBuilder
+}
+
 /**
  * The manager double, overridable per spec. Every chain read and write is one builder over the chain entity (the history, then the
  * step read back, an insert answering the new id, an update the settled step); who acted, the thread and the members are answered by the
  * owners' services, which the spec builds from {@link answersOf}.
  */
-export const managerOf = (answers: Answers = {}) => {
+export const managerOf = (answers: Answers = {}): ManagerOfResultShape => {
     const em = mockEntityManager({ update: [WorkChainEntity, { affected: 1, raw: [], generatedMaps: [] }] })
     answersByManager.set(em, answers)
     const steps: FakeBuilder = fakeQueryBuilder({
@@ -140,11 +145,27 @@ export interface ChainHarness {
 }
 
 /** The chain builder when the chained call was made on it, or undefined. */
-export const chainedWith = (harness: ChainHarness, method: string) =>
+export const chainedWith = (harness: ChainHarness, method: string): FakeQueryBuilder | undefined =>
     harness.steps.callsOf(method).length > 0 ? harness.steps : undefined
 
+type InsertedValuesResultShape = {
+    workspaceId: string
+    threadId: string
+    seq: unknown
+    actorKind: string
+    actorId: string
+    kind: string
+    action: string
+    detail: string
+    rule: null
+    target: null
+    approvalRequestId: null
+    status: string
+    finishedAt: unknown
+}
+
 /** The values a step insert is expected to carry. */
-export const insertedValues = (overrides: Record<string, unknown> = {}) => ({
+export const insertedValues = (overrides: Record<string, unknown> = {}): InsertedValuesResultShape => ({
     workspaceId: "ws-1",
     threadId: "thread-1",
     seq: anyFunction(),

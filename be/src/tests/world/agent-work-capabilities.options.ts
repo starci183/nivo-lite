@@ -144,7 +144,7 @@ class ScriptedAgentWorkModule {
 }
 
 /** The agent work store as the api composes it: the office (workspace, members, agents), the queue outbox and the capability, with a scripted handler and executor. */
-export const AGENT_WORK_MODULES = [
+export const AGENT_WORK_MODULES: Array<DynamicModule> = [
     ...OFFICE_CHAIN_MODULES,
     ...QUEUE_MODULES,
     IdsModule.register({ isGlobal: true }),

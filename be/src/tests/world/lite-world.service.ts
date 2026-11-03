@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
-import { fakeIds } from "@starci/jest-preset"
+import { fakeIds, type FakeIds } from "@starci/jest-preset"
 import type { TestingModule } from "@nestjs/testing"
 import { DataSource } from "typeorm"
 import type { EntityManager } from "typeorm"
@@ -25,7 +25,7 @@ import type { WorldDatabase, WorldSandbox } from "./test-world.contracts"
 const RUN_GROUP = ((process.pid % 0x10000) * 0x10000 + Number(process.hrtime.bigint() % 0x10000n)).toString(16)
 
 /** The ids of a proof: the `Ids` port as the specs use it, counting from a prefix that is new in every run. */
-export const worldIds = fakeIds(RUN_GROUP)
+export const worldIds: FakeIds = fakeIds(RUN_GROUP)
 
 @Module({})
 class LocalDatabaseModule {
@@ -76,8 +76,22 @@ const compileWorldModules = (manager: EntityManager, modules: ReadonlyArray<Dyna
         ],
     }).compile()
 
+type CreateLiteWorldResultShape = {
+    prefix: string
+    readonly db: WorldDatabase
+    open(): Promise<void>
+    resolve<T>(token: string | symbol | (new (...args: Array<never>) => T)): T
+    id(): string
+    key(scenario: string): string
+    cleanup(work: () => Promise<void>): void
+    close(): Promise<void>
+}
+
 /** Attaches only to migrated local PostgreSQL; the closure owns resources rather than injecting a DataSource into services. */
-export const createLiteWorld = (modules: ReadonlyArray<DynamicModule>, sandbox?: WorldSandbox) => {
+export const createLiteWorld = (
+    modules: ReadonlyArray<DynamicModule>,
+    sandbox?: WorldSandbox,
+): CreateLiteWorldResultShape => {
     let source: DataSource | undefined
     let container: TestingModule | undefined
     const cleanups: Array<() => Promise<void>> = []

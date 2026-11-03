@@ -7,7 +7,7 @@ import { StoredNote, type SourceRecord } from "@modules/domain/knowledge-sources
 export const INDEXING_WS = "11111111-1111-4111-8111-111111111111"
 
 /** A long text of many paragraphs, past one batch of passages. */
-export const MANY = Array.from({ length: 70 }, (_, i) => `Paragraph ${i} ${"y".repeat(700)}`).join("\n\n")
+export const MANY: string = Array.from({ length: 70 }, (_, i) => `Paragraph ${i} ${"y".repeat(700)}`).join("\n\n")
 
 /** A table that has a separator but no row. */
 export const TABLE_WITHOUT_ROWS = "|---|---|\n|---|---|\n|---|---|"
@@ -28,7 +28,7 @@ export const stored = (text: string, order: number): EmbeddedChunk => ({
 })
 
 /** A queued note of the indexing specs. */
-export const sourceOf = builder<SourceRecord>({
+export const sourceOf: (overrides?: Partial<SourceRecord>) => SourceRecord = builder<SourceRecord>({
     id: "s1",
     workspaceId: INDEXING_WS,
     module: "chatbot",
@@ -66,8 +66,24 @@ export const INDEXING_WHOLE_SOURCE_KINDS: Array<[SourceRecord["kind"], number]> 
     ["url", 1],
 ]
 
+type IndexingTextWriteDraftsShape = {
+    text: string
+    vector: string
+    order: number
+}
+
+type IndexingTextWriteShape = {
+    workspaceId: string
+    sourceId: string
+    module: string
+    visibility: string
+    installationId: null
+    model: string
+    drafts: Array<IndexingTextWriteDraftsShape>
+}
+
 /** The exact persisted passage write expected for the default text source. */
-export const INDEXING_TEXT_WRITE = {
+export const INDEXING_TEXT_WRITE: IndexingTextWriteShape = {
     workspaceId: INDEXING_WS,
     sourceId: "s1",
     module: "chatbot",

@@ -1,6 +1,6 @@
 import { bookingSettingsEntities } from "@modules/domain/booking-settings"
 
-const [BookingSettingEntity] = bookingSettingsEntities
+const BookingSettingEntity: (typeof bookingSettingsEntities)[0] = bookingSettingsEntities[0]
 
 /** The settings workspace `ws-1` saved, in the Ho Chi Minh time zone. */
 export const savedBookingSettingRow = (): InstanceType<typeof BookingSettingEntity> =>

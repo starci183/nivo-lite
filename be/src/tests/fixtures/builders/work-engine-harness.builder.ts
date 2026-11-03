@@ -1,6 +1,6 @@
+import type { WorkEngineService, WorkPerformer } from "@modules/domain/decisions"
 import { mock } from "@starci/jest-preset"
 import type { fakeTransaction, MockOf } from "@starci/jest-preset"
-import type { WorkEngineService, WorkPerformer } from "@modules/domain/decisions"
 import {
     itemOf,
     performedOf,
@@ -34,8 +34,25 @@ export const performerOf = (overrides: Partial<WorkPerformer> = {}): WorkPerform
     return performer
 }
 
+/** The doubles of the engine with the members the specs reach for lifted to the top. */
+type EngineDoublesOfResultShape = EngineHarnessDoubles & {
+    performer: WorkPerformer | null
+    insert: EngineHarnessDoubles["intake"]["insert"]
+    ask: EngineHarnessDoubles["approval"]["ask"]
+    continueChain: EngineHarnessDoubles["chain"]["continueChain"]
+    finished: EngineHarnessDoubles["recorder"]["finished"]
+    rejected: EngineHarnessDoubles["recorder"]["rejected"]
+    failed: EngineHarnessDoubles["recorder"]["failed"]
+    accessOf: EngineHarnessDoubles["access"]["accessOf"]
+    ruleFor: EngineHarnessDoubles["rules"]["ruleFor"]
+    error: EngineHarnessDoubles["logger"]["error"]
+}
+
 /** Arranges the constructor doubles without constructing the unit subject. */
-export const engineDoublesOf = (options: WorkEngineFixtureOptions, doubles: EngineHarnessDoubles) => {
+export const engineDoublesOf = (
+    options: WorkEngineFixtureOptions,
+    doubles: EngineHarnessDoubles,
+): EngineDoublesOfResultShape => {
     const { logger, catalog, modules, items, access, rules, registry, intake, chain, approval, recorder, branching } =
         doubles
     const performer = options.performer === undefined ? performerOf() : options.performer

@@ -69,8 +69,66 @@ export const setOutputProofChannel = async (
     )
 }
 
+type OutputApprovalRequestOfResultWaitScopeShape = {
+    conversationId: string
+    messageId: string
+    approvedBy: null
+    workItemId: null
+    planned: string
+    declined: boolean
+    outputNode: string
+    approvalNode: string
+    replyNode: string
+}
+
+type OutputApprovalRequestOfResultWaitCallsShape = {
+    tool: string
+    argsJson: string
+}
+
+type OutputApprovalRequestOfResultWaitShape = {
+    wakeId: string
+    calls: Array<OutputApprovalRequestOfResultWaitCallsShape>
+    scope: OutputApprovalRequestOfResultWaitScopeShape
+}
+
+type OutputApprovalRequestOfResultSpecSeedFieldsShape = {
+    tool: string
+    args_json: string
+    conversation_id: string
+    agent_id: string
+    in_run: string
+}
+
+type OutputApprovalRequestOfResultSpecSeedShape = {
+    summary: string
+    draft: string
+    fields: OutputApprovalRequestOfResultSpecSeedFieldsShape
+}
+
+type OutputApprovalRequestOfResultSpecShape = {
+    action: string
+    subject_type: "conversation"
+    subject_id: string
+    installationId: string
+    dedupeKey: string
+    preset: boolean
+    noChain: boolean
+    forceAsk: "over_authority"
+    seed: OutputApprovalRequestOfResultSpecSeedShape
+}
+
+type OutputApprovalRequestOfResultShape = {
+    spec: OutputApprovalRequestOfResultSpecShape
+    wait: OutputApprovalRequestOfResultWaitShape
+}
+
 /** One held call, used unchanged by the real registration and queue recovery proofs. */
-export const outputApprovalRequestOf = (who: OutputApprovalIdentity, wakeId: string, dedupeKey: string) => ({
+export const outputApprovalRequestOf = (
+    who: OutputApprovalIdentity,
+    wakeId: string,
+    dedupeKey: string,
+): OutputApprovalRequestOfResultShape => ({
     spec: {
         action: "gateway_call",
         subject_type: "conversation" as const,

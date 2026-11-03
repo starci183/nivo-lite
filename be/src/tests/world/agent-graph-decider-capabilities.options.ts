@@ -19,7 +19,7 @@ const AMOUNT: FactSpec = {
 /** The books of the proof: the amount of a payment by the record the work names, set by the scenario that needs it. */
 export class BooksReader implements GraphFactReader {
     readonly facts: ReadonlyArray<FactSpec> = [AMOUNT]
-    readonly amounts = new Map<string, number>()
+    readonly amounts: Map<string, number> = new Map<string, number>()
 
     read(_workspaceId: string, subject: FactSubject): Promise<FactValues> {
         const amount = this.amounts.get(subject.id)

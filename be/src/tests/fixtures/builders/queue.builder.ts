@@ -1,6 +1,6 @@
+import type { QueueOutbox, QueueDelivery } from "@modules/platform/queue"
 import type { EntityManager } from "typeorm"
 import { deliveryOf } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
 import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
 
 /** The broker-bound envelope fields a delivery is observed from. */
@@ -23,12 +23,13 @@ export interface DeliveredJobRow {
 
 /** Persists the durable outbox row using the real producer in the caller's transaction. */
 export const queueBuilder = (outbox: QueueOutbox, proofId: string) => ({
-    delivery: (row: DeliveredJobRow, signal: AbortSignal) =>
+    delivery: (row: DeliveredJobRow, signal: AbortSignal): QueueDelivery =>
         deliveryOf(
             CONTENT_TICK_QUEUE,
             { id: row.id, name: CONTENT_TICK_QUEUE, data: row.message.payload ?? {} },
             row.attempt,
             signal,
         ),
-    build: (tx: EntityManager, dedupeKey?: string) => outbox.write(tx, CONTENT_TICK_QUEUE, { proofId }, { dedupeKey }),
+    build: (tx: EntityManager, dedupeKey?: string): Promise<void> =>
+        outbox.write(tx, CONTENT_TICK_QUEUE, { proofId }, { dedupeKey }),
 })

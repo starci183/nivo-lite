@@ -46,7 +46,19 @@ export const SALES_ROW: WorkAgentRow = {
     module: "sales",
     can_tag_agent_ids: ["agent-accounting"],
 }
-export const SALES_AI = { id: "agent-sales", name: "AI Sales", module: "sales", canTag: ["agent-accounting"] }
+type SalesAiShape = {
+    id: string
+    name: string
+    module: string
+    canTag: Array<string>
+}
+
+export const SALES_AI: SalesAiShape = {
+    id: "agent-sales",
+    name: "AI Sales",
+    module: "sales",
+    canTag: ["agent-accounting"],
+}
 export const LEAD: WorkLeadRow = { id: "lead-thao", contact_name: "Chi Thao" }
 export const MINH: DeciderRow = { id: "m-minh", display_name: "Anh Minh", role: "manager" }
 
@@ -114,20 +126,48 @@ export const CARDED: ThreadMessage = {
     },
 }
 
+type AgentFoundOfResultShape = {
+    id: string
+    name: string
+    module: string
+    canTagAgentIds: Array<string>
+}
+
 /** What the agent directory answers for an agent row. */
-export const agentFoundOf = (row: WorkAgentRow | undefined) =>
+export const agentFoundOf = (row: WorkAgentRow | undefined): AgentFoundOfResultShape | null =>
     row === undefined ? null : { id: row.id, name: row.name, module: row.module, canTagAgentIds: row.can_tag_agent_ids }
 
+type LeadCardsOfResultShape = {
+    id: string
+    contactName: string
+    company: string
+    channel: string
+    stage: string
+    email: null
+}
+
 /** What the lead reader answers for a lead row. */
-export const leadCardsOf = (row: WorkLeadRow | undefined) =>
+export const leadCardsOf = (row: WorkLeadRow | undefined): Array<LeadCardsOfResultShape> =>
     row === undefined
         ? []
         : [{ id: row.id, contactName: row.contact_name, company: "", channel: "", stage: "new", email: null }]
 
+type MemberFoundOfResultShape = {
+    id: string
+    displayName: string
+    role: "owner" | "manager" | "staff"
+}
+
 /** What the member directory answers for a decider row. */
-export const memberFoundOf = (row: DeciderRow | undefined) =>
+export const memberFoundOf = (row: DeciderRow | undefined): MemberFoundOfResultShape | null =>
     row === undefined ? null : { id: row.id, displayName: row.display_name, role: row.role }
 
+type SettledRequestsOfResultShape = {
+    id: string
+    status: "approved" | "rejected" | "expired"
+    resolvedBy: string | null
+}
+
 /** How the approval reads answer for settled asking work. */
-export const settledRequestsOf = (rows: ReadonlyArray<SettledAskRow>) =>
+export const settledRequestsOf = (rows: ReadonlyArray<SettledAskRow>): Array<SettledRequestsOfResultShape> =>
     rows.map((row) => ({ id: row.approval_request_id ?? "", status: row.request_status, resolvedBy: row.resolved_by }))

@@ -6,8 +6,8 @@ import type { GoogleConnectionsService } from "@modules/domain/google-connection
 type GoogleCallbackInput = Parameters<GoogleConnectionsService["complete"]>[0]
 
 export const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }
-export const NOW = new Date("2026-10-12T03:00:00.000Z")
-export const EXPIRES = NOW.getTime() + 3_600_000
+export const NOW: Date = new Date("2026-10-12T03:00:00.000Z")
+export const EXPIRES: number = NOW.getTime() + 3_600_000
 export const state: OAuthState = { w: "ws-1", u: "owner-1", r: "/connections", e: EXPIRES }
 export const tokens: GoogleTokenSet = {
     accessToken: "access-new",
@@ -20,8 +20,15 @@ export const tokens: GoogleTokenSet = {
 export const tokensWithoutRenewal: GoogleTokenSet = { ...tokens, renewalToken: null }
 /** The Drive-only consent answer. */
 export const driveTokens: GoogleTokenSet = { ...tokens, scope: DRIVE_READ_SCOPE }
-export const stored = { access_token: "access-old", renewal_token: "refresh-old", expires_at: EXPIRES }
-export const issued = { access_token: "access-new", renewal_token: "refresh-new", expires_at: EXPIRES }
+type StoredShape = {
+    access_token: string
+    renewal_token: string
+    expires_at: number
+}
+
+export const stored: StoredShape = { access_token: "access-old", renewal_token: "refresh-old", expires_at: EXPIRES }
+
+export const issued: StoredShape = { access_token: "access-new", renewal_token: "refresh-new", expires_at: EXPIRES }
 export const event: SheetEventIn = { event: "order.confirmed", data: { code: "O-1" }, occurredAt: NOW.toISOString() }
 export const sheet = { spreadsheetId: "sheet-1", spreadsheetUrl: "https://docs.google.com/spreadsheets/d/sheet-1/edit" }
 
@@ -43,8 +50,13 @@ export const record = (overrides: Partial<ConnectionRecord> = {}): ConnectionRec
     ...overrides,
 })
 
+type GoogleRefusalInputShape = {
+    reason?: string
+    status?: number
+}
+
 /** A Google refusal with the transport status or OAuth reason required by a case. */
-export const googleRefusal = (params: { reason?: string; status?: number } = {}) =>
+export const googleRefusal = (params: GoogleRefusalInputShape = {}): GoogleError =>
     new GoogleError({ code: GoogleErrorCode.Refused, params })
 /** A consent callback with the requested missing or refused fields. */
 export const callback = (extra: Partial<GoogleCallbackInput> = {}): GoogleCallbackInput => ({

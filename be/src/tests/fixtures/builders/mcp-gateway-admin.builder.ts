@@ -2,19 +2,21 @@ import { builder } from "@starci/jest-preset"
 import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
 
 /** A remote connector row as the admin specs find it: set credential, one stale catalog entry, nothing approved. */
-export const hakuenConnectorRowOf = builder<McpConnectorRow>({
-    key: "hakuen",
-    name: "HAKUEN",
-    kind: "remote",
-    url: "https://hakuen.test/mcp",
-    credential_state: "set",
-    credential_set_at: new Date(Date.UTC(2026, 9, 22, 1)).toISOString(),
-    status: "active",
-    contract_version: "hakuen-mcp@1",
-    timeout_ms: 3000,
-    tool_catalog: [{ name: "old.tool", hash: "h-old" }],
-    catalog_hash: "catalog-1",
-    approved_catalog: [],
-    approved_at: null,
-    checked_at: null,
-})
+export const hakuenConnectorRowOf: (overrides?: Partial<McpConnectorRow>) => McpConnectorRow = builder<McpConnectorRow>(
+    {
+        key: "hakuen",
+        name: "HAKUEN",
+        kind: "remote",
+        url: "https://hakuen.test/mcp",
+        credential_state: "set",
+        credential_set_at: new Date(Date.UTC(2026, 9, 22, 1)).toISOString(),
+        status: "active",
+        contract_version: "hakuen-mcp@1",
+        timeout_ms: 3000,
+        tool_catalog: [{ name: "old.tool", hash: "h-old" }],
+        catalog_hash: "catalog-1",
+        approved_catalog: [],
+        approved_at: null,
+        checked_at: null,
+    },
+)

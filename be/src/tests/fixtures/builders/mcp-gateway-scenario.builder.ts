@@ -1,3 +1,15 @@
+import type {
+    MissingWriteIdentitiesShape,
+    ReplaySchemaChangesShape,
+    TimedOutWritesShape,
+    GatewayScenarioExpectedShape,
+    GatewayDescriptionsShape2,
+    GatewayDescriptionsShape,
+    GatewayRoleResolutionsShape,
+    GatewayReadinessShape,
+    InvalidGatewayToolsShape,
+    InvalidGatewayArgumentsShape,
+} from "./mcp-gateway-scenario-shapes.builder"
 import type { MockOf } from "@starci/jest-preset"
 import type { CallLogLine, McpCallLogService } from "@modules/domain/mcp-call-log"
 import type { McpConnectorRow, McpConnectorsService } from "@modules/domain/mcp-connectors"
@@ -8,7 +20,6 @@ import type {
     GatewayJson,
     McpGatewayService,
     NativeConnectorManifest,
-    RoleReadiness,
 } from "@modules/domain/mcp-gateway"
 import { McpGatewayError, McpGatewayErrorCode, SEPAY_MANIFEST } from "@modules/domain/mcp-gateway"
 import type { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
@@ -45,7 +56,7 @@ interface GatewayScenarioDoubles {
 }
 
 /** Configures constructor doubles while the spec keeps the actual Nest module and every token binding. */
-export const arrangeGatewayScenario = (setup: GatewaySpecSetup, doubles: GatewayScenarioDoubles) => {
+export const arrangeGatewayScenario = (setup: GatewaySpecSetup, doubles: GatewayScenarioDoubles): void => {
     doubles.remote.call.mockResolvedValue({ isError: false, value: { holdId: "h1", code: "777" } })
     doubles.timeout.schedule.mockReturnValue(doubles.cancel)
     doubles.connectors.list.mockResolvedValue(setup.rows ?? [remoteConnectorRowOf()])
@@ -67,7 +78,7 @@ export const gatewayLinesOf = (callLog: MockOf<McpCallLogService>): ReadonlyArra
     callLog.append.mock.calls.map(([line]) => line)
 
 /** A disabled connector advertises a receivable role without being a usable provider. */
-export const disabledReceivableConnectorOf = () =>
+export const disabledReceivableConnectorOf = (): McpConnectorRow =>
     remoteConnectorRowOf({
         key: "pay",
         name: "Pay Gateway",
@@ -80,13 +91,13 @@ export const disabledReceivableConnectorOf = () =>
     })
 
 /** A connector whose named tool no longer has its approved live schema. */
-export const changedToolConnectorOf = (name: string) =>
+export const changedToolConnectorOf = (name: string): McpConnectorRow =>
     remoteConnectorRowOf({
         tool_catalog: GATEWAY_CATALOG.map((tool) => (tool.name === name ? { ...tool, hash: "hash-new" } : tool)),
     })
 
 /** A live catalog that has never had the spa slot search approved. */
-export const unapprovedSpaConnectorOf = () =>
+export const unapprovedSpaConnectorOf = (): McpConnectorRow =>
     remoteConnectorRowOf({
         approved_catalog: GATEWAY_CATALOG.filter((tool) => tool.name !== "spa.findSlots").map(({ name, hash }) => ({
             name,
@@ -95,7 +106,7 @@ export const unapprovedSpaConnectorOf = () =>
     })
 
 /** A granted receivable role whose absent read hint makes it a write under the remote catalog contract. */
-export const defaultWriteRoleConnectorOf = () => {
+export const defaultWriteRoleConnectorOf = (): McpConnectorRow => {
     const tool = catalogToolOf("receivable.lookup", "Find a receivable.", false, {
         annotations: {},
         meta: { "nivo/role": "receivable.find" },
@@ -109,11 +120,7 @@ export const defaultWriteRoleConnectorOf = () => {
 }
 
 /** Missing or blank operation identities, including an explicit blank that must not fall back to a work item. */
-export const MISSING_WRITE_IDENTITIES: ReadonlyArray<{
-    readonly label: string
-    readonly caller: GatewayCaller
-    readonly native: boolean
-}> = [
+export const MISSING_WRITE_IDENTITIES: ReadonlyArray<MissingWriteIdentitiesShape> = [
     { label: "absent operation and work item", caller: { ...GATEWAY_CALLER, workItemId: null }, native: false },
     {
         label: "empty operation with a work item",
@@ -156,29 +163,19 @@ const replaySchemaRowOf = (hasReplayArgument: boolean) => {
 }
 
 /** The same client operation retried after an approved replay field is added or removed. */
-export const REPLAY_SCHEMA_CHANGES: ReadonlyArray<{
-    readonly label: string
-    readonly caller: GatewayCaller
-    readonly args: GatewayJson
-    readonly before: McpConnectorRow
-    readonly after: McpConnectorRow
-    readonly firstHasReplayKey: boolean
-}> = [false, true].map((firstHasReplayKey) => ({
-    label: firstHasReplayKey ? "removes a replay argument" : "adds a replay argument",
-    caller: { ...GATEWAY_CALLER, opKey: "schema-change:confirm" },
-    args: { holdId: "schema-hold", discountPct: 0 },
-    before: replaySchemaRowOf(firstHasReplayKey),
-    after: replaySchemaRowOf(!firstHasReplayKey),
-    firstHasReplayKey,
-}))
+export const REPLAY_SCHEMA_CHANGES: ReadonlyArray<ReplaySchemaChangesShape> = [false, true].map(
+    (firstHasReplayKey) => ({
+        label: firstHasReplayKey ? "removes a replay argument" : "adds a replay argument",
+        caller: { ...GATEWAY_CALLER, opKey: "schema-change:confirm" },
+        args: { holdId: "schema-hold", discountPct: 0 },
+        before: replaySchemaRowOf(firstHasReplayKey),
+        after: replaySchemaRowOf(!firstHasReplayKey),
+        firstHasReplayKey,
+    }),
+)
 
 /** Provider-call counts for one timed-out write, before its client retries the stored outcome. */
-export const TIMED_OUT_WRITES: ReadonlyArray<{
-    readonly label: string
-    readonly tool: string
-    readonly args: GatewayJson
-    readonly attempts: number
-}> = [
+export const TIMED_OUT_WRITES: ReadonlyArray<TimedOutWritesShape> = [
     { label: "a generated replay key", tool: "hakuen.booking.hold", args: { roomType: "deluxe" }, attempts: 2 },
     { label: "a tool without a replay field", tool: "hakuen.booking.confirm", args: { holdId: "h1" }, attempts: 1 },
     {
@@ -289,7 +286,7 @@ export const reroutedCallerOf = (caller: GatewayCaller): GatewayCaller => ({
 })
 
 /** Fixed public values expected by the gateway scenarios, independent of the subject's implementation. */
-export const GATEWAY_SCENARIO_EXPECTED = {
+export const GATEWAY_SCENARIO_EXPECTED: GatewayScenarioExpectedShape = {
     nativeUnknownTool: new McpGatewayError({
         code: McpGatewayErrorCode.UnknownTool,
         params: { tool: "transactions.list" },
@@ -381,7 +378,10 @@ export const WRITE_NATIVE_MANIFEST: NativeConnectorManifest = {
 }
 
 /** Five failed reads open the shared remote connector breaker. */
-export const openRemoteGatewayBreaker = async (gateway: McpGatewayService, remote: MockOf<McpRemote>) => {
+export const openRemoteGatewayBreaker = async (
+    gateway: McpGatewayService,
+    remote: MockOf<McpRemote>,
+): Promise<void> => {
     remote.call.mockRejectedValue(new Error("down"))
     await eachInOrder([1, 2, 3, 4, 5], () => gateway.call(GATEWAY_CALLER, "hakuen.stay.current", {}))
 }
@@ -394,13 +394,13 @@ export const pendingRemoteReplyOf = (remote: MockOf<McpRemote>) => {
             answers.push(resolve)
         }),
     )
-    return (result: McpRemoteResult) => {
+    return (result: McpRemoteResult): void => {
         for (const answer of answers) answer(result)
     }
 }
 
 /** Tool descriptions that differ by current catalog approval and caller grant. */
-export const GATEWAY_DESCRIPTIONS = [
+export const GATEWAY_DESCRIPTIONS: Array<GatewayDescriptionsShape | GatewayDescriptionsShape2> = [
     { name: "hakuen.booking.confirm", answer: GATEWAY_SCENARIO_EXPECTED.confirmation },
     ...["hakuen.stay.current", "hakuen.keycode.reveal", "sepay.transactions.list", "nope"].map((name) => ({
         name,
@@ -409,18 +409,14 @@ export const GATEWAY_DESCRIPTIONS = [
 ]
 
 /** Native priority, remote capability discovery, and the missing capability result. */
-export const GATEWAY_ROLE_RESOLUTIONS: ReadonlyArray<{ readonly role: CapabilityRole; readonly answer: unknown }> = [
+export const GATEWAY_ROLE_RESOLUTIONS: ReadonlyArray<GatewayRoleResolutionsShape> = [
     { role: "payment.credits.list", answer: GATEWAY_SCENARIO_EXPECTED.creditsRole },
     { role: "identity.find", answer: GATEWAY_SCENARIO_EXPECTED.identityRole },
     { role: "receivable.find", answer: GATEWAY_SCENARIO_EXPECTED.missingReceivableRole },
 ]
 
 /** Readiness includes the installed providers for complete, missing and empty role requests. */
-export const GATEWAY_READINESS: ReadonlyArray<{
-    readonly label: string
-    readonly roles: ReadonlyArray<CapabilityRole>
-    readonly answer: RoleReadiness
-}> = [
+export const GATEWAY_READINESS: ReadonlyArray<GatewayReadinessShape> = [
     {
         label: "available roles",
         roles: ["payment.credits.list", "identity.find"],
@@ -438,7 +434,7 @@ export const GATEWAY_READINESS: ReadonlyArray<{
 export const UNAVAILABLE_GATEWAY_ROLES: ReadonlyArray<CapabilityRole> = ["identity.find", "payment.credits.list"]
 
 /** Names refused before grants or an audit entry are consulted. */
-export const INVALID_GATEWAY_TOOLS = [
+export const INVALID_GATEWAY_TOOLS: Array<InvalidGatewayToolsShape> = [
     { name: "nope", answer: { ok: false, code: "invalid_name", detail: "nope" } },
     { name: "zalo.send", answer: { ok: false, code: "unknown_tool", detail: "zalo.send" } },
     { name: "hakuen.nope", answer: { ok: false, code: "unknown_tool", detail: "hakuen.nope" } },
@@ -453,14 +449,7 @@ const prototypeKeyed = (): GatewayJson => {
 }
 
 /** Refused arguments; each receipt is [outcome, code, recorded arguments], and the generic bound records none of the refused tree. */
-export const INVALID_GATEWAY_ARGUMENTS: ReadonlyArray<{
-    readonly label: string
-    readonly setup: GatewaySpecSetup
-    readonly tool: string
-    readonly args: GatewayJson
-    readonly connectorReads: number
-    readonly audit: ReadonlyArray<ReadonlyArray<string>>
-}> = [
+export const INVALID_GATEWAY_ARGUMENTS: ReadonlyArray<InvalidGatewayArgumentsShape> = [
     {
         label: "unbounded payloads",
         setup: {},

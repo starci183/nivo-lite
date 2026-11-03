@@ -3,11 +3,11 @@ import { agentsEntities } from "@modules/domain/agents"
 import type { Installation } from "@modules/domain/agents"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 
-const [AgentEntity] = agentsEntities
+const AgentEntity: (typeof agentsEntities)[0] = agentsEntities[0]
 type AgentEntity = InstanceType<typeof AgentEntity>
 
 /** An agent row of the agents spec workspace (a chatbot named Bot, active, owned by nobody yet). */
-export const agentEntityOf = builder<AgentEntity>({
+export const agentEntityOf: (overrides?: Partial<AgentEntity>) => AgentEntity = builder<AgentEntity>({
     id: "a1",
     workspaceId: "w1",
     module: "chatbot",
@@ -31,7 +31,7 @@ export const agentEntityOf = builder<AgentEntity>({
 })
 
 /** An installation of the agents spec workspace, driven by agent a1. */
-export const agentInstallationOf = builder<Installation>({
+export const agentInstallationOf: (overrides?: Partial<Installation>) => Installation = builder<Installation>({
     id: "i1",
     workspaceId: "w1",
     module: "chatbot",
@@ -46,7 +46,7 @@ export const agentInstallationOf = builder<Installation>({
 })
 
 /** The manager who reads the agents spec dashboards. */
-export const agentMemberOf = builder<WorkspaceMember>({
+export const agentMemberOf: (overrides?: Partial<WorkspaceMember>) => WorkspaceMember = builder<WorkspaceMember>({
     userId: "u1",
     workspaceId: "w1",
     role: "manager",
@@ -62,8 +62,20 @@ export const AGENT_LENS_COUNTS = {
     facts: { public: 2, internal: 0, restricted: 0 },
 }
 
+type AgentOpenGapsItemsShape = {
+    id: string
+    question: string
+    count: number
+    lastSeenAt: string
+}
+
+type AgentOpenGapsShape = {
+    openCount: number
+    items: Array<AgentOpenGapsItemsShape>
+}
+
 /** The open knowledge gaps a knowledge lens answers for that agent. */
-export const AGENT_OPEN_GAPS = {
+export const AGENT_OPEN_GAPS: AgentOpenGapsShape = {
     openCount: 2,
     items: [{ id: "g1", question: "Opening hours?", count: 3, lastSeenAt: "2026-10-11T00:00:00.000Z" }],
 }
@@ -81,7 +93,7 @@ export const AGENT_BOUND_CONNECTION = {
 }
 
 /** AI Sales, the agent the ownership scenarios start from: owned by Minh, Nam as the fallback, open to owners and managers. */
-export const ownedAgentOf = builder<AgentEntity>({
+export const ownedAgentOf: (overrides?: Partial<AgentEntity>) => AgentEntity = builder<AgentEntity>({
     ...agentEntityOf(),
     id: "a1",
     workspaceId: "w1",
@@ -100,7 +112,7 @@ export const ownerlessAgent = (): AgentEntity => ownedAgentOf({ ownerMemberId: n
 export const agentOfOtherWorkspace = (): AgentEntity => ownedAgentOf({ workspaceId: "w2" })
 
 /** An agent a member may be handed work for: open to the owner and manager roles and the sales room. */
-export const openAgentOf = builder<AgentEntity>({
+export const openAgentOf: (overrides?: Partial<AgentEntity>) => AgentEntity = builder<AgentEntity>({
     ...agentEntityOf(),
     id: "a1",
     workspaceId: "w1",

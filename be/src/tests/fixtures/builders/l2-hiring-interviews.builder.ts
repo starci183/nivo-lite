@@ -1,14 +1,14 @@
+import type { CandidateRecord, InterviewRecord, RequestInterviewParams } from "@modules/domain/hiring"
 import { createHash } from "node:crypto"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import type { CredentialPrincipal } from "@modules/domain/identity"
 import { text, interviewRequestOf } from "@tests/fixtures/builders/hiring.builder"
 import { builder } from "@starci/jest-preset"
-import type { CandidateRecord, InterviewRecord } from "@modules/domain/hiring"
 
 /** Shared L2 service proof fixture. */
-export const TOKEN = createHash("sha256").update("fixture-hiring-interview-token").digest("hex").slice(0, 32)
+export const TOKEN: string = createHash("sha256").update("fixture-hiring-interview-token").digest("hex").slice(0, 32)
 /** Shared L2 service proof fixture. */
-export const candidateOf = builder<CandidateRecord>({
+export const candidateOf: (overrides?: Partial<CandidateRecord>) => CandidateRecord = builder<CandidateRecord>({
     id: "candidate-1",
     workspaceId: "ws-1",
     jobId: "job-1",
@@ -31,7 +31,7 @@ export const slot: InterviewRecord["proposedSlots"][number] = {
     end: "2026-10-12T02:30:00.000Z",
 }
 /** Shared L2 service proof fixture. */
-export const interviewOf = builder<InterviewRecord>({
+export const interviewOf: (overrides?: Partial<InterviewRecord>) => InterviewRecord = builder<InterviewRecord>({
     id: "interview-1",
     workspaceId: "ws-1",
     candidateId: "candidate-1",
@@ -50,19 +50,24 @@ export const interviewOf = builder<InterviewRecord>({
     note: "Candidate note",
 })
 /** Shared L2 service proof fixture. */
-export const roleCall = ["user-1", "ws-1", ["owner", "manager"]]
+export const roleCall: Array<string | Array<string>> = ["user-1", "ws-1", ["owner", "manager"]]
 /** Shared L2 service proof fixture. */
-export const when = `when:${slot.start}`
+export const when: string = `when:${slot.start}`
 /** Shared L2 service proof fixture. */
-export const confirmArgs = [TOKEN, slot.start, slot.end, text("hiring.event.interviewConfirmed", { when })]
+export const confirmArgs: Array<string> = [
+    TOKEN,
+    slot.start,
+    slot.end,
+    text("hiring.event.interviewConfirmed", { when }),
+]
 /** Shared L2 service proof fixture. */
-export const defaultSlots = [
+export const defaultSlots: Array<InterviewRecord["proposedSlots"][number]> = [
     slot,
     { start: "2026-10-13T02:00:00.000Z", end: "2026-10-13T02:30:00.000Z" },
     { start: "2026-10-14T02:00:00.000Z", end: "2026-10-14T02:30:00.000Z" },
 ]
 /** Shared L2 service proof fixture. */
-export const declaredSlots = [
+export const declaredSlots: Array<InterviewRecord["proposedSlots"][number]> = [
     slot,
     { start: "2026-10-19T02:00:00.000Z", end: "2026-10-19T02:30:00.000Z" },
     { start: "2026-10-26T02:00:00.000Z", end: "2026-10-26T02:30:00.000Z" },
@@ -85,8 +90,13 @@ export const mismatchedInterviewPrincipals: Array<CredentialPrincipal> = [
     { kind: "link-token", subject: "interview-1", workspaceId: "foreign-workspace" },
 ]
 
+type InterviewDurationCasesShape = {
+    request: RequestInterviewParams
+    expected: number
+}
+
 /** Duration bounds and explicit interviewer requests. */
-export const interviewDurationCases = [
+export const interviewDurationCases: Array<InterviewDurationCasesShape> = [
     { request: interviewRequestOf({ durationMin: 0 }), expected: 30 },
     { request: interviewRequestOf({ durationMin: -1 }), expected: 15 },
     { request: interviewRequestOf({ durationMin: 181 }), expected: 180 },

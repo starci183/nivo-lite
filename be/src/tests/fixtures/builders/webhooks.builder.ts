@@ -1,7 +1,7 @@
 import { CLOCK } from "@modules/platform/clock"
 import { Test } from "@nestjs/testing"
 import { createHash, createHmac } from "node:crypto"
-import { FakeClock, mock } from "@starci/jest-preset"
+import { FakeClock, mock, type MockOf } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
 import { MetaCommentsService } from "@modules/domain/meta-comments"
@@ -22,7 +22,7 @@ import { INBOX, InboxService } from "@modules/platform/inbox"
 import type { EntityManager } from "typeorm"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
-const [WorkspaceEntity] = workspacesEntities
+const WorkspaceEntity: (typeof workspacesEntities)[0] = workspacesEntities[0]
 
 /** Explicit identities and signing/queue options supplied by the test composition root. */
 export interface WebhookBuilderOptions {
@@ -64,9 +64,55 @@ const signedDelivery = (options: WebhookBuilderOptions) => {
     }
 }
 
+/** The door under test, its driver and the owners it talks to. */
+type WebhooksBuilderReceiverShape = { receive: (rawBody: Buffer, signature: string) => Promise<void> }
+
+type WebhooksBuilderSenderShape = { id: string }
+
+type WebhooksBuilderDoorShape = {
+    door: WebhooksBuilderReceiverShape
+    process: (deliveryId: string) => Promise<void>
+    close: () => Promise<void>
+    connections: MockOf<ConnectionsService>
+    conversations: MockOf<ConversationsService>
+    threads: MockOf<MetaThreadsService>
+    taker: MockOf<MetaEventTaker>
+}
+
+type WebhooksBuilderMessageShape = { mid: string; text: string }
+
+type WebhooksBuilderMessagingShape = {
+    sender: WebhooksBuilderSenderShape
+    timestamp: number
+    message: WebhooksBuilderMessageShape
+}
+
+type WebhooksBuilderEntryShape = { id: string; messaging: Array<WebhooksBuilderMessagingShape> }
+
+type WebhooksBuilderPayloadShape = {
+    object: string
+    entry: Array<WebhooksBuilderEntryShape>
+}
+
+type WebhooksBuilderDeliveryShape = {
+    payload: WebhooksBuilderPayloadShape
+    mid: string
+    deliveryId: string
+    rawBody: Buffer<ArrayBuffer>
+    signature: string
+}
+
+type WebhooksBuilderBuildShape = {
+    build: () => Promise<WebhooksBuilderDoorShape>
+    delivery: () => WebhooksBuilderDeliveryShape
+    connectionId: string
+    workspaceId: string
+    signatureInvalidCode: MetaInboxErrorCode
+}
+
 /** Persists the real workspace needed by the transactional inbox/outbox handoff. */
 export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, options: WebhookBuilderOptions) => ({
-    async build() {
+    async build(): Promise<WebhooksBuilderBuildShape> {
         const { userId, workspaceId, connectionId } = options
         await manager.transaction(async (tx) => {
             await tx.insert("auth.users", { id: userId })

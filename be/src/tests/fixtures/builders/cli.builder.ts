@@ -168,8 +168,136 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
     return overrides
 }
 
+type BuildWiringProofResultOverridesShape = {
+    token: InjectionToken
+    value: unknown
+}
+
+type BuildWiringProofResultOptionsOpenclawShape = {
+    gateway: null
+    turnTimeoutMs: number
+    settleMs: number
+    configDir: undefined
+    gatewayStateDir: string
+    manageAgents: boolean
+    toolSecret: null
+}
+
+type BuildWiringProofResultOptionsMcpGatewayRemoteShape = {
+    clientName: string
+}
+
+type BuildWiringProofResultOptionsMcpGatewayShape = {
+    remote: BuildWiringProofResultOptionsMcpGatewayRemoteShape
+    defaultTimeoutMs: number
+}
+
+type BuildWiringProofResultOptionsWorkspaceSeedShape = {
+    input: undefined
+    profileInput: undefined
+}
+
+type BuildWiringProofResultOptionsChannelProvisioningShape = {
+    telegramToken: undefined
+    print: () => never
+}
+
+type BuildWiringProofResultOptionsN8nHostShape = {
+    host: undefined
+    user: string
+    sshKey: undefined
+    knownHosts: undefined
+    container: string
+}
+
+type BuildWiringProofResultOptionsChannelSetupShape = {
+    zaloOauthBase: undefined
+    siteUrl: string
+    timeoutMs: number
+}
+
+type BuildWiringProofResultOptionsChannelConnectionsShape = {
+    channelTokenKey: Secret
+    siteUrl: string
+    publicSiteUrl: undefined
+}
+
+type BuildWiringProofResultOptionsAiShape = {
+    gatewayUrl: null
+    virtualKey: null
+    chatModel: string
+    embeddingModel: string
+}
+
+type BuildWiringProofResultOptionsStorageShape = {
+    endpoint: string
+    region: string
+    accessKey: Secret
+    secretKey: Secret
+    bucketPrefix: string
+    publicUrl: string
+    timeoutMs: number
+}
+
+type BuildWiringProofResultOptionsMailShape = {
+    allowPrivateHosts: boolean
+    platform: null
+    helloName: string
+}
+
+type BuildWiringProofResultOptionsIdentityAuthShape = {
+    webOrigin: string
+    cookieDomain: undefined
+    refreshTtlSeconds: number
+    resetTtlSeconds: number
+    inviteTtlSeconds: number
+    loginAttempts: number
+    resetAttempts: number
+    attemptWindowMs: number
+}
+
+type BuildWiringProofResultOptionsPassportShape = {
+    privateKey: Secret
+    publicKey: string
+    keyId: undefined
+    issuer: string
+    returnOrigin: string
+    audience: string
+    accessTtlSeconds: number
+    bcryptCost: number
+    google: null
+}
+
+type BuildWiringProofResultOptionsConnectionsShape = {
+    name: string
+    provider: "postgres"
+    url: Secret
+    schema: string
+}
+
+type BuildWiringProofResultOptionsShape = {
+    connections: Array<BuildWiringProofResultOptionsConnectionsShape>
+    passport: BuildWiringProofResultOptionsPassportShape
+    identityAuth: BuildWiringProofResultOptionsIdentityAuthShape
+    mail: BuildWiringProofResultOptionsMailShape
+    storage: BuildWiringProofResultOptionsStorageShape
+    ai: BuildWiringProofResultOptionsAiShape
+    channelConnections: BuildWiringProofResultOptionsChannelConnectionsShape
+    channelSetup: BuildWiringProofResultOptionsChannelSetupShape
+    n8nHost: BuildWiringProofResultOptionsN8nHostShape
+    channelProvisioning: BuildWiringProofResultOptionsChannelProvisioningShape
+    workspaceSeed: BuildWiringProofResultOptionsWorkspaceSeedShape
+    mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
+    openclaw: BuildWiringProofResultOptionsOpenclawShape
+}
+
+type BuildWiringProofResultShape = {
+    options: BuildWiringProofResultOptionsShape
+    overrides: Array<BuildWiringProofResultOverridesShape>
+}
+
 /** Compiles the real CLI root with explicit options and existing infrastructure-token doubles. */
-export const buildWiringProof = (_AppModule: unknown) => {
+export const buildWiringProof = (_AppModule: unknown): BuildWiringProofResultShape => {
     const resources = resourceDoubles()
     return {
         options,

@@ -130,28 +130,34 @@ export const PATTERNS: ShopPatterns = {
 }
 
 /** Input factories for automation engine scenarios. */
-export const template = (key: string, overrides: Partial<TemplateDefinition> = {}) =>
+export const template = (key: string, overrides: Partial<TemplateDefinition> = {}): TemplateDefinition =>
     buildTemplate({ key, ...overrides })
 /** Builds a pipeline using its template key as its durable identity. */
-export const pipeline = (key: string, overrides: Partial<PipelineRow> = {}) =>
+export const pipeline = (key: string, overrides: Partial<PipelineRow> = {}): PipelineRow =>
     buildPipelineRow({ id: `p-${key}`, template_key: key, ...overrides })
+type SetupOfResultShape = {
+    pipelines: Array<PipelineRow>
+    templates: Array<TemplateDefinition>
+}
+
 /** Pairs implemented templates with their enabled pipelines. */
-export const setupOf = (...keys: ReadonlyArray<string>) => ({
+export const setupOf = (...keys: ReadonlyArray<string>): SetupOfResultShape => ({
     pipelines: keys.map((key) => pipeline(key)),
     templates: keys.map((key) => template(key)),
 })
+
 /** Pairs one n8n workflow with its configured pipeline. */
 export const n8nSetup = (
     key: string,
     definition: Partial<TemplateDefinition> = {},
     row: Partial<PipelineRow> = {},
-) => ({
+): SetupOfResultShape => ({
     pipelines: [pipeline(key, row)],
     templates: [template(key, { executor: "n8n", ...definition })],
 })
 
 /** Scheduled workflow inputs for the engine. */
-export const scheduled = (time = "17:00") =>
+export const scheduled = (time = "17:00"): SetupOfResultShape =>
     n8nSetup(
         "email-daily-report",
         {
@@ -174,11 +180,16 @@ export const paymentEvent = {
 /** The fixed clock instant for automation engine scenarios. */
 export const NOW = "2026-10-12T10:00:00.000Z"
 
+type DoneShape = {
+    status: "done"
+    steps: Array<never>
+}
+
 /** A completed executor result with no reported steps. */
-export const DONE = { status: "done" as const, steps: [] }
+export const DONE: DoneShape = { status: "done" as const, steps: [] }
 
 /** Builds the customer payment receipt workflow. */
-export const receiptSetup = () =>
+export const receiptSetup = (): SetupOfResultShape =>
     n8nSetup(
         "email-payment-receipt",
         { n8n: { webhook: "nivo/receipt", audience: "customer" } },

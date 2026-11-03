@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 
-const [WorkspaceMemberEntity] = workspaceMembersEntities
+const WorkspaceMemberEntity: (typeof workspaceMembersEntities)[0] = workspaceMembersEntities[0]
 type WorkspaceMemberEntity = InstanceType<typeof WorkspaceMemberEntity>
 
 /** The creation time every fixture row carries. */
-export const CREATED = new Date("2026-10-01T00:00:00.000Z")
+export const CREATED: Date = new Date("2026-10-01T00:00:00.000Z")
 
 /** Deterministic 32-hex hiring link token derived from a fixture label. */
-export const LINK_TOKEN = createHash("sha256").update("fixture-hiring-link-token").digest("hex").slice(0, 32)
+export const LINK_TOKEN: string = createHash("sha256").update("fixture-hiring-link-token").digest("hex").slice(0, 32)
 /** Shared, complete test data for the capability cases. */
 export const settings = {
     workspaceId: "ws-1",
@@ -69,8 +69,32 @@ export const candidate = {
     staffId: null,
 } as const
 
+type InterviewProposedSlotsShape = {
+    readonly start: "2026-10-14T01:00:00.000Z"
+    readonly end: "2026-10-14T01:30:00.000Z"
+}
+
+type InterviewShape = {
+    readonly id: "interview-1"
+    readonly workspaceId: "ws-1"
+    readonly candidateId: "candidate-1"
+    readonly jobId: "job-1"
+    readonly interviewerUserId: "user-1"
+    readonly interviewerName: "Blair"
+    readonly mode: "in_person"
+    readonly location: "Main shop"
+    readonly durationMin: 30
+    readonly proposedSlots: readonly [InterviewProposedSlotsShape]
+    readonly slotStart: "2026-10-14T01:00:00.000Z"
+    readonly slotEnd: "2026-10-14T01:30:00.000Z"
+    readonly status: "confirmed"
+    readonly token: string
+    readonly workItemId: "work-1"
+    readonly note: "Bring examples"
+}
+
 /** Shared, complete test data for the capability cases. */
-export const interview = {
+export const interview: InterviewShape = {
     id: "interview-1",
     workspaceId: "ws-1",
     candidateId: "candidate-1",
@@ -92,8 +116,29 @@ export const interview = {
 /** Terms shared by the persisted and public offer fixtures. */
 const offerTerms = { title: "Barista", pay: "40000 per hour", probation: "One month", note: "Welcome" }
 
+type OfferTermsShape = {
+    readonly startDate: "2026-10-20"
+    readonly title: string
+    readonly pay: string
+    readonly probation: string
+    readonly note: string
+}
+
+type OfferShape = {
+    readonly id: "offer-1"
+    readonly workspaceId: "ws-1"
+    readonly candidateId: "candidate-1"
+    readonly jobId: "job-1"
+    readonly terms: OfferTermsShape
+    readonly draft: "Letter draft"
+    readonly status: "sent"
+    readonly token: string
+    readonly workItemId: "work-1"
+    readonly expiresAt: "2026-10-21T01:00:00.000Z"
+}
+
 /** Shared, complete test data for the capability cases. */
-export const offer = {
+export const offer: OfferShape = {
     id: "offer-1",
     workspaceId: "ws-1",
     candidateId: "candidate-1",

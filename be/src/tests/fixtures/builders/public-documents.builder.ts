@@ -1,11 +1,26 @@
-import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import {
+    builder,
+    fakeTransaction,
+    mockEntityManager,
+    type FakeTransaction,
+    type MockEntityManager,
+} from "@starci/jest-preset"
 import type { InsertResult } from "typeorm"
 import type { SourceState } from "@modules/domain/knowledge-sources"
-import type { PublicDocumentsService } from "@modules/domain/public-documents"
+import type {
+    PublicDocumentsService,
+    PublicDocumentKind,
+    PublicDocumentStatus,
+    LeftOut,
+    PublicDocumentDraftRequest,
+    ApproveRequest,
+} from "@modules/domain/public-documents"
 import { publicDocumentsEntities } from "@modules/domain/public-documents"
 import { entityRowBuilder } from "./entity-row.builder"
 
-const [PublicDocumentEntity, PublicDocumentSourceEntity, PublicDocumentApprovalEntity] = publicDocumentsEntities
+const PublicDocumentEntity: (typeof publicDocumentsEntities)[0] = publicDocumentsEntities[0]
+const PublicDocumentSourceEntity: (typeof publicDocumentsEntities)[1] = publicDocumentsEntities[1]
+const PublicDocumentApprovalEntity: (typeof publicDocumentsEntities)[2] = publicDocumentsEntities[2]
 type PublicDocumentEntity = InstanceType<typeof PublicDocumentEntity>
 type PublicDocumentSourceEntity = InstanceType<typeof PublicDocumentSourceEntity>
 type PublicDocumentApprovalEntity = InstanceType<typeof PublicDocumentApprovalEntity>
@@ -13,44 +28,81 @@ type PublicDocumentApprovalEntity = InstanceType<typeof PublicDocumentApprovalEn
 /** The workspace of the public-documents cases. */
 export const WS = "11111111-1111-4111-8111-111111111111"
 
+type DocumentRowShape = {
+    readonly workspaceId?: string
+    readonly title?: string
+    readonly body?: string
+    readonly publishedBody?: string | null
+    readonly publishedRevision?: number | null
+    readonly kind?: PublicDocumentKind
+    readonly status?: PublicDocumentStatus
+    readonly draftRevision?: number
+    readonly question?: string | null
+    readonly gapId?: string | null
+    readonly instructions?: string | null
+    readonly leftOut?: Array<LeftOut>
+    readonly failureCode?: string | null
+    readonly approvedBy?: string | null
+    readonly approvedByName?: string | null
+    readonly approvedAt?: Date | null
+    readonly publishedSourceId?: string | null
+    readonly createdBy?: string | null
+    readonly id?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
+
 /** A draft NIVO wrote from one internal document, with every persisted column. */
-export const documentRow = entityRowBuilder<PublicDocumentEntity>({
-    id: "d1",
-    workspaceId: WS,
-    title: "Frequent questions",
-    body: "Same day delivery.",
-    publishedBody: null,
-    publishedRevision: null,
-    kind: "drafted",
-    status: "draft",
-    draftRevision: 0,
-    question: null,
-    gapId: null,
-    instructions: null,
-    leftOut: [],
-    failureCode: null,
-    approvedBy: null,
-    approvedByName: null,
-    approvedAt: null,
-    publishedSourceId: null,
-    createdBy: "u1",
-    createdAt: new Date("2026-11-01T01:00:00.000Z"),
-    updatedAt: new Date("2026-11-01T02:00:00.000Z"),
-})
+export const documentRow: (changes?: DocumentRowShape) => PublicDocumentEntity = entityRowBuilder<PublicDocumentEntity>(
+    {
+        id: "d1",
+        workspaceId: WS,
+        title: "Frequent questions",
+        body: "Same day delivery.",
+        publishedBody: null,
+        publishedRevision: null,
+        kind: "drafted",
+        status: "draft",
+        draftRevision: 0,
+        question: null,
+        gapId: null,
+        instructions: null,
+        leftOut: [],
+        failureCode: null,
+        approvedBy: null,
+        approvedByName: null,
+        approvedAt: null,
+        publishedSourceId: null,
+        createdBy: "u1",
+        createdAt: new Date("2026-11-01T01:00:00.000Z"),
+        updatedAt: new Date("2026-11-01T02:00:00.000Z"),
+    },
+)
+
+type DocumentSourceRowShape = {
+    readonly documentId?: string
+    readonly sourceId?: string
+    readonly workspaceId?: string
+    readonly sourceTitle?: string
+    readonly contentHash?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
 
 /** The internal document `s1` a public document was drafted from, with every persisted column. */
-export const documentSourceRow = entityRowBuilder<PublicDocumentSourceEntity>({
-    documentId: "d1",
-    sourceId: "s1",
-    workspaceId: WS,
-    sourceTitle: "Delivery policy",
-    contentHash: "h1",
-    createdAt: new Date("2026-11-01T01:00:00.000Z"),
-    updatedAt: new Date("2026-11-01T01:00:00.000Z"),
-})
+export const documentSourceRow: (changes?: DocumentSourceRowShape) => PublicDocumentSourceEntity =
+    entityRowBuilder<PublicDocumentSourceEntity>({
+        documentId: "d1",
+        sourceId: "s1",
+        workspaceId: WS,
+        sourceTitle: "Delivery policy",
+        contentHash: "h1",
+        createdAt: new Date("2026-11-01T01:00:00.000Z"),
+        updatedAt: new Date("2026-11-01T01:00:00.000Z"),
+    })
 
 /** A ready internal source and the current hash a document review reads. */
-export const publicSourceState = builder<SourceState>({
+export const publicSourceState: (overrides?: Partial<SourceState>) => SourceState = builder<SourceState>({
     id: "s1",
     title: "Delivery policy",
     visibility: "internal",
@@ -59,11 +111,12 @@ export const publicSourceState = builder<SourceState>({
 })
 
 /** A valid draft request; individual refusal cases change just the invalid field. */
-export const publicDraftRequestOf = builder<Parameters<PublicDocumentsService["requestDraft"]>[2]>({
-    title: "Frequent questions",
-    sourceIds: ["s1", "s1"],
-    instructions: " Keep it short ",
-})
+export const publicDraftRequestOf: (overrides?: Partial<PublicDocumentDraftRequest>) => PublicDocumentDraftRequest =
+    builder<Parameters<PublicDocumentsService["requestDraft"]>[2]>({
+        title: "Frequent questions",
+        sourceIds: ["s1", "s1"],
+        instructions: " Keep it short ",
+    })
 
 /** Invalid draft data with the exact external refusal expected for it. */
 export const PUBLIC_DRAFT_REFUSALS: Array<
@@ -104,21 +157,24 @@ export const PUBLIC_DRAFT_REFUSALS: Array<
 ]
 
 /** An independent expected immutable approval, with the source state bound by the review. */
-export const publicApprovalRow = builder<PublicDocumentApprovalEntity>({
-    documentId: "d1",
-    workspaceId: WS,
-    draftRevision: 0,
-    title: "Frequent questions",
-    body: "Same day delivery.",
-    draftSources: [{ sourceId: "s1", title: "Delivery policy", contentHash: "h1" }],
-    reviewedSources: [{ sourceId: "s1", title: "Delivery policy", contentHash: "h1", current: publicSourceState() }],
-    approvedBy: "u1",
-    approvedByName: "Owner",
-    approvedAt: new Date("2026-11-01T10:00:00.000Z"),
-})
+export const publicApprovalRow: (overrides?: Partial<PublicDocumentApprovalEntity>) => PublicDocumentApprovalEntity =
+    builder<PublicDocumentApprovalEntity>({
+        documentId: "d1",
+        workspaceId: WS,
+        draftRevision: 0,
+        title: "Frequent questions",
+        body: "Same day delivery.",
+        draftSources: [{ sourceId: "s1", title: "Delivery policy", contentHash: "h1" }],
+        reviewedSources: [
+            { sourceId: "s1", title: "Delivery policy", contentHash: "h1", current: publicSourceState() },
+        ],
+        approvedBy: "u1",
+        approvedByName: "Owner",
+        approvedAt: new Date("2026-11-01T10:00:00.000Z"),
+    })
 
 /** Data arranged for an atomic approval write; a published pointer also has its required immutable baseline. */
-export const publicApprovalTransaction = (document: PublicDocumentEntity) => {
+export const publicApprovalTransaction = (document: PublicDocumentEntity): FakeTransaction<MockEntityManager> => {
     if (document.publishedRevision === null)
         return fakeTransaction(
             mockEntityManager({
@@ -156,7 +212,9 @@ export const publicApprovalTransaction = (document: PublicDocumentEntity) => {
 }
 
 /** Data arranged for creating one queued draft and its source references. */
-export const draftRequestTransaction = (sources: ReadonlyArray<PublicDocumentSourceEntity> = [documentSourceRow()]) =>
+export const draftRequestTransaction = (
+    sources: ReadonlyArray<PublicDocumentSourceEntity> = [documentSourceRow()],
+): FakeTransaction<MockEntityManager> =>
     fakeTransaction(
         mockEntityManager({
             insert: [
@@ -171,8 +229,14 @@ export const draftRequestTransaction = (sources: ReadonlyArray<PublicDocumentSou
 /** A mutable TypeORM write answer, independent of the surrounding readonly entity-dispatch tuple. */
 const insertResultOf = builder<InsertResult>({ identifiers: [], generatedMaps: [], raw: [] })
 
+type WrittenDocumentAnswersResultShape = {
+    readonly insert: readonly [typeof PublicDocumentEntity, InsertResult]
+    readonly findOne: readonly [typeof PublicDocumentEntity, PublicDocumentEntity]
+    readonly find: readonly [typeof PublicDocumentSourceEntity, readonly []]
+}
+
 /** Data arranged for one hand-written draft and its readable row. */
-export const writtenDocumentAnswers = () =>
+export const writtenDocumentAnswers = (): WrittenDocumentAnswersResultShape =>
     ({
         insert: [PublicDocumentEntity, insertResultOf({ identifiers: [{ id: "d1" }] })],
         findOne: [PublicDocumentEntity, documentRow({ kind: "written" })],
@@ -186,7 +250,7 @@ export const PUBLIC_WRITE_REFUSALS: Array<[string, Parameters<PublicDocumentsSer
 ]
 
 /** Data arranged for an existing document being withdrawn, without an unrelated subject provider. */
-export const publicArchiveTransaction = (document: PublicDocumentEntity) =>
+export const publicArchiveTransaction = (document: PublicDocumentEntity): FakeTransaction<MockEntityManager> =>
     fakeTransaction(
         mockEntityManager({
             findOne: [PublicDocumentEntity, document],
@@ -194,8 +258,15 @@ export const publicArchiveTransaction = (document: PublicDocumentEntity) =>
         }),
     )
 
+type PublicDocumentListAnswersResultShape = {
+    readonly find: readonly [
+        readonly [typeof PublicDocumentEntity, readonly [PublicDocumentEntity]],
+        readonly [typeof PublicDocumentSourceEntity, readonly [PublicDocumentSourceEntity]],
+    ]
+}
+
 /** Data arranged for the document list and its working source references. */
-export const publicDocumentListAnswers = (document: PublicDocumentEntity) =>
+export const publicDocumentListAnswers = (document: PublicDocumentEntity): PublicDocumentListAnswersResultShape =>
     ({
         find: [
             [PublicDocumentEntity, [document]],
@@ -203,8 +274,18 @@ export const publicDocumentListAnswers = (document: PublicDocumentEntity) =>
         ],
     }) as const
 
+type EditablePublicDocumentAnswersResultUpdateShape = { readonly affected: 1 }
+
+type EditablePublicDocumentAnswersResultShape = {
+    readonly findOne: readonly [typeof PublicDocumentEntity, PublicDocumentEntity]
+    readonly find: readonly [typeof PublicDocumentSourceEntity, readonly []]
+    readonly update: readonly [typeof PublicDocumentEntity, EditablePublicDocumentAnswersResultUpdateShape]
+}
+
 /** Data arranged for an editable document and the row returned after its metadata write. */
-export const editablePublicDocumentAnswers = (document: PublicDocumentEntity) =>
+export const editablePublicDocumentAnswers = (
+    document: PublicDocumentEntity,
+): EditablePublicDocumentAnswersResultShape =>
     ({
         findOne: [PublicDocumentEntity, document],
         find: [PublicDocumentSourceEntity, []],
@@ -218,40 +299,44 @@ export const PUBLIC_REDRAFT_REFUSALS: Array<[string, PublicDocumentEntity, Array
     ["a document with no internal source", documentRow({ kind: "written" }), []],
 ]
 
+type PublicPublishedChangeShape = Pick<
+    PublicDocumentEntity,
+    | "status"
+    | "publishedBody"
+    | "publishedRevision"
+    | "draftRevision"
+    | "failureCode"
+    | "approvedBy"
+    | "approvedByName"
+    | "approvedAt"
+    | "publishedSourceId"
+>
+
 /** Exact persisted fields of the first public approval, independent of the production writer. */
-export const publicPublishedChangeOf = builder<
-    Pick<
-        PublicDocumentEntity,
-        | "status"
-        | "publishedBody"
-        | "publishedRevision"
-        | "draftRevision"
-        | "publishedSourceId"
-        | "approvedBy"
-        | "approvedByName"
-        | "approvedAt"
-        | "failureCode"
-    >
->({
-    status: "published",
-    publishedBody: "Same day delivery.",
-    publishedRevision: 0,
-    draftRevision: 0,
-    publishedSourceId: "d1",
-    approvedBy: "u1",
-    approvedByName: "Owner",
-    approvedAt: new Date("2026-11-01T10:00:00.000Z"),
-    failureCode: null,
-})
+export const publicPublishedChangeOf: (overrides?: Partial<PublicPublishedChangeShape>) => PublicPublishedChangeShape =
+    builder<PublicPublishedChangeShape>({
+        status: "published",
+        publishedBody: "Same day delivery.",
+        publishedRevision: 0,
+        draftRevision: 0,
+        publishedSourceId: "d1",
+        approvedBy: "u1",
+        approvedByName: "Owner",
+        approvedAt: new Date("2026-11-01T10:00:00.000Z"),
+        failureCode: null,
+    })
+
+type PublicPublicationOfShape2 = { title: string; content: string }
 
 /** The exact public text passed to its source owner. */
-export const publicPublicationOf = builder<{ title: string; content: string }>({
-    title: "Frequent questions",
-    content: "Same day delivery.",
-})
+export const publicPublicationOf: (overrides?: Partial<PublicPublicationOfShape2>) => PublicPublicationOfShape2 =
+    builder<{ title: string; content: string }>({
+        title: "Frequent questions",
+        content: "Same day delivery.",
+    })
 
 /** Source-review snapshot after explicit acknowledgement of h2, retaining h1 draft evidence. */
-export const publicChangedReviewOf = () =>
+export const publicChangedReviewOf = (): PublicDocumentApprovalEntity =>
     publicApprovalRow({
         draftRevision: 1,
         reviewedSources: [
@@ -265,7 +350,7 @@ export const publicChangedReviewOf = () =>
     })
 
 /** A published document with an exact immutable revision and its original actor. */
-export const publicReplayDocumentOf = () =>
+export const publicReplayDocumentOf = (): PublicDocumentEntity =>
     documentRow({
         status: "published",
         publishedBody: "Same day delivery.",
@@ -273,8 +358,20 @@ export const publicReplayDocumentOf = () =>
         approvedBy: "original-approver",
     })
 
+type PublicMissingReviewAnswersResultShape = {
+    readonly findOne: readonly [
+        readonly [typeof PublicDocumentEntity, PublicDocumentEntity],
+        readonly [typeof PublicDocumentApprovalEntity, null],
+    ]
+    readonly find: readonly [
+        readonly [typeof PublicDocumentEntity, readonly [PublicDocumentEntity]],
+        readonly [typeof PublicDocumentSourceEntity, readonly []],
+        readonly [typeof PublicDocumentApprovalEntity, readonly []],
+    ]
+}
+
 /** Entity answers for a published revision whose required immutable audit has disappeared. */
-export const publicMissingReviewAnswers = () =>
+export const publicMissingReviewAnswers = (): PublicMissingReviewAnswersResultShape =>
     ({
         findOne: [
             [PublicDocumentEntity, publicReplayDocumentOf()],
@@ -287,19 +384,41 @@ export const publicMissingReviewAnswers = () =>
         ],
     }) as const
 
+type PublicMutationAnswersResultShape = {
+    readonly findOne: readonly [typeof PublicDocumentEntity, PublicDocumentEntity]
+    readonly find: readonly [typeof PublicDocumentSourceEntity, readonly [PublicDocumentSourceEntity]]
+    readonly update: readonly [typeof PublicDocumentEntity, EditablePublicDocumentAnswersResultUpdateShape]
+}
+
 /** Concurrent revision-fence answers; the caller's kit manager retains the actual typed update result. */
-export const publicMutationAnswers = (document = documentRow()) =>
+export const publicMutationAnswers = (
+    document: PublicDocumentEntity = documentRow(),
+): PublicMutationAnswersResultShape =>
     ({
         findOne: [PublicDocumentEntity, document],
         find: [PublicDocumentSourceEntity, [documentSourceRow()]],
         update: [PublicDocumentEntity, { affected: 1 }],
     }) as const
 
+type PublicDraftingAnswersResultShape = {
+    readonly findOne: readonly [typeof PublicDocumentEntity, PublicDocumentEntity]
+    readonly find: readonly [typeof PublicDocumentSourceEntity, ReadonlyArray<PublicDocumentSourceEntity>]
+    readonly update: readonly [
+        readonly [typeof PublicDocumentEntity, EditablePublicDocumentAnswersResultUpdateShape],
+        readonly [typeof PublicDocumentSourceEntity, EditablePublicDocumentAnswersResultUpdateShape],
+    ]
+    readonly insert: readonly [typeof PublicDocumentSourceEntity, InsertResult]
+    readonly delete: readonly [
+        readonly [typeof PublicDocumentEntity, EditablePublicDocumentAnswersResultUpdateShape],
+        readonly [typeof PublicDocumentSourceEntity, EditablePublicDocumentAnswersResultUpdateShape],
+    ]
+}
+
 /** Strict entity answers for a revision-fenced generation and its working provenance. */
 export const publicDraftingAnswers = (
     document: PublicDocumentEntity,
     sources: ReadonlyArray<PublicDocumentSourceEntity>,
-) =>
+): PublicDraftingAnswersResultShape =>
     ({
         findOne: [PublicDocumentEntity, document],
         find: [PublicDocumentSourceEntity, sources],
@@ -315,10 +434,13 @@ export const publicDraftingAnswers = (
     }) as const
 
 /** The exact revision the approver saw; refusal cases change only its relevant field. */
-export const publicReviewRequestOf = builder<Parameters<PublicDocumentsService["approve"]>[2]>({
+export const publicReviewRequestOf: (overrides?: Partial<ApproveRequest>) => ApproveRequest = builder<
+    Parameters<PublicDocumentsService["approve"]>[2]
+>({
     id: "d1",
     expectedDraftRevision: 0,
 })
 
 /** A previously published document whose approved text differs from its working draft. */
-export const publicPublishedDocumentOf = () => documentRow({ status: "published", publishedBody: "x" })
+export const publicPublishedDocumentOf = (): PublicDocumentEntity =>
+    documentRow({ status: "published", publishedBody: "x" })

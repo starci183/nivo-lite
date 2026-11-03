@@ -1,11 +1,23 @@
-import { In, Not } from "typeorm"
+import { In, Not, type FindOperator } from "typeorm"
 import type { ContentPillarDraft, contentPillarsEntities } from "@modules/domain/content-pillars"
 import { entityRowBuilder } from "./entity-row.builder"
 
 type ContentPillarEntity = InstanceType<(typeof contentPillarsEntities)[0]>
 
+type PillarRowShape = {
+    readonly workspaceId?: string
+    readonly name?: string
+    readonly description?: string
+    readonly weight?: number
+    readonly sort?: number
+    readonly active?: boolean
+    readonly id?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
+
 /** A saved theme of workspace `ws-1`, with the fields a spec rarely changes filled. */
-export const pillarRow = entityRowBuilder<ContentPillarEntity>({
+export const pillarRow: (changes?: PillarRowShape) => ContentPillarEntity = entityRowBuilder<ContentPillarEntity>({
     id: "pillar-1",
     workspaceId: "ws-1",
     name: "Menu",
@@ -32,13 +44,18 @@ export const paddedDrafts: ReadonlyArray<ContentPillarDraft> = [
 ]
 
 /** The rows the replace expects the insert to carry for {@link paddedDrafts}: trimmed, kept id first. */
-export const paddedInserted = [
+export const paddedInserted: Array<Record<string, unknown>> = [
     insertedOf({ description: "Daily" }),
     insertedOf({ name: "New", description: "Fresh", weight: 1, sort: 1, active: false }, ["id"]),
 ]
 
+type DeleteExceptPillar1Shape = {
+    workspaceId: string
+    id: FindOperator<unknown>
+}
+
 /** What the replace deletes when only `pillar-1` is kept. */
-export const deleteExceptPillar1 = { workspaceId: "ws-1", id: Not(In(["pillar-1"])) }
+export const deleteExceptPillar1: DeleteExceptPillar1Shape = { workspaceId: "ws-1", id: Not(In(["pillar-1"])) }
 
 /** What the replace deletes when nothing is kept. */
 export const deleteAllOfWs1 = { workspaceId: "ws-1" }

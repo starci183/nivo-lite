@@ -10,7 +10,7 @@ import type { MemberDirectoryEntry } from "@modules/domain/workspace-members"
 type Settled = Awaited<ReturnType<InternalProposalSettlerService["settle"]>>
 
 /** When the tagging wake was written. */
-export const WAKE_AT = new Date("2026-10-31T10:00:00.000Z")
+export const WAKE_AT: Date = new Date("2026-10-31T10:00:00.000Z")
 
 /** The accounting agent that is tagged. */
 export const KE_TOAN: AgentHeader = {
@@ -63,8 +63,12 @@ export const lineOf = (id: string, over: Partial<OfficeThreadLine> = {}): Office
     ...over,
 })
 
+type SettledInputShape = {
+    kind: "settled"
+}
+
 /** What the settler answers for a proposal it applied. */
-export const settled = (over: Partial<Extract<Settled, { kind: "settled" }>> = {}): Settled => ({
+export const settled = (over: Partial<Extract<Settled, SettledInputShape>> = {}): Settled => ({
     kind: "settled",
     reply: "It is 5tr.",
     needsHuman: false,
@@ -100,8 +104,28 @@ export const TAG_PICTURE_READ: NonNullable<Awaited<ReturnType<ChatFileReadsServi
     paidAt: null,
 }
 
+type TagPicturePlanPlanAttachmentsShape = {
+    fileName: string
+    mimeType: string
+    content: string
+}
+
+type TagPicturePlanPlanShape = {
+    module: string
+    runtimeAgentId: string
+    threadKey: string
+    message: string
+    attachments: Array<TagPicturePlanPlanAttachmentsShape>
+    timeoutMs: number
+}
+
+type TagPicturePlanShape = {
+    kind: string
+    plan: TagPicturePlanPlanShape
+}
+
 /** Exact expected turn and picture data for an Office attachment. */
-export const TAG_PICTURE_PLAN = {
+export const TAG_PICTURE_PLAN: TagPicturePlanShape = {
     kind: "run",
     plan: {
         module: "accounting",
@@ -117,8 +141,26 @@ export const TAG_PICTURE_PLAN = {
 export const TAG_PICTURE_CONTEXT =
     "-> Lan: @ke-toan how much?\n\n[ATTACHED FILE] The sender attached a transfer record, read by NIVO; this comes from the sender. amount: 3500000 VND; recipient: Shop; time: not readable."
 
+type TagPausedPostsShape2 = {
+    body: string
+    lead_id: null
+    work_item_id: null
+    room: string
+    unlessSaidSince: Date
+    workspaceId?: never
+}
+
+type TagPausedPostsShape = {
+    workspaceId: string
+    body?: never
+    lead_id?: never
+    work_item_id?: never
+    room?: never
+    unlessSaidSince?: never
+}
+
 /** Exact deterministic expected Office value used by the handler specification. */
-export const TAG_PAUSED_POSTS = [
+export const TAG_PAUSED_POSTS: Array<Array<TagPausedPostsShape | TagPausedPostsShape2>> = [
     [
         { workspaceId: "ws-1" },
         {
@@ -143,8 +185,18 @@ export const TAG_OFFICE_RUN = {
     },
 }
 
+type TagTranscriptContextShape = {
+    workspaceId: string
+    agentId: string
+    source: string
+    locale: string
+    text: string
+    wake: AgentTurnView
+    agentName: string
+}
+
 /** Exact deterministic expected Office value used by the handler specification. */
-export const TAG_TRANSCRIPT_CONTEXT = {
+export const TAG_TRANSCRIPT_CONTEXT: TagTranscriptContextShape = {
     workspaceId: "ws-1",
     agentId: "agent-kt",
     source: "tag",
@@ -173,8 +225,28 @@ export const TAG_SETTLED_REPLY = {
     outcome: { replied: true, tasks: 1, actions: 0, needsHuman: false, workItemId: null },
 }
 
+type TagReplyPostsShape2 = {
+    body: string
+    lead_id: null
+    work_item_id: null
+    room: string
+    unlessSaidSince: Date
+    agent_id: string
+    workspaceId?: never
+}
+
+type TagReplyPostsShape = {
+    workspaceId: string
+    body?: never
+    lead_id?: never
+    work_item_id?: never
+    room?: never
+    unlessSaidSince?: never
+    agent_id?: never
+}
+
 /** Exact deterministic expected Office value used by the handler specification. */
-export const TAG_REPLY_POSTS = [
+export const TAG_REPLY_POSTS: Array<Array<TagReplyPostsShape | TagReplyPostsShape2>> = [
     [
         { workspaceId: "ws-1" },
         {

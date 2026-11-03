@@ -55,7 +55,7 @@ export const TEXTS: Readonly<Record<string, string>> = {
 }
 
 /** Builds a command addressed to the sales department. */
-export const inputOf = builder<SendCommandInput>({
+export const inputOf: (overrides?: Partial<SendCommandInput>) => SendCommandInput = builder<SendCommandInput>({
     from: "owner",
     to: "sales",
     command: "classify_lead",
@@ -64,7 +64,7 @@ export const inputOf = builder<SendCommandInput>({
 })
 
 /** Builds a reply command addressed to the chatbot department. */
-export const replyOf = builder<SendCommandInput>({
+export const replyOf: (overrides?: Partial<SendCommandInput>) => SendCommandInput = builder<SendCommandInput>({
     from: "owner",
     to: "chatbot",
     command: "reply_customer",
@@ -76,7 +76,7 @@ export const replyOf = builder<SendCommandInput>({
 export const rowOf = (): WorkItem => mock<WorkItem>({ id: "item-1", lead_id: "lead-1" })
 
 /** Resolves a mirror message with the same fixture catalogue and parameter substitutions. */
-export const plannerText = (key: string, params: Readonly<Record<string, string | number>>) =>
+export const plannerText = (key: string, params: Readonly<Record<string, string | number>>): string =>
     Object.entries(params).reduce(
         (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
         TEXTS[key] ?? key,

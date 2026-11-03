@@ -1,13 +1,13 @@
 import { builder } from "@starci/jest-preset"
-import type { EventsService } from "@modules/domain/events"
+import type { EventsService, EventEntry } from "@modules/domain/events"
 import type { EntityManager } from "typeorm"
 import { brainFactsEntities } from "@modules/domain/brain-facts"
 import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
 import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
 
-const [BrainFactEntity] = brainFactsEntities
-const [McpCallLogEntity] = mcpCallLogEntities
-const [McpToolGrantEntity] = mcpToolGrantsEntities
+const BrainFactEntity: (typeof brainFactsEntities)[0] = brainFactsEntities[0]
+const McpCallLogEntity: (typeof mcpCallLogEntities)[0] = mcpCallLogEntities[0]
+const McpToolGrantEntity: (typeof mcpToolGrantsEntities)[0] = mcpToolGrantsEntities[0]
 
 /** One fact of a workspace as a native-tools scenario seeds it. */
 interface SeededFact {
@@ -109,8 +109,21 @@ export const storedCallsOf = async (
     }))
 }
 
+type ToolAuditsShape = {
+    knowledgeSearch: (overrides?: Partial<EventEntry>) => EventEntry
+    boundedQuery: (overrides?: Partial<EventEntry>) => EventEntry
+    leadWrite: (overrides?: Partial<EventEntry>) => EventEntry
+    approval: (overrides?: Partial<EventEntry>) => EventEntry
+    handoffReason: (overrides?: Partial<EventEntry>) => EventEntry
+    handoffJob: (overrides?: Partial<EventEntry>) => EventEntry
+    connectorCall: (overrides?: Partial<EventEntry>) => EventEntry
+    agentHandoff: (overrides?: Partial<EventEntry>) => EventEntry
+    conversationMemory: (overrides?: Partial<EventEntry>) => EventEntry
+    turnMemory: (overrides?: Partial<EventEntry>) => EventEntry
+}
+
 /** Exact evidence records expected for conversation-scoped and admitted internal native-tool calls. */
-export const TOOL_AUDITS = {
+export const TOOL_AUDITS: ToolAuditsShape = {
     knowledgeSearch: builder<Parameters<EventsService["record"]>[0]>({
         workspaceId: "ws-1",
         kind: "engine.tool.knowledge.search",

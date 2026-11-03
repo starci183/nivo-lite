@@ -2,12 +2,12 @@ import { builder } from "@starci/jest-preset"
 import { ordersEntities } from "@modules/domain/orders"
 import type { SalesOrderListRow } from "@modules/domain/orders"
 
-const [OrderEntity] = ordersEntities
+const OrderEntity: (typeof ordersEntities)[0] = ordersEntities[0]
 type OrderRecord = InstanceType<typeof OrderEntity>
 type SalesOrderRow = Omit<SalesOrderListRow, "contact_name" | "company">
 
 /** An order row as the contract answers it. */
-export const orderOf = builder<SalesOrderRow>({
+export const orderOf: (overrides?: Partial<SalesOrderRow>) => SalesOrderRow = builder<SalesOrderRow>({
     id: "order-1",
     workspace_id: "ws-1",
     lead_id: "lead-1",
@@ -46,8 +46,25 @@ export const orderEntityOf = (row: SalesOrderRow): OrderRecord =>
         trackingCode: row.tracking_code,
     })
 
+type WrittenOfResultShape = {
+    amount_vnd: string | null
+    confirmed_at: Date | null
+    created_at: Date
+    shipped_at: Date | null
+    items: string
+    status: string
+    carrier: string | null
+    id: string
+    workspace_id: string
+    lead_id: string | null
+    inbound_event_id: string | null
+    order_no: string
+    confirmed_by: string | null
+    tracking_code: string | null
+}
+
 /** What a write answers with `RETURNING *`: snake case columns, a bigint as text, instants as Dates. */
-export const writtenOf = (row: SalesOrderRow) => ({
+export const writtenOf = (row: SalesOrderRow): WrittenOfResultShape => ({
     ...row,
     amount_vnd: row.amount_vnd === null ? null : String(row.amount_vnd),
     confirmed_at: dateOf(row.confirmed_at),

@@ -18,3 +18,4 @@ export type {
 } from "./invoices.contracts"
 export { invoicesEntities } from "./persistence/entities"
 export { InvoicesAutomationReadService } from "./invoices-automation-read.service"
+export type { InvoiceListingRecord } from "./invoices.contracts"

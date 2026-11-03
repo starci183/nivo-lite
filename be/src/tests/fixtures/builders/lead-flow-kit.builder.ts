@@ -3,7 +3,7 @@ import type { WorkItem } from "@modules/domain/decisions"
 
 export const NOW = "2026-10-12T10:00:00.000Z"
 
-export const itemOf = builder<WorkItem>({
+export const itemOf: (overrides?: Partial<WorkItem>) => WorkItem = builder<WorkItem>({
     id: "item-1",
     workspace_id: "ws-1",
     department: "lead_gen",

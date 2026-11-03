@@ -11,3 +11,4 @@ export type {
     TransactionViewRow,
 } from "./transactions.contracts"
 export { transactionsEntities } from "./persistence/entities"
+export type { TransactionRow } from "./transactions.contracts"

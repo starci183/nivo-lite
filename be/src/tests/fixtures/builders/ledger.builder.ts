@@ -90,7 +90,16 @@ const orderEvidence = {
     amount: 150000,
 }
 
-export const invoiceEvidence = {
+type InvoiceEvidenceShape = {
+    kind: string
+    title: string
+    detail: string
+    at: string
+    status: string
+    amount: number
+}
+
+export const invoiceEvidence: InvoiceEvidenceShape = {
     kind: "invoice",
     title: "INV-1",
     detail: "An",
@@ -119,12 +128,30 @@ const decisions = [
     { kind: "decision", title: "confirm", detail: "Staff", at: PAID, status: "edited", amount: null },
 ]
 
-export const invoiceAdjustments = [
+type InvoiceAdjustmentsShape2 = {
+    kind: string
+    title: string
+    detail: string
+    at: string
+    status: null
+    amount: number
+}
+
+type InvoiceAdjustmentsShape = {
+    kind: string
+    title: string
+    detail: string
+    at: string
+    status: null
+    amount: null
+}
+
+export const invoiceAdjustments: Array<InvoiceAdjustmentsShape | InvoiceAdjustmentsShape2> = [
     { kind: "adjustment", title: "Owner", detail: "Note only", at: ISSUED, status: null, amount: null },
     { kind: "adjustment", title: "Staff", detail: "Corrected", at: PAID, status: null, amount: 115000 },
 ]
 
-export const transactionAdjustment = {
+export const transactionAdjustment: InvoiceAdjustmentsShape2 = {
     kind: "adjustment",
     title: "Owner",
     detail: "Bank correction",
@@ -268,8 +295,56 @@ export const settlementInput: LedgerInput = input({
     ],
 })
 
+type SettlementExpectedLineageShapeOfOfOf = {
+    kind: string
+    title: string
+    detail: string
+    at: string
+    status: string
+    amount: null
+}
+
+type SettlementExpectedLineageShapeOfOf = {
+    kind: string
+    title: string
+    detail: null
+    at: string
+    status: string
+    amount: null
+}
+
+type SettlementExpectedLineageShapeOf = {
+    kind: string
+    title: string
+    detail: string
+    at: null
+    status: string
+    amount: number
+}
+
+type SettlementExpectedShape = {
+    id: string
+    targetType: string
+    targetId: string
+    at: string
+    description: string
+    kind: string
+    amount: number
+    status: string
+    linked: string
+    lineage: Array<
+        | InvoiceEvidenceShape
+        | SettlementExpectedLineageShapeOf
+        | SettlementExpectedLineageShapeOfOf
+        | SettlementExpectedLineageShapeOfOfOf
+        | InvoiceAdjustmentsShape
+        | InvoiceAdjustmentsShape2
+    >
+    adjustmentCount: number
+}
+
 /** The complete settlement ledger in descending evidence timestamp order. */
-export const settlementExpected = [
+export const settlementExpected: Array<SettlementExpectedShape> = [
     {
         id: "tx:tx-2",
         targetType: "transaction",

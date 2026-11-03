@@ -2,7 +2,8 @@ import type { EntityManager } from "typeorm"
 import { jobsEntities } from "@modules/platform/jobs"
 import { AgentRunStepEntity } from "../../modules/domain/agent-runs/persistence/entities"
 
-const [, JobOutboxEntity] = jobsEntities
+const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
+type JobOutboxEntity = InstanceType<typeof JobOutboxEntity>
 
 /** The most rows one read of the proofs takes. */
 const ROWS_MAX = 50
@@ -16,7 +17,7 @@ export const removeStepJobs = async (manager: EntityManager, workspaceId: string
 }
 
 /** The advance jobs the outbox holds for a workspace. */
-export const stepJobsOf = (manager: EntityManager, workspaceId: string) =>
+export const stepJobsOf = (manager: EntityManager, workspaceId: string): Promise<Array<JobOutboxEntity>> =>
     manager.find(JobOutboxEntity, { where: { queue: "agent_step", workspaceId }, take: ROWS_MAX })
 
 /** Lets every claim of the run lapse, the way a worker that was killed leaves them. */

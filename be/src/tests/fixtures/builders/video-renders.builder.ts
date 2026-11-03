@@ -12,8 +12,34 @@ export const DONE_RENDER: RenderDone = {
     meta: { fps: 30 },
 }
 
+type CompletedMediaRowsShape3 = {
+    id: string
+    brand_name: null
+    output_path: string
+    duration_ms: null
+    created_at: string
+}
+
+type CompletedMediaRowsShape2 = {
+    id: string
+    brand_name: string
+    output_path: string
+    duration_ms: null
+    created_at: string
+}
+
+type CompletedMediaRowsShape = {
+    id: string
+    brand_name: string
+    output_path: string
+    duration_ms: number
+    created_at: Date
+}
+
 /** Three completed renders as the media query selects them: titled by project, by brand, and by nothing. */
-export const COMPLETED_MEDIA_ROWS = [
+export const COMPLETED_MEDIA_ROWS: Array<
+    CompletedMediaRowsShape | CompletedMediaRowsShape2 | CompletedMediaRowsShape3
+> = [
     {
         id: "render-1",
         brand_name: "Brand",
@@ -37,8 +63,24 @@ export const COMPLETED_MEDIA_ROWS = [
     },
 ]
 
+type CompletedMediaShape2 = {
+    id: string
+    title: string
+    outputPath: string
+    durationMs: null
+    createdAt: string
+}
+
+type CompletedMediaShape = {
+    id: string
+    title: string
+    outputPath: string
+    durationMs: number
+    createdAt: string
+}
+
 /** The media `COMPLETED_MEDIA_ROWS` become when only the first render has a project title (`Offer`). */
-export const COMPLETED_MEDIA = [
+export const COMPLETED_MEDIA: Array<CompletedMediaShape | CompletedMediaShape2> = [
     {
         id: "render-1",
         title: "Offer",

@@ -18,15 +18,16 @@ import { Secret } from "@modules/platform/config"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { I18nModule } from "@modules/platform/i18n"
 import { QUEUE_MODULES } from "./test-capabilities.options"
+import type { DynamicModule } from "@nestjs/common"
 
 /** The connection key of the sealed-credential proofs: a local test key of their own, never a deployed one. */
-export const SEALED_PROOF_TOKEN_KEY = new Secret(Buffer.alloc(32, 13).toString("base64"))
+export const SEALED_PROOF_TOKEN_KEY: Secret = new Secret(Buffer.alloc(32, 13).toString("base64"))
 
 /**
  * The gateway as the api composes it for the console: the real connection key cipher (connection-secrets), the connections
  * capability that authorizes owners and managers, and the gateway with its admin service, over the local database.
  */
-export const MCP_SEALED_CREDENTIAL_MODULES = [
+export const MCP_SEALED_CREDENTIAL_MODULES: Array<DynamicModule> = [
     I18nModule.register({
         isGlobal: true,
         bundles: [

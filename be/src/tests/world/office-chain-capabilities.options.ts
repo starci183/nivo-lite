@@ -79,7 +79,7 @@ class OfficeAgentOwnersModule {
  * authority rules and the member grants, each port bound the way the app root binds it (the agent rules and owners to the
  * agents capability's ownership rules, the approval gate to the approval requests, `approval.resolved` to the thread cards).
  */
-export const OFFICE_CHAIN_MODULES = [
+export const OFFICE_CHAIN_MODULES: Array<DynamicModule> = [
     I18nModule.register({
         isGlobal: true,
         bundles: [

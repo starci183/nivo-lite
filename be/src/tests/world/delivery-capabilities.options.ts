@@ -171,8 +171,13 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
     MetaInboxModule.register({ isGlobal: true, taker: DeferredMetaEvents }),
 ]
 
+type DeliveryCapabilitiesResultShape = {
+    workspaceId: string
+    modules: Array<DynamicModule>
+}
+
 /** Real receipt owners, database claims and outbox; consumers remain idle until a proof invokes them. */
-export const deliveryCapabilities = () => {
+export const deliveryCapabilities = (): DeliveryCapabilitiesResultShape => {
     const workspaceId = worldIds.next()
     const tokenKey = new Secret(Buffer.alloc(32, 7).toString("base64"))
     return { workspaceId, modules: [...platformModules(tokenKey), ...domainModules(tokenKey)] }

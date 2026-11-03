@@ -1,10 +1,13 @@
 import { builder } from "@starci/jest-preset"
 import { bookingHoursEntities } from "@modules/domain/booking-hours"
 
-const [BookingHourEntity] = bookingHoursEntities
+const BookingHourEntity: (typeof bookingHoursEntities)[0] = bookingHoursEntities[0]
+type BookingHourEntity = InstanceType<typeof BookingHourEntity>
 
 /** A weekly opening window row of workspace `ws-1`: Sunday of resource `r-0`, 08:00 to 17:00. */
-export const bookingHourRowOf = builder<InstanceType<typeof BookingHourEntity>>({
+export const bookingHourRowOf: (overrides?: Partial<BookingHourEntity>) => BookingHourEntity = builder<
+    InstanceType<typeof BookingHourEntity>
+>({
     id: "h-1",
     workspaceId: "ws-1",
     resourceId: "r-0",

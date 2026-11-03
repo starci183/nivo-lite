@@ -1,7 +1,7 @@
 import { builder } from "@starci/jest-preset"
 import { bookingWaitlistEntities } from "@modules/domain/booking-waitlist"
 
-const [BookingWaitlistEntity] = bookingWaitlistEntities
+const BookingWaitlistEntity: (typeof bookingWaitlistEntities)[0] = bookingWaitlistEntities[0]
 type BookingWaitlistEntity = InstanceType<typeof BookingWaitlistEntity>
 
 const waitlistRowOf = builder<BookingWaitlistEntity>({
@@ -24,4 +24,4 @@ const waitlistRowOf = builder<BookingWaitlistEntity>({
 })
 
 /** A customer still waiting for a window. */
-export const waitingWaitlistRow = (id: string) => waitlistRowOf({ id, status: "waiting" })
+export const waitingWaitlistRow = (id: string): BookingWaitlistEntity => waitlistRowOf({ id, status: "waiting" })

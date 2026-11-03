@@ -1,6 +1,6 @@
 import type { CustomerTurn, ChatTurnProposal } from "@modules/domain/conversations"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { builder, mock } from "@starci/jest-preset"
+import { builder, mock, type MockOf } from "@starci/jest-preset"
 import type { AuthorityRule, GraphAnswer } from "@modules/domain/authority-rules"
 import type { BoundAgent } from "@modules/domain/agent-connections"
 import type { WorkItem } from "@modules/domain/decisions"
@@ -13,7 +13,7 @@ export const WS = "11111111-1111-4111-8111-111111111111"
 export const catalog: MessageCatalog = { get: (key: string) => key }
 
 /** Complete owner-read rows with the customer workspace and the scenario's supplied fields. */
-export const customerInvoiceOf = builder<InvoiceRow>({
+export const customerInvoiceOf: (overrides?: Partial<InvoiceRow>) => InvoiceRow = builder<InvoiceRow>({
     ...invoiceOf(),
     workspace_id: WS,
     lead_id: "l1",
@@ -21,7 +21,7 @@ export const customerInvoiceOf = builder<InvoiceRow>({
     paid_at: null,
 })
 /** A reply rule whose mode is decided by the scenario. */
-export const customerRuleOf = builder<AuthorityRule>({
+export const customerRuleOf: (overrides?: Partial<AuthorityRule>) => AuthorityRule = builder<AuthorityRule>({
     ...ruleOf(),
     department: "chatbot",
     action: "reply_customer",
@@ -29,7 +29,7 @@ export const customerRuleOf = builder<AuthorityRule>({
     limit_vnd: null,
 })
 /** The handling agent's ask-only connection binding. */
-export const customerBindingOf = builder<BoundAgent>({
+export const customerBindingOf: (overrides?: Partial<BoundAgent>) => BoundAgent = builder<BoundAgent>({
     id: "a1",
     module: "chatbot",
     name: "Bot",
@@ -37,15 +37,21 @@ export const customerBindingOf = builder<BoundAgent>({
     purpose: "inbound_chat",
 })
 /** A work row returned by a mocked collaborator, never persisted by these unit cases. */
-export const customerWorkItemOf = builder<WorkItem>({
+export const customerWorkItemOf: (overrides?: Partial<WorkItem>) => WorkItem = builder<WorkItem>({
     ...itemOf(),
     workspace_id: WS,
     subject_type: "conversation",
     subject_id: "c1",
 })
 
+type CustomerPaymentInvoicesShape = {
+    claimed: InvoiceRow
+    recent: InvoiceRow
+    stale: InvoiceRow
+}
+
 /** Unpaid, just-paid and old paid invoices used by the claim/reply cases. */
-export const customerPaymentInvoices = {
+export const customerPaymentInvoices: CustomerPaymentInvoicesShape = {
     claimed: customerInvoiceOf({ id: "inv-1", invoice_no: "HD-01", lead_id: "l1", amount_vnd: 50_000 }),
     recent: customerInvoiceOf({
         id: "inv-2",
@@ -56,8 +62,25 @@ export const customerPaymentInvoices = {
     stale: customerInvoiceOf({ id: "inv-3", invoice_no: "HD-03", status: "paid", paid_at: "2020-01-01T00:00:00.000Z" }),
 }
 
+type CustomerOutcomeExpectedHeldModuleReplyShape = {
+    reply: string
+    send: boolean
+    lines: Array<string>
+}
+
+type CustomerOutcomeExpectedLateReplyShape = {
+    reply: string
+    send: boolean
+    lines: Array<never>
+}
+
+type CustomerOutcomeExpectedShape = {
+    lateReply: CustomerOutcomeExpectedLateReplyShape
+    heldModuleReply: CustomerOutcomeExpectedHeldModuleReplyShape
+}
+
 /** Exact visible outcomes of a released late reply and a module answer held by the published graph. */
-export const CUSTOMER_OUTCOME_EXPECTED = {
+export const CUSTOMER_OUTCOME_EXPECTED: CustomerOutcomeExpectedShape = {
     lateReply: { reply: "Drafted ORD-1", send: true, lines: [] },
     heldModuleReply: {
         reply: "Your appointment is requested",
@@ -117,8 +140,30 @@ export const proposalOf = (
     ...changes,
 })
 
+type CustomerReplyGraphCasesResultFoundShape = {
+    lines: Array<never>
+    changed: boolean
+    leadId: string
+    orderAmountVnd: number
+}
+
+type CustomerReplyGraphCasesResultShape = {
+    ASK: GraphAnswer
+    found: CustomerReplyGraphCasesResultFoundShape
+    order: ChatTurnProposal
+    askCases: readonly [
+        readonly ["an earlier delivery already opened it", MockOf<WorkItem>, "waiting_decision"],
+        readonly ["it was decided at once", null, "done"],
+    ]
+    stopCases: readonly [
+        readonly ["stops it", GraphAnswer, "Stopped", false],
+        readonly ["leads elsewhere", GraphAnswer, "Diverted", false],
+        readonly ["leads elsewhere on the core road", GraphAnswer, "Diverted", true],
+    ]
+}
+
 /** The published reply branches, including an already-held item and the same diversion on both runtime roads. */
-export const customerReplyGraphCases = () => {
+export const customerReplyGraphCases = (): CustomerReplyGraphCasesResultShape => {
     const ASK: GraphAnswer = { outcome: "ask", unread: ["outgoing.amount_vnd"], unjudged: "fact_unread", divert: null }
     const HAND = { action: "hand_over_conversation", handoverTo: "support", asks: false }
     const STOP: GraphAnswer = { outcome: "stop", unread: [], unjudged: null, divert: null }

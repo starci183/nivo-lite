@@ -6,15 +6,20 @@ export const WS = "workspace-1"
 /** The instant the scripting specs run at. */
 export const NOW = "2026-10-13T09:00:00.000Z"
 /** The model answer: a title and two scenes. */
-export const ANSWER = JSON.stringify({
+export const ANSWER: string = JSON.stringify({
     title: "Spring  sale",
     scenes: [
         { caption: "Fresh", voiceover: "Hi" },
         { caption: "Visit", voiceover: "Bye" },
     ],
 })
+type PromptShape = {
+    role: string
+    content: string
+}
+
 /** The prompt the generation was made from. */
-export const PROMPT = [
+export const PROMPT: Array<PromptShape> = [
     { role: "system", content: "Write a script" },
     { role: "tool", content: "dropped" },
 ]
@@ -29,7 +34,7 @@ export const META = {
 }
 
 /** A finished video-script generation of the workspace, with the answer the model gave. */
-export const stateOf = builder<GenerationState>({
+export const stateOf: (overrides?: Partial<GenerationState>) => GenerationState = builder<GenerationState>({
     id: "generation-1",
     workspaceId: WS,
     purpose: "video_script",

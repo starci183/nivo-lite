@@ -14,7 +14,7 @@ export const INSTALL_VIEWED = {
 } as const
 
 /** An install request for the chatbot of the first workspace, in English, without a new instance. */
-export const installRequestOf = builder<InstallRequest>({
+export const installRequestOf: (overrides?: Partial<InstallRequest>) => InstallRequest = builder<InstallRequest>({
     workspaceId: "ws-1",
     moduleKey: "chatbot",
     locale: "en",

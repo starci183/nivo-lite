@@ -20,13 +20,17 @@ export const stepOf = (key: string, step: Node["step"], next: ReadonlyArray<stri
     })
 
 /** The nodes the walks are made of. */
-export const TRIGGER = stepOf("start", "customer_message", ["decide"], { kind: "trigger" })
-export const ACT = stepOf("act", "write", [], { action: PAY })
-export const ASK = stepOf("ask", "approval", ["act"], { doneBy: "person", approver: approverOf() })
-export const STOP = stepOf("stop", "stop", [])
+export const TRIGGER: Node = stepOf("start", "customer_message", ["decide"], { kind: "trigger" })
+export const ACT: Node = stepOf("act", "write", [], { action: PAY })
+export const ASK: Node = stepOf("ask", "approval", ["act"], { doneBy: "person", approver: approverOf() })
+export const STOP: Node = stepOf("stop", "stop", [])
 
 /** A graph of exactly these nodes. */
 export const documentOf = (...nodes: ReadonlyArray<Node>): Document => ({ nodes, rights: [] })
 
+type AmountShape = {
+    "supplier_payment.amount_vnd": number
+}
+
 /** The facts of a walk that read an amount. */
-export const AMOUNT = { [AMOUNT_FACT]: 7_200_000 }
+export const AMOUNT: AmountShape = { [AMOUNT_FACT]: 7_200_000 }

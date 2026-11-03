@@ -10,7 +10,7 @@ import type {
     QueuedAgentChatTurn,
     StartAgentChatRequest,
 } from "@modules/domain/agent-chat"
-import type { CustomerIntakeService } from "@modules/domain/conversations"
+import type { CustomerIntakeService, MessageIntake } from "@modules/domain/conversations"
 import type { ChatFilesService } from "@modules/domain/chat-files"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { builder } from "@starci/jest-preset"
@@ -109,8 +109,69 @@ interface ChatFileSendOwners {
     readonly conversations: MockOf<AgentConversationsService>
     readonly messages: MockOf<AgentMessagesService>
 }
+type ChatNamelessChatsShapeOf = {
+    readonly kind: "customer"
+    readonly visitorName: null
+}
+
+type ChatNamelessChatsShape = {
+    readonly kind: "test"
+    readonly visitorName: "Lan"
+}
+
+type ChatShape = {
+    page: (overrides?: Partial<AgentChatPageData>) => AgentChatPageData
+    salesPage: (
+        overrides?: Partial<Pick<AgentChatPageData, "module" | "avatarUrl" | "hasCustomerChannel" | "showWelcome">>,
+    ) => Pick<AgentChatPageData, "module" | "avatarUrl" | "hasCustomerChannel" | "showWelcome">
+    longVisitor: (overrides?: Partial<StartAgentChatRequest>) => StartAgentChatRequest
+    customerAccepted: (overrides?: Partial<QueuedAgentChatTurn>) => QueuedAgentChatTurn
+    customerWake: (overrides?: Partial<MessageIntake>) => MessageIntake
+    humanAccepted: (overrides?: Partial<QueuedAgentChatTurn>) => QueuedAgentChatTurn
+    releasedHolder: (overrides?: Partial<AgentChatHolder>) => AgentChatHolder
+    queuedStatus: (overrides?: Partial<AgentChatTurnStatus>) => AgentChatTurnStatus
+    runningStatus: (
+        overrides?: Partial<Pick<AgentChatTurnStatus, "status" | "errorCode">>,
+    ) => Pick<AgentChatTurnStatus, "status" | "errorCode">
+    succeededStatus: (
+        overrides?: Partial<Pick<AgentChatTurnStatus, "status" | "errorCode" | "resultMessageId">>,
+    ) => Pick<AgentChatTurnStatus, "status" | "errorCode" | "resultMessageId">
+    failedDelivery: (overrides?: Partial<ChatTurnFacts>) => ChatTurnFacts
+    failedDeliveryStatus: (overrides?: Partial<AgentChatTurnStatus>) => AgentChatTurnStatus
+    failedQueueStatus: (
+        overrides?: Partial<Pick<AgentChatTurnStatus, "status" | "errorCode">>,
+    ) => Pick<AgentChatTurnStatus, "status" | "errorCode">
+    fileAccepted: (overrides?: Partial<QueuedAgentChatTurn>) => QueuedAgentChatTurn
+    fileWake: (overrides?: Partial<MessageIntake>) => MessageIntake
+    namelessChats: readonly [ChatNamelessChatsShape, ChatNamelessChatsShapeOf]
+    externalDeliveries: readonly [
+        readonly ["failed", "failed", "CHAT_DELIVERY_FAILED"],
+        readonly ["sent", "succeeded", null],
+    ]
+    externalStatus: (
+        status: AgentChatTurnStatus["status"],
+        errorCode: AgentChatTurnStatus["errorCode"],
+    ) => AgentChatTurnStatus
+    turn: (overrides?: Partial<AgentChatTurnStatusRequest>) => AgentChatTurnStatusRequest
+    send: (overrides?: Partial<SendAgentChatRequest>) => SendAgentChatRequest
+    start: (overrides?: Partial<StartAgentChatRequest>) => StartAgentChatRequest
+    take: (overrides?: Partial<TakeOverAgentChatRequest>) => TakeOverAgentChatRequest
+    memberHolder: (overrides?: Partial<AgentChatHolder>) => AgentChatHolder
+    staffHolder: (overrides?: Partial<AgentChatHolder>) => AgentChatHolder
+    uploadRequest: (overrides?: Partial<RequestChatFileUpload>) => RequestChatFileUpload
+    arrangeFileSend: (
+        { files, conversations, messages }: ChatFileSendOwners,
+        checked: Parameters<ChatFilesService["attach"]>[1],
+    ) => void
+    arrangeAttachmentFailure: (
+        { files, conversations, messages }: ChatFileSendOwners,
+        checked: Parameters<ChatFilesService["attach"]>[1],
+        failure: Error,
+    ) => void
+}
+
 /** Deterministic page, submission and delivery answers used by the chat service boundary cases. */
-export const CHAT = {
+export const CHAT: ChatShape = {
     page: builder<AgentChatPageData>({
         id: "a1",
         module: "chatbot",

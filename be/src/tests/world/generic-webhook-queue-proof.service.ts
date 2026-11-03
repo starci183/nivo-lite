@@ -4,9 +4,13 @@ import type { GenericWebhookPayload } from "@modules/queues/generic-webhook"
 import type { LiteWorld } from "./lite-world.service"
 import { QUEUE_MODULES } from "./test-capabilities.options"
 import { deliveryPublications } from "./proof-database.service"
+import type { DynamicModule } from "@nestjs/common"
 
 /** The real transactional outbox and its generic webhook producer, with the relay idle during database proofs. */
-export const GENERIC_WEBHOOK_QUEUE_MODULES = [...QUEUE_MODULES, GenericWebhookQueueModule.register({})]
+export const GENERIC_WEBHOOK_QUEUE_MODULES: Array<DynamicModule> = [
+    ...QUEUE_MODULES,
+    GenericWebhookQueueModule.register({}),
+]
 
 /** Reads committed delivery state through the world's observer connection while the producer transaction remains open. */
 export const observeCommittedWebhookDelivery = (

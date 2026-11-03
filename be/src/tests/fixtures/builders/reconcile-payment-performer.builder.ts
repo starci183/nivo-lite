@@ -1,11 +1,11 @@
+import type { LeadRecordsService, LeadRecordRow } from "@modules/domain/leads"
 import { builder } from "@starci/jest-preset"
 import type { ContractResult } from "@modules/domain/contracts"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
-import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
-import type { InvoiceRow, InvoicesService } from "@modules/domain/invoices"
-import type { LeadRecordsService } from "@modules/domain/leads"
-import type { OptionalOrder } from "@modules/domain/orders"
-import type { OptionalTransaction } from "@modules/domain/transactions"
+import type { OptionalInboundEvent, InboundEventDetail } from "@modules/domain/inbound-events"
+import type { InvoiceRow, InvoicesService, InvoiceListingRecord } from "@modules/domain/invoices"
+import type { OptionalOrder, SalesOrderRow } from "@modules/domain/orders"
+import type { OptionalTransaction, TransactionRow } from "@modules/domain/transactions"
 
 /** One issued invoice as the invoices capability lists it. */
 export type IssuedInvoice = Awaited<ReturnType<InvoicesService["listIssued"]>>[number]
@@ -17,7 +17,7 @@ type LeadRecord = NonNullable<Awaited<ReturnType<LeadRecordsService["find"]>>>
 export const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
 /** A reconcile work item. */
-export const itemOf = builder<WorkItem>({
+export const itemOf: (overrides?: Partial<WorkItem>) => WorkItem = builder<WorkItem>({
     id: "item-1",
     workspace_id: "ws-1",
     department: "accounting",
@@ -47,7 +47,9 @@ export const itemOf = builder<WorkItem>({
 })
 
 /** A bank transaction. */
-export const transactionOf = builder<NonNullable<OptionalTransaction>>({
+export const transactionOf: (overrides?: Partial<TransactionRow>) => TransactionRow = builder<
+    NonNullable<OptionalTransaction>
+>({
     id: "tx-1",
     workspace_id: "ws-1",
     inbound_event_id: null,
@@ -59,7 +61,7 @@ export const transactionOf = builder<NonNullable<OptionalTransaction>>({
 })
 
 /** A paid invoice. */
-export const invoiceOf = builder<InvoiceRow>({
+export const invoiceOf: (overrides?: Partial<InvoiceRow>) => InvoiceRow = builder<InvoiceRow>({
     id: "inv-1",
     workspace_id: "ws-1",
     order_id: "ord-1",
@@ -74,14 +76,14 @@ export const invoiceOf = builder<InvoiceRow>({
 })
 
 /** An issued invoice. */
-export const issuedOf = builder<IssuedInvoice>({
+export const issuedOf: (overrides?: Partial<InvoiceListingRecord>) => InvoiceListingRecord = builder<IssuedInvoice>({
     ...invoiceOf({ status: "issued", paid_at: null }),
     order_no: "SO-1",
     contact_name: "Lan",
 })
 
 /** The known customer of a paid invoice. */
-export const leadOf = builder<LeadRecord>({
+export const leadOf: (overrides?: Partial<LeadRecordRow>) => LeadRecordRow = builder<LeadRecord>({
     id: "lead-1",
     workspace_id: "ws-1",
     contact_name: "Mai",
@@ -95,7 +97,7 @@ export const leadOf = builder<LeadRecord>({
 })
 
 /** The paid order of an invoice. */
-export const orderOf = builder<NonNullable<OptionalOrder>>({
+export const orderOf: (overrides?: Partial<SalesOrderRow>) => SalesOrderRow = builder<NonNullable<OptionalOrder>>({
     id: "ord-1",
     workspace_id: "ws-1",
     lead_id: "lead-1",
@@ -113,7 +115,9 @@ export const orderOf = builder<NonNullable<OptionalOrder>>({
 })
 
 /** A recorded bank credit. */
-export const eventOf = builder<NonNullable<OptionalInboundEvent>>({
+export const eventOf: (overrides?: Partial<InboundEventDetail>) => InboundEventDetail = builder<
+    NonNullable<OptionalInboundEvent>
+>({
     id: "ev-1",
     workspace_id: "ws-1",
     channel: "bank",
@@ -129,7 +133,7 @@ export const eventOf = builder<NonNullable<OptionalInboundEvent>>({
 })
 
 /** A clear proposal. */
-export const proposalOf = builder<Proposal>({
+export const proposalOf: (overrides?: Partial<Proposal>) => Proposal = builder<Proposal>({
     summary: "Payment",
     amount_vnd: 450000,
     fields: { reference: "INV-1 Lan", match: "matchedByCodeAmount" },

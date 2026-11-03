@@ -1,12 +1,13 @@
 import { builder } from "@starci/jest-preset"
 import { billingEntities } from "@modules/domain/billing"
 
-const [, PlanEntity, PlanUsageTierEntity] = billingEntities
+const PlanEntity: (typeof billingEntities)[1] = billingEntities[1]
+const PlanUsageTierEntity: (typeof billingEntities)[2] = billingEntities[2]
 type PlanEntity = InstanceType<typeof PlanEntity>
 type PlanUsageTierEntity = InstanceType<typeof PlanUsageTierEntity>
 
 /** A listed monthly plan with the fields a spec rarely changes filled. */
-export const planOf = builder<PlanEntity>({
+export const planOf: (overrides?: Partial<PlanEntity>) => PlanEntity = builder<PlanEntity>({
     code: "starter",
     nameVi: "Khoi dau",
     nameEn: "Starter",
@@ -49,18 +50,20 @@ export const unlistedPlan = (): PlanEntity => planOf({ listed: false })
 export const teamPlan = (): PlanEntity => planOf({ code: "team", perSeat: true, seats: 10, aiCreditsPerMonth: null })
 
 /** The 5000-credit tier of the team plan. */
-export const teamTier = builder<PlanUsageTierEntity>({
-    planCode: "team",
-    creditsPerMonth: 5000,
-    priceVnd: 200000,
-    perSeat: true,
-    sort: 1,
-    createdAt: new Date("2026-01-01T00:00:00.000Z"),
-    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-})
+export const teamTier: (overrides?: Partial<PlanUsageTierEntity>) => PlanUsageTierEntity = builder<PlanUsageTierEntity>(
+    {
+        planCode: "team",
+        creditsPerMonth: 5000,
+        priceVnd: 200000,
+        perSeat: true,
+        sort: 1,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    },
+)
 
 /** A usage tier of a plan, the allowance of which is paid per seat. */
-export const tierOf = builder<PlanUsageTierEntity>({
+export const tierOf: (overrides?: Partial<PlanUsageTierEntity>) => PlanUsageTierEntity = builder<PlanUsageTierEntity>({
     planCode: "starter",
     creditsPerMonth: 1000,
     priceVnd: 50000,

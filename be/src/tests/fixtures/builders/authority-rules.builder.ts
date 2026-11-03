@@ -2,13 +2,13 @@ import { builder } from "@starci/jest-preset"
 import type { AuthorityRule, AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
 import { authorityRulesEntities } from "@modules/domain/authority-rules"
 
-const [AuthorityRuleEntity] = authorityRulesEntities
+const AuthorityRuleEntity: (typeof authorityRulesEntities)[0] = authorityRulesEntities[0]
 type AuthorityRuleEntity = InstanceType<typeof AuthorityRuleEntity>
 
 /** When the rules of a spec were saved last. */
-export const UPDATED = new Date("2026-10-12T10:00:00.000Z")
+export const UPDATED: Date = new Date("2026-10-12T10:00:00.000Z")
 
-export const ruleOf = builder<AuthorityRule>({
+export const ruleOf: (overrides?: Partial<AuthorityRule>) => AuthorityRule = builder<AuthorityRule>({
     id: "rule-1",
     department: "sales",
     action: "send_follow_up",
@@ -21,45 +21,49 @@ export const ruleOf = builder<AuthorityRule>({
     agents: [],
 })
 
-export const entityOf = builder<AuthorityRuleEntity>({
-    id: "rule-1",
-    workspaceId: "ws-1",
-    department: "sales",
-    action: "send_follow_up",
-    mode: "auto",
-    limitVnd: 20_000_000,
-    requiredFields: ["contact"],
-    note: "",
-    updatedAt: UPDATED,
-    unit: "vnd",
-    autoMax: null,
-    askMax: null,
-    approverRoles: ["owner", "manager"],
-    approverRooms: [],
-    approverMembers: [],
-    approvalPolicy: "any",
-    timeoutMinutes: 30,
-    agents: [],
-    createdAt: new Date("2026-01-01T00:00:00.000Z"),
-})
+export const entityOf: (overrides?: Partial<AuthorityRuleEntity>) => AuthorityRuleEntity = builder<AuthorityRuleEntity>(
+    {
+        id: "rule-1",
+        workspaceId: "ws-1",
+        department: "sales",
+        action: "send_follow_up",
+        mode: "auto",
+        limitVnd: 20_000_000,
+        requiredFields: ["contact"],
+        note: "",
+        updatedAt: UPDATED,
+        unit: "vnd",
+        autoMax: null,
+        askMax: null,
+        approverRoles: ["owner", "manager"],
+        approverRooms: [],
+        approverMembers: [],
+        approvalPolicy: "any",
+        timeoutMinutes: 30,
+        agents: [],
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    },
+)
 
-export const recordOf = builder<AuthorityRuleRecord>({
-    ...ruleOf(),
-    workspace_id: "ws-1",
-    note: "",
-    updated_at: "2026-10-12T10:00:00.000Z",
-    unit: "vnd",
-    auto_max: null,
-    ask_max: null,
-    agents: [],
-    approver_roles: ["owner", "manager"],
-    approver_rooms: [],
-    approver_members: [],
-    approval_policy: "any",
-    timeout_minutes: 30,
-})
+export const recordOf: (overrides?: Partial<AuthorityRuleRecord>) => AuthorityRuleRecord = builder<AuthorityRuleRecord>(
+    {
+        ...ruleOf(),
+        workspace_id: "ws-1",
+        note: "",
+        updated_at: "2026-10-12T10:00:00.000Z",
+        unit: "vnd",
+        auto_max: null,
+        ask_max: null,
+        agents: [],
+        approver_roles: ["owner", "manager"],
+        approver_rooms: [],
+        approver_members: [],
+        approval_policy: "any",
+        timeout_minutes: 30,
+    },
+)
 
-export const changeOf = builder<RuleChange>({
+export const changeOf: (overrides?: Partial<RuleChange>) => RuleChange = builder<RuleChange>({
     action: "send_follow_up",
     department: "sales",
     mode: "ask",

@@ -19,7 +19,7 @@ export const eventDeliveryOf = <Event extends BaseEvent>(consumer: string, event
 })
 
 /** A captured lead with every fact the door knows. */
-export const lead = LeadCapturedEvent.create({
+export const lead: LeadCapturedEvent = LeadCapturedEvent.create({
     workspaceId: "ws-1",
     leadId: "lead-1",
     contactName: "Lan",
@@ -30,7 +30,7 @@ export const lead = LeadCapturedEvent.create({
 })
 
 /** A captured lead with only the facts every lead has. */
-export const bareLead = LeadCapturedEvent.create({
+export const bareLead: LeadCapturedEvent = LeadCapturedEvent.create({
     workspaceId: "ws-1",
     leadId: "lead-3",
     contactName: "Cuc",
@@ -40,7 +40,7 @@ export const bareLead = LeadCapturedEvent.create({
 })
 
 /** A won deal with its order. */
-export const deal = DealWonEvent.create({
+export const deal: DealWonEvent = DealWonEvent.create({
     workspaceId: "ws-1",
     leadId: "lead-1",
     name: "Lan",
@@ -52,7 +52,7 @@ export const deal = DealWonEvent.create({
 })
 
 /** A won deal that carries a source and its evidence. */
-export const sourcedDeal = DealWonEvent.create({
+export const sourcedDeal: DealWonEvent = DealWonEvent.create({
     workspaceId: "ws-1",
     leadId: "lead-3",
     name: "Cuong",
@@ -64,10 +64,10 @@ export const sourcedDeal = DealWonEvent.create({
 })
 
 /** A won deal with only a lead and a name. */
-export const bareDeal = DealWonEvent.create({ workspaceId: "ws-1", leadId: "lead-3", name: "Cuc" })
+export const bareDeal: DealWonEvent = DealWonEvent.create({ workspaceId: "ws-1", leadId: "lead-3", name: "Cuc" })
 
 /** A won deal that lacks the optional facts. */
-export const unadornedDeal = DealWonEvent.create({
+export const unadornedDeal: DealWonEvent = DealWonEvent.create({
     workspaceId: "ws-1",
     leadId: "lead-2",
     name: "Binh",
@@ -77,7 +77,7 @@ export const unadornedDeal = DealWonEvent.create({
 })
 
 /** An approved decision about a lead. */
-export const decision = DecisionMadeEvent.create({
+export const decision: DecisionMadeEvent = DecisionMadeEvent.create({
     workspaceId: "ws-1",
     workItemId: "wi-1",
     action: "send_quote",
@@ -89,7 +89,7 @@ export const decision = DecisionMadeEvent.create({
 })
 
 /** An approved decision that is not about a lead. */
-export const bareDecision = DecisionMadeEvent.create({
+export const bareDecision: DecisionMadeEvent = DecisionMadeEvent.create({
     workspaceId: "ws-1",
     workItemId: "wi-2",
     action: "send_quote",
@@ -100,7 +100,7 @@ export const bareDecision = DecisionMadeEvent.create({
 })
 
 /** A reconciled payment with its transaction and order. */
-export const payment = PaymentReconciledEvent.create({
+export const payment: PaymentReconciledEvent = PaymentReconciledEvent.create({
     workspaceId: "ws-1",
     invoiceId: "inv-1",
     invoiceNo: "HD1",
@@ -118,7 +118,7 @@ export const payment = PaymentReconciledEvent.create({
 })
 
 /** A reconciled payment that carries only what every invoice has. */
-export const barePayment = PaymentReconciledEvent.create({
+export const barePayment: PaymentReconciledEvent = PaymentReconciledEvent.create({
     workspaceId: "ws-1",
     invoiceId: "inv-1",
     invoiceNo: "HD1",
@@ -127,7 +127,7 @@ export const barePayment = PaymentReconciledEvent.create({
 })
 
 /** A confirmed order. */
-export const order = OrderConfirmedEvent.create({
+export const order: OrderConfirmedEvent = OrderConfirmedEvent.create({
     workspaceId: "ws-1",
     orderId: "o-1",
     orderNo: "SO-1",
@@ -140,7 +140,7 @@ export const order = OrderConfirmedEvent.create({
 })
 
 /** A shipment of the order, recorded by a member. */
-export const shipment = OrderShippedEvent.create({
+export const shipment: OrderShippedEvent = OrderShippedEvent.create({
     workspaceId: "ws-1",
     userId: "user-1",
     orderId: "o-1",

@@ -6,7 +6,15 @@ type WorkspaceBookParams = Parameters<BookingPublicService["requestIn"]>[0]
 type PublicBookResult = Awaited<ReturnType<BookingPublicService["book"]>>
 
 export const WORKSPACE = "ws-1"
-export const PAGE = {
+type PageShape = {
+    workspace_id: string
+    public_note: string
+    address: string
+    timezone: string
+    shop: string
+}
+
+export const PAGE: PageShape = {
     workspace_id: WORKSPACE,
     public_note: "Note",
     address: "1 Main St",
@@ -14,13 +22,26 @@ export const PAGE = {
     shop: "Spa Anna",
 }
 /** Sunday noon in Ho Chi Minh City, before Monday's hours from 09:00. */
-export const NOW = Date.UTC(2026, 9, 11, 5, 0)
+export const NOW: number = Date.UTC(2026, 9, 11, 5, 0)
 export const MONDAY_NINE = "2026-10-12T02:00:00.000Z"
 export const HOUR = 3_600_000
-export const CHAT_KEY = `chat:job-1:${MONDAY_NINE}`
+export const CHAT_KEY: "chat:job-1:2026-10-12T02:00:00.000Z" = `chat:job-1:${MONDAY_NINE}`
 export const CHAT_LINK = { conversationId: "conversation-1", leadId: "lead-1" }
-export const ALTERNATIVES = ["2026-10-12T03:00:00.000Z", "2026-10-12T04:00:00.000Z", "2026-10-12T05:00:00.000Z"]
-export const REQUEST_DETAILS = {
+export const ALTERNATIVES: Array<string> = [
+    "2026-10-12T03:00:00.000Z",
+    "2026-10-12T04:00:00.000Z",
+    "2026-10-12T05:00:00.000Z",
+]
+type RequestDetailsShape = {
+    serviceId: string
+    start: string
+    name: string
+    phone: string
+    party: number
+    note: string
+}
+
+export const REQUEST_DETAILS: RequestDetailsShape = {
     serviceId: "s1",
     start: MONDAY_NINE,
     name: " Mai ",
@@ -28,21 +49,22 @@ export const REQUEST_DETAILS = {
     party: 1,
     note: " first visit ",
 }
-export const bookingRequestOf = builder<PublicBookParams>({
+export const bookingRequestOf: (overrides?: Partial<PublicBookParams>) => PublicBookParams = builder<PublicBookParams>({
     ...REQUEST_DETAILS,
     slug: "spa-anna",
     email: "Mai@Example.com",
     token: "",
     website: "",
 })
-export const workspaceRequestOf = builder<WorkspaceBookParams>({
-    ...REQUEST_DETAILS,
-    workspaceId: WORKSPACE,
-    email: "",
-    token: CHAT_KEY,
-    sourceChannel: "chat",
-})
-export const replyOf = builder<PublicBookResult>({
+export const workspaceRequestOf: (overrides?: Partial<WorkspaceBookParams>) => WorkspaceBookParams =
+    builder<WorkspaceBookParams>({
+        ...REQUEST_DETAILS,
+        workspaceId: WORKSPACE,
+        email: "",
+        token: CHAT_KEY,
+        sourceChannel: "chat",
+    })
+export const replyOf: (overrides?: Partial<PublicBookResult>) => PublicBookResult = builder<PublicBookResult>({
     ok: true,
     state: "confirmed",
     code: "confirmed",
@@ -51,8 +73,16 @@ export const replyOf = builder<PublicBookResult>({
     alternatives: [],
     bookingId: "b1",
 })
+type NextReplyOfResultShape = {
+    id: string
+    leadId: string | null
+    customerName: string
+    serviceName: string
+    startIso: string
+}
+
 /** Expected next cancellable booking for a linked or unlinked lead. */
-export const nextReplyOf = (leadId: string | null) => ({
+export const nextReplyOf = (leadId: string | null): NextReplyOfResultShape => ({
     id: "b-next",
     leadId,
     customerName: "Mai",
@@ -66,7 +96,7 @@ interface RequestFailure {
     readonly key: string | null
     readonly reads: number
 }
-export const failureOf = builder<RequestFailure>({
+export const failureOf: (overrides?: Partial<RequestFailure>) => RequestFailure = builder<RequestFailure>({
     label: "uncoded",
     cause: {},
     request: workspaceRequestOf(),

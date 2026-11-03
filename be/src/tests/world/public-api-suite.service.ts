@@ -1,3 +1,9 @@
+import type {
+    PublicApiRequestState,
+    PublicApiOutboxState,
+    PublicApiInboxState,
+    PublicApiSourceState,
+} from "./public-api-database.service"
 import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
@@ -7,7 +13,6 @@ import { PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
 import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
 import { apiDealWon, apiInbox, apiLeadRequest, apiOutbox, apiSource } from "./public-api-database.service"
-import type { PublicApiRequestState } from "./public-api-database.service"
 import type { LiteWorld } from "./lite-world.service"
 import { PublicApiProofAccess } from "./public-api-capabilities.options"
 import { openPublicApiProof } from "./public-api-proof.service"
@@ -43,14 +48,31 @@ const requestForLead = async (
 }
 
 const observations = (world: LiteWorld) => ({
-    source: (workspaceId: string, id: string) => apiSource(world.db.primary, workspaceId, id),
-    inbox: (workspaceId: string) => apiInbox(world.db.primary, workspaceId),
-    outbox: (workspaceId: string) => apiOutbox(world.db.primary, workspaceId),
-    dealsWon: (workspaceId: string) => apiDealWon(world.db.primary, workspaceId),
+    source: (workspaceId: string, id: string): Promise<Array<PublicApiSourceState>> =>
+        apiSource(world.db.primary, workspaceId, id),
+    inbox: (workspaceId: string): Promise<Array<PublicApiInboxState>> => apiInbox(world.db.primary, workspaceId),
+    outbox: (workspaceId: string): Promise<Array<PublicApiOutboxState>> => apiOutbox(world.db.primary, workspaceId),
+    dealsWon: (workspaceId: string): Promise<Array<Readonly<Record<string, unknown>>>> =>
+        apiDealWon(world.db.primary, workspaceId),
 })
 
+type PreparePublicApiProofResultFixtureShape = {
+    readonly authorization: string
+}
+
+type PreparePublicApiProofResultShape = {
+    source: (workspaceId: string, id: string) => Promise<Array<PublicApiSourceState>>
+    inbox: (workspaceId: string) => Promise<Array<PublicApiInboxState>>
+    outbox: (workspaceId: string) => Promise<Array<PublicApiOutboxState>>
+    dealsWon: (workspaceId: string) => Promise<Array<Readonly<Record<string, unknown>>>>
+    registered: () => RegisteredPublicApi
+    fixture: () => Promise<PublicApiIdentity & PreparePublicApiProofResultFixtureShape>
+    deliver: (payload: object, job?: string) => Promise<void>
+    requestForLead: (workspaceId: string, externalId: string) => Promise<PublicApiRequestState>
+}
+
 /** Registers the world's real processors and gives each scenario its own local workspace and router delivery. */
-export const preparePublicApiProof = (world: LiteWorld) => {
+export const preparePublicApiProof = (world: LiteWorld): PreparePublicApiProofResultShape => {
     const registrations: Array<RegisteredPublicApi> = []
     beforeAll(async () => {
         await world.resolve(ModulesService).sync()
@@ -69,7 +91,7 @@ export const preparePublicApiProof = (world: LiteWorld) => {
         assert(entry !== undefined)
         return entry
     }
-    const deliver = (payload: object, job: string = "public-api.request") =>
+    const deliver = (payload: object, job: string = "public-api.request"): Promise<void> =>
         registered().handler.handle({
             id: world.key(world.id()),
             queue: PUBLIC_API_QUEUE,
@@ -80,9 +102,14 @@ export const preparePublicApiProof = (world: LiteWorld) => {
         })
     return {
         registered,
-        fixture: () => fixture(world),
+        fixture: (): Promise<
+            PublicApiIdentity & {
+                readonly authorization: string
+            }
+        > => fixture(world),
         deliver,
-        requestForLead: (workspaceId: string, externalId: string) => requestForLead(world, workspaceId, externalId),
+        requestForLead: (workspaceId: string, externalId: string): Promise<PublicApiRequestState> =>
+            requestForLead(world, workspaceId, externalId),
         ...observations(world),
     }
 }

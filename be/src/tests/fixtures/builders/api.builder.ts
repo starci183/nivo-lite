@@ -1,3 +1,4 @@
+import type * as Shapes from "./api-shapes.builder"
 import { fakeIds } from "@starci/jest-preset"
 import type { InjectionToken } from "@nestjs/common"
 import { Secret } from "@modules/platform/config"
@@ -242,4 +243,7 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
 }
 
 /** Compiles the real API root with explicit options and existing infrastructure-token doubles. */
-export const buildWiringProof = (_AppModule: unknown) => ({ options, overrides: resourceOverrides() })
+export const buildWiringProof = (_AppModule: unknown): Shapes.BuildWiringProofResultShape => ({
+    options,
+    overrides: resourceOverrides(),
+})

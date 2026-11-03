@@ -1,6 +1,6 @@
 import { paymentOrdersEntities } from "@modules/domain/payment-orders"
 
-const [PaymentOrderEntity] = paymentOrdersEntities
+const PaymentOrderEntity: (typeof paymentOrdersEntities)[0] = paymentOrdersEntities[0]
 type PaymentOrderEntity = InstanceType<typeof PaymentOrderEntity>
 
 /** The instant the payment-order specs treat as now. */
@@ -28,16 +28,16 @@ export const paymentOrderRowOf = (overrides: Partial<PaymentOrderEntity> = {}): 
     )
 
 /** A second listed order of the workspace. */
-export const SECOND_ROW = paymentOrderRowOf({ id: "order-2" })
+export const SECOND_ROW: PaymentOrderEntity = paymentOrderRowOf({ id: "order-2" })
 
 /** A pending order whose deadline passed a millisecond before the clock's instant. */
-export const LAPSED_ROW = paymentOrderRowOf({ expiresAt: new Date("2026-10-12T09:59:59.999Z") })
+export const LAPSED_ROW: PaymentOrderEntity = paymentOrderRowOf({ expiresAt: new Date("2026-10-12T09:59:59.999Z") })
 
 /** A pending order whose deadline is exactly the clock's instant. */
-export const AT_DEADLINE_ROW = paymentOrderRowOf({ expiresAt: new Date(PAYMENT_ORDER_NOW) })
+export const AT_DEADLINE_ROW: PaymentOrderEntity = paymentOrderRowOf({ expiresAt: new Date(PAYMENT_ORDER_NOW) })
 
 /** A paid order whose deadline lapsed before it was paid at the clock's instant. */
-export const PAID_LAPSED_ROW = paymentOrderRowOf({
+export const PAID_LAPSED_ROW: PaymentOrderEntity = paymentOrderRowOf({
     status: "paid",
     expiresAt: new Date("2026-10-12T09:59:59.999Z"),
     paidAt: new Date(PAYMENT_ORDER_NOW),

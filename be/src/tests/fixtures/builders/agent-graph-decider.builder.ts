@@ -1,5 +1,6 @@
 import type { BranchRequest } from "@modules/domain/authority-rules"
 import { itemOf } from "./work-engine.builder"
+import type { WorkItem } from "@modules/domain/work-items"
 
 /** What one walk of the graph came to, as far as the specs of the decider read it. */
 interface Walk {
@@ -20,7 +21,7 @@ export const OVER = { verdict: "ask", reason: "over_authority", reasons: ["over_
 export const MODEL = { summary: "Pay", fields: { amount_vnd: 4_900_000 }, amount_vnd: 4_900_000 }
 
 /** The work item of a supplier payment the decider judges. */
-export const DECIDED_ITEM = itemOf({
+export const DECIDED_ITEM: WorkItem = itemOf({
     id: "item-9",
     action: "pay_supplier",
     subject_type: "order",

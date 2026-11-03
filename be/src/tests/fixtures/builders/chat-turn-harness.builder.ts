@@ -26,7 +26,7 @@ const installationOf = (settings: InstallationSettings): InstallationRecord => (
 })
 
 /** Shared typed fixture setup for these behavior proofs. */
-export const NOW = Date.parse("2026-10-12T10:00:00.000Z")
+export const NOW: number = Date.parse("2026-10-12T10:00:00.000Z")
 
 /** Shared typed fixture setup for these behavior proofs. */
 export const conversation = (patch: Partial<TurnConversation> = {}): TurnConversation => ({
@@ -78,12 +78,12 @@ interface Plugged {
 export const chatTurnExtensionsOf = () => {
     const plugged: Plugged = {}
     return {
-        runtime: () => plugged.runtime,
-        outcomes: () => plugged.outcomes,
-        useRuntime: (runtime: ChatTurnRuntime) => {
+        runtime: (): ChatTurnRuntime | undefined => plugged.runtime,
+        outcomes: (): CustomerOutcomes | undefined => plugged.outcomes,
+        useRuntime: (runtime: ChatTurnRuntime): void => {
             plugged.runtime = runtime
         },
-        useOutcomes: (outcomes: CustomerOutcomes) => {
+        useOutcomes: (outcomes: CustomerOutcomes): void => {
             plugged.outcomes = outcomes
         },
     }

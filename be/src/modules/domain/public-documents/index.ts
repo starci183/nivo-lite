@@ -6,3 +6,10 @@ export { PublicDocumentsService } from "./public-documents.service"
 export { PublicDraftRunService } from "./public-draft-run.service"
 export { publicDocumentsEntities } from "./persistence/entities"
 export type { PublicDocumentView } from "./public-documents.contracts"
+export type {
+    ApproveRequest,
+    LeftOut,
+    PublicDocumentDraftRequest,
+    PublicDocumentKind,
+    PublicDocumentStatus,
+} from "./public-documents.contracts"

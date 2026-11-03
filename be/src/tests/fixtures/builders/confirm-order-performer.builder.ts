@@ -1,12 +1,12 @@
 import { builder } from "@starci/jest-preset"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
-import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
+import type { OptionalInboundEvent, InboundEventDetail } from "@modules/domain/inbound-events"
 import type { LeadRecordRow } from "@modules/domain/leads"
-import type { OptionalOrder } from "@modules/domain/orders"
+import type { OptionalOrder, SalesOrderRow } from "@modules/domain/orders"
 
 export const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
 
-export const itemOf = builder<WorkItem>({
+export const itemOf: (overrides?: Partial<WorkItem>) => WorkItem = builder<WorkItem>({
     id: "item-1",
     workspace_id: "ws-1",
     department: "sales",
@@ -35,7 +35,7 @@ export const itemOf = builder<WorkItem>({
     installation_id: null,
 })
 
-export const leadOf = builder<LeadRecordRow>({
+export const leadOf: (overrides?: Partial<LeadRecordRow>) => LeadRecordRow = builder<LeadRecordRow>({
     id: "lead-1",
     workspace_id: "ws-1",
     contact_name: "Lan",
@@ -48,7 +48,7 @@ export const leadOf = builder<LeadRecordRow>({
     email: null,
 })
 
-export const orderOf = builder<NonNullable<OptionalOrder>>({
+export const orderOf: (overrides?: Partial<SalesOrderRow>) => SalesOrderRow = builder<NonNullable<OptionalOrder>>({
     id: "ord-1",
     workspace_id: "ws-1",
     lead_id: "lead-1",
@@ -65,7 +65,9 @@ export const orderOf = builder<NonNullable<OptionalOrder>>({
     tracking_code: null,
 })
 
-export const eventOf = builder<NonNullable<OptionalInboundEvent>>({
+export const eventOf: (overrides?: Partial<InboundEventDetail>) => InboundEventDetail = builder<
+    NonNullable<OptionalInboundEvent>
+>({
     id: "ev-1",
     workspace_id: "ws-1",
     channel: "telegram",

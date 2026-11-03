@@ -64,7 +64,7 @@ class AgentTagProofModule {
 }
 
 /** The agent work store with the Office on top: lines, activity pushes and the tag door, with the scripted handler and executor. */
-export const AGENT_TAG_MODULES = [
+export const AGENT_TAG_MODULES: Array<DynamicModule> = [
     ...AGENT_WORK_MODULES,
     JobsModule.register({
         isGlobal: true,

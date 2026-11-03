@@ -2,7 +2,7 @@ import { builder } from "@starci/jest-preset"
 import type { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { StoredNote, contentHashOf, knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 
-const [KnowledgeSourceEntity] = knowledgeSourcesEntities
+const KnowledgeSourceEntity: (typeof knowledgeSourcesEntities)[0] = knowledgeSourcesEntities[0]
 type KnowledgeSourceEntity = InstanceType<typeof KnowledgeSourceEntity>
 
 /** Fixed document identity and time shared by the source row and its expected views. */
@@ -39,16 +39,45 @@ const sourceRowOf = builder<KnowledgeSourceEntity>({
 })
 
 /** The complete source row shared by source-owner unit proofs. */
-export const row = sourceRowOf()
+export const row: KnowledgeSourceEntity = sourceRowOf()
+
+type SourcePartRowsShape = {
+    first: KnowledgeSourceEntity
+    later: KnowledgeSourceEntity
+    approved: KnowledgeSourceEntity
+}
 
 /** The first, later and approved document parts used by the part lifecycle proofs. */
-export const SOURCE_PART_ROWS = {
+export const SOURCE_PART_ROWS: SourcePartRowsShape = {
     first: sourceRowOf({ topic: "Legal", tags: ["a"], visibility: "public" }),
     later: sourceRowOf({ topic: "Legal", tags: ["a"], visibility: "public", id: "p2", title: "Plan (2/2)" }),
     approved: sourceRowOf({ topic: "Legal", tags: ["a"], visibility: "public", origin: "public_document" }),
 }
+type SummaryShape = {
+    id: string
+    workspaceId: string
+    module: null
+    installationId: null
+    kind: string
+    topic: null
+    tags: Array<never>
+    visibility: string
+    title: string
+    status: string
+    error: null
+    chunkCount: number
+    sizeBytes: number
+    progress: number
+    stage: null
+    stageDone: null
+    stageTotal: null
+    createdAt: string
+    updatedAt: string
+    partCount: number
+}
+
 /** The independent expected list view. */
-export const summary = {
+export const summary: SummaryShape = {
     id: "s1",
     workspaceId: WS,
     module: null,
@@ -70,8 +99,18 @@ export const summary = {
     updatedAt: AT,
     partCount: 1,
 }
+type ReadableShape = {
+    id: string
+    title: string
+    topic: null
+    kind: string
+    visibility: string
+    updatedAt: string
+    content: string
+}
+
 /** The independent expected readable view. */
-export const readable = {
+export const readable: ReadableShape = {
     id: "shared",
     title: "T",
     topic: null,
@@ -129,23 +168,59 @@ export const SOURCE_ORIGIN_CASES: ReadonlyArray<readonly [string, KnowledgeSourc
     ["adds a new source for an uploaded object that no source holds yet", null, "s2", true],
 ]
 
+type SourceWriteRowsResultUpdateShape = {
+    readonly affected: number
+}
+
+type SourceWriteRowsResultShape = {
+    update: readonly [typeof KnowledgeSourceEntity, SourceWriteRowsResultUpdateShape]
+}
+
 /** The exact source write result arranged for the spec's own typed manager. */
-export const sourceWriteRows = (affected = 1) => ({ update: [KnowledgeSourceEntity, { affected }] as const })
+export const sourceWriteRows = (affected = 1): SourceWriteRowsResultShape => ({
+    update: [KnowledgeSourceEntity, { affected }] as const,
+})
+
+type SourceUnchangedRowsResultShape = {
+    findOne: readonly [typeof KnowledgeSourceEntity, KnowledgeSourceEntity | null]
+    update: readonly [typeof KnowledgeSourceEntity, SourceWriteRowsResultUpdateShape]
+}
 
 /** A refused source write followed by its scoped ownership lookup. */
-export const sourceUnchangedRows = (existing: KnowledgeSourceEntity | null) => ({
+export const sourceUnchangedRows = (existing: KnowledgeSourceEntity | null): SourceUnchangedRowsResultShape => ({
     ...sourceWriteRows(0),
     findOne: [KnowledgeSourceEntity, existing] as const,
 })
 
+type SourceOriginRowsResultInsertIdentifiersShape = {
+    id: string
+}
+
+type SourceOriginRowsResultInsertShape = {
+    readonly identifiers: Array<SourceOriginRowsResultInsertIdentifiersShape>
+}
+
+type SourceOriginRowsResultShape = {
+    findOne: readonly [typeof KnowledgeSourceEntity, KnowledgeSourceEntity | null]
+    insert: readonly [typeof KnowledgeSourceEntity, SourceOriginRowsResultInsertShape]
+}
+
 /** Data arranged for origin lookup followed by the optional source insert. */
-export const sourceOriginRows = (found: KnowledgeSourceEntity | null, id: string) => ({
+export const sourceOriginRows = (found: KnowledgeSourceEntity | null, id: string): SourceOriginRowsResultShape => ({
     ...sourceInsertRows(id),
     findOne: [KnowledgeSourceEntity, found] as const,
 })
 
+type SourceInsertRowsResultInsertShape = {
+    readonly identifiers: Array<SourceOriginRowsResultInsertIdentifiersShape>
+}
+
+type SourceInsertRowsResultShape = {
+    insert: readonly [typeof KnowledgeSourceEntity, SourceInsertRowsResultInsertShape]
+}
+
 /** Data arranged for a source insert with the given generated identifier. */
-export const sourceInsertRows = (id = "s1") => {
+export const sourceInsertRows = (id = "s1"): SourceInsertRowsResultShape => {
     const identifiers = [{ id }]
     return { insert: [KnowledgeSourceEntity, { identifiers }] as const }
 }

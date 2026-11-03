@@ -2,7 +2,7 @@ import { builder } from "@starci/jest-preset"
 import type { Shift, ShiftStaff } from "@modules/domain/shifts"
 
 /** A staff member of the shop with the fields a spec changes overridden. */
-export const performerStaffOf = builder<ShiftStaff>({
+export const performerStaffOf: (overrides?: Partial<ShiftStaff>) => ShiftStaff = builder<ShiftStaff>({
     id: "staff-1",
     name: "Alice",
     positionIds: ["position-1"],
@@ -19,7 +19,7 @@ export const performerStaffOf = builder<ShiftStaff>({
 })
 
 /** A published 08:00 to 10:00 shift of the first staff member with the fields a spec changes overridden. */
-export const performerShiftOf = builder<Shift>({
+export const performerShiftOf: (overrides?: Partial<Shift>) => Shift = builder<Shift>({
     id: "shift-1",
     date: "2026-10-12",
     start: "08:00",
