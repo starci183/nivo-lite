@@ -486,6 +486,8 @@ environments:
             SITE_URL: "http://localhost:${port.web}"
             AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
             AUTH_GOOGLE_CALLBACK_URL: "http://localhost:${port.api}/auth/google/callback"
+            # The refresh cookie takes Domain=starci.org on the dev tunnel host and stays host-only on localhost (@starci/auth 0.4.0 domains).
+            AUTH_COOKIE_DOMAINS: "starci.org"
             PUBLIC_API_URL: "https://nivo-local.starci.org"
             HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing}"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
