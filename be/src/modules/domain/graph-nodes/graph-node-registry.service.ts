@@ -87,6 +87,11 @@ export class GraphNodeRegistryService implements OnApplicationBootstrap {
         return port
     }
 
+    /** The executor of an effect, or undefined when no module performs it. */
+    optionalExecutorOf(effect: string): NodeEffectExecutor | undefined {
+        return this.executors.get(effect)
+    }
+
     /** The executor of an effect; refused when no module performs it. */
     executorOf(effect: string): NodeEffectExecutor {
         const executor = this.executors.get(effect)

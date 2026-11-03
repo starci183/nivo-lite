@@ -66,6 +66,8 @@ describe("GraphNodeRegistryService", () => {
         expect(registry.nodeOf("core.echo")).toBe(echo)
         expect(registry.portOf("record")).toBe(port)
         expect(registry.executorOf("core.ping")).toBe(executor)
+        expect(registry.optionalExecutorOf("core.ping")).toBe(executor)
+        expect(registry.optionalExecutorOf("core.ghost")).toBeUndefined()
         expect(registry.installed().effects.get("core.ping")).toBe(ping)
     })
 

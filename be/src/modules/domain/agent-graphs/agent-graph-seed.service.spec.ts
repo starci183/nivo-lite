@@ -275,10 +275,14 @@ describe("AgentGraphSeedService.refresh of a node graph", () => {
         const document = { ...graphOf(OWNER_EXAMPLE), flow }
         return stateOf({ activeKind, draft: document, active: document })
     }
-    const installed = (): GraphNodeRegistryService =>
+    const raise = { effect: "work-item.raise", execute: jest.fn().mockResolvedValue({ kind: "work-item", id: "w-1" }) }
+    const installed = (executor: typeof raise | null = raise): GraphNodeRegistryService =>
         mock<GraphNodeRegistryService>({
             installed: jest.fn().mockReturnValue(nodeIndexOf({ nodes: [], effects: [], tools: [], dataKinds: [] })),
+            optionalExecutorOf: jest.fn().mockReturnValue(executor ?? undefined),
         })
+
+    beforeEach(() => raise.execute.mockClear())
 
     it("never replaces a version that holds a flow, whatever its kind, even when the rules changed", async () => {
         const { service, graphs, rules, logger } = await build({ setup: null, nodes: installed() })
@@ -304,6 +308,27 @@ describe("AgentGraphSeedService.refresh of a node graph", () => {
             code: "NODE_UNKNOWN",
             at: "gone",
         })
+        const [turn, payload, call] = raise.execute.mock.calls[0] ?? []
+        expect(turn).toMatchObject({ workspaceId: "ws-1", agentId: "agent-1", conversationId: null, locale: "en" })
+        expect(payload).toEqual({
+            action: "review_agent_flow",
+            title: "[agentGraphs.flowUnsound.title]",
+            payload: { agentId: "agent-1", problems: "NODE_UNKNOWN gone" },
+        })
+        expect(call.dedupeKey).toMatch(/^flow-unsound:agent-1:[0-9a-f]{16}$/)
+    })
+
+    it("raises the same review once per agent and set of problems, and only logs where no module raises work", async () => {
+        const { service } = await build({ nodes: installed() })
+        const broken = { ...FLOW, nodes: [{ key: "gone", kind: "output" as const, step: "order.gone" }] }
+        await service.refresh(flowState("spec", broken), "accounting", "en")
+        await service.refresh(flowState("spec", broken), "accounting", "en")
+        const keys = raise.execute.mock.calls.map((call) => call[2].dedupeKey)
+        expect(new Set(keys).size).toBe(1)
+
+        const bare = await build({ nodes: installed(null) })
+        await expect(bare.service.refresh(flowState("spec", broken), "accounting", "en")).resolves.toBe(false)
+        expect(bare.logger.warn).toHaveBeenCalled()
     })
 
     it("only keeps a flow in an app that hosts no nodes", async () => {

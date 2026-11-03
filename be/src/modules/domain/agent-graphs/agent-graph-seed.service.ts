@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { Injectable, Optional } from "@nestjs/common"
 import { graphSpecProblems } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
@@ -19,6 +20,10 @@ import { graphDocumentSchema } from "./agent-graphs.schema"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import { baseGraphOf } from "./policies/base-graph.policy"
 import { sameBehaviour, sameRights } from "./policies/graph-behaviour.policy"
+
+/** The effect a refresh raises the owner's review of a node graph through, and the action of that work. */
+const RAISE_EFFECT = "work-item.raise"
+const FLOW_REVIEW_ACTION = "review_agent_flow"
 
 /** The wait given to a rule the owner never set approvers on, minutes. */
 const DEFAULT_TIMEOUT_MINUTES = 240
@@ -97,7 +102,7 @@ export class AgentGraphSeedService {
     async refresh(state: GraphState, moduleKey: string, locale: Locale): Promise<boolean> {
         const { workspaceId, agentId, installationId, active } = state
         if (active?.flow !== undefined) {
-            this.checkFlow(workspaceId, agentId, active.flow)
+            await this.checkFlow(workspaceId, agentId, active.flow, locale)
             return false
         }
         if (state.activeKind !== "seed" || active === null || !sameBehaviour(state.draft, active)) return false
@@ -119,13 +124,27 @@ export class AgentGraphSeedService {
 
     /**
      * A node graph is never re-derived from the rules: its spec owns it. A refresh only checks the flow is still one the installed nodes
-     * take, and names each problem for the owner when it is not; it never publishes a version without the flow.
+     * take. When it is not, each problem is logged and the owner is asked to change the spec through the work a graph raises
+     * (`work-item.raise`), once per agent and set of problems; the version stays live and is never published without its flow.
      */
-    private checkFlow(workspaceId: string, agentId: string, flow: GraphSpec): void {
+    private async checkFlow(workspaceId: string, agentId: string, flow: GraphSpec, locale: Locale): Promise<void> {
         if (this.nodes === undefined) return
-        for (const problem of graphSpecProblems(flow, this.nodes.installed())) {
+        const problems = graphSpecProblems(flow, this.nodes.installed())
+        if (problems.length === 0) return
+        for (const problem of problems) {
             this.logger.warn(AgentGraphsLogEvent.FlowUnsound, { workspaceId, agentId, code: problem.code, at: problem.at })
         }
+        const raise = this.nodes.optionalExecutorOf(RAISE_EFFECT)
+        if (raise === undefined) return
+        const listed = problems.map((problem) => `${problem.code} ${problem.at}`).sort().join(", ")
+        const turn = { turnId: `flow-check:${agentId}`, workspaceId, agentId, subject: null, conversationId: null, locale }
+        const payload = {
+            action: FLOW_REVIEW_ACTION,
+            title: this.catalog.get("agentGraphs.flowUnsound.title", {}, locale),
+            payload: { agentId, problems: listed },
+        }
+        const dedupeKey = `flow-unsound:${agentId}:${createHash("sha256").update(listed).digest("hex").slice(0, 16)}`
+        await raise.execute(turn, payload, { key: dedupeKey, dedupeKey })
     }
 
     private async derive(
