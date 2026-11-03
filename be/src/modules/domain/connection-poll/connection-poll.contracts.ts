@@ -88,4 +88,6 @@ export interface ConnectionPollDeps {
     readonly timer: Timer
     /** The connections: the cursor lives in their public facts. */
     readonly connections: ConnectionsService
+    /** Runs before every call to the provider, for example to take a rate-limit token; a throw ends the walk and is the outcome of the poll. */
+    readonly beforeFetch?: (connection: ConnectionRecord) => Promise<void>
 }

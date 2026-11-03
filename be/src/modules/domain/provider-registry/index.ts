@@ -4,6 +4,7 @@ export {
     BankFeedPollerRegistry,
     BankTransactionsRegistry,
     FeedWebhookRegistry,
+    MessageInboxPollerRegistry,
     PaymentInstructionRegistry,
 } from "./provider-registries.service"
 export type {
@@ -14,6 +15,7 @@ export type {
     FeedWebhookPort,
     FeedWebhookReading,
     InstructionAccount,
+    MessageInboxPoller,
     PaymentInstructionPort,
     PaymentInstructionRequest,
     PolledCredit,

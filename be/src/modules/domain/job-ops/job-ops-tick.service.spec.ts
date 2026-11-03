@@ -14,8 +14,8 @@ const EXPECTED = [
     ["agent-work-sweep", "agent_turn", "agent-turn.sweep", {}, 1],
     ["agents-sync-all", "agents", "agents.sync", {}, 5],
     ["automation-tick", "automation", "automation.tick", {}, 1],
-    ["bank-feed-reconcile-tick", "bank-feed-poll", "reconcile-bank-feed", {}, 5],
     ["connection-health-tick", "connection_health", "connection_health", { silentAfterHours: 72 }, 15],
+    ["connection-poll-due-tick", "connection-poll", "poll-due-connections", {}, 1],
     ["content-tick", "content_tick", "content_tick", {}, 15],
     ["data-sync-tick", "data_sync", "data_sync", { tick: true }, 1],
     ["decisions-drain-work", "decisions", "decisions.drain-work", {}, 1],
@@ -29,7 +29,6 @@ const EXPECTED = [
         { doneDays: 1, failedDays: 7, batch: 5000 },
         1440,
     ],
-    ["zalo-inbox-reconcile-tick", "zalo-inbox-poll", "reconcile-zalo-inbox", {}, 5],
     ["zalo-refresh-tick", "zalo_refresh", "zalo_refresh", { withinMs: 25_200_000 }, 360],
 ] as const
 

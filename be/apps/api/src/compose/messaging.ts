@@ -38,6 +38,7 @@ import {
 import { CONVERSATIONS_ERROR_KINDS, CONVERSATIONS_MESSAGES, ConversationsModule } from "@modules/domain/conversations"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule, ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
+import { ZaloProviderModule } from "@modules/domain/zalo-provider"
 import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
 import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integrations/mail"
 import { SEPAY_ERROR_KINDS, SEPAY_MESSAGES, SepayModule } from "@modules/integrations/sepay"
@@ -76,7 +77,8 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
     TelegramInboxModule.register({ isGlobal: true }),
-    ZaloInboxModule.register({ isGlobal: true, ...options.zaloInbox }),
+    ZaloInboxModule.register({ isGlobal: true }),
+    ZaloProviderModule.register({ isGlobal: true, ...options.zaloProvider }),
     ZaloWizardDraftsModule.register({ isGlobal: true }),
 ]
 

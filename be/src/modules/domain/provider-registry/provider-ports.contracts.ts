@@ -109,3 +109,17 @@ export interface BankTransactionsPort {
         query: BankTransactionsQuery,
     ): Promise<ReadonlyArray<BankTransaction> | undefined>
 }
+
+/** A messaging provider whose customer messages can be read back from its inbox to catch what the webhook never delivered. */
+export interface MessageInboxPoller<Item = unknown> {
+    /** The provider key of the connections it reads. */
+    readonly provider: string
+    /** What the provider allows one credential, declared at registration. */
+    readonly limits: PollLimits
+    /** Reads one page of one connection. */
+    fetch(connection: ConnectionRecord, window: PollWindow): Promise<PollPage<Item>>
+    /** Stores one message through the inbox its webhook feeds, under the webhook's key; false when the webhook already delivered it. */
+    store(connection: ConnectionRecord, item: Item): Promise<boolean>
+    /** Classifies a failure of `fetch` so the scheduler can back off, stop on a bad credential, retry or give up. */
+    classify(error: unknown): PollFailure
+}

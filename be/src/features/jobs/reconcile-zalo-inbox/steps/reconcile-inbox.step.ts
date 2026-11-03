@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ZaloInboxPollService } from "@modules/domain/zalo-inbox"
+import { ZaloInboxPollService } from "@modules/domain/zalo-provider"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
 import { isZaloInboxPollPayload } from "@modules/queues/zalo-inbox-poll"

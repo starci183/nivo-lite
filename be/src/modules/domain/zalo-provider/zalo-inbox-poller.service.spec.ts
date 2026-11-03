@@ -1,15 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { ZaloCredentialsService } from "@modules/domain/channels"
+import { ChannelsError, ChannelsErrorCode, ZaloCredentialsService } from "@modules/domain/channels"
+import { PollLimiterService } from "@modules/domain/connection-poll"
+import { ZaloInboxService } from "@modules/domain/zalo-inbox"
 import type { ConnectionRecord } from "@modules/domain/connections"
-import { ZALO } from "@modules/integrations/zalo"
+import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import type { ZaloChatMessage, ZaloClient } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
-import { TIMER } from "@modules/platform/retry"
-import type { Timer } from "@modules/platform/retry"
-import { ZALO_INBOX_OPTIONS } from "./zalo-inbox.decorators"
+import { ZALO_PROVIDER_OPTIONS } from "./zalo-provider.decorators"
 import { ZaloInboxPoller } from "./zalo-inbox-poller.service"
-import { ZaloInboxService } from "./zalo-inbox.service"
 import { ZALO_POLL_PAGE_SIZE } from "./zalo-poll.policy"
 
 const NOW = "2026-11-04T10:00:00.000Z"
@@ -48,23 +47,20 @@ const build = async (options = {}) => {
     credentials.accessToken.mockResolvedValue("token")
     const inbox = mock<ZaloInboxService>()
     inbox.acceptPolledMessage.mockResolvedValue(true)
-    const timer = mock<Timer>()
-    timer.schedule.mockImplementation((callback) => {
-        callback()
-        return () => undefined
-    })
+    const limiter = mock<PollLimiterService>()
+    limiter.pass.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloInboxPoller,
             { provide: CLOCK, useValue: new FakeClock(NOW) },
-            { provide: TIMER, useValue: timer },
+            { provide: PollLimiterService, useValue: limiter },
             { provide: ZALO, useValue: zalo },
-            { provide: ZALO_INBOX_OPTIONS, useValue: options },
+            { provide: ZALO_PROVIDER_OPTIONS, useValue: options },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZaloInboxService, useValue: inbox },
         ],
     }).compile()
-    return { poller: moduleRef.get(ZaloInboxPoller), zalo, credentials, inbox }
+    return { poller: moduleRef.get(ZaloInboxPoller), zalo, credentials, inbox, limiter }
 }
 
 describe("ZaloInboxPoller fetch", () => {
@@ -178,5 +174,55 @@ describe("ZaloInboxPoller store", () => {
         inbox.acceptPolledMessage.mockResolvedValue(false)
 
         await expect(poller.store(connection, chat({}))).resolves.toBe(false)
+    })
+})
+
+describe("ZaloInboxPoller limits and the limiter", () => {
+    it("declares what one OA may call", async () => {
+        const { poller } = await build()
+
+        expect(poller.provider).toBe("zalo_oa")
+        expect(poller.limits).toEqual({ ratePerSecond: 2, burst: 4, concurrency: 2 })
+    })
+
+    it("takes a token of the connection's bucket before every call to Zalo", async () => {
+        const { poller, zalo, limiter } = await build()
+        zalo.recentChats.mockResolvedValue([chat({ userId: "user-1" }), chat({ userId: "user-2" })])
+        zalo.conversation.mockResolvedValue([])
+
+        await poller.fetch(connection, window)
+
+        expect(limiter.pass).toHaveBeenCalledTimes(3)
+        expect(limiter.pass).toHaveBeenCalledWith("zalo_oa", "c-1", poller.limits)
+    })
+})
+
+describe("ZaloInboxPoller classify", () => {
+    it.each([
+        ["a refused access token", new ZaloError({ code: ZaloErrorCode.TokenRejected }), { kind: "auth_failed" }],
+        [
+            "an exhausted quota",
+            new ZaloError({ code: ZaloErrorCode.QuotaExhausted }),
+            { kind: "rate_limited", retryAfterSeconds: 0 },
+        ],
+        ["an unreachable Zalo", new ZaloError({ code: ZaloErrorCode.Unavailable }), { kind: "transient" }],
+        ["any other Zalo refusal", new ZaloError({ code: ZaloErrorCode.NotPermitted }), { kind: "fatal" }],
+        [
+            "a connection that was never authorised",
+            new ChannelsError({ code: ChannelsErrorCode.ZaloNotAuthorized }),
+            { kind: "auth_failed" },
+        ],
+        [
+            "an unreadable credential",
+            new ChannelsError({ code: ChannelsErrorCode.SecretUnreadable }),
+            { kind: "auth_failed" },
+        ],
+        ["a token refresh in progress", new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy }), { kind: "transient" }],
+        ["a missing connection", new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound }), { kind: "fatal" }],
+        ["anything else", new Error("boom"), { kind: "fatal" }],
+    ])("maps %s", async (_name, error, expected) => {
+        const { poller } = await build()
+
+        expect(poller.classify(error)).toEqual(expected)
     })
 })

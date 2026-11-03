@@ -1,6 +1,7 @@
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { eachInOrder } from "@modules/platform/primitives"
 import { ConnectionPollLogEvent } from "./connection-poll.log-events"
+import type { PollOutcome, PollWalkOptions } from "./poll-schedule.contracts"
 import type {
     ConnectionPollDeps,
     ConnectionPoller,
@@ -29,6 +30,15 @@ interface Walk {
     readonly fetched: number
     /** Why the connection was left out, when it was. */
     readonly skipped: PollSkipReason | undefined
+    /** The end of the next older page when a chunk stopped before the walk was done; undefined when the walk finished. */
+    readonly resumeTo: Date | undefined
+}
+
+/** Where a walk reads: the window start, the end of the page it begins at and the most pages of this call (undefined: the default cap). */
+interface WalkRange {
+    readonly from: Date
+    readonly to: Date | undefined
+    readonly pageLimit: number | undefined
 }
 
 /** A summary with nothing counted yet. */
@@ -43,17 +53,26 @@ export const emptyPollSummary = (): PollSummary => ({ connections: 0, fetched: 0
 export class ConnectionPollRun {
     constructor(private readonly deps: ConnectionPollDeps) {}
 
-    /** Polls one connection with its provider's poller and adds what it did to the summary. */
-    async poll<Item>(poller: ConnectionPoller<Item>, record: ConnectionRecord, summary: PollSummary): Promise<void> {
+    /**
+     * Polls one connection with its provider's poller and adds what it did to the summary. Answers how it ended, so a scheduler can plan the next
+     * poll: `options` starts the walk at a page end carried over from a chunk and caps the pages of this call (a chunked backfill).
+     */
+    async poll<Item>(
+        poller: ConnectionPoller<Item>,
+        record: ConnectionRecord,
+        summary: PollSummary,
+        options: PollWalkOptions = {},
+    ): Promise<PollOutcome> {
         summary.connections += 1
         try {
-            await this.pollWith(poller, record, summary)
+            return await this.pollWith(poller, record, summary, options)
         } catch (cause) {
             summary.failed += 1
             this.deps.logger.error(ConnectionPollLogEvent.Failed, cause, {
                 connectionId: record.id,
                 provider: record.provider,
             })
+            return { kind: "failed", cause }
         }
     }
 
@@ -61,12 +80,19 @@ export class ConnectionPollRun {
         poller: ConnectionPoller<Item>,
         record: ConnectionRecord,
         summary: PollSummary,
-    ): Promise<void> {
+        options: PollWalkOptions,
+    ): Promise<PollOutcome> {
         if (record.environment === "test") return this.skip(record, "test_environment", summary)
         const cursor = cursorOf(record.meta)
         const from = windowStartOf(cursor, this.deps.clock.now())
-        const start: Walk = { newest: cursor, recorded: 0, fetched: 0, skipped: undefined }
-        const walk = await this.walk(poller, record, from, undefined, 0, start)
+        const start: Walk = {
+            newest: laterOf(cursor, options.newest),
+            recorded: 0,
+            fetched: 0,
+            skipped: undefined,
+            resumeTo: undefined,
+        }
+        const walk = await this.walk(poller, record, { from, to: options.to, pageLimit: options.maxPages }, 0, start)
         summary.fetched += walk.fetched
         if (walk.skipped !== undefined) return this.skip(record, walk.skipped, summary)
         summary.recorded += walk.recorded
@@ -77,22 +103,35 @@ export class ConnectionPollRun {
                 missed: walk.recorded,
             })
         }
+        if (walk.resumeTo !== undefined) {
+            return {
+                kind: "partial",
+                fetched: walk.fetched,
+                recorded: walk.recorded,
+                resumeTo: walk.resumeTo,
+                newest: walk.newest,
+            }
+        }
         if (walk.newest !== undefined && walk.newest.getTime() !== cursor?.getTime()) {
             await this.saveCursor(record, walk.newest)
         }
+        return { kind: "done", fetched: walk.fetched, recorded: walk.recorded }
     }
 
     /** Reads the pages from the newest back, storing what each holds; stops at a page that is not full. */
     private async walk<Item>(
         poller: ConnectionPoller<Item>,
         record: ConnectionRecord,
-        from: Date,
-        to: Date | undefined,
+        range: WalkRange,
         pageIndex: number,
         before: Walk,
     ): Promise<Walk> {
-        if (pageIndex >= POLL_MAX_PAGES) return before
+        const { from, to, pageLimit } = range
+        if (pageIndex >= (pageLimit ?? POLL_MAX_PAGES)) {
+            return pageLimit !== undefined && to !== undefined ? { ...before, resumeTo: to } : before
+        }
         if (pageIndex > 0) await this.pause()
+        await this.deps.beforeFetch?.(record)
         const page = await poller.fetch(record, { from, to, limit: POLL_PAGE_SIZE })
         if (page.kind === "skipped") return { ...before, skipped: page.reason }
         const stored = await this.store(poller, record, page)
@@ -103,7 +142,7 @@ export class ConnectionPollRun {
             fetched: before.fetched + page.fetched,
         }
         const older = olderPageEnd(page, POLL_PAGE_SIZE, to)
-        return older === undefined ? after : this.walk(poller, record, from, older, pageIndex + 1, after)
+        return older === undefined ? after : this.walk(poller, record, { ...range, to: older }, pageIndex + 1, after)
     }
 
     /** Stores the items of a page one at a time; answers how many the webhook had not delivered. */
@@ -125,13 +164,14 @@ export class ConnectionPollRun {
         await connections.patch(record.workspaceId, record.id, { meta: metaWithCursor(fresh.meta, seenAt) })
     }
 
-    private skip(record: ConnectionRecord, reason: PollSkipReason, summary: PollSummary): void {
+    private skip(record: ConnectionRecord, reason: PollSkipReason, summary: PollSummary): PollOutcome {
         summary.skipped += 1
         this.deps.logger.info(ConnectionPollLogEvent.Skipped, {
             connectionId: record.id,
             provider: record.provider,
             reason,
         })
+        return { kind: "skipped", reason }
     }
 
     private pause(): Promise<void> {

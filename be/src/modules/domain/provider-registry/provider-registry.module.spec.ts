@@ -2,6 +2,7 @@ import {
     BankFeedPollerRegistry,
     BankTransactionsRegistry,
     FeedWebhookRegistry,
+    MessageInboxPollerRegistry,
     PaymentInstructionRegistry,
 } from "./provider-registries.service"
 import { ProviderRegistryModule } from "./provider-registry.module"
@@ -14,6 +15,7 @@ describe("ProviderRegistryModule", () => {
             PaymentInstructionRegistry,
             BankTransactionsRegistry,
             FeedWebhookRegistry,
+            MessageInboxPollerRegistry,
         ]
 
         expect(registered.providers).toEqual(expect.arrayContaining(registries))

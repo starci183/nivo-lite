@@ -1,6 +1,5 @@
 import { ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
-import { ZALO_POLL_DEFAULTS, isStaleMessage, polledRawBody, pollRulesOf } from "./zalo-poll.policy"
-import { zaloDeliveryIdOf } from "./zalo-delivery-id.policy"
+import { ZALO_POLL_DEFAULTS, isStaleMessage, pollRulesOf } from "./zalo-poll.policy"
 
 const HOUR = 3_600_000
 const NOW = Date.parse("2026-11-04T10:00:00.000Z")
@@ -35,19 +34,5 @@ describe("isStaleMessage", () => {
 
     it("treats a message exactly at the limit as still fresh", () => {
         expect(isStaleMessage(NOW - 24 * HOUR, NOW, rules)).toBe(false)
-    })
-})
-
-describe("polledRawBody", () => {
-    it("builds the body the webhook posts for a customer text, which gets the webhook delivery id", () => {
-        const body = polledRawBody({ messageId: "m-1", userId: "user-1", text: "Alo", sentAt: 1_762_192_200_000 })
-
-        expect(JSON.parse(body.toString("utf8"))).toEqual({
-            event_name: "user_send_text",
-            timestamp: "1762192200000",
-            sender: { id: "user-1" },
-            message: { msg_id: "m-1", text: "Alo" },
-        })
-        expect(zaloDeliveryIdOf("c-1", body)).toBe("c-1:m-1")
     })
 })
