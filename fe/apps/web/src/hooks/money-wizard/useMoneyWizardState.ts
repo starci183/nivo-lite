@@ -12,7 +12,6 @@ import type { AccountForm, FollowDraft, MoneyFlags } from "./money-wizard.shared
 import type { MoneyWizardInput } from "./useMoneyWizard"
 
 import type { SetStateAction, Dispatch } from "react"
-import type { SWRResponse, SWRConfiguration } from "swr"
 
 /** The draft after a stored connection is adopted; the key is in clear only when the server just created it, a masked one never replaces it. */
 const followAfterAdopt = (current: FollowDraft, stored: WizardConnection): FollowDraft => ({
@@ -43,29 +42,7 @@ type UseMoneyWizardStateResult = {
     setAgentIds: Dispatch<SetStateAction<readonly string[]>>
     note: WizardNote | null
     setNote: Dispatch<SetStateAction<WizardNote | null>>
-    resume: SWRResponse<
-        {
-            id: string
-            provider: string
-            name: string
-            environment: string
-            status: string
-            webhookUrl: string
-            apiKey: string
-            bankCode: string
-            account: string
-            holder: string
-            credentialsSaved: boolean
-            agentIds: Array<string>
-            firstEvent: {
-                amount: number
-                at: string
-                content: string
-            } | null
-        },
-        unknown,
-        SWRConfiguration | undefined
-    >
+    resume: ReturnType<typeof useQueryMoneyConnectionSwr>
     step: "follow" | "account" | "env" | "verify" | "agent"
     watch: {
         event: FirstEvent | null
