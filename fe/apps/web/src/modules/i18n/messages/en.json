@@ -4131,6 +4131,7 @@
     "gateAsking": "NIVO is asking in the chat",
     "proposalTitle": "Item {position} · {label}",
     "proposalsLabel": "NIVO's proposals",
+    "proposalsEmpty": "No proposals yet.",
     "proposalEdit": "Edit",
     "composerHint": "Ctrl+Enter to send · {count}/4000",
     "suggestionsLabel": "Suggestions",

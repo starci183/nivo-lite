@@ -4136,6 +4136,7 @@
     "gateAsking": "NIVO đang hỏi trong chat",
     "proposalTitle": "Mục {position} · {label}",
     "proposalsLabel": "Đề xuất của NIVO",
+    "proposalsEmpty": "Chưa có đề xuất nào.",
     "proposalEdit": "Sửa lại",
     "composerHint": "Ctrl+Enter để gửi · {count}/4000",
     "suggestionsLabel": "Gợi ý",
