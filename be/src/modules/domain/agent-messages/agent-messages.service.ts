@@ -46,14 +46,11 @@ const returnedIds = (raw: unknown): ReadonlyArray<string> =>
     Array.isArray(raw) ? raw.filter(isStoredMessage).map((row) => row.id) : []
 
 /**
- * Stores a customer message at the time it happened. `created_at` is an ordinary column with a default of now(), so the insert names it; the entity
- * marks it insert-only for the query builder, which is why this one insert is written out. No row is updated afterwards.
+ * The time a stamped message is inserted at: the time the channel gave plus the tie-break microseconds, worked out by the database, because a JS date
+ * holds no microseconds. The two values travel as parameters (`stampAt`, `stampTie`).
  */
-export const INSERT_STAMPED_SQL = `
-INSERT INTO public.agent_messages (workspace_id, conversation_id, role, body, author_user_id, created_at)
-VALUES ($1, $2, 'user', $3, $4, $5::timestamptz + make_interval(secs => $6::double precision / 1000000))
-RETURNING id
-`
+const STAMPED_AT = (): string =>
+    "CAST(:stampAt AS timestamptz) + make_interval(secs => CAST(:stampTie AS double precision) / 1000000)"
 
 @Injectable()
 /** The messages of a conversation between a customer and an agent; the only writer of agent_messages. */
@@ -169,18 +166,7 @@ export class AgentMessagesService {
         stamp?: MessageStamp,
     ): Promise<string> {
         const id = this.required(
-            stamp === undefined
-                ? await this.insert(manager, { workspaceId, conversationId, role: "user", body, authorUserId })
-                : returnedIds(
-                      await manager.query(INSERT_STAMPED_SQL, [
-                          workspaceId,
-                          conversationId,
-                          body,
-                          authorUserId,
-                          stamp.at,
-                          stamp.tieMicros,
-                      ]),
-                  ),
+            await this.insert(manager, { workspaceId, conversationId, role: "user", body, authorUserId }, false, stamp),
         )
         await this.announce(workspaceId, conversationId, authorUserId, manager)
         return id
@@ -375,8 +361,11 @@ export class AgentMessagesService {
         manager: EntityManager,
         values: Partial<AgentMessageEntity>,
         orIgnore = false,
+        stamp?: MessageStamp,
     ): Promise<ReadonlyArray<string>> {
-        const insert = manager.createQueryBuilder(AgentMessageEntity, "am").insert().values(values)
+        const timed = stamp === undefined ? values : { ...values, createdAt: STAMPED_AT }
+        const base = manager.createQueryBuilder(AgentMessageEntity, "am").insert().values(timed)
+        const insert = stamp === undefined ? base : base.setParameters({ stampAt: stamp.at, stampTie: stamp.tieMicros })
         const written = await (orIgnore ? insert.orIgnore() : insert).returning("id").execute()
         return returnedIds(written.raw)
     }
