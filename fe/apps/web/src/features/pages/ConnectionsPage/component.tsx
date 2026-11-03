@@ -11,20 +11,15 @@ export interface ConnectionsPageBaseProps {
 
 /** Draws the Connections page: the frame's `Page` around the board, with the wizard and connector detail drawers inside it. */
 export const ConnectionsPageBase = (props: ConnectionsPageBaseProps) => (
-    <ConnectionsFrame
-        tab={props.props.tab}
-        body={
-            <>
-                <ConnectionsOverlayHost
-                    tab={props.props.tab}
-                    candidate={
-                        <>
-                            <ConnectionWizardOverlay />
-                            <ConnectorDetailOverlay />
-                        </>
-                    }
-                />
-            </>
-        }
-    />
+    <ConnectionsFrame tab={props.props.tab}>
+        <ConnectionsOverlayHost
+            tab={props.props.tab}
+            candidate={
+                <>
+                    <ConnectionWizardOverlay />
+                    <ConnectorDetailOverlay />
+                </>
+            }
+        />
+    </ConnectionsFrame>
 )

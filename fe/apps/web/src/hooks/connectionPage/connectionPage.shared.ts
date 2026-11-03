@@ -1,7 +1,14 @@
 import type { SWRResponse } from "swr"
 import { slotOfSwr } from "@/hooks/slot"
 import { isInvalidFailure, isNotFoundFailure } from "@/modules/failure"
-import type { ConnectionNotice, DataSlot, SlotLabels } from "@/modules/types"
+import { CONSOLE_ROUTES } from "@/modules/routes"
+import type {
+    ConnectionHeadView,
+    ConnectionNotice,
+    ConnectionPageHeadView,
+    DataSlot,
+    SlotLabels,
+} from "@/modules/types"
 
 /** How many times slower a healthy connection page is asked again than one that needs attention. */
 const HEALTHY_SLOWDOWN = 4
@@ -41,4 +48,43 @@ export const readFailureNotice = (
     if ("isForbidden" in slot) return { id: "failure", tone: "negative", title: labels.forbidden }
     if (!("isError" in slot)) return undefined
     return { id: "failure", tone: "negative", title: labels.error, action: { label: labels.retry, run: retry } }
+}
+
+/** What the header of a provider page knows of its connection: the head once read, and whether it is still being read. */
+export const connectionHeadStateOf = (
+    head: DataSlot<ConnectionHeadView>,
+): Pick<ConnectionPageHeadView, "head" | "isLoading"> => ({
+    ...("items" in head ? { head: head.items } : {}),
+    isLoading: "isLoading" in head,
+})
+
+/** The trail of a provider page: the list of connections, then the connection itself. */
+export const connectionCrumbsOf = (
+    connectionsLabel: string,
+    current: ConnectionPageHeadView["crumbs"][number],
+): ConnectionPageHeadView["crumbs"] => [
+    { id: "connections", label: connectionsLabel, href: CONSOLE_ROUTES.connections },
+    current,
+]
+
+/** One setup step as a reader sees it, with the id that picks it among the steps of a connection. */
+interface SetupStepSource<Id extends string> {
+    readonly id: Id
+    readonly ordinal: number
+    readonly title: string
+    readonly summary: string
+    readonly hint: string
+    readonly isOpen: boolean
+}
+
+/** The step of the given id (the first when none matches), with every word empty while the steps are not read yet. */
+export const setupStepViewOf = <Id extends string>(steps: ReadonlyArray<SetupStepSource<Id>>, id: Id) => {
+    const step = steps.find((candidate) => candidate.id === id) ?? steps[0]
+    return {
+        ordinal: step?.ordinal ?? 1,
+        title: step?.title ?? "",
+        summary: step?.summary ?? "",
+        hint: step?.hint ?? "",
+        isOpen: step?.isOpen ?? false,
+    }
 }

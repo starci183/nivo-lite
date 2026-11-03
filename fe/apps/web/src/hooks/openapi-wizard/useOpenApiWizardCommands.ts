@@ -1,7 +1,7 @@
 "use client"
 
 import { useTransition } from "react"
-import type { useConnectionsRefresh, useSetConnectionAgents } from "@/hooks/connections"
+import { useConnectionsRefresh, useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
 import type { useOpenApiAuthForm } from "@/hooks/rhf"
 import { openApiScheduleMinutesOf } from "./openapi-wizard.shared"
 import type { OpenApiCommands } from "./useOpenApiCommands"
@@ -23,18 +23,18 @@ type OpenApiWizardCommandsInput = {
         password: string
     }
     readonly setConnId: import("react").Dispatch<import("react").SetStateAction<string | null>>
-    readonly startSync: (connectionId: string) => Promise<void>
     readonly editing: boolean
     readonly onClose: (changed: boolean) => void
     readonly index: number
     readonly setIndex: import("react").Dispatch<import("react").SetStateAction<number>>
-    readonly setConnectionAgents: ReturnType<typeof useSetConnectionAgents>
     readonly agentIds: ReadonlyArray<string>
-    readonly refresh: ReturnType<typeof useConnectionsRefresh>
 }
 
 type OpenApiWizardActionsInput = OpenApiWizardCommandsInput & {
     readonly startTransition: import("react").TransitionStartFunction
+    readonly startSync: (connectionId: string) => Promise<void>
+    readonly setConnectionAgents: ReturnType<typeof useSetConnectionAgents>
+    readonly refresh: ReturnType<typeof useConnectionsRefresh>
 }
 
 const createOpenApiWizardActions = ({
@@ -119,8 +119,11 @@ const createOpenApiWizardActions = ({
 /** Owns the OpenAPI command transition and its actions. */
 export const useOpenApiWizardCommands = (input: OpenApiWizardCommandsInput) => {
     const [isPending, startTransition] = useTransition()
+    const { start: startSync } = useSyncNow()
+    const setConnectionAgents = useSetConnectionAgents()
+    const refresh = useConnectionsRefresh()
     return {
-        ...createOpenApiWizardActions({ ...input, startTransition }),
+        ...createOpenApiWizardActions({ ...input, startTransition, startSync, setConnectionAgents, refresh }),
         isPending,
     }
 }

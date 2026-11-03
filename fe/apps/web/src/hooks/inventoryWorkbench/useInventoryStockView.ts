@@ -1,3 +1,5 @@
+"use client"
+
 import {
     stockToggleLabel,
     stockDetailOf,
@@ -13,21 +15,18 @@ import {
     useItemDrawer,
     type StockFilter,
 } from "@/hooks/inventory"
-;("use client")
-
 import { useFeatureReset } from "@/hooks/reuseables"
 import type { InventoryPanelInput } from "./inventoryWorkbench.shared"
 
-import type { useInventoryBoard } from "@/hooks/inventoryBoard"
 import { useTranslations } from "next-intl"
 import { useState, type Dispatch, type SetStateAction } from "react"
-import type { ItemView } from "@/modules/types"
+import type { InventoryWorkbenchData, ItemView } from "@/modules/types"
 import { useInventoryCatalogCommands, useInventoryStockCommands } from "@/hooks/inventoryCommands"
 
 /** Inputs needed to build the InventoryStockContent section. */
 interface BuildStockListViewContext {
     readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
-    readonly board: ReturnType<typeof useInventoryBoard>
+    readonly board: InventoryWorkbenchData
     readonly lowCount: number
     readonly empty: boolean
     readonly hasInactive: boolean
@@ -49,7 +48,7 @@ interface BuildStockCommandsContext {
     readonly itemDrawer: ReturnType<typeof useItemDrawer>
     readonly draft: () => void
     readonly quick: (id: string, sign: 1 | -1) => void
-    readonly board: ReturnType<typeof useInventoryBoard>
+    readonly board: InventoryWorkbenchData
     readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
     readonly setShowInactive: Dispatch<SetStateAction<boolean>>
 }

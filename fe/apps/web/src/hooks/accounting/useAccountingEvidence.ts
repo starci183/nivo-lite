@@ -2,37 +2,31 @@
 
 import { creditRecordsOf, invoiceRecordsOf, orderRecordsOf } from "@/hooks/accountingRecords"
 import { useAccountingEvidenceForm } from "@/hooks/rhf"
-import { useFeatureLifetime } from "@/hooks/reuseables"
-import { useGraphQLWithToast } from "@/modules/toast"
+import { useScopedState } from "@/hooks/reuseables"
 import type { AccountingEvidenceValues } from "@/hooks/rhf"
 import type { AccountingWorkbenchData } from "@/modules/types"
 import { digitsToNumber, moneyOf, vietnamToday } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useWatch } from "react-hook-form"
 import { supplierNeedOf } from "@/hooks/accountingUpcoming"
+import { useAccountingSubmit } from "./useAccountingSubmit"
 import { useRecordManualEvidence } from "./useRecordManualEvidence"
 
 /** The Evidence tab: credits, invoices and orders without an invoice, plus the manual evidence form. */
 export const useAccountingEvidence = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
-    const [isFormOpen, setIsFormOpen] = useState(false)
-    const [isDuplicate, setIsDuplicate] = useState(false)
-    const [operation, setOperation] = useState<EvidenceOperation | null>(null)
-    const lifetime = useFeatureLifetime(isActive, scope)
+    const [isFormOpen, setIsFormOpen] = useScopedState(false, isActive, scope)
+    const [isDuplicate, setIsDuplicate] = useScopedState(false, isActive, scope)
+    const { isSaving, submit } = useAccountingSubmit(isActive, scope)
     const form = useAccountingEvidenceForm()
     const reset = form.reset
     useEffect(() => {
-        setIsFormOpen(false)
-        setIsDuplicate(false)
-        setOperation(null)
         reset()
     }, [isActive, reset, scope])
     const fields = useWatch({ control: form.control })
     const { record } = useRecordManualEvidence()
-    const runGraphQL = useGraphQLWithToast()
-    const isSaving = isActive && operation?.identity === lifetime.identity
     const today = vietnamToday()
     const closeForm = () => {
         setIsFormOpen(false)
@@ -59,19 +53,7 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData, isActive: b
         closeForm,
         changeField: (name: keyof AccountingEvidenceValues, value: string) =>
             form.setValue(name, value, { shouldDirty: true, shouldValidate: form.formState.isSubmitted }),
-        submitForm: () => {
-            const pending = { identity: lifetime.identity, isCurrent: lifetime.capture() }
-            setOperation(pending)
-            const finish = () => setOperation((current) => (current === pending ? null : current))
-            form.handleSubmit((values) => {
-                if (!pending.isCurrent()) return finish()
-                recordValues(values, pending.isCurrent)
-                    .catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
-                    .finally(finish)
-            }, finish)().catch((error: unknown) =>
-                runGraphQL(() => Promise.reject(error), { showSuccessToast: false }).finally(finish),
-            )
-        },
+        submitForm: () => submit(form, recordValues),
     }
     const records = evidenceRecordsOf({ t, format, data })
     return {
@@ -84,12 +66,6 @@ export const useAccountingEvidence = (data: AccountingWorkbenchData, isActive: b
         },
         on: actions,
     }
-}
-
-/** Only the operation started in this active editor may hold its busy state. */
-interface EvidenceOperation {
-    readonly identity: ReturnType<typeof useFeatureLifetime>["identity"]
-    readonly isCurrent: () => boolean
 }
 
 /** Resolved input values and facts of the manual-evidence form. */

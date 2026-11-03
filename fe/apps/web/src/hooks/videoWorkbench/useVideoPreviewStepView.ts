@@ -6,21 +6,15 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { useVideoRender, useVideoFailure } from "@/hooks/video"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { editorHref } from "@/modules/video"
+import { editorHref, estimateScriptSeconds, VIDEO_MAX_SECONDS } from "@/modules/video"
 
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { videoOwnerOf } from "./videoWorkbench.shared"
+import { shapeOf, videoOwnerOf } from "./videoWorkbench.shared"
 
 import type { VideoViewInput } from "./videoWorkbench.shared"
 
-import { estimateScriptSeconds, VIDEO_MAX_SECONDS } from "@/modules/video"
-
 const STAGES: ReadonlySet<string> = new Set(["tts", "scenes", "mix", "encode", "upload"])
-const shapeOf = (aspect: string): "portrait" | "square" | "landscape" => {
-    if (aspect === "9:16") return "portrait"
-    return aspect === "1:1" ? "square" : "landscape"
-}
 interface PreviewProjection {
     readonly input: VideoViewInput
     readonly t: ReturnType<typeof useTranslations<"video">>

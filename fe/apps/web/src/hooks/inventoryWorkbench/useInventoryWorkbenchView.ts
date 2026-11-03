@@ -1,8 +1,8 @@
 "use client"
 import { INVENTORY_TABS } from "@/modules/types"
 import { useAppSelector } from "@/redux"
-import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
-import { EMPTY_INVENTORY_BOARD } from "@/hooks/inventoryBoard"
+import { useAgentWorkbenchShell } from "@/hooks/agentDashboard"
+import { EMPTY_INVENTORY_BOARD } from "./inventoryWorkbench.shared"
 import { mapSlot, slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { useInventoryWorkbenchData } from "./useInventoryWorkbenchData"
 import { useInventoryFiguresView } from "./useInventoryFiguresView"
@@ -26,13 +26,17 @@ interface InventoryWorkbenchInput {
 export const useInventoryWorkbenchView = (input: InventoryWorkbenchInput) => {
     const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
     const scope = JSON.stringify([workspaceId ?? null, input.installationId])
-    const tabs = useAgentWorkbenchTabs({ ids: INVENTORY_TABS, initialTab: input.initialTab })
-    const frame = useAgentDashboardFrame({
+    const {
+        tabs,
+        dashboard: frame,
+        isNormal: overview,
+        frameOf,
+    } = useAgentWorkbenchShell({
         module: "inventory",
         installationId: input.installationId,
-        hasOwnGaps: false,
+        ids: INVENTORY_TABS,
+        initialTab: input.initialTab,
     })
-    const overview = frame.why.workItemId === null
     const data = useInventoryWorkbenchData(overview),
         board = data.data ?? EMPTY_INVENTORY_BOARD
     const of = (id: InventoryTab) => ({ board, isActive: overview && tabs.selected === id, scope })
@@ -59,11 +63,7 @@ export const useInventoryWorkbenchView = (input: InventoryWorkbenchInput) => {
     return {
         shape: overview ? tabs.selected : ("explanation" as const),
         props: {
-            why: frame.why,
-            regions: frame.regions,
-            tabsLabel: frame.tabsLabel,
-            selectedTab: tabs.selected,
-            tabs: INVENTORY_TABS.map((id) => ({ id, label: input.tabs[id] })),
+            ...frameOf(input.tabs),
             ribbon: {
                 label: figures.label,
                 slot: mapSlot(data.slot, () => figures.items),

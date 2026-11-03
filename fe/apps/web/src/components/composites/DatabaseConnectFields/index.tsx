@@ -1,5 +1,6 @@
-import { Alert, RadioGroup, Select, Grid } from "@starci/grammar/common"
-import { ConnectionAccountInputs } from "@/components/leaves/ConnectionAccountInputs"
+import { Alert, RadioGroup, Grid } from "@starci/grammar/common"
+import { FormFieldList, type FormFieldItem } from "@/components/leaves/FormFieldList"
+import { textFieldsOf } from "@/modules/types"
 
 /** A text field of the database connect form. */
 type DatabaseTextField = "name" | "host" | "port" | "database" | "user" | "password"
@@ -42,6 +43,32 @@ export interface DatabaseConnectFieldsProps {
     }
 }
 
+/** The text and choice fields of the connect step, in the order they are drawn. */
+const fieldsOf = (
+    view: DatabaseConnectFieldsProps["props"],
+    on: DatabaseConnectFieldsProps["on"],
+): ReadonlyArray<FormFieldItem> => {
+    const source = { text: view.text, values: view.values, field: on.field }
+    return [
+        ...textFieldsOf(["name"], source, { name: { description: view.text.nameHint } }),
+        {
+            kind: "choice",
+            name: "engine",
+            label: view.text.engine,
+            value: view.values.engine,
+            options: view.engines,
+            change: on.engine,
+        },
+        ...textFieldsOf(["host", "port", "database", "user", "password"], source, {
+            host: { description: view.text.hostHint },
+            password: {
+                isSecret: true,
+                ...(view.passwordHint === undefined ? {} : { description: view.passwordHint }),
+            },
+        }),
+    ]
+}
+
 /** Connect step of the database wizard: a read-only user is advised, then the server, database and sign-in. */
 export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
     const { props: view, on } = props
@@ -49,54 +76,9 @@ export const DatabaseConnectFields = (props: DatabaseConnectFieldsProps) => {
         <>
             <Alert tone="informative" title={view.text.readOnlyTitle} description={view.text.readOnlyBody} />
             <Grid kind="form" columns={2}>
-                <ConnectionAccountInputs
-                    owner="db"
-                    fields={[
-                        {
-                            name: "name",
-                            label: view.text.name,
-                            value: view.values.name,
-                            description: view.text.nameHint,
-                            change: on.field("name"),
-                        },
-                    ]}
-                    isDisabled={view.isDisabled}
-                    {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
-                />
-                <Select
-                    {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
-                    label={view.text.engine}
-                    isDisabled={view.isDisabled}
-                    value={view.values.engine}
-                    options={view.engines}
-                    onValueChange={on.engine}
-                />
-                <ConnectionAccountInputs
-                    owner="db"
-                    fields={[
-                        {
-                            name: "host",
-                            label: view.text.host,
-                            value: view.values.host,
-                            description: view.text.hostHint,
-                            change: on.field("host"),
-                        },
-                        { name: "port", label: view.text.port, value: view.values.port, change: on.field("port") },
-                        {
-                            name: "database",
-                            label: view.text.database,
-                            value: view.values.database,
-                            change: on.field("database"),
-                        },
-                        { name: "user", label: view.text.user, value: view.values.user, change: on.field("user") },
-                        {
-                            name: "password",
-                            label: view.text.password,
-                            value: view.values.password,
-                            ...(view.passwordHint === undefined ? {} : { description: view.passwordHint }),
-                            change: on.field("password"),
-                        },
-                    ]}
+                <FormFieldList
+                    idPrefix="db"
+                    fields={fieldsOf(view, on)}
                     isDisabled={view.isDisabled}
                     {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
                 />

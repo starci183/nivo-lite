@@ -5,7 +5,7 @@ import { LENS_LANES, useAgentLenses } from "@/hooks/brain"
 import type { AgentLens } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { BrainAgentViewBase } from "./component"
-import type { AudienceView, LaneView } from "./component"
+import type { AudienceView, KnowledgeLaneView } from "./component"
 
 /** The connected matrix: what the customer and every installed agent may read of the shared knowledge, as the back end's own policy says. */
 export const BrainAgentView = () => {
@@ -19,7 +19,7 @@ export const BrainAgentView = () => {
             name: lens.kind === "customer" ? t("audienceCustomer") : (lens.name ?? ""),
             avatarUrl: lens.avatarUrl ?? undefined,
         }))
-        const lanes: ReadonlyArray<LaneView> = LENS_LANES.map((lane) => ({
+        const lanes: ReadonlyArray<KnowledgeLaneView> = LENS_LANES.map((lane) => ({
             id: lane,
             label: t(`lane_${lane}`),
             cells: Object.fromEntries(

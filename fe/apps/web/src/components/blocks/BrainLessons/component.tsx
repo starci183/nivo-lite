@@ -117,7 +117,6 @@ export const BrainLessonsBase = (props: BrainLessonsBaseProps) => {
         <KnowledgeRowsSection
             isHeadingInCard
             section={list.section}
-            isPending={list.isPending}
             before={props.props.write === undefined ? null : <WritePart view={props.props.write} on={props.on} />}
             body={
                 <SlotView

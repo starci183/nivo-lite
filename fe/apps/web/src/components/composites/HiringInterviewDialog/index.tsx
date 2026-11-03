@@ -1,8 +1,9 @@
 import type { HiringViews, HiringActions } from "@/modules/types"
 
-import { Stack, Alert, Dialog, Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
+import { Alert, Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
 
 import { HiringDialogFooter } from "@/components/branches/HiringDialogFooter"
+import { HiringDialogShell } from "@/components/branches/HiringDialogShell"
 
 /** The words, values and state of the interview request dialog. */
 type HiringInterviewDialogProps = HiringViews["interviewFields"] & {
@@ -14,11 +15,7 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
     const { copy, members, modes, values, outcome, canSend, isBusy, error } = props
     const { on } = props
     return (
-        <Dialog
-            isOpen
-            onOpenChange={(open) => {
-                if (!open) on.close()
-            }}
+        <HiringDialogShell
             size="md"
             title={props.title}
             closeLabel={copy.close}
@@ -34,10 +31,11 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                     onClose={on.close}
                 />
             }
-        >
-            <Stack gap="row">
-                {error === null ? null : <Alert tone="negative" title={copy.ivFailed} description={error} />}
-                {outcome === null ? (
+            errorTitle={copy.ivFailed}
+            error={error}
+            onClose={on.close}
+            body={
+                outcome === null ? (
                     <>
                         <Select
                             label={copy.ivInterviewer}
@@ -73,8 +71,8 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                         title={outcome.status === "done" ? copy.ivDone : copy.ivWaiting}
                         description={outcome.summary}
                     />
-                )}
-            </Stack>
-        </Dialog>
+                )
+            }
+        />
     )
 }

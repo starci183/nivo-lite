@@ -1,7 +1,7 @@
 import type { WorkbenchWaitingRegionView as WaitingView } from "@/modules/types"
 import { EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
 /** Copy and view of the waiting region; `isLoading` draws the same card with blank geometry while the data is read. */
-export interface WaitingRegionProps {
+interface WaitingRegionProps {
     readonly label: string
     readonly view: WaitingView
     readonly isLoading: boolean

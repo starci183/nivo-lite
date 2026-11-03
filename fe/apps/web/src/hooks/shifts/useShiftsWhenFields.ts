@@ -1,7 +1,7 @@
+"use client"
+
 import type { ShiftsSetupViews } from "@/modules/types"
 type WhenField = ShiftsSetupViews["formField"]
-;("use client")
-
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useShiftsFormat } from "./useShiftsFormat"

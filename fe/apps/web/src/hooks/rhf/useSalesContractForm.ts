@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { parseAmount } from "@/hooks/sales"
+import { digitsToNumber } from "@/modules/utils"
 import type { SalesContractStatus } from "@/modules/types"
 
 /** What a person has typed into the contract form. */
@@ -47,7 +47,7 @@ export const useSalesContractForm = (defaultValues: ContractForm) => {
                     endsOn: z.string().refine(isContractDay, t("errDate")),
                     amount: z.string().refine((value) => {
                         if (value.trim() === "") return true
-                        const amount = parseAmount(value)
+                        const amount = digitsToNumber(value)
                         return /^[\d.,\s]+$/u.test(value) && amount !== null && Number.isSafeInteger(amount)
                     }, t("errContractAmount")),
                     status: z.enum(STATUSES, {

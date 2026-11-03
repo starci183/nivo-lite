@@ -10,10 +10,10 @@ import {
     needsMaintenance,
     useBrainBoard,
     useBrainCommand,
+    useFailureToast,
 } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { brainTabHref } from "@/modules/routes"
-import { toast } from "@/modules/toast"
 import type { BrainFact, KnowledgeRowView, RowActionView } from "@/modules/types"
 import { BrainFactsBase } from "./component"
 
@@ -54,15 +54,12 @@ const shownFactsOf = (facts: ReadonlyArray<BrainFact>) =>
 /** The connected facts list: the facts in force and the scheduled ones, with a new value and a stop. */
 export const BrainFacts = () => {
     const t = useTranslations("brain")
-    const feedback = useTranslations("toast")
     const format = useFormatter()
     const command = useBrainCommand()
     const [pending, setPending] = useState<string | undefined>()
     const board = useBrainBoard()
     const slotLabels = useSlotLabels()
-    const failed = () => {
-        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
-    }
+    const failed = useFailureToast()
     const dayOf = (iso: string): string => format.dateTime(new Date(iso), { dateStyle: "medium" })
     const shown = shownFactsOf(board.facts)
     const scheduledBadge = (fact: BrainFact): ReadonlyArray<{ readonly label: string; readonly tone: "accent" }> =>

@@ -6,21 +6,21 @@ import { useState } from "react"
 import { monthKey, pad2, shiftMonth, vietnamClock, useRequestContentMonthPlan } from "@/hooks/content"
 import { useContentMonthPlanForm } from "@/hooks/rhf"
 import { useFeatureReset } from "@/hooks/reuseables"
-import type { ContentViewInput } from "./contentWorkbench.shared"
+import { useGraphQLWithToast } from "@/modules/toast"
+import { contentDialogOf, type ContentViewInput } from "./contentWorkbench.shared"
 
 const MONTHS_OFFERED = 4
 /** Owns the actual ContentPlanAction data derivations and conditional controller lifetime. */
 export const useContentPlanActionView = (input: ContentViewInput) => {
     const data = input.data
     const t = useTranslations("content")
+    const runGraphQL = useGraphQLWithToast()
     const job = useRequestContentMonthPlan(input.isActive && input.isReady, input.scope)
     const here = vietnamClock(new Date(data?.nowIso ?? input.startedAt))
     const [isOpen, setOpen] = useState(false)
     const form = useContentMonthPlanForm(monthKey(here.y, here.m))
     const plan = data?.lastPlan
-    const run = form.handleSubmit(({ month }) => {
-        job.request(month)
-    })
+    const run = form.handleSubmit(({ month }) => job.request(month))
     const error = form.formState.errors.month?.message
     const isPending = form.formState.isSubmitting || job.isPending
 
@@ -57,15 +57,11 @@ export const useContentPlanActionView = (input: ContentViewInput) => {
                   note: error ? { tone: "error", text: error } : null,
               }
     const on: ContentActions["planActions"] = {
-        open: () => {
-            if (input.isActive && input.isReady) setOpen(true)
-        },
-        close: () => setOpen(false),
-        openChange: (open) => {
-            if (!open && !isPending) setOpen(false)
-        },
+        ...contentDialogOf(input, setOpen, isPending),
         month: (month) => form.setValue("month", month, { shouldValidate: form.formState.isSubmitted }),
-        run: () => run(),
+        run: () => {
+            run().catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
+        },
         dismissNote: () => form.clearErrors(),
     }
     return { props, on }

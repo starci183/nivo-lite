@@ -27,7 +27,7 @@ import {
 } from "@/modules/office"
 import type { OfficeRoom, OfficeWaiting } from "@/modules/office"
 import { useOfficePanels } from "./useOfficePanels"
-import { officeReadSlots } from "./officeMessenger.slots"
+import { officeReadSlots } from "./officeMessenger.shared"
 import { useOfficeThreadView } from "./useOfficeThreadView"
 
 /** Where the header chip jumps: the oldest thing that waits for a person's decision; none when nothing waits. */

@@ -7,10 +7,9 @@ import { agentHref } from "@/modules/installations"
 import type { Installation } from "@/modules/installations"
 import { useInstallations } from "./useInstallations"
 
-/** The installed agents and the one instance an agent url names. */
+/** The one instance an agent url names. */
 interface InstanceGuard {
     readonly installation: Installation | undefined
-    readonly installations: ReadonlyArray<Installation>
     /** The resolved instance URL belongs elsewhere; the owning slot waits for navigation. */
     readonly isLeaving: boolean
 }
@@ -33,7 +32,6 @@ export const useInstanceGuard = (module: ModuleKey, installationId: string): Ins
     }, [target, router])
     return {
         installation: target === null ? installation : undefined,
-        installations: installations ?? [],
         isLeaving: target !== null,
     }
 }

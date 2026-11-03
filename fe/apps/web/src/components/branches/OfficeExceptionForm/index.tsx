@@ -126,6 +126,16 @@ type OfficeExceptionActionsInput = {
     readonly setIsEditing: (value: boolean) => void
 }
 
+/** The words on the approve button: save while editing, otherwise approve or send the draft. */
+const approveLabelOf = (
+    isEditing: boolean,
+    copy: NonNullable<OfficeExceptionFormProps["copy"]>,
+    item: NonNullable<OfficeExceptionFormProps["item"]>,
+): string => {
+    if (isEditing) return copy.exceptionSaveContinue
+    return item.draft === null ? copy.exceptionApprove : copy.exceptionSendDraft
+}
+
 const renderOfficeExceptionFormActions = ({
     props,
     isLocked,
@@ -145,11 +155,7 @@ const renderOfficeExceptionFormActions = ({
                 isDisabled={isLocked || isOtherIncomplete || isBasisMissing}
                 onPress={onApprove}
             >
-                {isEditing
-                    ? copy.exceptionSaveContinue
-                    : item.draft === null
-                      ? copy.exceptionApprove
-                      : copy.exceptionSendDraft}
+                {approveLabelOf(isEditing, copy, item)}
             </Button>
         )}
         {item.status === "failed" || item.isReconcile || (item.draft === null && item.amount === null) ? null : (

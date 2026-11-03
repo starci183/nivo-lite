@@ -141,16 +141,19 @@ export const useContentEditorCommands = (input: EditorCommandInput): EditorComma
     }
 }
 
-/** Copies one actual saved channel; completion messages belong only to its original active editor. */
-const copyEditorText = (input: {
+/** What copying one saved channel needs: the item and channel, the copy words, the command that reports and the current-editor check. */
+interface CopyEditorTextInput {
     readonly item: ContentItem
     readonly channel: ContentChannel
     readonly t: ReturnType<typeof useTranslations<"content">>
     readonly command: ContentCommand
     readonly isCurrent: () => boolean
-}) => {
+}
+
+/** Copies one actual saved channel; completion messages belong only to its original active editor. */
+const copyEditorText = (input: CopyEditorTextInput) => {
     const { item, channel, t, command, isCurrent } = input
-    return navigator.clipboard
+    navigator.clipboard
         .writeText(copyReadyText(item.variants[channel]))
         .then(() => {
             if (isCurrent()) command.say("ok", channelLabel(t, channel) + ": " + t("copied"))

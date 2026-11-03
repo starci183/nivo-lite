@@ -1,27 +1,27 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { PROPOSAL_PREVIEW_CHARS, clippedText, leftOutLabelsOf, proposalsOf, sourceTitlesOf } from "@/modules/brain"
 import type { PublicDocument } from "@/modules/brain"
 import { brainTabHref } from "@/modules/routes"
 import type { KnowledgeListView, KnowledgeRowView } from "@/modules/types"
-import { toast } from "@/modules/toast"
+import { useBrainRowAction } from "./useBrainRowAction"
 import { usePublicDocCommands } from "./usePublicDocCommands"
 import { usePublicDocuments } from "./usePublicDocuments"
 
 /** Owns proposed public answers, retaining their own read status and requiring full revision-bound review before approval. */
 export const usePublicProposals = () => {
     const t = useTranslations("publicBrain")
-    const feedback = useTranslations("toast")
     const read = usePublicDocuments()
     const command = usePublicDocCommands()
     const labels = useSlotLabels()
-    const [pending, setPending] = useState<string | undefined>()
-    const failed = () => {
-        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
-    }
+    const { pending, dispatch } = useBrainRowAction({
+        actionId: "skip",
+        canWrite: read.canWrite,
+        isKnown: (rowId) => proposalsOf(read.documents).some((doc) => doc.id === rowId),
+        send: (rowId) => command.archive(rowId, t("skipped")),
+    })
     const rowOf = (doc: PublicDocument): KnowledgeRowView => {
         const left = leftOutLabelsOf(doc)
         return {
@@ -58,27 +58,6 @@ export const usePublicProposals = () => {
                   ]
                 : [],
         }
-    }
-    const skip = async (rowId: string, actionId: string) => {
-        if (
-            !read.canWrite ||
-            actionId !== "skip" ||
-            pending !== undefined ||
-            !proposalsOf(read.documents).some((doc) => doc.id === rowId)
-        )
-            return
-        setPending(rowId)
-        try {
-            return await command.archive(rowId, t("skipped"))
-        } catch {
-            failed()
-            return undefined
-        } finally {
-            setPending(undefined)
-        }
-    }
-    const dispatch = (rowId: string, actionId: string) => {
-        skip(rowId, actionId).catch(failed)
     }
     const list: KnowledgeListView = {
         section: { id: "public-proposals-title", title: t("proposalsTitle"), failTitle: t("loadFailed") },

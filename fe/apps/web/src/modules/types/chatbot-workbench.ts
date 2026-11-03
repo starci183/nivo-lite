@@ -1,5 +1,6 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import type { ChatbotConversationView } from "./chatbot-inbox"
+import type { ChatbotInboxActions } from "./chatbot-inbox-actions"
 import type { SlotPanelProps } from "./slot"
 import type {
     WorkbenchDashboardRegions,
@@ -89,4 +90,30 @@ export interface ChatbotWorkbenchViewData {
     readonly customers: ChatbotCustomersView
     readonly inbox: SlotPanelProps<ChatbotConversationView>
     readonly gaps: ChatbotGapsView
+}
+/** Commands of the Chatbot workbench: the tabs, the customer list, the inbox, the waiting card and the gaps. */
+export interface ChatbotWorkbenchActions {
+    readonly selectTab: (id: string) => void
+    readonly closeWhy: () => void
+    readonly retryDashboard: () => void
+    readonly retry: () => void
+    readonly customers: {
+        readonly query: (value: string) => void
+        readonly filter: (value: string) => void
+        readonly retry: () => void
+    }
+    readonly inbox: ChatbotInboxActions & {
+        readonly reload: () => void
+    }
+    readonly waiting: {
+        readonly command: (rowId: string, commandId: string) => void
+        readonly retry: () => void
+        readonly changeEdit: (text: string) => void
+        readonly sendEdit: () => void
+        readonly cancelEdit: () => void
+    }
+    readonly gaps: {
+        readonly retry: () => void
+        readonly dismiss: (id: string) => void
+    }
 }

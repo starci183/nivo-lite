@@ -2,6 +2,7 @@ import {
     Alert,
     Badge,
     Button,
+    EmptyNotice,
     Page,
     Pane,
     PaneGrid,
@@ -12,17 +13,24 @@ import {
     type PageHeaderContent,
 } from "@starci/grammar/common"
 
-import type { ComponentProps, ReactNode } from "react"
+import {
+    ConnectionPaneLayoutNotice,
+    connectionGridOf,
+    connectionRefusedHeaderOf,
+} from "@/components/composites/ConnectionPaneLayout"
+import type { ReactNode } from "react"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
-import { ConnectionRefusedPage } from "@/components/composites/ConnectionRefusedPage"
 import { SepayConfirm } from "@/components/composites/SepayConfirm"
 import { SlotView } from "@/components/composites/SlotView"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { ConnectionRefusalView, DataSlot, SlotLabels } from "@/modules/types"
 
-/** The bands the page places: the main pane's (health, setup steps) and the live rail's. */
-export interface SepayConsoleShape {
-    readonly main: ReactNode
-    readonly rail: ReactNode
+/** One delivery of the live rail as it is worded. */
+interface SepayEventRow {
+    readonly id: string
+    readonly title: string
+    readonly statusLabel: string
+    readonly statusTone: BadgeTone
+    readonly detail: string
 }
 
 /** What the header shows once the connection is read. */
@@ -48,7 +56,8 @@ export interface SepayDisconnectConfirm {
 
 /** Props for {@link SepayConsoleBase}. */
 export interface SepayConsoleBaseProps {
-    readonly shape: SepayConsoleShape
+    /** The bands of the main pane (health, setup steps), connected by the page. */
+    readonly children: ReactNode
     readonly props: {
         readonly slot: DataSlot<SepayHeaderView>
         readonly placeholder: SepayHeaderView
@@ -57,7 +66,7 @@ export interface SepayConsoleBaseProps {
         readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
         readonly markSrc: string
         /** The notice drawn in place of the page for a member who may not read it. */
-        readonly refusal?: ComponentProps<typeof ConnectionRefusedPage>["props"]
+        readonly refusal?: ConnectionRefusalView
         readonly gridLabel: string
         readonly mainLabel: string
         readonly rail: {
@@ -67,6 +76,16 @@ export interface SepayConsoleBaseProps {
             readonly isOpen: boolean
         }
         readonly errorTitle: string
+        /** The live rail of webhook deliveries. */
+        readonly events: {
+            readonly title: string
+            readonly liveLabel: string
+            /** How the rail keeps itself current, under the list. */
+            readonly footnote: string
+            readonly slot: DataSlot<ReadonlyArray<SepayEventRow>>
+            readonly placeholder: ReadonlyArray<SepayEventRow>
+            readonly labels: SlotLabels
+        }
         /** Disconnect belongs to the workspace owner; absent for everyone else, whom the back end refuses. */
         readonly disconnect?: { readonly title: string; readonly description: string; readonly label: string }
         /** A disconnected connection is read-only: the way to connect it again, absent while it is connected. */
@@ -86,6 +105,7 @@ export interface SepayConsoleBaseProps {
         readonly confirmDisconnect: () => void
         readonly dismiss: () => void
         readonly openRail: (isOpen: boolean) => void
+        readonly retryEvents: () => void
     }
 }
 
@@ -182,33 +202,79 @@ const DisconnectBand = (props: SepayBandProps) => {
     )
 }
 
+/** The live rail: the deliveries newest first with the live cue, and the source note in its footer band. */
+const EventsRail = (props: SepayBandProps) => {
+    const { events } = props.props
+    return (
+        <>
+            <PaneSection>
+                <SlotView
+                    slot={events.slot}
+                    placeholder={events.placeholder}
+                    labels={events.labels}
+                    onRetry={props.on.retryEvents}
+                    render={(rows, isSkeleton) => (
+                        <Section
+                            kind="list"
+                            title={events.title}
+                            isLoading={isSkeleton}
+                            action={
+                                <Badge isDot tone="success">
+                                    {events.liveLabel}
+                                </Badge>
+                            }
+                            items={rows.map((event) => ({
+                                id: event.id,
+                                title: event.title,
+                                description: event.detail,
+                                badges: [{ label: event.statusLabel, tone: event.statusTone }] as const,
+                            }))}
+                            empty={<EmptyNotice message={events.labels.empty} />}
+                        />
+                    )}
+                />
+            </PaneSection>
+            <PaneSection as="footer">
+                <Text size="xs" tone="muted">
+                    {events.footnote}
+                </Text>
+            </PaneSection>
+        </>
+    )
+}
+
 /**
  * Draws the page of a SePay connection as one page with no tabs (`Page chrome="panes"`): the header band (status and environment),
  * then a main pane of bands (notice, health, the numbered setup steps, disconnect) beside the live webhook rail, which becomes a
- * drawer on a narrow screen. Disconnect asks first.
+ * drawer on a narrow screen. Disconnect asks first. A member who may not read the page gets the trail home and one notice.
  */
 export const SepayConsoleBase = (props: SepayConsoleBaseProps) => {
-    if (props.props.refusal !== undefined) return <ConnectionRefusedPage props={props.props.refusal} />
-    const { rail } = props.props
+    const { rail, refusal } = props.props
+    const isRefused = refusal !== undefined
+    const { areas, columns } = connectionGridOf(isRefused)
+    const isWaiting = isRefused ? false : "isLoading" in props.props.slot
     return (
-        <>
-            <Page
-                chrome="panes"
-                header={headerOf(props.props)}
-                isLoading={"isLoading" in props.props.slot}
-                measure="product"
-            >
-                <PaneGrid
-                    label={props.props.gridLabel}
-                    areas={{ base: ["main"], medium: ["main rail"] }}
-                    columns={{ base: ["fill"], medium: ["fill", "standard"] }}
-                >
-                    <Pane area="main" surface scroll label={props.props.mainLabel}>
-                        <ReconnectBand props={props.props} on={props.on} />
-                        <NoticeBand props={props.props} on={props.on} />
-                        {isFailed(props.props.slot) ? null : props.shape.main}
-                        <DisconnectBand props={props.props} on={props.on} />
-                    </Pane>
+        <Page
+            chrome="panes"
+            header={isRefused ? connectionRefusedHeaderOf(refusal) : headerOf(props.props)}
+            isLoading={isWaiting}
+            measure="product"
+        >
+            <PaneGrid label={props.props.gridLabel} areas={areas} columns={columns}>
+                <Pane area="main" surface scroll label={props.props.mainLabel}>
+                    <ConnectionPaneLayoutNotice refusal={refusal} />
+                    <ReconnectBand props={props.props} on={props.on} />
+                    <NoticeBand props={props.props} on={props.on} />
+                    {props.children}
+                    <DisconnectBand props={props.props} on={props.on} />
+                    <SepayConfirm
+                        {...props.props.confirm}
+                        isPending={props.props.isPending}
+                        onConfirm={props.on.confirmDisconnect}
+                        onDismiss={props.on.dismiss}
+                    />
+                </Pane>
+                {!isRefused && (
                     <Pane
                         area="rail"
                         surface
@@ -221,16 +287,10 @@ export const SepayConsoleBase = (props: SepayConsoleBaseProps) => {
                         isOpen={rail.isOpen}
                         onOpenChange={props.on.openRail}
                     >
-                        {props.shape.rail}
+                        <EventsRail props={props.props} on={props.on} />
                     </Pane>
-                </PaneGrid>
-            </Page>
-            <SepayConfirm
-                {...props.props.confirm}
-                isPending={props.props.isPending}
-                onConfirm={props.on.confirmDisconnect}
-                onDismiss={props.on.dismiss}
-            />
-        </>
+                )}
+            </PaneGrid>
+        </Page>
     )
 }

@@ -1,4 +1,5 @@
 import { type BookingWorkbenchDataView, type BookingWorkbenchActions, BOOKING_TABS } from "@/modules/types"
+import type { ReactNode } from "react"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { BookingSetupSection } from "@/components/frames/BookingSetupSection"
@@ -34,61 +35,40 @@ const DeskPanel = (props: Omit<BookingWorkbenchBaseProps, "shape">) => (
         render={(view, isLoading) => <BookingDesk {...view} {...props.on.desk} isLoading={isLoading} />}
     />
 )
+type SetupData = BookingWorkbenchDataView["panel"]["placeholder"]["setup"]
+type SetupKey = keyof SetupData
+/** The setup regions in the order the tab draws them, each with the form it holds. */
+const SETUP_REGIONS: ReadonlyArray<SetupKey> = ["services", "resources", "exceptions", "policy", "publicPage"]
+const SETUP_FORMS: Record<
+    SetupKey,
+    (setup: SetupData, on: BookingWorkbenchActions["setup"], isLoading: boolean) => ReactNode
+> = {
+    services: (setup, on, isLoading) => <BookingServices {...setup.services} {...on.services} isLoading={isLoading} />,
+    resources: (setup, on, isLoading) => (
+        <BookingResources {...setup.resources} {...on.resources} isLoading={isLoading} />
+    ),
+    exceptions: (setup, on, isLoading) => (
+        <BookingExceptions {...setup.exceptions} {...on.exceptions} isLoading={isLoading} />
+    ),
+    policy: (setup, on, isLoading) => <BookingPolicyForm {...setup.policy} {...on.policy} isLoading={isLoading} />,
+    publicPage: (setup, on, isLoading) => (
+        <BookingPublicPageForm {...setup.publicPage} {...on.publicPage} isLoading={isLoading} />
+    ),
+}
 const SetupPanel = (props: Omit<BookingWorkbenchBaseProps, "shape">) => (
     <Stack gap="section">
-        <SlotView
-            {...props.props.panel}
-            onRetry={props.on.retryPanel}
-            render={(panel, isLoading) => (
-                <BookingSetupSection title={panel.setup.services.title} hint={panel.setup.services.hint}>
-                    <BookingServices {...panel.setup.services} {...props.on.setup.services} isLoading={isLoading} />
-                </BookingSetupSection>
-            )}
-        />
-        <SlotView
-            {...props.props.panel}
-            onRetry={props.on.retryPanel}
-            render={(panel, isLoading) => (
-                <BookingSetupSection title={panel.setup.resources.title} hint={panel.setup.resources.hint}>
-                    <BookingResources {...panel.setup.resources} {...props.on.setup.resources} isLoading={isLoading} />
-                </BookingSetupSection>
-            )}
-        />
-        <SlotView
-            {...props.props.panel}
-            onRetry={props.on.retryPanel}
-            render={(panel, isLoading) => (
-                <BookingSetupSection title={panel.setup.exceptions.title} hint={panel.setup.exceptions.hint}>
-                    <BookingExceptions
-                        {...panel.setup.exceptions}
-                        {...props.on.setup.exceptions}
-                        isLoading={isLoading}
-                    />
-                </BookingSetupSection>
-            )}
-        />
-        <SlotView
-            {...props.props.panel}
-            onRetry={props.on.retryPanel}
-            render={(panel, isLoading) => (
-                <BookingSetupSection title={panel.setup.policy.title} hint={panel.setup.policy.hint}>
-                    <BookingPolicyForm {...panel.setup.policy} {...props.on.setup.policy} isLoading={isLoading} />
-                </BookingSetupSection>
-            )}
-        />
-        <SlotView
-            {...props.props.panel}
-            onRetry={props.on.retryPanel}
-            render={(panel, isLoading) => (
-                <BookingSetupSection title={panel.setup.publicPage.title} hint={panel.setup.publicPage.hint}>
-                    <BookingPublicPageForm
-                        {...panel.setup.publicPage}
-                        {...props.on.setup.publicPage}
-                        isLoading={isLoading}
-                    />
-                </BookingSetupSection>
-            )}
-        />
+        {SETUP_REGIONS.map((region) => (
+            <SlotView
+                key={region}
+                {...props.props.panel}
+                onRetry={props.on.retryPanel}
+                render={(panel, isLoading) => (
+                    <BookingSetupSection title={panel.setup[region].title} hint={panel.setup[region].hint}>
+                        {SETUP_FORMS[region](panel.setup, props.on.setup, isLoading)}
+                    </BookingSetupSection>
+                )}
+            />
+        ))}
     </Stack>
 )
 const ModulePanel = (props: BookingWorkbenchBaseProps) => {

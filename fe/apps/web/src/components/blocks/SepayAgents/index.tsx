@@ -1,8 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useConnectionsRole } from "@/hooks/connections"
-import { useSepayAgents, useSepayConnection, useSepayPlaceholder } from "@/hooks/sepayConnection"
+import { useConnectionRefusal, useConnectionsRole } from "@/hooks/connections"
+import { useSepayAgents, useSepayConnection, useSepayPlaceholder, useSepaySetupStep } from "@/hooks/sepayConnection"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 import type { SepayAgentView } from "@/modules/types"
 import { SepayAgentsBase } from "./component"
@@ -18,14 +18,18 @@ export const SepayAgents = (props: SepayAgentsProps) => {
     const connectionPlaceholder = useSepayPlaceholder()
     const placeholder: ReadonlyArray<SepayAgentView> = [{ id: "placeholder", name: t("title"), isOn: true }]
     const { role } = useConnectionsRole()
+    const setup = useSepaySetupStep(props.connectionId, "agents")
     const agents = useSepayAgents(
         props.connectionId,
         ("items" in connection.slot ? connection.slot.items : undefined)?.agentIds ?? connectionPlaceholder.agentIds,
         ("items" in connection.slot ? connection.slot.items : undefined) !== undefined,
     )
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     return (
         <SepayAgentsBase
             props={{
+                step: setup.step,
                 matching: t("matchingRule"),
                 slot: slotOfReads([connection.read, agents.read], () => agents.read.data),
                 placeholder,
@@ -35,6 +39,7 @@ export const SepayAgents = (props: SepayAgentsProps) => {
                     ("items" in connection.slot ? connection.slot.items : undefined)?.status === "disconnected",
             }}
             on={{
+                toggleStep: setup.toggle,
                 retry: () => {
                     connection.retry()
                     agents.retry()

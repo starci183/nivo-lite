@@ -5,7 +5,8 @@ import { useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useSalesContractForm } from "@/hooks/rhf"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { parseAmount, useSalesActions } from "@/hooks/sales"
+import { useSalesActions } from "@/hooks/sales"
+import { digitsToNumber } from "@/modules/utils"
 import type { SalesContract } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
 import {
@@ -142,7 +143,7 @@ const contractSubmitOf = (input: ContractSubmitInput) => () => {
                 plan: submitted.plan,
                 startsOn: submitted.startsOn,
                 endsOn: submitted.endsOn,
-                amountVnd: parseAmount(submitted.amount),
+                amountVnd: digitsToNumber(submitted.amount),
                 status: submitted.status,
                 note: submitted.note,
             })

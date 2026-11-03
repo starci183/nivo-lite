@@ -57,7 +57,11 @@ export const useContentCommand = (isActive = true, ownerScope?: string): Content
     })
     const explain = (reply: ActionReply): string =>
         t("actionFailed", { error: t(errorKey({ kind: reply.kind, code: reply.code ?? "" })) })
-    const run: ContentCommand["run"] = async (label, action, onOk) => {
+    const execute = async <R extends ActionReply>(
+        label: string,
+        action: () => Promise<R>,
+        onOk?: (done: R) => void,
+    ) => {
         const isCurrent = lifetime.capture()
         if (!isActive || !isCurrent()) return
         setBusy(label)
@@ -78,6 +82,12 @@ export const useContentCommand = (isActive = true, ownerScope?: string): Content
             setBusy(null)
             setPending(false)
         }
+    }
+    const run: ContentCommand["run"] = (label, action, onOk) => {
+        const isCurrent = lifetime.capture()
+        execute(label, action, onOk).catch(() => {
+            if (isCurrent()) setNote({ tone: "error", text: explain({ kind: "unavailable", code: "transport" }) })
+        })
     }
     return {
         isPending,

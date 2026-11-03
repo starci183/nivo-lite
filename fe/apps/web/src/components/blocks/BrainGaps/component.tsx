@@ -23,7 +23,6 @@ export const BrainGapsBase = (props: BrainGapsBaseProps) => {
         <KnowledgeRowsSection
             isHeadingInCard
             section={list.section}
-            isPending={list.isPending}
             body={
                 <SlotView
                     slot={list.slot}

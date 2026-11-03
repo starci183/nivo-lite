@@ -19,6 +19,11 @@ export interface VideoViewInput {
     readonly isActive: boolean
     readonly scope: string
 }
+/** The picture shape an aspect ratio is drawn in: portrait, square or landscape. */
+export const shapeOf = (aspect: string): "portrait" | "square" | "landscape" => {
+    if (aspect === "9:16") return "portrait"
+    return aspect === "1:1" ? "square" : "landscape"
+}
 /** Commands and reads share the actual tenant/instance scope plus their existing region identity. */
 export const videoOwnerOf = (input: VideoViewInput, region: string) => ({
     isActive: input.isActive,
@@ -50,6 +55,11 @@ const sceneCardsOf = (scenes: ReadonlyArray<ScriptScene>, t: ScriptProjection["t
         canMoveDown: index < scenes.length - 1,
         canRemove: scenes.length > 1,
     }))
+/** Whether the script has no scene yet, runs past the longest video or fits. */
+const estimateStateOf = (sceneCount: number, total: number): "none" | "long" | "ok" => {
+    if (sceneCount === 0) return "none"
+    return total > VIDEO_MAX_SECONDS ? "long" : "ok"
+}
 /** The script form's exact labels, estimate and command failures. */
 export const videoScriptFieldsOf = (context: ScriptProjection) => {
     const { input, form, job, error, pending, t, format, failure } = context,
@@ -58,7 +68,7 @@ export const videoScriptFieldsOf = (context: ScriptProjection) => {
         scenes = form.watch("scenes"),
         dirty = form.formState.isDirty,
         total = estimateScriptSeconds(scenes),
-        estimate = scenes.length === 0 ? "none" : total > VIDEO_MAX_SECONDS ? "long" : "ok"
+        estimate = estimateStateOf(scenes.length, total)
     return {
         ui: {
             heading: copy.scriptHeading,
@@ -89,7 +99,7 @@ export const videoScriptFieldsOf = (context: ScriptProjection) => {
                 ? null
                 : {
                       tookLabel:
-                          project?.scriptMs === null || project?.scriptMs === undefined
+                          project.scriptMs === null
                               ? undefined
                               : t("scriptTook", {
                                     s: format.number(project.scriptMs / 1000, { maximumFractionDigits: 0 }),

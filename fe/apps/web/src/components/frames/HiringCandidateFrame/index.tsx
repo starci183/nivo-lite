@@ -12,7 +12,7 @@ type HiringCandidateFrameProps = HiringViews["candidateFrameFields"] & {
 }
 
 /** The candidate's ready regions keep the existing drawer order; independent read nodes come from its Base. */
-const CandidateRegions = (props: HiringCandidateFrameProps) => (
+const CandidateRegions = (props: Omit<HiringCandidateFrameProps, "dialogs">) => (
     <>
         <HiringCandidateSections
             section="actions"
@@ -54,7 +54,9 @@ const CandidateRegions = (props: HiringCandidateFrameProps) => (
 )
 
 /** The original destructive confirmation remains a sibling of the drawer and shares its explicit close/reset. */
-const DeleteConfirmation = (props: HiringCandidateFrameProps) =>
+const DeleteConfirmation = (
+    props: Pick<HiringCandidateFrameProps, "isDeleteOpen" | "on" | "deleteTitle" | "copy" | "isBusy">,
+) =>
     props.isDeleteOpen ? (
         <AlertDialog
             isOpen

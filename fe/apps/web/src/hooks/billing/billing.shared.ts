@@ -73,6 +73,15 @@ export const billingWordsOf = (t: BillingTranslator, format: BillingFormatter): 
     },
 })
 
+/** The names of a plan in each language of the page. */
+interface PlanNames {
+    readonly nameVi: string
+    readonly nameEn: string
+}
+
+/** The plan's name in the language of the page. */
+const planNameOf = (plan: PlanNames, locale: string): string => (locale === "vi" ? plan.nameVi : plan.nameEn)
+
 /** A slot the viewer may not read becomes forbidden; any other slot passes through. */
 const refusedOr = <T>(isRefused: boolean, slot: DataSlot<T>): DataSlot<T> => (isRefused ? { isForbidden: true } : slot)
 
@@ -90,7 +99,7 @@ export const planCardOf = (
         item === undefined
             ? undefined
             : {
-                  planName: plan.data ? (locale === "vi" ? plan.data.nameVi : plan.data.nameEn) : t("noPlan"),
+                  planName: plan.data ? planNameOf(plan.data, locale) : t("noPlan"),
                   status: words.statusLabels[item.status] ?? t("statusCancelled"),
                   statusTone: STATUS_TONES[item.status] ?? "neutral",
                   paidUntil: item.paidUntil

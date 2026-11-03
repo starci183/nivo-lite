@@ -15,7 +15,13 @@ import {
     Textarea,
 } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
-import type { ContractImportDialogProps } from "./index"
+import type { ContractImportDialogEvents, ContractImportDialogView } from "@/modules/types"
+
+/** The resolved words, state and commands of the bulk contract import dialog. */
+interface ContractImportDialogProps {
+    readonly props: ContractImportDialogView
+    readonly on: ContractImportDialogEvents
+}
 
 type FileSourceProps = ContractImportDialogProps
 /** The file source: the drop zone, the chosen file name and, for a workbook, the tab to read. */

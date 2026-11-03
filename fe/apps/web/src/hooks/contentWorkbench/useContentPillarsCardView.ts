@@ -1,35 +1,24 @@
 "use client"
 import { useTranslations } from "next-intl"
-import { useApplyContentPillarPresets, useSaveContentPillars } from "@/hooks/content"
 import { useContentPillarsForm } from "@/hooks/rhf"
-import { useFeatureReset } from "@/hooks/reuseables"
-import type { ContentNoteView, ContentViews, Pillar } from "@/modules/types"
-import { contentSettingsError, type ContentViewInput } from "./contentWorkbench.shared"
+import type { ContentViews, Pillar } from "@/modules/types"
+import { canManageContentSettings, contentSettingsNoteOf, type ContentViewInput } from "./contentWorkbench.shared"
+import { useContentPillarsCommands } from "./useContentPillarsCommands"
 
 const EMPTY_PILLARS: ReadonlyArray<Pillar> = []
 
 /** Owns editable themes and resets only when their actual settings lifetime changes. */
 export const useContentPillarsCardView = (input: ContentViewInput) => {
-    const t = useTranslations("content")
     const form = useContentPillarsForm(input.data?.pillars ?? EMPTY_PILLARS)
-    const save = useSaveContentPillars({ isActive: input.isActive && input.isReady, scope: input.scope })
-    const presets = useApplyContentPillarPresets({ isActive: input.isActive && input.isReady, scope: input.scope })
-    useFeatureReset({
-        isActive: input.isActive,
-        isReady: input.isReady,
-        scope: input.scope,
-        onReset: () => {
-            form.reset()
-        },
-    })
+    const { save, presets } = useContentPillarsCommands(input, form)
     const rows = form.watch("rows")
     const errors = form.formState.errors.rows
-    const error = contentSettingsError(
+    const t = useTranslations("content")
+    const note = contentSettingsNoteOf(
         errors,
         errors?.find?.((row) => row?.name?.message)?.name?.message,
         t("err_input"),
     )
-    const note: ContentNoteView | null = error ? { tone: "error", text: error } : null
     return {
         props:
             input.data === undefined
@@ -57,13 +46,10 @@ export const useContentPillarsCardView = (input: ContentViewInput) => {
                     "rows",
                     form.getValues("rows").filter((row) => row.key !== key),
                 ),
-            preset: () => {
-                if (input.isActive && input.isReady && input.data?.canManage === true) return presets.apply()
-                return undefined
-            },
+            preset: () => (canManageContentSettings(input) ? presets.apply() : undefined),
             save: () => {
-                if (!input.isActive || !input.isReady || input.data?.canManage !== true) return
-                return form.handleSubmit((values) => {
+                if (!canManageContentSettings(input)) return
+                return form.handleSubmit((values) =>
                     save.save({
                         rows: values.rows.map(({ id, name, description, weight, active }) => ({
                             id,
@@ -72,8 +58,8 @@ export const useContentPillarsCardView = (input: ContentViewInput) => {
                             weight,
                             active,
                         })),
-                    })
-                })()
+                    }),
+                )()
             },
             dismissNote: () => form.clearErrors(),
         },

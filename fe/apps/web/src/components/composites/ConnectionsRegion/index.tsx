@@ -2,7 +2,7 @@ import type { WorkbenchConnectionsRegionView as ConnectionsView } from "@/module
 import { EmptyNotice, Link, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 /** Copy and view of the connections region; first-load geometry is the same card as its settled view. */
-export interface ConnectionsRegionProps {
+interface ConnectionsRegionProps {
     readonly label: string
     readonly view: ConnectionsView
     readonly isLoading: boolean

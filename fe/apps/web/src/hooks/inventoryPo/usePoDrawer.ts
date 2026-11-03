@@ -1,8 +1,8 @@
+"use client"
+
 import { usePoCopy } from "./usePoCopy"
 import { useFeatureLifetime } from "@/hooks/reuseables"
 import type { InventoryPanelScope } from "@/hooks/inventory"
-;("use client")
-
 import {
     useDrawer,
     useInventoryFormat,
@@ -47,14 +47,18 @@ export const usePoDrawer = (
             accounting: accounting ? t("poHandedToAccounting") : ".",
         })
     const clipboardLifetime = useFeatureLifetime(isActive, scope)
-    const copy = async (text: string) => {
+    const copy = (text: string) => {
         const isCurrent = clipboardLifetime.capture()
-        try {
-            await navigator.clipboard.writeText(text)
-            if (isCurrent()) change((current) => ({ ...current, copied: true }))
-        } catch {
-            if (isCurrent()) change((current) => ({ ...current, copied: false }))
-        }
+        Promise.resolve()
+            .then(() => navigator.clipboard.writeText(text))
+            .then(
+                () => {
+                    if (isCurrent()) change((current) => ({ ...current, copied: true }))
+                },
+                () => {
+                    if (isCurrent()) change((current) => ({ ...current, copied: false }))
+                },
+            )
     }
     const whenOpen = (act: (open: PoDrawerState) => void) => () => {
         if (state !== null) act(state)
@@ -98,7 +102,7 @@ interface PoDrawerActionsInput {
     readonly decisions: InventoryDecisions
     readonly done: () => undefined
     readonly receivedText: (status: string, changes: ReadonlyArray<string>, accounting: boolean) => string
-    readonly copy: (text: string) => Promise<void>
+    readonly copy: (text: string) => void
     readonly drawer: DrawerControl<PoDrawerState>
 }
 

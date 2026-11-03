@@ -23,6 +23,14 @@ import { Cluster, Stack, Alert, Button, SurfaceCard, Text } from "@starci/gramma
 import { VideoErrorAlert } from "@/components/leaves/VideoErrorAlert"
 import { VideoStepFooter } from "@/components/leaves/VideoStepFooter"
 
+const sceneActionsOf = (props: VideoScriptFormProps, index: number) => ({
+    move: (direction: -1 | 1) => props.on.move(index, direction),
+    remove: () => props.on.remove(index),
+    caption: (value: string) => props.on.caption(index, value),
+    voiceover: (value: string) => props.on.voiceover(index, value),
+    media: (value: string | null) => props.on.media(index, value),
+})
+
 const scenesOf = (props: VideoScriptFormProps) => (
     <>
         {props.scenes.map((scene, index) => (
@@ -38,13 +46,7 @@ const scenesOf = (props: VideoScriptFormProps) => (
                 moveUpLabel={props.moveUpLabel}
                 moveDownLabel={props.moveDownLabel}
                 removeLabel={props.removeLabel}
-                on={{
-                    move: (direction) => props.on.move(index, direction),
-                    remove: () => props.on.remove(index),
-                    caption: (value) => props.on.caption(index, value),
-                    voiceover: (value) => props.on.voiceover(index, value),
-                    media: (value) => props.on.media(index, value),
-                }}
+                on={sceneActionsOf(props, index)}
             />
         ))}
     </>

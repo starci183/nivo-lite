@@ -1,3 +1,4 @@
+import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { Alert, Stepper, Text } from "@starci/grammar/common"
 import type { StepperStep, StepperStepState } from "@starci/grammar/common"
 import { Icon } from "@/components/leaves/Icon"
@@ -18,6 +19,14 @@ export interface SepayChecklistStep {
 /** Props for {@link SepayChecklistBase}. */
 export interface SepayChecklistBaseProps {
     readonly props: {
+        /** The step's band: its place, words and whether it is open. */
+        readonly step: {
+            readonly ordinal: number
+            readonly title: string
+            readonly summary: string
+            readonly hint: string
+            readonly isOpen: boolean
+        }
         readonly stepsLabel: string
         readonly waitingText: string
         readonly waitingLabel: string
@@ -26,7 +35,7 @@ export interface SepayChecklistBaseProps {
         readonly placeholder: ReadonlyArray<SepayChecklistStep>
         readonly labels: SlotLabels
     }
-    readonly on: { readonly retry: () => void }
+    readonly on: { readonly retry: () => void; readonly toggle: (isOpen: boolean) => void }
 }
 
 /** The waiting copy of the current step. */
@@ -52,28 +61,30 @@ const stepsOf = (steps: ReadonlyArray<SepayChecklistStep>, waiting: Waiting): Re
 
 /** Draws the test steps inside the fourth setup step: a vertical stepper, each step true only when the webhook door really saw it. */
 export const SepayChecklistBase = (props: SepayChecklistBaseProps) => (
-    <SlotView
-        {...props.props}
-        onRetry={props.on.retry}
-        render={(steps, isSkeleton) => {
-            const current = steps.find((step) => step.state === "current") ?? steps[steps.length - 1]
-            return (
-                <Stepper
-                    label={props.props.stepsLabel}
-                    orientation="vertical"
-                    steps={stepsOf(steps, { text: props.props.waitingText, label: props.props.waitingLabel })}
-                    currentStepId={current?.id ?? ""}
-                    isLoading={isSkeleton}
-                    stateLabel={(state) => (state === "complete" ? props.props.doneLabel : undefined)}
-                    renderMarker={(_step, index, state) =>
-                        state === "complete" ? (
-                            <Icon props={{ name: "complete", ariaLabel: props.props.doneLabel }} />
-                        ) : (
-                            index + 1
-                        )
-                    }
-                />
-            )
-        }}
-    />
+    <ConnectionStepBand {...props.props.step} onToggle={props.on.toggle}>
+        <SlotView
+            {...props.props}
+            onRetry={props.on.retry}
+            render={(steps, isSkeleton) => {
+                const current = steps.find((step) => step.state === "current") ?? steps[steps.length - 1]
+                return (
+                    <Stepper
+                        label={props.props.stepsLabel}
+                        orientation="vertical"
+                        steps={stepsOf(steps, { text: props.props.waitingText, label: props.props.waitingLabel })}
+                        currentStepId={current?.id ?? ""}
+                        isLoading={isSkeleton}
+                        stateLabel={(state) => (state === "complete" ? props.props.doneLabel : undefined)}
+                        renderMarker={(_step, index, state) =>
+                            state === "complete" ? (
+                                <Icon props={{ name: "complete", ariaLabel: props.props.doneLabel }} />
+                            ) : (
+                                index + 1
+                            )
+                        }
+                    />
+                )
+            }}
+        />
+    </ConnectionStepBand>
 )

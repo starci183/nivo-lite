@@ -38,18 +38,15 @@ export interface AdminHealthBaseProps {
 }
 
 /** Draws the health page: its header band from the words, over the finished view, or the same view as a skeleton, the failure with its retry, or the empty notice. */
-export const AdminHealthBase = (props: AdminHealthBaseProps) => (
-    <SlotView
-        {...props.props}
-        onRetry={props.on.retry}
-        render={(view, isLoading) => (
-            <Page
-                measure="full"
-                isLoading={isLoading}
-                header={{ meta: view.eyebrow, title: view.title, description: view.description }}
-            >
-                <AdminHealthView props={view} isLoading={isLoading} />
-            </Page>
-        )}
-    />
-)
+export const AdminHealthBase = (props: AdminHealthBaseProps) => {
+    const words = props.props.placeholder
+    return (
+        <Page measure="full" header={{ meta: words.eyebrow, title: words.title, description: words.description }}>
+            <SlotView
+                {...props.props}
+                onRetry={props.on.retry}
+                render={(view, isLoading) => <AdminHealthView props={view} isLoading={isLoading} />}
+            />
+        </Page>
+    )
+}

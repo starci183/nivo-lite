@@ -1,6 +1,6 @@
 import type { DropdownMenuEntry, DropdownMenuSection } from "@starci/grammar/common"
 import { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
-import type { ConsoleIconName, ConsoleSession, ConsoleWorkspace } from "@/modules/types"
+import type { ConsoleIconName, ConsoleSessionView, ConsoleWorkspace } from "@/modules/types"
 
 /** The console route of the Office, the page people come to first. */
 export const OFFICE_ROUTE = "/chat"
@@ -115,7 +115,7 @@ export const workspaceSection = (
 })
 
 /** The session the console frame draws before it is read (the frame waits for the real one). */
-export const NO_CONSOLE_SESSION: ConsoleSession = {
+export const NO_CONSOLE_SESSION: ConsoleSessionView = {
     member: { workspaceId: "", userId: "", name: "", role: "staff", staffId: null },
     workspaceName: "",
     userName: "",

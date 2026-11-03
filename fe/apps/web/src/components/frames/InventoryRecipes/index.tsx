@@ -17,7 +17,8 @@ type InventoryRecipesProps = InventoryRecipesData & {
 }
 import { InventoryRecipeDrawer } from "@/components/composites/InventoryRecipeDrawer"
 
-import { Button, EmptyNotice, SurfaceCard, Stack } from "@starci/grammar/common"
+import { Button, Stack } from "@starci/grammar/common"
+import { InventoryRowList } from "@/components/composites/InventoryRowList"
 
 /** The recipes tab: what one product on an order takes out of stock. */
 export const InventoryRecipes = (props: InventoryRecipesProps) => {
@@ -49,11 +50,11 @@ export const InventoryRecipes = (props: InventoryRecipesProps) => {
                     </Button>
                 </div>
             )}
-            <SurfaceCard
+            <InventoryRowList
                 isLoading={props.isLoading}
-                kind="list"
                 label={props.listLabel}
-                empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
+                emptyTitle={props.emptyTitle}
+                emptyBody={props.emptyBody}
                 items={props.rows.map((row) => ({
                     id: row.id,
                     title: row.title,

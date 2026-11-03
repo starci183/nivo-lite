@@ -1,6 +1,7 @@
 import type { HiringViews, HiringActions } from "@/modules/types"
 
-import { Alert, Button, Dialog, Text, Textarea, Stack } from "@starci/grammar/common"
+import { Button, Text, Textarea } from "@starci/grammar/common"
+import { HiringDialogShell } from "@/components/branches/HiringDialogShell"
 
 /** The words and state of the reject dialog. */
 interface HiringRejectDialogProps {
@@ -13,25 +14,24 @@ export const HiringRejectDialog = (props: HiringRejectDialogProps) => {
     const { copy, reason, error } = props.props
     const { on } = props
     return (
-        <Dialog
-            isOpen
-            onOpenChange={(open) => {
-                if (!open) on.close()
-            }}
+        <HiringDialogShell
             size="md"
             title={copy.title}
             closeLabel={copy.closeLabel}
             description={copy.hint}
             footer={<HiringRejectDialogFooter {...props} />}
-        >
-            <Stack gap="row">
-                {error === null ? null : <Alert tone="negative" title={copy.failed} description={error} />}
-                <Textarea label={copy.reasonLabel} rows={3} value={reason} onValueChange={on.reason} />
-                <Text size="sm" tone="muted">
-                    {copy.kept}
-                </Text>
-            </Stack>
-        </Dialog>
+            errorTitle={copy.failed}
+            error={error}
+            onClose={on.close}
+            body={
+                <>
+                    <Textarea label={copy.reasonLabel} rows={3} value={reason} onValueChange={on.reason} />
+                    <Text size="sm" tone="muted">
+                        {copy.kept}
+                    </Text>
+                </>
+            }
+        />
     )
 }
 

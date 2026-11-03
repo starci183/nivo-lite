@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useFormatter, useTranslations } from "next-intl"
 import { useWorkspaceMember } from "@/hooks/knowledge"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
@@ -101,8 +101,13 @@ const paneOf = (context: PaneContext) => {
     }
 }
 
-const dossierIdOf = (input: FindingsSelection, categories: ReadonlyArray<CategoryView>): string | undefined => {
+/** A map node resolves to its dossier only once the categories are read: until then no dossier is selected and the pane stays hidden. */
+const dossierIdOf = (
+    input: FindingsSelection,
+    categories: ReadonlyArray<CategoryView> | undefined,
+): string | undefined => {
     if (input.kind === "dossier") return input.dossierId
+    if (categories === undefined) return undefined
     const selected = selectionOf(categories, input.nodeId ?? null)
     return selected.kind === "dossier" ? selected.dossier.id : undefined
 }
@@ -117,7 +122,7 @@ export const useDossierFindingsView = (input: FindingsSelection) => {
     const member = useWorkspaceMember()
     const slotLabels = useSlotLabels()
     const { categories } = useBrainDossiers()
-    const dossierId = dossierIdOf(input, categories ?? [])
+    const dossierId = dossierIdOf(input, categories)
     const findingId = input.kind === "dossier" ? input.findingId : undefined
     const { dossier } = useDossierRecord(dossierId)
     const summary = useDossierReviewSummary()
@@ -131,12 +136,14 @@ export const useDossierFindingsView = (input: FindingsSelection) => {
     }
     const dialog = useFindingDialog(commands, list.members, openDraft)
     const closeDialog = dialog.close
-    useEffect(() => {
+    const [seenDossierId, setSeenDossierId] = useState(dossierId)
+    if (seenDossierId !== dossierId) {
+        setSeenDossierId(dossierId)
         if (dossierId === undefined) {
             setPicked(undefined)
             closeDialog()
         }
-    }, [dossierId, closeDialog])
+    }
     const findings = ("items" in list.slot ? list.slot.items : undefined) ?? []
     const focused = findings.find((one) => one.id === findingId)
     const filter = picked ?? (focused === undefined ? "open" : filterOfStatus(focused.status))

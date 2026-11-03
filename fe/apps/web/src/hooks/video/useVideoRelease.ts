@@ -8,6 +8,7 @@ import {
     useMutateShareVideoProjectSwr,
 } from "@/hooks/swr"
 import type { Brand } from "@/modules/video"
+import { projectCommandOf } from "./video.shared"
 import { useVideoRefresh } from "./useVideoRefresh"
 import type { VideoOwner } from "./useVideoRefresh"
 
@@ -19,18 +20,13 @@ export const useVideoRelease = (owner?: VideoOwner) => {
     const publishMutation = useMutateMarkVideoPublishedSwr()
     const shareMutation = useMutateShareVideoProjectSwr()
     const brandMutation = useMutateSaveVideoBrandSwr()
-    const approve = (
-        projectId: string,
-        onResult?: (result: Awaited<ReturnType<typeof approveMutation.trigger>> | undefined) => void,
-    ) => complete(() => approveMutation.trigger({ projectId }), t("status_approved"), onResult)
-    const publish = (
-        projectId: string,
-        onResult?: (result: Awaited<ReturnType<typeof publishMutation.trigger>> | undefined) => void,
-    ) => complete(() => publishMutation.trigger({ projectId }), t("postedNote"), onResult)
-    const share = (
-        projectId: string,
-        onResult?: (result: Awaited<ReturnType<typeof shareMutation.trigger>> | undefined) => void,
-    ) => complete(() => shareMutation.trigger({ projectId }), t("shared"), onResult)
+    const approve = projectCommandOf(
+        complete,
+        (projectId) => approveMutation.trigger({ projectId }),
+        t("status_approved"),
+    )
+    const publish = projectCommandOf(complete, (projectId) => publishMutation.trigger({ projectId }), t("postedNote"))
+    const share = projectCommandOf(complete, (projectId) => shareMutation.trigger({ projectId }), t("shared"))
     const saveBrand = (
         brand: Brand,
         onResult?: (result: Awaited<ReturnType<typeof brandMutation.trigger>> | undefined) => void,

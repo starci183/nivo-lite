@@ -1,4 +1,4 @@
-export { MOVE_ACTION, actionsOf } from "@/modules/booking-desk"
+export { AUTO_RESOURCE, MOVE_ACTION, actionsOf } from "@/modules/booking-desk"
 export {
     BOOKING_STATUS_TONE,
     blankPlacementOf,

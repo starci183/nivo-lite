@@ -3,11 +3,11 @@ import type { ContentViews, ContentActions } from "@/modules/types"
 
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
-import { channelLabel, pad2, pillarBalance, shiftMonth, slotsForMonth, vietnamClock } from "@/hooks/content"
+import { pad2, shiftMonth, slotsForMonth, vietnamClock } from "@/hooks/content"
 import { useFeatureReset } from "@/hooks/reuseables"
+import { balanceChannelsOf, balanceThemesOf } from "@/modules/content"
 import type { ContentViewInput } from "./contentWorkbench.shared"
 
-const percent = (share: number): number => Math.round(share * 100)
 /** Owns the actual ContentBalancePanel data derivations and conditional controller lifetime. */
 export const useContentBalancePanelView = (input: ContentViewInput) => {
     const data = input.data
@@ -44,35 +44,8 @@ export const useContentBalancePanelView = (input: ContentViewInput) => {
                   m: ym.m,
                   monthTitle: t("monthTitle", { m: pad2(ym.m), y: ym.y }),
                   title: `${t("balanceTitle")} · ${t("balanceScope", { m: pad2(ym.m), y: ym.y })}`,
-                  themes:
-                      live.length === 0
-                          ? []
-                          : pillarBalance(data.pillars, monthItems).map((row) => ({
-                                id: row.pillarId ?? "none",
-                                label: row.name || t("balanceNone"),
-                                value: Math.min(100, percent(row.actualShare)),
-                                max: 100,
-                                valueLabel: t("balanceActual", { n: row.count, p: percent(row.actualShare) }),
-                                target:
-                                    row.targetShare > 0
-                                        ? t("balanceTarget", { p: percent(row.targetShare) })
-                                        : undefined,
-                            })),
-                  channels: data.cadence
-                      .filter((c) => c.posts_per_week > 0)
-                      .map((c) => {
-                          const want = slots.filter((s) => s.channel === c.channel).length
-                          const have = live.filter((i) => i.channels.includes(c.channel)).length
-                          const label = channelLabel(t, c.channel)
-                          return {
-                              id: c.channel,
-                              label,
-                              value: want > 0 ? Math.min(want, have) : 0,
-                              max: Math.max(1, want),
-                              valueLabel: t("cadenceRow", { channel: label, n: have, want }),
-                              target: undefined,
-                          }
-                      }),
+                  themes: balanceThemesOf(t, data.pillars, monthItems, live),
+                  channels: balanceChannelsOf(t, data.cadence, slots, live),
               }
     const on: ContentActions["balanceActions"] = {
         shift: (by) => setYm((cur) => shiftMonth(cur.y, cur.m, by)),

@@ -94,9 +94,14 @@ export const contentEditorEvents = (
         mark: (channel) =>
             withChannel(channel, (id) => {
                 const isCurrent = connected.capture()
-                state.validateProof(id).then((valid) => {
-                    if (valid && isCurrent()) commands.markPosted(id, form.proof[id])
-                })
+                state
+                    .validateProof(id)
+                    .then((valid) => {
+                        if (valid && isCurrent()) commands.markPosted(id, form.proof[id])
+                    })
+                    .catch((error: unknown) => {
+                        if (isCurrent()) command.say("error", error instanceof Error ? error.message : String(error))
+                    })
             }),
         save: commands.save,
         draft: () => commands.draft(form.hint),

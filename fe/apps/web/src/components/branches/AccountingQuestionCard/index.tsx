@@ -11,7 +11,7 @@ import {
     Text,
     Textarea,
 } from "@starci/grammar/common"
-import { DecisionMissingInputs } from "@/components/leaves/DecisionMissingInputs"
+import { FormFieldList } from "@/components/leaves/FormFieldList"
 import type { AccountingQuestionCardView } from "@/modules/types"
 /** A proposal's settled display data and bound decision actions, with one unresolved drawing flag. */
 interface AccountingQuestionCardProps extends AccountingQuestionCardView {
@@ -156,12 +156,15 @@ const renderAccountingQuestionDetails = (props: AccountingQuestionCardProps) => 
         {props.props.isOpen && !props.props.isFailed && props.props.fields.length ? (
             <Fieldset legend={props.props.missingLabel} isDisabled={props.props.isBusy}>
                 <Stack gap="row">
-                    <DecisionMissingInputs
+                    <FormFieldList
                         idPrefix={props.props.id}
-                        fields={props.props.fields}
+                        fields={props.props.fields.map((field) => ({
+                            ...field,
+                            kind: "text" as const,
+                            change: (value: string) => props.on.changeField(field.name, value),
+                        }))}
                         isRequired
                         isDisabled={props.props.isBusy}
-                        onField={props.on.changeField}
                     />
                 </Stack>
             </Fieldset>

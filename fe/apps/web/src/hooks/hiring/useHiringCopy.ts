@@ -18,8 +18,9 @@ export const useHiringCopy = (owner?: HiringOwner) => {
         (id: string, text: string) => {
             const isCurrent = lifetime.capture()
             if (!isCurrent()) return
-            try {
-                navigator.clipboard.writeText(text).then(
+            Promise.resolve()
+                .then(() => navigator.clipboard.writeText(text))
+                .then(
                     () => {
                         if (isCurrent()) setCopiedId(id)
                     },
@@ -27,9 +28,6 @@ export const useHiringCopy = (owner?: HiringOwner) => {
                         if (isCurrent()) setCopiedId(null)
                     },
                 )
-            } catch {
-                if (isCurrent()) setCopiedId(null)
-            }
         },
         [lifetime],
     )

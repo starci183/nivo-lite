@@ -1,16 +1,45 @@
 import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
 import { FilterButtonGroup, EmptyNotice, Grid, SearchField, SurfaceCard, Section } from "@starci/grammar/common"
+import type { BadgeTone, ListRowData } from "@starci/grammar/common"
 import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
 import { AgentTeamRow } from "@/components/composites/AgentTeamRow"
-import { agentTeamItemOf, type AgentTeamRowData } from "@/modules/team"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
+
+/** What one installed agent shows on the catalogue, already in the reader language. */
+export interface AgentCatalogTeamRow {
+    readonly name: string
+    readonly seed: string
+    readonly avatarUrl: string | null
+    /** "role · channel", already joined. */
+    readonly description: string
+    readonly statusLabel: string
+    readonly statusTone: BadgeTone
+    /** "Setup 3/8". */
+    readonly progressLabel: string
+    readonly confirmed: number
+    readonly total: number
+    /** "Continue setup" while gates are open, else "Open". */
+    readonly actionLabel: string
+    readonly href: string
+}
 
 /** One installed agent of the first section with the key the row is listed by. */
 export interface AgentCatalogTeamEntry {
     readonly key: string
-    readonly row: Omit<AgentTeamRowData, "isLoading">
+    readonly row: AgentCatalogTeamRow
 }
+
+/** The list item of one installed agent: its identity and status, with the setup progress as the detail. */
+const teamItemOf = (row: AgentCatalogTeamRow, id: string, detail: ListRowData["detail"]): ListRowData => ({
+    id,
+    title: row.name,
+    description: row.description,
+    leading: { avatar: { name: row.name, seed: row.seed, src: row.avatarUrl || AGENT_MARK_MASCOT_SRC, kind: "agent" } },
+    badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: true }],
+    action: { label: row.actionLabel, intent: "neutral", href: row.href },
+    detail,
+})
 
 /** One role card of the second section with the key the handlers name it by. */
 export interface AgentCatalogRoleEntry {
@@ -82,11 +111,7 @@ const Team = (props: TeamProps) => (
         fact={String(props.data.team.length)}
         isLoading={props.isLoading}
         items={props.data.team.map((entry) =>
-            agentTeamItemOf(
-                { ...entry.row, avatarUrl: entry.row.avatarUrl || AGENT_MARK_MASCOT_SRC },
-                entry.key,
-                <AgentTeamRow {...entry.row} isLoading={props.isLoading} />,
-            ),
+            teamItemOf(entry.row, entry.key, <AgentTeamRow {...entry.row} isLoading={props.isLoading} />),
         )}
         empty={<EmptyNotice message={props.emptyTitle} description={props.emptyHint} />}
     />

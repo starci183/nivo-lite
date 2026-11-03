@@ -123,7 +123,7 @@ export const useCatalogEntries = (): {
             },
         ]
     })
-    const agents = (installations ?? []).map((installation): InstalledAgent => {
+    const agents = (installations === undefined ? [] : installations).map((installation): InstalledAgent => {
         const copy = catalog.modules[installation.moduleKey]
         const lifecycle = agentLifecycleOf(installation)
         return {

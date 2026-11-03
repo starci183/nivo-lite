@@ -21,7 +21,7 @@ import { useBookingTransition } from "./useBookingTransition"
 import type { DeskNotice } from "./bookingDesk.shared"
 
 /** The owner's commands on bookings; every answer becomes a toast and revalidates every cached board. */
-export const useBookingActions = (onChanged: () => void, isActive = true, scope = "") => {
+export const useBookingActions = (onChanged: () => Promise<unknown>, isActive = true, scope = "") => {
     const t = useTranslations("workbenchBooking")
     const withToast = useGraphQLWithToast()
     const { mutate } = useSWRConfig()
@@ -61,8 +61,14 @@ export const useBookingActions = (onChanged: () => void, isActive = true, scope 
                 })
                 if (answer === undefined) return
                 if (isCurrent()) finish()
-                mutate(matchesSwrKey(QUERY_BOOKING_BOARD_SWR_KEY))
-                if (isCurrent()) onChanged()
+                await withToast(
+                    () =>
+                        Promise.all([
+                            mutate(matchesSwrKey(QUERY_BOOKING_BOARD_SWR_KEY)),
+                            ...(isCurrent() ? [onChanged()] : []),
+                        ]),
+                    { showSuccessToast: false },
+                )
             }),
     }
 }

@@ -1,9 +1,10 @@
-import type { InventoryPanelScope } from "./inventory.shared"
-;("use client")
+"use client"
 
+import { type InventoryPanelScope } from "./inventory.shared"
 import { useTranslations } from "next-intl"
 import type { SupplierFormField, SupplierFormValues, SupplierView } from "@/modules/types"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
+import { sayAll } from "@/modules/inventory"
 import { useDrawer } from "./useDrawer"
 import { useInventoryRun } from "./useInventoryRun"
 import { useSay } from "./useSay"
@@ -67,7 +68,7 @@ export const useSupplierDrawer = (commands: InventoryCommandSet<"saveSupplier">,
                             ...(target === null ? {} : { id: target.id }),
                             ...state.values,
                         }),
-                    (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
+                    drawer.finish,
                 )
             },
             close: drawer.close,
@@ -75,21 +76,25 @@ export const useSupplierDrawer = (commands: InventoryCommandSet<"saveSupplier">,
     }
 }
 
+/** The sentences of the catalog the drawer reads under their own names. */
+const SUPPLIER_DRAWER_KEYS = [
+    "supplierAddTitle",
+    "supplierDrawerHint",
+    "close",
+    "supplierName",
+    "supplierContact",
+    "supplierChannel",
+    "supplierEmail",
+    "supplierPhone",
+    "supplierZalo",
+    "supplierLead",
+    "supplierTerms",
+    "supplierNote",
+    "save",
+] as const
+
 /** Resolves the exact supplier drawer copy in its domain owner. */
-const supplierDrawerCopy = (say: ReturnType<typeof useSay>, owner: SupplierView | null) =>
-    ({
-        supplierAddTitle: say("supplierAddTitle"),
-        supplierEditTitle: say("supplierEditTitle", { name: owner?.name ?? "" }),
-        supplierDrawerHint: say("supplierDrawerHint"),
-        close: say("close"),
-        supplierName: say("supplierName"),
-        supplierContact: say("supplierContact"),
-        supplierChannel: say("supplierChannel"),
-        supplierEmail: say("supplierEmail"),
-        supplierPhone: say("supplierPhone"),
-        supplierZalo: say("supplierZalo"),
-        supplierLead: say("supplierLead"),
-        supplierTerms: say("supplierTerms"),
-        supplierNote: say("supplierNote"),
-        save: say("save"),
-    }) as const
+const supplierDrawerCopy = (say: ReturnType<typeof useSay>, owner: SupplierView | null) => ({
+    ...sayAll(say, SUPPLIER_DRAWER_KEYS),
+    supplierEditTitle: say("supplierEditTitle", { name: owner?.name ?? "" }),
+})

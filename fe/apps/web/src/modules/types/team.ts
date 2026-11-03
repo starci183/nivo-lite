@@ -22,3 +22,26 @@ export interface TeamPageHeading {
     readonly description: string
     readonly eyebrow?: string
 }
+
+/** The invitation command whose own control displays its pending state. */
+export type InviteAction = "resend" | "copy" | "revoke"
+
+/** The row-local link and clipboard acknowledgement. */
+export interface InviteLinkView {
+    readonly label: string
+    readonly value: string
+    readonly isCopied: boolean
+}
+
+/** Resolved invitation facts shared by its list identity and action detail. */
+export interface InviteRowView {
+    readonly id: string
+    readonly email: string
+    readonly expiry: string
+    readonly staffNote?: string | undefined
+    readonly roleLabel: string
+    readonly isExpired: boolean
+    readonly isBusy: boolean
+    readonly pendingAction: InviteAction | null
+    readonly link?: InviteLinkView | undefined
+}

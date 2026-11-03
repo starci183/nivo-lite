@@ -122,7 +122,7 @@ export const useBookingDeskState = (input: BookingDeskStateInput) => {
         range.board?.timezone ?? "",
         () => {
             setOpenId(null)
-            range.reload()
+            return range.reload()
         },
         input.isActive,
         input.scope,

@@ -31,7 +31,6 @@ export {
     monthKey,
     moveToDay,
     pad2,
-    pillarBalance,
     shiftMonth,
     slotsForMonth,
     toInstant,

@@ -43,6 +43,21 @@ export interface InviteOverviewBaseProps {
     }
 }
 
+/** What one sign-in or sign-up link of the invitation says and where it goes. */
+interface SignLinkProps {
+    readonly intent: "commit" | "alternative"
+    readonly href: string
+    readonly label: string
+    readonly isLoading: boolean
+}
+
+/** One full-width link of the signed-out visitor to the sign-in or the sign-up page. */
+const SignLink = (props: SignLinkProps) => (
+    <Button intent={props.intent} width="fill" href={props.href} isLoading={props.isLoading}>
+        {props.label}
+    </Button>
+)
+
 /** The step a visitor can take on a usable invitation. */
 const Actions = (props: InviteOverviewBaseProps) => {
     const view = props.props.view
@@ -52,12 +67,18 @@ const Actions = (props: InviteOverviewBaseProps) => {
                 <Text size="sm" tone="muted">
                     {view.signedOutHint}
                 </Text>
-                <Button intent="commit" width="fill" href={view.signInHref} isLoading={props.props.isLoading}>
-                    {view.signInLabel}
-                </Button>
-                <Button intent="alternative" width="fill" href={view.signUpHref} isLoading={props.props.isLoading}>
-                    {view.signUpLabel}
-                </Button>
+                <SignLink
+                    intent="commit"
+                    href={view.signInHref}
+                    label={view.signInLabel}
+                    isLoading={props.props.isLoading}
+                />
+                <SignLink
+                    intent="alternative"
+                    href={view.signUpHref}
+                    label={view.signUpLabel}
+                    isLoading={props.props.isLoading}
+                />
             </>
         )
     }

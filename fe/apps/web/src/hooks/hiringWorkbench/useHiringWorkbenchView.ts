@@ -6,6 +6,7 @@ import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDash
 import { useHiringWorkbench } from "@/hooks/hiring"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useGraphQLWithToast } from "@/modules/toast"
 import type { HiringWorkbenchData } from "@/hooks/hiringWire"
 
 import { useHiringWorkbenchCopy } from "./useHiringWorkbenchCopy"
@@ -50,6 +51,7 @@ const figuresOf = (board: HiringWorkbenchData, t: ReturnType<typeof useTranslati
 export const useHiringWorkbenchView = (input: HiringWorkbenchInput): HiringAssembly["workbenchView"] => {
     const t = useTranslations("workbenchFigures")
     const labels = useSlotLabels()
+    const runGraphQL = useGraphQLWithToast()
     const copy = useHiringWorkbenchCopy()
     const { activeWorkspaceId } = useActiveWorkspace()
     const scope = JSON.stringify([activeWorkspaceId, input.installationId])
@@ -93,7 +95,11 @@ export const useHiringWorkbenchView = (input: HiringWorkbenchInput): HiringAssem
             selectTab: tabs.select,
             closeWhy: frame.closeWhy,
             retryDashboard: frame.reload,
-            retry: board.reload,
+            retry: () => {
+                board
+                    .reload()
+                    .catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
+            },
             panels: panels.on,
             settings: settings.on,
             candidate: candidate.on,

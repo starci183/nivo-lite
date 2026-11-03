@@ -1,4 +1,4 @@
-import { Alert, Button, DescriptionList, Meter, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, DescriptionList, Meter, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, MarketingReportView, SlotLabels } from "@/modules/types"
 
@@ -69,73 +69,70 @@ const Report = (props: ReportProps) => {
     const { words } = props.props
     const { view, isLoading } = props
     return (
-        <Stack gap="region">
-            <Section
+        <Stack gap="section">
+            <SurfaceCard
+                kind="figures"
+                label={words.title}
                 headingLevel={2}
-                title={words.title}
-                description={view.period === "" ? words.description : `${words.description} · ${view.period}`}
+                {...(props.props.canPost
+                    ? {
+                          labelEnd: (
+                              <Button
+                                  intent="commit"
+                                  isPending={props.props.isPosting}
+                                  isDisabled={isLoading}
+                                  onPress={props.on.post}
+                              >
+                                  {words.postLabel}
+                              </Button>
+                          ),
+                      }
+                    : {})}
+                footer={view.period === "" ? words.description : `${words.description} · ${view.period}`}
                 isLoading={isLoading}
-                action={
-                    props.props.canPost ? (
-                        <Button
-                            intent="commit"
-                            isPending={props.props.isPosting}
-                            isDisabled={isLoading}
-                            onPress={props.on.post}
-                        >
-                            {words.postLabel}
-                        </Button>
-                    ) : undefined
-                }
-            >
-                <SurfaceCard
-                    kind="figures"
-                    ariaLabel={words.title}
-                    isLoading={isLoading}
-                    items={view.kpis.map((item) => ({
-                        id: item.id,
-                        term: item.term,
-                        value: item.description,
-                        meta: item.meta,
-                    }))}
-                />
-                <SurfaceCard label={words.chartTitle}>
-                    <Stack gap="section">
-                        <Text size="sm" tone="muted">
-                            {words.chartNote}
-                        </Text>
-                        <Stack gap="row">
-                            {view.days.map((day) => (
-                                <Meter
-                                    key={day.id}
-                                    label={day.label || words.chartTitle}
-                                    value={day.total}
-                                    maxValue={view.dayMax}
-                                    valueLabel={
-                                        day.breakdown === "" ? String(day.total) : `${day.total} · ${day.breakdown}`
-                                    }
-                                    isLoading={isLoading}
-                                />
-                            ))}
-                        </Stack>
-                    </Stack>
-                </SurfaceCard>
-                {view.channels.length === 0 ? null : (
-                    <SurfaceCard label={words.channelsTitle}>
-                        <DescriptionList layout="columns" isDivided items={view.channels} />
-                    </SurfaceCard>
-                )}
-                {view.insight === "" ? null : (
-                    <Alert tone="informative" title={words.insightTitle} description={view.insight} />
-                )}
-                <Suggestion words={words} view={view} />
-                <TopPosts words={words} view={view} />
-                {props.props.canPost ? (
-                    <Text size="xs" tone="muted">
-                        {words.postHint}
+                items={view.kpis.map((item) => ({
+                    id: item.id,
+                    term: item.term,
+                    value: item.description,
+                    meta: item.meta,
+                }))}
+            />
+            <SurfaceCard label={words.chartTitle}>
+                <Stack gap="section">
+                    <Text size="sm" tone="muted">
+                        {words.chartNote}
                     </Text>
-                ) : null}
-            </Section>
+                    <Stack gap="row">
+                        {view.days.map((day) => (
+                            <Meter
+                                key={day.id}
+                                label={day.label || words.chartTitle}
+                                value={day.total}
+                                maxValue={view.dayMax}
+                                valueLabel={
+                                    day.breakdown === "" ? String(day.total) : `${day.total} · ${day.breakdown}`
+                                }
+                                isLoading={isLoading}
+                            />
+                        ))}
+                    </Stack>
+                </Stack>
+            </SurfaceCard>
+            {view.channels.length === 0 ? null : (
+                <SurfaceCard label={words.channelsTitle}>
+                    <DescriptionList layout="columns" isDivided items={view.channels} />
+                </SurfaceCard>
+            )}
+            {view.insight === "" ? null : (
+                <Alert tone="informative" title={words.insightTitle} description={view.insight} />
+            )}
+            <Suggestion words={words} view={view} />
+            <TopPosts words={words} view={view} />
+            {props.props.canPost ? (
+                <Text size="xs" tone="muted">
+                    {words.postHint}
+                </Text>
+            ) : null}
         </Stack>
     )
 }

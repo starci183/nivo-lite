@@ -13,7 +13,7 @@ import {
     isCustomerFilter,
 } from "./chatbotCustomers.shared"
 import type { CustomerFilter } from "./chatbotCustomers.shared"
-import { useChatbotWorkbench } from "@/hooks/chatbotWorkbench"
+import { useChatbotWorkbench } from "@/hooks/chatbot"
 
 /** The Customers tab of one Chatbot instance: the customers behind its conversations, narrowed by a chip and a search. */
 export const useChatbotCustomers = (installationId: string | null, isActive = true) => {

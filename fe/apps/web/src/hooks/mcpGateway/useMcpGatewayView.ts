@@ -106,12 +106,13 @@ export const useMcpGatewayView = (enabled: boolean) => {
     const described = new Map(
         (connectors.data ?? []).flatMap((one) => one.tools.map((tool) => [tool.name, tool.description])),
     )
+    const agentList = agents.data ?? []
     const nameOf: ToolNamer = (tool) => toolNameOf(t, tool, nativeKeys, described.get(tool) ?? "")
     /** Every active agent gets a switch on every tool; on means a grant exists that is not `never`. */
     const agentsOf: McpToolAgentsOf = (tool) => ({
         label: t("toolAgents", { tool: nameOf(tool) }),
         switchLabel: t("grantSwitch"),
-        rows: (agents.data ?? [])
+        rows: agentList
             .filter((agent) => agent.status === "active")
             .map((agent) => ({
                 id: `${agent.id}:${tool}`,

@@ -19,7 +19,7 @@ export const useModuleCatalog = () => {
     )
     const modules = useMemo(
         (): Partial<Record<ModuleKey, ModuleCopy>> =>
-            Object.fromEntries((copies ?? []).map((entry) => [entry.key, entry])),
+            copies === undefined ? {} : Object.fromEntries(copies.map((entry) => [entry.key, entry])),
         [copies],
     )
     return {

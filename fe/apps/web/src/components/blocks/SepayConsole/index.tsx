@@ -3,18 +3,25 @@
 import { notFound } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { sepayStatusTone, useSepayCommands, useSepayConnection, useSepayPlaceholder } from "@/hooks/sepayConnection"
+import type { ReactNode } from "react"
+import {
+    sepayStatusTone,
+    useSepayCommands,
+    useSepayConnection,
+    useSepayEventsView,
+    useSepayPlaceholder,
+} from "@/hooks/sepayConnection"
 import type { SepayConnectionView } from "@/modules/types"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import { useConnectionRefusal, useConnectionsRole, wizardQuery } from "@/hooks/connections"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { SepayConsoleBase } from "./component"
-import type { SepayConsoleShape, SepayHeaderView } from "./component"
+import type { SepayHeaderView } from "./component"
 
-/** What the page hands the frame: the bands already connected to the connection of the url, and where the trail leads. */
+/** What the page hands the frame: the connection of the url, where the trail leads, and the bands of the main pane as children. */
 type SepayConsoleProps = {
-    readonly shape: SepayConsoleShape
+    readonly children: ReactNode
     readonly connectionId: string
     readonly homeHref: string
     readonly hubHref: string
@@ -54,6 +61,7 @@ export const SepayConsole = (props: SepayConsoleProps) => {
     const { slot, retry, isMissing } = useSepayConnection(props.connectionId)
     const commands = useSepayCommands(props.connectionId)
     const placeholder = useSepayPlaceholder()
+    const rail = useSepayEventsView(props.connectionId)
     const { role } = useConnectionsRole()
     const [isPending, setPending] = useState(false)
     const [isAsking, setAsking] = useState(false)
@@ -64,7 +72,7 @@ export const SepayConsole = (props: SepayConsoleProps) => {
     const canDisconnect = role === "owner" && connection !== undefined && connection.status !== "disconnected"
     return (
         <SepayConsoleBase
-            shape={props.shape}
+            children={props.children}
             props={{
                 slot: mapSlot(slot, (items) => viewOf(t, items)),
                 placeholder: viewOf(t, placeholder),
@@ -86,6 +94,7 @@ export const SepayConsole = (props: SepayConsoleProps) => {
                     isOpen: isRailOpen,
                 },
                 errorTitle: t("lastErrorTitle"),
+                events: rail.events,
                 ...(connection?.status === "disconnected" ? { reconnect: reconnectOf(t, props.hubHref) } : {}),
                 ...(canDisconnect
                     ? {
@@ -118,6 +127,7 @@ export const SepayConsole = (props: SepayConsoleProps) => {
                 },
                 dismiss: () => setAsking(false),
                 openRail: setRailOpen,
+                retryEvents: rail.retry,
             }}
         />
     )

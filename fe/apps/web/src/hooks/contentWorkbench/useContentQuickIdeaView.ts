@@ -12,7 +12,8 @@ import {
 } from "@/hooks/content"
 import { useContentQuickIdeaForm } from "@/hooks/rhf"
 import { useFeatureReset } from "@/hooks/reuseables"
-import type { ContentViewInput } from "./contentWorkbench.shared"
+import { useGraphQLWithToast } from "@/modules/toast"
+import { contentDialogOf, type ContentViewInput } from "./contentWorkbench.shared"
 
 /** Owns the actual ContentQuickIdea data derivations and conditional controller lifetime. */
 export const useContentQuickIdeaView = (input: ContentViewInput) => {
@@ -20,6 +21,7 @@ export const useContentQuickIdeaView = (input: ContentViewInput) => {
     const defaultChannels =
         data?.cadence.filter((entry) => entry.posts_per_week > 0).map((entry) => entry.channel) ?? []
     const t = useTranslations("content")
+    const runGraphQL = useGraphQLWithToast()
     const focus = useContentFocus()
     const [isOpen, setOpen] = useState(false)
     const form = useContentQuickIdeaForm(defaultChannels)
@@ -34,9 +36,7 @@ export const useContentQuickIdeaView = (input: ContentViewInput) => {
         input.isActive && input.isReady,
         input.scope,
     )
-    const run = form.handleSubmit((values) => {
-        job.request(values)
-    })
+    const run = form.handleSubmit((values) => job.request(values))
     const error = form.formState.errors.topic?.message ?? form.formState.errors.channels?.message
     const isPending = form.formState.isSubmitting || job.isPending
 
@@ -63,13 +63,7 @@ export const useContentQuickIdeaView = (input: ContentViewInput) => {
                   note: error ? { tone: "error", text: error } : null,
               }
     const on: ContentActions["quickIdeaActions"] = {
-        open: () => {
-            if (input.isActive && input.isReady) setOpen(true)
-        },
-        close: () => setOpen(false),
-        openChange: (open) => {
-            if (!open && !isPending) setOpen(false)
-        },
+        ...contentDialogOf(input, setOpen, isPending),
         topic: (topic) => form.setValue("topic", topic, { shouldValidate: form.formState.isSubmitted }),
         channels: (values) =>
             form.setValue(
@@ -79,7 +73,9 @@ export const useContentQuickIdeaView = (input: ContentViewInput) => {
                     shouldValidate: form.formState.isSubmitted,
                 },
             ),
-        run: () => run(),
+        run: () => {
+            run().catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
+        },
         dismissNote: () => form.clearErrors(),
     }
     return { props, on }

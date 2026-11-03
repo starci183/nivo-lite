@@ -1,5 +1,6 @@
 "use client"
 
+import { useConnectionRefusal } from "@/hooks/connections"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useSlotLabels } from "@/hooks/slot"
@@ -18,6 +19,8 @@ export const ZaloConnectionZns = (props: ZaloConnectionZnsProps) => {
     const zns = useZnsRenewal(props.connectionId)
     const [isOpen, setOpen] = useState(false)
     const templateId = ("items" in zns.slot ? zns.slot.items : undefined)?.templateId ?? ""
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     return (
         <ZaloConnectionZnsBase
             props={{

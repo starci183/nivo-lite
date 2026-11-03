@@ -2,10 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useBrainBoard, useLessonDesk, type MineOutcome } from "@/hooks/brain"
+import { useBrainBoard, useLessonDesk, type MineOutcome, useFailureToast } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView, RowActionView, BrainLesson, SlotLabels } from "@/modules/types"
-import { toast } from "@/modules/toast"
 import { BrainLessonsBase } from "./component"
 
 /** Proposed lessons first: they wait for a decision. */
@@ -96,14 +95,11 @@ const buildBrainLessonsState = (input: LessonsStateInput) => {
 /** Draws the connected view from its current state. */
 export const BrainLessons = () => {
     const t = useTranslations("brain")
-    const feedback = useTranslations("toast")
     const board = useBrainBoard()
     const slotLabels = useSlotLabels()
     const desk = useLessonDesk(board.lenses[0]?.module ?? "")
     const [pending, setPending] = useState<string | undefined>()
-    const failed = () => {
-        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
-    }
+    const failed = useFailureToast()
 
     const connected = buildBrainLessonsState({ t, board, desk, pending })
     const decide = async (rowId: string, actionId: string) => {

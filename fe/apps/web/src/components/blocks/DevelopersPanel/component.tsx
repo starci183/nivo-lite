@@ -32,6 +32,8 @@ interface DevelopersWebhooksProps {
     readonly rows: ReadonlyArray<DevelopersWebhookRow>
     readonly canManage: boolean
     readonly view: DevelopersWebhooksView
+    /** The connections read is still on: the list rests as itself under its skeleton. */
+    readonly isLoading: boolean
     readonly onAdd: () => void
     readonly onEdit: (connectionId: string) => void
 }
@@ -52,6 +54,8 @@ export interface DevelopersPanelBaseProps {
         readonly access: DataSlot<true>
         readonly webhooks: ReadonlyArray<DevelopersWebhookRow>
         readonly canManageWebhooks: boolean
+        /** Where the connections read behind the webhooks stands. */
+        readonly webhooksRead: DataSlot<true>
         readonly webhooksView: DevelopersWebhooksView
         readonly crumbLabel: string
         readonly crumbHome: string
@@ -64,6 +68,8 @@ export interface DevelopersPanelBaseProps {
         readonly slotLabels: SlotLabels
     }
     readonly on: {
+        /** Reads the connections again after a failed read. */
+        readonly retry: () => void
         /** Opens the wizard of a new outgoing webhook. */
         readonly add: () => void
         /** Opens the wizard on one outgoing webhook. */
@@ -98,12 +104,22 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
                             <Link href={APP_ROUTES.automations}>{props.props.backLabel}</Link>
                         </div>
                         <Section title={props.props.eventsTitle} description={props.props.eventsBody}>
-                            <DevelopersWebhooks
-                                rows={props.props.webhooks}
-                                canManage={props.props.canManageWebhooks}
-                                view={props.props.webhooksView}
-                                onAdd={props.on.add}
-                                onEdit={props.on.edit}
+                            <SlotView
+                                slot={props.props.webhooksRead}
+                                placeholder={true}
+                                labels={props.props.slotLabels}
+                                forbidden="hide"
+                                onRetry={props.on.retry}
+                                render={(_, isLoading) => (
+                                    <DevelopersWebhooks
+                                        rows={props.props.webhooks}
+                                        canManage={props.props.canManageWebhooks}
+                                        view={props.props.webhooksView}
+                                        isLoading={isLoading}
+                                        onAdd={props.on.add}
+                                        onEdit={props.on.edit}
+                                    />
+                                )}
                             />
                         </Section>
                     </Stack>
@@ -121,6 +137,7 @@ const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (
         label={props.view.title}
         headingLevel={3}
         fact={props.view.fact}
+        isLoading={props.isLoading}
         items={props.rows.map((row) => ({
             id: row.id,
             title: row.name,
@@ -149,9 +166,10 @@ const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (
 )
 
 /** Offers the provider connection when no outgoing webhook exists. */
-const AvailableWebhook = (props: Pick<DevelopersWebhooksProps, "canManage" | "view" | "onAdd">) => (
+const AvailableWebhook = (props: Pick<DevelopersWebhooksProps, "canManage" | "view" | "isLoading" | "onAdd">) => (
     <SurfaceCard
         kind="list"
+        isLoading={props.isLoading}
         label={props.view.notConnected}
         headingLevel={3}
         items={[

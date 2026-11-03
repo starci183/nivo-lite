@@ -54,7 +54,7 @@
     --info-soft: color-mix(in oklab, var(--info) 14%, var(--surface));
     --info-soft-foreground: color-mix(in oklab, var(--info) 50%, var(--foreground));
 
-    --starci-core-accent-text: color-mix(in oklab, var(--accent) 70%, var(--foreground));
+    --accent-soft-foreground: color-mix(in oklab, var(--accent) 70%, var(--foreground));
 }
 
 /* The grammar tokens resolve on the element that wears the mode class, so each mode reads its own set. */
@@ -64,26 +64,26 @@
     --radius: 0.5rem;
     --field-radius: 0.75rem;
 
-    --starci-core-accent: var(--accent);
-    --starci-core-accent-foreground: var(--accent-foreground);
-    --starci-core-accent-soft: var(--accent-soft);
-    --starci-core-focus: var(--focus);
-    --starci-core-canvas: var(--background);
-    --starci-core-surface: var(--surface);
-    --starci-core-surface-secondary: var(--surface-secondary);
-    --starci-core-surface-tertiary: var(--surface-tertiary);
-    --starci-core-foreground: var(--foreground);
-    --starci-core-muted: var(--muted);
-    --starci-core-border: var(--border);
-    --starci-core-separator: var(--separator);
-    --starci-core-success: var(--success);
-    --starci-core-success-foreground: var(--success-foreground);
-    --starci-core-warning: var(--warning);
-    --starci-core-warning-foreground: var(--warning-foreground);
-    --starci-core-danger: var(--danger);
-    --starci-core-danger-foreground: var(--danger-foreground);
-    --starci-core-info: var(--info);
-    --starci-core-info-foreground: var(--info-foreground);
+    --accent: var(--accent);
+    --accent-foreground: var(--accent-foreground);
+    --accent-soft: var(--accent-soft);
+    --focus: var(--focus);
+    --background: var(--background);
+    --surface: var(--surface);
+    --surface-secondary: var(--surface-secondary);
+    --surface-tertiary: var(--surface-tertiary);
+    --foreground: var(--foreground);
+    --muted: var(--muted);
+    --border: var(--border);
+    --separator: var(--separator);
+    --success: var(--success);
+    --success-foreground: var(--success-foreground);
+    --warning: var(--warning);
+    --warning-foreground: var(--warning-foreground);
+    --danger: var(--danger);
+    --danger-foreground: var(--danger-foreground);
+    --info: var(--info);
+    --info-foreground: var(--info-foreground);
 }
 
 .dark {
@@ -133,5 +133,5 @@
     --info-soft: color-mix(in oklab, var(--info) 22%, var(--surface));
     --info-soft-foreground: color-mix(in oklab, var(--info) 40%, var(--foreground));
 
-    --starci-core-accent-text: color-mix(in oklab, var(--accent) 60%, var(--foreground));
+    --accent-soft-foreground: color-mix(in oklab, var(--accent) 60%, var(--foreground));
 }

@@ -8,5 +8,5 @@ export const officePageMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** The Office route: the messenger reads its thread, approvals and team in the browser from the back end GraphQL API. */
+/** The Office route: the messenger block is its root and draws the one `Page`; it reads its thread, approvals and team in the browser from the back end GraphQL API. */
 export const OfficePage = () => <OfficeMessenger />

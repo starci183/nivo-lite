@@ -25,7 +25,7 @@ const PLACEHOLDER: ProfileHeadView = {
 type AgentProfileHeadProps = {
     readonly agentId: string
     /** The page body the Page draws under the heading. */
-    readonly body: ReactNode
+    readonly children: ReactNode
 }
 
 /** The connected heading of an agent profile: the identity, and the mini composer that hands the agent work. */
@@ -39,7 +39,7 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
 
     return (
         <AgentProfileHeadBase
-            shape={{ body: props.body }}
+            children={props.children}
             props={{
                 crumbLabel: t("crumbLabel"),
                 assignLabel: t("assignAction"),

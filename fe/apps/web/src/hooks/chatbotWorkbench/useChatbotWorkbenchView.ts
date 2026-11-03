@@ -2,14 +2,13 @@
 
 import { useTranslations } from "next-intl"
 import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
-import { CHATBOT_GAPS_PLACEHOLDER, useChatbotGaps } from "@/hooks/chatbot"
+import { CHATBOT_GAPS_PLACEHOLDER, useChatbotGaps, useChatbotWorkbench } from "@/hooks/chatbot"
 import { CHATBOT_CUSTOMERS_PLACEHOLDER, useChatbotCustomers } from "@/hooks/chatbotCustomers"
 import { useChatbotInbox } from "@/hooks/chatbotView"
 import { useChatbotWaiting } from "@/hooks/chatbotWaiting"
 import { slotOfReads, useSlotLabels, WAITING_ROWS_PLACEHOLDER } from "@/hooks/slot"
 import { workbenchRowDataOf, workbenchWaitingDataOf } from "@/hooks/workbench"
-import { CHATBOT_TABS } from "./chatbotWorkbench.shared"
-import { useChatbotWorkbench } from "./useChatbotWorkbench"
+import { CHATBOT_WORKBENCH_TABS } from "./chatbotWorkbench.shared"
 
 /** Existing route identity, focus and server-resolved area labels. */
 interface ChatbotWorkbenchViewInput {
@@ -30,7 +29,7 @@ export const useChatbotWorkbenchView = (input: ChatbotWorkbenchViewInput) => {
     const workbench = useChatbotWorkbench(input.installationId, input.focus, isOverview)
     const scope = JSON.stringify([workbench.workspaceId, workbench.userId, input.installationId])
     const tabs = useAgentWorkbenchTabs({
-        ids: CHATBOT_TABS,
+        ids: CHATBOT_WORKBENCH_TABS,
         initialTab: input.focus === null ? input.tab : "customers",
         scope,
     })
@@ -91,7 +90,7 @@ export const useChatbotWorkbenchView = (input: ChatbotWorkbenchViewInput) => {
     }
 }
 
-const shapeOf = (tab: (typeof CHATBOT_TABS)[number], focus: string | null, isOverview: boolean) => {
+const shapeOf = (tab: (typeof CHATBOT_WORKBENCH_TABS)[number], focus: string | null, isOverview: boolean) => {
     if (!isOverview) return "explanation" as const
     if (tab === "gaps") return "gaps" as const
     return focus === null ? ("customers" as const) : ("conversation" as const)
@@ -104,7 +103,7 @@ interface ChatbotPropsInput {
     readonly dashboard: ReturnType<typeof useTranslations<"agentDashboard">>
     readonly slotLabels: ReturnType<typeof useSlotLabels>
     readonly frame: ReturnType<typeof useAgentDashboardFrame>
-    readonly tabs: ReturnType<typeof useAgentWorkbenchTabs<(typeof CHATBOT_TABS)[number]>>
+    readonly tabs: ReturnType<typeof useAgentWorkbenchTabs<(typeof CHATBOT_WORKBENCH_TABS)[number]>>
     readonly workbench: ReturnType<typeof useChatbotWorkbench>
     readonly customers: ReturnType<typeof useChatbotCustomers>
     readonly inbox: ReturnType<typeof useChatbotInbox>

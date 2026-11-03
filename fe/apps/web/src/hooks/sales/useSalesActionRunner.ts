@@ -43,13 +43,14 @@ export const useSalesActionRunner = (activity?: SalesActionActivity) => {
     const isScoped = activity !== undefined
     const scope = JSON.stringify([activeWorkspaceId, activity?.scope ?? null])
     const lifetime = useFeatureLifetime(isActive, scope)
-    const observer = useSalesActionObserver(isActive, scope)
-    const lease = useMemo(() => ({ isLocked: false }), [isActive, scope])
+    const { pendingId, watch } = useSalesActionObserver(isActive, scope)
+    /** One lock per activation: a new identity (activity or scope changed) starts unlocked. */
+    const lease = useMemo(() => ({ isLocked: false, owner: lifetime.identity }), [lifetime.identity])
     const [operation, setOperation] = useState<SalesOperation | null>(null)
     const locked = useCallback(
         async <Result>(action: (isCurrent: () => boolean) => Promise<Result | undefined>) => {
             const pending = { scope, isCurrent: lifetime.capture() }
-            if (!pending.isCurrent() || lease.isLocked || observer.pendingId) return undefined
+            if (!pending.isCurrent() || lease.isLocked || pendingId) return undefined
             lease.isLocked = true
             setOperation(pending)
             try {
@@ -64,18 +65,18 @@ export const useSalesActionRunner = (activity?: SalesActionActivity) => {
                 setOperation((current) => (current === pending ? null : current))
             }
         },
-        [isScoped, lease, lifetime, observer.pendingId, revalidate, runGraphQL, scope],
+        [isScoped, lease, lifetime, pendingId, revalidate, runGraphQL, scope],
     )
     const runQueued = useCallback(
         (action: () => Promise<SalesActionType>) =>
             locked(async (isCurrent) =>
                 trackSalesAction(
                     t,
-                    (id) => observer.watch(id, isCurrent),
+                    (id) => watch(id, isCurrent),
                     await runGraphQL(action, { showSuccessToast: false }),
                 ),
             ),
-        [locked, observer.watch, runGraphQL, t],
+        [locked, watch, runGraphQL, t],
     )
     const runImmediate = useCallback(
         <Result>(action: () => Promise<Result>, successMessage: string) =>
@@ -86,13 +87,13 @@ export const useSalesActionRunner = (activity?: SalesActionActivity) => {
         <Result extends ShipmentAnswer>(action: () => Promise<Result>) =>
             locked(async (isCurrent) => {
                 const result = await runGraphQL(action, { successMessage: t("salesActionQueued") })
-                if (result !== undefined) observer.watch(result.notificationId, isCurrent)
+                if (result !== undefined) watch(result.notificationId, isCurrent)
                 return result
             }),
-        [locked, observer.watch, runGraphQL, t],
+        [locked, watch, runGraphQL, t],
     )
     return {
-        isBusy: Boolean(observer.pendingId),
+        isBusy: Boolean(pendingId),
         isExecuting: operation?.scope === scope && operation.isCurrent(),
         runQueued,
         runImmediate,

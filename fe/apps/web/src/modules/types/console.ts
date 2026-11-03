@@ -42,7 +42,7 @@ export type ConsoleWorkspace = {
 }
 
 /** What the console frame draws about the signed-in person and the workspace they work in. */
-export interface ConsoleSession {
+export interface ConsoleSessionView {
     readonly member: {
         readonly workspaceId: string
         readonly userId: string

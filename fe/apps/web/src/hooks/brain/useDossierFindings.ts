@@ -23,6 +23,9 @@ const filterOf = (query: FindingsQuery, viewerId: string | undefined): DossierFi
     }
 }
 
+/** The assignee choices before the members are read; `memberSlot` says whether they are still loading or failed. */
+const NO_MEMBERS: ReadonlyArray<MemberOption> = []
+
 /** What a list of findings gives its block. */
 interface DossierFindings {
     readonly slot: DataSlot<ReadonlyArray<FindingView>>
@@ -53,7 +56,10 @@ export const useDossierFindings = (query: FindingsQuery, isEnabled = true, revis
         revision,
     )
     const people = useQueryWorkspaceMembersSwr(activeWorkspaceId)
-    const members = useMemo(() => memberOptionsOf(people.data ?? []), [people.data])
+    const members = useMemo(
+        () => (people.data === undefined ? NO_MEMBERS : memberOptionsOf(people.data)),
+        [people.data],
+    )
     const views = useMemo(
         () =>
             read.data === undefined

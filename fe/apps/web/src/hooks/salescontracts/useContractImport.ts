@@ -13,7 +13,7 @@ import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { CONTRACT_IMPORT_FIELDS, CLOSED_CONTRACT_IMPORT, contractImportMappingOf } from "@/modules/sales"
 import type { ContractImportField, ContractImportMapping, ContractImportState } from "@/modules/sales"
 
-export type { ContractImportSource, ContractImportMapping } from "@/modules/sales"
+export type { ContractImportMapping } from "@/modules/sales"
 type ImportState = ContractImportState<ContractImportPreview>
 interface ImportOperation {
     readonly scope: string

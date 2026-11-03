@@ -1,12 +1,11 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useState } from "react"
 import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { brainTabHref } from "@/modules/routes"
 import type { BrainGap, KnowledgeListView, KnowledgeRowView } from "@/modules/types"
-import { toast } from "@/modules/toast"
 import { useBrainCommand } from "./useBrainCommand"
+import { useBrainRowAction } from "./useBrainRowAction"
 import type { useBrainBoard } from "./useBrainBoard"
 
 interface GapOptions {
@@ -18,14 +17,15 @@ interface GapOptions {
 export const useBrainGaps = (board: ReturnType<typeof useBrainBoard>, options: GapOptions = {}) => {
     const t = useTranslations("brain")
     const pub = useTranslations("publicBrain")
-    const feedback = useTranslations("toast")
     const format = useFormatter()
     const labels = useSlotLabels()
     const command = useBrainCommand()
-    const [pending, setPending] = useState<string | undefined>()
-    const failed = () => {
-        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
-    }
+    const { pending, dispatch } = useBrainRowAction({
+        actionId: "dismiss",
+        canWrite: board.canWrite,
+        isKnown: (rowId) => (options.gaps ?? board.gaps).some((gap) => gap.id === rowId),
+        send: (rowId) => command.send("gap.dismiss", { id: rowId }, { done: t("gapDismissed") }),
+    })
     const rowOf = (gap: BrainGap): KnowledgeRowView => {
         const when = format.dateTime(new Date(gap.lastSeenAt), { dateStyle: "medium" })
         return {
@@ -57,27 +57,6 @@ export const useBrainGaps = (board: ReturnType<typeof useBrainBoard>, options: G
                   ]
                 : [],
         }
-    }
-    const dismiss = async (rowId: string, actionId: string) => {
-        if (
-            !board.canWrite ||
-            actionId !== "dismiss" ||
-            pending !== undefined ||
-            !(options.gaps ?? board.gaps).some((gap) => gap.id === rowId)
-        )
-            return
-        setPending(rowId)
-        try {
-            return await command.send("gap.dismiss", { id: rowId }, { done: t("gapDismissed") })
-        } catch {
-            failed()
-            return undefined
-        } finally {
-            setPending(undefined)
-        }
-    }
-    const dispatch = (rowId: string, actionId: string) => {
-        dismiss(rowId, actionId).catch(failed)
     }
     const list: KnowledgeListView = {
         section: { id: "brain-gaps-title", title: t("gapsTitle"), failTitle: t("loadFailed") },

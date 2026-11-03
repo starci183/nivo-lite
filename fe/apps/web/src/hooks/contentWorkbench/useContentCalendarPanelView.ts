@@ -65,6 +65,29 @@ const calendarActions = (input: CalendarActionsInput) => {
     }
 }
 
+/**
+ * Answers, from an event, whether the calendar that built the handler is the one the browser committed. The receipt is written in
+ * a layout effect and read only by the returned check, so no render reads it.
+ */
+const useCommittedCalendar = (calendar: ContentCalendarState): (() => boolean) => {
+    const receipt = useRef<ContentCalendarReceipt | null>(null)
+    useLayoutEffect(() => {
+        receipt.current = {
+            scope: calendar.scope,
+            epoch: calendar.epoch,
+            isActive: calendar.isActive,
+            isReady: calendar.isReady,
+        }
+        return () => {
+            receipt.current = null
+        }
+    }, [calendar.scope, calendar.epoch, calendar.isActive, calendar.isReady])
+    return () => {
+        const committed = receipt.current
+        return committed !== null && currentContentCalendarEpoch(committed, calendar)
+    }
+}
+
 /** Projects the incoming owner immediately; only this immutable bundle owns calendar UI state. */
 export const useContentCalendarPanelView = (input: ContentViewInput) => {
     const { data } = input
@@ -78,22 +101,7 @@ export const useContentCalendarPanelView = (input: ContentViewInput) => {
     const isOwned = sameContentCalendarOwner(owned, input)
     const calendar = isOwned ? owned : freshContentCalendar(input, now, owned.epoch + 1)
     if (!isOwned) setOwned(calendar)
-    const receipt = useRef<ContentCalendarReceipt | null>(null)
-    useLayoutEffect(() => {
-        receipt.current = {
-            scope: calendar.scope,
-            epoch: calendar.epoch,
-            isActive: calendar.isActive,
-            isReady: calendar.isReady,
-        }
-        return () => {
-            receipt.current = null
-        }
-    }, [calendar.scope, calendar.epoch, calendar.isActive, calendar.isReady])
-    const isCurrent = () => {
-        const committed = receipt.current
-        return committed !== null && currentContentCalendarEpoch(committed, calendar)
-    }
+    const isCurrent = useCommittedCalendar(calendar)
     const update = (change: (current: ContentCalendarState) => ContentCalendarState) => {
         if (!isCurrent()) return
         setOwned((current) => (currentContentCalendarEpoch(current, calendar) ? change(current) : current))

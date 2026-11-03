@@ -12,9 +12,10 @@ import {
     useQueryAgentGraphVersionsSwr,
     useQueryApproverDirectorySwr,
 } from "@/hooks/swr"
-import { agentGraphOfWire, parseAgentGraphTrace, parseAgentGraphWire } from "@/modules/agent-graph"
+import { agentGraphOfWire, parseAgentGraphWire } from "@/modules/agent-graph"
 import type { AgentGraphWire } from "@/modules/agent-graph"
-import type { AgentGraphData, AgentGraphMemberData, DataSlot, SlotRead } from "@/modules/types"
+import type { AgentGraphData, DataSlot } from "@/modules/types"
+import { agentGraphMembersOf, agentGraphRunOf, parsedGraphReadOf } from "./agentGraph.shared"
 import { useAgentGraphWords } from "./useAgentGraphWords"
 
 /** The graph, as the back end carries it and as the panes draw it. */
@@ -43,24 +44,9 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
     const coverage = useQueryAgentGraphCoverageSwr(agentId === null ? null : { agentId })
     const workItemId = useSearchParams().get("run") ?? ""
     const runRead = useQueryAgentGraphRunSwr(workItemId === "" ? null : { workItemId })
-    const run =
-        runRead.data === undefined
-            ? null
-            : {
-                  id: runRead.data.decisionId,
-                  version: runRead.data.version,
-                  outcome: runRead.data.outcome,
-                  closedAs: runRead.data.closedAs,
-                  steps: parseAgentGraphTrace(runRead.data.traceJson) ?? [],
-              }
+    const run = agentGraphRunOf(runRead.data)
     const wire = useMemo(() => (graph.data === undefined ? undefined : parseAgentGraphWire(graph.data)), [graph.data])
-    const members = useMemo(
-        (): ReadonlyArray<AgentGraphMemberData> | undefined =>
-            directory.data
-                ?.filter((member) => member.status !== "disabled")
-                .map((member) => ({ id: member.memberId, name: member.name, upToVnd: null })),
-        [directory.data],
-    )
+    const members = useMemo(() => agentGraphMembersOf(directory.data), [directory.data])
     const read: AgentGraphRead | undefined =
         agentId === null ||
         graph.data === undefined ||
@@ -95,12 +81,7 @@ export const useAgentGraphRead = (installationId: string, changes: number) => {
                       },
                   ),
               }
-    const parsedGraphRead: SlotRead<typeof graph.data> = {
-        data: wire === null ? undefined : graph.data,
-        error: graph.error ?? (wire === null ? new Error("The agent graph payload is invalid") : undefined),
-        isLoading: graph.isLoading,
-        isValidating: graph.isValidating,
-    }
+    const parsedGraphRead = parsedGraphReadOf(graph, wire)
     const reads = [
         installations,
         parsedGraphRead,

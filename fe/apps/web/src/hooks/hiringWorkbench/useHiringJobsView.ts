@@ -26,16 +26,16 @@ const countsOf = (data: HiringWorkbenchData, jobId: string) => {
     }
 }
 
+/** What one job row needs besides the job: the workbench data, the formatter, the words and the id whose link was just copied. */
+interface JobRowContext {
+    readonly data: HiringWorkbenchData
+    readonly format: ReturnType<typeof useHiringFormat>
+    readonly t: ReturnType<typeof useTranslations<"hiring">>
+    readonly copiedId: string | null
+}
+
 /** Resolves the job facts and available status transitions. */
-const rowOf = (
-    job: JobView,
-    context: {
-        readonly data: HiringWorkbenchData
-        readonly format: ReturnType<typeof useHiringFormat>
-        readonly t: ReturnType<typeof useTranslations<"hiring">>
-        readonly copiedId: string | null
-    },
-) => {
+const rowOf = (job: JobView, context: JobRowContext) => {
     const { data, format, t, copiedId } = context
     const counts = countsOf(data, job.id)
     const copyKey = copiedId === job.id ? "copiedLink" : "copyLink"
@@ -135,13 +135,16 @@ export const useHiringJobsView = (input: HiringViewInput) => {
     return { props, on }
 }
 
-/** The ad dialog keeps all three actual variants and its record-specific title/link labels together. */
-const adDialogOf = (input: {
+/** What the ad dialog needs: the job it is for, the ad being drafted, the copy words and the translator. */
+interface AdDialogInput {
     readonly job: JobView | undefined
     readonly ad: ReturnType<typeof useHiringJobAd>
     readonly copy: HiringViewInput["copy"]
     readonly t: ReturnType<typeof useTranslations<"hiring">>
-}) => {
+}
+
+/** The ad dialog keeps all three actual variants and its record-specific title/link labels together. */
+const adDialogOf = (input: AdDialogInput) => {
     const { job, ad, t } = input
     const publicUrl = job?.publicUrl ?? null
     return {

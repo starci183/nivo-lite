@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useConnectionsRole } from "@/hooks/connections"
-import { useSepayCommands, useSepayConnection } from "@/hooks/sepayConnection"
+import { useConnectionRefusal, useConnectionsRole } from "@/hooks/connections"
+import { useSepayCommands, useSepayConnection, useSepaySetupStep } from "@/hooks/sepayConnection"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { SepayEnvironmentPickerBase, type SepayEnvironmentView } from "./component"
 
@@ -17,15 +17,19 @@ export const SepayEnvironmentPicker = (props: SepayEnvironmentPickerProps) => {
     const commands = useSepayCommands(props.connectionId)
     const { role } = useConnectionsRole()
     const slotLabels = useSlotLabels()
+    const setup = useSepaySetupStep(props.connectionId, "environment")
     const [isPending, setPending] = useState(false)
     const slot = mapSlot(connection.slot, (view): SepayEnvironmentView => ({
         value: view.environment,
         description: t(view.environment === "test" ? "environmentTestNote" : "environmentLiveNote"),
         isDisabled: role !== "owner" || view.status === "disconnected" || isPending,
     }))
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     return (
         <SepayEnvironmentPickerBase
             props={{
+                step: setup.step,
                 label: t("stepEnvironment"),
                 options: [
                     { value: "test", label: t("envTestShort") },
@@ -36,6 +40,7 @@ export const SepayEnvironmentPicker = (props: SepayEnvironmentPickerProps) => {
                 slotLabels: slotLabels(t("stepEnvironment")),
             }}
             on={{
+                toggle: setup.toggle,
                 retry: connection.retry,
                 change: (environment) => {
                     setPending(true)

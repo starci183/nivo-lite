@@ -42,6 +42,13 @@ export const BookingExceptions = (props: BookingExceptionsProps) => {
     )
 }
 
+/** The two times of an exception's opening hours, in the order they are drawn. */
+const TIME_KEYS = ["start", "end"] as const
+
+/** The change that sets one of the two times. */
+const timePatchOf = (key: (typeof TIME_KEYS)[number], time: string) =>
+    key === "start" ? { start: time } : { end: time }
+
 /** Draws the div section of the BookingExceptions view. */
 const renderExceptionFields = (p: ReadyProps, on: Actions, isLoading: boolean) => {
     return (
@@ -81,26 +88,19 @@ const renderExceptionFields = (p: ReadyProps, on: Actions, isLoading: boolean) =
             />
             {p.fields.closed ? null : (
                 <Grid kind="form" columns={2}>
-                    <TimeField
-                        isDisabled={isLoading || p.isPending}
-                        label={p.startLabel}
-                        granularity="minute"
-                        hourCycle={24}
-                        value={parseTime(p.fields.start)}
-                        onValueChange={(value) => {
-                            if (value !== null) on.change({ start: value.toString().slice(0, 5) })
-                        }}
-                    />
-                    <TimeField
-                        isDisabled={isLoading || p.isPending}
-                        label={p.endLabel}
-                        granularity="minute"
-                        hourCycle={24}
-                        value={parseTime(p.fields.end)}
-                        onValueChange={(value) => {
-                            if (value !== null) on.change({ end: value.toString().slice(0, 5) })
-                        }}
-                    />
+                    {TIME_KEYS.map((key) => (
+                        <TimeField
+                            key={key}
+                            isDisabled={isLoading || p.isPending}
+                            label={key === "start" ? p.startLabel : p.endLabel}
+                            granularity="minute"
+                            hourCycle={24}
+                            value={parseTime(p.fields[key])}
+                            onValueChange={(value) => {
+                                if (value !== null) on.change(timePatchOf(key, value.toString().slice(0, 5)))
+                            }}
+                        />
+                    ))}
                 </Grid>
             )}
             <BookingSaveLine isLoading={isLoading} label={p.addLabel} isPending={p.isPending} />

@@ -3,20 +3,15 @@ type ShiftsOpenShiftsProps = ShiftsPersonalViews["openShifts"] & {
     readonly on: ShiftsPersonalActions["openShifts"] | undefined
     readonly isLoading?: boolean
 }
-import { EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
+import { EmptyNotice } from "@starci/grammar/common"
+import { ShiftsListCard } from "@/components/branches/ShiftsListCard"
 
 /** Draws the open shifts with a button to ask for each. */
 export const ShiftsOpenShifts = (props: ShiftsOpenShiftsProps) => (
-    <SurfaceCard
-        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-        kind="list"
-        label={props.title}
-        headingLevel={2}
-        footer={
-            <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="sm" tone="muted">
-                {props.hint}
-            </Text>
-        }
+    <ShiftsListCard
+        title={props.title}
+        hint={props.hint}
+        isLoading={props.isLoading}
         empty={<EmptyNotice message={props.emptyLabel} />}
         items={props.shifts.map((shift) => ({
             id: shift.id,

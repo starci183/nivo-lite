@@ -32,8 +32,9 @@ export const useConnectionAgentRows = (connectionId: string, provider: Provider,
     const setAgents = useSetConnectionAgents()
     const { role } = useConnectionsRole()
     const on = new Set(agentIds ?? [])
+    const agents = agentsRead.data ?? []
     const slot = slotOfReads([agentsRead, page.read], (): ReadonlyArray<ConnectionAgentRowView> =>
-        (agentsRead.data ?? [])
+        agents
             .filter(
                 (agent) =>
                     on.has(agent.id) || (agent.status === "active" && purposeFor(agent.module, provider) !== null),

@@ -19,14 +19,14 @@ interface FeatureResetState {
 
 /** Resets local controller state at activation boundaries, never during an ordinary ready-data refresh. */
 export const useFeatureReset = (input: FeatureResetInput): void => {
+    const { isActive, isReady, scope, onReset } = input
     const previous = useRef<FeatureResetState | null>(null)
     useEffect(() => {
         const before = previous.current
-        previous.current = { isActive: input.isActive, isReady: input.isReady, scope: input.scope }
-        const changedScope = before === null || before.scope !== input.scope
-        const leftReady = before !== null && before.isActive && before.isReady && (!input.isActive || !input.isReady)
-        const enteredReady =
-            input.isActive && input.isReady && (before === null || changedScope || !before.isActive || !before.isReady)
-        if (changedScope || leftReady || enteredReady) input.onReset()
-    }, [input.isActive, input.isReady, input.scope, input.onReset])
+        previous.current = { isActive, isReady, scope }
+        const changedScope = before?.scope !== scope
+        const leftReady = before?.isActive && before.isReady && (!isActive || !isReady)
+        const enteredReady = isActive && isReady && (changedScope || !before?.isActive || !before.isReady)
+        if (changedScope || leftReady || enteredReady) onReset()
+    }, [isActive, isReady, scope, onReset])
 }

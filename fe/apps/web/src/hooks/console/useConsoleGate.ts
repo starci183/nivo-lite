@@ -5,13 +5,13 @@ import { useMutateStartFirstWorkspaceSwr, useQueryMyWorkspacesSwr } from "@/hook
 import { useSyncActiveWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { workspacePaymentPath, workspacesPath } from "@/modules/routes"
-import type { ConsoleSession } from "@/modules/types"
+import type { ConsoleSessionView } from "@/modules/types"
 import { UNPAID_WORKSPACE_STATES } from "./console.shared"
 import { useConsoleSessionRead } from "./useConsoleSessionRead"
 
 /** The SWR session and whether the console may mount its readers. */
 interface ConsoleGate {
-    readonly session: ConsoleSession | undefined
+    readonly session: ConsoleSessionView | undefined
     readonly isReady: boolean
 }
 

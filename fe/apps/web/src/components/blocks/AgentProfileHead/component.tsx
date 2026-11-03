@@ -37,7 +37,7 @@ export interface ProfileHeadView {
 /** Copy and slot of the heading of an agent profile. */
 export interface AgentProfileHeadBaseProps {
     /** The page body, drawn under the composer. */
-    readonly shape: { readonly body: ReactNode }
+    readonly children: ReactNode
     readonly props: {
         readonly crumbLabel: string
         readonly assignLabel: string
@@ -198,18 +198,16 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                 ),
             }}
         >
-            <SlotView
-                slot={view.read}
-                placeholder={false}
-                labels={view.labels}
-                onRetry={props.on.retry}
-                render={() => (
-                    <Stack gap="region">
-                        {view.composer.isOpen ? <AssignComposer {...props} /> : null}
-                        {props.shape.body}
-                    </Stack>
-                )}
-            />
+            <Stack gap="region">
+                <SlotView
+                    slot={view.read}
+                    placeholder={false}
+                    labels={view.labels}
+                    onRetry={props.on.retry}
+                    render={() => (view.composer.isOpen ? <AssignComposer {...props} /> : null)}
+                />
+                {props.children}
+            </Stack>
         </Page>
     )
 }

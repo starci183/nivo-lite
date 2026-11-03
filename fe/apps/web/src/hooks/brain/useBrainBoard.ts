@@ -26,16 +26,16 @@ interface BrainBoard {
 /** The shared Second Brain of the workspace with the membership of the person: every list of the page reads it, and the reads are shared. */
 export const useBrainBoard = (): BrainBoard => {
     const member = useWorkspaceMember()
-    const { brain, slot, reload } = useBrain()
+    const read = useBrain()
     return {
-        facts: brain?.facts ?? [],
-        lessons: brain?.lessons ?? [],
-        gaps: brain?.gaps ?? [],
-        lenses: brain?.lenses ?? [],
-        extractions: brain?.extractions ?? [],
+        facts: read.brain?.facts ?? [],
+        lessons: read.brain?.lessons ?? [],
+        gaps: read.brain?.gaps ?? [],
+        lenses: read.brain?.lenses ?? [],
+        extractions: read.brain?.extractions ?? [],
         canWrite: member.canWrite,
         nowMs: currentTime(),
-        slot: member.isLoading ? loadingSlot<BrainView>() : slot,
-        reload,
+        slot: member.isLoading || read.isLoading ? loadingSlot<BrainView>() : read.slot,
+        reload: read.reload,
     }
 }

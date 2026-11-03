@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useAppSelector } from "@/redux"
-import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
+import { useAgentWorkbenchShell } from "@/hooks/agentDashboard"
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { BOOKING_TABS } from "@/modules/types"
@@ -27,9 +27,17 @@ export const useBookingWorkbenchView = (input: BookingWorkbenchViewInput) => {
     const labels = useSlotLabels()
     const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
     const scope = JSON.stringify([workspaceId ?? null, input.installationId])
-    const tabs = useAgentWorkbenchTabs({ ids: BOOKING_TABS, initialTab: input.initialTab })
-    const frame = useAgentDashboardFrame({ module: "booking", installationId: input.installationId, hasOwnGaps: false })
-    const overview = frame.why.workItemId === null
+    const {
+        tabs,
+        dashboard: frame,
+        isNormal: overview,
+        frameOf,
+    } = useAgentWorkbenchShell({
+        module: "booking",
+        installationId: input.installationId,
+        ids: BOOKING_TABS,
+        initialTab: input.initialTab,
+    })
     const board = useBookingBoard(overview)
     const deskActive = overview && (tabs.selected === "calendar" || tabs.selected === "today")
     const setupActive = overview && tabs.selected === "setup"
@@ -42,11 +50,7 @@ export const useBookingWorkbenchView = (input: BookingWorkbenchViewInput) => {
     return {
         shape: overview ? tabs.selected : ("explanation" as const),
         props: {
-            why: frame.why,
-            regions: frame.regions,
-            tabsLabel: frame.tabsLabel,
-            selectedTab: tabs.selected,
-            tabs: BOOKING_TABS.map((id) => ({ id, label: input.tabs[id] })),
+            ...frameOf(input.tabs),
             ribbon: ribbon.props,
             desk: desk.props,
             panel: {

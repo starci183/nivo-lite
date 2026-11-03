@@ -123,8 +123,9 @@ export const useVideoWorkbenchView = (input: VideoWorkbenchInput): VideoWorkbenc
         frame,
         report,
     })
+    const surfaceShape = isActive ? tabs.selected : "explanation"
     return {
-        shape: input.isEditor ? step : isActive ? tabs.selected : "explanation",
+        shape: input.isEditor ? step : surfaceShape,
         props: {
             why: frame.why,
             loadFailedBody: copy.loadFailedBody,

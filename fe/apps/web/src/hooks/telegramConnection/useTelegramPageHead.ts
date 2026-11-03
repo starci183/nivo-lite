@@ -2,10 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { readFailureNotice } from "@/hooks/connectionPage"
+import { connectionCrumbsOf, connectionHeadStateOf, readFailureNotice } from "@/hooks/connectionPage"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { ConnectionPageHeadCommands, ConnectionPageHeadView } from "@/modules/types"
 import { useTelegramChecks } from "./useTelegramChecks"
 import { useTelegramHead } from "./useTelegramHead"
@@ -26,16 +25,15 @@ export const useTelegramPageHead = (connectionId: string | undefined) => {
     const failure = readFailureNotice(head, slotLabels(""), () => router.refresh())
     const [isAsking, setIsAsking] = useState(false)
     const [isRailOpen, setRailOpen] = useState(false)
-    const resolvedHead = "items" in head ? head.items : undefined
+    const headState = connectionHeadStateOf(head)
     const view: ConnectionPageHeadView = {
-        ...(resolvedHead === undefined ? {} : { head: resolvedHead }),
-        isLoading: "isLoading" in head,
+        ...headState,
         icon: "chat",
         crumbLabel: t("crumbLabel"),
-        crumbs: [
-            { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
-            { id: "telegram", label: resolvedHead?.name ?? t("crumbTelegram") },
-        ],
+        crumbs: connectionCrumbsOf(t("crumbConnections"), {
+            id: "telegram",
+            label: headState.head?.name ?? t("crumbTelegram"),
+        }),
         gridLabel: t("title"),
         mainLabel: t("mainLabel"),
         rail: { label: t("eventsTitle"), openLabel: t("eventsOpen"), closeLabel: t("eventsClose"), isOpen: isRailOpen },

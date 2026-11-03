@@ -62,7 +62,7 @@ export interface PublicDocDraftBaseProps {
     readonly props: {
         readonly title: string
         readonly closeLabel: string
-        readonly isPending: boolean
+        readonly isBusy: boolean
         readonly pendingAction: "save" | "approve" | "redraft" | undefined
         readonly document: DataSlot<readonly DraftView[]>
         readonly slotLabels: SlotLabels
@@ -80,7 +80,7 @@ export interface PublicDocDraftBaseProps {
 
 interface DocumentBodyProps {
     readonly document: DraftView
-    readonly isPending: boolean
+    readonly isBusy: boolean
     readonly isLoading: boolean
     readonly pendingAction: PublicDocDraftBaseProps["props"]["pendingAction"]
     readonly on: PublicDocDraftBaseProps["on"]
@@ -89,14 +89,14 @@ interface DocumentBodyProps {
 /** Keeps all decisions beside the text being reviewed. */
 const Footer = (props: Omit<DocumentBodyProps, "isLoading">) => (
     <div className={FOOTER_CLASS_NAME}>
-        <Button intent="alternative" isDisabled={props.isPending} onPress={props.on.close}>
+        <Button intent="alternative" isDisabled={props.isBusy} onPress={props.on.close}>
             {props.document.laterLabel}
         </Button>
         {props.document.canEdit ? (
             <Button
                 intent="neutral"
                 isPending={props.pendingAction === "save"}
-                isDisabled={props.isPending && props.pendingAction !== "save"}
+                isDisabled={props.isBusy && props.pendingAction !== "save"}
                 onPress={props.on.save}
             >
                 {props.document.saveLabel}
@@ -106,7 +106,7 @@ const Footer = (props: Omit<DocumentBodyProps, "isLoading">) => (
             <Button
                 intent="neutral"
                 isPending={props.pendingAction === "redraft"}
-                isDisabled={props.isPending && props.pendingAction !== "redraft"}
+                isDisabled={props.isBusy && props.pendingAction !== "redraft"}
                 onPress={props.on.redraft}
             >
                 {props.document.redraftLabel}
@@ -116,7 +116,7 @@ const Footer = (props: Omit<DocumentBodyProps, "isLoading">) => (
             <Button
                 intent="commit"
                 isPending={props.pendingAction === "approve"}
-                isDisabled={props.isPending && props.pendingAction !== "approve"}
+                isDisabled={props.isBusy && props.pendingAction !== "approve"}
                 onPress={props.on.approve}
             >
                 {props.document.approveLabel}
@@ -128,9 +128,9 @@ const Footer = (props: Omit<DocumentBodyProps, "isLoading">) => (
 /** Draws the editable snapshot and the previously approved text in the same review journey. */
 const DocumentBody = (props: Omit<DocumentBodyProps, "pendingAction">) => {
     const view = props.document
-    const isDisabled = props.isPending || props.isLoading || !view.canEdit
+    const isDisabled = props.isBusy || props.isLoading || !view.canEdit
     return (
-        <Form label={view.titleLabel} onSubmit={props.on.save} isPending={props.isPending}>
+        <Form label={view.titleLabel} onSubmit={props.on.save} isPending={props.isBusy}>
             <div className={FORM_CLASS_NAME}>
                 <Badge tone={view.badge.tone} isLoading={props.isLoading}>
                     {view.badge.label}
@@ -198,13 +198,13 @@ export const PublicDocDraftBase = (props: PublicDocDraftBaseProps) => {
             closeLabel={props.props.closeLabel}
             placement="right"
             onOpenChange={(open) => {
-                if (!open && !props.props.isPending) props.on.close()
+                if (!open && !props.props.isBusy) props.on.close()
             }}
             footer={
                 current === undefined ? undefined : (
                     <Footer
                         document={current}
-                        isPending={props.props.isPending}
+                        isBusy={props.props.isBusy}
                         pendingAction={props.props.pendingAction}
                         on={props.on}
                     />
@@ -221,7 +221,7 @@ export const PublicDocDraftBase = (props: PublicDocDraftBaseProps) => {
                         <DocumentBody
                             key={document.id}
                             document={document}
-                            isPending={props.props.isPending}
+                            isBusy={props.props.isBusy}
                             isLoading={isLoading}
                             on={props.on}
                         />

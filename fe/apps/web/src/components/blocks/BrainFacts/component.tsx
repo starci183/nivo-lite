@@ -30,7 +30,6 @@ export const BrainFactsBase = (props: BrainFactsBaseProps) => {
         <KnowledgeRowsSection
             isHeadingInCard
             section={list.section}
-            isPending={list.isPending}
             before={
                 maintain === undefined ? null : (
                     <Alert

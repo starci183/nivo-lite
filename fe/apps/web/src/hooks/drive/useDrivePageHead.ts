@@ -2,10 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { readFailureNotice } from "@/hooks/connectionPage"
+import { connectionCrumbsOf, connectionHeadStateOf, readFailureNotice } from "@/hooks/connectionPage"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { ConnectionPageHeadCommands, ConnectionPageHeadView } from "@/modules/types"
 import { useDriveHead } from "./useDriveHead"
 
@@ -23,16 +22,11 @@ export const useDrivePageHead = (enabled: boolean) => {
     const [isRailOpen, setRailOpen] = useState(false)
     const failure = readFailureNotice(head, slotLabels(""), () => router.refresh())
     const canDisconnect = isOwner && standing !== undefined && standing !== "none"
-    const resolvedHead = "items" in head ? head.items : undefined
     const view: ConnectionPageHeadView = {
-        ...(resolvedHead === undefined ? {} : { head: resolvedHead }),
-        isLoading: "isLoading" in head,
+        ...connectionHeadStateOf(head),
         icon: "apps",
         crumbLabel: t("crumbLabel"),
-        crumbs: [
-            { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
-            { id: "drive", label: t("crumbDrive") },
-        ],
+        crumbs: connectionCrumbsOf(t("crumbConnections"), { id: "drive", label: t("crumbDrive") }),
         gridLabel: t("title"),
         mainLabel: t("mainLabel"),
         rail: {

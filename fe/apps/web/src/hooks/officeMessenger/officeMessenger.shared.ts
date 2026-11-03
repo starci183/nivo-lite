@@ -1,12 +1,19 @@
+import { slotOfReads } from "@/hooks/slot"
+import type { useOfficeBoard, useOfficeRooms, useOfficeThread } from "@/hooks/office"
 import type { navigation } from "@/modules/i18n"
 import { agentChatHref, leadHref } from "@/modules/routes"
 import type { OfficeText, OfficeThreadProps } from "@/modules/types"
-import { BASIS_MIN_CHARS, EMPTY_OFFICE_CARD_DRAFT } from "@/modules/office"
+import { BASIS_MIN_CHARS, EMPTY_OFFICE_CARD_DRAFT, cardCopyOf, threadCopyOf } from "@/modules/office"
 import type { useOfficeCardDrafts } from "./useOfficeCardDrafts"
 import type { useOfficeMessenger } from "./useOfficeMessenger"
+import type { useOfficePanels } from "./useOfficePanels"
 
 /** What the thread draws once its messages are in. */
 export type OfficeThreadBody = Omit<OfficeThreadProps["props"], "isLoading">
+
+/** The hint under the basis of an exception: it counts the characters still missing until the basis is long enough. */
+const basisHintOf = (hint: string, basisLength: number, text: OfficeText): string =>
+    basisLength < BASIS_MIN_CHARS ? `${hint} ${text("basisCount", { n: basisLength, min: BASIS_MIN_CHARS })}` : hint
 
 /** Resolves the loaded thread and sender activity. */
 export const officeThreadProps = (
@@ -20,12 +27,7 @@ export const officeThreadProps = (
             const draft = drafts.drafts[item.key] ?? EMPTY_OFFICE_CARD_DRAFT
             const basisLength = draft.basis.trim().replace(/\s+/g, " ").length
             const hint = text("basisHint", { n: BASIS_MIN_CHARS })
-            const basisDescription =
-                item.kind !== "exception"
-                    ? null
-                    : basisLength < BASIS_MIN_CHARS
-                      ? `${hint} ${text("basisCount", { n: basisLength, min: BASIS_MIN_CHARS })}`
-                      : hint
+            const basisDescription = item.kind === "exception" ? basisHintOf(hint, basisLength, text) : null
             return [
                 {
                     item,
@@ -39,7 +41,7 @@ export const officeThreadProps = (
         basisMin: BASIS_MIN_CHARS,
         cardCopy: cardCopyOf(text),
         receipts: office.items.flatMap((item) =>
-            item.kind !== "message" || item.status === null || item.status.kind !== "seen"
+            item.kind !== "message" || item.status?.kind !== "seen"
                 ? []
                 : [
                       {
@@ -62,88 +64,6 @@ export const officeThreadProps = (
         isLoadingEarlier: office.thread.isLoadingEarlier,
     }
 }
-
-/** Resolves the thread and message controls from the Office locale. */
-const threadCopyOf = (text: OfficeText) => ({
-    thread: {
-        loadEarlier: text("loadEarlier"),
-        emptyMessage: text("emptyMessage"),
-        emptyMessageHint: text("emptyMessageHint"),
-    },
-    message: {
-        copied: text("copied"),
-        copyText: text("copyText"),
-        reply: text("reply"),
-        cmdOpenWork: text("cmdOpenWork"),
-        aiBadge: text("aiBadge"),
-    },
-    outbox: { sendFailed: text("sendFailed"), sending: text("sending") },
-})
-
-/** Resolves the controls used by the different decision card kinds. */
-const cardCopyOf = (text: OfficeText) => ({
-    exceptionForm: {
-        exceptionMissingHint: text("exceptionMissingHint"),
-        basisNeeded: text("basisNeeded"),
-        waitingManager: text("waitingManager"),
-        exceptionSaveContinue: text("exceptionSaveContinue"),
-        exceptionCancelEdit: text("exceptionCancelEdit"),
-        exceptionEditContinue: text("exceptionEditContinue"),
-        exceptionReject: text("exceptionReject"),
-        exceptionMissing: text("exceptionMissing"),
-        basisLabel: text("basisLabel"),
-        basisPlaceholder: text("basisPlaceholder"),
-        exceptionCandidates: text("exceptionCandidates"),
-        exceptionDraft: text("exceptionDraft"),
-        exceptionAmount: text("exceptionAmount"),
-        exceptionApprove: text("exceptionApprove"),
-        exceptionSendDraft: text("exceptionSendDraft"),
-    },
-    command: {
-        cmdRowAgent: text("cmdRowAgent"),
-        cmdRowCommand: text("cmdRowCommand"),
-        cmdPending: text("cmdPending"),
-        cmdSentBadge: text("cmdSentBadge"),
-        cmdCancelledBadge: text("cmdCancelledBadge"),
-        cmdFailed: text("cmdFailed"),
-        cmdCancel: text("cmdCancel"),
-        cmdSend: text("cmdSend"),
-        cmdOpenWork: text("cmdOpenWork"),
-    },
-    approval: {
-        draftLabel: text("draftLabel"),
-        showLess: text("showLess"),
-        showMore: text("showMore"),
-        waitingManager: text("waitingManager"),
-        approveEdited: text("approveEdited"),
-        approveSend: text("approveSend"),
-        cancelEdit: text("cancelEdit"),
-        edit: text("edit"),
-        reject: text("reject"),
-        aiBadge: text("aiBadge"),
-        openLead: text("openLead"),
-    },
-    exception: {
-        reconcileCredit: text("reconcileCredit"),
-        reconcileWarning: text("reconcileWarning"),
-        exceptionResult: text("exceptionResult"),
-        exceptionOpenLead: text("exceptionOpenLead"),
-        exceptionProposes: text("exceptionProposes"),
-        exceptionErrorLabel: text("exceptionErrorLabel"),
-        exceptionAsked: text("exceptionAsked"),
-        exceptionWillReply: text("exceptionWillReply"),
-    },
-    result: {
-        approveEdited: text("approveEdited"),
-        cardApprove: text("cardApprove"),
-        cancelEdit: text("cancelEdit"),
-        edit: text("edit"),
-        cardDecline: text("cardDecline"),
-        waitingManager: text("waitingManager"),
-        draftLabel: text("draftLabel"),
-        cardSources: text("cardSources"),
-    },
-})
 
 /** Who types now: the people typing in the room, else the agents the sender called; empty when nobody does. */
 const typingOf = (office: ReturnType<typeof useOfficeMessenger>): string => {
@@ -188,5 +108,40 @@ export const officeMessengerCommands = (
     openDirect: (kind: "agent" | "lead", id: string) => {
         void office.markConversationRead(kind, id)
         router.push(kind === "agent" ? agentChatHref(id) : leadHref(id))
+    },
+})
+
+type OfficeReadOwners = {
+    readonly board: ReturnType<typeof useOfficeBoard>
+    readonly hub: ReturnType<typeof useOfficeRooms>
+    readonly thread: ReturnType<typeof useOfficeThread>
+    readonly list: ReturnType<typeof useOfficePanels>["list"]
+}
+
+/** Folds the reads each Office region depends on and retries the same owners. */
+export const officeReadSlots = ({ board, hub, thread, list }: OfficeReadOwners) => ({
+    slot: thread.slot,
+    listSlot: slotOfReads(
+        [...hub.listReads, ...board.teamReads, ...board.approvalReads, ...board.workReads],
+        () => list,
+    ),
+    threadSlot: slotOfReads(
+        [thread.read, hub.roomRead, hub.markerRead, ...board.teamReads, ...board.approvalReads, ...board.workReads],
+        () => true,
+    ),
+    composerSlot: slotOfReads([...board.composerReads, hub.roomRead], () => true),
+    retryList: () => {
+        board.reload()
+        hub.reload()
+    },
+    retryThread: () => {
+        board.reload()
+        hub.refreshRooms()
+        hub.reloadMarkers()
+        thread.reload()
+    },
+    retryComposer: () => {
+        board.reloadTeam()
+        hub.refreshRooms()
     },
 })

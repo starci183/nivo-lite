@@ -14,13 +14,15 @@ import {
 } from "@/hooks/content"
 import { useContentAddPostForm } from "@/hooks/rhf"
 import { useFeatureReset } from "@/hooks/reuseables"
-import type { ContentViewInput } from "./contentWorkbench.shared"
+import { useGraphQLWithToast } from "@/modules/toast"
+import { contentDialogOf, type ContentViewInput } from "./contentWorkbench.shared"
 
 /** Owns the actual ContentAddPost data derivations and conditional controller lifetime. */
 export const useContentAddPostView = (input: ContentViewInput) => {
     const data = input.data
     const pillars = data?.pillars.filter((pillar) => pillar.active) ?? []
     const t = useTranslations("content")
+    const runGraphQL = useGraphQLWithToast()
     const command = useContentCommand(input.isActive && input.isReady, input.scope)
     const focus = useContentFocus()
     const actions = useContentItemActions()
@@ -59,13 +61,7 @@ export const useContentAddPostView = (input: ContentViewInput) => {
                   note: command.note,
               }
     const on: ContentActions["addPostActions"] = {
-        open: () => {
-            if (input.isActive && input.isReady) setOpen(true)
-        },
-        close: () => setOpen(false),
-        openChange: (open) => {
-            if (!open && !command.isPending) setOpen(false)
-        },
+        ...contentDialogOf(input, setOpen, command.isPending),
         title: (value) => form.setValue("title", value),
         date: (value) => form.setValue("date", value),
         time: (value) => form.setValue("time", value),
@@ -76,7 +72,7 @@ export const useContentAddPostView = (input: ContentViewInput) => {
                 CONTENT_CHANNELS.filter((c) => values.includes(c)),
             ),
         run: () => {
-            run()
+            run().catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
         },
         dismissNote: command.dismiss,
     }

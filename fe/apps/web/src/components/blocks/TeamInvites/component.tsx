@@ -3,8 +3,7 @@ import { TeamInviteRowDetail } from "@/components/composites/TeamInviteRowDetail
 
 import { SlotView } from "@/components/composites/SlotView"
 
-import type { InviteRowView } from "@/modules/team"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, InviteRowView, SlotLabels } from "@/modules/types"
 
 /** Copy, rows and state the connected invitations list supplies. */
 export interface TeamInvitesBaseProps {
@@ -34,6 +33,25 @@ export interface TeamInvitesBaseProps {
         readonly cancelRevoke: () => void
     }
 }
+
+/** The confirmation before an invitation is revoked; nothing is drawn while none waits. */
+const RevokeDialog = (props: TeamInvitesBaseProps) =>
+    props.props.confirm === undefined ? null : (
+        <AlertDialog
+            isOpen
+            title={props.props.revokeLabel}
+            description={props.props.confirm.email}
+            tone="negative"
+            confirmLabel={props.props.revokeLabel}
+            cancelLabel={props.props.cancelLabel}
+            isConfirmPending={props.props.confirm.isPending}
+            onOpenChange={(open) => {
+                if (!open) props.on.cancelRevoke()
+            }}
+            onConfirm={props.on.confirmRevoke}
+            onCancel={props.on.cancelRevoke}
+        />
+    )
 
 /** Draws the pending invitations with expiry, resend, copy link and revoke. */
 export const TeamInvitesBase = (props: TeamInvitesBaseProps) => {
@@ -99,22 +117,7 @@ export const TeamInvitesBase = (props: TeamInvitesBaseProps) => {
                     />
                 )}
             />
-            {props.props.confirm === undefined ? null : (
-                <AlertDialog
-                    isOpen
-                    title={props.props.revokeLabel}
-                    description={props.props.confirm.email}
-                    tone="negative"
-                    confirmLabel={props.props.revokeLabel}
-                    cancelLabel={props.props.cancelLabel}
-                    isConfirmPending={props.props.confirm.isPending}
-                    onOpenChange={(open) => {
-                        if (!open) props.on.cancelRevoke()
-                    }}
-                    onConfirm={props.on.confirmRevoke}
-                    onCancel={props.on.cancelRevoke}
-                />
-            )}
+            <RevokeDialog {...props} />
         </div>
     )
 }

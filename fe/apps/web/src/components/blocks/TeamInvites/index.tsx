@@ -5,9 +5,9 @@ import { useIndividualPlan } from "@/hooks/billing"
 import { useMember } from "@/hooks/member"
 import { ROLE_KEYS, isTeamManager, teamSlotOf, useInviteInteraction, useTeam } from "@/hooks/team"
 import { useSlotLabels } from "@/hooks/slot"
+import type { InviteRowView } from "@/modules/types"
 import { TeamInvitesBase } from "./component"
 import type { TeamInvitesBaseProps } from "./component"
-import type { InviteRowView } from "@/modules/team"
 
 /** Read data and interaction consumed when the connected owner resolves its copy. */
 interface TeamInvitesViewInput {

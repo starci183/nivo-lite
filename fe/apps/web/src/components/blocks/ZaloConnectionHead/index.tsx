@@ -6,16 +6,16 @@ import { useState, type ReactNode } from "react"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import { useConnectionRefusal } from "@/hooks/connections"
 import { useSlotLabels } from "@/hooks/slot"
-import { useZaloChecks, useZaloHead, useZaloPage } from "@/hooks/zaloConnection"
+import { useZaloChecks, useZaloEventsView, useZaloHead, useZaloPage } from "@/hooks/zaloConnection"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { ZaloConnectionHeadBase } from "./component"
 import type { ZaloPageNotice } from "./component"
 
-/** What the page hands the frame: the connection of the url and the connected bands of its two panes. */
+/** What the page hands the frame: the connection of the url and the connected bands of its main pane. */
 interface ZaloConnectionHeadProps {
     readonly connectionId: string
-    readonly shape: { readonly main: ReactNode; readonly rail: ReactNode }
+    readonly children: ReactNode
 }
 
 /**
@@ -31,6 +31,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
     )
     const { recheck, isRechecking } = useZaloChecks(props.connectionId)
     const { slot } = useZaloPage(props.connectionId)
+    const rail = useZaloEventsView(props.connectionId)
     const page = "items" in slot ? slot.items : undefined
     const [isAsking, setIsAsking] = useState(false)
     const [isRailOpen, setRailOpen] = useState(false)
@@ -47,7 +48,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
     const isLive = page !== undefined && page.status !== "disconnected"
     return (
         <ZaloConnectionHeadBase
-            shape={props.shape}
+            children={props.children}
             props={{
                 head,
                 markSrc: PROVIDER_LOGO.zalo_oa ?? "",
@@ -66,6 +67,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
                     closeLabel: t("eventsClose"),
                     isOpen: isRailOpen,
                 },
+                events: rail.events,
                 recheckLabel: t("recheck"),
                 isRechecking,
                 notices,
@@ -94,6 +96,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
                 dismiss: () => setIsAsking(false),
                 openRail: setRailOpen,
                 retry: () => router.refresh(),
+                retryEvents: rail.retry,
             }}
         />
     )

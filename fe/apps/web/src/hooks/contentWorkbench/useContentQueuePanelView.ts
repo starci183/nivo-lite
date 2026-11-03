@@ -29,7 +29,7 @@ export const useContentQueuePanelView = (input: ContentViewInput) => {
     const [notes, setNotes] = useState<Readonly<Record<string, ContentNote>>>({})
     const lifetime = useFeatureLifetime(input.isActive, input.scope)
     const decide = (id: string, decision: "approved" | "rejected") => {
-        if (!input.isActive || !input.isReady || data === undefined || !data.canManage) return
+        if (!input.isActive || !input.isReady || data?.canManage !== true) return
         const isCurrent = lifetime.capture()
         const workItemId = data.items.find((i) => i.id === id)?.work_item_id
         if (workItemId === null || workItemId === undefined) return

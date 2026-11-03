@@ -6,63 +6,63 @@ import { SalesRow } from "@/components/branches/SalesRow"
 interface SalesAttentionRowsProps extends SalesAttentionView {
     readonly on: SalesAttentionActions
 }
-/** Surface 1: opportunities that need a person, most urgent first. */
-export const SalesAttentionRows = (props: SalesAttentionRowsProps) => {
-    const on = props.on
-    return (
-        <SurfaceCard
-            kind="list"
-            ariaLabel={props.label}
-            empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
-            items={props.rows.map((row): ListRowData => ({
-                id: row.key,
-                title: row.customer,
-                state: "neutral",
-                ...(row.leadHref === null || row.customer === "" ? {} : { href: row.leadHref }),
-                detail: (
-                    <SalesRow
-                        {...{
-                            chips: (
-                                <>
-                                    <Badge tone={row.kindTone} isDot>
-                                        {row.kindLabel}
-                                    </Badge>
-                                    {row.stage === null ? null : <Badge tone={row.stage.tone}>{row.stage.label}</Badge>}
-                                    <Text as="span" size="xs" tone="muted" isStrong={row.isStale}>
-                                        {row.age}
-                                    </Text>
-                                </>
-                            ),
-                            actions: renderAttentionActions({ row, p: props, on }),
-                            body: (
-                                <>
-                                    {row.title === null ? null : (
-                                        <Text size="sm" isStrong>
-                                            {row.title}
-                                        </Text>
-                                    )}
-                                    {row.need === "" ? null : (
-                                        <Text size="sm" tone="muted" overflow="clamp-2">
-                                            {row.need}
-                                        </Text>
-                                    )}
-                                    <Text size="xs" tone="muted">
-                                        {row.owner}
-                                    </Text>
-                                    {row.error === null ? null : (
-                                        <Text size="sm" live="assertive">
-                                            {row.error}
-                                        </Text>
-                                    )}
-                                </>
-                            ),
-                        }}
-                    />
+/** One attention row: the customer with its marks, the age, what it needs and the steps a person can take. */
+const attentionItemOf = (row: AttentionItemView, view: SalesAttentionRowsProps): ListRowData => ({
+    id: row.key,
+    title: row.customer,
+    state: "neutral",
+    ...(row.leadHref === null || row.customer === "" ? {} : { href: row.leadHref }),
+    detail: (
+        <SalesRow
+            {...{
+                chips: (
+                    <>
+                        <Badge tone={row.kindTone} isDot>
+                            {row.kindLabel}
+                        </Badge>
+                        {row.stage === null ? null : <Badge tone={row.stage.tone}>{row.stage.label}</Badge>}
+                        <Text as="span" size="xs" tone="muted" isStrong={row.isStale}>
+                            {row.age}
+                        </Text>
+                    </>
                 ),
-            }))}
+                actions: renderAttentionActions({ row, p: view, on: view.on }),
+                body: (
+                    <>
+                        {row.title === null ? null : (
+                            <Text size="sm" isStrong>
+                                {row.title}
+                            </Text>
+                        )}
+                        {row.need === "" ? null : (
+                            <Text size="sm" tone="muted" overflow="clamp-2">
+                                {row.need}
+                            </Text>
+                        )}
+                        <Text size="xs" tone="muted">
+                            {row.owner}
+                        </Text>
+                        {row.error === null ? null : (
+                            <Text size="sm" live="assertive">
+                                {row.error}
+                            </Text>
+                        )}
+                    </>
+                ),
+            }}
         />
-    )
-}
+    ),
+})
+
+/** Surface 1: opportunities that need a person, most urgent first. */
+export const SalesAttentionRows = (props: SalesAttentionRowsProps) => (
+    <SurfaceCard
+        kind="list"
+        ariaLabel={props.label}
+        empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
+        items={props.rows.map((row) => attentionItemOf(row, props))}
+    />
+)
 const renderAttentionActions = ({ row, p, on }: RenderAttentionActionsInput) => (
     <>
         {row.decisionHref === null ? null : (

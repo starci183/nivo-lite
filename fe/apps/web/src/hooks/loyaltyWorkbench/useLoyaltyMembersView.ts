@@ -1,8 +1,7 @@
 import type { LoyaltyPanelInput } from "@/hooks/loyalty"
-import { toast } from "@/modules/toast"
 
-import { EMPTY_LOYALTY_BOARD, daysSince, findTier, tierTone } from "@/hooks/loyalty"
-import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { EMPTY_LOYALTY_BOARD, daysSince, findTier, tierTone, useLoyaltyPanelBoard } from "@/hooks/loyalty"
+import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { MEMBER_SORTS, groupPhone, lastVisitOf, useMemberDetailView, useMemberList } from "@/hooks/loyaltyMembers"
@@ -12,12 +11,7 @@ const DETAIL_ID = "loyalty-member-detail"
 /** The connected member list: search, tier filter, sort and show-more; a picked member opens the detail beside it. */
 /** The connected Members tab: reads the loyalty board itself (SWR shares the one request with the other tabs). */
 export const useLoyaltyMembersView = (input: LoyaltyPanelInput) => {
-    const read = input.read
-    const board = read.data ?? EMPTY_LOYALTY_BOARD
-    const slotLabels = useSlotLabels()
-    const retry = () => {
-        input.read.mutate().catch(() => toast.danger(slotLabels("").error))
-    }
+    const { read, board, slotLabels, retry } = useLoyaltyPanelBoard(input)
     const t = useTranslations("loyalty")
     const format = useFormatter()
     const list = useMemberList(board, input)

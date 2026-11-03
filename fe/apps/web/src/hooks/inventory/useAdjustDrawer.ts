@@ -1,6 +1,6 @@
-import { adjustmentCopyOf, type InventoryPanelScope, num, type AdjustMode } from "./inventory.shared"
-("use client")
+"use client"
 
+import { adjustmentCopyOf, type InventoryPanelScope, num, type AdjustMode } from "./inventory.shared"
 import { useAdjustmentPreview } from "./useAdjustmentPreview"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import type { ItemView, LocationView } from "@/modules/types"
@@ -51,7 +51,7 @@ export const useAdjustDrawer = (
                         qty: num(open.value),
                         note: open.reason,
                     }),
-                (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
+                drawer.finish,
             )
             return
         }

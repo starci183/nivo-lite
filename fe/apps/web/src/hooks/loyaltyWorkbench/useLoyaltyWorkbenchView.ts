@@ -1,4 +1,4 @@
-import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
+import { useAgentWorkbenchShell } from "@/hooks/agentDashboard"
 import { LOYALTY_TABS } from "@/hooks/loyalty"
 import type { LoyaltyTab, LoyaltyPanelInput } from "@/hooks/loyalty"
 import { useQueryLoyaltyBoardSwr } from "@/hooks/swr"
@@ -21,13 +21,13 @@ interface LoyaltyWorkbenchInput {
 export const useLoyaltyWorkbenchView = (input: LoyaltyWorkbenchInput) => {
     const { activeWorkspaceId } = useActiveWorkspace()
     const scope = JSON.stringify([activeWorkspaceId, input.installationId])
-    const tabs = useAgentWorkbenchTabs({ ids: LOYALTY_TABS, initialTab: input.initialTab, scope })
-    const dashboard = useAgentDashboardFrame({
+    const { tabs, dashboard, isNormal } = useAgentWorkbenchShell({
         module: "loyalty",
         installationId: input.installationId,
-        hasOwnGaps: false,
+        ids: LOYALTY_TABS,
+        initialTab: input.initialTab,
+        scope,
     })
-    const isNormal = dashboard.why.workItemId === null
     const read = useQueryLoyaltyBoardSwr(isNormal)
     const panel = (id: LoyaltyTab): LoyaltyPanelInput => ({
         read,

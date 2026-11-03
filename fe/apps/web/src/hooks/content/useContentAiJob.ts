@@ -119,9 +119,14 @@ export const useContentAiJob = <TRequest>(options: ContentAiJobOptions<TRequest>
         },
         [isActive, jobId, runGraphQL],
     )
+    const observe = (failure: unknown) => runGraphQL(() => Promise.reject(failure), { showSuccessToast: false })
     const { data: status } = useQueryContentAiStatusSwr(jobId, {
-        onSuccess: reportStatus,
-        onError: reportFailure,
+        onSuccess: (next) => {
+            reportStatus(next).catch(observe)
+        },
+        onError: (error) => {
+            reportFailure(error).catch(observe)
+        },
     })
 
     const request = useCallback(

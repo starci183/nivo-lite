@@ -3,12 +3,11 @@
 import { useState } from "react"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useTranslations } from "next-intl"
-import { useChatbotActions } from "@/hooks/chatbot"
+import { useChatbotActions, useChatbotWorkbench } from "@/hooks/chatbot"
 import { slotOfReads } from "@/hooks/slot"
 import { agentHref } from "@/modules/installations"
 import type { ChatbotWaitingReply } from "@/modules/types"
 import { WAITING_SHOWN, waitingRowOf } from "./chatbotWaiting.shared"
-import { useChatbotWorkbench } from "@/hooks/chatbotWorkbench"
 
 /** The customer replies of one Chatbot instance that wait for a person, each decided in place. */
 export const useChatbotWaiting = (installationId: string | null, isActive = true) => {

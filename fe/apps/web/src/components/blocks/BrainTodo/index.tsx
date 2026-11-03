@@ -17,9 +17,9 @@ import {
     useBrainReview,
     useBrainGaps,
     usePublicProposals,
+    useFailureToast,
 } from "@/hooks/brain"
 import type { TodoFilter } from "@/hooks/brain"
-import { toast } from "@/modules/toast"
 import { BrainTodoBase } from "./component"
 
 /** The words of the label of each filter besides the kinds of finding. */
@@ -49,7 +49,7 @@ const filterViewsOf = (
  */
 export const BrainTodo = () => {
     const t = useTranslations("dossierReview")
-    const feedback = useTranslations("toast")
+    const failed = useFailureToast()
     const slotLabels = useSlotLabels()
     const board = useBrainBoard()
     const review = useBrainReview(board)
@@ -110,7 +110,7 @@ export const BrainTodo = () => {
                 retry: list.retry,
                 submitDialog: (values) => {
                     dialog.submit(values).catch(() => {
-                        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+                        failed()
                     })
                 },
                 closeDialog: dialog.close,

@@ -10,7 +10,7 @@ interface PublicBookingPageBaseProps {
     readonly props: PublicBookingPageView
 }
 
-/** Passes the shop identifier to the interactive booking block. */
+/** Passes the shop identifier to the interactive booking block, which is its root and draws the one `Page`. */
 export const PublicBookingPageBase = (props: PublicBookingPageBaseProps) => (
     <PublicBookingContent slug={props.props.slug} />
 )

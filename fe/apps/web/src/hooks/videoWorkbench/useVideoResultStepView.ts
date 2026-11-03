@@ -11,13 +11,9 @@ import { editorHref } from "@/modules/video"
 
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { videoOwnerOf, videoResultBadgesOf } from "./videoWorkbench.shared"
+import { shapeOf, videoOwnerOf, videoResultBadgesOf } from "./videoWorkbench.shared"
 import type { VideoViewInput } from "./videoWorkbench.shared"
 type ResultBusy = "approve" | "share" | "posted"
-const shapeOf = (aspect: string): "portrait" | "square" | "landscape" => {
-    if (aspect === "9:16") return "portrait"
-    return aspect === "1:1" ? "square" : "landscape"
-}
 const copyOf = (t: ReturnType<typeof useTranslations<"video">>) => ({
     heading: t("resultHeading"),
     waitingLabel: t("status_rendering"),

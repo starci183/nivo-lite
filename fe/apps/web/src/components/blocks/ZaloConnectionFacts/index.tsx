@@ -1,32 +1,27 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useConnectionRefusal } from "@/hooks/connections"
 import { useSlotLabels } from "@/hooks/slot"
-import { useZaloOverviewFacts, useZaloPage, useZaloSetupFacts } from "@/hooks/zaloConnection"
+import { useZaloOverviewFacts, useZaloPage } from "@/hooks/zaloConnection"
 import { ZaloConnectionFactsBase } from "./component"
 
-/** What the page hands the facts: the connection of the url and which set it draws. */
+/** What the page hands the facts: the connection of the url. */
 interface ZaloConnectionFactsProps {
     readonly connectionId: string
-    /** `tiles`: the health band under the page header; `saved`: what the first setup step stored, secrets masked. */
-    readonly kind: "tiles" | "saved"
 }
 
-/** The connected facts: the health of the OA at a glance, or what is saved with every secret masked to its last four characters. */
+/** The connected health tiles: the health of the OA at a glance. */
 export const ZaloConnectionFacts = (props: ZaloConnectionFactsProps) => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
     const tiles = useZaloOverviewFacts(props.connectionId)
-    const saved = useZaloSetupFacts(props.connectionId)
     const { reload } = useZaloPage(props.connectionId)
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     return (
         <ZaloConnectionFactsBase
-            shape={props.kind}
-            props={{
-                label: t("mainLabel"),
-                facts: props.kind === "tiles" ? tiles : saved,
-                slotLabels: slotLabels(t("factsEmpty")),
-            }}
+            props={{ label: t("mainLabel"), facts: tiles, slotLabels: slotLabels(t("factsEmpty")) }}
             on={{ retry: reload }}
         />
     )

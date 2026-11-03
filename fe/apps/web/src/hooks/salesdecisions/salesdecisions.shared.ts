@@ -2,12 +2,18 @@ import type { useFormatter, useTranslations } from "next-intl"
 import { splitBasis } from "@/hooks/decisions"
 import { canDecideItem, type useMember } from "@/hooks/member"
 import type { useSalesDecisionForm } from "@/hooks/rhf"
-import { ageParts, decisionAnchor, isStale, OUTCOME_TONES, parseAmount, type useSalesActions } from "@/hooks/sales"
+import {
+    ageParts,
+    decisionAnchor,
+    isStale,
+    OUTCOME_TONES,
+    type useSalesActions,
+    type useSalesWorkbench,
+} from "@/hooks/sales"
 import type { SalesWorkEditsRequest } from "@/hooks/swr"
-import type { useSalesWorkbench } from "@/hooks/salesworkbench"
 import { leadPath } from "@/modules/routes"
 import type { FlowDecisionRow, SalesDecision, TypedDecisionValues } from "@/modules/types"
-import { fieldKey } from "@/modules/utils"
+import { digitsToNumber, fieldKey } from "@/modules/utils"
 import { actionWordOf } from "@/hooks/actionWord"
 
 type Decision = "approved" | "rejected"
@@ -19,9 +25,9 @@ const missingEditsOf = (item: SalesDecision, typed: TypedDecisionValues) => {
     for (const name of item.missing) {
         const raw = (typed.values[fieldKey(item.id, name)] ?? "").trim()
         if (!raw) continue
-        const value = name === "amount_vnd" ? parseAmount(raw) : raw
+        const value = name === "amount_vnd" ? digitsToNumber(raw) : raw
         fields[name] = value
-        if (name === "amount_vnd") amount = parseAmount(raw)
+        if (name === "amount_vnd") amount = digitsToNumber(raw)
     }
     return { fields, amount }
 }
@@ -35,7 +41,7 @@ const editorEditsOf = (item: SalesDecision, typed: TypedDecisionValues) => {
     if (typedDraft && typedDraft !== item.draft) draft = typedDraft
     if (item.hasAmount && !item.missing.includes("amount_vnd")) {
         const originalAmount = item.amountVnd === null ? "" : String(item.amountVnd)
-        const typedAmount = parseAmount(typed.amounts[item.id] ?? originalAmount)
+        const typedAmount = digitsToNumber(typed.amounts[item.id] ?? originalAmount)
         if (typedAmount !== item.amountVnd) amount = typedAmount
     }
     return { draft, amount }

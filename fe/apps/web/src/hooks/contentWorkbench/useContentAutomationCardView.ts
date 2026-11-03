@@ -41,11 +41,11 @@ export const useContentAutomationCardView = (input: ContentViewInput) => {
         const isCurrent = lifetime.capture()
         const previous = form.getValues(key)
         form.setValue(key, value)
-        return form.handleSubmit((request) => {
+        return form.handleSubmit((request) =>
             mutation.set({ key, on: request[key] }, (saved) => {
                 if (isCurrent() && saved === undefined) form.setValue(key, previous)
-            })
-        })()
+            }),
+        )()
     }
     const note: ContentNoteView | null = null
     return {

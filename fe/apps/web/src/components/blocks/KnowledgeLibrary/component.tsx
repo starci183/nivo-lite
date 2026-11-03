@@ -32,7 +32,6 @@ export const KnowledgeLibraryBase = (props: KnowledgeLibraryBaseProps) => {
         <KnowledgeRowsSection
             isHeadingInCard
             section={list.section}
-            isPending={list.isPending}
             before={
                 <div className={FILTER_CLASS_NAME}>
                     <Select

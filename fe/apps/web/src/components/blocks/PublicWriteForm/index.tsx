@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { usePublicWriteController } from "@/hooks/brain"
-import { toast } from "@/modules/toast"
+import { usePublicWriteController, useFailureToast } from "@/hooks/brain"
 import { PublicWriteFormBase } from "./component"
 
 /** Props for the connected write form: whether the address asks for it, and the title it starts with. */
@@ -19,7 +18,7 @@ interface PublicWriteFormProps {
  */
 export const PublicWriteForm = (props: PublicWriteFormProps) => {
     const t = useTranslations("publicBrain")
-    const feedback = useTranslations("toast")
+    const failed = useFailureToast()
     const controller = usePublicWriteController(props.initialTitle)
     if (!controller.canWrite) return null
     return (
@@ -43,7 +42,7 @@ export const PublicWriteForm = (props: PublicWriteFormProps) => {
                 close: controller.close,
                 submit: () => {
                     controller.submit().catch(() => {
-                        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+                        failed()
                     })
                 },
                 setTitle: controller.setTitle,

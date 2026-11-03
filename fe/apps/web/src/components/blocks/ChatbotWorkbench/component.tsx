@@ -1,4 +1,4 @@
-import type { ChatbotWorkbenchViewData, ChatbotInboxActions } from "@/modules/types"
+import type { ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "@/modules/types"
 import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
@@ -20,31 +20,7 @@ type ChatbotWorkbenchShape = (typeof CHATBOT_WORKBENCH_SHAPES)[number]
 export interface ChatbotWorkbenchBaseProps {
     readonly shape: ChatbotWorkbenchShape
     readonly props: ChatbotWorkbenchViewData
-    readonly on: {
-        readonly selectTab: (id: string) => void
-        readonly closeWhy: () => void
-        readonly retryDashboard: () => void
-        readonly retry: () => void
-        readonly customers: {
-            readonly query: (value: string) => void
-            readonly filter: (value: string) => void
-            readonly retry: () => void
-        }
-        readonly inbox: ChatbotInboxActions & {
-            readonly reload: () => void
-        }
-        readonly waiting: {
-            readonly command: (rowId: string, commandId: string) => void
-            readonly retry: () => void
-            readonly changeEdit: (text: string) => void
-            readonly sendEdit: () => void
-            readonly cancelEdit: () => void
-        }
-        readonly gaps: {
-            readonly retry: () => void
-            readonly dismiss: (id: string) => void
-        }
-    }
+    readonly on: ChatbotWorkbenchActions
 }
 const panelId = (id: string): string => `agent-dashboard-panel-${id}`
 const Inbox = (props: Omit<ChatbotWorkbenchBaseProps, "shape">) => (

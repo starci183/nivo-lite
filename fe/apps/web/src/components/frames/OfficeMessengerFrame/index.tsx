@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Page, Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
+import { Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
 import { OfficeHeader } from "@/components/composites/OfficeHeader"
 import { OfficeInfoHead, OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import type { Arrangement, OfficeInfoPanelProps, OfficeInfoView } from "@/modules/types"
@@ -92,65 +92,63 @@ export const OfficeMessengerFrame = (props: OfficeMessengerFrameProps) => {
     const hasDrawerInfo = props.isCompact && !isListScreen
     const infoPanel = <MessengerFrameInfo {...props} />
     return (
-        <Page chrome="panes">
-            <PaneGrid
-                label={props.label}
-                areas={props.arrangement.areas}
-                columns={props.arrangement.columns}
-                rows={props.arrangement.rows}
-            >
-                {hasList ? (
-                    <Pane area="listHead" surface>
-                        <PaneSection align="center">
-                            <Text isStrong>{props.listTitle}</Text>
-                        </PaneSection>
-                    </Pane>
-                ) : null}
-                {hasList ? (
-                    <Pane area="list" surface>
-                        {props.list}
-                    </Pane>
-                ) : null}
-                {hasCentre ? (
-                    <Pane area="head" surface>
-                        <MessengerFrameHeader {...props} />
-                    </Pane>
-                ) : null}
-                {hasCentre ? <Pane area="thread">{props.thread}</Pane> : null}
-                {hasCentre && props.centre !== "tasks" ? (
-                    <Pane area="composer" surface>
-                        {props.composer}
-                    </Pane>
-                ) : null}
-                {hasDockedInfo ? (
-                    <Pane area="infoHead" surface>
-                        <OfficeInfoHead
-                            props={{ title: props.infoTitle, closeLabel: props.infoCloseLabel }}
-                            on={{ close: props.onCloseInfo }}
-                        />
-                    </Pane>
-                ) : null}
-                {hasDockedInfo ? (
-                    <Pane area="info" surface scroll label={props.infoTitle}>
-                        {infoPanel}
-                    </Pane>
-                ) : null}
-                {hasDrawerInfo ? (
-                    <Pane
-                        area="info"
-                        surface
-                        collapse="drawer"
-                        collapseLabel={props.infoTitle}
-                        openLabel={props.infoOpenLabel}
-                        closeLabel={props.infoCloseLabel}
-                        isOpen={props.isInfoOpen}
-                        onOpenChange={props.onInfoOpenChange}
-                    >
-                        {infoPanel}
-                    </Pane>
-                ) : null}
-            </PaneGrid>
-        </Page>
+        <PaneGrid
+            label={props.label}
+            areas={props.arrangement.areas}
+            columns={props.arrangement.columns}
+            rows={props.arrangement.rows}
+        >
+            {hasList ? (
+                <Pane area="listHead" surface>
+                    <PaneSection align="center">
+                        <Text isStrong>{props.listTitle}</Text>
+                    </PaneSection>
+                </Pane>
+            ) : null}
+            {hasList ? (
+                <Pane area="list" surface>
+                    {props.list}
+                </Pane>
+            ) : null}
+            {hasCentre ? (
+                <Pane area="head" surface>
+                    <MessengerFrameHeader {...props} />
+                </Pane>
+            ) : null}
+            {hasCentre ? <Pane area="thread">{props.thread}</Pane> : null}
+            {hasCentre && props.centre !== "tasks" ? (
+                <Pane area="composer" surface>
+                    {props.composer}
+                </Pane>
+            ) : null}
+            {hasDockedInfo ? (
+                <Pane area="infoHead" surface>
+                    <OfficeInfoHead
+                        props={{ title: props.infoTitle, closeLabel: props.infoCloseLabel }}
+                        on={{ close: props.onCloseInfo }}
+                    />
+                </Pane>
+            ) : null}
+            {hasDockedInfo ? (
+                <Pane area="info" surface scroll label={props.infoTitle}>
+                    {infoPanel}
+                </Pane>
+            ) : null}
+            {hasDrawerInfo ? (
+                <Pane
+                    area="info"
+                    surface
+                    collapse="drawer"
+                    collapseLabel={props.infoTitle}
+                    openLabel={props.infoOpenLabel}
+                    closeLabel={props.infoCloseLabel}
+                    isOpen={props.isInfoOpen}
+                    onOpenChange={props.onInfoOpenChange}
+                >
+                    {infoPanel}
+                </Pane>
+            ) : null}
+        </PaneGrid>
     )
 }
 

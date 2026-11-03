@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
@@ -29,10 +29,13 @@ export const useQueryBookingBoardSwr = (
         },
         { ...config, keepPreviousData: config?.keepPreviousData === true && workspaceId === resolvedWorkspaceId },
     )
-    useEffect(() => {
-        if (workspaceId !== undefined && read.data !== undefined && !read.isLoading) {
-            setResolvedWorkspaceId(workspaceId)
-        }
-    }, [workspaceId, read.data, read.isLoading])
+    if (
+        workspaceId !== undefined &&
+        workspaceId !== resolvedWorkspaceId &&
+        read.data !== undefined &&
+        !read.isLoading
+    ) {
+        setResolvedWorkspaceId(workspaceId)
+    }
     return read
 }

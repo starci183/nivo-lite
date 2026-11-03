@@ -1,5 +1,5 @@
-import { useFeatureReset } from "@/hooks/reuseables"
-import { useShiftsOperation } from "./useShiftsOperation"
+import type { useShiftsOperation } from "./useShiftsOperation"
+import { useShiftsAvailabilityDraft } from "./useShiftsAvailabilityDraft"
 import type { ShiftsPersonalViews, ShiftsPersonalActions } from "@/modules/types"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
 type FullView = {
@@ -8,8 +8,7 @@ type FullView = {
 }
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
-import { requestStatusOf, useShiftsFormat, useShiftsWhenFields } from "@/hooks/shifts"
+import { requestStatusOf, useShiftsFormat, type useShiftsWhenFields } from "@/hooks/shifts"
 import { useShiftsMineCommands } from "@/hooks/shiftsCommands"
 
 /** What is typed in the availability form. */
@@ -93,21 +92,11 @@ export const useShiftsMyAvailabilityView = (input: ShiftsPanelInput) => {
     const format = useShiftsFormat()
     const mine = input.mine.data
     const commands = useShiftsMineCommands()
-    const [form, setForm] = useState<AvailabilityForm>(INITIAL_FORM)
-    const operation = useShiftsOperation(input)
-    const isBusy = operation.tag !== null
-    const today = mine?.today ?? ""
-    const date = form.date === "" ? today : form.date
-    const isWeekly = form.mode === "weekday"
-    const when = useShiftsWhenFields({ ...form, date }, today)
-    useFeatureReset({
-        isActive: input.isActive,
-        isReady: true,
-        scope: input.scope,
-        onReset: () => {
-            setForm(INITIAL_FORM)
-        },
-    })
+    const { form, setForm, operation, isBusy, date, isWeekly, when } = useShiftsAvailabilityDraft(
+        input,
+        INITIAL_FORM,
+        mine?.today ?? "",
+    )
 
     const copy: ShiftsPersonalViews["myAvailabilityCopy"] = {
         fieldStructure: [

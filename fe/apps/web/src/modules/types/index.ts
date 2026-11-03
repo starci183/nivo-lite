@@ -66,7 +66,7 @@ export type {
     PublicBookingPageData,
     ResourceFields,
 } from "./booking"
-export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSession, ConsoleWorkspace } from "./console"
+export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSessionView, ConsoleWorkspace } from "./console"
 export { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "./console"
 export type { Access, Environment, Provider, ProviderKind, Purpose } from "./connections"
 export type { Connection, ConnectionStatus, ConnectionTone } from "./connections"
@@ -74,7 +74,7 @@ export type { AgentOption, ConnectionAgentRowView } from "./connections"
 export type { ConnectionCheck, ConnectionFactView } from "./connections"
 export type { ConnectionHeadView, ConnectionPageHeadView } from "./connections"
 export type { ConnectionPageHeadCommands } from "./connections"
-export type { ConnectionLineView, ConnectionRailLinesView } from "./connections"
+export type { ConnectionLineView, ConnectionRailLinesView, ConnectionRefusalView } from "./connections"
 export type { ConnectionNotice } from "./connections"
 export type { ConnectionTilesView } from "./connections"
 export type { ConnectorAudience, ConnectorCategory } from "./connections"
@@ -167,7 +167,7 @@ export type { ActivityItemView } from "./sales"
 export type { SalesContract, SalesContractStatus, ContractItemView } from "./sales"
 export type { SalesDeal, DealView, LaneView, MoveDialogView } from "./sales"
 export type { HandoffRow, HandoffItemView, SalesShipping } from "./sales"
-export type { SalesDecision, DecisionRowView, DecisionRowLabels, DecisionRowActions, DecidedView } from "./sales"
+export type { SalesDecision, DecisionRowView, DecisionRowLabels, DecisionRowActions } from "./sales"
 export type { SalesConversion, SalesMetrics } from "./sales"
 export type { SalesOrderRowView } from "./sales"
 export type { SalesWorkbenchData } from "./sales"
@@ -375,14 +375,12 @@ export type {
 export type {
     ContentEditorFormView,
     ContentEditorItemView,
-    ContentEditorPatch,
     ContentNoteView,
     ContentTransitionView,
 } from "./content-editor"
 export type { TypedDecisionValues } from "./sales-decision-typed"
-export type { MemberRowView, TeamPageHeading } from "./team"
+export type { InviteAction, InviteRowView, MemberRowView, TeamPageHeading } from "./team"
 export type { ContractImportDialogEvents, ContractImportDialogView, ContractImportRowView } from "./contract-import"
-export type { ReadGateBaseProps } from "./read-gate"
 export type { MethodView, SessionRowView } from "./account"
 export type {
     ZaloAgentRowView,
@@ -445,13 +443,13 @@ export type { InventoryRecipeEditorData } from "./inventory-editors"
 export type { LoyaltyViews } from "./loyalty-views"
 export type { LoyaltyActions } from "./loyalty-views"
 export type { LoyaltyWorkbenchData, LoyaltyWorkbenchOn } from "./loyalty-workbench"
-export type { WorkbenchDashboardRegions, WorkbenchExplanationView } from "./workbench-dashboard"
-export type { WorkbenchFigureData, WorkbenchFigureRegion } from "./workbench-dashboard"
+export type { WorkbenchFigureData } from "./workbench-dashboard"
 export type { WorkbenchWaitingRegionView, WorkbenchDoneRegionView } from "./workbench-dashboard"
 export type { WorkbenchConnectionsRegionView, WorkbenchKnowledgeRegionView } from "./workbench-dashboard"
+export type { WorkbenchDashboardRegions, WorkbenchFigureRegion } from "./workbench-dashboard"
 export type { WorkbenchWhyLabels } from "./workbench-dashboard"
 export type { ChatbotCustomerWords, CustomerFilter, CustomerRowView } from "./chatbot-workbench"
-export type { ChatbotGapRow, ChatbotWorkbenchViewData } from "./chatbot-workbench"
+export type { ChatbotGapRow, ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "./chatbot-workbench"
 
 export { CHATBOT_CUSTOMER_FILTERS, CHATBOT_WORKBENCH_TABS } from "./chatbot-workbench"
 export type { ChatbotConversationListView } from "./chatbot-inbox"
@@ -494,3 +492,4 @@ export type { VideoLibraryViews, VideoLibraryActions } from "./video-library-vie
 export type { VideoProductionViews, VideoProductionActions } from "./video-production-views"
 export type { VideoWorkbenchViews, VideoWorkbenchActions } from "./video-workbench"
 export { VIDEO_TABS, VIDEO_EDITOR_STEPS } from "./video-workbench"
+export { textFieldsOf, type TextFieldItem } from "./form-fields"

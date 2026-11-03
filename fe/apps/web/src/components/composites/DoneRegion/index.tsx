@@ -1,7 +1,7 @@
 import type { WorkbenchDoneRegionView as DoneView } from "@/modules/types"
 import { Badge, Cluster, EmptyNotice, Link, SurfaceCard } from "@starci/grammar/common"
 /** Copy and view of the done region while the data is read. */
-export interface DoneRegionProps {
+interface DoneRegionProps {
     readonly label: string
     readonly view: DoneView
     readonly isLoading: boolean

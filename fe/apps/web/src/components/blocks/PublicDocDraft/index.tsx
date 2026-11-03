@@ -1,10 +1,9 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { failureKeyOf, publicBadgeOf, usePublicDocEditor } from "@/hooks/brain"
+import { failureKeyOf, publicBadgeOf, usePublicDocEditor, useFailureToast } from "@/hooks/brain"
 import type { PublicBadge, PublicDocument } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { toast } from "@/modules/toast"
 import { PublicDocDraftBase } from "./component"
 
 /** The tone of the badge of each state of a public document. */
@@ -64,20 +63,17 @@ const snapshotViewOf = (doc: PublicDocument, t: Translate, format: ReturnType<ty
 /** Opens the exact reviewed draft, retaining its own read failure, editable text and published snapshot. */
 export const PublicDocDraft = (props: PublicDocDraftProps) => {
     const t = useTranslations("publicBrain")
-    const feedback = useTranslations("toast")
     const format = useFormatter()
     const editor = usePublicDocEditor(props.docId)
     const slotLabels = useSlotLabels()
-    const failed = () => {
-        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
-    }
+    const failed = useFailureToast()
     if (props.docId === undefined || !editor.canWrite) return null
     return (
         <PublicDocDraftBase
             props={{
                 title: editor.doc?.title ?? t("seeDraft"),
                 closeLabel: t("cancel"),
-                isPending: editor.isPending,
+                isBusy: editor.isPending,
                 pendingAction: editor.pendingAction,
                 document: mapSlot(editor.slot, (documents) =>
                     documents.map((doc) => ({

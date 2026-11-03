@@ -1,57 +1,27 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import type { ReactNode } from "react"
-import { PROVIDERS } from "@/hooks/connection-providers"
-import { SEPAY_STEP_IDS, useSepayConnection, useSepaySteps } from "@/hooks/sepayConnection"
-import type { SepayStepId } from "@/modules/types"
+import { useConnectionRefusal } from "@/hooks/connections"
+import { useSepaySetupSteps } from "@/hooks/sepayConnection"
 import { SepaySetupStepsBase } from "./component"
 
-/** What the page hands the steps: the connection of the url and the connected body of every step. */
+/** What the page hands the stepper: the connection of the url. */
 interface SepaySetupStepsProps {
     readonly connectionId: string
-    readonly shape: Readonly<Record<SepayStepId, ReactNode>>
 }
 
-const TITLE_KEYS = {
-    environment: "stepEnvironment",
-    account: "stepAccount",
-    paste: "stepPaste",
-    test: "stepTest",
-    agents: "stepAgents",
-} as const satisfies Readonly<Record<SepayStepId, string>>
-
-/** The connected setup steps of a SePay connection: done or not from the connection read, the first one not done opens. */
+/** The connected stepper of the SePay setup: where the owner stands, from the connection read. */
 export const SepaySetupSteps = (props: SepaySetupStepsProps) => {
-    const t = useTranslations("sepayConnection")
-    const { slot } = useSepayConnection(props.connectionId)
-    const { steps, toggle } = useSepaySteps(props.connectionId)
-    const environment = ("items" in slot ? slot.items : undefined)?.environment ?? "test"
-    const titleOf = (id: SepayStepId): string => {
-        if (id === "test") return t(environment === "live" ? "checklistTitleLive" : "checklistTitle")
-        return t(TITLE_KEYS[id])
-    }
-    const drawn =
-        steps.length === 0
-            ? SEPAY_STEP_IDS.map((id) => ({ id, summary: "", isOpen: false }))
-            : steps.map((step) => ({ id: step.id, summary: step.summary, isOpen: step.isOpen }))
-    const dashboard = PROVIDERS.sepay.dashboard
+    const view = useSepaySetupSteps(props.connectionId)
+    const current = view.steps.find((step) => step.isOpen) ?? view.steps[0]
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     return (
         <SepaySetupStepsBase
-            shape={props.shape}
             props={{
-                stepsLabel: t("stepsLabel"),
-                steps: drawn.map((step) => ({
-                    ...step,
-                    title: titleOf(step.id),
-                    hint: t(`${TITLE_KEYS[step.id]}Hint`),
-                })),
-                openSepay: {
-                    label: t("openSepay"),
-                    href: (environment === "test" ? dashboard.test : dashboard.live) ?? dashboard.live ?? "",
-                },
+                stepsLabel: view.stepsLabel,
+                steps: view.steps.map((step) => ({ id: step.id, title: step.title })),
+                currentStepId: current?.id ?? "",
             }}
-            on={{ toggle }}
         />
     )
 }

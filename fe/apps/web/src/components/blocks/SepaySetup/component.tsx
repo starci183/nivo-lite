@@ -1,3 +1,4 @@
+import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { Button, CopyField, DescriptionList, Fieldset, Input, Select, Text, Grid } from "@starci/grammar/common"
 import { SepayConfirm } from "@/components/composites/SepayConfirm"
 import { SlotView } from "@/components/composites/SlotView"
@@ -21,11 +22,33 @@ export interface SepayRotateView {
     readonly isPending: boolean
 }
 
+interface OpenSepayProps {
+    readonly label: string
+    readonly href: string
+}
+
+/** The command that sends the owner to the webhook page of SePay. */
+const OpenSepay = (props: OpenSepayProps) => (
+    <Button intent="neutral" href={props.href} target="_blank" rel="noreferrer">
+        {props.label}
+    </Button>
+)
+
 /** Props for {@link SepaySetupBase}. */
 export interface SepaySetupBaseProps {
     /** `paste`: what to do on SePay (the third setup step); `account`: the bank account (the second). */
     readonly shape: "paste" | "account"
     readonly props: {
+        /** The step's band: its place, words and whether it is open. */
+        readonly step: {
+            readonly ordinal: number
+            readonly title: string
+            readonly summary: string
+            readonly hint: string
+            readonly isOpen: boolean
+        }
+        /** Opens the webhook page of SePay for the chosen environment in a new tab (the third step's command). */
+        readonly openSepay: { readonly label: string; readonly href: string }
         readonly slot: DataSlot<SepaySetupView>
         readonly placeholder: SepaySetupView
         readonly labels: SlotLabels
@@ -52,6 +75,7 @@ export interface SepaySetupBaseProps {
         readonly rotate: SepayRotateView
     }
     readonly on: {
+        readonly toggle: (isOpen: boolean) => void
         readonly retry: () => void
         readonly askRotate: () => void
         readonly confirmRotate: () => void
@@ -176,31 +200,37 @@ const AccountPart = ({ base, setup, isLoading }: PartProps) => {
  * account.
  */
 export const SepaySetupBase = (props: SepaySetupBaseProps) => (
-    <>
-        <SlotView
-            slot={props.props.slot}
-            placeholder={props.props.placeholder}
-            labels={props.props.labels}
-            onRetry={props.on.retry}
-            render={(setup, isLoading) =>
-                props.shape === "paste" ? (
-                    <PastePart base={props} setup={setup} isLoading={isLoading} />
-                ) : (
-                    <AccountPart base={props} setup={setup} isLoading={isLoading} />
-                )
-            }
-        />
-        {props.shape === "paste" ? (
-            <SepayConfirm
-                isOpen={props.props.rotate.isOpen}
-                title={props.props.rotate.title}
-                description={props.props.rotate.description}
-                confirmLabel={props.props.rotate.confirmLabel}
-                cancelLabel={props.props.rotate.cancelLabel}
-                isPending={props.props.rotate.isPending}
-                onConfirm={props.on.confirmRotate}
-                onDismiss={props.on.dismissRotate}
+    <ConnectionStepBand
+        {...props.props.step}
+        onToggle={props.on.toggle}
+        actions={props.shape === "paste" ? <OpenSepay {...props.props.openSepay} /> : undefined}
+    >
+        <>
+            <SlotView
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.labels}
+                onRetry={props.on.retry}
+                render={(setup, isLoading) =>
+                    props.shape === "paste" ? (
+                        <PastePart base={props} setup={setup} isLoading={isLoading} />
+                    ) : (
+                        <AccountPart base={props} setup={setup} isLoading={isLoading} />
+                    )
+                }
             />
-        ) : null}
-    </>
+            {props.shape === "paste" ? (
+                <SepayConfirm
+                    isOpen={props.props.rotate.isOpen}
+                    title={props.props.rotate.title}
+                    description={props.props.rotate.description}
+                    confirmLabel={props.props.rotate.confirmLabel}
+                    cancelLabel={props.props.rotate.cancelLabel}
+                    isPending={props.props.rotate.isPending}
+                    onConfirm={props.on.confirmRotate}
+                    onDismiss={props.on.dismissRotate}
+                />
+            ) : null}
+        </>
+    </ConnectionStepBand>
 )

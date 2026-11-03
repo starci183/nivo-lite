@@ -1,6 +1,7 @@
 import type { VideoBrandType, VideoMediaType, VideoProjectType } from "@/hooks/swr"
 import { ASPECTS, isGoal, Brand, MediaItem, ProjectStatus, ProjectView, SceneRole } from "@/modules/video"
 import type { RenderView } from "@/modules/video"
+import type { VideoRefresh } from "./useVideoRefresh"
 
 export {
     aspectKey,
@@ -107,3 +108,9 @@ export const brandOf = (brand: VideoBrandType): Brand => ({
     logoPath: brand.logoPath ?? null,
     musicTrack: brand.musicTrack ?? null,
 })
+
+/** A command on one video project: it sends the project's id, reports `done` and hands the result to whoever asked. */
+export const projectCommandOf =
+    <Result>(complete: VideoRefresh["complete"], send: (projectId: string) => Promise<Result>, done: string) =>
+    (projectId: string, onResult?: (result: Result | undefined) => void) =>
+        complete(() => send(projectId), done, onResult)

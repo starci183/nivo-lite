@@ -1,10 +1,11 @@
 "use client"
 
+import { mapSlot } from "@/hooks/slot"
 import { reviewBoardOf } from "@/modules/brain"
 import { useBrain } from "./useBrain"
 
-/** How many facts read from the documents wait for the owner to review them. */
-export const useWaitingFactCount = (): number => {
-    const { brain } = useBrain()
-    return reviewBoardOf(brain?.facts ?? []).cards
+/** The review-card count keeps the Brain read's own status and retry: the view tells loading from none. */
+export const useWaitingFactCount = () => {
+    const { slot, reload } = useBrain()
+    return { slot: mapSlot(slot, (brain) => reviewBoardOf(brain.facts).cards), reload }
 }

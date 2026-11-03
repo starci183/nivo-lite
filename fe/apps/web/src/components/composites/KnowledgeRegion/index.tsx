@@ -1,7 +1,7 @@
 import type { WorkbenchKnowledgeRegionView as KnowledgeView } from "@/modules/types"
 import { Badge, Cluster, EmptyNotice, Link, SurfaceCard, Text } from "@starci/grammar/common"
 /** Copy and view of the knowledge region; `isLoading` draws the same cards with blank geometry while the data is read. */
-export interface KnowledgeRegionProps {
+interface KnowledgeRegionProps {
     readonly label: string
     readonly view: KnowledgeView
     readonly isLoading: boolean

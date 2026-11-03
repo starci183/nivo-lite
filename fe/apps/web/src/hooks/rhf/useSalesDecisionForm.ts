@@ -5,8 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
-import { parseAmount } from "@/hooks/sales"
-import { EMPTY_TYPED, fieldKey } from "@/modules/utils"
+import { digitsToNumber, EMPTY_TYPED, fieldKey } from "@/modules/utils"
 
 import type { SalesDecision, TypedDecisionValues } from "@/modules/types"
 
@@ -44,7 +43,7 @@ export const useSalesDecisionForm = () => {
             .trim()
             .regex(/^[\d\s.,]+$/, t("salesAmountInvalid"))
             .refine((raw) => {
-                const value = parseAmount(raw)
+                const value = digitsToNumber(raw)
                 return value !== null && Number.isSafeInteger(value) && value <= 1000000000000
             }, t("salesAmountInvalid"))
         if (typed.editing[item.id]) {

@@ -10,9 +10,9 @@ import { useInstallations } from "./useInstallations"
 /** The installed agents (one row per instance, as people of the team) for the switcher of the agent frame; no rows until they are known. */
 export const useInstanceRail = (installationId: string) => {
     const locale = useLocale() === "en" ? "en" : "vi"
-    const { installations, read } = useInstallations()
+    const installed = useInstallations()
     const catalog = useModuleCatalog()
-    const items = (installations ?? []).map((other) => {
+    const items = (installed.installations ?? []).map((other) => {
         const lifecycle = agentLifecycleOf(other)
         const copy = catalog.modules[other.moduleKey]
         return {
@@ -27,5 +27,5 @@ export const useInstanceRail = (installationId: string) => {
             statusTone: agentLifecycleTone(lifecycle),
         }
     })
-    return { items, slot: slotOfReads([read, catalog.read], () => items) }
+    return { items, slot: slotOfReads([installed.read, catalog.read], () => items) }
 }

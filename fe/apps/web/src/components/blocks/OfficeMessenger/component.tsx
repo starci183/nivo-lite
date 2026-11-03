@@ -1,4 +1,4 @@
-import { PaneSection } from "@starci/grammar/common"
+import { Page, PaneSection } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
@@ -19,7 +19,7 @@ import type {
 } from "@/modules/types"
 
 /** What the thread draws once its messages are in. */
-export type OfficeMessengerThread = Omit<OfficeThreadProps["props"], "isLoading">
+export type OfficeMessengerThreadData = Omit<OfficeThreadProps["props"], "isLoading">
 
 /** What the composer draws once the room is in. */
 export type OfficeMessengerComposer = Omit<OfficeComposerProps["props"], "isLoading">
@@ -66,8 +66,8 @@ export interface OfficeMessengerBaseProps {
         /** The list, the thread and the composer are three slots: all wait for the room, only the thread can fail. */
         readonly listSlot: DataSlot<Omit<OfficeConversationsProps["props"], "isLoading">>
         readonly listPlaceholder: Omit<OfficeConversationsProps["props"], "isLoading" | "text">
-        readonly threadSlot: DataSlot<OfficeMessengerThread>
-        readonly threadPlaceholder: OfficeMessengerThread
+        readonly threadSlot: DataSlot<OfficeMessengerThreadData>
+        readonly threadPlaceholder: OfficeMessengerThreadData
         readonly composerSlot: DataSlot<OfficeMessengerComposer>
         readonly composerPlaceholder: OfficeMessengerComposer
         readonly slotLabels: SlotLabels
@@ -88,9 +88,9 @@ export interface OfficeMessengerBaseProps {
             readonly openGroup: (id: string) => void
             readonly openAgent: (id: string) => void
             readonly openCustomer: (id: string) => void
-            readonly conversationQuery: OfficeConversationsProps["on"]["query"]
-            readonly conversationFilter: OfficeConversationsProps["on"]["filter"]
-            readonly formatMembersOverflow: OfficeConversationsProps["on"]["formatMembersOverflow"]
+            readonly conversationQuery: (value: string) => void
+            readonly conversationFilter: (value: string) => void
+            readonly formatMembersOverflow: (count: number) => string
             readonly jumpApproval: (id: string) => void
             readonly jumpException: (id: string) => void
             readonly jumpCard: (id: string) => void
@@ -98,9 +98,9 @@ export interface OfficeMessengerBaseProps {
             readonly openTasks: () => void
             readonly closeInfo: () => void
             readonly openLeads: () => void
-            readonly taskOwner: OfficeTasksProps["on"]["owner"]
-            readonly taskStatus: OfficeTasksProps["on"]["status"]
-            readonly clearTasks: OfficeTasksProps["on"]["clear"]
+            readonly taskOwner: (value: string) => void
+            readonly taskStatus: (value: string) => void
+            readonly clearTasks: () => void
         }
 }
 
@@ -109,40 +109,42 @@ export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
     const on = props.on
     return (
-        <OfficeMessengerFrame
-            arrangement={view.arrangement}
-            phoneView={view.phoneView}
-            centre={view.centre}
-            isCompact={view.isCompact}
-            isInfoOpen={view.isInfoOpen}
-            isMuted={view.isMuted}
-            title={view.title}
-            subtitle={view.subtitle}
-            chip={view.chip}
-            headerCopy={view.headerCopy}
-            infoCopy={view.infoCopy}
-            info={view.info}
-            label={view.labels.messenger}
-            listTitle={view.labels.list}
-            infoTitle={view.labels.info}
-            infoOpenLabel={view.labels.infoOpen}
-            infoCloseLabel={view.labels.infoClose}
-            list={<MessengerList {...props} />}
-            thread={<MessengerCentre {...props} />}
-            composer={<MessengerComposer {...props} />}
-            onBack={on.back}
-            onChip={on.chip}
-            onToggleMute={on.toggleMute}
-            onToggleInfo={on.toggleInfo}
-            onShowChat={on.showChat}
-            onInfoOpenChange={on.infoOpenChange}
-            onCloseInfo={on.closeInfo}
-            onJumpApproval={on.jumpApproval}
-            onJumpException={on.jumpException}
-            onJumpCard={on.jumpCard}
-            onMention={on.mention}
-            onOpenTasks={on.openTasks}
-        />
+        <Page chrome="panes">
+            <OfficeMessengerFrame
+                arrangement={view.arrangement}
+                phoneView={view.phoneView}
+                centre={view.centre}
+                isCompact={view.isCompact}
+                isInfoOpen={view.isInfoOpen}
+                isMuted={view.isMuted}
+                title={view.title}
+                subtitle={view.subtitle}
+                chip={view.chip}
+                headerCopy={view.headerCopy}
+                infoCopy={view.infoCopy}
+                info={view.info}
+                label={view.labels.messenger}
+                listTitle={view.labels.list}
+                infoTitle={view.labels.info}
+                infoOpenLabel={view.labels.infoOpen}
+                infoCloseLabel={view.labels.infoClose}
+                list={<MessengerList {...props} />}
+                thread={<MessengerCentre {...props} />}
+                composer={<MessengerComposer {...props} />}
+                onBack={on.back}
+                onChip={on.chip}
+                onToggleMute={on.toggleMute}
+                onToggleInfo={on.toggleInfo}
+                onShowChat={on.showChat}
+                onInfoOpenChange={on.infoOpenChange}
+                onCloseInfo={on.closeInfo}
+                onJumpApproval={on.jumpApproval}
+                onJumpException={on.jumpException}
+                onJumpCard={on.jumpCard}
+                onMention={on.mention}
+                onOpenTasks={on.openTasks}
+            />
+        </Page>
     )
 }
 

@@ -115,7 +115,7 @@ const itemOf = (card: OrderCardView, props: InventoryOrdersProps): ListRowData =
 })
 
 /** The purchase-order and new-order drawers retain their own data and every original command. */
-const OrderDrawers = (props: InventoryOrdersProps) => {
+const OrderDrawers = (props: Omit<InventoryOrdersProps, "isLoading">) => {
     const on = {
         create: props.onCreate,
         open: props.onOpen,

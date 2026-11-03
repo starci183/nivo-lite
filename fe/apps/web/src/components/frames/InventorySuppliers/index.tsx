@@ -13,9 +13,10 @@ type InventorySuppliersProps = InventorySuppliersData & {
 }
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
 
+import { InventoryRowList } from "@/components/composites/InventoryRowList"
 import { InventorySupplierDrawer } from "@/components/composites/InventorySupplierDrawer"
 
-import { Button, Cluster, EmptyNotice, Input, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Button, Cluster, Input, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** The suppliers tab: who the orders go to, and the places the stock lives in. */
 export const InventorySuppliers = (props: InventorySuppliersProps) => {
@@ -37,11 +38,11 @@ export const InventorySuppliers = (props: InventorySuppliersProps) => {
                     </Button>
                 </div>
             )}
-            <SurfaceCard
+            <InventoryRowList
                 isLoading={props.isLoading}
-                kind="list"
                 label={props.listLabel}
-                empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
+                emptyTitle={props.emptyTitle}
+                emptyBody={props.emptyBody}
                 items={props.rows.map((row) => ({
                     id: row.id,
                     title: row.name,

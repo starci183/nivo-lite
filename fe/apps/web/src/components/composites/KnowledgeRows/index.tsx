@@ -32,7 +32,6 @@ interface KnowledgeRowListProps {
 /** The section's resolved heading, supporting content and rendered row body. */
 interface KnowledgeRowsSectionProps {
     readonly section: KnowledgeListView["section"]
-    readonly isPending: boolean
     readonly isLoading?: boolean
     readonly isHeadingInCard?: boolean
     readonly before?: ReactNode
@@ -94,11 +93,9 @@ export const rowListPropsOf = (
     emptyTitle: list.slotLabels.empty,
 })
 
-interface RowDetailProps {
+interface RowDetailProps extends Pick<KnowledgeRowListProps, "onAction" | "onConfirm"> {
     readonly row: KnowledgeRowView
     readonly isLoading: boolean
-    readonly onAction: KnowledgeRowListProps["onAction"]
-    readonly onConfirm: KnowledgeRowListProps["onConfirm"]
 }
 
 /** Retains overflow badges, live progress and separately decidable values in each row's detail. */

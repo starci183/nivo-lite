@@ -2,12 +2,12 @@
 
 import { ledgerRecordsOf } from "@/hooks/accountingRecords"
 import { useAccountingAdjustmentForm } from "@/hooks/rhf"
-import { useFeatureLifetime } from "@/hooks/reuseables"
-import { useGraphQLWithToast } from "@/modules/toast"
+import { useScopedState } from "@/hooks/reuseables"
 import type { AccountingLedgerKind, AccountingWorkbenchData } from "@/modules/types"
 import { accountingStampOf, lineageItemsOf, moneyOf } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
+import { useAccountingSubmit } from "./useAccountingSubmit"
 import { useCreateAccountingAdjustment } from "./useCreateAccountingAdjustment"
 
 type LedgerFilter = "all" | AccountingLedgerKind
@@ -34,11 +34,10 @@ const adjustModeOf = (
 export const useAccountingLedger = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
-    const [filter, setFilter] = useState<LedgerFilter>("all")
-    const [openId, setOpenId] = useState<string | null>(null)
-    const [isAdjusting, setIsAdjusting] = useState(false)
-    const [operation, setOperation] = useState<LedgerOperation | null>(null)
-    const lifetime = useFeatureLifetime(isActive, scope)
+    const [filter, setFilter] = useScopedState<LedgerFilter>("all", isActive, scope)
+    const [openId, setOpenId] = useScopedState<string | null>(null, isActive, scope)
+    const [isAdjusting, setIsAdjusting] = useScopedState(false, isActive, scope)
+    const { isSaving, submit } = useAccountingSubmit(isActive, scope)
     const open = data.ledger.find((entry) => entry.id === openId) ?? null
     const closeDrawer = () => {
         setIsAdjusting(false)
@@ -47,14 +46,9 @@ export const useAccountingLedger = (data: AccountingWorkbenchData, isActive: boo
     const { form, values, error } = useAccountingAdjustmentForm()
     const reset = form.reset
     useEffect(() => {
-        setFilter("all")
-        setOpenId(null)
-        setIsAdjusting(false)
-        setOperation(null)
         reset()
     }, [isActive, reset, scope])
     const { create } = useCreateAccountingAdjustment()
-    const runGraphQL = useGraphQLWithToast()
     const saveAdjustment = async (input: AdjustmentSubmission, isCurrent: () => boolean) => {
         if (open === null) return
         const saved = await create({
@@ -84,21 +78,8 @@ export const useAccountingLedger = (data: AccountingWorkbenchData, isActive: boo
         },
         changeNote: (note: string) => form.setValue("note", note, { shouldValidate: true }),
         changeAmount: (amount: string) => form.setValue("amount", amount, { shouldValidate: true }),
-        submitAdjust: () => {
-            const pending = { identity: lifetime.identity, isCurrent: lifetime.capture() }
-            setOperation(pending)
-            const finish = () => setOperation((current) => (current === pending ? null : current))
-            form.handleSubmit((values) => {
-                if (!pending.isCurrent()) return finish()
-                saveAdjustment(values, pending.isCurrent)
-                    .catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
-                    .finally(finish)
-            }, finish)().catch((error: unknown) =>
-                runGraphQL(() => Promise.reject(error), { showSuccessToast: false }).finally(finish),
-            )
-        },
+        submitAdjust: () => submit(form, saveAdjustment),
     }
-    const isSaving = isActive && operation?.identity === lifetime.identity
     const rows = data.ledger.filter((entry) => filter === "all" || entry.kind === filter)
     return {
         props: {
@@ -109,12 +90,6 @@ export const useAccountingLedger = (data: AccountingWorkbenchData, isActive: boo
         },
         on: actions,
     }
-}
-
-/** A retired adjustment cannot hold busy state or clear a newer operation. */
-interface LedgerOperation {
-    readonly identity: ReturnType<typeof useFeatureLifetime>["identity"]
-    readonly isCurrent: () => boolean
 }
 
 /** Facts of the selected ledger line and its current adjustment form. */

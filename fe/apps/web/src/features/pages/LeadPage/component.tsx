@@ -1,8 +1,6 @@
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { LeadContext } from "@/components/blocks/LeadContext"
 import { LeadExecution } from "@/components/blocks/LeadExecution"
-import { LeadHeader } from "@/components/blocks/LeadHeader"
-import { LeadHeaderActions } from "@/components/blocks/LeadHeaderActions"
 import { LeadHistory } from "@/components/blocks/LeadHistory"
 import { LeadOutcome } from "@/components/blocks/LeadOutcome"
 import { LeadPageHead } from "@/components/blocks/LeadPageHead"
@@ -26,39 +24,25 @@ export interface LeadPageBaseProps {
 export const LeadPageBase = (props: LeadPageBaseProps) => {
     const leadId = props.props.leadId
     return (
-        <LeadPageHead
-            leadId={leadId}
-            crumbLabel={props.props.crumbLabel}
-            crumbs={props.props.crumbs}
-            slots={{
-                mark: <LeadHeader leadId={leadId} part="mark" />,
-                title: <LeadHeader leadId={leadId} part="title" />,
-                status: <LeadHeader leadId={leadId} part="status" />,
-                description: <LeadHeader leadId={leadId} part="description" />,
-                actions: <LeadHeaderActions leadId={leadId} />,
-            }}
-            body={
-                <>
-                    <LeadPageLayout
-                        primary={
-                            <>
-                                <LeadExecution leadId={leadId} />
-                                <LeadWorkFlow leadId={leadId} />
-                                <LeadHistory leadId={leadId} />
-                                <PromoLeadWait leadId={leadId} />
-                            </>
-                        }
-                        rail={
-                            <>
-                                <LeadResponsibility leadId={leadId} />
-                                <LeadPreviousSteps leadId={leadId} />
-                                <LeadContext leadId={leadId} />
-                                <LeadOutcome leadId={leadId} />
-                            </>
-                        }
-                    />
-                </>
-            }
-        />
+        <LeadPageHead leadId={leadId} crumbLabel={props.props.crumbLabel} crumbs={props.props.crumbs}>
+            <LeadPageLayout
+                primary={
+                    <>
+                        <LeadExecution leadId={leadId} />
+                        <LeadWorkFlow leadId={leadId} />
+                        <LeadHistory leadId={leadId} />
+                        <PromoLeadWait leadId={leadId} />
+                    </>
+                }
+                rail={
+                    <>
+                        <LeadResponsibility leadId={leadId} />
+                        <LeadPreviousSteps leadId={leadId} />
+                        <LeadContext leadId={leadId} />
+                        <LeadOutcome leadId={leadId} />
+                    </>
+                }
+            />
+        </LeadPageHead>
     )
 }

@@ -3,12 +3,19 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { stageWordOf } from "@/hooks/salesworkbench"
 import { leadPath } from "@/modules/routes"
 import type { AttentionItemView, AttentionRow, SalesWorkbenchData } from "@/modules/types"
 import { actionWordOf } from "@/hooks/actionWord"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { ageParts, ATTENTION_TONES, decisionHref, isStale, KNOWN_FIELDS, stageToneOf } from "./sales.shared"
+import {
+    ageParts,
+    ATTENTION_TONES,
+    decisionHref,
+    isStale,
+    KNOWN_FIELDS,
+    stageToneOf,
+    stageWordOf,
+} from "./sales.shared"
 import { useSalesActions } from "./useSalesActions"
 
 interface Busy {

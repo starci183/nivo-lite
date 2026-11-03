@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useChatbotInbox } from "@/hooks/chatbotView"
-import { useChatbotWorkbench } from "@/hooks/chatbotWorkbench"
+import { useChatbotWorkbench } from "@/hooks/chatbot"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { ChatbotInboxBase } from "./component"
 

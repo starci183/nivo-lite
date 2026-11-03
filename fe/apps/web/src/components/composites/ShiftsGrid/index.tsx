@@ -5,51 +5,18 @@ type ShiftsGridProps = ShiftsWeekViews["grid"] & {
 }
 type GridCellView = ShiftsWeekViews["gridGridCellView"]
 type GridRowView = ShiftsWeekViews["gridGridRowView"]
-type GridDayShiftView = ShiftsWeekViews["gridGridDayShiftView"]
 import {
     Button,
     DataTable,
     type DataTableCellInteraction,
     DragItem,
     EmptyNotice,
-    Select,
-    SurfaceCard,
-    Tabs,
     Text,
     Section,
     Stack,
 } from "@starci/grammar/common"
+import { ShiftsDayList } from "@/components/branches/ShiftsDayList"
 import { DAYLIST_CLASS_NAME, FRAME_CLASS_NAME, NAME_CLASS_NAME, CELL_CLASS_NAME } from "./classNames"
-
-/** One shift of the selected day as a row of the phone's day list. */
-const dayShiftItem = (props: ShiftsGridProps, shift: GridDayShiftView) => ({
-    id: shift.id,
-    title: `${shift.time} · ${shift.position}`,
-    detail: (
-        <>
-            {props.editable ? (
-                <Select
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                    label={props.assignLabel}
-                    isLabelHidden
-                    name={`assign-${shift.id}`}
-                    value={shift.staffId}
-                    options={props.assignOptions}
-                    onValueChange={(value) => props.on?.assign(shift.id, value ?? props.openId)}
-                />
-            ) : (
-                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="sm">
-                    {shift.staffName}
-                </Text>
-            )}
-            {shift.why === "" ? null : (
-                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
-                    {shift.why}
-                </Text>
-            )}
-        </>
-    ),
-})
 
 /** Draws the people-by-days grid with draggable shift chips, and the day list that replaces it on phones. */
 export const ShiftsGrid = (props: ShiftsGridProps) => (
@@ -73,23 +40,20 @@ export const ShiftsGrid = (props: ShiftsGridProps) => (
             />
         </div>
         <div className={DAYLIST_CLASS_NAME}>
-            <Stack gap="row">
-                <Tabs
-                    label={props.title}
-                    selectedKey={props.selectedDay}
-                    inset="none"
-                    labelVisibility="always"
-                    items={datesOf(props)}
-                    {...(props.on === undefined ? {} : { onSelect: props.on.day })}
-                />
-                <SurfaceCard
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                    kind="list"
-                    ariaLabel={props.title}
-                    empty={<EmptyNotice message={props.emptyDay} />}
-                    items={props.dayShifts.map((shift) => dayShiftItem(props, shift))}
-                />
-            </Stack>
+            <ShiftsDayList
+                title={props.title}
+                days={datesOf(props)}
+                selectedDay={props.selectedDay}
+                emptyDay={props.emptyDay}
+                shifts={props.dayShifts}
+                isEditable={props.editable}
+                assignLabel={props.assignLabel}
+                assignOptions={props.assignOptions}
+                openId={props.openId}
+                onDay={props.on?.day}
+                onAssign={props.on?.assign}
+                isLoading={props.isLoading}
+            />
         </div>
     </Section>
 )

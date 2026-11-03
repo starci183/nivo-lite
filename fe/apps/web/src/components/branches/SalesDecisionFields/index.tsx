@@ -1,5 +1,5 @@
 import { Input, Stack, Textarea } from "@starci/grammar/common"
-import { DecisionMissingInputs } from "@/components/leaves/DecisionMissingInputs"
+import { FormFieldList } from "@/components/leaves/FormFieldList"
 
 /** One data field NIVO is missing and the person fills in. */
 interface MissingFieldView {
@@ -29,12 +29,15 @@ interface SalesDecisionFieldsProps {
 /** The missing fields, the editable draft and the editable amount of one pending decision. */
 export const SalesDecisionFields = (props: SalesDecisionFieldsProps) => (
     <Stack gap="row">
-        <DecisionMissingInputs
+        <FormFieldList
             idPrefix={props.anchor}
-            fields={props.missing}
+            fields={props.missing.map((field) => ({
+                ...field,
+                kind: "text" as const,
+                change: (value: string) => props.onField(field.name, value),
+            }))}
             isDisabled={props.isBusy}
             isLoading={props.isLoading === true}
-            onField={props.onField}
         />
         {props.showDraftField ? (
             <Textarea

@@ -5,7 +5,7 @@ interface LoyaltyPromoOutcomeProps {
     readonly result:
         | { readonly title: string; readonly recipients: string; readonly time: string; readonly draft: string }
         | undefined
-    readonly failure: string | undefined
+    readonly failureMessage: string | undefined
     readonly failureTitle: string
     readonly draftLabel: string
     readonly isLoading: boolean
@@ -17,8 +17,8 @@ export const LoyaltyPromoOutcome = (props: LoyaltyPromoOutcomeProps) => {
     const result = props.result
     return (
         <>
-            {props.failure === undefined ? null : (
-                <Alert title={props.failureTitle} description={props.failure} tone="negative" />
+            {props.failureMessage === undefined ? null : (
+                <Alert title={props.failureTitle} description={props.failureMessage} tone="negative" />
             )}
             {result === undefined ? null : (
                 <Stack gap="row">

@@ -20,7 +20,7 @@ export interface CellView {
 }
 
 /** One kind of knowledge: a row of the matrix and what every audience reads of it. */
-export interface LaneView {
+export interface KnowledgeLaneView {
     readonly id: string
     readonly label: string
     readonly cells: Readonly<Record<string, CellView>>
@@ -29,7 +29,7 @@ export interface LaneView {
 /** The matrix as its slot carries it: who reads, and what each reads of every kind of knowledge. */
 export interface MatrixView {
     readonly audiences: ReadonlyArray<AudienceView>
-    readonly lanes: ReadonlyArray<LaneView>
+    readonly lanes: ReadonlyArray<KnowledgeLaneView>
 }
 
 /** A matrix of the same shape as a ready one: the customer and an agent against four kinds of knowledge. */
@@ -60,7 +60,7 @@ export interface BrainAgentViewBaseProps {
 
 /** One row of the table: the audiences' identities, or a kind of knowledge. */
 interface MatrixRow extends DataTableRow {
-    readonly lane: LaneView | null
+    readonly lane: KnowledgeLaneView | null
 }
 
 const IDENTITY_ROW_ID = "identity"

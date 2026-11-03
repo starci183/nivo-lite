@@ -19,26 +19,21 @@ export interface AgentProfilePageBaseProps {
 export const AgentProfilePageBase = (props: AgentProfilePageBaseProps) => {
     const { agentId } = props.props
     return (
-        <AgentProfileHead
-            agentId={agentId}
-            body={
-                <>
+        <AgentProfileHead agentId={agentId}>
+            <Stack gap="region">
+                <AgentProfileIdentity agentId={agentId} />
+                <Grid kind="cards" columns={2}>
                     <Stack gap="region">
-                        <AgentProfileIdentity agentId={agentId} />
-                        <Grid kind="cards" columns={2}>
-                            <Stack gap="region">
-                                <AgentProfileOwner agentId={agentId} />
-                                <AgentProfileRules agentId={agentId} />
-                            </Stack>
-                            <Stack gap="region">
-                                <AgentProfileAssignable agentId={agentId} />
-                                <AgentProfileTags agentId={agentId} />
-                            </Stack>
-                        </Grid>
-                        <AgentProfileRecent agentId={agentId} />
+                        <AgentProfileOwner agentId={agentId} />
+                        <AgentProfileRules agentId={agentId} />
                     </Stack>
-                </>
-            }
-        />
+                    <Stack gap="region">
+                        <AgentProfileAssignable agentId={agentId} />
+                        <AgentProfileTags agentId={agentId} />
+                    </Stack>
+                </Grid>
+                <AgentProfileRecent agentId={agentId} />
+            </Stack>
+        </AgentProfileHead>
     )
 }

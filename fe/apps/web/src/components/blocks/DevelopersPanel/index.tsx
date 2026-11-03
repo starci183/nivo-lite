@@ -19,7 +19,7 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
     const t = useTranslations("developers")
     const member = useMember()
     const tc = useTranslations("connections")
-    const { webhooks, canManage } = useDeveloperWebhooks()
+    const { webhooks, canManage, read, retry } = useDeveloperWebhooks()
     const slotLabels = useSlotLabels()
     const overlays = useConnectionOverlays()
     return (
@@ -34,6 +34,7 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                     tone: statusTone(connection.status),
                 })),
                 canManageWebhooks: canManage,
+                webhooksRead: read,
                 webhooksView: {
                     title: tc(providerKey("webhook", "title")),
                     fact: tc("connectionCount", { count: webhooks.length }),
@@ -54,6 +55,7 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                 slotLabels: { ...slotLabels(t("title")), forbidden: t("forbiddenBody") },
             }}
             on={{
+                retry,
                 add: () => overlays.openWizard("webhook"),
                 edit: (connectionId) => overlays.openWizard("webhook", connectionId),
             }}

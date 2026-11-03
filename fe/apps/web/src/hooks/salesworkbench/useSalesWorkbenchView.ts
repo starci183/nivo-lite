@@ -2,10 +2,16 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
-import { useChatbotWorkbench } from "@/hooks/chatbotWorkbench"
+import { useChatbotWorkbench } from "@/hooks/chatbot"
 import { useChatbotInbox } from "@/hooks/chatbotView"
 import { useMember } from "@/hooks/member"
-import { SALES_TABS, useSalesActivityView, useSalesAttentionView, useSalesHandoffsView } from "@/hooks/sales"
+import {
+    SALES_TABS,
+    useSalesActivityView,
+    useSalesAttentionView,
+    useSalesHandoffsView,
+    useSalesWorkbench,
+} from "@/hooks/sales"
 import { useSalesContractsView } from "@/hooks/salescontracts"
 import { useSalesDecisionsView } from "@/hooks/salesdecisions"
 import { salesFiguresOf, salesFiguresPlaceholderOf } from "@/hooks/salesfigures"
@@ -15,7 +21,6 @@ import { mapSlot, slotOfReads, useSlotLabels, WAITING_ROWS_PLACEHOLDER } from "@
 import { workbenchRowDataOf, workbenchWaitingDataOf } from "@/hooks/workbench"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useSalesOrdersView } from "./useSalesOrdersView"
-import { useSalesWorkbench } from "./useSalesWorkbench"
 
 const SALES_INBOX_TABS = [...SALES_TABS, "conversation"] as const
 type SalesArea = (typeof SALES_INBOX_TABS)[number]

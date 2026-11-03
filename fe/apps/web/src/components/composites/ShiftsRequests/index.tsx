@@ -3,8 +3,31 @@ type ShiftsRequestsProps = ShiftsRequestViews["requests"] & {
     readonly on: ShiftsRequestActions["requests"] | undefined
     readonly isLoading?: boolean
 }
-import { Button, Cluster, EmptyNotice, Section, Stack } from "@starci/grammar/common"
+import { Cluster, EmptyNotice, Section, Stack } from "@starci/grammar/common"
+import { ShiftsActionButton, type ShiftsActionButtonProps } from "@/components/leaves/ShiftsActionButton"
 import type { ListRowData } from "@starci/grammar/common"
+
+/** The approve and decline buttons of a request that waits for a decision. */
+const decisionButtonsOf = (
+    props: ShiftsRequestsProps,
+    decision: NonNullable<ShiftsRequestsProps["recent"][number]["decision"]>,
+): ReadonlyArray<ShiftsActionButtonProps> =>
+    [
+        {
+            label: props.approveLabel,
+            onPress: () => props.on?.approve(decision.kind, decision.targetId),
+        },
+        {
+            label: props.declineLabel,
+            onPress: () => props.on?.decline(decision.kind, decision.targetId),
+        },
+    ].map((button): ShiftsActionButtonProps => ({
+        ...button,
+        intent: "neutral",
+        size: "sm",
+        isDisabled: props.isBusy,
+        isLoading: props.isLoading,
+    }))
 
 /** Draws open and recent requests in their own sections, preserving every decision command. */
 export const ShiftsRequests = (props: ShiftsRequestsProps) => (
@@ -21,30 +44,9 @@ export const ShiftsRequests = (props: ShiftsRequestsProps) => (
                     detail:
                         row.decision === null ? null : (
                             <Cluster gap="inline">
-                                <Button
-                                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                                    size="sm"
-                                    intent="neutral"
-                                    isDisabled={props.isBusy}
-                                    onPress={() => {
-                                        if (row.decision !== null)
-                                            props.on?.approve(row.decision.kind, row.decision.targetId)
-                                    }}
-                                >
-                                    {props.approveLabel}
-                                </Button>
-                                <Button
-                                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                                    size="sm"
-                                    intent="neutral"
-                                    isDisabled={props.isBusy}
-                                    onPress={() => {
-                                        if (row.decision !== null)
-                                            props.on?.decline(row.decision.kind, row.decision.targetId)
-                                    }}
-                                >
-                                    {props.declineLabel}
-                                </Button>
+                                {decisionButtonsOf(props, row.decision).map((button) => (
+                                    <ShiftsActionButton key={button.label} {...button} />
+                                ))}
                             </Cluster>
                         ),
                 }))

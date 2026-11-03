@@ -9,7 +9,6 @@ import {
 } from "./openapi-wizard.shared"
 
 import { useOpenApiWizardCommands } from "./useOpenApiWizardCommands"
-import { useConnectionsRefresh, useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
 import { useOpenApiAuthForm, type OpenApiAuthValues } from "@/hooks/rhf"
 import type { SlotRead } from "@/hooks/slot"
 
@@ -31,9 +30,6 @@ interface OpenApiWizardInput {
 /** The state machine of the OpenAPI wizard: spec, auth, pulled endpoints, agent tools, schedule, test, agents. */
 export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
     const commands = useOpenApiCommands()
-    const setConnectionAgents = useSetConnectionAgents()
-    const refresh = useConnectionsRefresh()
-    const { start: startSync } = useSyncNow()
     const authForm = useOpenApiAuthForm()
     const editing = Boolean(resumeId)
     const source = useOpenApiSource()
@@ -78,14 +74,11 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
         connId,
         authInput,
         setConnId,
-        startSync,
         editing,
         onClose,
         index,
         setIndex,
-        setConnectionAgents,
         agentIds,
-        refresh,
     })
 
     return viewOf({
@@ -113,6 +106,7 @@ export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput) => {
     })
 }
 
+/** What the view of the OpenAPI wizard is made of: its state, its reads and its commands. */
 type OpenApiWizardViewInput = {
     readonly index: number
     readonly steps: readonly OpenApiStep[]
@@ -137,40 +131,20 @@ type OpenApiWizardViewInput = {
     readonly onClose: (changed: boolean) => void
 }
 
-const viewOf = ({
-    index,
-    steps,
-    step,
-    editing,
-    error,
-    loadError,
-    reads,
-    retryReads,
-    isPending,
-    auth,
-    authForm,
-    source,
-    picks,
-    test,
-    agentIds,
-    go,
-    loadSpec,
-    save,
-    finish,
-    setAgentIds,
-    onClose,
-}: OpenApiWizardViewInput) => {
+/** The view the OpenAPI wizard hands its drawer: the step it stands on, the reads, the forms and every command. */
+const viewOf = (input: OpenApiWizardViewInput) => {
+    const { authForm, source } = input
     return {
-        reads,
-        retryReads,
-        index,
-        steps,
-        step,
-        editing,
-        error: error ?? loadError,
-        isPending,
+        reads: input.reads,
+        retryReads: input.retryReads,
+        index: input.index,
+        steps: input.steps,
+        step: input.step,
+        editing: input.editing,
+        error: input.error ?? input.loadError,
+        isPending: input.isPending,
         auth: {
-            values: auth,
+            values: input.auth,
             errors: {
                 baseUrl: authForm.formState.errors.baseUrl?.message,
                 authName: authForm.formState.errors.authName?.message,
@@ -179,16 +153,16 @@ const viewOf = ({
             ready: authForm.formState.isValid,
         },
         source,
-        picks,
-        test,
-        agentIds,
+        picks: input.picks,
+        test: input.test,
+        agentIds: input.agentIds,
         on: {
-            go,
-            loadSpec,
-            save,
-            finish,
-            setAgentIds,
-            close: () => onClose(false),
+            go: input.go,
+            loadSpec: input.loadSpec,
+            save: input.save,
+            finish: input.finish,
+            setAgentIds: input.setAgentIds,
+            close: () => input.onClose(false),
             authField: (field: OpenApiAuthField, value: string) =>
                 authForm.setValue(field, value, { shouldValidate: true }),
             authType: (value: string | null) => {

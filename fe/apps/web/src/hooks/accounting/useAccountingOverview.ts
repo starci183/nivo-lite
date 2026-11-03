@@ -2,7 +2,7 @@
 
 import type { AccountingWorkbenchData, AccountingPeriodKey } from "@/modules/types"
 import { useFormatter, useTranslations } from "next-intl"
-import { useEffect, useState } from "react"
+import { useScopedState } from "@/hooks/reuseables"
 import { dayOf, moneyOf, monthOf } from "@/modules/utils"
 
 /** The three ageing buckets as gauges: how much is owed at each age, the oldest drawn as the most serious. */
@@ -19,10 +19,7 @@ const AGEING_BUCKETS = [
 export const useAccountingOverview = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
-    const [periodKey, setPeriodKey] = useState<AccountingPeriodKey>("this")
-    useEffect(() => {
-        setPeriodKey("this")
-    }, [isActive, scope])
+    const [periodKey, setPeriodKey] = useScopedState<AccountingPeriodKey>("this", isActive, scope)
     const actions = { selectPeriod: (key: string) => setPeriodKey(key === "last" ? "last" : "this") }
     const period = data.periods[periodKey]
     const month = monthOf(format, period.fromIso)

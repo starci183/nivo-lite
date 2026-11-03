@@ -7,13 +7,13 @@ export {
     ageOf,
     dateOnly,
     dueFromDate,
-    primaryActionOf,
     splitResponsibilities,
 } from "./leads.shared"
 export { useLeadFlowView } from "./useLeadFlowView"
 export { useLeadCommands } from "./useLeadCommands"
 export { useLeadActions } from "./useLeadActions"
 export { useLeadJourney } from "./useLeadJourney"
+export { useLeadPageHead } from "./useLeadPageHead"
 export { useLeadBoard } from "./useLeadBoard"
 export { useStepView } from "./useStepView"
 export { useStepFormView } from "./useStepFormView"

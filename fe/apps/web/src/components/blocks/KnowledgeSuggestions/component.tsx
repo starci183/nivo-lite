@@ -37,7 +37,6 @@ export const KnowledgeSuggestionsBase = (props: KnowledgeSuggestionsBaseProps) =
         <KnowledgeRowsSection
             isHeadingInCard
             section={list.section}
-            isPending={list.isPending}
             body={
                 <>
                     <SlotView

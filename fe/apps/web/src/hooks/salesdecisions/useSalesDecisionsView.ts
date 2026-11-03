@@ -14,9 +14,27 @@ import type { SalesDecisionsControllerInput } from "./salesdecisions.shared"
 type Decision = "approved" | "rejected"
 const FIELD_NAMES: ReadonlySet<string> = new Set(KNOWN_FIELDS)
 
+/** Sends the decision to the draft of an execution or to the work item, with the edits the person typed when approving. */
+const sendDecision = (
+    input: SalesDecisionsControllerInput,
+    item: SalesDecisionsControllerInput["pending"][number],
+    decision: Decision,
+) => {
+    const { actions, typed } = input
+    const draft = (typed.drafts[item.id] ?? item.draft).trim()
+    const edited = decision === "approved" && typed.editing[item.id] && draft !== item.draft ? draft : undefined
+    if (item.source === "execution" && item.executionId)
+        return actions.decideDraft({ id: item.executionId, decision, editedDraft: edited })
+    return actions.decideWorkItem({
+        id: item.id,
+        decision,
+        edits: decision === "approved" ? editsOf(item, typed) : undefined,
+    })
+}
+
 /** Runs the same validated decision command, fencing only the local result of a retired panel. */
 const createSalesDecisionsState = (input: SalesDecisionsControllerInput) => {
-    const { t, g, actions, pending, decisionForm, setBusy, typed, setErrors, capture } = input
+    const { t, g, pending, decisionForm, setBusy, setErrors, capture } = input
     const fieldLabel = (name: string): string => (FIELD_NAMES.has(name) ? g(`field_${name}`) : name)
     const decide = async (id: string, decision: Decision) => {
         const isCurrent = capture()
@@ -38,16 +56,7 @@ const createSalesDecisionsState = (input: SalesDecisionsControllerInput) => {
         }
         setErrors((previous) => ({ ...previous, [id]: "" }))
         setBusy({ id, decision })
-        const draft = (typed.drafts[id] ?? item.draft).trim()
-        const edited = decision === "approved" && typed.editing[id] && draft !== item.draft ? draft : undefined
-        const result =
-            item.source === "execution" && item.executionId
-                ? await actions.decideDraft({ id: item.executionId, decision, editedDraft: edited })
-                : await actions.decideWorkItem({
-                      id: item.id,
-                      decision,
-                      edits: decision === "approved" ? editsOf(item, typed) : undefined,
-                  })
+        const result = await sendDecision(input, item, decision)
         if (!isCurrent()) return
         if (result !== undefined) decisionForm.finish(id)
         else {

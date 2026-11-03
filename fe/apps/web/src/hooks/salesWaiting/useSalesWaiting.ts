@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { decisionHref, useSalesActions } from "@/hooks/sales"
+import { decisionHref, useSalesActions, useSalesWorkbench } from "@/hooks/sales"
 import { mapSlot } from "@/hooks/slot"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
@@ -9,7 +9,6 @@ import { agentHref } from "@/modules/installations"
 import type { SalesDecision } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { SALES_WAITING_SHOWN, salesWaitingRowOf } from "./salesWaiting.shared"
-import { useSalesWorkbench } from "@/hooks/salesworkbench"
 
 /** The pending decisions of the Sales desk, each decided in place: the oldest three, then a link to the Decisions tab. */
 export const useSalesWaiting = (isActive = true, scope?: string) => {

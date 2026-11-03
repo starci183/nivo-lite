@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useBankName } from "@/hooks/banks"
 import { useCopyLabels } from "@/hooks/connection-wizard"
-import { useConnectionsRole } from "@/hooks/connections"
+import { useConnectionRefusal, useConnectionsRole } from "@/hooks/connections"
 import { bankOptions } from "@/hooks/money-wizard"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import {
@@ -12,6 +12,7 @@ import {
     useSepayConnection,
     useSepayPlaceholder,
     useSepayRotate,
+    useSepaySetupStep,
     useSepaySettings,
 } from "@/hooks/sepayConnection"
 import type { SepayConnectionView } from "@/modules/types"
@@ -36,6 +37,7 @@ export const SepaySetup = (props: SepaySetupProps) => {
     const placeholder = useSepayPlaceholder()
     const { role } = useConnectionsRole()
     const rotate = useSepayRotate(commands.rotateKey)
+    const setup = useSepaySetupStep(props.connectionId, props.part)
     const connection = "items" in slot ? slot.items : undefined
     const account = useSepayAccountForm(connection, commands.saveAccount)
     const settings = useSepaySettings(connection)
@@ -46,10 +48,14 @@ export const SepaySetup = (props: SepaySetupProps) => {
             ? t("accountKept", { account: items.accountMasked })
             : t("accountMissing", { account: items.accountMasked }),
     })
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     return (
         <SepaySetupBase
             shape={props.part}
             props={{
+                step: setup.step,
+                openSepay: setup.openSepay,
                 slot: mapSlot(slot, viewOf),
                 placeholder: viewOf(placeholder),
                 labels: slotLabels(t("loadFailed")),
@@ -82,6 +88,7 @@ export const SepaySetup = (props: SepaySetupProps) => {
                 },
             }}
             on={{
+                toggle: setup.toggle,
                 retry,
                 copyKey: async () => {
                     const settled = await commands.revealKey()

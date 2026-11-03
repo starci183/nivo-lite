@@ -1,14 +1,13 @@
 import { HIRING_TABS, type HiringViews, type HiringActions } from "@/modules/types"
 
-import { Grid, Stack, Tabs } from "@starci/grammar/common"
+import { Grid, Stack } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { HiringCandidateFrame } from "@/components/frames/HiringCandidateFrame"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
 import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
 import { SlotView } from "@/components/composites/SlotView"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
+import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { HiringJobList } from "@/components/composites/HiringJobList"
 import { HiringJobEditorDialog } from "@/components/composites/HiringJobEditorDialog"
@@ -41,9 +40,8 @@ interface PanelProps {
     readonly on: HiringActions["workbenchActions"]
     readonly isLoading: boolean
 }
-const panelId = (id: string) => "agent-dashboard-panel-" + id
 
-const Jobs = (props: PanelProps) => {
+const Jobs = (props: Pick<PanelProps, "data" | "on" | "isLoading">) => {
     const p = props.data.panels.jobs,
         on = props.on.panels.jobs
     return (
@@ -54,7 +52,7 @@ const Jobs = (props: PanelProps) => {
         </>
     )
 }
-const Pipeline = (props: PanelProps) => {
+const Pipeline = (props: Pick<PanelProps, "data" | "on" | "isLoading">) => {
     const p = props.data.panels.pipeline,
         on = props.on.panels.pipeline
     return (
@@ -114,7 +112,7 @@ const ModulePanel = (props: HiringWorkbenchBaseProps) => (
 )
 
 const CV_PLACEHOLDER = { hasCv: true, openLabel: "", url: "", isPdf: false, canPreview: false, isPreviewing: false }
-const CandidateDialogs = (props: HiringWorkbenchBaseProps) => {
+const CandidateDialogs = (props: Pick<HiringWorkbenchBaseProps, "props" | "on">) => {
     const p = props.props.candidate,
         on = props.on.candidate.dialogs
     return (
@@ -125,7 +123,7 @@ const CandidateDialogs = (props: HiringWorkbenchBaseProps) => {
         </>
     )
 }
-const Candidate = (props: HiringWorkbenchBaseProps) => {
+const Candidate = (props: Pick<HiringWorkbenchBaseProps, "props" | "on">) => {
     const p = props.props.candidate,
         on = props.on.candidate,
         copy = p.frame.copy
@@ -168,7 +166,7 @@ const Candidate = (props: HiringWorkbenchBaseProps) => {
     )
 }
 
-const DashboardCards = (props: HiringWorkbenchBaseProps) => {
+const DashboardCards = (props: Pick<HiringWorkbenchBaseProps, "props" | "on">) => {
     const regions = props.props.regions
     return (
         <Grid kind="cards" columns={3}>
@@ -201,39 +199,16 @@ const Overview = (props: HiringWorkbenchBaseProps) => {
     const view = props.props
     return (
         <Stack gap="region">
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(waiting, isLoading) => (
-                    <WaitingRegion label={view.regions.waiting.label} view={waiting} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...view.ribbon}
-                onRetry={props.on.retry}
-                render={(items, isLoading) => (
-                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
-                )}
-            />
-            <Tabs
-                label={view.tabsLabel}
-                selectedKey={view.selectedTab}
-                inset="none"
-                labelVisibility="always"
-                items={view.tabs}
-                panelId={panelId}
-                onSelect={props.on.selectTab}
-            />
-            <div role="tabpanel" id={panelId(view.selectedTab)}>
-                <ModulePanel {...props} />
-            </div>
+            <WorkbenchOverviewTop view={view} on={{ ...props.on, retryRibbon: props.on.retry }}>
+                <ModulePanel shape={props.shape} props={props.props} on={props.on} />
+            </WorkbenchOverviewTop>
             <DashboardCards {...props} />
             <Candidate {...props} />
         </Stack>
     )
 }
 
-const Explanation = (props: HiringWorkbenchBaseProps) => {
+const Explanation = (props: Pick<HiringWorkbenchBaseProps, "props" | "on">) => {
     const view = props.props
     const why = view.why
     return (

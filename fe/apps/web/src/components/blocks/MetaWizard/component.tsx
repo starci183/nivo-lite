@@ -1,6 +1,7 @@
 import { Alert, RadioGroup, Text } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
+import { WizardTestButtons } from "@/components/composites/WizardTestButtons"
 import {
     backAction,
     closeAction,
@@ -15,9 +16,6 @@ import { metaWizardClassNames as classNames } from "./classNames"
 
 /** The ready drawing with its canonical first-read loading atom. */
 type MetaWizardDrawLoadingProps = MetaWizardBaseProps & { readonly isLoading: boolean }
-
-/** The ready drawing with its canonical first-read loading atom. */
-type ButtonRowLoadingProps = ButtonRowProps & { readonly isLoading: boolean }
 
 /** One option of the Page list. */
 export interface MetaPageChoice {
@@ -214,37 +212,6 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
     )
 }
 
-/** Labels and commands of the run and repair buttons. */
-interface ButtonRowProps {
-    readonly run: string
-    readonly repair: string
-    readonly canRepair: boolean
-    readonly isDisabled: boolean
-    readonly onRun: () => void
-    readonly onRepair: () => void
-}
-
-/** The run and repair buttons of the test step. */
-const ButtonRow = (props: ButtonRowLoadingProps) => (
-    <WizardFooter
-        actions={[
-            { id: "run", label: props.run, intent: "alternative", onPress: props.onRun, isDisabled: props.isDisabled },
-            ...(props.canRepair
-                ? [
-                      {
-                          id: "repair",
-                          label: props.repair,
-                          intent: "alternative" as const,
-                          onPress: props.onRepair,
-                          isDisabled: props.isDisabled,
-                      },
-                  ]
-                : []),
-        ]}
-        isLoading={props.isLoading}
-    />
-)
-
 /** Renders the MetaTestStep section. */
 const MetaTestStep = (props: MetaWizardDrawLoadingProps) => {
     const view = props.props
@@ -275,7 +242,7 @@ const MetaTestStep = (props: MetaWizardDrawLoadingProps) => {
                 </Text>
             ) : null}
             <div className={classNames.buttons}>
-                <ButtonRow
+                <WizardTestButtons
                     run={text.testRun}
                     repair={text.testRepair}
                     canRepair={view.canRepair}

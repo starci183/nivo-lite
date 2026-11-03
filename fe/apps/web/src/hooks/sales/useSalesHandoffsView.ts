@@ -7,6 +7,7 @@ import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useSalesShipmentForm } from "@/hooks/rhf"
 import type { SalesShipping, SalesWorkbenchData } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
+import { submitGuarded } from "@/modules/utils"
 import { handoffItemsOf } from "./sales.shared"
 import { useSalesActions } from "./useSalesActions"
 
@@ -143,14 +144,13 @@ const useShipmentSubmission = (input: ShipmentSubmissionInput) => {
             setBusyKey(shipping.key)
             setOperation(pending)
             const finish = () => setOperation((current) => (current === pending ? null : current))
-            form.handleSubmit((submitted) => {
-                if (!pending.isCurrent()) return finish()
-                save(submitted, pending.isCurrent)
-                    .catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
-                    .finally(finish)
-            }, finish)().catch((error: unknown) =>
-                runGraphQL(() => Promise.reject(error), { showSuccessToast: false }).finally(finish),
-            )
+            submitGuarded({
+                form,
+                runGraphQL,
+                isCurrent: pending.isCurrent,
+                finish,
+                save: (submitted) => save(submitted, pending.isCurrent),
+            })
         },
     }
 }

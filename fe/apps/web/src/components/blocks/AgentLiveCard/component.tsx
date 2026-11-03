@@ -1,7 +1,7 @@
-import { SurfaceCard } from "@starci/grammar/common"
-import { SwitchStatus } from "@/components/composites/SwitchStatus"
 import type { SwitchStatusProps } from "@/components/composites/SwitchStatus"
 import { SlotView } from "@/components/composites/SlotView"
+import { SwitchStatus } from "@/components/composites/SwitchStatus"
+import { SwitchStatusCard } from "@/components/frames/SwitchStatusCard"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** What the card draws once the installation arrived, every word resolved. */
@@ -34,27 +34,25 @@ export interface AgentLiveCardBaseProps {
 }
 
 /** The switch, its status and what it needs, from the read installation. */
-const switchOf = (base: AgentLiveCardBaseProps, view: LiveView, isLoading: boolean): SwitchStatusProps => ({
-    label: base.props.switchLabel,
-    isSelected: view.isLive,
-    isLoading,
-    isDisabled: base.props.isDisabled,
-    onChange: base.on.live,
-    tone: view.statusTone,
-    statusLabel: view.statusLabel,
-    help: base.props.help,
-    blocker: view.blocker,
-    blockerAction: view.blockerAction,
-    quiet: "",
-})
+const switchOf = (base: AgentLiveCardBaseProps) => (view: LiveView, isLoading: boolean) => (
+    <SwitchStatus
+        label={base.props.switchLabel}
+        isSelected={view.isLive}
+        isLoading={isLoading}
+        isDisabled={base.props.isDisabled}
+        onChange={base.on.live}
+        tone={view.statusTone}
+        statusLabel={view.statusLabel}
+        help={base.props.help}
+        blocker={view.blocker}
+        blockerAction={view.blockerAction}
+        quiet={""}
+    />
+)
 
 /** Draws the live card: the switch with its label kept readable beside it even while the switch is off-limits, the status badge and what it needs before it can go live. */
 export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <SlotView
-            {...props.props.read}
-            onRetry={props.on.retry}
-            render={(view, isLoading) => <SwitchStatus {...switchOf(props, view, isLoading)} />}
-        />
-    </SurfaceCard>
+    <SwitchStatusCard title={props.props.title}>
+        <SlotView {...props.props.read} onRetry={props.on.retry} render={switchOf(props)} />
+    </SwitchStatusCard>
 )

@@ -1,5 +1,6 @@
-import { Section, PaneSection } from "@starci/grammar/common"
+import { PaneSection } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
+import { ConnectionFactsPane } from "@/components/frames/ConnectionFactsPane"
 import type { ConnectionFactView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** Fake rows of the same shape: the skeleton reuses the ready tree. */
@@ -28,17 +29,7 @@ export const ConnectionHealthTilesBase = (props: ConnectionHealthTilesBaseProps)
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
             render={(facts, isLoading) => (
-                <Section
-                    kind="figures"
-                    ariaLabel={props.props.label}
-                    isLoading={isLoading}
-                    items={facts.map((fact) => ({
-                        id: fact.id,
-                        term: fact.label,
-                        value: fact.value,
-                        ...(fact.meta === undefined ? {} : { meta: fact.meta }),
-                    }))}
-                />
+                <ConnectionFactsPane label={props.props.label} facts={facts} isLoading={isLoading} />
             )}
         />
     </PaneSection>

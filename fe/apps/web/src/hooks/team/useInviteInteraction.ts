@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { toast } from "@/modules/toast"
-import type { InviteAction, InviteShown } from "@/modules/team"
+import type { InviteAction } from "@/modules/types"
+import type { InviteShown } from "@/modules/team"
 import { useCopyInviteLink } from "./useCopyInviteLink"
 import { useInviteCommands } from "./useInviteCommands"
 

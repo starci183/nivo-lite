@@ -140,7 +140,6 @@ export const KnowledgeSourcePanelBase = (props: KnowledgeSourcePanelBaseProps) =
         render={(doc, isLoading) => (
             <KnowledgeRowsSection
                 section={doc.section}
-                isPending={props.props.isPending}
                 isLoading={isLoading}
                 before={<Head view={doc.head} isLoading={isLoading} on={props.on} />}
                 body={

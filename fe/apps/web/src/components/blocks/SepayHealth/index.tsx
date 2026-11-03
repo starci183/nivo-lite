@@ -1,5 +1,6 @@
 "use client"
 
+import { useConnectionRefusal } from "@/hooks/connections"
 import { useTranslations } from "next-intl"
 import { useSlotLabels } from "@/hooks/slot"
 import { useSepayHealthTiles } from "@/hooks/sepayConnection"
@@ -13,6 +14,8 @@ export const SepayHealth = (props: SepayHealthProps) => {
     const t = useTranslations("sepayConnection")
     const slotLabels = useSlotLabels()
     const tiles = useSepayHealthTiles(props.connectionId)
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     return (
         <SepayHealthBase
             props={{

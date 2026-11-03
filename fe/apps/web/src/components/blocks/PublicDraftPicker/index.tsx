@@ -1,9 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { usePublicDraftController } from "@/hooks/brain"
+import { usePublicDraftController, useFailureToast } from "@/hooks/brain"
 import { useSlotLabels } from "@/hooks/slot"
-import { toast } from "@/modules/toast"
 import { PublicDraftPickerBase } from "./component"
 
 /** Props for the connected picker: whether the address asks for it. */
@@ -18,7 +17,7 @@ interface PublicDraftPickerProps {
  */
 export const PublicDraftPicker = (props: PublicDraftPickerProps) => {
     const t = useTranslations("publicBrain")
-    const feedback = useTranslations("toast")
+    const failed = useFailureToast()
     const controller = usePublicDraftController()
     const slotLabels = useSlotLabels()
     if (!controller.canWrite) return null
@@ -48,7 +47,7 @@ export const PublicDraftPicker = (props: PublicDraftPickerProps) => {
                 close: controller.close,
                 submit: () => {
                     controller.submit().catch(() => {
-                        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+                        failed()
                     })
                 },
                 setTitle: controller.setTitle,

@@ -291,3 +291,13 @@ export interface LibraryCard {
     /** A planned connector: the state of its "I need this" command. */
     readonly want: { readonly isPending: boolean; readonly isDone: boolean; readonly note?: string }
 }
+
+/** What a member who may not read a provider page sees in place of it: the trail home and one notice saying who can. */
+export interface ConnectionRefusalView {
+    readonly title: string
+    readonly crumbLabel: string
+    readonly homeLabel: string
+    readonly homeHref: string
+    readonly message: string
+    readonly description: string
+}

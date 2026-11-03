@@ -45,9 +45,7 @@ export const useContentBrandCardView = (input: ContentViewInput) => {
             tags: (value: string) => form.setValue("hashtags", value),
             save: () => {
                 if (!input.isActive || !input.isReady || input.data?.canManage !== true) return
-                return form.handleSubmit((request) => {
-                    mutation.save(request)
-                })()
+                return form.handleSubmit((request) => mutation.save(request))()
             },
             dismissNote: () => form.clearErrors(),
         },

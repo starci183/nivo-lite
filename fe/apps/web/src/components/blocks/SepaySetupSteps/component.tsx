@@ -1,51 +1,24 @@
-import { Button } from "@starci/grammar/common"
-import type { ReactNode } from "react"
-import { ConnectionSteps } from "@/components/composites/ConnectionSteps"
-import type { SepayStepId } from "@/modules/types"
-
-/** One setup step as it is worded: its title, the summary beside it, the guidance under it, and whether it is open. */
-export interface SepaySetupStepView {
-    readonly id: SepayStepId
-    readonly title: string
-    readonly summary: string
-    readonly hint: string
-    readonly isOpen: boolean
-}
+import { ConnectionStepper } from "@/components/composites/ConnectionStepper"
 
 /** Props for {@link SepaySetupStepsBase}. */
 export interface SepaySetupStepsBaseProps {
-    /** The body of each step, connected by the page. */
-    readonly shape: Readonly<Record<SepayStepId, ReactNode>>
     readonly props: {
         /** Names the stepper above the steps. */
         readonly stepsLabel: string
-        readonly steps: ReadonlyArray<SepaySetupStepView>
-        /** Opens the webhook page of SePay for the chosen environment in a new tab. */
-        readonly openSepay: { readonly label: string; readonly href: string }
+        readonly steps: ReadonlyArray<{ readonly id: string; readonly title: string }>
+        /** The step the reader stands at. */
+        readonly currentStepId: string
     }
-    readonly on: { readonly toggle: (id: SepayStepId, isOpen: boolean) => void }
 }
 
 /**
- * Draws the setup of a SePay connection as numbered steps in the order the back end needs them (environment, bank account, the
- * webhook on SePay, the test, matching and the agent), each a band of the main pane whose head says whether the step is done.
+ * Draws the progress of the setup of a SePay connection as a dense stepper in the order the back end needs it (environment, bank
+ * account, the webhook on SePay, the test, matching and the agent). Each step is its own band below, drawn by its own block.
  */
 export const SepaySetupStepsBase = (props: SepaySetupStepsBaseProps) => (
-    <ConnectionSteps
+    <ConnectionStepper
         label={props.props.stepsLabel}
-        steps={props.props.steps.map((step) => ({
-            ...step,
-            body: props.shape[step.id],
-            actions:
-                step.id === "paste" ? (
-                    <Button intent="neutral" href={props.props.openSepay.href} target="_blank" rel="noreferrer">
-                        {props.props.openSepay.label}
-                    </Button>
-                ) : undefined,
-        }))}
-        onToggle={(id, isOpen) => {
-            const step = props.props.steps.find((candidate) => candidate.id === id)
-            if (step !== undefined) props.on.toggle(step.id, isOpen)
-        }}
+        steps={props.props.steps}
+        currentStepId={props.props.currentStepId}
     />
 )

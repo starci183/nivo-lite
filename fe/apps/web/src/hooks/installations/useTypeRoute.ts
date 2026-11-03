@@ -7,7 +7,7 @@ import { agentListHref, instancesOf } from "@/modules/installations"
 import { AGENTS_ROUTE } from "@/modules/routes"
 import type { AgentTab, Installation } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
-import { loadingSlot, mapSlot } from "@/hooks/slot"
+import { loadingSlot, slotOfReads } from "@/hooks/slot"
 import { typeTargetOf } from "./installations.shared"
 import type { TypeRouteMode } from "./installations.shared"
 import { useInstallations } from "./useInstallations"
@@ -29,21 +29,23 @@ interface TypeRoute {
  */
 export const useTypeRoute = (module: ModuleKey, tab: AgentTab, query: string, mode: TypeRouteMode): TypeRoute => {
     const router = navigation.useRouter()
-    const { slot, installations, reload, read } = useInstallations()
-    const target = installations === undefined ? null : typeTargetOf(installations, module, tab, query)
+    const installed = useInstallations()
+    const target =
+        installed.installations === undefined ? null : typeTargetOf(installed.installations, module, tab, query)
     const listed = target ?? (mode === "redirect" ? agentListHref(module) : null)
     const leaveTo = mode === "list" && listed !== AGENTS_ROUTE ? null : listed
     useEffect(() => {
         if (leaveTo !== null) router.replace(leaveTo)
     }, [leaveTo, router])
+    const instances = instancesOf(installed.installations ?? [], module)
     return {
         slot:
             leaveTo !== null
                 ? loadingSlot<ReadonlyArray<Installation>>()
-                : mapSlot(slot, (rows) => instancesOf(rows, module)),
-        reload,
-        read,
-        instances: instancesOf(installations ?? [], module),
+                : slotOfReads([installed.read], () => instances),
+        reload: installed.reload,
+        read: installed.read,
+        instances,
         isLeaving: leaveTo !== null,
     }
 }

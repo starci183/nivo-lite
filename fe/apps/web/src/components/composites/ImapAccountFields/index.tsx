@@ -1,5 +1,6 @@
-import { Grid, Select } from "@starci/grammar/common"
-import { ConnectionAccountInputs } from "@/components/leaves/ConnectionAccountInputs"
+import { Grid } from "@starci/grammar/common"
+import { FormFieldList, type FormFieldItem } from "@/components/leaves/FormFieldList"
+import { textFieldsOf } from "@/modules/types"
 
 /** A text field of the mailbox sign-in form. */
 type ImapTextField = "name" | "email" | "host" | "port" | "user" | "password"
@@ -46,82 +47,58 @@ export interface ImapAccountFieldsProps {
     }
 }
 
-/** The mailbox sign-in fields of the IMAP wizard. */
-export const ImapAccountFields = (props: ImapAccountFieldsProps) => {
-    const { props: view, on } = props
-    return (
-        <Grid kind="form" columns={2}>
-            <ConnectionAccountInputs
-                owner="imap"
-                fields={[
-                    {
-                        name: "name",
-                        label: view.text.name,
-                        value: view.values.name,
-                        description: view.text.nameHint,
-                        change: on.field("name"),
-                    },
-                    { name: "email", label: view.text.email, value: view.values.email, change: on.field("email") },
-                ]}
-                isDisabled={view.isDisabled}
-                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
-            />
-            <Select
-                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
-                label={view.text.provider}
-                isDisabled={view.isDisabled}
-                value={view.preset}
-                options={view.presets}
-                onValueChange={(value) => value && on.preset(value)}
-            />
-            {view.isCustom ? renderImapAccountFieldsServerFields(view, on) : null}
-            <ConnectionAccountInputs
-                owner="imap"
-                fields={[
-                    {
-                        name: "user",
-                        label: view.text.user,
-                        value: view.values.user,
-                        description: view.text.userHint,
-                        change: on.field("user"),
-                    },
-                    {
-                        name: "password",
-                        label: view.text.password,
-                        value: view.values.password,
-                        description: view.passwordHint,
-                        change: on.field("password"),
-                    },
-                ]}
-                isDisabled={view.isDisabled}
-                {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
-            />
-        </Grid>
-    )
+/** The server fields shown for a custom provider: host, port and the security choice. */
+const serverFieldsOf = (
+    view: ImapAccountFieldsProps["props"],
+    on: ImapAccountFieldsProps["on"],
+): ReadonlyArray<FormFieldItem> => [
+    ...textFieldsOf(["host", "port"], { text: view.text, values: view.values, field: on.field }),
+    {
+        kind: "choice",
+        name: "security",
+        label: view.text.security,
+        value: view.values.security,
+        options: view.securities,
+        change: (value) => {
+            if (value) on.security(value)
+        },
+    },
+]
+
+/** The mailbox, provider, server and sign-in fields in the order they are drawn. */
+const fieldsOf = (
+    view: ImapAccountFieldsProps["props"],
+    on: ImapAccountFieldsProps["on"],
+): ReadonlyArray<FormFieldItem> => {
+    const source = { text: view.text, values: view.values, field: on.field }
+    return [
+        ...textFieldsOf(["name", "email"], source, { name: { description: view.text.nameHint } }),
+        {
+            kind: "choice",
+            name: "provider",
+            label: view.text.provider,
+            value: view.preset,
+            options: view.presets,
+            change: (value) => {
+                if (value) on.preset(value)
+            },
+        },
+        ...(view.isCustom ? serverFieldsOf(view, on) : []),
+        ...textFieldsOf(["user", "password"], source, {
+            user: { description: view.text.userHint },
+            password: { description: view.passwordHint, isSecret: true },
+        }),
+    ]
 }
 
-/** Renders the ImapAccountFields server fields section. */
-const renderImapAccountFieldsServerFields = (
-    view: NonNullable<ImapAccountFieldsProps["props"]>,
-    on: NonNullable<ImapAccountFieldsProps["on"]>,
-) => (
-    <>
-        <ConnectionAccountInputs
-            owner="imap"
-            fields={[
-                { name: "host", label: view.text.host, value: view.values.host, change: on.field("host") },
-                { name: "port", label: view.text.port, value: view.values.port, change: on.field("port") },
-            ]}
-            isDisabled={view.isDisabled}
-            {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+/** The mailbox sign-in fields of the IMAP wizard. */
+export const ImapAccountFields = (props: ImapAccountFieldsProps) => (
+    <Grid kind="form" columns={2}>
+        <FormFieldList
+            idPrefix="imap"
+            fields={fieldsOf(props.props, props.on)}
+            isDisabled={props.props.isDisabled}
+            {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
         />
-        <Select
-            {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
-            label={view.text.security}
-            isDisabled={view.isDisabled}
-            value={view.values.security}
-            options={view.securities}
-            onValueChange={(value) => value && on.security(value)}
-        />
-    </>
+    </Grid>
 )

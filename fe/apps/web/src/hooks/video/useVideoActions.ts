@@ -9,6 +9,7 @@ import {
 } from "@/hooks/swr"
 import type { MutateCreateVideoProjectRequest, MutateUpdateVideoProjectRequest } from "@/hooks/swr"
 import type { ProjectInputs, ScriptScene } from "@/modules/video"
+import { projectCommandOf } from "./video.shared"
 import { useVideoRefresh } from "./useVideoRefresh"
 import type { VideoOwner } from "./useVideoRefresh"
 
@@ -45,13 +46,11 @@ export const useVideoActions = (owner?: VideoOwner) => {
         }
         return complete(() => updateMutation.trigger(request), t("saved"), onResult)
     }
-    const duplicate = (
-        projectId: string,
-        onResult?: (result: Awaited<ReturnType<typeof duplicateMutation.trigger>> | undefined) => void,
-    ) => complete(() => duplicateMutation.trigger({ projectId }), t("saved"), onResult)
-    const archive = (
-        projectId: string,
-        onResult?: (result: Awaited<ReturnType<typeof archiveMutation.trigger>> | undefined) => void,
-    ) => complete(() => archiveMutation.trigger({ projectId, archived: true }), t("status_archived"), onResult)
+    const duplicate = projectCommandOf(complete, (projectId) => duplicateMutation.trigger({ projectId }), t("saved"))
+    const archive = projectCommandOf(
+        complete,
+        (projectId) => archiveMutation.trigger({ projectId, archived: true }),
+        t("status_archived"),
+    )
     return { create, update, duplicate, archive, isPending }
 }

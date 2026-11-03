@@ -6,7 +6,7 @@ import {
     type ShiftsPanelInput,
     type ShiftsProjectionInput,
 } from "./shiftsWorkbench.shared"
-import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
+import { useAgentWorkbenchShell } from "@/hooks/agentDashboard"
 import { useShiftsBenchData, useShiftsMineData } from "@/hooks/shifts"
 import { useSlotLabels } from "@/hooks/slot"
 import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
@@ -38,13 +38,13 @@ export const useShiftsWorkbenchView = (input: ShiftsWorkbenchInput) => {
     const { activeWorkspaceId } = useActiveWorkspace(),
         labels = useSlotLabels()
     const scope = JSON.stringify([activeWorkspaceId, input.installationId])
-    const tabs = useAgentWorkbenchTabs({ ids: SHIFTS_TABS, initialTab: input.initialTab, scope })
-    const dashboard = useAgentDashboardFrame({
+    const { tabs, dashboard, isNormal } = useAgentWorkbenchShell({
         module: "shifts",
         installationId: input.installationId,
-        hasOwnGaps: false,
+        ids: SHIFTS_TABS,
+        initialTab: input.initialTab,
+        scope,
     })
-    const isNormal = dashboard.why.workItemId === null
     const monday = useShiftsWeekStore((state) => state.monday)
     const bench = useShiftsBenchData(null, isNormal),
         week = useShiftsBenchData(monday, isNormal && tabs.selected === "week"),

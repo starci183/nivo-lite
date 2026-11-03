@@ -9,7 +9,7 @@ import { QUERY_BOOKING_BOARD_SWR_KEY, useMutateAddBookingSwr, useMutateMoveBooki
 import { matchesSwrKey } from "@/modules/utils"
 import { graphQLErrorCode } from "@/modules/failure"
 import { wallInstant } from "@/modules/i18n"
-import { toast } from "@/modules/toast"
+import { toast, useGraphQLWithToast } from "@/modules/toast"
 import { useBookingTransition } from "./useBookingTransition"
 
 /** The fields of the dialog. */
@@ -80,12 +80,13 @@ const triggerPlacement = (input: PlacementWrite) => {
 /** The owner's add and move of a booking: one dialog, one set of fields, and the refusal reason kept on screen until the owner changes the plan. A placed booking toasts and revalidates every cached board. */
 export const useBookingPlacement = (
     timezone: string,
-    onPlaced: (kind: PlacementDraft["kind"]) => void,
+    onPlaced: (kind: PlacementDraft["kind"]) => Promise<unknown>,
     isActive = true,
     scope = "",
 ) => {
     const t = useTranslations("workbenchBooking")
     const tToast = useTranslations("toast")
+    const withToast = useGraphQLWithToast()
     const { mutate } = useSWRConfig()
     const add = useMutateAddBookingSwr()
     const move = useMutateMoveBookingSwr()
@@ -125,8 +126,14 @@ export const useBookingPlacement = (
             })
             const kind = draft.kind
             if (isCurrent()) close()
-            mutate(matchesSwrKey(QUERY_BOOKING_BOARD_SWR_KEY))
-            if (isCurrent()) onPlaced(kind)
+            await withToast(
+                () =>
+                    Promise.all([
+                        mutate(matchesSwrKey(QUERY_BOOKING_BOARD_SWR_KEY)),
+                        ...(isCurrent() ? [onPlaced(kind)] : []),
+                    ]),
+                { showSuccessToast: false },
+            )
         })
     }
 

@@ -16,7 +16,6 @@ export {
     monthKey,
     moveToDay,
     pad2,
-    pillarBalance,
     postView,
     publishSteps,
     quotes,

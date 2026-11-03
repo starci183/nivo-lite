@@ -42,10 +42,10 @@ export const useKnowledgeIdeas = (): KnowledgeIdeas => {
         sources === undefined ||
         installations === undefined
     const { open, skipped } = useMemo(() => {
-        if (!member.canWrite) return { open: [], skipped: [] }
+        if (!member.canWrite || sources === undefined || installations === undefined) return { open: [], skipped: [] }
         const decided = context?.states ?? new Map<string, IdeaDecision>()
-        const used = new Set(topicsOf(sources ?? []).map((topic) => topic.toLowerCase()))
-        const installed = (installations ?? []).map((one) => one.moduleKey)
+        const used = new Set(topicsOf(sources).map((topic) => topic.toLowerCase()))
+        const installed = installations.map((one) => one.moduleKey)
         const fitting = ideasFor(installed, context === undefined ? null : context.businessType)
         return {
             open: fitting

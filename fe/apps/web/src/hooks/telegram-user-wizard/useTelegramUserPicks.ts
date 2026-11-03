@@ -20,12 +20,14 @@ export const useTelegramUserPicks = () => {
     const reads: ReadonlyArray<SlotRead<unknown>> = chatsFor === undefined ? [] : [list]
     const chats = useMemo<ReadonlyArray<ChatChoice>>(
         () =>
-            (list.data ?? []).map((chat) => ({
-                id: chat.id,
-                title: chat.title,
-                kind: chatKindOf(chat.kind),
-                unread: chat.unread,
-            })),
+            list.data === undefined
+                ? []
+                : list.data.map((chat) => ({
+                      id: chat.id,
+                      title: chat.title,
+                      kind: chatKindOf(chat.kind),
+                      unread: chat.unread,
+                  })),
         [list.data],
     )
     const pickedIds = useMemo(() => new Set(picked.map((chat) => chat.id)), [picked])

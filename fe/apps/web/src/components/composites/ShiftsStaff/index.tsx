@@ -4,8 +4,6 @@ type ShiftsStaffProps = ShiftsSetupViews["staff"] & {
     readonly isLoading?: boolean
 }
 import {
-    Button,
-    CheckboxGroup,
     Cluster,
     EmptyNotice,
     Grid,
@@ -15,13 +13,52 @@ import {
     SurfaceCard,
     Stack,
     Switch,
-    Text,
 } from "@starci/grammar/common"
+import { ShiftsListCard } from "@/components/branches/ShiftsListCard"
+import { ShiftsActionButton } from "@/components/leaves/ShiftsActionButton"
+import { ShiftsCheckboxes } from "@/components/leaves/ShiftsCheckboxes"
+
+/** One text input of the person form: its id and name, the label it reads and the field of the form it edits. */
+interface StaffTextField {
+    readonly id: string
+    readonly name: string
+    readonly labelKey: "name" | "phone" | "telegram" | "zalo"
+    readonly formKey: ShiftsSetupViews["staffStaffTextField"]
+}
+
+/** The name opens the form; the contacts follow the limits. */
+const NAME_FIELDS: ReadonlyArray<StaffTextField> = [
+    { id: "shifts-staff-name", name: "name", labelKey: "name", formKey: "name" },
+]
+const CONTACT_FIELDS: ReadonlyArray<StaffTextField> = [
+    { id: "shifts-staff-phone", name: "phone", labelKey: "phone", formKey: "phone" },
+    { id: "shifts-staff-telegram", name: "telegram", labelKey: "telegram", formKey: "telegramChatId" },
+    { id: "shifts-staff-zalo", name: "zalo", labelKey: "zalo", formKey: "zaloUserId" },
+]
+
+/** The number fields of the person form, with the bounds of each. */
+const NUMBER_FIELDS = [
+    { name: "wage", labelKey: "wage", formKey: "wage", bounds: { minValue: 0, step: 1000 } },
+    { name: "maxWeek", labelKey: "maxWeek", formKey: "maxWeek", bounds: { minValue: 1, maxValue: 100 } },
+    { name: "maxDay", labelKey: "maxDay", formKey: "maxDay", bounds: { minValue: 1, maxValue: 16 } },
+    { name: "rest", labelKey: "minRest", formKey: "minRest", bounds: { minValue: 0, maxValue: 24 } },
+] as const
 
 /** Draws the roster with edit buttons and the form that adds or edits one person. */
 export const ShiftsStaff = (props: ShiftsStaffProps) => (
     <Stack gap="section">
-        {renderStaffList(props)}
+        <ShiftsListCard
+            title={props.title}
+            hint={props.hint}
+            isLoading={props.isLoading}
+            empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
+            items={props.people.map((person) => ({
+                id: person.id,
+                title: person.title,
+                description: person.notes.filter((note) => note !== "").join(" · "),
+                action: { label: props.editLabel, press: () => props.on?.edit(person.id) },
+            }))}
+        />
         <SurfaceCard
             {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
             label={props.formTitle}
@@ -29,31 +66,9 @@ export const ShiftsStaff = (props: ShiftsStaffProps) => (
         >
             <Stack gap="row">
                 <Grid kind="form" columns={2}>
-                    {renderStaffWorkLimits(props)}
-                    <Input
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                        id="shifts-staff-phone"
-                        name="phone"
-                        label={props.labels.phone}
-                        value={props.form.phone}
-                        onValueChange={(value) => props.on?.text("phone", value)}
-                    />
-                    <Input
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                        id="shifts-staff-telegram"
-                        name="telegram"
-                        label={props.labels.telegram}
-                        value={props.form.telegramChatId}
-                        onValueChange={(value) => props.on?.text("telegramChatId", value)}
-                    />
-                    <Input
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                        id="shifts-staff-zalo"
-                        name="zalo"
-                        label={props.labels.zalo}
-                        value={props.form.zaloUserId}
-                        onValueChange={(value) => props.on?.text("zaloUserId", value)}
-                    />
+                    {renderStaffTextFields(props, NAME_FIELDS)}
+                    {renderStaffNumberFields(props)}
+                    {renderStaffTextFields(props, CONTACT_FIELDS)}
                     <Select
                         {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                         label={props.labels.link}
@@ -63,13 +78,12 @@ export const ShiftsStaff = (props: ShiftsStaffProps) => (
                         onValueChange={(value) => props.on?.link(value ?? props.noLinkId)}
                     />
                 </Grid>
-                <CheckboxGroup
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                <ShiftsCheckboxes
                     label={props.labels.positions}
-                    orientation="horizontal"
                     options={props.positionOptions}
                     value={props.form.positionIds}
-                    {...(props.on === undefined ? {} : { onValueChange: props.on.positions })}
+                    onValueChange={props.on?.positions}
+                    isLoading={props.isLoading}
                 />
                 {renderStaffActions({ props })}
             </Stack>
@@ -79,24 +93,22 @@ export const ShiftsStaff = (props: ShiftsStaffProps) => (
 
 const renderStaffActions = ({ props }: RenderStaffActionsInput) => (
     <Cluster gap="row">
-        <Button
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+        <ShiftsActionButton
+            isLoading={props.isLoading}
             intent="commit"
             isPending={props.isBusy}
             isDisabled={!props.canSave}
-            {...(props.on === undefined ? {} : { onPress: props.on.save })}
-        >
-            {props.saveLabel}
-        </Button>
+            onPress={props.on?.save}
+            label={props.saveLabel}
+        />
         {props.form.id === null ? null : (
             <>
-                <Button
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                <ShiftsActionButton
+                    isLoading={props.isLoading}
                     intent="neutral"
-                    {...(props.on === undefined ? {} : { onPress: props.on.cancel })}
-                >
-                    {props.cancelLabel}
-                </Button>
+                    onPress={props.on?.cancel}
+                    label={props.cancelLabel}
+                />
                 <Switch
                     {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                     label={props.labels.active}
@@ -109,74 +121,30 @@ const renderStaffActions = ({ props }: RenderStaffActionsInput) => (
     </Cluster>
 )
 
-const renderStaffList = (props: ShiftsStaffProps) => (
-    <SurfaceCard
-        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-        kind="list"
-        label={props.title}
-        headingLevel={2}
-        footer={
-            <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="sm" tone="muted">
-                {props.hint}
-            </Text>
-        }
-        empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
-        items={props.people.map((person) => ({
-            id: person.id,
-            title: person.title,
-            description: person.notes.filter((note) => note !== "").join(" · "),
-            action: { label: props.editLabel, press: () => props.on?.edit(person.id) },
-        }))}
-    />
-)
-
-const renderStaffWorkLimits = (props: ShiftsStaffProps) => (
-    <>
+const renderStaffTextFields = (props: ShiftsStaffProps, fields: ReadonlyArray<StaffTextField>) =>
+    fields.map((field) => (
         <Input
             {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            id="shifts-staff-name"
-            name="name"
-            label={props.labels.name}
-            value={props.form.name}
-            onValueChange={(value) => props.on?.text("name", value)}
+            key={field.id}
+            id={field.id}
+            name={field.name}
+            label={props.labels[field.labelKey]}
+            value={props.form[field.formKey]}
+            onValueChange={(value) => props.on?.text(field.formKey, value)}
         />
+    ))
+
+const renderStaffNumberFields = (props: ShiftsStaffProps) =>
+    NUMBER_FIELDS.map((field) => (
         <NumberField
             {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            label={props.labels.wage}
-            name="wage"
-            value={props.form.wage}
-            minValue={0}
-            step={1000}
-            onValueChange={(value) => props.on?.number("wage", value)}
+            key={field.name}
+            label={props.labels[field.labelKey]}
+            name={field.name}
+            value={props.form[field.formKey]}
+            {...field.bounds}
+            onValueChange={(value) => props.on?.number(field.formKey, value)}
         />
-        <NumberField
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            label={props.labels.maxWeek}
-            name="maxWeek"
-            value={props.form.maxWeek}
-            minValue={1}
-            maxValue={100}
-            onValueChange={(value) => props.on?.number("maxWeek", value)}
-        />
-        <NumberField
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            label={props.labels.maxDay}
-            name="maxDay"
-            value={props.form.maxDay}
-            minValue={1}
-            maxValue={16}
-            onValueChange={(value) => props.on?.number("maxDay", value)}
-        />
-        <NumberField
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            label={props.labels.minRest}
-            name="rest"
-            value={props.form.minRest}
-            minValue={0}
-            maxValue={24}
-            onValueChange={(value) => props.on?.number("minRest", value)}
-        />
-    </>
-)
+    ))
 
 type RenderStaffActionsInput = { props: ShiftsStaffProps }

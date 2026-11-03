@@ -55,11 +55,11 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
         )
     }
     return (
-        <WorkspaceShell
-            align="stretch"
-            primaryLabel={title}
-            primary={
-                <Page measure="reading">
+        <Page measure="reading">
+            <WorkspaceShell
+                align="stretch"
+                primaryLabel={title}
+                primary={
                     <div className={MAIN_CLASS_NAME}>
                         <Stack gap="section">
                             <Stack gap="identity">
@@ -75,8 +75,8 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
                             <PublicBookingForm key={page.slug} props={props.props.form} on={props.on} />
                         </Stack>
                     </div>
-                </Page>
-            }
-        />
+                }
+            />
+        </Page>
     )
 }

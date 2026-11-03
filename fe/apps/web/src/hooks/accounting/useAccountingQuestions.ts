@@ -3,7 +3,7 @@
 import { useAccountingDecisionLock } from "./useAccountingDecisionLock"
 import { createAccountingQuestionsActions, propsOf } from "./accounting.shared"
 import { useAccountingQuestionsForm } from "@/hooks/rhf"
-import { useFeatureLifetime } from "@/hooks/reuseables"
+import { useFeatureLifetime, useScopedState } from "@/hooks/reuseables"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
@@ -30,7 +30,7 @@ export const useAccountingQuestions = (
     const form = useAccountingQuestionsForm(items)
     const values = useWatch({ control: form.control })
     const { getValues, setValue, reset } = form
-    const [editing, setEditing] = useState<Record<string, boolean>>({})
+    const [editing, setEditing] = useScopedState<Record<string, boolean>>({}, isActive, scope)
     const lock = useAccountingDecisionLock(isActive, scope)
     const { decide } = useDecideAccountingQuestion()
     const operation = useQuestionOperation(isActive, scope)
@@ -48,7 +48,6 @@ export const useAccountingQuestions = (
     }
     useEffect(() => {
         reset({ items: {} })
-        setEditing({})
     }, [isActive, reset, scope])
     useEffect(() => {
         if (!isActive) return

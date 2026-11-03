@@ -9,10 +9,18 @@ import { slotOfReads } from "@/hooks/slot"
 export const useConnectionsData = () => {
     const connectionsQuery = useQueryConnectionsSwr()
     const agentsQuery = useQueryConnectionAgentsSwr()
-    const items = useMemo(() => connectionsOf(connectionsQuery.data ?? []), [connectionsQuery.data])
-    const agents = useMemo(() => agentsQuery.data ?? [], [agentsQuery.data])
-    const active = useMemo(() => agents.filter((agent) => agent.status === "active").map(agentOptionOf), [agents])
-    const agentNames = Object.fromEntries(agents.map((agent) => [agent.id, agent.name]))
+    const connectionRows = connectionsQuery.data
+    const agentRows = agentsQuery.data
+    const items = useMemo(() => (connectionRows === undefined ? [] : connectionsOf(connectionRows)), [connectionRows])
+    const active = useMemo(
+        () =>
+            agentRows === undefined ? [] : agentRows.filter((agent) => agent.status === "active").map(agentOptionOf),
+        [agentRows],
+    )
+    const agentNames = useMemo(
+        () => Object.fromEntries((agentRows === undefined ? [] : agentRows).map((agent) => [agent.id, agent.name])),
+        [agentRows],
+    )
     return {
         items,
         agentNames,

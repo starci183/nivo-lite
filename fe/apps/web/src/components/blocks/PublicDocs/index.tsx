@@ -2,12 +2,17 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
-import { publicBadgeOf, listedPublicDocs, usePublicDocCommands, usePublicDocuments } from "@/hooks/brain"
+import {
+    publicBadgeOf,
+    listedPublicDocs,
+    useFailureToast,
+    usePublicDocCommands,
+    usePublicDocuments,
+} from "@/hooks/brain"
 import type { PublicBadge, PublicDocument } from "@/hooks/brain"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView } from "@/modules/types"
 import { brainTabHref } from "@/modules/routes"
-import { toast } from "@/modules/toast"
 import { PublicDocsBase } from "./component"
 
 /** The tone of each badge a public document wears. */
@@ -44,7 +49,7 @@ const approvalOf = (
 /** The connected public documents: the card that starts one, and the list of what customers may read or will once approved. */
 export const PublicDocs = () => {
     const t = useTranslations("publicBrain")
-    const feedback = useTranslations("toast")
+    const failed = useFailureToast()
     const format = useFormatter()
     const slotLabels = useSlotLabels()
     const { slot, reload, canWrite, documents } = usePublicDocuments()
@@ -83,7 +88,7 @@ export const PublicDocs = () => {
     }
     const confirm = async (rowId: string, actionId: string) => {
         if (!canWrite || actionId !== "archive" || !listedPublicDocs(documents).some((doc) => doc.id === rowId)) {
-            toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
+            failed()
             throw new Error("public document archive is unavailable")
         }
         setArchiving(rowId)

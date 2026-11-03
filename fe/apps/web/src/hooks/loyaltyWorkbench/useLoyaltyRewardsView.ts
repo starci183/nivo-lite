@@ -2,8 +2,8 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import type { LoyaltyPanelInput } from "@/hooks/loyalty"
 import { toast } from "@/modules/toast"
 
-import { EMPTY_LOYALTY_BOARD, findTier } from "@/hooks/loyalty"
-import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { EMPTY_LOYALTY_BOARD, findTier, useLoyaltyPanelBoard } from "@/hooks/loyalty"
+import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import {
@@ -27,12 +27,7 @@ interface Editing {
 /** The connected reward catalogue: managers add, edit, pause and remove rewards (outcome toasted); everyone else reads. */
 /** The connected Rewards tab: reads the loyalty board itself (SWR shares the one request with the other tabs). */
 export const useLoyaltyRewardsView = (input: LoyaltyPanelInput) => {
-    const read = input.read
-    const board = read.data ?? EMPTY_LOYALTY_BOARD
-    const slotLabels = useSlotLabels()
-    const retry = () => {
-        input.read.mutate().catch(() => toast.danger(slotLabels("").error))
-    }
+    const { read, board, slotLabels, retry } = useLoyaltyPanelBoard(input)
     const t = useTranslations("loyalty")
     const format = useFormatter()
     const actions = useLoyaltyRewardActions(input)

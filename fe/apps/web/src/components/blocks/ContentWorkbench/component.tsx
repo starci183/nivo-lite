@@ -1,14 +1,13 @@
 import { CONTENT_TABS, type ContentViews, type ContentActions } from "@/modules/types"
-import { Alert, Cluster, Grid, Stack, Tabs } from "@starci/grammar/common"
+import { Alert, Cluster, Grid, Stack } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { ContentSettingsCard } from "@/components/frames/ContentSettingsCard"
 import { ContentPostEditorView } from "@/components/frames/ContentPostEditorView"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
 import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
 import { SlotView } from "@/components/composites/SlotView"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
+import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { ContentAddPostControls } from "@/components/composites/ContentAddPostControls"
 import { ContentQuickIdeaControls } from "@/components/composites/ContentQuickIdeaControls"
@@ -41,9 +40,8 @@ interface PanelProps {
     readonly shape: ContentShape
     readonly isLoading: boolean
 }
-const panelId = (id: string) => "agent-dashboard-panel-" + id
 
-const Settings = ({ copy, data, on, isLoading }: PanelProps) => {
+const Settings = ({ copy, data, on, isLoading }: Pick<PanelProps, "copy" | "data" | "on" | "isLoading">) => {
     const settings = data?.settings
     const blank = { copy, canManage: false, isPending: false, note: null }
     return (
@@ -136,7 +134,7 @@ const ReadyPanel = (props: PanelProps) => {
                 />
             )
         case "settings":
-            return <Settings {...props} />
+            return <Settings copy={props.copy} data={props.data} on={props.on} isLoading={props.isLoading} />
         case "explanation":
             return null
     }
@@ -179,7 +177,7 @@ const ModulePanel = (props: ContentWorkbenchBaseProps) => (
     />
 )
 
-const DashboardCards = (props: ContentWorkbenchBaseProps) => {
+const DashboardCards = (props: Pick<ContentWorkbenchBaseProps, "props" | "on">) => {
     const regions = props.props.regions
     return (
         <Grid kind="cards" columns={3}>
@@ -212,39 +210,16 @@ const Overview = (props: ContentWorkbenchBaseProps) => {
     const view = props.props
     return (
         <Stack gap="region">
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(waiting, isLoading) => (
-                    <WaitingRegion label={view.regions.waiting.label} view={waiting} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...view.ribbon}
-                onRetry={props.on.retry}
-                render={(items, isLoading) => (
-                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
-                )}
-            />
-            <Tabs
-                label={view.tabsLabel}
-                selectedKey={view.selectedTab}
-                inset="none"
-                labelVisibility="always"
-                items={view.tabs}
-                panelId={panelId}
-                onSelect={props.on.selectTab}
-            />
-            <div role="tabpanel" id={panelId(view.selectedTab)}>
-                <ModulePanel {...props} />
-            </div>
+            <WorkbenchOverviewTop view={view} on={{ ...props.on, retryRibbon: props.on.retry }}>
+                <ModulePanel shape={props.shape} props={props.props} on={props.on} />
+            </WorkbenchOverviewTop>
             <DashboardCards {...props} />
             {view.editor === null ? null : <ContentPostEditorView {...view.editor} on={props.on.editor} />}
         </Stack>
     )
 }
 
-const Explanation = (props: ContentWorkbenchBaseProps) => {
+const Explanation = (props: Pick<ContentWorkbenchBaseProps, "props" | "on">) => {
     const view = props.props
     const why = view.why
     return (

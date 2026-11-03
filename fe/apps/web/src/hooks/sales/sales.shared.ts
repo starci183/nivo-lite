@@ -1,5 +1,6 @@
 import { SALES_WORKBENCH_TABS as SALES_TABS } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
+import { leadStageLabel } from "@/modules/utils"
 import type {
     FlowDecisionRow,
     FlowEvidenceState,
@@ -46,7 +47,7 @@ export const INVOICE_TONES: Readonly<Record<string, BadgeTone>> = {
     void: "danger",
 }
 /** The stages a deal can be moved to. */
-export const DEAL_STAGES: ReadonlyArray<LeadStageId> = ["new", "qualified", "proposal", "won", "lost"]
+export { DEAL_STAGES } from "@/modules/sales"
 /** The open lanes of the board. */
 export const OPEN_LANES: ReadonlyArray<LeadStageId> = ["new", "qualified", "proposal"]
 /** The longest-known source names the conversion line names. */
@@ -88,11 +89,6 @@ export const ageParts = (
 }
 /** True when the age is at least a day (rows turn urgent). */
 export const isStale = (sinceIso: string, nowIso: string): boolean => Date.parse(nowIso) - Date.parse(sinceIso) >= DAY
-/** Digits of a typed amount (45.000.000 becomes 45000000); null when empty. */
-export const parseAmount = (value: string): number | null => {
-    const only = value.replace(/[^\d]/g, "")
-    return only ? Number(only) : null
-}
 /** Today in Vietnam time as YYYY-MM-DD, from the server instant. */
 export const vietnamDay = (nowIso: string): string =>
     new Date(Date.parse(nowIso) + VN_OFFSET_MS).toISOString().slice(0, 10)
@@ -155,3 +151,7 @@ export const handoffItemsOf = ({
         }
     })
 }
+
+/** The words of a lead stage in the language of the page that asks, the one set the desk and the pipeline share. */
+export const stageWordOf = (t: Parameters<typeof leadStageLabel>[0], stage: LeadStageId): string =>
+    leadStageLabel(t, stage)

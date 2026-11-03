@@ -12,7 +12,10 @@ export const useVideoReferences = (isActive = true, withSources = true, withFigu
     const sourcesQuery = useQueryVideoSourcesSwr(isActive && withSources),
         figuresQuery = useQueryVideoFiguresSwr(isActive && withFigures)
     const sources = useMemo<ReadonlyArray<SourceChoice>>(
-        () => (sourcesQuery.data ?? []).map((source) => ({ ...source, topic: source.topic ?? null })),
+        () =>
+            sourcesQuery.data === undefined
+                ? []
+                : sourcesQuery.data.map((source) => ({ ...source, topic: source.topic ?? null })),
         [sourcesQuery.data],
     )
     const figures = useMemo<ReadonlyArray<WorkbenchFigureData>>(() => {

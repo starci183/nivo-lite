@@ -1,3 +1,4 @@
+import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { Button, CopyField, Fieldset, Input, Grid } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels, ZaloPasteView } from "@/modules/types"
@@ -24,6 +25,16 @@ export interface ZaloOaSecretView {
 /** Copy, slot and commands of the second setup step: the addresses to paste into Zalo, and the key to paste back. */
 export interface ZaloConnectionPasteBaseProps {
     readonly props: {
+        /** The step's band: its place, words and whether it is open. */
+        readonly step: {
+            readonly ordinal: number
+            readonly title: string
+            readonly summary: string
+            readonly hint: string
+            readonly isOpen: boolean
+        }
+        /** Opens the Zalo developer site in a new tab, where the app is set up. */
+        readonly openZalo: { readonly label: string; readonly href: string }
         readonly callbackLabel: string
         readonly webhookLabel: string
         readonly paste: DataSlot<ZaloPasteView>
@@ -34,6 +45,7 @@ export interface ZaloConnectionPasteBaseProps {
         readonly secret: ZaloOaSecretView
     }
     readonly on: {
+        readonly toggle: (isOpen: boolean) => void
         readonly retry: () => void
         readonly changeSecret: (value: string) => void
         readonly saveSecret: () => void
@@ -47,63 +59,73 @@ export interface ZaloConnectionPasteBaseProps {
 export const ZaloConnectionPasteBase = (props: ZaloConnectionPasteBaseProps) => {
     const { secret } = props.props
     return (
-        <SlotView
-            slot={props.props.paste}
-            placeholder={ZALO_PASTE_PLACEHOLDER}
-            labels={props.props.slotLabels}
-            onRetry={props.on.retry}
-            render={(paste, isLoading) => (
-                <>
-                    <Grid kind="form" columns={2}>
-                        <CopyField
-                            label={props.props.callbackLabel}
-                            value={paste.callbackUrl}
-                            copyLabel={props.props.copyLabel}
-                            copiedLabel={props.props.copiedLabel}
-                            copyErrorLabel={props.props.copyErrorLabel}
-                            isLoading={isLoading}
-                        />
-                        <CopyField
-                            label={props.props.webhookLabel}
-                            value={paste.webhookUrl}
-                            copyLabel={props.props.copyLabel}
-                            copiedLabel={props.props.copiedLabel}
-                            copyErrorLabel={props.props.copyErrorLabel}
-                            isLoading={isLoading}
-                        />
-                    </Grid>
-                    <Fieldset
-                        legend={secret.label}
-                        isLegendHidden
-                        actions={
-                            secret.canEdit ? (
-                                <Button
-                                    intent="neutral"
-                                    isPending={secret.isSaving}
-                                    isDisabled={isLoading}
-                                    onPress={props.on.saveSecret}
-                                >
-                                    {secret.saveLabel}
-                                </Button>
-                            ) : undefined
-                        }
-                    >
-                        <Input
-                            id="zalo-oa-secret"
-                            name="oaSecret"
-                            kind="password"
-                            label={secret.label}
-                            description={secret.description}
-                            value={secret.value}
-                            isDisabled={!secret.canEdit}
-                            isLoading={isLoading}
-                            isInvalid={secret.error !== ""}
-                            errorMessage={secret.error}
-                            onValueChange={props.on.changeSecret}
-                        />
-                    </Fieldset>
-                </>
-            )}
-        />
+        <ConnectionStepBand
+            {...props.props.step}
+            onToggle={props.on.toggle}
+            actions={
+                <Button intent="neutral" href={props.props.openZalo.href} target="_blank" rel="noreferrer">
+                    {props.props.openZalo.label}
+                </Button>
+            }
+        >
+            <SlotView
+                slot={props.props.paste}
+                placeholder={ZALO_PASTE_PLACEHOLDER}
+                labels={props.props.slotLabels}
+                onRetry={props.on.retry}
+                render={(paste, isLoading) => (
+                    <>
+                        <Grid kind="form" columns={2}>
+                            <CopyField
+                                label={props.props.callbackLabel}
+                                value={paste.callbackUrl}
+                                copyLabel={props.props.copyLabel}
+                                copiedLabel={props.props.copiedLabel}
+                                copyErrorLabel={props.props.copyErrorLabel}
+                                isLoading={isLoading}
+                            />
+                            <CopyField
+                                label={props.props.webhookLabel}
+                                value={paste.webhookUrl}
+                                copyLabel={props.props.copyLabel}
+                                copiedLabel={props.props.copiedLabel}
+                                copyErrorLabel={props.props.copyErrorLabel}
+                                isLoading={isLoading}
+                            />
+                        </Grid>
+                        <Fieldset
+                            legend={secret.label}
+                            isLegendHidden
+                            actions={
+                                secret.canEdit ? (
+                                    <Button
+                                        intent="neutral"
+                                        isPending={secret.isSaving}
+                                        isDisabled={isLoading}
+                                        onPress={props.on.saveSecret}
+                                    >
+                                        {secret.saveLabel}
+                                    </Button>
+                                ) : undefined
+                            }
+                        >
+                            <Input
+                                id="zalo-oa-secret"
+                                name="oaSecret"
+                                kind="password"
+                                label={secret.label}
+                                description={secret.description}
+                                value={secret.value}
+                                isDisabled={!secret.canEdit}
+                                isLoading={isLoading}
+                                isInvalid={secret.error !== ""}
+                                errorMessage={secret.error}
+                                onValueChange={props.on.changeSecret}
+                            />
+                        </Fieldset>
+                    </>
+                )}
+            />
+        </ConnectionStepBand>
     )
 }

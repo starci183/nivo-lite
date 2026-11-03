@@ -47,11 +47,9 @@ export const useVideoJob = <T extends VideoJobStatusView>(options: VideoJobOptio
         readonly id: string
     }>()
     useFeatureReset({ isActive, isReady: true, scope, onReset: () => setJob(undefined) })
-    const jobId = isActive
-        ? job !== undefined && job.workspaceId === activeWorkspaceId && job.scope === scope
-            ? job.id
-            : options.initialId
-        : undefined
+    const ownJobId =
+        job !== undefined && job.workspaceId === activeWorkspaceId && job.scope === scope ? job.id : options.initialId
+    const jobId = isActive ? ownJobId : undefined
     const read = options.useStatus(jobId, {
         onSuccess: (status) => {
             reportStatus(status).catch((error) => report(() => Promise.reject(error), { showSuccessToast: false }))

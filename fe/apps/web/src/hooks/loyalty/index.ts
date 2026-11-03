@@ -16,3 +16,4 @@ export {
 } from "./loyalty.shared"
 export type { LoyaltyTab, LoyaltyPanelActivation, LoyaltyPanelInput } from "./loyalty.shared"
 export { useLoyaltyCommand } from "./useLoyaltyCommand"
+export { useLoyaltyPanelBoard } from "./useLoyaltyPanelBoard"

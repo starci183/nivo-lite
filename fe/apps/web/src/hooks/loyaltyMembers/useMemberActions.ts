@@ -27,6 +27,23 @@ interface MemberFields {
     readonly note: string
 }
 
+/** One idempotency token for a command: reused when a command fails, renewed once the back end took it. */
+interface CommandToken {
+    readonly next: () => string
+    readonly renew: () => void
+}
+
+/** Keeps a command's idempotency token out of render: only the returned functions, run by events, read or replace it. */
+const useCommandToken = (): CommandToken => {
+    const token = useRef(newIdempotencyToken())
+    return {
+        next: () => token.current,
+        renew: () => {
+            token.current = newIdempotencyToken()
+        },
+    }
+}
+
 /** What the member page writes: details, point adjustments and redemptions, each toasted and followed by a revalidation. */
 export const useMemberActions = (customerId: string, activation: LoyaltyPanelActivation) => {
     const t = useTranslations("loyalty")
@@ -34,8 +51,8 @@ export const useMemberActions = (customerId: string, activation: LoyaltyPanelAct
     const updateMember = useMutateUpdateLoyaltyMemberSwr()
     const adjustPoints = useMutateAdjustLoyaltyPointsSwr()
     const redeemReward = useMutateRedeemLoyaltyRewardSwr()
-    const adjustToken = useRef(newIdempotencyToken())
-    const redeemToken = useRef(newIdempotencyToken())
+    const adjustToken = useCommandToken()
+    const redeemToken = useCommandToken()
     const [busyReward, setBusyReward] = useState<string | null>(null)
     const [adjustNote, setAdjustNote] = useState<string | null>(null)
     const [redeemNote, setRedeemNote] = useState<ActionNote | null>(null)
@@ -48,8 +65,8 @@ export const useMemberActions = (customerId: string, activation: LoyaltyPanelAct
             setBusyReward(null)
             setAdjustNote(null)
             setRedeemNote(null)
-            adjustToken.current = newIdempotencyToken()
-            redeemToken.current = newIdempotencyToken()
+            adjustToken.renew()
+            redeemToken.renew()
         },
     })
     const refresh = async () => {
@@ -95,8 +112,8 @@ interface MemberCommandsContext {
     readonly adjustPoints: ReturnType<typeof useMutateAdjustLoyaltyPointsSwr>
     readonly redeemReward: ReturnType<typeof useMutateRedeemLoyaltyRewardSwr>
     readonly command: ReturnType<typeof useLoyaltyCommand>
-    readonly adjustToken: { current: string }
-    readonly redeemToken: { current: string }
+    readonly adjustToken: CommandToken
+    readonly redeemToken: CommandToken
     readonly setBusyReward: (value: string | null) => void
     readonly setAdjustNote: (value: string | null) => void
     readonly setRedeemNote: (value: ActionNote | null) => void
@@ -137,12 +154,12 @@ const memberCommandsOf = (input: MemberCommandsContext) => {
             command.dispatch(async (isCurrent) => {
                 setAdjustNote(null)
                 const answer = await withToast(
-                    () => adjustPoints.trigger({ customerId, points, reason, token: adjustToken.current }),
+                    () => adjustPoints.trigger({ customerId, points, reason, token: adjustToken.next() }),
                     { showSuccessToast: false },
                 )
                 if (answer === undefined) return
                 if (isCurrent()) {
-                    adjustToken.current = newIdempotencyToken()
+                    adjustToken.renew()
                     setAdjustNote(answer.posted ? t("adjustDone") : t("adjustWaiting"))
                     onDone()
                 }
@@ -157,12 +174,12 @@ const memberCommandsOf = (input: MemberCommandsContext) => {
                 setBusyReward(rewardId)
                 try {
                     const answer = await withToast(
-                        () => redeemReward.trigger({ customerId, rewardId, token: redeemToken.current }),
+                        () => redeemReward.trigger({ customerId, rewardId, token: redeemToken.next() }),
                         { showSuccessToast: false },
                     )
                     if (answer === undefined) return
                     if (isCurrent()) {
-                        redeemToken.current = newIdempotencyToken()
+                        redeemToken.renew()
                         setRedeemNote({
                             id: rewardId,
                             text: answer.posted ? t("redeemDone", { code: answer.code }) : t("redeemWaiting"),

@@ -2,16 +2,14 @@ import { VIDEO_EDITOR_STEPS, type VideoWorkbenchActions, type VideoWorkbenchView
 type VideoWorkbenchFields = VideoWorkbenchViews["fields"]
 type VideoEditorPanelFields = VideoWorkbenchViews["editorPanel"]
 type VideoNormalPanelFields = VideoWorkbenchViews["normalPanel"]
-type VideoWorkbenchView = VideoWorkbenchViews["view"]
 
-import { Button, Grid, Stack, Tabs } from "@starci/grammar/common"
+import { Button, Grid, Stack } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@/components/composites/SlotView"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
+import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
 import { DoneRegion } from "@/components/composites/DoneRegion"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { VideoGoalForm } from "@/components/composites/VideoGoalForm"
 import { VideoInputsForm } from "@/components/composites/VideoInputsForm"
@@ -25,7 +23,7 @@ import { VideoLibraryList } from "@/components/composites/VideoLibraryList"
 export const VIDEO_WORKBENCH_SHAPES = ["library", "brand", ...VIDEO_EDITOR_STEPS, "explanation"] as const
 type Shape = (typeof VIDEO_WORKBENCH_SHAPES)[number]
 /** One pure Video drawing takes real read slots, separate local/copy atoms and actions. */
-export type VideoWorkbenchBaseProps = VideoWorkbenchView
+export type VideoWorkbenchBaseProps = VideoWorkbenchViews["view"]
 /** Native missing-read facts only: no Project, brand record, business row, or selected count. */
 const NORMAL_READ_MISSING: VideoNormalPanelFields = {
     library: { meta: "", entries: [], canEdit: false, isViewOnly: false },
@@ -42,7 +40,6 @@ const EDITOR_READ_MISSING: VideoEditorPanelFields = {
     result: null,
 }
 
-const panelId = (id: string) => "agent-dashboard-panel-" + id
 interface EditorProps {
     readonly shape: Shape
     readonly ui: VideoWorkbenchFields["ui"]
@@ -148,27 +145,45 @@ const Editor = (props: VideoWorkbenchBaseProps) => (
     />
 )
 type NormalProps = Omit<EditorProps, "data"> & { readonly data: VideoNormalPanelFields }
-const Normal = (props: NormalProps) =>
-    props.shape === "brand" ? (
-        <VideoBrandSettings {...props.ui.brand} {...props.data.brand} isLoading={props.isLoading} on={props.on.brand} />
-    ) : (
-        <Stack gap="section">
-            {props.data.canCreate ? (
-                <Button intent="commit" href={props.ui.createHref} isLoading={props.isLoading}>
-                    {props.ui.createLabel}
-                </Button>
-            ) : null}
-            <VideoLibraryList
-                {...props.ui.library}
-                meta={props.data.library.meta}
-                entries={props.data.library.entries}
-                canEdit={props.data.library.canEdit}
-                viewOnly={props.data.library.isViewOnly ? props.ui.viewOnlyLabel : null}
-                isLoading={props.isLoading}
-                on={props.on.library}
-            />
-        </Stack>
-    )
+const Normal = (props: NormalProps) => {
+    switch (props.shape) {
+        case "brand":
+            return (
+                <VideoBrandSettings
+                    {...props.ui.brand}
+                    {...props.data.brand}
+                    isLoading={props.isLoading}
+                    on={props.on.brand}
+                />
+            )
+        case "library":
+            return (
+                <Stack gap="section">
+                    {props.data.canCreate ? (
+                        <Button intent="commit" href={props.ui.createHref} isLoading={props.isLoading}>
+                            {props.ui.createLabel}
+                        </Button>
+                    ) : null}
+                    <VideoLibraryList
+                        {...props.ui.library}
+                        meta={props.data.library.meta}
+                        entries={props.data.library.entries}
+                        canEdit={props.data.library.canEdit}
+                        viewOnly={props.data.library.isViewOnly ? props.ui.viewOnlyLabel : null}
+                        isLoading={props.isLoading}
+                        on={props.on.library}
+                    />
+                </Stack>
+            )
+        case "goal":
+        case "inputs":
+        case "script":
+        case "preview":
+        case "result":
+        case "explanation":
+            return null
+    }
+}
 const DashboardCards = (props: VideoWorkbenchBaseProps) => {
     const regions = props.props.regions
     return (
@@ -241,31 +256,7 @@ const Overview = (props: VideoWorkbenchBaseProps) => {
     const view = props.props
     return (
         <Stack gap="region">
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(data, isLoading) => (
-                    <WaitingRegion label={view.regions.waiting.label} view={data} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...view.ribbon}
-                errorDescription={view.loadFailedBody}
-                onRetry={props.on.retryFigures}
-                render={(items, isLoading) => (
-                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
-                )}
-            />
-            <Tabs
-                label={view.tabsLabel}
-                selectedKey={view.selectedTab}
-                inset="none"
-                labelVisibility="always"
-                items={view.tabs}
-                panelId={panelId}
-                onSelect={props.on.selectTab}
-            />
-            <div role="tabpanel" id={panelId(view.selectedTab)}>
+            <WorkbenchOverviewTop view={view} on={{ ...props.on, retryRibbon: props.on.retryFigures }}>
                 <SlotView
                     {...view.normal}
                     placeholder={NORMAL_READ_MISSING}
@@ -275,7 +266,7 @@ const Overview = (props: VideoWorkbenchBaseProps) => {
                         <Normal data={data} ui={view.ui} shape={props.shape} isLoading={isLoading} on={props.on} />
                     )}
                 />
-            </div>
+            </WorkbenchOverviewTop>
             <DashboardCards {...props} />
         </Stack>
     )

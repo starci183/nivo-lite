@@ -1,1 +1,8 @@
-export { connectionPageOf, pollConnectionPage, readFailureNotice } from "./connectionPage.shared"
+export {
+    connectionCrumbsOf,
+    connectionHeadStateOf,
+    connectionPageOf,
+    pollConnectionPage,
+    readFailureNotice,
+    setupStepViewOf,
+} from "./connectionPage.shared"

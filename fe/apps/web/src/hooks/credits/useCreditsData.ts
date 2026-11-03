@@ -57,7 +57,7 @@ export const useCreditsData = (contactHref: string) => {
         readError(packs) ||
         readError(quota) ||
         readError(recent) ||
-        readError(ledger)
+        ledger.error
     const workspaceData = workspace.data
     const planData = catalog.plans
     const packData = packs.data

@@ -1,7 +1,6 @@
 export {
     FIELD_KEYS,
     authorityModeOf,
-    draftsFrom,
     fromField,
     hasAmountLimit,
     modesFor,
@@ -10,7 +9,7 @@ export {
     toField,
     visibleGroups,
 } from "@/modules/authority"
-export type { AuthorityProfile, RuleDraft, StoredRule } from "@/modules/authority"
+export type { StoredRule } from "@/modules/authority"
 export { useAuthoritySection } from "./useAuthoritySection"
 export { useAuthoritySheet } from "./useAuthoritySheet"
 export { useAuthorityStaff } from "./useAuthorityStaff"

@@ -1,9 +1,10 @@
-import type { InventoryPanelScope } from "./inventory.shared"
-;("use client")
+"use client"
 
+import type { InventoryPanelScope } from "./inventory.shared"
 import type { ItemView, RecipeView } from "@/modules/types"
 import { changeAt } from "./inventory.shared"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
+import { sayAll } from "@/modules/inventory"
 import { useDrawer } from "./useDrawer"
 import { useInventoryRun } from "./useInventoryRun"
 import { useSay } from "./useSay"
@@ -95,37 +96,37 @@ export const useRecipeDrawer = (
                             aliases: state.aliases,
                             lines: state.lines.map((line) => ({ itemId: line.itemId, qty: line.qty })),
                         }),
-                    (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
+                    drawer.finish,
                 )
             },
             remove: () => {
                 const target = state?.recipe ?? null
-                if (target !== null)
-                    run.exec(
-                        () => commands.deleteRecipe(target.id),
-                        (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
-                    )
+                if (target !== null) run.exec(() => commands.deleteRecipe(target.id), drawer.finish)
             },
             close: drawer.close,
         },
     }
 }
 
+/** The sentences of the catalog the drawer reads under their own names. */
+const RECIPE_DRAWER_KEYS = [
+    "recipeAddTitle",
+    "recipeDrawerHint",
+    "close",
+    "recipeName",
+    "recipeNameHint",
+    "recipeAliases",
+    "recipeAliasesHint",
+    "recipeIngredients",
+    "recipeIngredientHint",
+    "recipeRemoveLine",
+    "recipeAddLine",
+    "save",
+    "recipeDelete",
+] as const
+
 /** Resolves the exact recipe drawer copy in its domain owner. */
-const recipeDrawerCopy = (say: ReturnType<typeof useSay>, owner: RecipeView | null) =>
-    ({
-        recipeAddTitle: say("recipeAddTitle"),
-        recipeEditTitle: say("recipeEditTitle", { name: owner?.name ?? "" }),
-        recipeDrawerHint: say("recipeDrawerHint"),
-        close: say("close"),
-        recipeName: say("recipeName"),
-        recipeNameHint: say("recipeNameHint"),
-        recipeAliases: say("recipeAliases"),
-        recipeAliasesHint: say("recipeAliasesHint"),
-        recipeIngredients: say("recipeIngredients"),
-        recipeIngredientHint: say("recipeIngredientHint"),
-        recipeRemoveLine: say("recipeRemoveLine"),
-        recipeAddLine: say("recipeAddLine"),
-        save: say("save"),
-        recipeDelete: say("recipeDelete"),
-    }) as const
+const recipeDrawerCopy = (say: ReturnType<typeof useSay>, owner: RecipeView | null) => ({
+    ...sayAll(say, RECIPE_DRAWER_KEYS),
+    recipeEditTitle: say("recipeEditTitle", { name: owner?.name ?? "" }),
+})

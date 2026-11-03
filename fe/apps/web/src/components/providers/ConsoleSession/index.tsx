@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { useTranslations } from "next-intl"
 import { useConsoleGate } from "@/hooks/console"
 import { ConsoleSessionContext } from "@/modules/console-session"
+import { ConsoleSessionGateBase } from "./component"
 
 /** The console subtree that waits for a usable session. */
 interface ConsoleSessionProps {
@@ -16,7 +17,7 @@ export const ConsoleSession = (props: ConsoleSessionProps) => {
     const gate = useConsoleGate()
     return (
         <ConsoleSessionContext.Provider value={gate.session}>
-            {gate.isReady ? props.children : <div role="status" aria-busy="true" aria-label={t("loading")} />}
+            <ConsoleSessionGateBase isReady={gate.isReady} loadingLabel={t("loading")} content={props.children} />
         </ConsoleSessionContext.Provider>
     )
 }

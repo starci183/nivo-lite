@@ -1,6 +1,5 @@
 "use client"
 
-import { useMemo } from "react"
 import { useInstallations } from "./useInstallations"
 
 /** Who a screen names: the @handle when it has one, else the display name. */
@@ -16,10 +15,8 @@ export interface AgentRef {
  */
 export const useAgentPictures = (): ((agent: AgentRef) => string | null) => {
     const { installations } = useInstallations()
-    return useMemo(() => {
-        const rows = installations ?? []
-        const byHandle = new Map(rows.map((row) => [row.agentHandle, row.agentAvatarUrl]))
-        const byName = new Map(rows.map((row) => [row.name, row.agentAvatarUrl]))
-        return (agent) => byHandle.get(agent.handle ?? "") ?? byName.get(agent.name ?? "") ?? null
-    }, [installations])
+    if (installations === undefined) return () => null
+    const byHandle = new Map(installations.map((row) => [row.agentHandle, row.agentAvatarUrl]))
+    const byName = new Map(installations.map((row) => [row.name, row.agentAvatarUrl]))
+    return (agent) => byHandle.get(agent.handle ?? "") ?? byName.get(agent.name ?? "") ?? null
 }

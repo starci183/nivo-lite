@@ -1,6 +1,7 @@
 import { Button, EmptyNotice, PaneSection } from "@starci/grammar/common"
-import type { ReactNode } from "react"
+import type { ComponentProps, ReactNode } from "react"
 import { ConnectionSteps } from "@/components/composites/ConnectionSteps"
+import { DriveFileChooser } from "@/components/composites/DriveFileChooser"
 
 /** One setup step as it is worded: its title, the summary beside it, the guidance under it, and whether it is open. */
 interface DriveSetupStepView {
@@ -20,9 +21,9 @@ interface DriveUngrantedView {
 
 /** Props for {@link DriveConnectionStepsBase}. */
 export interface DriveConnectionStepsBaseProps {
-    /** The body of the choose step, connected by the page; the other two steps are guidance and a command. */
-    readonly shape: Readonly<Record<string, ReactNode>>
     readonly props: {
+        /** The body of the choose step; the other two steps are guidance and a command. */
+        readonly chooser: ComponentProps<typeof DriveFileChooser>["props"]
         readonly steps: ReadonlyArray<DriveSetupStepView>
         /** Names the progress landmark of the stepper. */
         readonly stepsLabel: string
@@ -36,6 +37,11 @@ export interface DriveConnectionStepsBaseProps {
     readonly on: {
         readonly toggle: (id: string, isOpen: boolean) => void
         readonly grant: () => void
+        readonly changeLink: (value: string) => void
+        readonly read: () => void
+        readonly pick: () => void
+        readonly select: (ids: ReadonlyArray<string>) => void
+        readonly add: () => void
     }
 }
 
@@ -76,12 +82,19 @@ export const DriveConnectionStepsBase = (props: DriveConnectionStepsBaseProps) =
             </PaneSection>
         )
     }
+    const chooserOn = {
+        changeLink: props.on.changeLink,
+        read: props.on.read,
+        pick: props.on.pick,
+        select: props.on.select,
+        add: props.on.add,
+    }
     return (
         <ConnectionSteps
             label={props.props.stepsLabel}
             steps={props.props.steps.map((step) => ({
                 ...step,
-                body: props.shape[step.id] ?? null,
+                body: step.id === "choose" ? <DriveFileChooser props={props.props.chooser} on={chooserOn} /> : null,
                 actions: actionOf(step.id, props.props, props.on.grant),
             }))}
             onToggle={props.on.toggle}

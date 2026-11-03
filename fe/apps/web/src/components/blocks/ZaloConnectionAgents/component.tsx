@@ -1,3 +1,4 @@
+import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { EmptyNotice, SurfaceCard, Switch } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { SlotView } from "@/components/composites/SlotView"
@@ -12,6 +13,14 @@ export const ZALO_AGENTS_PLACEHOLDER: ReadonlyArray<ZaloAgentRowView> = [
 /** Copy, slot and command of the agents that may use the connection. */
 export interface ZaloConnectionAgentsBaseProps {
     readonly props: {
+        /** The step's band: its place, words and whether it is open. */
+        readonly step: {
+            readonly ordinal: number
+            readonly title: string
+            readonly summary: string
+            readonly hint: string
+            readonly isOpen: boolean
+        }
         readonly title: string
         readonly agents: DataSlot<ReadonlyArray<ZaloAgentRowView>>
         readonly slotLabels: SlotLabels
@@ -21,43 +30,49 @@ export interface ZaloConnectionAgentsBaseProps {
         /** Only the owner may change which agents work through the connection. */
         readonly canToggle: boolean
     }
-    readonly on: { readonly toggle: (agentId: string, isOn: boolean) => void; readonly retry: () => void }
+    readonly on: {
+        readonly toggle: (agentId: string, isOn: boolean) => void
+        readonly retry: () => void
+        readonly toggleStep: (isOpen: boolean) => void
+    }
 }
 
 /** Draws the body of the last setup step: every agent that can work through a Zalo OA, with a switch for whether it does. */
 export const ZaloConnectionAgentsBase = (props: ZaloConnectionAgentsBaseProps) => (
-    <SlotView
-        slot={props.props.agents}
-        placeholder={ZALO_AGENTS_PLACEHOLDER}
-        labels={props.props.slotLabels}
-        forbidden="notice"
-        onRetry={props.on.retry}
-        render={(agents, isLoading) => (
-            <SurfaceCard
-                kind="list"
-                label={props.props.title}
-                isLoading={isLoading}
-                empty={<EmptyNotice message={props.props.slotLabels.empty} />}
-                items={agents.map((agent): ListRowData => {
-                    const item = { id: agent.id, title: agent.name }
-                    if (props.props.canToggle)
-                        return {
-                            ...item,
-                            detail: (
-                                <Switch
-                                    name={`agent-${agent.id}`}
-                                    label={`${props.props.switchLabel} ${agent.name}`}
-                                    isLabelHidden
-                                    isSelected={agent.isOn}
-                                    isLoading={isLoading}
-                                    onSelectedChange={(isOn) => props.on.toggle(agent.id, isOn)}
-                                />
-                            ),
-                        }
-                    if (agent.isOn) return { ...item, badges: [{ label: props.props.onLabel, tone: "success" }] }
-                    return item
-                })}
-            />
-        )}
-    />
+    <ConnectionStepBand {...props.props.step} onToggle={props.on.toggleStep}>
+        <SlotView
+            slot={props.props.agents}
+            placeholder={ZALO_AGENTS_PLACEHOLDER}
+            labels={props.props.slotLabels}
+            forbidden="notice"
+            onRetry={props.on.retry}
+            render={(agents, isLoading) => (
+                <SurfaceCard
+                    kind="list"
+                    label={props.props.title}
+                    isLoading={isLoading}
+                    empty={<EmptyNotice message={props.props.slotLabels.empty} />}
+                    items={agents.map((agent): ListRowData => {
+                        const item = { id: agent.id, title: agent.name }
+                        if (props.props.canToggle)
+                            return {
+                                ...item,
+                                detail: (
+                                    <Switch
+                                        name={`agent-${agent.id}`}
+                                        label={`${props.props.switchLabel} ${agent.name}`}
+                                        isLabelHidden
+                                        isSelected={agent.isOn}
+                                        isLoading={isLoading}
+                                        onSelectedChange={(isOn) => props.on.toggle(agent.id, isOn)}
+                                    />
+                                ),
+                            }
+                        if (agent.isOn) return { ...item, badges: [{ label: props.props.onLabel, tone: "success" }] }
+                        return item
+                    })}
+                />
+            )}
+        />
+    </ConnectionStepBand>
 )

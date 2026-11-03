@@ -1,4 +1,4 @@
-import type { ContentViews } from "@/modules/types"
+import type { ContentNoteView, ContentViews } from "@/modules/types"
 import type { ContentWorkbenchData } from "@/modules/content"
 import { parseDate } from "@internationalized/date"
 import type { useFormatter, useTranslations } from "next-intl"
@@ -18,17 +18,53 @@ export interface ContentViewInput {
     readonly focus: string | null
 }
 
+/** The part of a settings form the lifetime of its card needs: starting it again. */
+export interface SettingsFormReset {
+    readonly reset: () => void
+}
+
 /** The active tab scopes controller state to the surface that owns it. */
 export interface ContentSelectedViewInput extends ContentViewInput {
     readonly selected: ContentViews["tab"]
 }
 
 /** Keeps the existing form/root/row error precedence in the actual settings controller. */
-export const contentSettingsError = (
+const contentSettingsError = (
     errors: { readonly message?: string; readonly root?: { readonly message?: string } } | undefined,
     rowMessage: string | undefined,
     invalidLabel: string,
 ) => errors?.message ?? errors?.root?.message ?? rowMessage ?? (errors ? invalidLabel : undefined)
+
+/** The commands that open and close a dialog of the workbench: it opens only on an active, ready surface and does not close while pending. */
+export const contentDialogOf = (input: ContentViewInput, setOpen: (isOpen: boolean) => void, isPending: boolean) => ({
+    open: () => {
+        if (input.isActive && input.isReady) setOpen(true)
+    },
+    close: () => setOpen(false),
+    openChange: (open: boolean) => {
+        if (!open && !isPending) setOpen(false)
+    },
+})
+
+/** The error note of a settings card: its form, root or first row error, or nothing when the form is valid. */
+export const contentSettingsNoteOf = (
+    errors: Parameters<typeof contentSettingsError>[0],
+    rowMessage: string | undefined,
+    invalidLabel: string,
+): ContentNoteView | null => {
+    const error = contentSettingsError(errors, rowMessage, invalidLabel)
+    return error ? { tone: "error", text: error } : null
+}
+
+/** The lifetime the commands of a settings card follow: only while its surface is active and ready. */
+export const contentSettingsLifetimeOf = (input: ContentViewInput) => ({
+    isActive: input.isActive && input.isReady,
+    scope: input.scope,
+})
+
+/** Whether the person may change the settings now: the surface is active, ready and the person manages the content. */
+export const canManageContentSettings = (input: ContentViewInput): boolean =>
+    input.isActive && input.isReady && input.data?.canManage === true
 
 /** One immutable calendar owner and its actual local selection/drag state. */
 export interface ContentCalendarState {

@@ -4,14 +4,14 @@ import { useMemo } from "react"
 import { useQueryMyAccountSwr, useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { LocalStorage, StorageId } from "@/modules/storage"
-import type { ConsoleSession } from "@/modules/types"
+import type { ConsoleSessionView } from "@/modules/types"
 import { sessionRoleOf } from "./console.shared"
 
 /**
  * Reads the signed-in person's workspace session from SWR, choosing the remembered workspace or the first active one.
  * Console bootstrap and the onboarding handover share this read; only console bootstrap applies its redirects.
  */
-export const useConsoleSessionRead = (): ConsoleSession | undefined => {
+export const useConsoleSessionRead = (): ConsoleSessionView | undefined => {
     const memberships = useQueryMyWorkspacesSwr()
     const account = useQueryMyAccountSwr()
     const { activeWorkspaceId } = useActiveWorkspace()

@@ -1,6 +1,6 @@
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryInventoryWorkbenchSwr } from "@/hooks/swr"
-import { toInventoryWorkbenchData } from "./inventoryWorkbench.shared"
+import { toInventoryWorkbenchData } from "@/modules/inventory"
 import { readError } from "@/hooks/workspaceread"
 
 /**

@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import { useFailureToast } from "@/hooks/brain"
 import { useTranslations } from "next-intl"
 import { useKnowledgeIdeas, useLibraryCommands } from "@/hooks/knowledge"
 import { loadingSlot, useSlotLabels } from "@/hooks/slot"
 import type { KnowledgeRowView, IdeaDecision } from "@/modules/types"
 import { brainTabHref } from "@/modules/routes"
-import { toast } from "@/modules/toast"
 import { KnowledgeSuggestionsBase } from "./component"
 
 /** One idea the page worked out for the workspace. */
@@ -68,14 +68,11 @@ const skippedRowOf = (t: Translate, item: SuggestionItem, pending: string | unde
 /** The connected suggestions: opens the add drawer through the address, sets an idea aside or brings it back. */
 export const KnowledgeSuggestions = () => {
     const t = useTranslations("knowledge")
-    const feedback = useTranslations("toast")
     const commands = useLibraryCommands()
     const ideas = useKnowledgeIdeas()
     const slotLabels = useSlotLabels()
     const [isExpanded, setIsExpanded] = useState(false)
-    const failed = () => {
-        toast.danger(feedback("errorTitle"), { description: feedback("defaultError") })
-    }
+    const failed = useFailureToast()
     const openRow = (item: SuggestionItem): KnowledgeRowView => {
         const row = openRowOf(t, item)
         const pending = commands.pending[`idea:${item.key}`]

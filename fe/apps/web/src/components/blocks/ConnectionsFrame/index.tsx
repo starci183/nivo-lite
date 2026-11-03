@@ -18,7 +18,7 @@ import { ConnectionsFrameBase } from "./component"
 /** What the route hands the frame: the tab the query string asked for, and the page body. */
 interface ConnectionsFrameProps {
     readonly tab?: string | undefined
-    readonly body: ReactNode
+    readonly children: ReactNode
 }
 
 /** The Connections `Page`: its header reads the workspace (live count, summary) and selects the Connected / Library tab. */
@@ -41,7 +41,7 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
     const readyView = showsLibrary ? "library" : "connected"
     return (
         <ConnectionsFrameBase
-            shape={{ body: props.body }}
+            children={props.children}
             props={{
                 header: ConnectionsHeadContent({
                     crumbLabel: t("crumbLabel"),

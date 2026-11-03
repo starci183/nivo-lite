@@ -3,130 +3,122 @@ type ShiftsDemandProps = ShiftsSetupViews["demand"] & {
     readonly on: ShiftsSetupActions["demand"] | undefined
     readonly isLoading?: boolean
 }
-import {
-    Button,
-    CheckboxGroup,
-    NumberField,
-    Section,
-    Select,
-    SurfaceCard,
-    Switch,
-    TagGroup,
-    Text,
-    Stack,
-    Grid,
-    Cluster,
-} from "@starci/grammar/common"
+import { NumberField, Section, Select, Switch, TagGroup, Text, Stack, Grid, Cluster } from "@starci/grammar/common"
+import { ShiftsSetupCard } from "@/components/branches/ShiftsSetupCard"
+import { ShiftsActionButton } from "@/components/leaves/ShiftsActionButton"
+import { ShiftsCheckboxes } from "@/components/leaves/ShiftsCheckboxes"
 
 /** Draws the coverage blocks by weekday and the form that adds blocks over several days. */
 export const ShiftsDemand = (props: ShiftsDemandProps) => (
-    <SurfaceCard
-        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-        label={props.title}
-        headingLevel={2}
-    >
-        <Stack gap="row">
-            <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="sm" tone="muted">
-                {props.hint}
-            </Text>
-            {props.hasBlocks ? (
-                <Grid kind="form" columns={2}>
-                    {props.groups.map((group) => (
-                        <Stack gap="identity" key={group.id}>
-                            <TagGroup
-                                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                                label={group.label}
-                                size="sm"
-                                items={group.blocks}
-                                onRemove={(ids) => ids.forEach((id) => props.on?.remove(id))}
-                                removeLabel={(label) => `${props.removeLabel} ${label}`}
-                                emptyContent={
-                                    <Text
-                                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                                        size="xs"
-                                        tone="muted"
-                                    >
-                                        -
-                                    </Text>
-                                }
-                            />
-                        </Stack>
-                    ))}
-                </Grid>
-            ) : (
-                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="sm" tone="muted">
-                    {props.emptyLabel}
-                </Text>
-            )}
-            <Section
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                headingLevel={3}
-                title={props.addTitle}
-            >
-                <CheckboxGroup
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                    label={props.labels.days}
-                    orientation="horizontal"
-                    options={props.dayOptions}
-                    value={props.form.days}
-                    {...(props.on === undefined ? {} : { onValueChange: props.on.days })}
-                />
-                {renderDemandFields({ props })}
-                <Cluster gap="row" align="center">
-                    <Switch
+    <ShiftsSetupCard
+        title={props.title}
+        hint={props.hint}
+        isLoading={props.isLoading}
+        body={
+            <>
+                {props.hasBlocks ? (
+                    <Grid kind="form" columns={2}>
+                        {props.groups.map((group) => (
+                            <Stack gap="identity" key={group.id}>
+                                <TagGroup
+                                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                                    label={group.label}
+                                    size="sm"
+                                    items={group.blocks}
+                                    onRemove={(ids) => ids.forEach((id) => props.on?.remove(id))}
+                                    removeLabel={(label) => `${props.removeLabel} ${label}`}
+                                    emptyContent={
+                                        <Text
+                                            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                                            size="xs"
+                                            tone="muted"
+                                        >
+                                            -
+                                        </Text>
+                                    }
+                                />
+                            </Stack>
+                        ))}
+                    </Grid>
+                ) : (
+                    <Text
                         {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                        label={props.labels.peak}
-                        name="peak"
-                        isSelected={props.form.peak}
-                        {...(props.on === undefined ? {} : { onSelectedChange: props.on.peak })}
-                    />
-                    <Button
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                        intent="commit"
-                        isPending={props.isBusy}
-                        isDisabled={!props.canAdd}
-                        {...(props.on === undefined ? {} : { onPress: props.on.add })}
+                        size="sm"
+                        tone="muted"
                     >
-                        {props.addLabel}
-                    </Button>
-                </Cluster>
-            </Section>
-        </Stack>
-    </SurfaceCard>
+                        {props.emptyLabel}
+                    </Text>
+                )}
+                <Section
+                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    headingLevel={3}
+                    title={props.addTitle}
+                >
+                    <ShiftsCheckboxes
+                        label={props.labels.days}
+                        options={props.dayOptions}
+                        value={props.form.days}
+                        onValueChange={props.on?.days}
+                        isLoading={props.isLoading}
+                    />
+                    {renderDemandFields({ props })}
+                    <Cluster gap="row" align="center">
+                        <Switch
+                            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                            label={props.labels.peak}
+                            name="peak"
+                            isSelected={props.form.peak}
+                            {...(props.on === undefined ? {} : { onSelectedChange: props.on.peak })}
+                        />
+                        <ShiftsActionButton
+                            isLoading={props.isLoading}
+                            intent="commit"
+                            isPending={props.isBusy}
+                            isDisabled={!props.canAdd}
+                            onPress={props.on?.add}
+                            label={props.addLabel}
+                        />
+                    </Cluster>
+                </Section>
+            </>
+        }
+    />
 )
+
+/** The three choices of a coverage block, each with the command that sets it. */
+const choicesOf = (props: ShiftsDemandProps) => [
+    {
+        name: "cstart",
+        label: props.labels.from,
+        value: props.form.start,
+        options: props.timeOptions,
+        set: props.on?.start,
+    },
+    { name: "cend", label: props.labels.to, value: props.form.end, options: props.timeOptions, set: props.on?.end },
+    {
+        name: "cpos",
+        label: props.labels.position,
+        value: props.form.positionId,
+        options: props.positionOptions,
+        set: props.on?.position,
+    },
+]
 
 const renderDemandFields = ({ props }: RenderDemandFieldsInput) => (
     <Grid kind="form" columns={2}>
-        <Select
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            label={props.labels.from}
-            name="cstart"
-            value={props.form.start}
-            options={props.timeOptions}
-            onValueChange={(value) => {
-                if (value !== null) props.on?.start(value)
-            }}
-        />
-        <Select
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            label={props.labels.to}
-            name="cend"
-            value={props.form.end}
-            options={props.timeOptions}
-            onValueChange={(value) => {
-                if (value !== null) props.on?.end(value)
-            }}
-        />
-        <Select
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            label={props.labels.position}
-            name="cpos"
-            value={props.form.positionId}
-            options={props.positionOptions}
-            onValueChange={(value) => {
-                if (value !== null) props.on?.position(value)
-            }}
-        />
+        {choicesOf(props).map((choice) => (
+            <Select
+                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                key={choice.name}
+                label={choice.label}
+                name={choice.name}
+                value={choice.value}
+                options={choice.options}
+                onValueChange={(value) => {
+                    if (value !== null) choice.set?.(value)
+                }}
+            />
+        ))}
         <NumberField
             {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
             label={props.labels.min}

@@ -103,7 +103,8 @@ const Promotion = (props: Omit<LoyaltyWorkbenchBaseProps, "shape">) => {
                                 onRetry={on.retryCampaign}
                                 render={(outcome, isLoading) => (
                                     <LoyaltyPromoOutcome
-                                        {...outcome}
+                                        result={outcome.result}
+                                        failureMessage={outcome.failure}
                                         failureTitle={promo.copy.copy.failedTitle}
                                         draftLabel={promo.copy.copy.draftLabel}
                                         isLoading={isLoading}

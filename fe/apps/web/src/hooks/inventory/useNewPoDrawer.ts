@@ -1,6 +1,6 @@
-import type { InventoryPanelScope } from "./inventory.shared"
-;("use client")
+"use client"
 
+import type { InventoryPanelScope } from "./inventory.shared"
 import type { InventoryWorkbenchData } from "@/modules/types"
 import { changeAt } from "./inventory.shared"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
@@ -99,7 +99,7 @@ export const useNewPoDrawer = (
                                 unitCost: line.cost,
                             })),
                         }),
-                    (_value, isCurrent) => (isCurrent() ? drawer.done() : undefined),
+                    drawer.finish,
                 )
             },
             close: drawer.close,

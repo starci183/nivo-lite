@@ -31,7 +31,7 @@ interface VideoResultViewProps extends VideoResultViewFields {
 }
 import { Alert, Badge, Button, MediaFrame, SurfaceCard, Text, Video, Stack, Cluster } from "@starci/grammar/common"
 
-const playerOf = (props: VideoResultViewProps) => {
+const playerOf = (props: Omit<VideoResultViewProps, "on">) => {
     if (props.videoUrl !== null) {
         return (
             <MediaFrame

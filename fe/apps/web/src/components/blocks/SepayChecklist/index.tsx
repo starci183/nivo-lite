@@ -1,7 +1,8 @@
 "use client"
 
+import { useConnectionRefusal } from "@/hooks/connections"
 import { useFormatter, useTranslations } from "next-intl"
-import { sepayStepsOf, useSepayConnection, useSepayPlaceholder } from "@/hooks/sepayConnection"
+import { sepayStepsOf, useSepayConnection, useSepayPlaceholder, useSepaySetupStep } from "@/hooks/sepayConnection"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { SepayConnectionView, SepayStepView } from "@/modules/types"
 import { SepayChecklistBase } from "./component"
@@ -19,6 +20,7 @@ export const SepayChecklist = (props: SepayChecklistProps) => {
     const slotLabels = useSlotLabels()
     const placeholder = useSepayPlaceholder()
     const { slot, retry } = useSepayConnection(props.connectionId)
+    const setup = useSepaySetupStep(props.connectionId, "test")
     const titleOf = (step: SepayStepView, connection: SepayConnectionView): string => {
         const key =
             connection.environment === "live" && step.id !== "receive" ? `step_${step.id}_live` : `step_${step.id}`
@@ -39,9 +41,12 @@ export const SepayChecklist = (props: SepayChecklistProps) => {
             state: STEPPER_STATES[step.state],
             isWaiting: step.id === "simulate" && step.state === "active",
         }))
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     return (
         <SepayChecklistBase
             props={{
+                step: setup.step,
                 stepsLabel: t("checklistTitle"),
                 waitingText: t("waitingText"),
                 waitingLabel: t("waitingLabel"),
@@ -50,7 +55,7 @@ export const SepayChecklist = (props: SepayChecklistProps) => {
                 placeholder: stepsOf(placeholder),
                 labels: slotLabels(t("loadFailed")),
             }}
-            on={{ retry }}
+            on={{ retry, toggle: setup.toggle }}
         />
     )
 }

@@ -1,28 +1,17 @@
 "use client"
 import { useTranslations } from "next-intl"
 import type { Cadence } from "@/modules/content"
-import { useApplyContentCadencePresets, useSaveContentCadence } from "@/hooks/content"
 import { useContentCadenceForm } from "@/hooks/rhf"
-import { useFeatureReset } from "@/hooks/reuseables"
-import type { ContentChannel, ContentNoteView, ContentViews } from "@/modules/types"
-import { contentSettingsError, type ContentViewInput } from "./contentWorkbench.shared"
+import type { ContentChannel, ContentViews } from "@/modules/types"
+import { canManageContentSettings, contentSettingsNoteOf, type ContentViewInput } from "./contentWorkbench.shared"
+import { useContentCadenceCommands } from "./useContentCadenceCommands"
 
 const EMPTY_CADENCE: ReadonlyArray<Cadence> = []
 
 /** Owns the active settings rhythm form and its two independent mutation lifetimes. */
 export const useContentCadenceCardView = (input: ContentViewInput) => {
-    const t = useTranslations("content")
     const form = useContentCadenceForm(input.data?.cadence ?? EMPTY_CADENCE)
-    const save = useSaveContentCadence({ isActive: input.isActive && input.isReady, scope: input.scope })
-    const presets = useApplyContentCadencePresets({ isActive: input.isActive && input.isReady, scope: input.scope })
-    useFeatureReset({
-        isActive: input.isActive,
-        isReady: input.isReady,
-        scope: input.scope,
-        onReset: () => {
-            form.reset()
-        },
-    })
+    const { save, presets } = useContentCadenceCommands(input, form)
     const rows = form.watch("rows")
     const change = (channel: ContentChannel, patch: Partial<ContentViews["cadenceRow"]>) =>
         form.setValue(
@@ -34,12 +23,12 @@ export const useContentCadenceCardView = (input: ContentViewInput) => {
                 ),
         )
     const errors = form.formState.errors.rows
-    const error = contentSettingsError(
+    const t = useTranslations("content")
+    const note = contentSettingsNoteOf(
         errors,
         errors?.find?.((row) => row?.time?.message)?.time?.message,
         t("err_input"),
     )
-    const note: ContentNoteView | null = error ? { tone: "error", text: error } : null
     return {
         props:
             input.data === undefined
@@ -54,13 +43,10 @@ export const useContentCadenceCardView = (input: ContentViewInput) => {
                   },
         on: {
             change,
-            preset: () => {
-                if (input.isActive && input.isReady && input.data?.canManage === true) return presets.apply()
-                return undefined
-            },
+            preset: () => (canManageContentSettings(input) ? presets.apply() : undefined),
             save: () => {
-                if (!input.isActive || !input.isReady || input.data?.canManage !== true) return
-                return form.handleSubmit((values) => {
+                if (!canManageContentSettings(input)) return
+                return form.handleSubmit((values) =>
                     save.save({
                         rows: values.rows
                             .filter((row) => row.on)
@@ -70,8 +56,8 @@ export const useContentCadenceCardView = (input: ContentViewInput) => {
                                 days: row.days,
                                 time: row.time,
                             })),
-                    })
-                })()
+                    }),
+                )()
             },
             dismissNote: () => form.clearErrors(),
         },

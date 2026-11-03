@@ -81,7 +81,9 @@ export const usePermissionBoard = () => {
     const rowsOf = (): ReadonlyArray<PermissionBoardRow> =>
         visibleGroups(rules).flatMap((group) => group.actions.map((action) => rowOf(group.department, action)))
 
-    const rowsSlot: DataSlot<ReadonlyArray<PermissionBoardRow>> = slotOfReads([read, agents, directory, rooms], rowsOf)
+    const rowsSlot: DataSlot<ReadonlyArray<PermissionBoardRow>> = slotOfReads([read, agents, directory, rooms], () =>
+        rowsOf(),
+    )
     const reload = () => {
         authority.reload()
         void agents.mutate()

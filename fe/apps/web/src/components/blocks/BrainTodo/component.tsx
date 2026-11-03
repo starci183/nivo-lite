@@ -129,7 +129,6 @@ export const BrainTodoBase = (props: BrainTodoBaseProps) => {
                             <KnowledgeRowsSection
                                 isHeadingInCard
                                 section={list.section}
-                                isPending={list.isPending}
                                 isLoading={isLoading}
                                 body={
                                     <KnowledgeRowList

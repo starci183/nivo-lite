@@ -18,6 +18,24 @@ type ConnectionAgentSwitchesProps = {
 const readOnlyMark = (agent: ConnectionAgentRowView, label: string) =>
     agent.isOn ? <Badge tone="success">{label}</Badge> : undefined
 
+/** One agent: its name and, for the owner, the switch for whether it works through the connection. */
+const agentRowOf = (props: Omit<ConnectionAgentSwitchesProps, "title" | "agents">, agent: ConnectionAgentRowView) => ({
+    id: agent.id,
+    title: agent.name,
+    detail: props.canToggle ? (
+        <Switch
+            name={`agent-${agent.id}`}
+            label={`${props.switchLabel} ${agent.name}`}
+            isLabelHidden
+            isSelected={agent.isOn}
+            isLoading={props.isLoading}
+            onSelectedChange={(isOn) => props.onToggle(agent.id, isOn)}
+        />
+    ) : (
+        readOnlyMark(agent, props.onLabel)
+    ),
+})
+
 /** The agents that may work through a connection, each with a switch for whether it does (a badge for everyone but the owner). */
 export const ConnectionAgentSwitches = (props: ConnectionAgentSwitchesProps) => (
     <Section
@@ -25,21 +43,6 @@ export const ConnectionAgentSwitches = (props: ConnectionAgentSwitchesProps) => 
         title={props.title}
         isLoading={props.isLoading}
         empty={<EmptyNotice message={props.title} />}
-        items={props.agents.map((agent) => ({
-            id: agent.id,
-            title: agent.name,
-            detail: props.canToggle ? (
-                <Switch
-                    name={`agent-${agent.id}`}
-                    label={`${props.switchLabel} ${agent.name}`}
-                    isLabelHidden
-                    isSelected={agent.isOn}
-                    isLoading={props.isLoading}
-                    onSelectedChange={(isOn) => props.onToggle(agent.id, isOn)}
-                />
-            ) : (
-                readOnlyMark(agent, props.onLabel)
-            ),
-        }))}
+        items={props.agents.map((agent) => agentRowOf(props, agent))}
     />
 )

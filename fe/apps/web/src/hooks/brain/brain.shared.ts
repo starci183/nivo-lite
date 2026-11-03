@@ -1,5 +1,12 @@
 import type { useFormatter, useTranslations } from "next-intl"
-import { confirmSidesOf, findingActionsOf, isActive, DOSSIER_STATUS_TONE, FINDING_FILTERS } from "@/modules/brain"
+import {
+    confirmSidesOf,
+    findingActionsOf,
+    isActive,
+    toPublicDocument,
+    DOSSIER_STATUS_TONE,
+    FINDING_FILTERS,
+} from "@/modules/brain"
 import type {
     EvidencePlaceView,
     FindingAction,
@@ -12,6 +19,7 @@ import type {
 } from "@/modules/brain"
 import { brainUploadHref } from "@/modules/routes"
 import type { DossierIdentity } from "./useDossierIdentities"
+import type { Run } from "./usePublicDocRunner"
 
 /** The words of the dossier review. */
 export type Translate = ReturnType<typeof useTranslations<"dossierReview">>
@@ -145,3 +153,9 @@ export const cardActionsOf = (
     const wanted = findingActionsOf(finding, context.canWrite)
     return ACTION_ORDER.filter((one) => wanted.includes(one)).flatMap((one) => wording[one]())
 }
+
+/** A command that changes a public document: the runner answers the saved snapshot, and `done` says what was done. */
+export const documentCommandOf =
+    <Request>(run: Run, send: (request: Request) => Promise<Parameters<typeof toPublicDocument>[0]>) =>
+    (request: Request, done?: string) =>
+        run(async () => toPublicDocument(await send(request)), done)

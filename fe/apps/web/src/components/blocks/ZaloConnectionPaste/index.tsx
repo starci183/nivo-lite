@@ -1,9 +1,10 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useConnectionRefusal } from "@/hooks/connections"
 import { useCopyLabels } from "@/hooks/connection-wizard"
 import { useSlotLabels } from "@/hooks/slot"
-import { useZaloHead, useZaloOaSecret, useZaloPage, useZaloPaste } from "@/hooks/zaloConnection"
+import { useZaloHead, useZaloOaSecret, useZaloPage, useZaloPaste, useZaloSetupStep } from "@/hooks/zaloConnection"
 import { ZaloConnectionPasteBase } from "./component"
 
 /** What the page hands the step body: the connection of the url. */
@@ -20,10 +21,15 @@ export const ZaloConnectionPaste = (props: ZaloConnectionPasteProps) => {
     const { slot, reload } = useZaloPage(props.connectionId)
     const { isOwner } = useZaloHead(props.connectionId)
     const secret = useZaloOaSecret(props.connectionId)
+    const setup = useZaloSetupStep(props.connectionId, "paste")
+    const refusal = useConnectionRefusal()
+    if (refusal !== undefined) return null
     const mask = ("items" in slot ? slot.items : undefined)?.oaSecretMask ?? null
     return (
         <ZaloConnectionPasteBase
             props={{
+                step: setup.step,
+                openZalo: setup.openZalo,
                 callbackLabel: t("pasteCallback"),
                 webhookLabel: t("pasteWebhook"),
                 paste,
@@ -41,7 +47,12 @@ export const ZaloConnectionPaste = (props: ZaloConnectionPasteProps) => {
                     canEdit: isOwner,
                 },
             }}
-            on={{ retry: reload, changeSecret: secret.change, saveSecret: () => void secret.save() }}
+            on={{
+                toggle: setup.toggle,
+                retry: reload,
+                changeSecret: secret.change,
+                saveSecret: () => void secret.save(),
+            }}
         />
     )
 }

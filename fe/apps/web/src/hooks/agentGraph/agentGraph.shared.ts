@@ -1,5 +1,14 @@
-import type { AgentGraphSetupState } from "@/modules/agent-graph"
-import type { AgentGraphAction, AgentGraphCommands, AgentGraphPhoneView, AgentGraphSideTab } from "@/modules/types"
+import type { useQueryAgentGraphRunSwr, useQueryAgentGraphSwr, useQueryApproverDirectorySwr } from "@/hooks/swr"
+import { parseAgentGraphTrace } from "@/modules/agent-graph"
+import type { AgentGraphSetupState, AgentGraphWire } from "@/modules/agent-graph"
+import type {
+    AgentGraphAction,
+    AgentGraphCommands,
+    AgentGraphMemberData,
+    AgentGraphPhoneView,
+    AgentGraphSideTab,
+    SlotRead,
+} from "@/modules/types"
 
 /** The tabs of the pane beside the graph, in the order they are offered. */
 export const SIDE_TABS: ReadonlyArray<AgentGraphSideTab> = ["chat", "detail", "proposals", "versions"]
@@ -51,3 +60,34 @@ export const performAgentGraphAction = (commands: AgentGraphCommands, action: Ag
 export interface AgentGraphSetup extends AgentGraphSetupState {
     readonly apply: () => Promise<void>
 }
+
+/** The run a work item left on the graph: its decision, version, outcome and the steps of its trace; null while none is read. */
+export const agentGraphRunOf = (data: ReturnType<typeof useQueryAgentGraphRunSwr>["data"]) =>
+    data === undefined
+        ? null
+        : {
+              id: data.decisionId,
+              version: data.version,
+              outcome: data.outcome,
+              closedAs: data.closedAs,
+              steps: parseAgentGraphTrace(data.traceJson) ?? [],
+          }
+
+/** The people an approver can be: everyone in the directory who is not disabled. */
+export const agentGraphMembersOf = (
+    directory: ReturnType<typeof useQueryApproverDirectorySwr>["data"],
+): ReadonlyArray<AgentGraphMemberData> | undefined =>
+    directory
+        ?.filter((member) => member.status !== "disabled")
+        .map((member) => ({ id: member.memberId, name: member.name, upToVnd: null }))
+
+/** The graph read, settled only when its payload parsed: a payload that does not parse is an error, not data. */
+export const parsedGraphReadOf = (
+    graph: ReturnType<typeof useQueryAgentGraphSwr>,
+    wire: AgentGraphWire | null | undefined,
+): SlotRead<typeof graph.data> => ({
+    data: wire === null ? undefined : graph.data,
+    error: graph.error ?? (wire === null ? new Error("The agent graph payload is invalid") : undefined),
+    isLoading: graph.isLoading,
+    isValidating: graph.isValidating,
+})

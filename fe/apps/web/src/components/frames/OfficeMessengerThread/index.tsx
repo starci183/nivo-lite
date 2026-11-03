@@ -25,7 +25,7 @@ type OfficeMessengerThread = Pick<
 >
 
 type OfficeCardItem = Exclude<OfficeThreadItem, { readonly kind: "day" | "message" }>
-type MessengerThreadProps = {
+type OfficeMessengerThreadProps = {
     readonly thread: OfficeMessengerThread
     readonly isLoading: boolean
     readonly labels: { readonly nivoCore: string; readonly aiBadge: string }
@@ -44,7 +44,7 @@ type MessengerCardProps = {
 }
 
 /** Card slots are assembled here, so no card branch imports the frame above its tier. */
-export const OfficeMessengerThread = (props: MessengerThreadProps) => {
+export const OfficeMessengerThread = (props: OfficeMessengerThreadProps) => {
     const cards = new Map(
         props.thread.cards.map<[string, ReactElement]>(({ item, draft, label, basisDescription }) => [
             item.key,

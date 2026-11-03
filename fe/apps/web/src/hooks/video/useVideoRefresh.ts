@@ -25,6 +25,9 @@ export interface VideoOwner {
 }
 type Operation = () => boolean
 
+/** What the owner of the video commands hands out: the refresh, the guarded completion and whether one is pending. */
+export type VideoRefresh = ReturnType<typeof useVideoRefresh>
+
 /** Existing command owner: standard feedback and exact cache refresh precede current-origin completion and pending settlement. */
 export const useVideoRefresh = (owner?: VideoOwner) => {
     const runGraphQL = useGraphQLWithToast()
