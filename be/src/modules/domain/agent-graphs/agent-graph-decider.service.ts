@@ -23,6 +23,7 @@ import { MODEL_AMOUNT_FACT } from "./agent-graphs.contracts"
 import type { FactRegistry, FactValue, FactValues } from "./agent-graphs.contracts"
 import type { GraphWalk } from "./agent-graphs-walk.contracts"
 import type { FactSubject } from "./agent-graphs.port"
+import { isFlowOnly } from "./policies/flow.policy"
 import { strictest } from "./policies/strictest.policy"
 
 /** The amount in dong the records hold: the first numeric fact of the work counted in dong, or null when none was read. */
@@ -139,6 +140,7 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
         if (state === null || versionId === null) return null
         const enforced = state.mode === "enforced"
         if (state.active === null) return enforced ? this.safely(request) : null
+        if (isFlowOnly(state.active)) return null
         const { walk, read, registry } = await this.checks.walk(
             item.workspace_id,
             state.active,

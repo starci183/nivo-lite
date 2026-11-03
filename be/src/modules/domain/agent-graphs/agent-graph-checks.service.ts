@@ -18,6 +18,7 @@ import type { GraphWalk } from "./agent-graphs-walk.contracts"
 import type { FactSubject } from "./agent-graphs.port"
 import { GraphFactsService } from "./graph-facts.service"
 import { evidenceAccepted } from "./policies/evidence.policy"
+import { isFlowOnly } from "./policies/flow.policy"
 import { factsOfWalk, walkGraph } from "./policies/graph-walk.policy"
 import type { WalkOptions } from "./policies/graph-walk.policy"
 
@@ -102,6 +103,7 @@ export class AgentGraphChecksService {
         if (versionId === null) return RUN
         const enforced = state.mode === "enforced"
         if (state.active === null) return enforced ? safeAnswer("unreadable") : RUN
+        if (isFlowOnly(state.active)) return RUN
         const { walk, read } = await this.walk(
             request.workspaceId,
             state.active,

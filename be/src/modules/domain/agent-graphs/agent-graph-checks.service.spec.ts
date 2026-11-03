@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { Test } from "@nestjs/testing"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { mock } from "@starci/jest-preset"
 import type { GraphCheck } from "@modules/domain/authority-rules"
 import { LOGGER } from "@modules/platform/logging"
@@ -17,10 +18,20 @@ import {
 import { AgentGraphChecksService, closedAsOf, factsRead, outcomeOf } from "./agent-graph-checks.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
+import type { GraphDocument } from "./agent-graphs.contracts"
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { OptionalGraphState } from "./agent-graphs.service"
 import type { GraphWalk } from "./agent-graphs-walk.contracts"
 import { GraphFactsService } from "./graph-facts.service"
+
+const FLOW_ONLY: GraphSpec = {
+    schema: "nivo/agent-graph@1",
+    moduleKey: "sales",
+    trigger: { kind: "tag", sources: ["channel"] },
+    grant: { rights: [], tools: [], effects: [] },
+    nodes: [{ key: "end", kind: "output", step: "stop" }],
+}
+const FLOW_ONLY_GRAPH: GraphDocument = { nodes: [], rights: [], flow: FLOW_ONLY }
 
 const PAY = "pay_supplier"
 
@@ -359,6 +370,18 @@ describe("AgentGraphChecksService.check on an enforced graph that ends the work"
         expect(tool.decisions.record).toHaveBeenCalledWith(
             expect.objectContaining({ road: "tool", unjudged: "not_in_graph" }),
         )
+    })
+})
+
+describe("AgentGraphChecksService.check when the agent runs a flow and holds none of the old nodes", () => {
+    it("runs, as the old walk has nothing to judge, and records nothing", async () => {
+        const { service, decisions, reader } = await build(
+            stateOf({ mode: "enforced", active: FLOW_ONLY_GRAPH }),
+        )
+
+        await expect(service.check(REQUEST)).resolves.toMatchObject({ outcome: "run" })
+        expect(decisions.record).not.toHaveBeenCalled()
+        expect(reader.read).not.toHaveBeenCalled()
     })
 })
 

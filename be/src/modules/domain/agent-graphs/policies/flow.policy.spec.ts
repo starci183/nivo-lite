@@ -1,10 +1,12 @@
 import { Test } from "@nestjs/testing"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { sameFlow } from "./flow.policy"
+import type { GraphDocument } from "../agent-graphs.contracts"
+import { isFlowOnly, sameFlow } from "./flow.policy"
 
 /** The members of the subject under test. */
 interface Subject {
     readonly sameFlow: typeof sameFlow
+    readonly isFlowOnly: typeof isFlowOnly
 }
 
 const SUBJECT = Symbol("flow.policy")
@@ -12,7 +14,7 @@ const SUBJECT = Symbol("flow.policy")
 /** The policy functions, read through the Nest testing module. */
 const build = async (): Promise<Subject> => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { sameFlow } }],
+        providers: [{ provide: SUBJECT, useValue: { sameFlow, isFlowOnly } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -63,5 +65,16 @@ describe("sameFlow", () => {
                 FLOW,
             ),
         ).toBe(false)
+    })
+})
+
+describe("isFlowOnly", () => {
+    it("is true for a graph with a flow and no old node, and false for one with old nodes or with no flow", async () => {
+        const subject = await build()
+        const old = { nodes: [{ key: "n" }] } as unknown as GraphDocument
+
+        expect(subject.isFlowOnly({ nodes: [], rights: [], flow: FLOW })).toBe(true)
+        expect(subject.isFlowOnly({ ...old, rights: [], flow: FLOW })).toBe(false)
+        expect(subject.isFlowOnly({ nodes: [], rights: [] })).toBe(false)
     })
 })
