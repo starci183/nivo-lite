@@ -53,6 +53,7 @@ The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
 | --- | --- | --- |
 | `nivo` | api task (`<KEY>_FILE`); mcp task (`CHANNEL_TOKEN_KEY` only) | `CHANNEL_TOKEN_KEY`, `OTP_PEPPER`, `WEBHOOK_SIGNING_SECRET`, `NIVO_PLATFORM_ADMINS`. Remote MCP connector credentials are not custody keys: they are sealed per workspace in the database from the console |
 | `mail` | api task (`<KEY>_FILE`) | `MAIL_HOST`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` (the platform sender of sign-in, invitation and owner-notice mail; the port, security, sender name and default language are in `api-public.conf`) |
+| `telegram` | api task (`<KEY>_FILE`) | `TELEGRAM_API_ID`, `TELEGRAM_API_HASH` (the Telegram application of the personal-account bridge; bot tokens and Zalo app credentials are per connection, sealed in the database) |
 | `sepay` | api task | `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_ACCOUNT`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NAME` |
 | `auth` | api task | `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY` (the own Passport signing pair) |
 | `google` | api task | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` (own Google sign-in) |

@@ -267,6 +267,18 @@ environments:
         where: "secrets/mail"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the owner's own SMTP server (the same as production), sealed by the owner, never generated"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "telegram-api-id"
+        member: "telegram"
+        key: "TELEGRAM_API_ID"
+        where: "secrets/telegram"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the Telegram application (my.telegram.org) of the personal-account connection, sealed by the owner, never generated; optional at boot (parseTelegramUserConfig)"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "telegram-api-hash"
+        member: "telegram"
+        key: "TELEGRAM_API_HASH"
+        where: "secrets/telegram"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the Telegram application (my.telegram.org) of the personal-account connection, sealed by the owner, never generated; optional at boot (parseTelegramUserConfig)"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
     # `starci app stack up --env dev --execute` reads this block (PROJECT-STACKS-6). One command brings up the db (own role per environment),
     # Redis, MinIO and the OpenClaw gateway in containers, migrates, and runs the api, the mcp gateway, the console and the landing natively.
     local:
@@ -563,6 +575,13 @@ environments:
         keys: [MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
         recipientPolicy: SOPS/age, one member per provider (mail.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM of the platform sender (sign-in, invitation and owner-notice mail over @starci/mail). The other mail settings (MAIL_PORT, MAIL_SECURITY, MAIL_FROM_NAME, MAIL_DEFAULT_LANGUAGE) are public configuration in infra/swarm/api-public.conf.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: telegram
+        runtimeName: nivo-custody-telegram-v1
+        version: 1
+        where: secrets/telegram
+        keys: [TELEGRAM_API_ID, TELEGRAM_API_HASH]
+        recipientPolicy: SOPS/age, one member per provider (telegram.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys TELEGRAM_API_ID, TELEGRAM_API_HASH of the Telegram application (my.telegram.org) the api's personal-account connection logs in with (parseTelegramUserConfig, read through TELEGRAM_API_HASH_FILE). Bot tokens and Zalo app credentials are per connection and stored encrypted, never here.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: sepay
         runtimeName: nivo-custody-sepay-v1
         version: 1
@@ -635,8 +654,8 @@ environments:
         runtimeName: nivo-custody-seeds-nivo-workspace-v1
         version: 1
         where: secrets/seeds-nivo-workspace
-        keys: [WORKSPACE_SMTP_HOST, WORKSPACE_SMTP_PORT, WORKSPACE_SMTP_USER, WORKSPACE_SMTP_PASSWORD, WORKSPACE_SMTP_FROM, WORKSPACE_OWNER_EMAIL]
-        recipientPolicy: SOPS/age, one member (seeds-nivo-workspace.enc.yaml) for the seeded NIVO management workspace (its own per-workspace SMTP connection and its owner address); sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time.
+        keys: [WORKSPACE_SMTP_HOST, WORKSPACE_SMTP_PORT, WORKSPACE_SMTP_USER, WORKSPACE_SMTP_PASSWORD, WORKSPACE_SMTP_FROM, WORKSPACE_OWNER_EMAIL, WORKSPACE_TELEGRAM_BOT_TOKEN, WORKSPACE_ZALO_OA_APP_ID, WORKSPACE_ZALO_OA_APP_SECRET, WORKSPACE_ZALO_OA_SECRET_KEY]
+        recipientPolicy: SOPS/age, one member (seeds-nivo-workspace.enc.yaml) for the seeded NIVO management workspace (its own per-workspace SMTP connection and its owner address, its Telegram bot token, and the Zalo OA app id, app secret and OA secret key the connect-channel tool seals into the workspace connection; the Zalo access and refresh tokens are not here (the OA owner authorises in the console and the rotating tokens live in the encrypted connection store)); sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the operator CLI receives the values at seed time, never an argument or a log.
       - name: channel-token-key
         member: nivo
@@ -791,6 +810,7 @@ environments:
             from:
               - {member: nivo}
               - {member: mail}
+              - {member: telegram}
               - {member: sepay}
               - {member: postgres}
               - {member: redis}

@@ -72,8 +72,8 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `META_APP_ID` | The Meta app credentials (both or none); the Meta channels are off while absent. |
 | `META_APP_SECRET` | The Meta app credentials (both or none); the Meta channels are off while absent. |
 | `META_WEBHOOK_VERIFY_TOKEN` | The verify token of the Meta webhook subscription. |
-| `TELEGRAM_API_ID` | Telegram user-client application credentials (both or none); the user-account bridge is off while absent. |
-| `TELEGRAM_API_HASH` | Telegram user-client application credentials (both or none); the user-account bridge is off while absent. |
+| `TELEGRAM_API_ID` | Sealed member `telegram` (read through `TELEGRAM_API_ID_FILE`); Telegram user-client application credentials (both or none); the user-account bridge is off while absent. |
+| `TELEGRAM_API_HASH` | Sealed member `telegram` (read through `TELEGRAM_API_HASH_FILE`); Telegram user-client application credentials (both or none); the user-account bridge is off while absent. |
 | `CHANNEL_BOT_TOKEN` | Bot token of the channel provisioning helper; optional. |
 | `ZALO_APP_SECRET` | Zalo app secret the channel provisioning cli (`connect-channel zalo`) seals into the new connection; read only through `ZALO_APP_SECRET_FILE` on the operator machine for that run, optional, and granted to no service. |
 | `ZALO_OA_SECRET` | Zalo Official Account secret key the same cli seals beside the app secret; read only through `ZALO_OA_SECRET_FILE`, optional, and granted to no service. |
