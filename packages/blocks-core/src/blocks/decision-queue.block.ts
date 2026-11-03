@@ -22,7 +22,12 @@ const props: z.ZodObject<{
     seeWhy: specText,
     moreMenu: specText,
 })
-const slots: { readonly queue: RequiredRead<"record">; readonly command: OptionalAction } = {
+/** The slots of the decision queue block: the queue read and the command a row may run. */
+type Slots = {
+    readonly queue: RequiredRead<"record">
+    readonly command: OptionalAction
+}
+const slots: Slots = {
     queue: { kind: "read", shape: "record", required: true },
     command: { kind: "action", required: false },
 }

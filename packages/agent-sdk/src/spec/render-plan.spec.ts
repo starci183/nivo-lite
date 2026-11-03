@@ -1,3 +1,4 @@
+import { blockIndex } from "./spec"
 import { BLOCKS, docOf, listNode } from "./spec.fixture"
 import type { PlanView } from "./render-plan"
 import { planNode, renderPlan, viewOf } from "./render-plan"
@@ -53,17 +54,19 @@ describe("renderPlan", () => {
     })
 
     it("refuses to plan a node whose block is missing, which only an unvalidated spec reaches", () => {
-        expect(() => planNode(new Map(), { id: "x", block: "test.nope" })).toThrow("unvalidated")
+        expect(() => planNode(new Map(), { id: "x", block: "test.nope" })).toThrow("PLAN_SPEC_UNVALIDATED: test.nope")
     })
 })
 
 describe("viewOf", () => {
-    const planned = renderPlan(docOf(root), BLOCKS)
-    const base = planned.ok ? planned.views[0] : undefined
-    const view = (id: string, extra: Partial<PlanView> = {}): PlanView => {
-        if (base === undefined) throw new RangeError("fixture")
-        return { ...base, id, ...extra }
+    const base: PlanView = {
+        id: "base",
+        label: { key: "base" },
+        hidden: false,
+        openBy: null,
+        root: planNode(blockIndex(BLOCKS), root),
     }
+    const view = (id: string, extra: Partial<PlanView> = {}): PlanView => ({ ...base, id, ...extra })
     const none = (): string | null => null
 
     it("opens the hidden view whose query is present, else the named tab, else the first visible view", () => {

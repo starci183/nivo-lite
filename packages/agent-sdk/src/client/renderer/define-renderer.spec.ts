@@ -2,11 +2,12 @@ import { z } from "zod"
 import { defineBlock } from "../../block/block"
 import { UNBOUND_ACTION, UNBOUND_READ, MISSING_READ } from "./inert"
 import { defineRenderer } from "./define-renderer"
+import { RendererError } from "./renderer-error"
 
 const BLOCK = defineBlock({
     id: "test.label",
     title: { key: "t" },
-    props: z.object({ label: z.string().default("none") }),
+    props: z.object({ label: z.string().max(100).default("none") }),
     slots: { rows: { kind: "read", shape: "list", required: false } },
     children: false,
 })
@@ -20,8 +21,16 @@ describe("defineRenderer", () => {
         })
         expect(renderer.id).toBe("test.label")
         expect(renderer.block).toBe(BLOCK)
-        renderer.Component({ props: {}, slots: { rows: UNBOUND_READ }, children: null, nodeId: "n1" })
+        const drawn = renderer.Component({ props: {}, slots: { rows: UNBOUND_READ }, children: null, nodeId: "n1" })
+        expect(drawn).toBeNull()
         expect(seen).toEqual(["none", "n1", UNBOUND_READ])
+    })
+
+    it("refuses to draw a block whose declared slots are not all handed over", () => {
+        const renderer = defineRenderer(BLOCK, () => null)
+        const bare = { props: {}, slots: {}, children: null, nodeId: "n1" }
+        expect(() => renderer.Component(bare)).toThrow(RendererError)
+        expect(() => renderer.Component(bare)).toThrow("RENDERER_SLOTS_MISSING: test.label")
     })
 })
 

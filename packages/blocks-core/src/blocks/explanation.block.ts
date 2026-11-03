@@ -35,12 +35,14 @@ const props: z.ZodObject<{
     missingTitle: specText,
     missingBody: specText,
 })
-const slots: {
+/** The slots of the explanation block: the why, the two lists and the action that closes the item. */
+type Slots = {
     readonly why: RequiredRead<"record">
     readonly waiting: RequiredRead<"record">
     readonly done: RequiredRead<"record">
     readonly close: RequiredAction
-} = {
+}
+const slots: Slots = {
     why: { kind: "read", shape: "record", required: true },
     waiting: { kind: "read", shape: "record", required: true },
     done: { kind: "read", shape: "record", required: true },

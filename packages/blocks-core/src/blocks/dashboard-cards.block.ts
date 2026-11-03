@@ -6,11 +6,13 @@ import type { TextSchema, RequiredRead } from "./schema-types"
 
 const props: z.ZodObject<{ doneLabel: TextSchema; connectionsLabel: TextSchema; knowledgeLabel: TextSchema }> =
     z.object({ doneLabel: specText, connectionsLabel: specText, knowledgeLabel: specText })
-const slots: {
+/** The slots of the dashboard cards block: one record per card. */
+type Slots = {
     readonly done: RequiredRead<"record">
     readonly connections: RequiredRead<"record">
     readonly knowledge: RequiredRead<"record">
-} = {
+}
+const slots: Slots = {
     done: { kind: "read", shape: "record", required: true },
     connections: { kind: "read", shape: "record", required: true },
     knowledge: { kind: "read", shape: "record", required: true },
