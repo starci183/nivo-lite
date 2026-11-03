@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import {
     AlertDialog,
     Badge,
@@ -50,7 +51,7 @@ export interface TeamMembersBaseProps {
 }
 
 /** Draws the members of the workspace as a table: who they are, role, status, last sign-in and the actions menu. */
-export const TeamMembersBase = (props: TeamMembersBaseProps) => {
+export const TeamMembersBase = (props: TeamMembersBaseProps): ReactElement => {
     const renderCell = (row: MemberRowView, columnId: string) => {
         if (columnId === "member") {
             return (

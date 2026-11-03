@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { AgentInstanceLayout } from "@/features/layouts/AgentInstanceLayout"
 
 type LayoutProps = {
@@ -7,7 +7,7 @@ type LayoutProps = {
 }
 
 /** The frame slot of one agent instance. */
-const Layout = async (props: LayoutProps) => {
+const Layout = async (props: LayoutProps): Promise<ReactElement> => {
     const { module, installation } = await props.params
     return (
         <AgentInstanceLayout module={module} installationId={installation}>

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { KnowledgeRedirectPage } from "@/features/pages/KnowledgeRedirectPage"
 
 export { knowledgeRedirectMetadata as generateMetadata } from "@/features/pages/KnowledgeRedirectPage"
@@ -14,7 +15,7 @@ interface KnowledgeRouteProps {
 }
 
 /** Moved: the documents are the sources tab of the Second Brain, so the old address forwards there. */
-const Page = async ({ searchParams }: KnowledgeRouteProps) => {
+const Page = async ({ searchParams }: KnowledgeRouteProps): Promise<ReactElement> => {
     const { module, add } = await searchParams
     return <KnowledgeRedirectPage module={module} add={add} />
 }

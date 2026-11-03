@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { AccountingWorkbenchPageBase } from "./component"
 
@@ -10,7 +11,7 @@ interface AccountingWorkbenchPageProps {
 }
 
 /** /agents/accounting/workbench: the server shell words the tabs and hands the page its ids; every panel reads its own data. */
-export const AccountingWorkbenchPage = async (props: AccountingWorkbenchPageProps) => {
+export const AccountingWorkbenchPage = async (props: AccountingWorkbenchPageProps): Promise<ReactElement> => {
     const t = await getTranslations("workbenchAccounting")
     return (
         <AccountingWorkbenchPageBase

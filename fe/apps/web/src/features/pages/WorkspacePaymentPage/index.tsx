@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { WorkspacePaymentPageBase } from "./component"
@@ -14,7 +15,7 @@ export const workspacePaymentMetadata = async (): Promise<Metadata> => {
 }
 
 /** The server shell; connected browser blocks read the authorized payment data. */
-export const WorkspacePaymentPage = async (props: WorkspacePaymentPageProps) => {
+export const WorkspacePaymentPage = async (props: WorkspacePaymentPageProps): Promise<ReactElement> => {
     const selectors = await props.searchParams
     const t = await getTranslations("onboarding")
     return (

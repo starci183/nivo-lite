@@ -8,5 +8,5 @@ interface ConsoleSessionGateBaseProps {
 }
 
 /** Draws the console subtree once the session is usable, and an announced busy region until then. */
-export const ConsoleSessionGateBase = (props: ConsoleSessionGateBaseProps) =>
+export const ConsoleSessionGateBase = (props: ConsoleSessionGateBaseProps): ReactNode =>
     props.isReady ? props.content : <div role="status" aria-busy="true" aria-label={props.loadingLabel} />

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { TeamPageBase } from "./component"
@@ -9,7 +10,7 @@ export const teamMetadata = async (): Promise<Metadata> => {
 }
 
 /** The /team screen body (owner and manager): static copy; the roster is read in the browser from the back end GraphQL API. Staff see a friendly 403. */
-export const TeamPage = async () => {
+export const TeamPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("team")
     return (
         <TeamPageBase

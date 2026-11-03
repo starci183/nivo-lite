@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { TelegramConnectionLoadingPageBase } from "./component"
@@ -5,7 +6,7 @@ import { TelegramConnectionLoadingPageBase } from "./component"
 const STEPS = ["stepBot", "stepWebhook", "stepCheck", "stepAgents"] as const
 
 /** The loading view of one Telegram bot connection: the frame of the page itself with only what is read unresolved. */
-export const TelegramConnectionLoadingPage = async () => {
+export const TelegramConnectionLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("telegramConnection")
     return (
         <TelegramConnectionLoadingPageBase

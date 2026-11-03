@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { leadGenTabOf } from "@/hooks/leadgen"
 import { LeadGenWorkbenchPageBase } from "./component"
@@ -11,7 +12,7 @@ interface LeadGenWorkbenchPageProps {
 }
 
 /** Lead Gen server shell: words the tabs and hands the page the ids; every panel reads its own data in the browser. */
-export const LeadGenWorkbenchPage = async (props: LeadGenWorkbenchPageProps) => {
+export const LeadGenWorkbenchPage = async (props: LeadGenWorkbenchPageProps): Promise<ReactElement> => {
     const t = await getTranslations("workbenchLeadGen")
     return (
         <LeadGenWorkbenchPageBase

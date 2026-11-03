@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { inviteNext } from "@/hooks/auth"
@@ -15,7 +16,7 @@ export const signupMetadata = async (): Promise<Metadata> => {
 }
 
 /** Public sign-up page. `?invite=<token>` carries an invitation through; a signed-in visitor is sent on by the form. */
-export const SignupPage = async (props: SignupPageProps) => {
+export const SignupPage = async (props: SignupPageProps): Promise<ReactElement> => {
     const { invite, email } = await props.searchParams
     const next = inviteNext(invite)
     return <SignupPageBase props={{ next, invited: next !== undefined, initialEmail: email }} />

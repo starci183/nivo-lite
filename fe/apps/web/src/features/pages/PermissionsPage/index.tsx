@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { PermissionsPageBase } from "./component"
@@ -9,7 +10,7 @@ export const permissionsMetadata = async (): Promise<Metadata> => {
 }
 
 /** The /permissions screen body (owner and manager): static copy; the rules are read in the browser from the back end GraphQL API. */
-export const PermissionsPage = async () => {
+export const PermissionsPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("permissions")
     return (
         <PermissionsPageBase

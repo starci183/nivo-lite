@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { AdminLayoutBase } from "./component"
 
 /** What the admin route hands the layout: the routed page. */
@@ -15,7 +15,7 @@ export const adminLayoutMetadata = async (): Promise<Metadata> => {
 }
 
 /** The team console frame. Anyone the back end does not know as a platform admin gets a 404 (the account in the top bar), so the console is not discoverable. */
-export const AdminLayout = async (props: AdminLayoutProps) => {
+export const AdminLayout = async (props: AdminLayoutProps): Promise<ReactElement> => {
     const t = await getTranslations("admin")
     return <AdminLayoutBase props={{ title: t("consoleTitle") }}>{props.children}</AdminLayoutBase>
 }

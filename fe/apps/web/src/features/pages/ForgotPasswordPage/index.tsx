@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { ForgotPasswordPageBase } from "./component"
@@ -14,7 +15,7 @@ export const forgotPasswordMetadata = async (): Promise<Metadata> => {
 }
 
 /** Public "forgot password" page; `?email=` pre-fills the field. */
-export const ForgotPasswordPage = async (props: ForgotPasswordPageProps) => {
+export const ForgotPasswordPage = async (props: ForgotPasswordPageProps): Promise<ReactElement> => {
     const { email } = await props.searchParams
     return <ForgotPasswordPageBase props={{ initialEmail: email }} />
 }

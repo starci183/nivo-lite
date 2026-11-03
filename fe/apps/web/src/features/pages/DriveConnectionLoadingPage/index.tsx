@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import { DriveConnectionLoadingPageBase } from "./component"
@@ -5,7 +6,7 @@ import { DriveConnectionLoadingPageBase } from "./component"
 const STEPS = ["stepGrant", "stepChoose", "stepBrain"] as const
 
 /** The loading view of the Google Drive page: the frame of the page itself with only what is read unresolved. */
-export const DriveConnectionLoadingPage = async () => {
+export const DriveConnectionLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("driveConnection")
     return (
         <DriveConnectionLoadingPageBase

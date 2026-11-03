@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { VIDEO_EDITOR_STEPS, type VideoWorkbenchActions, type VideoWorkbenchViews } from "@/modules/types"
 type VideoWorkbenchFields = VideoWorkbenchViews["fields"]
 type VideoEditorPanelFields = VideoWorkbenchViews["editorPanel"]
@@ -20,7 +21,7 @@ import { VideoPreviewCard, VIDEO_PREVIEW_CARD_READ_DEFAULTS } from "@/components
 import { VideoResultView, VIDEO_RESULT_VIEW_READ_DEFAULTS } from "@/components/composites/VideoResultView"
 import { VideoLibraryList } from "@/components/composites/VideoLibraryList"
 /** The approved normal, five editor and explanation drawings remain exhaustive. */
-export const VIDEO_WORKBENCH_SHAPES = ["library", "brand", ...VIDEO_EDITOR_STEPS, "explanation"] as const
+export const VIDEO_WORKBENCH_SHAPES: readonly ["library", "brand", ...typeof VIDEO_EDITOR_STEPS, "explanation"] = ["library", "brand", ...VIDEO_EDITOR_STEPS, "explanation"]
 type Shape = (typeof VIDEO_WORKBENCH_SHAPES)[number]
 /** One pure Video drawing takes real read slots, separate local/copy atoms and actions. */
 export type VideoWorkbenchBaseProps = VideoWorkbenchViews["view"]
@@ -272,7 +273,7 @@ const Overview = (props: VideoWorkbenchBaseProps) => {
     )
 }
 /** The original editor bypasses the normal dashboard; every actual read keeps its own status recipe. */
-export const VideoWorkbenchBase = (props: VideoWorkbenchBaseProps) => {
+export const VideoWorkbenchBase = (props: VideoWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "library":
         case "brand":

@@ -1,10 +1,11 @@
+import type { ReactElement } from "react"
 import { Page } from "@starci/grammar/common"
 import { getTranslations } from "next-intl/server"
 import { InboxFeed } from "@/components/blocks/InboxFeed"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 
 /** The same page while its data loads: the heading stays, the feed is skeleton rows. */
-export const InboxLoadingPage = async () => {
+export const InboxLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("inbox")
     return (
         <Page

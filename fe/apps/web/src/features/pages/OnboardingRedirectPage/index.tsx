@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getLocale } from "next-intl/server"
 import { navigation } from "@/modules/i18n"
 
@@ -8,7 +9,7 @@ type OnboardingRedirectPageProps = {
 }
 
 /** The onboarding urls were replaced by the workspaces area: they forward there, keeping the query. */
-export const OnboardingRedirectPage = async (props: OnboardingRedirectPageProps) => {
+export const OnboardingRedirectPage = async (props: OnboardingRedirectPageProps): Promise<ReactElement> => {
     const query = new URLSearchParams()
     for (const [name, value] of Object.entries(props.search ?? {})) if (value) query.set(name, value)
     const locale = (await getLocale()) === "en" ? "en" : "vi"

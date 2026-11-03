@@ -1,5 +1,5 @@
 import { type BookingWorkbenchDataView, type BookingWorkbenchActions, BOOKING_TABS } from "@/modules/types"
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { BookingSetupSection } from "@/components/frames/BookingSetupSection"
@@ -19,7 +19,7 @@ import { SlotView } from "@/components/composites/SlotView"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 /** The five real booking panels and the recorded-explanation arrangement. */
-export const BOOKING_WORKBENCH_SHAPES = [...BOOKING_TABS, "explanation"] as const
+export const BOOKING_WORKBENCH_SHAPES: readonly [...typeof BOOKING_TABS, "explanation"] = [...BOOKING_TABS, "explanation"]
 type BookingWorkbenchShape = (typeof BOOKING_WORKBENCH_SHAPES)[number]
 /** Plain booking models and commands; only this module Base renders their canonical read status. */
 export interface BookingWorkbenchBaseProps {
@@ -204,7 +204,7 @@ const Explanation = (props: Omit<BookingWorkbenchBaseProps, "shape">) => {
     )
 }
 /** Draws actual booking panels and the original overview/why layouts; statuses never become shapes. */
-export const BookingWorkbenchBase = (props: BookingWorkbenchBaseProps) => {
+export const BookingWorkbenchBase = (props: BookingWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "calendar":
         case "today":

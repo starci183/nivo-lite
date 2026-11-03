@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { AgentTypeRedirectPage } from "@/features/pages/AgentTypeRedirectPage"
 
 export { agentWorkbenchMetadata as generateMetadata } from "@/features/pages/AgentWorkbenchPage"
@@ -8,7 +9,7 @@ type PageProps = {
 }
 
 /** The url of the workbench tab before agents became instances. */
-const Page = async (props: PageProps) => (
+const Page = async (props: PageProps): Promise<ReactElement> => (
     <AgentTypeRedirectPage module={(await props.params).module} tab="workbench" search={await props.searchParams} />
 )
 

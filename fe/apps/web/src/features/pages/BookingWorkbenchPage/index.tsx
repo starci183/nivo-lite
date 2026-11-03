@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import { BookingWorkbenchPageBase } from "./component"
@@ -11,7 +12,7 @@ interface BookingWorkbenchPageProps {
 }
 
 /** /agents/booking/workbench: the calendar of a week, today, the waiting list, the statistics and the setup of the shop. */
-export const BookingWorkbenchPage = async (props: BookingWorkbenchPageProps) => {
+export const BookingWorkbenchPage = async (props: BookingWorkbenchPageProps): Promise<ReactElement> => {
     if (props.installationId === undefined) notFound()
     const t = await getTranslations("workbenchBooking")
     return (

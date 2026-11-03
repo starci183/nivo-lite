@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { HIRING_TABS, type HiringViews, type HiringActions } from "@/modules/types"
 
 import { Grid, Stack } from "@starci/grammar/common"
@@ -25,7 +26,7 @@ import { HiringOfferDialog } from "@/components/composites/HiringOfferDialog"
 import { HiringCandidateHistory } from "@/components/leaves/HiringCandidateHistory"
 
 /** Existing real panel arrangements and the recorded-explanation arrangement. */
-export const HIRING_WORKBENCH_SHAPES = [...HIRING_TABS, "explanation"] as const
+export const HIRING_WORKBENCH_SHAPES: readonly [...typeof HIRING_TABS, "explanation"] = [...HIRING_TABS, "explanation"]
 type Shape = (typeof HIRING_WORKBENCH_SHAPES)[number]
 /** One world, plain read models and atomic actions only. */
 export interface HiringWorkbenchBaseProps {
@@ -250,7 +251,7 @@ const Explanation = (props: Pick<HiringWorkbenchBaseProps, "props" | "on">) => {
 }
 
 /** Status recipes remain in the one module Base; ordinary ready drawings stay downward. */
-export const HiringWorkbenchBase = (props: HiringWorkbenchBaseProps) => {
+export const HiringWorkbenchBase = (props: HiringWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "jobs":
         case "candidates":

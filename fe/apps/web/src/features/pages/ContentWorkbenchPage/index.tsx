@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { ContentWorkbenchPageBase } from "./component"
 
@@ -9,7 +10,7 @@ interface ContentWorkbenchPageProps {
 }
 
 /** Server shell of the content workbench: words the tabs and hands the ids; every block below it reads its own data in the browser. */
-export const ContentWorkbenchPage = async (props: ContentWorkbenchPageProps) => {
+export const ContentWorkbenchPage = async (props: ContentWorkbenchPageProps): Promise<ReactElement> => {
     const t = await getTranslations("content")
     return (
         <ContentWorkbenchPageBase

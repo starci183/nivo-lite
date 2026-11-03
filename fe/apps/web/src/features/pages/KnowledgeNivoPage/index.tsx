@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { knowledgeHeadingOf } from "@/modules/page-header"
@@ -28,13 +29,13 @@ const copyOf = (t: Translate): KnowledgeHeadingInput => ({
 })
 
 /** The base knowledge of NIVO per module: the connected body reads it through GraphQL; read-only for every member. */
-export const KnowledgeNivoPage = async () => {
+export const KnowledgeNivoPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("knowledge")
     return <KnowledgeNivoPageBase props={{ header: knowledgeHeadingOf(copyOf(t)) }} />
 }
 
 /** The same page while its data loads. */
-export const KnowledgeNivoLoadingPage = async () => {
+export const KnowledgeNivoLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("knowledge")
     return <KnowledgeNivoPageBase props={{ header: knowledgeHeadingOf(copyOf(t)) }} />
 }

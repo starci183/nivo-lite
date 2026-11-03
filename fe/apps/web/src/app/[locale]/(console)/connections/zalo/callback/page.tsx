@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { ZaloCallbackPage } from "@/features/pages/ZaloCallbackPage"
 
 export { connectionsMetadata as generateMetadata } from "@/features/pages/ConnectionsPage"
@@ -8,7 +9,7 @@ interface PageProps {
 }
 
 /** The return address of the Zalo OA authorization. */
-const Page = async (props: PageProps) => {
+const Page = async (props: PageProps): Promise<ReactElement> => {
     const query = await props.searchParams
     return <ZaloCallbackPage code={query.code} oaId={query.oa_id} state={query.state} />
 }

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server"
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { ConsoleLayoutBase } from "./component"
 
 /** What the console route hands the layout: the routed page. */
@@ -8,7 +8,7 @@ type ConsoleLayoutProps = {
 }
 
 /** The authenticated console frame: draws the chrome around the routed page; its connected blocks read the session and the real counts. */
-export const ConsoleLayout = async (props: ConsoleLayoutProps) => {
+export const ConsoleLayout = async (props: ConsoleLayoutProps): Promise<ReactElement> => {
     const t = await getTranslations("shell")
     return (
         <ConsoleLayoutBase

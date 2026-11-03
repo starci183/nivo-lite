@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { ShiftsWorkbenchPageBase } from "./component"
 
@@ -10,7 +11,7 @@ interface ShiftsWorkbenchPageProps {
 }
 
 /** The Shifts workbench slot: a server shell that words the tabs, then draws the frame around the connected tab blocks. */
-export const ShiftsWorkbenchPage = async (props: ShiftsWorkbenchPageProps) => {
+export const ShiftsWorkbenchPage = async (props: ShiftsWorkbenchPageProps): Promise<ReactElement> => {
     const t = await getTranslations("shifts")
     return (
         <ShiftsWorkbenchPageBase

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { LeadPage } from "@/features/pages/LeadPage"
 
 /** The document title of this page. */
@@ -11,7 +12,7 @@ interface PageProps {
 export const maxDuration = 60
 
 /** The lead route: mounts the page for the lead the address names. */
-const Page = async (props: PageProps) => {
+const Page = async (props: PageProps): Promise<ReactElement> => {
     const { id } = await props.params
     return <LeadPage leadId={id} />
 }

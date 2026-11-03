@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { HiringApplyPageBase } from "./component"
@@ -17,7 +18,7 @@ export const hiringApplyMetadata = async (): Promise<Metadata> => {
  * The public job page: the post, then the apply form. No login, no console chrome. The job is read in the browser from the
  * anonymous-callable `publicHiringJob` query.
  */
-export const HiringApplyPage = async (props: HiringApplyPageProps) => {
+export const HiringApplyPage = async (props: HiringApplyPageProps): Promise<ReactElement> => {
     const { ws, job } = await props.params
     const t = await getTranslations("hiring")
     return <HiringApplyPageBase props={{ ws, job, label: t("applyPageTitle") }} />

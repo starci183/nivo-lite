@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { salesTabOf } from "@/hooks/sales"
 import { SalesWorkbenchPageBase } from "./component"
@@ -15,7 +16,7 @@ interface SalesWorkbenchPageProps {
 }
 
 /** The server shell: resolves the tab from the route, words the tabs and hands the page its ids. */
-export const SalesWorkbenchPage = async (props: SalesWorkbenchPageProps) => {
+export const SalesWorkbenchPage = async (props: SalesWorkbenchPageProps): Promise<ReactElement> => {
     const t = await getTranslations("workbenchSales")
     const focus = props.focus ?? null
     return (

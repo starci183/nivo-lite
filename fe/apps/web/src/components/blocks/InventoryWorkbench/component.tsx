@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { type InventoryWorkbenchDataView, type InventoryWorkbenchActions, INVENTORY_TABS } from "@/modules/types"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
@@ -17,7 +18,7 @@ import { SlotView } from "@/components/composites/SlotView"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 /** The seven original Inventory panels and the recorded-explanation arrangement. */
-export const INVENTORY_WORKBENCH_SHAPES = [...INVENTORY_TABS, "explanation"] as const
+export const INVENTORY_WORKBENCH_SHAPES: readonly [...typeof INVENTORY_TABS, "explanation"] = [...INVENTORY_TABS, "explanation"]
 type InventoryWorkbenchShape = (typeof INVENTORY_WORKBENCH_SHAPES)[number]
 /** Plain inventory models and commands; only this module Base draws their read status. */
 export interface InventoryWorkbenchBaseProps {
@@ -172,7 +173,7 @@ const Explanation = (props: Omit<InventoryWorkbenchBaseProps, "shape">) => {
         </WorkbenchWhyFrame>
     )
 } /** Draws the actual inventory panels and original overview/why layouts; status never becomes a shape. */
-export const InventoryWorkbenchBase = (props: InventoryWorkbenchBaseProps) => {
+export const InventoryWorkbenchBase = (props: InventoryWorkbenchBaseProps): ReactElement => {
     switch (props.shape) {
         case "stock":
         case "orders":

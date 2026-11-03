@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { KnowledgeSourcePage } from "@/features/pages/KnowledgeSourcePage"
 
 export { knowledgeSourceMetadata as generateMetadata } from "@/features/pages/KnowledgeSourcePage"
@@ -8,7 +9,7 @@ interface SourceRouteProps {
 }
 
 /** One document: its facts, its passages as agents retrieve them and its text. */
-const Page = async ({ params }: SourceRouteProps) => {
+const Page = async ({ params }: SourceRouteProps): Promise<ReactElement> => {
     const { id } = await params
     return <KnowledgeSourcePage sourceId={id} />
 }

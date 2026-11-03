@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import { InventoryWorkbenchPageBase } from "./component"
@@ -11,7 +12,7 @@ interface InventoryWorkbenchPageProps {
 }
 
 /** The Inventory workbench slot: a thin server shell that hands the words and ids to the frame; every surface reads its own data. */
-export const InventoryWorkbenchPage = async (props: InventoryWorkbenchPageProps) => {
+export const InventoryWorkbenchPage = async (props: InventoryWorkbenchPageProps): Promise<ReactElement> => {
     if (props.installationId === undefined) notFound()
     const t = await getTranslations("workbenchInventory")
     return (

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { creditsContactHref } from "@/modules/config"
@@ -29,9 +30,9 @@ const creditsHeader = async () => {
 }
 
 /** Credits and plan; its connected block reads workspace data in the browser. */
-export const CreditsPage = async () => (
+export const CreditsPage = async (): Promise<ReactElement> => (
     <CreditsPageBase props={{ ...(await creditsHeader()), contactHref: creditsContactHref() }} />
 )
 
 /** The same Page and slot placeholders during route loading. */
-export const CreditsLoadingPage = async () => <CreditsLoadingPageBase props={await creditsHeader()} />
+export const CreditsLoadingPage = async (): Promise<ReactElement> => <CreditsLoadingPageBase props={await creditsHeader()} />

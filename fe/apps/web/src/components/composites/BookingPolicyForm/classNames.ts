@@ -1,3 +1,3 @@
 import { cn } from "@heroui/react"
 /** A field that spans two columns. */
-export const WIDE_CLASS = cn("sm:col-span-2")
+export const WIDE_CLASS: string | undefined = cn("sm:col-span-2")

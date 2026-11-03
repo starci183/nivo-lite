@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { DecisionsPage } from "@/features/pages/DecisionsPage"
 
 /** The document title of this page. */
@@ -11,7 +12,7 @@ const firstOf = (value: string | string[] | undefined): string =>
     Array.isArray(value) ? (value[0] ?? "") : (value ?? "")
 
 /** The decisions route: `?kind=policy|human|rejected&dept=<module>` filter the history. */
-const Page = async (props: PageProps) => {
+const Page = async (props: PageProps): Promise<ReactElement> => {
     const query = await props.searchParams
     return <DecisionsPage kind={firstOf(query.kind)} department={firstOf(query.dept)} />
 }

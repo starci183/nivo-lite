@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
 import { AgentWorkbenchPageBase } from "./component"
@@ -33,7 +33,7 @@ type AgentWorkbenchPageProps = {
 export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode | Promise<ReactNode>
 
 /** The workbench slot of one instance: the working screen of the module scoped to the instance, or the pending state. */
-export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps) => {
+export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps): Promise<ReactElement> => {
     if (!isModuleKey(props.module)) notFound()
     const key = MODULE_REGISTRY[props.module].workbench
     const Workbench = key === null ? undefined : props.workbenches[key]

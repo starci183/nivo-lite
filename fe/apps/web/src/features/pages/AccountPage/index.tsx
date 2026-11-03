@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { homePageHeadingOf } from "@/modules/page-header"
@@ -10,7 +11,7 @@ export const accountMetadata = async (): Promise<Metadata> => {
 }
 
 /** The /account screen body: static copy; the account, its sign-in methods and its device sessions are read in the browser from the back end GraphQL API. */
-export const AccountPage = async () => {
+export const AccountPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("account")
     return (
         <AccountPageBase

@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { BrainPage } from "@/features/pages/BrainPage"
 
 export { brainMetadata as generateMetadata } from "@/features/pages/BrainPage"
@@ -30,7 +31,7 @@ interface BrainRouteProps {
 }
 
 /** The Second Brain: the shared memory of the business, its documents and what each agent sees of it. Everyone reads; owners and managers decide. */
-const Page = async ({ searchParams }: BrainRouteProps) => {
+const Page = async ({ searchParams }: BrainRouteProps): Promise<ReactElement> => {
     const { tab, fact, edit, answer, module, add, topic, tag, dossier, finding, draft, node, compose, title, doc } =
         await searchParams
     return (

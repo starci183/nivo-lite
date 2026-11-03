@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { Badge, Button, Cluster, IconButton, Text, Tooltip, MessageBubble, MessageStatus } from "@starci/grammar/common"
 import type { MessageStatusProps } from "@starci/grammar/common"
 import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
@@ -90,7 +90,7 @@ const MessageActions = ({ message, copy, isCopied, onCopy, onReply }: MessageAct
 )
 
 /** One chat line: a bubble of a person, an agent or me, or a centred notice for a system line. */
-export const OfficeMessageRow = (props: OfficeMessageRowProps) => {
+export const OfficeMessageRow = (props: OfficeMessageRowProps): ReactElement => {
     const { message } = props
     const onCopy = () => props.onCopy(message.key, message.copyText)
 

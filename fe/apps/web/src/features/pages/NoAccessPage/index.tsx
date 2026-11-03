@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { workspacesPath } from "@/modules/routes"
@@ -15,7 +16,7 @@ export const noAccessMetadata = async (): Promise<Metadata> => {
 }
 
 /** Old entry point: everything about "no workspace yet" or "disabled" now lives on /workspaces. */
-export const NoAccessPage = async (props: NoAccessPageProps) => {
+export const NoAccessPage = async (props: NoAccessPageProps): Promise<ReactElement> => {
     const { reason } = await props.searchParams
     return (
         <NoAccessPageBase

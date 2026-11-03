@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { Alert, Badge, Cluster, EmptyNotice, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { KnowledgeProgressRow } from "@/components/branches/KnowledgeProgressRow"
@@ -41,7 +41,7 @@ interface KnowledgeRowsSectionProps {
 }
 
 /** Draws the section around its already-rendered body, preserving local command feedback. */
-export const KnowledgeRowsSection = (props: KnowledgeRowsSectionProps) => {
+export const KnowledgeRowsSection = (props: KnowledgeRowsSectionProps): ReactElement => {
     const section = props.section
     const content = (
         <Stack gap="row">
@@ -84,7 +84,7 @@ export const KnowledgeRowsSection = (props: KnowledgeRowsSectionProps) => {
 /** Resolved list fields shared by a region's ready and loading collection. */
 export const rowListPropsOf = (
     list: Pick<KnowledgeListView, "section" | "label" | "footer" | "isPending" | "slotLabels">,
-) => ({
+): Pick<KnowledgeRowListProps, "label" | "isLabelVisible" | "action" | "footer" | "isPending" | "emptyTitle"> => ({
     label: list.label,
     isLabelVisible: true,
     action: list.section.action,
@@ -170,7 +170,7 @@ const itemOf = (row: KnowledgeRowView, props: KnowledgeRowListProps): ListRowDat
 })
 
 /** The native collection card; each read's SlotView remains in its connected block's pure twin. */
-export const KnowledgeRowList = (props: KnowledgeRowListProps) => (
+export const KnowledgeRowList = (props: KnowledgeRowListProps): ReactElement => (
     <SurfaceCard
         kind="list"
         {...(props.isLabelVisible === true ? { label: props.label } : { ariaLabel: props.label })}

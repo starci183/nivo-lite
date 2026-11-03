@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { AuthLayoutBase } from "./component"
 
@@ -6,7 +6,7 @@ import { AuthLayoutBase } from "./component"
 type AuthLayoutProps = { readonly children: ReactNode }
 
 /** The frame of sign-in, sign-up, forgot and reset password: the brand pitch beside the routed card. */
-export const AuthLayout = async (props: AuthLayoutProps) => {
+export const AuthLayout = async (props: AuthLayoutProps): Promise<ReactElement> => {
     const t = await getTranslations("login")
     return (
         <AuthLayoutBase

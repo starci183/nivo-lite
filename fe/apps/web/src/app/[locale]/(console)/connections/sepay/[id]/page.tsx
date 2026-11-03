@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import { SepayConnectionPage } from "@/features/pages/SepayConnectionPage"
 
 /** The document title of the SePay connection page. */
@@ -8,7 +9,7 @@ type PageProps = {
 }
 
 /** One SePay connection: its setup steps in back end order, its health and its live webhook events, on one page. */
-const Page = async (props: PageProps) => {
+const Page = async (props: PageProps): Promise<ReactElement> => {
     const { id } = await props.params
     return <SepayConnectionPage connectionId={id} />
 }

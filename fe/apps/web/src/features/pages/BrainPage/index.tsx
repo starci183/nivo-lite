@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { brainPartOf, brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
@@ -88,7 +89,7 @@ const composeOf = (value: string | undefined): "pick" | "write" | undefined => {
 }
 
 /** The Second Brain page shell: translates and lays out the page; the connected blocks read their data through GraphQL. */
-export const BrainPage = async (props: BrainPageProps) => {
+export const BrainPage = async (props: BrainPageProps): Promise<ReactElement> => {
     const legacy = legacyBrainHrefOf(props)
     if (legacy !== null) navigation.redirect({ href: legacy, locale: (await getLocale()) === "en" ? "en" : "vi" })
     const tab = brainTabOf(props)
@@ -120,7 +121,7 @@ export const BrainPage = async (props: BrainPageProps) => {
 }
 
 /** The same page while it loads: the blocks draw their own skeletons. */
-export const BrainLoadingPage = async () => {
+export const BrainLoadingPage = async (): Promise<ReactElement> => {
     const [t, brain, knowledge] = await Promise.all([
         getTranslations("brain"),
         getTranslations("secondBrain"),

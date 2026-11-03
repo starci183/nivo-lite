@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react"
+import type { ComponentProps, ReactElement } from "react"
 import { EmptyNotice, PaneSection } from "@starci/grammar/common"
 import type { PageHeaderContent, PaneGrid } from "@starci/grammar/common"
 import type { ConnectionRefusalView } from "@/modules/types"
@@ -23,13 +23,20 @@ const connectionColumnsOf = (isRefused: boolean): GridColumns =>
     isRefused ? { base: ["fill"], medium: ["fill"] } : { base: ["fill"], medium: ["fill", "standard"] }
 
 /** The areas and the tracks of the pane grid of a provider connection page. */
-export const connectionGridOf = (isRefused: boolean) => ({
+export const connectionGridOf = (isRefused: boolean): { readonly areas: GridAreas; readonly columns: GridColumns } => ({
     areas: connectionAreasOf(isRefused),
     columns: connectionColumnsOf(isRefused),
 })
 
+/** The live rail pane of a provider page as the pane grid takes it: a drawer on a narrow screen. */
+interface ConnectionRailPane extends ConnectionRail {
+    readonly collapse: "drawer"
+    readonly collapseLabel: string
+    readonly onOpenChange: (isOpen: boolean) => void
+}
+
 /** The live rail pane of a provider page, which becomes a drawer on a narrow screen. */
-export const connectionRailPaneOf = (rail: ConnectionRail, onOpenChange: (isOpen: boolean) => void) => ({
+export const connectionRailPaneOf = (rail: ConnectionRail, onOpenChange: (isOpen: boolean) => void): ConnectionRailPane => ({
     label: rail.label,
     collapse: "drawer" as const,
     collapseLabel: rail.label,
@@ -57,7 +64,7 @@ interface ConnectionPaneLayoutNoticeProps {
 }
 
 /** What the main pane of a provider page opens with for a member who may not read it, and nothing for anyone else. */
-export const ConnectionPaneLayoutNotice = (props: ConnectionPaneLayoutNoticeProps) =>
+export const ConnectionPaneLayoutNotice = (props: ConnectionPaneLayoutNoticeProps): ReactElement | null =>
     props.refusal === undefined ? null : (
         <PaneSection>
             <EmptyNotice message={props.refusal.message} description={props.refusal.description} />
