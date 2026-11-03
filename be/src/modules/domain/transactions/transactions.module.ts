@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./transactions.module-definition"
+import { BankTransactionGraphAdapter } from "./bank-transaction-graph.adapter"
 import { TransactionsService } from "./transactions.service"
 import { TransactionsFiguresService } from "./transactions-figures.service"
 import { TransactionsLedgerService } from "./transactions-ledger.service"
@@ -18,6 +19,7 @@ export class TransactionsModule extends ConfigurableModuleClass {
                 TransactionsService,
                 TransactionsLedgerService,
                 TransactionsFiguresService,
+                BankTransactionGraphAdapter,
             ],
             exports: [TransactionsService, TransactionsLedgerService, TransactionsFiguresService],
         }

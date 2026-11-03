@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import { In, LessThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { NewPaymentClaim, PaymentClaimRow } from "./orders.contracts"
+import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
+import type { NewPaymentClaim, PaymentClaimRow, PaymentClaimWhere } from "./orders.contracts"
 import { PaymentClaimEntity } from "./persistence/entities"
 
 /** The most open claims one read returns. */
 const OPEN_LIMIT = 100
+
+/** The row an insert answers with `RETURNING id`. */
+const isWrittenId = rowShape({ id: "string" })
 
 const toRow = (claim: PaymentClaimEntity): PaymentClaimRow => ({
     id: claim.id,
@@ -25,8 +28,8 @@ const toRow = (claim: PaymentClaimEntity): PaymentClaimRow => ({
 export class OrderPaymentClaimsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
-    /** Writes the claim; false when the same message was already written. */
-    async record(claim: NewPaymentClaim): Promise<boolean> {
+    /** Writes the claim and answers its id; the same message again answers the id of the claim already written. */
+    async record(claim: NewPaymentClaim): Promise<string> {
         const inserted = await this.entityManager
             .createQueryBuilder(PaymentClaimEntity, "c")
             .insert()
@@ -34,7 +37,22 @@ export class OrderPaymentClaimsService {
             .orIgnore()
             .returning("id")
             .execute()
-        return Array.isArray(inserted.raw) && inserted.raw.length > 0
+        const [written] = returnedRows(inserted.raw, isWrittenId)
+        if (written !== undefined) return written.id
+        const existing = await this.entityManager.findOneOrFail(PaymentClaimEntity, {
+            where: { workspaceId: claim.workspaceId, dedupeKey: claim.dedupeKey },
+        })
+        return existing.id
+    }
+
+    /** The claims of the workspace that match the equalities, newest first. */
+    async query(workspaceId: string, where: PaymentClaimWhere, limit: number): Promise<Array<PaymentClaimRow>> {
+        const claims = await this.entityManager.find(PaymentClaimEntity, {
+            where: { workspaceId, ...where },
+            order: { claimedAt: "DESC" },
+            take: Math.min(limit, OPEN_LIMIT),
+        })
+        return claims.map(toRow)
     }
 
     /** The claims of the workspace that still wait for money, oldest first. */

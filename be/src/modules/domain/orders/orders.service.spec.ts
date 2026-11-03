@@ -453,6 +453,12 @@ const registerSettlement = () => {
             )
         })
 
+        it("takes an update that reports no count as nothing settled", async () => {
+            const em = mockEntityManager({ update: [OrderEntity, { raw: [], generatedMaps: [] }] })
+            const orders = await build(em)
+            await expect(orders.settle("ws-1", "order-1")).resolves.toBe(false)
+        })
+
         it("settles through the manager of the caller's transaction", async () => {
             const own = mockEntityManager()
             const callers = mockEntityManager({ update: [OrderEntity, { affected: 1 }] })

@@ -42,18 +42,34 @@ const build = async (em: MockEntityManager) => {
 }
 
 describe("OrderPaymentClaimsService", () => {
-    it("writes a claim once: the same message again is ignored", async () => {
-        const em = mockEntityManager()
-        const first = fakeQueryBuilder({ execute: { raw: [{ id: "claim-1" }] } })
+    it("writes a claim and answers its id; the same message again answers the id already written", async () => {
+        const em = mockEntityManager({ findOneOrFail: [PaymentClaimEntity, entityOf()] })
+        const first = fakeQueryBuilder({ execute: { raw: [{ id: "claim-new" }] } })
         const repeat = fakeQueryBuilder({ execute: { raw: [] } })
         answerQueryBuilders(em, first, repeat)
         const claims = await build(em)
 
-        await expect(claims.record(claim)).resolves.toBe(true)
-        await expect(claims.record(claim)).resolves.toBe(false)
+        await expect(claims.record(claim)).resolves.toBe("claim-new")
+        await expect(claims.record(claim)).resolves.toBe("claim-1")
 
         expect(first.callsOf("values")).toEqual([[{ ...claim, names: ["BUI NGUYEN DINH"] }]])
         expect(first.callsOf("orIgnore")).toHaveLength(1)
+        expect(em.findOneOrFail).toHaveBeenCalledWith(PaymentClaimEntity, {
+            where: { workspaceId: "ws-1", dedupeKey: "zalo:1:order-claim" },
+        })
+    })
+
+    it("reads the claims that match the equalities, newest first, bounded", async () => {
+        const em = mockEntityManager({ find: [PaymentClaimEntity, [entityOf()]] })
+        const claims = await build(em)
+
+        await expect(claims.query("ws-1", { leadId: "lead-1", status: "open" }, 5000)).resolves.toHaveLength(1)
+
+        expect(em.find).toHaveBeenCalledWith(PaymentClaimEntity, {
+            where: { workspaceId: "ws-1", leadId: "lead-1", status: "open" },
+            order: { claimedAt: "DESC" },
+            take: 100,
+        })
     })
 
     it("lists the open claims of a workspace, oldest first, as rows", async () => {
@@ -119,6 +135,12 @@ describe("OrderPaymentClaimsService", () => {
             order: { claimedAt: "ASC" },
             take: 50,
         })
+    })
+
+    it("takes an update that reports no count as nothing escalated", async () => {
+        const em = mockEntityManager({ update: [PaymentClaimEntity, { raw: [], generatedMaps: [] }] })
+        const claims = await build(em)
+        await expect(claims.escalate("ws-1", "claim-1")).resolves.toBe(false)
     })
 
     it("escalates an open claim once", async () => {

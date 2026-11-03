@@ -189,3 +189,11 @@ export interface NewPaymentClaim {
     /** What makes a repeated message one claim. */
     readonly dedupeKey: string
 }
+
+/** The equalities a read of payment claims may name. */
+export interface PaymentClaimWhere {
+    readonly id?: string
+    readonly leadId?: string
+    readonly conversationId?: string
+    readonly status?: PaymentClaimStatus
+}
