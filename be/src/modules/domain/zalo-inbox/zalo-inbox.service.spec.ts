@@ -316,6 +316,7 @@ describe("ZaloInboxService pictures and files", () => {
         expect(conversations.readFiles).toHaveBeenCalledWith(
             [expect.objectContaining({ kind: "image", url: "https://cdn.test/a.jpg" })],
             false,
+            "m-9",
         )
         expect(conversations.acceptZalo).toHaveBeenCalledWith(
             "c-1",
@@ -341,7 +342,7 @@ describe("ZaloInboxService pictures and files", () => {
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
 
-        expect(conversations.readFiles).toHaveBeenCalledWith([expect.objectContaining({ localPath: "receipts/a.jpg" })], true)
+        expect(conversations.readFiles).toHaveBeenCalledWith([expect.objectContaining({ localPath: "receipts/a.jpg" })], true, "m-9")
     })
 
     it("still delivers the message when the pictures cannot be read", async () => {

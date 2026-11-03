@@ -120,7 +120,7 @@ export class ZaloInboxService {
             this.logUnknownShape(rawBody)
             return []
         }
-        return this.conversations.readFiles(inbound.value.attachments, imported)
+        return this.conversations.readFiles(inbound.value.attachments, imported, inbound.value.messageId)
     }
 
     private logUnknownShape(rawBody: Buffer): void {

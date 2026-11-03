@@ -58,6 +58,8 @@ export interface VerifiedChatFile {
 export interface InboundFileSource {
     /** The https address to download it from; empty when the file is a local import. */
     readonly url: string
+    /** The address of a smaller preview, tried when the full file cannot be read; empty when there is none. */
+    readonly thumbnailUrl: string
     /** The path of a manual import, relative to the import folder; empty for a download. */
     readonly localPath: string
     /** The name the sender gave it, or an empty text. */

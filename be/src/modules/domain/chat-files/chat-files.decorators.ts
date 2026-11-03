@@ -2,6 +2,7 @@ import type { StorageAssetsPort, StorageObjectsPort } from "@modules/integration
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { InboundFileReader } from "./inbound-file.reader"
+import type { HostResolver } from "./inbound-file.resolver"
 
 /** Token of the storage door selected by the app root. */
 export const CHAT_FILES_STORAGE: unique symbol = Symbol("domain.chat-files.storage")
@@ -29,3 +30,10 @@ export const InjectChatFilesImportRoot = (): TypedParameterDecorator<string> => 
 /** Injects the reader of local import files. Parameter type: InboundFileReader. */
 export const InjectChatFilesReader = (): TypedParameterDecorator<InboundFileReader> =>
     injector<InboundFileReader>(CHAT_FILES_READER)
+
+/** Token of the resolver of host names for downloads. */
+export const CHAT_FILES_RESOLVER: unique symbol = Symbol("domain.chat-files.resolver")
+
+/** Injects the resolver of host names. Parameter type: HostResolver. */
+export const InjectChatFilesResolver = (): TypedParameterDecorator<HostResolver> =>
+    injector<HostResolver>(CHAT_FILES_RESOLVER)

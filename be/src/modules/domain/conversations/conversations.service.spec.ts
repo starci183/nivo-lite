@@ -571,10 +571,12 @@ const registerZaloAttachments = () => {
                 { kind: "image", url: "https://cdn.test/b.png", thumbnailUrl: "", name: "", localPath: "" },
             ],
             true,
+            "m-9",
         )
 
         expect(read).toEqual([receipt])
-        expect(inboundFiles.download).toHaveBeenNthCalledWith(1, expect.objectContaining({ url: "https://cdn.test/a.png" }), true)
+        expect(inboundFiles.download).toHaveBeenNthCalledWith(1, expect.objectContaining({ url: "https://cdn.test/a.png" }), true, "m-9", 0)
+        expect(inboundFiles.download).toHaveBeenNthCalledWith(2, expect.objectContaining({ url: "https://cdn.test/b.png" }), true, "m-9", 1)
     })
 }
 
