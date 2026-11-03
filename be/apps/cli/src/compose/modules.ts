@@ -32,7 +32,7 @@ import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { STORAGE_ASSETS, ObjectStorageModule } from "@modules/integrations/object-storage"
 import { IDENTITY_ACCOUNTS, IDENTITY_AUTHENTICATOR, IdentityModule } from "@modules/domain/identity"
 import { MailModule } from "@modules/integrations/mail"
-import { PASSPORT_TOKENS, PassportModule } from "@modules/integrations/passport"
+import { PassportModule } from "@modules/integrations/passport"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { AuthorityRulesModule } from "@modules/domain/authority-rules"
 import { MemberGrantsModule, OfficeAuthorityService } from "@modules/domain/member-grants"
@@ -92,7 +92,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     N8nHostModule.register({ isGlobal: true, ...options.n8nHost }),
     MailModule.register({ isGlobal: true, ...options.mail }),
     PassportModule.register({ isGlobal: true, ...options.passport, authenticator: IDENTITY_AUTHENTICATOR }),
-    IdentityModule.register({ isGlobal: true, tokens: PASSPORT_TOKENS, auth: options.identityAuth }),
+    IdentityModule.register({ isGlobal: true, ownTokens: true, auth: options.identityAuth }),
     ObjectStorageModule.register({ isGlobal: true, ...options.storage }),
     VideoMusicModule.register({ isGlobal: true, store: STORAGE_ASSETS }),
     EventsModule.register({ isGlobal: true }),

@@ -1,11 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectPassportPasswords } from "@modules/integrations/passport"
+import {
+    InjectAuthPasswords,
+    InjectSignInBudget,
+    isPresentablePassword,
+    normalizeEmail,
+} from "@modules/integrations/passport"
 import type {
+    AuthAuthenticator,
+    AuthPasswords,
     AuthSubject,
     GoogleProfile,
-    PassportAuthenticator,
-    PassportPasswordsClient,
+    SignInBudget,
 } from "@modules/integrations/passport"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -14,10 +20,8 @@ import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { IdentityAttemptsService } from "./attempts.service"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 import { IdentityAuthLogEvent } from "./identity-auth.log-events"
-import { isPresentablePassword, normalizeEmail } from "./password.policy"
 import { authDoors } from "./persistence/auth-doors.port"
 
 /** A Google profile whose email Google verified, so it has one. */
@@ -33,27 +37,28 @@ const profileKeysOf = (profile: VerifiedProfile): Record<string, string | boolea
 
 @Injectable()
 /** The two sign-in decisions: is this email and password right, and which account does this Google profile stand for. */
-export class IdentityAuthenticatorService implements PassportAuthenticator {
+export class IdentityAuthenticatorService implements AuthAuthenticator {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectPassportPasswords() private readonly passwords: PassportPasswordsClient,
-        private readonly attempts: IdentityAttemptsService,
+        @InjectAuthPasswords() private readonly passwords: AuthPasswords,
+        @InjectSignInBudget() private readonly budget: SignInBudget,
         @InjectClock() private readonly clock: Clock,
         @InjectIds() private readonly ids: Ids,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Verifies the pair (existing GoTrue bcrypt hashes included). An unknown address and a wrong password answer the same refusal. */
+    /** Verifies the pair (existing GoTrue bcrypt hashes included). An unknown address and a wrong password answer the same refusal; only wrong passwords count against the budget. */
     async verifyPassword(email: string, password: string): Promise<AuthSubject> {
         const address = normalizeEmail(email)
-        await this.attempts.admit("login", address)
-        const row = await authDoors.userByEmail(this.entityManager, address)
-        const matches = await this.passwords.verify(
-            isPresentablePassword(password) ? password : "",
-            row?.encrypted_password ?? "",
-        )
-        if (row === undefined || !matches) throw new IdentityError({ code: IdentityErrorCode.InvalidCredentials })
-        await this.attempts.clear("login", address)
+        const row = await this.budget.counted("login", address, async () => {
+            const found = await authDoors.userByEmail(this.entityManager, address)
+            const matches = await this.passwords.verify(
+                isPresentablePassword(password) ? password : "",
+                found?.encrypted_password ?? "",
+            )
+            return { passed: found !== undefined && matches, value: found !== undefined && matches ? found : undefined }
+        })
+        if (row === undefined) throw new IdentityError({ code: IdentityErrorCode.InvalidCredentials })
         if (row.disabled) throw new IdentityError({ code: IdentityErrorCode.AccountDisabled })
         if (row.email_confirmed_at === null) throw new IdentityError({ code: IdentityErrorCode.EmailNotConfirmed })
         await authDoors.touchUser(this.entityManager, row.id, this.clock.now(), false, "{}")

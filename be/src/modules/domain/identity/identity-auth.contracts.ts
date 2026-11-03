@@ -1,65 +1,8 @@
-/** What the transport knows about the device a sign-in comes from. */
-export interface DeviceMeta {
-    /** The raw user agent, bounded by the transport. */
-    readonly userAgent: string | null
-    /** The caller address. */
-    readonly ip: string | null
-}
-
-/** The person a session belongs to. */
-export interface SessionUser {
-    /** The user id. */
-    readonly id: string
-    /** The account email. */
-    readonly email: string
-}
-
-/** The tokens one sign-in or refresh produces; the refresh token only ever leaves in the cookie. */
-export interface SessionTokens {
-    /** The compact access JWT. */
-    readonly accessToken: string
-    /** When the access token stops being accepted, ISO 8601. */
-    readonly accessExpiresAt: string
-    /** How many seconds the access token lives. */
-    readonly accessExpiresIn: number
-    /** The opaque token the refresh cookie carries. */
-    readonly cookieToken: string
-    /** True when the answer did not rotate the token (a racing request, or the non-rotating session door): the caller leaves the cookie as it is. */
-    readonly cookieKept?: true
-    /** How long the refresh cookie lives, in seconds. */
-    readonly refreshMaxAgeSeconds: number
-    /** The signed-in person. */
-    readonly user: SessionUser
-}
-
-/** What a sign-in, refresh or session check answers in the body. */
-export interface AccessGrant {
-    /** The access JWT, to be sent as a Bearer token. */
-    readonly accessToken: string
-    /** How many seconds the access token lives. */
-    readonly expiresIn: number
-    /** When the access token stops being accepted, ISO 8601. */
-    readonly expiresAt: string
-    /** The signed-in person. */
-    readonly user: SessionUser
-}
-
-/** Where the browser goes after the Google round trip: the web app on success, its sign-in page with an error flag on failure. */
-export interface GoogleRedirect {
-    /** The absolute address. */
-    readonly url: string
-    /** The redirect status. */
-    readonly statusCode: number
-}
-
 /** How an invitation left: a new-account email, a sign-in email, or not at all. */
 export type InviteSent = "invited" | "existing" | "none"
 
 /** What a single-use emailed token is for. */
 export type PasswordPurpose = "reset" | "invite" | "confirm"
-
-/** Which counter an attempt is counted against. */
-export type AttemptKind = "login" | "reset" | "signup"
 
 /** What an operator account call answers when it failed. */
 export interface AccountAdminFailure {

@@ -11,7 +11,6 @@ import {
     authActionsOf,
 } from "@/hooks/auth"
 import { useSignupForm } from "@/hooks/rhf"
-import { navigation } from "@/modules/i18n"
 import { loginPath } from "@/modules/routes"
 import { SignupFormBase } from "./component"
 
@@ -28,7 +27,6 @@ type SignupFormControllerInput = {
     readonly props: SignupFormProps
     readonly auth: ReturnType<typeof authActionsOf>
     readonly t: ReturnType<typeof useTranslations<"auth">>
-    readonly router: ReturnType<typeof navigation.useRouter>
     readonly form: ReturnType<typeof useSignupForm>
     readonly submitError: string | undefined
     readonly setSubmitError: React.Dispatch<React.SetStateAction<string | undefined>>
@@ -40,7 +38,7 @@ type SignupFormControllerInput = {
 }
 
 const createSignupFormController = (input: SignupFormControllerInput) => {
-    const { props, auth, t, router, form, setSubmitError, setSentTo, startTransition, resending } = input
+    const { props, auth, t, form, setSubmitError, setSentTo, startTransition, resending } = input
 
     const set = (key: "name" | "email" | "password" | "confirm") => (value: string) => {
         form.setValue(key, value, { shouldValidate: form.formState.isSubmitted })
@@ -52,11 +50,6 @@ const createSignupFormController = (input: SignupFormControllerInput) => {
             const outcome = await auth.signUp({ ...values, next: props.next })
             if (!outcome.success || outcome.data === undefined) {
                 setSubmitError(t(authErrorKey(outcome.error ?? "")))
-                return
-            }
-            if (outcome.data.sessionCreated) {
-                router.push(outcome.data.path)
-                router.refresh()
                 return
             }
             setSentTo(values.email.trim().toLowerCase())
@@ -76,7 +69,6 @@ export const SignupForm = (props: SignupFormProps) => {
     const auth = authActionsOf()
     useRedirectWhenSignedIn(props.next)
     const t = useTranslations("auth")
-    const router = navigation.useRouter()
     const form = useSignupForm(props.initialEmail)
     const [submitError, setSubmitError] = useState<string>()
     const [sentTo, setSentTo] = useState<string | null>(null)
@@ -93,7 +85,6 @@ export const SignupForm = (props: SignupFormProps) => {
         props,
         auth,
         t,
-        router,
         form,
         submitError,
         setSubmitError,

@@ -1,8 +1,15 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule, Provider } from "@nestjs/common"
+import {
+    PASSPORT_ACCOUNTS,
+    PASSPORT_PRINCIPAL_VERIFIER,
+    PASSPORT_RATE_COUNTER,
+    PASSPORT_SESSION_STORE,
+} from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
+import { RATE_LIMIT_STORE } from "@modules/platform/database"
 import { IdentityAccountsService } from "./accounts.service"
-import { IdentityAttemptsService } from "./attempts.service"
+import { IdentityAccountDirectoryService } from "./identity-account-directory.service"
 import { createAccessTokenVerifier, refuseSessions } from "./access-token.policy"
 import { AuthGuard } from "./auth.guard"
 import { IdentityAuthenticatorService } from "./authenticator.service"
@@ -13,8 +20,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./identity.module-definit
 import { IDENTITY_ACCOUNTS, IDENTITY_AUTHENTICATOR, IDENTITY_AUTH_OPTIONS } from "./identity-auth.decorators"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { IdentityPasswordResetService } from "./password-reset.service"
-import { IdentityRefreshCookieService } from "./refresh-cookie.service"
-import { IdentitySessionsService } from "./sessions.service"
+import { IdentitySessionStoreService } from "./identity-session-store.service"
 import { IdentitySignInService } from "./sign-in.service"
 import { IdentitySignupService } from "./signup.service"
 
@@ -22,21 +28,25 @@ const SIGN_IN_EXPORTS = [
     IDENTITY_AUTHENTICATOR,
     IDENTITY_ACCOUNTS,
     IdentityPasswordResetService,
-    IdentitySessionsService,
     IdentitySignInService,
     IdentitySignupService,
+    PASSPORT_SESSION_STORE,
+    PASSPORT_ACCOUNTS,
+    PASSPORT_RATE_COUNTER,
 ]
 
 const signInProviders = (auth: IdentityAuthOptions): Array<Provider> => [
     { provide: IDENTITY_AUTH_OPTIONS, useValue: auth },
-    IdentityAttemptsService,
-    IdentityRefreshCookieService,
+    IdentitySessionStoreService,
+    IdentityAccountDirectoryService,
+    { provide: PASSPORT_SESSION_STORE, useExisting: IdentitySessionStoreService },
+    { provide: PASSPORT_ACCOUNTS, useExisting: IdentityAccountDirectoryService },
+    { provide: PASSPORT_RATE_COUNTER, useExisting: RATE_LIMIT_STORE },
     IdentityAuthenticatorService,
     { provide: IDENTITY_AUTHENTICATOR, useExisting: IdentityAuthenticatorService },
     IdentityPasswordResetService,
     IdentityAccountsService,
     { provide: IDENTITY_ACCOUNTS, useExisting: IdentityAccountsService },
-    IdentitySessionsService,
     IdentitySignInService,
     IdentitySignupService,
 ]
@@ -54,12 +64,12 @@ export class IdentityModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                options.tokens === undefined
+                options.ownTokens !== true
                     ? { provide: ACCESS_TOKEN_VERIFIER, useValue: options.verifyAccessToken ?? refuseSessions }
                     : {
                           provide: ACCESS_TOKEN_VERIFIER,
                           useFactory: createAccessTokenVerifier,
-                          inject: [options.tokens, CLOCK],
+                          inject: [PASSPORT_PRINCIPAL_VERIFIER, CLOCK],
                       },
                 options.credentialAuthenticator === undefined
                     ? {

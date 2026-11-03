@@ -1,5 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { IdentitySessionsService } from "@modules/domain/identity"
+import { IdentitySignInService } from "@modules/domain/identity"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -10,12 +10,12 @@ import { LogoutOthersCommand } from "./logout-others.command"
 export class LogoutOthersHandler extends ICQRSHandler<LogoutOthersCommand, void> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly sessions: IdentitySessionsService,
+        private readonly signIn: IdentitySignInService,
     ) {
         super(logger)
     }
 
     protected override process(command: LogoutOthersCommand): Promise<void> {
-        return this.sessions.endOthers(command.params.principal)
+        return this.signIn.endOthers(command.params.principal)
     }
 }

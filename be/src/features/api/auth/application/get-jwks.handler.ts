@@ -1,5 +1,5 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { IdentitySessionsService } from "@modules/domain/identity"
+import { IdentitySignInService } from "@modules/domain/identity"
 import type { JwksDocument } from "@modules/integrations/passport"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
@@ -11,12 +11,12 @@ import { GetJwksQuery } from "./get-jwks.query"
 export class GetJwksHandler extends ICQRSHandler<GetJwksQuery, JwksDocument> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly sessions: IdentitySessionsService,
+        private readonly signIn: IdentitySignInService,
     ) {
         super(logger)
     }
 
     protected override process(): Promise<JwksDocument> {
-        return this.sessions.jwks()
+        return this.signIn.jwks()
     }
 }

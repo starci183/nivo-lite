@@ -58,21 +58,7 @@ export interface NewAuthUser {
     readonly now: Date
 }
 
-/** A device session to open. */
-export interface NewAuthSession {
-    /** The session id. */
-    readonly id: string
-    /** The account it belongs to. */
-    readonly userId: string
-    /** The instant it opens. */
-    readonly now: Date
-    /** The raw user agent, or null. */
-    readonly userAgent: string | null
-    /** The caller address, or null. */
-    readonly ip: string | null
-}
-
-/** The SECURITY DEFINER doors of the app-owned auth tables (`auth.users`, `auth.sessions`, `auth.identities`); the app never touches those tables itself. */
+/** The SECURITY DEFINER doors of the app-owned auth tables (`auth.users`, `auth.identities`); the app never touches those tables itself. */
 export const authDoors = {
     /** The account of an address, or undefined. */
     async userByEmail(manager: EntityManager, email: string): Promise<AuthUserByEmail | undefined> {
@@ -124,32 +110,6 @@ export const authDoors = {
             url,
         ])
         return row?.be_auth_set_avatar === true
-    },
-    /** Opens a device session. */
-    async openSession(manager: EntityManager, session: NewAuthSession): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_open_session", [
-            session.id,
-            session.userId,
-            session.now,
-            session.userAgent,
-            session.ip,
-        ])
-    },
-    /** Marks a session refreshed. */
-    async touchSession(manager: EntityManager, sessionId: string, now: Date): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_touch_session", [sessionId, now])
-    },
-    /** Ends one session. */
-    async closeSession(manager: EntityManager, sessionId: string): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_close_session", [sessionId])
-    },
-    /** Ends every session of an account. */
-    async closeUserSessions(manager: EntityManager, userId: string): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_close_user_sessions", [userId])
-    },
-    /** Ends every session of an account but one. */
-    async closeOtherSessions(manager: EntityManager, userId: string, keepSessionId: string): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_close_other_sessions", [userId, keepSessionId])
     },
     /** One bounded page of accounts (the door holds a page to 1000 people), oldest first. */
     listUsers(manager: EntityManager, page: number, perPage: number): Promise<ReadonlyArray<AuthUserListed>> {

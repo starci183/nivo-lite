@@ -1,175 +1,107 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { Request, Response } from "express"
-import { PASSPORT_FLOWS } from "@modules/integrations/passport"
-import type { HttpExchange, PassportFlowsService } from "@modules/integrations/passport"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
-import { IDENTITY_AUTH_OPTIONS } from "./identity-auth.decorators"
-import type { IdentityAuthOptions } from "./identity-auth.options"
-import { IdentityRefreshCookieService } from "./refresh-cookie.service"
-import { IdentitySessionsService } from "./sessions.service"
+import { AUTH_ERROR_CODES, AuthError, PASSPORT_DOORS, PASSPORT_SESSIONS } from "@modules/integrations/passport"
+import type { AuthDoors, AuthSessions, HttpExchange } from "@modules/integrations/passport"
+import type { Principal } from "@modules/platform/cqrs"
+import { IdentityError } from "./errors/identity.error"
 import { IdentitySignInService } from "./sign-in.service"
 
-const SUBJECT = { userId: "u1", email: "an@example.test" }
-const DEVICE = { userAgent: "Mozilla", ip: "203.0.113.9" }
-const OPTIONS: IdentityAuthOptions = {
-    webOrigin: "https://app.example.test",
-    cookieDomain: undefined,
-    refreshTtlSeconds: 3600,
-    resetTtlSeconds: 3600,
-    inviteTtlSeconds: 3600,
-    loginAttempts: 5,
-    resetAttempts: 5,
-    attemptWindowMs: 60_000,
-}
-const TOKENS = {
-    accessToken: "jwt",
-    accessExpiresAt: "2026-11-09T10:15:00.000Z",
-    accessExpiresIn: 900,
-    cookieToken: "refresh",
-    refreshMaxAgeSeconds: 3600,
-    user: { id: "u1", email: "an@example.test" },
-}
 const GRANT = {
     accessToken: "jwt",
     expiresIn: 900,
     expiresAt: "2026-11-09T10:15:00.000Z",
     user: { id: "u1", email: "an@example.test" },
 }
+const REDIRECT = { url: "https://app.example.test/inbox", statusCode: 303 }
 
 const build = async () => {
-    const flows = mock<PassportFlowsService>()
-    const sessions = mock<IdentitySessionsService>()
-    sessions.start.mockResolvedValue(TOKENS)
-    sessions.refresh.mockResolvedValue(TOKENS)
-    sessions.access.mockResolvedValue(TOKENS)
-    const cookies = mock<IdentityRefreshCookieService>()
-    cookies.read.mockReturnValue("cookie-token")
-    cookies.deviceOf.mockReturnValue(DEVICE)
-    const logger = mock<Logger>()
+    const doors = mock<AuthDoors>()
+    const sessions = mock<AuthSessions>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             IdentitySignInService,
-            { provide: PASSPORT_FLOWS, useValue: flows },
-            { provide: IdentitySessionsService, useValue: sessions },
-            { provide: IdentityRefreshCookieService, useValue: cookies },
-            { provide: IDENTITY_AUTH_OPTIONS, useValue: OPTIONS },
-            { provide: LOGGER, useValue: logger },
+            { provide: PASSPORT_DOORS, useValue: doors },
+            { provide: PASSPORT_SESSIONS, useValue: sessions },
         ],
     }).compile()
     const exchange: HttpExchange = { req: mock<Request>(), res: mock<Response>() }
-    return { service: moduleRef.get(IdentitySignInService), flows, sessions, cookies, logger, exchange }
+    return { service: moduleRef.get(IdentitySignInService), doors, sessions, exchange }
 }
 
-describe("IdentitySignInService / login", () => {
-    it("opens the session of the person the local strategy established and sets the cookie, not the body", async () => {
-        const { service, flows, sessions, cookies, exchange } = await build()
-        flows.authenticateLocal.mockResolvedValue(SUBJECT)
+describe("IdentitySignInService / doors", () => {
+    it("hands each cookie door to the package and answers what it answers", async () => {
+        const { service, doors, exchange } = await build()
+        doors.login.mockResolvedValue(GRANT)
+        doors.refresh.mockResolvedValue(GRANT)
+        doors.session.mockResolvedValue(GRANT)
+        doors.logout.mockResolvedValue(undefined)
+        doors.beginGoogle.mockResolvedValue(undefined)
+        doors.completeGoogle.mockResolvedValue(REDIRECT)
 
         await expect(service.login(exchange)).resolves.toEqual(GRANT)
-
-        expect(sessions.start).toHaveBeenCalledWith(SUBJECT, DEVICE)
-        expect(cookies.issue).toHaveBeenCalledWith(exchange.res, TOKENS)
-    })
-
-    it("opens no session and sets no cookie when the strategy refuses", async () => {
-        const { service, flows, sessions, cookies, exchange } = await build()
-        flows.authenticateLocal.mockRejectedValue(new Error("refused"))
-
-        await expect(service.login(exchange)).rejects.toThrow("refused")
-
-        expect(sessions.start).not.toHaveBeenCalled()
-        expect(cookies.issue).not.toHaveBeenCalled()
-    })
-})
-
-describe("IdentitySignInService / refresh, session and logout", () => {
-    it("rotates the cookie token and sets the new cookie", async () => {
-        const { service, sessions, cookies, exchange } = await build()
-
         await expect(service.refresh(exchange)).resolves.toEqual(GRANT)
-
-        expect(sessions.refresh).toHaveBeenCalledWith("cookie-token")
-        expect(cookies.issue).toHaveBeenCalledWith(exchange.res, TOKENS)
-    })
-
-    it("leaves the cookie as the sibling wrote it when the token was just rotated by a racing request", async () => {
-        const { service, sessions, cookies, exchange } = await build()
-        sessions.refresh.mockResolvedValue({ ...TOKENS, cookieKept: true })
-
-        await expect(service.refresh(exchange)).resolves.toEqual(GRANT)
-
-        expect(cookies.issue).not.toHaveBeenCalled()
-        expect(cookies.clear).not.toHaveBeenCalled()
-    })
-
-    it("clears the cookie and rethrows when the token cannot be used", async () => {
-        const { service, sessions, cookies, exchange } = await build()
-        const refusal = new IdentityError({ code: IdentityErrorCode.RefreshReused })
-        sessions.refresh.mockRejectedValue(refusal)
-
-        await expect(service.refresh(exchange)).rejects.toBe(refusal)
-
-        expect(cookies.clear).toHaveBeenCalledWith(exchange.res)
-        expect(cookies.issue).not.toHaveBeenCalled()
-    })
-
-    it("answers an access token for the cookie session without touching the cookie", async () => {
-        const { service, sessions, cookies, exchange } = await build()
-
         await expect(service.session(exchange)).resolves.toEqual(GRANT)
+        await expect(service.logout(exchange)).resolves.toBeUndefined()
+        await expect(service.beginGoogle(exchange)).resolves.toBeUndefined()
+        await expect(service.completeGoogle(exchange)).resolves.toEqual(REDIRECT)
 
-        expect(sessions.access).toHaveBeenCalledWith("cookie-token")
-        expect(cookies.issue).not.toHaveBeenCalled()
-        expect(cookies.clear).not.toHaveBeenCalled()
+        for (const door of [
+            doors.login,
+            doors.refresh,
+            doors.session,
+            doors.logout,
+            doors.beginGoogle,
+            doors.completeGoogle,
+        ]) {
+            expect(door).toHaveBeenCalledWith(exchange)
+        }
     })
 
-    it("ends the session of the cookie and clears it", async () => {
-        const { service, sessions, cookies, exchange } = await build()
+    it("turns a refusal of the package into the identity error the errors filter maps", async () => {
+        const { service, doors, exchange } = await build()
+        doors.refresh.mockRejectedValue(new AuthError(AUTH_ERROR_CODES.RefreshReused))
 
-        await service.logout(exchange)
+        const refusal: unknown = await service.refresh(exchange).catch((cause: unknown) => cause)
 
-        expect(sessions.end).toHaveBeenCalledWith("cookie-token")
-        expect(cookies.clear).toHaveBeenCalledWith(exchange.res)
+        expect(refusal).toBeInstanceOf(IdentityError)
+        expect(refusal).toMatchObject({ code: "IDENTITY_REFRESH_REUSED" })
+    })
+
+    it("lets the domain refusal of a sign-in decision through as it is", async () => {
+        const { service, doors, exchange } = await build()
+        const refusal = new Error("identity refused")
+        doors.login.mockRejectedValue(refusal)
+
+        await expect(service.login(exchange)).rejects.toBe(refusal)
     })
 })
 
-describe("IdentitySignInService / google", () => {
-    it("hands the start of the round trip to the strategy", async () => {
-        const { service, flows, exchange } = await build()
-        flows.beginGoogle.mockResolvedValue(undefined)
+describe("IdentitySignInService / keys and other devices", () => {
+    const principal: Principal = { id: "u1", role: "authenticated", sessionId: "s1" }
 
-        await service.beginGoogle(exchange)
+    it("answers the public key document of the package", async () => {
+        const { service, sessions } = await build()
+        sessions.jwks.mockResolvedValue({ keys: [{ kid: "k1" }] })
 
-        expect(flows.beginGoogle).toHaveBeenCalledWith(exchange)
+        await expect(service.jwks()).resolves.toEqual({ keys: [{ kid: "k1" }] })
     })
 
-    it("signs in the person a finished round trip established, sets the cookie and sends the browser to the web app", async () => {
-        const { service, flows, sessions, cookies, exchange } = await build()
-        flows.completeGoogle.mockResolvedValue({ subject: SUBJECT, next: "/inbox" })
+    it("signs the caller out of every other device but the session of the token", async () => {
+        const { service, sessions } = await build()
+        sessions.endOthers.mockResolvedValue(undefined)
 
-        await expect(service.completeGoogle(exchange)).resolves.toEqual({
-            url: "https://app.example.test/inbox",
-            statusCode: 303,
-        })
+        await service.endOthers(principal)
 
-        expect(sessions.start).toHaveBeenCalledWith(SUBJECT, DEVICE)
-        expect(cookies.issue).toHaveBeenCalledWith(exchange.res, TOKENS)
+        expect(sessions.endOthers).toHaveBeenCalledWith("u1", "s1")
     })
 
-    it("sends the browser back to sign in, with no session, when the round trip fails", async () => {
-        const { service, flows, sessions, cookies, logger, exchange } = await build()
-        flows.completeGoogle.mockRejectedValue(new Error("state mismatch"))
+    it("refuses with the passport error when the token names no session", async () => {
+        const { service, sessions } = await build()
+        sessions.endOthers.mockRejectedValue(new AuthError(AUTH_ERROR_CODES.Unauthenticated))
 
-        await expect(service.completeGoogle(exchange)).resolves.toEqual({
-            url: "https://app.example.test/sign-in?auth=error",
-            statusCode: 303,
+        await expect(service.endOthers({ id: "u1", role: "authenticated" })).rejects.toMatchObject({
+            code: "IDENTITY_UNAUTHENTICATED",
         })
-
-        expect(sessions.start).not.toHaveBeenCalled()
-        expect(cookies.clear).toHaveBeenCalledWith(exchange.res)
-        expect(logger.error).toHaveBeenCalledTimes(1)
     })
 })

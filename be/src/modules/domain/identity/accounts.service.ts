@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectMail } from "@modules/integrations/mail"
-import { InjectPassportPasswords } from "@modules/integrations/passport"
-import type { PassportPasswordsClient } from "@modules/integrations/passport"
+import { AuthError, InjectAuthPasswords, InjectAuthSessions, normalizeEmail } from "@modules/integrations/passport"
+import type { AuthPasswords, AuthSessions } from "@modules/integrations/passport"
 import type { MailClient } from "@modules/integrations/mail"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -14,6 +14,7 @@ import type { Logger } from "@modules/platform/logging"
 import { ok, refused, sameSitePath } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { IdentityAuthenticatorService } from "./authenticator.service"
+import { refusing } from "./auth-refusal.policy"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 import { InjectAccessTokenVerifier } from "./identity.decorators"
 import type { VerifyAccessToken } from "./identity.contracts"
@@ -31,9 +32,7 @@ import { InjectIdentityAuthOptions } from "./identity-auth.decorators"
 import { IdentityAuthLogEvent } from "./identity-auth.log-events"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { inviteLinkMail, passwordLinkMail } from "./password-mail.policy"
-import { normalizeEmail } from "./password.policy"
 import { IdentityPasswordResetService } from "./password-reset.service"
-import { IdentitySessionsService } from "./sessions.service"
 import { authDoors } from "./persistence/auth-doors.port"
 
 /** The metadata key of the picture a person uploaded; the Google sign-in never rewrites it. */
@@ -66,8 +65,8 @@ export class IdentityAccountsService {
         @InjectMail() private readonly mail: MailClient,
         private readonly resets: IdentityPasswordResetService,
         private readonly authenticator: IdentityAuthenticatorService,
-        private readonly sessions: IdentitySessionsService,
-        @InjectPassportPasswords() private readonly passwords: PassportPasswordsClient,
+        @InjectAuthSessions() private readonly sessions: AuthSessions,
+        @InjectAuthPasswords() private readonly passwords: AuthPasswords,
         @InjectAccessTokenVerifier() private readonly verifyAccessToken: VerifyAccessToken,
         @InjectClock() private readonly clock: Clock,
         @InjectIds() private readonly ids: Ids,
@@ -138,17 +137,17 @@ export class IdentityAccountsService {
         try {
             subject = await this.authenticator.verifyPassword(email, password)
         } catch (cause) {
-            if (cause instanceof IdentityError) return null
+            if (cause instanceof IdentityError || cause instanceof AuthError) return null
             throw cause
         }
-        const tokens = await this.sessions.start(subject, { userAgent: null, ip: null })
+        const tokens = await refusing(() => this.sessions.start(subject, { userAgent: null, ip: null }))
         let closed: boolean | undefined
         return {
             id: subject.userId,
             close: async () => {
                 if (closed !== undefined) return closed
                 try {
-                    await this.sessions.end(tokens.cookieToken)
+                    await refusing(() => this.sessions.end(tokens.cookieToken))
                     closed = true
                 } catch (cause) {
                     closed = false
