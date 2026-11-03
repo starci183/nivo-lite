@@ -5,6 +5,7 @@ import { coreHandoffNode } from "./handoff.node"
 import { tagPayloadOf } from "./handoff.policy"
 
 const [example] = coreHandoffNode.examples
+const SALES = { toModuleKey: "sales", visibility: "chat" as const }
 const BARE = { text: "n", leadId: null, channel: null, conversationId: null, context: null }
 
 describe("core.handoff", () => {
@@ -16,7 +17,7 @@ describe("core.handoff", () => {
         const [first] = coreHandoffNode.examples
         const changed = {
             ...first,
-            params: { toModuleKey: "billing" },
+            params: { toModuleKey: "billing", visibility: "chat" as const },
             effects: first.effects.map((effect) =>
                 typeof effect === "string"
                     ? effect
@@ -45,6 +46,14 @@ describe("core.handoff", () => {
         expect(fake.executed[0]?.payload).toMatchObject({ subject: { kind: "conversation", id: "c1" } })
     })
 
+    it("shows the hand-off in the chat unless the params say redirect, and refuses another visibility", () => {
+        expect(coreHandoffNode.params.parse({ toModuleKey: "sales" })).toEqual(SALES)
+        expect(coreHandoffNode.params.parse({ toModuleKey: "sales", visibility: "redirect" }).visibility).toBe(
+            "redirect",
+        )
+        expect(coreHandoffNode.params.safeParse({ toModuleKey: "sales", visibility: "loud" }).success).toBe(false)
+    })
+
     it("refuses a context that is not plain data or is too long, and a target that is empty", () => {
         expect(coreHandoffNode.input.safeParse({ ...BARE, context: { when: new Date(0) } }).success).toBe(false)
         const long = Object.fromEntries(["a", "b", "c", "d", "e"].map((key) => [key, key.repeat(1900)]))
@@ -58,22 +67,32 @@ describe("core.handoff", () => {
 describe("tagPayloadOf", () => {
     it("keeps the note as text and sends the context, nested order included, in the context field", () => {
         const context = { intents: ["order"], order: { items: [{ name: "chậu hoa", quantity: 1 }], address: null } }
-        expect(tagPayloadOf("sales", { ...BARE, context }, null)).toEqual({ toModuleKey: "sales", text: "n", context })
+        expect(tagPayloadOf(SALES, { ...BARE, context }, null)).toEqual({
+            toModuleKey: "sales",
+            visibility: "chat",
+            text: "n",
+            context,
+        })
     })
 
     it("leaves out what is not bound: an empty context, no lead, channel or conversation, no subject", () => {
-        expect(tagPayloadOf("sales", { ...BARE, context: {} }, null)).toEqual({ toModuleKey: "sales", text: "n" })
+        expect(tagPayloadOf(SALES, { ...BARE, context: {} }, null)).toEqual({
+            toModuleKey: "sales",
+            visibility: "chat",
+            text: "n",
+        })
     })
 
     it("passes the lead, channel, conversation and subject through when bound", () => {
         expect(
             tagPayloadOf(
-                "sales",
+                SALES,
                 { ...BARE, leadId: "l1", channel: "zalo", conversationId: "c1" },
                 { kind: "conversation", id: "c1" },
             ),
         ).toEqual({
             toModuleKey: "sales",
+            visibility: "chat",
             text: "n",
             leadId: "l1",
             channel: "zalo",

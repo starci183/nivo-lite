@@ -4,7 +4,7 @@ import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
 import { tagPayloadOf } from "./handoff.policy"
-import type { HandoffInput, HandoffOutput, HandoffParams } from "./handoff.types"
+import type { HandoffInput, HandoffOutput, HandoffParams, HandoffParamsIn } from "./handoff.types"
 
 const TARGET_MAX = 120
 const TEXT_MAX = 2000
@@ -14,7 +14,10 @@ const CONTEXT_JSON_MAX = 8000
 /** Plain data only: strings, numbers, booleans, null, arrays and objects of them. */
 const contextValue: NodeSchema<JsonValue> = z.json()
 
-const params: NodeSchema<HandoffParams> = z.object({ toModuleKey: z.string().min(1).max(TARGET_MAX) })
+const params: NodeSchema<HandoffParams, HandoffParamsIn> = z.object({
+    toModuleKey: z.string().min(1).max(TARGET_MAX),
+    visibility: z.enum(["chat", "redirect"]).default("chat"),
+})
 
 const input: NodeSchema<HandoffInput> = z.object({
     text: z.string().min(1).max(TEXT_MAX),
@@ -39,7 +42,7 @@ const output: NodeSchema<HandoffOutput> = z.object({
 export const coreHandoffNode: NodeDefinition<
     NodeSchema<HandoffInput>,
     NodeSchema<HandoffOutput>,
-    NodeSchema<HandoffParams>
+    NodeSchema<HandoffParams, HandoffParamsIn>
 > = defineNode({
     id: "core.handoff",
     role: "output",
@@ -50,11 +53,9 @@ export const coreHandoffNode: NodeDefinition<
     rights: [],
     effects: ["agent.tag"],
     run: async (given, context) => {
-        const tag = await context.effect(
-            "agent.tag",
-            tagPayloadOf(context.params.toModuleKey, given, context.turn.subject),
-            { dedupeKey: `agent-tag:${context.turn.turnId}:${context.params.toModuleKey}` },
-        )
+        const tag = await context.effect("agent.tag", tagPayloadOf(context.params, given, context.turn.subject), {
+            dedupeKey: `agent-tag:${context.turn.turnId}:${context.params.toModuleKey}`,
+        })
         return { toModuleKey: context.params.toModuleKey, tag }
     },
     examples: [
@@ -77,6 +78,7 @@ export const coreHandoffNode: NodeDefinition<
                     kind: "agent.tag",
                     payload: {
                         toModuleKey: "sales",
+                        visibility: "chat",
                         text: "Khách muốn đặt 1 chậu hoa",
                         context: {
                             intent: "order",
@@ -90,8 +92,8 @@ export const coreHandoffNode: NodeDefinition<
             ],
         },
         {
-            name: "tags with the note alone",
-            params: { toModuleKey: "care" },
+            name: "a redirect is a silent direct hand-off with the note alone",
+            params: { toModuleKey: "care", visibility: "redirect" },
             input: {
                 text: "Khách cần hỗ trợ sau mua",
                 leadId: null,
@@ -105,6 +107,7 @@ export const coreHandoffNode: NodeDefinition<
                     kind: "agent.tag",
                     payload: {
                         toModuleKey: "care",
+                        visibility: "redirect",
                         text: "Khách cần hỗ trợ sau mua",
                     },
                 },
