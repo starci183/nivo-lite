@@ -14,6 +14,7 @@ export type {
     ConnectionPollDeps,
     ConnectionPoller,
     AuthFailureReason,
+    UnavailableReason,
     PollFailure,
     PollLimits,
     PollPage,

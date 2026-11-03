@@ -30,6 +30,7 @@ const rowOf = (over: Partial<PollScheduleRow> = {}): PollScheduleRow => ({
     hotUntil: null,
     lastSuccessAt: null,
     lastWebhookAt: new Date(NOW - MIN),
+    unavailableReason: null,
     backfillTo: null,
     backfillNewest: null,
     ...over,
@@ -319,5 +320,47 @@ describe("authReasonOf", () => {
 
     it("names nothing for a failure that is not a refusal", () => {
         expect(authReasonOf({ kind: "transient" })).toBeUndefined()
+    })
+})
+
+describe("planAfterFailure unavailable", () => {
+    const planLacks: PollFailure = { kind: "unavailable", reason: "plan", notice: "upgrade the plan" }
+
+    it("is no failure: the breaker stays closed, nothing counts and the connection is tried again after the recheck time", () => {
+        const plan = planAfterFailure(rowOf({ failures: 3, breakerState: "half_open" }), planLacks, NOW, options, MID)
+
+        expect(plan).toMatchObject({
+            nextPollAt: NOW + options.unavailableRecheckMs,
+            intervalMs: options.unavailableRecheckMs,
+            failures: 0,
+            breakerState: "closed",
+            breakerOpenedAt: null,
+            needsReauth: false,
+            succeeded: false,
+            unavailableReason: "plan",
+        })
+    })
+
+    it("asks for the owner notice once, when the capability first becomes unavailable", () => {
+        expect(planAfterFailure(rowOf(), planLacks, NOW, options, MID).raiseOwnerNotice).toBe(true)
+        expect(planAfterFailure(rowOf({ unavailableReason: "plan" }), planLacks, NOW, options, MID).raiseOwnerNotice).toBe(false)
+    })
+
+    it("spreads the recheck by jitter and keeps an unfinished backfill", () => {
+        const row = rowOf({ backfillTo: new Date(NOW - MIN), backfillNewest: new Date(NOW) })
+
+        const plan = planAfterFailure(row, planLacks, NOW, options, 0)
+
+        expect(plan.nextPollAt).toBe(NOW + options.unavailableRecheckMs * 0.8)
+        expect(plan).toMatchObject({ backfillTo: NOW - MIN, backfillNewest: NOW })
+    })
+
+    it("is cleared by a poll that reads again, and kept through any other failure", () => {
+        const flagged = rowOf({ unavailableReason: "plan" })
+
+        expect(planAfterRead(flagged, { kind: "done", fetched: 0, recorded: 0 }, NOW, options, MID).unavailableReason).toBeNull()
+        expect(planAfterFailure(flagged, { kind: "transient" }, NOW, options, MID).unavailableReason).toBe("plan")
+        expect(planAfterFailure(flagged, { kind: "rate_limited", retryAfterSeconds: 0 }, NOW, options, MID).unavailableReason).toBe("plan")
+        expect(planAfterFailure(flagged, { kind: "fatal" }, NOW, options, MID).unavailableReason).toBe("plan")
     })
 })

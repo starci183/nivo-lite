@@ -46,6 +46,8 @@ export interface ProviderTally {
     authFailed: number
     /** Failures to retry later. */
     transient: number
+    /** Polls the provider's plan does not allow. */
+    unavailable: number
     /** Failures to give up on. */
     fatal: number
     /** Polls that waited for the rate limit and were planned again, or found the provider busy. */
@@ -61,6 +63,7 @@ const emptyTally = (): ProviderTally => ({
     rateLimited: 0,
     authFailed: 0,
     transient: 0,
+    unavailable: 0,
     fatal: 0,
     deferred: 0,
     maxLagMs: 0,
@@ -178,6 +181,7 @@ export class PollSchedulerService {
         tally.rateLimited += failure.kind === "rate_limited" ? 1 : 0
         tally.authFailed += failure.kind === "auth_failed" ? 1 : 0
         tally.transient += failure.kind === "transient" ? 1 : 0
+        tally.unavailable += failure.kind === "unavailable" ? 1 : 0
         tally.fatal += failure.kind === "fatal" ? 1 : 0
         const plan = planAfterFailure(row, failure, now, this.options.schedule, unit)
         await this.schedule.settle(row.connectionId, plan)
@@ -189,6 +193,15 @@ export class PollSchedulerService {
             this.logger.warn(ConnectionPollLogEvent.BreakerOpened, { connectionId: record.id, provider: record.provider, kind: failure.kind })
         }
         if (!plan.raiseOwnerNotice) return
+        if (failure.kind === "unavailable") {
+            this.logger.warn(ConnectionPollLogEvent.Unavailable, {
+                connectionId: record.id,
+                provider: record.provider,
+                reason: failure.reason,
+            })
+            await this.notice.unavailable(record, failure.notice, now)
+            return
+        }
         this.logger.warn(ConnectionPollLogEvent.NeedsReauth, { connectionId: record.id, provider: record.provider })
         await this.notice.needsReauth(record, now, authReasonOf(failure))
     }

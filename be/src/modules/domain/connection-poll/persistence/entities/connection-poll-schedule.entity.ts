@@ -1,5 +1,6 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 import { AbstractEntity } from "@modules/platform/database"
+import type { UnavailableReason } from "../../connection-poll.contracts"
 import type { BreakerState } from "../../poll-schedule.contracts"
 
 @Entity({ schema: "public", name: "connection_poll_schedule" })
@@ -56,6 +57,10 @@ export class ConnectionPollScheduleEntity extends AbstractEntity {
     /** The last delivery the webhook made for this connection. */
     @Column({ name: "last_webhook_at", type: "timestamptz", nullable: true })
     lastWebhookAt!: Date | null
+
+    /** Why the provider cannot be read for this connection (its plan lacks the capability). */
+    @Column({ name: "unavailable_reason", type: "text", nullable: true })
+    unavailableReason!: UnavailableReason | null
 
     /** Where an unfinished backfill resumes. */
     @Column({ name: "backfill_to", type: "timestamptz", nullable: true })

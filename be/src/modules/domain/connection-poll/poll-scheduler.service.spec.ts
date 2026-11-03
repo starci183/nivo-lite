@@ -38,6 +38,7 @@ const rowOf = (over: Partial<PollScheduleRow> = {}): PollScheduleRow => ({
     hotUntil: null,
     lastSuccessAt: null,
     lastWebhookAt: new Date(NOW_MS - MIN),
+    unavailableReason: null,
     backfillTo: null,
     backfillNewest: null,
     ...over,
@@ -374,6 +375,35 @@ describe("PollSchedulerService failures", () => {
         const { notice } = await failing({ kind: "auth_failed" }, { needsReauth: true })
 
         expect(notice.needsReauth).not.toHaveBeenCalled()
+    })
+
+    it("is no failure when the provider's plan lacks the capability: the breaker stays closed and the owner is told once, in the provider's words", async () => {
+        const { schedule, tallies, notice, logger } = await failing({ kind: "unavailable", reason: "plan", notice: "upgrade the plan" })
+
+        expect(tallies.get("sepay")?.unavailable).toBe(1)
+        expect(schedule.settle).toHaveBeenCalledWith(
+            "c-1",
+            expect.objectContaining({
+                breakerState: "closed",
+                failures: 0,
+                unavailableReason: "plan",
+                nextPollAt: NOW_MS + DEFAULT_POLL_SCHEDULE.unavailableRecheckMs,
+            }),
+        )
+        expect(notice.unavailable).toHaveBeenCalledTimes(1)
+        expect(notice.unavailable).toHaveBeenCalledWith(expect.objectContaining({ id: "c-1" }), "upgrade the plan", NOW_MS)
+        expect(notice.needsReauth).not.toHaveBeenCalled()
+        expect(logger.warn).toHaveBeenCalledWith(
+            ConnectionPollLogEvent.Unavailable,
+            expect.objectContaining({ connectionId: "c-1", reason: "plan" }),
+        )
+        expect(logger.warn).not.toHaveBeenCalledWith(ConnectionPollLogEvent.BreakerOpened, expect.anything())
+    })
+
+    it("tells the owner nothing more while the capability stays unavailable", async () => {
+        const { notice } = await failing({ kind: "unavailable", reason: "plan", notice: "upgrade the plan" }, { unavailableReason: "plan" })
+
+        expect(notice.unavailable).not.toHaveBeenCalled()
     })
 
     it("opens the breaker for a fatal failure without the owner", async () => {

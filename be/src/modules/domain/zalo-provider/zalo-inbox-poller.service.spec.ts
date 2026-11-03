@@ -9,6 +9,7 @@ import type { ZaloChatMessage, ZaloClient } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
 import { ZALO_PROVIDER_OPTIONS } from "./zalo-provider.decorators"
 import { ZaloInboxPoller } from "./zalo-inbox-poller.service"
+import { ZALO_PLAN_LACKS_READING_NOTICE } from "./messages/zalo-provider.messages"
 import { ZALO_POLL_PAGE_SIZE } from "./zalo-poll.policy"
 
 const NOW = "2026-11-04T10:00:00.000Z"
@@ -200,6 +201,14 @@ describe("ZaloInboxPoller limits and the limiter", () => {
 describe("ZaloInboxPoller classify", () => {
     it.each([
         ["a refused access token", new ZaloError({ code: ZaloErrorCode.TokenRejected }), { kind: "auth_failed", reason: "credential" }],
+        [
+            "an OA tier package that lacks the feature",
+            new ZaloError({
+                code: ZaloErrorCode.Rejected,
+                params: { zaloCode: -224, reason: "The OA needs to upgrade OA Tier Package to use this feature" },
+            }),
+            { kind: "unavailable", reason: "plan", notice: ZALO_PLAN_LACKS_READING_NOTICE },
+        ],
         ["an app or OA without the permission", new ZaloError({ code: ZaloErrorCode.NotPermitted }), { kind: "auth_failed", reason: "permission" }],
         [
             "a refusal that says in words the permission is missing",

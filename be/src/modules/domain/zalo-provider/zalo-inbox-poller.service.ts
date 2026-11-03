@@ -12,8 +12,12 @@ import type { Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectZaloProviderOptions } from "./zalo-provider.decorators"
 import type { ZaloProviderOptions } from "./zalo-provider.options"
+import { ZALO_PLAN_LACKS_READING_NOTICE } from "./messages/zalo-provider.messages"
 import { ZALO_POLL_MAX_PAGES, ZALO_POLL_PAGE_SIZE, isStaleMessage, pollRulesOf } from "./zalo-poll.policy"
 import type { ZaloPollRules } from "./zalo-poll.policy"
+
+/** The number Zalo answers when the OA tier package does not include the feature ("The OA needs to upgrade OA Tier Package to use this feature"). */
+const PLAN_LACKS_FEATURE = -224
 
 /** What Zalo says in its own words when the app or the OA lacks a permission or a scope (the numeric codes of that refusal are not in a table we can read). */
 const MISSING_PERMISSION = /permission|scope|quy[ềe]n/iu
@@ -79,7 +83,7 @@ export class ZaloInboxPoller implements MessageInboxPoller<ZaloChatMessage> {
     }
 
     /**
-     * Classifies a failure: Zalo refusing the access token or the connection needing the owner is a bad credential, and Zalo saying the app or OA
+     * Classifies a failure: an OA tier package that lacks the feature (-224) is no failure but a capability the plan does not give; Zalo refusing the access token or the connection needing the owner is a bad credential, and Zalo saying the app or OA
      * lacks a permission is an auth failure the owner must fix by connecting again and granting message reading; an exhausted quota asks to slow
      * down (Zalo names no wait, so the backoff decides); an unreachable Zalo or a busy token refresh is worth retrying; anything else is given up on.
      */
@@ -94,6 +98,9 @@ export class ZaloInboxPoller implements MessageInboxPoller<ZaloChatMessage> {
     }
 
     private classifyZalo(error: ZaloError): PollFailure {
+        if (error.params.zaloCode === PLAN_LACKS_FEATURE) {
+            return { kind: "unavailable", reason: "plan", notice: ZALO_PLAN_LACKS_READING_NOTICE }
+        }
         if (error.code === ZaloErrorCode.TokenRejected) return { kind: "auth_failed", reason: "credential" }
         if (error.code === ZaloErrorCode.NotPermitted || MISSING_PERMISSION.test(String(error.params.reason ?? ""))) {
             return { kind: "auth_failed", reason: "permission" }

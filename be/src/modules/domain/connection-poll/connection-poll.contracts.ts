@@ -44,6 +44,9 @@ export interface ConnectionPoller<Item> {
     store(connection: ConnectionRecord, item: Item): Promise<boolean>
 }
 
+/** Why a provider cannot be read for a connection although the credential is fine: its plan does not include the capability. */
+export type UnavailableReason = "plan"
+
 /** Why a provider refused a credential: it is bad (expired, revoked) or it lacks the permission the poll needs, which only the owner can grant. */
 export type AuthFailureReason = "credential" | "permission"
 
@@ -54,6 +57,7 @@ export type AuthFailureReason = "credential" | "permission"
 export type PollFailure =
     | { readonly kind: "rate_limited"; readonly retryAfterSeconds: number }
     | { readonly kind: "auth_failed"; readonly reason?: AuthFailureReason | undefined }
+    | { readonly kind: "unavailable"; readonly reason: UnavailableReason; readonly notice: string }
     | { readonly kind: "transient" }
     | { readonly kind: "fatal" }
 

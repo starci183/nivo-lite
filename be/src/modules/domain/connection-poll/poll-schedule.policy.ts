@@ -1,4 +1,4 @@
-import type { AuthFailureReason, PollFailure } from "./connection-poll.contracts"
+import type { AuthFailureReason, PollFailure, UnavailableReason } from "./connection-poll.contracts"
 import type { PollOutcome, PollScheduleOptions, PollScheduleRow } from "./poll-schedule.contracts"
 
 /** The intervals and caps a scheduler runs with when the environment names none. */
@@ -14,6 +14,7 @@ export const DEFAULT_POLL_SCHEDULE: PollScheduleOptions = {
     breakerThreshold: 5,
     breakerCooldownMs: 10 * 60_000,
     breakerCooldownCapMs: 6 * 3_600_000,
+    unavailableRecheckMs: 24 * 3_600_000,
     batchSize: 50,
     leaseMs: 10 * 60_000,
     maxInlineWaitMs: 5_000,
@@ -41,6 +42,8 @@ export interface PollPlan {
     readonly raiseOwnerNotice: boolean
     /** True when the poll ended well, so the success time is stamped. */
     readonly succeeded: boolean
+    /** Why the provider cannot be read for this connection (its plan lacks the capability); null while it can. */
+    readonly unavailableReason: UnavailableReason | null
     /** The end of the next older page of an unfinished backfill; null when there is none. */
     readonly backfillTo: number | null
     /** The newest instant an unfinished backfill read; null when there is none. */
@@ -89,6 +92,7 @@ const closedPlan = (row: PollScheduleRow, now: number, options: PollScheduleOpti
         needsReauth: false,
         raiseOwnerNotice: false,
         succeeded: true,
+        unavailableReason: null,
         backfillTo: null,
         backfillNewest: null,
     }
@@ -133,6 +137,7 @@ const openPlan = (
     needsReauth: false,
     raiseOwnerNotice: false,
     succeeded: false,
+    unavailableReason: row.unavailableReason,
     ...keptBackfill(row),
 })
 
@@ -151,6 +156,7 @@ const transientPlan = (row: PollScheduleRow, now: number, options: PollScheduleO
         needsReauth: false,
         raiseOwnerNotice: false,
         succeeded: false,
+        unavailableReason: row.unavailableReason,
         ...keptBackfill(row),
     }
 }
@@ -174,15 +180,37 @@ const rateLimitedPlan = (
         needsReauth: false,
         raiseOwnerNotice: false,
         succeeded: false,
+        unavailableReason: row.unavailableReason,
         ...keptBackfill(row),
     }
 }
 
+/** The plan after the provider said its plan lacks the capability: not a failure, the breaker stays closed, the owner is told once, and it is tried again rarely. */
+const unavailablePlan = (
+    row: PollScheduleRow,
+    reason: UnavailableReason,
+    now: number,
+    options: PollScheduleOptions,
+    unit: number,
+): PollPlan => ({
+    nextPollAt: now + jittered(options.unavailableRecheckMs, options.jitterRatio, unit),
+    intervalMs: options.unavailableRecheckMs,
+    failures: 0,
+    breakerState: "closed",
+    breakerOpenedAt: null,
+    needsReauth: false,
+    raiseOwnerNotice: row.unavailableReason === null,
+    succeeded: false,
+    unavailableReason: reason,
+    ...keptBackfill(row),
+})
+
 /**
  * The plan after a failed poll, by how the provider adapter classified it. A 429 waits at least its Retry-After and then backs off exponentially
  * without counting against the breaker; a transient failure backs off and opens the breaker at the threshold (or at once when it was the probe of
- * a half-open breaker); a refused credential opens the breaker, parks the connection for the owner and asks for one owner work item; a fatal
- * failure opens the breaker for the longest cool-down.
+ * a half-open breaker); a refused credential opens the breaker, parks the connection for the owner and asks for one owner work item; a
+ * capability the provider's plan lacks is no failure: the breaker stays closed, the owner is told once and the connection is tried again
+ * rarely; a fatal failure opens the breaker for the longest cool-down.
  */
 export const planAfterFailure = (
     row: PollScheduleRow,
@@ -202,6 +230,8 @@ export const planAfterFailure = (
                 needsReauth: true,
                 raiseOwnerNotice: !row.needsReauth,
             }
+        case "unavailable":
+            return unavailablePlan(row, failure.reason, now, options, unit)
         case "fatal":
             return openPlan(row, options.breakerCooldownCapMs, now, options, unit)
     }
