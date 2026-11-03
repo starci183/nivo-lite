@@ -48,6 +48,7 @@ interface Scenario {
     readonly inserted?: string | null
     readonly nodes?: NodeInstall | undefined
     readonly owner?: string | null
+    readonly holds?: boolean
     readonly status?: string
 }
 
@@ -68,6 +69,7 @@ const build = async (scenario: Scenario = {}) => {
     activation.activate.mockResolvedValue({ sales: scenario.status ?? "live" } as never)
     const flows = mock<AgentGraphFlowService>()
     flows.publish.mockResolvedValue("created")
+    flows.holds.mockResolvedValue(scenario.holds ?? false)
     const print = jest.fn<void, [string]>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -120,6 +122,35 @@ describe("GraphSeedService > run", () => {
         expect(agents.ensureByHandle).not.toHaveBeenCalled()
         expect(installations.insert).not.toHaveBeenCalled()
         expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph created"]])
+    })
+
+    it("costs reads only when the module is live and already runs the flow: no rule, activation or publish", async () => {
+        const { service, agents, installations, rules, activation, flows, print } = await build({
+            held: [record({ status: "live" })],
+            holds: true,
+        })
+
+        await service.run(TEXT, "NIVO")
+
+        expect(flows.holds).toHaveBeenCalledWith("ws-1", "agent-1", SPEC)
+        expect(rules.seedDefaults).not.toHaveBeenCalled()
+        expect(activation.activate).not.toHaveBeenCalled()
+        expect(flows.publish).not.toHaveBeenCalled()
+        expect(agents.ensureByHandle).not.toHaveBeenCalled()
+        expect(installations.insert).not.toHaveBeenCalled()
+        expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph unchanged"]])
+    })
+
+    it("goes the whole way when the module is live but runs another flow, or runs the flow but is not live", async () => {
+        const newer = await build({ held: [record({ status: "live" })], holds: false })
+        const waiting = await build({ held: [record({ status: "needs_connection" })], holds: true })
+
+        await newer.service.run(TEXT, "NIVO")
+        await waiting.service.run(TEXT, "NIVO")
+
+        expect(newer.flows.publish).toHaveBeenCalledTimes(1)
+        expect(waiting.flows.publish).toHaveBeenCalledTimes(1)
+        expect(waiting.flows.holds).not.toHaveBeenCalled()
     })
 
     it("installs the module first when the workspace has none: its agent under the handle of the module, then the installation", async () => {

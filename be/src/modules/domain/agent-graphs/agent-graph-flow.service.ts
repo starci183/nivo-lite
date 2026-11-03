@@ -35,6 +35,11 @@ const EMPTY: GraphDocument = { nodes: [], rights: [] }
 export class AgentGraphFlowService {
     constructor(private readonly graphs: AgentGraphsService) {}
 
+    /** True when the live version of the agent's graph already holds this flow: one read, nothing written. */
+    async holds(workspaceId: string, agentId: string, flow: GraphSpec): Promise<boolean> {
+        return sameFlow((await this.graphs.stateOfAgent(workspaceId, agentId))?.active?.flow, flow)
+    }
+
     /** Publishes the flow as the live version of the agent's graph and says what that did. */
     async publish(input: PublishFlowInput): Promise<FlowPublished> {
         const { workspaceId, agentId, installationId, flow, installed } = input
