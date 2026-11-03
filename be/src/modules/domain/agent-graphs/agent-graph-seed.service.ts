@@ -12,7 +12,7 @@ import type { SeedAction, SeedRule } from "./agent-graphs-seed.contracts"
 import type { GraphDocument } from "./agent-graphs.contracts"
 import { graphDocumentSchema } from "./agent-graphs.schema"
 import { baseGraphOf } from "./policies/base-graph.policy"
-import { sameBehaviour } from "./policies/graph-behaviour.policy"
+import { sameBehaviour, sameRights } from "./policies/graph-behaviour.policy"
 
 /** The wait given to a rule the owner never set approvers on, minutes. */
 const DEFAULT_TIMEOUT_MINUTES = 240
@@ -91,7 +91,7 @@ export class AgentGraphSeedService {
         const parsed = graphDocumentSchema.safeParse(
             await this.derive(workspaceId, moduleKey, installationId, agentId, locale),
         )
-        if (!parsed.success || sameBehaviour(parsed.data, active)) return false
+        if (!parsed.success || (sameBehaviour(parsed.data, active) && sameRights(parsed.data, active))) return false
         await this.graphs.publish({
             workspaceId,
             agentId,

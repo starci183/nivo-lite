@@ -354,3 +354,46 @@ describe("AgentGraphPublishService the contracts of a graph", () => {
         await expect(warning.service.publishDraft("ws-1", "agent-1", OWNER, "Edit")).resolves.toBe(VERSION)
     })
 })
+
+describe("AgentGraphPublishService.publishTemplate", () => {
+    it("publishes the graph a template made as a version of kind template, by the owner", async () => {
+        const state = stateOf({ activeKind: "seed" })
+        const { service, graphs } = await build(state)
+
+        await expect(service.publishTemplate("ws-1", "agent-1", state.draft, OWNER)).resolves.toBe(VERSION)
+
+        expect(graphs.publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "template", memberId: "boss" }))
+    })
+
+    it("refuses a manager the first version a template gives an agent, even one that widens nothing", async () => {
+        const state = stateOf({ activeKind: "seed" })
+        const { service, graphs } = await build(state)
+
+        expect(await codeOf(service.publishTemplate("ws-1", "agent-1", state.draft, MANAGER))).toBe(
+            AgentGraphsErrorCode.WidensNeedsOwner,
+        )
+        expect(graphs.publish).not.toHaveBeenCalled()
+    })
+
+    it("lets a manager publish a later version that widens nothing, and still refuses a widening", async () => {
+        const state = stateOf({ activeKind: "template" })
+        const { service } = await build(state)
+
+        await expect(service.publishTemplate("ws-1", "agent-1", state.draft, MANAGER)).resolves.toBe(VERSION)
+        expect(await codeOf(service.publishTemplate("ws-1", "agent-1", raised(state), MANAGER))).toBe(
+            AgentGraphsErrorCode.WidensNeedsOwner,
+        )
+    })
+
+    it("holds a template graph to the rules of the buyer, so a graph with a problem is refused and nothing is written", async () => {
+        const blank = graphOf(OWNER_EXAMPLE)
+        const state = stateOf({ activeKind: "seed" })
+        const { service, graphs } = await build(state)
+        const broken = { ...blank, nodes: [...blank.nodes, nodeOf({ key: "blank", does: "", next: ["end"] })] }
+
+        expect(await codeOf(service.publishTemplate("ws-1", "agent-1", broken, OWNER))).toBe(
+            AgentGraphsErrorCode.PublishRefused,
+        )
+        expect(graphs.publish).not.toHaveBeenCalled()
+    })
+})

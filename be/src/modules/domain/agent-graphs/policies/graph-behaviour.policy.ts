@@ -29,3 +29,8 @@ const behaviourOfNode = (node: GraphNode): unknown => ({
  */
 export const sameBehaviour = (left: GraphDocument, right: GraphDocument): boolean =>
     JSON.stringify(left.nodes.map(behaviourOfNode)) === JSON.stringify(right.nodes.map(behaviourOfNode))
+
+/** True when two graphs grant the same data rights, kind by kind. */
+export const sameRights = (left: GraphDocument, right: GraphDocument): boolean =>
+    JSON.stringify([...left.rights].sort((a, b) => a.kind.localeCompare(b.kind))) ===
+    JSON.stringify([...right.rights].sort((a, b) => a.kind.localeCompare(b.kind)))

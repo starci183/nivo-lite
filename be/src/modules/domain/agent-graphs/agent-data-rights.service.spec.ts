@@ -30,12 +30,24 @@ describe("AgentDataRightsService.rightsOf", () => {
         await expect(service.rightsOf("ws-1", "agent-1")).resolves.toEqual([])
     })
 
-    it("does not govern an agent that is still on its seed, which holds no rights because no person chose any", async () => {
-        const seeded = await build(
+    it("governs an agent on its seed by the grant the seed carries, so a seed with no grant reads nothing", async () => {
+        const granted = await build(
+            stateOf({ mode: "enforced", activeKind: "seed", active: { ...graphOf(OWNER_EXAMPLE), rights: RIGHTS } }),
+        )
+        const bare = await build(
             stateOf({ mode: "enforced", activeKind: "seed", active: { ...graphOf(OWNER_EXAMPLE), rights: [] } }),
         )
 
-        await expect(seeded.rightsOf("ws-1", "agent-1")).resolves.toBeNull()
+        await expect(granted.rightsOf("ws-1", "agent-1")).resolves.toEqual(RIGHTS)
+        await expect(bare.rightsOf("ws-1", "agent-1")).resolves.toEqual([])
+    })
+
+    it("denies by default an agent imported from a template, even in shadow, until its buyer grants a right", async () => {
+        const template = await build(
+            stateOf({ mode: "shadow", activeKind: "template", active: { ...graphOf(OWNER_EXAMPLE), rights: [] } }),
+        )
+
+        await expect(template.rightsOf("ws-1", "agent-1")).resolves.toEqual([])
     })
 
     it("governs an agent from the first version a person published, even an empty one", async () => {
@@ -44,12 +56,12 @@ describe("AgentDataRightsService.rightsOf", () => {
         await expect(chat.rightsOf("ws-1", "agent-1")).resolves.toEqual([])
     })
 
-    it("does not govern an agent whose graph is in shadow, has no version or does not exist", async () => {
+    it("governs a graph in shadow by its rights, and does not govern an agent with no version or no graph", async () => {
         const shadow = await build(stateOf({ active: { ...graphOf(OWNER_EXAMPLE), rights: RIGHTS } }))
         const noVersion = await build(stateOf({ mode: "enforced", active: null }))
         const none = await build(null)
 
-        await expect(shadow.rightsOf("ws-1", "agent-1")).resolves.toBeNull()
+        await expect(shadow.rightsOf("ws-1", "agent-1")).resolves.toEqual(RIGHTS)
         await expect(noVersion.rightsOf("ws-1", "agent-1")).resolves.toBeNull()
         await expect(none.rightsOf("ws-1", "agent-1")).resolves.toBeNull()
     })

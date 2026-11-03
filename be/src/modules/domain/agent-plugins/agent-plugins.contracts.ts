@@ -1,4 +1,9 @@
-import type { IntentCheck, IntentFrame, IntentResultSchema } from "@modules/domain/intent-contracts"
+import type {
+    GraphVocabularyManifest,
+    IntentCheck,
+    IntentFrame,
+    IntentResultSchema,
+} from "@modules/domain/intent-contracts"
 
 /**
  * Everything a domain brings to the agent core, in one declaration, the way a provider brings a manifest to the gateway. Adding a domain
@@ -13,4 +18,6 @@ export interface AgentPluginManifest {
     readonly results?: Readonly<Record<string, IntentResultSchema>> | undefined
     /** The function of each check it defines, by key. */
     readonly checks?: Readonly<Record<string, IntentCheck>> | undefined
+    /** The tool providers and steps it adds to the words a graph may use. */
+    readonly vocabulary?: GraphVocabularyManifest | undefined
 }

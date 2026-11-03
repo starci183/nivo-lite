@@ -219,6 +219,20 @@ describe("AgentGraphSeedService.refresh", () => {
         expect(graphs.publish).not.toHaveBeenCalled()
     })
 
+    it("publishes a new seed, by nobody, for a seed that still carries no grant, so the default deny gets its kind of agent's grant", async () => {
+        const state = await seedState()
+        const { service, graphs } = await build()
+
+        await expect(
+            service.refresh(
+                { ...state, active: state.active === null ? null : { ...state.active, rights: [] } },
+                "accounting",
+                "en",
+            ),
+        ).resolves.toBe(true)
+        expect(graphs.publish.mock.calls[0]?.[0].document.rights.map((right) => right.kind)).toContain("brain")
+    })
+
     it("leaves alone a version a person published, a graph with no version and a graph with unpublished edits", async () => {
         const seeded = await seedState()
         const { service, graphs, rules } = await build({ setup: null })

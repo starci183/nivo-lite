@@ -1,7 +1,8 @@
 import { z } from "zod"
+import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { MAX_LIMITS, MAX_LIMIT_LENGTH, MAX_TASK_LENGTH } from "./agent-graphs-contract.contracts"
 import { MAX_CONDITION_TERMS, MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "./agent-graphs.contracts"
-import type { Condition, GraphDocument } from "./agent-graphs.contracts"
+import type { Condition, GraphDocument, GraphNodeKind, GraphNodeStep, ToolUse } from "./agent-graphs.contracts"
 
 const factValueSchema = z.union([z.string().max(200), z.number(), z.boolean()])
 
@@ -87,20 +88,8 @@ const branchSchema = z
 const nodeSchema = z
     .object({
         key: z.string().min(1).max(60),
-        kind: z.enum(["trigger", "condition", "execute", "output"]),
-        step: z.enum([
-            "customer_message",
-            "tag",
-            "event",
-            "schedule",
-            "read_context",
-            "evaluate",
-            "call",
-            "reply",
-            "approval",
-            "write",
-            "stop",
-        ]),
+        kind: z.custom<GraphNodeKind>((value) => typeof value === "string" && graphVocabulary.hasKind(value)),
+        step: z.custom<GraphNodeStep>((value) => typeof value === "string" && graphVocabulary.hasStep(value)),
         title: z.string().max(MAX_TITLE_LENGTH),
         doneBy: z.enum(["agent", "nivo", "person"]),
         knows: z
@@ -116,7 +105,9 @@ const nodeSchema = z
         uses: z
             .array(
                 z.object({
-                    provider: z.enum(["brain", "drive", "sepay", "zalo", "telegram", "office", "mcp"]),
+                    provider: z.custom<ToolUse["provider"]>(
+                        (value) => typeof value === "string" && graphVocabulary.hasProvider(value),
+                    ),
                     tool: z.string().max(200).nullable(),
                     scope: z.enum(["read", "write"]),
                     label: z.string().max(200),

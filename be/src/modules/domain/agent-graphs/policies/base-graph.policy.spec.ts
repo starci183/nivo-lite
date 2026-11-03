@@ -81,7 +81,10 @@ describe("base-graph.policy", () => {
         ])
         expect(graph.nodes.find((node) => node.key === "decide:pay_supplier")?.decide?.facts).toEqual([AMOUNT_FACT])
         expect(graph.nodes.find((node) => node.key === "ask:pay_supplier")?.approver?.group.members).toEqual(["dinh"])
-        expect(graph.rights).toEqual([])
+        expect(graph.rights).toEqual([
+            { kind: "brain", scope: "conversation", hide: [], mask: [] },
+            { kind: "payments", scope: "conversation", hide: [], mask: [] },
+        ])
     })
 
     it("draws no stop for a rule whose branches never stop, so no node is left that no trigger reaches", async () => {

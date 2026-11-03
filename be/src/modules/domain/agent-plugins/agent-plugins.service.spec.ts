@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { IntentRegistryService } from "@modules/domain/intent-contracts"
+import { graphVocabulary, IntentRegistryService } from "@modules/domain/intent-contracts"
 import { TEST_DOMAIN } from "@tests/fixtures/builders/intent-domain.builder"
 import { AgentPluginsErrorCode } from "./errors/agent-plugins.error"
 import { AgentPluginsService } from "./agent-plugins.service"
@@ -56,5 +56,15 @@ describe("AgentPluginsService.add", () => {
             AgentPluginsErrorCode.KeyDuplicate,
         )
         expect(intents.add).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("AgentPluginsService.add vocabulary", () => {
+    it("registers the providers a manifest brings into the words a graph may use", async () => {
+        const { service } = await build()
+
+        service.add({ key: "shipping", vocabulary: { providers: ["viettel-post"] } })
+
+        expect(graphVocabulary.hasProvider("viettel-post")).toBe(true)
     })
 })

@@ -1,3 +1,4 @@
+import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { conditionSchema as condition, graphDocumentSchema as graph } from "./agent-graphs.schema"
 
 const node = (key: string) => ({
@@ -117,5 +118,15 @@ describe("agent-graphs.schema the contracts of a graph", () => {
         expect(refused({ limits: [limit({ text: "" })] })).toBe(false)
         expect(refused({ sources: [{ kind: "template", key: "k", version: 1 }] })).toBe(false)
         expect(refused({ task: "x".repeat(601) })).toBe(false)
+    })
+
+    it("reads the providers and steps from the vocabulary, so a plug-in provider is accepted only once it is registered", () => {
+        const withProvider = { ...node("n1"), uses: [{ provider: "ghn", tool: null, scope: "read", label: "Ship" }] }
+
+        expect(graph.safeParse({ nodes: [withProvider], rights: [] }).success).toBe(false)
+
+        graphVocabulary.add({ providers: ["ghn"] })
+
+        expect(graph.safeParse({ nodes: [withProvider], rights: [] }).success).toBe(true)
     })
 })

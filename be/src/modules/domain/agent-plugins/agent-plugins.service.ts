@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IntentRegistryService } from "@modules/domain/intent-contracts"
+import { graphVocabulary, IntentRegistryService } from "@modules/domain/intent-contracts"
 import { AgentPluginsError, AgentPluginsErrorCode } from "./errors/agent-plugins.error"
 import type { AgentPluginManifest } from "./agent-plugins.contracts"
 
@@ -10,13 +10,18 @@ import type { AgentPluginManifest } from "./agent-plugins.contracts"
  * names a result or a check nobody registered, so a wiring bug stops the start and never a turn.
  */
 export class AgentPluginsService {
-    private readonly keys = new Set<string>()
+    private readonly registered = new Set<string>()
 
     constructor(private readonly intents: IntentRegistryService) {}
 
+    /** The keys of the plug-ins registered so far. */
+    keys(): ReadonlyArray<string> {
+        return [...this.registered]
+    }
+
     /** Registers a plug-in. */
     add(manifest: AgentPluginManifest): void {
-        if (this.keys.has(manifest.key)) {
+        if (this.registered.has(manifest.key)) {
             throw new AgentPluginsError({ code: AgentPluginsErrorCode.KeyDuplicate, params: { key: manifest.key } })
         }
         this.intents.add({
@@ -24,6 +29,7 @@ export class AgentPluginsService {
             results: manifest.results ?? {},
             checks: manifest.checks ?? {},
         })
-        this.keys.add(manifest.key)
+        graphVocabulary.add(manifest.vocabulary ?? {})
+        this.registered.add(manifest.key)
     }
 }
