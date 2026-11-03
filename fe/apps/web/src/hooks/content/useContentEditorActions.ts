@@ -66,7 +66,7 @@ export const useContentEditorActions = (draftItem: EditorActions["draftItem"]): 
             if (prepared === undefined) return { kind: "handled" }
             const stored = await runRest(
                 async () => {
-                    await putPresigned({ url: prepared.signedUrl, file })
+                    await putPresigned({ url: prepared.signedUrl, file, contentType: file.type })
                     return { path: prepared.path, name: prepared.name }
                 },
                 { successMessage: t("saved") },

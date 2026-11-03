@@ -16,6 +16,7 @@ const mutation1: TypedDocumentNode<
 > = gql`
     mutation CreateKnowledgeUpload($input: CreateKnowledgeUploadInput!) {
         createKnowledgeUpload(input: $input) {
+            contentType
             path
             signedUrl
             token

@@ -3320,6 +3320,7 @@
     "note_KNOWLEDGE_SOURCES_INSTANCE_UNKNOWN": "This agent was not found in the workspace.",
     "note_KNOWLEDGE_SOURCES_UPLOAD_UNAVAILABLE": "An upload address could not be made. Try again later.",
     "note_KNOWLEDGE_SOURCES_FILE_NAME_REQUIRED": "A file name is required.",
+    "note_KNOWLEDGE_SOURCES_FILE_TYPE_UNSUPPORTED": "This file type cannot be read yet. Use PDF, Word, Excel, PowerPoint, text or CSV.",
     "suggest_about_topic": "About the business",
     "suggest_about_hint": "Who you are, what you do, who you serve, where.",
     "suggest_offerings_topic": "Products, services and prices",

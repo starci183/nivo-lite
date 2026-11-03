@@ -57,7 +57,7 @@ export const useChatFile = (): ChatFileView => {
         if (address === undefined) return undefined
         return runRest(
             async () => {
-                await putFile({ url: address.signedUrl, file })
+                await putFile({ url: address.signedUrl, file, contentType: file.type })
                 return { path: address.path, name: file.name }
             },
             { showSuccessToast: false },

@@ -3325,6 +3325,7 @@
     "note_KNOWLEDGE_SOURCES_INSTANCE_UNKNOWN": "Không tìm thấy agent này trong workspace.",
     "note_KNOWLEDGE_SOURCES_UPLOAD_UNAVAILABLE": "Chưa tạo được địa chỉ tải lên. Hãy thử lại sau.",
     "note_KNOWLEDGE_SOURCES_FILE_NAME_REQUIRED": "Cần có tên tệp.",
+    "note_KNOWLEDGE_SOURCES_FILE_TYPE_UNSUPPORTED": "Chưa đọc được loại tệp này. Hãy dùng PDF, Word, Excel, PowerPoint, văn bản hoặc CSV.",
     "suggest_about_topic": "Giới thiệu doanh nghiệp",
     "suggest_about_hint": "Bạn là ai, làm nghề gì, phục vụ ai, ở đâu. Chatbot dùng để chào và giới thiệu.",
     "suggest_offerings_topic": "Sản phẩm, dịch vụ và giá",

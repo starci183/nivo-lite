@@ -27,13 +27,18 @@ export const useQueueActions = (): QueueActions => {
     const { trigger: enqueueSource } = useMutateEnqueueKnowledgeSourceSwr()
     return {
         upload: async (file, onProgress) => {
-            const address = await runGraphQL(() => askUpload({ filename: file.name }), {
+            const address = await runGraphQL(() => askUpload({ filename: file.name, contentType: file.type }), {
                 showSuccessToast: false,
             })
             if (address === undefined) return null
             const sent = await runRest(
                 () =>
-                    putPresigned({ url: address.signedUrl, file, ...(onProgress === undefined ? {} : { onProgress }) }),
+                    putPresigned({
+                        url: address.signedUrl,
+                        file,
+                        contentType: address.contentType,
+                        ...(onProgress === undefined ? {} : { onProgress }),
+                    }),
                 {
                     showSuccessToast: false,
                 },
