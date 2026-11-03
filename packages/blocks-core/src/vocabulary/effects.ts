@@ -164,20 +164,11 @@ export const orderVoidEffect: EffectDefinition<z.ZodType<UndoPayload>> = defineE
     rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }],
 })
 
-/** Confirms an order; the subject is the order. */
+/** Confirms an order; the subject is the order. A pivot: the confirmation is announced to other contexts and cannot be taken back. */
 export const orderConfirmEffect: EffectDefinition<z.ZodType<OrderConfirmPayload>> = defineEffect({
     id: "order.confirm",
     title: { key: "effectOrderConfirm" },
     payload: orderConfirmPayload,
-    rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }],
-    compensation: "order.unconfirm",
-})
-
-/** Takes back the confirmation of an order a failed run confirmed; idempotent. */
-export const orderUnconfirmEffect: EffectDefinition<z.ZodType<UndoPayload>> = defineEffect({
-    id: "order.unconfirm",
-    title: { key: "effectOrderUnconfirm" },
-    payload: undoPayload,
     rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }],
 })
 
@@ -240,7 +231,6 @@ export const coreEffects: ReadonlyArray<EffectDefinition> = [
     orderRecordEffect,
     orderVoidEffect,
     orderConfirmEffect,
-    orderUnconfirmEffect,
     paymentMarkPaidEffect,
     paymentClaimRecordEffect,
     paymentClaimWithdrawEffect,

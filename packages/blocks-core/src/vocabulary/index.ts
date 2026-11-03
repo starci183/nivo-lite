@@ -26,7 +26,6 @@ export {
     channelSendEffect,
     coreEffects,
     orderConfirmEffect,
-    orderUnconfirmEffect,
     orderVoidEffect,
     orderRecordEffect,
     paymentClaimRecordEffect,

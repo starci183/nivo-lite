@@ -24,7 +24,6 @@ export {
     knowledgeDocumentKind,
     messageKind,
     orderConfirmEffect,
-    orderUnconfirmEffect,
     orderVoidEffect,
     orderKind,
     orderRecordEffect,
