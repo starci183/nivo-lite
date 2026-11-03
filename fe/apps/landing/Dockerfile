@@ -29,6 +29,7 @@ COPY --from=manifests /app ./
 RUN npm ci --ignore-scripts
 
 COPY turbo.json ./
+COPY be/contracts be/contracts
 COPY fe/tsconfig.json fe/tsconfig.json
 COPY fe/packages fe/packages
 COPY fe/apps/landing fe/apps/landing
