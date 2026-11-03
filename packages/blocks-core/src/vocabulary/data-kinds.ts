@@ -19,6 +19,7 @@ export const orderKind: DataKindDefinition = defineDataKind({
         items: z.array(z.record(z.string(), z.unknown())),
         amountVnd: amount,
         status: text,
+        note: nullableText,
         confirmedAt: moment.nullable(),
         createdAt: moment,
     }),

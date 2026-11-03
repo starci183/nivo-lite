@@ -1,4 +1,4 @@
-import { BRANCH_FIELD, graphNodeProblems, inputSourcesOf, TRIGGER_SOURCE } from "../node"
+import { BRANCH_FIELD, graphNodeProblems, inputSourcesOf, nodeSagaOf, TRIGGER_SOURCE } from "../node"
 import type { NodeDefinition, NodeIndex } from "../node"
 import type { DataRight } from "../rights/rights.types"
 import type { GraphSpec, GraphSpecNode, GraphSpecProblem } from "./graph-spec.types"
@@ -67,6 +67,30 @@ const refProblems = (spec: GraphSpec, nodes: ReadonlyMap<string, GraphSpecNode>)
             .map((source): GraphSpecProblem => ({ code: "GRAPH_REF_NOT_UPSTREAM", at: `${node.key}<-${source}` }))
     })
 
+/**
+ * The saga rule: a compensable node reachable after a pivot could never be undone (the run goes forward past a pivot, never back), so
+ * each one is named. A node not installed is judged elsewhere.
+ */
+const sagaProblems = (
+    spec: GraphSpec,
+    nodes: ReadonlyMap<string, GraphSpecNode>,
+    index: NodeIndex,
+): ReadonlyArray<GraphSpecProblem> => {
+    const sagaOf = (node: GraphSpecNode): string | null => {
+        const definition = index.nodes.get(node.step)
+        return definition === undefined ? null : nodeSagaOf(definition, index)
+    }
+    const after = spec.nodes
+        .filter((node) => sagaOf(node) === "pivot")
+        .flatMap((pivot) => [...reachedFrom(nodes, edgesOf(pivot))])
+    return [...new Set(after)]
+        .filter((key) => {
+            const node = nodes.get(key)
+            return node !== undefined && sagaOf(node) === "compensable"
+        })
+        .map((at): GraphSpecProblem => ({ code: "GRAPH_COMPENSABLE_AFTER_PIVOT", at }))
+}
+
 /** What a node needs the agent to hold: its own rights and those of every effect and tool it may use. */
 const requiredRights = (node: NodeDefinition, index: NodeIndex): ReadonlyArray<DataRight> => [
     ...node.rights,
@@ -108,7 +132,8 @@ const minimumProblems = (
 }
 
 /**
- * The problems of a graph spec against the installed nodes: its shape (keys, edges, references), every node as `graphNodeProblems`
+ * The problems of a graph spec against the installed nodes: its shape (keys, edges, references), the saga rule (nothing undoable after a
+ * pivot), every node as `graphNodeProblems`
  * judges it under the spec's own grant, and a grant that holds more than its nodes need. A step that is not installed is
  * `NODE_UNKNOWN` (any built-in step but `stop`: a spec is composed of SDK nodes), and the minimum is not judged while one is missing.
  */
@@ -123,6 +148,7 @@ export const graphSpecProblems = (spec: GraphSpec, index: NodeIndex): ReadonlyAr
     return [
         ...shapeProblems(spec, nodes),
         ...refProblems(spec, nodes),
+        ...sagaProblems(spec, nodes, index),
         ...judged,
         ...(installed.length === working.length ? minimumProblems(spec, installed, index) : []),
     ]

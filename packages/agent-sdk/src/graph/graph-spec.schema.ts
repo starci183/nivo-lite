@@ -28,7 +28,7 @@ const node = z.strictObject({
     key: z.string().regex(KEY),
     kind: z.enum(["trigger", "condition", "execute", "output"]),
     step: z.string().min(1),
-    params: z.record(z.string(), z.unknown()).optional(),
+    params: z.record(z.string(), z.json()).optional(),
     input: z.record(z.string(), binding).optional(),
     next: z.string().regex(KEY).optional(),
     routes: z.record(z.string(), z.string().regex(KEY)).optional(),

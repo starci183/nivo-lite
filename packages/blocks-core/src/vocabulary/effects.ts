@@ -65,7 +65,14 @@ export interface WorkItemRaisePayload {
     readonly claimId?: string | undefined
 }
 
+/** What every undo effect is given: the id of the subject the effect it undoes touched. */
+export interface UndoPayload {
+    readonly id: string
+}
+
 const id = z.string().min(1)
+
+const undoPayload: z.ZodType<UndoPayload> = z.object({ id })
 
 const channelSendPayload: z.ZodType<ChannelSendPayload> = z.object({
     conversationId: id,
@@ -137,6 +144,15 @@ export const orderRecordEffect: EffectDefinition<z.ZodType<OrderRecordPayload>> 
     title: { key: "effectOrderRecord" },
     payload: orderRecordPayload,
     rights: [{ kind: "order", access: "write", scope: "turn", fields: ["leadId", "items", "amountVnd"] }],
+    compensation: "order.void",
+})
+
+/** Voids an order a failed run recorded; voiding it twice is voiding it once. */
+export const orderVoidEffect: EffectDefinition<z.ZodType<UndoPayload>> = defineEffect({
+    id: "order.void",
+    title: { key: "effectOrderVoid" },
+    payload: undoPayload,
+    rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }],
 })
 
 /** Confirms an order; the subject is the order. */
@@ -144,6 +160,15 @@ export const orderConfirmEffect: EffectDefinition<z.ZodType<OrderConfirmPayload>
     id: "order.confirm",
     title: { key: "effectOrderConfirm" },
     payload: orderConfirmPayload,
+    rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }],
+    compensation: "order.unconfirm",
+})
+
+/** Takes back the confirmation of an order a failed run confirmed; idempotent. */
+export const orderUnconfirmEffect: EffectDefinition<z.ZodType<UndoPayload>> = defineEffect({
+    id: "order.unconfirm",
+    title: { key: "effectOrderUnconfirm" },
+    payload: undoPayload,
     rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }],
 })
 
@@ -164,6 +189,15 @@ export const paymentClaimRecordEffect: EffectDefinition<z.ZodType<PaymentClaimRe
     title: { key: "effectPaymentClaimRecord" },
     payload: paymentClaimRecordPayload,
     rights: [{ kind: "payment-claim", access: "write", scope: "turn", fields: ["leadId", "amountVnd", "names", "body"] }],
+    compensation: "payment-claim.withdraw",
+})
+
+/** Withdraws a claim a failed run recorded; idempotent. */
+export const paymentClaimWithdrawEffect: EffectDefinition<z.ZodType<UndoPayload>> = defineEffect({
+    id: "payment-claim.withdraw",
+    title: { key: "effectPaymentClaimWithdraw" },
+    payload: undoPayload,
+    rights: [{ kind: "payment-claim", access: "write", scope: "turn", fields: ["status"] }],
 })
 
 /** Tags another agent, which its tag grants allow; the subject is the tag. */
@@ -180,15 +214,28 @@ export const workItemRaiseEffect: EffectDefinition<z.ZodType<WorkItemRaisePayloa
     title: { key: "effectWorkItemRaise" },
     payload: workItemRaisePayload,
     rights: [],
+    compensation: "work-item.withdraw",
 })
 
-/** Every effect the core nodes may run; the back end registers an executor for each. */
+/** Withdraws a work item a failed run raised; idempotent. */
+export const workItemWithdrawEffect: EffectDefinition<z.ZodType<UndoPayload>> = defineEffect({
+    id: "work-item.withdraw",
+    title: { key: "effectWorkItemWithdraw" },
+    payload: undoPayload,
+    rights: [],
+})
+
+/** Every effect the core nodes may run and every undo a compensation runs; the back end registers an executor for each. */
 export const coreEffects: ReadonlyArray<EffectDefinition> = [
     channelSendEffect,
     orderRecordEffect,
+    orderVoidEffect,
     orderConfirmEffect,
+    orderUnconfirmEffect,
     paymentMarkPaidEffect,
     paymentClaimRecordEffect,
+    paymentClaimWithdrawEffect,
     agentTagEffect,
     workItemRaiseEffect,
+    workItemWithdrawEffect,
 ] as ReadonlyArray<EffectDefinition>

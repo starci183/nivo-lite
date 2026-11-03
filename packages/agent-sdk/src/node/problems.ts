@@ -13,6 +13,7 @@ export type NodeProblemCode =
     | "TOOL_DUPLICATE"
     | "DATA_KIND_DUPLICATE"
     | "NODE_EFFECT_UNKNOWN"
+    | "EFFECT_COMPENSATION_UNKNOWN"
     | "NODE_TOOL_UNKNOWN"
     | "NODE_CONDITION_MUTATES"
     | "RIGHT_KIND_UNKNOWN"
@@ -90,7 +91,7 @@ const toolProblems = (node: NodeDefinition, tools: ReadonlyMap<string, ToolDefin
 
 /**
  * The problems of an install: duplicates, effects and tools a node declares and nobody installed, a condition that calls a mutating
- * tool, and rights over unknown kinds or fields.
+ * tool, rights over unknown kinds or fields, and an effect whose compensation nobody installed.
  */
 export const nodeListProblems = (install: NodeInstall): ReadonlyArray<NodeProblem> => {
     const index = nodeIndexOf(install)
@@ -119,6 +120,9 @@ export const nodeListProblems = (install: NodeInstall): ReadonlyArray<NodeProble
             ...rightProblems(node.rights, index.dataKinds, node.id),
         ]),
         ...install.effects.flatMap((effect) => rightProblems(effect.rights, index.dataKinds, effect.id)),
+        ...install.effects
+            .filter((effect) => effect.compensation !== undefined && !index.effects.has(effect.compensation))
+            .map((effect): NodeProblem => ({ code: "EFFECT_COMPENSATION_UNKNOWN", at: `${effect.id}:${effect.compensation}` })),
         ...install.tools.flatMap((tool) => rightProblems(tool.rights, index.dataKinds, tool.id)),
     ]
 }

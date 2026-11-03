@@ -13,9 +13,10 @@ import type {
 /** A data kind name: kebab-case ASCII, one word group, no namespace. */
 const DATA_KIND = /^[a-z][a-z0-9-]*$/
 
-/** Defines an effect a node may run. Throws `SdkDefinitionError` (`ID_MALFORMED`) at module load. */
+/** Defines an effect a node may run. Throws `SdkDefinitionError` (`ID_MALFORMED`) at module load, for its id or its compensation. */
 export const defineEffect = <P extends z.ZodType>(config: EffectConfig<P>): EffectDefinition<P> => {
     assertNamespaced(config.id)
+    if (config.compensation !== undefined) assertNamespaced(config.compensation)
     return { ...config, entry: "effect" }
 }
 

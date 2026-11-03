@@ -1,5 +1,6 @@
 import type { NodeInputBindings, NodeProblemCode, NodeRole } from "../node"
 import type { DataRight } from "../rights/rights.types"
+import type { JsonValue } from "../schema/schema.types"
 
 /** The schema id of an agent graph spec. */
 export type GraphSpecSchemaId = "nivo/agent-graph@1"
@@ -25,7 +26,7 @@ export interface GraphSpecNode {
     readonly key: string
     readonly kind: NodeRole
     readonly step: string
-    readonly params?: Readonly<Record<string, unknown>> | undefined
+    readonly params?: Readonly<Record<string, JsonValue>> | undefined
     readonly input?: NodeInputBindings | undefined
     /** The node that follows, for a node that is not a condition; none ends the run. */
     readonly next?: string | undefined
@@ -53,6 +54,7 @@ export type GraphSpecProblemCode =
     | "GRAPH_GRANT_EXCESS"
     | "GRAPH_EFFECTS_MISMATCH"
     | "GRAPH_TOOLS_MISMATCH"
+    | "GRAPH_COMPENSABLE_AFTER_PIVOT"
 
 /** One problem of a graph spec and where it is: a node key, or a granted right, tool or effect. */
 export interface GraphSpecProblem {
