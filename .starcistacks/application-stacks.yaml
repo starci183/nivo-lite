@@ -303,6 +303,35 @@ environments:
             NEXT_PUBLIC_DEVELOPER_API_URL: "http://localhost:${port.api}"
             NEXT_PUBLIC_SITE_URL: "http://localhost:${port.web}"
             NEXT_PUBLIC_LANDING_URL: "http://localhost:${port.landing}"
+      seed:
+        # The module/action catalogue, as the production deploy runs it (verify exec "catalogue synced"): without it public.authority_actions
+        # lacks the actions the default rules grant, and installing an agent fails on authority_rules_action_fk. It upserts, so a rerun is safe.
+        - name: catalogue
+          argv: [node, dist/apps/cli/src/main.js, seed-modules, ensure]
+          cwd: be
+          after: migrate
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET]
+          env:
+            PRIMARY_DB_SCHEMA: public
+            SITE_URL: "http://localhost:${port.web}"
+            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            PUBLIC_API_URL: "http://localhost:${port.api}"
+            STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
+            STORAGE_BUCKET_PREFIX: nivo-dev
+        # The buckets of the environment (cli storage bootstrap: creates the missing ones, opens the picture bucket to anonymous reads):
+        # without them every upload and media read answers OBJECT_STORAGE_UNAVAILABLE. Safe to run again.
+        - name: buckets
+          argv: [node, dist/apps/cli/src/main.js, storage, bootstrap]
+          cwd: be
+          after: migrate
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET]
+          env:
+            PRIMARY_DB_SCHEMA: public
+            SITE_URL: "http://localhost:${port.web}"
+            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            PUBLIC_API_URL: "http://localhost:${port.api}"
+            STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
+            STORAGE_BUCKET_PREFIX: nivo-dev
       processes:
         - name: api
           argv: [node, dist/apps/api/src/main.js]
