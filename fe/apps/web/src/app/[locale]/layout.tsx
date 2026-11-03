@@ -16,7 +16,8 @@ type LayoutProps = {
 export { appLayoutViewport as viewport } from "@/features/layouts/AppLayout"
 
 /** The localized document title of this route segment. */
-export const generateMetadata = async (props: LayoutProps): Promise<Metadata> => appLayoutMetadata((await props.params).locale)
+export const generateMetadata = async (props: LayoutProps): Promise<Metadata> =>
+    appLayoutMetadata((await props.params).locale)
 
 /** The locale segment's document, providers and app chrome. */
 const Layout = async (props: LayoutProps): Promise<ReactElement> => {

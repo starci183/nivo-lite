@@ -36,7 +36,10 @@ interface ConnectionRailPane extends ConnectionRail {
 }
 
 /** The live rail pane of a provider page, which becomes a drawer on a narrow screen. */
-export const connectionRailPaneOf = (rail: ConnectionRail, onOpenChange: (isOpen: boolean) => void): ConnectionRailPane => ({
+export const connectionRailPaneOf = (
+    rail: ConnectionRail,
+    onOpenChange: (isOpen: boolean) => void,
+): ConnectionRailPane => ({
     label: rail.label,
     collapse: "drawer" as const,
     collapseLabel: rail.label,

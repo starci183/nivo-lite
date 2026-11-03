@@ -21,7 +21,11 @@ import { SalesOrderRows } from "@/components/composites/SalesOrderRows"
 import { SalesPipelineBoard } from "@/components/composites/SalesPipelineBoard"
 import { SALES_WORKBENCH_TABS as SALES_TABS } from "@/modules/types"
 /** The six Sales areas, optional customer conversation and explanation drawings. */
-export const SALES_WORKBENCH_SHAPES: readonly [...typeof SALES_TABS, "conversation", "explanation"] = [...SALES_TABS, "conversation", "explanation"]
+export const SALES_WORKBENCH_SHAPES: readonly [...typeof SALES_TABS, "conversation", "explanation"] = [
+    ...SALES_TABS,
+    "conversation",
+    "explanation",
+]
 type SalesWorkbenchShape = (typeof SALES_WORKBENCH_SHAPES)[number]
 interface SalesWorkbenchBaseProps {
     readonly shape: SalesWorkbenchShape

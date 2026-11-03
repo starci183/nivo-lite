@@ -7,4 +7,8 @@ export const useWorkspaceParamsKey = <Params extends readonly unknown[]>(
     name: string,
     params: Params | null,
 ): KeyOrWait<readonly [string, string, ...Params]> =>
-    tenantParamsKey(name, useAppSelector((state) => state.workspace.activeWorkspaceId), params)
+    tenantParamsKey(
+        name,
+        useAppSelector((state) => state.workspace.activeWorkspaceId),
+        params,
+    )

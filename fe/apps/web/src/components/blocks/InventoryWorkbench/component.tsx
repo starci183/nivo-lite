@@ -18,7 +18,10 @@ import { InventoryHistory } from "@/components/composites/InventoryHistory"
 import { InventoryCount } from "@/components/composites/InventoryCount"
 import { InventoryImport } from "@/components/composites/InventoryImport"
 /** The seven original Inventory panels and the recorded-explanation arrangement. */
-export const INVENTORY_WORKBENCH_SHAPES: readonly [...typeof INVENTORY_TABS, "explanation"] = [...INVENTORY_TABS, "explanation"]
+export const INVENTORY_WORKBENCH_SHAPES: readonly [...typeof INVENTORY_TABS, "explanation"] = [
+    ...INVENTORY_TABS,
+    "explanation",
+]
 type InventoryWorkbenchShape = (typeof INVENTORY_WORKBENCH_SHAPES)[number]
 /** Plain inventory models and commands; only this module Base draws their read status. */
 export interface InventoryWorkbenchBaseProps {

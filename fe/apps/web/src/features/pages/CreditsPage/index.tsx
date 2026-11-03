@@ -35,4 +35,6 @@ export const CreditsPage = async (): Promise<ReactElement> => (
 )
 
 /** The same Page and slot placeholders during route loading. */
-export const CreditsLoadingPage = async (): Promise<ReactElement> => <CreditsLoadingPageBase props={await creditsHeader()} />
+export const CreditsLoadingPage = async (): Promise<ReactElement> => (
+    <CreditsLoadingPageBase props={await creditsHeader()} />
+)

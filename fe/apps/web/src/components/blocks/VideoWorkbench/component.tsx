@@ -21,7 +21,12 @@ import { VideoPreviewCard, VIDEO_PREVIEW_CARD_READ_DEFAULTS } from "@/components
 import { VideoResultView, VIDEO_RESULT_VIEW_READ_DEFAULTS } from "@/components/composites/VideoResultView"
 import { VideoLibraryList } from "@/components/composites/VideoLibraryList"
 /** The approved normal, five editor and explanation drawings remain exhaustive. */
-export const VIDEO_WORKBENCH_SHAPES: readonly ["library", "brand", ...typeof VIDEO_EDITOR_STEPS, "explanation"] = ["library", "brand", ...VIDEO_EDITOR_STEPS, "explanation"]
+export const VIDEO_WORKBENCH_SHAPES: readonly ["library", "brand", ...typeof VIDEO_EDITOR_STEPS, "explanation"] = [
+    "library",
+    "brand",
+    ...VIDEO_EDITOR_STEPS,
+    "explanation",
+]
 type Shape = (typeof VIDEO_WORKBENCH_SHAPES)[number]
 /** One pure Video drawing takes real read slots, separate local/copy atoms and actions. */
 export type VideoWorkbenchBaseProps = VideoWorkbenchViews["view"]

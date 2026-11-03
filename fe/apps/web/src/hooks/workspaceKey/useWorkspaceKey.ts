@@ -11,4 +11,9 @@ export const useWorkspaceKey = <Rest extends ReadonlyArray<string | null>>(
     rest: Rest,
     enabled = true,
 ): KeyOrWait<readonly [string, string, ...Rest]> =>
-    tenantKey(name, useAppSelector((state) => state.workspace.activeWorkspaceId), rest, enabled)
+    tenantKey(
+        name,
+        useAppSelector((state) => state.workspace.activeWorkspaceId),
+        rest,
+        enabled,
+    )
