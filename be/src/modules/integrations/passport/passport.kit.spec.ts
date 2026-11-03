@@ -149,6 +149,7 @@ const seedOldSession = (sessions: MemorySessionStore): void => {
         tokenHash: createHash("sha256").update(OLD_REFRESH_TOKEN, "utf8").digest("hex"),
         expiresAt: new Date(NOW.getTime() + DAY_MS),
         usedAt: null,
+        racedCount: 0,
     })
 }
 
