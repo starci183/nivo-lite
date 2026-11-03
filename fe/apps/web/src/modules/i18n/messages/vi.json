@@ -8187,7 +8187,7 @@
     "approveAgain": "Duyệt lại",
     "alertDrafting": "NIVO đang soạn nháp. Trang tự cập nhật khi xong.",
     "alertReview": "Tài liệu nội bộ vừa đổi. Xem lại nội dung hoặc để NIVO soạn lại, rồi duyệt lại.",
-    "pubFailNoRight": "Chưa agent nội bộ nào được quyền đọc tài liệu nội bộ để soạn. Hãy bật công cụ brain.documents.read cho một agent nội bộ ở mục Quyền, rồi soạn lại.",
+    "pubFailNoRight": "Chưa agent nội bộ nào đọc được tài liệu nội bộ để soạn. Chỉ một agent nội bộ (không phải Chatbot hay agent trả lời khách) đọc được: agent đó cần được bật công cụ “Đọc tài liệu nội bộ để soạn” ở trang Kết nối, và bản đồ công việc của nó phải cho phép đọc dữ liệu Brain. Hãy kiểm tra rồi soạn lại.",
     "pubFailUnavailable": "NIVO chưa soạn được lúc này. Hãy thử lại sau.",
     "pubFailNothingLeft": "Mọi đoạn trong các tài liệu đã chọn đều thuộc phần không công khai (lương, số giấy tờ, hợp đồng, vốn, chiết khấu nội bộ), nên không còn gì để soạn.",
     "pubFailGeneric": "Không soạn được tài liệu này.",

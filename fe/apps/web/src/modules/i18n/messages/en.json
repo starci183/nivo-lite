@@ -8182,7 +8182,7 @@
     "approveAgain": "Approve again",
     "alertDrafting": "NIVO is drafting. This updates by itself when it is done.",
     "alertReview": "An internal document changed. Read the text, or let NIVO draft again, then approve again.",
-    "pubFailNoRight": "No internal agent has the right to read internal documents for drafting. Turn on the tool brain.documents.read for an internal agent under Permissions, then draft again.",
+    "pubFailNoRight": "No internal agent could read the internal documents for drafting. Only an internal agent (not the Chatbot or another customer-facing agent) can read them: it needs the tool “Read an internal document for drafting” switched on under Connections, and its work map must allow it to read Brain data. Check both, then draft again.",
     "pubFailUnavailable": "NIVO could not draft right now. Try again later.",
     "pubFailNothingLeft": "Every passage of the chosen documents is something that is never public (salaries, ID numbers, contracts, capital, internal discounts), so nothing is left to draft.",
     "pubFailGeneric": "This document could not be drafted.",
