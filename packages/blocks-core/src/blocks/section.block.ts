@@ -1,10 +1,14 @@
 import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition, BlockSlots } from "@nivo-lite/agent-sdk/block"
+import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
+import type { TextSchema } from "./schema-types"
 
-const props = z.object({ title: specText, hint: specText.optional() })
-const slots = {} as const satisfies BlockSlots
+const props: z.ZodObject<{ title: TextSchema; hint: z.ZodOptional<TextSchema> }> = z.object({
+    title: specText,
+    hint: specText.optional(),
+})
+const slots: Record<never, never> = {}
 
 /** A titled card holding child blocks, with an optional hint over them. */
 export const sectionBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
