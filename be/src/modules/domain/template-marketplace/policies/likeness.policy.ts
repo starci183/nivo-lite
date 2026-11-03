@@ -1,4 +1,4 @@
-import type { LikenessClaim } from "@modules/domain/agent-templates"
+import type { LikenessClaim } from "@nivo/agent-sdk/template"
 
 /** The part of a consent record the check reads. */
 export interface ConsentRecord {

@@ -1,0 +1,31 @@
+{
+  "name": "@nivo/agent-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The SDK every Nivo agent kind is built on: the node-kind and provider registry, the agent template format with its allowlist packager, parameters, provenance and update merge, and the fakes to test them.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./template": {
+      "types": "./dist/template/index.d.ts",
+      "default": "./dist/template/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

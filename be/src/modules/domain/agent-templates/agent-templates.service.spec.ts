@@ -28,10 +28,10 @@ const memberOf = builder<WorkspaceMember>({
 
 const documentOf = builder<PublicDocumentView>({
     id: "doc-1",
-    title: "Giờ mở cửa",
+    title: "Gio mo cua",
     body: "draft text",
     draftRevision: 1,
-    publishedBody: "Spa mở cửa từ 9 giờ đến 21 giờ mỗi ngày.",
+    publishedBody: "Spa mo cua tu 9 gio den 21 gio moi ngay.",
     status: "published",
     kind: "written",
     question: null,
@@ -160,7 +160,7 @@ describe("AgentTemplatesService.preview", () => {
         expect(preview.report.brainRefs).toBeGreaterThan(0)
         expect(preview.package?.version).toBe(1)
         expect(preview.package?.starterKnowledge).toEqual([
-            { title: "Giờ mở cửa", body: "Spa mở cửa từ 9 giờ đến 21 giờ mỗi ngày." },
+            { title: "Gio mo cua", body: "Spa mo cua tu 9 gio den 21 gio moi ngay." },
         ])
         expect(preview.package?.publisher).toEqual({ creatorId: CREATOR.accountId, displayName: "Linh" })
         expect(versions.save).not.toHaveBeenCalled()

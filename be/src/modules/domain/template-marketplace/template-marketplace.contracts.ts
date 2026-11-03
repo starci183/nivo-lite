@@ -1,4 +1,4 @@
-import type { TemplateParameter, TemplateText, UpdateOffer, UpdateUnit } from "@modules/domain/agent-templates"
+import type { TemplateParameter, TemplateText, UpdateOffer, UpdateUnit } from "@nivo/agent-sdk/template"
 
 /** The review state of a listing. */
 export type ListingStatus = "draft" | "submitted" | "approved" | "rejected"

@@ -1,4 +1,4 @@
-import type { Condition } from "@modules/domain/agent-graphs"
+import type { Condition } from "./graph.types"
 
 /** The terms of a condition, in reading order, groups opened. */
 export const leavesOf = (condition: Condition): ReadonlyArray<Condition> => {

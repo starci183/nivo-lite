@@ -1,5 +1,5 @@
-import { PARAMETERS, draftOf, leakyGraph, packageOf } from "@tests/fixtures/builders/agent-template.builder"
-import { instantiate, resolveValues } from "./template-parameters.policy"
+import { PARAMETERS, draftOf, leakyGraph, packageOf } from "../testing"
+import { instantiate, resolveValues } from "./parameters"
 
 const pkg = () => packageOf(leakyGraph(), draftOf())
 const decideOf = (graph: ReturnType<typeof instantiate>) => graph.nodes.find((node) => node.key === "decide")?.decide

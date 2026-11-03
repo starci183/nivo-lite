@@ -1,5 +1,5 @@
 import { Query } from "@nestjs/cqrs"
-import type { UpdateOffer } from "@modules/domain/agent-templates"
+import type { UpdateOffer } from "@nivo/agent-sdk/template"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { TemplateUpdateOffersRequest } from "./template-update-offers.contracts"
 

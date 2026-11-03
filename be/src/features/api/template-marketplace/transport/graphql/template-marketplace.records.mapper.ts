@@ -9,7 +9,7 @@ import type {
     TemplateVersionView,
     TemplateView,
     UpdateOffer,
-} from "@modules/domain/agent-templates"
+} from "@nivo/agent-sdk/template"
 import type {
     CreatorLedgerView,
     LikenessGrantRequest,

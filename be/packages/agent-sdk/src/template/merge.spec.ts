@@ -1,8 +1,8 @@
-import type { GraphDocument } from "@modules/domain/agent-graphs"
-import { amountIs, branchOf } from "@tests/fixtures/builders/agent-graph.builder"
-import { draftOf, leakyGraph, packageOf, withExtraBranch } from "@tests/fixtures/builders/agent-template.builder"
-import { applyUnits, updateUnits } from "./template-merge.policy"
-import { instantiate } from "./template-parameters.policy"
+import type { GraphDocument } from "./graph.types"
+import { amountIs, branchOf } from "../testing"
+import { draftOf, leakyGraph, packageOf, withExtraBranch } from "../testing"
+import { applyUnits, updateUnits } from "./merge"
+import { instantiate } from "./parameters"
 
 const VALUES = { autoLimit: 5_000_000, waitMinutes: 240, shop: "Spa Hoa" }
 const v1 = (): GraphDocument => instantiate(packageOf(), VALUES)

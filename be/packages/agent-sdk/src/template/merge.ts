@@ -1,6 +1,6 @@
-import type { GraphBranch, GraphDocument, GraphNode } from "@modules/domain/agent-graphs"
-import type { UpdateUnit } from "../agent-templates.contracts"
-import { canonicalJson } from "./template-packager.policy"
+import { canonicalJson } from "./canonical"
+import type { UpdateUnit } from "./format.types"
+import type { GraphBranch, GraphDocument, GraphNode } from "./graph.types"
 
 /** The three graphs of an update: the version installed (with the buyer's values), what the buyer has now, and the version offered. */
 export interface MergeInput {
@@ -108,17 +108,15 @@ export const updateUnits = (input: MergeInput): ReadonlyArray<UpdateUnit> => {
 }
 
 const withBranch = (node: GraphNode, branch: GraphBranch, at: number): GraphNode => {
-    const branches = node.decide?.branches ?? []
-    const replaced = branches.some((entry) => entry.key === branch.key)
     if (node.decide === undefined) return node
-    if (replaced) {
+    const branches = node.decide.branches
+    if (branches.some((entry) => entry.key === branch.key)) {
         return {
             ...node,
             decide: { ...node.decide, branches: branches.map((entry) => (entry.key === branch.key ? branch : entry)) },
         }
     }
-    const last = branches[branches.length - 1]
-    const limit = last?.when === "else" ? branches.length - 1 : branches.length
+    const limit = branches.at(-1)?.when === "else" ? branches.length - 1 : branches.length
     const index = Math.min(at, limit)
     return {
         ...node,
@@ -150,9 +148,10 @@ const apply = (graph: GraphDocument, next: GraphDocument, unit: UpdateUnit): Gra
         }
         return { ...graph, nodes: graph.nodes.map((node) => (node.key === unit.nodeKey ? trimmed : node)) }
     }
-    const wanted = branchOf(offered, unit.branchKey)
-    if (wanted === undefined || offered === undefined) return graph
-    const at = (offered.decide?.branches ?? []).findIndex((branch) => branch.key === unit.branchKey)
+    const offeredBranches = offered?.decide?.branches ?? []
+    const wanted = offeredBranches.find((branch) => branch.key === unit.branchKey)
+    if (wanted === undefined) return graph
+    const at = offeredBranches.indexOf(wanted)
     return {
         ...graph,
         nodes: graph.nodes.map((node) => (node.key === unit.nodeKey ? withBranch(node, wanted, at) : node)),

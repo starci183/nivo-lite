@@ -1,4 +1,4 @@
-import type { TemplateView } from "@modules/domain/agent-templates"
+import type { TemplateView } from "@nivo/agent-sdk/template"
 import type { TemplateType } from "./dto/template.type"
 import { toTemplateType } from "./template-marketplace.records.mapper"
 
