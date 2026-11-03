@@ -1,13 +1,11 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { runNode } from "@nivo-lite/agent-sdk/node"
 import type { EffectPayload, NodeHostPorts, NodeRun } from "@nivo-lite/agent-sdk/node"
-import { AiTasksService } from "@modules/domain/ai-tasks"
-import type { AiTaskScope } from "@modules/domain/ai-tasks"
 import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
-import { InjectGraphNodeToolDoor } from "./graph-nodes.decorators"
-import type { NodeRunInput, NodeToolDoor, NodeTurn, NodeUndoInput } from "./graph-nodes.contracts"
+import { InjectGraphNodeModel, InjectGraphNodeToolDoor } from "./graph-nodes.decorators"
+import type { NodeModelDoor, NodeModelScope, NodeRunInput, NodeToolDoor, NodeTurn, NodeUndoInput } from "./graph-nodes.contracts"
 
 @Injectable()
 /**
@@ -19,7 +17,7 @@ export class GraphNodeHostService {
     constructor(
         private readonly registry: GraphNodeRegistryService,
         private readonly effects: GraphNodeEffectsService,
-        private readonly ai: AiTasksService,
+        @InjectGraphNodeModel() private readonly ai: NodeModelDoor,
         @Optional() @InjectGraphNodeToolDoor() private readonly door: NodeToolDoor | null = null,
     ) {}
 
@@ -75,7 +73,7 @@ export class GraphNodeHostService {
     }
 
     private portsOf(turn: NodeTurn): NodeHostPorts {
-        const scope: AiTaskScope = { workspaceId: turn.workspaceId, locale: turn.locale }
+        const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale }
         return {
             read: (kind, query, rightScope) => this.registry.portOf(kind).read(turn, query, rightScope),
             write: (kind, record) => {

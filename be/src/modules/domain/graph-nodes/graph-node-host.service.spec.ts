@@ -3,15 +3,15 @@ import { mock } from "@starci/jest-preset"
 import { z } from "zod"
 import { defineEffect, defineNode, defineTool, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import { AiTasksService } from "@modules/domain/ai-tasks"
 import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeHostService } from "./graph-node-host.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
-import { GRAPH_NODE_TOOL_DOOR } from "./graph-nodes.decorators"
+import { GRAPH_NODE_MODEL, GRAPH_NODE_TOOL_DOOR } from "./graph-nodes.decorators"
 import type {
     NodeDataPort,
     NodeEffectExecutor,
+    NodeModelDoor,
     NodeRunInput,
     NodeSubjectResolver,
     NodeToolDoor,
@@ -111,7 +111,7 @@ const build = async (door: NodeToolDoor | null, port: NodeDataPort, resolvers: R
     registry.executorOf.mockReturnValue(executor)
     const effects = mock<GraphNodeEffectsService>()
     effects.once.mockImplementation((_workspace, _effect, _call, act) => act())
-    const ai = mock<AiTasksService>()
+    const ai = mock<NodeModelDoor>()
     ai.nodeText.mockResolvedValue("hi")
     ai.nodeJson.mockResolvedValue({ n: 2 })
     const moduleRef = await Test.createTestingModule({
@@ -119,7 +119,7 @@ const build = async (door: NodeToolDoor | null, port: NodeDataPort, resolvers: R
             GraphNodeHostService,
             { provide: GraphNodeRegistryService, useValue: registry },
             { provide: GraphNodeEffectsService, useValue: effects },
-            { provide: AiTasksService, useValue: ai },
+            { provide: GRAPH_NODE_MODEL, useValue: ai },
             ...(door === null ? [] : [{ provide: GRAPH_NODE_TOOL_DOOR, useValue: door }]),
         ],
     }).compile()

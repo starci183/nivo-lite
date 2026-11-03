@@ -7,19 +7,19 @@ import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { EffectCall, EffectPayload, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
-import { AiTasksService } from "@modules/domain/ai-tasks"
-import type { NodeAsk } from "@modules/domain/ai-tasks"
+import type { NodeModelRequest as NodeAsk } from "@nivo-lite/agent-sdk/node"
 import { AgentRunHandlersService, AgentRunsService } from "@modules/domain/agent-runs"
 import type { StepJson, StepSpec, StepView } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import {
+    GRAPH_NODE_MODEL,
     GRAPH_NODE_TOOL_DOOR,
     GRAPH_NODES_OPTIONS,
     GraphNodeEffectsService,
     GraphNodeHostService,
     GraphNodeRegistryService,
 } from "@modules/domain/graph-nodes"
-import type { NodeRow, NodeToolDoor, NodeTurn } from "@modules/domain/graph-nodes"
+import type { NodeModelDoor, NodeRow, NodeToolDoor, NodeTurn } from "@modules/domain/graph-nodes"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -77,7 +77,7 @@ const worldOf = (store: Record<string, Array<NodeRow>>, failOn: string | null = 
 
 const build = async (world: ReturnType<typeof worldOf>, graph: GraphSpec, model: Record<string, Array<unknown>>) => {
     const logger = mock<Logger>()
-    const ai = mock<AiTasksService>({
+    const ai = mock<NodeModelDoor>({
         nodeText: jest.fn((_scope, ask: NodeAsk) => Promise.resolve(String(model[ask.purpose]?.shift() ?? ""))),
         nodeJson: jest.fn((_scope, ask: NodeAsk) => Promise.resolve(model[ask.purpose]?.shift() as never)),
     })
@@ -107,7 +107,7 @@ const build = async (world: ReturnType<typeof worldOf>, graph: GraphSpec, model:
             },
             { provide: LOGGER, useValue: logger },
             { provide: GraphNodeEffectsService, useValue: effects },
-            { provide: AiTasksService, useValue: ai },
+            { provide: GRAPH_NODE_MODEL, useValue: ai },
             { provide: GRAPH_NODE_TOOL_DOOR, useValue: door },
             {
                 provide: AgentGraphsService,
