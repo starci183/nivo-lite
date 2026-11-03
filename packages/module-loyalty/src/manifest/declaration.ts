@@ -1,4 +1,4 @@
-import type { WorkbenchDeclaration } from "@nivo/agent-sdk/workbench/contract"
+import type { WorkbenchDeclaration } from "@nivo-lite/agent-sdk/workbench/contract"
 
 /** The views of the Loyalty workbench in strip order (`?tab=`), each labelled from the module's namespace. */
 export const LOYALTY_VIEW_IDS: readonly ["overview", "members", "rewards", "promo", "pending"] = [

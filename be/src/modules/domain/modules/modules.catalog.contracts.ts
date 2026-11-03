@@ -1,4 +1,4 @@
-import { templatesOf } from "@nivo/agent-sdk/module"
+import { templatesOf } from "@nivo-lite/agent-sdk/module"
 import { MODULE_SERVERS } from "@nivo/modules/template"
 import type { ModuleDefinition } from "./modules.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"

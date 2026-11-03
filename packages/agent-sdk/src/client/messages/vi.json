@@ -1,0 +1,10 @@
+{
+  "renderer": {
+    "problems": "Bố cục đã lưu của màn hình này không còn khớp các khối đã cài, nên đang hiện bố cục mặc định.",
+    "crashed": "Không vẽ được phần này của màn hình.",
+    "retry": "Thử lại",
+    "noView": "Màn hình này chưa có bố cục để hiện.",
+    "tabs": "Các tab",
+    "unbound": "Thao tác này chưa được cài đặt."
+  }
+}

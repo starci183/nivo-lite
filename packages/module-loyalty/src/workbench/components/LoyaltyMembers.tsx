@@ -13,7 +13,7 @@ import {
     Grid,
     Stack,
 } from "@starci/grammar/common"
-import { MasterDetail } from "@nivo/agent-sdk/workbench"
+import { MasterDetail } from "@nivo-lite/agent-sdk/client"
 
 /** One labelled option of a select. */
 

@@ -1,6 +1,6 @@
 import type { LoyaltyActions, LoyaltyViews } from "./loyalty-views"
-import type { DataSlot, SlotLabels } from "@nivo/agent-sdk/workbench"
-import type { WorkbenchDashboardRegions, WorkbenchExplanationView } from "@nivo/agent-sdk/workbench/view"
+import type { DataSlot, SlotLabels } from "@nivo-lite/agent-sdk/client"
+import type { WorkbenchDashboardRegions, WorkbenchExplanationView } from "@nivo-lite/agent-sdk/workbench/view"
 
 type LoyaltyTab = "overview" | "members" | "rewards" | "promo" | "pending"
 

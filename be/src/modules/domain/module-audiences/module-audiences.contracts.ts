@@ -1,4 +1,4 @@
-import type { ModuleAudience as SdkModuleAudience } from "@nivo/agent-sdk/module"
+import type { ModuleAudience as SdkModuleAudience } from "@nivo-lite/agent-sdk/module"
 
 /** Who a module's agent talks to: customers, or only the business itself. */
 export type ModuleAudience = SdkModuleAudience

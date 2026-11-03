@@ -1,4 +1,4 @@
-import type { ModuleCapabilityRole } from "@nivo/agent-sdk/module"
+import type { ModuleCapabilityRole } from "@nivo-lite/agent-sdk/module"
 import type { ConnectionActor } from "@modules/domain/connections"
 import type { CredentialState } from "@modules/domain/mcp-connectors"
 import type { GatewayApprovalReason, GatewayJson } from "@modules/domain/mcp-gateway-receipts"

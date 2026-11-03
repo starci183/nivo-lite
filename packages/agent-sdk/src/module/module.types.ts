@@ -135,7 +135,7 @@ export interface ModuleTemplateRequirements {
     /** The connection providers the workspace should have connected. */
     readonly connections: ReadonlyArray<string>
     /** The connector roles the agent needs and uses; absent means none. */
-    readonly roles?: ModuleTemplateRoles
+    readonly roles?: ModuleTemplateRoles | undefined
 }
 
 /** A clock trigger a module seeds for its agent. */
@@ -145,9 +145,9 @@ export interface ModuleTemplateTrigger {
     /** How often it fires. */
     readonly preset: ModuleTriggerPreset
     /** The time of day (`HH:MM`) of a daily preset. */
-    readonly atTime?: string
+    readonly atTime?: string | undefined
     /** The probe that decides whether a fire has work. */
-    readonly probeKey?: string
+    readonly probeKey?: string | undefined
 }
 
 /**

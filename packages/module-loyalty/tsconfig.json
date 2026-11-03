@@ -4,8 +4,8 @@
     "incremental": false,
     "types": ["jest", "node"],
     "paths": {
-      "@nivo/agent-sdk": ["../agent-sdk/src/index.ts"],
-      "@nivo/agent-sdk/*": ["../agent-sdk/src/*"]
+      "@nivo-lite/agent-sdk": ["../agent-sdk/src/index.ts"],
+      "@nivo-lite/agent-sdk/*": ["../agent-sdk/src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json"],

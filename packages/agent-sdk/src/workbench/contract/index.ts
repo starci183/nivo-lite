@@ -1,5 +1,5 @@
-export type { DataSlot, ForbiddenTest, SlotLabels, SlotPanelProps, SlotRead } from "../slot/slot.types"
-export { loadingSlot, mapSlot, slotOfRead, slotOfReads } from "../slot/slot"
+export type { DataSlot, ForbiddenTest, SlotLabels, SlotPanelProps, SlotRead } from "../../slot/slot.types"
+export { loadingSlot, mapSlot, slotOfRead, slotOfReads } from "../../slot/slot"
 export type {
     WorkbenchCommand,
     WorkbenchDataPort,

@@ -10,13 +10,5 @@
     "module": "node16",
     "moduleResolution": "node16"
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/**/*.spec.ts",
-    "src/workbench/*.ts",
-    "src/workbench/blocks/**",
-    "src/workbench/host/WorkbenchHostProvider.tsx",
-    "src/workbench/spec/SpecWorkbench.tsx"
-  ]
+  "exclude": ["node_modules", "dist", "src/**/*.spec.ts", "src/client/**"]
 }

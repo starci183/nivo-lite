@@ -1,4 +1,4 @@
-import { workbenchProblems } from "@nivo/agent-sdk/workbench/contract"
+import { workbenchProblems } from "@nivo-lite/agent-sdk/workbench/contract"
 import { LOYALTY_VIEW_IDS, LOYALTY_WORKBENCH } from "./declaration"
 
 const Component = (): null => null

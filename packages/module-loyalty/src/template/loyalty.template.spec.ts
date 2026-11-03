@@ -1,4 +1,4 @@
-import { moduleListProblems } from "@nivo/agent-sdk/module"
+import { moduleListProblems } from "@nivo-lite/agent-sdk/module"
 import { loyaltyCopy, loyaltyList, loyaltyText } from "./copy"
 import { LOYALTY_SERVER, LOYALTY_TEMPLATE } from "./loyalty.template"
 import en from "./messages/en.json"
