@@ -31,7 +31,7 @@ export const parseMailConfig = (env: EnvSource): MailOptions => ({
     helloName: env.optional("MAIL_HELLO_NAME") ?? HELLO_NAME,
     webOrigin: new URL(env.url("AUTH_WEB_ORIGIN")).origin,
     brandName: env.string("MAIL_FROM_NAME"),
-    defaultLanguage: env.has("MAIL_DEFAULT_LANGUAGE") ? env.enum("MAIL_DEFAULT_LANGUAGE", LANGUAGES) : "en",
+    defaultLanguage: env.has("MAIL_DEFAULT_LANGUAGE") ? env.enum("MAIL_DEFAULT_LANGUAGE", LANGUAGES) : "vi",
     confirmTtlSeconds: env.int("MAIL_CONFIRM_TTL_SECONDS", CONFIRM_TTL_SECONDS),
     resetTtlSeconds: env.int("MAIL_RESET_TTL_SECONDS", RESET_TTL_SECONDS),
     allowPrivateHosts: !isPublicSite(env.optional("SITE_URL")) || env.bool("SMTP_ALLOW_PRIVATE_HOSTS", false),

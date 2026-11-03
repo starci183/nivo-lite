@@ -6,6 +6,7 @@ import { LogoutOtherSessionsResolver } from "./logout-other-sessions.resolver"
 import { MyAccountResolver } from "./my-account.resolver"
 import { RequestMyAvatarUploadResolver } from "./request-my-avatar-upload.resolver"
 import { RevokeSessionResolver } from "./revoke-session.resolver"
+import { SetSignupNameResolver } from "./set-signup-name.resolver"
 import { SetMyAvatarResolver } from "./set-my-avatar.resolver"
 import { UpdateProfileResolver } from "./update-profile.resolver"
 
@@ -19,6 +20,7 @@ import { UpdateProfileResolver } from "./update-profile.resolver"
         UpdateProfileResolver,
         RequestMyAvatarUploadResolver,
         SetMyAvatarResolver,
+        SetSignupNameResolver,
     ],
 })
 /** The GraphQL transport of the account feature. */

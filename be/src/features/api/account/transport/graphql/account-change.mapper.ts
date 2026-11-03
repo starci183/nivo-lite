@@ -2,6 +2,7 @@ import type { AvatarUpload } from "@modules/domain/avatars"
 import type { ChangePasswordRequest } from "../../application/change-password.contracts"
 import type { RequestMyAvatarUploadRequest } from "../../application/request-my-avatar-upload.contracts"
 import type { RevokeSessionRequest } from "../../application/revoke-session.contracts"
+import type { SetSignupNameRequest } from "../../application/set-signup-name.contracts"
 import type { SetMyAvatarRequest } from "../../application/set-my-avatar.contracts"
 import type { UpdateProfileRequest } from "../../application/update-profile.contracts"
 import type { ChangePasswordInput } from "./dto/change-password.input"
@@ -9,6 +10,7 @@ import type { MyAvatarUploadType } from "./dto/my-avatar-upload.type"
 import type { RequestMyAvatarUploadInput } from "./dto/request-my-avatar-upload.input"
 import type { RevokeSessionInput } from "./dto/revoke-session.input"
 import type { SetMyAvatarInput } from "./dto/set-my-avatar.input"
+import type { SetSignupNameInput } from "./dto/set-signup-name.input"
 import type { UpdateProfileInput } from "./dto/update-profile.input"
 
 /** Maps the GraphQL input to the sign-out request of one device. */
@@ -37,4 +39,10 @@ export const toSetMyAvatarRequest = (input: SetMyAvatarInput): SetMyAvatarReques
 export const toChangePasswordRequest = (input: ChangePasswordInput): ChangePasswordRequest => ({
     current: input.currentPassword,
     next: input.newPassword,
+})
+
+/** Maps the GraphQL input to the request that keeps the sign-up name. */
+export const toSetSignupNameRequest = (input: SetSignupNameInput): SetSignupNameRequest => ({
+    email: input.email,
+    name: input.name,
 })

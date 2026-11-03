@@ -5910,6 +5910,7 @@ type Mutation {
   setOperatingMode(input: SetOperatingModeInput!): ModuleInstallationType!
   setSepayEnvironment(input: SetSepayEnvironmentInput!): SepayConnectionType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
+  setSignupName(input: SetSignupNameInput!): Boolean!
   setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
   setWorkspaceAgentWork(input: SetWorkspaceAgentWorkInput!): WorkspaceAgentWorkType!
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
@@ -8375,6 +8376,11 @@ input SetSetupGateInput {
   evidence: String = "" @inputBounds(maxLength: 800)
   gateKey: String! @inputBounds(maxLength: 60)
   setupSessionId: ID! @inputBounds(maxLength: 36)
+}
+
+input SetSignupNameInput {
+  email: String! @inputBounds(maxLength: 254)
+  name: String! @inputBounds(maxLength: 120)
 }
 
 input SetSyncScheduleInput {

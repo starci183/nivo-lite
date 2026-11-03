@@ -5,6 +5,7 @@ import { ChangePasswordHandler } from "./application/change-password.handler"
 import { LogoutOtherSessionsHandler } from "./application/logout-other-sessions.handler"
 import { RequestMyAvatarUploadHandler } from "./application/request-my-avatar-upload.handler"
 import { RevokeSessionHandler } from "./application/revoke-session.handler"
+import { SetSignupNameHandler } from "./application/set-signup-name.handler"
 import { SetMyAvatarHandler } from "./application/set-my-avatar.handler"
 import { UpdateProfileHandler } from "./application/update-profile.handler"
 
@@ -17,6 +18,7 @@ import { UpdateProfileHandler } from "./application/update-profile.handler"
         UpdateProfileHandler,
         RequestMyAvatarUploadHandler,
         SetMyAvatarHandler,
+        SetSignupNameHandler,
     ],
 })
 /** The account feature: the handlers of its application. */

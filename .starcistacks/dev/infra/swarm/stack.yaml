@@ -42,7 +42,7 @@ services:
       MAIL_PORT: "587"
       MAIL_SECURITY: starttls
       MAIL_FROM_NAME: NIVO
-      MAIL_DEFAULT_LANGUAGE: en
+      MAIL_DEFAULT_LANGUAGE: vi
     extra_hosts:
       - host.docker.internal:host-gateway
     healthcheck:
