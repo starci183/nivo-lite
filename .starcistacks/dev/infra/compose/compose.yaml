@@ -65,6 +65,10 @@ services:
       AI_BASE_URL: http://host.docker.internal:${STACK_PORT_GATEWAY}/v1
       # The primary model, as production's OPENCLAW_MODEL setting.
       OPENCLAW_MODEL: nivo-ai/work
+      # The api (a host process) writes the agent entries into openclaw.json and the gateway reloads on the file change; a Windows bind
+      # mount delivers no inotify event into the Linux VM, so the dev gateway polls its config folder instead.
+      CHOKIDAR_USEPOLLING: "1"
+      CHOKIDAR_INTERVAL: "1000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
