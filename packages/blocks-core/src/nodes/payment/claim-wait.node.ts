@@ -6,9 +6,9 @@ import { CLAIM_DINH, STORE_REAL_CASE } from "./payment.fixtures"
 import { READ_CLAIMS } from "./payment.rights"
 import type { ClaimRow } from "./payment.schemas"
 
-/** Which claim, and whether the wait for the money has run out. */
+/** Which claim (null when no claim is open: there is nothing to answer or wait for), and whether the wait for the money has run out. */
 interface ClaimWaitInput {
-    readonly claimId: string
+    readonly claimId: string | null
     readonly timedOut: boolean
 }
 
@@ -30,7 +30,7 @@ const params: z.ZodType<ClaimWaitParams> = z.object({
     neutralText: z.string().min(1),
     overdueTitle: z.string().min(1),
 })
-const input: z.ZodType<ClaimWaitInput, ClaimWaitInput> = z.object({ claimId: z.string(), timedOut: z.boolean() })
+const input: z.ZodType<ClaimWaitInput, ClaimWaitInput> = z.object({ claimId: z.string().nullable(), timedOut: z.boolean() })
 const output: z.ZodType<ClaimWaitOutput, ClaimWaitOutput> = z.object({
     state: z.enum(["waiting", "escalated", "closed"]),
     resumeAfterMinutes: z.number().nullable(),
@@ -43,7 +43,7 @@ const GRANT = { rights: [READ_CLAIMS, ...channelSendEffect.rights] }
  * A customer says they paid and no matching money has arrived. The first run answers them neutrally in the conversation they wrote in
  * (`channel.send`: never a confirmation, Chatbot and Sales cannot confirm a payment) and waits: the graph resumes it on the next tagged
  * transaction (the evidence node then reads the claim) or, with `timedOut`, when the configured wait ran out, which raises a work item for the
- * owner (`work-item.raise`). A claim that was settled meanwhile is closed and says nothing.
+ * owner (`work-item.raise`). A claim that was settled meanwhile, or no claim at all (the transaction came by itself, `claimId` null), is closed and says nothing.
  */
 export const paymentClaimWaitNode: NodeDefinition<
     z.ZodType<ClaimWaitInput, ClaimWaitInput>,
@@ -60,6 +60,7 @@ export const paymentClaimWaitNode: NodeDefinition<
     effects: ["channel.send", "work-item.raise"],
     run: async (given, context) => {
         const settings = context.params
+        if (given.claimId === null) return { state: "closed", resumeAfterMinutes: null }
         const [claim] = await context.data.read<ClaimRow>("payment-claim", {
             where: { id: given.claimId },
             fields: READ_CLAIMS.fields,
@@ -161,6 +162,15 @@ export const paymentClaimWaitNode: NodeDefinition<
             output: { state: "waiting", resumeAfterMinutes: 30 },
             effects: [],
             store: { ...STORE_REAL_CASE, "payment-claim": [{ ...CLAIM_DINH, conversationId: null }] },
+            grant: GRANT,
+        },
+        {
+            name: "no claim is open (the transaction came by itself): closed, nothing is said and nothing is raised",
+            params: { timeoutMinutes: 30, neutralText: "x", overdueTitle: "y" },
+            input: { claimId: null, timedOut: false },
+            output: { state: "closed", resumeAfterMinutes: null },
+            effects: [],
+            store: STORE_REAL_CASE,
             grant: GRANT,
         },
         {
