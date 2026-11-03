@@ -2,8 +2,9 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
+import { graphSpecProblems, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { EffectCall, EffectPayload, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
 import { AiTasksService } from "@modules/domain/ai-tasks"
@@ -186,7 +187,8 @@ const SALES_WAKE: FlowWake = {
 
 describe("flow F graphs on fake ports", () => {
     it("pass the installed nodes with the saga rule on", () => {
-        for (const name of ["sales", "chatbot", "accounting"]) expect(graphOf(name).nodes.length).toBeGreaterThan(0)
+        const installed = nodeIndexOf({ nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds })
+        for (const name of ["sales", "chatbot", "accounting"]) expect(graphSpecProblems(graphOf(name), installed)).toEqual([])
     })
 
     it("Sales records the order, confirms it under the threshold and asks for the payment", async () => {
