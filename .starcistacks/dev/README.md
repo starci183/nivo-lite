@@ -29,7 +29,10 @@ of this environment alone, so no role is shared with another environment or serv
 
 **A new machine.** Run `starci app stack doctor --env dev`: it prints one row per prerequisite (Node 22, npm, git, Docker with Compose v2, WSL2 on
 Windows, sops and age, disk, memory, the ports) and, for each missing one, the exact winget, brew or apt step for the owner to run. Then
-`starci app stack up --env dev --execute`.
+`starci app stack up --env dev --execute`. On Windows the SWC native binding refuses a cache folder whose ACL lets other principals replace files
+(`ERR_SWC_NATIVE_CACHE`; `%LOCALAPPDATA%\swc` and a folder on a shared data drive both can): export `SWC_NATIVE_BINDING_CACHE` to a folder of
+your own profile (for example `%USERPROFILE%\.swc-native-cache`) in the shell that runs `up`, which hands its environment to the console and the
+landing (PROJECT-STACKS-10).
 
 | Command | Operation |
 | --- | --- |
