@@ -17,6 +17,16 @@ export const CUSTOMER_INTENTS_MESSAGES: MessageBundle = {
             "Khách rõ ràng muốn đổi một phần thưởng của chương trình tích điểm: đề nghị đổi thưởng và trả lời khách.",
         "intentContracts.task.screen_candidate":
             "Người này muốn ứng tuyển một việc đang mở: thu thập hồ sơ và trả lời họ.",
+        "intentContracts.task.classify_lead":
+            "Khách cho biết nhu cầu, ngân sách hoặc họ là ai: ghi nhận khách tiềm năng để phân loại và trả lời khách.",
+        "intentContracts.task.send_follow_up":
+            "Khách quay lại sau lần trao đổi trước hoặc chưa chốt: trả lời và đề nghị bước tiếp theo, không hứa ngoài tri thức của cửa hàng.",
+        "intentContracts.task.send_quote":
+            "Khách hỏi giá hoặc tổng tiền: trả lời đúng giá ghi trong tri thức của cửa hàng, không tự đặt giá mới.",
+        "intentContracts.task.send_care":
+            "Khách hỏi thăm, cảm ơn hoặc cần hỗ trợ sau mua: chăm sóc khách và trả lời khách.",
+        "intentContracts.task.give_discount":
+            "Khách xin giảm giá: trả lời theo đúng chính sách giảm giá trong tri thức của cửa hàng; không có thì từ chối lịch sự.",
         "intentContracts.task.gateway_call":
             "Làm việc cần ghi dữ liệu qua công cụ NIVO rồi trả lời khách. Chạy trong một lượt riêng.",
         "intentContracts.limit.reply_style": "Reply in the customer's language, max 80 words.",
@@ -25,10 +35,10 @@ export const CUSTOMER_INTENTS_MESSAGES: MessageBundle = {
         "intentContracts.limit.authority":
             'If the customer asks for a price, discount, deadline or any commitment that is not clearly allowed by the business knowledge and authority, or you are not sure of the answer:\nset "needs_human": true, "reason": "over_authority" (commitment or price) or "unclear_outcome" (unsure), put in "proposed_answer" ONLY facts found in the business knowledge (never invent a discount, gift, price or policy; if the knowledge has no answer set "proposed_answer": null), written as the FINAL message to the customer, as if the owner has already approved it (warm, concrete, no mention of approval, owner or internal checks), and make "reply" answer what you are allowed to and say politely that the team will confirm the rest shortly: in "reply" never state the discount, gift or commitment itself.',
         "intentContracts.limit.routine":
-            'Asking to be contacted, called back or advised, sharing a need or contact details, and general questions answered by the business knowledge are ROUTINE: capture the lead and answer yourself with "needs_human": false.',
+            'Asking to be contacted, called back or advised, sharing a need or contact details, and general questions answered by the business knowledge are ROUTINE: capture the lead and answer yourself with "needs_human": false. When the business knowledge or the instructions refuse something (no discount, a promise the shop must not make), that refusal IS the answer: decline it politely in "reply" with "needs_human": false, and never say the team will confirm it.',
         "intentContracts.limit.otherwise": 'Otherwise "needs_human": false, "reason": null, "proposed_answer": null.',
         "intentContracts.limit.order":
-            'ORDER: judge ONLY the customer\'s latest message. When it clearly commits to buy an item whose price is WRITTEN in the business knowledge, set "order": {"items": the item name as written, "amount_vnd": the total price in VND as an integer copied from the knowledge}. In "reply" thank them, repeat the item and price, and say the payment details follow; do not say it is paid. If the item or its price is not in the knowledge: "order": null, "needs_human": true, "reason": "over_authority". Otherwise "order": null.',
+            'ORDER: judge ONLY the customer\'s latest message. When it clearly commits to buy an item whose price is WRITTEN in the business knowledge, set "order": {"items": the item name as written, "amount_vnd": the total price in VND as an integer copied from the knowledge}. Set it even when the order needs approval by the owner: NIVO asks the owner, so that alone is not "needs_human". In "reply" thank them, repeat the item and price, and say the payment details follow; do not say it is paid, and never say the order was sent for approval, confirmed or recorded: NIVO decides that after your reply. If the item or its price is not in the knowledge: "order": null, "needs_human": true, "reason": "over_authority". Otherwise "order": null.',
         "intentContracts.limit.payment_claim":
             'PAYMENT CLAIM: when the customer says they have already paid or transferred the money, or an [ATTACHED FILE] block shows a transfer, set "payment_claim": true, "needs_human": false, and in "reply" thank them and say the shop will check the transfer and confirm shortly. Never say the payment is received. Use only the amount the attached block states; when it says the amount is not readable, ask the customer to send a clearer file. Otherwise "payment_claim": false.',
         "intentContracts.limit.knowledge_gap":
@@ -61,6 +71,16 @@ export const CUSTOMER_INTENTS_MESSAGES: MessageBundle = {
             "The customer clearly asks to redeem one reward of the loyalty programme: propose the redemption and answer the customer.",
         "intentContracts.task.screen_candidate":
             "The person wants to apply for one of the open jobs: collect the application and answer them.",
+        "intentContracts.task.classify_lead":
+            "The customer shared a need, a budget or who they are: note the lead for classification and answer the customer.",
+        "intentContracts.task.send_follow_up":
+            "The customer comes back after an earlier talk or has not decided: answer and propose the next step, promising nothing beyond the business knowledge.",
+        "intentContracts.task.send_quote":
+            "The customer asks a price or a total: answer with the price written in the business knowledge, never a new price.",
+        "intentContracts.task.send_care":
+            "The customer checks in, thanks the shop or needs help after buying: take care of them and answer the customer.",
+        "intentContracts.task.give_discount":
+            "The customer asks for a discount: answer by the discount policy written in the business knowledge; with none, decline politely.",
         "intentContracts.task.gateway_call":
             "Do the work that needs a write through the NIVO tools, then answer the customer. Runs in a turn of its own.",
         "intentContracts.limit.reply_style": "Reply in the customer's language, max 80 words.",
@@ -69,10 +89,10 @@ export const CUSTOMER_INTENTS_MESSAGES: MessageBundle = {
         "intentContracts.limit.authority":
             'If the customer asks for a price, discount, deadline or any commitment that is not clearly allowed by the business knowledge and authority, or you are not sure of the answer:\nset "needs_human": true, "reason": "over_authority" (commitment or price) or "unclear_outcome" (unsure), put in "proposed_answer" ONLY facts found in the business knowledge (never invent a discount, gift, price or policy; if the knowledge has no answer set "proposed_answer": null), written as the FINAL message to the customer, as if the owner has already approved it (warm, concrete, no mention of approval, owner or internal checks), and make "reply" answer what you are allowed to and say politely that the team will confirm the rest shortly: in "reply" never state the discount, gift or commitment itself.',
         "intentContracts.limit.routine":
-            'Asking to be contacted, called back or advised, sharing a need or contact details, and general questions answered by the business knowledge are ROUTINE: capture the lead and answer yourself with "needs_human": false.',
+            'Asking to be contacted, called back or advised, sharing a need or contact details, and general questions answered by the business knowledge are ROUTINE: capture the lead and answer yourself with "needs_human": false. When the business knowledge or the instructions refuse something (no discount, a promise the shop must not make), that refusal IS the answer: decline it politely in "reply" with "needs_human": false, and never say the team will confirm it.',
         "intentContracts.limit.otherwise": 'Otherwise "needs_human": false, "reason": null, "proposed_answer": null.',
         "intentContracts.limit.order":
-            'ORDER: judge ONLY the customer\'s latest message. When it clearly commits to buy an item whose price is WRITTEN in the business knowledge, set "order": {"items": the item name as written, "amount_vnd": the total price in VND as an integer copied from the knowledge}. In "reply" thank them, repeat the item and price, and say the payment details follow; do not say it is paid. If the item or its price is not in the knowledge: "order": null, "needs_human": true, "reason": "over_authority". Otherwise "order": null.',
+            'ORDER: judge ONLY the customer\'s latest message. When it clearly commits to buy an item whose price is WRITTEN in the business knowledge, set "order": {"items": the item name as written, "amount_vnd": the total price in VND as an integer copied from the knowledge}. Set it even when the order needs approval by the owner: NIVO asks the owner, so that alone is not "needs_human". In "reply" thank them, repeat the item and price, and say the payment details follow; do not say it is paid, and never say the order was sent for approval, confirmed or recorded: NIVO decides that after your reply. If the item or its price is not in the knowledge: "order": null, "needs_human": true, "reason": "over_authority". Otherwise "order": null.',
         "intentContracts.limit.payment_claim":
             'PAYMENT CLAIM: when the customer says they have already paid or transferred the money, or an [ATTACHED FILE] block shows a transfer, set "payment_claim": true, "needs_human": false, and in "reply" thank them and say the shop will check the transfer and confirm shortly. Never say the payment is received. Use only the amount the attached block states; when it says the amount is not readable, ask the customer to send a clearer file. Otherwise "payment_claim": false.',
         "intentContracts.limit.knowledge_gap":
