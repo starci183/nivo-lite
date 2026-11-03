@@ -7513,6 +7513,8 @@
     "toolName_brain-facts-list": "Facts list",
     "tool_brain-facts-get": "One fact in force with the kind and label of its evidence and when it holds.",
     "toolName_brain-facts-get": "One fact",
+    "tool_brain-documents-read": "One internal document of the business, read whole, to draft a separate public text from it. Never in a customer turn.",
+    "toolName_brain-documents-read": "Read an internal document for drafting",
     "tool_customer-brief": "The customer of this conversation: where the deal stands, what they need, their company, where they came from, when they last wrote and their phone, masked.",
     "toolName_customer-brief": "Customer brief",
     "tool_dossier-status": "Where the dossiers of the business stand: each one's status and open findings, the totals and the last review.",

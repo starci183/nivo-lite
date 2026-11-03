@@ -7518,6 +7518,8 @@
     "toolName_brain-facts-list": "Danh sách sự thật",
     "tool_brain-facts-get": "Một sự thật đang hiệu lực, kèm loại và nhãn của căn cứ và thời điểm nó đúng.",
     "toolName_brain-facts-get": "Một sự thật",
+    "tool_brain-documents-read": "Một tài liệu nội bộ của doanh nghiệp, đọc trọn vẹn, để soạn một văn bản công khai riêng từ nó. Không bao giờ dùng khi trả lời khách.",
+    "toolName_brain-documents-read": "Đọc tài liệu nội bộ để soạn",
     "tool_customer-brief": "Khách của cuộc trò chuyện này: giao dịch đang ở đâu, họ cần gì, công ty, nguồn đến, lần nhắn gần nhất và số điện thoại đã che bớt.",
     "toolName_customer-brief": "Tóm tắt khách hàng",
     "tool_dossier-status": "Tình trạng các bộ hồ sơ của doanh nghiệp: trạng thái và điểm còn mở của từng bộ, tổng số và lần rà soát gần nhất.",
