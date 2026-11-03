@@ -1,4 +1,4 @@
-import type { ModuleTriggerPreset } from "@nivo/agent-sdk/module"
+import type { ModuleTriggerPreset } from "@nivo-lite/agent-sdk/module"
 
 /**
  * What starts a wake: the key of the adapter that normalized the fact. The four built-in keys are listed so they read well; an adapter

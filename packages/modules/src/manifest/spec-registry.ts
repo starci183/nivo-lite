@@ -1,5 +1,5 @@
-import { specRegistryFrom } from "@nivo/agent-sdk/workbench/contract"
-import type { WorkbenchSpecRegistry } from "@nivo/agent-sdk/workbench/spec"
+import { specRegistryFrom } from "@nivo-lite/agent-sdk/workbench/contract"
+import type { WorkbenchSpecRegistry } from "@nivo-lite/agent-sdk/workbench/spec"
 import { MODULE_WORKBENCHES } from "./module-workbenches"
 
 /**

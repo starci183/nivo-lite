@@ -8,7 +8,7 @@ import {
     WaitingRegion,
     WorkbenchDashboardCards,
     WorkbenchExplanation,
-} from "@nivo/agent-sdk/workbench"
+} from "@nivo-lite/agent-sdk/client"
 import { LoyaltyCampaignMessage } from "./LoyaltyCampaignMessage"
 import { LoyaltyCampaignSegment } from "./LoyaltyCampaignSegment"
 import { LoyaltyMemberPanel } from "./LoyaltyMemberPanel"

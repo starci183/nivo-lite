@@ -1,4 +1,4 @@
-import type { ModuleServer, ModuleTemplate } from "@nivo/agent-sdk/module"
+import type { ModuleServer, ModuleTemplate } from "@nivo-lite/agent-sdk/module"
 import { loyaltyCopy, loyaltyList, loyaltyText } from "./copy"
 
 /** The Loyalty module's template: its copy, agent, setup gates, authority actions and accepted commands. */

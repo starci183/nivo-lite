@@ -1,4 +1,4 @@
-import type { ModuleServer } from "@nivo/agent-sdk/module"
+import type { ModuleServer } from "@nivo-lite/agent-sdk/module"
 import { LOYALTY_SERVER } from "@nivo/module-loyalty/template"
 
 /**

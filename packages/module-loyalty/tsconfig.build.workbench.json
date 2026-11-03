@@ -8,7 +8,7 @@
     "isolatedDeclarations": true,
     "types": [],
     "paths": {
-      "@nivo/agent-sdk/*": ["../agent-sdk/dist/esm/*/index.d.ts"]
+      "@nivo-lite/agent-sdk/*": ["../agent-sdk/dist/esm/*/index.d.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json"],

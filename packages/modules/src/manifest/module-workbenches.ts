@@ -1,4 +1,4 @@
-import type { WorkbenchDeclaration } from "@nivo/agent-sdk/workbench/contract"
+import type { WorkbenchDeclaration } from "@nivo-lite/agent-sdk/workbench/contract"
 import { LOYALTY_WORKBENCH } from "@nivo/module-loyalty/manifest"
 
 /**

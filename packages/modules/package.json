@@ -22,7 +22,7 @@
     "typecheck": "tsc --noEmit --pretty false"
   },
   "dependencies": {
-    "@nivo/agent-sdk": "*",
+    "@nivo-lite/agent-sdk": "*",
     "@nivo/module-loyalty": "*"
   },
   "devDependencies": {

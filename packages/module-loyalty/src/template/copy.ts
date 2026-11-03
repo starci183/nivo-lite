@@ -1,4 +1,4 @@
-import type { Bilingual, BilingualList } from "@nivo/agent-sdk/module"
+import type { Bilingual, BilingualList } from "@nivo-lite/agent-sdk/module"
 import en from "./messages/en.json"
 import vi from "./messages/vi.json"
 

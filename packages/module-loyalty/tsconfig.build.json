@@ -8,8 +8,8 @@
     "isolatedDeclarations": true,
     "types": [],
     "paths": {
-      "@nivo/agent-sdk": ["../agent-sdk/dist/index.d.ts"],
-      "@nivo/agent-sdk/*": ["../agent-sdk/dist/*/index.d.ts"]
+      "@nivo-lite/agent-sdk": ["../agent-sdk/dist/index.d.ts"],
+      "@nivo-lite/agent-sdk/*": ["../agent-sdk/dist/*/index.d.ts"]
     },
     "module": "node16",
     "moduleResolution": "node16"

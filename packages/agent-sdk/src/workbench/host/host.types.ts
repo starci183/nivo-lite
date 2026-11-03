@@ -1,4 +1,4 @@
-import type { ForbiddenTest, SlotRead } from "../slot/slot.types"
+import type { ForbiddenTest, SlotRead } from "../../slot/slot.types"
 import type { WorkbenchDashboardRegions, WorkbenchExplanationView } from "../view/view.types"
 
 /** The values a message interpolates. */
