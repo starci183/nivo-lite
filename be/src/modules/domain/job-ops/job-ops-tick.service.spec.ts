@@ -15,6 +15,7 @@ const EXPECTED = [
     ["agents-sync-all", "agents", "agents.sync", {}, 5],
     ["automation-tick", "automation", "automation.tick", {}, 1],
     ["connection-health-tick", "connection_health", "connection_health", { silentAfterHours: 72 }, 15],
+    ["connection-poll-due-tick", "connection-poll", "poll-due-connections", {}, 1],
     ["content-tick", "content_tick", "content_tick", {}, 15],
     ["data-sync-tick", "data_sync", "data_sync", { tick: true }, 1],
     ["decisions-drain-work", "decisions", "decisions.drain-work", {}, 1],

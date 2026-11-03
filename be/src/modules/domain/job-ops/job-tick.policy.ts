@@ -2,6 +2,7 @@ import { ACCOUNTING_DESK_QUEUE, ACCOUNTING_MORNING_JOB } from "@modules/queues/a
 import { AGENT_TURN_QUEUE, AgentTurnJob } from "@modules/queues/agent-turn"
 import { AGENTS_QUEUE, AgentsJob } from "@modules/queues/agents"
 import { AUTOMATION_QUEUE, AUTOMATION_TICK_JOB } from "@modules/queues/automation"
+import { CONNECTION_POLL_QUEUE, POLL_DUE_CONNECTIONS_JOB } from "@modules/queues/connection-poll"
 import { CONNECTION_HEALTH_QUEUE } from "@modules/queues/connection-health"
 import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
 import { DATA_SYNC_QUEUE } from "@modules/queues/data-sync"
@@ -40,6 +41,12 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
         job: CONNECTION_HEALTH_QUEUE,
         payload: { silentAfterHours: 72 },
         minutes: 15,
+    },
+    "connection-poll-due-tick": {
+        queue: CONNECTION_POLL_QUEUE,
+        job: POLL_DUE_CONNECTIONS_JOB,
+        payload: {},
+        minutes: 1,
     },
     "content-tick": { queue: CONTENT_TICK_QUEUE, job: CONTENT_TICK_QUEUE, payload: {}, minutes: 15 },
     "data-sync-tick": { queue: DATA_SYNC_QUEUE, job: DATA_SYNC_QUEUE, payload: { tick: true }, minutes: 1 },

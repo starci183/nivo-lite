@@ -2,6 +2,7 @@ import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
 import { parseAiConfig } from "@modules/integrations/ai"
 import { parseMcpConfig } from "@modules/integrations/mcp"
+import { parseSepayConfig } from "@modules/integrations/sepay"
 import { parseServerConfig } from "@modules/platform/config"
 import type { EnvSource } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
@@ -24,6 +25,8 @@ export interface McpAppOptions {
     readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
     /** The AI endpoint that embeds a Brain question; every key is optional, and without them the search reads words. */
     readonly ai: ReturnType<typeof parseAiConfig>
+    /** The SePay user API host the bank transaction list reads. */
+    readonly sepay: ReturnType<typeof parseSepayConfig>
 }
 
 /** Reads the mcp app environment once. */
@@ -35,4 +38,5 @@ export const readMcpEnv = (env: EnvSource): McpAppOptions => ({
     connectionSecrets: parseConnectionSecretsConfig(env),
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
     ai: parseAiConfig(env),
+    sepay: parseSepayConfig(env),
 })

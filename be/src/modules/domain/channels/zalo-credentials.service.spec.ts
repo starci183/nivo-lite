@@ -1,11 +1,14 @@
 import type { ZaloClient } from "@modules/integrations/zalo"
 import type { Logger } from "@modules/platform/logging"
-import { FakeClock, mock } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
+import type { ConnectionReadyEvent } from "@modules/events/api"
 import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
 import { LOGGER } from "@modules/platform/logging"
 import { CHANNELS_OPTIONS } from "./channels.decorators"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
@@ -34,6 +37,9 @@ const build = async (siteUrl: string = "https://nivo.test") => {
     const zalo = mock<ZaloClient>()
     const logger = mock<Logger>()
     configureCredentialDoubles(secrets, secretReads, connections)
+    const tx = fakeTransaction(mockEntityManager())
+    const bus = recordingEventBus<ConnectionReadyEvent>()
+    const publish = jest.spyOn(bus, "publish")
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloCredentialsService,
@@ -44,9 +50,11 @@ const build = async (siteUrl: string = "https://nivo.test") => {
             { provide: ConnectionSecretsService, useValue: secrets },
             { provide: ConnectionSecretReadsService, useValue: secretReads },
             { provide: ConnectionsService, useValue: connections },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: EVENT_BUS, useValue: bus },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloCredentialsService), secrets, secretReads, connections, zalo, logger }
+    return { service: moduleRef.get(ZaloCredentialsService), secrets, secretReads, connections, zalo, logger, publish }
 }
 describe("ZaloCredentialsService", () => {
     describe("callbackUrl", () => {
@@ -154,7 +162,7 @@ describe("ZaloCredentialsService", () => {
 describe("ZaloCredentialsService", () => {
     describe("completeAuthorization", () => {
         it("exchanges the code, stores the tokens without the verifier and records the OA", async () => {
-            const { service, zalo, connections, secrets, secretReads } = await build()
+            const { service, zalo, connections, secrets, secretReads, publish } = await build()
             secretReads.secretOf.mockResolvedValue(startedAuthorization())
             zalo.exchangeCode.mockResolvedValue(tokens)
             await expect(
@@ -171,6 +179,15 @@ describe("ZaloCredentialsService", () => {
             expect(Reflect.has(saved, "pkce")).toBe(false)
             expect(secrets.save).toHaveBeenCalledWith("c-1", sealed, new Date(NOW + HOUR))
             expect(connections.applyZaloAuthorization).toHaveBeenCalledWith("c-1", "oa-9")
+            // The saved token is announced as a ready connection, so the first reconcile of its inbox runs at once.
+            expect(publish).toHaveBeenCalledTimes(1)
+            const [event] = publish.mock.calls[0] ?? []
+            expect(event?.payload).toEqual({
+                workspaceId: "ws-1",
+                connectionId: "c-1",
+                provider: "zalo_oa",
+                dedupeKey: matching(/^c-1:zalo_token:[0-9a-f]{16}$/u),
+            })
         })
 
         it("refuses a return that does not match a started authorization", async () => {

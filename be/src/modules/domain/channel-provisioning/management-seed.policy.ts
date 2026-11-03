@@ -69,6 +69,7 @@ export const readManagementSeed = (document: unknown): ManagementSeed => {
                 accountNumber: values.WORKSPACE_SEPAY_BANK_ACCOUNT,
                 holder: values.WORKSPACE_SEPAY_ACCOUNT_HOLDER,
                 apiKey: values.WORKSPACE_SEPAY_API_KEY,
+                apiToken: values.WORKSPACE_SEPAY_API_TOKEN,
             },
             payos: {
                 id: MANAGEMENT_CONNECTION_IDS.payos,

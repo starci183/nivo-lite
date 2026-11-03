@@ -1,10 +1,15 @@
 import { Injectable } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import { parseZaloSecret } from "@modules/domain/channel-connections"
 import { ConnectionSecretsService, randomSecret, safeEqual } from "@modules/domain/connection-secrets"
-import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
+import { ConnectionSecretReadsService, ConnectionsService, sha256 } from "@modules/domain/connections"
+import { ConnectionReadyEvent } from "@modules/events/api"
 import { InjectZalo, isZaloRefusal, newVerifier } from "@modules/integrations/zalo"
 import type { ZaloClient } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -53,6 +58,8 @@ export class ZaloCredentialsService {
         private readonly secrets: ConnectionSecretsService,
         private readonly connections: ConnectionsService,
         private readonly secretReads: ConnectionSecretReadsService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectEventBus() private readonly bus: EventBus,
     ) {}
 
     /** The address to register on the Zalo app: Zalo sends the browser back here with code, oa_id and state. */
@@ -113,7 +120,18 @@ export class ZaloCredentialsService {
             expiresAt: new Date(this.clock.now().getTime() + tokens.expiresInSeconds * 1000),
         })
         await this.connections.applyZaloAuthorization(connectionId, input.oaId)
+        await this.announceReady(workspaceId, connectionId, tokens.accessToken)
         return connectionId
+    }
+
+    /**
+     * Tells the app the OA can be read back from Zalo now that its OAuth token is stored, so the first reconcile runs at once and recovers the
+     * messages that reached the OA before the connection existed. The same token saved again is the same fact.
+     */
+    private announceReady(workspaceId: string, connectionId: string, accessToken: string): Promise<void> {
+        const dedupeKey = `${connectionId}:zalo_token:${sha256(accessToken).slice(0, 16)}`
+        const event = ConnectionReadyEvent.create({ workspaceId, connectionId, provider: "zalo_oa", dedupeKey })
+        return this.entityManager.transaction((tx) => this.bus.publish(event, tx, dedupeKey))
     }
 
     /**

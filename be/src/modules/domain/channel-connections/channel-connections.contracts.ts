@@ -190,21 +190,8 @@ export interface WorkspacePaymentAccount {
     readonly connectionId: string
 }
 
-/** The account a VietQR is drawn for. */
-export interface VietQrAccount {
-    /** The full account number. */
-    readonly accountNumber: string
-    /** The short bank code as VietQR lists it. */
-    readonly bankCode: string
-    /** The account holder; the image does not print it. */
-    readonly holder?: string | null
-}
-
 /** A workspace payment account, or null when no bank feed of the workspace stores a full account number. */
 export type OptionalWorkspacePaymentAccount = WorkspacePaymentAccount | null
-
-/** An amount in VND for a VietQR, or null when the payer types it. */
-export type OptionalQrAmount = number | null
 
 /** The Zalo credential read from a sealed secret, or null when the text is not one. */
 export type OptionalZaloSecret = ZaloSetupSecret | null

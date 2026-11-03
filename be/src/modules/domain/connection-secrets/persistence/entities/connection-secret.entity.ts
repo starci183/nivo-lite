@@ -12,6 +12,10 @@ export class ConnectionSecretEntity extends AbstractEntity {
     @Column({ name: "ciphertext", type: "text" })
     ciphertext!: string
 
+    /** The sealed API token NIVO presents to the provider; null when none was given. */
+    @Column({ name: "api_token_ciphertext", type: "text", nullable: true })
+    apiTokenCiphertext!: string | null
+
     /** The random secret of the connection's own webhook. */
     @Column({ name: "webhook_secret", type: "text" })
     webhookSecret!: string
