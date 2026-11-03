@@ -98,7 +98,7 @@ export const AgentMarketplaceBase = (props: AgentMarketplaceBaseProps) => {
                                             </Button>
                                         ) : null}
                                         <Button
-                                            intent="commit"
+                                            intent="alternative"
                                             isPending={view.isPending}
                                             isDisabled={isLoading}
                                             onPress={() => props.on.install(listing.id)}

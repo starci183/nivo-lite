@@ -1,5 +1,5 @@
-import type { Condition } from "@modules/domain/agent-graphs"
-import { leavesOf, withLeafValue } from "./template-condition.policy"
+import type { Condition } from "./graph.types"
+import { leavesOf, withLeafValue } from "./condition"
 
 const term = (value: number): Condition => ({ fact: "amount", op: "lt", value })
 const NESTED: Condition = { all: [term(1), { any: [term(2), { fact: "kind", op: "known" }, term(3)] }] }

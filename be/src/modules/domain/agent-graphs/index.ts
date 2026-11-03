@@ -14,6 +14,8 @@ export type { FactSpec, FactValues, GraphContext, GraphDocument } from "./agent-
 export type { FactSubject, GraphFactReader, AgentGraphBrief } from "./agent-graphs.port"
 export { AGENT_GRAPH_BRIEF, InjectAgentGraphBrief } from "./agent-graphs.decorators"
 export { graphDocumentSchema } from "./agent-graphs.schema"
+export { baseGraphOf } from "./policies/base-graph.policy"
+export type { SeedRule } from "./agent-graphs-seed.contracts"
 export { AgentGraphsService } from "./agent-graphs.service"
 export type { GraphState } from "./agent-graphs.service"
 export { AgentGraphPublishService } from "./agent-graph-publish.service"

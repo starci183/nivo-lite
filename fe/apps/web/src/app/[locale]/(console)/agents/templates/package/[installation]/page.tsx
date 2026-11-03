@@ -1,14 +1,16 @@
-import { AgentPackagePage } from "@/features/pages/AgentPackagePage"
+import type { Metadata } from "next"
+import type { ReactElement } from "react"
+import { AgentTemplatesPage, agentTemplatesMetadataOf } from "@/features/pages/AgentTemplatesPage"
 
 /** The document title of the packaging page. */
-export { agentPackageMetadata as generateMetadata } from "@/features/pages/AgentPackagePage"
+export const generateMetadata: () => Promise<Metadata> = agentTemplatesMetadataOf("package")
 
 type PageProps = { readonly params: Promise<{ installation: string }> }
 
 /** The packaging slot of one installed agent. */
-const Page = async (props: PageProps) => {
+const Page = async (props: PageProps): Promise<ReactElement> => {
     const { installation } = await props.params
-    return <AgentPackagePage installationId={installation} />
+    return <AgentTemplatesPage view="package" installationId={installation} />
 }
 
 export default Page

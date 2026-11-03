@@ -1,6 +1,8 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OrderTemplateListingData } from "@/modules/api/graphql"
 import { mutateOrderTemplateListing } from "@/modules/api/graphql/mutations/mutation-order-template-listing"
 import type { MutateOrderTemplateListingRequest } from "@/modules/api/graphql/mutations/mutation-order-template-listing"
 
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** The back end `orderTemplateListing` mutation. */
-export const useMutateOrderTemplateListingSwr = () =>
+export const useMutateOrderTemplateListingSwr = (): SWRMutationResponse<
+    OrderTemplateListingData,
+    Error,
+    string,
+    MutateOrderTemplateListingRequest
+> =>
     useSWRMutation(MUTATE_ORDER_TEMPLATE_LISTING_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateOrderTemplateListing({ request: arg })
         if (!result.data) throw new Error("orderTemplateListing answered no data")

@@ -1,11 +1,6 @@
-import type { GraphBranch, GraphDocument, GraphNode } from "@modules/domain/agent-graphs"
-import type {
-    AgentTemplatePackage,
-    ParameterBinding,
-    ParameterValue,
-    TemplateParameter,
-} from "../agent-templates.contracts"
-import { withLeafValue } from "./template-condition.policy"
+import { withLeafValue } from "./condition"
+import type { AgentTemplatePackage, ParameterBinding, ParameterValue, TemplateParameter } from "./format.types"
+import type { GraphBranch, GraphDocument, GraphNode } from "./graph.types"
 
 /** The title and sentence limits of a node, kept when a value is written into them. */
 const TITLE_MAX = 28

@@ -34,6 +34,7 @@
       "backing": ["redis"],
       "optionalSlots": [
         "repo.docs",
+        "repo.packages",
         "be.contract.graphql",
         "be.contract.events",
         "be.contract.mcp-tools",

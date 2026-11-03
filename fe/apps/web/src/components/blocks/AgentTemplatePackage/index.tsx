@@ -1,12 +1,18 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import type { ReactElement } from "react"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { TEXT_FIELDS, usePackageTemplate } from "@/hooks/templates"
 import { AgentTemplatePackageBase } from "./component"
 
+/** What the page hands the packaging form: the installation whose agent is packaged. */
+interface AgentTemplatePackageProps {
+    readonly installationId: string
+}
+
 /** The connected packaging form of one installed agent. */
-export const AgentTemplatePackage = (props: { readonly installationId: string }) => {
+export const AgentTemplatePackage = (props: AgentTemplatePackageProps): ReactElement => {
     const t = useTranslations("agentTemplates")
     const slotLabels = useSlotLabels()
     const packaging = usePackageTemplate(props.installationId)

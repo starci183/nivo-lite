@@ -15,7 +15,7 @@ const template = (over: Partial<AgentTemplateEntity> = {}): AgentTemplateEntity 
         key: "spa-booking-by-linh",
         creatorAccountId: CREATOR.accountId,
         baseModule: "accounting",
-        name: { vi: "Đặt lịch spa", en: "Spa booking" },
+        name: { vi: "Dat lich spa", en: "Spa booking" },
         firstParty: false,
         ...over,
     })

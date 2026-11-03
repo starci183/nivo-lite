@@ -1,4 +1,13 @@
-import { createHash } from "node:crypto"
+import { hashOfPackage } from "./canonical"
+import { leavesOf } from "./condition"
+import { TEMPLATE_FORMAT } from "./format.types"
+import type {
+    AgentTemplatePackage,
+    PackageDraft,
+    PackagePreview,
+    PackageReport,
+    ParameterBinding,
+} from "./format.types"
 import type {
     BranchApprover,
     Condition,
@@ -7,38 +16,12 @@ import type {
     GraphDocument,
     GraphNode,
     GraphSource,
-} from "@modules/domain/agent-graphs"
-import { TEMPLATE_FORMAT } from "../agent-templates.contracts"
-import type {
-    AgentTemplatePackage,
-    PackageDraft,
-    PackagePreview,
-    PackageReport,
-    ParameterBinding,
-} from "../agent-templates.contracts"
-import { leavesOf } from "./template-condition.policy"
+} from "./graph.types"
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
 const EMAIL = /[^\s@"]+@[^\s@"]+\.[a-z]{2,}/i
 const SECRET =
     /(sk-[A-Za-z0-9_-]{16,}|Bearer\s+[A-Za-z0-9._-]{16,}|-----BEGIN [A-Z ]*KEY|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|api[_-]?key\s*[:=]\s*\S{8,}|password\s*[:=]\s*\S+)/i
-
-/** The JSON of a value with its object keys sorted, so equal data always has the same text and the same hash. */
-export const canonicalJson = (value: unknown): string => {
-    if (Array.isArray(value)) return `[${value.map((item: unknown) => canonicalJson(item)).join(",")}]`
-    if (typeof value === "object" && value !== null) {
-        return `{${Object.entries(value)
-            .filter(([, member]) => member !== undefined)
-            .sort(([left], [right]) => left.localeCompare(right))
-            .map(([name, member]) => `${JSON.stringify(name)}:${canonicalJson(member)}`)
-            .join(",")}}`
-    }
-    return JSON.stringify(value) ?? "null"
-}
-
-/** The hash of a package: every field but the hash itself. */
-export const hashOfPackage = (body: Omit<AgentTemplatePackage, "hash">): string =>
-    createHash("sha256").update(canonicalJson(body)).digest("hex")
 
 /** A counter of what was left out while the graph was rebuilt. */
 interface Tally {

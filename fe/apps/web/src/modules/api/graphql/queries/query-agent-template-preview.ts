@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
+import type { ApolloClient, TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
 import type { AgentTemplatePreviewQuery, AgentTemplatePreviewQueryVariables } from "../__generated__/graphql"
@@ -85,7 +85,7 @@ export const queryAgentTemplatePreview = async ({
     query = QueryAgentTemplatePreview.Query1,
     request,
     signal,
-}: QueryAgentTemplatePreviewParams) => {
+}: QueryAgentTemplatePreviewParams): Promise<ApolloClient.QueryResult<QueryAgentTemplatePreviewResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }

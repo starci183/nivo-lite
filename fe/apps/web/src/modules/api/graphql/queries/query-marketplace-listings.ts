@@ -1,4 +1,5 @@
-import { gql, type TypedDocumentNode } from "@apollo/client"
+import { gql } from "@apollo/client"
+import type { ApolloClient, TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
 import type { MarketplaceListingsQuery } from "../__generated__/graphql"
@@ -59,7 +60,7 @@ const queryMap: Record<QueryMarketplaceListings, typeof query1> = { [QueryMarket
 export const queryMarketplaceListings = async ({
     query = QueryMarketplaceListings.Query1,
     signal,
-}: QueryParams<QueryMarketplaceListings> = {}) => {
+}: QueryParams<QueryMarketplaceListings> = {}): Promise<ApolloClient.QueryResult<QueryMarketplaceListingsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

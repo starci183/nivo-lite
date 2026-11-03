@@ -1,4 +1,5 @@
-import { gql, type TypedDocumentNode } from "@apollo/client"
+import { gql } from "@apollo/client"
+import type { ApolloClient, TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
 import type { MyAgentTemplatesQuery } from "../__generated__/graphql"
@@ -37,7 +38,7 @@ const queryMap: Record<QueryMyAgentTemplates, typeof query1> = { [QueryMyAgentTe
 export const queryMyAgentTemplates = async ({
     query = QueryMyAgentTemplates.Query1,
     signal,
-}: QueryParams<QueryMyAgentTemplates> = {}) => {
+}: QueryParams<QueryMyAgentTemplates> = {}): Promise<ApolloClient.QueryResult<QueryMyAgentTemplatesResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

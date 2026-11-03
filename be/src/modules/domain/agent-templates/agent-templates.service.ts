@@ -18,7 +18,7 @@ import type {
     TemplateVersionView,
     TemplateView,
 } from "./agent-templates.contracts"
-import { canonicalJson, previewPackage } from "./policies/template-packager.policy"
+import { canonicalJson, previewPackage } from "@nivo/agent-sdk/template"
 
 /** What the creator gives to package one version of an agent. */
 export interface PackageRequest {
@@ -86,7 +86,7 @@ export class AgentTemplatesService {
         const foreign = foreignKeysOf(prepared.graph, request.key)
         for (const key of foreign) {
             const owner = await this.versions.templateOf(key)
-            if (owner?.creatorAccountId !== userId) {
+            if (owner?.creatorAccountId !== userId && owner?.firstParty !== true) {
                 throw new AgentTemplatesError({ code: AgentTemplatesErrorCode.ForeignTemplate, params: { key } })
             }
         }

@@ -1,6 +1,6 @@
-import { CREATOR, SECRET_IN_ENV, draftOf, leakyGraph } from "@tests/fixtures/builders/agent-template.builder"
-import { agentTemplatePackageSchema } from "../agent-template.schema"
-import { canonicalJson, hashOfPackage, leakProblems, previewPackage, suggestionsOf } from "./template-packager.policy"
+import { CREATOR, SECRET_IN_ENV, draftOf, leakyGraph, packageOf } from "../testing"
+import { canonicalJson, hashOfPackage } from "./canonical"
+import { leakProblems, previewPackage, suggestionsOf } from "./packager"
 
 describe("previewPackage: the allowlist", () => {
     it("keeps the process and leaves out the internal Brain, customer data, people and the secrets of the creator agent", () => {
@@ -12,8 +12,8 @@ describe("previewPackage: the allowlist", () => {
             CREATOR.workspaceId,
             CREATOR.memberId,
             "room-secret",
-            "Giá vốn 40%",
-            "Nguyễn Văn A",
+            "Gia von 40%",
+            "Nguyen Van A",
             "0901234567",
             "msg-9",
             "prop-1",
@@ -60,7 +60,7 @@ describe("previewPackage: the allowlist", () => {
         const decide = pkg?.graph.nodes.find((node) => node.key === "decide")
 
         expect(middle?.approver?.group).toEqual({ roles: ["manager"], rooms: [], members: [] })
-        expect(decide?.knows).toEqual([{ kind: "brain_fact", ref: "", label: "Giá nội bộ" }])
+        expect(decide?.knows).toEqual([{ kind: "brain_fact", ref: "", label: "Gia noi bo" }])
     })
 
     it("never carries a data right: the rights become proposals the buyer turns on one by one", () => {
@@ -92,13 +92,27 @@ describe("previewPackage: the allowlist", () => {
         expect(pkg?.requiredProviders.every((provider) => typeof provider === "string")).toBe(true)
     })
 
-    it("yields a package the closed schema reads back with the same hash", () => {
-        const pkg = previewPackage(leakyGraph(), draftOf()).package
+    it("yields a package whose canonical text reads back to the same package and the same hash", () => {
+        const made = packageOf()
 
-        expect(pkg).not.toBeNull()
-        const parsed = agentTemplatePackageSchema.parse(JSON.parse(canonicalJson(pkg)))
-        const { hash, ...body } = parsed
+        expect(JSON.parse(canonicalJson(made))).toEqual(made)
+        const { hash, ...body } = made
         expect(hashOfPackage(body)).toBe(hash)
+    })
+})
+
+describe("canonicalJson", () => {
+    it("sorts the keys of objects at any depth, so equal data has one text, and leaves out members that are undefined", () => {
+        expect(canonicalJson({ b: 1, a: { d: [3, { y: 1, x: 2 }], c: undefined } })).toBe(
+            '{"a":{"d":[3,{"x":2,"y":1}]},"b":1}',
+        )
+        expect(canonicalJson({ a: 1, b: 2 })).toBe(canonicalJson({ b: 2, a: 1 }))
+    })
+
+    it("writes null and scalars as JSON does, and a value JSON cannot write as null", () => {
+        expect(canonicalJson(null)).toBe("null")
+        expect(canonicalJson("x")).toBe('"x"')
+        expect(canonicalJson(undefined)).toBe("null")
     })
 })
 

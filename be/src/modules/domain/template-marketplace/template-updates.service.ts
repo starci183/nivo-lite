@@ -1,16 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentGraphPublishService, AgentGraphsService } from "@modules/domain/agent-graphs"
+import { AgentGraphPublishService, AgentGraphsService, graphDocumentSchema } from "@modules/domain/agent-graphs"
 import {
     AgentTemplateVersionsService,
-    applyUnits,
-    instantiate,
-    resolveValues,
     TemplateInstallEntity,
     TemplateLicenseEntity,
-    updateUnits,
 } from "@modules/domain/agent-templates"
-import type { UpdateOffer } from "@modules/domain/agent-templates"
+import { applyUnits, instantiate, resolveValues, updateUnits } from "@nivo/agent-sdk/template"
+import type { UpdateOffer } from "@nivo/agent-sdk/template"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
@@ -75,9 +72,11 @@ export class TemplateUpdatesService {
         const state = await this.graphs.stateOfAgent(workspaceId, merged.agentId)
         if (state?.active == null)
             throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.UpdateUnavailable })
-        const document = applyUnits(state.active, merged.next, merged.units, unitIds)
+        const document = graphDocumentSchema.safeParse(applyUnits(state.active, merged.next, merged.units, unitIds))
+        if (!document.success)
+            throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.UpdateUnavailable })
         const by = { memberId: await this.members.idOf(userId, workspaceId), role: member.role }
-        await this.publish.publishTemplate(workspaceId, merged.agentId, document, by)
+        await this.publish.publishTemplate(workspaceId, merged.agentId, document.data, by)
         if (merged.units.every((unit) => unitIds.includes(unit.id))) {
             await this.entityManager.update(
                 TemplateInstallEntity,
