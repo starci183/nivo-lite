@@ -6,6 +6,8 @@ export enum ChannelsLogEvent {
     DeliveryFailed = "channels.delivery.failed",
     /** The refresh lease could not be released; it expires on its own. */
     LeaseNotReleased = "channels.zalo.lease-not-released",
+    /** A Zalo webhook call reached a connection that cannot prove events yet (unknown, or no OA secret key): answered 200 and dropped. */
+    ZaloWebhookUnverified = "zalo.webhook.unverified",
     /** A webhook body was not the JSON its mac covers. */
     ProofBodyUnreadable = "channels.proof.body-unreadable",
     /** A connection is failing or silent; the owner should look at it. */

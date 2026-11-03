@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { fakeInbox, fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { IsNull } from "typeorm"
+import { ZaloWebhookGateService } from "@modules/domain/channels"
 import { ConversationsService } from "@modules/domain/conversations"
 import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -24,7 +25,7 @@ const payload = { connection: "c-1", rawBody: body.toString("utf8") }
 const pendingOf = (over: Partial<ZaloInboxEntity> = {}): ZaloInboxEntity =>
     Object.assign(new ZaloInboxEntity(), { id: "receipt-1", provider: "zalo", payload }, over)
 
-const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = true) => {
+const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = true, keyed = true) => {
     const tx = fakeTransaction(
         mockEntityManager({
             findOne: [ZaloInboxEntity, pending],
@@ -35,6 +36,8 @@ const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = tr
     conversations.acceptZalo.mockResolvedValue(undefined)
     const inbox = fakeInbox()
     if (!claimed) inbox.seen("zalo", "c-1:m-1")
+    const gate = mock<ZaloWebhookGateService>()
+    gate.holdsProofKey.mockResolvedValue(keyed)
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const moduleRef = await Test.createTestingModule({
@@ -44,9 +47,10 @@ const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = tr
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: ConversationsService, useValue: conversations },
+            { provide: ZaloWebhookGateService, useValue: gate },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write, inbox }
+    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write, inbox, gate }
 }
 
 describe("ZaloInboxService receipt delivery", () => {
@@ -85,6 +89,16 @@ describe("ZaloInboxService receipt delivery", () => {
         await service.acceptZaloDelivery(undefined, "c-1")
         expect(tx.em.findOne).not.toHaveBeenCalled()
         expect(outbox.jobs).toEqual([])
+    })
+
+    it("closes the receipt of a connection that holds no OA secret key yet, publishing nothing", async () => {
+        const { service, outbox, tx, conversations, gate } = await build(pendingOf(), true, false)
+        await service.acceptZaloDelivery(body, "c-1")
+        expect(gate.holdsProofKey).toHaveBeenCalledWith("c-1")
+        expect(outbox.jobs).toEqual([])
+        expect(stampedValues(tx.em.update.mock.calls[0]?.[2])).toEqual({ processedAt: "function" })
+        expect(tx.commits).toBe(1)
+        expect(conversations.acceptZalo).not.toHaveBeenCalled()
     })
 
     it("rolls back the intake if publication fails", async () => {

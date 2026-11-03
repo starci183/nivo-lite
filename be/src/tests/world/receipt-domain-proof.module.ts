@@ -4,7 +4,7 @@ import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
-import { ZaloCredentialsService } from "@modules/domain/channels"
+import { ZaloCredentialsService, ZaloWebhookGateService } from "@modules/domain/channels"
 import { CHANNELS_OPTIONS } from "../../modules/domain/channels/channels.decorators"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
@@ -42,6 +42,7 @@ const billingOptions = (): BillingOptions => ({
         ChatTurnQueue,
         ZaloDeliveryQueue,
         ZaloCredentialsService,
+        ZaloWebhookGateService,
         ConversationsService,
         InboundEventsService,
         PaymentSecretsService,
@@ -49,7 +50,7 @@ const billingOptions = (): BillingOptions => ({
         PaymentOrdersService,
         SepayTransactionsService,
     ],
-    exports: [ConversationsService, SepayTransactionsService, ZaloDeliveryQueue],
+    exports: [ConversationsService, SepayTransactionsService, ZaloDeliveryQueue, ZaloWebhookGateService],
 })
 /** Composes real receipt consumers and their dependencies; these proofs make no provider network calls. */
 export class ReceiptDomainProofModule {
