@@ -3,7 +3,7 @@ import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
-import { tagTextOf } from "./handoff.policy"
+import { tagPayloadOf } from "./handoff.policy"
 import type { HandoffInput, HandoffOutput, HandoffParams } from "./handoff.types"
 
 const TARGET_MAX = 120
@@ -18,6 +18,8 @@ const params: NodeSchema<HandoffParams> = z.object({ toModuleKey: z.string().min
 
 const input: NodeSchema<HandoffInput> = z.object({
     text: z.string().min(1).max(TEXT_MAX),
+    leadId: z.string().min(1).max(TARGET_MAX).nullable(),
+    channel: z.string().min(1).max(TARGET_MAX).nullable(),
     conversationId: z.string().min(1).max(TARGET_MAX).nullable(),
     context: z
         .record(z.string().max(TARGET_MAX), contextValue)
@@ -50,12 +52,7 @@ export const coreHandoffNode: NodeDefinition<
     run: async (given, context) => {
         const tag = await context.effect(
             "agent.tag",
-            {
-                toModuleKey: context.params.toModuleKey,
-                text: tagTextOf(given),
-                ...(given.conversationId === null ? {} : { conversationId: given.conversationId }),
-                ...(context.turn.subject === null ? {} : { subject: context.turn.subject }),
-            },
+            tagPayloadOf(context.params.toModuleKey, given, context.turn.subject),
             { dedupeKey: `agent-tag:${context.turn.turnId}:${context.params.toModuleKey}` },
         )
         return { toModuleKey: context.params.toModuleKey, tag }
@@ -66,8 +63,13 @@ export const coreHandoffNode: NodeDefinition<
             params: { toModuleKey: "sales" },
             input: {
                 text: "Khách muốn đặt 1 chậu hoa",
+                leadId: "l1",
+                channel: "zalo",
                 conversationId: "c1",
-                context: { intent: "order", address: "69 Hàng Xanh" },
+                context: {
+                    intent: "order",
+                    order: { items: [{ name: "chậu hoa", quantity: 1 }], address: "69 Hàng Xanh" },
+                },
             },
             output: { toModuleKey: "sales", tag: { kind: "agent.tag", id: "agent.tag-1" } },
             effects: [
@@ -75,7 +77,13 @@ export const coreHandoffNode: NodeDefinition<
                     kind: "agent.tag",
                     payload: {
                         toModuleKey: "sales",
-                        text: 'Khách muốn đặt 1 chậu hoa\n{"intent":"order","address":"69 Hàng Xanh"}',
+                        text: "Khách muốn đặt 1 chậu hoa",
+                        context: {
+                            intent: "order",
+                            order: { items: [{ name: "chậu hoa", quantity: 1 }], address: "69 Hàng Xanh" },
+                        },
+                        leadId: "l1",
+                        channel: "zalo",
                         conversationId: "c1",
                     },
                 },
@@ -84,7 +92,13 @@ export const coreHandoffNode: NodeDefinition<
         {
             name: "tags with the note alone",
             params: { toModuleKey: "care" },
-            input: { text: "Khách cần hỗ trợ sau mua", conversationId: null, context: null },
+            input: {
+                text: "Khách cần hỗ trợ sau mua",
+                leadId: null,
+                channel: null,
+                conversationId: null,
+                context: null,
+            },
             output: { toModuleKey: "care", tag: { kind: "agent.tag", id: "agent.tag-1" } },
             effects: [
                 {
