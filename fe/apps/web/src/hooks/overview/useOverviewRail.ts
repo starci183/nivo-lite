@@ -9,7 +9,7 @@ import { agentLifecycleOf } from "@/modules/installations"
 import { useOverviewData } from "./useOverviewData"
 
 import type { AgentLifecycle } from "@/modules/installations"
-import type { ActivityModel } from "../overviewRows/overviewRows.shared"
+import type { ActivityModel } from "@/hooks/overviewRows"
 
 type UseOverviewRailResult =
     | {

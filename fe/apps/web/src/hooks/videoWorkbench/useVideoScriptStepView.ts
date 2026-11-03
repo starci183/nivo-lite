@@ -1,10 +1,11 @@
 "use client"
 
 import type { VideoEditorActions } from "@/modules/types"
+/** Handlers the script step form calls. */
 export type VideoScriptFormActions = VideoEditorActions["script"]
 import { useEffect, useState } from "react"
 import { useTranslations, useFormatter } from "next-intl"
-import { useVideoActions, useVideoScript, useVideoFailure } from "@/hooks/video"
+import { useVideoActions, useVideoScript, useVideoFailure, type VideoJobRead } from "@/hooks/video"
 import { useVideoScriptForm } from "@/hooks/rhf"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { editorHref, newScene } from "@/modules/video"
@@ -13,7 +14,6 @@ import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { videoOwnerOf, videoScriptFieldsOf, swapped } from "./videoWorkbench.shared"
 import type { VideoViewInput } from "./videoWorkbench.shared"
-import type { VideoJobRead } from "@/hooks/video/useVideoJob"
 const sceneChangesOf = (form: ReturnType<typeof useVideoScriptForm>, scenes: ReadonlyArray<ScriptScene>) => {
     const change = (next: ReadonlyArray<ScriptScene>) => {
         form.setValue(

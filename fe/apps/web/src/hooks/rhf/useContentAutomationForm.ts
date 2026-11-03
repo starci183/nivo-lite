@@ -8,7 +8,7 @@ import { z } from "zod"
 import type { ContentSettings } from "@/modules/content"
 
 import type { UseFormReturn } from "react-hook-form"
-import type { AutomationKey } from "@/modules/types/content-model-workbench-forms"
+import type { AutomationKey } from "@/modules/types"
 
 /** Validates switches before changing a workspace automation. */
 export const useContentAutomationForm = (
