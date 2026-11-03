@@ -1,4 +1,5 @@
 import type { InjectionToken, Type } from "@nestjs/common"
+import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 import type { Secret } from "@modules/platform/config"
 import type { OfficeAuthorityPort } from "./office-seed.port"
 import type { SeedAgentRecords, SeedConnectors, SeedSources, SeedToolGrants } from "./workspace-seed.port"
@@ -119,6 +120,8 @@ export interface WorkspaceSeedOptions {
     readonly profileInput?: Secret | undefined
     /** Private office input (`nivo/workspace-office-input@1`): the accounts of the two people the ensure input does not carry. */
     readonly officeInput?: Secret | undefined
+    /** The nodes, effects, tools and data kinds the app installs: the graphs a seed publishes are judged against them. */
+    readonly nodes?: NodeInstall | undefined
     /** Writes the closed public receipt, never credentials. */
     readonly print: (line: string) => void
 }

@@ -6,3 +6,10 @@ entries:
     target: [node, be/dist/apps/cli/src/main.js, seed-management]
     mode: once
     schema: be/src/modules/domain/channel-provisioning/management-seed.schema.json
+  - id: agent-graphs
+    kind: data
+    path: data/graphs
+    target: [node, be/dist/apps/cli/src/main.js, seed-agent-graphs, --workspace, NIVO]
+    mode: upsert
+    after: [nivo-workspace]
+    schema: be/src/modules/domain/agent-graphs/agent-graph-spec.schema.json

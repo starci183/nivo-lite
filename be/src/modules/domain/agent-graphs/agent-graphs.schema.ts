@@ -1,5 +1,5 @@
-import { z } from "zod"
 import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
+import { z } from "zod"
 import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { MAX_LIMITS, MAX_LIMIT_LENGTH, MAX_TASK_LENGTH } from "./agent-graphs-contract.contracts"
 import { MAX_CONDITION_TERMS, MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "./agent-graphs.contracts"

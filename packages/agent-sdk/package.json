@@ -12,6 +12,10 @@
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
     },
+    "./reconcile": {
+      "types": "./dist/reconcile/index.d.ts",
+      "default": "./dist/reconcile/index.js"
+    },
     "./rights": {
       "types": "./dist/rights/index.d.ts",
       "default": "./dist/rights/index.js"

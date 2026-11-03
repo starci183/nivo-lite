@@ -10,6 +10,8 @@ export interface AgentGraphsOptions {
     readonly readers?: ReadonlyArray<Type<GraphFactReader>>
     /** Only the data rights of the gateway: the store and the rights, none of the work engine behind the rest of the graph (the MCP endpoint). */
     readonly rightsOnly?: boolean
+    /** Only the store of the graphs and the publishing of a flow onto it (the cli seed): none of the work engine, the gateway or the approval road. */
+    readonly storeOnly?: boolean
     /** Only the branch decider with its store, its ledger and its fact readers, with no approval road behind it. */
     readonly deciderOnly?: boolean
     /** The time a fact read may take, milliseconds (2 s). */

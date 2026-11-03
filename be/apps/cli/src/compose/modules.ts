@@ -1,7 +1,10 @@
 import type { DynamicModule, Type } from "@nestjs/common"
+import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
+import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 import { CliModule } from "@features/cli"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelProvisioningModule } from "@modules/domain/channel-provisioning"
+import { AgentGraphsModule } from "@modules/domain/agent-graphs"
 import { AgentBindingsService, AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { ConnectionGrantsModule } from "@modules/domain/connection-grants"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
@@ -69,6 +72,14 @@ const CLI_QUEUE: QueueOptions = {
     schedulers: [],
 }
 
+/** The nodes the graphs a seed publishes are judged against: the core ones of the blocks package. */
+const GRAPH_NODES: NodeInstall = {
+    nodes: coreNodes,
+    effects: coreEffects,
+    tools: coreTools,
+    dataKinds: coreDataKinds,
+}
+
 /** Registers the CLI capabilities in their boot order, with queue producers only. */
 export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> => [
     ClockModule.register({ isGlobal: true }),
@@ -122,9 +133,11 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
             connectors: McpGatewayAdminService,
             officeAuthority: OfficeAuthorityService,
         },
+        nodes: GRAPH_NODES,
         print: printConsoleLine,
         ...options.workspaceSeed,
     }),
+    AgentGraphsModule.register({ isGlobal: true, storeOnly: true }),
     WorkspaceCleanupModule.register({ isGlobal: true, accounts: IDENTITY_ACCOUNTS, print: printConsoleLine }),
     AuthorityActionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({

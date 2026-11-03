@@ -1,7 +1,4 @@
-import { isDeepStrictEqual } from "node:util"
 import { Injectable } from "@nestjs/common"
-import { graphSpecProblems } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpecProblem } from "@nivo-lite/agent-sdk/graph"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
@@ -11,6 +8,7 @@ import { AgentGraphsService } from "./agent-graphs.service"
 import type { GraphState } from "./agent-graphs.service"
 import type { GraphChangeKind, GraphDocument, GraphMode, GraphVersionView } from "./agent-graphs.contracts"
 import { graphDiff } from "./policies/graph-diff.policy"
+import { flowChanged, requireSoundFlow } from "./policies/flow.policy"
 import { graphProblems } from "./policies/graph-problems.policy"
 
 /** Who publishes. */
@@ -152,24 +150,19 @@ export class AgentGraphPublishService {
         })
     }
 
-    /** The problems of the node graph a version carries, judged against the nodes the app installed. */
-    private flowProblems(document: GraphDocument): ReadonlyArray<GraphSpecProblem> {
-        return document.flow === undefined ? [] : graphSpecProblems(document.flow, this.nodes.installed())
-    }
-
     private async checked(state: GraphState, document: GraphDocument, by: Publisher): Promise<void> {
         const installation = await this.installations.findById(state.installationId)
         if (installation === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
         const context = await this.context.contextOf({ ...state, moduleKey: installation.moduleKey }, document)
-        const problems = [...graphProblems(document, context), ...this.flowProblems(document)]
+        if (document.flow !== undefined) requireSoundFlow(document.flow, this.nodes.installed())
+        const problems = graphProblems(document, context)
         if (problems.length > 0)
             throw new AgentGraphsError({
                 code: AgentGraphsErrorCode.PublishRefused,
                 params: { count: problems.length },
             })
         const diff = graphDiff(state.active ?? EMPTY, document, { actorMemberId: by.memberId, facts: context.facts })
-        const flowChanged = !isDeepStrictEqual(state.active?.flow, document.flow)
-        if ((diff.widens || flowChanged) && by.role !== "owner")
+        if ((diff.widens || flowChanged(state.active?.flow, document.flow)) && by.role !== "owner")
             throw new AgentGraphsError({ code: AgentGraphsErrorCode.WidensNeedsOwner })
     }
 }

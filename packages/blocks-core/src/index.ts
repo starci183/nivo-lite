@@ -11,7 +11,7 @@ import { sectionBlock } from "./blocks/section.block"
 import { stackBlock } from "./blocks/stack.block"
 import { waitingBlock } from "./blocks/waiting.block"
 
-export { coreNodes } from "./nodes"
+export { coreNodes, paymentNodes } from "./nodes"
 export {
     agentTagEffect,
     bankTransactionKind,
@@ -80,3 +80,6 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     masterDetailBlock,
     explanationBlock,
 ]
+
+export { DEFAULT_THRESHOLD_VND } from "./nodes/order/needs-approval.node"
+export { transferContentOf } from "./nodes/payment/payment-request.policy"
