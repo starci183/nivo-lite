@@ -17,6 +17,7 @@ import type {
     DesignedModule,
     ExtractedOrder,
     LeadInput,
+    NodeAsk,
     OptionalAgentInput,
     ProposedCommand,
     ProposedResponsibility,
@@ -39,6 +40,7 @@ import type { TaskSchema } from "./ai-tasks.schema"
 import { AiTasksError, AiTasksErrorCode } from "./errors/ai-tasks.error"
 import { NotesService } from "./notes.service"
 import { embeddedObject, isJsonRecord, unfenced } from "./json.mapper"
+import { nodeMessagesOf, nodeMetaOf } from "./node-prompt.policy"
 import type { JsonRecord, OptionalJsonRecord } from "./json.mapper"
 import { leadTurnPrompt } from "./lead-turn-prompt.policy"
 import type { LeadTurnInput } from "./lead-turn-prompt.policy"
@@ -327,6 +329,16 @@ Current rules: ${currentRules}`,
             LEAD_TURN,
             LEAD_TURN_SCHEMA,
         )
+    }
+
+    /** A graph node's free-text call: its instructions and input, metered as engine work of the node's namespace. */
+    nodeText(scope: AiTaskScope, ask: NodeAsk): Promise<string> {
+        return this.complete(scope, nodeMessagesOf(ask), false, nodeMetaOf(ask))
+    }
+
+    /** A graph node's structured call: the answer the schema asks for, asked again as often as the options allow. */
+    nodeJson(scope: AiTaskScope, ask: NodeAsk, schema: TaskSchema): Promise<JsonRecord> {
+        return this.completeJson(scope, nodeMessagesOf(ask), nodeMetaOf(ask), schema)
     }
 
     private phrase(key: string, locale: Locale): string {

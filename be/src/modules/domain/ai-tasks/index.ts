@@ -9,6 +9,7 @@ export type {
     AiTaskScope,
     ExtractedOrder,
     LeadInput,
+    NodeAsk,
     ProposedCommand,
     ProposedResponsibility,
     TextRequest,
@@ -19,3 +20,4 @@ export { authorityBrief } from "./prompts.policy"
 
 export { AI_TASKS, InjectAiTasks } from "./ai-tasks.decorators"
 export type { LeadTurnInput } from "./lead-turn-prompt.policy"
+export type { JsonRecord } from "./json.mapper"
