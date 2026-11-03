@@ -1,3 +1,4 @@
+export type { CodeOutcome } from "./judge"
 export type {
     Arrival,
     Brief,

@@ -3,6 +3,7 @@ import type {
     Arrival,
     Candidate,
     Claim,
+    Effect,
     EffectHandlers,
     EvidenceOptions,
     Evidenced,
@@ -22,17 +23,22 @@ export const REASON = {
     amountDiffers: "amount_differs",
 } as const
 
+/** An outcome the code rule gives: the match is applied, or a person is asked; the rule never leaves an arrival. */
+export type CodeOutcome = Omit<Outcome, "effect"> & {
+    readonly effect: Extract<Effect, { readonly kind: "apply" | "ask" }>
+}
+
 const codeNamed = (list: ReadonlyArray<Evidenced>): ReadonlyArray<Evidenced> => list.filter((one) => holds(one, "code"))
 
 const idsOf = (list: ReadonlyArray<Evidenced>): ReadonlyArray<string> => list.map((one) => one.candidate.id)
 
-const outcomeOf = (candidates: ReadonlyArray<Evidenced>, rest: Omit<Outcome, "candidates">): Outcome => ({
-    ...rest,
-    candidates,
-})
+const outcomeOf = <E extends Effect>(
+    candidates: ReadonlyArray<Evidenced>,
+    rest: Omit<Outcome, "candidates" | "effect"> & { readonly effect: E },
+): Omit<Outcome, "effect"> & { readonly effect: E } => ({ ...rest, candidates })
 
 /** The first pass, with no model: a code in the text that names exactly one candidate decides, if the amount is the amount due. */
-export const decideByCode = (candidates: ReadonlyArray<Evidenced>): Outcome | null => {
+export const decideByCode = (candidates: ReadonlyArray<Evidenced>): CodeOutcome | null => {
     const named = codeNamed(candidates)
     const [only] = named
     if (only === undefined) return null

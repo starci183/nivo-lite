@@ -4,13 +4,13 @@ import { z } from "zod"
 /** The statuses of an order that waits for money. */
 export const AWAITING_PAYMENT: ReadonlyArray<string> = ["confirmed", "invoiced"]
 
-/** One bank transaction as the `bank-transaction` data kind yields it (instants as ISO text or epoch milliseconds). */
+/** One bank transaction as the `bank-transaction` data kind yields it (instants as ISO text). */
 export type TransactionRow = {
     readonly id: string
     readonly amountVnd: number
     readonly content: string
     readonly counterpartName: string | null
-    readonly receivedAt: string | number
+    readonly receivedAt: string
     readonly orderId: string | null
     readonly status: string
 }
@@ -19,25 +19,25 @@ export type TransactionRow = {
 export type OrderRow = {
     readonly id: string
     readonly orderNo: string
-    readonly leadId: string | null
-    readonly items: string
+    readonly leadId: string
+    readonly items: ReadonlyArray<Readonly<Record<string, unknown>>>
     readonly amountVnd: number | null
     readonly status: string
-    readonly confirmedAt: string | number | null
-    readonly createdAt: string | number
+    readonly confirmedAt: string | null
+    readonly createdAt: string
 }
 
 /** One customer as the `sales-lead` data kind yields it. */
 export type LeadRow = {
     readonly id: string
-    readonly contactName: string
+    readonly contactName: string | null
 }
 
 /** One conversation as the `conversation` data kind yields it. */
 export type ConversationRow = {
     readonly id: string
     readonly leadId: string | null
-    readonly lastMessageAt: string | number | null
+    readonly lastMessageAt: string | null
 }
 
 /** One customer payment claim as the `payment-claim` data kind yields it. */
@@ -48,12 +48,15 @@ export type ClaimRow = {
     readonly amountVnd: number | null
     readonly names: ReadonlyArray<string>
     readonly body: string
-    readonly claimedAt: string | number
+    readonly claimedAt: string
     readonly status: string
 }
 
-/** An instant as epoch milliseconds, whether the row gave ISO text or a number. */
-export const atOf = (value: string | number): number => (typeof value === "number" ? value : Date.parse(value))
+/** An instant as epoch milliseconds. */
+export const atOf = (value: string): number => Date.parse(value)
+
+/** An order that has an amount due. */
+export type PricedOrder = OrderRow & { readonly amountVnd: number }
 
 export const arrivalSchema: z.ZodType<Arrival, Arrival> = z.object({
     id: z.string(),

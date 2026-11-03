@@ -1,10 +1,8 @@
-import { defineEffect } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import { EXAMPLE_TURN, fakeNodePorts, nodeListMismatches } from "@nivo-lite/agent-sdk/testing"
+import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
 import type { FakeNodePortsOptions } from "@nivo-lite/agent-sdk/testing"
 import { runNode } from "@nivo-lite/agent-sdk/node"
-import { z } from "zod"
-import { coreNodes, paymentNodes } from ".."
+import { coreEffects, coreNodes, paymentNodes } from "../.."
 import {
     ARRIVAL_DINH,
     CLAIM_OF_DINH,
@@ -13,33 +11,6 @@ import {
     TRANSACTION_DINH,
     TRANSACTION_MOMO,
 } from "./payment.fixtures"
-
-/** The effects the host's vocabulary defines for these nodes (the payloads of the node contract). */
-const EFFECTS = [
-    defineEffect({
-        id: "payment.mark-paid",
-        title: { key: "paymentMarkPaid" },
-        payload: z.object({ orderId: z.string(), transactionId: z.string(), evidence: z.array(z.string()) }),
-        rights: [],
-    }),
-    defineEffect({
-        id: "channel.send",
-        title: { key: "channelSend" },
-        payload: z.object({ conversationId: z.string(), text: z.string() }),
-        rights: [],
-    }),
-    defineEffect({
-        id: "work-item.raise",
-        title: { key: "workItemRaise" },
-        payload: z.object({
-            action: z.string(),
-            title: z.string(),
-            payload: z.record(z.string(), z.unknown()),
-            amountVnd: z.number().nullable(),
-        }),
-        rights: [],
-    }),
-]
 
 const SETTLE_PARAMS = { confirmationText: "Đã nhận {amount} đ cho {orderNo}", reviewTitle: "Kiểm tra" }
 
@@ -52,8 +23,9 @@ const run = (node: NodeDefinition, params: unknown, input: unknown, options: Fak
             params,
             input,
             turn: EXAMPLE_TURN,
-            grant: { rights: paymentNodes.flatMap((one) => one.rights) },
-            effects: new Map(EFFECTS.map((effect) => [effect.id, effect])),
+            grant: { rights: [...paymentNodes.flatMap((one) => one.rights), ...coreEffects.flatMap((effect) => effect.rights)] },
+            effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
+            tools: new Map(),
             key: `${node.id}:real-case`,
         },
         fake.ports,
@@ -67,10 +39,6 @@ const byId = (id: string): NodeDefinition => {
 }
 
 describe("the payment nodes", () => {
-    it("conform to every example of theirs", async () => {
-        await expect(nodeListMismatches(paymentNodes, EFFECTS)).resolves.toEqual({})
-    })
-
     it("are listed among the core nodes with distinct kebab-case ids", () => {
         const ids = coreNodes.map((node) => node.id)
         expect(ids).toEqual([
@@ -109,7 +77,7 @@ describe("the real case end to end", () => {
         const settled = await run(
             byId("payment.settle"),
             SETTLE_PARAMS,
-            { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: ["order-dinh"], reasons: ["khớp"] },
+            { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: ["order-dinh"], reasons: ["khớp"], claimId: null },
             { store: STORE_REAL_CASE },
         )
         expect(settled.output).toEqual({ result: "paid", orderId: "order-dinh" })
@@ -134,6 +102,7 @@ describe("the real case end to end", () => {
                     turn: EXAMPLE_TURN,
                     grant: { rights: [] },
                     effects: new Map(),
+                    tools: new Map(),
                     key: "denied",
                 },
                 fake.ports,

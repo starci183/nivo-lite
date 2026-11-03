@@ -13,5 +13,22 @@
   "slotEmpty": "Nothing here yet",
   "slotForbidden": "You do not have access to this",
   "slotError": "This could not be loaded",
-  "slotRetry": "Try again"
+  "slotRetry": "Try again",
+  "dataKindOrder": "Order",
+  "dataKindSalesLead": "Sales lead",
+  "dataKindCatalogueItem": "Catalogue item",
+  "dataKindBankTransaction": "Bank transaction",
+  "dataKindPaymentClaim": "Payment claim",
+  "dataKindPaymentAccount": "Payment account",
+  "dataKindConversation": "Conversation",
+  "dataKindMessage": "Message",
+  "dataKindKnowledgeDocument": "Knowledge document",
+  "effectChannelSend": "Send a message",
+  "effectOrderRecord": "Record an order",
+  "effectOrderConfirm": "Confirm an order",
+  "effectPaymentMarkPaid": "Mark an order paid",
+  "effectPaymentClaimRecord": "Record a payment claim",
+  "effectAgentTag": "Tag an agent",
+  "effectWorkItemRaise": "Raise a work item",
+  "toolPaymentInstruction": "Payment instruction"
 }

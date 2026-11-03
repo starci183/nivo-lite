@@ -1,6 +1,7 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
+import { channelSendEffect } from "../../vocabulary"
 import { CLAIM_DINH, STORE_REAL_CASE } from "./payment.fixtures"
 import { READ_CLAIMS } from "./payment.rights"
 import type { ClaimRow } from "./payment.schemas"
@@ -34,6 +35,9 @@ const output: z.ZodType<ClaimWaitOutput, ClaimWaitOutput> = z.object({
     state: z.enum(["waiting", "escalated", "closed"]),
     resumeAfterMinutes: z.number().nullable(),
 })
+
+/** The agent's grant in the examples: the node's own rights and what the effects it runs need (the host checks the grant for them). */
+const GRANT = { rights: [READ_CLAIMS, ...channelSendEffect.rights] }
 
 /**
  * A customer says they paid and no matching money has arrived. The first run answers them neutrally in the conversation they wrote in
@@ -69,7 +73,8 @@ export const paymentClaimWaitNode: NodeDefinition<
                     action: "reconcile_payment",
                     title: settings.overdueTitle,
                     payload: { target: "order", claimId: claim.id, leadId: claim.leadId, body: claim.body },
-                    amountVnd: claim.amountVnd,
+                    ...(claim.amountVnd === null ? {} : { amountVnd: claim.amountVnd }),
+                    claimId: claim.id,
                 },
                 { dedupeKey: `payment-claim:${claim.id}` },
             )
@@ -104,6 +109,7 @@ export const paymentClaimWaitNode: NodeDefinition<
                 },
             ],
             store: STORE_REAL_CASE,
+            grant: GRANT,
         },
         {
             name: "the wait ran out and no money came: the owner gets a work item",
@@ -122,10 +128,49 @@ export const paymentClaimWaitNode: NodeDefinition<
                         title: "Khách báo đã chuyển khoản nhưng chưa thấy tiền",
                         payload: { target: "order", claimId: CLAIM_DINH.id, leadId: "lead-dinh", body: CLAIM_DINH.body },
                         amountVnd: 5000,
+                        claimId: "claim-dinh",
                     },
                 },
             ],
             store: STORE_REAL_CASE,
+            grant: GRANT,
+        },
+        {
+            name: "a claim that named no amount, timed out: the work item carries no amount",
+            params: { timeoutMinutes: 30, neutralText: "x", overdueTitle: "y" },
+            input: { claimId: CLAIM_DINH.id, timedOut: true },
+            output: { state: "escalated", resumeAfterMinutes: null },
+            effects: [
+                {
+                    kind: "work-item.raise",
+                    payload: {
+                        action: "reconcile_payment",
+                        title: "y",
+                        payload: { target: "order", claimId: CLAIM_DINH.id, leadId: "lead-dinh", body: CLAIM_DINH.body },
+                        claimId: CLAIM_DINH.id,
+                    },
+                },
+            ],
+            store: { ...STORE_REAL_CASE, "payment-claim": [{ ...CLAIM_DINH, amountVnd: null }] },
+            grant: GRANT,
+        },
+        {
+            name: "a claim with no conversation to answer in waits without saying anything",
+            params: { timeoutMinutes: 30, neutralText: "x", overdueTitle: "y" },
+            input: { claimId: CLAIM_DINH.id, timedOut: false },
+            output: { state: "waiting", resumeAfterMinutes: 30 },
+            effects: [],
+            store: { ...STORE_REAL_CASE, "payment-claim": [{ ...CLAIM_DINH, conversationId: null }] },
+            grant: GRANT,
+        },
+        {
+            name: "a claim that is not found is closed",
+            params: { timeoutMinutes: 30, neutralText: "x", overdueTitle: "y" },
+            input: { claimId: "ghost", timedOut: false },
+            output: { state: "closed", resumeAfterMinutes: null },
+            effects: [],
+            store: STORE_REAL_CASE,
+            grant: GRANT,
         },
         {
             name: "the money arrived and settled the claim meanwhile: closed, nothing is said",
@@ -134,6 +179,7 @@ export const paymentClaimWaitNode: NodeDefinition<
             output: { state: "closed", resumeAfterMinutes: null },
             effects: [],
             store: { ...STORE_REAL_CASE, "payment-claim": [{ ...CLAIM_DINH, status: "settled" }] },
+            grant: GRANT,
         },
     ],
 })

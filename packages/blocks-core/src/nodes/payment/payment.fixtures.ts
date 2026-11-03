@@ -36,7 +36,7 @@ export const ORDER_DINH: OrderRow = {
     id: "order-dinh",
     orderNo: "SO-0001",
     leadId: "lead-dinh",
-    items: "1 chau hoa",
+    items: [{ name: "chau hoa", qty: 1 }],
     amountVnd: 5000,
     status: "confirmed",
     confirmedAt: "2026-11-04T00:40:00.000Z",
@@ -51,6 +51,40 @@ export const CONVERSATION_DINH: ConversationRow = {
     id: "conversation-dinh",
     leadId: "lead-dinh",
     lastMessageAt: "2026-11-04T00:54:00.000Z",
+}
+
+/** An older conversation of the same customer, with no message in it. */
+export const CONVERSATION_OLD: ConversationRow = { id: "conversation-old", leadId: "lead-dinh", lastMessageAt: null }
+
+/** A second order, invoiced and never confirmed, of a customer with no lead row, waiting for 7,000. */
+export const ORDER_SECOND: OrderRow = {
+    id: "order-2",
+    orderNo: "SO-0002",
+    leadId: "lead-gone",
+    items: [],
+    amountVnd: 7000,
+    status: "invoiced",
+    confirmedAt: null,
+    createdAt: "2026-11-04T00:50:00.000Z",
+}
+
+/** A 7,000 transfer at 01:30 from a named payer, with no code. */
+export const TRANSACTION_NAMED: TransactionRow = {
+    id: "tx-named",
+    amountVnd: 7000,
+    content: "thanh toan",
+    counterpartName: "Nguyen Van A",
+    receivedAt: "2026-11-04T01:30:00.000Z",
+    orderId: null,
+    status: "unmatched",
+}
+
+/** A transfer that already paid another order. */
+export const TRANSACTION_LINKED: TransactionRow = {
+    ...TRANSACTION_DINH,
+    id: "tx-linked",
+    orderId: "order-other",
+    status: "matched",
 }
 
 /** His message of 00:54, twelve minutes before the money. */
@@ -70,8 +104,15 @@ export const STORE_REAL_CASE: NodeStore = {
     "bank-transaction": [TRANSACTION_DINH, TRANSACTION_MOMO],
     order: [ORDER_DINH],
     "sales-lead": [LEAD_DINH],
-    conversation: [CONVERSATION_DINH],
+    conversation: [CONVERSATION_OLD, CONVERSATION_DINH],
     "payment-claim": [CLAIM_DINH],
+}
+
+/** The real case plus a second open order, a named 7,000 transfer and a transfer that already paid another order. */
+export const STORE_EXTENDED: NodeStore = {
+    ...STORE_REAL_CASE,
+    "bank-transaction": [TRANSACTION_DINH, TRANSACTION_NAMED, TRANSACTION_LINKED],
+    order: [ORDER_DINH, ORDER_SECOND],
 }
 
 /** The 5,000 transfer as an arrival. */
@@ -81,6 +122,15 @@ export const ARRIVAL_DINH: Arrival = {
     text: TRANSACTION_DINH.content,
     names: [],
     at: Date.parse("2026-11-04T01:06:00.000Z"),
+}
+
+/** The 7,000 transfer as an arrival. */
+export const ARRIVAL_NAMED: Arrival = {
+    id: TRANSACTION_NAMED.id,
+    amount: 7000,
+    text: TRANSACTION_NAMED.content,
+    names: ["Nguyen Van A"],
+    at: Date.parse("2026-11-04T01:30:00.000Z"),
 }
 
 /** The 2,000 transfer as an arrival. */
@@ -103,6 +153,17 @@ export const CANDIDATE_DINH: Candidate = {
     openedAt: Date.parse("2026-11-04T00:40:00.000Z"),
 }
 
+/** The second order as a candidate: its customer has no name, and it opened when it was created. */
+export const CANDIDATE_SECOND: Candidate = {
+    id: ORDER_SECOND.id,
+    label: "SO-0002 · —",
+    amountDue: 7000,
+    partyName: null,
+    partyKey: "lead-gone",
+    codes: ["SO-0002"],
+    openedAt: Date.parse("2026-11-04T00:50:00.000Z"),
+}
+
 /** His claim in the ledger's shape. */
 export const CLAIM_OF_DINH: Claim = {
     id: CLAIM_DINH.id,
@@ -118,6 +179,14 @@ export const CLAIM_OF_DINH: Claim = {
 export const EVIDENCED_FOR_DINH: ReadonlyArray<Evidenced> = scoreCandidates(
     ARRIVAL_DINH,
     [CANDIDATE_DINH],
+    [CLAIM_OF_DINH],
+    OPTIONS,
+)
+
+/** The evidence for the 7,000 transfer from a named payer: only the amount of the second order holds. */
+export const EVIDENCED_FOR_NAMED: ReadonlyArray<Evidenced> = scoreCandidates(
+    ARRIVAL_NAMED,
+    [CANDIDATE_DINH, CANDIDATE_SECOND],
     [CLAIM_OF_DINH],
     OPTIONS,
 )

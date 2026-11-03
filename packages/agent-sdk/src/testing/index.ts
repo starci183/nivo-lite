@@ -8,7 +8,7 @@ export {
     fakeWorkbenchHost,
     slotOf,
 } from "./fakes"
-export type { FakeExecuted, FakeNodePorts, FakeNodePortsOptions, FakeWrite } from "./node-ports"
+export type { FakeExecuted, FakeNodePorts, FakeNodePortsOptions, FakeToolCall, FakeWrite } from "./node-ports"
 export { fakeNodePorts } from "./node-ports"
 export { EXAMPLE_TURN, nodeExampleMismatches, nodeListMismatches } from "./node-examples"
 export { AMOUNT_FACT, OWNER_BRANCHES, amountIs, approverOf, branchOf, graphOf, nodeOf } from "./graph"

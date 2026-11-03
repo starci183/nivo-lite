@@ -6,17 +6,21 @@ import { z } from "zod"
 import {
     ARRIVAL_DINH,
     ARRIVAL_MOMO,
+    ARRIVAL_NAMED,
     CLAIM_OF_DINH,
     EVIDENCED_FOR_DINH,
     EVIDENCED_FOR_MOMO,
+    EVIDENCED_FOR_NAMED,
+    STORE_EXTENDED,
     STORE_REAL_CASE,
     TRANSACTION_DINH,
     TRANSACTION_MOMO,
+    TRANSACTION_NAMED,
     WINDOW_HOURS,
 } from "./payment.fixtures"
 import { READ_CLAIMS, READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "./payment.rights"
 import { AWAITING_PAYMENT, arrivalSchema, atOf, claimSchema, evidencedSchema } from "./payment.schemas"
-import type { ClaimRow, LeadRow, OrderRow, TransactionRow } from "./payment.schemas"
+import type { ClaimRow, LeadRow, OrderRow, PricedOrder, TransactionRow } from "./payment.schemas"
 
 const HOUR_MS = 3_600_000
 const READ_LIMIT = 200
@@ -58,10 +62,10 @@ const arrivalOf = (row: TransactionRow): Arrival => ({
     at: atOf(row.receivedAt),
 })
 
-const candidateOf = (order: OrderRow, name: string | null): Candidate => ({
+const candidateOf = (order: PricedOrder, name: string | null): Candidate => ({
     id: order.id,
     label: `${order.orderNo} · ${name ?? "—"}`,
-    amountDue: order.amountVnd ?? 0,
+    amountDue: order.amountVnd,
     partyName: name,
     partyKey: order.leadId,
     codes: [order.orderNo],
@@ -75,22 +79,21 @@ const claimOf = (row: ClaimRow): Claim => ({
     names: row.names,
     text: row.body,
     at: atOf(row.claimedAt),
-    status: row.status === "settled" || row.status === "escalated" ? row.status : "open",
+    status: "open",
 })
 
 /** The orders that wait for money and have an amount. */
-const openOrders = async (context: NodeContext): Promise<ReadonlyArray<OrderRow>> => {
+const openOrders = async (context: NodeContext): Promise<ReadonlyArray<PricedOrder>> => {
     const lists = await Promise.all(
         AWAITING_PAYMENT.map((status) =>
             context.data.read<OrderRow>("order", { where: { status }, fields: ORDER_FIELDS, limit: READ_LIMIT }),
         ),
     )
-    return lists.flat().filter((order) => order.amountVnd !== null)
+    return lists.flat().filter((order): order is PricedOrder => order.amountVnd !== null)
 }
 
 /** The name of the customer of an order, read once per customer. */
-const nameOf = async (context: NodeContext, leadId: string | null): Promise<string | null> => {
-    if (leadId === null) return null
+const nameOf = async (context: NodeContext, leadId: string): Promise<string | null> => {
     const [lead] = await context.data.read<LeadRow>("sales-lead", {
         where: { id: leadId },
         fields: READ_LEADS.fields,
@@ -157,6 +160,14 @@ export const paymentEvidenceNode: NodeDefinition<
             output: { arrival: ARRIVAL_MOMO, evidenced: [...EVIDENCED_FOR_MOMO], claims: [CLAIM_OF_DINH] },
             effects: [],
             store: STORE_REAL_CASE,
+        },
+        {
+            name: "a named 7,000 payer and a second order of a customer nobody knows: the amount of the second order holds",
+            params: { windowHours: WINDOW_HOURS },
+            input: { transactionId: TRANSACTION_NAMED.id },
+            output: { arrival: ARRIVAL_NAMED, evidenced: [...EVIDENCED_FOR_NAMED], claims: [CLAIM_OF_DINH] },
+            effects: [],
+            store: STORE_EXTENDED,
         },
         {
             name: "a transaction that is not found has no evidence",
