@@ -4,4 +4,6 @@ export interface CreateKnowledgeUploadRequest {
     readonly workspaceId: string
     /** The file name. */
     readonly filename: string
+    /** The content type the browser reports for the file; may be empty. */
+    readonly contentType: string
 }

@@ -2781,11 +2781,13 @@ input CreateContentItemInput {
 }
 
 type CreateCvUploadType {
+  contentType: String!
   path: String!
   token: String!
 }
 
 input CreateHiringCvUploadInput {
+  contentType: String! @inputBounds(maxLength: 100)
   fileName: String! @inputBounds(maxLength: 255)
   job: String! @inputBounds(maxLength: 120)
   ws: String! @inputBounds(maxLength: 80)
@@ -2804,6 +2806,7 @@ input CreateInviteInput {
 }
 
 input CreateKnowledgeUploadInput {
+  contentType: String! @inputBounds(maxLength: 100)
   filename: String! @inputBounds(maxLength: 200)
 }
 
@@ -9368,6 +9371,7 @@ input UpdateWebhookEventsInput {
 }
 
 type UploadAddressType {
+  contentType: String!
   path: String!
   signedUrl: String!
   token: String!

@@ -28,6 +28,18 @@ export const MAX_SOURCE_CHARS = 120_000
 /** The storage bucket of uploaded documents; objects live at `<workspaceId>/<uuid>/<filename>`. */
 export const KNOWLEDGE_UPLOAD_BUCKET = "knowledge-uploads"
 
+/** The content type of each document extension a knowledge upload is signed with; the extensions are the ones a document can be read from. */
+export const KNOWLEDGE_UPLOAD_MIME: ReadonlyMap<string, string> = new Map([
+    ["pdf", "application/pdf"],
+    ["docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    ["xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    ["pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"],
+    ["txt", "text/plain"],
+    ["md", "text/markdown"],
+    ["markdown", "text/markdown"],
+    ["csv", "text/csv"],
+])
+
 /** The largest uploaded document, in bytes: 50 MB. */
 export const MAX_UPLOAD_BYTES: number = 50 * 1024 * 1024
 
@@ -143,6 +155,8 @@ export interface UploadAddress {
     readonly token: string
     /** The signed address to PUT the file to. */
     readonly signedUrl: string
+    /** The content type the address is signed for: the upload must send exactly this `Content-Type`. */
+    readonly contentType: string
 }
 
 /** A source as the jobs read it. */

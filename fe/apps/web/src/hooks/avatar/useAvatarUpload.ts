@@ -47,7 +47,7 @@ export const useAvatarUpload = (doors: AvatarDoors): AvatarUploadView => {
             const sent =
                 ticket === undefined
                     ? null
-                    : await runRest(() => putPresigned({ url: ticket.signedUrl, file }), { showSuccessToast: false })
+                    : await runRest(() => putPresigned({ url: ticket.signedUrl, file, contentType: file.type }), { showSuccessToast: false })
             const kept =
                 ticket === undefined || sent === null
                     ? undefined

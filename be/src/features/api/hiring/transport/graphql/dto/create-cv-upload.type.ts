@@ -10,4 +10,8 @@ export class CreateCvUploadType {
     /** The upload token. */
     @Field(() => String)
     token!: string
+
+    /** The content type the address is signed for: the upload must send exactly this `Content-Type`. */
+    @Field(() => String)
+    contentType!: string
 }

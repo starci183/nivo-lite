@@ -4,6 +4,6 @@ export abstract class CvStorage {
     abstract remove(paths: ReadonlyArray<string>): Promise<number>
     /** A short-lived link to look at a file, or null when there is none. */
     abstract signedUrl(path: string): Promise<string | null>
-    /** A one-time upload token for a path, or null when uploads are not available. */
-    abstract signedUpload(path: string): Promise<string | null>
+    /** A one-time upload token for a path, signed for the content type, or null when uploads are not available. */
+    abstract signedUpload(path: string, contentType: string): Promise<string | null>
 }

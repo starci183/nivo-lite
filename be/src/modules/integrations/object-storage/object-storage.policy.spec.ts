@@ -1,15 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { ObjectStorageError } from "./errors/object-storage.error"
-import { MAX_PRESIGN_SECONDS, bucketNameOf, objectKeyOf, presignSecondsOf, publicUrlOf } from "./object-storage.policy"
+import { ObjectStorageError } from "@starci/object-storage"
+import { MAX_PRESIGN_SECONDS, bucketNameOf, presignSecondsOf, uploadContentTypeOf } from "./object-storage.policy"
 import type * as policy from "./object-storage.policy"
 
 const SUBJECT = Symbol("storage.policy")
 
-type Subject = Pick<typeof policy, "bucketNameOf" | "objectKeyOf" | "presignSecondsOf" | "publicUrlOf">
+type Subject = Pick<typeof policy, "bucketNameOf" | "presignSecondsOf" | "uploadContentTypeOf">
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { bucketNameOf, objectKeyOf, presignSecondsOf, publicUrlOf } }],
+        providers: [{ provide: SUBJECT, useValue: { bucketNameOf, presignSecondsOf, uploadContentTypeOf } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -29,30 +29,6 @@ describe("storage policy / bucketNameOf", () => {
     })
 })
 
-describe("storage policy / objectKeyOf", () => {
-    it("keeps a clean relative path as the key", async () => {
-        const subject = await build()
-
-        expect(subject.objectKeyOf("ws-1/marketing/a b.png")).toBe("ws-1/marketing/a b.png")
-    })
-
-    it.each(["", "/abs", "a//b", "a/../b", "a/./b", "a\b", "a/\u0007b", "a/"])("refuses the path %p", async (path) => {
-        const subject = await build()
-
-        expect(() => subject.objectKeyOf(path)).toThrow(ObjectStorageError)
-    })
-})
-
-describe("storage policy / publicUrlOf", () => {
-    it("joins origin, bucket and encoded key segments", async () => {
-        const subject = await build()
-
-        expect(subject.publicUrlOf("https://minio.example.org/", "nivo-avatars-public", "people/a b.png")).toBe(
-            "https://minio.example.org/nivo-avatars-public/people/a%20b.png",
-        )
-    })
-})
-
 describe("storage policy / presignSecondsOf", () => {
     it.each([
         [60, 60],
@@ -65,5 +41,31 @@ describe("storage policy / presignSecondsOf", () => {
         const subject = await build()
 
         expect(subject.presignSecondsOf(asked)).toBe(given)
+    })
+})
+
+describe("storage policy / uploadContentTypeOf", () => {
+    const admitted = new Map([
+        ["pdf", "application/pdf"],
+        ["md", "text/markdown"],
+    ])
+
+    it("keeps the type of the browser when the kind admits it, ignoring case and parameters", async () => {
+        const subject = await build()
+
+        expect(subject.uploadContentTypeOf(admitted, "a.pdf", "Application/PDF; charset=x")).toBe("application/pdf")
+    })
+
+    it("names the type from the extension when the browser reports none or one the kind does not admit", async () => {
+        const subject = await build()
+
+        expect(subject.uploadContentTypeOf(admitted, "notes.MD", "")).toBe("text/markdown")
+        expect(subject.uploadContentTypeOf(admitted, "notes.md", "application/octet-stream")).toBe("text/markdown")
+    })
+
+    it.each([["a.exe", ""], ["noextension", ""], ["a.constructor", ""]])("refuses %p with type %p", async (name, given) => {
+        const subject = await build()
+
+        expect(subject.uploadContentTypeOf(admitted, name, given)).toBeNull()
     })
 })

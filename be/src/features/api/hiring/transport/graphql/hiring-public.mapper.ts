@@ -40,6 +40,7 @@ export const toCreateHiringCvUploadRequest = (
     ws: input.ws,
     job: input.job,
     fileName: input.fileName,
+    contentType: input.contentType,
 })
 
 /** Maps the GraphQL input to the application request. */

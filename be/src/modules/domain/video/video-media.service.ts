@@ -75,7 +75,7 @@ export class VideoMediaService {
             throw new VideoError({ code: VideoErrorCode.StorageFailed, params: { path: workspaceId } })
         }
         const path = `${workspaceId}/${identity.gen_random_uuid}-${filename}`
-        const signed = await this.storage.signedUpload(MEDIA_BUCKET, path)
+        const signed = await this.storage.signedUpload(MEDIA_BUCKET, path, file.type)
         if (signed.kind !== "ok") throw new VideoError({ code: VideoErrorCode.StorageFailed, params: { path } })
         return { path: signed.value.path, token: signed.value.token, signedUrl: signed.value.signedUrl }
     }

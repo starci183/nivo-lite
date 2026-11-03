@@ -53,7 +53,7 @@ describe("AvatarsService > uploads", () => {
             signedUrl: `https://s.test/upload/people/${ID}.png`,
             publicUrl: `${PUBLIC_BASE}/people/${ID}.png`,
         })
-        expect(storage.signedUpload).toHaveBeenCalledWith("avatars_public", `people/${ID}.png`)
+        expect(storage.signedUpload).toHaveBeenCalledWith("avatars_public", `people/${ID}.png`, "image/png")
     })
 
     it("issues an agent picture address to a manager only", async () => {

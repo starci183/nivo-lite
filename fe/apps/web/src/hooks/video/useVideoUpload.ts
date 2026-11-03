@@ -24,7 +24,7 @@ export const useVideoUpload = (): UseVideoUploadResult => {
             successMessage: t("saved"),
         })
         if (ticket === undefined) return undefined
-        const sent = await runRest(() => putPresigned({ url: ticket.signedUrl, file }), {
+        const sent = await runRest(() => putPresigned({ url: ticket.signedUrl, file, contentType: file.type }), {
             successMessage: t("saved"),
         })
         return sent === null ? undefined : ticket.path

@@ -220,15 +220,38 @@ describe("KnowledgeSourcesService createUpload", () => {
         const { service, storage } = await build(mockEntityManager())
         const signed = { path: `${WS}/${UPLOAD_ID}/my_file.pdf`, token: "t", signedUrl: "https://s.test/u" }
         storage.signedUpload.mockResolvedValue({ kind: "ok", value: signed })
-        await expect(service.createUpload("u1", WS, "my file.pdf")).resolves.toEqual(signed)
-        expect(storage.signedUpload).toHaveBeenCalledWith("knowledge-uploads", `${WS}/${UPLOAD_ID}/my_file.pdf`)
+        await expect(service.createUpload("u1", WS, "my file.pdf", "application/pdf")).resolves.toEqual({
+            ...signed,
+            contentType: "application/pdf",
+        })
+        expect(storage.signedUpload).toHaveBeenCalledWith(
+            "knowledge-uploads",
+            `${WS}/${UPLOAD_ID}/my_file.pdf`,
+            "application/pdf",
+        )
+    })
+
+    it("signs the type of the extension when the browser reports none and refuses a type the readers do not take", async () => {
+        const { service, storage } = await build(mockEntityManager())
+        const signed = { path: `${WS}/${UPLOAD_ID}/notes.md`, token: "t", signedUrl: "https://s.test/u" }
+        storage.signedUpload.mockResolvedValue({ kind: "ok", value: signed })
+        await expect(service.createUpload("u1", WS, "notes.md", "")).resolves.toMatchObject({
+            contentType: "text/markdown",
+        })
+        await expect(service.createUpload("u1", WS, "movie.mp4", "video/mp4")).rejects.toMatchObject({
+            code: codes.FileTypeUnsupported,
+        })
+        await expect(service.createUpload("u1", WS, "noextension", "")).rejects.toMatchObject({
+            code: codes.FileTypeUnsupported,
+        })
+        expect(storage.signedUpload).toHaveBeenCalledTimes(1)
     })
 
     it("refuses an empty name and a storage that cannot sign", async () => {
         const { service, storage } = await build(mockEntityManager())
         storage.signedUpload.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_UNAVAILABLE" })
-        await expect(service.createUpload("u1", WS, " ")).rejects.toMatchObject({ code: codes.FileNameRequired })
-        await expect(service.createUpload("u1", WS, "a.pdf")).rejects.toMatchObject({
+        await expect(service.createUpload("u1", WS, " ", "")).rejects.toMatchObject({ code: codes.FileNameRequired })
+        await expect(service.createUpload("u1", WS, "a.pdf", "application/pdf")).rejects.toMatchObject({
             code: codes.UploadUnavailable,
         })
     })

@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common"
+import type { ObjectStorage } from "@starci/object-storage"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import type { StorageClient } from "./object-storage.contracts"
-import { InjectStorageClient, InjectStorageOptions } from "./object-storage.decorators"
+import { InjectObjectStorage, InjectStorageOptions } from "./object-storage.decorators"
 import { StorageLogEvent } from "./object-storage.log-events"
 import type { ObjectStorageOptions } from "./object-storage.options"
 import { STORAGE_BUCKETS, bucketNameOf } from "./object-storage.policy"
@@ -12,7 +12,7 @@ import { STORAGE_BUCKETS, bucketNameOf } from "./object-storage.policy"
 /** Sets the buckets of an environment up: creates the missing ones and opens the picture bucket to anonymous reads. */
 export class StorageBootstrapService {
     constructor(
-        @InjectStorageClient() private readonly client: StorageClient,
+        @InjectObjectStorage() private readonly storage: ObjectStorage,
         @InjectStorageOptions() private readonly options: ObjectStorageOptions,
         @InjectLogger() private readonly logger: Logger,
     ) {}
@@ -21,7 +21,7 @@ export class StorageBootstrapService {
     async bootstrap(): Promise<void> {
         await eachInOrder(STORAGE_BUCKETS, async (bucket) => {
             const name = bucketNameOf(this.options.bucketPrefix, bucket.purpose)
-            await this.client.ensureBucket(name, bucket.publicRead)
+            await this.storage.ensureBucket(name, { publicRead: bucket.publicRead })
             this.logger.info(StorageLogEvent.BucketReady, { bucket: name })
         })
     }

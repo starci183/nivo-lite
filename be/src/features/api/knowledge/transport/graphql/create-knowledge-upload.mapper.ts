@@ -10,6 +10,7 @@ export const toCreateKnowledgeUploadRequest = (
 ): CreateKnowledgeUploadRequest => ({
     workspaceId,
     filename: input.filename,
+    contentType: input.contentType,
 })
 
 /** Maps the answer to the GraphQL type. */

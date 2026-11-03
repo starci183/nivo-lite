@@ -60,7 +60,7 @@ export class ChatFilesService {
         const [allocated] = await callDbFunction<AllocatedId>(this.entityManager, "gen_random_uuid", [])
         if (allocated === undefined) throw new ChatFilesError({ code: ChatFilesErrorCode.StorageUnavailable })
         const path = chatFilePathOf(scope, allocated.gen_random_uuid, file.contentType)
-        const signed = await this.storage.signedUpload(CHAT_FILE_BUCKET, path)
+        const signed = await this.storage.signedUpload(CHAT_FILE_BUCKET, path, file.contentType)
         if (signed.kind !== "ok") throw new ChatFilesError({ code: ChatFilesErrorCode.StorageUnavailable })
         return { path, signedUrl: signed.value.signedUrl }
     }

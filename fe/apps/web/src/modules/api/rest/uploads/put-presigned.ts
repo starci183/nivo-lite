@@ -6,6 +6,8 @@ export interface PutPresignedRequest {
     readonly url: string
     /** The file to upload. */
     readonly file: Blob
+    /** The content type the address was signed for: the back end refuses the upload when the header differs. */
+    readonly contentType: string
     /** Reports the upload progress as a fraction between 0 and 1. */
     readonly onProgress?: (fraction: number) => void
     /** Optional abort signal. */
@@ -13,9 +15,9 @@ export interface PutPresignedRequest {
 }
 
 /** Uploads a file straight to the presigned storage URL (plain axios: the storage URL takes no bearer token). */
-export const putPresigned = async ({ url, file, onProgress, signal }: PutPresignedRequest): Promise<void> => {
+export const putPresigned = async ({ url, file, contentType, onProgress, signal }: PutPresignedRequest): Promise<void> => {
     await axios.put(url, file, {
-        headers: { "Content-Type": file.type || "application/octet-stream" },
+        headers: { "Content-Type": contentType },
         ...(signal ? { signal } : {}),
         onUploadProgress: (event) => {
             if (event.total) onProgress?.(event.loaded / event.total)

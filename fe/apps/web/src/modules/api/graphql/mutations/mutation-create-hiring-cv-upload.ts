@@ -16,6 +16,7 @@ const mutation1: TypedDocumentNode<
 > = gql`
     mutation CreateHiringCvUpload($input: CreateHiringCvUploadInput!) {
         createHiringCvUpload(input: $input) {
+            contentType
             path
             token
         }

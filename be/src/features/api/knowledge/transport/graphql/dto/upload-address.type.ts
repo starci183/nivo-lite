@@ -14,4 +14,8 @@ export class UploadAddressType {
     /** The signed address to PUT the file to. */
     @Field(() => String)
     signedUrl!: string
+
+    /** The content type the address is signed for: the upload must send exactly this `Content-Type`. */
+    @Field(() => String)
+    contentType!: string
 }

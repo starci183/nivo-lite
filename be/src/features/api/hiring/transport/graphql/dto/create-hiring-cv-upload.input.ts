@@ -21,4 +21,10 @@ export class CreateHiringCvUploadInput {
     @IsString()
     @MaxLength(255)
     fileName!: string
+
+    /** The content type the browser reports for the file; may be empty. */
+    @Field(() => String)
+    @IsString()
+    @MaxLength(100)
+    contentType!: string
 }

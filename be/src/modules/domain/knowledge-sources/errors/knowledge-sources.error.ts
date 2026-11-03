@@ -23,6 +23,8 @@ export enum KnowledgeSourcesErrorCode {
     UploadUnavailable = "KNOWLEDGE_SOURCES_UPLOAD_UNAVAILABLE",
     /** The uploaded file name is empty. */
     FileNameRequired = "KNOWLEDGE_SOURCES_FILE_NAME_REQUIRED",
+    /** The uploaded file is not of a type a document can be read from. */
+    FileTypeUnsupported = "KNOWLEDGE_SOURCES_FILE_TYPE_UNSUPPORTED",
     /** The uploaded file is larger than one document may be. */
     FileTooLarge = "KNOWLEDGE_SOURCES_FILE_TOO_LARGE",
     /** The new source would take the workspace past its raw document allowance. */
@@ -47,6 +49,7 @@ export const KNOWLEDGE_SOURCES_ERROR_KINDS: Record<KnowledgeSourcesErrorCode, Er
     [KnowledgeSourcesErrorCode.InstanceUnknown]: "invalid",
     [KnowledgeSourcesErrorCode.UploadUnavailable]: "unavailable",
     [KnowledgeSourcesErrorCode.FileNameRequired]: "invalid",
+    [KnowledgeSourcesErrorCode.FileTypeUnsupported]: "invalid",
     [KnowledgeSourcesErrorCode.FileTooLarge]: "invalid",
     [KnowledgeSourcesErrorCode.QuotaExceeded]: "invalid",
     [KnowledgeSourcesErrorCode.UploadMissing]: "invalid",

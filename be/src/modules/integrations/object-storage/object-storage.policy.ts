@@ -1,4 +1,4 @@
-import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
+import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError } from "@starci/object-storage"
 
 /** The longest a SigV4 presigned address lives (seven days). */
 export const MAX_PRESIGN_SECONDS = 604_800
@@ -17,37 +17,10 @@ export const presignSecondsOf = (requested: number): number =>
 export const bucketNameOf = (prefix: string, purpose: string): string => {
     const name = `${prefix}-${purpose.toLowerCase().replaceAll("_", "-")}`
     if (!PREFIX.test(prefix) || !BUCKET_NAME.test(name)) {
-        throw new ObjectStorageError({ code: ObjectStorageErrorCode.KeyInvalid, params: { key: name } })
+        throw new ObjectStorageError(OBJECT_STORAGE_ERROR_CODES.BucketInvalid, { context: { bucket: name } })
     }
     return name
 }
-
-const FORBIDDEN_CHARACTER = /[\p{Cc}\\]/u
-
-const hasForbiddenCharacter = (path: string): boolean => FORBIDDEN_CHARACTER.test(path)
-
-/** The object key for a path: unchanged when it is a relative path of clean segments, else a KeyInvalid error. */
-export const objectKeyOf = (path: string): string => {
-    const segments = path.split("/")
-    const clean =
-        path.length > 0 &&
-        path.length <= 1024 &&
-        segments.every((segment) => segment !== "" && segment !== "." && segment !== "..") &&
-        !hasForbiddenCharacter(path)
-    if (!clean) throw new ObjectStorageError({ code: ObjectStorageErrorCode.KeyInvalid, params: { key: path } })
-    return path
-}
-
-/** The text without the slashes at its end. */
-export const withoutTrailingSlashes = (text: string): string => {
-    let end = text.length
-    while (end > 0 && text.charAt(end - 1) === "/") end -= 1
-    return text.slice(0, end)
-}
-
-/** The address anyone reads an object of a public bucket at: `<public origin>/<bucket>/<key>`, each segment encoded. */
-export const publicUrlOf = (publicUrl: string, bucketName: string, key: string): string =>
-    `${withoutTrailingSlashes(publicUrl)}/${bucketName}/${key.split("/").map(encodeURIComponent).join("/")}`
 
 /** A purpose bucket of the product and whether anonymous readers may fetch its objects. */
 export interface StorageBucket {
@@ -65,3 +38,18 @@ export const STORAGE_BUCKETS: ReadonlyArray<StorageBucket> = [
     { purpose: "hiring", publicRead: false },
     { purpose: "knowledge-uploads", publicRead: false },
 ]
+
+/**
+ * The content type an upload of one kind is signed with: the browser's own when the kind admits it, else the one the extension of
+ * the file name names; null when the kind admits neither, so the upload is refused and never signed as an anonymous binary.
+ */
+export const uploadContentTypeOf = (
+    admitted: ReadonlyMap<string, string>,
+    filename: string,
+    given: string,
+): string | null => {
+    const asked = (given.split(";")[0] ?? "").trim().toLowerCase()
+    if ([...admitted.values()].includes(asked)) return asked
+    const dot = filename.lastIndexOf(".")
+    return dot < 0 ? null : (admitted.get(filename.slice(dot + 1).toLowerCase()) ?? null)
+}

@@ -82,6 +82,8 @@ export interface CreateCvUploadParams {
     readonly job: string
     /** The file name. */
     readonly fileName: string
+    /** The content type the browser reports for the file; may be empty. */
+    readonly contentType: string
 }
 
 /** What the request to get a signed place to upload a CV answers. */
@@ -90,6 +92,8 @@ export interface CreateCvUploadOutput {
     readonly path: string
     /** The upload token. */
     readonly token: string
+    /** The content type the address is signed for: the upload must send exactly this `Content-Type`. */
+    readonly contentType: string
 }
 
 /** One answer. */
