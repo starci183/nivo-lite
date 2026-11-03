@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { mock } from "@starci/jest-preset"
 import type { GraphAnswer, GraphCheck } from "@modules/domain/authority-rules"
 import { LOGGER } from "@modules/platform/logging"
@@ -35,6 +36,15 @@ import type { FactSubject } from "./agent-graphs.port"
 import type { GraphWalk } from "./agent-graphs-walk.contracts"
 import { walkGraph } from "./policies/graph-walk.policy"
 import type { WalkOptions } from "./policies/graph-walk.policy"
+
+const FLOW_ONLY: GraphSpec = {
+    schema: "nivo/agent-graph@1",
+    moduleKey: "sales",
+    trigger: { kind: "tag", sources: ["channel"] },
+    grant: { rights: [], tools: [], effects: [] },
+    nodes: [{ key: "end", kind: "output", step: "stop" }],
+}
+const FLOW_ONLY_GRAPH: GraphDocument = { nodes: [], rights: [], flow: FLOW_ONLY }
 
 const gateOf = (verdict: typeof AUTO | typeof OVER = AUTO) => jest.fn().mockResolvedValue(verdict)
 
@@ -108,6 +118,14 @@ describe("AgentGraphDeciderService.decide leaves the item to the gate", () => {
         expect(noVersion.decisions.record).not.toHaveBeenCalled()
         expect(unreadable.decisions.record).not.toHaveBeenCalled()
         expect(unreadable.checks.walk).not.toHaveBeenCalled()
+    })
+
+    it("when the agent runs a flow and holds none of the old nodes: the old walk has nothing to judge, so the gate alone answers", async () => {
+        const flowOnly = await build(stateOf({ mode: "enforced", active: FLOW_ONLY_GRAPH }))
+
+        await expect(flowOnly.service.decide(deciderRequestOf(gateOf()))).resolves.toBeNull()
+        expect(flowOnly.checks.walk).not.toHaveBeenCalled()
+        expect(flowOnly.decisions.record).not.toHaveBeenCalled()
     })
 
     it("when no node holds the action, and still records the run as one the graph does not hold", async () => {

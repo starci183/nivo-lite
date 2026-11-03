@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
+import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { ModulesService } from "@modules/domain/modules"
@@ -9,6 +10,7 @@ import type { ModuleDefinition } from "@modules/domain/modules"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { GraphSeedService } from "./graph-seed.service"
+import { ProfileActivationService } from "./profile-activation.service"
 import { SEED_AGENTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
 import type { SeedAgentRecords } from "./workspace-seed.port"
 
@@ -25,6 +27,11 @@ const MODULE = {
     key: "sales",
     name: { vi: "Bán hàng", en: "Sales" },
     defaultOperatingMode: "assist",
+    gates: [
+        { key: "identity", hint_vi: "Tên và nghề của shop" },
+        { key: "products", hint_vi: "Sản phẩm bán" },
+    ],
+    authorityActions: [{ action: "create_order", mode: "ask", limitVnd: 5_000_000, requiredFields: ["total"] }],
     agent: {
         label: { vi: "Agent Bán hàng", en: "Sales agent" },
         handle: "sales",
@@ -40,11 +47,14 @@ interface Scenario {
     readonly held?: ReadonlyArray<InstallationRecord | null>
     readonly inserted?: string | null
     readonly nodes?: NodeInstall | undefined
+    readonly owner?: string | null
+    readonly status?: string
 }
 
 const build = async (scenario: Scenario = {}) => {
     const workspaces = mock<WorkspacesService>()
     workspaces.list.mockResolvedValue(scenario.workspaces ?? [{ id: "ws-1", name: "NIVO" }])
+    workspaces.ownerIdOf.mockResolvedValue(scenario.owner === undefined ? "owner-1" : scenario.owner)
     const modules = mock<ModulesService>()
     modules.find.mockResolvedValue(MODULE)
     const installations = mock<InstallationRecordsService>()
@@ -53,6 +63,9 @@ const build = async (scenario: Scenario = {}) => {
     installations.insert.mockResolvedValue(scenario.inserted === undefined ? "inst-1" : scenario.inserted)
     const agents = mock<SeedAgentRecords>()
     agents.ensureByHandle.mockResolvedValue("agent-1")
+    const rules = mock<AuthorityRulesService>()
+    const activation = mock<ProfileActivationService>()
+    activation.activate.mockResolvedValue({ sales: scenario.status ?? "live" } as never)
     const flows = mock<AgentGraphFlowService>()
     flows.publish.mockResolvedValue("created")
     const print = jest.fn<void, [string]>()
@@ -67,19 +80,35 @@ const build = async (scenario: Scenario = {}) => {
             { provide: WorkspacesService, useValue: workspaces },
             { provide: ModulesService, useValue: modules },
             { provide: InstallationRecordsService, useValue: installations },
+            { provide: AuthorityRulesService, useValue: rules },
+            { provide: ProfileActivationService, useValue: activation },
             { provide: AgentGraphFlowService, useValue: flows },
         ],
     }).compile()
-    return { service: moduleRef.get(GraphSeedService), agents, installations, flows, print }
+    return { service: moduleRef.get(GraphSeedService), agents, installations, rules, activation, flows, print }
 }
 
 const failure = (code: WorkspaceSeedErrorCode) => new WorkspaceSeedError({ code })
 
 describe("GraphSeedService > run", () => {
     it("publishes the flow to the agent of the module installed in the named workspace, and prints no value", async () => {
-        const { service, agents, installations, flows, print } = await build()
+        const { service, agents, installations, rules, activation, flows, print } = await build()
 
         await service.run(TEXT, "NIVO")
+
+        expect(rules.seedDefaults).toHaveBeenCalledWith("ws-1", "sales", [
+            { action: "create_order", mode: "ask", limit_vnd: 5_000_000, required_fields: ["total"] },
+        ])
+        expect(activation.activate).toHaveBeenCalledWith({ workspaceId: "ws-1", ownerId: "owner-1" }, [
+            {
+                handle: "sales",
+                installation: record(),
+                answers: [
+                    { gate: "identity", evidence: "Tên và nghề của shop" },
+                    { gate: "products", evidence: "Sản phẩm bán" },
+                ],
+            },
+        ])
 
         expect(flows.publish).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -90,7 +119,7 @@ describe("GraphSeedService > run", () => {
         })
         expect(agents.ensureByHandle).not.toHaveBeenCalled()
         expect(installations.insert).not.toHaveBeenCalled()
-        expect(print.mock.calls).toEqual([["sales agent agent-1 graph created"]])
+        expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph created"]])
     })
 
     it("installs the module first when the workspace has none: its agent under the handle of the module, then the installation", async () => {
@@ -133,6 +162,26 @@ describe("GraphSeedService > run", () => {
         await expect(service.run(TEXT, "NIVO")).rejects.toThrow(failure(WorkspaceSeedErrorCode.RowMissing))
 
         expect(flows.publish).not.toHaveBeenCalled()
+    })
+
+    it("reports the status the activation settled in, and one it does not report as unknown", async () => {
+        const waiting = await build({ status: "needs_connection" })
+        const silent = await build()
+        silent.activation.activate.mockResolvedValue({})
+
+        await waiting.service.run(TEXT, "NIVO")
+        await silent.service.run(TEXT, "NIVO")
+
+        expect(waiting.print).toHaveBeenCalledWith("sales agent agent-1 needs_connection, graph created")
+        expect(silent.print).toHaveBeenCalledWith("sales agent agent-1 unknown, graph created")
+    })
+
+    it("refuses a workspace that has no owner, before anything is installed", async () => {
+        const { service, installations } = await build({ owner: null })
+
+        await expect(service.run(TEXT, "NIVO")).rejects.toThrow(failure(WorkspaceSeedErrorCode.RowMissing))
+
+        expect(installations.firstOfModule).not.toHaveBeenCalled()
     })
 
     it("refuses a workspace that does not exist and one whose name is ambiguous, before anything is installed", async () => {
