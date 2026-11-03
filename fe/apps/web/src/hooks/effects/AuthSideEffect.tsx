@@ -28,7 +28,7 @@ export const AuthSideEffect = () => {
                 seen.current = userId
                 // The first answer only records who is signed in (the browser may announce it as SIGNED_IN before INITIAL_SESSION).
                 if (previous === undefined || previous === userId) return
-                if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return
+                if (event === "TOKEN_REFRESHED") return
                 // Drop the answers without refetching them: the per-viewer cache and the server refresh own what comes next.
                 void mutate(() => true, undefined, { revalidate: false })
                 router.refresh()
