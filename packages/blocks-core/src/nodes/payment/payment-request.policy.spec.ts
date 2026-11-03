@@ -2,9 +2,8 @@ import {
     isPayableAccount,
     itemsTextOf,
     noAccountTitleOf,
-    paymentRequestOf,
+    paymentMessageOf,
     transferContentOf,
-    vietQrUrl,
 } from "./payment-request.policy"
 
 const account = {
@@ -21,12 +20,6 @@ describe("payment request policy", () => {
         expect(transferContentOf("so 2026/11_x")).toBe("SO202611X")
     })
 
-    it("draws SePay VietQR image of the account, the amount and the content", () => {
-        expect(vietQrUrl(account, 300_000, "DH1")).toBe(
-            "https://qr.sepay.vn/img?acc=525209999&bank=MBBank&amount=300000&des=DH1&template=compact",
-        )
-    })
-
     it("accepts only a SePay account", () => {
         expect(isPayableAccount(account)).toBe(true)
         expect(isPayableAccount({ ...account, provider: "casso" })).toBe(false)
@@ -38,19 +31,19 @@ describe("payment request policy", () => {
     })
 
     it("writes the amount, the content, the holder and the link in the language asked", () => {
-        const order = { orderNo: "DH-1", amountVnd: 1_500_000, lines: [{ name: "tea", qty: 1 }] }
+        const order = { amountVnd: 1_500_000, lines: [{ name: "tea", qty: 1 }] }
+        const pay = { content: "DH1", qrUrl: "https://qr.example/x" }
 
-        const vi = paymentRequestOf(account, order, "vi")
-        const en = paymentRequestOf({ ...account, bankName: "MB Bank" }, order, "en")
+        const vi = paymentMessageOf(account, order, pay, "vi")
+        const en = paymentMessageOf({ ...account, bankName: "MB Bank" }, order, pay, "en")
 
-        expect(vi.message).toContain("1 x tea · 1.500.000 đ")
-        expect(vi.message).toContain("Ngân hàng: MBBank")
-        expect(vi.message).toContain("Chủ tài khoản: NGUYEN VAN A")
-        expect(vi.message).toContain(`Hoặc quét mã QR: ${vi.qrUrl}`)
-        expect(en.message).toContain("1 x tea · 1,500,000 VND")
-        expect(en.message).toContain("Bank: MB Bank")
-        expect(en.message).toContain("Transfer content (type exactly): DH1")
-        expect(en.content).toBe("DH1")
+        expect(vi).toContain("1 x tea · 1.500.000 đ")
+        expect(vi).toContain("Ngân hàng: MBBank")
+        expect(vi).toContain("Chủ tài khoản: NGUYEN VAN A")
+        expect(vi).toContain("Hoặc quét mã QR: https://qr.example/x")
+        expect(en).toContain("1 x tea · 1,500,000 VND")
+        expect(en).toContain("Bank: MB Bank")
+        expect(en).toContain("Transfer content (type exactly): DH1")
     })
 
     it("names the order in the title that tells the owner no payment request could go out", () => {

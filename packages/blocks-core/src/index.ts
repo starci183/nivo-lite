@@ -41,5 +41,5 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
 ]
 
 export { coreNodes } from "./nodes"
-export { DEFAULT_THRESHOLD_VND } from "./nodes/order/confirm.node"
-export { transferContentOf, vietQrUrl, paymentRequestOf } from "./nodes/payment/payment-request.policy"
+export { DEFAULT_THRESHOLD_VND } from "./nodes/order/needs-approval.node"
+export { transferContentOf } from "./nodes/payment/payment-request.policy"

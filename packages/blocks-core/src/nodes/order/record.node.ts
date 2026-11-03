@@ -64,11 +64,12 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
         const items = resolvedItems(mergedItems(given.items), catalogue)
         const amountVnd = totalOf(items)
         const note = [given.note, given.address].filter((part) => part !== null && part !== "").join(" · ")
-        const ref = await context.effect(
-            "order.record",
-            { kind: "order", id: given.leadId },
-            { leadId: given.leadId, items: recordedItemsOf(items), amountVnd, ...(note === "" ? {} : { note }) },
-        )
+        const ref = await context.effect("order.record", {
+            leadId: given.leadId,
+            items: recordedItemsOf(items),
+            amountVnd,
+            ...(note === "" ? {} : { note }),
+        })
         return { orderId: ref.id, items, amountVnd }
     },
     examples: [

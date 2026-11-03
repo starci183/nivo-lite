@@ -2,7 +2,7 @@ import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import type { OrderLine, PaymentAccount } from "./payment-request.policy"
-import { isPayableAccount, noAccountTitleOf, paymentRequestOf } from "./payment-request.policy"
+import { isPayableAccount, noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
 import type { RequestLocale } from "./payment-request.messages"
 import type { NodeSchema } from "../order/order.schema"
 
@@ -48,12 +48,24 @@ const output: NodeSchema<PaymentRequestOutput> = z.object({
     qrUrl: z.string().nullable(),
 })
 
+/**
+ * The VietQR image link of one transfer into the account (SePay image: account, bank, amount, content). The only place the link is
+ * built; it moves to a provider tool when the capability port lands.
+ */
+const qrUrlOf = (account: PaymentAccount, amountVnd: number, content: string): string => {
+    const query = new URLSearchParams({ acc: account.accountNumber, bank: account.bankCode })
+    query.set("amount", String(amountVnd))
+    query.set("des", content)
+    query.set("template", "compact")
+    return `https://qr.sepay.vn/img?${query.toString()}`
+}
+
 const NOT_SENT: Omit<PaymentRequestOutput, "status"> = { content: null, qrUrl: null }
 
 /**
  * `payment.request`: asks the customer to pay a confirmed order: the amount, the order number as the transfer content, the SePay
  * account and the VietQR link, sent on the channel of the conversation. Without a SePay account nothing is sent and the owner gets a
- * work item. The host makes the send once per run and step.
+ * work item. The send is once per order across runs (dedupe key `payment-request:<orderId>`).
  */
 export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "payment.request",
@@ -86,26 +98,23 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             fields: ["provider", "bankCode", "bankName", "accountNumber", "accountHolder"],
             limit: 1,
         })
-        const subject = { kind: "order", id: given.orderId }
         if (!isPayableAccount(account)) {
-            await context.effect("work-item.raise", subject, {
+            await context.effect("work-item.raise", {
                 action: "connect_sepay",
                 title: noAccountTitleOf(order.orderNo, given.locale),
                 payload: { orderId: given.orderId },
             })
             return { status: "no_account", ...NOT_SENT }
         }
-        const request = paymentRequestOf(
-            account,
-            { orderNo: order.orderNo, amountVnd, lines: order.items },
-            given.locale,
-        )
+        const content = transferContentOf(order.orderNo)
+        const qrUrl = qrUrlOf(account, amountVnd, content)
+        const text = paymentMessageOf(account, { amountVnd, lines: order.items }, { content, qrUrl }, given.locale)
         await context.effect(
             "channel.send",
-            { kind: "message", id: given.conversationId },
-            { conversationId: given.conversationId, text: request.message },
+            { conversationId: given.conversationId, text },
+            { dedupeKey: `payment-request:${given.orderId}` },
         )
-        return { status: "sent", content: request.content, qrUrl: request.qrUrl }
+        return { status: "sent", content, qrUrl }
     },
     examples: [
         {

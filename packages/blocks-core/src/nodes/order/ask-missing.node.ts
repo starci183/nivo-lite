@@ -47,11 +47,7 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
     run: async (given, context) => {
         if (given.missing.length === 0) return { asked: false, text: null }
         const text = askTextOf(given.missing, given.locale)
-        await context.effect(
-            "channel.send",
-            { kind: "message", id: given.conversationId },
-            { conversationId: given.conversationId, text },
-        )
+        await context.effect("channel.send", { conversationId: given.conversationId, text })
         return { asked: true, text }
     },
     examples: [
