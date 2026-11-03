@@ -39,11 +39,11 @@ const smtpOf = (values: Values): ManagementSmtp | undefined => {
     return { host, port: number, user, password, from: from.toLowerCase() }
 }
 
-/** The owner address: the sealed one, else the one the document names; both or neither is refused. */
+/** The owner address: the sealed one when the member holds it, else the one the document names; neither is refused. */
 const ownerOf = (document: Record<string, unknown>, values: Values): string => {
     const sealed = values.WORKSPACE_OWNER_EMAIL
     const named = document.ownerEmail === undefined ? undefined : textOf(document.ownerEmail, "ownerEmail")
-    const email = (sealed === undefined) === (named === undefined) ? invalid("ownerEmail") : (sealed ?? named ?? "")
+    const email = sealed ?? named ?? invalid("ownerEmail")
     return isMailAddress(email.toLowerCase()) ? email.toLowerCase() : invalid("ownerEmail")
 }
 
