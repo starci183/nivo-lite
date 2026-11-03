@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import type { RightScope } from "@nivo-lite/agent-sdk/rights"
@@ -28,14 +28,14 @@ export class ConversationNodePortService implements NodeDataPort, OnModuleInit {
     readonly kind: "conversation" = KIND
 
     constructor(
-        private readonly registry: GraphNodeRegistryService,
         private readonly conversations: AgentConversationsService,
         private readonly messages: AgentMessagesService,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
     /** Registers the port once the app has started. */
     onModuleInit(): void {
-        this.registry.addDataPort(this)
+        this.registry?.addDataPort(this)
     }
 
     /** The conversations the query asks for, cut to its fields. */

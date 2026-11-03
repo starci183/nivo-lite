@@ -26,6 +26,24 @@ export interface ConnectionStatusFacts extends ConnectionBindingFacts {
     readonly email: string | null
 }
 
+/** A bank feed as the workspace's payment account is read from it: where it stands and the account its provider reported. */
+export interface FeedAccountFacts {
+    /** The connection. */
+    readonly id: string
+    /** The provider of the feed. */
+    readonly provider: string
+    /** Where the connection stands. */
+    readonly status: string
+    /** When the connection was created. */
+    readonly createdAt: Date
+    /** The full account number the feed stores, trimmed, or null. */
+    readonly accountNumber: string | null
+    /** The bank code, trimmed, or null. */
+    readonly bankCode: string | null
+    /** The account holder, trimmed, or null. */
+    readonly accountHolder: string | null
+}
+
 /** The name and the environment a connection runs in. */
 export interface ConnectionState {
     /** The display name. */

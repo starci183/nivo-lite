@@ -1,13 +1,18 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ConnectionBindingFacts,
+    FeedAccountFacts,
     ConnectionStatusFacts,
     OptionalConnectionState,
     OptionalConnectionWorkspace,
 } from "./connection-bindings-read.contracts"
+import { toConnectionRecord } from "./connections.mapper"
+import type { OptionalConnectionRecord } from "./connections.contracts"
+import { projectConnections } from "./persistence/connection.projection"
+import type { ConnectionProjection } from "./persistence/connection.projection"
 import { ConnectionEntity } from "./persistence/entities"
 
 /** The text a provider reported in the public meta, trimmed; null when it is missing or blank. */
@@ -42,6 +47,37 @@ export class ConnectionBindingsReadService {
             take: limit,
         })
         return rows.map(bindingFactsOf)
+    }
+
+    /** One connection of the workspace as its record, for a read-only app that hands it to a provider port; null when there is none. */
+    async recordOf(workspaceId: string, id: string): Promise<OptionalConnectionRecord> {
+        const row = await projectConnections(this.entityManager.createQueryBuilder(ConnectionEntity, "c"))
+            .where("c.workspaceId = :workspaceId AND c.id = :id", { workspaceId, id })
+            .limit(1)
+            .getRawOne<ConnectionProjection>()
+        return row === undefined ? null : toConnectionRecord(row)
+    }
+
+    /**
+     * The live (not disconnected) feeds of a workspace under one provider, newest first, at most `limit`, with the account each
+     * reported: what a read-only app reads the workspace's payment account from. It never logs the account.
+     */
+    async feedAccountsOf(workspaceId: string, provider: string, limit: number): Promise<Array<FeedAccountFacts>> {
+        const rows = await this.entityManager.find(ConnectionEntity, {
+            select: { id: true, provider: true, status: true, createdAt: true, publicMeta: true },
+            where: { workspaceId, provider, status: Not("disconnected") },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: limit,
+        })
+        return rows.map((row) => ({
+            id: row.id,
+            provider: row.provider,
+            status: row.status,
+            createdAt: row.createdAt,
+            accountNumber: reportedText(row.publicMeta, "account_number"),
+            bankCode: reportedText(row.publicMeta, "bank_code"),
+            accountHolder: reportedText(row.publicMeta, "account_holder"),
+        }))
     }
 
     /** The connections of a workspace under one provider, oldest first, at most `limit`, with the status facts a status read shows. */

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import type { RightScope } from "@nivo-lite/agent-sdk/rights"
@@ -21,15 +21,15 @@ export class KnowledgeNodePortService implements NodeDataPort, OnModuleInit {
     readonly kind: "knowledge-document" = KIND
 
     constructor(
-        private readonly registry: GraphNodeRegistryService,
         private readonly sources: KnowledgeSourcesReadableService,
         private readonly agents: AgentDirectoryService,
         private readonly conversations: AgentConversationsService,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
     /** Registers the port once the app has started. */
     onModuleInit(): void {
-        this.registry.addDataPort(this)
+        this.registry?.addDataPort(this)
     }
 
     /** The documents the query asks for, cut to its fields; none when the turn's agent is gone. */

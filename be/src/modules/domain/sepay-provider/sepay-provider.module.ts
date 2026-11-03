@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common"
+import { Module, Optional } from "@nestjs/common"
 import type { DynamicModule, OnModuleInit } from "@nestjs/common"
 import {
     BankFeedPollerRegistry,
@@ -12,17 +12,13 @@ import { SepayFeedPoller } from "./sepay-feed-poller.service"
 import { SepayPaymentInstructionService } from "./sepay-payment-instruction.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay-provider.module-definition"
 
-const PROVIDERS = [
-    SepayFeedPoller,
-    SepayBankTransactionsService,
-    SepayPaymentInstructionService,
-    SepayFeedWebhookService,
-]
+const PROVIDERS = [SepayFeedPoller, SepayBankTransactionsService, SepayPaymentInstructionService]
 
 @Module({})
 /**
  * Everything SePay-specific that core asks a provider for, registered under the capability names: the poller that reads its
- * transactions back, the transaction list and the payment instruction its MCP tools (`bank.transactions`, `payment.instruction`) answer with.
+ * transactions back, the transaction list and the payment instruction its MCP tools (`bank.transactions`, `payment.instruction`) answer with,
+ * and, in the app that receives it, the workspace-feed webhook.
  */
 export class SepayProviderModule extends ConfigurableModuleClass implements OnModuleInit {
     constructor(
@@ -33,7 +29,7 @@ export class SepayProviderModule extends ConfigurableModuleClass implements OnMo
         private readonly poller: SepayFeedPoller,
         private readonly lister: SepayBankTransactionsService,
         private readonly instruction: SepayPaymentInstructionService,
-        private readonly webhook: SepayFeedWebhookService,
+        @Optional() private readonly webhook?: SepayFeedWebhookService,
     ) {
         super()
     }
@@ -41,7 +37,8 @@ export class SepayProviderModule extends ConfigurableModuleClass implements OnMo
     /** Registers the app's SePay provider once. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        return { ...base, providers: [...(base.providers ?? []), ...PROVIDERS], exports: PROVIDERS }
+        const providers = options.feedWebhook === true ? [...PROVIDERS, SepayFeedWebhookService] : PROVIDERS
+        return { ...base, providers: [...(base.providers ?? []), ...providers], exports: providers }
     }
 
     /** Hands each capability to its registry. */
@@ -49,6 +46,6 @@ export class SepayProviderModule extends ConfigurableModuleClass implements OnMo
         this.pollers.register(this.poller)
         this.transactions.register(this.lister)
         this.instructions.register(this.instruction)
-        this.webhooks.register(this.webhook)
+        if (this.webhook !== undefined) this.webhooks.register(this.webhook)
     }
 }

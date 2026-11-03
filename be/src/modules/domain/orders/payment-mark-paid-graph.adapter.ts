@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import type { EntityManager } from "typeorm"
@@ -21,15 +21,15 @@ export class PaymentMarkPaidGraphAdapter implements NodeEffectExecutor, OnModule
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        private readonly registry: GraphNodeRegistryService,
         private readonly orders: OrdersService,
         private readonly transactions: TransactionsService,
         private readonly claims: OrderPaymentClaimsService,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
     /** Registers the executor with the node host once the app has started. */
     onModuleInit(): void {
-        this.registry.addExecutor(this)
+        this.registry?.addExecutor(this)
     }
 
     /** Marks the order paid with the transaction, settles the customer's claims, and answers the order. */

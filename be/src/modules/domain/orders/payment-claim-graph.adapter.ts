@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectCall, EffectPayload, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import type { RightScope } from "@nivo-lite/agent-sdk/rights"
@@ -48,15 +48,15 @@ export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecuto
     readonly effect = "payment-claim.record"
 
     constructor(
-        private readonly registry: GraphNodeRegistryService,
         private readonly claims: OrderPaymentClaimsService,
         private readonly demand: PaymentDemandService,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
     /** Registers the port and the executor with the node host once the app has started. */
     onModuleInit(): void {
-        this.registry.addDataPort(this)
-        this.registry.addExecutor(this)
+        this.registry?.addDataPort(this)
+        this.registry?.addExecutor(this)
     }
 
     /** Reads the claims of the query, cut to its fields. */

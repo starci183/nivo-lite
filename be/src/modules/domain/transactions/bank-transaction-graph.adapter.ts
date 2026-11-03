@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import type { RightScope } from "@nivo-lite/agent-sdk/rights"
@@ -48,12 +48,12 @@ export class BankTransactionGraphAdapter implements NodeDataPort, OnModuleInit {
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        private readonly registry: GraphNodeRegistryService,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
     /** Registers the port with the node host once the app has started. */
     onModuleInit(): void {
-        this.registry.addDataPort(this)
+        this.registry?.addDataPort(this)
     }
 
     /** Reads the credits of the query, cut to its fields. */

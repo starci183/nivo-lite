@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
@@ -15,13 +15,13 @@ export class PaymentClaimWithdrawGraphAdapter implements NodeEffectExecutor, OnM
     readonly effect = "payment-claim.withdraw"
 
     constructor(
-        private readonly registry: GraphNodeRegistryService,
         private readonly claims: OrderPaymentClaimsService,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
     /** Registers the executor with the node host once the app has started. */
     onModuleInit(): void {
-        this.registry.addExecutor(this)
+        this.registry?.addExecutor(this)
     }
 
     /** Withdraws the claim if it is still open and answers it. */

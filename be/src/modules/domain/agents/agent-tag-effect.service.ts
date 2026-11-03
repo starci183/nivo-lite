@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { NodeRunError, RightsDeniedError } from "@nivo-lite/agent-sdk/node"
 import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
@@ -27,14 +27,14 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
     readonly effect: string = AGENT_TAG
 
     constructor(
-        private readonly registry: GraphNodeRegistryService,
         private readonly tags: AgentTagService,
         @InjectInstallations() private readonly installations: InstallationDirectory,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
     /** Registers with the node host once the app has started. */
     onModuleInit(): void {
-        this.registry.addExecutor(this)
+        this.registry?.addExecutor(this)
     }
 
     /** Tags the target agent for the turn's agent and answers the wake it wrote. */

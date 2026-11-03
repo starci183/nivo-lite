@@ -32,7 +32,7 @@ export const billingModules = (options: ApiOptions): Array<DynamicModule> => [
     ProviderRegistryModule.register({ isGlobal: true }),
     ConnectionPollModule.register({ isGlobal: true, ...options.connectionPoll }),
     BankFeedInboxModule.register({ isGlobal: true }),
-    SepayProviderModule.register({}),
+    SepayProviderModule.register({ feedWebhook: true }),
     BillingModule.register({ isGlobal: true, ...options.billing }),
     BillingGraphqlModule.register({}),
     SepayTransactionsModule.register({ isGlobal: true }),

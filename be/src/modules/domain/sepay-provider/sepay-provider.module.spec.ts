@@ -39,8 +39,24 @@ describe("SepayProviderModule", () => {
         expect(webhooks.all()).toEqual([webhook])
     })
 
-    it("provides and exports the four implementations", () => {
-        const registered = SepayProviderModule.register({})
+    it("registers no webhook in an app that does not receive the feed's webhook", () => {
+        const webhooks = new FeedWebhookRegistry()
+        new SepayProviderModule(
+            new BankFeedPollerRegistry(),
+            new BankTransactionsRegistry(),
+            new PaymentInstructionRegistry(),
+            webhooks,
+            mock<SepayFeedPoller>(),
+            mock<SepayBankTransactionsService>(),
+            mock<SepayPaymentInstructionService>(),
+        ).onModuleInit()
+
+        expect(webhooks.all()).toEqual([])
+        expect(SepayProviderModule.register({}).providers).not.toContain(SepayFeedWebhookService)
+    })
+
+    it("provides and exports the four implementations in the app that receives the webhook", () => {
+        const registered = SepayProviderModule.register({ feedWebhook: true })
 
         expect(registered.providers).toEqual(
             expect.arrayContaining([

@@ -1,5 +1,5 @@
 import { mock } from "@starci/jest-preset"
-import { ConnectionBindingsReadService, ConnectionsService } from "@modules/domain/connections"
+import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionRecord, ConnectionStatusFacts } from "@modules/domain/connections"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
 import { BankTransactionsRegistry } from "@modules/domain/provider-registry"
@@ -50,15 +50,13 @@ const build = () => {
     const views = mock<NativeViewService>()
     views.internalOf.mockResolvedValue(undefined as never)
     const bindings = mock<ConnectionBindingsReadService>()
-    const connections = mock<ConnectionsService>()
     const providers = new BankTransactionsRegistry()
     const transactions = jest.fn().mockResolvedValue([TRANSACTION])
     providers.register({ provider: "sepay", transactions })
     return {
-        service: new BankNativeService(views, bindings, connections, providers),
+        service: new BankNativeService(views, bindings, providers),
         views,
         bindings,
-        connections,
         transactions,
     }
 }
@@ -70,9 +68,9 @@ describe("BankNativeService", () => {
     })
 
     it("lists the transactions of the live feed through the provider that registered, with the window the caller named", async () => {
-        const { service, views, bindings, connections, transactions } = build()
+        const { service, views, bindings, transactions } = build()
         bindings.ofProvider.mockResolvedValue([feed("connected")])
-        connections.find.mockResolvedValue(record("live"))
+        bindings.recordOf.mockResolvedValue(record("live"))
 
         const answer = await service.invoke(
             "ws-1",
@@ -91,9 +89,9 @@ describe("BankNativeService", () => {
     })
 
     it("passes no window when the caller names none and defaults the limit", async () => {
-        const { service, bindings, connections, transactions } = build()
+        const { service, bindings, transactions } = build()
         bindings.ofProvider.mockResolvedValue([feed("connected")])
-        connections.find.mockResolvedValue(record("live"))
+        bindings.recordOf.mockResolvedValue(record("live"))
 
         await service.invoke("ws-1", "transactions", {}, CALLER)
 
@@ -114,17 +112,17 @@ describe("BankNativeService", () => {
     })
 
     it("is not connected when the feed runs in test, vanished or cannot be read yet", async () => {
-        const { service, bindings, connections, transactions } = build()
+        const { service, bindings, transactions } = build()
         bindings.ofProvider.mockResolvedValue([feed("connected")])
         const cases: Array<ConnectionRecord | null> = [record("test"), null]
 
         for (const found of cases) {
-            connections.find.mockResolvedValueOnce(found)
+            bindings.recordOf.mockResolvedValueOnce(found)
             await expect(service.invoke("ws-1", "transactions", {}, CALLER)).rejects.toMatchObject({
                 params: { reason: "not_connected" },
             })
         }
-        connections.find.mockResolvedValueOnce(record("live"))
+        bindings.recordOf.mockResolvedValueOnce(record("live"))
         transactions.mockResolvedValueOnce(undefined)
         await expect(service.invoke("ws-1", "transactions", {}, CALLER)).rejects.toMatchObject({
             params: { reason: "not_connected" },

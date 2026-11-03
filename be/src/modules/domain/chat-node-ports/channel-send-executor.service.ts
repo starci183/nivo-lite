@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
@@ -32,15 +32,15 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
     constructor(
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
-        private readonly registry: GraphNodeRegistryService,
         private readonly conversations: AgentConversationsService,
         private readonly messages: AgentMessagesService,
         private readonly delivery: ChannelDeliveryService,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
     /** Registers the executor once the app has started. */
     onModuleInit(): void {
-        this.registry.addExecutor(this)
+        this.registry?.addExecutor(this)
     }
 
     /** Stores and pushes the text; answers the stored message, and throws when a rule or the channel refused. */

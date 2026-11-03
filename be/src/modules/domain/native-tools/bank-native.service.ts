@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionBindingsReadService, ConnectionsService } from "@modules/domain/connections"
+import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { BankTransactionsRegistry } from "@modules/domain/provider-registry"
@@ -44,7 +44,6 @@ export class BankNativeService implements NativeAdapter {
     constructor(
         private readonly views: NativeViewService,
         private readonly bindings: ConnectionBindingsReadService,
-        private readonly connections: ConnectionsService,
         private readonly providers: BankTransactionsRegistry,
     ) {}
 
@@ -83,7 +82,7 @@ export class BankNativeService implements NativeAdapter {
     private async liveFeed(workspaceId: string, provider: string): Promise<ConnectionRecord | undefined> {
         const feeds = await this.bindings.ofProvider(workspaceId, provider, FEEDS_MAX)
         const live = feeds.find((feed) => feed.status !== "disconnected")
-        const record = live === undefined ? undefined : await this.connections.find(workspaceId, live.id)
+        const record = live === undefined ? undefined : await this.bindings.recordOf(workspaceId, live.id)
         return record?.environment === "live" ? record : undefined
     }
 }
