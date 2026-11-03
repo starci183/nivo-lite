@@ -1,6 +1,6 @@
 "use client"
 
-import { type InventoryPanelScope } from "./inventory.shared"
+import type { InventoryPanelScope } from "./inventory.shared"
 import { useTranslations } from "next-intl"
 import type { SupplierFormField, SupplierFormValues, SupplierView } from "@/modules/types"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"

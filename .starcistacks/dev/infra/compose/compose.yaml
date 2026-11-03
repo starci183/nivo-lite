@@ -1,0 +1,92 @@
+# The dev environment's dependencies of NIVO, run by `starci app stack up --env dev --execute` (PROJECT-STACKS-3, PROJECT-STACKS-6); nobody runs
+# docker by hand. Host ports come from environments.dev.local.ports through STACK_PORT_<NAME>; every credential is read from a file through the
+# least grant of its service (STACK_GRANT_<NAME>, a directory holding only that service's keys), never from the environment; the agent workspace
+# is STACK_DATA_DIR. Service names are the component ids of the manifest. Every port publishes on loopback
+# only. The api, the mcp gateway, the console and the landing run natively against these containers.
+name: nivo-lite-dev
+services:
+  db:
+    build:
+      context: ../../../images/db
+    image: nivo-lite-db:stack-dev
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/POSTGRES_PASSWORD
+    ports:
+      - "127.0.0.1:${STACK_PORT_DB}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ${STACK_GRANT_DB}:/run/secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  nivo-redis:
+    image: redis:7.4-alpine@sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541
+    # The api refuses a Redis that may evict jobs (platform/queue isQueueMemoryBounded): bounded like production, noeviction.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:${STACK_PORT_REDIS}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  nivo-minio:
+    # The StarCi source-built MinIO fork (harness images/sources.json "minio"), pinned by digest (BE-SERVICES-2).
+    image: ghcr.io/starci183/minio:RELEASE.2025-10-15T17-29-55Z-starci.1@sha256:ec6dfba54eaa8e0d77bed9e7c6d86df90ad341f914ecfd3d613f0f811155f40f
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER_FILE: /run/secrets/STORAGE_ACCESS_KEY
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/STORAGE_SECRET_KEY
+    ports:
+      - "127.0.0.1:${STACK_PORT_MINIO}:9000"
+    volumes:
+      - minio-data:/data
+      - ${STACK_GRANT_MINIO}:/run/secrets:ro
+    restart: unless-stopped
+
+  # The OpenClaw agent gateway: the NIVO image (.starcistacks/images/openclaw/Dockerfile), the StarCi OpenClaw fork plus the wrapper and the
+  # nivo-bridge plugin baked in, the same image production runs. The wrapper reads its three secrets from /run/secrets, which here is the
+  # least grant of this service alone; nothing else is mounted but the agent state.
+  nivo-openclaw:
+    build:
+      context: ../../../images/openclaw
+    image: nivo-lite-openclaw:dev
+    environment:
+      OPENCLAW_BRIDGE_URL: http://host.docker.internal:${STACK_PORT_API}/agent-tools
+      AI_BASE_URL: http://host.docker.internal:${STACK_PORT_GATEWAY}/v1
+      # The primary model, as production's OPENCLAW_MODEL setting.
+      OPENCLAW_MODEL: nivo-ai/work
+      # The api (a host process) writes the agent entries into openclaw.json and the gateway reloads on the file change; a Windows bind
+      # mount delivers no inotify event into the Linux VM, so the dev gateway polls its config folder instead.
+      CHOKIDAR_USEPOLLING: "1"
+      CHOKIDAR_INTERVAL: "1000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${STACK_PORT_OPENCLAW}:18790"
+    volumes:
+      - ${STACK_DATA_DIR}/openclaw-state:/home/node/.openclaw
+      - ${STACK_GRANT_OPENCLAW}:/run/secrets:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18790/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+volumes:
+  db-data: {}
+  redis-data: {}
+  minio-data: {}
+

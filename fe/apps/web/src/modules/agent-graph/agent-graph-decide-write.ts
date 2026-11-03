@@ -1,5 +1,5 @@
 import type { AgentGraphDecideForm, AgentGraphFactData, AgentGraphRowForm } from "@/modules/types"
-import { conditionOfTerms } from "./agent-graph-condition"
+import { conditionOfTerms, newTermOf } from "./agent-graph-condition"
 import { KEEP_GROUP } from "./agent-graph-decide-form"
 import type {
     AgentGraphWireApprover,
@@ -296,10 +296,16 @@ export const documentWithDecidePoint = (
         onTimeout: { kind: "agent_owner" },
     }
     const small = fact.unit === "vnd" ? 5_000_000 : 1
+    // A number starts under its first amount; any other fact starts with the comparison the editor proposes first (eq its first
+    // value), never an ordering the back end refuses for that type (condition.policy wrong_type).
+    const firstWhen =
+        fact.type === "number"
+            ? { fact: fact.key, op: "lt", value: small }
+            : conditionOfTerms([newTermOf(fact)], [fact])
     const branches: Array<AgentGraphWireBranch> = [
         {
             key: "b1",
-            when: { fact: fact.key, op: "lt", value: small },
+            when: firstWhen,
             then: "auto",
             next: act.key,
             approver: null,

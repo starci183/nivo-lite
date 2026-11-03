@@ -55,7 +55,6 @@ interface Setup {
     readonly propose?: ProposeOutcome
 }
 
-/** A fresh tagged thread talk, in the same order as the gateway fixture. */
 const taggedTalkOf = () => ({
     before: [{ id: "t0", author: "An", body: "earlier" }],
     tagged: { id: "msg-1", author: "Lan", body: "@ke-toan look" },
@@ -100,6 +99,7 @@ const build = async (setup: Setup = {}) => {
     const fileReads = mock<ChatFileReadsService>({
         readOf: jest.fn(NO_CHAT_FILE_READS.readOf),
         attachmentsOf: jest.fn(NO_CHAT_FILE_READS.attachmentsOf),
+        documentBlockOf: jest.fn(NO_CHAT_FILE_READS.documentBlockOf),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [

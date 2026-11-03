@@ -52,12 +52,16 @@ const leadOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
 const statusOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
     const { t } = ctx
     const lead = leadOf(data, ctx)
-    const conflicts = data.proposals.filter((proposal) => proposal.kind === "conflict").length
-    const learned = data.proposals.length - conflicts
+    const countOf = (kinds: ReadonlyArray<string>): number =>
+        data.proposals.filter((proposal) => kinds.includes(proposal.kind)).length
+    const conflicts = countOf(["conflict"])
+    const learned = countOf(["learned", "template_update"])
+    const contracts = countOf(["contract", "gap"])
     if (data.problems.length > 0) return `${lead} · ${t("statusProblems", { count: data.problems.length })}`
     if (data.gaps.length > 0) return `${lead} · ${t("statusGaps", { count: data.gaps.length })}`
     if (conflicts > 0) return `${lead} · ${t("statusConflicts", { count: conflicts })}`
     if (learned > 0) return `${lead} · ${t("statusLearned", { count: learned })}`
+    if (contracts > 0) return `${lead} · ${t("statusContracts", { count: contracts })}`
     if (ctx.setup.isReady && ctx.setup.isChanged) return `${lead} · ${t("statusSetupChanged")}`
     if (!ctx.setup.isReady) return `${lead} · ${t("statusSetupMissing", { count: ctx.setup.missing })}`
     return isSetupPending(ctx.lifecycle) ? lead : `${lead} · ${t("statusClear")}`

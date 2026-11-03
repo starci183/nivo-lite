@@ -11,12 +11,13 @@ import type {
     ChatFileTurn,
     ChatTurnAttachment,
     OptionalChatFileRead,
+    OptionalDocumentBlock,
     OptionalStoredChatFile,
     StoredChatFile,
 } from "./chat-files.contracts"
 import { ChatFilesLogEvent } from "./chat-files.log-events"
 import { ChatFilesService } from "./chat-files.service"
-import { fileReadOf, fileTextOf, isPictureFile, UNREADABLE_FILE } from "./file-read.policy"
+import { documentTextBlockOf, fileReadOf, fileTextOf, isPictureFile, UNREADABLE_FILE } from "./file-read.policy"
 import { fileReadSchema } from "./file-read.schema"
 import { FILE_READ_IMAGE_REQUEST, FILE_READ_SYSTEM, FILE_READ_TEXT_REQUEST } from "./file-read.templates"
 
@@ -69,6 +70,17 @@ export class ChatFileReadsService {
         if (file === null || !isPictureFile(file.contentType)) return []
         const content = Buffer.from(file.bytes).toString("base64")
         return [{ fileName: file.name, mimeType: file.contentType, content }]
+    }
+
+    /** The text of the document of the turn's message, fenced as data, for a turn that answers about it; null for a picture or no file. */
+    async documentBlockOf(turn: ChatFileTurn): Promise<OptionalDocumentBlock> {
+        const file = await this.fileOf(turn)
+        if (file === null || isPictureFile(file.contentType)) return null
+        const text = await this.documents.readFile(file.name, file.bytes, file.contentType).catch((cause: unknown) => {
+            this.logger.error(ChatFilesLogEvent.ReadFailed, cause, { workspaceId: turn.workspaceId })
+            return ""
+        })
+        return documentTextBlockOf(file.name, text)
     }
 
     private fileOf(turn: ChatFileTurn): Promise<OptionalStoredChatFile> {

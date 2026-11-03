@@ -8,6 +8,8 @@ import { InstallationRecordsService } from "@modules/domain/module-installations
 import { ModulesService } from "@modules/domain/modules"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { END, TRIGGER, nodeOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphContractsService } from "./agent-graph-contracts.service"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -50,6 +52,7 @@ const build = async (state: OptionalGraphState, installed = true) => {
         find: jest.fn().mockResolvedValue({ authorityActions: CATALOG_ACTIONS }),
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphContractsService,
@@ -57,10 +60,11 @@ const build = async (state: OptionalGraphState, installed = true) => {
             { provide: InstallationRecordsService, useValue: installations },
             { provide: ModulesService, useValue: modules },
             { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LOGGER, useValue: logger },
             { provide: IntentRegistryService, useValue: registry },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphContractsService), graphs, modules, catalog }
+    return { service: moduleRef.get(AgentGraphContractsService), graphs, modules, catalog, logger }
 }
 
 const enforced = (active: GraphDocument | null, versionId: string | null = "version-1") =>
@@ -184,13 +188,28 @@ describe("AgentGraphContractsService.turnContractsOf > the turn stays as it was"
         await expect(noId.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
     })
 
-    it("has no contracts when the installation is gone, the trigger reaches nothing or an intent has no frame", async () => {
+    it("has no contracts when the installation is gone or the trigger reaches nothing", async () => {
         const gone = await build(enforced(documentOf(["reply_customer"], [])), false)
         const idle = await build(enforced(documentOf(["reply_customer"], [])))
-        const unframed = await build(enforced(documentOf(["reply_customer", "invent_work"], [])))
 
         await expect(gone.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
         await expect(idle.service.turnContractsOf("ws-1", "a", "tag", "manager")).resolves.toBeNull()
-        await expect(unframed.service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
+    })
+
+    it("leaves an unframed intent out of the turn and logs it, never dropping the turn off its contracts", async () => {
+        const { service, logger } = await build(enforced(documentOf(["reply_customer", "invent_work"], [])))
+
+        const turn = await service.turnContractsOf("ws-1", "a", "customer_message", "outsider")
+
+        expect(turn?.contracts.map((contract) => contract.intent)).toEqual(["reply_customer"])
+        expect(logger.warn).toHaveBeenCalledWith("agent_graphs.intent_unframed", {
+            agentId: "a",
+            intent: "invent_work",
+        })
+    })
+
+    it("has no contracts when every intent the trigger reaches is unframed", async () => {
+        const { service } = await build(enforced(documentOf(["invent_work"], [])))
+        await expect(service.turnContractsOf("ws-1", "a", "customer_message", "outsider")).resolves.toBeNull()
     })
 })

@@ -1,6 +1,7 @@
 # NIVO (nivo-lite) application stack, schema starci/application-stacks@1.
 #
-# dev        docker-swarm: the api, console and landing in containers over the local db container (npm run db:create), Redis and MinIO.
+# dev        docker-compose: the db (an own role per environment), Redis, MinIO and the OpenClaw gateway in containers; the api, the mcp gateway,
+#            the console and the landing run natively against them. One command: starci app stack up --env dev --execute (runbook .starcistacks/dev/README.md).
 # production docker-swarm on ONE Ubuntu VPS (single-manager swarm: orchestration without manager failover). The database is the self-hosted
 #            db service of the stack (owner ruling 2026-10-29); production starts on an empty database. Runbook: .starcistacks/production/README.md (the seven commands, the release flow, the cutover window).
 #
@@ -65,10 +66,16 @@ components:
     required: true
   nivo-openclaw:
     role: stateful
-    image: ghcr.io/openclaw/openclaw:2026.7.1@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c
+    image: ghcr.io/starci183/nivo-lite-openclaw:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
-    purpose: The OpenClaw agent gateway. Private network only; the api reaches it by service DNS through the loopback relay of the entrypoint wrapper.
+    purpose: The OpenClaw agent gateway, built from .starcistacks/images/openclaw/Dockerfile (the StarCi OpenClaw fork plus the NIVO wrapper and nivo-bridge plugin). Private network only; the api reaches it by service DNS through the loopback relay of the entrypoint wrapper.
     required: true
+  nivo-minio:
+    role: stateful
+    image: ghcr.io/starci183/minio:RELEASE.2025-10-15T17-29-55Z-starci.1@sha256:ec6dfba54eaa8e0d77bed9e7c6d86df90ad341f914ecfd3d613f0f811155f40f
+    compose: infra/compose/compose.yaml
+    purpose: The S3-compatible object store of the dev environment (production uses the host's MinIO through STORAGE_ENDPOINT). Loopback only, on the persisted volume minio-data.
+    required: false
   nivo-n8n:
     role: stateful
     image: docker.n8n.io/n8nio/n8n:1.64.3@sha256:4d9116228d426ce24c442a744e9c11ee7c1187713f93f21dd5a34a12584708c1
@@ -81,12 +88,6 @@ components:
     compose: infra/swarm/stack.yaml
     purpose: The BullMQ broker of the job queue (owner ruling 2026-11-05, the queue is BullMQ on Redis in both editions). Internal only on the private agents network as nivo-redis:6379, no published port. AOF with appendfsync everysec on the persisted named volume nivo-engine_redis-data; the PostgreSQL outbox relay republishes any committed row the broker loses, so no admitted job is lost on a Redis restart.
     required: true
-  nivo-mail:
-    role: service
-    image: axllent/mailpit:v1.31.6@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
-    compose: infra/swarm/mail-catcher.override.yaml
-    purpose: The development mail catcher (Mailpit, the harness lite sink), a TEST-RUN OVERRIDE the A-E kit adds as a second compose file; the default dev mail is the owner SMTP server. The api then sends to nivo-mail:1025 with no login and no encryption and the inbox is read at http://mail.localhost. Development only, memory only, never in production.
-    required: false
   db:
     role: stateful
     image: ghcr.io/starci183/nivo-lite-db:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
@@ -152,93 +153,301 @@ jobs:
 environments:
   dev:
     status: supported
-    runtime: docker-swarm
+    runtime: docker-compose
     composeFiles:
-      - infra/swarm/stack.yaml
+      - infra/compose/compose.yaml
     components:
+      db:
+        port: 54332
+      nivo-redis:
+        port: 56379
+      nivo-minio:
+        port: 59000
+      nivo-openclaw:
+        port: 58790
       nivo-api:
-        replicas: 1
-        port: 8787
+        port: 18787
       nivo-mcp:
-        replicas: 1
-        port: 8790
+        port: 18790
       nivo-web-app:
-        replicas: 1
         port: 3000
       nivo-landing:
-        replicas: 1
-        port: 3000
-      ingress:
-        replicas: 1
-        port: 80
-      nivo-redis:
-        replicas: 1
-        port: 6379
-      nivo-mail:
-        replicas: 1
-        port: 1025
+        port: 3002
     runbook: README.md
-    # The one local ingress publishes port 80 in ingress mode; the hosts below resolve to the loopback address by themselves (RFC 6761),
-    # so no DNS record or certificate exists. The console answers on every other host (http://localhost).
-    ingress:
-      component: ingress
-      hosts: [api.localhost, landing.localhost, mail.localhost]
-    dns:
-      - host: api.localhost
-        owner: Development operator
-        receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
-      - host: landing.localhost
-        owner: Development operator
-        receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
-      - host: mail.localhost
-        owner: Development operator
-        receipt: "README.md (the *.localhost names resolve to 127.0.0.1 in the browser and the OS; nothing to publish)"
-    tls:
-      owner: Development operator
-      receipt: "README.md (local development serves plain HTTP on the loopback address; no certificate is issued or persisted)"
-    release:
-      imagesLock: .starcistacks/dev/infra/swarm/release/images.lock.yaml
-      pointer: .starcistacks/dev/infra/swarm/release/current.yaml
-      previous: .starcistacks/dev/infra/swarm/release/previous.yaml
-      healthAssertions:
-        - The api answers /healthz and /readyz on http://api.localhost.
-        - The mcp gateway task is healthy (its container healthcheck probes /healthz; it has no host route).
-        - The console answers /health/live on http://localhost.
-        - The landing answers /health/live on http://landing.localhost.
-        - The mail catcher task is healthy (its container healthcheck probes /mailpit readyz) and its inbox answers on http://mail.localhost.
-    backup:
-      - component: db
-        target: The local db container's volume is disposable development data; `starci app db migrate` rebuilds it from db/bootstrap.sql and db/migrations.
-        retention: None; the repository migrations are the source, the local volume is recreated on demand.
-        owner: Development operator
-        restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
-      - component: nivo-redis
-        target: The local Redis volume only mirrors the broker copy of queued jobs; the PostgreSQL job_outbox of the local db is the record and the relay republishes any row the broker lost, so the volume is disposable.
-        retention: None; the volume is recreated on demand and the relay refills it from the outbox.
-        owner: Development operator
-        restoreProof: .starcistacks/dev/infra/swarm/recovery/restore-proof.md
-    # Local development holds no sealed secret: the operator owns the local backing containers (db, Redis, MinIO) and supplies their
-    # development configuration through the untracked .starcistacks/dev/api.dev.env. It is not a deployed Swarm component.
+    # Dev values are generated once, dev-only, by `starci app secret init --env dev --execute`, which declares each key here; the sealed
+    # members `ai` (the upstream OPENROUTER_API_KEY and STARCI_AI_KEY) and `auth` (the JWT pair) are the owner's and are never regenerated.
     secrets:
-      - name: auth
-        runtimeName: nivo-dev-auth-v1
-        version: 1
-        where: secrets/auth
-        recipientPolicy: SOPS/age, one member per provider (auth.enc.yaml), sealed to the owner key per .sops.yaml; keys AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY.
-        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
-      - name: mail
-        runtimeName: nivo-dev-mail-v1
-        version: 1
-        where: secrets/mail
-        keys: [MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
-        recipientPolicy: SOPS/age, one member per provider (mail.enc.yaml), sealed to the owner key per .sops.yaml; keys MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM of the owner own SMTP server (the same server as production). MAIL_PORT, MAIL_SECURITY, MAIL_FROM_NAME, MAIL_DEFAULT_LANGUAGE and AUTH_WEB_ORIGIN are plain configuration in infra/swarm/stack.yaml.
-        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
-      - name: ai
-        runtimeName: nivo-dev-ai-v1
-        version: 1
-        where: secrets/ai
-        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the owner key per .sops.yaml; keys STARCI_AI_KEY (dev's own virtual key) and OPENROUTER_API_KEY.
-        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
+      - name: "postgres-password"
+        member: "db"
+        key: "POSTGRES_PASSWORD"
+        where: "secrets/db"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "dev-db-owner-password"
+        member: "db"
+        key: "DEV_DB_OWNER_PASSWORD"
+        where: "secrets/db"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "dev-db-app-password"
+        member: "db"
+        key: "DEV_DB_APP_PASSWORD"
+        where: "secrets/db"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "storage-access-key"
+        member: "storage"
+        key: "STORAGE_ACCESS_KEY"
+        where: "secrets/storage"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "storage-secret-key"
+        member: "storage"
+        key: "STORAGE_SECRET_KEY"
+        where: "secrets/storage"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "channel-token-key"
+        member: "platform"
+        key: "CHANNEL_TOKEN_KEY"
+        where: "secrets/platform"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "otp-pepper"
+        member: "platform"
+        key: "OTP_PEPPER"
+        where: "secrets/platform"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "n8n-signing-secret"
+        member: "platform"
+        key: "N8N_SIGNING_SECRET"
+        where: "secrets/platform"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "openclaw-gateway-token"
+        member: "openclaw"
+        key: "OPENCLAW_GATEWAY_TOKEN"
+        where: "secrets/openclaw"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "openclaw-bridge-secret"
+        member: "openclaw"
+        key: "OPENCLAW_BRIDGE_SECRET"
+        where: "secrets/openclaw"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "openclaw-tool-secret"
+        member: "openclaw"
+        key: "OPENCLAW_TOOL_SECRET"
+        where: "secrets/openclaw"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "mail-host"
+        member: "mail"
+        key: "MAIL_HOST"
+        where: "secrets/mail"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the owner's own SMTP server (the same as production), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "mail-user"
+        member: "mail"
+        key: "MAIL_USER"
+        where: "secrets/mail"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the owner's own SMTP server (the same as production), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "mail-password"
+        member: "mail"
+        key: "MAIL_PASSWORD"
+        where: "secrets/mail"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the owner's own SMTP server (the same as production), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+      - name: "mail-from"
+        member: "mail"
+        key: "MAIL_FROM"
+        where: "secrets/mail"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml; the owner's own SMTP server (the same as production), sealed by the owner, never generated"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed."
+    # `starci app stack up --env dev --execute` reads this block (PROJECT-STACKS-6). One command brings up the db (own role per environment),
+    # Redis, MinIO and the OpenClaw gateway in containers, migrates, and runs the api, the mcp gateway, the console and the landing natively.
+    local:
+      ports:
+        db: 54332
+        redis: 56379
+        minio: 59000
+        openclaw: 58790
+        api: 18787
+        gateway: 18788
+        mcp: 18790
+        web: 3000
+        landing: 3002
+      services:
+        - {name: db, wait: healthy}
+        - {name: nivo-redis, wait: healthy}
+        - {name: nivo-minio, wait: tcp, port: minio}
+        - {name: nivo-openclaw, wait: healthy}
+      dirs: [openclaw-state, ai-router]
+      database:
+        service: db
+        port: db
+        urlEnv: PRIMARY_DB_URL
+        appRole: app_be
+        password: {member: db, key: DEV_DB_OWNER_PASSWORD}
+        adminPassword: {member: db, key: POSTGRES_PASSWORD}
+        appPassword: {member: db, key: DEV_DB_APP_PASSWORD}
+      grants:
+        - {name: db, keys: [POSTGRES_PASSWORD]}
+        - {name: minio, keys: [STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY]}
+        - {name: openclaw, keys: [OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, STARCI_AI_KEY]}
+      custody:
+        - {member: db, key: POSTGRES_PASSWORD, kind: password}
+        - {member: db, key: DEV_DB_OWNER_PASSWORD, kind: password}
+        - {member: db, key: DEV_DB_APP_PASSWORD, kind: password}
+        - {member: storage, key: STORAGE_ACCESS_KEY, kind: hex, bytes: 12}
+        - {member: storage, key: STORAGE_SECRET_KEY, kind: hex, bytes: 24}
+        - {member: platform, key: CHANNEL_TOKEN_KEY, kind: base64, bytes: 32}
+        - {member: platform, key: OTP_PEPPER, kind: hex, bytes: 32}
+        - {member: platform, key: N8N_SIGNING_SECRET, kind: hex, bytes: 32}
+        - {member: openclaw, key: OPENCLAW_GATEWAY_TOKEN, kind: hex, bytes: 32}
+        - {member: openclaw, key: OPENCLAW_BRIDGE_SECRET, kind: hex, bytes: 32}
+        - {member: openclaw, key: OPENCLAW_TOOL_SECRET, kind: hex, bytes: 32}
+      setup:
+        - {name: install, argv: [npm, ci], heavy: install, skipIfExists: node_modules}
+        - {name: codegen, argv: [npm, run, codegen, --silent], heavy: build}
+        # The api and the mcp gateway run compiled: Nest reads GraphQL field types from the decorator metadata only tsc emits,
+        # so a transpile-only loader leaves a union-typed field (RunFlowInput.kind) as Object and boot fails.
+        - {name: build-be, argv: [npm, run, build:be], heavy: build}
+        # The console runs compiled (next build, then next start): under next dev a page compiles on its first request, and a browser walk
+        # met an unhydrated sign-in form for seconds. The public build values are the dev origins.
+        - name: build-web
+          argv: [npx, next, build]
+          cwd: fe/apps/web
+          heavy: build
+          env:
+            NEXT_PUBLIC_API_URL: "http://localhost:${port.api}"
+            NEXT_PUBLIC_DEVELOPER_API_URL: "http://localhost:${port.api}"
+            NEXT_PUBLIC_SITE_URL: "http://localhost:${port.web}"
+            NEXT_PUBLIC_LANDING_URL: "http://localhost:${port.landing}"
+      seed:
+        # The module/action catalogue, as the production deploy runs it (verify exec "catalogue synced"): without it public.authority_actions
+        # lacks the actions the default rules grant, and installing an agent fails on authority_rules_action_fk. It upserts, so a rerun is safe.
+        - name: catalogue
+          argv: [node, dist/apps/cli/src/main.js, seed-modules, ensure]
+          cwd: be
+          after: migrate
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
+          env:
+            PRIMARY_DB_SCHEMA: public
+            SITE_URL: "http://localhost:${port.web}"
+            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            PUBLIC_API_URL: "http://localhost:${port.api}"
+            STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
+            STORAGE_BUCKET_PREFIX: nivo-dev
+            MAIL_PORT: "587"
+            MAIL_SECURITY: starttls
+            MAIL_FROM_NAME: NIVO
+            MAIL_DEFAULT_LANGUAGE: vi
+        # The buckets of the environment (cli storage bootstrap: creates the missing ones, opens the picture bucket to anonymous reads):
+        # without them every upload and media read answers OBJECT_STORAGE_UNAVAILABLE. Safe to run again.
+        - name: buckets
+          argv: [node, dist/apps/cli/src/main.js, storage, bootstrap]
+          cwd: be
+          after: migrate
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
+          env:
+            PRIMARY_DB_SCHEMA: public
+            SITE_URL: "http://localhost:${port.web}"
+            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            PUBLIC_API_URL: "http://localhost:${port.api}"
+            STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
+            STORAGE_BUCKET_PREFIX: nivo-dev
+            MAIL_PORT: "587"
+            MAIL_SECURITY: starttls
+            MAIL_FROM_NAME: NIVO
+            MAIL_DEFAULT_LANGUAGE: vi
+      processes:
+        - name: api
+          argv: [node, dist/apps/api/src/main.js]
+          cwd: be
+          port: api
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
+          env:
+            PORT: "${port.api}"
+            PRIMARY_DB_SCHEMA: public
+            SITE_URL: "http://localhost:${port.web}"
+            AUTH_WEB_ORIGIN: "http://localhost:${port.web}"
+            AUTH_GOOGLE_CALLBACK_URL: "http://localhost:${port.api}/auth/google/callback"
+            PUBLIC_API_URL: "http://localhost:${port.api}"
+            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing}"
+            STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
+            STORAGE_BUCKET_PREFIX: nivo-dev
+            MAIL_PORT: "587"
+            MAIL_SECURITY: starttls
+            MAIL_FROM_NAME: NIVO
+            MAIL_DEFAULT_LANGUAGE: vi
+            QUEUE_ENABLED: "true"
+            QUEUE_REDIS_HOST: 127.0.0.1
+            QUEUE_REDIS_PORT: "${port.redis}"
+            QUEUE_REDIS_PREFIX: nivo
+            REALTIME_HUB: redis
+            REALTIME_REDIS_URL: "redis://127.0.0.1:${port.redis}"
+            REALTIME_REDIS_PREFIX: nivo-realtime
+            AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
+            AI_ROUTER_KEYS_PATH: "${data}/ai-router/keys.db"
+            OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:${port.openclaw}"
+            OPENCLAW_CONFIG_DIR: "${data}/openclaw-state"
+            OPENCLAW_MANAGE_AGENTS: "true"
+            WORKSPACE_SIGNUP_ENABLED: "true"
+          health: {url: "http://localhost:${port.api}/healthz"}
+        - name: mcp
+          argv: [node, dist/apps/mcp/src/main.js]
+          cwd: be
+          port: mcp
+          files: [CHANNEL_TOKEN_KEY, STARCI_AI_KEY]
+          env:
+            PORT: "${port.mcp}"
+            PRIMARY_DB_SCHEMA: public
+            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web}"
+            QUEUE_ENABLED: "true"
+            QUEUE_REDIS_HOST: 127.0.0.1
+            QUEUE_REDIS_PORT: "${port.redis}"
+            QUEUE_REDIS_PREFIX: nivo
+            AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
+          health: {url: "http://localhost:${port.mcp}/healthz"}
+        - name: web
+          # The build of the setup step build-web, served by next start in the app folder (turbo strips undeclared env such as PORT from
+          # its tasks, and turbo.json is a managed file).
+          argv: [npx, next, start]
+          cwd: fe/apps/web
+          port: web
+          env:
+            PORT: "${port.web}"
+          health: {url: "http://localhost:${port.web}/health/live"}
+        - name: landing
+          # next dev directly in the app folder (the setup ran codegen): turbo strips undeclared env such as PORT from its tasks, and
+          # turbo.json is a managed file, so `npm run dev:fe:landing` would start on 3000 whatever port is declared.
+          argv: [npx, next, dev]
+          cwd: fe/apps/landing
+          port: landing
+          env:
+            PORT: "${port.landing}"
+            NEXT_PUBLIC_SITE_URL: "http://localhost:${port.landing}"
+            NEXT_PUBLIC_APP_URL: "http://localhost:${port.web}"
+          health: {url: "http://localhost:${port.landing}/health/live"}
+      ready:
+        - {name: api-live, url: "http://localhost:${port.api}/healthz"}
+        - {name: api-ready, url: "http://localhost:${port.api}/readyz"}
+        - {name: web-live, url: "http://localhost:${port.web}/health/live"}
+        - {name: landing-live, url: "http://localhost:${port.landing}/health/live"}
+      verify:
+        - {name: api-live, url: "http://localhost:${port.api}/healthz"}
+        - {name: api-ready, url: "http://localhost:${port.api}/readyz"}
+        - {name: web-live, url: "http://localhost:${port.web}/health/live"}
+        - {name: landing-live, url: "http://localhost:${port.landing}/health/live"}
+      origins:
+        - {name: web, url: "http://localhost:${port.web}"}
+        - {name: landing, url: "http://localhost:${port.landing}"}
+        - {name: api, url: "http://localhost:${port.api}"}
+        - {name: mcp, url: "http://localhost:${port.mcp}"}
   production:
     status: supported
     runtime: docker-swarm
@@ -563,6 +772,9 @@ environments:
         nivo-api: {app: api}
         nivo-mcp: {app: mcp}
         db: {app: db}
+        # nivo-openclaw is built from .starcistacks/images/openclaw/Dockerfile, but deploy.images accepts only an app hfs.json declares (and the
+        # db image), so it is not listed here yet: the harness's image build (stack build, images.yml) resolves no other .starcistacks image.
+        # Until it does, a deploy passes --image nivo-openclaw=<pushed digest> by hand.
         nivo-web-app:
           app: web
           buildArgs:
@@ -656,13 +868,6 @@ environments:
           settings:
             OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: nivo-ai/work}
       configs:
-        - {name: openclaw-entrypoint, file: infra/swarm/openclaw/entrypoint.sh, env: NIVO_CFG_OPENCLAW_ENTRYPOINT}
-        - {name: openclaw-init, file: infra/swarm/openclaw/openclaw-init.mjs, env: NIVO_CFG_OPENCLAW_INIT}
-        - {name: openclaw-relay, file: infra/swarm/openclaw/openclaw-relay.mjs, env: NIVO_CFG_OPENCLAW_RELAY}
-        - {name: nivo-bridge-manifest, file: infra/swarm/openclaw/nivo-bridge/openclaw.plugin.json, env: NIVO_CFG_NIVO_BRIDGE_MANIFEST}
-        - {name: nivo-bridge-package, file: infra/swarm/openclaw/nivo-bridge/package.json, env: NIVO_CFG_NIVO_BRIDGE_PACKAGE}
-        - {name: nivo-bridge-index, file: infra/swarm/openclaw/nivo-bridge/index.js, env: NIVO_CFG_NIVO_BRIDGE_INDEX}
-        - {name: nivo-bridge-token, file: infra/swarm/openclaw/nivo-bridge/bridge-token.js, env: NIVO_CFG_NIVO_BRIDGE_TOKEN}
         - {name: postgres-backup, file: infra/swarm/postgres/backup.sh, env: NIVO_CFG_POSTGRES_BACKUP}
       verify:
         http:

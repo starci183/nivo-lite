@@ -1,75 +1,48 @@
 # dev
 
-Local development of NIVO uses a Docker container of the managed `db` image (`.starcistacks/images/db/Dockerfile`) for PostgreSQL: `npm run db:create` builds the image and creates the container `nivo-lite-dev-db` (loopback port 54322), `npm run db:start`, `db:stop` and `db:reset` run it, and `npm run db:push` applies `db/bootstrap.sql` and `db/migrations`. Auth is the API's own and object storage is the operator's local MinIO, so no further database service exists. Preserve a running container when an operation is refused. Starting Docker or the database does not configure or start the API, web console or landing. Production has its own stack and runbook (`../production/README.md`).
+The dev environment of NIVO is one command: `starci app stack up --env dev --execute`. It checks the machine, opens the dev custody, runs the
+setup (`npm ci` when `node_modules` is absent, then codegen), starts PostgreSQL (the managed `db` image, pgvector), Redis, MinIO and the OpenClaw
+gateway in Docker Linux containers, gives the environment its own database role, migrates, starts the api, the mcp gateway, the console and the
+landing natively, waits for readiness and prints the origins. What it runs is the `local` block of `environments.dev` in
+`.starcistacks/application-stacks.yaml` and `infra/compose/compose.yaml` (PROJECT-STACKS-6 in contexts/project/stacks.md of the harness); this
+runbook carries no docker command and nobody runs docker by hand.
 
-The API's required base settings are below. `be/apps/api/src/api.env.ts` composes the typed config readers; missing or malformed inputs fail boot. Optional integrations can require additional settings when enabled, so this list is not proof that an arbitrary supplied configuration is ready.
+| Component | Where | Host port (loopback) |
+| --- | --- | --- |
+| db (PostgreSQL 17, pgvector) | container, volume `db-data` | 54332 |
+| redis (BullMQ broker, realtime) | container, volume `redis-data` | 56379 |
+| minio (S3) | container, volume `minio-data` | 59000 |
+| openclaw (agent gateway, relay) | container, agent workspace under the state base | 58790 |
+| api (+ the AI gateway on port + 1) | native | 18787 (gateway 18788) |
+| mcp | native | 18790 |
+| web (console) | native | 3000 |
+| landing | native | 3002 |
 
-| Setting | Local API requirement |
+The ports differ from production and from the earlier local containers (`nivo-lite-dev-db` on 54322, port 8787) on purpose: `doctor` reports a port
+that something else holds and names the holder. Change a port in `local.ports` of the manifest, not in the commands.
+
+**Custody.** Dev values are sealed like any secret. `starci app secret init --env dev --execute` creates the dev-only ones once (members `db`,
+`storage`, `platform`, `openclaw`) and never replaces a sealed value; the owner's members `ai` (`OPENROUTER_API_KEY`, `STARCI_AI_KEY`) and `auth`
+(the JWT pair) are read as they are. A machine without the age identity the members are sealed to is refused with the owner step to obtain it. The
+database is a container of its own compose project: the migrations run as the role `nivo_lite_dev` and the api connects as `app_be` with a password
+of this environment alone, so no role is shared with another environment or server.
+
+**A new machine.** Run `starci app stack doctor --env dev`: it prints one row per prerequisite (Node 22, npm, git, Docker with Compose v2, WSL2 on
+Windows, sops and age, disk, memory, the ports) and, for each missing one, the exact winget, brew or apt step for the owner to run. Then
+`starci app stack up --env dev --execute`. On Windows the SWC native binding refuses a cache folder whose ACL lets other principals replace files
+(`ERR_SWC_NATIVE_CACHE`; `%LOCALAPPDATA%\swc` and a folder on a shared data drive both can): export `SWC_NATIVE_BINDING_CACHE` to a folder of
+your own profile (for example `%USERPROFILE%\.swc-native-cache`) in the shell that runs `up`, which hands its environment to the console and the
+landing (PROJECT-STACKS-10).
+
+| Command | Operation |
 | --- | --- |
-| `PORT` | Integer listener port from the selected application placement. |
-| `HTTP_SECURITY_ALLOWED_ORIGINS` | Comma-separated canonical browser origins permitted by the HTTP security reader. |
-| `PRIMARY_DB_URL` | Private connection to the local database as the least-privilege `app_be` role, with its existing matching password. The administrative `postgres` connection is not the application credential. |
-| `PRIMARY_DB_SCHEMA` | Nonempty application schema name from the selected database configuration. |
-| `CHANNEL_TOKEN_KEY` | Private base64 value that decodes to exactly 32 bytes; preserve it for existing encrypted connection data. |
-| `OTP_PEPPER` | Independent private pepper of at least 32 characters for loyalty code hashes. |
-| `SITE_URL` | Absolute public origin of the local web app, used for provider return addresses. |
-| `N8N_SIGNING_SECRET` | Nonempty private signing secret; it must match any enabled n8n workflow consumer. |
+| prepare | `starci app stack prepare --env dev --execute`: checks the machine, opens the custody, runs the setup and builds or pulls the images. |
+| doctor | `starci app stack doctor --env dev`: read-only table of the host prerequisites with the owner-run install step per OS, the custody, the compose render and the ports. |
+| up | `starci app stack up --env dev --execute`: prepare, then the services and their health, the database role, the migrations with a receipt, the processes and readiness; prints the origins. |
+| status | `starci app stack status --env dev`: desired against running, the migration receipt and every readiness probe. |
+| logs | `starci app stack logs --env dev --service api` (api, mcp, web, landing, or db, nivo-redis, nivo-minio, nivo-openclaw; bounded and redacted). |
+| down | `starci app stack down --env dev --execute`: ends the processes and stops the compose project; volumes and sealed values stay. |
+| verification | `starci app stack verify --env dev`: the api `/healthz` and `/readyz` (the database answers), the console and the landing `/health/live`; then `npm run test` and the acceptance flows against the printed origins. |
 
-Supply private values through the existing native custody owner, never chat, command arguments or shared logs. Sealed application custody belongs in `.starcistacks/<env>/secrets/<slug>.enc`; the API's `EnvSource` prefers the corresponding `<NAME>_FILE` input and fails if that file cannot be read. Existing local keys must be retained; fresh keys belong only to an explicitly initialized fresh environment. Do not substitute production custody for a missing local binding.
-
-The tracked `infra/swarm/stack.yaml` recipe declares an externally supplied legacy API environment input. That declaration does not create, supply or validate the input. Existing `starci app secret` commands can manage and materialize sealed values, but they do not assemble this complete API input, initialize the `app_be` password, or adopt an existing database container. Native status output and a successful secret-shape check do not establish those steps or application readiness.
-
-Use component-specific endpoints: host application processes reach local dependencies through their published loopback ports, while service containers need the declared reachable host gateway. The browser-facing api origin must remain browser-reachable. The web app receives only its public `NEXT_PUBLIC_*` build settings and signs in through the api's `/auth` doors; the database URL and the sign-in signing keys remain backend-only.
-
-After the selected local configuration and database migration state are verified, the existing package scripts can run the application processes (`npm run dev:be:api`, `npm run dev:fe:web`, `npm run dev:fe:landing`), or the declared Swarm recipe can run the services. These scripts consume configuration; they are not a local credential bootstrap. Run repository commands from the application root and retain separate liveness, database readiness and browser verification.
-
-Swarm does not build images. Choose a registry reachable from the local Swarm, build and push all four images, and copy each pushed image's digest reference:
-
-```sh
-docker build -f be/apps/api/Dockerfile -t <registry>/nivo-lite-api:dev .
-docker build -f be/apps/mcp/Dockerfile -t <registry>/nivo-lite-mcp:dev .
-docker build -f fe/apps/web/Dockerfile -t <registry>/nivo-lite-web:dev \
-    --build-arg NEXT_PUBLIC_API_URL=http://api.localhost \
-    --build-arg NEXT_PUBLIC_DEVELOPER_API_URL=http://api.localhost \
-    --build-arg NEXT_PUBLIC_SITE_URL=http://localhost \
-    --build-arg NEXT_PUBLIC_LANDING_URL=http://landing.localhost .
-docker build -f fe/apps/landing/Dockerfile -t <registry>/nivo-lite-landing:dev \
-    --build-arg NEXT_PUBLIC_SITE_URL=http://landing.localhost \
-    --build-arg NEXT_PUBLIC_APP_URL=http://localhost .
-docker push <registry>/nivo-lite-api:dev
-docker push <registry>/nivo-lite-mcp:dev
-docker push <registry>/nivo-lite-web:dev
-docker push <registry>/nivo-lite-landing:dev
-```
-
-Create the untracked file dev.images.override.yaml at the repository root with the pushed image references. Replace `<registry>`, `<api-digest>`, `<mcp-digest>`, `<web-digest>` and `<landing-digest>` with your registry and the actual 64-character SHA-256 digests. All four images must override the all-zero placeholders in the base stack:
-
-```yaml
-services:
-  nivo-api:
-    image: <registry>/nivo-lite-api@sha256:<api-digest>
-  nivo-mcp:
-    image: <registry>/nivo-lite-mcp@sha256:<mcp-digest>
-  nivo-web-app:
-    image: <registry>/nivo-lite-web@sha256:<web-digest>
-  nivo-landing:
-    image: <registry>/nivo-lite-landing@sha256:<landing-digest>
-```
-
-Deploy to the local Swarm manager:
-
-```sh
-docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c dev.images.override.yaml | docker stack deploy -c - nivo-dev
-```
-
-`docker stack config` includes the local api.dev.env values in its output. Pipe it directly to deploy and keep that output out of shared logs. The one ingress publishes port 80 and routes by host: the api at `http://api.localhost`, the landing at `http://landing.localhost`, the test-run mail catcher inbox (Mailpit from `mail-catcher.override.yaml`, not deployed by default) at `http://mail.localhost` and the web console at `http://localhost` (the catch-all). The `*.localhost` names resolve to the loopback address without a DNS record, and the stack serves plain HTTP, so no certificate exists. The api and landing Host rules take priority over the web catch-all. The MCP gateway (`nivo-mcp`) carries no Traefik label: it is internal only, reached as `http://nivo-mcp:8790` from the other services of the stack, and its own healthcheck probes `/healthz`.
-
-| Command      | What it does                                                                                                                                                                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| prepare      | Start the database container (`npm run db:start`), prepare api.dev.env, build and push the images, and write the digest override as described above.                                                                                                                                                |
-| doctor       | `docker version`, `docker info` (check Swarm is active and this node is a manager), the state of the container `nivo-lite-dev-db` (`docker ps`), and a check that ports 54322 and 80 are free or owned by this stack. Read-only.                                                              |
-| up           | Migrate the local database, then run the `docker stack config` / `docker stack deploy` pipeline above; or start the host processes `npm run dev:be:api` and `npm run dev:fe:web`.                                                                                          |
-| status       | `docker stack services nivo-dev`, `docker stack ps nivo-dev` and the state of the container `nivo-lite-dev-db` (`docker ps`).                                                                                                                                                                                |
-| logs         | `docker service logs -f nivo-dev_nivo-api`, `docker service logs -f nivo-dev_nivo-web-app` or `docker service logs -f nivo-dev_nivo-landing`.                                                                                                                                                                                    |
-| down         | `docker stack rm nivo-dev` removes the app services; `npm run db:stop` stops the database.                                                                                                                                                                           |
-| verification | `curl -fsS http://api.localhost/healthz`, `curl -fsS http://api.localhost/readyz` (the database answers), `curl -fsS http://localhost/health/live` (console) and `curl -fsS http://landing.localhost/health/live` (landing); then `npm run test` and the smoke steps of `be/docs/runbooks/cutover.md` against `http://localhost`. |
+The volumes are rebuildable development data: `starci app db migrate` recreates the schema from `db/bootstrap.sql` and `db/migrations`; the
+OpenClaw workspace lives under the state base (`STARCI_LOCAL_ROOT`) and `down` keeps it. Key names are in `runtime/env/KEYS.md`.

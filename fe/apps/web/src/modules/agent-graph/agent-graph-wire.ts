@@ -731,7 +731,7 @@ type ProposalSchemaShape = z.ZodObject<
 
 const proposalSchema: ProposalSchemaShape = z.object({
     id: z.string(),
-    kind: z.enum(["conflict", "learned", "template_update"]),
+    kind: z.enum(["conflict", "learned", "template_update", "gap", "contract"]),
     status: z.enum(["open", "confirmed", "declined", "superseded"]),
     nodeKey: z.string().nullable(),
     branchKey: z.string().nullable(),

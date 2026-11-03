@@ -55,13 +55,15 @@ export const useChatFile = (): ChatFileView => {
         if (file === null) return null
         const address = await addressOf(file)
         if (address === undefined) return undefined
-        return runRest(
+        const uploaded = await runRest(
             async () => {
                 await putFile({ url: address.signedUrl, file, contentType: file.type })
                 return { path: address.path, name: file.name }
             },
             { showSuccessToast: false },
         )
+        // runRest answers null on failure, and null here means "no file chosen": a failed upload answers undefined.
+        return uploaded ?? undefined
     }
     return { file, problem, choose, clear, upload }
 }

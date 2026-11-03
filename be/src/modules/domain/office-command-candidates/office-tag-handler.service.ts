@@ -134,8 +134,14 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
 
     /** The file of the tagging line, in the same words a customer's reaches a customer turn. */
     private async textOf(turn: AgentTurnView, module: string, transcript: string): Promise<string> {
-        const read = await this.fileReads.readOf(this.fileTurnOf(turn, module))
-        return read === null ? transcript : `${transcript}\n\n${fileReadBlockOf(read)}`
+        const fileTurn = this.fileTurnOf(turn, module)
+        // The transfer read, and the document's own text for a question about it (a picture reaches the turn as an attachment).
+        const [read, document] = await Promise.all([
+            this.fileReads.readOf(fileTurn),
+            this.fileReads.documentBlockOf(fileTurn),
+        ])
+        const blocks = [transcript, read === null ? null : fileReadBlockOf(read), document]
+        return blocks.filter((block): block is string => block !== null).join("\n\n")
     }
 
     private fileTurnOf(turn: AgentTurnView, module: string): ChatFileTurn {

@@ -17,7 +17,7 @@ config.agents.defaults = { ...(config.agents.defaults || {}), skipBootstrap: tru
 // `every: "0m"` gives each no interval, so no agent is scheduled (the default is 30m, which would spend a model call per agent per half hour).
 config.cron = { ...(config.cron || {}), enabled: false }
 config.agents.defaults.heartbeat = { ...(config.agents.defaults.heartbeat || {}), every: "0m" }
-// The one tool an agent has besides session_status is nivo_call, from the bridge plugin mounted at /opt/nivo/nivo-bridge: it runs a NIVO
+// The one tool an agent has besides session_status is nivo_call, from the bridge plugin the image ships at /opt/nivo/nivo-bridge: it runs a NIVO
 // tool through the api for the turn that is running. Other plugin paths and entries an operator added are kept.
 const bridgePath = "/opt/nivo/nivo-bridge"
 const plugins = config.plugins || {}
