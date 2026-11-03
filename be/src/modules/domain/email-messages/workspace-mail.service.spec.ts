@@ -2,8 +2,8 @@ import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
-import { MAIL, MAIL_ERROR_KINDS, MailError } from "@modules/integrations/mail"
-import type { MailClient } from "@modules/integrations/mail"
+import { MAIL_ERROR_KINDS, MAIL_RELAY, MailError } from "@modules/integrations/mail"
+import type { MailRelayService } from "@modules/integrations/mail"
 import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -30,13 +30,13 @@ const build = async () => {
         sentSince: jest.fn().mockResolvedValue(0),
         record: jest.fn().mockResolvedValue("e1"),
     })
-    const mail = mock<MailClient>({ hasPlatformSender: jest.fn().mockReturnValue(false) })
+    const mail = mock<MailRelayService>()
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
     const connections = mock<ConnectionsService>({ listByProvider: jest.fn().mockResolvedValue([]) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceMailService,
-            { provide: MAIL, useValue: mail },
+            { provide: MAIL_RELAY, useValue: mail },
             { provide: CLOCK, useValue: new FakeClock("2026-10-13T10:00:00.000Z") },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: mock<Logger>() },
@@ -64,11 +64,6 @@ describe("WorkspaceMailService", () => {
             status: "blocked",
             failure: "gate",
         })
-    })
-
-    it("records an owner notice as no_smtp when neither the workspace nor the platform can send", async () => {
-        const service = await build()
-        await expect(service.send(owner)).resolves.toMatchObject({ status: "no_smtp", failure: "no_smtp" })
     })
 })
 
@@ -118,8 +113,7 @@ const FILE = { filename: "report.csv", content: "value\n1", contentType: "text/c
 const SENT_FILE = { filename: "report.csv", content: Buffer.from("value\n1"), contentType: "text/csv" }
 
 const buildDelivery = async (records: ReadonlyArray<ConnectionRecord> = [connectionOf()]) => {
-    const mail = mock<MailClient>({
-        hasPlatformSender: jest.fn().mockReturnValue(false),
+    const mail = mock<MailRelayService>({
         sendThroughSmtp: jest.fn().mockResolvedValue({ messageId: "smtp-message" }),
         sendThroughPlatform: jest.fn().mockResolvedValue({ messageId: "platform-message" }),
     })
@@ -136,7 +130,7 @@ const buildDelivery = async (records: ReadonlyArray<ConnectionRecord> = [connect
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkspaceMailService,
-            { provide: MAIL, useValue: mail },
+            { provide: MAIL_RELAY, useValue: mail },
             { provide: CLOCK, useValue: new FakeClock("2026-10-13T10:00:00.000Z") },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
@@ -233,10 +227,7 @@ describe("WorkspaceMailService delivery", () => {
         expect(connections.readSecret).toHaveBeenCalledWith("smtp-1")
         expect(mail.sendThroughSmtp).toHaveBeenCalledWith(SMTP_CONFIG, {
             to: "customer@example.com",
-            subject: "Daily report",
-            html: "<p>Report</p>",
-            text: "Report",
-            attachments: [SENT_FILE],
+            message: { subject: "Daily report", html: "<p>Report</p>", text: "Report", attachments: [SENT_FILE] },
         })
         expect(log.record).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -250,7 +241,6 @@ describe("WorkspaceMailService delivery", () => {
             error: null,
             refs: { invoice_id: "invoice-1", work_item_id: "work-1" },
         })
-        expect(mail.hasPlatformSender).not.toHaveBeenCalled()
     })
 
     it("sends an owner email without adding an empty attachment list", async () => {
@@ -259,10 +249,7 @@ describe("WorkspaceMailService delivery", () => {
         await expect(service.send(OWNER)).resolves.toMatchObject({ status: "sent", via: "workspace" })
         expect(mail.sendThroughSmtp).toHaveBeenCalledWith(SMTP_CONFIG, {
             to: "owner@example.com",
-            subject: "Daily report",
-            html: "<p>Report</p>",
-            text: "Report",
-            attachments: undefined,
+            message: { subject: "Daily report", html: "<p>Report</p>", text: "Report" },
         })
     })
 })
@@ -295,7 +282,6 @@ describe("WorkspaceMailService delivery", () => {
 
     it("never falls back to the platform for gated customer mail", async () => {
         const { service, mail } = await buildDelivery([])
-        mail.hasPlatformSender.mockReturnValue(true)
 
         await expect(service.send({ ...OWNER, audience: "customer", workItemId: "work-1" })).resolves.toMatchObject({
             status: "no_smtp",
@@ -303,7 +289,6 @@ describe("WorkspaceMailService delivery", () => {
             failure: "no_smtp",
             error: "email.err_no_smtp",
         })
-        expect(mail.hasPlatformSender).not.toHaveBeenCalled()
         expect(mail.sendThroughPlatform).not.toHaveBeenCalled()
     })
 })
@@ -311,7 +296,6 @@ describe("WorkspaceMailService delivery", () => {
 describe("WorkspaceMailService delivery", () => {
     it.each([false, true])("sends an owner notice through the platform with attachments: %s", async (withFile) => {
         const { service, mail, log } = await buildDelivery([])
-        mail.hasPlatformSender.mockReturnValue(true)
         log.sentSince.mockResolvedValueOnce(0).mockResolvedValueOnce(19)
 
         await expect(service.send({ ...OWNER, attachments: withFile ? [FILE] : [] })).resolves.toEqual({
@@ -325,10 +309,12 @@ describe("WorkspaceMailService delivery", () => {
         expect(log.sentSince).toHaveBeenNthCalledWith(2, "ws-1", new Date("2026-10-12T10:00:00.000Z"), "platform")
         expect(mail.sendThroughPlatform).toHaveBeenCalledWith({
             to: "owner@example.com",
-            subject: "Daily report",
-            html: "<p>Report</p>",
-            text: "Report",
-            attachments: withFile ? [SENT_FILE] : undefined,
+            message: {
+                subject: "Daily report",
+                html: "<p>Report</p>",
+                text: "Report",
+                ...(withFile ? { attachments: [SENT_FILE] } : {}),
+            },
         })
         expect(log.record).toHaveBeenCalledWith(
             expect.objectContaining({ connectionId: null, status: "sent", via: "platform", error: null }),
@@ -339,7 +325,6 @@ describe("WorkspaceMailService delivery", () => {
 describe("WorkspaceMailService delivery", () => {
     it("refuses a platform notice once the daily limit is reached", async () => {
         const { service, mail, log } = await buildDelivery([])
-        mail.hasPlatformSender.mockReturnValue(true)
         log.sentSince.mockResolvedValueOnce(0).mockResolvedValueOnce(20)
 
         await expect(service.send(OWNER)).resolves.toMatchObject({
@@ -353,7 +338,6 @@ describe("WorkspaceMailService delivery", () => {
 
     it("records an unexpected platform delivery failure", async () => {
         const { service, mail, log } = await buildDelivery([])
-        mail.hasPlatformSender.mockReturnValue(true)
         mail.sendThroughPlatform.mockRejectedValue(new Error("platform unavailable"))
 
         await expect(service.send(OWNER)).resolves.toMatchObject({

@@ -3,8 +3,8 @@ import { builder, mock } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { MAIL, MAIL_ERROR_KINDS, MailError, renderEmail } from "@modules/integrations/mail"
-import type { MailClient } from "@modules/integrations/mail"
+import { MAIL_ERROR_KINDS, MAIL_RELAY, MailError, renderEmail } from "@modules/integrations/mail"
+import type { MailRelayService } from "@modules/integrations/mail"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
@@ -66,9 +66,9 @@ const SMTP_CONFIG = {
 }
 
 const build = async (found: ConnectionRecord | null = connectionOf()) => {
-    const mail = mock<MailClient>({
+    const mail = mock<MailRelayService>({
         assertSmtpTarget: jest.fn(() => Promise.resolve()),
-        sendThroughSmtp: jest.fn(() => Promise.resolve({ messageId: "<msg-1@gmail.com>" })),
+        sendThroughSmtp: jest.fn(() => Promise.resolve({ messageId: "<msg-1@gmail.com>", accepted: ["lan@example.test"] })),
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const logger = mock<Logger>()
@@ -89,7 +89,7 @@ const build = async (found: ConnectionRecord | null = connectionOf()) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             SmtpWizardService,
-            { provide: MAIL, useValue: mail },
+            { provide: MAIL_RELAY, useValue: mail },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
             { provide: ConnectionsService, useValue: connections },
@@ -158,9 +158,7 @@ describe("SmtpWizardService", () => {
             })
             expect(mail.sendThroughSmtp).toHaveBeenCalledWith(SMTP_CONFIG, {
                 to: "lan@example.test",
-                subject: "[email.test_subject]",
-                html: rendered.html,
-                text: rendered.text,
+                message: { subject: "[email.test_subject]", html: rendered.html, text: rendered.text },
             })
             expect(log.record).toHaveBeenCalledWith({
                 workspaceId: "ws-1",
@@ -234,9 +232,7 @@ describe("SmtpWizardService", () => {
             expect(workspaces.nameOf).toHaveBeenCalledWith("ws-1")
             expect(mail.sendThroughSmtp).toHaveBeenCalledWith(SMTP_CONFIG, {
                 to: "lan@example.test",
-                subject: "[email.test_subject]",
-                html: rendered.html,
-                text: rendered.text,
+                message: { subject: "[email.test_subject]", html: rendered.html, text: rendered.text },
             })
         })
 

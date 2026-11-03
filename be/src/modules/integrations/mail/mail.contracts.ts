@@ -1,3 +1,5 @@
+import type { MailMessage } from "@starci/mail"
+
 /** How a workspace SMTP connection secures the channel. */
 export type SmtpSecurity = "starttls" | "tls"
 
@@ -21,34 +23,12 @@ export interface SmtpConfig {
     readonly replyTo?: string | undefined
 }
 
-/** One attachment of a message. */
-export interface MailAttachment {
-    /** The file name. */
-    readonly filename: string
-    /** The bytes. */
-    readonly content: Buffer
-    /** The media type, when known. */
-    readonly contentType?: string | undefined
-}
-
-/** One message to send. */
-export interface MailMessage {
+/** One message and the mailbox it goes to. */
+export interface MailDelivery {
     /** The recipient. */
     readonly to: string
-    /** The subject, one line. */
-    readonly subject: string
-    /** The HTML body. */
-    readonly html: string
-    /** The plain-text body. */
-    readonly text: string
-    /** Attachments, at most three. */
-    readonly attachments?: ReadonlyArray<MailAttachment> | undefined
-}
-
-/** What the mail server answered for an accepted message. */
-export interface SentMail {
-    /** The message id the server assigned. */
-    readonly messageId: string
+    /** The subject, the bodies and at most three attachments. */
+    readonly message: MailMessage
 }
 
 /** A message rendered by the shop layout. */
@@ -58,9 +38,6 @@ export interface RenderedEmail {
     /** The text part. */
     readonly text: string
 }
-
-/** The values a template placeholder is filled from; a missing or null value becomes empty. */
-export type TemplateVars = Readonly<Record<string, string | number | null | undefined>>
 
 /** What the shop layout wraps around an already rendered plain body. */
 export interface EmailLayoutInput {
@@ -76,12 +53,4 @@ export interface EmailLayoutInput {
     readonly footer: string
     /** The language of the email (the html lang attribute). */
     readonly lang: string
-}
-
-/** What the mail server reported for a send: the message id and the recipients it refused. */
-export interface AcceptedInfo {
-    /** The message id the server assigned. */
-    readonly messageId: string
-    /** The recipients the server refused. */
-    readonly rejected: ReadonlyArray<unknown>
 }

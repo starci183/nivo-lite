@@ -37,7 +37,7 @@ describe("attachments policy", () => {
             { filename: "c.txt", content: "c" },
             { filename: "d.txt", content: "d" },
         ])
-        expect(files.map((file) => [file.filename, file.content.toString("utf8")])).toEqual([
+        expect(files.map((file) => [file.filename, Buffer.from(file.content).toString("utf8")])).toEqual([
             ["ca_lam_.csv", "a,b"],
             ["b.txt", "b"],
             ["c.txt", "c"],
