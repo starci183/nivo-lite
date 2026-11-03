@@ -335,6 +335,7 @@
     "statusGaps": "{count, plural, one {# thing still unclear} other {# things still unclear}}",
     "statusConflicts": "{count, plural, one {# conflict} other {# conflicts}} with the Brain",
     "statusLearned": "{count, plural, one {# proposal} other {# proposals}} from feedback",
+    "statusContracts": "{count, plural, one {# new piece of work} other {# new pieces of work}} to approve",
     "statusClear": "No new changes",
     "channelNone": "No channel connected",
     "statusSetupChanged": "The checklist has changes not published yet",

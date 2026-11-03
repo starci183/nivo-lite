@@ -335,6 +335,7 @@
     "statusGaps": "Còn {count} chỗ chưa rõ",
     "statusConflicts": "{count} xung đột với Brain",
     "statusLearned": "{count} đề xuất từ phản hồi",
+    "statusContracts": "{count} việc mới chờ bạn duyệt",
     "statusClear": "Không có thay đổi mới",
     "channelNone": "Chưa gắn kênh nào",
     "statusSetupChanged": "Danh sách thiết lập có thay đổi chưa xuất bản",
