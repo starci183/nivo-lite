@@ -1,0 +1,79 @@
+import { Test } from "@nestjs/testing"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import { ConversationHandoverService } from "@modules/domain/agent-conversations"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { AgentMessagesService } from "./agent-messages.service"
+import { AgentTagConversationService } from "./agent-tag-conversation.service"
+
+const NOTICE = {
+    workspaceId: "ws-1",
+    conversationId: "c1",
+    fromAgentId: "chat",
+    toAgentId: "sales",
+    text: "Order for 5 baskets",
+}
+
+const build = async (bound = true) => {
+    const messages = mock<AgentMessagesService>()
+    messages.storeLine.mockResolvedValue(undefined)
+    const handover = mock<ConversationHandoverService>()
+    handover.handOver.mockResolvedValue(true)
+    const directory = mock<AgentDirectoryService>()
+    directory.activeInOrder.mockResolvedValue([{ id: "sales", name: "Sales AI", module: "sales", canTagAgentIds: [] }])
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentTagConversationService,
+            { provide: AgentMessagesService, useValue: messages },
+            ...(bound
+                ? [
+                      { provide: ConversationHandoverService, useValue: handover },
+                      { provide: AgentDirectoryService, useValue: directory },
+                  ]
+                : []),
+        ],
+    }).compile()
+    return { service: moduleRef.get(AgentTagConversationService), messages, handover, directory }
+}
+
+describe("AgentTagConversationService", () => {
+    it("writes the tag line with the name of the agent that takes over, in the transaction it is given", async () => {
+        const { service, messages } = await build()
+        const tx = mockEntityManager()
+
+        await service.announce(NOTICE, tx)
+
+        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "c1", "@Sales AI Order for 5 baskets", tx)
+    })
+
+    it("writes the words alone when the agent cannot be named", async () => {
+        const { service, messages } = await build(false)
+        const tx = mockEntityManager()
+
+        await service.announce(NOTICE, tx)
+
+        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "c1", "Order for 5 baskets", tx)
+    })
+
+    it("hands the conversation over without a line, and only when an agent hands it over", async () => {
+        const { service, handover, messages } = await build()
+
+        await service.redirect(NOTICE)
+        await service.redirect({ ...NOTICE, fromAgentId: null })
+
+        expect(handover.handOver).toHaveBeenCalledTimes(1)
+        expect(handover.handOver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "c1",
+            fromAgentId: "chat",
+            toAgentId: "sales",
+            reason: "Order for 5 baskets",
+        })
+        expect(messages.storeLine).not.toHaveBeenCalled()
+    })
+
+    it("moves nothing when the handover is not bound", async () => {
+        const { service } = await build(false)
+
+        await expect(service.redirect(NOTICE)).resolves.toBeUndefined()
+    })
+})

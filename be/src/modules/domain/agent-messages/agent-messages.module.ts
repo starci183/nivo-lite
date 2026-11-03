@@ -1,3 +1,5 @@
+import { AGENT_TAG_VISIBILITY } from "@modules/domain/agent-work"
+import { AgentTagConversationService } from "./agent-tag-conversation.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-messages.module-definition"
@@ -34,6 +36,8 @@ export class AgentMessagesModule extends ConfigurableModuleClass {
                 AgentMessageDeliveriesService,
                 AgentMessagesFeedReadService,
                 AgentTestChatsService,
+                AgentTagConversationService,
+                { provide: AGENT_TAG_VISIBILITY, useExisting: AgentTagConversationService },
                 { provide: OFFICE_ROOMS_TEST_CHATS, useExisting: AgentTestChatsService },
             ],
             exports: [
@@ -44,6 +48,7 @@ export class AgentMessagesModule extends ConfigurableModuleClass {
                 AgentMessageDeliveriesService,
                 AgentMessagesFeedReadService,
                 AgentTestChatsService,
+                AGENT_TAG_VISIBILITY,
                 OFFICE_ROOMS_TEST_CHATS,
             ],
         }
