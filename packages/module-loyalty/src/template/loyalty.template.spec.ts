@@ -1,8 +1,8 @@
 import { moduleListProblems } from "@nivo-lite/agent-sdk/module"
 import { loyaltyCopy, loyaltyList, loyaltyText } from "./copy"
 import { LOYALTY_SERVER, LOYALTY_TEMPLATE } from "./loyalty.template"
-import en from "./messages/en.json"
-import vi from "./messages/vi.json"
+import * as en from "./messages/en.json"
+import * as vi from "./messages/vi.json"
 
 describe("the Loyalty template copy", () => {
     it("reads one message in its language", () => {
