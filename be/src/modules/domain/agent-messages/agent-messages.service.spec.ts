@@ -13,7 +13,7 @@ import { Test } from "@nestjs/testing"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { ChatActivityService } from "@modules/domain/chat-activity"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { AgentMessagesService, RESTAMP_SQL } from "./agent-messages.service"
+import { AgentMessagesService, INSERT_STAMPED_SQL } from "./agent-messages.service"
 
 import { In, MoreThanOrEqual, Not } from "typeorm"
 
@@ -197,15 +197,27 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
         ])
     })
 
-    it("moves the message to the time the channel gave it, with the tie-break, in the same transaction", async () => {
-        const { service } = await build()
-        const { em: inside } = withStatements(mockEntityManager({ query: [RESTAMP_SQL, []] }), stored("m-1"))
+    it("inserts the message at the time the channel gave it, with the tie-break, and updates nothing afterwards", async () => {
+        const { service, activity } = await build()
+        const inside = mockEntityManager({ query: [INSERT_STAMPED_SQL, [{ id: "m-1" }]] })
         const at = new Date("2026-11-04T00:50:00.000Z")
 
-        await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside, null, { at, tieMicros: 417 })).resolves.toBe("m-1")
+        await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside, "user-1", { at, tieMicros: 417 })).resolves.toBe("m-1")
 
-        expect(inside.query).toHaveBeenCalledWith(RESTAMP_SQL, ["m-1", at, 417])
-        expect(RESTAMP_SQL).toContain("created_at = $2::timestamptz + make_interval")
+        expect(inside.query).toHaveBeenCalledWith(INSERT_STAMPED_SQL, ["ws-1", "conv-1", "Hello", "user-1", at, 417])
+        expect(inside.update).not.toHaveBeenCalled()
+        expect(INSERT_STAMPED_SQL).toContain("created_at")
+        expect(INSERT_STAMPED_SQL).not.toContain("UPDATE")
+        expect(activity.message).toHaveBeenCalledWith("ws-1", "conversation:conv-1", "user-1", inside)
+    })
+
+    it("fails loudly when the stamped insert answers no row", async () => {
+        const { service } = await build()
+        const inside = mockEntityManager({ query: [INSERT_STAMPED_SQL, []] })
+
+        await expect(
+            service.storeCustomer("ws-1", "conv-1", "Hello", inside, null, { at: new Date(), tieMicros: 1 }),
+        ).rejects.toMatchObject({ code: AgentMessagesErrorCode.NotStored })
     })
 
     it("leaves the time of arrival alone when the channel gave none", async () => {

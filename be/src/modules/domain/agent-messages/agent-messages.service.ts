@@ -45,11 +45,14 @@ const isStoredMessage = (value: unknown): value is { readonly id: string } =>
 const returnedIds = (raw: unknown): ReadonlyArray<string> =>
     Array.isArray(raw) ? raw.filter(isStoredMessage).map((row) => row.id) : []
 
-/** Moves a stored message to the time it happened; the column is written by the database at insert, so this is the one place it is set. */
-export const RESTAMP_SQL = `
-UPDATE public.agent_messages
-SET created_at = $2::timestamptz + make_interval(secs => $3::double precision / 1000000)
-WHERE id = $1
+/**
+ * Stores a customer message at the time it happened. `created_at` is an ordinary column with a default of now(), so the insert names it; the entity
+ * marks it insert-only for the query builder, which is why this one insert is written out. No row is updated afterwards.
+ */
+export const INSERT_STAMPED_SQL = `
+INSERT INTO public.agent_messages (workspace_id, conversation_id, role, body, author_user_id, created_at)
+VALUES ($1, $2, 'user', $3, $4, $5::timestamptz + make_interval(secs => $6::double precision / 1000000))
+RETURNING id
 `
 
 @Injectable()
@@ -154,8 +157,8 @@ export class AgentMessagesService {
     }
 
     /**
-     * Stores what the customer wrote and answers the message id. A channel that timed the message itself passes `stamp`, so the message sits at
-     * the time it happened, not the time it was stored: an imported or polled burst keeps its order.
+     * Stores what the customer wrote and answers the message id. A channel that timed the message itself passes `stamp`, so the row is inserted at
+     * the time it happened, not the time it was stored: an imported or polled burst keeps its order. Nothing is updated after the insert.
      */
     async storeCustomer(
         workspaceId: string,
@@ -166,9 +169,19 @@ export class AgentMessagesService {
         stamp?: MessageStamp,
     ): Promise<string> {
         const id = this.required(
-            await this.insert(manager, { workspaceId, conversationId, role: "user", body, authorUserId }),
+            stamp === undefined
+                ? await this.insert(manager, { workspaceId, conversationId, role: "user", body, authorUserId })
+                : returnedIds(
+                      await manager.query(INSERT_STAMPED_SQL, [
+                          workspaceId,
+                          conversationId,
+                          body,
+                          authorUserId,
+                          stamp.at,
+                          stamp.tieMicros,
+                      ]),
+                  ),
         )
-        if (stamp !== undefined) await manager.query(RESTAMP_SQL, [id, stamp.at, stamp.tieMicros])
         await this.announce(workspaceId, conversationId, authorUserId, manager)
         return id
     }
