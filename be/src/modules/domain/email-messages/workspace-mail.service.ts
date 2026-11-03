@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
-import { InjectMail, MailError } from "@modules/integrations/mail"
-import type { MailAttachment, MailClient, SmtpConfig } from "@modules/integrations/mail"
+import { InjectMailRelay, MailError } from "@modules/integrations/mail"
+import type { MailAttachment, MailMessage, MailRelayService, SmtpConfig } from "@modules/integrations/mail"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -44,7 +44,7 @@ interface Verdict {
  */
 export class WorkspaceMailService {
     constructor(
-        @InjectMail() private readonly mail: MailClient,
+        @InjectMailRelay() private readonly mail: MailRelayService,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
@@ -75,7 +75,7 @@ export class WorkspaceMailService {
         }
         const smtp = await this.smtpOf(input.workspaceId, input.connectionId)
         if (smtp !== null) return this.viaWorkspace(input, to, smtp.id, smtp.config, files)
-        if (audience === "owner" && this.mail.hasPlatformSender()) return this.viaPlatform(input, to, files)
+        if (audience === "owner") return this.viaPlatform(input, to, files)
         return this.done(input, to, "no_smtp", "none", { failure: "no_smtp", error: this.text("no_smtp") })
     }
 
@@ -92,13 +92,7 @@ export class WorkspaceMailService {
         files: ReadonlyArray<MailAttachment>,
     ): Promise<SendEmailResult> {
         try {
-            const sent = await this.mail.sendThroughSmtp(config, {
-                to,
-                subject: input.subject,
-                html: input.html,
-                text: input.text,
-                attachments: files.length === 0 ? undefined : files,
-            })
+            const sent = await this.mail.sendThroughSmtp(config, { to, message: this.messageOf(input, files) })
             return await this.done(input, to, "sent", "workspace", { connectionId, messageId: sent.messageId })
         } catch (cause) {
             return this.done(input, to, "failed", "workspace", {
@@ -123,16 +117,19 @@ export class WorkspaceMailService {
             return this.done(input, to, "rate_limited", "platform", { failure: "rate", error: this.text("rate") })
         }
         try {
-            const sent = await this.mail.sendThroughPlatform({
-                to,
-                subject: input.subject,
-                html: input.html,
-                text: input.text,
-                attachments: files.length === 0 ? undefined : files,
-            })
+            const sent = await this.mail.sendThroughPlatform({ to, message: this.messageOf(input, files) })
             return await this.done(input, to, "sent", "platform", { messageId: sent.messageId })
         } catch (cause) {
             return this.done(input, to, "failed", "platform", { failure: "mail", error: this.mailText(cause) })
+        }
+    }
+
+    private messageOf(input: SendEmailInput, files: ReadonlyArray<MailAttachment>): MailMessage {
+        return {
+            subject: input.subject,
+            html: input.html,
+            text: input.text,
+            ...(files.length === 0 ? {} : { attachments: files }),
         }
     }
 

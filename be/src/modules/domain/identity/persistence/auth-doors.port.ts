@@ -4,20 +4,6 @@ import { callDbFunction } from "@modules/platform/database"
 /** A point in time as a door answers it. */
 type Instant = Date | string
 
-/** The account a lookup by email answers. */
-export interface AuthUserByEmail {
-    /** The account id. */
-    readonly id: string
-    /** The address. */
-    readonly email: string
-    /** The stored password hash, or null for an account that never set one. */
-    readonly encrypted_password: string | null
-    /** When the mailbox was confirmed, or null. */
-    readonly email_confirmed_at: Instant | null
-    /** Whether the account is disabled. */
-    readonly disabled: boolean
-}
-
 /** The account a lookup by id answers. */
 export interface AuthUserById {
     /** The account id. */
@@ -42,66 +28,15 @@ export interface AuthUserListed {
     readonly meta: Record<string, unknown>
 }
 
-/** An account to create. */
-export interface NewAuthUser {
-    /** The account id. */
-    readonly id: string
-    /** The address. */
-    readonly email: string
-    /** The password hash, or null for an invited or Google-only account. */
-    readonly hash: string | null
-    /** Whether the mailbox counts as confirmed. */
-    readonly confirmed: boolean
-    /** The profile metadata as JSON text. */
-    readonly meta: string
-    /** The instant of creation. */
-    readonly now: Date
-}
-
-/** The SECURITY DEFINER doors of the app-owned auth tables (`auth.users`, `auth.identities`); the app never touches those tables itself. */
+/**
+ * The SECURITY DEFINER doors of the product beside the account doors of the sign-in glue (`account-doors.port.ts`): the profile of
+ * one account, the uploaded picture, the operator listing and the deletion. The app never touches the auth tables itself.
+ */
 export const authDoors = {
-    /** The account of an address, or undefined. */
-    async userByEmail(manager: EntityManager, email: string): Promise<AuthUserByEmail | undefined> {
-        const [row] = await callDbFunction<AuthUserByEmail>(manager, "public.be_auth_user_by_email", [email])
-        return row
-    },
-    /** The account of an id, or undefined. */
+    /** The profile of an account by id, or undefined. */
     async userById(manager: EntityManager, userId: string): Promise<AuthUserById | undefined> {
         const [row] = await callDbFunction<AuthUserById>(manager, "public.be_auth_user_by_id", [userId])
         return row
-    },
-    /** The account a Google subject is linked to, or null. */
-    async userByGoogle(manager: EntityManager, subject: string): Promise<string | null> {
-        const [row] = await callDbFunction<{ be_auth_user_by_google: string | null }>(
-            manager,
-            "public.be_auth_user_by_google",
-            [subject],
-        )
-        return row?.be_auth_user_by_google ?? null
-    },
-    /** Creates an account and answers its id. */
-    async createUser(manager: EntityManager, user: NewAuthUser): Promise<string | undefined> {
-        const [row] = await callDbFunction<{ be_auth_create_user: string }>(manager, "public.be_auth_create_user", [
-            user.id,
-            user.email,
-            user.hash,
-            user.confirmed,
-            user.meta,
-            user.now,
-        ])
-        return row?.be_auth_create_user
-    },
-    /** Links a Google subject to an account. */
-    async linkGoogle(manager: EntityManager, userId: string, subject: string, data: string, now: Date): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_link_google", [userId, subject, data, now])
-    },
-    /** Records a sign-in and fills profile keys the person did not set. */
-    async touchUser(manager: EntityManager, userId: string, now: Date, confirm: boolean, meta: string): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_touch_user", [userId, now, confirm, meta])
-    },
-    /** Sets the password hash of an account. */
-    async setPassword(manager: EntityManager, userId: string, hash: string, now: Date): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_set_password", [userId, hash, now])
     },
     /** Keeps or drops the uploaded picture; whether an account was changed. */
     async setAvatar(manager: EntityManager, userId: string, url: string | null): Promise<boolean> {
@@ -121,9 +56,5 @@ export const authDoors = {
             userId,
         ])
         return row?.be_auth_delete_user === true
-    },
-    /** Confirms the mailbox of an account. */
-    async confirmEmail(manager: EntityManager, userId: string, now: Date): Promise<void> {
-        await callDbFunction(manager, "public.be_auth_confirm_email", [userId, now])
     },
 }

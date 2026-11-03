@@ -1,7 +1,7 @@
 import { createProxy } from "@starci/next-i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
 import { sessionCookieOptions } from "./modules/config"
-import { checkSession, onPublicOrigin } from "./modules/auth"
+import { checkSession, onPublicOrigin } from "./modules/auth-session"
 import { i18n } from "./modules/i18n"
 
 // The two destinations the proxy redirects to; the proxy cannot evaluate the routes barrel, so it names them itself.

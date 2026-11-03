@@ -8,7 +8,7 @@ export enum IdentityErrorCode {
     /** The access token failed signature, issuer, audience or expiry verification. */
     AccessTokenInvalid = "IDENTITY_ACCESS_TOKEN_INVALID",
     /** The email and password pair is wrong (the same answer for an unknown email). */
-    InvalidCredentials = "IDENTITY_INVALID_CREDENTIALS",
+    PairRefused = "IDENTITY_INVALID_CREDENTIALS",
     /** The account is deleted or banned. */
     AccountDisabled = "IDENTITY_ACCOUNT_DISABLED",
     /** The refresh token is unknown, expired or already rotated. */
@@ -33,7 +33,7 @@ export enum IdentityErrorCode {
 export const IDENTITY_ERROR_KINDS: Record<IdentityErrorCode, ErrorKind> = {
     [IdentityErrorCode.Unauthenticated]: "unauthenticated",
     [IdentityErrorCode.AccessTokenInvalid]: "unauthenticated",
-    [IdentityErrorCode.InvalidCredentials]: "unauthenticated",
+    [IdentityErrorCode.PairRefused]: "unauthenticated",
     [IdentityErrorCode.AccountDisabled]: "forbidden",
     [IdentityErrorCode.RefreshInvalid]: "unauthenticated",
     [IdentityErrorCode.RefreshReused]: "unauthenticated",

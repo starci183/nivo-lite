@@ -1,7 +1,7 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
-import { confirmEmail } from "@/modules/auth"
+import { confirmEmail } from "@/modules/auth-actions"
 import { navigation } from "@/modules/i18n"
 import { APP_ROUTES, safeNext } from "@/modules/routes"
 

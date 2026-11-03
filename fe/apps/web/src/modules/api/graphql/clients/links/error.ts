@@ -1,6 +1,6 @@
 import { CombinedGraphQLErrors } from "@apollo/client"
 import { ErrorLink } from "@apollo/client/link/error"
-import { endSession } from "@/modules/auth"
+import { endSession } from "@/modules/auth-actions"
 import { loginPath } from "@/modules/routes"
 
 /**

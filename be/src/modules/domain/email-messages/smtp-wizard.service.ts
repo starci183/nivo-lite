@@ -3,8 +3,8 @@ import { ConnectionsService } from "@modules/domain/connections"
 import { randomSecret } from "@modules/domain/connection-secrets"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { InjectMail, MailError, renderEmail } from "@modules/integrations/mail"
-import type { MailClient } from "@modules/integrations/mail"
+import { InjectMailRelay, MailError, renderEmail } from "@modules/integrations/mail"
+import type { MailRelayService } from "@modules/integrations/mail"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -23,7 +23,7 @@ const FALLBACK_SHOP = "NIVO"
 /** The "Outgoing email" wizard: stores an SMTP connection as pending, proves it with a real test email, changes its password, picks the default. */
 export class SmtpWizardService {
     constructor(
-        @InjectMail() private readonly mail: MailClient,
+        @InjectMailRelay() private readonly mail: MailRelayService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
         private readonly connections: ConnectionsService,
@@ -79,9 +79,7 @@ export class SmtpWizardService {
         try {
             const sent = await this.mail.sendThroughSmtp(smtpConfigOf(connection.meta, password), {
                 to,
-                subject,
-                html: rendered.html,
-                text: rendered.text,
+                message: { subject, html: rendered.html, text: rendered.text },
             })
             await this.record(actor.workspaceId, connection.id, to, subject, sent.messageId, null)
         } catch (cause) {

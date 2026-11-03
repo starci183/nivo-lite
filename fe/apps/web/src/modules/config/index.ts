@@ -22,10 +22,10 @@ export const sessionCookieOptions: SessionCookieOptionsShape = {
     sameSite: "lax",
 } as const
 
-/** The origin of the back end api the browser calls directly (GraphQL at `/graphql`, REST beside it). */
-export const apiOrigin = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
+/** The origin of the back end api the browser calls directly (GraphQL at `/graphql`, REST beside it) and whose auth doors modules/auth calls. */
+export const apiUrl = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
 /** The GraphQL endpoint of the back end api. */
-export const graphqlUrl = (): string => `${apiOrigin()}/graphql`
+export const graphqlUrl = (): string => `${apiUrl()}/graphql`
 /** The back end's event-stream endpoint at `path`, on the origin of its GraphQL endpoint (the streams of modules/api/sse). */
 export const eventStreamUrl = (path: string): string => new URL(path, graphqlUrl()).href
 

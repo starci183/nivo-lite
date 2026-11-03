@@ -18,7 +18,9 @@ export const MAIL_MESSAGES: MessageBundle = {
         "errors.MAIL_RECIPIENT": "Địa chỉ người nhận bị từ chối. Kiểm tra lại chính tả.",
         "errors.MAIL_LIMIT": "Đã chạm giới hạn gửi của nhà cung cấp. Thử lại sau.",
         "errors.MAIL_UNKNOWN": "Máy chủ email từ chối thư này.",
-        "errors.MAIL_NOT_CONFIGURED": "Hệ thống chưa cấu hình người gửi thông báo.",
+        "errors.MAIL_ADDRESS_INVALID": "Địa chỉ email không hợp lệ. Kiểm tra lại chính tả.",
+        "errors.MAIL_MESSAGE_INVALID":
+            "Nội dung thư không hợp lệ: thiếu tiêu đề, thiếu nội dung hoặc tệp đính kèm quá lớn.",
     },
     en: {
         "errors.MAIL_AUTH": "Wrong username or password. Check the address and the password you pasted.",
@@ -36,6 +38,8 @@ export const MAIL_MESSAGES: MessageBundle = {
         "errors.MAIL_RECIPIENT": "The recipient address was refused. Check that it is spelled correctly.",
         "errors.MAIL_LIMIT": "The provider's sending limit was reached. Try again later.",
         "errors.MAIL_UNKNOWN": "The mail server refused the message.",
-        "errors.MAIL_NOT_CONFIGURED": "The platform has no sender for notices configured.",
+        "errors.MAIL_ADDRESS_INVALID": "The email address is not valid. Check that it is spelled correctly.",
+        "errors.MAIL_MESSAGE_INVALID":
+            "The message is not valid: it has no subject, no text, or an attachment that is too large.",
     },
 }

@@ -8,15 +8,12 @@ const isEmail = (value: string): boolean => {
     return dot !== -1 && dot < domain.length - 1
 }
 
-const NAME_MIN = 2
-const NAME_MAX = 120
 const EMAIL_MAX = 254
 const PASSWORD_MIN = 8
 const PASSWORD_MAX = 256
 
 /** The request-bound facts a sign-up needs. */
 export interface SignUpInput {
-    readonly name: string
     readonly email: string
     readonly password: string
     readonly next: string | undefined
@@ -43,13 +40,9 @@ const emailOf = (input: unknown): string | undefined => {
 
 /** The bounded fields of a sign-up request, or `undefined` when one is missing or out of range. */
 export const parseSignUp = (input: unknown): SignUpInput | undefined => {
-    const name = textOf(input, "name")?.trim()
     const email = emailOf(input)
     const password = textOf(input, "password")
     if (
-        name === undefined ||
-        name.length < NAME_MIN ||
-        name.length > NAME_MAX ||
         email === undefined ||
         password === undefined ||
         password.length < PASSWORD_MIN ||
@@ -57,7 +50,7 @@ export const parseSignUp = (input: unknown): SignUpInput | undefined => {
     ) {
         return undefined
     }
-    return { name, email, password, next: textOf(input, "next") }
+    return { email, password, next: textOf(input, "next") }
 }
 
 /** The bounded e-mail of a request that only carries an e-mail address (resend, password reset) and an optional destination. */

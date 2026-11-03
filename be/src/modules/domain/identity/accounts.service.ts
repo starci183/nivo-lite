@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectMail } from "@modules/integrations/mail"
-import { AuthError, InjectAuthPasswords, InjectAuthSessions, normalizeEmail } from "@modules/integrations/passport"
+import { AuthError, normalizeEmail } from "@modules/integrations/passport"
 import type { AuthPasswords, AuthSessions } from "@modules/integrations/passport"
-import type { MailClient } from "@modules/integrations/mail"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -11,12 +9,12 @@ import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { ok, refused, sameSitePath } from "@modules/platform/primitives"
+import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { IdentityAuthenticatorService } from "./authenticator.service"
 import { refusing } from "./auth-refusal.policy"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
-import { InjectAccessTokenVerifier } from "./identity.decorators"
+import { InjectAccessTokenVerifier, InjectAuthPasswords, InjectAuthSessions } from "./identity.decorators"
 import type { VerifyAccessToken } from "./identity.contracts"
 import type {
     AccountAdminFailure,
@@ -28,11 +26,9 @@ import type {
     NewAccount,
     PasswordPrincipal,
 } from "./identity-auth.contracts"
-import { InjectIdentityAuthOptions } from "./identity-auth.decorators"
 import { IdentityAuthLogEvent } from "./identity-auth.log-events"
-import type { IdentityAuthOptions } from "./identity-auth.options"
-import { inviteLinkMail, passwordLinkMail } from "./password-mail.policy"
-import { IdentityPasswordResetService } from "./password-reset.service"
+import { IdentityInviteService } from "./identity-invite.service"
+import { accountDoors } from "./persistence/account-doors.port"
 import { authDoors } from "./persistence/auth-doors.port"
 
 /** The metadata key of the picture a person uploaded; the Google sign-in never rewrites it. */
@@ -62,15 +58,13 @@ const isoOf = (value: Date | string | null): string | null => (value === null ? 
 export class IdentityAccountsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectMail() private readonly mail: MailClient,
-        private readonly resets: IdentityPasswordResetService,
+        private readonly invites: IdentityInviteService,
         private readonly authenticator: IdentityAuthenticatorService,
         @InjectAuthSessions() private readonly sessions: AuthSessions,
         @InjectAuthPasswords() private readonly passwords: AuthPasswords,
         @InjectAccessTokenVerifier() private readonly verifyAccessToken: VerifyAccessToken,
         @InjectClock() private readonly clock: Clock,
         @InjectIds() private readonly ids: Ids,
-        @InjectIdentityAuthOptions() private readonly options: IdentityAuthOptions,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -112,7 +106,7 @@ export class IdentityAccountsService {
     /** Creates a person with a password (a confirmed one when the caller says so). A failure of the door is answered, not thrown. */
     async createUser(user: NewAccount): Promise<AccountCreated> {
         try {
-            const id = await authDoors.createUser(this.entityManager, {
+            const id = await accountDoors.createUser(this.entityManager, {
                 id: this.ids.next(),
                 email: normalizeEmail(user.email),
                 hash: await this.passwords.hash(user.password),
@@ -178,49 +172,12 @@ export class IdentityAccountsService {
      * Emails the invitation: a new person gets an account with a link to set a password and continue to the invitation, a known person
      * a link to the invitation. When the mail cannot be sent the delivery is `none` and the caller shows the link to copy. Never throws.
      */
-    async deliverInvite(email: string, redirectTo: string): Promise<InviteSent> {
-        try {
-            const address = normalizeEmail(email)
-            const known = await authDoors.userByEmail(this.entityManager, address)
-            if (known !== undefined) {
-                await this.mail.sendThroughPlatform({
-                    to: address,
-                    ...inviteLinkMail(`${this.options.webOrigin}${this.nextPathOf(redirectTo)}`),
-                })
-                return "existing"
-            }
-            const created = await authDoors.createUser(this.entityManager, {
-                id: this.ids.next(),
-                email: address,
-                hash: null,
-                confirmed: false,
-                meta: "{}",
-                now: this.clock.now(),
-            })
-            if (created === undefined) return "none"
-            const token = await this.resets.mint(created, "invite", this.options.inviteTtlSeconds)
-            const next = encodeURIComponent(this.nextPathOf(redirectTo))
-            const link = `${this.options.webOrigin}/auth/reset?token=${token}&next=${next}`
-            await this.mail.sendThroughPlatform({
-                to: address,
-                ...passwordLinkMail("invite", link, Math.ceil(this.options.inviteTtlSeconds / 3600)),
-            })
-            return "invited"
-        } catch (cause) {
-            this.logger.error(IdentityAuthLogEvent.MailFailed, cause, { kind: "invite" })
-            return "none"
-        }
+    deliverInvite(email: string, redirectTo: string): Promise<InviteSent> {
+        return this.invites.deliver(email, redirectTo)
     }
 
     private failureOf(cause: unknown): AccountAdminFailure {
         this.logger.error(IdentityAuthLogEvent.AccountAdminFailed, cause, { kind: "account-admin" })
         return { message: cause instanceof Error ? cause.message : "The account door failed." }
-    }
-
-    /** The same-site path the invitation link continues to: its `next` query value, else the path of the link itself, else the root. */
-    private nextPathOf(redirectTo: string): string {
-        if (!URL.canParse(redirectTo)) return "/"
-        const url = new URL(redirectTo)
-        return sameSitePath(url.searchParams.get("next") ?? `${url.pathname}${url.search}`, "/")
     }
 }

@@ -34,6 +34,14 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `STORAGE_ENDPOINT` | `api-public.conf` | The MinIO S3 address over the shared `nivo-edge-swarm` overlay (`http://academy-minio:9000`); public configuration, not a secret. |
 | `STORAGE_PUBLIC_URL` | `api-public.conf` | The origin browsers upload to and read from (`https://minio.starci.org`); presigned addresses are signed for it. |
 | `STORAGE_BUCKET_PREFIX` | `api-public.conf` | `nivo`: buckets are `<prefix>-avatars-public`, `-media`, `-videos`, `-hiring`, `-knowledge-uploads`. |
+| `MAIL_HOST` | its sealed member `mail` (granted in `application-stacks.yaml`) | The SMTP server of the platform sender: the confirmation, password reset and invitation mail and the owner notices. |
+| `MAIL_FROM` | its sealed member `mail` | The sender mailbox of the platform mail. |
+| `MAIL_USER` | its sealed member `mail` | The SMTP login; with `MAIL_PASSWORD`, both or neither. |
+| `MAIL_PASSWORD` | its sealed member `mail` | The SMTP password, read through `MAIL_PASSWORD_FILE`. |
+| `MAIL_PORT` | `api-public.conf` | `587` (STARTTLS); `465` with `MAIL_SECURITY=tls`. |
+| `MAIL_SECURITY` | `api-public.conf` | `starttls` (a server without STARTTLS fails the send), `tls` or `none` (a local sink only; refused with a login). |
+| `MAIL_FROM_NAME` | `api-public.conf` | The sender name and the product name in the header of every mail. |
+| `MAIL_DEFAULT_LANGUAGE` | `api-public.conf` | `vi` or `en`: the language of a mail whose request names none (default `en`). |
 | `PORT` | stack environment | The listener port (`8787`). |
 | `QUEUE_REDIS_PASSWORD` | its sealed member (granted in `application-stacks.yaml`) | The password of the declared Redis (the BullMQ broker): the api reads it as `QUEUE_REDIS_PASSWORD_FILE`, the `nivo-redis` service starts with `--requirepass` from the same Swarm secret, and holds no trailing newline. Never printed, never read from a file by hand: `starci app secret set production api QUEUE_REDIS_PASSWORD --generate 32`. |
 | `QUEUE_REDIS_HOST` | stack environment | `nivo-redis`, the one Redis service on the private `agents` network. |

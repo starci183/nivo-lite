@@ -23,8 +23,10 @@ export enum MailErrorCode {
     Limit = "MAIL_LIMIT",
     /** The server refused the message for a reason this client does not know. */
     Unknown = "MAIL_UNKNOWN",
-    /** The deployment has no platform sender. */
-    NotConfigured = "MAIL_NOT_CONFIGURED",
+    /** The address is not a mailbox the mail integration sends to. */
+    AddressInvalid = "MAIL_ADDRESS_INVALID",
+    /** The message is not one the mail integration sends: no subject, no text, a body or an attachment over the limit. */
+    MessageInvalid = "MAIL_MESSAGE_INVALID",
 }
 
 /** How each mail code travels. */
@@ -39,7 +41,8 @@ export const MAIL_ERROR_KINDS: Record<MailErrorCode, ErrorKind> = {
     [MailErrorCode.Recipient]: "invalid",
     [MailErrorCode.Limit]: "rate-limited",
     [MailErrorCode.Unknown]: "unavailable",
-    [MailErrorCode.NotConfigured]: "unavailable",
+    [MailErrorCode.AddressInvalid]: "invalid",
+    [MailErrorCode.MessageInvalid]: "invalid",
 }
 
 /** The one error class of the mail integration; the server's own words ride in the `detail` param. */

@@ -1,5 +1,5 @@
 import { ApolloLink, Observable } from "@apollo/client"
-import { sessionAccessToken } from "@/modules/auth"
+import { sessionAccessToken } from "@/modules/auth-session"
 
 /** The context of an operation as far as the headers go. */
 interface OperationHeaders {

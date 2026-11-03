@@ -1,25 +1,16 @@
 import { Test } from "@nestjs/testing"
-import {
-    NIVO_ACCENT,
-    renderTemplate as realRenderTemplate,
-    oneLine as realOneLine,
-    renderEmail as realRenderEmail,
-} from "./mail-layout.policy"
+import { NIVO_ACCENT, renderEmail as realRenderEmail } from "./mail-layout.policy"
 
 const SUBJECT = Symbol("mail-layout.policy")
 
-type Subject = Pick<typeof import("./mail-layout.policy"), "renderTemplate" | "oneLine" | "renderEmail">
+type Subject = Pick<typeof import("./mail-layout.policy"), "renderEmail">
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             {
                 provide: SUBJECT,
-                useValue: {
-                    renderTemplate: realRenderTemplate,
-                    oneLine: realOneLine,
-                    renderEmail: realRenderEmail,
-                },
+                useValue: { renderEmail: realRenderEmail },
             },
         ],
     }).compile()
@@ -27,30 +18,6 @@ const build = async () => {
 }
 
 const base = { shopName: "Shop <A>", title: "Hello", footer: "Sent by Shop", lang: "en" }
-
-describe("mail-layout policy / renderTemplate", () => {
-    it("fills single and double brace placeholders, empties unknown ones and drops control characters", async () => {
-        const subject = await build()
-
-        const text = subject.renderTemplate("Hi {name}, order {{ no }} total {total} {missing}.\u0007", {
-            name: "Minh",
-            no: 12,
-            total: null,
-        })
-
-        expect(text).toBe("Hi Minh, order 12 total  .")
-    })
-})
-
-describe("mail-layout policy / oneLine", () => {
-    it("joins lines and bounds the length", async () => {
-        const subject = await build()
-
-        expect(subject.oneLine("a\r\nb\n\nc ")).toBe("a b c")
-        expect(subject.oneLine("x".repeat(500))).toHaveLength(200)
-        expect(subject.oneLine("x".repeat(500), 10)).toHaveLength(10)
-    })
-})
 
 describe("mail-layout policy / renderEmail", () => {
     it("renders paragraphs and bullet lists in the shop colour and escapes everything", async () => {
@@ -71,6 +38,19 @@ describe("mail-layout policy / renderEmail", () => {
         expect(mail.html).toContain('<li style="margin:0 0 6px">only</li>')
         expect(mail.html).toContain("Shop &lt;A&gt;")
         expect(mail.html).toContain("Sent by Shop")
+    })
+    it("keeps the title and the shop name on one line and bounds the shop name", async () => {
+        const subject = await build()
+
+        const mail = subject.renderEmail({
+            ...base,
+            shopName: "S".repeat(120),
+            title: " Hello\r\nthere\n\nall ",
+            body: "x",
+        })
+
+        expect(mail.html).toContain("<title>Hello there all</title>")
+        expect(mail.text.startsWith(`${"S".repeat(80)}\n\n`)).toBe(true)
     })
     it("falls back to the default colour for anything but #rrggbb", async () => {
         const subject = await build()

@@ -1,5 +1,5 @@
 import { ApolloLink, Observable } from "@apollo/client"
-import { renewSessionToken } from "@/modules/auth"
+import { renewSessionToken } from "@/modules/auth-session"
 
 /** True when a result carries the back end refusal of a missing or expired session (`extensions.kind` is `unauthenticated`). */
 const isUnauthenticated = (result: ApolloLink.Result): boolean =>
