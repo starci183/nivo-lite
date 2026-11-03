@@ -1,7 +1,7 @@
 "use client"
 
 import { useLocale, useTranslations } from "next-intl"
-import { LOCALE_COOKIE, appLocaleOf, navigation } from "@/modules/i18n"
+import { i18n, navigation } from "@/modules/i18n"
 import { useTransition } from "react"
 
 const YEAR_SECONDS = 60 * 60 * 24 * 365
@@ -40,7 +40,7 @@ export const useLocaleSwitch = (): LocaleChoice => {
             if (next === locale) return
             startTransition(() => {
                 // The reader's language lives in a cookie the server reads; the URL never carries it.
-                document.cookie = `${LOCALE_COOKIE}=${appLocaleOf(next)}; path=/; max-age=${YEAR_SECONDS}; samesite=lax`
+                document.cookie = `${i18n.localeCookieName}=${i18n.localeOf(next)}; path=/; max-age=${YEAR_SECONDS}; samesite=lax`
                 router.refresh()
             })
         },

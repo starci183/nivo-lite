@@ -1,6 +1,6 @@
 import { useLocale, useTranslations } from "next-intl"
 import { useTransition } from "react"
-import { LOCALE_COOKIE, appLocaleOf, navigation } from "@/modules/i18n"
+import { i18n, navigation } from "@/modules/i18n"
 
 type UseLanguageResult = {
     label: string
@@ -22,7 +22,7 @@ export const useLanguage = (): UseLanguageResult => {
     const [isPending, startTransition] = useTransition()
     const choose = (next: string): void => {
         if (next === locale) return
-        document.cookie = `${LOCALE_COOKIE}=${appLocaleOf(next)}; path=/; max-age=31536000; samesite=lax`
+        document.cookie = `${i18n.localeCookieName}=${i18n.localeOf(next)}; path=/; max-age=31536000; samesite=lax`
         startTransition(() => router.refresh())
     }
     return {

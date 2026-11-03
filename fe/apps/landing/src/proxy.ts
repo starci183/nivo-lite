@@ -1,11 +1,9 @@
-import { negotiateLocale } from "@nivo-lite/i18n/proxy"
-import type { NextRequest, NextResponse } from "next/server"
-
-/** The first path segments no locale is negotiated for: liveness and framework files. */
-const UNNEGOTIATED_ROOTS: ReadonlySet<string> = new Set(["health", "_next", "_vercel"])
+import { createProxy } from "@starci/next-i18n/proxy"
+import type { LocaleProxy } from "@starci/next-i18n/proxy"
+import { i18n } from "@/modules/i18n"
 
 /** Locale routing only: the landing has no session, and every path that is not a landing page is redirected to the console by next.config.ts. */
-export const proxy = (request: NextRequest): NextResponse => negotiateLocale(request, UNNEGOTIATED_ROOTS)
+export const proxy: LocaleProxy = createProxy(i18n, { unnegotiatedRoots: ["health", "_next", "_vercel"] })
 
 type ConfigShape = {
     matcher: string[]

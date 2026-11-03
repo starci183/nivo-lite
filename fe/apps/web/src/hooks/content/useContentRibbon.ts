@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import type { WorkbenchFigureData } from "@/modules/types"
-import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
+import { i18n } from "@/modules/i18n"
 import type { ContentWorkbenchData } from "@/modules/content"
 
 /** The four figures of the workbench ribbon, formatted for the reader; only their terms while they are not read. */
@@ -38,7 +38,7 @@ export const useContentRibbon = (figures: ContentWorkbenchData["figures"] | unde
                       month: "2-digit",
                       hour: "2-digit",
                       minute: "2-digit",
-                      timeZone: PRODUCT_TIME_ZONE,
+                      timeZone: i18n.timeZone,
                   })
                 : "-",
             meta: figures.next?.title ?? t("ctNextNoneMeta"),
