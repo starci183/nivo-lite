@@ -18,8 +18,8 @@ export interface ZaloReceiptPayload {
     readonly connection: string
     /** The original delivery decoded as UTF-8. */
     readonly rawBody: string
-    /** `poll` when the reconcile job read the message back from Zalo because the webhook never delivered it; absent for a webhook delivery. */
-    readonly source?: "poll"
+    /** `poll` when the reconcile job read the message back from Zalo because the webhook never delivered it; `manual_import` for a row the owner imported (its attachments may name local files); absent for a webhook delivery. */
+    readonly source?: "poll" | "manual_import"
 }
 
 /**

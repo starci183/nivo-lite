@@ -1,6 +1,6 @@
 export { parseObjectStorageConfig } from "./object-storage.config"
 export { InjectStorageObjects, STORAGE_ASSETS, STORAGE_OBJECTS } from "./object-storage.decorators"
-export type { StorageObjectsPort } from "./object-storage.port"
+export type { StorageAssetsPort, StorageObjectsPort } from "./object-storage.port"
 export { OBJECT_STORAGE_ERROR_KINDS } from "@starci/object-storage"
 export { uploadContentTypeOf } from "./object-storage.policy"
 export { StorageBootstrapService } from "./object-storage-bootstrap.service"

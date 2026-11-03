@@ -5,8 +5,9 @@ export { CustomerIntakeService } from "./customer-intake.service"
 export { CONVERSATIONS_ERROR_KINDS } from "./errors/conversations.error"
 export { CONVERSATIONS_MESSAGES } from "./messages/conversations.messages"
 export { readTelegramUpdate } from "./telegram-update.policy"
-export { readZaloEvent } from "./zalo-event.policy"
+export { isZaloAttachmentEvent, readZaloEvent, zaloAttachmentShapeOf } from "./zalo-event.policy"
 export type {
+    InboundAttachment,
     CustomerTurn,
     ChatTurnProposal,
     ChatTurnRuntime,

@@ -6,6 +6,8 @@ import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelsErrorCode, ZaloCredentialsService } from "@modules/domain/channels"
+import { InboundFilesService } from "@modules/domain/chat-files"
+import type { DownloadedChatFile } from "@modules/domain/chat-files"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { CLOCK } from "@modules/platform/clock"
@@ -431,6 +433,8 @@ const build = async (setup: Setup = {}, front: ReadonlyArray<FrontAgent> = []) =
     const inboundEvents = mock<InboundEventsService>()
     inboundEvents.keepUnrouted.mockResolvedValue(undefined)
     const zalo = mock<ZaloCredentialsService>()
+    const inboundFiles = mock<InboundFilesService>()
+    inboundFiles.keep.mockResolvedValue(true)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key) => `<${key}>`)
     const moduleRef = await Test.createTestingModule({
@@ -447,10 +451,12 @@ const build = async (setup: Setup = {}, front: ReadonlyArray<FrontAgent> = []) =
             { provide: ZaloCredentialsService, useValue: zalo },
             { provide: AgentBindingsService, useValue: bindings },
             { provide: AgentDirectoryService, useValue: agents },
+            { provide: InboundFilesService, useValue: inboundFiles },
         ],
     }).compile()
     return {
         service: moduleRef.get(ConversationsService),
+        inboundFiles,
         queue,
         intake,
         connections,
@@ -479,6 +485,7 @@ const zaloMessage = (patch: Record<string, unknown> = {}) => ({
     userId: "user-1",
     messageId: "m-1",
     text: "Hello",
+    attachments: [],
     ...patch,
 })
 
@@ -491,7 +498,88 @@ const metaMessage = (patch: Partial<MetaInbound> = {}): MetaInbound => ({
     ...patch,
 })
 
+const receipt: DownloadedChatFile = {
+    bytes: new Uint8Array([1, 2, 3]),
+    contentType: "image/png",
+    name: "a.png",
+    sourceUrl: "https://cdn.test/a.png",
+}
+
+const registerZaloAttachments = () => {
+    const picture = zaloMessage({
+        text: "Em chuyen khoan roi",
+        attachments: [{ kind: "image", url: "https://cdn.test/a.png", thumbnailUrl: "", name: "", localPath: "" }],
+    })
+
+    it("reaches the turn as the label of the picture and its caption, with the picture stored on the message", async () => {
+        const manager = mockEntityManager()
+        const { service, intake, messages, inboundFiles } = await build({}, [FRONT_AGENT])
+
+        await expect(service.acceptZalo(CONNECTION, picture, manager, [receipt])).resolves.toBe(true)
+
+        expect(messages.storeCustomer).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.imageLabel> Em chuyen khoan roi", manager)
+        expect(inboundFiles.keep).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", conversationId: "conv-1" },
+            receipt,
+            "zalo:m-1",
+            "msg-1",
+            manager,
+        )
+        expect(intake.answer).toHaveBeenCalledWith(expect.objectContaining({ channelEventId: "zalo:m-1", messageId: "msg-1" }), manager)
+    })
+
+    it("labels a picture that came without a caption by the label alone, and a file by its own label", async () => {
+        const manager = mockEntityManager()
+        const { service, messages } = await build({}, [FRONT_AGENT])
+        const file = zaloMessage({ text: "", attachments: [{ kind: "file", url: "https://cdn.test/f.pdf", thumbnailUrl: "", name: "", localPath: "" }] })
+
+        await service.acceptZalo(CONNECTION, { ...picture, text: "" }, manager, [])
+        await service.acceptZalo(CONNECTION, file, manager, [])
+
+        expect(messages.storeCustomer).toHaveBeenNthCalledWith(1, "ws-1", "conv-1", "<conversations.imageLabel>", manager)
+        expect(messages.storeCustomer).toHaveBeenNthCalledWith(2, "ws-1", "conv-1", "<conversations.fileLabel>", manager)
+    })
+
+    it("still reaches the turn when no file could be read", async () => {
+        const manager = mockEntityManager()
+        const { service, intake, inboundFiles } = await build({}, [FRONT_AGENT])
+
+        await expect(service.acceptZalo(CONNECTION, picture, manager)).resolves.toBe(true)
+
+        expect(inboundFiles.keep).not.toHaveBeenCalled()
+        expect(intake.answer).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps the label and the caption in the inbox when no agent is bound", async () => {
+        const manager = mockEntityManager()
+        const { service, inboundEvents, inboundFiles } = await build({}, [])
+
+        await expect(service.acceptZalo(CONNECTION, picture, manager, [receipt])).resolves.toBe(false)
+
+        expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, expect.objectContaining({ body: "<conversations.imageLabel> Em chuyen khoan roi" }))
+        expect(inboundFiles.keep).not.toHaveBeenCalled()
+    })
+
+    it("reads the files before the message is stored, leaving out the ones that cannot be read", async () => {
+        const { service, inboundFiles } = await build({}, [FRONT_AGENT])
+        inboundFiles.download.mockResolvedValueOnce(receipt).mockResolvedValueOnce(null)
+
+        const read = await service.readFiles(
+            [
+                { kind: "image", url: "https://cdn.test/a.png", thumbnailUrl: "", name: "", localPath: "" },
+                { kind: "image", url: "https://cdn.test/b.png", thumbnailUrl: "", name: "", localPath: "" },
+            ],
+            true,
+        )
+
+        expect(read).toEqual([receipt])
+        expect(inboundFiles.download).toHaveBeenNthCalledWith(1, expect.objectContaining({ url: "https://cdn.test/a.png" }), true)
+    })
+}
+
 describe("ConversationsService", () => {
+    describe("acceptZaloAttachments", registerZaloAttachments)
+
     describe("acceptTelegram", registerTelegramRouting)
 
     describe("acceptZalo", registerZaloRouting)

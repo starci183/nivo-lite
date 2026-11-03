@@ -17,7 +17,21 @@ export interface TelegramInbound {
     readonly isStart: boolean
 }
 
-/** The customer's text message of one Zalo event. */
+/** A picture or file the customer sent with a message: where its bytes are, before they are read. */
+export interface InboundAttachment {
+    /** `image` or `file`. */
+    readonly kind: "image" | "file"
+    /** The https address to download the bytes from; empty for a file of a manual import. */
+    readonly url: string
+    /** The address of a smaller preview, or an empty text. */
+    readonly thumbnailUrl: string
+    /** The name the sender gave it, or an empty text. */
+    readonly name: string
+    /** The path of a manual import inside the import folder; empty for any other source. */
+    readonly localPath: string
+}
+
+/** The customer's message of one Zalo event: text, or a picture or file with its caption. */
 export interface ZaloInbound {
     /** The Zalo app the event was sent for; empty when the event names none. */
     readonly appId: string
@@ -25,8 +39,10 @@ export interface ZaloInbound {
     readonly userId: string
     /** Zalo's id of the message: the key of the delivery. */
     readonly messageId: string
-    /** What the customer wrote. */
+    /** What the customer wrote, or the caption of the picture or file; empty when a picture came without one. */
     readonly text: string
+    /** The pictures and files sent with the message; empty for a text message. */
+    readonly attachments: ReadonlyArray<InboundAttachment>
 }
 
 /** The customer's direct message of one Facebook or Instagram event. */

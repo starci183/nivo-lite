@@ -33,6 +33,14 @@ export class AgentMessageAttachmentEntity extends UuidAbstractEntity {
     @Column({ name: "size_bytes", type: "integer" })
     sizeBytes!: number
 
+    /** The address the channel gave for the file, or the local path of a manual import; null for a file a person uploaded. */
+    @Column({ name: "source_url", type: "text", nullable: true })
+    sourceUrl!: string | null
+
+    /** The channel's own id of the message the file came with; null for a file a person uploaded. */
+    @Column({ name: "source_ref", type: "text", nullable: true })
+    sourceRef!: string | null
+
     /** What a turn read from the file, once; null before it was read. */
     @Column({ name: "read", type: "jsonb", nullable: true })
     read!: ChatFileRead | null

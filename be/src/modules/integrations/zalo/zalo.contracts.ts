@@ -21,8 +21,28 @@ export interface ZaloParty {
 export interface ZaloMessage {
     /** Zalo's id of the message. */
     readonly msg_id?: string
-    /** What the customer wrote. */
+    /** What the customer wrote, or the caption of a picture or file. */
     readonly text?: string
+    /** The pictures or files of a `user_send_image` or `user_send_file` event. */
+    readonly attachments?: ReadonlyArray<ZaloAttachment>
+}
+
+/** One picture or file of a customer message as the webhook sends it. */
+export interface ZaloAttachment {
+    /** `image` or `file`. */
+    readonly type?: string
+    /** Where the bytes are. */
+    readonly payload?: ZaloAttachmentPayload
+}
+
+/** The address and facts of one attachment. */
+export interface ZaloAttachmentPayload {
+    /** The address to download the bytes from. */
+    readonly url?: string
+    /** The address of a smaller preview (pictures). */
+    readonly thumbnail?: string
+    /** The file name (files). */
+    readonly name?: string
 }
 
 /** The event Zalo posts to the webhook of an OA; only the fields the intake reads. */
