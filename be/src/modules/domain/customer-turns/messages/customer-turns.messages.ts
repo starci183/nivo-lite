@@ -13,6 +13,7 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
         "customerTurns.finalReply.failed":
             "Dạ xin lỗi mình, thao tác vừa rồi chưa thực hiện được nên yêu cầu của mình chưa hoàn tất ạ.",
         "customerTurns.orderPriceUnknownReply": "Cảm ơn bạn! Shop sẽ xác nhận giá của gói này với bạn ngay nhé.",
+        "customerTurns.claimFreeReply": "Cảm ơn bạn! Shop đã nhận được tin nhắn và sẽ phản hồi bạn sớm nhé.",
         "customerTurns.paymentClaimReply":
             "Cảm ơn bạn! Shop đã ghi nhận bạn báo chuyển khoản cho mã {{no}}. Shop sẽ kiểm tra và xác nhận lại với bạn sớm nhất nhé.",
         "customerTurns.paymentConfirmedReply":
@@ -69,6 +70,7 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
             "Sorry, that action could not be carried out, so your request is not complete.",
         "customerTurns.orderPriceUnknownReply":
             "Thank you! The team will confirm the price of this item with you shortly.",
+        "customerTurns.claimFreeReply": "Thank you! The shop has your message and will get back to you shortly.",
         "customerTurns.paymentClaimReply":
             "Thank you! We have noted that you transferred the payment for {{no}}. The shop will check it and confirm with you shortly.",
         "customerTurns.paymentConfirmedReply":

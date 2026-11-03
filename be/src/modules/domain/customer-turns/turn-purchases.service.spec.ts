@@ -121,6 +121,7 @@ describe("TurnPurchasesService", () => {
             changed: true,
             leadId: "l9",
             orderAmountVnd: 50_000,
+            orderState: "confirmed",
         })
         expect(orders.find).toHaveBeenCalledWith(WS, "o-9")
     })
@@ -148,7 +149,8 @@ describe("TurnPurchasesService", () => {
             channel,
             leadId: "l1",
         })
-        expect(settled).toEqual({ lines: [], changed: false, leadId: "l1", orderAmountVnd: 50_000 })
+        const open = { lines: [], changed: false, leadId: "l1", orderAmountVnd: 50_000 }
+        expect(settled).toEqual({ ...open, orderState: "confirmed" })
     })
 
     it("joins a check already open for a repeated payment claim", async () => {
@@ -269,5 +271,32 @@ describe("TurnPurchasesService", () => {
             leadId: "l1",
         })
         expect(inbound.mark).toHaveBeenCalledWith(WS, "e1", "processed", "l1")
+    })
+})
+
+describe("TurnPurchasesService the state the reply may claim", () => {
+    it.each([
+        ["waits for a person", "waiting_decision", "awaiting_approval"],
+        ["is still queued", "queued", "recorded"],
+    ])("says the order is only on record or waiting when its confirm work %s", async (_label, status, state) => {
+        const { purchases } = await build([], true, { ...ORDER_WORK, status })
+        const settled = await purchases.recordOrder(ctx, turn, {
+            reply,
+            order: { items: "Tra sua", amountVnd: 50_000 },
+            channel,
+            leadId: null,
+        })
+        expect(settled.orderState).toBe(state)
+    })
+
+    it("says an open draft order is only on record when the customer orders it again", async () => {
+        const { purchases } = await build([{ status: "draft", amount_vnd: 50_000, items: "Tra sua" }])
+        const settled = await purchases.recordOrder(ctx, turn, {
+            reply,
+            order: { items: "Tra sua", amountVnd: 50_000 },
+            channel,
+            leadId: "l1",
+        })
+        expect(settled.orderState).toBe("recorded")
     })
 })

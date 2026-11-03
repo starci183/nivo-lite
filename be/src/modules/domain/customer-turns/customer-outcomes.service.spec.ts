@@ -12,9 +12,9 @@ import {
     customerWorkItemOf,
     catalog as catalogData,
     bookingCase,
+    r28SalesOrder,
 } from "@tests/fixtures/builders/customer-outcomes.builder"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
-
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
@@ -35,9 +35,7 @@ import { CustomerOutcomesService } from "./customer-outcomes.service"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
-
 import type { WorkItem } from "@modules/domain/decisions"
-
 import { findingsOf } from "./reply-reading.policy"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -186,6 +184,13 @@ describe("CustomerOutcomesService", () => {
             expect.objectContaining({ order: { items: "Tra sua", amountVnd: 50_000 } }),
         )
         expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: [] })
+    })
+
+    it("records the r28 order the model left out and drops the approval it claimed falsely", async () => {
+        const { outcomes, purchases } = await build()
+        const { turn, proposal, kept, order } = r28SalesOrder()
+        await expect(outcomes.settle(turn, proposal)).resolves.toMatchObject({ reply: kept })
+        expect(purchases.recordOrder).toHaveBeenCalledWith(expect.any(Object), turn, objectLike({ order }))
     })
 })
 
@@ -365,7 +370,6 @@ describe("CustomerOutcomesService", () => {
             reply: "customerTurns.paymentConfirmedReply",
             send: true,
         })
-
         const stale = await build()
         stale.invoices.latestOfLead.mockResolvedValueOnce(null).mockResolvedValueOnce(customerPaymentInvoices.stale)
         const looked = await stale.outcomes.settle(turnOf("l1"), proposalOf({ payment_claim: true }))
