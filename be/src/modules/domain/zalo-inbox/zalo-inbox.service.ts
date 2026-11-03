@@ -13,7 +13,7 @@ import { ConversationsService, readZaloEvent } from "@modules/domain/conversatio
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { zaloDeliveryIdOf } from "./zalo-delivery-id.policy"
-import { polledRawBody } from "./zalo-poll.policy"
+import { polledRawBody } from "./zalo-polled-body.policy"
 import { ZaloInboxEntity } from "./persistence/entities"
 
 @Injectable()

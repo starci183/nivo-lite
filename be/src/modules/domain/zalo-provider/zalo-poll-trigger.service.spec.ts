@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager, recordingQueueOutbox } from "@starci/jest-preset"
+import { PollScheduleService } from "@modules/domain/connection-poll"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { ZaloInboxPollService } from "./zalo-poll.service"
@@ -18,24 +19,27 @@ const build = async (polls: boolean) => {
     const write = jest.spyOn(outbox, "write")
     const poll = mock<ZaloInboxPollService>()
     poll.polls.mockReturnValue(polls)
+    const schedule = mock<PollScheduleService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloInboxPollTriggerService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: ZaloInboxPollService, useValue: poll },
+            { provide: PollScheduleService, useValue: schedule },
         ],
     }).compile()
-    return { trigger: moduleRef.get(ZaloInboxPollTriggerService), tx, outbox, write, poll }
+    return { trigger: moduleRef.get(ZaloInboxPollTriggerService), tx, outbox, write, poll, schedule }
 }
 
 describe("ZaloInboxPollTriggerService enqueueFirstPoll", () => {
     it("enqueues the one-connection reconcile job once per fact", async () => {
-        const { trigger, tx, outbox, write, poll } = await build(true)
+        const { trigger, tx, outbox, write, poll, schedule } = await build(true)
 
         await expect(trigger.enqueueFirstPoll(ready)).resolves.toBe(true)
 
         expect(poll.polls).toHaveBeenCalledWith("zalo_oa")
+        expect(schedule.markReady).toHaveBeenCalledWith("conn-1")
         expect(write).toHaveBeenCalledWith(
             expect.anything(),
             "zalo-inbox-poll",

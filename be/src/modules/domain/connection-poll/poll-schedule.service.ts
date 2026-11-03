@@ -32,7 +32,7 @@ const rowOf = (entity: ConnectionPollScheduleEntity): PollScheduleRow => ({
 })
 
 /** Puts a connection in the schedule, hot, or makes an existing row hot and due sooner; a row that needs the owner stays parked. */
-const MARK_HOT = `
+export const MARK_HOT_SQL = `
 INSERT INTO public.connection_poll_schedule (connection_id, workspace_id, provider, next_poll_at, interval_ms, hot_until, hot_reason)
 SELECT c.id, c.workspace_id, c.provider, now(), $2::integer, now() + make_interval(secs => $3::double precision / 1000), $4
 FROM public.connections c
@@ -47,7 +47,7 @@ ON CONFLICT (connection_id) DO UPDATE SET
 `
 
 /** Puts every connection of the given providers that has no row into the schedule, spread at random over the healthy interval so tenants never poll in step. */
-const ENROLL = `
+export const ENROLL_SQL = `
 INSERT INTO public.connection_poll_schedule (connection_id, workspace_id, provider, next_poll_at, interval_ms)
 SELECT c.id, c.workspace_id, c.provider, now() + make_interval(secs => random() * $2::double precision / 1000), $2::integer
 FROM public.connections c
@@ -69,7 +69,7 @@ export class PollScheduleService {
 
     /** Gives every connection of the providers a row in the schedule. */
     async enroll(providers: ReadonlyArray<string>): Promise<void> {
-        await this.entityManager.query(ENROLL, [[...providers], this.options.schedule.healthyIntervalMs])
+        await this.entityManager.query(ENROLL_SQL, [[...providers], this.options.schedule.healthyIntervalMs])
     }
 
     /** Claims up to `size` due connections of the providers, oldest first, and holds them for the lease. */
@@ -124,7 +124,7 @@ export class PollScheduleService {
      * call this when a connection has demand (an order awaiting payment, an open payment claim). A connection that is not in the schedule yet joins it.
      */
     async markHot(connectionId: string, reason: PollHotReason, ttlMs: number = this.options.schedule.hotTtlMs): Promise<void> {
-        await this.entityManager.query(MARK_HOT, [connectionId, this.options.schedule.hotIntervalMs, ttlMs, reason])
+        await this.entityManager.query(MARK_HOT_SQL, [connectionId, this.options.schedule.hotIntervalMs, ttlMs, reason])
     }
 
     /** The connection can be read back now (its credential was just saved): the breaker and the owner request are cleared and it is polled hot. */

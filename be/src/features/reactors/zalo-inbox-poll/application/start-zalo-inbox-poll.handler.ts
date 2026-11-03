@@ -1,5 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ZaloInboxPollTriggerService } from "@modules/domain/zalo-inbox"
+import { ZaloInboxPollTriggerService } from "@modules/domain/zalo-provider"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"

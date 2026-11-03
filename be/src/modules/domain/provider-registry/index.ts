@@ -3,6 +3,7 @@ export { ProviderRegistry } from "./provider-registry.service"
 export {
     BankFeedPollerRegistry,
     BankTransactionsRegistry,
+    MessageInboxPollerRegistry,
     PaymentInstructionRegistry,
 } from "./provider-registries.service"
 export type {
@@ -11,6 +12,7 @@ export type {
     BankTransactionsPort,
     BankTransactionsQuery,
     InstructionAccount,
+    MessageInboxPoller,
     PaymentInstructionPort,
     PaymentInstructionRequest,
     PolledCredit,

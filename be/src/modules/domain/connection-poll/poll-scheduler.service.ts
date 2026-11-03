@@ -180,16 +180,16 @@ export class PollSchedulerService {
         tally.fatal += failure.kind === "fatal" ? 1 : 0
         const plan = planAfterFailure(row, failure, now, this.options.schedule, unit)
         await this.schedule.settle(row.connectionId, plan)
-        await this.report(record, failure.kind, plan)
+        await this.report(record, failure.kind, plan, now)
     }
 
-    private async report(record: ConnectionRecord, kind: string, plan: PollPlan): Promise<void> {
+    private async report(record: ConnectionRecord, kind: string, plan: PollPlan, now: number): Promise<void> {
         if (plan.breakerState === "open") {
             this.logger.warn(ConnectionPollLogEvent.BreakerOpened, { connectionId: record.id, provider: record.provider, kind })
         }
         if (!plan.raiseOwnerNotice) return
         this.logger.warn(ConnectionPollLogEvent.NeedsReauth, { connectionId: record.id, provider: record.provider })
-        await this.notice.needsReauth(record, plan.breakerOpenedAt ?? this.clock.now().getTime())
+        await this.notice.needsReauth(record, now)
     }
 
     private defer(connectionId: string, afterMs: number): Promise<void> {

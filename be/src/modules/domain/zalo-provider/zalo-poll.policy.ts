@@ -1,11 +1,10 @@
 import { ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
-import type { PolledZaloMessage } from "./zalo-inbox.contracts"
-import type { ZaloInboxOptions } from "./zalo-inbox.options"
+import type { ZaloProviderOptions } from "./zalo-provider.options"
 
 const DAY_MS = 86_400_000
 
 /** The reconcile rules with every default filled in. */
-export type ZaloPollRules = Required<ZaloInboxOptions>
+export type ZaloPollRules = Required<ZaloProviderOptions>
 
 /** Zalo lets the OA reply as a consultation message for 48 hours after the customer's last message; a day-old message is stale for an agent. */
 export const ZALO_POLL_DEFAULTS: ZaloPollRules = {
@@ -23,7 +22,7 @@ export const ZALO_POLL_MAX_PAGES = 30
 export const ZALO_POLL_PAUSE_MS = 400
 
 /** The rules the options give, the defaults where they give none. */
-export const pollRulesOf = (options: ZaloInboxOptions): ZaloPollRules => ({ ...ZALO_POLL_DEFAULTS, ...options })
+export const pollRulesOf = (options: ZaloProviderOptions): ZaloPollRules => ({ ...ZALO_POLL_DEFAULTS, ...options })
 
 /**
  * True when a message must not be answered by an agent: it is older than the reply window (Zalo would refuse or charge the reply) or older
@@ -31,14 +30,3 @@ export const pollRulesOf = (options: ZaloInboxOptions): ZaloPollRules => ({ ...Z
  */
 export const isStaleMessage = (sentAt: number, now: number, rules: ZaloPollRules): boolean =>
     now - sentAt > Math.min(rules.replyWindowMs, rules.staleAfterMs)
-
-/** The body the webhook would have posted for this message, so the inbox claims it under the same delivery id and the consumer reads it like any delivery. */
-export const polledRawBody = (message: PolledZaloMessage): Buffer =>
-    Buffer.from(
-        JSON.stringify({
-            event_name: "user_send_text",
-            timestamp: String(message.sentAt),
-            sender: { id: message.userId },
-            message: { msg_id: message.messageId, text: message.text },
-        }),
-    )

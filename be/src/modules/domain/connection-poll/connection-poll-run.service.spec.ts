@@ -167,12 +167,83 @@ describe("ConnectionPollRun a connection that is left out or fails", () => {
         poller.fetch.mockRejectedValue(failure)
         const summary = emptyPollSummary()
 
-        await expect(run.poll(poller, recordOf(), summary)).resolves.toBeUndefined()
+        await expect(run.poll(poller, recordOf(), summary)).resolves.toEqual({ kind: "failed", cause: failure })
 
         expect(summary.failed).toBe(1)
         expect(logger.error).toHaveBeenCalledWith(ConnectionPollLogEvent.Failed, failure, {
             connectionId: "conn-1",
             provider: "sepay",
+        })
+    })
+})
+
+describe("ConnectionPollRun the outcome a scheduler plans with", () => {
+    it("answers done with what it read and stored", async () => {
+        const { run, poller } = build()
+        poller.fetch.mockResolvedValue(pageOf(["a", "b"], 2, T1, T2))
+        poller.store.mockResolvedValue(true)
+
+        await expect(run.poll(poller, recordOf(), emptyPollSummary())).resolves.toEqual({ kind: "done", fetched: 2, recorded: 2 })
+    })
+
+    it("answers skipped with the reason", async () => {
+        const { run, poller } = build()
+        poller.fetch.mockResolvedValue({ kind: "skipped", reason: "no_token" })
+
+        await expect(run.poll(poller, recordOf(), emptyPollSummary())).resolves.toEqual({ kind: "skipped", reason: "no_token" })
+    })
+
+    it("takes the gate before every call to the provider and ends the poll when the gate refuses", async () => {
+        const logger = mock<Logger>()
+        const timer = mock<Timer>()
+        timer.schedule.mockImplementation((callback) => {
+            callback()
+            return () => undefined
+        })
+        const connections = mock<ConnectionsService>()
+        const gate = jest.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("deferred"))
+        const run = new ConnectionPollRun({ clock: new FakeClock(NOW.toISOString()), logger, timer, connections, beforeFetch: gate })
+        const poller = mock<ConnectionPoller<string>>()
+        poller.fetch.mockResolvedValue(pageOf(["a"], POLL_PAGE_SIZE, T1, T2))
+        poller.store.mockResolvedValue(true)
+
+        const outcome = await run.poll(poller, recordOf(), emptyPollSummary())
+
+        expect(gate).toHaveBeenCalledTimes(2)
+        expect(gate).toHaveBeenCalledWith(expect.objectContaining({ id: "conn-1" }))
+        expect(poller.fetch).toHaveBeenCalledTimes(1)
+        expect(outcome.kind).toBe("failed")
+        expect(connections.patch).not.toHaveBeenCalled()
+    })
+
+    it("stops a chunk at its page cap, keeps the cursor and says where the next chunk resumes", async () => {
+        const { run, poller, connections } = build()
+        let oldest = T1.getTime()
+        poller.fetch.mockImplementation(() => {
+            oldest -= 1000
+            return Promise.resolve(pageOf(["a"], POLL_PAGE_SIZE, T1, new Date(oldest)))
+        })
+        poller.store.mockResolvedValue(true)
+
+        const outcome = await run.poll(poller, recordOf(), emptyPollSummary(), { maxPages: 2 })
+
+        expect(poller.fetch).toHaveBeenCalledTimes(2)
+        expect(outcome).toEqual({ kind: "partial", fetched: 2 * POLL_PAGE_SIZE, recorded: 2, resumeTo: new Date(T1.getTime() - 2000), newest: T1 })
+        expect(connections.patch).not.toHaveBeenCalled()
+    })
+
+    it("resumes a chunk from the page end and the newest instant the last chunk carried, and then saves the cursor", async () => {
+        const { run, poller, connections } = build()
+        const carried = new Date("2026-11-04T09:00:00.000Z")
+        poller.fetch.mockResolvedValue(pageOf(["a"], 1, T2, T2))
+        poller.store.mockResolvedValue(true)
+
+        const outcome = await run.poll(poller, recordOf(), emptyPollSummary(), { to: T2, newest: carried, maxPages: 2 })
+
+        expect(poller.fetch).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ to: T2 }))
+        expect(outcome.kind).toBe("done")
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "conn-1", {
+            meta: expect.objectContaining({ [POLL_CURSOR_KEY]: carried.toISOString() }),
         })
     })
 })
