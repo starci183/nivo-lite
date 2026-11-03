@@ -1,10 +1,11 @@
-import { Page, PaneSection } from "@starci/grammar/common"
+import { Page, Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
+import { OfficeHeader } from "@/components/composites/OfficeHeader"
+import { OfficeInfoHead, OfficeInfoPanel } from "@/components/composites/OfficeInfoPanel"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"
 import { OfficeMessengerThread } from "@/components/frames/OfficeMessengerThread"
-import { OfficeMessengerFrame } from "@/components/frames/OfficeMessengerFrame"
 import { OfficeThreadScroll } from "@/components/frames/OfficeThreadScroll"
 import type {
     Arrangement,
@@ -104,49 +105,119 @@ export interface OfficeMessengerBaseProps {
         }
 }
 
-/** Keeps each independent read in the block and hands only rendered regions to the messenger frame. */
+/**
+ * Keeps each independent read in the block and draws the messenger as `Page chrome="panes"` over one `PaneGrid`: the list,
+ * the header, the thread, the composer and the docked-or-drawer information column are its flush pane bands.
+ */
 export const OfficeMessengerBase = (props: OfficeMessengerBaseProps) => {
     const view = props.props
-    const on = props.on
+    const isListScreen = view.isCompact && view.phoneView === "list"
+    const hasList = isListScreen || !view.isCompact
+    const hasCentre = !isListScreen
+    const hasDockedInfo = !view.isCompact && view.isInfoOpen
+    const hasDrawerInfo = view.isCompact && !isListScreen
     return (
         <Page chrome="panes">
-            <OfficeMessengerFrame
-                arrangement={view.arrangement}
-                phoneView={view.phoneView}
-                centre={view.centre}
-                isCompact={view.isCompact}
-                isInfoOpen={view.isInfoOpen}
-                isMuted={view.isMuted}
-                title={view.title}
-                subtitle={view.subtitle}
-                chip={view.chip}
-                headerCopy={view.headerCopy}
-                infoCopy={view.infoCopy}
-                info={view.info}
+            <PaneGrid
                 label={view.labels.messenger}
-                listTitle={view.labels.list}
-                infoTitle={view.labels.info}
-                infoOpenLabel={view.labels.infoOpen}
-                infoCloseLabel={view.labels.infoClose}
-                list={<MessengerList {...props} />}
-                thread={<MessengerCentre {...props} />}
-                composer={<MessengerComposer {...props} />}
-                onBack={on.back}
-                onChip={on.chip}
-                onToggleMute={on.toggleMute}
-                onToggleInfo={on.toggleInfo}
-                onShowChat={on.showChat}
-                onInfoOpenChange={on.infoOpenChange}
-                onCloseInfo={on.closeInfo}
-                onJumpApproval={on.jumpApproval}
-                onJumpException={on.jumpException}
-                onJumpCard={on.jumpCard}
-                onMention={on.mention}
-                onOpenTasks={on.openTasks}
-            />
+                areas={view.arrangement.areas}
+                columns={view.arrangement.columns}
+                rows={view.arrangement.rows}
+            >
+                {hasList ? (
+                    <Pane area="listHead" surface>
+                        <PaneSection align="center">
+                            <Text isStrong>{view.labels.list}</Text>
+                        </PaneSection>
+                    </Pane>
+                ) : null}
+                {hasList ? (
+                    <Pane area="list" surface>
+                        <MessengerList {...props} />
+                    </Pane>
+                ) : null}
+                {hasCentre ? (
+                    <Pane area="head" surface>
+                        <MessengerHeader {...props} />
+                    </Pane>
+                ) : null}
+                {hasCentre ? (
+                    <Pane area="thread">
+                        <MessengerCentre {...props} />
+                    </Pane>
+                ) : null}
+                {hasCentre && view.centre !== "tasks" ? (
+                    <Pane area="composer" surface>
+                        <MessengerComposer {...props} />
+                    </Pane>
+                ) : null}
+                {hasDockedInfo ? (
+                    <Pane area="infoHead" surface>
+                        <OfficeInfoHead
+                            props={{ title: view.labels.info, closeLabel: view.labels.infoClose }}
+                            on={{ close: props.on.closeInfo }}
+                        />
+                    </Pane>
+                ) : null}
+                {hasDockedInfo ? (
+                    <Pane area="info" surface scroll label={view.labels.info}>
+                        <MessengerInfo {...props} />
+                    </Pane>
+                ) : null}
+                {hasDrawerInfo ? (
+                    <Pane
+                        area="info"
+                        surface
+                        collapse="drawer"
+                        collapseLabel={view.labels.info}
+                        openLabel={view.labels.infoOpen}
+                        closeLabel={view.labels.infoClose}
+                        isOpen={view.isInfoOpen}
+                        onOpenChange={props.on.infoOpenChange}
+                    >
+                        <MessengerInfo {...props} />
+                    </Pane>
+                ) : null}
+            </PaneGrid>
         </Page>
     )
 }
+
+/** The existing header owns its same chrome and receives only its original resolved data/actions. */
+const MessengerHeader = (props: OfficeMessengerBaseProps) => (
+    <OfficeHeader
+        props={{
+            copy: props.props.headerCopy,
+            centre: props.props.centre,
+            title: props.props.title,
+            subtitle: props.props.subtitle,
+            chip: props.props.chip,
+            isMuted: props.props.isMuted,
+            isInfoOpen: props.props.isInfoOpen,
+        }}
+        on={{
+            back: props.on.back,
+            chip: props.on.chip,
+            toggleMute: props.on.toggleMute,
+            toggleInfo: props.on.toggleInfo,
+            showChat: props.on.showChat,
+        }}
+    />
+)
+
+/** Docked and drawer placements use the same information body and jump commands. */
+const MessengerInfo = (props: OfficeMessengerBaseProps) => (
+    <OfficeInfoPanel
+        props={{ info: props.props.info, copy: props.props.infoCopy }}
+        on={{
+            jumpApproval: props.on.jumpApproval,
+            jumpException: props.on.jumpException,
+            jumpCard: props.on.jumpCard,
+            mention: props.on.mention,
+            openTasks: props.on.openTasks,
+        }}
+    />
+)
 
 /** The list waits independently of the conversation and composer. */
 const MessengerList = (props: OfficeMessengerBaseProps) => (
