@@ -120,6 +120,26 @@ describe("contextOf", () => {
     })
 })
 
+describe("contextOf for a tag and a burst", () => {
+    it("keeps what the tag door and the burst window wrote: the words, the data, the tagger, the lead and the merged messages", async () => {
+        const { contextOf } = await buildSubject()
+        const written = {
+            text: "Khách đặt 1 chậu",
+            tagContext: '{"items":[]}',
+            subject: "order:o-1",
+            tagSource: "bank_feed",
+            channel: "zalo",
+            leadId: "l-1",
+            authorAgentId: "a-1",
+            conversationId: "c-1",
+            messageId: "m-1",
+            mergedMessageIds: "m-2,m-3,m-4",
+            locale: "vi",
+        }
+        expect(contextOf(written)).toEqual(written)
+    })
+})
+
 describe("contextOf for an inbound wake", () => {
     it("keeps the event text and the pinned intent, which are text like any other key", async () => {
         const { contextOf } = await buildSubject()

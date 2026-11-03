@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WORK_RAISED } from "./work-engine.decorators"
 import type { WorkRaisedHook } from "./work-engine.port"
 import { WorkEngineService } from "./work-engine.service"
@@ -17,16 +18,19 @@ const TURN: NodeTurn = {
     locale: "vi",
 }
 
-const build = async (options: { registry?: boolean; hook?: boolean } = {}) => {
+const build = async (options: { registry?: boolean; hook?: boolean; installed?: boolean } = {}) => {
     const { registry: withRegistry = true, hook: withHook = true } = options
     const engine = mock<WorkEngineService>()
     engine.runWork.mockResolvedValue({ id: "item-1" } as WorkItem)
     const registry = mock<GraphNodeRegistryService>()
     const hook = mock<WorkRaisedHook>()
+    const installations = mock<InstallationRecordsService>()
+    installations.ofAgent.mockResolvedValue(options.installed === false ? null : ({ moduleKey: "sales" } as never))
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkItemRaiseExecutorService,
             { provide: WorkEngineService, useValue: engine },
+            { provide: InstallationRecordsService, useValue: installations },
             ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
             ...(withHook ? [{ provide: WORK_RAISED, useValue: hook }] : []),
         ],
@@ -62,6 +66,7 @@ describe("WorkItemRaiseExecutorService", () => {
             { workspaceId: "ws-1", actor: "NIVO", locale: "vi" },
             {
                 action: "confirm_order",
+                department: "sales",
                 subject_type: "order",
                 subject_id: "o1",
                 lead_id: "lead-1",
@@ -110,5 +115,15 @@ describe("WorkItemRaiseExecutorService", () => {
             executor.execute(TURN, { action: "x_action", title: "T", payload: {}, claimId: "claim-1" }, { key: "k", dedupeKey: null }),
         ).resolves.toEqual({ kind: "work-item", id: "item-1" })
         expect(engine.runWork).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("WorkItemRaiseExecutorService for an agent with no installation", () => {
+    it("names no department, so only a listed action can be raised", async () => {
+        const { engine, executor } = await build({ installed: false })
+
+        await executor.execute(TURN, { action: "review_agent_run", title: "Review", payload: {} }, { key: "k", dedupeKey: null })
+
+        expect(engine.runWork.mock.calls[0]?.[1]).not.toHaveProperty("department")
     })
 })

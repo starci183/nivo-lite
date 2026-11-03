@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, MoreThanOrEqual, Not } from "typeorm"
+import { In, MoreThan, MoreThanOrEqual, Not } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
@@ -304,6 +304,29 @@ export class AgentMessagesService {
             select: { id: true, body: true, createdAt: true },
             where: { conversationId, id: In([...ids]), role: "user" },
             order: { createdAt: "ASC", id: "ASC" },
+        })
+        return rows.map((row) => ({ id: row.id, body: row.body, at: row.createdAt }))
+    }
+
+    /**
+     * The customer's messages the agent has not answered yet: every one said after the agent's last reply in the conversation (all of
+     * them when it never replied), in the order they were said, at most `limit`.
+     */
+    async unansweredLinesOf(conversationId: string, limit: number): Promise<ReadonlyArray<CustomerLine>> {
+        const reply = await this.entityManager.findOne(AgentMessageEntity, {
+            select: { createdAt: true },
+            where: { conversationId, role: "agent" },
+            order: { createdAt: "DESC", id: "DESC" },
+        })
+        const rows = await this.entityManager.find(AgentMessageEntity, {
+            select: { id: true, body: true, createdAt: true },
+            where: {
+                conversationId,
+                role: "user",
+                ...(reply === null ? {} : { createdAt: MoreThan(reply.createdAt) }),
+            },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: limit,
         })
         return rows.map((row) => ({ id: row.id, body: row.body, at: row.createdAt }))
     }

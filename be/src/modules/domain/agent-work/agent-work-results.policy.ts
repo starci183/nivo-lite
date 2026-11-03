@@ -10,22 +10,41 @@ import type {
     AgentWorkDue,
 } from "./agent-work.contracts"
 
-const CONTEXT_TEXT_KEYS = [
-    "conversationId",
-    "messageId",
-    "channelEventId",
-    "room",
-    "threadId",
-    "authorUserId",
-    "triggerId",
-    "slot",
-    "eventName",
-    "subjectId",
-    "taskId",
-    "probeKey",
-    "inbound",
-    "intent",
-] as const
+/** The keys of a wake context that hold text. */
+type ContextTextKey = {
+    [Key in keyof AgentWakeContext]-?: NonNullable<AgentWakeContext[Key]> extends string ? Key : never
+}[keyof AgentWakeContext]
+
+/**
+ * Every text key of the wake context, as a record so the compiler refuses a key added to the contract and forgotten here: a key left
+ * out is dropped on every read, and what a door wrote (a tag's words, a burst's merged messages) silently never reaches the turn.
+ */
+const CONTEXT_TEXT_KEY_SET: Readonly<Record<Exclude<ContextTextKey, "locale">, true>> = {
+    conversationId: true,
+    messageId: true,
+    channelEventId: true,
+    room: true,
+    threadId: true,
+    mergedMessageIds: true,
+    tagContext: true,
+    text: true,
+    subject: true,
+    tagSource: true,
+    channel: true,
+    leadId: true,
+    authorAgentId: true,
+    authorUserId: true,
+    triggerId: true,
+    slot: true,
+    eventName: true,
+    subjectId: true,
+    taskId: true,
+    probeKey: true,
+    intent: true,
+    inbound: true,
+}
+
+const CONTEXT_TEXT_KEYS = Object.keys(CONTEXT_TEXT_KEY_SET) as ReadonlyArray<Exclude<ContextTextKey, "locale">>
 
 const sourceOf = (value: unknown): AgentWakeSource | null =>
     typeof value === "string" && wakeSources.lookup(value) !== undefined ? value : null

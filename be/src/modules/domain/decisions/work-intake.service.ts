@@ -27,7 +27,8 @@ export class WorkIntakeService {
     /** Inserts the item; `onInserted` runs once, only when this call really inserted the row. */
     async insert(ctx: WorkContext, spec: WorkSpec, manager?: EntityManager): Promise<IntakeResult> {
         const entry = await this.modules.actionOf(spec.action)
-        if (entry === null) {
+        const department = entry?.moduleKey ?? spec.department
+        if (department === undefined) {
             throw new DecisionsError({ code: DecisionsErrorCode.UnknownAction, params: { action: spec.action } })
         }
         const item = await this.items.insert(
@@ -35,7 +36,7 @@ export class WorkIntakeService {
                 workspaceId: ctx.workspaceId,
                 chainId: spec.chainId ?? null,
                 depth: spec.depth ?? 0,
-                department: entry.moduleKey,
+                department,
                 action: spec.action,
                 subjectType: spec.subject_type,
                 subjectId: spec.subject_id ?? null,

@@ -16,7 +16,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { AgentMessagesService } from "./agent-messages.service"
 
-import { In, MoreThanOrEqual, Not } from "typeorm"
+import { In, MoreThan, MoreThanOrEqual, Not } from "typeorm"
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const activity = mock<ChatActivityService>()
@@ -426,6 +426,35 @@ describe("AgentMessagesService customerLinesOf", () => {
         })
         await expect(service.customerLinesOf("conv-1", [])).resolves.toEqual([])
         expect(em.find).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("AgentMessagesService unansweredLinesOf", () => {
+    it("answers the customer's messages said after the agent's last reply, in the order said", async () => {
+        const replied = new Date("2026-11-04T01:00:00.000Z")
+        const later = new Date("2026-11-04T01:00:03.000Z")
+        const em = mockEntityManager({
+            findOne: [AgentMessageEntity, Object.assign(new AgentMessageEntity(), { createdAt: replied })],
+            find: [AgentMessageEntity, [Object.assign(new AgentMessageEntity(), { id: "m-2", body: "Còn hàng?", createdAt: later })]],
+        })
+        const { service } = await build(em)
+
+        await expect(service.unansweredLinesOf("conv-1", 30)).resolves.toEqual([{ id: "m-2", body: "Còn hàng?", at: later }])
+        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
+            select: { id: true, body: true, createdAt: true },
+            where: { conversationId: "conv-1", role: "user", createdAt: MoreThan(replied) },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: 30,
+        })
+    })
+
+    it("answers every customer message of a conversation the agent never replied in", async () => {
+        const em = mockEntityManager({ findOne: [AgentMessageEntity, null], find: [AgentMessageEntity, []] })
+        const { service } = await build(em)
+
+        await service.unansweredLinesOf("conv-1", 30)
+
+        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, expect.objectContaining({ where: { conversationId: "conv-1", role: "user" } }))
     })
 })
 

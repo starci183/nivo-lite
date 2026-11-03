@@ -75,6 +75,11 @@ export interface WorkOrigin {
 export interface WorkSpec {
     /** The action key. */
     readonly action: string
+    /**
+     * The department an action the catalogue does not list is filed under, as a generic owner decision (a graph's raised review); the
+     * catalogue's own department wins for a listed action. Without one, an unlisted action is refused.
+     */
+    readonly department?: string | undefined
     /** The kind of record. */
     readonly subject_type: SubjectType
     /** The id of the record. */

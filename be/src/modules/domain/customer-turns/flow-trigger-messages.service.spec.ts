@@ -12,6 +12,7 @@ describe("FlowTriggerMessagesService", () => {
                 { id: "m-1", body: "Chào shop", at: new Date("2026-11-04T01:00:00.000Z") },
                 { id: "m-2", body: "Đã chuyển khoản", at: new Date("2026-11-04T01:00:05.000Z") },
             ]),
+            unansweredLinesOf: jest.fn().mockResolvedValue([]),
         })
         const files = mock<ChatFilesService>({
             viewsOf: jest.fn().mockResolvedValue([
@@ -38,6 +39,33 @@ describe("FlowTriggerMessagesService", () => {
         ])
         expect(messages.customerLinesOf).toHaveBeenCalledWith("c-1", ["m-2", "m-1"])
         expect(files.viewsOf).toHaveBeenCalledWith("ws-1", ["m-1", "m-2"])
+        expect(messages.unansweredLinesOf).toHaveBeenCalledWith("c-1", 30)
+    })
+
+    it("answers a burst of five coalesced wakes whole, in order and once each, though the surviving wake named only one", async () => {
+        const said = ["Alo, đặt giùm Định 1 chậu hoa", "giao tới 69 Hàng Xanh", "Tôi cần tư vấn", "Tôi đã chuyển khoản 5k", "tên BUI NGUYEN DINH"]
+        const lines = said.map((body, index) => ({
+            id: `m-${index + 1}`,
+            body,
+            at: new Date(Date.UTC(2026, 10, 4, 1, 0, Math.min(index, 3))),
+        }))
+        const messages = mock<AgentMessagesService>({
+            customerLinesOf: jest.fn().mockResolvedValue([lines[3]]),
+            unansweredLinesOf: jest.fn().mockResolvedValue([...lines].reverse()),
+        })
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                FlowTriggerMessagesService,
+                { provide: AgentMessagesService, useValue: messages },
+                { provide: ChatFilesService, useValue: mock<ChatFilesService>({ viewsOf: jest.fn().mockResolvedValue([]) }) },
+                { provide: AgentConversationsService, useValue: mock<AgentConversationsService>() },
+            ],
+        }).compile()
+
+        const answered = await moduleRef.get(FlowTriggerMessagesService).messagesOf("ws-1", "c-1", ["m-4"])
+
+        expect(answered.map((message) => message.text)).toEqual(said)
+        expect(answered.map((message) => message.id)).toEqual(["m-1", "m-2", "m-3", "m-4", "m-5"])
     })
 })
 

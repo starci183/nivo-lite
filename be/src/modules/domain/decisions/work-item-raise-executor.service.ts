@@ -9,6 +9,7 @@ import type { WorkSpec } from "./decisions.contracts"
 import { InjectWorkRaised } from "./work-engine.decorators"
 import type { WorkRaisedHook } from "./work-engine.port"
 import { WorkEngineService } from "./work-engine.service"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
 
 /** The name under which a graph node raises work in the Office. */
 const ACTOR = "NIVO"
@@ -48,12 +49,14 @@ const subjectOf = (
 @Injectable()
 /**
  * The executor of the `work-item.raise` effect: a graph node asks a person to decide, and the work engine opens the item that waits for
- * them, once per business key. When the item answers a claim, the capability that owns claims is told through the raised hook, so the
+ * them, once per business key. An action the catalogue does not list (a run's review, a flow's review) is a generic owner decision of
+ * the raising agent's module. When the item answers a claim, the capability that owns claims is told through the raised hook, so the
  * engine names no claim of its own.
  */
 export class WorkItemRaiseExecutorService implements OnModuleInit {
     constructor(
         private readonly engine: WorkEngineService,
+        private readonly installations: InstallationRecordsService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
         @Optional() @InjectWorkRaised() private readonly hook?: WorkRaisedHook,
     ) {}
@@ -69,8 +72,10 @@ export class WorkItemRaiseExecutorService implements OnModuleInit {
     private async raise(turn: NodeTurn, payload: EffectPayload, key: string): Promise<SubjectRef> {
         const given = raisePayload.parse(payload)
         const subject = subjectOf(given.payload, turn)
+        const installation = await this.installations.ofAgent(turn.workspaceId, turn.agentId)
         const spec: WorkSpec = {
             action: given.action,
+            ...(installation === null ? {} : { department: installation.moduleKey }),
             subject_type: subject.type,
             subject_id: subject.id,
             lead_id: textOf(given.payload.leadId),

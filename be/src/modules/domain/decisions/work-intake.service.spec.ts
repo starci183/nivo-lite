@@ -192,6 +192,17 @@ describe("WorkIntakeService", () => {
         await expect(service.insert(ctx, specOf())).rejects.toThrow(DecisionsErrorCode.UnknownAction)
     })
 
+    it("files an action the registry does not list under the department the spec names, as a generic owner decision", async () => {
+        const { service, insert } = await build({ action: null })
+
+        await service.insert(ctx, { ...specOf(), action: "review_agent_run", department: "chatbot" })
+
+        expect(insert).toHaveBeenCalledWith(
+            expect.objectContaining({ action: "review_agent_run", department: "chatbot" }),
+            undefined,
+        )
+    })
+
     it("inserts the exact durable execution choices through the supplied transaction", async () => {
         const { service, insert, modules } = await build()
         const manager = mockEntityManager()
