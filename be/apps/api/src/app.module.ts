@@ -57,7 +57,7 @@ export class AppModule {
                 ...salesModules(),
                 ...adminModules(options),
                 ...agentsModules(options),
-                ...agentWorkModules(),
+                ...agentWorkModules(options),
                 ...agentGraphsModules(),
                 ...accountingModules(),
                 ...agentApiModules(),

@@ -3,7 +3,14 @@ import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectAgentWorkOptions } from "./agent-work.decorators"
-import { LEASE_SECONDS, BREAKER_AFTER, BREAKER_SECONDS, debounceMsOf, retryWaitOf } from "./agent-work.policy"
+import {
+    LEASE_SECONDS,
+    BREAKER_AFTER,
+    BREAKER_SECONDS,
+    debounceMaxMsOf,
+    debounceMsOf,
+    retryWaitOf,
+} from "./agent-work.policy"
 import type { AgentWorkOptions } from "./agent-work.options"
 import { parseBegin, parseDue, parseFinish, parsePropose } from "./agent-work-results.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
@@ -37,12 +44,14 @@ export class AgentTurnsService {
 
     /** Takes the next wake of the scope for `owner`: killed, busy, idle, or a turn begun with its fence. */
     async begin(agentId: string, scopeKey: string, owner: string): Promise<AgentBegin> {
+        const window = debounceMsOf(this.options?.debounceMs)
         const [row] = await callDbFunction<FunctionRow>(this.entityManager, "public.agent_turn_begin", [
             agentId,
             scopeKey,
             owner,
             LEASE_SECONDS,
-            debounceMsOf(this.options?.debounceMs),
+            window,
+            debounceMaxMsOf(this.options?.debounceMaxMs, window),
         ])
         const begin = parseBegin(row?.agent_turn_begin, agentId, scopeKey)
         if (begin === null) throw rejected()

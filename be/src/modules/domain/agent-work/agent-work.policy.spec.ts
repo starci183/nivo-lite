@@ -9,6 +9,7 @@ import {
     backgroundCapSpent,
     boundedWakeAt,
     breakerOpen,
+    debounceMaxMsOf,
     debounceMsOf,
     drainDelayMsOf,
     isBackground,
@@ -32,6 +33,7 @@ const buildSubject = async () => {
                     backgroundCapSpent,
                     boundedWakeAt,
                     breakerOpen,
+                    debounceMaxMsOf,
                     debounceMsOf,
                     drainDelayMsOf,
                     isBackground,
@@ -223,10 +225,18 @@ describe("awaitsAnswer", () => {
 })
 
 describe("burst window", () => {
-    it("is three seconds unless the app root names another, and never below zero", async () => {
+    it("is six seconds unless the app root names another, and never below zero", async () => {
         const { debounceMsOf } = await buildSubject()
 
-        expect([undefined, 5000, 0, -10].map(debounceMsOf)).toEqual([3000, 5000, 0, 0])
+        expect([undefined, 5000, 0, -10].map(debounceMsOf)).toEqual([6000, 5000, 0, 0])
+    })
+
+    it("waits at most twenty seconds unless the app root names another, and never less than the window", async () => {
+        const { debounceMaxMsOf } = await buildSubject()
+
+        expect(debounceMaxMsOf(undefined, 6000)).toBe(20_000)
+        expect(debounceMaxMsOf(12_000, 6000)).toBe(12_000)
+        expect(debounceMaxMsOf(2000, 6000)).toBe(6000)
     })
 
     it("delays the drain of a wake locked to a conversation and no other", async () => {

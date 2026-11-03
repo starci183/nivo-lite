@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentDrainService } from "../../../modules/domain/agent-work/agent-drain.service"
 import { AgentTurnsService } from "../../../modules/domain/agent-work/agent-turns.service"
@@ -287,5 +288,61 @@ describe("agent-work/kill-switch: held, never dropped", () => {
         expect((await rowOf(wake)).status).toBe("pending")
         await drain()
         expect((await rowOf(wake)).status).toBe("done")
+    })
+})
+
+describe("agent-work/burst: a sliding window per conversation", () => {
+    const WINDOW_MS = 6000
+    const MAX_MS = 20_000
+    const messageWake = (eventKey: string, conversationId: string): AgentWake =>
+        wakeOf(eventKey, { source: "customer", context: { conversationId, messageId: `${world.prefix}:${eventKey}` } })
+    const begin = async (conversationId: string): Promise<Record<string, unknown>> => {
+        const [row] = await callDbFunction<{ agent_turn_begin: Record<string, unknown> }>(
+            em(),
+            "public.agent_turn_begin",
+            [AGENT, `conversation:${conversationId}`, "burst-worker", 90, WINDOW_MS, MAX_MS],
+        )
+        assert(row !== undefined)
+        return row.agent_turn_begin
+    }
+    const older = async (wake: AgentWake, ms: number): Promise<void> => {
+        const { id } = await rowOf(wake)
+        await em().query(
+            "UPDATE public.agent_wakes SET created_at = created_at - make_interval(secs => $2::numeric / 1000) WHERE id = $1",
+            [id, ms],
+        )
+    }
+
+    it("agent-work/burst-text-then-image: a text and an image four seconds apart are one turn that reads both", async () => {
+        const text = messageWake("burst-text", "conv-burst")
+        const image = messageWake("burst-image", "conv-burst")
+        await post(text)
+        await post(image)
+        await older(text, 4000)
+
+        // Four seconds in, the image is inside the window: the turn waits for more.
+        await expect(begin("conv-burst")).resolves.toMatchObject({ result: "idle" })
+        expect((await rowOf(text)).status).toBe("pending")
+
+        // Quiet for the whole window since the image: one turn, on the first message, with the image taken into it.
+        await older(text, WINDOW_MS)
+        await older(image, WINDOW_MS)
+        const begun = await begin("conv-burst")
+        expect(begun).toMatchObject({ result: "begun", wakeId: (await rowOf(text)).id })
+        expect(begun.context).toMatchObject({ mergedMessageIds: image.context.messageId })
+        expect((await rowOf(image)).status).toBe("skipped")
+    })
+
+    it("agent-work/burst-cap: a burst that keeps going stops waiting once its first message is older than the longest wait", async () => {
+        const first = messageWake("cap-1", "conv-cap")
+        const last = messageWake("cap-2", "conv-cap")
+        await post(first)
+        await post(last)
+        await older(first, MAX_MS + 1000)
+
+        const begun = await begin("conv-cap")
+
+        expect(begun).toMatchObject({ result: "begun", wakeId: (await rowOf(first)).id })
+        expect(begun.context).toMatchObject({ mergedMessageIds: last.context.messageId })
     })
 })
