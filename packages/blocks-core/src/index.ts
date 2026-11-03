@@ -75,3 +75,6 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     masterDetailBlock,
     explanationBlock,
 ]
+
+export { DEFAULT_THRESHOLD_VND } from "./nodes/order/needs-approval.node"
+export { transferContentOf } from "./nodes/payment/payment-request.policy"
