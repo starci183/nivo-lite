@@ -15,9 +15,12 @@ interface AuthFormProps {
     readonly children: ReactNode
 }
 
-/** One auth form step: a labelled form, the submit error (when there is one) above the fields. */
+/**
+ * One auth form step: a labelled form, the submit error (when there is one) above the fields. The native fallback is a POST: a submit
+ * before hydration would otherwise be a GET that puts the email and password in the URL, the server log and the browser history.
+ */
 export const AuthForm = (props: AuthFormProps) => (
-    <Form label={props.label} onSubmit={props.onSubmit} isPending={props.isPending}>
+    <Form label={props.label} method="post" onSubmit={props.onSubmit} isPending={props.isPending}>
         <Stack gap="section">
             {props.error === undefined ? null : (
                 <Alert title={props.error.title} description={props.error.text} tone="negative" />
