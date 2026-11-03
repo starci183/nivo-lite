@@ -61,7 +61,7 @@ export const raiseWorkItemNode: NodeDefinition<typeof input, typeof output, type
             name: "raises the order for the owner with its amount",
             params: { action: "confirm_order", title: "Order waits for the owner" },
             input: { payload: { orderId: "o1" }, amountVnd: 5_000_000 },
-            output: { workItemId: "work-item-1" },
+            output: { workItemId: "work-item.raise-1" },
             effects: [
                 {
                     kind: "work-item.raise",
@@ -78,7 +78,7 @@ export const raiseWorkItemNode: NodeDefinition<typeof input, typeof output, type
             name: "raises an item that has no amount",
             params: { action: "connect_sepay", title: "Connect SePay" },
             input: { payload: {}, amountVnd: null },
-            output: { workItemId: "work-item-1" },
+            output: { workItemId: "work-item.raise-1" },
             effects: [{ kind: "work-item.raise", payload: { action: "connect_sepay", title: "Connect SePay", payload: {} } }],
         },
     ],

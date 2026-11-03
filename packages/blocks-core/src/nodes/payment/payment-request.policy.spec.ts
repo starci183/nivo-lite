@@ -1,17 +1,17 @@
 import {
-    isPayableAccount,
     itemsTextOf,
     noAccountTitleOf,
     paymentMessageOf,
     transferContentOf,
 } from "./payment-request.policy"
 
-const account = {
+const instruction = {
     provider: "sepay",
     bankCode: "MBBank",
     bankName: null,
     accountNumber: "525209999",
     accountHolder: "NGUYEN VAN A",
+    qrUrl: "https://qr.example/x",
 }
 
 describe("payment request policy", () => {
@@ -20,22 +20,15 @@ describe("payment request policy", () => {
         expect(transferContentOf("so 2026/11_x")).toBe("SO202611X")
     })
 
-    it("accepts only a SePay account", () => {
-        expect(isPayableAccount(account)).toBe(true)
-        expect(isPayableAccount({ ...account, provider: "casso" })).toBe(false)
-        expect(isPayableAccount(undefined)).toBe(false)
-    })
-
     it("lists the items in a few words", () => {
         expect(itemsTextOf([{ name: "tea", qty: 2 }, { name: "cake", qty: 1 }])).toBe("2 x tea, 1 x cake")
     })
 
     it("writes the amount, the content, the holder and the link in the language asked", () => {
         const order = { amountVnd: 1_500_000, lines: [{ name: "tea", qty: 1 }] }
-        const pay = { content: "DH1", qrUrl: "https://qr.example/x" }
 
-        const vi = paymentMessageOf(account, order, pay, "vi")
-        const en = paymentMessageOf({ ...account, bankName: "MB Bank" }, order, pay, "en")
+        const vi = paymentMessageOf(instruction, order, "DH1", "vi")
+        const en = paymentMessageOf({ ...instruction, bankName: "MB Bank" }, order, "DH1", "en")
 
         expect(vi).toContain("1 x tea · 1.500.000 đ")
         expect(vi).toContain("Ngân hàng: MBBank")

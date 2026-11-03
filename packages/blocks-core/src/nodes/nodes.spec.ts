@@ -1,129 +1,141 @@
-import { RightsDeniedError } from "@nivo-lite/agent-sdk/node"
-import type { NodeContext, NodeDefinition, SubjectRef } from "@nivo-lite/agent-sdk/node"
-import { rightsGaps } from "@nivo-lite/agent-sdk/rights"
-import { coreNodes, orderCompleteNode, orderConfirmNode, paymentRequestNode } from "./index"
+import { defineEffect } from "@nivo-lite/agent-sdk/node"
+import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { nodeListMismatches } from "@nivo-lite/agent-sdk/testing"
+import { z } from "zod"
+import {
+    coreNodes,
+    orderConfirmNode,
+    orderNeedsApprovalNode,
+    paymentRequestNode,
+    raiseWorkItemNode,
+} from "./index"
 
-// A stand-in for the SDK's runNodeExamples until the host lead's SDK lands: the same contract, one context per example.
+// The effects the nodes run, with loose payloads; the vocabulary commit brings the real definitions (coreEffects).
+const effects = ["channel.send", "order.record", "order.confirm", "work-item.raise"].map((id) =>
+    defineEffect({ id: id as `${string}.${string}`, title: { key: id }, payload: z.looseObject({}), rights: [] }),
+)
 
-interface RecordedEffect {
-    readonly kind: string
-    readonly payload: unknown
-}
+/** The example of payment.request that needs the tools port, which the SDK host does not give yet: run by hand below. */
+const NEEDS_TOOLS = "sends the order number as the transfer content with the account and QR link the provider tool gave"
 
-type Row = Readonly<Record<string, unknown>>
-
-const matches = (row: Row, where: Readonly<Record<string, string | number | boolean>>): boolean =>
-    Object.entries(where).every(([name, value]) => row[name] === value)
-
-const pick = (row: Row, fields: ReadonlyArray<string>): Row =>
-    Object.fromEntries(fields.map((field) => [field, row[field]]))
-
-const contextOf = (
-    node: NodeDefinition,
-    params: unknown,
-    store: Readonly<Record<string, ReadonlyArray<Row>>>,
-    effects: Array<RecordedEffect>,
-): NodeContext => ({
-    turn: { turnId: "turn-1", workspaceId: "workspace-1", agentId: "agent-1", subject: null },
-    params: node.params.parse(params),
-    data: {
-        read: <T>(kind: string, query: Parameters<NodeContext["data"]["read"]>[1]): Promise<ReadonlyArray<T>> => {
-            const [first, ...rest] = query.fields
-            if (first === undefined) throw new RightsDeniedError(kind)
-            const wanted = { kind, access: "read", scope: "turn", fields: [first, ...rest] } as const
-            if (rightsGaps({ rights: node.rights }, [wanted]).length > 0) throw new RightsDeniedError(kind)
-            const rows = (store[kind] ?? []).filter((row) => matches(row, query.where ?? {}))
-            return Promise.resolve(rows.slice(0, query.limit).map((row) => pick(row, query.fields)) as ReadonlyArray<T>)
-        },
-        write: () => Promise.reject(new RightsDeniedError("write")),
-    },
-    effect: (kind: string, subject: SubjectRef, payload: unknown): Promise<SubjectRef> => {
-        if (!node.effects.includes(kind as never)) throw new Error(`undeclared effect ${kind}`)
-        effects.push({ kind, payload })
-        return Promise.resolve({ kind: subject.kind, id: `${subject.kind}-${String(effects.length)}` })
-    },
-    model: { text: () => Promise.reject(new Error("no model call in a worked example")) },
-    now: () => new Date(0),
+const conforming = (node: NodeDefinition): NodeDefinition => ({
+    ...node,
+    examples: node.examples.filter((example) => example.name !== NEEDS_TOOLS) as unknown as NodeDefinition["examples"],
 })
 
-const runOne = async (
-    node: NodeDefinition,
-    example: NodeDefinition["examples"][number],
-): Promise<{ output: unknown; effects: ReadonlyArray<RecordedEffect> }> => {
-    const effects: Array<RecordedEffect> = []
-    const context = contextOf(node, example.params, example.store ?? {}, effects)
-    const output = node.output.parse(await node.run(node.input.parse(example.input), context))
-    return { output, effects }
-}
-
 describe("coreNodes", () => {
-    it("lists the five nodes by id, in the order the graph runs them", () => {
+    it("lists the seven nodes by id, in the order the graph runs them", () => {
         expect(coreNodes.map((node) => node.id)).toEqual([
             "order.record",
             "order.complete",
             "order.ask-missing",
+            "order.needs-approval",
             "order.confirm",
+            "core.raise-work-item",
             "payment.request",
         ])
     })
 
-    it("names every node by capability and routes on the two conditions", () => {
-        expect(coreNodes.every((node) => /^(order|payment)\.[a-z-]+$/.test(node.id))).toBe(true)
-        expect(coreNodes.filter((node) => node.role === "condition").map((node) => node.id)).toEqual([
-            "order.complete",
-            "order.confirm",
-        ])
+    it("keeps the conditions pure: they route on a branch and declare no effect", () => {
+        const conditions = coreNodes.filter((node) => node.role === "condition")
+
+        expect(conditions.map((node) => node.id)).toEqual(["order.complete", "order.needs-approval"])
+        expect(conditions.every((node) => node.effects.length === 0)).toBe(true)
     })
 
-    it.each(coreNodes.map((node) => [node.id, node] as const))(
-        "%s: every example runs under its declared rights to its output and effects",
-        async (_id, node) => {
-            for (const example of node.examples) {
-                const run = await runOne(node, example)
+    it("runs every worked example to its output and effects", async () => {
+        await expect(nodeListMismatches(coreNodes.map(conforming), effects)).resolves.toEqual({})
+    })
+})
 
-                expect(run.output).toEqual(example.output)
-                expect(run.effects.map((effect) => effect.kind)).toEqual(
-                    example.effects.map((effect) => (typeof effect === "string" ? effect : effect.kind)),
-                )
-                example.effects.forEach((effect, at) => {
-                    if (typeof effect !== "string" && effect.payload !== undefined)
-                        expect(run.effects[at]?.payload).toEqual(effect.payload)
-                })
-            }
-        },
-    )
+describe("order.needs-approval", () => {
+    it("defaults the threshold to 5,000,000 VND", () => {
+        expect(orderNeedsApprovalNode.params.parse({})).toEqual({ thresholdVnd: 5_000_000 })
+    })
 })
 
 describe("order.confirm", () => {
-    it("defaults the threshold to 5,000,000 VND", () => {
-        expect(orderConfirmNode.params.parse({})).toEqual({ thresholdVnd: 5_000_000 })
+    it("confirms once per order across runs: the dedupe key is the order", async () => {
+        const calls: Array<[string, unknown, unknown]> = []
+        const context = {
+            effect: (kind: string, payload: unknown, options: unknown) => {
+                calls.push([kind, payload, options])
+                return Promise.resolve({ kind, id: "x" })
+            },
+        } as unknown as NodeContext
+
+        await orderConfirmNode.run({ orderId: "o1" }, context as never)
+
+        expect(calls).toEqual([["order.confirm", { orderId: "o1" }, { dedupeKey: "order-confirm:o1" }]])
     })
 })
 
-describe("the host contract the examples run under", () => {
-    it("refuses a read the node did not declare", async () => {
-        const [example] = orderCompleteNode.examples
+describe("core.raise-work-item", () => {
+    it("takes the action and the title from the params", () => {
+        expect(raiseWorkItemNode.params.safeParse({ action: "Bad Action", title: "x" }).success).toBe(false)
+        expect(raiseWorkItemNode.params.safeParse({ action: "confirm_order", title: "x" }).success).toBe(true)
+    })
+})
 
-        await expect(runOne({ ...orderCompleteNode, rights: [] } as NodeDefinition, example)).rejects.toThrow(
-            RightsDeniedError,
+describe("payment.request", () => {
+    const order = { id: "o1", orderNo: "DH-20261105-0001", amountVnd: 300_000, status: "confirmed", items: [] }
+    const instruction = {
+        bankName: null,
+        bankCode: "MBBank",
+        accountNumber: "525209999",
+        accountHolder: null,
+        qrUrl: "https://qr.example/x",
+        provider: "sepay",
+    }
+
+    const run = async (answer: () => Promise<unknown>) => {
+        const effectsRun: Array<[string, Record<string, unknown>, unknown]> = []
+        const toolCalls: Array<[string, unknown]> = []
+        const context = {
+            data: { read: () => Promise.resolve([order]) },
+            effect: (kind: string, payload: Record<string, unknown>, options: unknown) => {
+                effectsRun.push([kind, payload, options])
+                return Promise.resolve({ kind, id: "x" })
+            },
+            tools: {
+                call: (name: string, args: unknown) => {
+                    toolCalls.push([name, args])
+                    return answer()
+                },
+            },
+        }
+        const output = await paymentRequestNode.run(
+            { orderId: "o1", conversationId: "conv-1", locale: "en" },
+            context as never,
         )
+        return { output, effectsRun, toolCalls }
+    }
+
+    it("asks the tool with the order number, the amount and the transfer content, then sends once per order", async () => {
+        const { output, effectsRun, toolCalls } = await run(() => Promise.resolve(instruction))
+
+        expect(toolCalls).toEqual([
+            ["payment.instruction", { orderNo: "DH-20261105-0001", amountVnd: 300_000, transferContent: "DH202611050001" }],
+        ])
+        expect(output).toEqual({ status: "sent", content: "DH202611050001", qrUrl: "https://qr.example/x" })
+        expect(effectsRun).toHaveLength(1)
+        expect(effectsRun[0]?.[0]).toBe("channel.send")
+        expect(effectsRun[0]?.[1].text).toContain("Bank: MBBank")
+        expect(effectsRun[0]?.[2]).toEqual({ dedupeKey: "payment-request:o1" })
     })
 
-    it("refuses an effect the node did not declare", async () => {
-        const stray = { ...paymentRequestNode, effects: [] } as NodeDefinition
-        const [example] = paymentRequestNode.examples
+    it.each([
+        ["the tool fails", () => Promise.reject(new Error("no provider connected"))],
+        ["the tool answers something else", () => Promise.resolve({ error: "no provider" })],
+    ])("raises a connect_sepay work item and sends nothing when %s", async (_name, answer) => {
+        const { output, effectsRun } = await run(answer)
 
-        await expect(runOne(stray, example)).rejects.toThrow("undeclared effect")
+        expect(output).toEqual({ status: "no_account", content: null, qrUrl: null })
+        expect(effectsRun.map(([kind]) => kind)).toEqual(["work-item.raise"])
+        expect(effectsRun[0]?.[1]).toMatchObject({ action: "connect_sepay", payload: { orderId: "o1" } })
     })
 
-    it("refuses a write, a model call and a read without fields", async () => {
-        const context = contextOf(paymentRequestNode as NodeDefinition, {}, {}, [])
-
-        await expect(context.data.write("order", { id: "o1" })).rejects.toThrow(RightsDeniedError)
-        await expect(context.model.text({ purpose: "x", instructions: "x", input: null })).rejects.toThrow(
-            "no model call",
-        )
-        expect(() => context.data.read("order", { fields: [] })).toThrow(RightsDeniedError)
-        expect(context.now().getTime()).toBe(0)
+    it("declares no provider data: it reads the order only", () => {
+        expect(paymentRequestNode.rights.map((right) => right.kind)).toEqual(["order"])
     })
 })

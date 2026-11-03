@@ -1,8 +1,9 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
-import type { OrderLine, PaymentAccount } from "./payment-request.policy"
-import { isPayableAccount, noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
+import type { PaymentInstruction } from "./payment-request.policy"
+import type { OrderLine } from "./payment-request.policy"
+import { noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
 import type { RequestLocale } from "./payment-request.messages"
 import type { NodeSchema } from "../order/order.schema"
 
@@ -18,11 +19,11 @@ export interface PaymentRequestInput {
 
 /** What came of the request. */
 export interface PaymentRequestOutput {
-    /** `sent`: the message went to the customer; `no_account`: no SePay account, the owner was told; `not_payable`: the order is not confirmed or has no amount. */
+    /** `sent`: the message went to the customer; `no_account`: no provider answered, the owner was told; `not_payable`: the order is not confirmed or has no amount. */
     readonly status: "sent" | "no_account" | "not_payable"
     /** The transfer content, or null when nothing was sent. */
     readonly content: string | null
-    /** The VietQR link, or null when nothing was sent. */
+    /** The QR link the provider tool drew, or null when nothing was sent. */
     readonly qrUrl: string | null
 }
 
@@ -33,6 +34,26 @@ interface PayableOrder {
     readonly status: string
     readonly items: ReadonlyArray<OrderLine>
 }
+
+/** The NIVO MCP tool that answers how to pay: the account of the connected provider and the QR link of the transfer. */
+const INSTRUCTION_TOOL = "payment.instruction"
+
+/**
+ * The tools port of the node context. The host lead's SDK exposes it as `context.tools`; until it lands this reads it structurally, and
+ * the cast goes away with it.
+ */
+interface ToolsPort {
+    readonly tools: { readonly call: (name: string, args: Readonly<Record<string, unknown>>) => Promise<unknown> }
+}
+
+const instructionSchema: NodeSchema<PaymentInstruction> = z.object({
+    bankName: z.string().nullable(),
+    bankCode: z.string().min(1),
+    accountNumber: z.string().min(1),
+    accountHolder: z.string().nullable(),
+    qrUrl: z.string().min(1),
+    provider: z.string().min(1),
+})
 
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
@@ -48,24 +69,26 @@ const output: NodeSchema<PaymentRequestOutput> = z.object({
     qrUrl: z.string().nullable(),
 })
 
-/**
- * The VietQR image link of one transfer into the account (SePay image: account, bank, amount, content). The only place the link is
- * built; it moves to a provider tool when the capability port lands.
- */
-const qrUrlOf = (account: PaymentAccount, amountVnd: number, content: string): string => {
-    const query = new URLSearchParams({ acc: account.accountNumber, bank: account.bankCode })
-    query.set("amount", String(amountVnd))
-    query.set("des", content)
-    query.set("template", "compact")
-    return `https://qr.sepay.vn/img?${query.toString()}`
-}
-
 const NOT_SENT: Omit<PaymentRequestOutput, "status"> = { content: null, qrUrl: null }
 
+/** What the provider tool answered, or null when it failed or answered something else (no provider connected). */
+const instructionOf = async (
+    context: object,
+    args: Readonly<Record<string, unknown>>,
+): Promise<PaymentInstruction | null> => {
+    try {
+        const answer = instructionSchema.safeParse(await (context as ToolsPort).tools.call(INSTRUCTION_TOOL, args))
+        return answer.success ? answer.data : null
+    } catch {
+        return null
+    }
+}
+
 /**
- * `payment.request`: asks the customer to pay a confirmed order: the amount, the order number as the transfer content, the SePay
- * account and the VietQR link, sent on the channel of the conversation. Without a SePay account nothing is sent and the owner gets a
- * work item. The send is once per order across runs (dedupe key `payment-request:<orderId>`).
+ * `payment.request`: asks the customer to pay a confirmed order. The business rules are here: only a confirmed order with an amount,
+ * the order number reduced to letters and digits as the transfer content, and one request per order across runs (dedupe key
+ * `payment-request:<orderId>`). The account and the QR link come from the `payment.instruction` tool; when it fails or no provider is
+ * connected, nothing is sent and a work item (`connect_sepay`) goes to the owner.
  */
 export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "payment.request",
@@ -74,15 +97,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
     params,
     input,
     output,
-    rights: [
-        {
-            kind: "payment-account",
-            access: "read",
-            scope: "workspace",
-            fields: ["provider", "bankCode", "bankName", "accountNumber", "accountHolder"],
-        },
-        { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
-    ],
+    rights: [{ kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] }],
     effects: ["channel.send", "work-item.raise"],
     run: async (given, context) => {
         const [order] = await context.data.read<PayableOrder>("order", {
@@ -94,11 +109,9 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
         if (order === undefined || order.status !== "confirmed" || amountVnd <= 0) {
             return { status: "not_payable", ...NOT_SENT }
         }
-        const [account] = await context.data.read<PaymentAccount>("payment-account", {
-            fields: ["provider", "bankCode", "bankName", "accountNumber", "accountHolder"],
-            limit: 1,
-        })
-        if (!isPayableAccount(account)) {
+        const content = transferContentOf(order.orderNo)
+        const instruction = await instructionOf(context, { orderNo: order.orderNo, amountVnd, transferContent: content })
+        if (instruction === null) {
             await context.effect("work-item.raise", {
                 action: "connect_sepay",
                 title: noAccountTitleOf(order.orderNo, given.locale),
@@ -106,26 +119,20 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             })
             return { status: "no_account", ...NOT_SENT }
         }
-        const content = transferContentOf(order.orderNo)
-        const qrUrl = qrUrlOf(account, amountVnd, content)
-        const text = paymentMessageOf(account, { amountVnd, lines: order.items }, { content, qrUrl }, given.locale)
+        const text = paymentMessageOf(instruction, { amountVnd, lines: order.items }, content, given.locale)
         await context.effect(
             "channel.send",
             { conversationId: given.conversationId, text },
             { dedupeKey: `payment-request:${given.orderId}` },
         )
-        return { status: "sent", content, qrUrl }
+        return { status: "sent", content, qrUrl: instruction.qrUrl }
     },
     examples: [
         {
-            name: "sends the transfer content, the SePay account and the VietQR link on the conversation",
+            name: "sends the order number as the transfer content with the account and QR link the provider tool gave",
             params: {},
             input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
-            output: {
-                status: "sent",
-                content: "DH202611050001",
-                qrUrl: "https://qr.sepay.vn/img?acc=525209999&bank=MBBank&amount=300000&des=DH202611050001&template=compact",
-            },
+            output: { status: "sent", content: "DH202611050001", qrUrl: "https://qr.example/DH202611050001" },
             effects: [
                 {
                     kind: "channel.send",
@@ -138,7 +145,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                             "Account number: 525209999",
                             "Account holder: NGUYEN VAN A",
                             "Transfer content (type exactly): DH202611050001",
-                            "Or scan the QR code: https://qr.sepay.vn/img?acc=525209999&bank=MBBank&amount=300000&des=DH202611050001&template=compact",
+                            "Or scan the QR code: https://qr.example/DH202611050001",
                             "Once you have transferred, just message us here.",
                         ].join("\n"),
                     },
@@ -154,82 +161,6 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                         items: [{ name: "tea boxes", qty: 2 }],
                     },
                 ],
-                "payment-account": [
-                    {
-                        provider: "sepay",
-                        bankCode: "MBBank",
-                        bankName: "MB Bank",
-                        accountNumber: "525209999",
-                        accountHolder: "NGUYEN VAN A",
-                    },
-                ],
-            },
-        },
-        {
-            name: "writes the Vietnamese message from the bank code when the feed has no bank name or holder",
-            params: {},
-            input: { orderId: "o1", conversationId: "conv-1", locale: "vi" },
-            output: {
-                status: "sent",
-                content: "DH1",
-                qrUrl: "https://qr.sepay.vn/img?acc=525209999&bank=MBBank&amount=1500000&des=DH1&template=compact",
-            },
-            effects: [
-                {
-                    kind: "channel.send",
-                    payload: {
-                        conversationId: "conv-1",
-                        text: [
-                            "Đơn của bạn đã được xác nhận: — · 1.500.000 đ.",
-                            "Bạn vui lòng chuyển khoản theo thông tin sau:",
-                            "Ngân hàng: MBBank",
-                            "Số tài khoản: 525209999",
-                            "Nội dung chuyển khoản (ghi đúng): DH1",
-                            "Hoặc quét mã QR: https://qr.sepay.vn/img?acc=525209999&bank=MBBank&amount=1500000&des=DH1&template=compact",
-                            "Chuyển khoản xong bạn nhắn lại cho shop nhé.",
-                        ].join("\n"),
-                    },
-                },
-            ],
-            store: {
-                order: [{ id: "o1", orderNo: "DH-1", amountVnd: 1_500_000, status: "confirmed", items: [] }],
-                "payment-account": [
-                    {
-                        provider: "sepay",
-                        bankCode: "MBBank",
-                        bankName: null,
-                        accountNumber: "525209999",
-                        accountHolder: null,
-                    },
-                ],
-            },
-        },
-        {
-            name: "raises a work item for the owner and sends nothing without a SePay account",
-            params: {},
-            input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
-            output: { status: "no_account", content: null, qrUrl: null },
-            effects: [
-                {
-                    kind: "work-item.raise",
-                    payload: {
-                        action: "connect_sepay",
-                        title: "Order DH-1 has no payment request: no SePay connection with a full account number",
-                        payload: { orderId: "o1" },
-                    },
-                },
-            ],
-            store: {
-                order: [{ id: "o1", orderNo: "DH-1", amountVnd: 300_000, status: "confirmed", items: [] }],
-                "payment-account": [
-                    {
-                        provider: "casso",
-                        bankCode: "VCB",
-                        bankName: null,
-                        accountNumber: "1234567",
-                        accountHolder: null,
-                    },
-                ],
             },
         },
         {
@@ -238,9 +169,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
             output: { status: "not_payable", content: null, qrUrl: null },
             effects: [],
-            store: {
-                order: [{ id: "o1", orderNo: "DH-1", amountVnd: 300_000, status: "draft", items: [] }],
-            },
+            store: { order: [{ id: "o1", orderNo: "DH-1", amountVnd: 300_000, status: "draft", items: [] }] },
         },
         {
             name: "sends nothing for a confirmed order that has no amount",
@@ -248,9 +177,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
             output: { status: "not_payable", content: null, qrUrl: null },
             effects: [],
-            store: {
-                order: [{ id: "o1", orderNo: "DH-1", amountVnd: null, status: "confirmed", items: [] }],
-            },
+            store: { order: [{ id: "o1", orderNo: "DH-1", amountVnd: null, status: "confirmed", items: [] }] },
         },
         {
             name: "sends nothing for an order that is gone",

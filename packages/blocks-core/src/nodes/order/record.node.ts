@@ -86,7 +86,7 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
                 note: "gọi trước",
             },
             output: {
-                orderId: "order-1",
+                orderId: "order.record-1",
                 items: [{ name: "Trà sen", quantity: 3, priceVnd: 120_000, catalogueItemId: "c1" }],
                 amountVnd: 360_000,
             },
@@ -107,7 +107,7 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
             name: "records an item the catalogue lacks, unpriced, without a total or a note",
             params: {},
             input: { leadId: "lead-1", items: [{ name: "Bánh", quantity: 2, priceVnd: null }], address: null, note: null },
-            output: { orderId: "order-1", items: [{ name: "Bánh", quantity: 2, priceVnd: null }], amountVnd: null },
+            output: { orderId: "order.record-1", items: [{ name: "Bánh", quantity: 2, priceVnd: null }], amountVnd: null },
             effects: [
                 {
                     kind: "order.record",

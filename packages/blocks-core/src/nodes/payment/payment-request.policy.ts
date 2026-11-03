@@ -1,18 +1,20 @@
 import { REQUEST_WORDS } from "./payment-request.messages"
 import type { RequestLocale } from "./payment-request.messages"
 
-/** The bank account a customer pays into, as the payment-account data port reads it. */
-export interface PaymentAccount {
-    /** The feed the account comes from. */
-    readonly provider: string
-    /** The short bank code as VietQR lists it. */
-    readonly bankCode: string
+/** What the `payment.instruction` tool answers: the account to pay into and the QR link of the transfer. */
+export interface PaymentInstruction {
     /** The bank name to show, or null. */
     readonly bankName: string | null
+    /** The short bank code. */
+    readonly bankCode: string
     /** The full account number, digits only. */
     readonly accountNumber: string
     /** The account holder, or null. */
     readonly accountHolder: string | null
+    /** The QR image link of the transfer, drawn by the provider tool. */
+    readonly qrUrl: string
+    /** The provider the account comes from. */
+    readonly provider: string
 }
 
 /** A line of a recorded order as the order data port reads it. */
@@ -23,15 +25,8 @@ export interface OrderLine {
     readonly qty: number
 }
 
-/** The only feed whose account a payment request names. */
-export const PAYMENT_PROVIDER = "sepay"
-
 /** The transfer content of an order number: letters and digits only, upper case (`DH-20261105-0001` becomes `DH202611050001`). */
 export const transferContentOf = (orderNo: string): string => orderNo.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
-
-/** True for an account a payment request may name: a SePay feed. */
-export const isPayableAccount = (account: PaymentAccount | undefined): account is PaymentAccount =>
-    account !== undefined && account.provider === PAYMENT_PROVIDER
 
 /** The items of an order in a few words: `2 x tea, 1 x cake`. */
 export const itemsTextOf = (lines: ReadonlyArray<OrderLine>): string =>
@@ -42,9 +37,9 @@ const fill = (template: string, values: Readonly<Record<string, string>>): strin
 
 /** The message that asks the customer to pay: the amount, the items, the account, the transfer content and the QR link. */
 export const paymentMessageOf = (
-    account: PaymentAccount,
+    instruction: PaymentInstruction,
     order: { readonly amountVnd: number; readonly lines: ReadonlyArray<OrderLine> },
-    pay: { readonly content: string; readonly qrUrl: string },
+    content: string,
     locale: RequestLocale,
 ): string => {
     const words = REQUEST_WORDS[locale]
@@ -52,14 +47,13 @@ export const paymentMessageOf = (
     const items = itemsTextOf(order.lines)
     return [
         fill(words.intro, { items: items === "" ? "—" : items, amount }),
-        fill(words.bank, { bank: account.bankName ?? account.bankCode }),
-        fill(words.account, { account: account.accountNumber }),
-        ...(account.accountHolder === null ? [] : [fill(words.holder, { holder: account.accountHolder })]),
-        fill(words.content, { content: pay.content }),
-        fill(words.qr, { url: pay.qrUrl }),
+        fill(words.bank, { bank: instruction.bankName ?? instruction.bankCode }),
+        fill(words.account, { account: instruction.accountNumber }),
+        ...(instruction.accountHolder === null ? [] : [fill(words.holder, { holder: instruction.accountHolder })]),
+        fill(words.content, { content }),
+        fill(words.qr, { url: instruction.qrUrl }),
         words.outro,
-    ].join("
-")
+    ].join("\n")
 }
 
 /** The title of the work item that tells the owner the payment request could not go out. */
