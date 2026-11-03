@@ -117,6 +117,8 @@ import { telegramInboxEntities } from "@modules/domain/telegram-inbox"
 import { threadMessagesEntities } from "@modules/domain/thread-messages"
 import { threadWorkEntities } from "@modules/domain/thread-work"
 import { agentGraphsEntities } from "@modules/domain/agent-graphs"
+import { agentTemplatesEntities } from "@modules/domain/agent-templates"
+import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
 import { agentRunsEntities } from "@modules/domain/agent-runs"
 import { agentWorkEntities } from "@modules/domain/agent-work"
 import { transactionsEntities } from "@modules/domain/transactions"
@@ -263,6 +265,8 @@ export const PRIMARY_ENTITIES = [
     ...threadMessagesEntities,
     ...threadWorkEntities,
     ...agentGraphsEntities,
+    ...agentTemplatesEntities,
+    ...templateMarketplaceEntities,
     ...agentRunsEntities,
     ...agentWorkEntities,
     ...transactionsEntities,
