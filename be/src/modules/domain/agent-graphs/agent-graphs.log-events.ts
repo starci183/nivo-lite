@@ -1,5 +1,7 @@
 /** Log events of the action graph: ids only, never a customer's words or a rule's text. */
 export enum AgentGraphsLogEvent {
+    /** A refresh found a node graph the installed nodes no longer take; the version stays, and the owner must change the spec. */
+    FlowUnsound = "agent_graphs.flow_unsound",
     /** A fact could not be read, so the branch fell to the else. */
     FactUnreadable = "agent_graphs.fact_unreadable",
     /** The request of a branch ask could not be opened, so the item stays with the people who govern. */

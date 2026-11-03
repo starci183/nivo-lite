@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
 import { AgentGraphsService } from "./agent-graphs.service"
-import type { GraphDocument } from "./agent-graphs.contracts"
+import type { GraphChangeKind, GraphDocument } from "./agent-graphs.contracts"
 import { requireSoundFlow, sameFlow } from "./policies/flow.policy"
 
 /** What publishing a flow did: gave the agent its first graph, published another flow as the next version, or found the same flow live. */
@@ -24,11 +24,15 @@ export interface PublishFlowInput {
 
 const EMPTY: GraphDocument = { nodes: [], rights: [] }
 
+/** The change kind of a version a spec published: the rules-derived refresh never replaces it. */
+const SPEC: GraphChangeKind = "spec"
+
 @Injectable()
 /**
  * Puts a flow on the graph of an agent as the version that decides. The flow is judged first against the installed nodes under its own
- * grant, and a flow with a problem is refused with nothing written. The same flow again changes nothing; another one is the next
- * version, with the nodes and rights of the live one kept.
+ * grant, and a flow with a problem is refused with nothing written. The version is of kind `spec`, which the rules-derived refresh
+ * never replaces. The same flow live as a spec changes nothing; any other state (another flow, none, or the same one on a version of
+ * another kind) publishes the next version, with the nodes and rights of the live one kept, so a rerun restores a flow a version lost.
  */
 export class AgentGraphFlowService {
     constructor(private readonly graphs: AgentGraphsService) {}
@@ -37,21 +41,18 @@ export class AgentGraphFlowService {
     async publish(input: PublishFlowInput): Promise<FlowPublished> {
         const { workspaceId, agentId, installationId, flow, installed } = input
         requireSoundFlow(flow, installed)
-        const state = await this.graphs.stateOfAgent(workspaceId, agentId)
-        if (state === null) {
-            await this.graphs.ensure(workspaceId, agentId, installationId, { ...EMPTY, flow })
-            return "created"
-        }
-        if (sameFlow(state.active?.flow, flow)) return "unchanged"
+        const existing = await this.graphs.stateOfAgent(workspaceId, agentId)
+        const state = existing ?? (await this.graphs.ensure(workspaceId, agentId, installationId, EMPTY))
+        if (state.activeKind === SPEC && sameFlow(state.active?.flow, flow)) return "unchanged"
         await this.graphs.publish({
             workspaceId,
             agentId,
             document: { ...(state.active ?? EMPTY), flow },
-            kind: "seed",
+            kind: SPEC,
             note: "",
             memberId: null,
             contextVersionId: null,
         })
-        return "replaced"
+        return existing === null ? "created" : "replaced"
     }
 }

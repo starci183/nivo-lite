@@ -1,12 +1,17 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModulesService } from "@modules/domain/modules"
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { OWNER_EXAMPLE, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -57,6 +62,7 @@ const build = async (
         setup?: ApprovalSetup | null
         rule?: "none"
         action?: string
+        nodes?: GraphNodeRegistryService
     } = {},
 ) => {
     const existing = options.existing === true ? stateOf() : null
@@ -101,6 +107,7 @@ const build = async (
         ruleFor: jest.fn().mockResolvedValue(options.rule === "none" ? null : { limit_vnd: 5_000_000 }),
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphSeedService,
@@ -110,9 +117,11 @@ const build = async (
             { provide: AutomationTemplatesService, useValue: templates },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: LOGGER, useValue: logger },
+            ...(options.nodes === undefined ? [] : [{ provide: GraphNodeRegistryService, useValue: options.nodes }]),
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphSeedService), graphs, rules, templates }
+    return { service: moduleRef.get(AgentGraphSeedService), graphs, rules, templates, logger }
 }
 
 describe("AgentGraphSeedService.ensureFor", () => {
@@ -251,5 +260,58 @@ describe("AgentGraphSeedService.refresh", () => {
 
         await expect(service.refresh(state, "accounting", "en")).resolves.toBe(false)
         expect(graphs.publish).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphSeedService.refresh of a node graph", () => {
+    const FLOW: GraphSpec = {
+        schema: "nivo/agent-graph@1",
+        moduleKey: "accounting",
+        trigger: { kind: "tag", sources: ["system-event"] },
+        grant: { rights: [], tools: [], effects: [] },
+        nodes: [{ key: "end", kind: "output", step: "stop" }],
+    }
+    const flowState = (activeKind: "seed" | "spec", flow: GraphSpec = FLOW): GraphState => {
+        const document = { ...graphOf(OWNER_EXAMPLE), flow }
+        return stateOf({ activeKind, draft: document, active: document })
+    }
+    const installed = (): GraphNodeRegistryService =>
+        mock<GraphNodeRegistryService>({
+            installed: jest.fn().mockReturnValue(nodeIndexOf({ nodes: [], effects: [], tools: [], dataKinds: [] })),
+        })
+
+    it("never replaces a version that holds a flow, whatever its kind, even when the rules changed", async () => {
+        const { service, graphs, rules, logger } = await build({ setup: null, nodes: installed() })
+
+        await expect(service.refresh(flowState("seed"), "accounting", "en")).resolves.toBe(false)
+        await expect(service.refresh(flowState("spec"), "accounting", "en")).resolves.toBe(false)
+
+        expect(graphs.publish).not.toHaveBeenCalled()
+        expect(rules.approvalSetup).not.toHaveBeenCalled()
+        expect(logger.warn).not.toHaveBeenCalled()
+    })
+
+    it("names each problem of a flow the installed nodes no longer take, and still leaves it live", async () => {
+        const { service, graphs, logger } = await build({ nodes: installed() })
+        const broken = { ...FLOW, nodes: [{ key: "gone", kind: "output" as const, step: "order.gone" }] }
+
+        await expect(service.refresh(flowState("spec", broken), "accounting", "en")).resolves.toBe(false)
+
+        expect(graphs.publish).not.toHaveBeenCalled()
+        expect(logger.warn).toHaveBeenCalledWith("agent_graphs.flow_unsound", {
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            code: "NODE_UNKNOWN",
+            at: "gone",
+        })
+    })
+
+    it("only keeps a flow in an app that hosts no nodes", async () => {
+        const { service, graphs, logger } = await build({ setup: null })
+
+        await expect(service.refresh(flowState("seed"), "accounting", "en")).resolves.toBe(false)
+
+        expect(graphs.publish).not.toHaveBeenCalled()
+        expect(logger.warn).not.toHaveBeenCalled()
     })
 })

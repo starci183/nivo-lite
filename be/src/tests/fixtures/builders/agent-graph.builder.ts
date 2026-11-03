@@ -101,7 +101,7 @@ interface GraphDocument {
     }>
 }
 type GraphMode = "shadow" | "enforced"
-type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback"
+type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback" | "spec"
 
 const GraphEntity: (typeof agentGraphsEntities)[0] = agentGraphsEntities[0]
 const VersionEntity: (typeof agentGraphsEntities)[1] = agentGraphsEntities[1]

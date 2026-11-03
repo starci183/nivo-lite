@@ -394,8 +394,8 @@ export interface GraphDiff {
     readonly changes: ReadonlyArray<DiffChange>
 }
 
-/** How a version came to be. */
-export type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback"
+/** How a version came to be; `spec` is a node graph a graph spec published, which no rules-derived refresh replaces. */
+export type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback" | "spec"
 
 /** Where a proposal stands: waiting for a person, taken, turned down, or overtaken by a newer change. */
 export type ProposalStatus = "open" | "confirmed" | "declined" | "superseded"

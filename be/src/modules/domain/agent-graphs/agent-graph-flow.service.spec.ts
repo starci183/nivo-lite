@@ -38,23 +38,39 @@ const build = async (held: ReturnType<typeof stateOf> | null) => {
 }
 
 describe("AgentGraphFlowService > publish", () => {
-    it("gives an agent with no graph one that holds the flow, as the version that decides", async () => {
+    it("gives an agent with no graph an empty one, then the flow as a spec version that decides", async () => {
         const { service, graphs } = await build(null)
+        graphs.ensure.mockResolvedValue(stateOf({ active: null }))
 
         await expect(service.publish(INPUT)).resolves.toBe("created")
 
-        expect(graphs.ensure).toHaveBeenCalledWith("ws-1", "agent-1", "inst-1", { nodes: [], rights: [], flow: FLOW })
-        expect(graphs.publish).not.toHaveBeenCalled()
+        expect(graphs.ensure).toHaveBeenCalledWith("ws-1", "agent-1", "inst-1", { nodes: [], rights: [] })
+        expect(graphs.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ kind: "spec", document: { nodes: [], rights: [], flow: FLOW } }),
+        )
     })
 
-    it("changes nothing when the live graph already holds the flow", async () => {
+    it("changes nothing when the live graph already holds the flow as a spec version, across any number of runs", async () => {
         const held: GraphDocument = { ...graphOf(OWNER_EXAMPLE), flow: FLOW }
-        const { service, graphs } = await build(stateOf({ active: held }))
+        const { service, graphs } = await build(stateOf({ active: held, activeKind: "spec" }))
 
+        await expect(service.publish(INPUT)).resolves.toBe("unchanged")
         await expect(service.publish(INPUT)).resolves.toBe("unchanged")
 
         expect(graphs.ensure).not.toHaveBeenCalled()
         expect(graphs.publish).not.toHaveBeenCalled()
+    })
+
+    it("restores the flow as a spec version when the live version lost it, or holds it on a version of another kind", async () => {
+        const live = graphOf(OWNER_EXAMPLE)
+        const lost = await build(stateOf({ active: live, activeKind: "seed" }))
+        await expect(lost.service.publish(INPUT)).resolves.toBe("replaced")
+        expect(lost.graphs.publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "spec", document: { ...live, flow: FLOW } }))
+
+        const withFlow: GraphDocument = { ...live, flow: FLOW }
+        const seeded = await build(stateOf({ active: withFlow, activeKind: "seed" }))
+        await expect(seeded.service.publish(INPUT)).resolves.toBe("replaced")
+        expect(seeded.graphs.publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "spec" }))
     })
 
     it("publishes the flow as the next version and keeps the nodes and rights of the live graph", async () => {
@@ -67,7 +83,7 @@ describe("AgentGraphFlowService > publish", () => {
             workspaceId: "ws-1",
             agentId: "agent-1",
             document: { ...live, flow: FLOW },
-            kind: "seed",
+            kind: "spec",
             note: "",
             memberId: null,
             contextVersionId: null,
