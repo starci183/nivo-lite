@@ -114,3 +114,23 @@ describe("AgentGraphFlowService > publish", () => {
         expect(graphs.publish).not.toHaveBeenCalled()
     })
 })
+
+describe("AgentGraphFlowService > holds", () => {
+    it("is true only when the live version is a spec holding the flow, by one read and no write", async () => {
+        const held: GraphDocument = { ...graphOf(OWNER_EXAMPLE), flow: FLOW }
+        const same = await build(stateOf({ active: held, activeKind: "spec" }))
+        const seeded = await build(stateOf({ active: held, activeKind: "seed" }))
+        const other = await build(stateOf())
+        const none = await build(null)
+        const unversioned = await build(stateOf({ active: null }))
+
+        await expect(same.service.holds("ws-1", "agent-1", FLOW)).resolves.toBe(true)
+        await expect(seeded.service.holds("ws-1", "agent-1", FLOW)).resolves.toBe(false)
+        await expect(other.service.holds("ws-1", "agent-1", FLOW)).resolves.toBe(false)
+        await expect(none.service.holds("ws-1", "agent-1", FLOW)).resolves.toBe(false)
+        await expect(unversioned.service.holds("ws-1", "agent-1", FLOW)).resolves.toBe(false)
+        expect(same.graphs.stateOfAgent).toHaveBeenCalledWith("ws-1", "agent-1")
+        expect(same.graphs.ensure).not.toHaveBeenCalled()
+        expect(same.graphs.publish).not.toHaveBeenCalled()
+    })
+})

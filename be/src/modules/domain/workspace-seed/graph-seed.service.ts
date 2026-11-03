@@ -35,7 +35,8 @@ interface Seat {
  * under the handle of its module, so `sales`, `accounting` and `chatbot` name the installed agents), given the default authority rules
  * of the module, brought live through the same activation the profile seed uses (the gates are confirmed with the wording of the module
  * itself, so no setup chat runs), and the spec is published as the flow the agent runs, judged against the installed nodes first. A
- * rerun with the same content changes nothing. It prints what it did and never a value.
+ * rerun with the same content changes nothing and is cheap: a module that is live and already runs the flow costs reads only (its
+ * installation and its live graph), so the seed may run on every start. It prints what it did and never a value.
  */
 export class GraphSeedService {
     constructor(
@@ -59,6 +60,10 @@ export class GraphSeedService {
         for (const spec of specs) {
             const module = await this.modules.find(spec.moduleKey)
             const { installation, agentId } = await this.seatOf(workspaceId, module)
+            if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
+                this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
+                continue
+            }
             await this.rules.seedDefaults(workspaceId, module.key, defaultRulesOf(module))
             const statuses = await this.activation.activate({ workspaceId, ownerId }, [
                 {
