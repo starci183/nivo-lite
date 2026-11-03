@@ -1,6 +1,7 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req } from "@nestjs/common"
 import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
+import { PollScheduleService } from "@modules/domain/connection-poll"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { ZaloInboxService } from "@modules/domain/zalo-inbox"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
@@ -16,6 +17,7 @@ export class ZaloWebhook {
     constructor(
         private readonly signature: ScopedWebhookVerifier,
         private readonly deliveries: ZaloInboxService,
+        private readonly schedule: PollScheduleService,
     ) {}
 
     /** Acknowledges with 200 and no body: a duplicate receives the same acknowledgement without being processed again. */
@@ -36,5 +38,6 @@ export class ZaloWebhook {
             timestamp: undefined,
         })
         await this.deliveries.acceptZaloDelivery(request.rawBody, route.connectionId)
+        await this.schedule.recordWebhook(route.connectionId)
     }
 }

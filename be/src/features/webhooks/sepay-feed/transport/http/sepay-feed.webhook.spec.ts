@@ -5,6 +5,7 @@ import { Test } from "@nestjs/testing"
 import type { Request } from "express"
 import { mock } from "@starci/jest-preset"
 import { BankFeedService, BillingError, BillingErrorCode } from "@modules/domain/billing"
+import { PollScheduleService } from "@modules/domain/connection-poll"
 import { PublicReason } from "@modules/domain/identity"
 import { RateTier } from "@modules/platform/http-security"
 import { SepayFeedHttpModule, webhookVerifiers } from "./sepay-feed-http.module"
@@ -16,17 +17,23 @@ const build = async () => {
     const feed = mock<BankFeedService>()
     feed.verifyFeedDelivery.mockResolvedValue(undefined)
     feed.acceptFeedDelivery.mockResolvedValue(undefined)
+    const schedule = mock<PollScheduleService>()
+    schedule.recordWebhook.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
-        providers: [SepayFeedWebhook, { provide: BankFeedService, useValue: feed }],
+        providers: [
+            SepayFeedWebhook,
+            { provide: BankFeedService, useValue: feed },
+            { provide: PollScheduleService, useValue: schedule },
+        ],
     }).compile()
-    return { door: moduleRef.get(SepayFeedWebhook), feed }
+    return { door: moduleRef.get(SepayFeedWebhook), feed, schedule }
 }
 
 describe("SepayFeedWebhook", () => {
     it.each(["Apikey k", " \tAPIKEY k \t"])(
         "hands the url connection, the header %j and the raw bytes to the feed intake and answers success",
         async (authorization) => {
-            const { door, feed } = await build()
+            const { door, feed, schedule } = await build()
 
             await expect(
                 door.receive(mock<RawBodyRequest<Request>>({ rawBody: RAW }), "conn-1", authorization),
@@ -37,6 +44,7 @@ describe("SepayFeedWebhook", () => {
             expect(feed.acceptFeedDelivery).toHaveBeenCalledTimes(1)
             expect(feed.acceptFeedDelivery).toHaveBeenCalledWith(RAW, "conn-1", "sepay")
             expect(feed.acceptFeedDelivery.mock.calls[0]?.[0]).toBe(RAW)
+            expect(schedule.recordWebhook).toHaveBeenCalledWith("conn-1")
         },
     )
 
@@ -121,7 +129,7 @@ describe("SepayFeedWebhook", () => {
 
 describe("SepayFeedWebhook", () => {
     it("lets a refusal of the intake reach SePay", async () => {
-        const { door, feed } = await build()
+        const { door, feed, schedule } = await build()
         const refusal = "refused"
         feed.acceptFeedDelivery.mockRejectedValue(refusal)
 
@@ -131,6 +139,7 @@ describe("SepayFeedWebhook", () => {
 
         expect(feed.acceptFeedDelivery).toHaveBeenCalledTimes(1)
         expect(feed.acceptFeedDelivery).toHaveBeenCalledWith(RAW, "conn-1", "sepay")
+        expect(schedule.recordWebhook).not.toHaveBeenCalled()
     })
 
     it("acknowledges accepted deliveries with HTTP 200", () => {
