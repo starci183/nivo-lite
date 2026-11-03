@@ -23,6 +23,8 @@ const doneSchema = z.object({
     effects: z.array(z.object({ id: z.string(), subject: z.object({ kind: z.string(), id: z.string() }) })),
 })
 
+const subjectSchema = z.object({ kind: z.string().min(1), id: z.string().min(1) })
+
 const stepInputSchema: z.ZodType<GraphNodeStepInput> = z.object({
     versionId: z.string().min(1),
     nodeKey: z.string().min(1),
@@ -35,18 +37,21 @@ const textOf = (trigger: StepJson, member: string): string | null => {
     return typeof value === "string" ? value : null
 }
 
-/** The turn a node runs in: the run is the turn, about the trigger's subject, in its conversation and language. */
-const turnOf = (step: StepView, trigger: StepJson): NodeTurn => {
-    const subjectId = textOf(trigger, "subjectId")
-    return {
-        turnId: step.runId,
-        workspaceId: step.workspaceId,
-        agentId: step.agentId,
-        subject: subjectId === null ? null : { kind: textOf(trigger, "subjectType") ?? "subject", id: subjectId },
-        conversationId: textOf(trigger, "conversationId"),
-        locale: localeOf(trigger),
-    }
+/** The subject a trigger names: `{ kind, id }` as the scope parsed it, else none; the host's resolvers fill a turn without one. */
+const subjectOf = (trigger: StepJson): NodeTurn["subject"] => {
+    const parsed = subjectSchema.safeParse(trigger.subject)
+    return parsed.success ? parsed.data : null
 }
+
+/** The turn a node runs in: the run is the turn, about the trigger's subject, in its conversation and language. */
+const turnOf = (step: StepView, trigger: StepJson): NodeTurn => ({
+    turnId: step.runId,
+    workspaceId: step.workspaceId,
+    agentId: step.agentId,
+    subject: subjectOf(trigger),
+    conversationId: textOf(trigger, "conversationId"),
+    locale: localeOf(trigger),
+})
 
 /** Whether a node refused in a way no retry changes: a schema, a right, an undeclared effect or tool. */
 const refused = (cause: unknown): cause is NodeRunError | RightsDeniedError | ToolUndeclaredError =>

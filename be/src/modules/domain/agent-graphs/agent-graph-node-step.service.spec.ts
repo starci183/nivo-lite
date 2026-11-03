@@ -23,7 +23,7 @@ const FLOW: GraphSpec = {
     ],
 }
 
-const TRIGGER = { text: "hi", conversationId: "c-1", subjectId: "o-1", subjectType: "order", locale: "en" }
+const TRIGGER = { text: "hi", conversationId: "c-1", subject: { kind: "order", id: "o-1" }, locale: "en" }
 
 const stepOf = (nodeKey: string, overrides: Partial<StepView> = {}): StepView =>
     ({
@@ -105,20 +105,12 @@ describe("AgentGraphNodeStepService", () => {
         host.run.mockResolvedValueOnce({ output: { branch: "yes" }, effects: [] }).mockResolvedValueOnce({ output: { branch: "no" }, effects: [] })
 
         await expect(steps.run(stepOf("check", { earlier: {} }))).resolves.toMatchObject({ next: [{ stepKey: "keep" }] })
-        const bare = { ...TRIGGER, subjectId: undefined, subjectType: undefined, conversationId: undefined }
+        const bare = { ...TRIGGER, subject: "a label", conversationId: undefined }
         await expect(
             steps.run(stepOf("check", { input: { versionId: "version-1", nodeKey: "check", trigger: bare } })),
         ).resolves.toMatchObject({ next: [] })
         expect(host.run.mock.calls[1]?.[0]).toMatchObject({ params: {}, input: {}, turn: { subject: null, conversationId: null } })
         await expect(steps.run(stepOf("end"))).resolves.toEqual({ kind: "done", result: { output: null, effects: [] }, next: [] })
-    })
-
-    it("names the subject of a trigger with an id and no type a subject", async () => {
-        const { steps, host } = await build()
-        host.run.mockResolvedValue({ output: { branch: "no" }, effects: [] })
-        const typeless = { ...TRIGGER, subjectType: 1 }
-        await steps.run(stepOf("check", { input: { versionId: "version-1", nodeKey: "check", trigger: typeless } }))
-        expect(host.run.mock.calls[0]?.[0].turn.subject).toEqual({ kind: "subject", id: "o-1" })
     })
 
     it("fails a row that is not a node step, a node the version does not hold, and a node that refused", async () => {

@@ -1,4 +1,4 @@
-import { graphNodeStepOf, localeOf, outputsOf, tagSourceOf, triggerScopeOf } from "./graph-flow.policy"
+import { graphNodeStepOf, localeOf, outputsOf, subjectOfLabel, tagSourceOf, triggerScopeOf } from "./graph-flow.policy"
 import type { FlowWake } from "./graph-flow.policy"
 
 const wake = (overrides: Partial<FlowWake> = {}): FlowWake => ({ source: "tag", context: {}, actorMemberId: null, ...overrides })
@@ -28,6 +28,7 @@ describe("triggerScopeOf", () => {
                     tagContext: '{"items":[{"name":"Lan"}]}',
                     authorAgentId: "a-2",
                     locale: "en",
+                    subject: "order:o-1",
                 },
             }),
         )
@@ -37,6 +38,7 @@ describe("triggerScopeOf", () => {
             leadId: "l-1",
             authorAgentId: "a-2",
             locale: "en",
+            subject: { kind: "order", id: "o-1" },
             context: { items: [{ name: "Lan" }] },
             source: "agent",
             origin: "agent",
@@ -44,6 +46,7 @@ describe("triggerScopeOf", () => {
         expect(triggerScopeOf(wake({ context: { tagSource: "sepay" } }))).toMatchObject({
             source: "sepay",
             origin: "system-event",
+            subject: null,
             context: {},
             locale: "vi",
         })
@@ -76,5 +79,16 @@ describe("graphNodeStepOf", () => {
             record: { orderId: "o-1" },
             gone: undefined,
         })
+    })
+})
+
+describe("subjectOfLabel", () => {
+    it("reads a `<kind>:<id>` label as a subject, and nothing else", () => {
+        expect(subjectOfLabel("bank-transaction:t-1")).toEqual({ kind: "bank-transaction", id: "t-1" })
+        expect(subjectOfLabel("a label")).toBeNull()
+        expect(subjectOfLabel(":x")).toBeNull()
+        expect(subjectOfLabel("x:")).toBeNull()
+        expect(subjectOfLabel(1)).toBeNull()
+        expect(triggerScopeOf(wake({ context: { subject: "a label" } })).subject).toBe("a label")
     })
 })

@@ -41,9 +41,16 @@ export const tagSourceOf = ({ source, context, actorMemberId }: FlowWake): Graph
     return source === "customer" || context.conversationId !== undefined ? "channel" : "agent"
 }
 
+/** A subject written as `<kind>:<id>` (as the tag door keeps it), or null for a label in any other form. */
+export const subjectOfLabel = (label: unknown): { readonly kind: string; readonly id: string } | null => {
+    if (typeof label !== "string") return null
+    const at = label.indexOf(":")
+    return at <= 0 || at === label.length - 1 ? null : { kind: label.slice(0, at), id: label.slice(at + 1) }
+}
+
 /**
- * The trigger scope the nodes read as `trigger.*`: every member of the wake's flat context as its door wrote it, the tag's plain data
- * as `context`, the system source that tagged (or where the wake came from) as `source`, where it came from as `origin`, and the
+ * The trigger scope the nodes read as `trigger.*`: every member of the wake's flat context as its door wrote it, the subject as
+ * `{ kind, id }` when the door wrote it as `<kind>:<id>`, the tag's plain data as `context`, the system source that tagged (or where the wake came from) as `source`, where it came from as `origin`, and the
  * language as `locale`.
  */
 export const triggerScopeOf = (wake: FlowWake): StepJson => {
@@ -51,6 +58,7 @@ export const triggerScopeOf = (wake: FlowWake): StepJson => {
     const origin = tagSourceOf(wake)
     return {
         ...members,
+        subject: subjectOfLabel(wake.context.subject) ?? wake.context.subject ?? null,
         context: tagPayloadOf(wake.context),
         source: wake.context.tagSource ?? origin,
         origin,
