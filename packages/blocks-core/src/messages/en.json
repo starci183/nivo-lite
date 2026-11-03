@@ -32,7 +32,6 @@
   "effectWorkItemRaise": "Raise a work item",
   "toolPaymentInstruction": "Payment instruction",
   "effectOrderVoid": "Void an order",
-  "effectOrderUnconfirm": "Take back an order confirmation",
   "effectPaymentClaimWithdraw": "Withdraw a payment claim",
   "effectWorkItemWithdraw": "Withdraw a work item"
 }

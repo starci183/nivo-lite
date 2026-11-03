@@ -201,19 +201,27 @@ describe("flow F graphs on fake ports", () => {
         expect(String(world.ran[2]?.payload.text)).toContain("DH001")
     })
 
-    it("Sales undoes the confirmation and the order, last first, when the payment request fails before the pivot", async () => {
+    it("Sales voids the order it recorded when the confirmation fails before any pivot", async () => {
+        const graph = graphOf("sales")
+        const world = worldOf({ "catalogue-item": [...CATALOGUE] }, "order.confirm")
+        const run = await drive(await build(world, graph, {}), graph, SALES_WAKE)
+
+        expect(run.failed).toBe("confirm")
+        expect(run.undone).toEqual(["record"])
+        expect(world.ran.map((entry) => [entry.effect, entry.payload])).toEqual([
+            ["order.record", expect.anything()],
+            ["order.void", { id: "order-1" }],
+        ])
+    })
+
+    it("Sales undoes nothing when the payment request fails after the confirmation, a pivot", async () => {
         const graph = graphOf("sales")
         const world = worldOf({ "catalogue-item": [...CATALOGUE] }, "channel.send")
         const run = await drive(await build(world, graph, {}), graph, SALES_WAKE)
 
         expect(run.failed).toBe("request-payment")
-        expect(run.undone).toEqual(["confirm", "record"])
-        expect(world.ran.map((entry) => [entry.effect, entry.payload])).toEqual([
-            ["order.record", expect.anything()],
-            ["order.confirm", { orderId: "order-1" }],
-            ["order.unconfirm", { id: "order.confirm-2" }],
-            ["order.void", { id: "order-1" }],
-        ])
+        expect(run.undone).toEqual([])
+        expect(world.ran.map((entry) => entry.effect)).toEqual(["order.record", "order.confirm"])
     })
 
     it("Chatbot answers nothing and hands an order to Sales with its items as context", async () => {
