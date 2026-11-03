@@ -1,0 +1,65 @@
+/** What a customer message is about. */
+export type Intent = "question" | "order" | "payment_claim" | "other"
+
+/** One line of an order as the customer said it. */
+export interface OrderLine {
+    /** What was asked for. */
+    readonly name: string
+    /** How many; at least one. */
+    readonly quantity: number
+    /** The price of one, VND; the customer's words give none, so null. */
+    readonly priceVnd: number | null
+}
+
+/** The order the customer asked for. */
+export interface OrderSlot {
+    /** The lines asked for. */
+    readonly items: ReadonlyArray<OrderLine>
+    /** Where to deliver, or null. */
+    readonly address: string | null
+    /** Who orders, or null. */
+    readonly customer: string | null
+}
+
+/** The payment the customer says they made. */
+export interface PaymentClaimSlot {
+    /** The amount they claim, VND, or null when they gave none. */
+    readonly amountVnd: number | null
+    /** The name on the transfer, or null. */
+    readonly payerName: string | null
+}
+
+/** The pending customer messages, one line each. */
+export interface ClassifyInput {
+    readonly text: string
+}
+
+/** The intents of the batch and the slots each filled. */
+export interface ClassifyOutput {
+    /** The intents, each once, in the order the messages raised them; `other` only when nothing else was raised. */
+    readonly intents: ReadonlyArray<Intent>
+    /** The order slot, or null when the batch holds no order. */
+    readonly order: OrderSlot | null
+    /** The payment claim slot, or null when the batch holds no claim. */
+    readonly paymentClaim: PaymentClaimSlot | null
+}
+
+/** The order as the model writes it, before it is cleaned. */
+export interface ModelOrder {
+    readonly items: ReadonlyArray<{ readonly name: string; readonly quantity: number | null }>
+    readonly address: string | null
+    readonly customer: string | null
+}
+
+/** The payment claim as the model writes it, before it is cleaned. */
+export interface ModelClaim {
+    readonly amount_vnd: number | string | null
+    readonly payer_name: string | null
+}
+
+/** The reply the model gives, before it is cleaned. */
+export interface ModelReply {
+    readonly intents: ReadonlyArray<Intent>
+    readonly order: ModelOrder | null
+    readonly payment_claim: ModelClaim | null
+}
