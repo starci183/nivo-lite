@@ -5,6 +5,7 @@ import { runNode } from "@nivo-lite/agent-sdk/node"
 import { coreEffects, coreNodes, paymentNodes } from "../.."
 import {
     ARRIVAL_DINH,
+    CLAIM_DINH,
     CLAIM_OF_DINH,
     EVIDENCED_FOR_DINH,
     STORE_REAL_CASE,
@@ -23,7 +24,12 @@ const run = (node: NodeDefinition, params: unknown, input: unknown, options: Fak
             params,
             input,
             turn: EXAMPLE_TURN,
-            grant: { rights: [...paymentNodes.flatMap((one) => one.rights), ...coreEffects.flatMap((effect) => effect.rights)] },
+            grant: {
+                rights: [
+                    ...paymentNodes.flatMap((one) => one.rights),
+                    ...coreEffects.flatMap((effect) => effect.rights),
+                ],
+            },
             effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
             tools: new Map(),
             key: `${node.id}:real-case`,
@@ -59,9 +65,46 @@ describe("the payment nodes", () => {
     })
 })
 
+describe("a claim of a customer with no lead yet", () => {
+    it("is evidence keyed by its conversation, so it never counts as the party of an order", async () => {
+        const claim = { ...CLAIM_DINH, leadId: null }
+        const store = { ...STORE_REAL_CASE, "payment-claim": [claim] }
+
+        const evidence = await run(
+            byId("payment.evidence"),
+            { windowHours: 72 },
+            { transactionId: TRANSACTION_DINH.id },
+            { store },
+        )
+
+        expect(evidence.output).toMatchObject({
+            claims: [{ id: claim.id, partyKey: "conversation:conversation-dinh" }],
+        })
+    })
+
+    it("falls back to the claim itself when it has no conversation either", async () => {
+        const claim = { ...CLAIM_DINH, leadId: null, conversationId: null }
+        const store = { ...STORE_REAL_CASE, "payment-claim": [claim] }
+
+        const evidence = await run(
+            byId("payment.evidence"),
+            { windowHours: 72 },
+            { transactionId: TRANSACTION_DINH.id },
+            { store },
+        )
+
+        expect(evidence.output).toMatchObject({ claims: [{ partyKey: "conversation:claim-dinh" }] })
+    })
+})
+
 describe("the real case end to end", () => {
     it("matches the 5,000 transfer to Định's order when his claim came first, and leaves the 2,000 MoMo unmatched", async () => {
-        const evidence = await run(byId("payment.evidence"), { windowHours: 72 }, { transactionId: TRANSACTION_DINH.id }, { store: STORE_REAL_CASE })
+        const evidence = await run(
+            byId("payment.evidence"),
+            { windowHours: 72 },
+            { transactionId: TRANSACTION_DINH.id },
+            { store: STORE_REAL_CASE },
+        )
         expect(evidence.output).toMatchObject({ arrival: ARRIVAL_DINH, claims: [CLAIM_OF_DINH] })
         expect(evidence.output).toMatchObject({ evidenced: [...EVIDENCED_FOR_DINH] })
 
@@ -79,7 +122,13 @@ describe("the real case end to end", () => {
         const settled = await run(
             byId("payment.settle"),
             SETTLE_PARAMS,
-            { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: ["order-dinh"], reasons: ["khớp"], claimId: null },
+            {
+                transactionId: TRANSACTION_DINH.id,
+                mode: "apply",
+                candidateIds: ["order-dinh"],
+                reasons: ["khớp"],
+                claimId: null,
+            },
             { store: STORE_REAL_CASE },
         )
         expect(settled.output).toEqual({ result: "paid", orderId: "order-dinh" })
@@ -88,7 +137,12 @@ describe("the real case end to end", () => {
             ["channel.send", "payment-confirmation:order-dinh"],
         ])
 
-        const momo = await run(byId("payment.evidence"), { windowHours: 72 }, { transactionId: TRANSACTION_MOMO.id }, { store: STORE_REAL_CASE })
+        const momo = await run(
+            byId("payment.evidence"),
+            { windowHours: 72 },
+            { transactionId: TRANSACTION_MOMO.id },
+            { store: STORE_REAL_CASE },
+        )
         const left = await run(byId("payment.judge"), {}, momo.output, {})
         expect(left.output).toMatchObject({ branch: "no_match", candidateIds: [] })
     })

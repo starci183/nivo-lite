@@ -160,8 +160,8 @@ export interface PaymentClaimRow {
     readonly id: string
     /** The workspace. */
     readonly workspaceId: string
-    /** The customer who said it. */
-    readonly leadId: string
+    /** The customer who said it, or null while the conversation has no lead yet. */
+    readonly leadId: string | null
     /** The conversation it was said in, or null. */
     readonly conversationId: string | null
     /** The amount the customer named in VND, or null when they named none. */
@@ -180,8 +180,8 @@ export interface PaymentClaimRow {
 export interface NewPaymentClaim {
     /** The workspace. */
     readonly workspaceId: string
-    /** The customer. */
-    readonly leadId: string
+    /** The customer, or null while the conversation has no lead yet. */
+    readonly leadId: string | null
     /** The conversation it was said in, or null. */
     readonly conversationId: string | null
     /** The amount named in VND, or null. */

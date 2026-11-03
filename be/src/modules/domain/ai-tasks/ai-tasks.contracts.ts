@@ -6,6 +6,8 @@ export interface ChatMessage {
     readonly role: "system" | "user" | "assistant"
     /** What is said. */
     readonly content: string
+    /** The pictures said with it, as addresses the model host can fetch. */
+    readonly images?: ReadonlyArray<string>
 }
 
 /** The lane of the Second Brain a drafting task reads: the module and agent instance that owns it, and who the text reaches. */
@@ -293,6 +295,8 @@ export interface NodeAsk {
     readonly instructions: string
     /** What the node asks about, sent as JSON. */
     readonly input: unknown
+    /** Pictures to look at, sent with the input as image parts of the user message. */
+    readonly images?: ReadonlyArray<string> | undefined
 }
 
 /** What a command does, in both languages. */

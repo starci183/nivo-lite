@@ -43,7 +43,7 @@ export type ConversationRow = {
 /** One customer payment claim as the `payment-claim` data kind yields it. */
 export type ClaimRow = {
     readonly id: string
-    readonly leadId: string
+    readonly leadId: string | null
     readonly conversationId: string | null
     readonly amountVnd: number | null
     readonly names: ReadonlyArray<string>

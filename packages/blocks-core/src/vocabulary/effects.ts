@@ -39,8 +39,9 @@ export interface PaymentMarkPaidPayload {
 
 /** What a customer said they paid. */
 export interface PaymentClaimRecordPayload {
-    readonly leadId: string
-    readonly conversationId: string | null
+    /** The customer, or null while the conversation has no lead yet: the claim then belongs to the conversation. */
+    readonly leadId: string | null
+    readonly conversationId: string
     readonly amountVnd?: number | undefined
     readonly names: ReadonlyArray<string>
     readonly body: string
@@ -113,8 +114,8 @@ const paymentMarkPaidPayload: z.ZodType<PaymentMarkPaidPayload> = z.object({
 })
 
 const paymentClaimRecordPayload: z.ZodType<PaymentClaimRecordPayload> = z.object({
-    leadId: id,
-    conversationId: id.nullable(),
+    leadId: id.nullable(),
+    conversationId: id,
     amountVnd: z.number().positive().optional(),
     names: z.array(z.string()),
     body: z.string().min(1),

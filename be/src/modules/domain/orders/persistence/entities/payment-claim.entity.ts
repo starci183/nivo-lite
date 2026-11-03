@@ -12,8 +12,8 @@ export class PaymentClaimEntity extends UuidAbstractEntity {
     workspaceId!: string
 
     /** The customer who said it. */
-    @Column({ name: "lead_id", type: "uuid" })
-    leadId!: string
+    @Column({ name: "lead_id", type: "uuid", nullable: true })
+    leadId!: string | null
 
     /** The conversation it was said in. */
     @Column({ name: "conversation_id", type: "uuid", nullable: true })
