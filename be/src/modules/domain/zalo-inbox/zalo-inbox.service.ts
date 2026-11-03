@@ -8,6 +8,7 @@ import type { ZaloDeliveryRecorded } from "@modules/queues/zalo-delivery"
 import { Injectable } from "@nestjs/common"
 import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { ZaloWebhookGateService } from "@modules/domain/channels"
 import { ConversationsService, readZaloEvent } from "@modules/domain/conversations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { zaloDeliveryIdOf } from "./zalo-delivery-id.policy"
@@ -21,6 +22,7 @@ export class ZaloInboxService {
         private readonly conversations: ConversationsService,
         @InjectEntityInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
+        private readonly gate: ZaloWebhookGateService,
     ) {}
 
     /** A redelivered message is acknowledged without being processed again; every event type has its own id, so a follow event is claimed once and never overwrites another. */
@@ -35,6 +37,11 @@ export class ZaloInboxService {
             }
             const receiptId = await this.inbox.claimRow("zalo", deliveryId, manager, receipt)
             if (receiptId === undefined) return
+            // A connection that holds no OA secret key yet proved nothing: the call is acknowledged and closed, never read as an event.
+            if (!(await this.gate.holdsProofKey(connection))) {
+                await manager.update(ZaloInboxEntity, { id: receiptId }, { processedAt: () => "now()" })
+                return
+            }
             const message: ZaloDeliveryRecorded = { deliveryId }
             await this.outbox.write(manager, ZALO_DELIVERY_QUEUE, message, {
                 dedupeKey: `${ZALO_DELIVERY_QUEUE}:${deliveryId}`,

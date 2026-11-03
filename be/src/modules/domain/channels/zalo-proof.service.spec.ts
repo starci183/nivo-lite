@@ -64,14 +64,22 @@ describe("ZaloProofService", () => {
             expect(credentials.load).toHaveBeenCalledWith(CONNECTION)
         })
 
-        it("refuses a wrong mac, a missing body, a route that is not a connection id and a connection that is gone", async () => {
+        it("refuses a wrong mac, a missing body and a route that is not a connection id", async () => {
             const wrong = await build(true)
-            const gone = await build(false)
 
             await expect(wrong.proof.prove(request(CONNECTION, Buffer.from(BODY), "mac=00"))).resolves.toBe(false)
             await expect(wrong.proof.prove(request(CONNECTION, undefined, MAC))).resolves.toBe(false)
             await expect(wrong.proof.prove(request("x", Buffer.from(BODY), MAC))).resolves.toBe(false)
-            await expect(gone.proof.prove(request(CONNECTION, Buffer.from(BODY), MAC))).resolves.toBe(false)
+        })
+
+        it("lets a call to a connection that holds no OA secret key yet through, logged as unverified, for the intake to drop", async () => {
+            const { proof, logger } = await build(false)
+
+            await expect(proof.prove(request(CONNECTION, Buffer.from(BODY), ""))).resolves.toBe(true)
+            expect(logger.warn).toHaveBeenCalledWith("zalo.webhook.unverified", {
+                connectionId: CONNECTION,
+                reason: ChannelsErrorCode.ConnectionNotFound,
+            })
         })
 
         it("refuses and logs a body that is not JSON", async () => {
