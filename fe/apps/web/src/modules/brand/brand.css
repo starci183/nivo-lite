@@ -1,7 +1,7 @@
 /*
  * NIVO Brand System V1.2: the one place the app writes colour. The owner's set is final and the app owns it, independent of the
  * grammar (--scrollbar is in the set but is not a grammar token, so the brand lint refuses it and it is not written). Soft pairs and the text-safe accent are derived from it with color-mix; info keeps its blue (no clash with the crimson set).
- * The --starci-core-* tokens the grammar renderers read follow the set below, so a renderer and a HeroUI part paint the same colour.
+ * The grammar renderers read these same HeroUI tokens, so a renderer and a HeroUI part paint the same colour.
  */
 :root,
 .light {
@@ -55,35 +55,6 @@
     --info-soft-foreground: color-mix(in oklab, var(--info) 50%, var(--foreground));
 
     --accent-soft-foreground: color-mix(in oklab, var(--accent) 70%, var(--foreground));
-}
-
-/* The grammar tokens resolve on the element that wears the mode class, so each mode reads its own set. */
-:root,
-.light,
-.dark {
-    --radius: 0.5rem;
-    --field-radius: 0.75rem;
-
-    --accent: var(--accent);
-    --accent-foreground: var(--accent-foreground);
-    --accent-soft: var(--accent-soft);
-    --focus: var(--focus);
-    --background: var(--background);
-    --surface: var(--surface);
-    --surface-secondary: var(--surface-secondary);
-    --surface-tertiary: var(--surface-tertiary);
-    --foreground: var(--foreground);
-    --muted: var(--muted);
-    --border: var(--border);
-    --separator: var(--separator);
-    --success: var(--success);
-    --success-foreground: var(--success-foreground);
-    --warning: var(--warning);
-    --warning-foreground: var(--warning-foreground);
-    --danger: var(--danger);
-    --danger-foreground: var(--danger-foreground);
-    --info: var(--info);
-    --info-foreground: var(--info-foreground);
 }
 
 .dark {
