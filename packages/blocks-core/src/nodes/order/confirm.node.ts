@@ -1,5 +1,6 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import type { NodeSchema } from "./order.schema"
 
@@ -15,6 +16,9 @@ export interface OrderConfirmOutput {
     readonly orderId: string
 }
 
+/** The agent grant the example runs under: the rights of the effect the node runs. */
+const EXAMPLE_GRANT: RightsGrant = { rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }] }
+
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
 const input: NodeSchema<OrderConfirmInput> = z.object({ orderId: z.string().min(1) })
@@ -29,7 +33,7 @@ export const orderConfirmNode: NodeDefinition<typeof input, typeof output, typeo
     params,
     input,
     output,
-    rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }],
+    rights: [],
     effects: ["order.confirm"],
     run: async (given, context) => {
         await context.effect("order.confirm", { orderId: given.orderId }, { dedupeKey: `order-confirm:${given.orderId}` })
@@ -41,6 +45,7 @@ export const orderConfirmNode: NodeDefinition<typeof input, typeof output, typeo
             params: {},
             input: { orderId: "o1" },
             output: { orderId: "o1" },
+            grant: EXAMPLE_GRANT,
             effects: [{ kind: "order.confirm", payload: { orderId: "o1" } }],
         },
     ],

@@ -87,9 +87,9 @@ describe("payment.request", () => {
         return { output, effectsRun, toolCalls }
     }
 
-    it("declares the tool it calls and reads the order, writes the message and holds the rights of its tool", () => {
+    it("declares the tool it calls and reads the order only: the rights of its effect and tool are the grant", () => {
         expect(paymentRequestNode.tools).toEqual(["payment.instruction"])
-        expect(paymentRequestNode.rights.map((right) => right.kind)).toEqual(["order", "message", "payment-account"])
+        expect(paymentRequestNode.rights.map((right) => right.kind)).toEqual(["order"])
     })
 
     it("asks the tool with the order number, the amount and the transfer content, then sends once per order", async () => {

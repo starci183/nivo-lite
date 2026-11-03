@@ -17,6 +17,8 @@ export interface RaiseWorkItemInput {
     readonly payload: Readonly<Record<string, string | number | boolean | null>>
     /** The amount at stake, VND, or null. */
     readonly amountVnd: number | null
+    /** The claim the item answers (a payment claim), or null. */
+    readonly claimId: string | null
 }
 
 /** The raised item. */
@@ -33,6 +35,7 @@ const params: NodeSchema<RaiseWorkItemParams> = z.object({
 const input: NodeSchema<RaiseWorkItemInput> = z.object({
     payload: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
     amountVnd: z.number().min(0).nullable(),
+    claimId: z.string().min(1).nullable(),
 })
 
 const output: NodeSchema<RaiseWorkItemOutput> = z.object({ workItemId: z.string() })
@@ -53,6 +56,7 @@ export const raiseWorkItemNode: NodeDefinition<typeof input, typeof output, type
             title: context.params.title,
             payload: given.payload,
             ...(given.amountVnd === null ? {} : { amountVnd: given.amountVnd }),
+            ...(given.claimId === null ? {} : { claimId: given.claimId }),
         })
         return { workItemId: ref.id }
     },
@@ -60,7 +64,7 @@ export const raiseWorkItemNode: NodeDefinition<typeof input, typeof output, type
         {
             name: "raises the order for the owner with its amount",
             params: { action: "confirm_order", title: "Order waits for the owner" },
-            input: { payload: { orderId: "o1" }, amountVnd: 5_000_000 },
+            input: { payload: { orderId: "o1" }, amountVnd: 5_000_000, claimId: null },
             output: { workItemId: "work-item.raise-1" },
             effects: [
                 {
@@ -77,12 +81,12 @@ export const raiseWorkItemNode: NodeDefinition<typeof input, typeof output, type
         {
             name: "raises an item that has no amount",
             params: { action: "connect_sepay", title: "Connect SePay" },
-            input: { payload: {}, amountVnd: null },
+            input: { payload: {}, amountVnd: null, claimId: "claim-1" },
             output: { workItemId: "work-item.raise-1" },
             effects: [
                 {
                     kind: "work-item.raise",
-                    payload: { action: "connect_sepay", title: "Connect SePay", payload: {} },
+                    payload: { action: "connect_sepay", title: "Connect SePay", payload: {}, claimId: "claim-1" },
                 },
             ],
         },
