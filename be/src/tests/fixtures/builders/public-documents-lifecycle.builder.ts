@@ -1,5 +1,5 @@
+import type { EntityManager, DeleteResult, UpdateResult } from "typeorm"
 import { builder } from "@starci/jest-preset"
-import type { EntityManager } from "typeorm"
 import { agentsEntities } from "@modules/domain/agents"
 import { knowledgeChunksEntities } from "@modules/domain/knowledge-chunks"
 import { knowledgeGapsEntities } from "@modules/domain/knowledge-gaps"
@@ -10,14 +10,16 @@ import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
 import { callDbFunction } from "@modules/platform/database"
 
-const [AgentEntity] = agentsEntities
-const [KnowledgeChunkEntity] = knowledgeChunksEntities
-const [KnowledgeGapEntity] = knowledgeGapsEntities
-const [KnowledgeSourceEntity] = knowledgeSourcesEntities
-const [McpToolGrantEntity] = mcpToolGrantsEntities
-const [PublicDocumentEntity, PublicDocumentSourceEntity, PublicDocumentApprovalEntity] = publicDocumentsEntities
-const [WorkspaceMemberEntity] = workspaceMembersEntities
-const [WorkspaceEntity] = workspacesEntities
+const AgentEntity: (typeof agentsEntities)[0] = agentsEntities[0]
+const KnowledgeChunkEntity: (typeof knowledgeChunksEntities)[0] = knowledgeChunksEntities[0]
+const KnowledgeGapEntity: (typeof knowledgeGapsEntities)[0] = knowledgeGapsEntities[0]
+const KnowledgeSourceEntity: (typeof knowledgeSourcesEntities)[0] = knowledgeSourcesEntities[0]
+const McpToolGrantEntity: (typeof mcpToolGrantsEntities)[0] = mcpToolGrantsEntities[0]
+const PublicDocumentEntity: (typeof publicDocumentsEntities)[0] = publicDocumentsEntities[0]
+const PublicDocumentSourceEntity: (typeof publicDocumentsEntities)[1] = publicDocumentsEntities[1]
+const PublicDocumentApprovalEntity: (typeof publicDocumentsEntities)[2] = publicDocumentsEntities[2]
+const WorkspaceMemberEntity: (typeof workspaceMembersEntities)[0] = workspaceMembersEntities[0]
+const WorkspaceEntity: (typeof workspacesEntities)[0] = workspacesEntities[0]
 
 /** Explicit identities isolated by the real local world. */
 export interface PublicLifecycleIdentity {
@@ -271,17 +273,17 @@ export const advancePublicInternalEvidence = async (
 }
 
 /** Attempts a forbidden rewrite through the real role-bound manager; assertions remain in the integration spec. */
-export const rewritePublicApprovalFixture = (manager: EntityManager, documentId: string) =>
+export const rewritePublicApprovalFixture = (manager: EntityManager, documentId: string): Promise<UpdateResult> =>
     manager.update(PublicDocumentApprovalEntity, { documentId }, { body: "Tampered" })
 
 /** Attempts deletion of immutable approval history without bypassing its actual grants. */
-export const deletePublicApprovalFixture = (manager: EntityManager, documentId: string) =>
+export const deletePublicApprovalFixture = (manager: EntityManager, documentId: string): Promise<DeleteResult> =>
     manager.delete(PublicDocumentApprovalEntity, { documentId })
 
 /** Attempts deletion of an approved parent under its real deferred foreign key. */
-export const deletePublicDocumentFixture = (manager: EntityManager, id: string) =>
+export const deletePublicDocumentFixture = (manager: EntityManager, id: string): Promise<DeleteResult> =>
     manager.delete(PublicDocumentEntity, { id })
 
 /** Deletes the whole workspace through the same manager so both deferred sides are checked together. */
-export const deletePublicWorkspaceFixture = (manager: EntityManager, id: string) =>
+export const deletePublicWorkspaceFixture = (manager: EntityManager, id: string): Promise<DeleteResult> =>
     manager.delete(WorkspaceEntity, { id })

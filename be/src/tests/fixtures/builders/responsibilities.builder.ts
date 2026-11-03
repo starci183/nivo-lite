@@ -10,8 +10,16 @@ import type {
     ResponsibilityScope,
 } from "@modules/domain/responsibilities"
 
+type AssignedEventResultShape = {
+    workspaceId: string
+    kind: string
+    actor: string
+    summary: string
+    leadId: string
+}
+
 /** The evidence-log entry a responsibility assignment records, with the given summary. */
-export const assignedEvent = (summary: string) => ({
+export const assignedEvent = (summary: string): AssignedEventResultShape => ({
     workspaceId: "ws-1",
     kind: "responsibility.assigned",
     actor: "An",
@@ -35,23 +43,25 @@ export const LEAD = { contact_name: "Binh" }
 export const ctx: ResponsibilityScope = { workspaceId: "ws-1", actor: "An", locale: "en" }
 
 /** A stored responsibility as the journal answers it, with any field overridden. */
-export const rowOf = builder<ResponsibilityRecord>({
-    id: "resp-1",
-    workspace_id: "ws-1",
-    lead_id: "lead-1",
-    title: "Follow up with Binh",
-    owner_kind: "agent",
-    owner_agent_id: "agent-1",
-    owner_member_id: null,
-    owner_name: "Sales Agent",
-    next_action: "Classify",
-    due_at: "2026-10-13T10:00:00.000Z",
-    status: "open",
-    created_at: "2026-10-12T10:00:00.000Z",
-})
+export const rowOf: (overrides?: Partial<ResponsibilityRecord>) => ResponsibilityRecord = builder<ResponsibilityRecord>(
+    {
+        id: "resp-1",
+        workspace_id: "ws-1",
+        lead_id: "lead-1",
+        title: "Follow up with Binh",
+        owner_kind: "agent",
+        owner_agent_id: "agent-1",
+        owner_member_id: null,
+        owner_name: "Sales Agent",
+        next_action: "Classify",
+        due_at: "2026-10-13T10:00:00.000Z",
+        status: "open",
+        created_at: "2026-10-12T10:00:00.000Z",
+    },
+)
 
 /** The acting member, with any field overridden. */
-export const memberOf = builder<WorkspaceMember>({
+export const memberOf: (overrides?: Partial<WorkspaceMember>) => WorkspaceMember = builder<WorkspaceMember>({
     userId: "user-1",
     workspaceId: "ws-1",
     role: "staff",
@@ -61,10 +71,15 @@ export const memberOf = builder<WorkspaceMember>({
 })
 
 /** A person owner, with any field overridden. */
-export const personOf = builder<ResolvedOwner>({ kind: "human", agentId: null, memberId: "member-1", name: "An" })
+export const personOf: (overrides?: Partial<ResolvedOwner>) => ResolvedOwner = builder<ResolvedOwner>({
+    kind: "human",
+    agentId: null,
+    memberId: "member-1",
+    name: "An",
+})
 
 /** An agent owner, with any field overridden. */
-export const agentOwner = builder<ResolvedOwner>({
+export const agentOwner: (overrides?: Partial<ResolvedOwner>) => ResolvedOwner = builder<ResolvedOwner>({
     kind: "agent",
     agentId: "agent-1",
     memberId: null,
@@ -72,7 +87,7 @@ export const agentOwner = builder<ResolvedOwner>({
 })
 
 /** A new responsibility as a caller asks for it, with any field overridden. */
-export const inputOf = builder<NewResponsibility>({
+export const inputOf: (overrides?: Partial<NewResponsibility>) => NewResponsibility = builder<NewResponsibility>({
     lead_id: "lead-1",
     title: "Call Binh",
     owner: "member-1",
@@ -80,8 +95,20 @@ export const inputOf = builder<NewResponsibility>({
     due_at: null,
 })
 
+type StepOfResultShape = {
+    workspaceId: string
+    leadId: string
+    title: string
+    ownerKind: string
+    ownerAgentId: null
+    ownerMemberId: string
+    ownerName: string
+    nextAction: string
+    dueAt: null
+}
+
 /** The step an insert writes for the default input and the person owner, with any field overridden. */
-export const stepOf = (overrides: Record<string, unknown> = {}) => ({
+export const stepOf = (overrides: Record<string, unknown> = {}): StepOfResultShape => ({
     workspaceId: "ws-1",
     leadId: "lead-1",
     title: "Call Binh",
@@ -108,13 +135,17 @@ export const leadGuard: LeadGuard = {
     name: undefined,
 }
 
+type AnswerInsertResultShape = {
+    write: FakeQueryBuilder
+}
+
 /** Primes the lead guard (held `FOR SHARE`) with `lead` and queues the insert, after the builders already queued. */
 export const answerInsert = (
     em: MockEntityManager,
     lead: unknown,
     inserted: ReadonlyArray<unknown>,
     ...before: Array<FakeQueryBuilder>
-) => {
+): AnswerInsertResultShape => {
     leadGuard.held = lead !== undefined
     const write = fakeQueryBuilder({ execute: { raw: inserted } })
     answerQueryBuilders(em, ...before, write)

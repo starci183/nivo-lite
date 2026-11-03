@@ -1,3 +1,4 @@
+import { jobsEntities } from "@modules/platform/jobs"
 import { AgentRunSweepService } from "../../modules/domain/agent-runs/agent-run-sweep.service"
 import { AgentRunsService } from "../../modules/domain/agent-runs/agent-runs.service"
 import { AgentStepJobService } from "../../modules/domain/agent-runs/agent-step-job.service"
@@ -9,6 +10,11 @@ import { sceneOf } from "./agent-runs-scene.service"
 import type { Scene } from "./agent-runs-scene.service"
 import type { Boundary, Chain, FailureCase, Fault, FaultKind } from "../fixtures/builders/backbone.builder"
 import type { EnginePort } from "./backbone-engine.service"
+import { agentRunsEntities } from "@modules/domain/agent-runs"
+import type { StepSpec, RunStepView } from "@modules/domain/agent-runs"
+
+type JobOutboxEntity = InstanceType<(typeof jobsEntities)[1]>
+type AgentRunEntity = InstanceType<(typeof agentRunsEntities)[0]>
 
 const SIGNAL = new AbortController().signal
 
@@ -123,8 +129,28 @@ const FIRST: Readonly<
     approval: (wakeId, itemId, deadlineAt) => [specOf("ask", "ask", { kind: "read" }, { wakeId, itemId, deadlineAt })],
 }
 
+type BackboneOfResultHelpersShape = {
+    workspaceId: string
+    agentId: string
+    newRun: (label: string, first?: ReadonlyArray<StepSpec>) => Promise<Scene>
+    expireClaims: (runId: string) => Promise<void>
+    endBackoff: (runId: string) => Promise<void>
+    stepsOf: (runId: string) => Promise<ReadonlyArray<RunStepView>>
+    runRow: (runId: string) => Promise<AgentRunEntity>
+    jobs: () => Promise<Array<JobOutboxEntity>>
+}
+
+type BackboneOfResultShape = {
+    helpers: BackboneOfResultHelpersShape
+    /** Runs one row: the run, the fault, the recovery the product has, and the checks. */
+    run(row: FailureCase): Promise<void>
+}
+
 /** Opens the harness of a suite: a run, a fault injected at a step boundary of the real engine, and the checks every row makes. */
-export const backboneOf = (world: ReturnType<typeof useTestWorld>, engineOf: (workspaceId: string) => EnginePort) => {
+export const backboneOf = (
+    world: ReturnType<typeof useTestWorld>,
+    engineOf: (workspaceId: string) => EnginePort,
+): BackboneOfResultShape => {
     const helpers = sceneOf(world)
     const engine = engineOf(helpers.workspaceId)
     const script = () => world.resolve(ScriptedWorld)

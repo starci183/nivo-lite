@@ -1,10 +1,3 @@
-import { createHash } from "node:crypto"
-import { builder } from "@starci/jest-preset"
-import type { FakeClock, MockOf } from "@starci/jest-preset"
-import type { CallLogLine, McpCallLogService } from "@modules/domain/mcp-call-log"
-import type { McpConnectorRow, McpConnectorsService } from "@modules/domain/mcp-connectors"
-import type { McpToolGrantView, McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import type { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import type {
     GatewayCaller,
     GatewayJson,
@@ -15,7 +8,15 @@ import type {
     DataRightsGate,
     ToolGraphGate,
     McpGatewayService,
+    CapabilityRole,
 } from "@modules/domain/mcp-gateway"
+import { createHash } from "node:crypto"
+import { builder } from "@starci/jest-preset"
+import type { FakeClock, MockOf } from "@starci/jest-preset"
+import type { CallLogLine, McpCallLogService } from "@modules/domain/mcp-call-log"
+import type { McpConnectorRow, McpConnectorsService } from "@modules/domain/mcp-connectors"
+import type { McpToolGrantView, McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
+import type { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import type { McpEndpoint, McpRemote } from "@modules/integrations/mcp"
 import { Secret } from "@modules/platform/config"
 import type { Logger } from "@modules/platform/logging"
@@ -31,8 +32,32 @@ export const GATEWAY_CALLER: GatewayCaller = {
     workItemId: null,
 }
 
+type CatalogToolOfResultMetaShape = {}
+
+type CatalogToolOfResultAnnotationsShape = {
+    readOnlyHint: boolean
+}
+
+type CatalogToolOfResultInputSchemaShape = {
+    type: string
+}
+
+type CatalogToolOfResultShape = {
+    name: string
+    description: string
+    inputSchema: CatalogToolOfResultInputSchemaShape
+    annotations: CatalogToolOfResultAnnotationsShape
+    meta: CatalogToolOfResultMetaShape
+    hash: string
+}
+
 /** One tool of the remote server's live catalog as a read stored it, with its schema hash. */
-export const catalogToolOf = (name: string, description: string, readOnly: boolean, extra: GatewayJson = {}) => ({
+export const catalogToolOf = (
+    name: string,
+    description: string,
+    readOnly: boolean,
+    extra: GatewayJson = {},
+): CatalogToolOfResultShape => ({
     name,
     description,
     inputSchema: { type: "object" },
@@ -42,8 +67,17 @@ export const catalogToolOf = (name: string, description: string, readOnly: boole
     ...extra,
 })
 
+type GatewayCatalogShape = {
+    name: string
+    description: string
+    inputSchema: CatalogToolOfResultInputSchemaShape
+    annotations: CatalogToolOfResultAnnotationsShape
+    meta: CatalogToolOfResultMetaShape
+    hash: string
+}
+
 /** The live catalog of the remote connector of the gateway specs. */
-export const GATEWAY_CATALOG = [
+export const GATEWAY_CATALOG: Array<GatewayCatalogShape> = [
     catalogToolOf("rooms.searchAvailability", "Room types free for a check-in date, nights and guests.", true),
     catalogToolOf("booking.hold", "Hold a room type for 30 minutes for a guest.", false, {
         inputSchema: { type: "object", properties: { idempotencyKey: { type: "string" } } },
@@ -64,7 +98,7 @@ export const GATEWAY_CATALOG = [
 const SET_AT = "2026-10-20T01:00:00.000Z"
 
 /** The bearer the credential capability opens for a remote connector in the gateway specs. */
-export const GATEWAY_BEARER = new Secret("bearer-1")
+export const GATEWAY_BEARER: Secret = new Secret("bearer-1")
 
 /** The endpoint the credential capability answers for a remote target: no bearer when the server takes none. */
 export const endpointFor = (target: RemoteTarget): McpEndpoint => ({
@@ -77,39 +111,52 @@ export const openedEndpointOf = (_workspaceId: string, target: RemoteTarget): Pr
     Promise.resolve(endpointFor(target))
 
 /** A remote connector row whose whole live catalog is approved. */
-export const remoteConnectorRowOf = builder<McpConnectorRow>({
-    key: "hakuen",
-    name: "HAKUEN",
-    kind: "remote",
-    url: "https://hakuen.test/mcp",
-    credential_state: "set",
-    credential_set_at: SET_AT,
-    status: "active",
-    contract_version: "hakuen-mcp@1",
-    timeout_ms: 4000,
-    tool_catalog: GATEWAY_CATALOG,
-    catalog_hash: "catalog-1",
-    approved_catalog: GATEWAY_CATALOG.map((tool) => ({ name: tool.name, hash: tool.hash })),
-    approved_at: "2026-10-20T01:00:00.000Z",
-    checked_at: "2026-10-20T01:00:00.000Z",
-})
+export const remoteConnectorRowOf: (overrides?: Partial<McpConnectorRow>) => McpConnectorRow = builder<McpConnectorRow>(
+    {
+        key: "hakuen",
+        name: "HAKUEN",
+        kind: "remote",
+        url: "https://hakuen.test/mcp",
+        credential_state: "set",
+        credential_set_at: SET_AT,
+        status: "active",
+        contract_version: "hakuen-mcp@1",
+        timeout_ms: 4000,
+        tool_catalog: GATEWAY_CATALOG,
+        catalog_hash: "catalog-1",
+        approved_catalog: GATEWAY_CATALOG.map((tool) => ({ name: tool.name, hash: tool.hash })),
+        approved_at: "2026-10-20T01:00:00.000Z",
+        checked_at: "2026-10-20T01:00:00.000Z",
+    },
+)
 
 /** A grant of every tool of the remote connector, auto, with one data constraint. */
-export const toolGrantRowOf = builder<McpToolGrantView>({
+export const toolGrantRowOf: (overrides?: Partial<McpToolGrantView>) => McpToolGrantView = builder<McpToolGrantView>({
     tool: "hakuen.*",
     mode: "auto",
     limit_vnd: null,
     constraints: [{ arg: "discountPct", max: 10 }],
 })
 
+type RefusalOfResultShape = {
+    ok: boolean
+    code: string
+    detail: string
+}
+
 /** The refusal a gateway call answers. */
-export const refusalOf = (code: string, detail: string) => ({ ok: false, code, detail })
+export const refusalOf = (code: string, detail: string): RefusalOfResultShape => ({ ok: false, code, detail })
+
+type AnswerOfResultShape = {
+    ok: boolean
+    value: GatewayJson
+}
 
 /** The answer of a gateway call that ran. */
-export const answerOf = (value: GatewayJson) => ({ ok: true, value })
+export const answerOf = (value: GatewayJson): AnswerOfResultShape => ({ ok: true, value })
 
 /** The audit line of a refused, ungranted read of the bank credits by the spec caller. */
-export const refusedReadLineOf = builder<CallLogLine>({
+export const refusedReadLineOf: (overrides?: Partial<CallLogLine>) => CallLogLine = builder<CallLogLine>({
     workspaceId: "ws-1",
     connector: "sepay",
     tool: "sepay.transactions.list",
@@ -126,7 +173,9 @@ export const refusedReadLineOf = builder<CallLogLine>({
 })
 
 /** The providers of every capability role, none unless the spec names some. */
-export const roleProvidersOf = builder<RoleReadiness["providers"]>({
+export const roleProvidersOf: (
+    overrides?: Partial<Readonly<Record<CapabilityRole, ReadonlyArray<string>>>>,
+) => Readonly<Record<CapabilityRole, ReadonlyArray<string>>> = builder<RoleReadiness["providers"]>({
     "identity.find": [],
     "identity.upsert": [],
     "receivable.find": [],

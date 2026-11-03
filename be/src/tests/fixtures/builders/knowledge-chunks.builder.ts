@@ -1,10 +1,13 @@
 import { builder } from "@starci/jest-preset"
 import { knowledgeChunksEntities } from "@modules/domain/knowledge-chunks"
 
-const [KnowledgeChunkEntity] = knowledgeChunksEntities
+const KnowledgeChunkEntity: (typeof knowledgeChunksEntities)[0] = knowledgeChunksEntities[0]
+type KnowledgeChunkEntity = InstanceType<typeof KnowledgeChunkEntity>
 
 /** A complete unembedded passage with deterministic source identity and no document place. */
-export const knowledgeChunkOf = builder<InstanceType<typeof KnowledgeChunkEntity>>({
+export const knowledgeChunkOf: (overrides?: Partial<KnowledgeChunkEntity>) => KnowledgeChunkEntity = builder<
+    InstanceType<typeof KnowledgeChunkEntity>
+>({
     id: "c1",
     workspaceId: "11111111-1111-4111-8111-111111111111",
     sourceId: "s1",

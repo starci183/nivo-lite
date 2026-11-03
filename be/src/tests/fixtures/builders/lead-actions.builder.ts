@@ -5,7 +5,7 @@ import type { LeadRecordRow } from "@modules/domain/leads"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 
 /** The active workspace owner requesting a queued lead action. */
-export const memberOf = builder<WorkspaceMember>({
+export const memberOf: (overrides?: Partial<WorkspaceMember>) => WorkspaceMember = builder<WorkspaceMember>({
     userId: "user-1",
     workspaceId: "ws-1",
     role: "owner",
@@ -15,7 +15,7 @@ export const memberOf = builder<WorkspaceMember>({
 })
 
 /** The customer addressed by queued lead actions. */
-export const leadOf = builder<LeadRecordRow>({
+export const leadOf: (overrides?: Partial<LeadRecordRow>) => LeadRecordRow = builder<LeadRecordRow>({
     id: "11111111-1111-4111-8111-111111111111",
     workspace_id: "ws-1",
     contact_name: "Lan",

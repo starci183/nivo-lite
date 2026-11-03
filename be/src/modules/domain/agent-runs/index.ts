@@ -25,3 +25,4 @@ export type {
     RunView,
     WaitExpiry,
 } from "./agent-runs-engine.contracts"
+export type { OptionalRunTrace } from "./agent-runs-engine.contracts"

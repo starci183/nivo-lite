@@ -13,7 +13,7 @@ export interface DashboardItemRow {
 }
 
 /** A dashboard line with the fields a scenario rarely changes filled. */
-export const itemRowOf = builder<DashboardItemRow>({
+export const itemRowOf: (overrides?: Partial<DashboardItemRow>) => DashboardItemRow = builder<DashboardItemRow>({
     id: "wi1",
     action: "reply_customer",
     leadId: null,
@@ -36,8 +36,29 @@ export const DASHBOARD_LISTS: Lists = {
     done: [itemRowOf({ id: "wi2", total: "2", resultHref: "/leads/l1" })],
 }
 
+type WaitingExpectedDataItemsShape = {
+    id: string
+    title: string
+    action: string
+    customer: string
+    at: string
+    leadId: null
+    resultHref: null
+    decisionHref: string
+}
+
+type WaitingExpectedDataShape = {
+    total: number
+    items: Array<WaitingExpectedDataItemsShape>
+}
+
+type WaitingExpectedShape = {
+    ok: boolean
+    data: WaitingExpectedDataShape
+}
+
 /** The waiting region the dashboard shows for that scenario. */
-export const WAITING_EXPECTED = {
+export const WAITING_EXPECTED: WaitingExpectedShape = {
     ok: true,
     data: {
         total: 6,
@@ -56,8 +77,24 @@ export const WAITING_EXPECTED = {
     },
 }
 
+type ConnectionsExpectedDataShape = {
+    id: string
+    name: string
+    provider: string
+    botUsername: null
+    accountMasked: null
+    status: string
+    access: string
+    purpose: string
+}
+
+type ConnectionsExpectedShape = {
+    ok: boolean
+    data: Array<ConnectionsExpectedDataShape>
+}
+
 /** The connections region the dashboard shows for that scenario. */
-export const CONNECTIONS_EXPECTED = {
+export const CONNECTIONS_EXPECTED: ConnectionsExpectedShape = {
     ok: true,
     data: [
         {

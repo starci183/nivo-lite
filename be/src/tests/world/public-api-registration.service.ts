@@ -1,15 +1,25 @@
+import type { QueueHandler } from "@modules/platform/queue"
+import type { JobProcessorRegistry, FencedProcessor } from "@modules/platform/jobs"
 import assert from "node:assert/strict"
 import type { OnModuleInit } from "@nestjs/common"
 import { JOB_PROCESSOR_REGISTRY } from "@modules/platform/jobs"
-import type { JobProcessorRegistry } from "@modules/platform/jobs"
 import { QUEUE_WORKER_REGISTRY } from "@modules/platform/queue"
 import { QUEUE_TRANSPORT } from "../../modules/platform/queue/queue.decorators"
 import type { QueueTransport } from "../../modules/platform/queue/queue-transport.port"
 import { QueueWorkerService } from "../../modules/platform/queue/queue-worker.service"
 import type { LiteWorld } from "./lite-world.service"
 
+type RegisterPublicApiProcessorsResultShape = {
+    processor: FencedProcessor
+    registered: Array<FencedProcessor>
+    handler: QueueHandler
+}
+
 /** Captures the actual named processors and the platform's real router without starting any poller. */
-export const registerPublicApiProcessors = async (world: LiteWorld, module: OnModuleInit) => {
+export const registerPublicApiProcessors = async (
+    world: LiteWorld,
+    module: OnModuleInit,
+): Promise<RegisterPublicApiProcessorsResultShape> => {
     const registry = world.resolve<JobProcessorRegistry>(JOB_PROCESSOR_REGISTRY)
     const workers = world.resolve<QueueWorkerService>(QUEUE_WORKER_REGISTRY)
     const transport = world.resolve<QueueTransport>(QUEUE_TRANSPORT)

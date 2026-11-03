@@ -21,7 +21,7 @@ export const arrangeRunStore = (store: MockOf<RunStore>): void => {
 }
 
 /** A transaction-owned wait whose workspace, wake and approval key remain exact. */
-export const runWaitOf = builder<RunWait>({
+export const runWaitOf: (overrides?: Partial<RunWait>) => RunWait = builder<RunWait>({
     workspaceId: "ws-1",
     wakeId: "wake-1",
     workItemId: "item-1",

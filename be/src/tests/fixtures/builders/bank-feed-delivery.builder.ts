@@ -1,11 +1,17 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { mock, type MockOf } from "@starci/jest-preset"
 import { BankFeedService, BankFeedDeliveryService } from "@modules/domain/billing"
 import { JOB_CLAIMS } from "@modules/platform/jobs"
 import type { JobClaims } from "@modules/platform/jobs"
 
+type BankFeedDomainBuilderResultShape = {
+    inbox: MockOf<BankFeedService>
+    service: BankFeedDeliveryService
+    close: () => Promise<void>
+}
+
 /** Arranges the actual domain coordinator and a recorder for the downstream receipt effect. */
-export const bankFeedDomainBuilder = async (claims: JobClaims) => {
+export const bankFeedDomainBuilder = async (claims: JobClaims): Promise<BankFeedDomainBuilderResultShape> => {
     const inbox = mock<BankFeedService>()
     inbox.processRecordedFeedDelivery.mockResolvedValue([])
     const billing = await Test.createTestingModule({

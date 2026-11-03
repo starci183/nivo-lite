@@ -1,7 +1,28 @@
+import type { Proposal } from "@modules/domain/work-items"
 import { AT, proposal } from "./work-items.builder"
 
+type AutoDoneColumnsResultShape = {
+    summary: string
+    href: string
+}
+
+type AutoDoneColumnsShape = {
+    status: string
+    decidedPath: string
+    proposal: Proposal
+    result: AutoDoneColumnsResultShape
+    evidenceState: string
+    completedAt: Date
+    leasedAt: Date
+    error: null
+    leadId: string
+    reason: string
+    reasons: string
+    missingFields: Array<never>
+}
+
 /** The columns closing the shipped quote as done on the automatic path writes, the SQL expressions shown as their text. */
-export const AUTO_DONE_COLUMNS = {
+export const AUTO_DONE_COLUMNS: AutoDoneColumnsShape = {
     status: "done",
     decidedPath: "auto",
     proposal,
@@ -16,8 +37,17 @@ export const AUTO_DONE_COLUMNS = {
     missingFields: [],
 }
 
+type StillWaitingColumnsShape = {
+    status: string
+    proposal: Proposal
+    missingFields: Array<string>
+    reason: string
+    reasons: Array<string>
+    leasedAt: Date
+}
+
 /** The columns putting an item back to waiting for a decision while the field `need` is still missing writes. */
-export const STILL_WAITING_COLUMNS = {
+export const STILL_WAITING_COLUMNS: StillWaitingColumnsShape = {
     status: "waiting_decision",
     proposal,
     missingFields: ["need"],

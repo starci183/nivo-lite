@@ -1,5 +1,5 @@
+import type { MockEntityManager, MockOf, FakeTransaction, FakeQueryBuilder } from "@starci/jest-preset"
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager, MockOf } from "@starci/jest-preset"
 import type { Timer } from "@modules/platform/retry"
 import type { ListenHandlers, NotificationListener, RealtimeTopic } from "@modules/platform/realtime"
 import {
@@ -25,14 +25,24 @@ export const topicOf = (name: string): RealtimeTopic<Frame> => ({ name, accepts:
 /** The frame of one numeric value. */
 export const frameOf = (value: number): Frame => ({ id: `e-${value}`, value })
 
+type RowOfResultShape = {
+    seq: string
+    topic: string
+    payload: object
+}
+
 /** The committed event row of one sequence on a topic. */
-export const rowOf = (seq: number, topic: string, payload: object) => ({ seq: String(seq), topic, payload })
+export const rowOf = (seq: number, topic: string, payload: object): RowOfResultShape => ({
+    seq: String(seq),
+    topic,
+    payload,
+})
 
 /** The text a database notification carries for one topic and sequence. */
 export const notification = (topic: string, seq: number): string => JSON.stringify({ topic, seq })
 
 /** Waits for the queued microtasks and immediate callbacks of the hub to run. */
-export const settle = () => new Promise<void>((resolve) => setImmediate(resolve))
+export const settle = (): Promise<void> => new Promise<void>((resolve) => setImmediate(resolve))
 
 /** What a scripted statement answers for its arguments. */
 export type Answer = (args: ReadonlyArray<unknown>) => unknown
@@ -54,8 +64,13 @@ export const numbers = (value: unknown): ReadonlyArray<number> =>
 /** Does nothing. */
 const noop = (): void => undefined
 
+type GateOfResultShape = {
+    open: () => void
+    opened: Promise<void>
+}
+
 /** A gate a proof opens to release a held read. */
-export const gateOf = () => {
+export const gateOf = (): GateOfResultShape => {
     let open: () => void = noop
     const opened = new Promise<void>((resolve) => {
         open = resolve
@@ -85,6 +100,17 @@ export interface ScheduledTimer {
 const missedBy = (names: ReadonlyArray<string>, after: ReadonlyArray<number>, row: Row): boolean =>
     Number(row.seq) > (after[names.indexOf(row.topic)] ?? Infinity)
 
+type ReloadingHubWorldResultShape = {
+    em: MockEntityManager
+    table: Array<RowOfResultShape>
+    answers: Map<string, Answer>
+    reads: Array<ReadRecord>
+    handlers: CapturedHandlers
+    transactions: FakeTransaction<MockEntityManager>
+    scheduled: Array<ScheduledTimer>
+    fakes: ReadonlyArray<FakeQueryBuilder>
+}
+
 /**
  * The world of the Postgres reloading hub on a scripted database: the entity manager, the committed `table`, the statements the hub
  * runs (the highest sequence of a topic, the row a notification names, the rows after each topic's cursor; one the spec did not
@@ -94,7 +120,7 @@ export const reloadingHubWorld = (
     watermarks: Readonly<Record<string, number>>,
     listener: MockOf<NotificationListener>,
     timer: MockOf<Timer>,
-) => {
+): ReloadingHubWorldResultShape => {
     const em: MockEntityManager = mockEntityManager()
     const table: Array<Row> = []
     const answers = new Map<string, Answer>([

@@ -4,7 +4,7 @@ import type { CommandResult, WorkItem } from "@modules/domain/decisions"
 import type { CandidateView } from "@modules/domain/office-command-candidates"
 
 /** A command candidate as the candidate statements return it. */
-export const candidateOf = builder<CandidateView>({
+export const candidateOf: (overrides?: Partial<CandidateView>) => CandidateView = builder<CandidateView>({
     id: "c-1",
     message_id: "m-1",
     module: "accounting",
@@ -19,7 +19,7 @@ export const candidateOf = builder<CandidateView>({
 })
 
 /** What the model picked for a message. */
-export const choiceOf = builder<ProposedCommand>({
+export const choiceOf: (overrides?: Partial<ProposedCommand>) => ProposedCommand = builder<ProposedCommand>({
     intent: "command",
     command: "issue_receipt",
     subject_id: "o-1",

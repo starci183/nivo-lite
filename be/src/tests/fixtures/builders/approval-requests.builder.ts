@@ -8,7 +8,7 @@ import type {
     ApprovalVerdictRecord,
 } from "@modules/domain/approval-requests"
 
-const [ApprovalRequestEntity] = approvalRequestsEntities
+const ApprovalRequestEntity: (typeof approvalRequestsEntities)[0] = approvalRequestsEntities[0]
 type ApprovalRequestEntity = InstanceType<typeof ApprovalRequestEntity>
 
 /** The moment the specs of the approval requests run at. */
@@ -21,7 +21,7 @@ export const IN_30_MINUTES = "2026-10-22T10:00:00.000Z"
 export const AGENT = "22222222-2222-4222-8222-222222222222"
 
 /** One person of the HAKUEN workspace as the directory lists them. */
-export const memberOf = builder<DirectoryMember>({
+export const memberOf: (overrides?: Partial<DirectoryMember>) => DirectoryMember = builder<DirectoryMember>({
     memberId: "member-owner",
     name: "Chu Van",
     role: "owner",
@@ -30,22 +30,28 @@ export const memberOf = builder<DirectoryMember>({
     rooms: [],
 })
 
-export const OWNER = memberOf()
-export const MINH = memberOf({
+export const OWNER: DirectoryMember = memberOf()
+export const MINH: DirectoryMember = memberOf({
     memberId: "member-minh",
     name: "Anh Minh",
     role: "manager",
     roomId: "sales",
     rooms: ["sales"],
 })
-export const HA = memberOf({
+export const HA: DirectoryMember = memberOf({
     memberId: "member-ha",
     name: "Ha",
     role: "manager",
     roomId: "executive",
     rooms: ["executive"],
 })
-export const LAN = memberOf({ memberId: "member-lan", name: "Lan", role: "staff", roomId: "sales", rooms: ["sales"] })
+export const LAN: DirectoryMember = memberOf({
+    memberId: "member-lan",
+    name: "Lan",
+    role: "staff",
+    roomId: "sales",
+    rooms: ["sales"],
+})
 
 /** The owner, a manager of Sales, a manager of the executive room and a staff member of Sales. */
 export const DIRECTORY: ReadonlyArray<DirectoryMember> = [OWNER, MINH, HA, LAN]
@@ -55,7 +61,7 @@ export const MINH_REF: ApproverRef = { memberId: "member-minh", name: "Anh Minh"
 export const HA_REF: ApproverRef = { memberId: "member-ha", name: "Ha", role: "manager", roomId: "executive" }
 
 /** One grant for the discount action. */
-export const grantOf = builder<MemberGrant>({
+export const grantOf: (overrides?: Partial<MemberGrant>) => MemberGrant = builder<MemberGrant>({
     id: "grant-1",
     workspace_id: "ws-1",
     member_id: "member-minh",
@@ -72,7 +78,7 @@ export const GRANTS: ReadonlyArray<MemberGrant> = [
 ]
 
 /** The discount rule: auto up to 3 percent, ask up to 20, managers and the Sales room approve, any one of them, thirty minutes. */
-export const setupOf = builder<ApprovalSetup>({
+export const setupOf: (overrides?: Partial<ApprovalSetup>) => ApprovalSetup = builder<ApprovalSetup>({
     department: "sales",
     action: "give_discount",
     mode: "auto",
@@ -86,7 +92,7 @@ export const setupOf = builder<ApprovalSetup>({
 })
 
 /** What the work chain asks when it opens a request. */
-export const openOf = builder<OpenApprovalParams>({
+export const openOf: (overrides?: Partial<OpenApprovalParams>) => OpenApprovalParams = builder<OpenApprovalParams>({
     workspaceId: "ws-1",
     chainStepId: "step-1",
     action: "give_discount",
@@ -96,62 +102,65 @@ export const openOf = builder<OpenApprovalParams>({
 })
 
 /** A pending request opened {@link NOW}, with Anh Minh tagged. */
-export const approvalRequestOf = builder<ApprovalRequestRecord>({
-    id: "request-1",
-    workspace_id: "ws-1",
-    chain_step_id: "step-1",
-    department: "sales",
-    action: "give_discount",
-    amount: 10,
-    unit: "percent",
-    requested_by_agent_id: AGENT,
-    policy: "any",
-    status: "pending",
-    approvers: [MINH_REF],
-    verdicts: [],
-    excluded: [],
-    timeout_minutes: 30,
-    expires_at: IN_30_MINUTES,
-    reminded_at: null,
-    resolved_by: null,
-    resolved_at: null,
-    escalated_to: null,
-    approver_group: null,
-    created_at: NOW,
-})
+export const approvalRequestOf: (overrides?: Partial<ApprovalRequestRecord>) => ApprovalRequestRecord =
+    builder<ApprovalRequestRecord>({
+        id: "request-1",
+        workspace_id: "ws-1",
+        chain_step_id: "step-1",
+        department: "sales",
+        action: "give_discount",
+        amount: 10,
+        unit: "percent",
+        requested_by_agent_id: AGENT,
+        policy: "any",
+        status: "pending",
+        approvers: [MINH_REF],
+        verdicts: [],
+        excluded: [],
+        timeout_minutes: 30,
+        expires_at: IN_30_MINUTES,
+        reminded_at: null,
+        resolved_by: null,
+        resolved_at: null,
+        escalated_to: null,
+        approver_group: null,
+        created_at: NOW,
+    })
 
 /** The stored row of {@link approvalRequestOf}: a pending request opened {@link NOW}, with Anh Minh tagged. */
-export const approvalRequestEntityOf = builder<ApprovalRequestEntity>({
-    id: "request-1",
-    workspaceId: "ws-1",
-    chainStepId: "step-1",
-    department: "sales",
-    action: "give_discount",
-    amount: 10,
-    unit: "percent",
-    requestedByAgentId: AGENT,
-    policy: "any",
-    status: "pending",
-    approvers: [MINH_REF],
-    excluded: [],
-    verdicts: [],
-    timeoutMinutes: 30,
-    expiresAt: new Date(IN_30_MINUTES),
-    remindedAt: null,
-    resolvedBy: null,
-    resolvedAt: null,
-    escalatedTo: null,
-    approverGroup: null,
-    createdAt: new Date(NOW),
-    updatedAt: new Date(NOW),
-})
+export const approvalRequestEntityOf: (overrides?: Partial<ApprovalRequestEntity>) => ApprovalRequestEntity =
+    builder<ApprovalRequestEntity>({
+        id: "request-1",
+        workspaceId: "ws-1",
+        chainStepId: "step-1",
+        department: "sales",
+        action: "give_discount",
+        amount: 10,
+        unit: "percent",
+        requestedByAgentId: AGENT,
+        policy: "any",
+        status: "pending",
+        approvers: [MINH_REF],
+        excluded: [],
+        verdicts: [],
+        timeoutMinutes: 30,
+        expiresAt: new Date(IN_30_MINUTES),
+        remindedAt: null,
+        resolvedBy: null,
+        resolvedAt: null,
+        escalatedTo: null,
+        approverGroup: null,
+        createdAt: new Date(NOW),
+        updatedAt: new Date(NOW),
+    })
 
 /** The approve verdict of Anh Minh. */
-export const verdictOf = builder<ApprovalVerdictRecord>({
-    member_id: "member-minh",
-    verdict: "approve",
-    decided_at: NOW,
-})
+export const verdictOf: (overrides?: Partial<ApprovalVerdictRecord>) => ApprovalVerdictRecord =
+    builder<ApprovalVerdictRecord>({
+        member_id: "member-minh",
+        verdict: "approve",
+        decided_at: NOW,
+    })
 
 /** What a spec arranges about the rule and the people. */
 export interface Arrangement {
@@ -212,8 +221,15 @@ export const requestOfSecondStep = (): ApprovalRequestEntity =>
 export const allApproveRequestMinhApproved = (): ApprovalRequestEntity =>
     approvalRequestEntityOf({ policy: "all", approvers: [MINH_REF, HA_REF], verdicts: [verdictOf()] })
 
+type EscalationExpirySetShape = {
+    status: string
+    resolvedBy: null
+    resolvedAt: Date
+    escalatedTo: string
+}
+
 /** What the escalation writes onto a request it expires toward Anh Minh. */
-export const ESCALATION_EXPIRY_SET = {
+export const ESCALATION_EXPIRY_SET: EscalationExpirySetShape = {
     status: "expired",
     resolvedBy: null,
     resolvedAt: new Date(NOW),
@@ -221,17 +237,18 @@ export const ESCALATION_EXPIRY_SET = {
 }
 
 /** An approved sales refund resolved by member m-1 on step c-1, as the history reads see it. */
-export const historyRequestOf = builder<ApprovalRequestEntity>({
-    ...approvalRequestEntityOf(),
-    id: "r-1",
-    department: "sales",
-    action: "refund",
-    status: "approved",
-    resolvedBy: "m-1",
-    chainStepId: "c-1",
-    resolvedAt: new Date("2026-10-12T03:00:00.000Z"),
-    createdAt: new Date("2026-10-11T03:00:00.000Z"),
-})
+export const historyRequestOf: (overrides?: Partial<ApprovalRequestEntity>) => ApprovalRequestEntity =
+    builder<ApprovalRequestEntity>({
+        ...approvalRequestEntityOf(),
+        id: "r-1",
+        department: "sales",
+        action: "refund",
+        status: "approved",
+        resolvedBy: "m-1",
+        chainStepId: "c-1",
+        resolvedAt: new Date("2026-10-12T03:00:00.000Z"),
+        createdAt: new Date("2026-10-11T03:00:00.000Z"),
+    })
 
 /** The request r-2 that expired without anybody resolving it. */
 export const expiredUnresolvedRequest = (): ApprovalRequestEntity =>

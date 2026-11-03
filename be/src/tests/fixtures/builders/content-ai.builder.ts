@@ -33,8 +33,17 @@ export const PILLAR = {
     sort: 0,
 }
 
+type CadenceShape = {
+    id: string
+    workspaceId: string
+    channel: "facebook"
+    postsPerWeek: number
+    days: Array<number>
+    time: string
+}
+
 /** A daily Facebook schedule with all weekdays available. */
-export const CADENCE = {
+export const CADENCE: CadenceShape = {
     id: "cadence-1",
     workspaceId: "ws-1",
     channel: "facebook" as const,
@@ -58,7 +67,7 @@ export const CONFIGURATION: ContentConfiguration = {
 }
 
 /** Builds an editable content idea with per-case overrides. */
-export const itemOf = builder<ContentItem>({
+export const itemOf: (overrides?: Partial<ContentItem>) => ContentItem = builder<ContentItem>({
     id: "item-1",
     workspaceId: "ws-1",
     planId: null,
@@ -87,7 +96,7 @@ export const itemOf = builder<ContentItem>({
 })
 
 /** Builds a queued generation and its related child identities. */
-export const stateOf = builder<GenerationState>({
+export const stateOf: (overrides?: Partial<GenerationState>) => GenerationState = builder<GenerationState>({
     id: "g-1",
     workspaceId: "ws-1",
     purpose: "content_draft",
@@ -103,7 +112,7 @@ export const stateOf = builder<GenerationState>({
 })
 
 /** Builds the expected public status of a queued content operation. */
-export const statusOf = builder<ContentAiStatus>({
+export const statusOf: (overrides?: Partial<ContentAiStatus>) => ContentAiStatus = builder<ContentAiStatus>({
     id: "g-1",
     status: "queued",
     progress: 0,

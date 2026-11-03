@@ -1,11 +1,11 @@
 import { builder } from "@starci/jest-preset"
 import { agentMessagesEntities } from "@modules/domain/agent-messages"
 
-const [AgentMessageEntity] = agentMessagesEntities
+const AgentMessageEntity: (typeof agentMessagesEntities)[0] = agentMessagesEntities[0]
 type AgentMessageEntity = InstanceType<typeof AgentMessageEntity>
 
 /** A stored conversation message, with the fields a spec rarely changes filled. */
-export const messageOf = builder<AgentMessageEntity>({
+export const messageOf: (overrides?: Partial<AgentMessageEntity>) => AgentMessageEntity = builder<AgentMessageEntity>({
     id: "msg-1",
     workspaceId: "ws-1",
     conversationId: "conv-1",
@@ -50,7 +50,9 @@ export const customerPriceQuestion = (): AgentMessageEntity => messageOf({ role:
 export const agentWelcomeReply = (): AgentMessageEntity => messageOf({ role: "agent", body: "Welcome" })
 
 /** A sent message m1 as the delivery specs see it. */
-export const sentReplyOf = builder<AgentMessageEntity>({ ...messageOf(), id: "m1", deliveryStatus: "sent" })
+export const sentReplyOf: (overrides?: Partial<AgentMessageEntity>) => AgentMessageEntity = builder<AgentMessageEntity>(
+    { ...messageOf(), id: "m1", deliveryStatus: "sent" },
+)
 
 /** The sent message m1 of conversation c1. */
 export const sentReplyInC1 = (): AgentMessageEntity => sentReplyOf({ conversationId: "c1" })

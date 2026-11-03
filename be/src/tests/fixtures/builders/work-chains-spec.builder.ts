@@ -1,16 +1,25 @@
+import type { ChainStepRecord } from "@modules/domain/work-chains"
 import { rowOf } from "./work-chains.builder"
 
 /** The twelve automatic steps of one thread, the most a chain may hold. */
-export const twelveSteps = Array.from({ length: 12 }, (_, index) =>
+export const twelveSteps: Array<ChainStepRecord> = Array.from({ length: 12 }, (_, index) =>
     rowOf({ id: `s${index}`, seq: index + 1, actor_id: `a${index}` }),
 )
+
+type ApprovalResultShape = {
+    workspaceId: string
+    approvalRequestId: string
+    outcome: "approved" | "rejected" | "expired"
+    decidedBy: string | null
+    locale: "vi" | "en"
+}
 
 /** The settlement of the approval request `req-1` of the first workspace. */
 export const approval = (
     outcome: "approved" | "rejected" | "expired",
     decidedBy: string | null,
     locale: "vi" | "en" = "vi",
-) => ({
+): ApprovalResultShape => ({
     workspaceId: "ws-1",
     approvalRequestId: "req-1",
     outcome,
@@ -25,18 +34,36 @@ export const catalogText = (key: string, params: Readonly<Record<string, string 
 /** The directory answer for the owner of the agent: a member and the member to fall back to. */
 export const OWNER_FACTS = { ownerMemberId: "owner-1", fallbackMemberId: "fallback-1" }
 
+type ActiveMembersOfInputShape = {
+    readonly id: string
+}
+
+type ActiveMembersOfResultShape = {
+    id: string
+    displayName: string
+    role: "manager"
+}
+
 /** The active members the directory answers, each named by its id and managing. */
-export const activeMembersOf = (active: ReadonlyArray<{ readonly id: string }> | undefined) =>
+export const activeMembersOf = (
+    active: ReadonlyArray<ActiveMembersOfInputShape> | undefined,
+): Array<ActiveMembersOfResultShape> =>
     (active ?? [{ id: "owner-1" }]).map(({ id }) => ({ id, displayName: id, role: "manager" as const }))
 
+type NamedMemberOfInputShape = {
+    readonly name: string
+}
+
 /** The member the directory finds by id, or none when the answers name none. */
-export const namedMemberOf = (name: ReadonlyArray<{ readonly name: string }> | undefined) => {
+export const namedMemberOf = (
+    name: ReadonlyArray<NamedMemberOfInputShape> | undefined,
+): ActiveMembersOfResultShape | null => {
     const [named] = name ?? [{ name: "Mr Minh" }]
     return named === undefined ? null : { id: "minh", displayName: named.name, role: "manager" as const }
 }
 
 /** Two steps, the second an approval decided by the owner four minutes after it began. */
-export const decidedHistory = [
+export const decidedHistory: Array<ChainStepRecord> = [
     rowOf({ id: "s1", seq: 1 }),
     rowOf({
         id: "s2",
@@ -49,7 +76,7 @@ export const decidedHistory = [
 ]
 
 /** Three steps by actors the directories may or may not know: a member, a vanished member and an unknown agent. */
-export const mixedActorHistory = [
+export const mixedActorHistory: Array<ChainStepRecord> = [
     rowOf({ id: "s1", seq: 1, actor_kind: "member", actor_id: "minh" }),
     rowOf({ id: "s2", seq: 2, actor_kind: "member", actor_id: "gone" }),
     rowOf({ id: "s3", seq: 3, actor_kind: "agent", actor_id: "agent-9" }),

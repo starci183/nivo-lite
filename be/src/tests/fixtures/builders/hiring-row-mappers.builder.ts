@@ -3,7 +3,7 @@ import { createHash } from "node:crypto"
 import type { CandidateRecord, InterviewRecord, JobRecord, OfferRecord } from "@modules/domain/hiring"
 
 /** Deterministic 32-hex hiring link token derived from a fixture label. */
-export const LINK_TOKEN = createHash("sha256").update("fixture-hiring-link-token").digest("hex").slice(0, 32)
+export const LINK_TOKEN: string = createHash("sha256").update("fixture-hiring-link-token").digest("hex").slice(0, 32)
 
 export const job: JobRecord = {
     id: "job-1",

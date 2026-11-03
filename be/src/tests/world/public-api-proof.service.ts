@@ -1,6 +1,6 @@
+import type { JobClaims, ClaimedJob } from "@modules/platform/jobs"
 import assert from "node:assert/strict"
 import { JOB_CLAIMS } from "@modules/platform/jobs"
-import type { JobClaims } from "@modules/platform/jobs"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { LiteWorld } from "./lite-world.service"
 import { cleanupJobs, cleanupWorkspace } from "./proof-database.service"
@@ -28,8 +28,18 @@ export const openPublicApiProof = async (world: LiteWorld, identity: PublicApiId
     })
 }
 
+type ClaimPublicApiResultShape = {
+    claims: JobClaims
+    claim: () => Promise<ClaimedJob>
+    job: ClaimedJob
+}
+
 /** The real claim used by direct processor and stale-fence proofs. */
-export const claimPublicApi = async (world: LiteWorld, payload: object, kind: string = "public-api.request") => {
+export const claimPublicApi = async (
+    world: LiteWorld,
+    payload: object,
+    kind: string = "public-api.request",
+): Promise<ClaimPublicApiResultShape> => {
     const claims = world.resolve<JobClaims>(JOB_CLAIMS)
     const key = world.key(world.id())
     const claim = async () => {

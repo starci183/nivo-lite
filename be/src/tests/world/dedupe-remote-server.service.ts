@@ -35,8 +35,15 @@ const messageOf = async (request: IncomingMessage): Promise<RpcMessage> => {
     return read.ok && typeof read.value === "object" && read.value !== null ? { ...read.value } : {}
 }
 
+type CreateDedupeRemoteServerResultShape = {
+    calls: Array<Readonly<Record<string, unknown>>>
+    readonly url: string
+    listen: () => Promise<void>
+    close: () => Promise<void>
+}
+
 /** A loopback-only HAKUEN-shaped MCP server for durable inbox regressions; it counts effects independently of NIVO's claim. */
-export const createDedupeRemoteServer = () => {
+export const createDedupeRemoteServer = (): CreateDedupeRemoteServerResultShape => {
     const calls: Array<Readonly<Record<string, unknown>>> = []
     let allowing: jest.SpyInstance | null = null
     const resultOf = (message: RpcMessage): unknown => {
@@ -75,12 +82,12 @@ export const createDedupeRemoteServer = () => {
             const port = typeof address === "object" && address !== null ? address.port : 0
             return `http://127.0.0.1:${String(port)}/mcp`
         },
-        listen: () =>
+        listen: (): Promise<void> =>
             new Promise<void>((resolve) => {
                 allowing = allowingLoopback("127.0.0.1")
                 http.listen(0, "127.0.0.1", resolve)
             }),
-        close: () =>
+        close: (): Promise<void> =>
             new Promise<void>((resolve) => {
                 allowing?.mockRestore()
                 http.closeAllConnections()

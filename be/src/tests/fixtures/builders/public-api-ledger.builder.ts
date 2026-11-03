@@ -1,5 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import { fakeQueryBuilder } from "./fake-query-builder.builder"
+import { fakeQueryBuilder, type FakeQueryBuilder } from "./fake-query-builder.builder"
 import type { LedgerRecord, publicApiEntities } from "@modules/domain/public-api"
 
 type PublicApiEntity = InstanceType<(typeof publicApiEntities)[number]>
@@ -8,7 +8,7 @@ type PublicApiEntity = InstanceType<(typeof publicApiEntities)[number]>
 export const LEDGER_WORKSPACE = "11111111-1111-4111-8111-111111111111"
 
 /** A ledger row as the lock read answers it, with any column overridden. */
-export const ledgerRowOf = builder<PublicApiEntity>({
+export const ledgerRowOf: (overrides?: Partial<PublicApiEntity>) => PublicApiEntity = builder<PublicApiEntity>({
     id: "22222222-2222-4222-8222-222222222222",
     workspaceId: LEDGER_WORKSPACE,
     keyId: "key-1",
@@ -86,11 +86,16 @@ export const ledgerExpected = (expected: LedgerRecord): LedgerCalls => ({
     returning: [["id, lead_id"]],
 })
 
+type LedgerAnswersResultShape = {
+    write: FakeQueryBuilder
+    builders: Array<FakeQueryBuilder>
+}
+
 /**
  * The query builders a ledger record runs: the insert, answering the rows given, or (when the first row is a repeat,
  * `inserted: false`) an insert that wrote nothing followed by the counting update that answers that row.
  */
-export const ledgerAnswers = (raw: ReadonlyArray<object>) => {
+export const ledgerAnswers = (raw: ReadonlyArray<object>): LedgerAnswersResultShape => {
     const [first] = raw
     const repeat = first !== undefined && "inserted" in first && first.inserted === false
     const write = fakeQueryBuilder({ execute: { raw: repeat ? [] : raw } })

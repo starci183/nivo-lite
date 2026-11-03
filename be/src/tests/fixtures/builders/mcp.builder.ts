@@ -85,5 +85,89 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
     ]
 }
 
+type BuildWiringProofResultOverridesShape = {
+    token: InjectionToken
+    value: unknown
+}
+
+type BuildWiringProofResultOptionsAiShape = {
+    gatewayUrl: null
+    virtualKey: null
+    chatModel: string
+    embeddingModel: string
+}
+
+type BuildWiringProofResultOptionsMcpGatewayRemoteShape = {
+    clientName: string
+}
+
+type BuildWiringProofResultOptionsMcpGatewayShape = {
+    remote: BuildWiringProofResultOptionsMcpGatewayRemoteShape
+    defaultTimeoutMs: number
+}
+
+type BuildWiringProofResultOptionsConnectionSecretsShape = {
+    tokenKey: Secret
+}
+
+type BuildWiringProofResultOptionsQueueShape = {
+    enabled: boolean
+    redisHost: string
+    redisPort: number
+    redisDb: number
+    prefix: string
+    concurrency: number
+    workspaceConcurrency: number
+    relayIntervalMs: number
+    relayBatch: number
+    reconcileAfterMs: number
+    visibilityTimeoutMs: number
+    shutdownGraceMs: number
+}
+
+type BuildWiringProofResultOptionsDatabaseShape = {
+    name: string
+    provider: "postgres"
+    url: Secret
+    schema: string
+}
+
+type BuildWiringProofResultOptionsHttpSecurityWebhooksShape = {}
+
+type BuildWiringProofResultOptionsHttpSecurityRateLimitShape = {
+    windowMs: number
+    defaultLimit: number
+    strictLimit: number
+}
+
+type BuildWiringProofResultOptionsHttpSecurityShape = {
+    trustedProxyHops: number
+    allowedOrigins: Array<string>
+    rateLimit: BuildWiringProofResultOptionsHttpSecurityRateLimitShape
+    webhooks: BuildWiringProofResultOptionsHttpSecurityWebhooksShape
+}
+
+type BuildWiringProofResultOptionsServerShape = {
+    port: number
+}
+
+type BuildWiringProofResultOptionsShape = {
+    server: BuildWiringProofResultOptionsServerShape
+    httpSecurity: BuildWiringProofResultOptionsHttpSecurityShape
+    database: BuildWiringProofResultOptionsDatabaseShape
+    queue: BuildWiringProofResultOptionsQueueShape
+    connectionSecrets: BuildWiringProofResultOptionsConnectionSecretsShape
+    mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
+    ai: BuildWiringProofResultOptionsAiShape
+}
+
+type BuildWiringProofResultShape = {
+    options: BuildWiringProofResultOptionsShape
+    overrides: Array<BuildWiringProofResultOverridesShape>
+}
+
 /** Compiles the real mcp root with explicit options and existing infrastructure-token doubles. */
-export const buildWiringProof = (_AppModule: unknown) => ({ options, overrides: resourceOverrides() })
+export const buildWiringProof = (_AppModule: unknown): BuildWiringProofResultShape => ({
+    options,
+    overrides: resourceOverrides(),
+})

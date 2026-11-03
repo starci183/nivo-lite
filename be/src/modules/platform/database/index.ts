@@ -24,3 +24,5 @@ export {
 } from "./primary.decorators"
 export type { AfterCommit } from "./after-commit.port"
 export type { RateLimitStore } from "./rate-limit-store.port"
+export type { CommitTask } from "./after-commit.port"
+export type { SqlText } from "./database.sql"

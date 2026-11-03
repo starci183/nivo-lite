@@ -40,8 +40,23 @@ export const PIPELINE: PipelineRow = {
     updated_at: "2026-10-01T00:00:00.000Z",
 }
 
+type PendingSwapViewShape = {
+    id: string
+    kind: string
+    shiftId: string
+    fromStaffId: string
+    toStaffId: string
+    reason: string
+    status: string
+    checks: Array<never>
+    workItemId: null
+    createdAt: string
+    item: null
+    shiftLine: string
+}
+
 /** The pending swap of the rows builder as the bench lists it. */
-export const PENDING_SWAP_VIEW = {
+export const PENDING_SWAP_VIEW: PendingSwapViewShape = {
     id: "swap-1",
     kind: "swap",
     shiftId: "shift-1",

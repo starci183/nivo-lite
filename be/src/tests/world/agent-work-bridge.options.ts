@@ -7,7 +7,7 @@ import { Secret } from "@modules/platform/config"
 import { AGENT_WORK_MODULES } from "./agent-work-capabilities.options"
 
 /** The secret, drawn per run, the proofs sign the bridge plugin's credential with. */
-export const BRIDGE_PROOF_SECRET = randomBytes(24).toString("hex")
+export const BRIDGE_PROOF_SECRET: string = randomBytes(24).toString("hex")
 
 @Module({})
 class AgentBridgeAccessModule {
@@ -26,4 +26,4 @@ class AgentBridgeAccessModule {
 }
 
 /** The agent work store with the bridge door on top, scripted handler and executor included. */
-export const AGENT_BRIDGE_MODULES = [...AGENT_WORK_MODULES, AgentBridgeAccessModule.register()]
+export const AGENT_BRIDGE_MODULES: Array<DynamicModule> = [...AGENT_WORK_MODULES, AgentBridgeAccessModule.register()]

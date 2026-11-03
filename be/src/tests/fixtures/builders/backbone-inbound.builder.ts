@@ -12,11 +12,12 @@ import { nodeOf } from "./agent-graph.builder"
 import { persistGraph, persistGraphTenant } from "./agent-graph-world.builder"
 import type { GraphTenant } from "./agent-graph-world.builder"
 
-const [ConversationEntity] = agentConversationsEntities
-const [MessageEntity] = agentMessagesEntities
-const [InstallationEntity] = moduleInstallationsEntities
-const [GraphEntity, VersionEntity] = agentGraphsEntities
-const [MemberEntity] = workspaceMembersEntities
+const ConversationEntity: (typeof agentConversationsEntities)[0] = agentConversationsEntities[0]
+const MessageEntity: (typeof agentMessagesEntities)[0] = agentMessagesEntities[0]
+const InstallationEntity: (typeof moduleInstallationsEntities)[0] = moduleInstallationsEntities[0]
+const GraphEntity: (typeof agentGraphsEntities)[0] = agentGraphsEntities[0]
+const VersionEntity: (typeof agentGraphsEntities)[1] = agentGraphsEntities[1]
+const MemberEntity: (typeof workspaceMembersEntities)[0] = workspaceMembersEntities[0]
 
 /** Actual catalogue action: an untrusted inbound source must request approval before recording a receipt. */
 export const INBOUND_ACTION = "record_receivable_payment"
@@ -186,11 +187,16 @@ export const receiptTextOf = (amount = 3_500_000): string =>
         },
     })
 
+type PaymentAmountsShape = {
+    name: string
+    amount: number
+}
+
 /** Images and typed amounts are unverified evidence: both stay requests rather than payment confirmations. */
-export const PAYMENT_AMOUNTS = [
+export const PAYMENT_AMOUNTS: Array<PaymentAmountsShape> = [
     { name: "3tr5", amount: 3_500_000 },
     { name: "17tr5", amount: 17_500_000 },
 ]
 
 /** These prospective actions have no offered contract. Picking one must leave an invalid-output trace and no effect. */
-export const UNSUPPORTED_INTENTS = ["confirm_payment", "refund"]
+export const UNSUPPORTED_INTENTS: Array<string> = ["confirm_payment", "refund"]

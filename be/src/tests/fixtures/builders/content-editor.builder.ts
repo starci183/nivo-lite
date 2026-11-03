@@ -1,6 +1,6 @@
 import { contentItemsEntities } from "@modules/domain/content-items"
 
-const ContentItemEntity = contentItemsEntities[0]
+const ContentItemEntity: (typeof contentItemsEntities)[0] = contentItemsEntities[0]
 type ContentItemEntity = InstanceType<typeof ContentItemEntity>
 
 /** The fixed instant used by content editing scenarios. */
@@ -31,12 +31,16 @@ const shared = {
     source: "manual",
 }
 
+type ReadingStatusResultShape = {
+    findOne: readonly [typeof ContentItemEntity, ContentItemEntity]
+}
+
 /** The stubs of a manager whose read of one item answers an item of the status (and, optionally, its draft time and media). */
 export const readingStatus = (
     status: string,
     draftedAt: Date | null = null,
     media: ContentItemEntity["media"] = [],
-) => ({ findOne: [ContentItemEntity, row({ status, draftedAt, media })] as const })
+): ReadingStatusResultShape => ({ findOne: [ContentItemEntity, row({ status, draftedAt, media })] as const })
 
 /** A persisted content item with optional field overrides. */
 export const row = (patch: Partial<ContentItemEntity> = {}): ContentItemEntity =>
@@ -58,8 +62,38 @@ export const row = (patch: Partial<ContentItemEntity> = {}): ContentItemEntity =
         ...patch,
     })
 
+type ItemPublishedShape = {}
+
+type ItemShape = {
+    workspaceId: string
+    planId: null
+    pillarId: null
+    scheduledAt: null
+    holidayKey: null
+    workItemId: null
+    draftedAt: null
+    approvedBy: null
+    approvedAt: null
+    publishedAt: null
+    createdBy: string
+    createdAt: string
+    updatedAt: string
+    id: string
+    title: string
+    brief: string
+    channels: Array<string>
+    status: string
+    variants: ItemPublishedShape
+    hashtags: Array<never>
+    media: Array<never>
+    links: Array<never>
+    evidence: Array<never>
+    published: ItemPublishedShape
+    source: string
+}
+
 /** The API projection of the persisted content item. */
-export const item = {
+export const item: ItemShape = {
     ...shared,
     workspaceId: "workspace-1",
     planId: null,
@@ -76,34 +110,101 @@ export const item = {
     updatedAt: at,
 }
 
+type EditedEvidenceShape = {
+    at: string
+    kind: string
+    by: string
+    text: string
+}
+
 /** The expected audit trail of an edit. */
-export const editedEvidence = [{ at, kind: "edited", by: "Mai", text: "edited" }]
+export const editedEvidence: Array<EditedEvidenceShape> = [{ at, kind: "edited", by: "Mai", text: "edited" }]
 
 /** The expected audit trail of a creation. */
-export const createdEvidence = [{ at, kind: "created", by: "Mai", text: "created" }]
+export const createdEvidence: Array<EditedEvidenceShape> = [{ at, kind: "created", by: "Mai", text: "created" }]
+
+type LegacyAttachmentsShape2 = {
+    kind: string
+    name: string
+    path: string
+}
+
+type LegacyAttachmentsShape = {
+    kind: string
+    name: string
+    path?: never
+}
 
 /** Legacy attachments retained when a post is moved. */
-export const legacyAttachments = [
+export const legacyAttachments: Array<LegacyAttachmentsShape | LegacyAttachmentsShape2> = [
     { kind: "video_render", name: "Legacy" },
     { kind: "media", name: "Photo", path: "workspace-1/photo.jpg" },
 ]
 
+type CompletedRenderAttachmentsShape = {
+    kind: string
+    name: string
+    id: string
+}
+
 /** Two attachment references to the same completed render. */
-export const completedRenderAttachments = [
+export const completedRenderAttachments: Array<CompletedRenderAttachmentsShape> = [
     { kind: "video_render", name: "Video", id: "00000000-0000-0000-0000-000000000001" },
     { kind: "video_render", name: "Duplicate", id: "00000000-0000-0000-0000-000000000001" },
 ]
 
+type SelectedPillarInputShape = {
+    title: string
+    channels: Array<string>
+    pillarId: string
+    scheduledAt: string
+}
+
 /** Editor input with an explicitly selected pillar and schedule. */
-export const selectedPillarInput = {
+export const selectedPillarInput: SelectedPillarInputShape = {
     title: "x".repeat(210),
     channels: ["zalo"],
     pillarId: "pillar-1",
     scheduledAt: "2026-02-01",
 }
 
+type WorkbenchExpectedResultLastPlanShape = {
+    month: string
+    ideas: number
+    ms: number
+    createdAt: string
+}
+
+type WorkbenchExpectedResultFiguresPillarsShape = {
+    covered: number
+    total: number
+}
+
+type WorkbenchExpectedResultFiguresShape = {
+    awaitingApproval: number
+    published30: number
+    next: null
+    pillars: WorkbenchExpectedResultFiguresPillarsShape
+}
+
+type WorkbenchExpectedResultActorShape = {
+    workspaceId: string
+    name: string
+    canManage: boolean
+}
+
+type WorkbenchExpectedResultShape = {
+    nowIso: string
+    workspaceId: string
+    canManage: boolean
+    actor: WorkbenchExpectedResultActorShape
+    items: Array<never>
+    figures: WorkbenchExpectedResultFiguresShape
+    lastPlan: WorkbenchExpectedResultLastPlanShape | null
+}
+
 /** The expected authorized workbench, optionally with the last generated plan. */
-export const workbenchExpected = (hasPlan = false) => ({
+export const workbenchExpected = (hasPlan = false): WorkbenchExpectedResultShape => ({
     nowIso: at,
     workspaceId: "workspace-1",
     canManage: true,

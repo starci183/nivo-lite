@@ -1,3 +1,4 @@
+import { jobsEntities } from "@modules/platform/jobs"
 import { AgentRunTraceService } from "../../modules/domain/agent-runs/agent-run-trace.service"
 import { AgentRunsService } from "../../modules/domain/agent-runs/agent-runs.service"
 import { AgentWakeService } from "../../modules/domain/agent-work/agent-wake.service"
@@ -11,6 +12,9 @@ import type { useTestWorld } from "./use-test-world"
 import { specOf } from "./agent-runs-script.service"
 import { endBackoff, lapseClaims, removeStepJobs, stepJobsOf } from "./agent-runs-database.service"
 import type { StepSpec } from "../../modules/domain/agent-runs/agent-runs.contracts"
+import type { RunStepView } from "@modules/domain/agent-runs"
+
+type JobOutboxEntity = InstanceType<(typeof jobsEntities)[1]>
 
 /** The wake and run a proof drives. */
 export interface Scene {
@@ -20,8 +24,24 @@ export interface Scene {
     readonly runId: string
 }
 
+type SceneOfResultShape = {
+    workspaceId: string
+    agentId: string
+    newRun: (label: string, first?: ReadonlyArray<StepSpec>) => Promise<Scene>
+    /** Lets every claim of the run lapse, the way a worker that was killed leaves them. */
+    expireClaims: (runId: string) => Promise<void>
+    /** Ends the backoff of the pending steps of the run. */
+    endBackoff: (runId: string) => Promise<void>
+    /** The steps of the run, in order, as the trace reads them. */
+    stepsOf: (runId: string) => Promise<ReadonlyArray<RunStepView>>
+    /** The run row. */
+    runRow: (runId: string) => Promise<AgentRunEntity>
+    /** The advance jobs the outbox holds for the workspace. */
+    jobs: () => Promise<Array<JobOutboxEntity>>
+}
+
 /** What a proof needs of the office, the wake and the run of the agents' sagas, with the cleanup that leaves the database as it was. */
-export const sceneOf = (world: ReturnType<typeof useTestWorld>) => {
+export const sceneOf = (world: ReturnType<typeof useTestWorld>): SceneOfResultShape => {
     const identity: OfficeIdentity = {
         workspaceId: world.id(),
         users: { nam: world.id(), minh: world.id(), ha: world.id(), van: world.id(), lan: world.id() },
@@ -86,10 +106,11 @@ export const sceneOf = (world: ReturnType<typeof useTestWorld>) => {
         /** Ends the backoff of the pending steps of the run. */
         endBackoff: (runId: string): Promise<void> => endBackoff(em(), runId),
         /** The steps of the run, in order, as the trace reads them. */
-        stepsOf: (runId: string) => world.resolve(AgentRunTraceService).stepsOf(runId),
+        stepsOf: (runId: string): Promise<ReadonlyArray<RunStepView>> =>
+            world.resolve(AgentRunTraceService).stepsOf(runId),
         /** The run row. */
-        runRow: (runId: string) => em().findOneByOrFail(AgentRunEntity, { id: runId }),
+        runRow: (runId: string): Promise<AgentRunEntity> => em().findOneByOrFail(AgentRunEntity, { id: runId }),
         /** The advance jobs the outbox holds for the workspace. */
-        jobs: () => stepJobsOf(em(), workspaceId),
+        jobs: (): Promise<Array<JobOutboxEntity>> => stepJobsOf(em(), workspaceId),
     }
 }

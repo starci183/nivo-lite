@@ -11,7 +11,7 @@ export const DOC_AT = "2026-10-12T10:00:00.000Z"
 export const DOC_CONTENT = "Hours 8am-9pm. Price 20 USD."
 
 /** The document a fact extraction reads: a public note that waits for its facts. */
-export const docSourceOf = builder<SourceRecord>({
+export const docSourceOf: (overrides?: Partial<SourceRecord>) => SourceRecord = builder<SourceRecord>({
     id: DOC_SOURCE,
     workspaceId: DOC_WS,
     module: "chatbot",

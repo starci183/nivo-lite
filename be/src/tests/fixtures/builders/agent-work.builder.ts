@@ -9,16 +9,14 @@ import type {
     AgentWakeView,
 } from "@modules/domain/agent-work"
 
-const [
-    AgentWorkSettingsEntity,
-    AgentWorkStateEntity,
-    AgentWorkLeaseEntity,
-    AgentGoalEntity,
-    AgentTaskEntity,
-    AgentTriggerEntity,
-    AgentWakeEntity,
-    AgentTurnEntity,
-] = agentWorkEntities
+const AgentWorkSettingsEntity: (typeof agentWorkEntities)[0] = agentWorkEntities[0]
+const AgentWorkStateEntity: (typeof agentWorkEntities)[1] = agentWorkEntities[1]
+const AgentWorkLeaseEntity: (typeof agentWorkEntities)[2] = agentWorkEntities[2]
+const AgentGoalEntity: (typeof agentWorkEntities)[3] = agentWorkEntities[3]
+const AgentTaskEntity: (typeof agentWorkEntities)[4] = agentWorkEntities[4]
+const AgentTriggerEntity: (typeof agentWorkEntities)[5] = agentWorkEntities[5]
+const AgentWakeEntity: (typeof agentWorkEntities)[6] = agentWorkEntities[6]
+const AgentTurnEntity: (typeof agentWorkEntities)[7] = agentWorkEntities[7]
 type AgentWorkSettingsEntity = InstanceType<typeof AgentWorkSettingsEntity>
 type AgentWorkStateEntity = InstanceType<typeof AgentWorkStateEntity>
 type AgentWorkLeaseEntity = InstanceType<typeof AgentWorkLeaseEntity>
@@ -31,35 +29,37 @@ type AgentTurnEntity = InstanceType<typeof AgentTurnEntity>
 const WHEN = new Date("2026-11-10T03:00:00.000Z")
 
 /** The agent work settings row of workspace ws-1: work on, the core road, a cap of 50. */
-export const agentWorkSettingsRowOf = builder<AgentWorkSettingsEntity>({
-    workspaceId: "ws-1",
-    workEnabled: true,
-    road: "core",
-    backgroundDailyCap: 50,
-    pausedBy: null,
-    pausedAt: null,
-    createdAt: WHEN,
-    updatedAt: WHEN,
-})
+export const agentWorkSettingsRowOf: (overrides?: Partial<AgentWorkSettingsEntity>) => AgentWorkSettingsEntity =
+    builder<AgentWorkSettingsEntity>({
+        workspaceId: "ws-1",
+        workEnabled: true,
+        road: "core",
+        backgroundDailyCap: 50,
+        pausedBy: null,
+        pausedAt: null,
+        createdAt: WHEN,
+        updatedAt: WHEN,
+    })
 
 /** The work state row of agent-1: two failures and four background turns counted on the day. */
-export const agentWorkStateRowOf = builder<AgentWorkStateEntity>({
-    agentId: "agent-1",
-    workspaceId: "ws-1",
-    workEnabled: true,
-    pausedBy: null,
-    pausedAt: null,
-    failures: 2,
-    breakerUntil: null,
-    lastTurnAt: null,
-    backgroundDay: "2026-11-10",
-    backgroundTurns: 4,
-    createdAt: WHEN,
-    updatedAt: WHEN,
-})
+export const agentWorkStateRowOf: (overrides?: Partial<AgentWorkStateEntity>) => AgentWorkStateEntity =
+    builder<AgentWorkStateEntity>({
+        agentId: "agent-1",
+        workspaceId: "ws-1",
+        workEnabled: true,
+        pausedBy: null,
+        pausedAt: null,
+        failures: 2,
+        breakerUntil: null,
+        lastTurnAt: null,
+        backgroundDay: "2026-11-10",
+        backgroundTurns: 4,
+        createdAt: WHEN,
+        updatedAt: WHEN,
+    })
 
 /** A goal row of agent-1 written by an owner. */
-export const agentGoalRowOf = builder<AgentGoalEntity>({
+export const agentGoalRowOf: (overrides?: Partial<AgentGoalEntity>) => AgentGoalEntity = builder<AgentGoalEntity>({
     id: "goal-1",
     workspaceId: "ws-1",
     agentId: "agent-1",
@@ -75,7 +75,7 @@ export const agentGoalRowOf = builder<AgentGoalEntity>({
 })
 
 /** An open task row of agent-1 that wants to be woken in an hour. */
-export const agentTaskRowOf = builder<AgentTaskEntity>({
+export const agentTaskRowOf: (overrides?: Partial<AgentTaskEntity>) => AgentTaskEntity = builder<AgentTaskEntity>({
     id: "task-1",
     workspaceId: "ws-1",
     agentId: "agent-1",
@@ -94,28 +94,29 @@ export const agentTaskRowOf = builder<AgentTaskEntity>({
 })
 
 /** A daily trigger row of agent-1 at 08:30 that checks the invoices that are due. */
-export const agentTriggerRowOf = builder<AgentTriggerEntity>({
-    id: "trigger-1",
-    workspaceId: "ws-1",
-    agentId: "agent-1",
-    kind: "schedule",
-    preset: "daily_at",
-    atTime: "08:30:00",
-    timeZone: "Asia/Ho_Chi_Minh",
-    eventName: null,
-    probeKey: "invoices_due",
-    enabled: true,
-    sources: [],
-    seedKey: null,
-    nextRunAt: null,
-    lastFiredAt: null,
-    reconciledAt: null,
-    createdAt: WHEN,
-    updatedAt: WHEN,
-})
+export const agentTriggerRowOf: (overrides?: Partial<AgentTriggerEntity>) => AgentTriggerEntity =
+    builder<AgentTriggerEntity>({
+        id: "trigger-1",
+        workspaceId: "ws-1",
+        agentId: "agent-1",
+        kind: "schedule",
+        preset: "daily_at",
+        atTime: "08:30:00",
+        timeZone: "Asia/Ho_Chi_Minh",
+        eventName: null,
+        probeKey: "invoices_due",
+        enabled: true,
+        sources: [],
+        seedKey: null,
+        nextRunAt: null,
+        lastFiredAt: null,
+        reconciledAt: null,
+        createdAt: WHEN,
+        updatedAt: WHEN,
+    })
 
 /** A wake row that a switch held: a customer's message in conversation conv-1, written at 01:00 on the day. */
-export const agentWakeRowOf = builder<AgentWakeEntity>({
+export const agentWakeRowOf: (overrides?: Partial<AgentWakeEntity>) => AgentWakeEntity = builder<AgentWakeEntity>({
     id: "wake-1",
     workspaceId: "ws-1",
     agentId: "agent-1",
@@ -138,17 +139,18 @@ export const agentWakeRowOf = builder<AgentWakeEntity>({
 })
 
 /** The idle lease row of agent-1 in a customer conversation, last touched a long time ago. */
-export const agentWorkLeaseRowOf = builder<AgentWorkLeaseEntity>({
-    agentId: "agent-1",
-    scopeKey: "conversation:conv-1",
-    workspaceId: "ws-1",
-    fence: 4,
-    leaseOwner: null,
-    leaseUntil: null,
-    runningTurnId: null,
-    createdAt: WHEN,
-    updatedAt: WHEN,
-})
+export const agentWorkLeaseRowOf: (overrides?: Partial<AgentWorkLeaseEntity>) => AgentWorkLeaseEntity =
+    builder<AgentWorkLeaseEntity>({
+        agentId: "agent-1",
+        scopeKey: "conversation:conv-1",
+        workspaceId: "ws-1",
+        fence: 4,
+        leaseOwner: null,
+        leaseUntil: null,
+        runningTurnId: null,
+        createdAt: WHEN,
+        updatedAt: WHEN,
+    })
 
 /** The idle lease rows of agent-1 in conversations conv-1 and conv-2. */
 export const idleLeaseRowsOf = (): ReadonlyArray<AgentWorkLeaseEntity> => [
@@ -157,7 +159,7 @@ export const idleLeaseRowsOf = (): ReadonlyArray<AgentWorkLeaseEntity> => [
 ]
 
 /** A settled turn row of agent-1 with its usage, whose proposal holds words the work tab must never show. */
-export const agentTurnRowOf = builder<AgentTurnEntity>({
+export const agentTurnRowOf: (overrides?: Partial<AgentTurnEntity>) => AgentTurnEntity = builder<AgentTurnEntity>({
     id: "turn-1",
     workspaceId: "ws-1",
     agentId: "agent-1",
@@ -180,7 +182,7 @@ export const agentTurnRowOf = builder<AgentTurnEntity>({
 })
 
 /** The turn a worker begun for a customer wake of conversation conv-1, on its first of two attempts. */
-export const agentTurnViewOf = builder<AgentTurnView>({
+export const agentTurnViewOf: (overrides?: Partial<AgentTurnView>) => AgentTurnView = builder<AgentTurnView>({
     workspaceId: "ws-1",
     agentId: "agent-1",
     scopeKey: "conversation:conv-1",
@@ -198,7 +200,7 @@ export const agentTurnViewOf = builder<AgentTurnView>({
 })
 
 /** The customer wake of conversation conv-1 as a handler sees it when `begin` ended it with no turn. */
-export const agentWakeViewOf = builder<AgentWakeView>({
+export const agentWakeViewOf: (overrides?: Partial<AgentWakeView>) => AgentWakeView = builder<AgentWakeView>({
     workspaceId: "ws-1",
     agentId: "agent-1",
     scopeKey: "conversation:conv-1",
@@ -213,7 +215,7 @@ export const agentWakeViewOf = builder<AgentWakeView>({
 })
 
 /** A tag of agent-1 in the sales room by member-1. */
-export const agentWakeOf = builder<AgentWake>({
+export const agentWakeOf: (overrides?: Partial<AgentWake>) => AgentWake = builder<AgentWake>({
     workspaceId: "ws-1",
     agentId: "agent-1",
     source: "tag",
@@ -223,7 +225,7 @@ export const agentWakeOf = builder<AgentWake>({
 })
 
 /** What an owner writes for a new daily goal of agent-1. */
-export const agentGoalWriteOf = builder<AgentGoalWrite>({
+export const agentGoalWriteOf: (overrides?: Partial<AgentGoalWrite>) => AgentGoalWrite = builder<AgentGoalWrite>({
     workspaceId: "ws-1",
     agentId: "agent-1",
     goalId: null,
@@ -236,18 +238,19 @@ export const agentGoalWriteOf = builder<AgentGoalWrite>({
 })
 
 /** What an owner writes for a new daily trigger of agent-1 at 08:30. */
-export const agentTriggerWriteOf = builder<AgentTriggerWrite>({
-    workspaceId: "ws-1",
-    agentId: "agent-1",
-    triggerId: null,
-    kind: "schedule",
-    preset: "daily_at",
-    atTime: "08:30",
-    timeZone: null,
-    eventName: null,
-    probeKey: "invoices_due",
-    enabled: true,
-})
+export const agentTriggerWriteOf: (overrides?: Partial<AgentTriggerWrite>) => AgentTriggerWrite =
+    builder<AgentTriggerWrite>({
+        workspaceId: "ws-1",
+        agentId: "agent-1",
+        triggerId: null,
+        kind: "schedule",
+        preset: "daily_at",
+        atTime: "08:30",
+        timeZone: null,
+        eventName: null,
+        probeKey: "invoices_due",
+        enabled: true,
+    })
 
 /** A goal row of agent-1 a person paused. */
 export const pausedGoalRowOf = (): AgentGoalEntity => agentGoalRowOf({ id: "goal-2", status: "paused" })

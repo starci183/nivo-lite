@@ -1,14 +1,14 @@
 import { builder } from "@starci/jest-preset"
 import { automationRunsEntities } from "@modules/domain/automation-runs"
 
-const [AutomationRunEntity] = automationRunsEntities
+const AutomationRunEntity: (typeof automationRunsEntities)[0] = automationRunsEntities[0]
 type AutomationRunEntity = InstanceType<typeof AutomationRunEntity>
 
 /** The moment the automation run specs run at. */
 const RUN_MOMENT = "2026-10-12T10:00:00.000Z"
 
 /** A queued run of pipeline `p-1`, with the fields a spec rarely changes filled. */
-export const runOf = builder<AutomationRunEntity>({
+export const runOf: (overrides?: Partial<AutomationRunEntity>) => AutomationRunEntity = builder<AutomationRunEntity>({
     id: "r-1",
     pipelineId: "p-1",
     workspaceId: "ws-1",

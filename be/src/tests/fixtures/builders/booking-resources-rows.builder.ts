@@ -1,7 +1,7 @@
 import { builder } from "@starci/jest-preset"
 import { bookingResourcesEntities } from "@modules/domain/booking-resources"
 
-const [BookingResourceEntity] = bookingResourcesEntities
+const BookingResourceEntity: (typeof bookingResourcesEntities)[0] = bookingResourcesEntities[0]
 type BookingResourceEntity = InstanceType<typeof BookingResourceEntity>
 
 const resourceRowOf = builder<BookingResourceEntity>({
@@ -19,10 +19,10 @@ const resourceRowOf = builder<BookingResourceEntity>({
 })
 
 /** A named resource of the workspace. */
-export const namedResourceRow = (id: string, name: string) => resourceRowOf({ id, name })
+export const namedResourceRow = (id: string, name: string): BookingResourceEntity => resourceRowOf({ id, name })
 
 /** A resource linked to a staff member. */
-export const staffResourceRow = (id: string, staffId: string) => resourceRowOf({ id, staffId })
+export const staffResourceRow = (id: string, staffId: string): BookingResourceEntity => resourceRowOf({ id, staffId })
 
 /** A resource with the given capacity. */
-export const capacityResourceRow = (capacity: number) => resourceRowOf({ capacity })
+export const capacityResourceRow = (capacity: number): BookingResourceEntity => resourceRowOf({ capacity })

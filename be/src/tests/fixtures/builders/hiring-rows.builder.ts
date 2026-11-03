@@ -5,13 +5,28 @@ const NOW = "2026-10-15T03:00:00.000Z"
 import { entityRowBuilder } from "./entity-row.builder"
 
 type HiringAvailabilityEntity = InstanceType<(typeof hiringEntities)[0]>
-type HiringCandidateEntity = InstanceType<(typeof hiringEntities)[1]>
-type HiringInterviewEntity = InstanceType<(typeof hiringEntities)[4]>
+/** A stored hiring candidate row. */
+export type HiringCandidateEntity = InstanceType<(typeof hiringEntities)[1]>
+/** A stored hiring interview row. */
+export type HiringInterviewEntity = InstanceType<(typeof hiringEntities)[4]>
 type HiringJobEntity = InstanceType<(typeof hiringEntities)[5]>
 type HiringOfferEntity = InstanceType<(typeof hiringEntities)[6]>
 type HiringSettingEntity = InstanceType<(typeof hiringEntities)[9]>
 
-export const settingsRow = entityRowBuilder<HiringSettingEntity>({
+type SettingsRowShape = {
+    readonly workspaceId?: string
+    readonly publicSlug?: string
+    readonly retentionDays?: number
+    readonly notifyNewCandidate?: boolean
+    readonly remindInterview?: boolean
+    readonly autoCloseWhenFilled?: boolean
+    readonly applyConsentText?: string
+    readonly adTone?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
+
+export const settingsRow: (changes?: SettingsRowShape) => HiringSettingEntity = entityRowBuilder<HiringSettingEntity>({
     workspaceId: "ws-1",
     publicSlug: "shop",
     retentionDays: 90,
@@ -24,7 +39,32 @@ export const settingsRow = entityRowBuilder<HiringSettingEntity>({
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
-export const jobRow = entityRowBuilder<HiringJobEntity>({
+type JobRowShape = {
+    readonly workspaceId?: string
+    readonly slug?: string
+    readonly title?: string
+    readonly position?: string
+    readonly employmentType?: HiringJobEntity["employmentType"]
+    readonly schedule?: string
+    readonly payMinVnd?: string | null
+    readonly payMaxVnd?: string | null
+    readonly payUnit?: HiringJobEntity["payUnit"]
+    readonly location?: string
+    readonly headcount?: number
+    readonly description?: string
+    readonly requirements?: HiringJobEntity["requirements"]
+    readonly questions?: HiringJobEntity["questions"]
+    readonly status?: HiringJobEntity["status"]
+    readonly channels?: Array<string>
+    readonly adVariants?: Record<string, unknown> | null
+    readonly closesAt?: Date | null
+    readonly createdBy?: string | null
+    readonly id?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
+
+export const jobRow: (changes?: JobRowShape) => HiringJobEntity = entityRowBuilder<HiringJobEntity>({
     id: "job-1",
     workspaceId: "ws-1",
     slug: "barista",
@@ -49,58 +89,130 @@ export const jobRow = entityRowBuilder<HiringJobEntity>({
     updatedAt: CREATED,
 })
 
-export const candidateRow = entityRowBuilder<HiringCandidateEntity>({
-    id: "candidate-1",
-    workspaceId: "ws-1",
-    jobId: "job-1",
-    name: "Alex",
-    phone: "0912345678",
-    email: "alex@example.test",
-    source: "page",
-    conversationId: null,
-    cvPath: null,
-    cvName: null,
-    cvMime: null,
-    cvSize: null,
-    answers: [{ question_id: "q-1", question: "Experience?", answer: "Two years" }],
-    availability: "Monday morning",
-    score: null,
-    scoreLabel: null,
-    scoreReasons: [],
-    scoreSummary: null,
-    screenedAt: null,
-    stage: "applied",
-    stageChangedAt: CREATED,
-    rejectedReason: null,
-    notes: "",
-    createdAt: CREATED,
-    staffId: null,
-    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-})
+type CandidateRowShape = {
+    readonly workspaceId?: string
+    readonly jobId?: string
+    readonly name?: string
+    readonly phone?: string
+    readonly email?: string
+    readonly source?: HiringCandidateEntity["source"]
+    readonly conversationId?: string | null
+    readonly cvPath?: string | null
+    readonly cvName?: string | null
+    readonly cvMime?: string | null
+    readonly cvSize?: number | null
+    readonly answers?: HiringCandidateEntity["answers"]
+    readonly availability?: string
+    readonly score?: number | null
+    readonly scoreLabel?: HiringCandidateEntity["scoreLabel"]
+    readonly scoreReasons?: HiringCandidateEntity["scoreReasons"]
+    readonly scoreSummary?: string | null
+    readonly screenedAt?: Date | null
+    readonly stage?: HiringCandidateEntity["stage"]
+    readonly stageChangedAt?: Date
+    readonly rejectedReason?: string | null
+    readonly notes?: string
+    readonly staffId?: string | null
+    readonly id?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
 
-export const interviewRow = entityRowBuilder<HiringInterviewEntity>({
-    id: "interview-1",
-    workspaceId: "ws-1",
-    candidateId: "candidate-1",
-    jobId: "job-1",
-    interviewerUserId: "user-1",
-    interviewerName: "Blair",
-    mode: "in_person",
-    location: "Main shop",
-    durationMin: 30,
-    proposedSlots: [{ start: "2026-10-14T01:00:00.000Z", end: "2026-10-14T01:30:00.000Z" }],
-    slotStart: new Date("2026-10-14T01:00:00.000Z"),
-    slotEnd: new Date("2026-10-14T01:30:00.000Z"),
-    status: "confirmed",
-    token: LINK_TOKEN,
-    workItemId: "work-1",
-    reminderSentAt: null,
-    note: "Bring examples",
-    createdAt: CREATED,
-    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-})
+export const candidateRow: (changes?: CandidateRowShape) => HiringCandidateEntity =
+    entityRowBuilder<HiringCandidateEntity>({
+        id: "candidate-1",
+        workspaceId: "ws-1",
+        jobId: "job-1",
+        name: "Alex",
+        phone: "0912345678",
+        email: "alex@example.test",
+        source: "page",
+        conversationId: null,
+        cvPath: null,
+        cvName: null,
+        cvMime: null,
+        cvSize: null,
+        answers: [{ question_id: "q-1", question: "Experience?", answer: "Two years" }],
+        availability: "Monday morning",
+        score: null,
+        scoreLabel: null,
+        scoreReasons: [],
+        scoreSummary: null,
+        screenedAt: null,
+        stage: "applied",
+        stageChangedAt: CREATED,
+        rejectedReason: null,
+        notes: "",
+        createdAt: CREATED,
+        staffId: null,
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    })
 
-export const offerRow = entityRowBuilder<HiringOfferEntity>({
+type InterviewRowShape = {
+    readonly workspaceId?: string
+    readonly candidateId?: string
+    readonly jobId?: string
+    readonly interviewerUserId?: string | null
+    readonly interviewerName?: string
+    readonly mode?: "in_person" | "online"
+    readonly location?: string
+    readonly durationMin?: number
+    readonly proposedSlots?: HiringInterviewEntity["proposedSlots"]
+    readonly slotStart?: Date | null
+    readonly slotEnd?: Date | null
+    readonly status?: HiringInterviewEntity["status"]
+    readonly token?: string
+    readonly workItemId?: string | null
+    readonly reminderSentAt?: Date | null
+    readonly note?: string
+    readonly id?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
+
+export const interviewRow: (changes?: InterviewRowShape) => HiringInterviewEntity =
+    entityRowBuilder<HiringInterviewEntity>({
+        id: "interview-1",
+        workspaceId: "ws-1",
+        candidateId: "candidate-1",
+        jobId: "job-1",
+        interviewerUserId: "user-1",
+        interviewerName: "Blair",
+        mode: "in_person",
+        location: "Main shop",
+        durationMin: 30,
+        proposedSlots: [{ start: "2026-10-14T01:00:00.000Z", end: "2026-10-14T01:30:00.000Z" }],
+        slotStart: new Date("2026-10-14T01:00:00.000Z"),
+        slotEnd: new Date("2026-10-14T01:30:00.000Z"),
+        status: "confirmed",
+        token: LINK_TOKEN,
+        workItemId: "work-1",
+        reminderSentAt: null,
+        note: "Bring examples",
+        createdAt: CREATED,
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    })
+
+type OfferRowShape = {
+    readonly workspaceId?: string
+    readonly candidateId?: string
+    readonly jobId?: string
+    readonly terms?: HiringOfferEntity["terms"]
+    readonly draft?: string
+    readonly status?: HiringOfferEntity["status"]
+    readonly token?: string
+    readonly workItemId?: string | null
+    readonly sentVia?: "email" | "chat" | "manual" | null
+    readonly sentAt?: Date | null
+    readonly expiresAt?: Date | null
+    readonly respondedAt?: Date | null
+    readonly createdBy?: string | null
+    readonly id?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
+
+export const offerRow: (changes?: OfferRowShape) => HiringOfferEntity = entityRowBuilder<HiringOfferEntity>({
     id: "offer-1",
     workspaceId: "ws-1",
     candidateId: "candidate-1",
@@ -125,18 +237,30 @@ export const offerRow = entityRowBuilder<HiringOfferEntity>({
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 })
 
-export const availabilityRow = entityRowBuilder<HiringAvailabilityEntity>({
-    id: "window-1",
-    workspaceId: "ws-1",
-    memberUserId: "user-1",
-    weekday: 1,
-    startMin: 480,
-    endMin: 720,
-    createdAt: new Date("2026-01-01T00:00:00.000Z"),
-    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-})
+type AvailabilityRowShape = {
+    readonly workspaceId?: string
+    readonly memberUserId?: string
+    readonly weekday?: number
+    readonly startMin?: number
+    readonly endMin?: number
+    readonly id?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
 
-export const benchJobRow = entityRowBuilder<HiringJobEntity>({
+export const availabilityRow: (changes?: AvailabilityRowShape) => HiringAvailabilityEntity =
+    entityRowBuilder<HiringAvailabilityEntity>({
+        id: "window-1",
+        workspaceId: "ws-1",
+        memberUserId: "user-1",
+        weekday: 1,
+        startMin: 480,
+        endMin: 720,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    })
+
+export const benchJobRow: (changes?: JobRowShape) => HiringJobEntity = entityRowBuilder<HiringJobEntity>({
     id: "job-1",
     workspaceId: "ws-1",
     slug: "cashier",
@@ -168,58 +292,60 @@ export const benchJobRow = entityRowBuilder<HiringJobEntity>({
     updatedAt: new Date(NOW),
 })
 
-export const benchCandidateRow = entityRowBuilder<HiringCandidateEntity>({
-    id: "cand-1",
-    workspaceId: "ws-1",
-    jobId: "job-1",
-    name: "Minh",
-    phone: "0901000000",
-    email: "minh@example.test",
-    source: "page",
-    conversationId: null,
-    cvPath: "ws-1/cv.pdf",
-    cvName: "cv.pdf",
-    cvMime: "application/pdf",
-    cvSize: 123,
-    answers: [{ question_id: "q-1", question: "POS?", answer: "yes" }],
-    availability: "Evenings",
-    score: 90,
-    scoreLabel: "fit",
-    scoreReasons: [{ criterion: "POS", status: "met", note: "Yes" }],
-    scoreSummary: "Ready",
-    screenedAt: new Date(NOW),
-    stage: "shortlisted",
-    stageChangedAt: new Date(NOW),
-    rejectedReason: null,
-    notes: "Call",
-    staffId: null,
-    createdAt: new Date(NOW),
-    updatedAt: new Date(NOW),
-})
+export const benchCandidateRow: (changes?: CandidateRowShape) => HiringCandidateEntity =
+    entityRowBuilder<HiringCandidateEntity>({
+        id: "cand-1",
+        workspaceId: "ws-1",
+        jobId: "job-1",
+        name: "Minh",
+        phone: "0901000000",
+        email: "minh@example.test",
+        source: "page",
+        conversationId: null,
+        cvPath: "ws-1/cv.pdf",
+        cvName: "cv.pdf",
+        cvMime: "application/pdf",
+        cvSize: 123,
+        answers: [{ question_id: "q-1", question: "POS?", answer: "yes" }],
+        availability: "Evenings",
+        score: 90,
+        scoreLabel: "fit",
+        scoreReasons: [{ criterion: "POS", status: "met", note: "Yes" }],
+        scoreSummary: "Ready",
+        screenedAt: new Date(NOW),
+        stage: "shortlisted",
+        stageChangedAt: new Date(NOW),
+        rejectedReason: null,
+        notes: "Call",
+        staffId: null,
+        createdAt: new Date(NOW),
+        updatedAt: new Date(NOW),
+    })
 
-export const benchInterviewRow = entityRowBuilder<HiringInterviewEntity>({
-    id: "int-1",
-    workspaceId: "ws-1",
-    candidateId: "cand-1",
-    jobId: "job-1",
-    interviewerUserId: "u-1",
-    interviewerName: "Lan",
-    mode: "online",
-    location: "https://meet.test",
-    durationMin: 30,
-    proposedSlots: [{ start: NOW, end: "2026-10-15T03:30:00.000Z" }],
-    slotStart: new Date(NOW),
-    slotEnd: new Date("2026-10-15T03:30:00.000Z"),
-    status: "confirmed",
-    token: "token-1",
-    workItemId: "work-1",
-    reminderSentAt: new Date(NOW),
-    note: "Bring CV",
-    createdAt: new Date(NOW),
-    updatedAt: new Date(NOW),
-})
+export const benchInterviewRow: (changes?: InterviewRowShape) => HiringInterviewEntity =
+    entityRowBuilder<HiringInterviewEntity>({
+        id: "int-1",
+        workspaceId: "ws-1",
+        candidateId: "cand-1",
+        jobId: "job-1",
+        interviewerUserId: "u-1",
+        interviewerName: "Lan",
+        mode: "online",
+        location: "https://meet.test",
+        durationMin: 30,
+        proposedSlots: [{ start: NOW, end: "2026-10-15T03:30:00.000Z" }],
+        slotStart: new Date(NOW),
+        slotEnd: new Date("2026-10-15T03:30:00.000Z"),
+        status: "confirmed",
+        token: "token-1",
+        workItemId: "work-1",
+        reminderSentAt: new Date(NOW),
+        note: "Bring CV",
+        createdAt: new Date(NOW),
+        updatedAt: new Date(NOW),
+    })
 
-export const benchOfferRow = entityRowBuilder<HiringOfferEntity>({
+export const benchOfferRow: (changes?: OfferRowShape) => HiringOfferEntity = entityRowBuilder<HiringOfferEntity>({
     id: "offer-1",
     workspaceId: "ws-1",
     candidateId: "cand-1",

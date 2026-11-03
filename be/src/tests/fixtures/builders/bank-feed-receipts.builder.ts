@@ -5,13 +5,71 @@ const raw = (body: object): Buffer => Buffer.from(JSON.stringify(body))
 /** The clock instant used while consuming committed receipt fixtures. */
 export const DEFERRED_AT = "2026-10-12T10:00:00.000Z"
 const deferredCredit = { amount: 125000, content: "NIVO123", eventId: "bank:7", fallbackBankName: "Bank" }
+type ReceiptPayloadCreditsShape = {
+    amount: number
+    content: string
+    eventId: string
+    fallbackBankName: string
+}
+
+type ReceiptPayloadShape = {
+    connection: string
+    credits: Array<ReceiptPayloadCreditsShape>
+}
+
+type ReceiptShape = {
+    id: string
+    payload: ReceiptPayloadShape
+}
+
 /** A committed provider receipt with one credit ready for booking. */
-export const receipt = { id: "receipt-1", payload: { connection: "c-1", credits: [deferredCredit] } }
+export const receipt: ReceiptShape = { id: "receipt-1", payload: { connection: "c-1", credits: [deferredCredit] } }
 /** The provider kinds whose receipts share the deferred booking workflow. */
 export const providers = ["casso", "payos", "sepay-feed"] as const
 
+type ReceiptCasesOfResultShape3 = {
+    provider: "sepay-feed"
+    body: object
+    deliveryId: string
+    credits: Array<ReceiptPayloadCreditsShape>
+}
+
+type ReceiptCasesOfResultBodyDataShape = {
+    amount: number
+    reference: string
+}
+
+type ReceiptCasesOfResultBodyShape = {
+    code: string
+    data: ReceiptCasesOfResultBodyDataShape
+    error?: never
+}
+
+type ReceiptCasesOfResultShape2 = {
+    provider: "payos"
+    body: ReceiptCasesOfResultBodyShape
+    deliveryId: string
+    credits: Array<ReceiptPayloadCreditsShape>
+}
+
+type ReceiptCasesOfResultBodyShapeOf = {
+    error: number
+    data: object
+    code?: never
+}
+
+type ReceiptCasesOfResultShape = {
+    provider: "casso"
+    body: ReceiptCasesOfResultBodyShapeOf
+    deliveryId: string
+    credits: Array<ReceiptPayloadCreditsShape>
+}
+
 /** Builds the three provider receipt identities and expected credits. */
-export const receiptCasesOf = (tx1: object, incoming: object) => [
+export const receiptCasesOf = (
+    tx1: object,
+    incoming: object,
+): Array<ReceiptCasesOfResultShape | ReceiptCasesOfResultShape2 | ReceiptCasesOfResultShape3> => [
     {
         provider: "casso" as const,
         body: { error: 0, data: tx1 },
@@ -48,5 +106,15 @@ export const incoming = {
     gateway: "MBBank",
 }
 
+type FeedDeliveryShape = {
+    connectionId: string
+    authorization: string
+    rawBody: Buffer<ArrayBufferLike>
+}
+
 /** The credential and raw delivery used to prove the SePay feed boundary. */
-export const feedDelivery = { connectionId: "conn-1", authorization: "Apikey k", rawBody: raw(incoming) }
+export const feedDelivery: FeedDeliveryShape = {
+    connectionId: "conn-1",
+    authorization: "Apikey k",
+    rawBody: raw(incoming),
+}

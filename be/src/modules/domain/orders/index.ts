@@ -11,3 +11,4 @@ export type { OptionalOrder, SalesOrderView, SalesOrderViewLookup } from "./orde
 export type { OrderNameRef, OrdersWorkbenchRow, SalesOrderListRow } from "./orders.contracts"
 export { ordersEntities } from "./persistence/entities"
 export { OrdersAutomationReadService } from "./orders-automation-read.service"
+export type { SalesOrderRow } from "./orders.contracts"

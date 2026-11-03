@@ -1,5 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import type { EventsService } from "@modules/domain/events"
+import type { EventsService, EventEntry } from "@modules/domain/events"
 import type { BookingNotice, BookingNoticesService, EffectsRow } from "@modules/domain/bookings"
 type NoticeFacts = Awaited<ReturnType<BookingNoticesService["factsOf"]>>
 
@@ -7,7 +7,7 @@ const BOOKING_ID = "b1"
 const WORKSPACE = "ws-1"
 const START = Date.UTC(2026, 9, 15, 2, 30)
 
-export const noticeOf = builder<BookingNotice>({
+export const noticeOf: (overrides?: Partial<BookingNotice>) => BookingNotice = builder<BookingNotice>({
     workspaceId: WORKSPACE,
     bookingId: BOOKING_ID,
     kind: "confirmed",
@@ -31,7 +31,7 @@ export const FACTS: NoticeFacts = {
     fromMs: null,
     feeVnd: 0,
 }
-export const rowOf = builder<EffectsRow>({
+export const rowOf: (overrides?: Partial<EffectsRow>) => EffectsRow = builder<EffectsRow>({
     id: BOOKING_ID,
     workspace_id: WORKSPACE,
     status: "confirmed",
@@ -52,7 +52,9 @@ export const rowOf = builder<EffectsRow>({
     from_ms: null,
     holds_slot: true,
 })
-export const evidenceOf = builder<Parameters<EventsService["record"]>[0]>({
+export const evidenceOf: (overrides?: Partial<EventEntry>) => EventEntry = builder<
+    Parameters<EventsService["record"]>[0]
+>({
     workspaceId: WORKSPACE,
     kind: "booking.done",
     actor: "vi:bookings.evidence.actor:{}",

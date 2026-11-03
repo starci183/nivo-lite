@@ -1,12 +1,24 @@
+import type { MockOf, MockEntityManager } from "@starci/jest-preset"
+import type { WorkPerformer, WorkItem } from "@modules/domain/decisions"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockOf } from "@starci/jest-preset"
-import type { WorkPerformer } from "@modules/domain/decisions"
-import type { AfterCommit } from "@modules/platform/database"
+import type { AfterCommit, CommitTask } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { itemOf } from "./work-engine.builder"
 
+type TimeoutFixtureResultShape = {
+    manager: MockEntityManager
+    item: WorkItem
+    rejected: WorkItem
+    performer: MockOf<WorkPerformer>
+    barePerformer: WorkPerformer
+    rejection: MockOf<Required<Pick<WorkPerformer, "onReject">>>
+    afterCommit: MockOf<AfterCommit>
+    pending: Array<CommitTask>
+    deliver: () => Promise<void>
+}
+
 /** Arranges an open decision and a deferred notification port without claiming database commit behavior. */
-export const timeoutFixture = (afterCommit: MockOf<AfterCommit>) => {
+export const timeoutFixture = (afterCommit: MockOf<AfterCommit>): TimeoutFixtureResultShape => {
     const manager = mockEntityManager()
     const item = itemOf({ status: "waiting_decision" })
     const rejected = itemOf({ status: "rejected", result: { summary: "Rejected by timeout" } })
@@ -19,6 +31,6 @@ export const timeoutFixture = (afterCommit: MockOf<AfterCommit>) => {
         pending.push(task)
         return Promise.resolve()
     })
-    const deliver = () => eachInOrder(pending.splice(0), (task) => task())
+    const deliver = (): Promise<void> => eachInOrder(pending.splice(0), (task) => task())
     return { manager, item, rejected, performer, barePerformer, rejection, afterCommit, pending, deliver }
 }

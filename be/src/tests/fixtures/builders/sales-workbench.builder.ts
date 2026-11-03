@@ -26,17 +26,29 @@ export const MONTH = "2026-10-31T17:00:00.000Z"
 export const NOVEMBER = "2026-11-01T00:00:00.000Z"
 /** The fixed workbench clock. */
 export const NOW = "2026-10-13T02:00:00.000Z"
+type QuoteResultFieldsShape = {}
+
+type QuoteResultShape = {
+    summary: string
+    fields: QuoteResultFieldsShape
+    amount_vnd: number | null | undefined
+}
+
 /** Builds quote proposal fields for work-item scenarios. */
-export const quote = (amount_vnd?: number | null, summary = "Quote") => ({ summary, fields: {}, amount_vnd })
+export const quote = (amount_vnd?: number | null, summary = "Quote"): QuoteResultShape => ({
+    summary,
+    fields: {},
+    amount_vnd,
+})
 /** The expected clipped preview including its ellipsis. */
-export const CLIPPED = "x".repeat(139) + "\u2026"
+export const CLIPPED: string = "x".repeat(139) + "\u2026"
 const contact = { id: "lead-1", contact_name: "Lan", company: "Tea Co", channel: "web" }
 /** Builds the sales lead shared by workbench scenarios. */
-export const leadOf = builder<LeadView>(
+export const leadOf: (overrides?: Partial<LeadView>) => LeadView = builder<LeadView>(
     mock<LeadView>({ ...contact, need: "Tea", stage: "proposal", created_at: CREATED }),
 )
 /** Builds a confirmed order for the scenario lead. */
-export const orderOf = builder<OrdersWorkbenchRow>(
+export const orderOf: (overrides?: Partial<OrdersWorkbenchRow>) => OrdersWorkbenchRow = builder<OrdersWorkbenchRow>(
     mock<OrdersWorkbenchRow>({
         id: "order-1",
         lead_id: "lead-1",
@@ -51,19 +63,20 @@ export const orderOf = builder<OrdersWorkbenchRow>(
     }),
 )
 /** Builds an open sales responsibility. */
-export const stepOf = builder<ResponsibilityRecord>(
-    mock<ResponsibilityRecord>({
-        id: "step-1",
-        lead_id: "lead-1",
-        title: "Follow up",
-        owner_name: "Mai",
-        next_action: "Call",
-        due_at: null,
-        status: "open",
-    }),
-)
+export const stepOf: (overrides?: Partial<ResponsibilityRecord>) => ResponsibilityRecord =
+    builder<ResponsibilityRecord>(
+        mock<ResponsibilityRecord>({
+            id: "step-1",
+            lead_id: "lead-1",
+            title: "Follow up",
+            owner_name: "Mai",
+            next_action: "Call",
+            due_at: null,
+            status: "open",
+        }),
+    )
 /** Builds a completed automatic sales work item. */
-export const itemOf = builder<WorkItemView>(
+export const itemOf: (overrides?: Partial<WorkItemView>) => WorkItemView = builder<WorkItemView>(
     mock<WorkItemView>({
         id: "item-1",
         department: "sales",
@@ -88,7 +101,7 @@ export const itemOf = builder<WorkItemView>(
     }),
 )
 /** Builds empty workbench inputs with a fixed clock and explicit scenario overrides. */
-export const rowsOf = builder<SalesRows>({
+export const rowsOf: (overrides?: Partial<SalesRows>) => SalesRows = builder<SalesRows>({
     nowMs: Date.parse(NOW),
     leads: [],
     steps: [],
@@ -106,7 +119,7 @@ export const rowsOf = builder<SalesRows>({
     isTestRun: () => false,
 })
 /** Builds an active monthly sales contract. */
-export const contractOf = builder<ContractResult>({
+export const contractOf: (overrides?: Partial<ContractResult>) => ContractResult = builder<ContractResult>({
     id: "contract-1",
     leadId: "lead-1",
     customerName: "Lan",
@@ -118,7 +131,7 @@ export const contractOf = builder<ContractResult>({
     note: "Renew",
 })
 /** Builds the expected sales deal view. */
-export const dealOf = builder<SalesDeal>({
+export const dealOf: (overrides?: Partial<SalesDeal>) => SalesDeal = builder<SalesDeal>({
     leadId: "lead-1",
     customer: "Lan",
     company: "Tea Co",
@@ -135,7 +148,7 @@ export const dealOf = builder<SalesDeal>({
     closedAt: null,
 })
 /** Builds the expected automatic activity view. */
-export const activityOf = builder<AutoActivity>({
+export const activityOf: (overrides?: Partial<AutoActivity>) => AutoActivity = builder<AutoActivity>({
     id: "result",
     action: "send_quote",
     leadId: "lead-1",
@@ -147,7 +160,7 @@ export const activityOf = builder<AutoActivity>({
     href: "/leads/lead-1",
 })
 /** Builds the expected pending decision view. */
-export const decisionOf = builder<SalesDecision>({
+export const decisionOf: (overrides?: Partial<SalesDecision>) => SalesDecision = builder<SalesDecision>({
     id: "legacy",
     source: "work_item",
     workItemId: null,
@@ -167,7 +180,7 @@ export const decisionOf = builder<SalesDecision>({
     conversationId: null,
 })
 /** Builds the expected attention view. */
-export const attentionOf = builder<AttentionRow>({
+export const attentionOf: (overrides?: Partial<AttentionRow>) => AttentionRow = builder<AttentionRow>({
     key: "decision:waiting",
     kind: "decision",
     leadId: "lead-1",
@@ -184,20 +197,26 @@ export const attentionOf = builder<AttentionRow>({
     conversationId: null,
 })
 /** Builds failed-item attention. */
-export const failureOf = builder<AttentionRow>(attentionOf({ kind: "failed", since: UPDATED }))
+export const failureOf: (overrides?: Partial<AttentionRow>) => AttentionRow = builder<AttentionRow>(
+    attentionOf({ kind: "failed", since: UPDATED }),
+)
 /** Builds overdue-responsibility attention. */
-export const overdueOf = builder<AttentionRow>(
+export const overdueOf: (overrides?: Partial<AttentionRow>) => AttentionRow = builder<AttentionRow>(
     attentionOf({ kind: "overdue", since: YESTERDAY, owner: "Mai", action: null }),
 )
 /** Builds attention for an unanswered customer message. */
-export const replyOf = builder<AttentionRow>(
+export const replyOf: (overrides?: Partial<AttentionRow>) => AttentionRow = builder<AttentionRow>(
     attentionOf({ kind: "awaiting_reply", since: "2026-10-13T01:56:00.000Z", action: null }),
 )
 /** Builds attention without a linked lead. */
-export const anonymousOf = builder<AttentionRow>(
+export const anonymousOf: (overrides?: Partial<AttentionRow>) => AttentionRow = builder<AttentionRow>(
     attentionOf({ leadId: null, customer: "\u2014", company: "", stage: null }),
 )
 /** Builds failed-item attention without a linked lead. */
-export const unknownFailureOf = builder<AttentionRow>(anonymousOf({ kind: "failed", since: UPDATED }))
+export const unknownFailureOf: (overrides?: Partial<AttentionRow>) => AttentionRow = builder<AttentionRow>(
+    anonymousOf({ kind: "failed", since: UPDATED }),
+)
 /** Builds the expected legacy execution decision. */
-export const legacyOf = builder<SalesDecision>(decisionOf({ source: "execution", reason: null, createdAt: NOW }))
+export const legacyOf: (overrides?: Partial<SalesDecision>) => SalesDecision = builder<SalesDecision>(
+    decisionOf({ source: "execution", reason: null, createdAt: NOW }),
+)

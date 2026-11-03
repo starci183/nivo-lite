@@ -64,25 +64,25 @@ export class ScriptedWorld {
     readonly performed: Array<string> = []
 
     /** What the tool stored under its idempotency key: the receipt of the gateway. */
-    readonly receipts = new Map<string, StepJson>()
+    readonly receipts: Map<string, Readonly<Record<string, unknown>>> = new Map<string, StepJson>()
 
     /** The keys a tool began and never stored: the gateway cannot say whether the tool acted. */
-    readonly started = new Set<string>()
+    readonly started: Set<string> = new Set<string>()
 
     /** The keys of the replies that were sent. */
-    readonly sent = new Set<string>()
+    readonly sent: Set<string> = new Set<string>()
 
     /** What a person was told: the failing step and its code, in order. */
     readonly told: Array<string> = []
 
     /** How many times each kind of handler ran. */
-    readonly calls = new Map<string, number>()
+    readonly calls: Map<string, number> = new Map<string, number>()
 
     /** Answers the next tries of the tool give, in order; once empty the tool acts. */
     toolTries: Array<StepAnswer> = []
 
     /** Called when a handler answered and before the engine stores it, by kind. */
-    readonly afterAnswer = new Map<string, () => void>()
+    readonly afterAnswer: Map<string, () => void> = new Map<string, () => void>()
 
     private readonly hangs = new Map<string, HangPair>()
 

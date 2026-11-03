@@ -6,8 +6,14 @@ import { Secret } from "@modules/platform/config"
 import { apiAppModules } from "./api-app.options"
 import { worldIds } from "./lite-world.service"
 
+type UsePublicDocumentsModelResultShape = {
+    modules: Array<DynamicModule>
+    close: () => Promise<void>
+    reply(body: string): Promise<void>
+}
+
 /** Boots the real API and PostgreSQL graph, faking only the external OpenAI-compatible HTTP endpoint. */
-export const usePublicDocumentsModel = () => {
+export const usePublicDocumentsModel = (): UsePublicDocumentsModelResultShape => {
     const modules: Array<DynamicModule> = []
     const definition = openaiCompatibleFake({ embeddingDimensions: 1536 })
     const runId = worldIds.next()
@@ -41,7 +47,7 @@ export const usePublicDocumentsModel = () => {
     })
     return {
         modules,
-        close: () => host.close(),
+        close: (): Promise<void> => host.close(),
         async reply(body: string): Promise<void> {
             assert(model, "The model boundary must be open")
             await model.reply({ content: JSON.stringify({ body }) })

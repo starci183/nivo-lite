@@ -19,8 +19,26 @@ export interface WorkspaceRow {
     readonly logoUrl: string | null
 }
 
+type WorkspaceRowShape = {
+    readonly id?: string
+    readonly ownerId?: string
+    readonly name?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+    readonly status?: "pending_payment" | "active" | "past_due" | "cancelled"
+    readonly planCode?: string | null
+    readonly paidUntil?: Date | null
+    readonly businessType?: string | null
+    readonly tierCredits?: string | null
+    readonly seatCount?: number | null
+    readonly billingCycle?: "monthly" | "annual" | null
+    readonly billedMonthlyVnd?: string | null
+    readonly displayName?: string | null
+    readonly logoUrl?: string | null
+}
+
 /** Workspace `ws-1`, the cafe Quan Ca Phe owned by `owner-1`; the arguments of a case change what it needs. */
-export const workspaceRow = entityRowBuilder<WorkspaceRow>({
+export const workspaceRow: (changes?: WorkspaceRowShape) => WorkspaceRow = entityRowBuilder<WorkspaceRow>({
     id: "ws-1",
     ownerId: "owner-1",
     name: "Quan Ca Phe",

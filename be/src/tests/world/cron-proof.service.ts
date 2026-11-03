@@ -1,11 +1,16 @@
-import type { CronRow } from "../fixtures/persistence/proof.rows"
+import type { CronRow, TickRow } from "../fixtures/persistence/proof.rows"
 import assert from "node:assert/strict"
 import type { LiteWorld } from "./lite-world.service"
 import { hideOpenTicks, openTicks } from "./proof-database.service"
 import { CRON, LOCK_TICKS, FIRE_TICK } from "./proof.sql"
 
+type CronProofResultShape = {
+    jobs: Array<CronRow>
+    added: Array<TickRow>
+}
+
 /** Executes the installed command, isolates existing ticks, and rolls the entire proof back. */
-export const cronProof = async (world: LiteWorld) => {
+export const cronProof = async (world: LiteWorld): Promise<CronProofResultShape> => {
     const runner = world.db.primary.connection.createQueryRunner()
     await runner.connect()
     await runner.startTransaction()

@@ -85,7 +85,7 @@ class RoadWorkModule {
 }
 
 /** The clock of the agents as the api composes it, over a private Redis under `prefix`: the office, the work store, the schedules and a handler that asks the probes first. */
-export const agentRoadModules = (prefix: string) => [
+export const agentRoadModules = (prefix: string): Array<DynamicModule> => [
     ...OFFICE_CHAIN_MODULES,
     ...redisQueueModules(prefix),
     IdsModule.register({ isGlobal: true }),

@@ -1,7 +1,7 @@
 import type { PayableOrder } from "@modules/domain/billing"
 import { paymentOrderRequestsEntities } from "@modules/domain/payment-order-requests"
 
-const [PaymentOrderRequestEntity] = paymentOrderRequestsEntities
+const PaymentOrderRequestEntity: (typeof paymentOrderRequestsEntities)[0] = paymentOrderRequestsEntities[0]
 type PaymentOrderRequestEntity = InstanceType<typeof PaymentOrderRequestEntity>
 
 export const PAYLOAD = { requestId: "request-1", workspaceId: "ws-1" }
@@ -62,8 +62,17 @@ export const PAYABLE: PayableOrder = {
     bank: { account: "0123", bank: "MB", holder: "NIVO" },
 }
 
+type AnsweredResultUpdateShape = {
+    readonly affected: 1
+}
+
+type AnsweredResultShape = {
+    readonly findOne: readonly [typeof PaymentOrderRequestEntity, PaymentOrderRequestEntity]
+    readonly update: readonly [typeof PaymentOrderRequestEntity, AnsweredResultUpdateShape]
+}
+
 /** The stubs of a request answered once: its stored row is read, then its answer is written. */
-export const answered = (stored: StoredRequest = REQUEST) =>
+export const answered = (stored: StoredRequest = REQUEST): AnsweredResultShape =>
     ({
         findOne: [PaymentOrderRequestEntity, entityOf(stored)],
         update: [PaymentOrderRequestEntity, { affected: 1 }],

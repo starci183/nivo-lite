@@ -16,8 +16,9 @@ import type { LiteWorld } from "./lite-world.service"
 import { removeAuthUsers, removeWorkspace } from "./proof-accounts.service"
 import { receiptsOf, removeReceipts } from "./receipts-database.service"
 
-const [JobEntity, JobOutboxEntity] = jobsEntities
-const [MetaInboxEntity] = metaInboxEntities
+const JobEntity: (typeof jobsEntities)[0] = jobsEntities[0]
+const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
+const MetaInboxEntity: (typeof metaInboxEntities)[0] = metaInboxEntities[0]
 
 /** One outbox row as the entity reads it. */
 type OutboxRecord = InstanceType<typeof JobOutboxEntity>
@@ -155,8 +156,13 @@ const removeProofTicks = async (manager: EntityManager, proof: string): Promise<
         .execute()
 }
 
+type ObserveQueueResultShape = {
+    outbox: Array<OutboxRow>
+    messages: Array<ObservedMessageRow>
+}
+
 /** Reads committed state through the world's observer connection, including while a business transaction is open. */
-export const observeQueue = async (world: LiteWorld, proof: string) => ({
+export const observeQueue = async (world: LiteWorld, proof: string): Promise<ObserveQueueResultShape> => ({
     outbox: await outboxRows(world.db.primary, proof),
     messages: await messages(world.db.primary, proof),
 })

@@ -23,7 +23,7 @@ export const minimalFacts = (): string =>
         text("hiring.facts.headcount", { count: 1 }),
     ].join("\n")
 export const cleanAds = { facebook: "Facebook {{link}}", zalo: "Zalo {{link}}", topcv: "Board {{link}}" }
-export const unfairAds = JSON.stringify({
+export const unfairAds: string = JSON.stringify({
     facebook: "nu\nFacebook {{link}}",
     zalo: "Zalo {{link}}\nnu",
     topcv: "nu\nBoard {{link}}\nnu",

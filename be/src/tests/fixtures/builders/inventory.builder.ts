@@ -1,17 +1,15 @@
 import { builder } from "@starci/jest-preset"
 import { inventoryEntities } from "@modules/domain/inventory"
 
-const [
-    InventoryLocationEntity,
-    InventorySupplierEntity,
-    InventoryItemEntity,
-    InventoryStockLevelEntity,
-    InventoryMovementEntity,
-    InventoryRecipeEntity,
-    InventoryRecipeLineEntity,
-    InventoryPurchaseOrderEntity,
-    InventoryPoLineEntity,
-] = inventoryEntities
+const InventoryLocationEntity: (typeof inventoryEntities)[0] = inventoryEntities[0]
+const InventorySupplierEntity: (typeof inventoryEntities)[1] = inventoryEntities[1]
+const InventoryItemEntity: (typeof inventoryEntities)[2] = inventoryEntities[2]
+const InventoryStockLevelEntity: (typeof inventoryEntities)[3] = inventoryEntities[3]
+const InventoryMovementEntity: (typeof inventoryEntities)[4] = inventoryEntities[4]
+const InventoryRecipeEntity: (typeof inventoryEntities)[5] = inventoryEntities[5]
+const InventoryRecipeLineEntity: (typeof inventoryEntities)[6] = inventoryEntities[6]
+const InventoryPurchaseOrderEntity: (typeof inventoryEntities)[7] = inventoryEntities[7]
+const InventoryPoLineEntity: (typeof inventoryEntities)[8] = inventoryEntities[8]
 type InventoryLocationEntity = InstanceType<typeof InventoryLocationEntity>
 type InventorySupplierEntity = InstanceType<typeof InventorySupplierEntity>
 type InventoryItemEntity = InstanceType<typeof InventoryItemEntity>

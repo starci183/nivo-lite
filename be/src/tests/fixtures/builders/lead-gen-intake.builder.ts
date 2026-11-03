@@ -9,7 +9,7 @@ import type { LeadFlow } from "@modules/domain/lead-flows"
 
 export const AT_ISO = "2026-10-12T10:00:00.000Z"
 
-export const AT = Date.parse(AT_ISO)
+export const AT: number = Date.parse(AT_ISO)
 
 export const PAGE: MetaPageAccess = { pageId: "page-1", pageToken: "page-token", igId: null }
 
@@ -26,7 +26,7 @@ export const PROFILE: AgentProfile = {
     module: "chatbot",
 }
 
-export const eventOf = builder<MetaEvent>({
+export const eventOf: (overrides?: Partial<MetaEvent>) => MetaEvent = builder<MetaEvent>({
     kind: "dm",
     platform: "facebook",
     page_id: "page-1",
@@ -47,7 +47,7 @@ export const eventOf = builder<MetaEvent>({
     event_key: "dm:mid-1",
 })
 
-export const agentOf = builder<BoundAgent>({
+export const agentOf: (overrides?: Partial<BoundAgent>) => BoundAgent = builder<BoundAgent>({
     id: "agent-1",
     module: "lead_gen",
     name: "Linh",
@@ -55,7 +55,7 @@ export const agentOf = builder<BoundAgent>({
     purpose: "lead_source",
 })
 
-export const flowOf = builder<LeadFlow>({
+export const flowOf: (overrides?: Partial<LeadFlow>) => LeadFlow = builder<LeadFlow>({
     id: "flow-1",
     workspace_id: "ws-1",
     lead_id: "lead-1",

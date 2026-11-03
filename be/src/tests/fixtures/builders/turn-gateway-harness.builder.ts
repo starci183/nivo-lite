@@ -38,8 +38,22 @@ export const CONVERSATION: TurnConversation = {
 }
 /** Shared typed fixture setup for these behavior proofs. */
 export const CALLER = { workspaceId: "ws", agentId: "sales", conversationId: "c1", workItemId: null }
+type DescribedInputSchemaShape = {
+    type: string
+}
+
+type DescribedShape = {
+    name: string
+    description: string
+    scope: "write"
+    mode: "auto"
+    inputSchema: DescribedInputSchemaShape
+    constraints: Array<never>
+    limitVnd: null
+}
+
 /** Shared typed fixture setup for these behavior proofs. */
-export const DESCRIBED = {
+export const DESCRIBED: DescribedShape = {
     name: "crm.order.place",
     description: "Place an order",
     scope: "write" as const,
@@ -48,15 +62,40 @@ export const DESCRIBED = {
     constraints: [],
     limitVnd: null,
 }
+
+type ReadShape = {
+    name: string
+    description: string
+    scope: "read"
+    mode: "auto"
+    inputSchema: DescribedInputSchemaShape
+    constraints: Array<never>
+    limitVnd: null
+}
+
 /** Shared typed fixture setup for these behavior proofs. */
-export const READ = { ...DESCRIBED, name: "crm.stock.read", description: "Read stock", scope: "read" as const }
+export const READ: ReadShape = {
+    ...DESCRIBED,
+    name: "crm.stock.read",
+    description: "Read stock",
+    scope: "read" as const,
+}
+type PriceListShape = {
+    layer: 2
+    kind: string
+    ref: string
+    label: string
+}
+
 /** Shared typed fixture setup for these behavior proofs. */
-export const PRICE_LIST = [{ layer: 2 as const, kind: "brain_document", ref: "src-1", label: "Price list" }]
+export const PRICE_LIST: Array<PriceListShape> = [
+    { layer: 2 as const, kind: "brain_document", ref: "src-1", label: "Price list" },
+]
 /** Shared typed fixture setup for these behavior proofs. */
 export const ORDER_SOURCE = { layer: 1, kind: "mcp_tool", ref: "crm.order.place", label: "crm.order.place" }
 
 /** Shared typed fixture setup for these behavior proofs. */
-export const SEQUENCE_STEPS = JSON.stringify([
+export const SEQUENCE_STEPS: string = JSON.stringify([
     { name: "crm.stock.read", arguments: { sku: "a" } },
     { name: "crm.order.place", arguments: { sku: "a" } },
 ])
@@ -115,8 +154,33 @@ export const arrangeTurnGateway = (doubles: TurnGatewayDoubles, refuses = false)
     nodes.nodesOf.mockResolvedValue(CORE_NODES)
 }
 
+type ApprovalSpecSeedFieldsShape = {
+    readonly tool: "crm.order.place"
+    readonly args_json: '{"sku":"a"}'
+    readonly customer: "Lan"
+    readonly conversation_id: "c1"
+    readonly agent_id: "sales"
+    readonly reason: "over_limit_vnd"
+    readonly sources: string
+}
+
+type ApprovalSpecSeedShape = {
+    readonly summary: 'gatewayTurns.approvalSummary {"tool":"crm.order.place","name":"Lan","reason":"over_limit_vnd"}'
+    readonly draft: "gatewayTurns.approvedDone {}"
+    readonly fields: ApprovalSpecSeedFieldsShape
+}
+
+type ApprovalSpecShape = {
+    readonly action: "gateway_call"
+    readonly subject_type: "conversation"
+    readonly subject_id: "c1"
+    readonly lead_id: "l1"
+    readonly forceAsk: "over_authority"
+    readonly seed: ApprovalSpecSeedShape
+}
+
 /** Exact approval fields captured for one owner-gated connector call. */
-export const APPROVAL_SPEC = {
+export const APPROVAL_SPEC: ApprovalSpecShape = {
     action: "gateway_call",
     subject_type: "conversation",
     subject_id: "c1",
@@ -150,7 +214,7 @@ export const SEQUENCE_ARGUMENT_CASES = {
 } as const
 
 /** Malformed or out-of-bound sequence inputs rejected before any gateway discovery. */
-export const INVALID_SEQUENCES = [
+export const INVALID_SEQUENCES: Array<string> = [
     "not json",
     JSON.stringify(Array.from({ length: 11 }, () => ({ name: "crm.stock.read" }))),
     JSON.stringify([{ name: "n".repeat(114) }]),
@@ -158,8 +222,20 @@ export const INVALID_SEQUENCES = [
     JSON.stringify([{ name: "crm.stock.read", arguments: { text: "x".repeat(8193) } }]),
 ]
 
+type SequenceApprovalSeedFieldsShape = {
+    readonly steps_json: string
+    readonly reason: "playbook"
+    readonly sources: string
+}
+
+type SequenceApprovalSeedShape = {
+    readonly summary: 'gatewayTurns.approvalSummary {"tool":"crm.stock.read > crm.order.place","name":"Lan","reason":"playbook"}'
+    readonly draft: "Done for you"
+    readonly fields: SequenceApprovalSeedFieldsShape
+}
+
 /** Exact human-approved sequence replay and its evidence source labels. */
-export const SEQUENCE_APPROVAL_SEED = {
+export const SEQUENCE_APPROVAL_SEED: SequenceApprovalSeedShape = {
     summary:
         'gatewayTurns.approvalSummary {"tool":"crm.stock.read > crm.order.place","name":"Lan","reason":"playbook"}',
     draft: "Done for you",

@@ -1,13 +1,29 @@
-import { createHash } from "node:crypto"
 import type { OfferRecord, HiringBenchView, RequestOfferParams, HiringCandidatesService } from "@modules/domain/hiring"
+import { createHash } from "node:crypto"
 import { builder } from "@starci/jest-preset"
 import type { PerformContext } from "@modules/domain/module-ops"
 
 type CandidateRecord = Awaited<ReturnType<HiringCandidatesService["requireCandidate"]>>
 
 /** Deterministic 32-hex offer link token derived from a fixture label. */
-export const TOKEN = createHash("sha256").update("fixture-hiring-offer-token").digest("hex").slice(0, 32)
-export const staleResponses = [
+export const TOKEN: string = createHash("sha256").update("fixture-hiring-offer-token").digest("hex").slice(0, 32)
+type StaleResponsesRowsShape = {
+    hiring_offer_answer: string
+}
+
+type StaleResponsesShape2 = {
+    rows: Array<StaleResponsesRowsShape>
+}
+
+type StaleResponsesRowsShapeOf = {
+    hiring_offer_answer: null
+}
+
+type StaleResponsesShape = {
+    rows: Array<StaleResponsesRowsShapeOf>
+}
+
+export const staleResponses: Array<StaleResponsesShape | StaleResponsesShape2> = [
     { rows: [] },
     { rows: [{ hiring_offer_answer: null }] },
     { rows: [{ hiring_offer_answer: "sent" }] },
@@ -15,19 +31,28 @@ export const staleResponses = [
 /** Render catalog keys and parameters deterministically for the service expectations. */
 export const text = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
     `${key}${JSON.stringify(params)}`
-export const contextOf = builder<PerformContext>({
+export const contextOf: (overrides?: Partial<PerformContext>) => PerformContext = builder<PerformContext>({
     workspaceId: "ws-1",
     workItemId: "work-1",
     actor: "Manager",
     draft: " Approved letter ",
     fields: { offer_id: "offer-1", candidate_id: "candidate-1" },
 })
-export const modelOutput = JSON.stringify({
+export const modelOutput: string = JSON.stringify({
     opening: "**Welcome to our team.**",
     closing: "We look forward to meeting you.",
 })
+type GeneratorValueResultShape = {
+    workspaceId: string
+    purpose: string
+    module: string
+    system: string
+    user: string
+    timeoutMs: number
+}
+
 /** Build the expected offer-generation request for the job title. */
-export const generatorValue = (title: string) => ({
+export const generatorValue = (title: string): GeneratorValueResultShape => ({
     workspaceId: "ws-1",
     purpose: "hiring_offer",
     module: "hiring",
@@ -35,9 +60,9 @@ export const generatorValue = (title: string) => ({
     user: text("hiring.offer.user", { shop: "Coffee Shop", name: "Alice", title }),
     timeoutMs: 75000,
 })
-export const onboarding = [1, 2, 3, 4, 5, 6, 7].map((step) => text(`hiring.onboarding.${step}`))
+export const onboarding: Array<string> = [1, 2, 3, 4, 5, 6, 7].map((step) => text(`hiring.onboarding.${step}`))
 
-export const candidateOf = builder<CandidateRecord>({
+export const candidateOf: (overrides?: Partial<CandidateRecord>) => CandidateRecord = builder<CandidateRecord>({
     id: "candidate-1",
     workspaceId: "ws-1",
     jobId: "job-1",
@@ -58,7 +83,7 @@ export const candidateOf = builder<CandidateRecord>({
 type JobRecord = Omit<HiringBenchView["jobs"][number], "adVariants" | "createdAt" | "updatedAt" | "publicUrl">
 type OfferTerms = Omit<RequestOfferParams, "candidateId">
 
-export const jobOf = builder<JobRecord>({
+export const jobOf: (overrides?: Partial<JobRecord>) => JobRecord = builder<JobRecord>({
     id: "job-1",
     workspaceId: "ws-1",
     slug: "barista",
@@ -85,7 +110,7 @@ export const jobOf = builder<JobRecord>({
     channels: ["page"],
     closesAt: null,
 })
-export const termsOf = builder<OfferTerms>({
+export const termsOf: (overrides?: Partial<OfferTerms>) => OfferTerms = builder<OfferTerms>({
     title: "Lead Barista",
     pay: "100 per shift",
     startDate: "2026-11-01",
@@ -121,7 +146,7 @@ export const modelLetter = (terms: OfferTerms = termsOf()): string =>
     ].join("\n\n")
 
 /** A stored offer bound to its candidate and public link. */
-export const offerOf = builder<OfferRecord>({
+export const offerOf: (overrides?: Partial<OfferRecord>) => OfferRecord = builder<OfferRecord>({
     id: "offer-1",
     workspaceId: "ws-1",
     candidateId: "candidate-1",

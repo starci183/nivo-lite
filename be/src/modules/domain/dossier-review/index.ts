@@ -25,3 +25,4 @@ export type {
     RemedyText,
     RemedyWriter,
 } from "./dossier-review.port"
+export type { FindingEvidence } from "./dossier-review.contracts"

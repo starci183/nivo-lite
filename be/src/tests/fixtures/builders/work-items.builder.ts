@@ -1,11 +1,21 @@
+import type {
+    NewWorkItem,
+    Proposal,
+    WorkItemRecord,
+    EvidenceState,
+    DecidedPath,
+    SubjectType,
+    ReasonCode,
+    WorkStatus,
+    WorkResult,
+} from "@modules/domain/work-items"
 import { ANY_FUNCTION } from "./any-function.builder"
 import { builderOf } from "./entity-query-builder-fake.builder"
 import { builder, mockEntityManager, fakeQueryBuilder } from "@starci/jest-preset"
 import type { MockEntityManager, FakeQueryBuilder, QueryBuilderAnswers } from "@starci/jest-preset"
 import { toProposal, workItemsEntities } from "@modules/domain/work-items"
-import type { NewWorkItem, Proposal, WorkItemRecord } from "@modules/domain/work-items"
 
-const [WorkItemEntity] = workItemsEntities
+const WorkItemEntity: (typeof workItemsEntities)[0] = workItemsEntities[0]
 type WorkItemEntity = InstanceType<typeof WorkItemEntity>
 
 /** The any-function matcher, typed `unknown` so it flows into any slot. */
@@ -15,7 +25,7 @@ export const NOW = "2026-10-12T10:00:00.000Z"
 
 export const proposal: Proposal = { summary: "Quote", fields: { items: "tea" } }
 
-export const rowOf = builder<WorkItemRecord>({
+export const rowOf: (overrides?: Partial<WorkItemRecord>) => WorkItemRecord = builder<WorkItemRecord>({
     id: "item-1",
     workspace_id: "ws-1",
     department: "sales",
@@ -76,8 +86,37 @@ export const entityOf = (record: WorkItemRecord = rowOf()): WorkItemEntity =>
         installationId: record.installation_id,
     })
 
+type ContractOfResultShape = {
+    proposal: Proposal
+    created_at: string
+    updated_at: string
+    completed_at: string | null
+    id: string
+    workspace_id: string
+    department: string
+    action: string
+    subject_type: SubjectType
+    subject_id: string | null
+    lead_id: string | null
+    inbound_event_id: string | null
+    parent_id: string | null
+    chain_id: string | null
+    depth: number
+    status: WorkStatus
+    decided_path: DecidedPath | null
+    reason: ReasonCode | null
+    reasons: Array<string>
+    missing_fields: Array<string>
+    result: WorkResult | null
+    error: string | null
+    evidence_state: EvidenceState
+    assigned_staff_id: string | null
+    execution_id: string | null
+    installation_id: string | null
+}
+
 /** The contract an item reaches the callers as. */
-export const contractOf = (record: WorkItemRecord = rowOf()) => ({
+export const contractOf = (record: WorkItemRecord = rowOf()): ContractOfResultShape => ({
     ...record,
     proposal: toProposal(record.proposal),
     created_at: record.created_at.toISOString(),
@@ -101,8 +140,16 @@ export const newItem: NewWorkItem = {
     installationId: null,
 }
 
+type ManagerAnsweringResultShape = {
+    em: MockEntityManager
+    fake: FakeQueryBuilder
+}
+
 /** A manager double whose every query builder is one fake that answers the given terminals and records the chain. */
-export const managerAnswering = (answers: QueryBuilderAnswers, em: MockEntityManager = mockEntityManager()) => {
+export const managerAnswering = (
+    answers: QueryBuilderAnswers,
+    em: MockEntityManager = mockEntityManager(),
+): ManagerAnsweringResultShape => {
     const fake = fakeQueryBuilder(answers)
     em.createQueryBuilder.mockReturnValue(builderOf(fake.builder))
     return { em, fake }
@@ -111,7 +158,7 @@ export const managerAnswering = (answers: QueryBuilderAnswers, em: MockEntityMan
 /** The answer of an `UPDATE ... RETURNING` or an `INSERT ... RETURNING`. */
 export const returned = (rows: ReadonlyArray<unknown>): QueryBuilderAnswers => ({ execute: { raw: rows } })
 
-export const AT = new Date(NOW)
+export const AT: Date = new Date(NOW)
 
 /** The first id the kit generator hands out. */
 export const MINTED = "00000000-0000-4000-8000-000000000001"
@@ -122,8 +169,26 @@ export const singleCall = (fake: Pick<FakeQueryBuilder, "callsOf">, method: stri
     return calls.length === 1 ? calls[0]?.[0] : { [`${method} was called`]: `${calls.length} times, expected once` }
 }
 
+type InsertedValuesResultShape = {
+    id: string
+    workspaceId: string
+    chainId: string | null
+    depth: number
+    department: string
+    action: string
+    subjectType: SubjectType
+    subjectId: string | null
+    leadId: string | null
+    inboundEventId: string | null
+    parentId: string | null
+    dedupeKey: string
+    status: string
+    proposal: Proposal
+    installationId: string | null
+}
+
 /** The values the insert of `newItem` writes: the minted id, the queued status and the proposal. */
-export const insertedValues = (overrides: Record<string, unknown> = {}) => ({
+export const insertedValues = (overrides: Record<string, unknown> = {}): InsertedValuesResultShape => ({
     id: MINTED,
     workspaceId: newItem.workspaceId,
     chainId: newItem.chainId,

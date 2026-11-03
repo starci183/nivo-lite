@@ -1,15 +1,15 @@
+import type { JobClaims, FencedProcessor, ClaimedJob } from "@modules/platform/jobs"
 import assert from "node:assert/strict"
 import { createHash } from "node:crypto"
 import type { MetaInboxService } from "@modules/domain/meta-inbox"
 import type { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import type { SepayTransactionsService } from "@modules/domain/sepay-transactions"
-import type { JobClaims, FencedProcessor } from "@modules/platform/jobs"
 import type { EntityManager } from "typeorm"
 import { connectionsEntities } from "@modules/domain/connections"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
-const [WorkspaceEntity] = workspacesEntities
-const [ConnectionEntity] = connectionsEntities
+const WorkspaceEntity: (typeof workspacesEntities)[0] = workspacesEntities[0]
+const ConnectionEntity: (typeof connectionsEntities)[0] = connectionsEntities[0]
 
 /** The receipt capabilities covered by the delivery processors. */
 export type DeliveryKind = "meta" | "telegram" | "sepay"
@@ -30,7 +30,7 @@ interface DeliveryIntakeOwners {
 }
 
 /** The durable reference shared by every delivery job. */
-interface DeliveryMessage {
+export interface DeliveryMessage {
     readonly deliveryId: string
 }
 
@@ -46,13 +46,24 @@ export const persistDeliveryWorkspaceRows = async (
     })
 }
 
+type DeliveryIntakeBuilderResultMessageShape = {
+    deliveryId: string
+}
+
+type DeliveryIntakeBuilderResultShape = {
+    service: MetaInboxService | TelegramInboxService | SepayTransactionsService
+    accept: () => Promise<void>
+    message: DeliveryIntakeBuilderResultMessageShape
+    queue: string
+}
+
 /** Intake, rather than a queue producer, creates every durable receipt and publication. */
 export const deliveryIntakeBuilder = async (
     manager: EntityManager,
     owners: DeliveryIntakeOwners,
     kind: DeliveryKind,
     identity: DeliveryFixtureIdentity,
-) => {
+): Promise<DeliveryIntakeBuilderResultShape> => {
     const { id, connection, proofId, workspaceId } = identity
     if (kind === "telegram") {
         await manager.insert(ConnectionEntity, {
@@ -99,13 +110,28 @@ const intakeActions = (owners: DeliveryIntakeOwners, metaBody: Buffer, connectio
         }),
 })
 
+type DeliveryClaimBuilderResultDeliveryShape = {
+    id: string
+    queue: string
+    job: string
+    payload: DeliveryMessage
+    attempt: number
+    signal: AbortSignal
+}
+
+type DeliveryClaimBuilderResultShape = {
+    job: ClaimedJob
+    delivery: DeliveryClaimBuilderResultDeliveryShape
+    claim: () => Promise<ClaimedJob>
+}
+
 /** Reclaims two failed attempts so the original fence-three case uses a real job row. */
 export const deliveryClaimBuilder = async (
     claims: JobClaims,
     key: string,
     processor: FencedProcessor,
     message: DeliveryMessage,
-) => {
+): Promise<DeliveryClaimBuilderResultShape> => {
     const claim = async () => {
         const job = await claims.claim({
             kind: processor.queue,

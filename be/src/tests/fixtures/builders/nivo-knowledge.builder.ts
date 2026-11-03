@@ -1,24 +1,26 @@
 import { builder } from "@starci/jest-preset"
 import { nivoKnowledgeEntities } from "@modules/domain/nivo-knowledge"
 
-const [NivoKnowledgeItemEntity] = nivoKnowledgeEntities
+const NivoKnowledgeItemEntity: (typeof nivoKnowledgeEntities)[0] = nivoKnowledgeEntities[0]
+type NivoKnowledgeItemEntity = InstanceType<typeof NivoKnowledgeItemEntity>
 type NivoKnowledgeItem = InstanceType<typeof NivoKnowledgeItemEntity>
 
 /** A stored base-knowledge item, with the fields a spec rarely changes filled. */
-export const knowledgeRow = builder<NivoKnowledgeItem>({
-    id: "n1",
-    module: "core",
-    slug: "voice",
-    title: "Voice",
-    body: "Warm.",
-    kind: "tone",
-    version: 1,
-    embedding: null,
-    fts: null,
-    createdAt: new Date("2026-04-01T00:00:00.000Z"),
-    updatedAt: new Date("2026-04-01T00:00:00.000Z"),
-    embeddingModel: null,
-})
+export const knowledgeRow: (overrides?: Partial<NivoKnowledgeItemEntity>) => NivoKnowledgeItemEntity =
+    builder<NivoKnowledgeItem>({
+        id: "n1",
+        module: "core",
+        slug: "voice",
+        title: "Voice",
+        body: "Warm.",
+        kind: "tone",
+        version: 1,
+        embedding: null,
+        fts: null,
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+        embeddingModel: null,
+    })
 
 /** A stored item with the given text. */
 export const knowledgeRowWithText = (title: string, body: string): NivoKnowledgeItem => knowledgeRow({ title, body })

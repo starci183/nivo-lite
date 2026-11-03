@@ -22,17 +22,18 @@ class CustomerIntakeProofModule {
 }
 
 /** The road's world with the customer intake on top: the work store, the chat-turn queue and the intake that picks between them. */
-export const agentCustomerModules = (prefix: string) => [
+export const agentCustomerModules = (prefix: string): Array<DynamicModule> => [
     ...agentRoadModules(prefix),
     AgentConversationsModule.register({ isGlobal: true }),
     ChatTurnModule.register({}),
     CustomerIntakeProofModule.register(),
 ]
 
-const [, JobOutboxEntity] = jobsEntities
+const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
+type JobOutboxEntity = InstanceType<typeof JobOutboxEntity>
 
 /** The chat-turn jobs the outbox holds for a customer message. */
-export const chatJobsOf = (manager: EntityManager, messageId: string) =>
+export const chatJobsOf = (manager: EntityManager, messageId: string): Promise<Array<JobOutboxEntity>> =>
     manager.find(JobOutboxEntity, { where: { queue: "chat_turn", dedupeKey: `chat-turn.turn:${messageId}` }, take: 5 })
 
 /** Removes the chat-turn jobs and the settings row a workspace's proofs wrote. */

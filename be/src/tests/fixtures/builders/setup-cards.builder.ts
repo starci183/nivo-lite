@@ -10,7 +10,7 @@ import type { CardRecord, FactCardPayload, RuleCardPayload } from "@modules/doma
 const NOW = "2026-10-13T02:00:00.000Z"
 
 /** A fact proposed by a setup card. */
-export const factOf = builder<FactRecord>({
+export const factOf: (overrides?: Partial<FactRecord>) => FactRecord = builder<FactRecord>({
     id: "fact-1",
     subjectType: "business",
     subjectKey: "shop",
@@ -39,7 +39,7 @@ export const factOf = builder<FactRecord>({
     decisionNote: null,
 })
 /** An open knowledge gap offered during setup. */
-export const gapOf = builder<GapRecord>({
+export const gapOf: (overrides?: Partial<GapRecord>) => GapRecord = builder<GapRecord>({
     id: "gap-1",
     module: "accounting",
     question: "Do you take cards?",
@@ -54,27 +54,28 @@ export const gapOf = builder<GapRecord>({
 })
 
 /** An accounting action of the authority registry. */
-export const actionOf = builder<AuthorityActionRecord>({
-    action: "issue_invoice",
-    module_key: "accounting",
-    sort_order: 1,
-    default_mode: "ask",
-    default_limit_vnd: null,
-    default_required_fields: [],
-    amount_limit: false,
-    max_mode: null,
-    label: { en: "Issue an invoice", vi: "Xuat hoa don" },
-})
+export const actionOf: (overrides?: Partial<AuthorityActionRecord>) => AuthorityActionRecord =
+    builder<AuthorityActionRecord>({
+        action: "issue_invoice",
+        module_key: "accounting",
+        sort_order: 1,
+        default_mode: "ask",
+        default_limit_vnd: null,
+        default_required_fields: [],
+        amount_limit: false,
+        max_mode: null,
+        label: { en: "Issue an invoice", vi: "Xuat hoa don" },
+    })
 
 /** The registry the setup cards are checked against: two free actions and one that can never run alone. */
-export const REGISTRY = [
+export const REGISTRY: Array<AuthorityActionRecord> = [
     actionOf(),
     actionOf({ action: "send_email" }),
     actionOf({ action: "pay_vendor", max_mode: "ask" }),
 ]
 
 /** An authority rule of the accounting module. */
-export const ruleOf = builder<AuthorityRuleRecord>({
+export const ruleOf: (overrides?: Partial<AuthorityRuleRecord>) => AuthorityRuleRecord = builder<AuthorityRuleRecord>({
     id: "rule-1",
     workspace_id: "ws-1",
     department: "accounting",
@@ -106,20 +107,21 @@ export const SESSION: SetupSessionRecord = {
     createdAt: NOW,
 }
 /** The accounting installation in setup. */
-export const installationOf = builder<InstallationRecord>({
-    id: "inst-1",
-    workspaceId: "ws-1",
-    moduleKey: "accounting",
-    name: "Accounting",
-    isMulti: true,
-    agentId: "agent-1",
-    status: "setup",
-    operatingMode: "assist",
-    liveEnabled: false,
-    activeContextVersionId: null,
-    settings: {},
-    createdAt: NOW,
-})
+export const installationOf: (overrides?: Partial<InstallationRecord>) => InstallationRecord =
+    builder<InstallationRecord>({
+        id: "inst-1",
+        workspaceId: "ws-1",
+        moduleKey: "accounting",
+        name: "Accounting",
+        isMulti: true,
+        agentId: "agent-1",
+        status: "setup",
+        operatingMode: "assist",
+        liveEnabled: false,
+        activeContextVersionId: null,
+        settings: {},
+        createdAt: NOW,
+    })
 
 export const FACT: FactCardPayload = {
     subjectType: "business",

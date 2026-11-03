@@ -1,6 +1,12 @@
-import { builder, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import {
+    builder,
+    fakeTransaction,
+    mockEntityManager,
+    type FakeTransaction,
+    type MockEntityManager,
+} from "@starci/jest-preset"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { fakeQueryBuilder } from "./entity-query-builder-fake.builder"
+import { fakeQueryBuilder, type FakeQueryBuilder } from "./entity-query-builder-fake.builder"
 
 /** A stored seat as the members table holds it. */
 export interface SeatRow {
@@ -37,13 +43,15 @@ export const seatRowOf = (
 ): SeatRow => baseSeat({ role, status, userId, displayName, staffId })
 
 /** The owner Chu who changes seats. */
-export const CHU_OWNER_SEAT = seatRowOf("owner", "active", "user-1", "Chu")
+export const CHU_OWNER_SEAT: SeatRow = seatRowOf("owner", "active", "user-1", "Chu")
 
 /** The staff member Binh whose seat is changed. */
-export const BINH_STAFF_SEAT = seatRowOf("staff", "active", "user-2", "Binh")
+export const BINH_STAFF_SEAT: SeatRow = seatRowOf("staff", "active", "user-2", "Binh")
 
 /** The two reads of a seat change in order: the actor, then the target. */
-export const seatChangeReads = <Entity extends object>(entity: Entity) =>
+export const seatChangeReads = <Entity extends object>(
+    entity: Entity,
+): readonly [readonly [Entity, SeatRow], readonly [Entity, SeatRow]] =>
     [
         [entity, CHU_OWNER_SEAT],
         [entity, BINH_STAFF_SEAT],
@@ -69,8 +77,16 @@ export const SAVED_STAFF = {
     created_at: "2026-10-01T00:00:00.000Z",
 }
 
+type StaffOptionShape = {
+    id: string
+    name: string
+    role: string
+    email: string
+    active: boolean
+}
+
 /** The console fields of that staff row. */
-export const STAFF_OPTION = {
+export const STAFF_OPTION: StaffOptionShape = {
     id: SAVED_STAFF.id,
     name: SAVED_STAFF.name,
     role: SAVED_STAFF.role,
@@ -81,12 +97,22 @@ export const STAFF_OPTION = {
 /** The statement `callDbFunction` sends for the member pictures. */
 export const MEMBER_AVATARS = 'SELECT * FROM "be_access"."workspace_member_avatars"($1, $2)'
 
+type ListWorldInputShape = {
+    id: string
+    avatar_url: string | null
+}
+
+type ListWorldResultShape = {
+    em: MockEntityManager
+    list: FakeQueryBuilder
+}
+
 /** A manager-or-staff viewer who lists one member (the viewer) whose picture the avatars door answers. */
 export const listWorld = (
     entity: new () => SeatRow,
     viewer: SeatRow,
-    avatars: ReadonlyArray<{ id: string; avatar_url: string | null }>,
-) => {
+    avatars: ReadonlyArray<ListWorldInputShape>,
+): ListWorldResultShape => {
     const em = mockEntityManager({
         findOne: [entity, viewer],
         query: [MEMBER_AVATARS, avatars],
@@ -96,11 +122,29 @@ export const listWorld = (
     return { em, list }
 }
 
+type SeatLookupResultWhereShape = {
+    workspaceId: string
+    userId: string
+}
+
+type SeatLookupResultShape = {
+    where: SeatLookupResultWhereShape
+}
+
 /** The options a seat lookup of one account in one workspace passes to `findOne`. */
-export const seatLookup = (workspaceId: string, userId: string) => ({ where: { workspaceId, userId } })
+export const seatLookup = (workspaceId: string, userId: string): SeatLookupResultShape => ({
+    where: { workspaceId, userId },
+})
+
+type JoinWorldResultShape = {
+    em: MockEntityManager
+    insert: FakeQueryBuilder
+    update: FakeQueryBuilder
+    transaction: FakeTransaction<MockEntityManager>
+}
 
 /** A manager whose join runs in a transaction of two statements: the insert that ignores a seat that exists, then the update. */
-export const joinWorld = () => {
+export const joinWorld = (): JoinWorldResultShape => {
     const em = mockEntityManager()
     const insert = fakeQueryBuilder({ execute: {} })
     const update = fakeQueryBuilder({ execute: {} })

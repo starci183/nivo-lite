@@ -20,12 +20,13 @@ import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { Secret } from "@modules/platform/config"
 import { I18nModule } from "@modules/platform/i18n"
 import { QUEUE_MODULES } from "./test-capabilities.options"
+import type { DynamicModule } from "@nestjs/common"
 
 /** The connection key of the mcp proofs: a local test key of their own, never a deployed one. */
-export const MCP_PROOF_TOKEN_KEY = new Secret(Buffer.alloc(32, 11).toString("base64"))
+export const MCP_PROOF_TOKEN_KEY: Secret = new Secret(Buffer.alloc(32, 11).toString("base64"))
 
 /** The mcp app's credential composition: no user session, the agent key verified by api-keys, the connection key of the sealed connector credentials. */
-export const MCP_CREDENTIAL_MODULES = [
+export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
     I18nModule.register({
         isGlobal: true,
         bundles: [

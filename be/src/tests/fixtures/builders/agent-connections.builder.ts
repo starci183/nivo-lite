@@ -1,19 +1,20 @@
 import { builder } from "@starci/jest-preset"
 import { agentConnectionsEntities } from "@modules/domain/agent-connections"
 
-const [AgentConnectionEntity] = agentConnectionsEntities
+const AgentConnectionEntity: (typeof agentConnectionsEntities)[0] = agentConnectionsEntities[0]
 type AgentConnectionEntity = InstanceType<typeof AgentConnectionEntity>
 
 /** The grant of connection c1 to agent a1 for inbound chat at the auto level, in workspace w1. */
-export const linkOf = builder<AgentConnectionEntity>({
-    agentId: "a1",
-    connectionId: "c1",
-    workspaceId: "w1",
-    purpose: "inbound_chat",
-    access: "auto",
-    createdAt: new Date("2026-10-13T02:00:00.000Z"),
-    updatedAt: new Date("2026-10-13T02:00:00.000Z"),
-})
+export const linkOf: (overrides?: Partial<AgentConnectionEntity>) => AgentConnectionEntity =
+    builder<AgentConnectionEntity>({
+        agentId: "a1",
+        connectionId: "c1",
+        workspaceId: "w1",
+        purpose: "inbound_chat",
+        access: "auto",
+        createdAt: new Date("2026-10-13T02:00:00.000Z"),
+        updatedAt: new Date("2026-10-13T02:00:00.000Z"),
+    })
 
 /** The inbound chat grants of connection c1 to the agents a1, a2 and a3. */
 export const inboundLinks = (): Array<AgentConnectionEntity> => ["a1", "a2", "a3"].map((agentId) => linkOf({ agentId }))

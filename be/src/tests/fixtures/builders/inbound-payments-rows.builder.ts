@@ -1,6 +1,6 @@
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 
-const [InboundEventEntity] = inboundEventsEntities
+const InboundEventEntity: (typeof inboundEventsEntities)[0] = inboundEventsEntities[0]
 
 /** A payment of 500000 VND from Lan that still waits for a decision. */
 export const waitingPaymentRow = (): InstanceType<typeof InboundEventEntity> =>

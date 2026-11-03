@@ -1,13 +1,21 @@
+import type { QueryBuilderAnswers, FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
 
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 
 /** The answer of an insert that stored these ids. */
 export const stored = (...ids: Array<string>): QueryBuilderAnswers => ({ execute: { raw: ids.map((id) => ({ id })) } })
 
+type WithStatementsResultShape = {
+    em: MockEntityManager
+    fakes: ReadonlyArray<FakeQueryBuilder>
+}
+
 /** A manager whose inserts and reads answer these, one fake statement each, in order. */
-export const withStatements = (em: MockEntityManager, ...answers: Array<QueryBuilderAnswers>) => {
+export const withStatements = (
+    em: MockEntityManager,
+    ...answers: Array<QueryBuilderAnswers>
+): WithStatementsResultShape => {
     return { em, fakes: queueQueryBuilders(em, answers) }
 }
 

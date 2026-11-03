@@ -1,12 +1,58 @@
 import { builder } from "@starci/jest-preset"
 import { automationTemplatesEntities } from "@modules/domain/automation-templates"
 
-const [AutomationTemplateEntity] = automationTemplatesEntities
+const AutomationTemplateEntity: (typeof automationTemplatesEntities)[0] = automationTemplatesEntities[0]
+type AutomationTemplateEntity = InstanceType<typeof AutomationTemplateEntity>
 
 const text = { vi: "Hello there", en: "Hello" }
 
+type DefinitionOfResultDefaultsShape = {}
+
+type DefinitionOfResultAuthorityShape = {
+    action: null
+}
+
+type DefinitionOfResultRequiresShape = {
+    modules: Array<never>
+    channels: Array<never>
+    connections: Array<never>
+    capabilities: Array<never>
+}
+
+type DefinitionOfResultTriggerLineShape = {
+    vi: string
+    en: string
+}
+
+type DefinitionOfResultTriggerShape = {
+    kind: string
+    event: string
+    line: DefinitionOfResultTriggerLineShape
+}
+
+type DefinitionOfResultShape = {
+    key: string
+    version: number
+    position: number
+    pack: string
+    executor: string
+    moduleKey: string
+    icon: string
+    name: DefinitionOfResultTriggerLineShape
+    description: DefinitionOfResultTriggerLineShape
+    trigger: DefinitionOfResultTriggerShape
+    requires: DefinitionOfResultRequiresShape
+    settings: Array<never>
+    contentMode: string
+    guardrails: Array<never>
+    variables: Array<never>
+    defaultBody: null
+    authority: DefinitionOfResultAuthorityShape
+    defaults: DefinitionOfResultDefaultsShape
+}
+
 /** A catalogue definition of a payment-received template at the given position. */
-export const definitionOf = (key: string, position: number) => ({
+export const definitionOf = (key: string, position: number): DefinitionOfResultShape => ({
     key,
     version: 2,
     position,
@@ -28,7 +74,9 @@ export const definitionOf = (key: string, position: number) => ({
 })
 
 /** A stored template row with the fields a spec rarely changes filled. */
-export const rowOf = builder<InstanceType<typeof AutomationTemplateEntity>>({
+export const rowOf: (overrides?: Partial<AutomationTemplateEntity>) => AutomationTemplateEntity = builder<
+    InstanceType<typeof AutomationTemplateEntity>
+>({
     key: "a_one",
     version: 1,
     moduleKey: null,

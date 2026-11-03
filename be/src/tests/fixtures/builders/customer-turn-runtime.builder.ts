@@ -6,7 +6,7 @@ import type { Passage } from "@modules/domain/knowledge"
 /** The workspace of the runtime specs. */
 export const RUNTIME_WS = "11111111-1111-4111-8111-111111111111"
 /** The tool token a turn is given; it must never appear in anything stored or logged. */
-export const RUNTIME_TOKEN = ["turn", "m1", "signed"].join(".")
+export const RUNTIME_TOKEN: string = ["turn", "m1", "signed"].join(".")
 
 /** An installation of the turn's agent with the given settings. */
 export const runtimeInstallationOf = (settings: Installation["settings"] = {}): Installation => ({

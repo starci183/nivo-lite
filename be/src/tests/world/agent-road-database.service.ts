@@ -3,8 +3,10 @@ import { jobsEntities } from "@modules/platform/jobs"
 import { agentWorkEntities } from "../../modules/domain/agent-work"
 import type { AgentWakeSource } from "../../modules/domain/agent-work/agent-work.contracts"
 
-const [, JobOutboxEntity] = jobsEntities
-const [, , , , , AgentTriggerEntity, AgentWakeEntity] = agentWorkEntities
+const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
+type JobOutboxEntity = InstanceType<typeof JobOutboxEntity>
+const AgentTriggerEntity: (typeof agentWorkEntities)[5] = agentWorkEntities[5]
+const AgentWakeEntity: (typeof agentWorkEntities)[6] = agentWorkEntities[6]
 
 const MINUTE_MS = 60_000
 
@@ -22,7 +24,12 @@ export const wakesOfSource = (manager: EntityManager, agentId: string, source: A
     manager.countBy(AgentWakeEntity, { agentId, source })
 
 /** The drains the minute sweep started for the scope of an agent, whatever minute it ran in. */
-export const sweepDrainsOf = async (manager: EntityManager, workspaceId: string, agentId: string, scopeKey: string) => {
+export const sweepDrainsOf = async (
+    manager: EntityManager,
+    workspaceId: string,
+    agentId: string,
+    scopeKey: string,
+): Promise<Array<JobOutboxEntity>> => {
     const rows = await manager.find(JobOutboxEntity, { where: { queue: "agent_turn", workspaceId }, take: 100 })
     return rows.filter((row) => row.dedupeKey?.startsWith(`agent-turn:${agentId}:sweep:${scopeKey}:`) === true)
 }

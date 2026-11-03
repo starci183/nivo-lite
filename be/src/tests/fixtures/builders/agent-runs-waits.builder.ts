@@ -13,11 +13,11 @@ import { persistGraph } from "./agent-graph-world.builder"
 import { entityOf as authorityRuleOf } from "./authority-rules.builder"
 import { entityOf } from "./entity.builder"
 
-const [, , , , GraphDecisionEntity] = agentGraphsEntities
-const [ApprovalRequestEntity] = approvalRequestsEntities
-const [AuthorityRuleEntity] = authorityRulesEntities
-const [InstallationEntity] = moduleInstallationsEntities
-const [MemberEntity] = workspaceMembersEntities
+const GraphDecisionEntity: (typeof agentGraphsEntities)[4] = agentGraphsEntities[4]
+const ApprovalRequestEntity: (typeof approvalRequestsEntities)[0] = approvalRequestsEntities[0]
+const AuthorityRuleEntity: (typeof authorityRulesEntities)[0] = authorityRulesEntities[0]
+const InstallationEntity: (typeof moduleInstallationsEntities)[0] = moduleInstallationsEntities[0]
+const MemberEntity: (typeof workspaceMembersEntities)[0] = workspaceMembersEntities[0]
 const ACTION = "send_follow_up"
 const SUMMARY = "Engine-extension approval proof"
 const RESULT = { summary: "Owner decision committed", evidence: "reviewed" } as const
@@ -204,6 +204,12 @@ export const persistWaitsAsk = async (
     )
 }
 
+type CommitWaitsDecisionResultShape = {
+    name: string
+    kind: "owner"
+    memberId: string
+}
+
 /** Commits the real owner row and decision log together; the caller chooses whether its post-commit callback survives. */
 export const commitWaitsDecision = async (
     manager: EntityManager,
@@ -212,7 +218,7 @@ export const commitWaitsDecision = async (
     who: WaitsFixtureIdentity,
     item: WorkItem,
     approved: boolean,
-) => {
+): Promise<CommitWaitsDecisionResultShape> => {
     const owner = await manager.findOneOrFail(MemberEntity, {
         where: { workspaceId: who.workspaceId, role: "owner" },
     })

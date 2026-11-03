@@ -1,9 +1,18 @@
+import type {
+    Evidence,
+    FactInput,
+    FactRecord,
+    BrainSubjectType,
+    Scope,
+    FactStatus,
+    FactSource,
+    ProposalKind,
+} from "@modules/domain/brain-facts"
 import { builder } from "@starci/jest-preset"
-import type { Evidence, FactInput, FactRecord } from "@modules/domain/brain-facts"
 import { brainFactsEntities } from "@modules/domain/brain-facts"
 import { entityRowBuilder } from "./entity-row.builder"
 
-const [BrainFactEntity] = brainFactsEntities
+const BrainFactEntity: (typeof brainFactsEntities)[0] = brainFactsEntities[0]
 type BrainFactEntity = InstanceType<typeof BrainFactEntity>
 
 /** Shared, complete test data for the capability cases. */
@@ -19,7 +28,7 @@ export const LATER = "2026-10-13T10:00:00.000Z"
 export const PROOF: Evidence = { kind: "document", ref: "doc-1", label: "Hours" }
 
 /** Shared, complete test data for the capability cases. */
-export const inputOf = builder<FactInput>({
+export const inputOf: (overrides?: Partial<FactInput>) => FactInput = builder<FactInput>({
     subjectLabel: "Shop",
     attributeLabel: "Hours",
     value: "8h",
@@ -27,8 +36,40 @@ export const inputOf = builder<FactInput>({
     proposedBy: "u1",
 })
 
+type RowOfShape = {
+    readonly workspaceId?: string
+    readonly installationId?: string | null
+    readonly subjectType?: BrainSubjectType
+    readonly subjectKey?: string
+    readonly subjectLabel?: string
+    readonly attribute?: string
+    readonly attributeLabel?: string
+    readonly value?: string
+    readonly valueNumber?: string | null
+    readonly unit?: string | null
+    readonly scope?: Scope
+    readonly modules?: Array<string>
+    readonly status?: FactStatus
+    readonly sourceKind?: FactSource
+    readonly trust?: number
+    readonly validFrom?: Date | null
+    readonly validTo?: Date | null
+    readonly supersedesId?: string | null
+    readonly conflictWith?: string | null
+    readonly evidence?: Array<Evidence>
+    readonly proposedBy?: string
+    readonly proposedAt?: Date
+    readonly decidedBy?: string | null
+    readonly decidedAt?: Date | null
+    readonly decisionNote?: string | null
+    readonly proposalKind?: ProposalKind
+    readonly id?: string
+    readonly createdAt?: Date
+    readonly updatedAt?: Date
+}
+
 /** Shared, complete test data for the capability cases. */
-export const rowOf = entityRowBuilder<BrainFactEntity>({
+export const rowOf: (changes?: RowOfShape) => BrainFactEntity = entityRowBuilder<BrainFactEntity>({
     id: "f1",
     workspaceId: WS,
     installationId: null,
@@ -61,7 +102,7 @@ export const rowOf = entityRowBuilder<BrainFactEntity>({
 })
 
 /** Shared, complete test data for the capability cases. */
-export const factOf = builder<FactRecord>({
+export const factOf: (overrides?: Partial<FactRecord>) => FactRecord = builder<FactRecord>({
     id: "f1",
     installationId: null,
     subjectType: "business",
@@ -94,7 +135,7 @@ export const factOf = builder<FactRecord>({
 export const OTHER: Evidence = { kind: "manual", ref: "doc-1", label: "Owner" }
 
 /** Shared, complete test data for the capability cases. */
-export const withdrawalRows = [
+export const withdrawalRows: Array<BrainFactEntity> = [
     rowOf({ evidence: [PROOF] }),
     rowOf({ id: "orphan", status: "active", sourceKind: "document", evidence: [PROOF] }),
     rowOf({ id: "owner", status: "active", sourceKind: "owner", evidence: [PROOF] }),
@@ -102,8 +143,25 @@ export const withdrawalRows = [
     rowOf({ id: "supported", status: "active", evidence: [PROOF, OTHER, { ...PROOF, ref: "doc-2" }] }),
 ]
 
+type SplitProposalShape = {
+    subjectType: string
+    subjectLabel: string
+    attributeLabel: string
+    value: string
+    unit: null
+    scope: string
+    modules: Array<never>
+    sourceKind: string
+    validFrom: null
+    validTo: null
+    evidence: Array<never>
+    proposedBy: string
+    installationId: null
+    autoApply: boolean
+}
+
 /** Shared, complete test data for the capability cases. */
-export const splitProposal = {
+export const splitProposal: SplitProposalShape = {
     subjectType: "business",
     subjectLabel: "Shop",
     attributeLabel: "Hours (Weekend)",
@@ -176,8 +234,32 @@ interface InsertParameters {
     readonly evidence: string
 }
 
+type InsertedOfShape = {
+    readonly workspaceId?: string
+    readonly subjectType?: string
+    readonly subjectKey?: string
+    readonly subjectLabel?: string
+    readonly attribute?: string
+    readonly attributeLabel?: string
+    readonly value?: string
+    readonly valueNumber?: string | null
+    readonly unit?: string | null
+    readonly scope?: string
+    readonly modules?: Array<string>
+    readonly sourceKind?: string
+    readonly trust?: number
+    readonly conflictWith?: string | null
+    readonly proposedBy?: string
+    readonly installationId?: string | null
+    readonly proposalKind?: string
+    readonly status?: string
+    readonly validFrom?: string
+    readonly validTo?: string
+    readonly evidence?: string
+}
+
 /** The values a new proposal is inserted with; the three instants and the evidence are named as functions, their text is a parameter. */
-export const insertedOf = entityRowBuilder<InsertedValues>({
+export const insertedOf: (changes?: InsertedOfShape) => InsertedValues = entityRowBuilder<InsertedValues>({
     workspaceId: WS,
     subjectType: "business",
     subjectKey: "shop",
@@ -201,11 +283,18 @@ export const insertedOf = entityRowBuilder<InsertedValues>({
     evidence: "function",
 })
 
+type InsertParametersOfShape = {
+    readonly validFrom?: string | null
+    readonly validTo?: string | null
+    readonly evidence?: string
+}
+
 /** The parameters that carry the instants and the evidence of an insert. */
-export const insertParametersOf = entityRowBuilder<InsertParameters>({ validFrom: null, validTo: null, evidence: "[]" })
+export const insertParametersOf: (changes?: InsertParametersOfShape) => InsertParameters =
+    entityRowBuilder<InsertParameters>({ validFrom: null, validTo: null, evidence: "[]" })
 
 /** The retirement the document filing writes for an active value. */
-export const retirementInsert = insertedOf({
+export const retirementInsert: InsertedValues = insertedOf({
     modules: ["sales"],
     sourceKind: "document",
     trust: 75,
@@ -216,7 +305,7 @@ export const retirementInsert = insertedOf({
 })
 
 /** The values of a proposal written with every field explicit. */
-export const explicitInsert = insertedOf({
+export const explicitInsert: InsertedValues = insertedOf({
     subjectType: "product",
     unit: "hours",
     scope: "restricted",
@@ -225,7 +314,7 @@ export const explicitInsert = insertedOf({
 })
 
 /** The values of a retirement filed for an orphan. */
-export const orphanInsert = insertedOf({
+export const orphanInsert: InsertedValues = insertedOf({
     sourceKind: "document",
     trust: 75,
     conflictWith: "file",
@@ -234,7 +323,7 @@ export const orphanInsert = insertedOf({
 })
 
 /** The values of a conflicting proposal that inherits the active value. */
-export const conflictInsert = insertedOf({
+export const conflictInsert: InsertedValues = insertedOf({
     subjectType: "service",
     unit: "hour",
     scope: "restricted",
@@ -243,10 +332,22 @@ export const conflictInsert = insertedOf({
 })
 
 /** The values of a restricted proposal with no modules. */
-export const restrictedInsert = insertedOf({ scope: "restricted" })
+export const restrictedInsert: InsertedValues = insertedOf({ scope: "restricted" })
+
+type ExplicitInputShape = {
+    subjectType: "product"
+    scope: "restricted"
+    modules: Array<string>
+    unit: string
+    validFrom: string
+    validTo: string
+    evidence: Array<Evidence>
+    installationId: string
+    autoApply: true
+}
 
 /** The input that sets every field of a proposal. */
-export const explicitInput = {
+export const explicitInput: ExplicitInputShape = {
     subjectType: "product",
     scope: "restricted",
     modules: ["chatbot"],
@@ -259,7 +360,7 @@ export const explicitInput = {
 } satisfies Partial<FactInput>
 
 /** The active restricted value inherited by a conflicting proposal. */
-export const conflictingActive = rowOf({
+export const conflictingActive: BrainFactEntity = rowOf({
     id: "old",
     value: "9h",
     subjectType: "service",

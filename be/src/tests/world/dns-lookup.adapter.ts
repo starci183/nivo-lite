@@ -9,10 +9,15 @@ interface LookupOwner {
 const lookupOwner: LookupOwner = dns
 
 /** Makes every name resolve to these addresses (none: to nothing) until the mocks are restored. */
-export const resolvingTo = (...addresses: ReadonlyArray<string>) =>
+export const resolvingTo = (
+    ...addresses: ReadonlyArray<string>
+): jest.SpyInstance<Promise<Array<LookupAddress>>, [hostname: string, options: LookupAllOptions]> =>
     jest
         .spyOn(lookupOwner, "lookup")
         .mockResolvedValue(addresses.map((address) => ({ address, family: address.includes(":") ? 6 : 4 })))
 
 /** Makes every lookup fail, as an unknown name does. */
-export const failingLookup = () => jest.spyOn(lookupOwner, "lookup").mockRejectedValue(new TypeError("ENOTFOUND"))
+export const failingLookup = (): jest.SpyInstance<
+    Promise<Array<LookupAddress>>,
+    [hostname: string, options: LookupAllOptions]
+> => jest.spyOn(lookupOwner, "lookup").mockRejectedValue(new TypeError("ENOTFOUND"))

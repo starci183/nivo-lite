@@ -1,3 +1,4 @@
+import type { ChatTypingFrame } from "@modules/domain/chat-typing"
 import assert from "node:assert/strict"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
@@ -185,8 +186,21 @@ const compileReplica = (world: LiteWorld, identity: ChatMarkersIdentity, prefix:
     }).compile()
 }
 
+type StartTypingReplicaResultShape = {
+    hub: ProofHub
+    origin: string
+    typing: typingContract.ChatTypingService
+    topic: (recipientId: string, target: ChatTarget) => realtimeContract.RealtimeTopic<ChatTypingFrame>
+    open: (streamOptions: TypingStreamOptions) => Promise<TypingStreamClient>
+    close: () => Promise<void>
+}
+
 /** An independently composed API replica with the actual Redis hub, typing publisher and SSE door. */
-export const startTypingReplica = async (world: LiteWorld, identity: ChatMarkersIdentity, prefix: string) => {
+export const startTypingReplica = async (
+    world: LiteWorld,
+    identity: ChatMarkersIdentity,
+    prefix: string,
+): Promise<StartTypingReplicaResultShape> => {
     const contracts = loadContracts()
     const moduleRef = await compileReplica(world, identity, prefix, contracts)
     const app = moduleRef.createNestApplication({ logger: false })

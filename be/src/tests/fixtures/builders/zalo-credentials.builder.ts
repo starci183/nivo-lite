@@ -1,3 +1,4 @@
+import { ok, refused, type OutcomeOk, type OutcomeRefused } from "@modules/platform/primitives"
 import type { MockOf } from "@starci/jest-preset"
 import {
     type ConnectionSecretsService,
@@ -6,12 +7,11 @@ import {
 } from "@modules/domain/connection-secrets"
 import type { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
-import { ok, refused } from "@modules/platform/primitives"
 import type { ZaloCredentialsService } from "@modules/domain/channels"
 
 type ZaloSecret = Extract<Awaited<ReturnType<ZaloCredentialsService["load"]>>, ReturnType<typeof ok>>["value"]["secret"]
 
-export const NOW = Date.parse("2026-10-12T10:00:00.000Z")
+export const NOW: number = Date.parse("2026-10-12T10:00:00.000Z")
 export const HOUR = 3_600_000
 /** Build a valid stored Zalo credential with optional overrides. */
 export const secretOf = (patch: Partial<ZaloSecret> = {}): ZaloSecret => ({
@@ -23,7 +23,10 @@ export const secretOf = (patch: Partial<ZaloSecret> = {}): ZaloSecret => ({
     ...patch,
 })
 /** Wrap the credential in the connection-secret read result. */
-export const stored = (secret: ZaloSecret | string, expiresAt: number | null = NOW + HOUR) =>
+export const stored = (
+    secret: ZaloSecret | string,
+    expiresAt: number | null = NOW + HOUR,
+): OutcomeOk<ConnectionSecret> =>
     ok<ConnectionSecret>({
         workspaceId: "ws-1",
         credential: typeof secret === "string" ? secret : JSON.stringify(secret),
@@ -31,7 +34,7 @@ export const stored = (secret: ZaloSecret | string, expiresAt: number | null = N
         tokenExpiresAt: expiresAt === null ? null : new Date(expiresAt).toISOString(),
     })
 /** The stored credential of a connection whose authorization was begun: a PKCE verifier and nonce that are still valid. */
-export const startedAuthorization = () =>
+export const startedAuthorization = (): OutcomeOk<ConnectionSecret> =>
     stored(secretOf({ pkce: { verifier: "verifier-1", nonce: "nonce-1", exp: NOW + 60_000 } }))
 /** Parse the sealed test text, retaining an unreadable value's error so assertions expose it. */
 export const sealedJson = (sealed: string): object => {
@@ -42,9 +45,9 @@ export const sealedJson = (sealed: string): object => {
         return { cause }
     }
 }
-export const missing = refused(ConnectionSecretsErrorCode.NotFound)
+export const missing: OutcomeRefused<ConnectionSecretsErrorCode.NotFound> = refused(ConnectionSecretsErrorCode.NotFound)
 /** Build a provider rejection carrying the requested Zalo error code. */
-export const zaloRefusal = (zaloCode: number) =>
+export const zaloRefusal = (zaloCode: number): ZaloError =>
     new ZaloError({ code: ZaloErrorCode.Rejected, params: { path: "/v4/oa/access_token", reason: "no", zaloCode } })
 export const tokens = { accessToken: "access-2", renewalToken: "refresh-2", expiresInSeconds: 3600 }
 

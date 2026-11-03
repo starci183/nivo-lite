@@ -1,11 +1,14 @@
 import { builder } from "@starci/jest-preset"
-import { MoreThanOrEqual } from "typeorm"
+import { MoreThanOrEqual, type FindOperator } from "typeorm"
 import { bookingExceptionsEntities } from "@modules/domain/booking-exceptions"
 
-const [BookingExceptionEntity] = bookingExceptionsEntities
+const BookingExceptionEntity: (typeof bookingExceptionsEntities)[0] = bookingExceptionsEntities[0]
+type BookingExceptionEntity = InstanceType<typeof BookingExceptionEntity>
 
 /** A calendar exception row of workspace `ws-1`: a closed day without a resource. */
-export const bookingExceptionRowOf = builder<InstanceType<typeof BookingExceptionEntity>>({
+export const bookingExceptionRowOf: (overrides?: Partial<BookingExceptionEntity>) => BookingExceptionEntity = builder<
+    InstanceType<typeof BookingExceptionEntity>
+>({
     id: "e-0",
     workspaceId: "ws-1",
     resourceId: null,
@@ -21,8 +24,24 @@ export const bookingExceptionRowOf = builder<InstanceType<typeof BookingExceptio
 /** The options `list("ws-1")` reads the exceptions with: the whole workspace in date order, bounded. */
 export const EXCEPTIONS_FIND_ALL = { where: { workspaceId: "ws-1" }, order: { onDate: "ASC", id: "ASC" }, take: 1000 }
 
+type ExceptionsFindFromResultOrderShape = {
+    onDate: string
+    id: string
+}
+
+type ExceptionsFindFromResultWhereShape = {
+    workspaceId: string
+    onDate: FindOperator<string>
+}
+
+type ExceptionsFindFromResultShape = {
+    where: ExceptionsFindFromResultWhereShape
+    order: ExceptionsFindFromResultOrderShape
+    take: number
+}
+
 /** The options `list("ws-1", from)` reads the exceptions with: from a local date on, in date order, bounded. */
-export const exceptionsFindFrom = (from: string) => ({
+export const exceptionsFindFrom = (from: string): ExceptionsFindFromResultShape => ({
     where: { workspaceId: "ws-1", onDate: MoreThanOrEqual(from) },
     order: { onDate: "ASC", id: "ASC" },
     take: 1000,

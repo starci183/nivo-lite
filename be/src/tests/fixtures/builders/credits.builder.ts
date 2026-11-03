@@ -84,8 +84,20 @@ export const UPGRADE_PAYABLE: PayableOrder = {
     order: UPGRADE_ORDER,
     qrUrl: "https://qr.sepay.vn/img?acc=0123&bank=MB&amount=1495000&des=NIVO8F3K2&template=compact",
 }
+type UpgradeResultQuoteShape = {
+    amount: number
+    credit: number
+    daysLeft: number
+    fromCode: string
+}
+
+type UpgradeResultShape = {
+    payable: PayableOrder
+    quote: UpgradeResultQuoteShape
+}
+
 /** What an upgrade answers: the payable order and its quote. */
-export const UPGRADE_RESULT = {
+export const UPGRADE_RESULT: UpgradeResultShape = {
     payable: UPGRADE_PAYABLE,
     quote: { amount: 1495000, credit: 495000, daysLeft: 15, fromCode: "starter" },
 }

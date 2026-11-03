@@ -5,7 +5,7 @@ import { leadFlowsEntities } from "@modules/domain/lead-flows"
 type LeadFlowEntity = InstanceType<(typeof leadFlowsEntities)[number]>
 
 /** A stored flow of a Messenger prospect, with every persisted column. */
-export const storedFlowOf = builder<LeadFlowEntity>({
+export const storedFlowOf: (overrides?: Partial<LeadFlowEntity>) => LeadFlowEntity = builder<LeadFlowEntity>({
     id: "flow-1",
     workspaceId: "ws-1",
     leadId: "lead-1",
@@ -44,7 +44,7 @@ export const storedFlowOf = builder<LeadFlowEntity>({
 })
 
 /** A stored flow whose JSON columns and state still hold the values a malformed row would. */
-export const looseFlowOf = builder<LeadFlowEntity>({
+export const looseFlowOf: (overrides?: Partial<LeadFlowEntity>) => LeadFlowEntity = builder<LeadFlowEntity>({
     id: "flow-1",
     workspaceId: "ws-1",
     leadId: "lead-1",

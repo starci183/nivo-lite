@@ -232,7 +232,7 @@ class PublicApiProofPeersModule {
 }
 
 /** Real queue, ledger, inbox and work owners; only external ports are supplied by the proof. */
-export const publicApiProofModules = (options: QueueOptions) => [
+export const publicApiProofModules = (options: QueueOptions): Array<DynamicModule> => [
     // The proof captures the router without starting a poller, so teardown has no in-flight transport delivery to await.
     QueueModule.register({ ...options, enabled: true, isGlobal: true }),
     JobsModule.register({
@@ -270,4 +270,7 @@ export const publicApiProofModules = (options: QueueOptions) => [
 ]
 
 /** Existing persisted routing proofs capture their worker without opening a broker connection. */
-export const PUBLIC_API_PROOF_MODULES = publicApiProofModules({ ...queueOptions, shutdownGraceMs: 0 })
+export const PUBLIC_API_PROOF_MODULES: Array<DynamicModule> = publicApiProofModules({
+    ...queueOptions,
+    shutdownGraceMs: 0,
+})

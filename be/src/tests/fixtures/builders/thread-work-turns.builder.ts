@@ -39,8 +39,23 @@ export const ACCOUNTING_ROW: WorkAgentRecord = {
     can_tag_agent_ids: [],
 }
 
+type PlaceAgentShape = {
+    id: string
+    name: string
+    module: string
+    canTag: Array<string>
+}
+
+type PlaceShape = {
+    workspaceId: string
+    threadId: string
+    workId: string
+    agent: PlaceAgentShape
+    locale: "vi"
+}
+
 /** The address and language of the sales step. */
-export const PLACE = {
+export const PLACE: PlaceShape = {
     workspaceId: "ws-1",
     threadId: "thread-1",
     workId: "work-1",
@@ -117,8 +132,30 @@ export interface Doubles {
     readonly requestId?: string | null
 }
 
+type StepSeedFieldsShape = {
+    customer: string
+    amount_percent: number
+}
+
+type StepSeedShape = {
+    summary: string
+    amount_vnd: number
+    fields: StepSeedFieldsShape
+}
+
+type StepShape = {
+    workspaceId: string
+    threadId: string
+    agent: PlaceAgentShape
+    action: string
+    leadId: string
+    seed: StepSeedShape
+    parentId: null
+    actorName: string
+}
+
 /** The structured customer assignment given to Sales. */
-export const STEP = {
+export const STEP: StepShape = {
     workspaceId: "ws-1",
     threadId: "thread-1",
     agent: SALES_AI,

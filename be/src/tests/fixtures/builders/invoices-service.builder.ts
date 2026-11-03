@@ -1,4 +1,4 @@
-import { mockEntityManager } from "@starci/jest-preset"
+import { mockEntityManager, type MockEntityManager } from "@starci/jest-preset"
 import type {
     InvoiceRow,
     InvoiceViewRow,
@@ -50,8 +50,19 @@ export const RENEWAL_INPUT: NewRenewalInvoice = {
 }
 export const VIEW: InvoiceViewRow = { ...INVOICE, due_at: DUE_AT, issued_at: NOW, created_at: NOW }
 
+type ReconcileRawShape = {
+    id: string
+    order_id: string
+    lead_id: string
+    invoice_no: string
+    amount_vnd: number
+    status: string
+    issued_at: string
+    due_at: string
+}
+
 /** The columns the reconciliation read selects for `INVOICE`, before the owners add the order and the customer. */
-export const RECONCILE_RAW = {
+export const RECONCILE_RAW: ReconcileRawShape = {
     id: INVOICE.id,
     order_id: "o1",
     lead_id: "l1",
@@ -87,8 +98,13 @@ export const LEAD: LeadCard = {
     email: null,
 }
 
+type QueuedResultShape = {
+    em: MockEntityManager
+    fakes: ReadonlyArray<FakeQueryBuilder>
+}
+
 /** A manager that hands out one query builder per call, answering `answers` in order. */
-export const queued = (answers: ReadonlyArray<QueryBuilderAnswers>) => {
+export const queued = (answers: ReadonlyArray<QueryBuilderAnswers>): QueuedResultShape => {
     const em = mockEntityManager()
     return { em, fakes: queueQueryBuilders(em, answers) }
 }
@@ -103,8 +119,20 @@ export const listed = (rows: ReadonlyArray<unknown>): QueryBuilderAnswers => ({ 
 /** What an insert query builder was told to write. */
 export const writtenBy = (fake: FakeQueryBuilder | undefined): unknown => fake?.callsOf("values")[0]?.[0]
 
+type OrderValuesResultShape = {
+    workspaceId: string
+    orderId: string | null
+    leadId: string
+    invoiceNo: string
+    amountVnd: number
+    dueAt: Date
+    issuedBy: string
+    issuedAt: Date
+    status: string
+}
+
 /** What the clock-dated insert of an order invoice writes under a number. */
-export const orderValues = (invoiceNo: string, orderId: string | null = "o1") => ({
+export const orderValues = (invoiceNo: string, orderId: string | null = "o1"): OrderValuesResultShape => ({
     workspaceId: WS,
     orderId,
     leadId: "l1",
@@ -116,8 +144,21 @@ export const orderValues = (invoiceNo: string, orderId: string | null = "o1") =>
     status: "issued",
 })
 
+type RenewalValuesResultShape = {
+    workspaceId: string
+    contractId: string
+    periodEndsOn: string
+    leadId: string
+    invoiceNo: string
+    amountVnd: number
+    dueAt: Date
+    issuedBy: null
+    issuedAt: Date
+    status: string
+}
+
 /** What the clock-dated insert of a renewal invoice writes under a number. */
-export const renewalValues = (invoiceNo: string, periodEndsOn: string = PERIOD) => ({
+export const renewalValues = (invoiceNo: string, periodEndsOn: string = PERIOD): RenewalValuesResultShape => ({
     workspaceId: WS,
     contractId: CONTRACT,
     periodEndsOn,

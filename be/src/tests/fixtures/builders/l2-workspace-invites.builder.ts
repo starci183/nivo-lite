@@ -17,16 +17,16 @@ interface InviteFixture {
 /** Shared L2 service proof fixture. */
 export const NOW = "2026-10-12T00:00:00.000Z"
 /** Shared L2 service proof fixture. */
-export const TOKEN = createHash("sha256").update("fixture-workspace-invite-token").digest("hex")
+export const TOKEN: string = createHash("sha256").update("fixture-workspace-invite-token").digest("hex")
 /** Shared L2 service proof fixture. */
-export const LINK = `https://app.test/invite/${TOKEN}`
+export const LINK: string = `https://app.test/invite/${TOKEN}`
 /** Shared L2 service proof fixture. */
-export const REDIRECT = `https://app.test/auth/confirm?next=${encodeURIComponent("/invite/" + TOKEN)}`
+export const REDIRECT: string = `https://app.test/auth/confirm?next=${encodeURIComponent("/invite/" + TOKEN)}`
 /** Shared L2 service proof fixture. */
-export const EXPIRES = new Date("2026-10-19T00:00:00.000Z")
+export const EXPIRES: Date = new Date("2026-10-19T00:00:00.000Z")
 
 /** Shared L2 service proof fixture. */
-export const actorOf = builder<WorkspaceMember>({
+export const actorOf: (overrides?: Partial<WorkspaceMember>) => WorkspaceMember = builder<WorkspaceMember>({
     userId: "owner-1",
     workspaceId: "ws-1",
     role: "owner",
@@ -35,7 +35,7 @@ export const actorOf = builder<WorkspaceMember>({
     status: "active",
 })
 /** Shared L2 service proof fixture. */
-export const listingOf = builder<MemberListing>({
+export const listingOf: (overrides?: Partial<MemberListing>) => MemberListing = builder<MemberListing>({
     ...actorOf(),
     avatarUrl: null,
     email: "chu@example.test",
@@ -51,7 +51,7 @@ export const accountOf = () => ({
 })
 
 /** Shared L2 service proof fixture. */
-export const inviteRowOf = builder<InviteFixture>({
+export const inviteRowOf: (overrides?: Partial<InviteFixture>) => InviteFixture = builder<InviteFixture>({
     id: "invite-1",
     workspace_id: "ws-1",
     email: "An@Example.test",
@@ -72,8 +72,17 @@ export const pendingInviteRow = {
     expires_at: "2026-10-17T00:00:00.000Z",
 }
 
+type PendingInviteExpectedShape = {
+    id: string
+    email: string
+    role: string
+    staffId: string
+    createdAt: string
+    expiresAt: string
+}
+
 /** The corresponding public listing. */
-export const pendingInviteExpected = [
+export const pendingInviteExpected: Array<PendingInviteExpectedShape> = [
     {
         id: "invite-1",
         email: "an@example.test",

@@ -1,10 +1,19 @@
 import type { MetaEvent } from "@modules/integrations/meta"
 
-/** Deterministic Meta delivery test data. */
-export const BODY = { object: "page", entry: [{ id: "page-1" }] }
+type BodyEntryShape = {
+    id: string
+}
+
+type BodyShape = {
+    object: string
+    entry: Array<BodyEntryShape>
+}
 
 /** Deterministic Meta delivery test data. */
-export const RAW_BODY = Buffer.from(JSON.stringify(BODY))
+export const BODY: BodyShape = { object: "page", entry: [{ id: "page-1" }] }
+
+/** Deterministic Meta delivery test data. */
+export const RAW_BODY: Buffer<ArrayBuffer> = Buffer.from(JSON.stringify(BODY))
 
 /** Deterministic Meta delivery test data. */
 export const DELIVERY_ID = "cf4757fb1d998bf973749a593b19bf7ecac5a415369525483e3dd6219ed26a52"
@@ -41,17 +50,47 @@ export const event = (overrides: Partial<MetaEvent> = {}): MetaEvent => ({
     ...overrides,
 })
 
-/** Complete parameterized delivery cases, shared without dropping any case. */
-export const unreadableReceipts = [
-    { rawBody: undefined, signature: SIGNATURE },
-    { rawBody: RAW_BODY, signature: undefined },
-    { rawBody: Buffer.from("{invalid"), signature: SIGNATURE },
-    { rawBody: Buffer.from("null"), signature: SIGNATURE },
-    { rawBody: Buffer.from("[]"), signature: SIGNATURE },
-]
+type UnreadableReceiptsShape3 = {
+    rawBody: Buffer<ArrayBuffer>
+    signature: string
+}
+
+type UnreadableReceiptsShape2 = {
+    rawBody: Buffer<ArrayBuffer>
+    signature: undefined
+}
+
+type UnreadableReceiptsShape = {
+    rawBody: undefined
+    signature: string
+}
 
 /** Complete parameterized delivery cases, shared without dropping any case. */
-export const directMessages = [
+export const unreadableReceipts: Array<UnreadableReceiptsShape | UnreadableReceiptsShape2 | UnreadableReceiptsShape3> =
+    [
+        { rawBody: undefined, signature: SIGNATURE },
+        { rawBody: RAW_BODY, signature: undefined },
+        { rawBody: Buffer.from("{invalid"), signature: SIGNATURE },
+        { rawBody: Buffer.from("null"), signature: SIGNATURE },
+        { rawBody: Buffer.from("[]"), signature: SIGNATURE },
+    ]
+
+type DirectMessagesShape2 = {
+    name: string
+    inbound: MetaEvent
+    personId: string
+    visitor: null
+}
+
+type DirectMessagesShape = {
+    name: string
+    inbound: MetaEvent
+    personId: string
+    visitor: string
+}
+
+/** Complete parameterized delivery cases, shared without dropping any case. */
+export const directMessages: Array<DirectMessagesShape | DirectMessagesShape2> = [
     {
         name: "a Facebook DM with its PSID taking precedence",
         inbound: event({ sender_igsid: "other-person" }),
@@ -73,8 +112,13 @@ export const directMessages = [
     },
 ]
 
+type IgnoredMessagesShape = {
+    name: string
+    inbound: MetaEvent
+}
+
 /** Complete parameterized delivery cases, shared without dropping any case. */
-export const ignoredMessages = [
+export const ignoredMessages: Array<IgnoredMessagesShape> = [
     { name: "a postback", inbound: event({ kind: "postback" }) },
     { name: "a comment", inbound: event({ kind: "comment" }) },
     { name: "a mention", inbound: event({ kind: "mention" }) },
@@ -85,10 +129,10 @@ export const ignoredMessages = [
 ]
 
 /** A signed surface event used by the window assertions. */
-export const dm = event({ text: "x".repeat(161) })
+export const dm: MetaEvent = event({ text: "x".repeat(161) })
 
 /** A signed surface event used by the window assertions. */
-export const postback = event({
+export const postback: MetaEvent = event({
     kind: "postback",
     platform: "instagram",
     page_id: null,
@@ -101,10 +145,10 @@ export const postback = event({
 })
 
 /** A signed surface event used by the window assertions. */
-export const comment = event({ kind: "comment", comment_id: "comment-1", event_key: "comment:1" })
+export const comment: MetaEvent = event({ kind: "comment", comment_id: "comment-1", event_key: "comment:1" })
 
 /** A signed surface event used by the window assertions. */
-export const mention = event({
+export const mention: MetaEvent = event({
     kind: "mention",
     platform: "instagram",
     page_id: null,
@@ -114,7 +158,7 @@ export const mention = event({
 })
 
 /** Surface events covering missing and unowned identities. */
-export const missingWindowEvents = [
+export const missingWindowEvents: Array<MetaEvent> = [
     event({ sender_psid: null }),
     event({ kind: "postback", sender_psid: null, event_key: "postback:missing-person" }),
     event({ kind: "comment", event_key: "comment:missing-id" }),
@@ -123,7 +167,7 @@ export const missingWindowEvents = [
 ]
 
 /** Surface events covering missing and unowned identities. */
-export const unownedSurfaceEvents = [
+export const unownedSurfaceEvents: Array<MetaEvent> = [
     event({ page_id: null }),
     event({ platform: "instagram", ig_id: null }),
     event({ page_id: "unowned-page" }),
@@ -131,19 +175,19 @@ export const unownedSurfaceEvents = [
 ]
 
 /** Independent expected window effects in their recorded order. */
-export const expectedThreadWindows = (manager: unknown) => [
+export const expectedThreadWindows = (manager: unknown): Array<Array<unknown>> => [
     [{ connectionId: "connection-1", platform: "facebook", userId: "person-1", at: AT }, manager],
     [{ connectionId: "connection-1", platform: "instagram", userId: "ig-person-1", at: AT }, manager],
 ]
 
 /** Independent expected window effects in their recorded order. */
-export const expectedCommentWindows = (manager: unknown) => [
+export const expectedCommentWindows = (manager: unknown): Array<Array<unknown>> => [
     [{ connectionId: "connection-1", commentId: "comment-1", platform: "facebook", at: AT }, manager],
     [{ connectionId: "connection-1", commentId: "comment-2", platform: "instagram", at: AT }, manager],
 ]
 
 /** Expected window calls, with the transaction supplied by the spec. */
-export const expectedMessageJobs = (manager: unknown, queue: string) => [
+export const expectedMessageJobs = (manager: unknown, queue: string): Array<Array<unknown>> => [
     [
         manager,
         queue,
@@ -159,7 +203,7 @@ export const expectedMessageJobs = (manager: unknown, queue: string) => [
 ]
 
 /** Expected window calls, with the transaction supplied by the spec. */
-export const expectedCommentJobs = (manager: unknown, queue: string) => [
+export const expectedCommentJobs = (manager: unknown, queue: string): Array<Array<unknown>> => [
     [
         manager,
         queue,
@@ -175,7 +219,11 @@ export const expectedCommentJobs = (manager: unknown, queue: string) => [
 ]
 
 /** One queued handoff for each owned surface event. */
-export const surfaceEventCalls = (events: ReadonlyArray<MetaEvent>, manager: unknown, queue: string) =>
+export const surfaceEventCalls = (
+    events: ReadonlyArray<MetaEvent>,
+    manager: unknown,
+    queue: string,
+): Array<Array<unknown>> =>
     events.map((item) => [
         manager,
         queue,
@@ -184,7 +232,12 @@ export const surfaceEventCalls = (events: ReadonlyArray<MetaEvent>, manager: unk
     ])
 
 /** The expected direct-message handoff. */
-export const directMessageCalls = (manager: unknown, inbound: MetaEvent, personId: string, visitor: string | null) => [
+export const directMessageCalls = (
+    manager: unknown,
+    inbound: MetaEvent,
+    personId: string,
+    visitor: string | null,
+): Array<Array<unknown>> => [
     [
         "connection-1",
         {
@@ -199,31 +252,51 @@ export const directMessageCalls = (manager: unknown, inbound: MetaEvent, personI
 ]
 
 /** Expected recorded surface state. */
-export const expectedSurfaceLookups = (manager: unknown) => [
+export const expectedSurfaceLookups = (manager: unknown): Array<Array<unknown>> => [
     ["meta", "page_id", "page-1", manager],
     ["meta", "ig_id", "ig-1", manager],
 ]
 
 /** Expected recorded surface state. */
-export const expectedMessageRecords = (manager: unknown) => [
+export const expectedMessageRecords = (manager: unknown): Array<Array<unknown>> => [
     ["connection-1", { amount: 0, content: "Lan", at: AT, text: "x".repeat(160) }, manager],
     ["connection-1", { amount: 0, content: "postback", at: AT, text: "" }, manager],
 ]
 
 /** Expected recorded surface state. */
-export const expectedCommentRecords = (manager: unknown) => [
+export const expectedCommentRecords = (manager: unknown): Array<Array<unknown>> => [
     ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }, manager],
     ["connection-1", { amount: 0, content: "Lan", at: AT, text: "Hello" }, manager],
 ]
 
 /** Expected recorded surface state. */
-export const expectedUnownedLookups = (manager: unknown) => [
+export const expectedUnownedLookups = (manager: unknown): Array<Array<unknown>> => [
     ["meta", "page_id", "unowned-page", manager],
     ["meta", "ig_id", "unowned-ig", manager],
 ]
 
+type ReplayReceiptBodyEntryMessagingMessageShape = {
+    mid: string
+    text: string
+}
+
+type ReplayReceiptBodyEntryMessagingShape = {
+    sender: BodyEntryShape
+    message: ReplayReceiptBodyEntryMessagingMessageShape
+}
+
+type ReplayReceiptBodyEntryShape = {
+    id: string
+    messaging: Array<ReplayReceiptBodyEntryMessagingShape>
+}
+
+type ReplayReceiptBodyShape = {
+    object: string
+    entry: Array<ReplayReceiptBodyEntryShape>
+}
+
 /** A receipt exercising the real Meta parser during rollback and replay. */
-export const replayReceiptBody = {
+export const replayReceiptBody: ReplayReceiptBodyShape = {
     object: "page",
     entry: [
         {

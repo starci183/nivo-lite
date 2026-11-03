@@ -52,3 +52,4 @@ export type {
     AgentWorkFallback,
     AgentWorkHandler,
 } from "./agent-work.port"
+export type { AgentBegin } from "./agent-work-turns.contracts"

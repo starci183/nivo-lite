@@ -103,13 +103,44 @@ interface GraphDocument {
 type GraphMode = "shadow" | "enforced"
 type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback"
 
-const [GraphEntity, VersionEntity, , ProposalEntity, DecisionEntity] = agentGraphsEntities
+const GraphEntity: (typeof agentGraphsEntities)[0] = agentGraphsEntities[0]
+const VersionEntity: (typeof agentGraphsEntities)[1] = agentGraphsEntities[1]
+const ProposalEntity: (typeof agentGraphsEntities)[3] = agentGraphsEntities[3]
+const DecisionEntity: (typeof agentGraphsEntities)[4] = agentGraphsEntities[4]
 
 /** The fact the specs of the action graph decide on: the amount of a supplier payment, counted in dong. */
 export const AMOUNT_FACT = "supplier_payment.amount_vnd"
 
+type FactsSupplierPaymentUrgentShape = {
+    readonly key: "supplier_payment.urgent"
+    readonly type: "boolean"
+    readonly unit: null
+    readonly labelKey: "fact.urgent"
+}
+
+type FactsSupplierPaymentKindShape = {
+    readonly key: "supplier_payment.kind"
+    readonly type: "string"
+    readonly unit: null
+    readonly allowed: readonly ["rent", "stock"]
+    readonly labelKey: "fact.kind"
+}
+
+type FactsSupplierPaymentAmountVndShape = {
+    readonly key: "supplier_payment.amount_vnd"
+    readonly type: "number"
+    readonly unit: "vnd"
+    readonly labelKey: "fact.amount"
+}
+
+type FactsShape = {
+    readonly "supplier_payment.amount_vnd": FactsSupplierPaymentAmountVndShape
+    readonly "supplier_payment.kind": FactsSupplierPaymentKindShape
+    readonly "supplier_payment.urgent": FactsSupplierPaymentUrgentShape
+}
+
 /** The registry of the specs: the amount, a supplier kind with allowed values, and a flag. */
-export const FACTS = {
+export const FACTS: FactsShape = {
     [AMOUNT_FACT]: { key: AMOUNT_FACT, type: "number", unit: "vnd", labelKey: "fact.amount" },
     "supplier_payment.kind": {
         key: "supplier_payment.kind",
@@ -126,7 +157,7 @@ export const say = (key: string, params?: Readonly<Record<string, string | numbe
     key === "agentGraphs.unit.million" ? "tr" : `${key}${params === undefined ? "" : JSON.stringify(params)}`
 
 /** The approver of a branch: a manager group, asked as a group, with a day to answer and the owner of the agent after. */
-export const approverOf = builder<Approver>({
+export const approverOf: (overrides?: Partial<Approver>) => Approver = builder<Approver>({
     group: { roles: ["manager"], rooms: [], members: ["dinh"] },
     policy: "any",
     timeoutMinutes: 240,
@@ -141,7 +172,7 @@ export const amountIs = (op: "lt" | "lte" | "gt" | "gte" | "eq", value: number):
 })
 
 /** A branch that runs alone below five million. */
-export const branchOf = builder<Branch>({
+export const branchOf: (overrides?: Partial<Branch>) => Branch = builder<Branch>({
     key: "small",
     when: amountIs("lt", 5_000_000),
     then: "auto",
@@ -151,7 +182,7 @@ export const branchOf = builder<Branch>({
 })
 
 /** A node with every answer filled, so a spec breaks only the one it is about. */
-export const nodeOf = builder<Node>({
+export const nodeOf: (overrides?: Partial<Node>) => Node = builder<Node>({
     key: "act",
     kind: "output",
     step: "write",
@@ -251,7 +282,7 @@ const NO_CEILINGS: ReadonlyArray<Ceiling> = []
 const OUTWARD: boolean = false
 
 /** A workspace in which every approver is covered, the rule is open, every tool is granted and the agent faces nobody. */
-export const contextOf = builder<GraphContext>({
+export const contextOf: (overrides?: Partial<GraphContext>) => GraphContext = builder<GraphContext>({
     facts: FACTS,
     ceilings: NO_CEILINGS,
     isGranted: (_tool: string): boolean => true,
@@ -274,7 +305,7 @@ interface State {
 }
 
 /** The graph of one agent as the store reads it: the owner example, active and decided, in shadow until a spec says otherwise. */
-export const stateOf = builder<State>({
+export const stateOf: (overrides?: Partial<State>) => State = builder<State>({
     workspaceId: "ws-1",
     agentId: "agent-1",
     installationId: "inst-1",
@@ -290,7 +321,7 @@ export const stateOf = builder<State>({
 export const UNREADABLE_DOCUMENT: GraphDocument = { nodes: [nodeOf({ title: "x".repeat(40) })], rights: [] }
 
 /** The instant the rows of the specs were written. */
-export const ROW_TIME = new Date("2026-11-01T01:00:00.000Z")
+export const ROW_TIME: Date = new Date("2026-11-01T01:00:00.000Z")
 
 /** The stored graph of an agent: the owner example, with version 1 active; the arguments change only what a spec is about. */
 export const graphRow = (

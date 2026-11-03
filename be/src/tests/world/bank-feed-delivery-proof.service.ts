@@ -1,15 +1,65 @@
+import type { AdvanceWrite } from "@modules/platform/jobs"
 import { bankFeedDomainBuilder } from "../fixtures/builders/bank-feed-delivery.builder"
 import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { BankFeedService, BankFeedDeliveryService } from "@modules/domain/billing"
-import { JOB_CLAIMS, JOB_PROCESSOR_REGISTRY } from "@modules/platform/jobs"
+import {
+    JOB_CLAIMS,
+    JOB_PROCESSOR_REGISTRY,
+    type FencedProcessor,
+    type ClaimedJob,
+    type JobsLogEvent,
+    type JobRunnerService,
+    type JobClaimService,
+    type ClaimResult,
+} from "@modules/platform/jobs"
 import { BANK_FEED_DELIVERY_QUEUE } from "@modules/queues/bank-feed-delivery"
 import { BankFeedDeliveryQueueModule } from "@features/jobs/bank-feed-delivery"
 import type { LiteWorld } from "@tests/world/lite-world.service"
 import { jobsBuilder } from "../fixtures/builders/jobs.builder"
+import type { Logger } from "@modules/platform/logging"
+import type { MockOf, FakeClock } from "@starci/jest-preset"
+
+type BankFeedDeliveryBuilderResultRegistryShape = {
+    add: jest.SpyInstance<void, [processor: FencedProcessor]>
+}
+
+type BankFeedDeliveryBuilderResultClaimsShape = {
+    advance: jest.SpyInstance<Promise<void>, [write: AdvanceWrite]>
+}
+
+type BankFeedDeliveryBuilderResultDeliveryPayloadShape = {
+    provider: string
+    deliveryId: string
+}
+
+type BankFeedDeliveryBuilderResultDeliveryShape = {
+    queue: string
+    job: string
+    payload: BankFeedDeliveryBuilderResultDeliveryPayloadShape
+    id: string
+    attempt: number
+    signal: AbortSignal
+}
+
+type BankFeedDeliveryBuilderResultShape = {
+    delivery: BankFeedDeliveryBuilderResultDeliveryShape
+    processor: FencedProcessor
+    inbox: MockOf<BankFeedService>
+    claims: BankFeedDeliveryBuilderResultClaimsShape
+    registry: BankFeedDeliveryBuilderResultRegistryShape
+    advance: (write: AdvanceWrite) => Promise<void>
+    job: ClaimedJob
+    clock: FakeClock
+    successorClaims: JobClaimService
+    logger: MockOf<Logger>
+    runner: JobRunnerService
+    claim: (worker: JobClaimService, workerId: string) => Promise<ClaimResult>
+    fencedOutEvent: JobsLogEvent
+}
 
 /** Composes the real feature and runner over persisted claims; only the downstream domain effect is recorded. */
-export const bankFeedDeliveryBuilder = async (world: LiteWorld) => {
+export const bankFeedDeliveryBuilder = async (world: LiteWorld): Promise<BankFeedDeliveryBuilderResultShape> => {
     const built = jobsBuilder(world.db.primary, world.key(world.id()))
     const delivery = {
         ...built.delivery,

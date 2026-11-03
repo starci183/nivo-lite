@@ -1,15 +1,44 @@
-import { In, LessThan } from "typeorm"
-import { candidateRow, interviewRow } from "./hiring-rows.builder"
+import {
+    candidateRow,
+    interviewRow,
+    type HiringCandidateEntity,
+    type HiringInterviewEntity,
+} from "./hiring-rows.builder"
+import { In, LessThan, type FindOperator } from "typeorm"
 
 /** One candidate row per id, the defaults of the area for the rest. */
-export const candidateRowsOf = (ids: ReadonlyArray<string>) => ids.map((id) => candidateRow({ id }))
+export const candidateRowsOf = (ids: ReadonlyArray<string>): Array<HiringCandidateEntity> =>
+    ids.map((id) => candidateRow({ id }))
 
 /** A proposed interview that has no slot yet and no proposed slots. */
-export const unslottedInterviewRow = () =>
+export const unslottedInterviewRow = (): HiringInterviewEntity =>
     interviewRow({ status: "proposed", slotStart: null, slotEnd: null, proposedSlots: null })
 
+type RetentionCandidatesFindResultOrderShape = {
+    readonly stageChangedAt: "ASC"
+}
+
+type RetentionCandidatesFindResultWhereShape = {
+    readonly workspaceId: "ws-1"
+    readonly stage: FindOperator<unknown>
+    readonly stageChangedAt: FindOperator<Date>
+}
+
+type RetentionCandidatesFindResultSelectShape = {
+    readonly id: true
+}
+
+type RetentionCandidatesFindResultShape = {
+    readonly select: RetentionCandidatesFindResultSelectShape
+    readonly where: RetentionCandidatesFindResultWhereShape
+    readonly order: RetentionCandidatesFindResultOrderShape
+    readonly take: 200
+}
+
 /** The find a retention sweep makes for the candidates of a workspace that left the pipeline before `cutoff`, as `namedCalls` reports it. */
-export const retentionCandidatesFind = (cutoff: Date) =>
+export const retentionCandidatesFind = (
+    cutoff: Date,
+): readonly ["HiringCandidateEntity", RetentionCandidatesFindResultShape] =>
     [
         "HiringCandidateEntity",
         {
@@ -24,8 +53,27 @@ export const retentionCandidatesFind = (cutoff: Date) =>
         },
     ] as const
 
+type BusyInterviewsFindResultWhereShape = {
+    readonly workspaceId: "ws-1"
+    readonly interviewerUserId: string
+    readonly status: FindOperator<unknown>
+}
+
+type BusyInterviewsFindResultSelectShape = {
+    readonly slotStart: true
+    readonly slotEnd: true
+    readonly proposedSlots: true
+    readonly status: true
+}
+
+type BusyInterviewsFindResultShape = {
+    readonly select: BusyInterviewsFindResultSelectShape
+    readonly where: BusyInterviewsFindResultWhereShape
+    readonly take: 500
+}
+
 /** The find the busy windows of an interviewer make, as `namedCalls` reports it. */
-export const busyInterviewsFind = (userId: string) =>
+export const busyInterviewsFind = (userId: string): readonly ["HiringInterviewEntity", BusyInterviewsFindResultShape] =>
     [
         "HiringInterviewEntity",
         {
