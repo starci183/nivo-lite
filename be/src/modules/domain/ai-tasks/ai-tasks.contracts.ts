@@ -285,6 +285,16 @@ export interface CallMeta {
     readonly module: string
 }
 
+/** One call of the model by a graph node: what it is for, how to answer and on what. */
+export interface NodeAsk {
+    /** `<node id>:<purpose>`; the namespace of the node is the usage module. */
+    readonly purpose: string
+    /** The node's instructions, the system message. */
+    readonly instructions: string
+    /** What the node asks about, sent as JSON. */
+    readonly input: unknown
+}
+
 /** What a command does, in both languages. */
 export interface CommandDescription {
     /** Vietnamese. */

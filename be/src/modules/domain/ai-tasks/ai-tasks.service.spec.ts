@@ -1,3 +1,4 @@
+import { z } from "zod"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -253,6 +254,26 @@ describe("AiTasksService", () => {
                 module: "accounting",
             })
             expect(generator.generate.mock.calls[0]?.[0].messages[0]?.content).toContain("[prompts.orderMoney]")
+        })
+
+        it("runs a graph node's text and JSON calls, metered under the node's namespace", async () => {
+            const { client, generator } = await build()
+            generator.generate.mockResolvedValueOnce("Hello").mockResolvedValueOnce('{"n":2}')
+            const ask = { purpose: "order.record:extract", instructions: "Read the order", input: { text: "2 combo" } }
+
+            await expect(client.nodeText(scope, ask)).resolves.toBe("Hello")
+            await expect(client.nodeJson(scope, { ...ask, input: undefined }, z.object({ n: z.number() }))).resolves.toEqual({
+                n: 2,
+            })
+            expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
+                purpose: "order:engine",
+                module: "order",
+                messages: [
+                    { role: "system", content: "Read the order" },
+                    { role: "user", content: '{"text":"2 combo"}' },
+                ],
+            })
+            expect(generator.generate.mock.calls[1]?.[0].messages[1]?.content).toBe("null")
         })
 
         it("reads the owner's authority chat", async () => {
