@@ -42,7 +42,7 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
     params,
     input,
     output,
-    rights: [],
+    rights: [{ kind: "message", access: "write", scope: "turn", fields: ["body"] }],
     effects: ["channel.send"],
     run: async (given, context) => {
         if (given.missing.length === 0) return { asked: false, text: null }

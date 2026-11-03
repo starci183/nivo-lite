@@ -8,7 +8,7 @@ import {
 const instruction = {
     provider: "sepay",
     bankCode: "MBBank",
-    bankName: null,
+    bankName: "",
     accountNumber: "525209999",
     accountHolder: "NGUYEN VAN A",
     qrUrl: "https://qr.example/x",
@@ -37,6 +37,7 @@ describe("payment request policy", () => {
         expect(en).toContain("1 x tea · 1,500,000 VND")
         expect(en).toContain("Bank: MB Bank")
         expect(en).toContain("Transfer content (type exactly): DH1")
+        expect(paymentMessageOf({ ...instruction, accountHolder: "" }, order, "DH1", "en")).not.toContain("holder")
     })
 
     it("names the order in the title that tells the owner no payment request could go out", () => {

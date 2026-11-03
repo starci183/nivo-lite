@@ -54,7 +54,10 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
     params,
     input,
     output,
-    rights: [{ kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] }],
+    rights: [
+        { kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] },
+        { kind: "order", access: "write", scope: "turn", fields: ["leadId", "items", "amountVnd"] },
+    ],
     effects: ["order.record"],
     run: async (given, context) => {
         const catalogue = await context.data.read<CatalogueRow>("catalogue-item", {

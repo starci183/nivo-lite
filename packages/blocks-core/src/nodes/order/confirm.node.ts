@@ -29,7 +29,7 @@ export const orderConfirmNode: NodeDefinition<typeof input, typeof output, typeo
     params,
     input,
     output,
-    rights: [],
+    rights: [{ kind: "order", access: "write", scope: "turn", fields: ["status"] }],
     effects: ["order.confirm"],
     run: async (given, context) => {
         await context.effect("order.confirm", { orderId: given.orderId }, { dedupeKey: `order-confirm:${given.orderId}` })

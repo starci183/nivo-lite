@@ -7,7 +7,16 @@ export interface FakeNodePortsOptions {
     readonly store?: NodeStore | undefined
     /** The model's answers, in call order: a text for `text`, a value for `json`. */
     readonly model?: ReadonlyArray<unknown> | undefined
+    /** The tools' results, in call order. */
+    readonly tools?: ReadonlyArray<unknown> | undefined
     readonly now?: Date | undefined
+}
+
+/** One tool call the fake host answered. */
+export interface FakeToolCall {
+    readonly id: string
+    readonly args: Readonly<Record<string, unknown>>
+    readonly key: string
 }
 
 /** One effect the fake host ran. */
@@ -29,6 +38,7 @@ export interface FakeNodePorts {
     readonly ports: NodeHostPorts
     readonly executed: ReadonlyArray<FakeExecuted>
     readonly writes: ReadonlyArray<FakeWrite>
+    readonly toolCalls: ReadonlyArray<FakeToolCall>
 }
 
 /** Whether a stored row matches every `where` entry. */
@@ -43,8 +53,20 @@ const pick = (
     fields: ReadonlyArray<string>,
 ): Readonly<Record<string, unknown>> => Object.fromEntries(fields.map((field) => [field, row[field]]))
 
-/** Thrown when a node calls the model more often than its example scripted. */
-const unscripted = (): SdkError => new SdkError("MODEL_UNSCRIPTED", "MODEL_UNSCRIPTED")
+/** What a call past the end of a script is refused with. */
+type Unscripted = "MODEL_UNSCRIPTED" | "TOOL_UNSCRIPTED"
+
+/** Thrown when a node calls the model or a tool more often than its example scripted. */
+const unscripted = (code: Unscripted): SdkError => new SdkError(code, code)
+
+/** Answers from a script in order, refusing a call past its end. */
+const scriptOf = (answers: ReadonlyArray<unknown> | undefined, code: Unscripted): (() => unknown) => {
+    const left = [...(answers ?? [])]
+    return () => {
+        if (left.length === 0) throw unscripted(code)
+        return left.shift()
+    }
+}
 
 /**
  * Ports for `runNode` in a test: reads from the store (scope is the host's business, so every row of the kind is in reach), writes and
@@ -53,14 +75,13 @@ const unscripted = (): SdkError => new SdkError("MODEL_UNSCRIPTED", "MODEL_UNSCR
 export const fakeNodePorts = (options: FakeNodePortsOptions = {}): FakeNodePorts => {
     const executed: Array<FakeExecuted> = []
     const writes: Array<FakeWrite> = []
-    const answers = [...(options.model ?? [])]
-    const next = (): unknown => {
-        if (answers.length === 0) throw unscripted()
-        return answers.shift()
-    }
+    const toolCalls: Array<FakeToolCall> = []
+    const next = scriptOf(options.model, "MODEL_UNSCRIPTED")
+    const nextTool = scriptOf(options.tools, "TOOL_UNSCRIPTED")
     return {
         executed,
         writes,
+        toolCalls,
         ports: {
             read: (kind, query) => {
                 const rows = (options.store?.[kind] ?? []).filter((row) => matches(row, query.where ?? {}))
@@ -77,9 +98,13 @@ export const fakeNodePorts = (options: FakeNodePortsOptions = {}): FakeNodePorts
             model: {
                 text: () => {
                     const answer = next()
-                    return typeof answer === "string" ? Promise.resolve(answer) : Promise.reject(unscripted())
+                    return typeof answer === "string" ? Promise.resolve(answer) : Promise.reject(unscripted("MODEL_UNSCRIPTED"))
                 },
                 json: (schema) => Promise.resolve(schema.parse(next())),
+            },
+            callTool: (tool, args, key) => {
+                toolCalls.push({ id: tool.id, args, key })
+                return Promise.resolve(nextTool())
             },
             now: () => options.now ?? new Date(0),
         },

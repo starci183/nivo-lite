@@ -8,6 +8,10 @@ export type NodeRunErrorCode =
     | "EFFECT_UNDECLARED"
     | "EFFECT_UNKNOWN"
     | "EFFECT_PAYLOAD_INVALID"
+    | "TOOL_UNKNOWN"
+    | "TOOL_MUTATES"
+    | "TOOL_ARGS_INVALID"
+    | "TOOL_RESULT_INVALID"
 
 /** Thrown by the node host: a stable code and the node or effect it is about. */
 export class NodeRunError extends SdkError {

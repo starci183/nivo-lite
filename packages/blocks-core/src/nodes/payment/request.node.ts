@@ -1,7 +1,7 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
-import type { PaymentInstruction } from "./payment-request.policy"
+import type { PaymentInstruction } from "../../vocabulary"
 import type { OrderLine } from "./payment-request.policy"
 import { noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
 import type { RequestLocale } from "./payment-request.messages"
@@ -36,24 +36,7 @@ interface PayableOrder {
 }
 
 /** The NIVO MCP tool that answers how to pay: the account of the connected provider and the QR link of the transfer. */
-const INSTRUCTION_TOOL = "payment.instruction"
-
-/**
- * The tools port of the node context. The host lead's SDK exposes it as `context.tools`; until it lands this reads it structurally, and
- * the cast goes away with it.
- */
-interface ToolsPort {
-    readonly tools: { readonly call: (name: string, args: Readonly<Record<string, unknown>>) => Promise<unknown> }
-}
-
-const instructionSchema: NodeSchema<PaymentInstruction> = z.object({
-    bankName: z.string().nullable(),
-    bankCode: z.string().min(1),
-    accountNumber: z.string().min(1),
-    accountHolder: z.string().nullable(),
-    qrUrl: z.string().min(1),
-    provider: z.string().min(1),
-})
+const INSTRUCTION_TOOL = "payment.instruction" as const
 
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
@@ -71,14 +54,13 @@ const output: NodeSchema<PaymentRequestOutput> = z.object({
 
 const NOT_SENT: Omit<PaymentRequestOutput, "status"> = { content: null, qrUrl: null }
 
-/** What the provider tool answered, or null when it failed or answered something else (no provider connected). */
+/** What the provider tool answered, or null when it failed or no provider is connected. */
 const instructionOf = async (
-    context: object,
+    tools: NodeContext["tools"],
     args: Readonly<Record<string, unknown>>,
 ): Promise<PaymentInstruction | null> => {
     try {
-        const answer = instructionSchema.safeParse(await (context as ToolsPort).tools.call(INSTRUCTION_TOOL, args))
-        return answer.success ? answer.data : null
+        return await tools.call<PaymentInstruction>(INSTRUCTION_TOOL, args)
     } catch {
         return null
     }
@@ -97,8 +79,14 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
     params,
     input,
     output,
-    rights: [{ kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] }],
+    rights: [
+        { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
+        { kind: "message", access: "write", scope: "turn", fields: ["body"] },
+        // The grant must cover the rights of the tool it calls; the node itself never reads the account.
+        { kind: "payment-account", access: "read", scope: "workspace", fields: ["bankName", "bankCode", "accountNumber", "accountHolder"] },
+    ],
     effects: ["channel.send", "work-item.raise"],
+    tools: [INSTRUCTION_TOOL],
     run: async (given, context) => {
         const [order] = await context.data.read<PayableOrder>("order", {
             where: { id: given.orderId },
@@ -110,7 +98,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             return { status: "not_payable", ...NOT_SENT }
         }
         const content = transferContentOf(order.orderNo)
-        const instruction = await instructionOf(context, { orderNo: order.orderNo, amountVnd, transferContent: content })
+        const instruction = await instructionOf(context.tools, { orderNo: order.orderNo, amountVnd, transferContent: content })
         if (instruction === null) {
             await context.effect("work-item.raise", {
                 action: "connect_sepay",
@@ -149,6 +137,16 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                             "Once you have transferred, just message us here.",
                         ].join("\n"),
                     },
+                },
+            ],
+            tools: [
+                {
+                    bankName: "MB Bank",
+                    bankCode: "MBBank",
+                    accountNumber: "525209999",
+                    accountHolder: "NGUYEN VAN A",
+                    qrUrl: "https://qr.example/DH202611050001",
+                    provider: "sepay",
                 },
             ],
             store: {

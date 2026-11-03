@@ -15,6 +15,8 @@ export interface DataRight {
 /** What an agent holds: data, seeded per agent type. */
 export interface RightsGrant {
     readonly rights: ReadonlyArray<DataRight>
+    /** The NIVO MCP tools it may call, by name; none when absent (default deny). */
+    readonly tools?: ReadonlyArray<string> | undefined
 }
 
 /** A required right a grant does not cover, and what is missing. */

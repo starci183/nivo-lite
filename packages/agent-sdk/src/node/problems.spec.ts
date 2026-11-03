@@ -43,19 +43,19 @@ const free = defineNode({
     examples: [{ name: "e", params: { limit: 1 }, input: {}, output: { branch: "yes" }, effects: [] }],
 }) as unknown as NodeDefinition
 
-const index = nodeIndexOf({ nodes: [pick, free], effects: [send], dataKinds: [order, message] })
+const index = nodeIndexOf({ nodes: [pick, free], effects: [send], tools: [], dataKinds: [order, message] })
 const grant = { rights: [READ, SEND] }
 
 describe("nodeListProblems", () => {
     it("is empty for a sound install", () => {
-        expect(nodeListProblems({ nodes: [pick, free], effects: [send], dataKinds: [order, message] })).toEqual([])
+        expect(nodeListProblems({ nodes: [pick, free], effects: [send], tools: [], dataKinds: [order, message] })).toEqual([])
     })
 
     it("names duplicates, unknown effects, unknown kinds and unknown fields", () => {
         const rights: ReadonlyArray<DataRight> = [{ ...READ, fields: ["id", "secret"] }, { ...READ, kind: "ghost" }]
         const wide = { ...pick, rights }
         expect(
-            nodeListProblems({ nodes: [pick, pick, wide], effects: [send, send], dataKinds: [order, order] }),
+            nodeListProblems({ nodes: [pick, pick, wide], effects: [send, send], tools: [], dataKinds: [order, order] }),
         ).toEqual([
             { code: "NODE_DUPLICATE", at: "order.pick" },
             { code: "EFFECT_DUPLICATE", at: "channel.send" },
@@ -68,7 +68,7 @@ describe("nodeListProblems", () => {
     })
 
     it("names an effect a node declares and nobody installed", () => {
-        expect(nodeListProblems({ nodes: [pick], effects: [], dataKinds: [order] })).toEqual([
+        expect(nodeListProblems({ nodes: [pick], effects: [], tools: [], dataKinds: [order] })).toEqual([
             { code: "NODE_EFFECT_UNKNOWN", at: "order.pick:channel.send" },
         ])
     })
@@ -111,7 +111,7 @@ describe("graphNodeProblems", () => {
 
     it("does not route an execute node, and counts an uninstalled effect as no right", () => {
         const run = { ...pick, id: "order.run", role: "execute", effects: ["order.ghost"] } as unknown as NodeDefinition
-        const withRun = nodeIndexOf({ nodes: [run], effects: [], dataKinds: [] })
+        const withRun = nodeIndexOf({ nodes: [run], effects: [], tools: [], dataKinds: [] })
         expect(graphNodeProblems({ key: "k", kind: "execute", step: "order.run", params: { limit: 1 } }, withRun, grant)).toEqual(
             [],
         )

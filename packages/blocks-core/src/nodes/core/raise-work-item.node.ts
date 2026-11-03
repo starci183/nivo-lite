@@ -79,7 +79,12 @@ export const raiseWorkItemNode: NodeDefinition<typeof input, typeof output, type
             params: { action: "connect_sepay", title: "Connect SePay" },
             input: { payload: {}, amountVnd: null },
             output: { workItemId: "work-item.raise-1" },
-            effects: [{ kind: "work-item.raise", payload: { action: "connect_sepay", title: "Connect SePay", payload: {} } }],
+            effects: [
+                {
+                    kind: "work-item.raise",
+                    payload: { action: "connect_sepay", title: "Connect SePay", payload: {} },
+                },
+            ],
         },
     ],
 })

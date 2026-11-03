@@ -1,21 +1,6 @@
+import type { PaymentInstruction } from "../../vocabulary"
 import { REQUEST_WORDS } from "./payment-request.messages"
 import type { RequestLocale } from "./payment-request.messages"
-
-/** What the `payment.instruction` tool answers: the account to pay into and the QR link of the transfer. */
-export interface PaymentInstruction {
-    /** The bank name to show, or null. */
-    readonly bankName: string | null
-    /** The short bank code. */
-    readonly bankCode: string
-    /** The full account number, digits only. */
-    readonly accountNumber: string
-    /** The account holder, or null. */
-    readonly accountHolder: string | null
-    /** The QR image link of the transfer, drawn by the provider tool. */
-    readonly qrUrl: string
-    /** The provider the account comes from. */
-    readonly provider: string
-}
 
 /** A line of a recorded order as the order data port reads it. */
 export interface OrderLine {
@@ -47,9 +32,9 @@ export const paymentMessageOf = (
     const items = itemsTextOf(order.lines)
     return [
         fill(words.intro, { items: items === "" ? "—" : items, amount }),
-        fill(words.bank, { bank: instruction.bankName ?? instruction.bankCode }),
+        fill(words.bank, { bank: instruction.bankName === "" ? instruction.bankCode : instruction.bankName }),
         fill(words.account, { account: instruction.accountNumber }),
-        ...(instruction.accountHolder === null ? [] : [fill(words.holder, { holder: instruction.accountHolder })]),
+        ...(instruction.accountHolder === "" ? [] : [fill(words.holder, { holder: instruction.accountHolder })]),
         fill(words.content, { content }),
         fill(words.qr, { url: instruction.qrUrl }),
         words.outro,

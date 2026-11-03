@@ -1,27 +1,7 @@
-import { defineEffect } from "@nivo-lite/agent-sdk/node"
-import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import { nodeListMismatches } from "@nivo-lite/agent-sdk/testing"
-import { z } from "zod"
-import {
-    coreNodes,
-    orderConfirmNode,
-    orderNeedsApprovalNode,
-    paymentRequestNode,
-    raiseWorkItemNode,
-} from "./index"
+import type { NodeContext } from "@nivo-lite/agent-sdk/node"
+import { coreNodes, orderConfirmNode, orderNeedsApprovalNode, paymentRequestNode, raiseWorkItemNode } from "./index"
 
-// The effects the nodes run, with loose payloads; the vocabulary commit brings the real definitions (coreEffects).
-const effects = ["channel.send", "order.record", "order.confirm", "work-item.raise"].map((id) =>
-    defineEffect({ id: id as `${string}.${string}`, title: { key: id }, payload: z.looseObject({}), rights: [] }),
-)
-
-/** The example of payment.request that needs the tools port, which the SDK host does not give yet: run by hand below. */
-const NEEDS_TOOLS = "sends the order number as the transfer content with the account and QR link the provider tool gave"
-
-const conforming = (node: NodeDefinition): NodeDefinition => ({
-    ...node,
-    examples: node.examples.filter((example) => example.name !== NEEDS_TOOLS) as unknown as NodeDefinition["examples"],
-})
+// The worked examples of every node run in the root conformance spec; these cover what an example cannot say.
 
 describe("coreNodes", () => {
     it("lists the seven nodes by id, in the order the graph runs them", () => {
@@ -41,10 +21,6 @@ describe("coreNodes", () => {
 
         expect(conditions.map((node) => node.id)).toEqual(["order.complete", "order.needs-approval"])
         expect(conditions.every((node) => node.effects.length === 0)).toBe(true)
-    })
-
-    it("runs every worked example to its output and effects", async () => {
-        await expect(nodeListMismatches(coreNodes.map(conforming), effects)).resolves.toEqual({})
     })
 })
 
@@ -80,10 +56,10 @@ describe("core.raise-work-item", () => {
 describe("payment.request", () => {
     const order = { id: "o1", orderNo: "DH-20261105-0001", amountVnd: 300_000, status: "confirmed", items: [] }
     const instruction = {
-        bankName: null,
+        bankName: "",
         bankCode: "MBBank",
         accountNumber: "525209999",
-        accountHolder: null,
+        accountHolder: "",
         qrUrl: "https://qr.example/x",
         provider: "sepay",
     }
@@ -111,6 +87,11 @@ describe("payment.request", () => {
         return { output, effectsRun, toolCalls }
     }
 
+    it("declares the tool it calls and reads the order, writes the message and holds the rights of its tool", () => {
+        expect(paymentRequestNode.tools).toEqual(["payment.instruction"])
+        expect(paymentRequestNode.rights.map((right) => right.kind)).toEqual(["order", "message", "payment-account"])
+    })
+
     it("asks the tool with the order number, the amount and the transfer content, then sends once per order", async () => {
         const { output, effectsRun, toolCalls } = await run(() => Promise.resolve(instruction))
 
@@ -124,18 +105,11 @@ describe("payment.request", () => {
         expect(effectsRun[0]?.[2]).toEqual({ dedupeKey: "payment-request:o1" })
     })
 
-    it.each([
-        ["the tool fails", () => Promise.reject(new Error("no provider connected"))],
-        ["the tool answers something else", () => Promise.resolve({ error: "no provider" })],
-    ])("raises a connect_sepay work item and sends nothing when %s", async (_name, answer) => {
-        const { output, effectsRun } = await run(answer)
+    it("raises a connect_sepay work item and sends nothing when the tool fails", async () => {
+        const { output, effectsRun } = await run(() => Promise.reject(new Error("no provider connected")))
 
         expect(output).toEqual({ status: "no_account", content: null, qrUrl: null })
         expect(effectsRun.map(([kind]) => kind)).toEqual(["work-item.raise"])
         expect(effectsRun[0]?.[1]).toMatchObject({ action: "connect_sepay", payload: { orderId: "o1" } })
-    })
-
-    it("declares no provider data: it reads the order only", () => {
-        expect(paymentRequestNode.rights.map((right) => right.kind)).toEqual(["order"])
     })
 })
