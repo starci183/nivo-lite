@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { ChannelSeed } from "./channel-seed.contracts"
@@ -15,6 +16,7 @@ const IDS = {
 }
 const TOKEN = ["123456789", "AAEabcdefghijklmnopqrstuvwxyz012345"].join(":")
 const SEPAY_KEY = ["nivo", "ab12".repeat(16)].join("_")
+const SEPAY_API_TOKEN = ["api", "token", "1"].join("-")
 const hashOf = (text: string): string => createHash("sha256").update(text).digest("hex")
 
 const BARE: ChannelSeed = {
@@ -26,7 +28,14 @@ const BARE: ChannelSeed = {
 const FULL: ChannelSeed = {
     telegram: { id: IDS.telegram, token: TOKEN },
     zaloOa: { id: IDS.zaloOa, appId: "1234567", appSecret: "app-secret-1", oaSecret: "oa-secret-1" },
-    sepay: { id: IDS.sepay, bankCode: "vcb", accountNumber: "0123456789", holder: "nivo", apiKey: SEPAY_KEY },
+    sepay: {
+        id: IDS.sepay,
+        bankCode: "vcb",
+        accountNumber: "0123456789",
+        holder: "nivo",
+        apiKey: SEPAY_KEY,
+        apiToken: SEPAY_API_TOKEN,
+    },
     payos: { id: IDS.payos, clientId: "client", apiKey: "payos-key-1", checksumKey: "checksum-1" },
 }
 
@@ -62,10 +71,16 @@ const build = async (held: Held = {}) => {
         return Promise.resolve(plain === undefined ? null : { plain, webhookSecret: "hook", sealedAt: "now" })
     })
     connections.create.mockImplementation((input) => Promise.resolve(input.id ?? "generated"))
+    const apiTokens = mock<ConnectionApiTokenService>()
+    apiTokens.write.mockResolvedValue(true)
     const moduleRef = await Test.createTestingModule({
-        providers: [ChannelSeedService, { provide: ConnectionsService, useValue: connections }],
+        providers: [
+            ChannelSeedService,
+            { provide: ConnectionsService, useValue: connections },
+            { provide: ConnectionApiTokenService, useValue: apiTokens },
+        ],
     }).compile()
-    return { service: moduleRef.get(ChannelSeedService), connections }
+    return { service: moduleRef.get(ChannelSeedService), connections, apiTokens }
 }
 
 const createdWith = (connections: jest.Mocked<ConnectionsService>, id: string) =>
@@ -107,6 +122,16 @@ describe("ChannelSeedService > a workspace without the connections", () => {
             account_masked: "•••• 6789",
             account_number: "0123456789",
         })
+    })
+
+    it("seals the SePay API token apart from the webhook key, and only when the seed gives one", async () => {
+        const { service, apiTokens } = await build()
+
+        await service.ensure(ACTOR, FULL)
+        await service.ensure(ACTOR, BARE)
+
+        expect(apiTokens.write).toHaveBeenCalledTimes(1)
+        expect(apiTokens.write).toHaveBeenCalledWith(IDS.sepay, SEPAY_API_TOKEN)
     })
 
     it("generates a SePay key only when none is supplied", async () => {

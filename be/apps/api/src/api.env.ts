@@ -13,6 +13,7 @@ import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
 import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
 import { parseTelegramUserConfig } from "@modules/integrations/telegram-user"
 import { parseMailConfig } from "@modules/integrations/mail"
+import { parseSepayConfig } from "@modules/integrations/sepay"
 import { parseTelegramConfig } from "@modules/integrations/telegram"
 import { parseZaloConfig } from "@modules/integrations/zalo"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
@@ -78,6 +79,8 @@ export interface ApiOptions {
     readonly channels: ReturnType<typeof parseChannelsConfig>
     /** The Telegram Bot API host. */
     readonly telegram: ReturnType<typeof parseTelegramConfig>
+    /** The SePay user API host. */
+    readonly sepay: ReturnType<typeof parseSepayConfig>
     /** The Zalo OAuth and Open API hosts. */
     readonly zalo: ReturnType<typeof parseZaloConfig>
     /** The MCP gateway: the credential NAMES remote connectors may use (each read through <NAME>_FILE) and the call limit. */
@@ -143,6 +146,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     loyaltyOtps: parseLoyaltyOtpsConfig(env),
     channels: parseChannelsConfig(env),
     telegram: parseTelegramConfig(env),
+    sepay: parseSepayConfig(env),
     zalo: parseZaloConfig(env),
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
     mail: parseMailConfig(env),

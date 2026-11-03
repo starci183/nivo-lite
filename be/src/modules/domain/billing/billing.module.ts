@@ -1,11 +1,13 @@
 import { BankFeedDeliveryService } from "./bank-feed-delivery.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { BankFeedPollService } from "./bank-feed-poll.service"
 import { BankFeedService } from "./bank-feed.service"
 import { BillingReadService } from "./billing-read.service"
 import { BillingService } from "./billing.service"
 import { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./billing.module-definition"
 import { PaymentSecretsService } from "./payment-secrets.service"
+import { SepayFeedPoller } from "./sepay-feed-poller.service"
 import { EntitlementsService } from "./entitlements.service"
 import { PaymentProofService } from "./payment-proof.service"
 import { CassoProofService } from "./casso-proof.service"
@@ -31,6 +33,8 @@ export class BillingModule extends ConfigurableModuleClass {
                 PaymentSecretsService,
                 BankFeedService,
                 BankFeedDeliveryService,
+                SepayFeedPoller,
+                BankFeedPollService,
             ],
             exports: [
                 BillingEventsReadService,
@@ -41,6 +45,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 PaymentProofService,
                 BankFeedService,
                 BankFeedDeliveryService,
+                BankFeedPollService,
             ],
         }
     }

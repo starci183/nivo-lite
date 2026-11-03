@@ -97,6 +97,14 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         payload: { withinMs: 25200000 },
     },
     {
+        name: "bank-feed-reconcile-tick",
+        cron: "*/5 * * * *",
+        timeZone: "UTC",
+        queue: "bank-feed-poll",
+        job: "reconcile-bank-feed",
+        payload: {},
+    },
+    {
         name: "accounting-desk-morning",
         cron: "30 23 * * *",
         timeZone: "UTC",

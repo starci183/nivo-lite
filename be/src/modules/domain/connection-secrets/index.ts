@@ -1,5 +1,6 @@
 export { parseConnectionSecretsConfig } from "./connection-secrets.config"
 export { ConnectionSecretsModule } from "./connection-secrets.module"
+export { ConnectionApiTokenService } from "./connection-api-token.service"
 export { ConnectionSecretsService } from "./connection-secrets.service"
 export {
     CONNECTION_SECRETS_ERROR_KINDS,
@@ -8,5 +9,5 @@ export {
 } from "./errors/connection-secrets.error"
 export { CONNECTION_SECRETS_MESSAGES } from "./messages/connection-secrets.messages"
 export { randomSecret, safeEqual } from "./secret-cipher.policy"
-export type { ConnectionSecret, OptionalStoredSecret } from "./connection-secrets.contracts"
+export type { ConnectionSecret, OptionalApiToken, OptionalStoredSecret } from "./connection-secrets.contracts"
 export { connectionSecretsEntities } from "./persistence/entities"

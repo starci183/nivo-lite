@@ -45,3 +45,6 @@ export interface ConnectionSecretFacts {
     /** The connection status. */
     readonly status: string
 }
+
+/** An opened API token, or null when the connection has none. */
+export type OptionalApiToken = string | null

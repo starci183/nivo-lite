@@ -30,6 +30,8 @@ export interface SeedSepay {
     readonly holder?: string | undefined
     /** The webhook API key (`nivo_` and 64 hex); an absent one is generated once, for a new connection only. */
     readonly apiKey?: string | undefined
+    /** The SePay user-API token NIVO reads the feed with (a different secret from the webhook key); absent leaves the stored one. */
+    readonly apiToken?: string | undefined
 }
 
 /** The payOS feed of a seeded workspace. */

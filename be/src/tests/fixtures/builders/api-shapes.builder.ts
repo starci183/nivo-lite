@@ -201,7 +201,11 @@ export type BuildWiringProofResultOptionsPassportKeyShape = { privateKey: Secret
 /** The refresh cookie of the passport record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsPassportCookieShape = { name: string; domain: undefined }
 /** The sign-in budget of the passport record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsPassportBudgetShape = { loginAttempts: number; resetAttempts: number; windowMs: number }
+export type BuildWiringProofResultOptionsPassportBudgetShape = {
+    loginAttempts: number
+    resetAttempts: number
+    windowMs: number
+}
 /** The build wiring proof result options passport record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsPassportShape = {
     issuer: string
@@ -277,6 +281,7 @@ export type BuildWiringProofResultOptionsShape = {
     loyaltyOtps: BuildWiringProofResultOptionsLoyaltyOtpsShape
     channels: BuildWiringProofResultOptionsChannelsShape
     telegram: BuildWiringProofResultOptionsTelegramShape
+    sepay: BuildWiringProofResultOptionsTelegramShape
     zalo: BuildWiringProofResultOptionsZaloShape
     mail: BuildWiringProofResultOptionsMailShape
     dataSources: BuildWiringProofResultOptionsDataSourcesShape
