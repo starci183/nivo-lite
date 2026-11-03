@@ -85,6 +85,9 @@ describe("flowChanged and requireSoundFlow", () => {
         expect(() => requireSoundFlow(FLOW, index)).toThrow(
             expect.objectContaining({ code: AgentGraphsErrorCode.PublishRefused }),
         )
+    })
+})
+
 describe("isFlowOnly", () => {
     it("is true for a graph with a flow and no old node, and false for one with old nodes or with no flow", async () => {
         const subject = await build()
