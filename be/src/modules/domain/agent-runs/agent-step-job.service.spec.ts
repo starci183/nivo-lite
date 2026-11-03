@@ -1,3 +1,4 @@
+import { QueueErrorCode } from "@modules/platform/queue"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
@@ -27,8 +28,8 @@ describe("AgentStepJobService.run", () => {
         const { service } = await build({ run: runViewOf(), retryAfterMs: 4200 })
 
         await expect(service.run({ workspaceId: "ws-1", runId: "run-1" })).rejects.toMatchObject({
-            code: AgentRunsErrorCode.StepNotReady,
-            params: { retryAfterSeconds: 5 },
+            code: QueueErrorCode.DeferredUntil,
+            params: { seconds: 5 },
         })
     })
 
@@ -37,10 +38,10 @@ describe("AgentStepJobService.run", () => {
         const long = await build({ run: null, retryAfterMs: 99_999_999 })
 
         await expect(short.service.run({ workspaceId: "ws-1", runId: "run-1" })).rejects.toMatchObject({
-            params: { retryAfterSeconds: 1 },
+            params: { seconds: 1 },
         })
         await expect(long.service.run({ workspaceId: "ws-1", runId: "run-1" })).rejects.toMatchObject({
-            params: { retryAfterSeconds: 3600 },
+            params: { seconds: 3600 },
         })
     })
 

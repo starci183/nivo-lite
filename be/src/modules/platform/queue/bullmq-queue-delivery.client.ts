@@ -189,6 +189,7 @@ export class BullmqQueueDeliveryClient {
             return this.defer(job, token, deferMsOf(delivery.id), redis)
         }
         if (cause instanceof QueueError && cause.code === QueueErrorCode.DeferredUntil) {
+            this.logger.info(QueueLogEvent.Deferred, { ...fields, seconds: Number(cause.params.seconds) })
             await callDbFunction(this.entityManager, "public.job_handback", [delivery.id, runToken])
             return this.defer(job, token, Number(cause.params.seconds) * 1000, redis)
         }

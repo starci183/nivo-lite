@@ -24,4 +24,6 @@ export enum QueueLogEvent {
     TouchFailed = "queue.delivery.touch-failed",
     /** A delivery was aborted by the shutdown and handed back. */
     HandedBack = "queue.delivery.handed-back",
+    /** A handler asked for its job to run again later (a step held by its backoff); no attempt is spent and nothing failed. */
+    Deferred = "queue.delivery.deferred",
 }

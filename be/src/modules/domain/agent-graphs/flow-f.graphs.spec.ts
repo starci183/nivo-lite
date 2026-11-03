@@ -11,7 +11,7 @@ import type { NodeModelRequest as NodeAsk } from "@nivo-lite/agent-sdk/node"
 import { AgentRunHandlersService, AgentRunsService } from "@modules/domain/agent-runs"
 import type { StepJson, StepSpec, StepView } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
-import { tagContextOf, tagPayloadTextOf } from "@modules/domain/agent-work"
+import { storedWakeContextOf, tagContextOf, tagPayloadTextOf } from "@modules/domain/agent-work"
 import type { AgentTurnView } from "@modules/domain/agent-work"
 import { customerWakeContextOf } from "@modules/domain/conversations"
 import {
@@ -161,12 +161,15 @@ interface Drive {
 }
 
 /**
- * Drives a graph the way the run engine does: the first node's step, then each step the last one wrote, with the results of the done
+ * Drives a graph the way the run engine does, from the wake as the store answers it (its context through the same reader the drain
+ * uses, so a key the reader drops is missing here too): the first node's step, then each step the last one wrote, with the results of the done
  * steps as `earlier`. A step that throws or fails ends the run; when no pivot is done, the done compensable steps are undone, last
  * first, as the engine's compensation does.
  */
 const drive = async (built: Awaited<ReturnType<typeof build>>, graph: GraphSpec, wake: FlowWake): Promise<Drive> => {
-    const trigger = await built.flows.triggerOf({ ...wake, workspaceId: "ws-1", agentId: "agent-1", wakeId: "wake-1" } as AgentTurnView)
+    const stored = storedWakeContextOf(JSON.parse(JSON.stringify(wake.context)))
+    const turn = { ...wake, context: stored, workspaceId: "ws-1", agentId: "agent-1", wakeId: "wake-1" } as AgentTurnView
+    const trigger = await built.flows.triggerOf(turn)
     const first = graph.nodes[0]
     if (first === undefined) throw new Error("empty graph")
     const pending: Array<StepSpec> = [built.flows.stepOf(first, { versionId: "version-1", nodeKey: first.key, trigger })]

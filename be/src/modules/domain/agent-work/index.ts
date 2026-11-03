@@ -73,3 +73,4 @@ export type {
     AgentTaggedBySource,
 } from "./agent-tag.contracts"
 export type { AgentTagRights, AgentTagVisibilityPort } from "./agent-work.port"
+export { contextOf as storedWakeContextOf } from "./agent-work-results.policy"

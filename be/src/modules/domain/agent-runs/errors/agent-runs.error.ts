@@ -13,8 +13,6 @@ export enum AgentRunsErrorCode {
     RunNotFound = "AGENT_RUNS_RUN_NOT_FOUND",
     /** A step called from inside a turn did not finish; the code says why. */
     StepFailed = "AGENT_RUNS_STEP_FAILED",
-    /** A step is held by its backoff: the job runs again after the pause the params name. */
-    StepNotReady = "AGENT_RUNS_STEP_NOT_READY",
     /** An advance job names no run: nothing a retry could change. */
     JobPayloadInvalid = "AGENT_RUNS_JOB_PAYLOAD_INVALID",
 }
@@ -26,7 +24,6 @@ export const AGENT_RUNS_ERROR_KINDS: Record<AgentRunsErrorCode, ErrorKind> = {
     [AgentRunsErrorCode.HandlerDuplicate]: "internal",
     [AgentRunsErrorCode.RunNotFound]: "not-found",
     [AgentRunsErrorCode.StepFailed]: "internal",
-    [AgentRunsErrorCode.StepNotReady]: "internal",
     [AgentRunsErrorCode.JobPayloadInvalid]: "internal",
 }
 
