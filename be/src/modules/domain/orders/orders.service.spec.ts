@@ -406,7 +406,7 @@ const registerTransitions = () => {
                     {
                         status: "confirmed",
                         amountVnd: 90000,
-                        note: "",
+                        items: "2 x Tea",
                         confirmedBy: "Lan",
                         confirmedAt: new Date(NOW),
                     },
