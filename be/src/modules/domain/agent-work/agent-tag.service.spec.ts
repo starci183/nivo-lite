@@ -83,6 +83,21 @@ describe("AgentTagService.tagAgent", () => {
         )
     })
 
+    it("hands the plain data of the tag to the target and refuses data a wake cannot keep", async () => {
+        const { service, wakes } = await build(null)
+
+        await service.tagAgent({ ...BASE, source: "bank-feed", context: { items: [{ sku: "x" }] } })
+        await expect(
+            service.tagAgent({ ...BASE, source: "bank-feed", context: { blob: "x".repeat(9000) } }),
+        ).resolves.toEqual({ tagged: false, reason: "too_large" })
+
+        expect(wakes.write).toHaveBeenCalledTimes(1)
+        expect(wakes.write).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ context: expect.objectContaining({ tagContext: '{"items":[{"sku":"x"}]}' }) }),
+        )
+    })
+
     it("answers a duplicate when the same fact was already written", async () => {
         const { service, wakes } = await build(null)
         wakes.write.mockResolvedValue(null)

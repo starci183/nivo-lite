@@ -3,7 +3,7 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AgentWakeService } from "./agent-wake.service"
-import { tagContextOf } from "./agent-tag.policy"
+import { tagContextOf, tagPayloadTextOf } from "./agent-tag.policy"
 import { InjectAgentTagRights } from "./agent-work.decorators"
 import type { AgentTagRequest, AgentTagResult } from "./agent-tag.contracts"
 import type { AgentTagRights } from "./agent-work.port"
@@ -32,12 +32,14 @@ export class AgentTagService {
         if ("fromAgentId" in request && !(await this.mayTag(request.fromAgentId, request.toAgentId))) {
             return { tagged: false, reason: "not_allowed" }
         }
+        const payload = tagPayloadTextOf(request)
+        if (payload === null) return { tagged: false, reason: "too_large" }
         const id = await this.wakes.write(tx, {
             workspaceId: request.workspaceId,
             agentId: request.toAgentId,
             source: "tag",
             eventKey: request.eventKey ?? `tag:${randomUUID()}`,
-            context: tagContextOf(request),
+            context: tagContextOf(request, payload),
             actorMemberId: "personId" in request ? request.personId : null,
         })
         return id === null ? { tagged: false, reason: "duplicate" } : { tagged: true, wakeId: id }

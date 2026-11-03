@@ -10,6 +10,8 @@ export interface AgentTagBody {
     readonly subject?: string | null | undefined
     /** The conversation the tag belongs to, when it belongs to one. */
     readonly conversationId?: string | null | undefined
+    /** Plain data for the target's graph (objects and arrays allowed): it becomes trigger.context there. Kept as JSON text, at most 8000 characters. */
+    readonly context?: Readonly<Record<string, unknown>> | undefined
     /** Stable for one fact, so the same tag written twice wakes once; a fresh key per call when absent. */
     readonly eventKey?: string | undefined
 }
@@ -38,4 +40,4 @@ export type AgentTagRequest = AgentTaggedByAgent | AgentTaggedByPerson | AgentTa
 /** What a tag came to. */
 export type AgentTagResult =
     | { readonly tagged: true; readonly wakeId: string }
-    | { readonly tagged: false; readonly reason: "not_allowed" | "duplicate" }
+    | { readonly tagged: false; readonly reason: "not_allowed" | "duplicate" | "too_large" }
