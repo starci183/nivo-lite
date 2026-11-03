@@ -7,12 +7,16 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryAgentSyncStatus } from "@/modules/api/graphql/queries/query-agent-sync-status"
 import type { QueryAgentSyncStatusRequest } from "@/modules/api/graphql/queries/query-agent-sync-status"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQueryAgentSyncStatusSwr}. */
 export const QUERY_AGENT_SYNC_STATUS_SWR_KEY = "QUERY_AGENT_SYNC_STATUS_SWR"
 
 /** The back end `agentSyncStatus` query. Pass `null` to wait for the arguments. */
-export const useQueryAgentSyncStatusSwr = (request: QueryAgentSyncStatusRequest | null, config?: SWRConfiguration) =>
+export const useQueryAgentSyncStatusSwr = (
+    request: QueryAgentSyncStatusRequest | null,
+    config?: SWRConfiguration,
+): ReadResponse<OperationData<typeof queryAgentSyncStatus>["agentSyncStatus"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_AGENT_SYNC_STATUS_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryAgentSyncStatusRequest>) =>

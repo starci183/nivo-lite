@@ -5,6 +5,7 @@ import useSWR from "swr"
 import type { LessonMiningStatusType } from "@/modules/api"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryLessonMiningStatus } from "@/modules/api/graphql/queries/query-lesson-mining-status"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the lesson mining status poll. */
 export const QUERY_LESSON_MINING_STATUS_SWR_KEY = "QUERY_LESSON_MINING_STATUS_SWR"
@@ -16,7 +17,7 @@ export const QUERY_LESSON_MINING_STATUS_SWR_KEY = "QUERY_LESSON_MINING_STATUS_SW
 export const useQueryLessonMiningStatusSwr = (
     id: string | undefined,
     onStatus?: (status: LessonMiningStatusType) => void | Promise<void>,
-) => {
+): ReadResponse<OperationData<typeof queryLessonMiningStatus>["lessonMiningStatus"]> => {
     const key = useWorkspaceKey(QUERY_LESSON_MINING_STATUS_SWR_KEY, [id ?? ""], id !== undefined)
     return useSWR(
         key,

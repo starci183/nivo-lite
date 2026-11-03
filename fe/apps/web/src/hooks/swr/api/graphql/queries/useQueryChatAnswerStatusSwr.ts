@@ -5,6 +5,7 @@ import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { StatusPollOptions } from "@/hooks/reuseables"
 import { queryChatAnswerStatus } from "@/modules/api/graphql/queries/query-chat-answer-status"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the chatAnswerStatus query. */
 export const QUERY_CHAT_ANSWER_STATUS_SWR_KEY = "QUERY_CHAT_ANSWER_STATUS_SWR"
@@ -17,7 +18,7 @@ export const useQueryChatAnswerStatusSwr = (
     workspaceId: string | undefined,
     workItemId: string | undefined,
     options: StatusPollOptions = {},
-) =>
+): ReadResponse<OperationData<typeof queryChatAnswerStatus>["chatAnswerStatus"]> =>
     useSWR(
         workspaceArgumentKey(QUERY_CHAT_ANSWER_STATUS_SWR_KEY, workspaceId, workItemId),
         async ([, , id]: WorkspaceReadKey<string>) => {

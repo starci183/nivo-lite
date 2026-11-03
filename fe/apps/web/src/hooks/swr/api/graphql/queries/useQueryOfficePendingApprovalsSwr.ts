@@ -4,12 +4,15 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryOfficePendingApprovals } from "@/modules/api/graphql/queries/query-office-pending-approvals"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQueryOfficePendingApprovalsSwr}. */
 export const QUERY_OFFICE_PENDING_APPROVALS_SWR_KEY = "QUERY_OFFICE_PENDING_APPROVALS_SWR"
 
 /** The back end `officePendingApprovals` query. */
-export const useQueryOfficePendingApprovalsSwr = (config?: SWRConfiguration) =>
+export const useQueryOfficePendingApprovalsSwr = (
+    config?: SWRConfiguration,
+): ReadResponse<OperationData<typeof queryOfficePendingApprovals>["officePendingApprovals"] | undefined> =>
     useSWR(
         useWorkspaceKey(QUERY_OFFICE_PENDING_APPROVALS_SWR_KEY, []),
         async () => (await queryOfficePendingApprovals()).data?.officePendingApprovals,

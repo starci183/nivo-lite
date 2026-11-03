@@ -7,6 +7,7 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryContentAiStatus } from "@/modules/api/graphql/queries/query-content-ai-status"
 import type { ContentAiStatusType } from "@/modules/api"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the contentAiStatus query. */
 export const QUERY_CONTENT_AI_STATUS_SWR_KEY = "QUERY_CONTENT_AI_STATUS_SWR"
@@ -15,7 +16,10 @@ export const QUERY_CONTENT_AI_STATUS_SWR_KEY = "QUERY_CONTENT_AI_STATUS_SWR"
 type ContentAiStatusCallbacks = Pick<SWRConfiguration<ContentAiStatusType, Error>, "onSuccess" | "onError">
 
 /** A queued content AI job, read every two seconds until it is done. */
-export const useQueryContentAiStatusSwr = (id: string | undefined, callbacks: ContentAiStatusCallbacks) =>
+export const useQueryContentAiStatusSwr = (
+    id: string | undefined,
+    callbacks: ContentAiStatusCallbacks,
+): ReadResponse<OperationData<typeof queryContentAiStatus>["contentAiStatus"]> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_CONTENT_AI_STATUS_SWR_KEY, id === undefined ? null : ([id] as const)),
         async ([, , ...input]: WorkspaceReadKey<string>) =>

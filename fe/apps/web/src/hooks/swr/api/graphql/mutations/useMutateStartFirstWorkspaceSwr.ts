@@ -4,6 +4,7 @@ import useSWR, { useSWRConfig } from "swr"
 import { mutateStartFirstWorkspace } from "@/modules/api/graphql/mutations/mutation-start-first-workspace"
 import { matchesSwrKey } from "@/modules/utils"
 import { QUERY_MY_WORKSPACES_SWR_KEY } from "../queries/useQueryMyWorkspacesSwr"
+import type { ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the start first workspace mutation. */
 export const MUTATE_START_FIRST_WORKSPACE_SWR_KEY = "MUTATE_START_FIRST_WORKSPACE_SWR"
@@ -12,7 +13,7 @@ export const MUTATE_START_FIRST_WORKSPACE_SWR_KEY = "MUTATE_START_FIRST_WORKSPAC
  * {@link mutateStartFirstWorkspace} once, while `enabled` (the person has no membership at all): answers the new workspace id, or null
  * when none was created. A created workspace refreshes the workspaces list. The back end creates at most one, so a repeat is harmless.
  */
-export const useMutateStartFirstWorkspaceSwr = (enabled: boolean) => {
+export const useMutateStartFirstWorkspaceSwr = (enabled: boolean): ReadResponse<string | null> => {
     const { mutate } = useSWRConfig()
     return useSWR(
         enabled ? MUTATE_START_FIRST_WORKSPACE_SWR_KEY : null,

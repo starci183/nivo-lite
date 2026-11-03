@@ -1,4 +1,4 @@
-import type { SWRConfiguration } from "swr"
+import type { SWRConfiguration, SWRResponse } from "swr"
 
 /** How often a queued job is asked for its status until it ends. */
 const JOB_POLL_MS = 2000
@@ -30,6 +30,14 @@ export interface StatusPollOptions {
 interface GraphQLAnswer<T> {
     readonly data?: T | null | undefined
 }
+
+/** The data object one GraphQL operation answers, with the missing-data case removed: what a hook reads a field of. */
+export type OperationData<Operation extends (params: never) => Promise<GraphQLAnswer<object>>> = NonNullable<
+    Awaited<ReturnType<Operation>>["data"]
+>
+
+/** The SWR response of a read hook: its data, the `Error` it fails with, and the options it takes, so an option callback is typed by the data. */
+export type ReadResponse<Data> = SWRResponse<Data, Error, SWRConfiguration<Data, Error>>
 
 /** The data of a GraphQL answer; a missing one is a failure named after the operation. */
 export const answeredData = <T>(result: GraphQLAnswer<T>, operation: string): T => {

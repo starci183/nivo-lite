@@ -4,6 +4,7 @@ import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { answeredData } from "@/hooks/workspaceread"
 import { queryBrain } from "@/modules/api/graphql/queries/query-brain"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the brain read; mutations that change it revalidate the keys that lead with it. */
 export const QUERY_BRAIN_SWR_KEY = "QUERY_BRAIN_SWR"
@@ -14,7 +15,7 @@ const READING_STATUSES: ReadonlySet<string> = new Set(["queued", "running"])
  * The shared Second Brain of the active workspace (the back end `brain` query). Polls while a document reading is still
  * on, so newly proposed facts and lessons appear on their own.
  */
-export const useQueryBrainSwr = () => {
+export const useQueryBrainSwr = (): ReadResponse<OperationData<typeof queryBrain>["brain"]> => {
     const key = useWorkspaceKey(QUERY_BRAIN_SWR_KEY, [])
     return useSWR(
         key,

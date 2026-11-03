@@ -3,6 +3,8 @@
 import { queryLoadOpenApiSpec } from "@/modules/api/graphql/queries/query-load-open-api-specification"
 import type { queryLoadOpenApiSpec as QueryLoadOpenApiSpecOperation } from "@/modules/api/graphql/queries/query-load-open-api-specification"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the loadOpenApiSpec query is triggered with. */
 interface LoadOpenApiSpecificationArg {
@@ -13,7 +15,12 @@ interface LoadOpenApiSpecificationArg {
 export const QUERY_LOAD_OPEN_API_SPECIFICATION_SWR_KEY = "QUERY_LOAD_OPEN_API_SPECIFICATION_SWR"
 
 /** Lazy SWR query for {@link queryLoadOpenApiSpec}: `trigger(input)` answers the specification and rejects with the back end failure. */
-export const useQueryLoadOpenApiSpecificationSwr = () =>
+export const useQueryLoadOpenApiSpecificationSwr = (): SWRMutationResponse<
+    OperationData<typeof queryLoadOpenApiSpec>["loadOpenApiSpec"],
+    Error,
+    typeof QUERY_LOAD_OPEN_API_SPECIFICATION_SWR_KEY,
+    LoadOpenApiSpecificationArg["arg"]
+> =>
     useSWRMutation(
         QUERY_LOAD_OPEN_API_SPECIFICATION_SWR_KEY,
         async (_key: string, { arg }: LoadOpenApiSpecificationArg) => {

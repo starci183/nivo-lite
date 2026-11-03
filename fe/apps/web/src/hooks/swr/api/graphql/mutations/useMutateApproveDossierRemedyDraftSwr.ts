@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateApproveDossierRemedyDraft } from "@/modules/api/graphql/mutations/mutation-approve-dossier-remedy-draft"
 import type { MutateApproveDossierRemedyDraftRequest } from "@/modules/api/graphql/mutations/mutation-approve-dossier-remedy-draft"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the ApproveDossierRemedyDraft mutation is triggered with. */
 interface ApproveDossierRemedyDraftArg {
@@ -13,7 +15,12 @@ interface ApproveDossierRemedyDraftArg {
 export const MUTATE_APPROVE_DOSSIER_REMEDY_DRAFT_SWR_KEY = "MUTATE_APPROVE_DOSSIER_REMEDY_DRAFT_SWR"
 
 /** SWR mutation for {@link mutateApproveDossierRemedyDraft}: approves a proposed draft: it becomes a document of the dossier and the finding is resolved. `trigger(input)` rejects with the back end failure. */
-export const useMutateApproveDossierRemedyDraftSwr = () =>
+export const useMutateApproveDossierRemedyDraftSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateApproveDossierRemedyDraft>["approveDossierRemedyDraft"],
+    Error,
+    typeof MUTATE_APPROVE_DOSSIER_REMEDY_DRAFT_SWR_KEY,
+    ApproveDossierRemedyDraftArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_APPROVE_DOSSIER_REMEDY_DRAFT_SWR_KEY,
         async (_key: string, { arg }: ApproveDossierRemedyDraftArg) => {

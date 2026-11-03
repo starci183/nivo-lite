@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveBookingException } from "@/modules/api/graphql/mutations/mutation-save-booking-exception"
 import type { MutateSaveBookingExceptionRequest } from "@/modules/api/graphql/mutations/types/save-booking-exception"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the `saveBookingException` mutation. */
 export const MUTATE_SAVE_BOOKING_EXCEPTION_SWR_KEY = "MUTATE_SAVE_BOOKING_EXCEPTION_SWR"
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** Adds a closing or a special opening window on one date. */
-export const useMutateSaveBookingExceptionSwr = () =>
+export const useMutateSaveBookingExceptionSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveBookingException>["saveBookingException"],
+    Error,
+    typeof MUTATE_SAVE_BOOKING_EXCEPTION_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_BOOKING_EXCEPTION_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateSaveBookingException({ request: arg })
         if (!result.data) throw new Error("saveBookingException answered no data")

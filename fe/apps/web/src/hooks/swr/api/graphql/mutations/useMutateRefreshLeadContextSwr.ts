@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRefreshLeadContext } from "@/modules/api/graphql/mutations/mutation-refresh-lead-context"
 import type { MutateRefreshLeadContextRequest } from "@/modules/api/graphql/mutations/mutation-refresh-lead-context"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the refreshLeadContext mutation is triggered with. */
 interface RefreshLeadContextArg {
@@ -13,7 +15,12 @@ interface RefreshLeadContextArg {
 export const MUTATE_REFRESH_LEAD_CONTEXT_SWR_KEY = "MUTATE_REFRESH_LEAD_CONTEXT_SWR"
 
 /** SWR mutation for {@link mutateRefreshLeadContext}: `trigger(request)` answers the result and rejects with the back end failure. */
-export const useMutateRefreshLeadContextSwr = () =>
+export const useMutateRefreshLeadContextSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRefreshLeadContext>["refreshLeadContext"],
+    Error,
+    typeof MUTATE_REFRESH_LEAD_CONTEXT_SWR_KEY,
+    RefreshLeadContextArg["arg"]
+> =>
     useSWRMutation(MUTATE_REFRESH_LEAD_CONTEXT_SWR_KEY, async (_key: string, { arg }: RefreshLeadContextArg) => {
         const result = await mutateRefreshLeadContext({ request: arg })
         if (!result.data) throw new Error("refreshLeadContext answered no data")

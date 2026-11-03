@@ -4,12 +4,19 @@ import { mutateChooseMetaPage } from "@/modules/api/graphql/mutations/mutation-c
 import type { mutateChooseMetaPage as MutateChooseMetaPageOperation } from "@/modules/api/graphql/mutations/mutation-choose-meta-page"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the chooseMetaPage mutation. */
 export const MUTATE_CHOOSE_META_PAGE_SWR_KEY = "MUTATE_CHOOSE_META_PAGE_SWR"
 
 /** SWR mutation for {@link mutateChooseMetaPage}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateChooseMetaPageSwr = () =>
+export const useMutateChooseMetaPageSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateChooseMetaPage>["chooseMetaPage"],
+    Error,
+    typeof MUTATE_CHOOSE_META_PAGE_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_CHOOSE_META_PAGE_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

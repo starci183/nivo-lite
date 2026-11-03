@@ -4,12 +4,19 @@ import { mutateRequestVideoRender } from "@/modules/api/graphql/mutations/mutati
 import type { mutateRequestVideoRender as MutateRequestVideoRenderOperation } from "@/modules/api/graphql/mutations/mutation-request-video-render"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the requestVideoRender mutation. */
 export const MUTATE_REQUEST_VIDEO_RENDER_SWR_KEY = "MUTATE_REQUEST_VIDEO_RENDER_SWR"
 
 /** SWR mutation for {@link mutateRequestVideoRender}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateRequestVideoRenderSwr = () =>
+export const useMutateRequestVideoRenderSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRequestVideoRender>["requestVideoRender"],
+    Error,
+    typeof MUTATE_REQUEST_VIDEO_RENDER_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_REQUEST_VIDEO_RENDER_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

@@ -12,10 +12,14 @@ import type { SalesOrdersQuery } from "@/modules/api"
 /** The workspace sales order connection cache. */
 export const QUERY_SALES_ORDERS_SWR_KEY = "QUERY_SALES_ORDERS_SWR"
 
-type SalesOrdersPage = ConnectionPage<SalesOrdersQuery["salesOrders"]["nodes"][number]>
+type SalesOrdersNode = SalesOrdersQuery["salesOrders"]["nodes"][number]
+
+type SalesOrdersPage = ConnectionPage<SalesOrdersNode>
 
 /** Reads the loaded sales order pages for the active workspace. */
-export const useQuerySalesOrdersSwr = (workspaceId: string | undefined) => {
+export const useQuerySalesOrdersSwr = (
+    workspaceId: string | undefined,
+): ReturnType<typeof connectionPageView<SalesOrdersNode>> => {
     const getKey: SWRInfiniteKeyLoader<SalesOrdersPage, ConnectionPageKey | null> = (index, previous) =>
         connectionPageKey(QUERY_SALES_ORDERS_SWR_KEY, workspaceId, index, previous)
     const query = useSWRInfinite<SalesOrdersPage, Error>(

@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveLoyaltyReward } from "@/modules/api/graphql/mutations/mutation-save-loyalty-reward"
 import type { MutateSaveLoyaltyRewardRequest } from "@/modules/api/graphql/mutations/types/save-loyalty-reward"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the `saveLoyaltyReward` mutation. */
 export const MUTATE_SAVE_LOYALTY_REWARD_SWR_KEY = "MUTATE_SAVE_LOYALTY_REWARD_SWR"
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** Creates or updates one reward of the catalogue (id null creates). */
-export const useMutateSaveLoyaltyRewardSwr = () =>
+export const useMutateSaveLoyaltyRewardSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveLoyaltyReward>["saveLoyaltyReward"],
+    Error,
+    typeof MUTATE_SAVE_LOYALTY_REWARD_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_LOYALTY_REWARD_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateSaveLoyaltyReward({ request: arg })
         if (!result.data) throw new Error("saveLoyaltyReward answered no data")

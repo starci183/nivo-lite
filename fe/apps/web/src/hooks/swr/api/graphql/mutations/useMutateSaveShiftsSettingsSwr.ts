@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveShiftsSettings } from "@/modules/api/graphql/mutations/mutation-save-shifts-settings"
 import type { MutateSaveShiftsSettingsRequest } from "@/modules/api/graphql/mutations/mutation-save-shifts-settings"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the saveShiftsSettings mutation is triggered with. */
 interface SaveShiftsSettingsArg {
@@ -13,7 +15,12 @@ interface SaveShiftsSettingsArg {
 export const MUTATE_SAVE_SHIFTS_SETTINGS_SWR_KEY = "MUTATE_SAVE_SHIFTS_SETTINGS_SWR"
 
 /** SWR mutation for {@link mutateSaveShiftsSettings}: `trigger(request)` answers `saveShiftsSettings` and rejects with the back end failure. */
-export const useMutateSaveShiftsSettingsSwr = () =>
+export const useMutateSaveShiftsSettingsSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveShiftsSettings>["saveShiftsSettings"],
+    Error,
+    typeof MUTATE_SAVE_SHIFTS_SETTINGS_SWR_KEY,
+    SaveShiftsSettingsArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_SHIFTS_SETTINGS_SWR_KEY, async (_key: string, { arg }: SaveShiftsSettingsArg) => {
         const result = await mutateSaveShiftsSettings({ request: arg })
         if (!result.data) throw new Error("saveShiftsSettings answered no data")

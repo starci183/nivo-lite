@@ -7,12 +7,16 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryAgentGraph } from "@/modules/api/graphql/queries/query-agent-graph"
 import type { QueryAgentGraphRequest } from "@/modules/api/graphql/queries/query-agent-graph"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQueryAgentGraphSwr}. */
 export const QUERY_AGENT_GRAPH_SWR_KEY = "QUERY_AGENT_GRAPH_SWR"
 
 /** The back end `getAgentGraph` query. Pass `null` to wait for the arguments. */
-export const useQueryAgentGraphSwr = (request: QueryAgentGraphRequest | null, config?: SWRConfiguration) =>
+export const useQueryAgentGraphSwr = (
+    request: QueryAgentGraphRequest | null,
+    config?: SWRConfiguration,
+): ReadResponse<OperationData<typeof queryAgentGraph>["getAgentGraph"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_AGENT_GRAPH_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryAgentGraphRequest>) =>

@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRemoveAgentTrigger } from "@/modules/api/graphql/mutations/mutation-remove-agent-trigger"
 import type { MutateRemoveAgentTriggerRequest } from "@/modules/api/graphql/mutations/mutation-remove-agent-trigger"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the RemoveAgentTrigger mutation is triggered with. */
 interface RemoveAgentTriggerArg {
@@ -13,7 +15,12 @@ interface RemoveAgentTriggerArg {
 export const MUTATE_REMOVE_AGENT_TRIGGER_SWR_KEY = "MUTATE_REMOVE_AGENT_TRIGGER_SWR"
 
 /** SWR mutation for {@link mutateRemoveAgentTrigger}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateRemoveAgentTriggerSwr = () =>
+export const useMutateRemoveAgentTriggerSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRemoveAgentTrigger>["removeAgentTrigger"],
+    Error,
+    typeof MUTATE_REMOVE_AGENT_TRIGGER_SWR_KEY,
+    RemoveAgentTriggerArg["arg"]
+> =>
     useSWRMutation(MUTATE_REMOVE_AGENT_TRIGGER_SWR_KEY, async (_key: string, { arg }: RemoveAgentTriggerArg) => {
         const result = await mutateRemoveAgentTrigger({ request: arg })
         if (!result.data) throw new Error("removeAgentTrigger answered no data")

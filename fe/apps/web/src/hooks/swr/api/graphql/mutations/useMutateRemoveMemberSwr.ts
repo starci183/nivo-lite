@@ -4,12 +4,19 @@ import { mutateRemoveMember } from "@/modules/api/graphql/mutations/mutation-rem
 import type { mutateRemoveMember as MutateRemoveMemberOperation } from "@/modules/api/graphql/mutations/mutation-remove-member"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the removeMember mutation. */
 export const MUTATE_REMOVE_MEMBER_SWR_KEY = "MUTATE_REMOVE_MEMBER_SWR"
 
 /** SWR mutation for {@link mutateRemoveMember}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateRemoveMemberSwr = () =>
+export const useMutateRemoveMemberSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRemoveMember>["removeMember"],
+    Error,
+    typeof MUTATE_REMOVE_MEMBER_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_REMOVE_MEMBER_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

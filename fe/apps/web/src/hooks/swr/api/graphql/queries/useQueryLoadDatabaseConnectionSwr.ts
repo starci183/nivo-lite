@@ -4,12 +4,16 @@ import { argumentKey, answeredData } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryLoadDatabaseConnection } from "@/modules/api/graphql/queries/query-load-database-connection"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the loadDatabaseConnection query. */
 export const QUERY_LOAD_DATABASE_CONNECTION_SWR_KEY = "QUERY_LOAD_DATABASE_CONNECTION_SWR"
 
 /** A saved database connection reopened for editing. The key carries the connection; `undefined` pauses it. */
-export const useQueryLoadDatabaseConnectionSwr = (connectionId: string | undefined, options?: SWRConfiguration) =>
+export const useQueryLoadDatabaseConnectionSwr = (
+    connectionId: string | undefined,
+    options?: SWRConfiguration,
+): ReadResponse<OperationData<typeof queryLoadDatabaseConnection>["loadDatabaseConnection"]> =>
     useSWR(
         argumentKey(QUERY_LOAD_DATABASE_CONNECTION_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

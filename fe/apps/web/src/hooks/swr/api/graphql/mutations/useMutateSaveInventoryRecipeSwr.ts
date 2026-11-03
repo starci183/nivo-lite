@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveInventoryRecipe } from "@/modules/api/graphql/mutations/mutation-save-inventory-recipe"
 import type { MutateSaveInventoryRecipeRequest } from "@/modules/api/graphql/mutations/mutation-save-inventory-recipe"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the saveInventoryRecipe mutation is triggered with. */
 interface SaveInventoryRecipeArg {
@@ -13,7 +15,12 @@ interface SaveInventoryRecipeArg {
 export const MUTATE_SAVE_INVENTORY_RECIPE_SWR_KEY = "MUTATE_SAVE_INVENTORY_RECIPE_SWR"
 
 /** SWR mutation for {@link mutateSaveInventoryRecipe}: `trigger(request)` answers `saveInventoryRecipe` and rejects with the back end failure. */
-export const useMutateSaveInventoryRecipeSwr = () =>
+export const useMutateSaveInventoryRecipeSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveInventoryRecipe>["saveInventoryRecipe"],
+    Error,
+    typeof MUTATE_SAVE_INVENTORY_RECIPE_SWR_KEY,
+    SaveInventoryRecipeArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_INVENTORY_RECIPE_SWR_KEY, async (_key: string, { arg }: SaveInventoryRecipeArg) => {
         const result = await mutateSaveInventoryRecipe({ request: arg })
         if (!result.data) throw new Error("saveInventoryRecipe answered no data")

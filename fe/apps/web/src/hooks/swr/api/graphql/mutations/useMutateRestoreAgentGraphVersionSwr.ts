@@ -4,12 +4,19 @@ import { mutateRestoreAgentGraphVersion } from "@/modules/api/graphql/mutations/
 import type { mutateRestoreAgentGraphVersion as MutateRestoreAgentGraphVersionOperation } from "@/modules/api/graphql/mutations/mutation-restore-agent-graph-version"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the restoreAgentGraphVersion mutation. */
 export const MUTATE_RESTORE_AGENT_GRAPH_VERSION_SWR_KEY = "MUTATE_RESTORE_AGENT_GRAPH_VERSION_SWR"
 
 /** SWR mutation for {@link mutateRestoreAgentGraphVersion}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateRestoreAgentGraphVersionSwr = () =>
+export const useMutateRestoreAgentGraphVersionSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRestoreAgentGraphVersion>["restoreAgentGraphVersion"],
+    Error,
+    typeof MUTATE_RESTORE_AGENT_GRAPH_VERSION_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_RESTORE_AGENT_GRAPH_VERSION_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

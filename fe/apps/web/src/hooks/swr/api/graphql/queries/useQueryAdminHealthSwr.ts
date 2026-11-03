@@ -2,6 +2,7 @@
 
 import useSWR from "swr"
 import { queryAdminHealth } from "@/modules/api/graphql/queries/query-admin-health"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the adminHealth query; mutations that change it call `mutate` with a matcher on this key. */
 export const QUERY_ADMIN_HEALTH_SWR_KEY = "QUERY_ADMIN_HEALTH_SWR"
@@ -10,7 +11,7 @@ export const QUERY_ADMIN_HEALTH_SWR_KEY = "QUERY_ADMIN_HEALTH_SWR"
  * Reads sign-ups, billing events, application errors and the latest console activity (the back end `adminHealth` query).
  * The back end audits every read, so the result never revalidates on focus or reconnect.
  */
-export const useQueryAdminHealthSwr = () =>
+export const useQueryAdminHealthSwr = (): ReadResponse<OperationData<typeof queryAdminHealth>["adminHealth"]> =>
     useSWR(
         QUERY_ADMIN_HEALTH_SWR_KEY,
         async () => {

@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateTakeOverAgentChatConversation } from "@/modules/api/graphql/mutations/mutation-take-over-agent-chat-conversation"
 import type { MutateTakeOverAgentChatConversationRequest } from "@/modules/api/graphql/mutations/mutation-take-over-agent-chat-conversation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the TakeOverAgentChatConversation mutation is triggered with. */
 interface TakeOverAgentChatConversationArg {
@@ -13,7 +15,14 @@ interface TakeOverAgentChatConversationArg {
 export const MUTATE_TAKE_OVER_AGENT_CHAT_CONVERSATION_SWR_KEY = "MUTATE_TAKE_OVER_AGENT_CHAT_CONVERSATION_SWR"
 
 /** Gives the selected customer thread to a human or returns it to the agent. */
-export const useMutateTakeOverAgentChatConversationSwr = (workspaceId: string) =>
+export const useMutateTakeOverAgentChatConversationSwr = (
+    workspaceId: string,
+): SWRMutationResponse<
+    OperationData<typeof mutateTakeOverAgentChatConversation>["takeOverAgentChatConversation"],
+    Error,
+    [string, string],
+    TakeOverAgentChatConversationArg["arg"]
+> =>
     useSWRMutation(
         [MUTATE_TAKE_OVER_AGENT_CHAT_CONVERSATION_SWR_KEY, workspaceId],
         async ([, scope]: [string, string], { arg }: TakeOverAgentChatConversationArg) => {

@@ -2,12 +2,16 @@
 
 import useSWR from "swr"
 import { queryAgentChatMessages } from "@/modules/api/graphql/queries/query-agent-chat-messages"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** SWR identity for one conversation's thread. */
 export const QUERY_AGENT_CHAT_MESSAGES_SWR_KEY = "QUERY_AGENT_CHAT_MESSAGES_SWR"
 
 /** Follows the selected thread through SWR polling. */
-export const useQueryAgentChatMessagesSwr = (workspaceId: string | undefined, conversationId: string | null) =>
+export const useQueryAgentChatMessagesSwr = (
+    workspaceId: string | undefined,
+    conversationId: string | null,
+): ReadResponse<OperationData<typeof queryAgentChatMessages>["agentChatMessages"]> =>
     useSWR(
         workspaceId === undefined || conversationId === null
             ? null

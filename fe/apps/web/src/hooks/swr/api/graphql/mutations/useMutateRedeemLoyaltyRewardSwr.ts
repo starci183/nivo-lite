@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRedeemLoyaltyReward } from "@/modules/api/graphql/mutations/mutation-redeem-loyalty-reward"
 import type { MutateRedeemLoyaltyRewardRequest } from "@/modules/api/graphql/mutations/types/redeem-loyalty-reward"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the `redeemLoyaltyReward` mutation. */
 export const MUTATE_REDEEM_LOYALTY_REWARD_SWR_KEY = "MUTATE_REDEEM_LOYALTY_REWARD_SWR"
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** Redeems a reward for a member; answers the redemption code the customer shows. */
-export const useMutateRedeemLoyaltyRewardSwr = () =>
+export const useMutateRedeemLoyaltyRewardSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRedeemLoyaltyReward>["redeemLoyaltyReward"],
+    Error,
+    typeof MUTATE_REDEEM_LOYALTY_REWARD_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(MUTATE_REDEEM_LOYALTY_REWARD_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateRedeemLoyaltyReward({ request: arg })
         if (!result.data) throw new Error("redeemLoyaltyReward answered no data")

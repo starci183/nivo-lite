@@ -4,12 +4,19 @@ import { mutateSetAgentGraphMode } from "@/modules/api/graphql/mutations/mutatio
 import type { mutateSetAgentGraphMode as MutateSetAgentGraphModeOperation } from "@/modules/api/graphql/mutations/mutation-set-agent-graph-mode"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the setAgentGraphMode mutation. */
 export const MUTATE_SET_AGENT_GRAPH_MODE_SWR_KEY = "MUTATE_SET_AGENT_GRAPH_MODE_SWR"
 
 /** SWR mutation for {@link mutateSetAgentGraphMode}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateSetAgentGraphModeSwr = () =>
+export const useMutateSetAgentGraphModeSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSetAgentGraphMode>["setAgentGraphMode"],
+    Error,
+    typeof MUTATE_SET_AGENT_GRAPH_MODE_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SET_AGENT_GRAPH_MODE_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

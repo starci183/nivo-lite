@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveInventoryLocation } from "@/modules/api/graphql/mutations/mutation-save-inventory-location"
 import type { MutateSaveInventoryLocationRequest } from "@/modules/api/graphql/mutations/mutation-save-inventory-location"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the saveInventoryLocation mutation is triggered with. */
 interface SaveInventoryLocationArg {
@@ -13,7 +15,12 @@ interface SaveInventoryLocationArg {
 export const MUTATE_SAVE_INVENTORY_LOCATION_SWR_KEY = "MUTATE_SAVE_INVENTORY_LOCATION_SWR"
 
 /** SWR mutation for {@link mutateSaveInventoryLocation}: `trigger(request)` answers `saveInventoryLocation` and rejects with the back end failure. */
-export const useMutateSaveInventoryLocationSwr = () =>
+export const useMutateSaveInventoryLocationSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveInventoryLocation>["saveInventoryLocation"],
+    Error,
+    typeof MUTATE_SAVE_INVENTORY_LOCATION_SWR_KEY,
+    SaveInventoryLocationArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_INVENTORY_LOCATION_SWR_KEY, async (_key: string, { arg }: SaveInventoryLocationArg) => {
         const result = await mutateSaveInventoryLocation({ request: arg })
         if (!result.data) throw new Error("saveInventoryLocation answered no data")

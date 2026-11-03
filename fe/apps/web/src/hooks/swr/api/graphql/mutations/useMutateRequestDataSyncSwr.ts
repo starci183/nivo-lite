@@ -4,12 +4,19 @@ import { mutateRequestDataSync } from "@/modules/api/graphql/mutations/mutation-
 import type { mutateRequestDataSync as MutateRequestDataSyncOperation } from "@/modules/api/graphql/mutations/mutation-request-data-sync"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the requestDataSync mutation. */
 export const MUTATE_REQUEST_DATA_SYNC_SWR_KEY = "MUTATE_REQUEST_DATA_SYNC_SWR"
 
 /** SWR mutation for {@link mutateRequestDataSync}: `trigger(input)` answers the queued run and rejects with the back end failure. */
-export const useMutateRequestDataSyncSwr = () =>
+export const useMutateRequestDataSyncSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRequestDataSync>["requestDataSync"],
+    Error,
+    typeof MUTATE_REQUEST_DATA_SYNC_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_REQUEST_DATA_SYNC_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

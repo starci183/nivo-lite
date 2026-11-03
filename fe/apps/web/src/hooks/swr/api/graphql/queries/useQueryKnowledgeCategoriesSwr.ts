@@ -3,12 +3,15 @@
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryKnowledgeCategories } from "@/modules/api/graphql/queries/query-knowledge-categories"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the categories of the documents; mutations that change the documents revalidate the keys that lead with it. */
 export const QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY = "QUERY_KNOWLEDGE_CATEGORIES_SWR"
 
 /** What each category (topic) of the documents of the active workspace holds (the back end `knowledgeCategories` query). */
-export const useQueryKnowledgeCategoriesSwr = () => {
+export const useQueryKnowledgeCategoriesSwr = (): ReadResponse<
+    OperationData<typeof queryKnowledgeCategories>["knowledgeCategories"]
+> => {
     const key = useWorkspaceKey(QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY, [])
     return useSWR(key, async () => {
         const result = await queryKnowledgeCategories()

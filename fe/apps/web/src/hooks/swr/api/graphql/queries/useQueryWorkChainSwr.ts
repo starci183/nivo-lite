@@ -6,12 +6,16 @@ import type { SWRConfiguration } from "swr"
 import { useAppSelector } from "@/redux"
 import { queryWorkChain } from "@/modules/api/graphql/queries/query-work-chain"
 import type { QueryWorkChainRequest } from "@/modules/api/graphql/queries/query-work-chain"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQueryWorkChainSwr}. */
 export const QUERY_WORK_CHAIN_SWR_KEY = "QUERY_WORK_CHAIN_SWR"
 
 /** The back end `workChain` query. Pass `null` to wait for the arguments. */
-export const useQueryWorkChainSwr = (request: QueryWorkChainRequest | null, config?: SWRConfiguration) => {
+export const useQueryWorkChainSwr = (
+    request: QueryWorkChainRequest | null,
+    config?: SWRConfiguration,
+): ReadResponse<OperationData<typeof queryWorkChain>["workChain"]> => {
     const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
     const read = async ([, , input]: readonly [string, string, QueryWorkChainRequest]) =>
         answeredData(await queryWorkChain({ request: input }), QUERY_WORK_CHAIN_SWR_KEY).workChain

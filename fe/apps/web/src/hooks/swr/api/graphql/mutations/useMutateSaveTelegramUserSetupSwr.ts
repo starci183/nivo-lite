@@ -4,12 +4,19 @@ import { mutateSaveTelegramUserSetup } from "@/modules/api/graphql/mutations/mut
 import type { mutateSaveTelegramUserSetup as MutateSaveTelegramUserSetupOperation } from "@/modules/api/graphql/mutations/mutation-save-telegram-user-setup"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the saveTelegramUserSetup mutation. */
 export const MUTATE_SAVE_TELEGRAM_USER_SETUP_SWR_KEY = "MUTATE_SAVE_TELEGRAM_USER_SETUP_SWR"
 
 /** SWR mutation for {@link mutateSaveTelegramUserSetup}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateSaveTelegramUserSetupSwr = () =>
+export const useMutateSaveTelegramUserSetupSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveTelegramUserSetup>["saveTelegramUserSetup"],
+    Error,
+    typeof MUTATE_SAVE_TELEGRAM_USER_SETUP_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SAVE_TELEGRAM_USER_SETUP_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRequestHiringOffer } from "@/modules/api/graphql/mutations/mutation-request-hiring-offer"
 import type { MutateRequestHiringOfferRequest } from "@/modules/api/graphql/mutations/mutation-request-hiring-offer"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the requestHiringOffer mutation is triggered with. */
 interface RequestHiringOfferArg {
@@ -13,7 +15,12 @@ interface RequestHiringOfferArg {
 export const MUTATE_REQUEST_HIRING_OFFER_SWR_KEY = "MUTATE_REQUEST_HIRING_OFFER_SWR"
 
 /** SWR mutation for {@link mutateRequestHiringOffer}: `trigger(request)` answers `requestHiringOffer` and rejects with the back end failure. */
-export const useMutateRequestHiringOfferSwr = () =>
+export const useMutateRequestHiringOfferSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRequestHiringOffer>["requestHiringOffer"],
+    Error,
+    typeof MUTATE_REQUEST_HIRING_OFFER_SWR_KEY,
+    RequestHiringOfferArg["arg"]
+> =>
     useSWRMutation(MUTATE_REQUEST_HIRING_OFFER_SWR_KEY, async (_key: string, { arg }: RequestHiringOfferArg) => {
         const result = await mutateRequestHiringOffer({ request: arg })
         if (!result.data) throw new Error("requestHiringOffer answered no data")

@@ -6,6 +6,7 @@ import { workspaceArgumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { isForbiddenFailure, isUnauthenticatedFailure } from "@/modules/failure"
+import type { ReadResponse } from "@/hooks/workspaceread"
 
 type PaymentOrderRequestStatusResponse = NonNullable<
     Awaited<ReturnType<typeof PaymentOrderRequestStatusOperation>>["data"]
@@ -28,7 +29,7 @@ export const useQueryPaymentOrderRequestStatusSwr = (
     workspaceId: string | undefined,
     id: string | undefined,
     options?: PaymentOrderRequestStatusOptions,
-) =>
+): ReadResponse<PaymentOrderRequestStatus> =>
     useSWR(
         workspaceArgumentKey(QUERY_PAYMENT_ORDER_REQUEST_STATUS_SWR_KEY, workspaceId, id),
         async ([, , requestedId]) => {

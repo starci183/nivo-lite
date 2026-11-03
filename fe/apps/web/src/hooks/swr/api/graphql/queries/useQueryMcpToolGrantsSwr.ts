@@ -3,12 +3,15 @@
 import useSWR from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryMcpToolGrants } from "@/modules/api/graphql/queries/query-mcp-tool-grants"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the mcpToolGrants query. */
 export const QUERY_MCP_TOOL_GRANTS_SWR_KEY = "QUERY_MCP_TOOL_GRANTS_SWR"
 
 /** Every agent's grants of gateway tools (default deny); nothing is read while `enabled` is false (not a manager). */
-export const useQueryMcpToolGrantsSwr = (enabled: boolean) =>
+export const useQueryMcpToolGrantsSwr = (
+    enabled: boolean,
+): ReadResponse<OperationData<typeof queryMcpToolGrants>["mcpToolGrants"]> =>
     useSWR(
         useWorkspaceKey(QUERY_MCP_TOOL_GRANTS_SWR_KEY, [], enabled),
         async ({ signal }: { signal?: AbortSignal } = {}) => {

@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveBookingResource } from "@/modules/api/graphql/mutations/mutation-save-booking-resource"
 import type { MutateSaveBookingResourceRequest } from "@/modules/api/graphql/mutations/types/save-booking-resource"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the `saveBookingResource` mutation. */
 export const MUTATE_SAVE_BOOKING_RESOURCE_SWR_KEY = "MUTATE_SAVE_BOOKING_RESOURCE_SWR"
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** Creates or updates a booking resource. */
-export const useMutateSaveBookingResourceSwr = () =>
+export const useMutateSaveBookingResourceSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveBookingResource>["saveBookingResource"],
+    Error,
+    typeof MUTATE_SAVE_BOOKING_RESOURCE_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_BOOKING_RESOURCE_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateSaveBookingResource({ request: arg })
         if (!result.data) throw new Error("saveBookingResource answered no data")

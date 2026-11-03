@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRenameModuleInstallation } from "@/modules/api/graphql/mutations/mutation-rename-module-installation"
 import type { MutateRenameModuleInstallationRequest } from "@/modules/api/graphql/mutations/mutation-rename-module-installation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the RenameModuleInstallation mutation is triggered with. */
 interface RenameModuleInstallationArg {
@@ -13,7 +15,12 @@ interface RenameModuleInstallationArg {
 export const MUTATE_RENAME_MODULE_INSTALLATION_SWR_KEY = "MUTATE_RENAME_MODULE_INSTALLATION_SWR"
 
 /** SWR mutation for {@link mutateRenameModuleInstallation}: `trigger(request)` answers the payload and rejects with the back end failure. */
-export const useMutateRenameModuleInstallationSwr = () =>
+export const useMutateRenameModuleInstallationSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRenameModuleInstallation>["renameModuleInstallation"],
+    Error,
+    typeof MUTATE_RENAME_MODULE_INSTALLATION_SWR_KEY,
+    RenameModuleInstallationArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_RENAME_MODULE_INSTALLATION_SWR_KEY,
         async (_key: string, { arg }: RenameModuleInstallationArg) => {

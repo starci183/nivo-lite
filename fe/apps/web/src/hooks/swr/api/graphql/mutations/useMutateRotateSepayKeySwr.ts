@@ -4,12 +4,19 @@ import { mutateRotateSepayKey } from "@/modules/api/graphql/mutations/mutation-r
 import type { mutateRotateSepayKey as MutateRotateSepayKeyOperation } from "@/modules/api/graphql/mutations/mutation-rotate-sepay-key"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the rotateSepayKey mutation. */
 export const MUTATE_ROTATE_SEPAY_KEY_SWR_KEY = "MUTATE_ROTATE_SEPAY_KEY_SWR"
 
 /** SWR mutation for {@link mutateRotateSepayKey}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateRotateSepayKeySwr = () =>
+export const useMutateRotateSepayKeySwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRotateSepayKey>["rotateSepayKey"],
+    Error,
+    typeof MUTATE_ROTATE_SEPAY_KEY_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_ROTATE_SEPAY_KEY_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

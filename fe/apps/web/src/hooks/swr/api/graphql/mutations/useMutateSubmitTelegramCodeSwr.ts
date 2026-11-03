@@ -4,12 +4,19 @@ import { mutateSubmitTelegramCode } from "@/modules/api/graphql/mutations/mutati
 import type { mutateSubmitTelegramCode as MutateSubmitTelegramCodeOperation } from "@/modules/api/graphql/mutations/mutation-submit-telegram-code"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the submitTelegramCode mutation. */
 export const MUTATE_SUBMIT_TELEGRAM_CODE_SWR_KEY = "MUTATE_SUBMIT_TELEGRAM_CODE_SWR"
 
 /** SWR mutation for {@link mutateSubmitTelegramCode}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateSubmitTelegramCodeSwr = () =>
+export const useMutateSubmitTelegramCodeSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSubmitTelegramCode>["submitTelegramCode"],
+    Error,
+    typeof MUTATE_SUBMIT_TELEGRAM_CODE_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SUBMIT_TELEGRAM_CODE_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

@@ -6,6 +6,7 @@ import { zaloConnectionHref } from "@/modules/routes"
 import { LocalStorage, StorageId } from "@/modules/storage"
 import useSWR from "swr"
 import { useMutateReturnZaloAuthorizationSwr } from "../mutations/useMutateReturnZaloAuthorizationSwr"
+import type { ReadResponse } from "@/hooks/workspaceread"
 
 /** What Zalo sends the browser back with after the owner granted the OA permissions. */
 export interface ZaloReturnInput {
@@ -34,7 +35,7 @@ const connectionsHref = (verdict: string, connectionId?: string): string => {
 const ZALO_RETURN_SWR_KEY = "zalo-return"
 
 /** Hands the Zalo return to the back end once, then navigates to the connection's page (reconnect from it) or to Connections with the verdict. */
-export const useQueryZaloReturnSwr = ({ code, oaId, state }: ZaloReturnInput) => {
+export const useQueryZaloReturnSwr = ({ code, oaId, state }: ZaloReturnInput): ReadResponse<string> => {
     const router = navigation.useRouter()
     const { trigger } = useMutateReturnZaloAuthorizationSwr()
     return useSWR(

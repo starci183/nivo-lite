@@ -1,10 +1,11 @@
 "use client"
 
 import { answeredData, readError } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import type { OperationData, WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
-import type { SWRConfiguration } from "swr"
+import type { KeyedMutator, SWRConfiguration } from "swr"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
 import { useAppSelector } from "@/redux"
 import { OFFICE_PAGE_SIZE } from "@/modules/office"
 import { queryOfficeMessages } from "@/modules/api/graphql/queries/query-office-messages"
@@ -14,17 +15,31 @@ import type { QueryOfficeMessagesRequest } from "@/modules/api/graphql/queries/q
 export const QUERY_OFFICE_MESSAGES_SWR_KEY = "QUERY_OFFICE_MESSAGES_SWR"
 
 /** One read of the `officeMessages` query. */
-const readOfficeMessages = async ([, , input]: WorkspaceReadKey<QueryOfficeMessagesRequest>) =>
+const readOfficeMessages = async ([
+    ,
+    ,
+    input,
+]: WorkspaceReadKey<QueryOfficeMessagesRequest>): Promise<OfficeMessagesPage> =>
     answeredData(await queryOfficeMessages({ request: input }), QUERY_OFFICE_MESSAGES_SWR_KEY).officeMessages
 
 /** What one read of the `officeMessages` query answers. */
-type OfficeMessagesPage = Awaited<ReturnType<typeof readOfficeMessages>>
+type OfficeMessagesPage = OperationData<typeof queryOfficeMessages>["officeMessages"]
+
+/** What the hook answers: the latest page with its SWR state beside the mutation that reads the earlier page. */
+interface OfficeMessagesRead {
+    readonly mutate: KeyedMutator<OfficeMessagesPage>
+    readonly data: OfficeMessagesPage | undefined
+    readonly error: unknown
+    readonly isValidating: boolean
+    readonly isLoading: boolean
+    readonly earlier: SWRMutationResponse<OfficeMessagesPage, Error, "OFFICE_EARLIER_PAGE", TriggerArg["arg"]>
+}
 
 /** The back end `officeMessages` query. Pass `null` to wait for the arguments. */
 export const useQueryOfficeMessagesSwr = (
     request: QueryOfficeMessagesRequest | null,
     config?: SWRConfiguration<OfficeMessagesPage>,
-) => {
+): OfficeMessagesRead => {
     const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
     const latest = useSWR(
         request === null || workspaceId === undefined

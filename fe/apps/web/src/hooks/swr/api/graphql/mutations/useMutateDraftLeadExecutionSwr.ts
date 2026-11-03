@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateDraftLeadExecution } from "@/modules/api/graphql/mutations/mutation-draft-lead-execution"
 import type { MutateDraftLeadExecutionRequest } from "@/modules/api/graphql/mutations/mutation-draft-lead-execution"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the draft lead execution mutation is triggered with. */
 interface DraftLeadExecutionArg {
@@ -13,7 +15,12 @@ interface DraftLeadExecutionArg {
 export const MUTATE_DRAFT_LEAD_EXECUTION_SWR_KEY = "MUTATE_DRAFT_LEAD_EXECUTION_SWR"
 
 /** SWR mutation for {@link mutateDraftLeadExecution}: `trigger({ responsibilityId })` answers the queued draft and rejects with the back end failure. */
-export const useMutateDraftLeadExecutionSwr = () =>
+export const useMutateDraftLeadExecutionSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateDraftLeadExecution>["draftLeadExecution"],
+    Error,
+    typeof MUTATE_DRAFT_LEAD_EXECUTION_SWR_KEY,
+    DraftLeadExecutionArg["arg"]
+> =>
     useSWRMutation(MUTATE_DRAFT_LEAD_EXECUTION_SWR_KEY, async (_key: string, { arg }: DraftLeadExecutionArg) => {
         const result = await mutateDraftLeadExecution({ request: arg })
         if (!result.data) throw new Error("draftLeadExecution answered no data")

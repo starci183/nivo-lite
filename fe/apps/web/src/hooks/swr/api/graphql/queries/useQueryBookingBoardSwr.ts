@@ -7,6 +7,7 @@ import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import { queryBookingBoard } from "@/modules/api/graphql/queries/query-booking-board"
 import type { QueryBookingBoardRequest } from "@/modules/api/graphql/queries/types/booking-board"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of the `bookingBoard` query. */
 export const QUERY_BOOKING_BOARD_SWR_KEY = "QUERY_BOOKING_BOARD_SWR"
@@ -16,7 +17,7 @@ export const useQueryBookingBoardSwr = (
     request?: QueryBookingBoardRequest | null,
     config?: SWRConfiguration,
     isActive = true,
-) => {
+): ReadResponse<OperationData<typeof queryBookingBoard>["bookingBoard"]> => {
     const key = useWorkspaceParamsKey(QUERY_BOOKING_BOARD_SWR_KEY, isActive ? [request ?? null] : null)
     const workspaceId = key?.[1]
     const [resolvedWorkspaceId, setResolvedWorkspaceId] = useState(workspaceId)

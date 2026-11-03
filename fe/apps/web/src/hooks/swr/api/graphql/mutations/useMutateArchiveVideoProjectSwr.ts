@@ -4,12 +4,19 @@ import { mutateArchiveVideoProject } from "@/modules/api/graphql/mutations/mutat
 import type { mutateArchiveVideoProject as MutateArchiveVideoProjectOperation } from "@/modules/api/graphql/mutations/mutation-archive-video-project"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the archiveVideoProject mutation. */
 export const MUTATE_ARCHIVE_VIDEO_PROJECT_SWR_KEY = "MUTATE_ARCHIVE_VIDEO_PROJECT_SWR"
 
 /** SWR mutation for {@link mutateArchiveVideoProject}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateArchiveVideoProjectSwr = () =>
+export const useMutateArchiveVideoProjectSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateArchiveVideoProject>["archiveVideoProject"],
+    Error,
+    typeof MUTATE_ARCHIVE_VIDEO_PROJECT_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_ARCHIVE_VIDEO_PROJECT_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>

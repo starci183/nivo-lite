@@ -3,6 +3,7 @@
 import { argumentKey, noData } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { querySalesWorkbench } from "@/modules/api/graphql/queries/query-sales-workbench"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** Workspace-scoped cache identity for the salesWorkbench query. */
 export const QUERY_SALES_WORKBENCH_SWR_KEY = "QUERY_SALES_WORKBENCH_SWR"
@@ -11,7 +12,9 @@ export const QUERY_SALES_WORKBENCH_SWR_KEY = "QUERY_SALES_WORKBENCH_SWR"
 const REFRESH_MS = 5000
 
 /** Reads salesWorkbench. The workspace id is part of the cache identity; `undefined` pauses the read. */
-export const useQuerySalesWorkbenchSwr = (workspaceId: string | undefined) =>
+export const useQuerySalesWorkbenchSwr = (
+    workspaceId: string | undefined,
+): ReadResponse<NonNullable<OperationData<typeof querySalesWorkbench>["salesWorkbench"]>> =>
     useSWR(
         argumentKey(QUERY_SALES_WORKBENCH_SWR_KEY, workspaceId),
         async () => (await querySalesWorkbench()).data?.salesWorkbench ?? noData("salesWorkbench"),

@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRegisterMcpConnector } from "@/modules/api/graphql/mutations/mutation-register-mcp-connector"
 import type { MutateRegisterMcpConnectorRequest } from "@/modules/api/graphql/mutations/mutation-register-mcp-connector"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the RegisterMcpConnector mutation is triggered with. */
 interface RegisterMcpConnectorArg {
@@ -13,7 +15,12 @@ interface RegisterMcpConnectorArg {
 export const MUTATE_REGISTER_MCP_CONNECTOR_SWR_KEY = "MUTATE_REGISTER_MCP_CONNECTOR_SWR"
 
 /** SWR mutation for {@link mutateRegisterMcpConnector}: `trigger(input)` registers a remote connector with its credential and answers true; rejects with the back end failure. */
-export const useMutateRegisterMcpConnectorSwr = () =>
+export const useMutateRegisterMcpConnectorSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRegisterMcpConnector>["registerMcpConnector"],
+    Error,
+    typeof MUTATE_REGISTER_MCP_CONNECTOR_SWR_KEY,
+    RegisterMcpConnectorArg["arg"]
+> =>
     useSWRMutation(MUTATE_REGISTER_MCP_CONNECTOR_SWR_KEY, async (_key: string, { arg }: RegisterMcpConnectorArg) => {
         const result = await mutateRegisterMcpConnector({ request: arg })
         if (!result.data) throw new Error("registerMcpConnector answered no data")

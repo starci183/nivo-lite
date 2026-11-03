@@ -12,7 +12,9 @@ import type { LeadBoardQuery } from "@/modules/api"
 /** Workspace-scoped cache identity for the leadBoard query. */
 export const QUERY_LEAD_BOARD_SWR_KEY = "QUERY_LEAD_BOARD_SWR"
 
-type LeadBoardPage = ConnectionPage<LeadBoardQuery["leadBoard"]["nodes"][number]>
+type LeadBoardNode = LeadBoardQuery["leadBoard"]["nodes"][number]
+
+type LeadBoardPage = ConnectionPage<LeadBoardNode>
 
 /** The cache and bounded initial capacity of a lead board reader. */
 interface LeadBoardOptions {
@@ -21,7 +23,10 @@ interface LeadBoardOptions {
 }
 
 /** Reads all loaded lead pages; a workspace switch starts a new cursor chain. */
-export const useQueryLeadBoardSwr = (workspaceId: string | undefined, options?: LeadBoardOptions) => {
+export const useQueryLeadBoardSwr = (
+    workspaceId: string | undefined,
+    options?: LeadBoardOptions,
+): ReturnType<typeof connectionPageView<LeadBoardNode>> => {
     const getKey: SWRInfiniteKeyLoader<LeadBoardPage, ConnectionPageKey | null> = (index, previous) =>
         connectionPageKey(options?.cacheKey ?? QUERY_LEAD_BOARD_SWR_KEY, workspaceId, index, previous)
     const query = useSWRInfinite<LeadBoardPage, Error>(

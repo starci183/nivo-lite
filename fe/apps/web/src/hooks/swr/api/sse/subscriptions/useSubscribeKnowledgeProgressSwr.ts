@@ -9,6 +9,7 @@ import { QUERY_BRAIN_SWR_KEY } from "../../graphql/queries/useQueryBrainSwr"
 import { QUERY_BRAIN_TODO_SWR_KEY } from "../../graphql/queries/useQueryBrainTodoSwr"
 import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeSourcesSwr"
 import { QUERY_KNOWLEDGE_USAGE_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeUsageSwr"
+import type { SWRSubscriptionResponse } from "swr/subscription"
 
 /** The SWR key of the knowledge-progress stream; the full key carries the workspace and the signed-in member, the identity of the stream. */
 export const SUBSCRIBE_KNOWLEDGE_PROGRESS_SWR_KEY = "SUBSCRIBE_KNOWLEDGE_PROGRESS_SWR"
@@ -50,7 +51,7 @@ const withPush = (state: KnowledgeProgressState, push: KnowledgeProgressPush): K
  * stream. Each (re)open reads the stored list once (the state comes from the database, never from the stream), a push that settles
  * a source reads it again, and a dropped stream flips `isLive` off so the polling of the list takes over until it reopens.
  */
-export const useSubscribeKnowledgeProgressSwr = () => {
+export const useSubscribeKnowledgeProgressSwr = (): SWRSubscriptionResponse<KnowledgeProgressState, Error> => {
     const viewerId = useViewerKeyId()
     const { mutate } = useSWRConfig()
     const key = useWorkspaceKey(

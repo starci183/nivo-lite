@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateRecordOutcome } from "@/modules/api/graphql/mutations/mutation-record-outcome"
 import type { MutateRecordOutcomeRequest } from "@/modules/api/graphql/mutations/mutation-record-outcome"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the recordOutcome mutation is triggered with. */
 interface RecordOutcomeArg {
@@ -13,7 +15,12 @@ interface RecordOutcomeArg {
 export const MUTATE_RECORD_OUTCOME_SWR_KEY = "MUTATE_RECORD_OUTCOME_SWR"
 
 /** SWR mutation for {@link mutateRecordOutcome}: `trigger(request)` answers the result and rejects with the back end failure. */
-export const useMutateRecordOutcomeSwr = () =>
+export const useMutateRecordOutcomeSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateRecordOutcome>["recordOutcome"],
+    Error,
+    typeof MUTATE_RECORD_OUTCOME_SWR_KEY,
+    RecordOutcomeArg["arg"]
+> =>
     useSWRMutation(MUTATE_RECORD_OUTCOME_SWR_KEY, async (_key: string, { arg }: RecordOutcomeArg) => {
         const result = await mutateRecordOutcome({ request: arg })
         if (!result.data) throw new Error("recordOutcome answered no data")

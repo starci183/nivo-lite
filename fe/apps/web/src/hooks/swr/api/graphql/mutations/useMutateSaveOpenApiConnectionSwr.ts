@@ -3,6 +3,8 @@
 import useSWRMutation from "swr/mutation"
 import { mutateSaveOpenApiConnection } from "@/modules/api/graphql/mutations/mutation-save-open-api-connection"
 import type { MutateSaveOpenApiConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-open-api-connection"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** What the saveOpenApiConnection mutation is triggered with. */
 interface SaveOpenApiConnectionArg {
@@ -13,7 +15,12 @@ interface SaveOpenApiConnectionArg {
 export const MUTATE_SAVE_OPEN_API_CONNECTION_SWR_KEY = "MUTATE_SAVE_OPEN_API_CONNECTION_SWR"
 
 /** SWR mutation for {@link mutateSaveOpenApiConnection}: `trigger(input)` answers the connection id and rejects with the back end failure. */
-export const useMutateSaveOpenApiConnectionSwr = () =>
+export const useMutateSaveOpenApiConnectionSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSaveOpenApiConnection>["saveOpenApiConnection"],
+    Error,
+    typeof MUTATE_SAVE_OPEN_API_CONNECTION_SWR_KEY,
+    SaveOpenApiConnectionArg["arg"]
+> =>
     useSWRMutation(MUTATE_SAVE_OPEN_API_CONNECTION_SWR_KEY, async (_key: string, { arg }: SaveOpenApiConnectionArg) => {
         const result = await mutateSaveOpenApiConnection({ request: arg })
         if (result.data === undefined) throw new Error("saveOpenApiConnection answered no data")

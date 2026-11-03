@@ -3,12 +3,16 @@
 import { workspaceArgumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryAgentChatConversations } from "@/modules/api/graphql/queries/query-agent-chat-conversations"
+import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** SWR identity for an agent's conversations. */
 export const QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY = "QUERY_AGENT_CHAT_CONVERSATIONS_SWR"
 
 /** Follows customer conversations and staff takeover through SWR polling. */
-export const useQueryAgentChatConversationsSwr = (workspaceId: string | undefined, agentId: string | undefined) =>
+export const useQueryAgentChatConversationsSwr = (
+    workspaceId: string | undefined,
+    agentId: string | undefined,
+): ReadResponse<OperationData<typeof queryAgentChatConversations>["agentChatConversations"]> =>
     useSWR(
         workspaceArgumentKey(QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY, workspaceId, agentId),
         async ([, scope, id]: [string, string, string]) => {

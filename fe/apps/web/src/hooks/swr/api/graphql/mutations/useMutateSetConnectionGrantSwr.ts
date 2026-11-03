@@ -4,12 +4,19 @@ import { mutateSetConnectionGrant } from "@/modules/api/graphql/mutations/mutati
 import type { mutateSetConnectionGrant as MutateSetConnectionGrantOperation } from "@/modules/api/graphql/mutations/mutation-set-connection-grant"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { OperationData } from "@/hooks/workspaceread"
 
 /** The SWR key of the setConnectionGrant mutation. */
 export const MUTATE_SET_CONNECTION_GRANT_SWR_KEY = "MUTATE_SET_CONNECTION_GRANT_SWR"
 
 /** SWR mutation for {@link mutateSetConnectionGrant}: `trigger(input)` answers the payload and rejects with the back end failure. */
-export const useMutateSetConnectionGrantSwr = () =>
+export const useMutateSetConnectionGrantSwr = (): SWRMutationResponse<
+    OperationData<typeof mutateSetConnectionGrant>["setConnectionGrant"],
+    Error,
+    typeof MUTATE_SET_CONNECTION_GRANT_SWR_KEY,
+    TriggerArg["arg"]
+> =>
     useSWRMutation(
         MUTATE_SET_CONNECTION_GRANT_SWR_KEY,
         async (_key: string, { arg }: TriggerArg) =>
