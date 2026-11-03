@@ -61,6 +61,8 @@ export interface WorkItemRaisePayload {
     readonly title: string
     readonly payload: Readonly<Record<string, unknown>>
     readonly amountVnd?: number | undefined
+    /** The claim of a customer's word this work settles or escalates, when it is about one. */
+    readonly claimId?: string | undefined
 }
 
 const id = z.string().min(1)
@@ -118,6 +120,7 @@ const workItemRaisePayload: z.ZodType<WorkItemRaisePayload> = z.object({
     title: z.string().min(1),
     payload: z.record(z.string(), z.unknown()),
     amountVnd: z.number().nonnegative().optional(),
+    claimId: id.optional(),
 })
 
 /** Sends a message to a customer conversation; the subject is the message. */
