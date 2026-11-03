@@ -15,11 +15,17 @@ export interface ZaloStepState {
     readonly isOpen: boolean
 }
 
+type UseZaloStepsResult = {
+    steps: readonly ZaloStepState[]
+    isLoading: boolean
+    toggle: (id: ZaloStepId, isOpen: boolean) => void
+}
+
 /**
  * The five setup steps of a Zalo OA connection in back end order (app keys, the Zalo app set up, the OA authorized, the checks, the
  * agents): each says whether it is done, the first step not done opens on its own, and the owner opens or closes any step.
  */
-export const useZaloSteps = (connectionId: string) => {
+export const useZaloSteps = (connectionId: string): UseZaloStepsResult => {
     const t = useTranslations("zaloConnection")
     const { slot } = useZaloPage(connectionId)
     const [toggled, setToggled] = useState<Readonly<Partial<Record<ZaloStepId, boolean>>>>({})
@@ -60,6 +66,6 @@ export const useZaloSteps = (connectionId: string) => {
     return {
         steps,
         isLoading: page === undefined,
-        toggle: (id: ZaloStepId, isOpen: boolean) => setToggled((current) => ({ ...current, [id]: isOpen })),
+        toggle: (id: ZaloStepId, isOpen: boolean): void => setToggled((current) => ({ ...current, [id]: isOpen })),
     }
 }

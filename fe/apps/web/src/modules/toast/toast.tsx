@@ -8,6 +8,9 @@ import {
 import { IconTile } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
+import type { ToastPromiseOptions, ToastContentValue, HeroUIToastOptions } from "@heroui/react"
+import type { UNSTABLE_ToastQueue } from "react-aria-components"
+
 /** Options a status toast accepts: the HeroUI ones, minus the `variant` each status already implies. */
 type StatusToastOptions = Parameters<typeof heroToast.success>[1]
 
@@ -23,18 +26,32 @@ const INDICATOR: Record<"success" | "danger" | "warning" | "info", ReactNode> = 
     info: <IconTile source={InformationCircleIcon} tone="accent" size="sm" />,
 }
 
+type ToastShape = {
+    success: (message: ReactNode, options?: StatusToastOptions) => string
+    danger: (message: ReactNode, options?: StatusToastOptions) => string
+    warning: (message: ReactNode, options?: StatusToastOptions) => string
+    info: (message: ReactNode, options?: StatusToastOptions) => string
+    update(id: string, message: ReactNode, options?: HeroUIToastOptions): string
+    promise<T>(promise: Promise<T> | (() => Promise<T>), options: ToastPromiseOptions<T>): string
+    getQueue(): UNSTABLE_ToastQueue<ToastContentValue>
+    close(key: string): void
+    pauseAll(): void
+    resumeAll(): void
+    clear(): void
+}
+
 /**
  * App toast: a thin wrapper over the HeroUI imperative `toast` that injects the status indicator. Import THIS instead of the
  * HeroUI `toast` so every toast looks the same. Non-status members (`promise`, `close`, `clear`) pass through.
  */
-export const toast = {
+export const toast: ToastShape = {
     ...heroToast,
-    success: (message: ReactNode, options?: StatusToastOptions) =>
+    success: (message: ReactNode, options?: StatusToastOptions): string =>
         heroToast.success(message, { indicator: INDICATOR.success, ...options }),
-    danger: (message: ReactNode, options?: StatusToastOptions) =>
+    danger: (message: ReactNode, options?: StatusToastOptions): string =>
         heroToast.danger(message, { indicator: INDICATOR.danger, ...options }),
-    warning: (message: ReactNode, options?: StatusToastOptions) =>
+    warning: (message: ReactNode, options?: StatusToastOptions): string =>
         heroToast.warning(message, { indicator: INDICATOR.warning, ...options }),
-    info: (message: ReactNode, options?: StatusToastOptions) =>
+    info: (message: ReactNode, options?: StatusToastOptions): string =>
         heroToast.info(message, { indicator: INDICATOR.info, ...options }),
 }

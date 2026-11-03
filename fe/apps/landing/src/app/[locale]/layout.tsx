@@ -1,10 +1,12 @@
 import { readLocaleSegment } from "@nivo-lite/i18n/layout"
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 import { SiteLayout, siteLayoutMetadata } from "@/features/layouts/SiteLayout"
 import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
 import { LandingProviders } from "./providers"
 import "../globals.css"
 import "@/modules/brand"
+
+import type { Metadata } from "next"
 
 type LayoutProps = {
     readonly children: ReactNode
@@ -15,10 +17,11 @@ type LayoutProps = {
 export { siteLayoutViewport as viewport } from "@/features/layouts/SiteLayout"
 
 /** The localized document title of this route segment. */
-export const generateMetadata = async (props: LayoutProps) => siteLayoutMetadata((await props.params).locale)
+export const generateMetadata = async (props: LayoutProps): Promise<Metadata> =>
+    siteLayoutMetadata((await props.params).locale)
 
 /** The locale segment's document, providers and app chrome. */
-const Layout = async (props: LayoutProps) => {
+const Layout = async (props: LayoutProps): Promise<ReactElement> => {
     const { locale, messages } = await readLocaleSegment(props.params)
     return (
         <SiteLayout

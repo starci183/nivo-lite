@@ -6,11 +6,16 @@ import { mutate } from "@/modules/viewer-cache"
 import { useMutateDraftLeadExecutionSwr, QUERY_DASHBOARD_SWR_KEY } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
+type UseDraftFollowUpResult = {
+    draft: (responsibilityId: string) => Promise<void>
+    isDrafting: boolean
+}
+
 /**
  * Asks for a follow-up draft for the customer behind a responsibility. The draft is queued on the back end and waits for the
  * owner's approval (or is sent inside the granted authority). The outcome is toasted; the dashboard is read again on success.
  */
-export const useDraftFollowUp = () => {
+export const useDraftFollowUp = (): UseDraftFollowUpResult => {
     const t = useTranslations("responsibilities")
     const runGraphQL = useGraphQLWithToast()
     const { trigger, isMutating } = useMutateDraftLeadExecutionSwr()

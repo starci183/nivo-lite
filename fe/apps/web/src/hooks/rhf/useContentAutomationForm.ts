@@ -7,8 +7,13 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { ContentSettings } from "@/modules/content"
 
+import type { UseFormReturn } from "react-hook-form"
+import type { AutomationKey } from "@/modules/types/content-model-workbench-forms"
+
 /** Validates switches before changing a workspace automation. */
-export const useContentAutomationForm = (initial: ContentSettings) => {
+export const useContentAutomationForm = (
+    initial: ContentSettings,
+): UseFormReturn<Readonly<Record<AutomationKey, boolean>>> => {
     const t = useTranslations("content")
     const schema = useMemo(
         () =>

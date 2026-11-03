@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit"
-import type { PayloadAction } from "@reduxjs/toolkit"
+import type { ActionCreatorWithOptionalPayload, PayloadAction, Reducer } from "@reduxjs/toolkit"
 
 /** The app-wide workspace selection. */
 export interface WorkspaceSliceState {
@@ -20,6 +20,10 @@ const workspaceSlice = createSlice({
 })
 
 /** Selects (or clears) the active workspace. */
-export const { setActiveWorkspaceId } = workspaceSlice.actions
+const dest = workspaceSlice.actions
+export const setActiveWorkspaceId: ActionCreatorWithOptionalPayload<
+    string | undefined,
+    "workspace/setActiveWorkspaceId"
+> = dest.setActiveWorkspaceId
 /** The reducer of the workspace selection. */
-export const workspaceReducer = workspaceSlice.reducer
+export const workspaceReducer: Reducer<WorkspaceSliceState> = workspaceSlice.reducer

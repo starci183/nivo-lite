@@ -2,7 +2,7 @@
 export const CONTENT_MEDIA_BUCKET = "media"
 
 /** The largest media file, in bytes. */
-export const CONTENT_MEDIA_MAX_BYTES = 10 * 1024 * 1024
+export const CONTENT_MEDIA_MAX_BYTES: number = 10 * 1024 * 1024
 
 /** The accepted media types. */
 export const CONTENT_MEDIA_MIME: ReadonlyArray<string> = ["image/jpeg", "image/png", "image/webp", "video/mp4"]

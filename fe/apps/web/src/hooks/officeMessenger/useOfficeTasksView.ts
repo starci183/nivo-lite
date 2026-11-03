@@ -5,8 +5,54 @@ const ALL = "all"
 const STATUS_KEYS = { open: "statusOpen", waiting_approval: "statusWaiting", done: "statusDone" } as const
 const STATUSES = ["open", "waiting_approval", "done"] as const
 
+type UseOfficeTasksViewResult = {
+    view: {
+        tasks: {
+            statusLabel: string
+            id: string
+            title: string
+            status: "open" | "waiting_approval" | "done"
+            nextAction: string
+            owner: string
+            meta: string
+            leadHref: string
+        }[]
+        hasTasks: boolean
+        owner: string
+        status: string
+        ownerOptions: {
+            id: string
+            label: string
+        }[]
+        statusOptions: {
+            id: string
+            label: string
+        }[]
+        meta: string
+        copy: {
+            title: string
+            noTasks: string
+            noTasksHint: string
+            openLeads: string
+            noTasksMatch: string
+            noTasksMatchHint: string
+            clearFilters: string
+            openArrow: string
+            filterOwner: string
+            filterStatus: string
+        }
+    }
+    onOwner: (value: string) => void
+    onStatus: (value: string) => void
+    clear: () => void
+}
+
 /** Keeps the filters for the lifetime of the visible tasks pane and resolves its count and row copy. */
-export const useOfficeTasksView = (tasks: ReadonlyArray<OfficeTaskView>, text: OfficeText, mounted: boolean) => {
+export const useOfficeTasksView = (
+    tasks: ReadonlyArray<OfficeTaskView>,
+    text: OfficeText,
+    mounted: boolean,
+): UseOfficeTasksViewResult => {
     const [state, setState] = useState({ mounted, owner: ALL, status: ALL })
     if (state.mounted !== mounted) setState({ mounted, owner: ALL, status: ALL })
     const owner = state.mounted === mounted ? state.owner : ALL
@@ -42,8 +88,8 @@ export const useOfficeTasksView = (tasks: ReadonlyArray<OfficeTaskView>, text: O
                 filterStatus: text("filterStatus"),
             },
         },
-        onOwner: (value: string) => setState((current) => ({ ...current, owner: value })),
-        onStatus: (value: string) => setState((current) => ({ ...current, status: value })),
-        clear: () => setState((current) => ({ ...current, owner: ALL, status: ALL })),
+        onOwner: (value: string): void => setState((current) => ({ ...current, owner: value })),
+        onStatus: (value: string): void => setState((current) => ({ ...current, status: value })),
+        clear: (): void => setState((current) => ({ ...current, owner: ALL, status: ALL })),
     }
 }

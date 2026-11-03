@@ -5,12 +5,34 @@ import { useQueryListTelegramChatsSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
 import { chatKindOf, MAX_CHATS } from "./telegram-user-wizard.shared"
 import type { ChatChoice, PickedChat, SinceDays, TelegramInitial } from "./telegram-user-wizard.shared"
+import type { SetStateAction, Dispatch } from "react"
 
 /** Fresh chats on every visit; a failure is shown with a retry, not retried by itself. */
 const FRESH = { revalidateOnFocus: false, revalidateOnReconnect: false, shouldRetryOnError: false } as const
 
+type UseTelegramUserPicksResult = {
+    reads: readonly SlotRead<unknown>[]
+    loading: boolean
+    failed: boolean
+    failure: string | null
+    picked: readonly PickedChat[]
+    pickedIds: Set<string>
+    visible: readonly ChatChoice[]
+    full: boolean
+    query: string
+    sinceDays: SinceDays
+    every: string
+    change: (ids: ReadonlyArray<string>) => void
+    setQuery: Dispatch<SetStateAction<string>>
+    setSinceDays: Dispatch<SetStateAction<SinceDays>>
+    setEvery: Dispatch<SetStateAction<string>>
+    restore: (initial: TelegramInitial, resumeId: string | undefined) => void
+    load: Dispatch<SetStateAction<string | undefined>>
+    reload: () => void
+}
+
 /** The chat list of the account and what the owner ticked, how far back to read, and how often. */
-export const useTelegramUserPicks = () => {
+export const useTelegramUserPicks = (): UseTelegramUserPicksResult => {
     const [chatsFor, setChatsFor] = useState<string | undefined>(undefined)
     const [picked, setPicked] = useState<ReadonlyArray<PickedChat>>([])
     const [sinceDays, setSinceDays] = useState<SinceDays>(7)
@@ -45,7 +67,7 @@ export const useTelegramUserPicks = () => {
     const visible = needle === "" ? all : all.filter((chat) => chat.title.toLowerCase().includes(needle))
 
     /** The ticks of the shown chats changed; ticks hidden by the search are kept. */
-    const change = (ids: ReadonlyArray<string>) => {
+    const change = (ids: ReadonlyArray<string>): void => {
         const visibleIds = new Set(visible.map((chat) => chat.id))
         const kept = picked.filter((chat) => !visibleIds.has(chat.id))
         const added = ids
@@ -55,7 +77,7 @@ export const useTelegramUserPicks = () => {
         setPicked([...kept, ...added].slice(0, MAX_CHATS))
     }
 
-    const restore = useCallback((initial: TelegramInitial, resumeId: string | undefined) => {
+    const restore = useCallback((initial: TelegramInitial, resumeId: string | undefined): void => {
         setChatsFor(initial.editing ? resumeId : undefined)
         setPicked(initial.picked)
         setSinceDays(initial.sinceDays)
@@ -80,7 +102,7 @@ export const useTelegramUserPicks = () => {
         setEvery,
         restore,
         load: setChatsFor,
-        reload: () => {
+        reload: (): void => {
             void list.mutate()
         },
     }

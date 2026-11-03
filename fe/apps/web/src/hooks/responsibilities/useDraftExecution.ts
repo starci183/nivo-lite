@@ -25,11 +25,16 @@ interface PolledStatus {
 
 const ENDED: ReadonlySet<string> = new Set(["succeeded", "failed"])
 
+type UseDraftExecutionResult = {
+    draft: (responsibilityId: string) => Promise<void>
+    draftingId: string | null
+}
+
 /**
  * Asks the owning agent to draft the next message of a responsibility. The back end queues the work; the status is polled
  * until it ends, then the board is read again (the responsibility now waits for approval) and the outcome is toasted.
  */
-export const useDraftExecution = () => {
+export const useDraftExecution = (): UseDraftExecutionResult => {
     const t = useTranslations("responsibilities")
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId } = useActiveWorkspace()

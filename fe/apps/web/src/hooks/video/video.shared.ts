@@ -112,5 +112,5 @@ export const brandOf = (brand: VideoBrandType): Brand => ({
 /** A command on one video project: it sends the project's id, reports `done` and hands the result to whoever asked. */
 export const projectCommandOf =
     <Result>(complete: VideoRefresh["complete"], send: (projectId: string) => Promise<Result>, done: string) =>
-    (projectId: string, onResult?: (result: Result | undefined) => void) =>
+    (projectId: string, onResult?: (result: Result | undefined) => void): Promise<Result | undefined> =>
         complete(() => send(projectId), done, onResult)

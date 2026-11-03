@@ -7,10 +7,11 @@ import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryZaloConnectionSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
-import type { AgentOption, WizardNote, ZaloWizardConnection } from "@/modules/types"
+import type { AgentOption, FirstEvent, DataSlot, WizardNote, WizardResume, ZaloWizardConnection } from "@/modules/types"
 import { canSaveOaSecret, ZALO_STEPS, zaloFailureOf, zaloStartStepOf, type ZaloFields } from "./zalo-wizard.shared"
 
 import { useZaloCommands, type ZaloCommands } from "./useZaloCommands"
+import type { SetStateAction, Dispatch } from "react"
 
 /** What the Zalo wizard needs from its drawer. */
 interface ZaloWizardInput {
@@ -23,11 +24,39 @@ interface ZaloWizardInput {
     readonly onClose: (changed: boolean) => void
 }
 
+type UseZaloWizardResult = {
+    reads: readonly SlotRead<unknown>[]
+    index: number
+    step: "app" | "follow" | "authorize" | "verify" | "agent"
+    fields: ZaloFields
+    conn: ZaloWizardConnection | null
+    note: WizardNote | null
+    isPending: boolean
+    resume: DataSlot<WizardResume>
+    firstEvent: FirstEvent | null
+    agentIds: readonly string[]
+    canSaveSecret: boolean
+    on: {
+        retry: () => void
+        go: (to: number) => void
+        create: () => void
+        saveSecret: () => void
+        authorize: () => void
+        finish: () => void
+        close: () => void
+        name: (name: string) => void
+        appId: (appId: string) => void
+        appSecret: (appSecret: string) => void
+        oaSecret: (oaSecret: string) => void
+        agents: Dispatch<SetStateAction<readonly string[]>>
+    }
+}
+
 /**
  * The Zalo wizard's state machine, like the bank one: name and app keys, set up the Zalo app (the OA Secret Key to paste), connect the
  * Official Account (the browser leaves for Zalo and comes back here), check (message the OA), attach to the agents.
  */
-export const useZaloWizard = (input: ZaloWizardInput) => {
+export const useZaloWizard = (input: ZaloWizardInput): UseZaloWizardResult => {
     const tw = useTranslations("connectionWizard")
     const commands = useZaloCommands()
     const setAgentsOf = useSetConnectionAgents()
@@ -81,7 +110,7 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
         agentIds,
         canSaveSecret: canSaveOaSecret(conn, fields),
         on: {
-            retry: () => {
+            retry: (): void => {
                 void resume.mutate()
             },
             go,
@@ -89,11 +118,11 @@ export const useZaloWizard = (input: ZaloWizardInput) => {
             saveSecret,
             authorize,
             finish,
-            close: () => input.onClose(conn !== null),
-            name: (name: string) => setFields((current) => ({ ...current, name })),
-            appId: (appId: string) => setFields((current) => ({ ...current, appId })),
-            appSecret: (appSecret: string) => setFields((current) => ({ ...current, appSecret })),
-            oaSecret: (oaSecret: string) => setFields((current) => ({ ...current, oaSecret })),
+            close: (): void => input.onClose(conn !== null),
+            name: (name: string): void => setFields((current) => ({ ...current, name })),
+            appId: (appId: string): void => setFields((current) => ({ ...current, appId })),
+            appSecret: (appSecret: string): void => setFields((current) => ({ ...current, appSecret })),
+            oaSecret: (oaSecret: string): void => setFields((current) => ({ ...current, oaSecret })),
             agents: setAgentIds,
         },
     }
@@ -126,7 +155,7 @@ const createZaloWizardActions = ({
     setAgentsOf,
     agentIds,
 }: ZaloWizardActionsInput) => {
-    const saveSecret = () => {
+    const saveSecret = (): void => {
         if (conn === null) return
         if (conn.oaSecretSaved && fields.oaSecret.trim() === "") return go(2)
         startTransition(async () => {
@@ -138,7 +167,7 @@ const createZaloWizardActions = ({
         })
     }
 
-    const authorize = () => {
+    const authorize = (): void => {
         if (conn === null) return
         startTransition(async () => {
             const answer = await commands.authorize(conn.id)
@@ -146,12 +175,12 @@ const createZaloWizardActions = ({
             window.location.assign(answer.value)
         })
     }
-    const go = (to: number) => {
+    const go = (to: number): void => {
         setNote(null)
         setIndex(to)
     }
     const fail = (message: string) => setNote({ tone: "negative", text: message })
-    const create = () => {
+    const create = (): void => {
         if (conn !== null) return go(1)
         startTransition(async () => {
             const answer = await commands.start(fields)
@@ -160,7 +189,7 @@ const createZaloWizardActions = ({
             go(1)
         })
     }
-    const finish = () => {
+    const finish = (): void => {
         if (conn === null) return input.onClose(false)
         startTransition(async () => {
             const answer = await setAgentsOf(conn.id, agentIds)

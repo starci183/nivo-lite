@@ -11,6 +11,8 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { decidedSalesRow, editsOf, pendingSalesRow } from "./salesdecisions.shared"
 import type { SalesDecisionsControllerInput } from "./salesdecisions.shared"
 
+import type { BadgeTone } from "@starci/grammar/common"
+
 type Decision = "approved" | "rejected"
 const FIELD_NAMES: ReadonlySet<string> = new Set(KNOWN_FIELDS)
 
@@ -67,13 +69,84 @@ const createSalesDecisionsState = (input: SalesDecisionsControllerInput) => {
     return { ...input, fieldLabel, decide }
 }
 
+type UseSalesDecisionsViewResult = {
+    props: {
+        pendingLabel: string
+        emptyTitle: string
+        emptyBody: string
+        decidedTitle: string
+        decidedBody: string
+        decidedEmptyTitle: string
+        decidedEmptyBody: string
+        pending: {
+            id: string
+            anchor: string
+            isFocused: boolean
+            badge: string
+            age: string
+            isStale: boolean
+            customer: string
+            leadHref: string | null
+            actionLabel: string
+            summary: string
+            reasonHint: string | null
+            amountLine: string | null
+            draft: string | null
+            canAct: boolean
+            assignedTo: string | null
+            missing: {
+                name: string
+                label: string
+                value: string
+            }[]
+            isEditing: boolean
+            draftValue: string
+            showDraftField: boolean
+            amountValue: string
+            showAmountField: boolean
+            canEdit: boolean
+            isBusy: boolean
+            isApproveBusy: boolean
+            isRejectBusy: boolean
+            isApproveDisabled: boolean
+            editLabel: string
+            error: string | null
+        }[]
+        decided: {
+            id: string
+            action: string
+            outcomeLabel: string
+            outcomeTone: BadgeTone
+            customer: string
+            href: string | null
+            byline: string
+            basis: string | null
+            rest: string | null
+        }[]
+        rowLabels: {
+            draftLabel: string
+            waitingManager: string
+            amountLabel: string
+            approveLabel: string
+            rejectLabel: string
+        }
+    }
+    on: {
+        field: (id: string, name: string, value: string) => void
+        draft: (id: string, value: string) => void
+        amount: (id: string, value: string) => void
+        toggleEdit: (id: string) => void
+        decide: (id: string, decision: Decision) => void
+    }
+}
+
 /** Owns the real pending-decision editor and historical display within its original tab lifetime. */
 export const useSalesDecisionsView = (
     data: SalesWorkbenchData | null,
     isActive: boolean,
     scope: string,
     focusId: string | null,
-) => {
+): UseSalesDecisionsViewResult => {
     const t = useTranslations("workbenchSales")
     const g = useTranslations("governance")
     const format = useFormatter()
@@ -144,7 +217,7 @@ export const useSalesDecisionsView = (
             draft: decisionForm.draft,
             amount: decisionForm.amount,
             toggleEdit: decisionForm.toggleEdit,
-            decide: (id: string, decision: Decision) => {
+            decide: (id: string, decision: Decision): void => {
                 context
                     .decide(id, decision)
                     .catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))

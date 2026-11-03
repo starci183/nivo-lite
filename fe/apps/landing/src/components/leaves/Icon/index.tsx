@@ -4,8 +4,79 @@ import * as Outline from "@heroicons/react/24/outline"
 import { Icon as GrammarIcon, IconTile } from "@starci/grammar/common"
 import type { IconUsage } from "@starci/grammar/common"
 
+import type { ForwardRefExoticComponent, ReactElement, RefAttributes, SVGProps } from "react"
+
+type GlyphsShape = {
+    readonly account: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly agentos: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly complete: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly next: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly notification: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly pending: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly review: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly search: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly send: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly support: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly wallet: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+}
+
 /** The glyphs the landing draws: one outline drawing per meaning. */
-const GLYPHS = {
+const GLYPHS: GlyphsShape = {
     account: Outline.UserCircleIcon,
     agentos: Outline.CpuChipIcon,
     complete: Outline.CheckCircleIcon,
@@ -35,7 +106,7 @@ type IconGlyphProps = {
 }
 
 /** The landing glyph, bare or on a neutral tile; the client boundary lets a server component hand over a NAME, never a glyph function. */
-export const IconGlyph = (props: IconGlyphProps) =>
+export const IconGlyph = (props: IconGlyphProps): ReactElement =>
     props.isTile ? (
         <IconTile source={iconGlyphOf(props.name)} tone="neutral" size="sm" />
     ) : (

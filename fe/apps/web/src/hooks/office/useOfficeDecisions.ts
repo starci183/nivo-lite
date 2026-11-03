@@ -12,8 +12,21 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import type { OfficeWorkDecision } from "@/modules/types"
 import { refreshOffice } from "./office.shared"
 
+type UseOfficeDecisionsResult = {
+    busyId: string | null
+    alreadyIds: readonly string[]
+    decideApproval: (
+        executionId: string,
+        decision: "approved" | "rejected",
+        editedDraft: string | null,
+    ) => Promise<void>
+    decideWork: (workItemId: string, choice: OfficeWorkDecision) => Promise<void>
+    confirmCommand: (candidateId: string) => Promise<void>
+    cancelCommand: (candidateId: string) => Promise<void>
+}
+
 /** The decisions of the Office: approvals, exceptions and command cards. `busyId` names the card being worked on. */
-export const useOfficeDecisions = () => {
+export const useOfficeDecisions = (): UseOfficeDecisionsResult => {
     const t = useTranslations("office")
     const runGraphQL = useGraphQLWithToast()
     const decideExecution = useMutateDecideExecutionSwr()
@@ -24,7 +37,7 @@ export const useOfficeDecisions = () => {
     const [alreadyIds, setAlreadyIds] = useState<ReadonlyArray<string>>([])
 
     const decideApproval = useCallback(
-        async (executionId: string, decision: "approved" | "rejected", editedDraft: string | null) => {
+        async (executionId: string, decision: "approved" | "rejected", editedDraft: string | null): Promise<void> => {
             setBusyId(executionId)
             const done = await runGraphQL(() => decideExecution.trigger({ executionId, decision, editedDraft }), {
                 successMessage: t(decision === "approved" ? "approvalSaved" : "rejectionSaved"),
@@ -36,7 +49,7 @@ export const useOfficeDecisions = () => {
     )
 
     const decideWork = useCallback(
-        async (workItemId: string, choice: OfficeWorkDecision) => {
+        async (workItemId: string, choice: OfficeWorkDecision): Promise<void> => {
             setBusyId(workItemId)
             const edits = {
                 draft: choice.draft,
@@ -61,7 +74,7 @@ export const useOfficeDecisions = () => {
     )
 
     const confirmCommand = useCallback(
-        async (candidateId: string) => {
+        async (candidateId: string): Promise<void> => {
             setBusyId(candidateId)
             const sent = await runGraphQL(() => confirm.trigger({ candidateId }), { successMessage: t("cmdSentBadge") })
             if (sent !== undefined) {
@@ -74,7 +87,7 @@ export const useOfficeDecisions = () => {
     )
 
     const cancelCommand = useCallback(
-        async (candidateId: string) => {
+        async (candidateId: string): Promise<void> => {
             setBusyId(candidateId)
             const done = await runGraphQL(() => cancel.trigger({ candidateId }), {
                 successMessage: t("cmdCancelledBadge"),

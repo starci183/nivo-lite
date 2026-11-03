@@ -1,7 +1,82 @@
 import type { ModuleDef } from "./catalog.types"
 
+type AccountingShape = {
+    key: "accounting"
+    order: number
+    icon: string
+    glyph: "moduleAccounting"
+    mascot: string
+    category: "finance"
+    status: "stable"
+    audience: "internal"
+    includedWithWorkspace: true
+    available: false
+    knowledgeFolder: string
+    workbench: string
+    settingsExtras: null
+    requires: {
+        capabilities: never[]
+        connections: never[]
+    }
+    connectionProviders: string[]
+    defaultOperatingMode: "assist"
+    multiInstance: false
+    gates: {
+        key: string
+    }[]
+    authorityActions: (
+        | {
+              action: "issue_invoice"
+              mode: "auto"
+              limitVnd: number
+              requiredFields: string[]
+              amountLimit: true
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "reconcile_payment"
+              mode: "auto"
+              limitVnd: number
+              requiredFields: string[]
+              amountLimit: true
+              maxMode: null
+              next: "send_care"[]
+          }
+        | {
+              action: "send_email"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: string[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+    )[]
+    accepts: (
+        | {
+              command: string
+              action: "issue_invoice"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "reconcile_payment"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "send_email"
+              subjectType: string
+              requiredFields: never[]
+          }
+    )[]
+}
+
 /** The accounting module. */
-export const ACCOUNTING = {
+export const ACCOUNTING: AccountingShape = {
     key: "accounting",
     order: 30,
     icon: "wallet",

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { TransitionStartFunction } from "react"
+import type { SetStateAction, Dispatch, TransitionStartFunction } from "react"
 import type { useTelegramUserForm } from "@/hooks/rhf"
 import type { LoginStage, SentVia } from "./telegram-user-wizard.shared"
 import type { TelegramUserCommands } from "./useTelegramUserCommands"
@@ -21,14 +21,26 @@ interface TelegramLoginInput {
     readonly onCancelled: () => void
 }
 
+type UseTelegramUserLoginResult = {
+    stage: LoginStage
+    connId: string | null
+    sentVia: SentVia | null
+    setStage: Dispatch<SetStateAction<LoginStage>>
+    sendCode: () => void
+    confirmCode: () => void
+    confirmPassword: () => void
+    resend: () => void
+    cancel: () => void
+}
+
 /** The phone, code and two-step password steps of the personal Telegram login; `setStage` resumes a login on the server. */
-export const useTelegramUserLogin = (input: TelegramLoginInput) => {
+export const useTelegramUserLogin = (input: TelegramLoginInput): UseTelegramUserLoginResult => {
     const { forms, commands, run, fail, onLoggedIn, onCancelled } = input
     const [stage, setStage] = useState<LoginStage>("phone")
     const [connId, setConnId] = useState<string | null>(input.resumeId ?? null)
     const [sentVia, setSentVia] = useState<SentVia | null>(null)
 
-    const sendCode = () =>
+    const sendCode = (): void =>
         run(async () => {
             const { name, consent } = forms.consent.getValues()
             const answer = await commands.start({
@@ -44,7 +56,7 @@ export const useTelegramUserLogin = (input: TelegramLoginInput) => {
             fail(null)
         })
 
-    const confirmCode = () =>
+    const confirmCode = (): void =>
         run(async () => {
             if (connId === null) return
             const answer = await commands.submitCode(connId, forms.code.getValues("code"))
@@ -57,7 +69,7 @@ export const useTelegramUserLogin = (input: TelegramLoginInput) => {
             onLoggedIn(connId)
         })
 
-    const confirmPassword = () =>
+    const confirmPassword = (): void =>
         run(async () => {
             if (connId === null) return
             const answer = await commands.submitPassword(connId, forms.password.getValues("password"))
@@ -65,7 +77,7 @@ export const useTelegramUserLogin = (input: TelegramLoginInput) => {
             onLoggedIn(connId)
         })
 
-    const resend = () =>
+    const resend = (): void =>
         run(async () => {
             if (connId === null) return
             const answer = await commands.resend(connId)
@@ -74,7 +86,7 @@ export const useTelegramUserLogin = (input: TelegramLoginInput) => {
             fail(null)
         })
 
-    const cancel = () =>
+    const cancel = (): void =>
         run(async () => {
             if (connId !== null) await commands.cancel(connId)
             onCancelled()

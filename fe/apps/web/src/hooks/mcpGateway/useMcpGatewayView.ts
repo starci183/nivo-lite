@@ -10,11 +10,14 @@ import { useFormatter, useTranslations } from "next-intl"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { connectorRowsOf } from "./mcpGateway.shared"
 import { argsWordsOf, constraintBadgesOf, modeWordOf, outcomeWordOf, toolNameOf } from "@/modules/mcpGateway"
-import type { McpBadgeView, McpFormatter, McpTone, McpToolRowView, McpTranslator } from "./mcpGateway.shared"
+import type { McpBadgeView, McpFormatter, McpTone, McpToolRowView, McpTranslator, McpConnectorRowView } from "./mcpGateway.shared"
 import { useMcpConnectorCommands } from "./useMcpConnectorCommands"
 import { useMcpConnectorForms } from "./useMcpConnectorForms"
 import { grantKeyOf, useMcpGrantCommands } from "@/hooks/mcpGrants"
 import type { McpToolAgentsOf } from "@/hooks/mcpGrants"
+
+import type { McpRegisterField } from "./useMcpConnectorForms"
+import type { DataSlot } from "@/modules/types"
 
 /** How many audit lines the Connections page shows. */
 const LOG_LIMIT = 20
@@ -83,13 +86,79 @@ const logRowsOf = (
         ],
     }))
 
+type UseMcpGatewayViewResult = {
+    /** The region is drawn for a manager once the page is ready, and only then is anything read. */
+    isShown: boolean
+    label: string
+    slot: DataSlot<{
+        cards: (
+            | {
+                  label: string
+                  emptyMessage: string
+                  emptyDescription: string
+                  rows: readonly McpConnectorRowView[]
+              }
+            | {
+                  label: string
+                  emptyMessage: string
+                  emptyDescription: string
+                  rows: readonly McpToolRowView[]
+              }
+        )[]
+    }>
+    labels: {
+        error: string
+        retry: string
+        empty: string
+        forbidden: string
+    }
+    forms: {
+        register: {
+            values: Readonly<Record<McpRegisterField, string>>
+            isPending: boolean
+            text: {
+                title: string
+                hint: string
+                key: string
+                keyHint: string
+                name: string
+                url: string
+                urlHint: string
+                contractVersion: string
+                credential: string
+                credentialHint: string
+                submit: string
+            }
+        }
+        credential: {
+            value: string
+            isPending: boolean
+            text: {
+                title: string
+                hint: string
+                label: string
+                submit: string
+                cancel: string
+            }
+        } | null
+    }
+    on: {
+        registerField: (field: McpRegisterField) => (value: string) => void
+        register: () => undefined
+        credentialChange: (value: string) => void
+        credentialSubmit: () => undefined
+        credentialClose: () => void
+    }
+    onRetry: () => void
+}
+
 /**
  * The MCP gateway region of the Connections page (owner | manager; nothing is read while `enabled` is false): the connectors behind
  * the workspace's one MCP endpoint with their pinned tools, approval, credential state and Set / Rotate credential, Test, Approve
  * and Check; the form that registers a remote connector (endpoint and credential, entered once); each agent's grants (default deny)
  * and the latest audited calls with secrets masked.
  */
-export const useMcpGatewayView = (enabled: boolean) => {
+export const useMcpGatewayView = (enabled: boolean): UseMcpGatewayViewResult => {
     const t = useTranslations("mcpGateway")
     const format = useFormatter()
     const slotLabelsOf = useSlotLabels()
@@ -152,7 +221,7 @@ export const useMcpGatewayView = (enabled: boolean) => {
         labels: { ...slotLabelsOf(t("connectorsEmpty")), error: t("failedTitle"), retry: t("retry") },
         forms: forms.view,
         on: forms.on,
-        onRetry: () => {
+        onRetry: (): void => {
             void connectors.mutate()
             void grants.mutate()
             void log.mutate()

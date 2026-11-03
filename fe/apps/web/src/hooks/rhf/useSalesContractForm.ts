@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { digitsToNumber } from "@/modules/utils"
 import type { SalesContractStatus } from "@/modules/types"
+import type { UseFormReturn } from "react-hook-form"
 
 /** What a person has typed into the contract form. */
 export interface ContractForm {
@@ -27,7 +28,7 @@ const STATUSES = ["active", "ended", "cancelled"] as const satisfies ReadonlyArr
 const isContractDay = (value: string): boolean => z.iso.date().safeParse(value).success
 
 /** Validates recurring contract values before the GraphQL save runs; `defaultValues` is the form of a new contract. */
-export const useSalesContractForm = (defaultValues: ContractForm) => {
+export const useSalesContractForm = (defaultValues: ContractForm): UseFormReturn<ContractForm> => {
     const t = useTranslations("workbenchSales")
     const schema = useMemo(
         () =>

@@ -1,7 +1,82 @@
 import type { ModuleDef } from "./catalog.types"
 
+type InventoryShape = {
+    key: "inventory"
+    order: number
+    icon: string
+    glyph: "moduleInventory"
+    mascot: string
+    category: "operations"
+    status: "early"
+    audience: "internal"
+    includedWithWorkspace: false
+    available: true
+    knowledgeFolder: string
+    workbench: string
+    settingsExtras: null
+    requires: {
+        capabilities: never[]
+        connections: never[]
+    }
+    connectionProviders: never[]
+    defaultOperatingMode: "assist"
+    multiInstance: false
+    gates: {
+        key: string
+    }[]
+    authorityActions: (
+        | {
+              action: "draft_purchase_order"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "send_purchase_order"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: string[]
+              amountLimit: true
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "adjust_stock"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+    )[]
+    accepts: (
+        | {
+              command: string
+              action: "draft_purchase_order"
+              subjectType: string
+              requiredFields: never[]
+          }
+        | {
+              command: string
+              action: "send_purchase_order"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "adjust_stock"
+              subjectType: string
+              requiredFields: string[]
+          }
+    )[]
+}
+
 /** The inventory module. */
-export const INVENTORY = {
+export const INVENTORY: InventoryShape = {
     key: "inventory",
     order: 60,
     icon: "servers",

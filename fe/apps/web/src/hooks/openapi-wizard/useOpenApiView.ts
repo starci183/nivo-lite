@@ -16,8 +16,62 @@ import type { useOpenApiWizard } from "./useOpenApiWizard"
 /** The state the view reads. */
 type OpenApiWizardState = ReturnType<typeof useOpenApiWizard>
 
+type UseOpenApiViewResult = {
+    steps: string[]
+    authOptions: {
+        id: "query" | "header" | "none" | "bearer" | "basic"
+        label: string
+    }[]
+    authText: {
+        baseUrl: string
+        baseUrlHint: string
+        auth: string
+        authName: string
+        authNameError: string | undefined
+        authValue: string
+        secretHint: string | undefined
+        user: string
+        password: string
+    }
+    entityOptions: {
+        id: "customer" | "order" | "product" | "transaction" | "other"
+        label: string
+    }[]
+    pullRows: {
+        id: string
+        label: string
+        description: string | undefined
+        isPullable: boolean
+        pull: {
+            opId: string
+            entity: "customer" | "order" | "product" | "transaction" | "other"
+            itemsPath: string
+            idField: string
+            titleField: string
+            fixedQuery: string
+        } | null
+        fixedQueryHint: string | null
+    }[]
+    tooMany: string | null
+    toolOptions: {
+        value: string
+        label: string
+        description: string | undefined
+    }[]
+    scheduleOptions: {
+        id: "manual" | "15" | "60" | "360" | "1440"
+        label: string
+    }[]
+    testOptions: {
+        id: string
+        label: string
+    }[]
+    testNote: WizardNote | null
+    testFields: string | null
+}
+
 /** The OpenAPI wizard's lists and computed lines in the reader's language: step names, options, operation rows and the test answer. */
-export const useOpenApiView = (wizard: OpenApiWizardState) => {
+export const useOpenApiView = (wizard: OpenApiWizardState): UseOpenApiViewResult => {
     const t = useTranslations("connectorOpenapi")
     const { auth, picks, test } = wizard
     const authType = auth.values.authType

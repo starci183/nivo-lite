@@ -7,8 +7,95 @@ import type { ContentChannel, ContentItem, LinkRef, MediaRef, Variants } from ".
 
 type EditorT = ReturnType<typeof useTranslations<"content">>
 
+type EditorSchemaResult = z.ZodObject<
+    {
+        title: z.ZodString
+        brief: z.ZodString
+        pillarId: z.ZodNullable<z.ZodString>
+        channels: z.ZodArray<
+            z.ZodEnum<{
+                facebook: "facebook"
+                zalo: "zalo"
+                tiktok: "tiktok"
+                instagram: "instagram"
+            }>
+        >
+        date: z.ZodString
+        time: z.ZodString
+        hint: z.ZodString
+        proof: z.ZodRecord<
+            z.ZodEnum<{
+                facebook: "facebook"
+                zalo: "zalo"
+                tiktok: "tiktok"
+                instagram: "instagram"
+            }> &
+                z.core.$partial,
+            z.ZodObject<
+                {
+                    url: z.ZodUnion<readonly [z.ZodLiteral<"">, z.ZodURL]>
+                    how: z.ZodString
+                },
+                z.core.$strip
+            >
+        >
+        variants: z.ZodRecord<
+            z.ZodEnum<{
+                facebook: "facebook"
+                zalo: "zalo"
+                tiktok: "tiktok"
+                instagram: "instagram"
+            }> &
+                z.core.$partial,
+            z.ZodObject<
+                {
+                    text: z.ZodString
+                    hashtags: z.ZodArray<z.ZodString>
+                    note: z.ZodString
+                },
+                z.core.$strip
+            >
+        >
+        tags: z.ZodRecord<
+            z.ZodEnum<{
+                facebook: "facebook"
+                zalo: "zalo"
+                tiktok: "tiktok"
+                instagram: "instagram"
+            }> &
+                z.core.$partial,
+            z.ZodString
+        >
+        media: z.ZodArray<
+            z.ZodObject<
+                {
+                    kind: z.ZodEnum<{
+                        media: "media"
+                        video_render: "video_render"
+                    }>
+                    path: z.ZodOptional<z.ZodString>
+                    id: z.ZodOptional<z.ZodString>
+                    name: z.ZodString
+                    suggested: z.ZodOptional<z.ZodBoolean>
+                },
+                z.core.$strip
+            >
+        >
+        links: z.ZodArray<
+            z.ZodObject<
+                {
+                    url: z.ZodUnion<readonly [z.ZodLiteral<"">, z.ZodURL]>
+                    label: z.ZodString
+                },
+                z.core.$strip
+            >
+        >
+    },
+    z.core.$strip
+>
+
 /** The validation schema of the post editor, with the messages of the content catalog. */
-export const editorSchema = (t: EditorT) => {
+export const editorSchema = (t: EditorT): EditorSchemaResult => {
     const channel = z.enum(["facebook", "zalo", "tiktok", "instagram"])
     const text = (max: number) => z.string().max(max, t("err_input"))
     return z.object({

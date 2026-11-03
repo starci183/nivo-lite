@@ -63,8 +63,47 @@ interface DrawerViewInput {
     readonly error: string | null
     readonly isPending: boolean
 }
+type ContractDrawerOfResult = {
+    title: string
+    closeLabel: string
+    saveLabel: string
+    cancelLabel: string
+    leadLabel: string
+    leadOptions: {
+        id: string
+        label: string
+    }[]
+    lead: string
+    customerLabel: string
+    customer: string
+    planLabel: string
+    planHint: string
+    plan: string
+    startLabel: string
+    start: string
+    endLabel: string
+    endHint: string
+    end: string
+    amountLabel: string
+    amount: string
+    statusLabel: string
+    statusOptions: {
+        id: SalesContractStatus
+        label: string
+    }[]
+    status: SalesContractStatus
+    noteLabel: string
+    note: string
+    error: string | null
+    isPending: boolean
+    canSave: boolean
+}
+
 /** The words and values of the contract drawer. */
-export const contractDrawerOf = (t: ReturnType<typeof useTranslations<"workbenchSales">>, input: DrawerViewInput) => {
+export const contractDrawerOf = (
+    t: ReturnType<typeof useTranslations<"workbenchSales">>,
+    input: DrawerViewInput,
+): ContractDrawerOfResult => {
     const { values } = input
     return {
         title: input.isEditing ? t("contractEditTitle") : t("contractAddTitle"),

@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { draftsFrom } from "@/modules/authority"
 import type { StoredRule, RuleDraft } from "@/modules/authority"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the limits form: the note and the required details of every action, by rule key. */
 export interface AuthorityLimitsValues {
@@ -11,8 +12,16 @@ export interface AuthorityLimitsValues {
     drafts: Record<string, RuleDraft>
 }
 
+type UseAuthorityLimitsFormResult = {
+    form: UseFormReturn<AuthorityLimitsValues>
+    stored: Record<string, RuleDraft>
+}
+
 /** The limits form over the stored note and rules; the stored values refill it when they change. */
-export const useAuthorityLimitsForm = (limitsNote: string, rules: ReadonlyArray<StoredRule>) => {
+export const useAuthorityLimitsForm = (
+    limitsNote: string,
+    rules: ReadonlyArray<StoredRule>,
+): UseAuthorityLimitsFormResult => {
     const stored = useMemo(() => draftsFrom(rules), [rules])
     const values = useMemo<AuthorityLimitsValues>(() => ({ limitsNote, drafts: stored }), [limitsNote, stored])
     return { form: useForm<AuthorityLimitsValues>({ values }), stored }

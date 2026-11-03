@@ -14,14 +14,75 @@ const onTimeoutSchema = z.looseObject({
     group: groupSchema.optional(),
 })
 
-const approverSchema = z.looseObject({
+type ApproverSchemaShape = z.ZodObject<
+    {
+        group: z.ZodObject<
+            {
+                roles: z.ZodArray<z.ZodString>
+                rooms: z.ZodArray<z.ZodString>
+                members: z.ZodArray<z.ZodString>
+            },
+            z.core.$loose
+        >
+        policy: z.ZodEnum<{
+            any: "any"
+            all: "all"
+            sequential: "sequential"
+        }>
+        timeoutMinutes: z.ZodNumber
+        onTimeout: z.ZodObject<
+            {
+                kind: z.ZodEnum<{
+                    backup: "backup"
+                    stop: "stop"
+                    agent_owner: "agent_owner"
+                    unset: "unset"
+                }>
+                group: z.ZodOptional<
+                    z.ZodObject<
+                        {
+                            roles: z.ZodArray<z.ZodString>
+                            rooms: z.ZodArray<z.ZodString>
+                            members: z.ZodArray<z.ZodString>
+                        },
+                        z.core.$loose
+                    >
+                >
+            },
+            z.core.$loose
+        >
+    },
+    z.core.$loose
+>
+
+const approverSchema: ApproverSchemaShape = z.looseObject({
     group: groupSchema,
     policy: z.enum(["any", "all", "sequential"]),
     timeoutMinutes: z.number(),
     onTimeout: onTimeoutSchema,
 })
 
-const sourceSchema = z.looseObject({
+type SourceSchemaShape = z.ZodObject<
+    {
+        kind: z.ZodEnum<{
+            brain: "brain"
+            template: "template"
+            chat: "chat"
+            learned: "learned"
+            owner: "owner"
+            rule: "rule"
+        }>
+        passage: z.ZodOptional<z.ZodString>
+        quote: z.ZodOptional<z.ZodString>
+        key: z.ZodOptional<z.ZodString>
+        memberId: z.ZodOptional<z.ZodString>
+        version: z.ZodOptional<z.ZodNumber>
+        action: z.ZodOptional<z.ZodString>
+    },
+    z.core.$loose
+>
+
+const sourceSchema: SourceSchemaShape = z.looseObject({
     kind: z.enum(["brain", "template", "chat", "learned", "owner", "rule"]),
     passage: z.string().optional(),
     quote: z.string().optional(),
@@ -39,8 +100,86 @@ const useSchema = z.looseObject({
 })
 const dataSchema = z.looseObject({ label: z.string(), place: z.string() })
 
+type BranchSchemaShape = z.ZodObject<
+    {
+        key: z.ZodString
+        when: z.ZodUnknown
+        then: z.ZodEnum<{
+            stop: "stop"
+            auto: "auto"
+            ask: "ask"
+        }>
+        next: z.ZodString
+        approver: z.ZodNullable<
+            z.ZodObject<
+                {
+                    group: z.ZodObject<
+                        {
+                            roles: z.ZodArray<z.ZodString>
+                            rooms: z.ZodArray<z.ZodString>
+                            members: z.ZodArray<z.ZodString>
+                        },
+                        z.core.$loose
+                    >
+                    policy: z.ZodEnum<{
+                        any: "any"
+                        all: "all"
+                        sequential: "sequential"
+                    }>
+                    timeoutMinutes: z.ZodNumber
+                    onTimeout: z.ZodObject<
+                        {
+                            kind: z.ZodEnum<{
+                                backup: "backup"
+                                stop: "stop"
+                                agent_owner: "agent_owner"
+                                unset: "unset"
+                            }>
+                            group: z.ZodOptional<
+                                z.ZodObject<
+                                    {
+                                        roles: z.ZodArray<z.ZodString>
+                                        rooms: z.ZodArray<z.ZodString>
+                                        members: z.ZodArray<z.ZodString>
+                                    },
+                                    z.core.$loose
+                                >
+                            >
+                        },
+                        z.core.$loose
+                    >
+                },
+                z.core.$loose
+            >
+        >
+        sources: z.ZodArray<
+            z.ZodObject<
+                {
+                    kind: z.ZodEnum<{
+                        brain: "brain"
+                        template: "template"
+                        chat: "chat"
+                        learned: "learned"
+                        owner: "owner"
+                        rule: "rule"
+                    }>
+                    passage: z.ZodOptional<z.ZodString>
+                    quote: z.ZodOptional<z.ZodString>
+                    key: z.ZodOptional<z.ZodString>
+                    memberId: z.ZodOptional<z.ZodString>
+                    version: z.ZodOptional<z.ZodNumber>
+                    action: z.ZodOptional<z.ZodString>
+                },
+                z.core.$loose
+            >
+        >
+        selfCorrected: z.ZodOptional<z.ZodBoolean>
+    },
+    z.core.$loose
+>
+
 /** A condition tree is read as it comes; only the branch editor looks inside it, and it writes a new one. */
-const branchSchema = z.looseObject({
+const branchSchema: BranchSchemaShape = z.looseObject({
     key: z.string(),
     when: z.unknown(),
     then: z.enum(["auto", "ask", "stop"]),
@@ -50,7 +189,220 @@ const branchSchema = z.looseObject({
     selfCorrected: z.boolean().optional(),
 })
 
-const nodeSchema = z.looseObject({
+type NodeSchemaShape = z.ZodObject<
+    {
+        key: z.ZodString
+        kind: z.ZodEnum<{
+            trigger: "trigger"
+            condition: "condition"
+            execute: "execute"
+            output: "output"
+        }>
+        step: z.ZodString
+        title: z.ZodString
+        doneBy: z.ZodEnum<{
+            agent: "agent"
+            nivo: "nivo"
+            person: "person"
+        }>
+        knows: z.ZodArray<
+            z.ZodObject<
+                {
+                    label: z.ZodString
+                    ref: z.ZodOptional<z.ZodString>
+                },
+                z.core.$loose
+            >
+        >
+        does: z.ZodString
+        uses: z.ZodArray<
+            z.ZodObject<
+                {
+                    label: z.ZodString
+                    tool: z.ZodOptional<z.ZodNullable<z.ZodString>>
+                    scope: z.ZodEnum<{
+                        read: "read"
+                        write: "write"
+                    }>
+                },
+                z.core.$loose
+            >
+        >
+        reads: z.ZodArray<
+            z.ZodObject<
+                {
+                    label: z.ZodString
+                    place: z.ZodString
+                },
+                z.core.$loose
+            >
+        >
+        writes: z.ZodArray<
+            z.ZodObject<
+                {
+                    label: z.ZodString
+                    place: z.ZodString
+                },
+                z.core.$loose
+            >
+        >
+        approver: z.ZodNullable<
+            z.ZodObject<
+                {
+                    group: z.ZodObject<
+                        {
+                            roles: z.ZodArray<z.ZodString>
+                            rooms: z.ZodArray<z.ZodString>
+                            members: z.ZodArray<z.ZodString>
+                        },
+                        z.core.$loose
+                    >
+                    policy: z.ZodEnum<{
+                        any: "any"
+                        all: "all"
+                        sequential: "sequential"
+                    }>
+                    timeoutMinutes: z.ZodNumber
+                    onTimeout: z.ZodObject<
+                        {
+                            kind: z.ZodEnum<{
+                                backup: "backup"
+                                stop: "stop"
+                                agent_owner: "agent_owner"
+                                unset: "unset"
+                            }>
+                            group: z.ZodOptional<
+                                z.ZodObject<
+                                    {
+                                        roles: z.ZodArray<z.ZodString>
+                                        rooms: z.ZodArray<z.ZodString>
+                                        members: z.ZodArray<z.ZodString>
+                                    },
+                                    z.core.$loose
+                                >
+                            >
+                        },
+                        z.core.$loose
+                    >
+                },
+                z.core.$loose
+            >
+        >
+        sources: z.ZodArray<
+            z.ZodObject<
+                {
+                    kind: z.ZodEnum<{
+                        brain: "brain"
+                        template: "template"
+                        chat: "chat"
+                        learned: "learned"
+                        owner: "owner"
+                        rule: "rule"
+                    }>
+                    passage: z.ZodOptional<z.ZodString>
+                    quote: z.ZodOptional<z.ZodString>
+                    key: z.ZodOptional<z.ZodString>
+                    memberId: z.ZodOptional<z.ZodString>
+                    version: z.ZodOptional<z.ZodNumber>
+                    action: z.ZodOptional<z.ZodString>
+                },
+                z.core.$loose
+            >
+        >
+        next: z.ZodArray<z.ZodString>
+        decide: z.ZodOptional<
+            z.ZodObject<
+                {
+                    intent: z.ZodString
+                    facts: z.ZodArray<z.ZodString>
+                    branches: z.ZodArray<
+                        z.ZodObject<
+                            {
+                                key: z.ZodString
+                                when: z.ZodUnknown
+                                then: z.ZodEnum<{
+                                    stop: "stop"
+                                    auto: "auto"
+                                    ask: "ask"
+                                }>
+                                next: z.ZodString
+                                approver: z.ZodNullable<
+                                    z.ZodObject<
+                                        {
+                                            group: z.ZodObject<
+                                                {
+                                                    roles: z.ZodArray<z.ZodString>
+                                                    rooms: z.ZodArray<z.ZodString>
+                                                    members: z.ZodArray<z.ZodString>
+                                                },
+                                                z.core.$loose
+                                            >
+                                            policy: z.ZodEnum<{
+                                                any: "any"
+                                                all: "all"
+                                                sequential: "sequential"
+                                            }>
+                                            timeoutMinutes: z.ZodNumber
+                                            onTimeout: z.ZodObject<
+                                                {
+                                                    kind: z.ZodEnum<{
+                                                        backup: "backup"
+                                                        stop: "stop"
+                                                        agent_owner: "agent_owner"
+                                                        unset: "unset"
+                                                    }>
+                                                    group: z.ZodOptional<
+                                                        z.ZodObject<
+                                                            {
+                                                                roles: z.ZodArray<z.ZodString>
+                                                                rooms: z.ZodArray<z.ZodString>
+                                                                members: z.ZodArray<z.ZodString>
+                                                            },
+                                                            z.core.$loose
+                                                        >
+                                                    >
+                                                },
+                                                z.core.$loose
+                                            >
+                                        },
+                                        z.core.$loose
+                                    >
+                                >
+                                sources: z.ZodArray<
+                                    z.ZodObject<
+                                        {
+                                            kind: z.ZodEnum<{
+                                                brain: "brain"
+                                                template: "template"
+                                                chat: "chat"
+                                                learned: "learned"
+                                                owner: "owner"
+                                                rule: "rule"
+                                            }>
+                                            passage: z.ZodOptional<z.ZodString>
+                                            quote: z.ZodOptional<z.ZodString>
+                                            key: z.ZodOptional<z.ZodString>
+                                            memberId: z.ZodOptional<z.ZodString>
+                                            version: z.ZodOptional<z.ZodNumber>
+                                            action: z.ZodOptional<z.ZodString>
+                                        },
+                                        z.core.$loose
+                                    >
+                                >
+                                selfCorrected: z.ZodOptional<z.ZodBoolean>
+                            },
+                            z.core.$loose
+                        >
+                    >
+                },
+                z.core.$loose
+            >
+        >
+    },
+    z.core.$loose
+>
+
+const nodeSchema: NodeSchemaShape = z.looseObject({
     key: z.string(),
     kind: kindSchema,
     step: z.string(),
@@ -69,9 +421,254 @@ const nodeSchema = z.looseObject({
         .optional(),
 })
 
-const documentSchema = z.looseObject({ nodes: z.array(nodeSchema), rights: z.array(z.unknown()) })
+type DocumentSchemaShape = z.ZodObject<
+    {
+        nodes: z.ZodArray<
+            z.ZodObject<
+                {
+                    key: z.ZodString
+                    kind: z.ZodEnum<{
+                        trigger: "trigger"
+                        condition: "condition"
+                        execute: "execute"
+                        output: "output"
+                    }>
+                    step: z.ZodString
+                    title: z.ZodString
+                    doneBy: z.ZodEnum<{
+                        agent: "agent"
+                        nivo: "nivo"
+                        person: "person"
+                    }>
+                    knows: z.ZodArray<
+                        z.ZodObject<
+                            {
+                                label: z.ZodString
+                                ref: z.ZodOptional<z.ZodString>
+                            },
+                            z.core.$loose
+                        >
+                    >
+                    does: z.ZodString
+                    uses: z.ZodArray<
+                        z.ZodObject<
+                            {
+                                label: z.ZodString
+                                tool: z.ZodOptional<z.ZodNullable<z.ZodString>>
+                                scope: z.ZodEnum<{
+                                    read: "read"
+                                    write: "write"
+                                }>
+                            },
+                            z.core.$loose
+                        >
+                    >
+                    reads: z.ZodArray<
+                        z.ZodObject<
+                            {
+                                label: z.ZodString
+                                place: z.ZodString
+                            },
+                            z.core.$loose
+                        >
+                    >
+                    writes: z.ZodArray<
+                        z.ZodObject<
+                            {
+                                label: z.ZodString
+                                place: z.ZodString
+                            },
+                            z.core.$loose
+                        >
+                    >
+                    approver: z.ZodNullable<
+                        z.ZodObject<
+                            {
+                                group: z.ZodObject<
+                                    {
+                                        roles: z.ZodArray<z.ZodString>
+                                        rooms: z.ZodArray<z.ZodString>
+                                        members: z.ZodArray<z.ZodString>
+                                    },
+                                    z.core.$loose
+                                >
+                                policy: z.ZodEnum<{
+                                    any: "any"
+                                    all: "all"
+                                    sequential: "sequential"
+                                }>
+                                timeoutMinutes: z.ZodNumber
+                                onTimeout: z.ZodObject<
+                                    {
+                                        kind: z.ZodEnum<{
+                                            backup: "backup"
+                                            stop: "stop"
+                                            agent_owner: "agent_owner"
+                                            unset: "unset"
+                                        }>
+                                        group: z.ZodOptional<
+                                            z.ZodObject<
+                                                {
+                                                    roles: z.ZodArray<z.ZodString>
+                                                    rooms: z.ZodArray<z.ZodString>
+                                                    members: z.ZodArray<z.ZodString>
+                                                },
+                                                z.core.$loose
+                                            >
+                                        >
+                                    },
+                                    z.core.$loose
+                                >
+                            },
+                            z.core.$loose
+                        >
+                    >
+                    sources: z.ZodArray<
+                        z.ZodObject<
+                            {
+                                kind: z.ZodEnum<{
+                                    brain: "brain"
+                                    template: "template"
+                                    chat: "chat"
+                                    learned: "learned"
+                                    owner: "owner"
+                                    rule: "rule"
+                                }>
+                                passage: z.ZodOptional<z.ZodString>
+                                quote: z.ZodOptional<z.ZodString>
+                                key: z.ZodOptional<z.ZodString>
+                                memberId: z.ZodOptional<z.ZodString>
+                                version: z.ZodOptional<z.ZodNumber>
+                                action: z.ZodOptional<z.ZodString>
+                            },
+                            z.core.$loose
+                        >
+                    >
+                    next: z.ZodArray<z.ZodString>
+                    decide: z.ZodOptional<
+                        z.ZodObject<
+                            {
+                                intent: z.ZodString
+                                facts: z.ZodArray<z.ZodString>
+                                branches: z.ZodArray<
+                                    z.ZodObject<
+                                        {
+                                            key: z.ZodString
+                                            when: z.ZodUnknown
+                                            then: z.ZodEnum<{
+                                                stop: "stop"
+                                                auto: "auto"
+                                                ask: "ask"
+                                            }>
+                                            next: z.ZodString
+                                            approver: z.ZodNullable<
+                                                z.ZodObject<
+                                                    {
+                                                        group: z.ZodObject<
+                                                            {
+                                                                roles: z.ZodArray<z.ZodString>
+                                                                rooms: z.ZodArray<z.ZodString>
+                                                                members: z.ZodArray<z.ZodString>
+                                                            },
+                                                            z.core.$loose
+                                                        >
+                                                        policy: z.ZodEnum<{
+                                                            any: "any"
+                                                            all: "all"
+                                                            sequential: "sequential"
+                                                        }>
+                                                        timeoutMinutes: z.ZodNumber
+                                                        onTimeout: z.ZodObject<
+                                                            {
+                                                                kind: z.ZodEnum<{
+                                                                    backup: "backup"
+                                                                    stop: "stop"
+                                                                    agent_owner: "agent_owner"
+                                                                    unset: "unset"
+                                                                }>
+                                                                group: z.ZodOptional<
+                                                                    z.ZodObject<
+                                                                        {
+                                                                            roles: z.ZodArray<z.ZodString>
+                                                                            rooms: z.ZodArray<z.ZodString>
+                                                                            members: z.ZodArray<z.ZodString>
+                                                                        },
+                                                                        z.core.$loose
+                                                                    >
+                                                                >
+                                                            },
+                                                            z.core.$loose
+                                                        >
+                                                    },
+                                                    z.core.$loose
+                                                >
+                                            >
+                                            sources: z.ZodArray<
+                                                z.ZodObject<
+                                                    {
+                                                        kind: z.ZodEnum<{
+                                                            brain: "brain"
+                                                            template: "template"
+                                                            chat: "chat"
+                                                            learned: "learned"
+                                                            owner: "owner"
+                                                            rule: "rule"
+                                                        }>
+                                                        passage: z.ZodOptional<z.ZodString>
+                                                        quote: z.ZodOptional<z.ZodString>
+                                                        key: z.ZodOptional<z.ZodString>
+                                                        memberId: z.ZodOptional<z.ZodString>
+                                                        version: z.ZodOptional<z.ZodNumber>
+                                                        action: z.ZodOptional<z.ZodString>
+                                                    },
+                                                    z.core.$loose
+                                                >
+                                            >
+                                            selfCorrected: z.ZodOptional<z.ZodBoolean>
+                                        },
+                                        z.core.$loose
+                                    >
+                                >
+                            },
+                            z.core.$loose
+                        >
+                    >
+                },
+                z.core.$loose
+            >
+        >
+        rights: z.ZodArray<z.ZodUnknown>
+    },
+    z.core.$loose
+>
 
-const cardSchema = z.object({
+const documentSchema: DocumentSchemaShape = z.looseObject({ nodes: z.array(nodeSchema), rights: z.array(z.unknown()) })
+
+type CardSchemaShape = z.ZodObject<
+    {
+        id: z.ZodString
+        description: z.ZodString
+        tone: z.ZodEnum<{
+            success: "success"
+            neutral: "neutral"
+            accent: "accent"
+            warning: "warning"
+            danger: "danger"
+            muted: "muted"
+        }>
+        shape: z.ZodEnum<{
+            rect: "rect"
+            round: "round"
+            diamond: "diamond"
+            stadium: "stadium"
+        }>
+        count: z.ZodString
+        isPlaceholder: z.ZodBoolean
+    },
+    z.core.$strip
+>
+
+const cardSchema: CardSchemaShape = z.object({
     id: z.string(),
     description: z.string(),
     tone: z.enum(["neutral", "accent", "success", "warning", "danger", "muted"]),
@@ -80,15 +677,59 @@ const cardSchema = z.object({
     isPlaceholder: z.boolean(),
 })
 
-const problemSchema = z.object({
+type ProblemSchemaShape = z.ZodObject<
+    {
+        code: z.ZodString
+        nodeKey: z.ZodString
+        branchKey: z.ZodNullable<z.ZodString>
+        detail: z.ZodString
+    },
+    z.core.$strip
+>
+
+const problemSchema: ProblemSchemaShape = z.object({
     code: z.string(),
     nodeKey: z.string(),
     branchKey: z.string().nullable(),
     detail: z.string(),
 })
-const gapSchema = z.object({ code: z.string(), nodeKey: z.string(), branchKey: z.string().nullable() })
+type GapSchemaShape = z.ZodObject<
+    {
+        code: z.ZodString
+        nodeKey: z.ZodString
+        branchKey: z.ZodNullable<z.ZodString>
+    },
+    z.core.$strip
+>
 
-const proposalSchema = z.object({
+const gapSchema: GapSchemaShape = z.object({ code: z.string(), nodeKey: z.string(), branchKey: z.string().nullable() })
+
+type ProposalSchemaShape = z.ZodObject<
+    {
+        id: z.ZodString
+        kind: z.ZodEnum<{
+            learned: "learned"
+            conflict: "conflict"
+            template_update: "template_update"
+        }>
+        status: z.ZodEnum<{
+            open: "open"
+            confirmed: "confirmed"
+            declined: "declined"
+            superseded: "superseded"
+        }>
+        nodeKey: z.ZodNullable<z.ZodString>
+        branchKey: z.ZodNullable<z.ZodString>
+        widens: z.ZodBoolean
+        evidence: z.ZodArray<z.ZodString>
+        createdAt: z.ZodString
+        before: z.ZodOptional<z.ZodNullable<z.ZodString>>
+        after: z.ZodOptional<z.ZodNullable<z.ZodString>>
+    },
+    z.core.$strip
+>
+
+const proposalSchema: ProposalSchemaShape = z.object({
     id: z.string(),
     kind: z.enum(["conflict", "learned", "template_update"]),
     status: z.enum(["open", "confirmed", "declined", "superseded"]),
@@ -101,7 +742,28 @@ const proposalSchema = z.object({
     after: z.string().nullable().optional(),
 })
 
-const factSchema = z.object({
+type FactSchemaShape = z.ZodObject<
+    {
+        key: z.ZodString
+        label: z.ZodString
+        type: z.ZodEnum<{
+            string: "string"
+            number: "number"
+            boolean: "boolean"
+        }>
+        unit: z.ZodNullable<
+            z.ZodEnum<{
+                count: "count"
+                vnd: "vnd"
+                percent: "percent"
+            }>
+        >
+        allowed: z.ZodArray<z.ZodString>
+    },
+    z.core.$strip
+>
+
+const factSchema: FactSchemaShape = z.object({
     key: z.string(),
     label: z.string(),
     type: z.enum(["number", "string", "boolean"]),
@@ -109,7 +771,25 @@ const factSchema = z.object({
     allowed: z.array(z.string()),
 })
 
-const traceSchema = z.array(
+type TraceSchemaShape = z.ZodArray<
+    z.ZodObject<
+        {
+            key: z.ZodString
+            title: z.ZodString
+            kind: z.ZodEnum<{
+                trigger: "trigger"
+                condition: "condition"
+                execute: "execute"
+                output: "output"
+            }>
+            step: z.ZodString
+            branchKey: z.ZodNullable<z.ZodString>
+        },
+        z.core.$strip
+    >
+>
+
+const traceSchema: TraceSchemaShape = z.array(
     z.object({
         key: z.string(),
         title: z.string(),

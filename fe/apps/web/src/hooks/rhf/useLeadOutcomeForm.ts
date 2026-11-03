@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The stage selection and its supporting evidence. */
 export interface LeadOutcomeValues {
@@ -13,7 +14,7 @@ export interface LeadOutcomeValues {
 }
 
 /** Every recorded stage change must include evidence. */
-export const useLeadOutcomeForm = () => {
+export const useLeadOutcomeForm = (): UseFormReturn<LeadOutcomeValues> => {
     const t = useTranslations("lead")
     const schema = useMemo(
         () =>

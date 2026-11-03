@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The longest offer name and offer text the form accepts. */
 export interface LoyaltyCampaignLimits {
@@ -25,7 +26,7 @@ export interface LoyaltyCampaignValues {
 const EMPTY: LoyaltyCampaignValues = { tiers: [], inactive: "", spend: "", birthday: false, name: "", brief: "" }
 
 /** The promotion form: a zod schema whose messages come from the `loyalty` catalog; the offer text is the only required field. */
-export const useLoyaltyCampaignForm = (limits: LoyaltyCampaignLimits) => {
+export const useLoyaltyCampaignForm = (limits: LoyaltyCampaignLimits): UseFormReturn<LoyaltyCampaignValues> => {
     const t = useTranslations("loyalty")
     const schema = useMemo(
         () =>

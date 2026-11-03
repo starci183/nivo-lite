@@ -11,7 +11,7 @@ import type { QueryChatMarkerStateRequest } from "@/modules/api/graphql/queries/
 export const QUERY_CHAT_MARKER_STATE_SWR_KEY = "QUERY_CHAT_MARKER_STATE_SWR"
 
 /** One target of the `chatMarkerState` query and what the back end answered for it. */
-interface ChatMarkerStateAnswer {
+export interface ChatMarkerStateAnswer {
     readonly request: QueryChatMarkerStateRequest
     readonly state: ChatMarkerWire | undefined
 }

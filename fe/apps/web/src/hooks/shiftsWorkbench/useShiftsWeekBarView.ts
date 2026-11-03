@@ -6,8 +6,112 @@ import type { ShiftsWeekViews, ShiftsWeekActions } from "@/modules/types"
 import { useShiftsWeekBarActions } from "./useShiftsWeekBarActions"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
 const WEEK_DAYS = 7
+type UseShiftsWeekBarViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly weekLabel: string
+                  readonly status: ShiftsWeekViews["weekBarWeekBarStatusView"]
+                  readonly prevLabel: string
+                  readonly nextLabel: string
+                  readonly todayLabel: string
+                  readonly proposeLabel: string
+                  readonly publishLabel: string
+                  readonly progress: string
+                  readonly isDraft: boolean
+                  readonly canPublish: boolean
+                  readonly isProposing: boolean
+                  readonly isPublishing: boolean
+                  readonly isDeciding: boolean
+                  readonly isIdle: boolean
+                  readonly empty: {
+                      readonly title: string
+                      readonly body: string
+                  } | null
+                  readonly waiting: {
+                      readonly title: string
+                      readonly description: string
+                      readonly approveLabel: string
+                      readonly declineLabel: string
+                  } | null
+              },
+              "weekLabel" | "status" | "isDraft" | "canPublish" | "empty" | "waiting"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly weekLabel: string
+                  readonly status: ShiftsWeekViews["weekBarWeekBarStatusView"]
+                  readonly prevLabel: string
+                  readonly nextLabel: string
+                  readonly todayLabel: string
+                  readonly proposeLabel: string
+                  readonly publishLabel: string
+                  readonly progress: string
+                  readonly isDraft: boolean
+                  readonly canPublish: boolean
+                  readonly isProposing: boolean
+                  readonly isPublishing: boolean
+                  readonly isDeciding: boolean
+                  readonly isIdle: boolean
+                  readonly empty: {
+                      readonly title: string
+                      readonly body: string
+                  } | null
+                  readonly waiting: {
+                      readonly title: string
+                      readonly description: string
+                      readonly approveLabel: string
+                      readonly declineLabel: string
+                  } | null
+              },
+              "weekLabel" | "status" | "isDraft" | "canPublish" | "empty" | "waiting"
+          >
+          data: Pick<
+              {
+                  readonly weekLabel: string
+                  readonly status: ShiftsWeekViews["weekBarWeekBarStatusView"]
+                  readonly prevLabel: string
+                  readonly nextLabel: string
+                  readonly todayLabel: string
+                  readonly proposeLabel: string
+                  readonly publishLabel: string
+                  readonly progress: string
+                  readonly isDraft: boolean
+                  readonly canPublish: boolean
+                  readonly isProposing: boolean
+                  readonly isPublishing: boolean
+                  readonly isDeciding: boolean
+                  readonly isIdle: boolean
+                  readonly empty: {
+                      readonly title: string
+                      readonly body: string
+                  } | null
+                  readonly waiting: {
+                      readonly title: string
+                      readonly description: string
+                      readonly approveLabel: string
+                      readonly declineLabel: string
+                  } | null
+              },
+              "weekLabel" | "status" | "isDraft" | "canPublish" | "empty" | "waiting"
+          >
+          on: {
+              readonly previous: () => void
+              readonly next: () => void
+              readonly today: () => void
+              readonly propose: () => void
+              readonly publish: () => void
+              readonly approve: () => void
+              readonly decline: () => void
+          }
+      }
+
 /** Resolves the unchanged week navigation, status and captured bar actions. */
-export const useShiftsWeekBarView = (input: ShiftsPanelInput) => {
+export const useShiftsWeekBarView = (input: ShiftsPanelInput): UseShiftsWeekBarViewResult => {
     const t = useTranslations("shifts"),
         format = useShiftsFormat()
     const setMonday = useShiftsWeekStore((state) => state.setMonday)

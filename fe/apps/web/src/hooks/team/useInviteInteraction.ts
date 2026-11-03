@@ -7,9 +7,25 @@ import type { InviteAction } from "@/modules/types"
 import type { InviteShown } from "@/modules/team"
 import { useCopyInviteLink } from "./useCopyInviteLink"
 import { useInviteCommands } from "./useInviteCommands"
+import type { SetStateAction, Dispatch } from "react"
+import type { InviteCommands } from "./useInviteCommands"
+
+type UseInviteInteractionResult = {
+    commands: InviteCommands
+    busyId: string | undefined
+    busyAction: InviteAction | null
+    shown: InviteShown | undefined
+    revokingId: string | undefined
+    resend: (id: string) => void
+    copyLink: (id: string) => void
+    confirmRevoke: () => void
+    revoke: Dispatch<SetStateAction<string | undefined>>
+    cancelRevoke: () => void
+    linkCopied: () => void
+}
 
 /** Owns invitation interaction; command refusals remain toasted by their existing command owner. */
-export const useInviteInteraction = () => {
+export const useInviteInteraction = (): UseInviteInteractionResult => {
     const commands = useInviteCommands()
     const copy = useCopyInviteLink()
     const tToast = useTranslations("toast")
@@ -21,7 +37,8 @@ export const useInviteInteraction = () => {
         toast.danger(tToast("errorTitle"), {
             description: error instanceof Error && error.message ? error.message : tToast("defaultError"),
         })
-    const linkCopied = () => setShown((current) => (current === undefined ? current : { ...current, isCopied: true }))
+    const linkCopied = (): void =>
+        setShown((current) => (current === undefined ? current : { ...current, isCopied: true }))
     const run = async <T>(
         id: string,
         action: InviteAction,
@@ -84,7 +101,7 @@ export const useInviteInteraction = () => {
         copyLink,
         confirmRevoke,
         revoke: setRevokingId,
-        cancelRevoke: () => setRevokingId(undefined),
+        cancelRevoke: (): void => setRevokingId(undefined),
         linkCopied,
     }
 }

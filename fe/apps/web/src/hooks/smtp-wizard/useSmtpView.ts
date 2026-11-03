@@ -15,8 +15,51 @@ interface SmtpViewInput {
     readonly needsPassword: boolean
 }
 
+type UseSmtpViewResult = {
+    presets: readonly SmtpOption[]
+    modes: readonly SmtpOption[]
+    guide: SmtpGuideView
+    account: SmtpAccountView
+    text: Readonly<
+        Record<
+            | "next"
+            | "done"
+            | "back"
+            | "close"
+            | "saveContinue"
+            | "testSend"
+            | "testSending"
+            | "chooseHint"
+            | "modeTitle"
+            | "stepsTitle"
+            | "cautionTitle"
+            | "fieldFromName"
+            | "fieldFromNameHint"
+            | "fieldFromEmail"
+            | "fieldFromEmailHint"
+            | "fieldReplyTo"
+            | "fieldReplyToHint"
+            | "fieldHost"
+            | "fieldPort"
+            | "fieldSecurity"
+            | "fieldUser"
+            | "fieldUserHint"
+            | "passwordStored"
+            | "notConnectedYet"
+            | "testToLabel"
+            | "testToHint"
+            | "makeDefault"
+            | "makeDefaultHint"
+            | "stepProvider",
+            string
+        >
+    >
+    sentNote: (to: string) => string
+    steps: string[]
+}
+
 /** The outgoing-email wizard's words in the reader's language: the provider lists, the chosen guide, the sender form and the fixed labels. */
-export const useSmtpView = (input: SmtpViewInput) => {
+export const useSmtpView = (input: SmtpViewInput): UseSmtpViewResult => {
     const t = useTranslations("email")
     const say = useTranslations("smtpPresets")
     const mode = modeOf(input.preset, input.choice.modeId)

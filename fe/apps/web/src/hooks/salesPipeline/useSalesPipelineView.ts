@@ -6,13 +6,37 @@ import { useLeadCommands } from "@/hooks/leads"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useSalesPipelineForm } from "@/hooks/rhf"
 import { DEAL_STAGES, stageWordOf } from "@/hooks/sales"
-import type { MoveDialogView, SalesWorkbenchData, LeadStageId } from "@/modules/types"
+import type { MoveDialogView, SalesWorkbenchData, LeadStageId, LaneView } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { createSalesPipelineState, isClosing, isStage, LANES, MIN_REASON_CHARS } from "./salesPipeline.shared"
 import type { PipelineOperation, SalesPipelineControllerInput } from "./salesPipeline.shared"
 
+type UseSalesPipelineViewResult = {
+    props: {
+        label: string
+        lanes: LaneView[]
+        emptyText: string
+        moveLabel: string
+        cancelLabel: string
+        confirmLabel: string
+        dialog: MoveDialogView | null
+        isPending: boolean
+    }
+    on: {
+        move: (leadId: string) => void
+        target: (value: string) => void
+        reason: (value: string) => void
+        confirm: () => void
+        close: () => void
+    }
+}
+
 /** Owns the original move dialog's form and command lifetime while the pipeline tab is present. */
-export const useSalesPipelineView = (data: SalesWorkbenchData | null, isActive: boolean, scope: string) => {
+export const useSalesPipelineView = (
+    data: SalesWorkbenchData | null,
+    isActive: boolean,
+    scope: string,
+): UseSalesPipelineViewResult => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
     const commands = useLeadCommands()
@@ -61,9 +85,9 @@ export const useSalesPipelineView = (data: SalesWorkbenchData | null, isActive: 
             isPending: context.isPending,
         },
         on: {
-            move: (leadId: string) => setMovingId(leadId),
-            target: (value: string) => form.setValue("target", isStage(value) ? value : ""),
-            reason: (value: string) => form.setValue("reason", value),
+            move: (leadId: string): void => setMovingId(leadId),
+            target: (value: string): void => form.setValue("target", isStage(value) ? value : ""),
+            reason: (value: string): void => form.setValue("reason", value),
             confirm: context.confirm,
             close: context.close,
         },

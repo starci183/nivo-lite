@@ -2,11 +2,13 @@ import { getFormatter, getTranslations } from "next-intl/server"
 import { FOUNDING_OFFER, LANDING_OFFER } from "@/hooks/landing"
 import { LandingFaqBase } from "./component"
 
+import type { ReactElement } from "react"
+
 /** Values the answers quote, by the placeholder names the catalog uses. */
 type FaqValues = Record<string, string | number>
 
 /** The landing FAQ with its copy and quoted numbers resolved on the server. */
-export const LandingFaq = async () => {
+export const LandingFaq = async (): Promise<ReactElement> => {
     const t = await getTranslations("landingBottom")
 
     const format = await getFormatter()

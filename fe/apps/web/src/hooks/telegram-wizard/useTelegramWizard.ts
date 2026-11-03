@@ -7,6 +7,7 @@ import { useSetConnectionAgents } from "@/hooks/connections"
 import type { AgentOption, WizardNote } from "@/modules/types"
 import { checkNoteOf, TELEGRAM_STEPS } from "./telegram-wizard.shared"
 import { useTelegramCommands } from "./useTelegramCommands"
+import type { SetStateAction, Dispatch } from "react"
 
 /** What the Telegram wizard needs from its drawer. */
 interface TelegramWizardInput {
@@ -15,11 +16,35 @@ interface TelegramWizardInput {
     readonly onClose: (changed: boolean) => void
 }
 
+type UseTelegramWizardResult = {
+    index: number
+    step: "check" | "bot" | "token" | "agent"
+    form: {
+        name: string
+        token: string
+    }
+    check: WizardNote | null
+    error: string | null
+    isPending: boolean
+    isChecking: boolean
+    agentIds: readonly string[]
+    on: {
+        go: (to: number) => void
+        connect: () => void
+        finish: () => void
+        retry: () => false | void
+        close: () => void
+        name: (name: string) => void
+        token: (token: string) => void
+        agents: Dispatch<SetStateAction<readonly string[]>>
+    }
+}
+
 /**
  * The Telegram wizard's state machine: BotFather steps, paste the token (the api checks it and registers the webhook), check the bot,
  * attach it to the agents. The connection is created when the token step ends; the check then runs by itself.
  */
-export const useTelegramWizard = (input: TelegramWizardInput) => {
+export const useTelegramWizard = (input: TelegramWizardInput): UseTelegramWizardResult => {
     const tc = useTranslations("connections")
     const commands = useTelegramCommands()
     const setAgentsOf = useSetConnectionAgents()
@@ -32,7 +57,7 @@ export const useTelegramWizard = (input: TelegramWizardInput) => {
     const [isPending, startTransition] = useTransition()
     const [isChecking, startChecking] = useTransition()
 
-    const go = (to: number) => {
+    const go = (to: number): void => {
         setError(null)
         setIndex(to)
     }
@@ -44,7 +69,7 @@ export const useTelegramWizard = (input: TelegramWizardInput) => {
             setCheck(answer.kind === "ok" ? checkNoteOf(answer.value, tc) : { tone: "negative", text: answer.message })
         })
 
-    const connect = () =>
+    const connect = (): void =>
         startTransition(async () => {
             const answer = await commands.connect(form)
             if (answer.kind !== "ok") return setError(answer.message)
@@ -53,7 +78,7 @@ export const useTelegramWizard = (input: TelegramWizardInput) => {
             runCheck(answer.value.connection.id)
         })
 
-    const finish = () =>
+    const finish = (): void =>
         startTransition(async () => {
             if (connectionId === null) return input.onClose(false)
             const answer = await setAgentsOf(connectionId, agentIds)
@@ -74,10 +99,10 @@ export const useTelegramWizard = (input: TelegramWizardInput) => {
             go,
             connect,
             finish,
-            retry: () => connectionId !== null && runCheck(connectionId),
-            close: () => input.onClose(connectionId !== null),
-            name: (name: string) => setForm((current) => ({ ...current, name })),
-            token: (token: string) => setForm((current) => ({ ...current, token })),
+            retry: (): false | void => connectionId !== null && runCheck(connectionId),
+            close: (): void => input.onClose(connectionId !== null),
+            name: (name: string): void => setForm((current) => ({ ...current, name })),
+            token: (token: string): void => setForm((current) => ({ ...current, token })),
             agents: setAgentIds,
         },
     }

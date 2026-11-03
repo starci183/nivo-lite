@@ -20,12 +20,40 @@ interface SmtpWizardInput {
 
 const FIRST_PRESET = SMTP_PRESETS[0]
 
+type UseSmtpWizardResult = {
+    index: number
+    step: "provider" | "guide" | "account" | "verify"
+    preset: SmtpPreset
+    choice: SmtpChoice
+    fields: SmtpFields
+    isLocked: boolean
+    isReady: boolean
+    needsPassword: boolean
+    test: SmtpTest
+    error: string | null
+    isPending: boolean
+    on: {
+        go: (to: number) => void
+        save: () => void
+        sendTest: () => void
+        close: (changed: boolean) => void
+        preset: (id: string) => void
+        mode: (id: string) => void
+        host: (host: string) => void
+        port: (port: string) => void
+        security: (security: Security) => void
+        field: (name: keyof SmtpFields, value: string) => void
+        testTo: (to: string) => void
+        makeDefault: (makeDefault: boolean) => void
+    }
+}
+
 /**
  * The outgoing-email wizard's state machine: 1 pick where the mailbox lives (host, port and security are prefilled), 2 a step-by-step
  * guide for a non-technical owner, 3 the sender details and password (stored encrypted, never shown again), 4 a test email: the connection
  * becomes active only after one test email is really sent.
  */
-export const useSmtpWizard = (input: SmtpWizardInput) => {
+export const useSmtpWizard = (input: SmtpWizardInput): UseSmtpWizardResult => {
     const commands = useSmtpCommands()
     const [index, setIndex] = useState(0)
     const [choice, setChoice] = useState<SmtpChoice>(choiceOf(FIRST_PRESET, FIRST_PRESET.modes[0].id))
@@ -43,12 +71,12 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
     const fields: SmtpFields = form.watch()
     const { setValue } = form
 
-    const go = (to: number) => {
+    const go = (to: number): void => {
         setError(null)
         setIndex(to)
     }
 
-    const save = () => {
+    const save = (): void => {
         if (conn !== null) return go(3)
         startTransition(async () => {
             const answer = await commands.start(callbackOf(preset, choice, fields))
@@ -59,7 +87,7 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
         })
     }
 
-    const sendTest = () => {
+    const sendTest = (): void => {
         if (conn === null) return
         startTransition(async () => {
             setError(null)
@@ -85,16 +113,16 @@ export const useSmtpWizard = (input: SmtpWizardInput) => {
             go,
             save,
             sendTest,
-            close: (changed: boolean) => input.onClose(changed),
-            preset: (id: string) => setChoice(choiceOf(presetOrFirst(id), presetOrFirst(id).modes[0].id)),
-            mode: (id: string) => setChoice(choiceOf(preset, id)),
-            host: (host: string) => setChoice((current) => ({ ...current, host })),
-            port: (port: string) => setChoice((current) => ({ ...current, port })),
-            security: (security: Security) => setChoice((current) => ({ ...current, security })),
-            field: (name: keyof SmtpFields, value: string) =>
+            close: (changed: boolean): void => input.onClose(changed),
+            preset: (id: string): void => setChoice(choiceOf(presetOrFirst(id), presetOrFirst(id).modes[0].id)),
+            mode: (id: string): void => setChoice(choiceOf(preset, id)),
+            host: (host: string): void => setChoice((current) => ({ ...current, host })),
+            port: (port: string): void => setChoice((current) => ({ ...current, port })),
+            security: (security: Security): void => setChoice((current) => ({ ...current, security })),
+            field: (name: keyof SmtpFields, value: string): void =>
                 setValue(name, value, { shouldValidate: true, shouldDirty: true }),
-            testTo: (to: string) => setTest((current) => ({ ...current, to })),
-            makeDefault: (makeDefault: boolean) => setTest((current) => ({ ...current, makeDefault })),
+            testTo: (to: string): void => setTest((current) => ({ ...current, to })),
+            makeDefault: (makeDefault: boolean): void => setTest((current) => ({ ...current, makeDefault })),
         },
     }
 }

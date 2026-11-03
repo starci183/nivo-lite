@@ -3,6 +3,8 @@ import { FOUNDING_OFFER, LANDING_ANCHORS } from "@/hooks/landing"
 import { CONSOLE_PAGES, appHref } from "@/modules/routes"
 import { LandingHeroBase } from "./component"
 
+import type { ReactElement } from "react"
+
 /** Demo avatars and badge tones of the hero card rows. */
 const HERO_ROWS = [
     { id: "first", name: "Minh", badgeTone: "warning" },
@@ -10,7 +12,7 @@ const HERO_ROWS = [
 ] as const
 
 /** The landing hero with its copy resolved on the server. */
-export const LandingHero = async () => {
+export const LandingHero = async (): Promise<ReactElement> => {
     const t = await getTranslations("landing")
 
     const locale = await getLocale()

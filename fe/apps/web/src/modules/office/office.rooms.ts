@@ -1,4 +1,5 @@
 import type {
+    OfficeAvatarView,
     OfficeChannelRowView,
     OfficePinRowView,
     OfficeResultCardView,
@@ -289,8 +290,18 @@ export const resultCardView = (
     }
 }
 
+type PendingCardRowsOfResult = {
+    id: string
+    title: string
+    subtitle: string
+    avatar: OfficeAvatarView
+}[]
+
 /** The pending result cards of the shown lines, as jump rows of the right panel. */
-export const pendingCardRowsOf = (messages: ReadonlyArray<OfficeMessage>, context: OfficeContext) =>
+export const pendingCardRowsOf = (
+    messages: ReadonlyArray<OfficeMessage>,
+    context: OfficeContext,
+): PendingCardRowsOfResult =>
     messages
         .filter((message) => message.card !== null && message.cardState === "pending")
         .map((message) => ({

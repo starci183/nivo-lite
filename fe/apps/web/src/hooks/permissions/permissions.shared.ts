@@ -16,28 +16,28 @@ interface PermissionEditTargets {
 export const permissionEditsOf = (targets: PermissionEditTargets) => {
     const { change, editGrant } = targets
     return {
-        agents: (ids: ReadonlyArray<string>) => change({ agents: ids }),
-        strategy: (value: string) => {
+        agents: (ids: ReadonlyArray<string>): void => change({ agents: ids }),
+        strategy: (value: string): void => {
             const strategy = STRATEGIES.find((one) => one === value)
             if (strategy !== undefined) change({ strategy })
         },
-        unit: (value: string | null) =>
+        unit: (value: string | null): void =>
             change({ unit: ruleUnitOf(value ?? ""), autoMax: Number.NaN, askMax: Number.NaN }),
-        autoMax: (value: number) => change({ autoMax: value }),
-        askMax: (value: number) => change({ askMax: value }),
-        slider: (values: ReadonlyArray<number>) =>
+        autoMax: (value: number): void => change({ autoMax: value }),
+        askMax: (value: number): void => change({ askMax: value }),
+        slider: (values: ReadonlyArray<number>): void =>
             change({ autoMax: values[0] ?? Number.NaN, askMax: values[1] ?? Number.NaN }),
-        roles: (ids: ReadonlyArray<string>) => change({ roles: ids.flatMap((id) => approverRoleOf(id) ?? []) }),
-        rooms: (ids: ReadonlyArray<string>) => change({ rooms: ids }),
-        members: (ids: ReadonlyArray<string>) => change({ members: orderedPick(targets.members, ids) }),
-        policy: (value: string) => change({ policy: approvalPolicyOf(value) }),
-        timeout: (value: string | null) => {
+        roles: (ids: ReadonlyArray<string>): void => change({ roles: ids.flatMap((id) => approverRoleOf(id) ?? []) }),
+        rooms: (ids: ReadonlyArray<string>): void => change({ rooms: ids }),
+        members: (ids: ReadonlyArray<string>): void => change({ members: orderedPick(targets.members, ids) }),
+        policy: (value: string): void => change({ policy: approvalPolicyOf(value) }),
+        timeout: (value: string | null): void => {
             const minutes = Number(value)
             if (TIMEOUT_CHOICES.includes(minutes)) change({ timeoutMinutes: minutes })
         },
-        grantEnabled: (memberId: string, enabled: boolean) =>
+        grantEnabled: (memberId: string, enabled: boolean): void =>
             editGrant(memberId, (known) => ({ memberId, enabled, max: known?.max ?? Number.NaN })),
-        grantMax: (memberId: string, max: number) =>
+        grantMax: (memberId: string, max: number): void =>
             editGrant(memberId, (known) => ({ memberId, enabled: known?.enabled ?? true, max })),
     }
 }

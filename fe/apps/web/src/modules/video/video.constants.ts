@@ -51,7 +51,7 @@ export const MEDIA_BUCKET = "media"
 export const VIDEOS_BUCKET = "videos"
 
 /** The biggest asset one render reads, in bytes. */
-export const MEDIA_MAX_BYTES = 50 * 1024 * 1024
+export const MEDIA_MAX_BYTES: number = 50 * 1024 * 1024
 
 /** The file types the media bucket accepts. */
 export const MEDIA_MIME = [
@@ -76,7 +76,7 @@ export const TARGET_SECONDS_MAX = 90
 export const LIBRARY_LIMIT = 60
 
 /** How long a script may be written before the project is called stuck, in milliseconds. */
-export const SCRIPT_STALE_MS = 5 * 60_000
+export const SCRIPT_STALE_MS: number = 5 * 60_000
 
 /** The default voice. */
 export const DEFAULT_VOICE: TtsVoice = "vi-VN-HoaiMyNeural"

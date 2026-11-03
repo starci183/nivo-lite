@@ -9,11 +9,16 @@ interface FeatureIdentity {
 interface FeatureActivation {
     readonly identity: FeatureIdentity
 }
+type UseFeatureLifetimeResult = {
+    identity: FeatureIdentity
+    capture: () => () => boolean
+}
+
 /**
  * Captures local completion ownership at event start. Render consumes only identity; liveness is read only by event and
  * settlement code. Retiring an activation never cancels its remote effect or normal feedback and revalidation.
  */
-export const useFeatureLifetime = (isActive: boolean, scope: string) => {
+export const useFeatureLifetime = (isActive: boolean, scope: string): UseFeatureLifetimeResult => {
     const [identity, setIdentity] = useState<FeatureIdentity>({ isActive, scope })
     if (identity.isActive !== isActive || identity.scope !== scope) {
         setIdentity({ isActive, scope })
@@ -34,7 +39,7 @@ export const useFeatureLifetime = (isActive: boolean, scope: string) => {
         identity,
         capture: () => {
             const captured = activation.current
-            return () => captured !== null && captured.identity === identity && activation.current === captured
+            return (): boolean => captured !== null && captured.identity === identity && activation.current === captured
         },
     }
 }

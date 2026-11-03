@@ -12,8 +12,13 @@ const pageOf = (data: PublicBookingPageData): PublicBookingPageData => ({
     services: data.services.map((service) => ({ ...service, priceVnd: service.priceVnd ?? null })),
 })
 
+type UsePublicBookingPageResult = {
+    data: PublicBookingPageData | null | undefined
+    failed: boolean
+}
+
 /** Loads a shop anonymously and follows the existing client document-title convention. */
-export const usePublicBookingPage = (slug: string) => {
+export const usePublicBookingPage = (slug: string): UsePublicBookingPageResult => {
     const query = useQueryPublicBookingPageSwr({ slug })
     const missing = isNotFoundFailure(query.error)
     const data = query.data == null ? query.data : pageOf(query.data)

@@ -3,8 +3,14 @@
 import { useTranslations } from "next-intl"
 import type { SepayConnectionView } from "@/modules/types"
 
+type UseSepaySettingsResult = {
+    id: string
+    label: string
+    value: string
+}[]
+
 /** The settings to set on the SePay webhook, worded for this connection. */
-export const useSepaySettings = (connection: SepayConnectionView | undefined) => {
+export const useSepaySettings = (connection: SepayConnectionView | undefined): UseSepaySettingsResult => {
     const t = useTranslations("sepayConnection")
     return [
         { id: "name", label: t("settingName"), value: t("settingNameValue", { name: connection?.name ?? "" }) },

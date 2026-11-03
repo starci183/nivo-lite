@@ -1,6 +1,7 @@
 "use client"
 
 import { create } from "zustand"
+import type { UseBoundStore, StoreApi } from "zustand"
 
 /** An approval stays locked across workbench remounts until the backend reports its terminal result. */
 interface LeadGenApproval {
@@ -22,57 +23,59 @@ interface LeadGenApprovalStore {
 }
 
 /** Browser-lifetime state of public-reply approvals, scoped by workspace and signed-in user, independent of each instance's editor. */
-export const useLeadGenApprovalStore = create<LeadGenApprovalStore>((set, get) => ({
-    approvals: {},
-    claim: (scopeId, workItemId) => {
-        if (get().approvals[scopeId]?.pending) return false
-        set((state) => ({
-            approvals: {
-                ...state.approvals,
-                [scopeId]: { workItemId, requesting: true, pending: true, readErrorReported: false },
-            },
-        }))
-        return true
-    },
-    accepted: (scopeId, workItemId, jobId) =>
-        set((state) => {
-            const approval = state.approvals[scopeId]
-            if (!approval?.requesting || approval.workItemId !== workItemId) return state
-            return {
+export const useLeadGenApprovalStore: UseBoundStore<StoreApi<LeadGenApprovalStore>> = create<LeadGenApprovalStore>(
+    (set, get) => ({
+        approvals: {},
+        claim: (scopeId, workItemId) => {
+            if (get().approvals[scopeId]?.pending) return false
+            set((state) => ({
                 approvals: {
                     ...state.approvals,
-                    [scopeId]: { ...approval, jobId, requesting: false },
+                    [scopeId]: { workItemId, requesting: true, pending: true, readErrorReported: false },
                 },
-            }
-        }),
-    refused: (scopeId, workItemId) =>
-        set((state) => {
-            const approval = state.approvals[scopeId]
-            if (!approval?.requesting || approval.workItemId !== workItemId) return state
-            return {
+            }))
+            return true
+        },
+        accepted: (scopeId, workItemId, jobId) =>
+            set((state) => {
+                const approval = state.approvals[scopeId]
+                if (!approval?.requesting || approval.workItemId !== workItemId) return state
+                return {
+                    approvals: {
+                        ...state.approvals,
+                        [scopeId]: { ...approval, jobId, requesting: false },
+                    },
+                }
+            }),
+        refused: (scopeId, workItemId) =>
+            set((state) => {
+                const approval = state.approvals[scopeId]
+                if (!approval?.requesting || approval.workItemId !== workItemId) return state
+                return {
+                    approvals: {
+                        ...state.approvals,
+                        [scopeId]: { ...approval, requesting: false, pending: false },
+                    },
+                }
+            }),
+        reportReadError: (scopeId, jobId) => {
+            const approval = get().approvals[scopeId]
+            if (!approval?.pending || approval.jobId !== jobId || approval.readErrorReported) return false
+            set((state) => ({
+                approvals: { ...state.approvals, [scopeId]: { ...approval, readErrorReported: true } },
+            }))
+            return true
+        },
+        finish: (scopeId, jobId, status) => {
+            const approval = get().approvals[scopeId]
+            if (approval?.jobId !== jobId || approval.terminalReported === status) return false
+            set((state) => ({
                 approvals: {
                     ...state.approvals,
-                    [scopeId]: { ...approval, requesting: false, pending: false },
+                    [scopeId]: { ...approval, pending: false, terminalReported: status },
                 },
-            }
-        }),
-    reportReadError: (scopeId, jobId) => {
-        const approval = get().approvals[scopeId]
-        if (!approval?.pending || approval.jobId !== jobId || approval.readErrorReported) return false
-        set((state) => ({
-            approvals: { ...state.approvals, [scopeId]: { ...approval, readErrorReported: true } },
-        }))
-        return true
-    },
-    finish: (scopeId, jobId, status) => {
-        const approval = get().approvals[scopeId]
-        if (approval?.jobId !== jobId || approval.terminalReported === status) return false
-        set((state) => ({
-            approvals: {
-                ...state.approvals,
-                [scopeId]: { ...approval, pending: false, terminalReported: status },
-            },
-        }))
-        return true
-    },
-}))
+            }))
+            return true
+        },
+    }),
+)

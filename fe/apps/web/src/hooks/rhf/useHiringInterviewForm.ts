@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import type { InterviewValues } from "@/hooks/hiringCandidate"
+import type { UseFormReturn } from "react-hook-form"
 
 const schema = z.object({
     interviewerUserId: z.string(),
@@ -13,5 +14,5 @@ const schema = z.object({
 })
 
 /** The interview request form: who interviews, how, where and for how long. */
-export const useHiringInterviewForm = (defaults: InterviewValues) =>
+export const useHiringInterviewForm = (defaults: InterviewValues): UseFormReturn<InterviewValues> =>
     useForm<InterviewValues>({ resolver: zodResolver(schema), values: defaults, mode: "onChange" })

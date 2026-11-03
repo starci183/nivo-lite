@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { SCRIPT_MAX_SCENES } from "@/modules/video"
 import type { ScriptScene } from "@/modules/video"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The scenes edited before rendering a video. */
 export interface VideoScriptValues {
@@ -15,7 +16,7 @@ export interface VideoScriptValues {
 }
 
 /** Validates edited scenes with localized messages before they are saved or rendered. */
-export const useVideoScriptForm = (initial: ReadonlyArray<ScriptScene>) => {
+export const useVideoScriptForm = (initial: ReadonlyArray<ScriptScene>): UseFormReturn<VideoScriptValues> => {
     const t = useTranslations("video")
     const schema = useMemo(() => {
         const error = t("err_default")

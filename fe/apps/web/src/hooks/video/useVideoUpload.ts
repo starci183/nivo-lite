@@ -6,8 +6,13 @@ import { useMutateCreateVideoMediaUploadSwr, QUERY_VIDEO_MEDIA_SWR_KEY, usePutPr
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
 
+type UseVideoUploadResult = {
+    upload: (files: ReadonlyArray<File>) => Promise<string[]>
+    isMutating: boolean
+}
+
 /** Uploads directly to the storage URL supplied by GraphQL, then refreshes the active workspace's media library. */
-export const useVideoUpload = () => {
+export const useVideoUpload = (): UseVideoUploadResult => {
     const t = useTranslations("video")
     const runGraphQL = useGraphQLWithToast()
     const runRest = useRestWithToast()
@@ -24,7 +29,7 @@ export const useVideoUpload = () => {
         })
         return sent === null ? undefined : ticket.path
     }
-    const upload = async (files: ReadonlyArray<File>) => {
+    const upload = async (files: ReadonlyArray<File>): Promise<string[]> => {
         const results = await Promise.all(files.map(uploadOne))
         const paths = results.filter((path): path is string => path !== undefined)
         await mutate((key) => Array.isArray(key) && key[0] === QUERY_VIDEO_MEDIA_SWR_KEY && key[1] === workspaceId)

@@ -6,8 +6,18 @@ import { toRowModels } from "@/hooks/overviewRows"
 import { realResponsibilities } from "./overview.shared"
 import { useOverviewData } from "./useOverviewData"
 
+import type { ResponsibilityRowModel } from "../overviewRows/overviewRows.shared"
+
+type UseOverviewRowsResult =
+    | {
+          now: Date
+          rows: ResponsibilityRowModel[]
+          active: ResponsibilityRowModel[]
+      }
+    | undefined
+
 /** The open responsibilities of the workspace resolved for display, test runs left out; undefined until the dashboard is read. */
-export const useOverviewRows = () => {
+export const useOverviewRows = (): UseOverviewRowsResult => {
     const t = useTranslations("responsibilities")
     const { dashboard } = useOverviewData()
     return useMemo(() => {

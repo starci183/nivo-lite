@@ -13,6 +13,7 @@ import {
     WORKSPACE_NAME_MIN,
 } from "@/hooks/workspaces"
 import type { WorkspaceBusinessType } from "@/hooks/workspaces"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the create workspace form. */
 export interface WorkspaceCreateValues {
@@ -23,7 +24,7 @@ export interface WorkspaceCreateValues {
 }
 
 /** The create workspace form: a zod schema whose messages come from the `onboarding` catalog, validated before the mutation runs. */
-export const useWorkspaceCreateForm = () => {
+export const useWorkspaceCreateForm = (): UseFormReturn<WorkspaceCreateValues> => {
     const t = useTranslations("onboarding")
     const schema = useMemo(
         () =>

@@ -24,5 +24,5 @@ export const FOUNDING_OFFER: FoundingOffer = {
 }
 
 /** True while the campaign is switched on and `now` (epoch milliseconds) is inside its window. */
-export const isOfferLive = (now = Date.now()): boolean =>
+export const isOfferLive = (now: number = Date.now()): boolean =>
     FOUNDING_OFFER.enabled && now >= Date.parse(FOUNDING_OFFER.startsAt) && now <= Date.parse(FOUNDING_OFFER.endsAt)

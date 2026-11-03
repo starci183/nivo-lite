@@ -17,6 +17,12 @@ export interface ChatbotTextFormOptions {
     readonly scope?: string
 }
 
+type UseChatbotTextFormResult = {
+    error: string | null
+    setDraft: (text: string) => void
+    submit: (e?: React.BaseSyntheticEvent) => Promise<void>
+}
+
 /** Validates a reply or an escalation answer with the same text limits as the GraphQL input. Drafts stay with their conversation. */
 export const useChatbotTextForm = ({
     draft,
@@ -25,7 +31,7 @@ export const useChatbotTextForm = ({
     onSubmit,
     isActive = true,
     scope,
-}: ChatbotTextFormOptions) => {
+}: ChatbotTextFormOptions): UseChatbotTextFormResult => {
     const t = useTranslations("workbenchChatbot")
     const schema = z.object({ text: z.string().trim().min(1, t("emptyReply")).max(4000, t(tooLong)) })
     const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema), values: { text: draft } })
@@ -33,7 +39,7 @@ export const useChatbotTextForm = ({
     useFeatureReset({ isActive, isReady: true, scope: scope ?? "", onReset: reset })
     return {
         error: form.formState.errors.text?.message ?? null,
-        setDraft: (text: string) => {
+        setDraft: (text: string): void => {
             form.setValue("text", text, { shouldValidate: form.formState.isSubmitted })
             onDraft(text)
         },

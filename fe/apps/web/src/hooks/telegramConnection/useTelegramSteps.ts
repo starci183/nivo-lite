@@ -7,11 +7,22 @@ import type { TelegramStepId } from "./telegramConnection.shared"
 import { useTelegramChecks } from "./useTelegramChecks"
 import { useTelegramPage } from "./useTelegramPage"
 
+type UseTelegramStepsResult = {
+    steps: {
+        id: TelegramStepId
+        title: string
+        hint: string
+        summary: string
+        isOpen: boolean
+    }[]
+    toggle: (id: string, isOpen: boolean) => void
+}
+
 /**
  * The four setup steps of a Telegram bot connection in back end order (the bot and its token, the webhook NIVO registers, the check,
  * the agents): each says whether it is done, the first step not done opens on its own, and the reader opens or closes any step.
  */
-export const useTelegramSteps = (connectionId: string) => {
+export const useTelegramSteps = (connectionId: string): UseTelegramStepsResult => {
     const t = useTranslations("telegramConnection")
     const { slot } = useTelegramPage(connectionId)
     const { lines } = useTelegramChecks(connectionId)
@@ -52,5 +63,8 @@ export const useTelegramSteps = (connectionId: string) => {
         summary: page === undefined ? "" : wording[id].summary,
         isOpen: toggled[id] ?? id === opensOn,
     }))
-    return { steps, toggle: (id: string, isOpen: boolean) => setToggled((current) => ({ ...current, [id]: isOpen })) }
+    return {
+        steps,
+        toggle: (id: string, isOpen: boolean): void => setToggled((current) => ({ ...current, [id]: isOpen })),
+    }
 }

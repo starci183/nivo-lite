@@ -11,7 +11,18 @@ export const BRAIN_PART_TABS = {
 } as const
 
 /** The tabs of the Second Brain page, in the order they are drawn: the internal part first. */
-export const BRAIN_TABS = [...BRAIN_PART_TABS.internal, ...BRAIN_PART_TABS.public] as const
+export const BRAIN_TABS: readonly [
+    "todo",
+    "dossiers",
+    "sources",
+    "map",
+    "facts",
+    "lessons",
+    "agents",
+    "publicDocs",
+    "publicAsks",
+    "publicTry",
+] = [...BRAIN_PART_TABS.internal, ...BRAIN_PART_TABS.public] as const
 
 /** One tab of the Second Brain page. */
 export type BrainTab = (typeof BRAIN_TABS)[number]
@@ -34,8 +45,14 @@ export const brainTabHref = (tab: BrainTab, params: BrainParams = {}): string =>
     return `/brain?${query.toString()}`
 }
 
+type KnowledgeRoutesShape = {
+    readonly library: string
+    readonly nivo: "/knowledge/nivo"
+    readonly brain: "/brain"
+}
+
 /** The knowledge and Second Brain destinations, named once. The documents live on the sources tab of the one page. */
-export const KNOWLEDGE_ROUTES = {
+export const KNOWLEDGE_ROUTES: KnowledgeRoutesShape = {
     library: brainTabHref("sources"),
     nivo: "/knowledge/nivo",
     brain: "/brain",

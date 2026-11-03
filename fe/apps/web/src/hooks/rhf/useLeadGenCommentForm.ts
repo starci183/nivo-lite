@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** Local values of the public-reply editor. */
 interface LeadGenCommentValues {
@@ -13,7 +14,7 @@ interface LeadGenCommentValues {
 }
 
 /** Validates an edited public reply before requesting its approval. */
-export const useLeadGenCommentForm = () => {
+export const useLeadGenCommentForm = (): UseFormReturn<LeadGenCommentValues> => {
     const t = useTranslations("workbenchLeadGen")
     const schema = useMemo(
         () =>

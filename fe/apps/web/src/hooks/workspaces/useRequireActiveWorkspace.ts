@@ -6,8 +6,13 @@ import { LocalStorage, StorageId } from "@/modules/storage"
 import { AUTH_ROUTES } from "@/modules/routes"
 import { useActiveWorkspace } from "./useActiveWorkspace"
 
+type UseRequireActiveWorkspaceResult = {
+    activeWorkspaceId: string | undefined
+    select: (workspaceId: string) => void
+}
+
 /** Sends a session without a workspace selection to the workspace picker after hydration. */
-export const useRequireActiveWorkspace = () => {
+export const useRequireActiveWorkspace = (): UseRequireActiveWorkspaceResult => {
     const workspace = useActiveWorkspace()
     const router = navigation.useRouter()
     useEffect(() => {

@@ -7,9 +7,10 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { HHMM, toNumber } from "@/hooks/loyaltyProgram"
 import type { ProgramValues } from "@/modules/types"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The whole-programme form: a zod schema whose messages come from the `loyalty` catalog; `initial` is the saved programme it starts from. */
-export const useLoyaltyProgramForm = (initial: ProgramValues) => {
+export const useLoyaltyProgramForm = (initial: ProgramValues): UseFormReturn<ProgramValues> => {
     const t = useTranslations("loyalty")
     const schema = useMemo(
         () =>

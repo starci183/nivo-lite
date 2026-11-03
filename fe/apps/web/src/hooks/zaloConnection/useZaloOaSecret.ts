@@ -6,11 +6,19 @@ import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizar
 import { useMutateSaveZaloOaSecretSwr } from "@/hooks/swr"
 import { useZaloPage } from "./useZaloPage"
 
+type UseZaloOaSecretResult = {
+    value: string
+    change: (next: string) => void
+    save: () => Promise<void>
+    error: string
+    isSaving: boolean
+}
+
 /**
  * The OA Secret Key of the second setup step: the key typed on the page, and the save that stores it and reads the page again. Without
  * it the back end refuses every Zalo webhook, whose signature it checks with this key.
  */
-export const useZaloOaSecret = (connectionId: string) => {
+export const useZaloOaSecret = (connectionId: string): UseZaloOaSecretResult => {
     const t = useTranslations("zaloConnection")
     const settle = useSettledGraphQL()
     const labelOf = useZaloFailureLabel()
@@ -19,7 +27,7 @@ export const useZaloOaSecret = (connectionId: string) => {
     const [value, setValue] = useState("")
     const [error, setError] = useState("")
 
-    const change = useCallback((next: string) => {
+    const change = useCallback((next: string): void => {
         setValue(next)
         setError("")
     }, [])

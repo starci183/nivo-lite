@@ -48,8 +48,29 @@ export const isStage = (value: string): value is LeadStageId => {
     return STAGE_IDS.has(value)
 }
 
+type CreateSalesPipelineStateResult = {
+    error: string | null
+    moving: SalesDeal | null
+    laneOf: (stage: LeadStageId) => LaneView
+    t: ReturnType<typeof useTranslations<"workbenchSales">>
+    format: ReturnType<typeof useFormatter>
+    commands: ReturnType<typeof useLeadCommands>
+    runGraphQL: ReturnType<typeof useGraphQLWithToast>
+    deals: SalesWorkbenchData["deals"]
+    closedHidden: SalesWorkbenchData["closedHidden"]
+    form: ReturnType<typeof useSalesPipelineForm>
+    reason: string
+    target: LeadStageId | null
+    isPending: boolean
+    movingId: string | null
+    setMovingId: Dispatch<SetStateAction<string | null>>
+    scope: string
+    capture: () => () => boolean
+    setOperation: Dispatch<SetStateAction<PipelineOperation | null>>
+}
+
 /** Resolves pipeline display data from the current deals and form state. */
-export const createSalesPipelineState = (input: SalesPipelineControllerInput) => {
+export const createSalesPipelineState = (input: SalesPipelineControllerInput): CreateSalesPipelineStateResult => {
     const { t, format, deals, closedHidden, form, movingId } = input
 
     const error = form.formState.errors.reason?.message ?? form.formState.errors.target?.message ?? null

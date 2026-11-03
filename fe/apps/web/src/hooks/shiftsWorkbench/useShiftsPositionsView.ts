@@ -8,8 +8,66 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
 
+type UseShiftsPositionsViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyLabel: string
+                  readonly nameLabel: string
+                  readonly addLabel: string
+                  readonly removeLabel: string
+                  readonly positions: ReadonlyArray<ShiftsSetupViews["positionsPositionView"]>
+                  readonly name: string
+                  readonly isBusy: boolean
+                  readonly canAdd: boolean
+              },
+              "positions"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyLabel: string
+                  readonly nameLabel: string
+                  readonly addLabel: string
+                  readonly removeLabel: string
+                  readonly positions: ReadonlyArray<ShiftsSetupViews["positionsPositionView"]>
+                  readonly name: string
+                  readonly isBusy: boolean
+                  readonly canAdd: boolean
+              },
+              "positions"
+          >
+          data: Pick<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly emptyLabel: string
+                  readonly nameLabel: string
+                  readonly addLabel: string
+                  readonly removeLabel: string
+                  readonly positions: ReadonlyArray<ShiftsSetupViews["positionsPositionView"]>
+                  readonly name: string
+                  readonly isBusy: boolean
+                  readonly canAdd: boolean
+              },
+              "positions"
+          >
+          on: {
+              readonly name: (value: string) => void
+              readonly add: () => void
+              readonly remove: (id: string) => void
+          }
+      }
+
 /** The positions of the shop (barista, waiter, cashier): remove one, add a new one. */
-export const useShiftsPositionsView = (input: ShiftsPanelInput) => {
+export const useShiftsPositionsView = (input: ShiftsPanelInput): UseShiftsPositionsViewResult => {
     const t = useTranslations("shifts")
     const bench = input.bench.data
     const commands = useShiftsSetupCommands()

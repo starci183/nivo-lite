@@ -5,14 +5,55 @@ import { useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useSalesShipmentForm } from "@/hooks/rhf"
-import type { SalesShipping, SalesWorkbenchData } from "@/modules/types"
+import type { HandoffItemView, SalesShipping, SalesWorkbenchData } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { submitGuarded } from "@/modules/utils"
 import { handoffItemsOf } from "./sales.shared"
 import { useSalesActions } from "./useSalesActions"
 
+type UseSalesHandoffsViewResult = {
+    props: {
+        rows: readonly HandoffItemView[]
+        isBusy: boolean
+        ship: {
+            isOpen: boolean
+            title: string
+            closeLabel: string
+            saveLabel: string
+            cancelLabel: string
+            noticeTitle: string
+            noticeText: string
+            carrierLabel: string
+            carrierHint: string
+            trackingLabel: string
+            carrier: string
+            tracking: string
+            error: string | null
+            isPending: boolean
+        } | null
+        label: string
+        intro: string
+        emptyTitle: string
+        emptyBody: string
+        errorLabel: string
+        shipLabel: string
+    }
+    on: {
+        run: (key: string, orderId: string) => void
+        ship: (key: string) => void
+        carrier: (value: string) => void
+        tracking: (value: string) => void
+        submit: () => void
+        close: () => void
+    }
+}
+
 /** Owns the original confirmed-order commands and shipping drawer while its hand-off tab is mounted. */
-export const useSalesHandoffsView = (data: SalesWorkbenchData | null, isActive: boolean, scope: string) => {
+export const useSalesHandoffsView = (
+    data: SalesWorkbenchData | null,
+    isActive: boolean,
+    scope: string,
+): UseSalesHandoffsViewResult => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
     const actions = useSalesActions({ isActive, scope })
@@ -76,17 +117,18 @@ export const useSalesHandoffsView = (data: SalesWorkbenchData | null, isActive: 
                       }),
         },
         on: {
-            run: (key: string, orderId: string) => {
+            run: (key: string, orderId: string): void => {
                 run(key, orderId).catch((error: unknown) =>
                     runGraphQL(() => Promise.reject(error), { showSuccessToast: false }),
                 )
             },
             ship: openShip,
-            carrier: (value: string) => form.setValue("carrier", value, { shouldValidate: form.formState.isSubmitted }),
-            tracking: (value: string) =>
+            carrier: (value: string): void =>
+                form.setValue("carrier", value, { shouldValidate: form.formState.isSubmitted }),
+            tracking: (value: string): void =>
                 form.setValue("tracking", value, { shouldValidate: form.formState.isSubmitted }),
             submit: submission.submit,
-            close: () => setShipping(null),
+            close: (): void => setShipping(null),
         },
     }
 }

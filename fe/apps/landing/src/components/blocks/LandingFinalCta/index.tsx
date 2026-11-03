@@ -2,8 +2,10 @@ import { getLocale, getTranslations } from "next-intl/server"
 import { CONSOLE_PAGES, appHref } from "@/modules/routes"
 import { LandingFinalCtaBase } from "./component"
 
+import type { ReactElement } from "react"
+
 /** The landing final call to action with its copy resolved on the server. */
-export const LandingFinalCta = async () => {
+export const LandingFinalCta = async (): Promise<ReactElement> => {
     const t = await getTranslations("landingBottom")
 
     const locale = await getLocale()

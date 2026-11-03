@@ -2,7 +2,7 @@ import type { useTranslations } from "next-intl"
 import type { BrainFact, KnowledgeRowView, RowActionView, RowPartView } from "@/modules/types"
 import { adviceFor, proposerOf } from "./advice"
 import { reviewBoardOf } from "./board"
-import type { ReviewSingle, ReviewConflict } from "./board"
+import type { ReviewSingle, ReviewConflict, ReviewBoard } from "./board"
 import { FACT_SOURCE_KEY } from "./labels"
 
 /** The facts review's resolved copy and initiating action identity. */
@@ -111,8 +111,13 @@ const conflictFactRow = (group: ReviewConflict, context: ReviewRowsContext): Kno
     }
 }
 
+type ReviewRowsOfResult = {
+    plan: ReviewBoard
+    rows: KnowledgeRowView[]
+}
+
 /** The resolved review rows and the current plan share one source of truth. */
-export const reviewRowsOf = (facts: readonly BrainFact[], context: ReviewRowsContext) => {
+export const reviewRowsOf = (facts: readonly BrainFact[], context: ReviewRowsContext): ReviewRowsOfResult => {
     const plan = reviewBoardOf(facts)
     return {
         plan,

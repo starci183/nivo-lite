@@ -1,9 +1,11 @@
 import type { useTelegramUserForm } from "@/hooks/rhf"
-import type { DataSlot } from "@/modules/types"
+import type { DataSlot, SlotRead } from "@/modules/types"
 import type { useTelegramUserBoot } from "./useTelegramUserBoot"
 import type { useTelegramUserLogin } from "./useTelegramUserLogin"
 import type { useTelegramUserPicks } from "./useTelegramUserPicks"
 import type { TelegramUserStep, TelegramUserField } from "./useTelegramUserWizard"
+
+import type { Dispatch, SetStateAction } from "react"
 
 /** The status of the chat list read. */
 interface ChatsRead {
@@ -93,6 +95,75 @@ type TelegramUserWizardViewInput = {
     readonly setError: import("react").Dispatch<import("react").SetStateAction<string | null>>
 }
 
+type ViewOfResult = {
+    reads: readonly SlotRead<unknown>[]
+    bootData:
+        | {
+              readonly isConfigured: boolean
+          }
+        | undefined
+    bootError: string | null
+    index: number
+    login: {
+        stage: LoginStage
+        connId: string | null
+        sentVia: SentVia | null
+        setStage: Dispatch<SetStateAction<LoginStage>>
+        sendCode: () => void
+        confirmCode: () => void
+        confirmPassword: () => void
+        resend: () => void
+        cancel: () => void
+    }
+    picks: {
+        reads: readonly SlotRead<unknown>[]
+        loading: boolean
+        failed: boolean
+        failure: string | null
+        picked: readonly PickedChat[]
+        pickedIds: Set<string>
+        visible: readonly ChatChoice[]
+        full: boolean
+        query: string
+        sinceDays: SinceDays
+        every: string
+        change: (ids: ReadonlyArray<string>) => void
+        setQuery: Dispatch<SetStateAction<string>>
+        setSinceDays: Dispatch<SetStateAction<SinceDays>>
+        setEvery: Dispatch<SetStateAction<string>>
+        restore: (initial: TelegramInitial, resumeId: string | undefined) => void
+        load: Dispatch<SetStateAction<string | undefined>>
+        reload: () => void
+    }
+    agentIds: readonly string[]
+    error: string | null
+    isPending: boolean
+    values: {
+        name: string
+        consent: boolean
+        phone: string
+        code: string
+        password: string
+    }
+    valid: {
+        consent: boolean
+        phone: boolean
+        code: boolean
+        password: boolean
+    }
+    on: {
+        go: (to: number) => void
+        setAgentIds: Dispatch<SetStateAction<readonly string[]>>
+        save: () => void
+        finish: () => void
+        field: (name: TelegramUserField, value: string) => void
+        retry: () => void
+        close: () => void
+        consent: (on: boolean) => void
+        reloadChats: () => void
+    }
+}
+
 /** Assembles the resolved domain state and commands for its drawing. */
 export const viewOf = ({
     boot,
@@ -110,7 +181,7 @@ export const viewOf = ({
     field,
     onClose,
     setError,
-}: TelegramUserWizardViewInput) => {
+}: TelegramUserWizardViewInput): ViewOfResult => {
     return {
         reads: boot.reads,
         bootData: boot.bootData,
@@ -141,9 +212,9 @@ export const viewOf = ({
             finish,
             field,
             retry: boot.retry,
-            close: () => onClose(false),
-            consent: (on: boolean) => forms.consent.setValue("consent", on, { shouldValidate: true }),
-            reloadChats: () => {
+            close: (): void => onClose(false),
+            consent: (on: boolean): void => forms.consent.setValue("consent", on, { shouldValidate: true }),
+            reloadChats: (): void => {
                 setError(null)
                 picks.reload()
             },

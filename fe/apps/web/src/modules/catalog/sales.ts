@@ -1,7 +1,112 @@
 import type { ModuleDef } from "./catalog.types"
 
+type SalesShape = {
+    key: "sales"
+    order: number
+    icon: string
+    glyph: "moduleSales"
+    mascot: string
+    category: "sales_customer"
+    status: "stable"
+    audience: "internal"
+    includedWithWorkspace: true
+    available: false
+    knowledgeFolder: string
+    workbench: string
+    settingsExtras: null
+    requires: {
+        capabilities: never[]
+        connections: never[]
+    }
+    connectionProviders: string[]
+    defaultOperatingMode: "assist"
+    multiInstance: false
+    gates: {
+        key: string
+    }[]
+    authorityActions: (
+        | {
+              action: "classify_lead"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: "send_follow_up"[]
+          }
+        | {
+              action: "send_follow_up"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: string[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "send_quote"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: string[]
+              amountLimit: true
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "confirm_order"
+              mode: "auto"
+              limitVnd: number
+              requiredFields: string[]
+              amountLimit: true
+              maxMode: null
+              next: "issue_invoice"[]
+          }
+        | {
+              action: "send_care"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+    )[]
+    accepts: (
+        | {
+              command: string
+              action: "classify_lead"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "send_follow_up"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "send_quote"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "confirm_order"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "send_care"
+              subjectType: string
+              requiredFields: string[]
+          }
+    )[]
+}
+
 /** The sales module. */
-export const SALES = {
+export const SALES: SalesShape = {
     key: "sales",
     order: 20,
     icon: "cart",

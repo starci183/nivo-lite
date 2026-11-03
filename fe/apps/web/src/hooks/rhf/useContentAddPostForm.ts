@@ -6,12 +6,31 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { toInstant } from "@/modules/content"
 import type { ContentChannel } from "@/modules/content"
+import type { UseFormReturn } from "react-hook-form"
 
 const NO_PILLAR: string | null = null
 const DEFAULT_CHANNELS: Array<ContentChannel> = ["facebook"]
 
+type UseContentAddPostFormResult = UseFormReturn<
+    {
+        title: string
+        date: string
+        time: string
+        pillarId: string | null
+        channels: ("facebook" | "zalo" | "tiktok" | "instagram")[]
+    },
+    unknown,
+    {
+        title: string
+        date: string
+        time: string
+        pillarId: string | null
+        channels: ("facebook" | "zalo" | "tiktok" | "instagram")[]
+    }
+>
+
 /** Validates the manually entered post using localized form messages. */
-export const useContentAddPostForm = () => {
+export const useContentAddPostForm = (): UseContentAddPostFormResult => {
     const t = useTranslations("content")
     const schema = z
         .object({

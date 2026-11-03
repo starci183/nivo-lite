@@ -3,6 +3,8 @@
 import { useCallback, useReducer, useSyncExternalStore } from "react"
 import { arrangementOf } from "@/modules/office"
 
+import type { Arrangement } from "@/modules/types"
+
 const WIDE_INFO_QUERY = "(min-width: 80rem)"
 const SIDE_BY_SIDE_QUERY = "(min-width: 48rem)"
 
@@ -47,8 +49,24 @@ const reduce = (state: FrameState, action: FrameAction): FrameState => {
     return { ...state, info: action.isOpen }
 }
 
+type UseOfficeFrameResult = {
+    phoneView: "list" | "thread"
+    centre: "chat" | "tasks"
+    isThreadVisible: boolean
+    isInfoDocked: boolean
+    isSideBySide: boolean
+    isInfoOpen: boolean
+    arrangement: Arrangement
+    showThread: () => void
+    showList: () => void
+    showTasks: () => void
+    showChat: () => void
+    setInfoOpen: (isOpen: boolean) => void
+    toggleInfo: () => void
+}
+
 /** The frame of the Office messenger: wide screens dock the info panel as a column, narrower ones open it in a drawer. */
-export const useOfficeFrame = () => {
+export const useOfficeFrame = (): UseOfficeFrameResult => {
     const [state, dispatch] = useReducer(reduce, { phoneView: "list", centre: "chat", info: null })
     const isInfoDocked = useSyncExternalStore(subscribeWide, readWide, readWideOnServer)
     const isSideBySide = useSyncExternalStore(subscribeSideBySide, readSideBySide, readWideOnServer)
@@ -66,11 +84,11 @@ export const useOfficeFrame = () => {
             isInfoOpen,
             isCompact: !isSideBySide,
         }),
-        showThread: useCallback(() => dispatch({ type: "thread" }), []),
-        showList: useCallback(() => dispatch({ type: "list" }), []),
-        showTasks: useCallback(() => dispatch({ type: "tasks" }), []),
-        showChat: useCallback(() => dispatch({ type: "chat" }), []),
-        setInfoOpen: useCallback((isOpen: boolean) => dispatch({ type: "info", isOpen }), []),
-        toggleInfo: useCallback(() => dispatch({ type: "info", isOpen: !isInfoOpen }), [isInfoOpen]),
+        showThread: useCallback((): void => dispatch({ type: "thread" }), []),
+        showList: useCallback((): void => dispatch({ type: "list" }), []),
+        showTasks: useCallback((): void => dispatch({ type: "tasks" }), []),
+        showChat: useCallback((): void => dispatch({ type: "chat" }), []),
+        setInfoOpen: useCallback((isOpen: boolean): void => dispatch({ type: "info", isOpen }), []),
+        toggleInfo: useCallback((): void => dispatch({ type: "info", isOpen: !isInfoOpen }), [isInfoOpen]),
     }
 }

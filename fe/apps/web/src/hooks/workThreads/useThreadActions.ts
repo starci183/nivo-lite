@@ -18,8 +18,17 @@ interface ThreadActionTarget {
     readonly opened: (threadId: string) => void
 }
 
+type UseThreadActionsResult = {
+    open: (title: string) => Promise<boolean>
+    send: (draft: string, picked: ReadonlyArray<PickedMention>) => Promise<boolean>
+    decideCard: (messageId: string, verdict: "approve" | "reject") => Promise<void>
+    isOpening: boolean
+    isSending: boolean
+    decidingId: string | null
+}
+
 /** The writes of the work threads board: open a thread, write in it with the tags picked, decide an approval card. Each one reads the board again. */
-export const useThreadActions = (target: ThreadActionTarget) => {
+export const useThreadActions = (target: ThreadActionTarget): UseThreadActionsResult => {
     const t = useTranslations("workThreads")
     const runGraphQL = useGraphQLWithToast()
     const create = useMutateCreateWorkThreadSwr()

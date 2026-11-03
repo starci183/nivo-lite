@@ -12,8 +12,16 @@ interface JumpTarget {
     readonly anchor: string
 }
 
+type UseOfficeJumpResult = {
+    focusedId: string | null
+    jumpApproval: (id: string) => void
+    jumpException: (id: string) => void
+    jumpCard: (id: string) => void
+    jumpWaiting: (waiting: OfficeWaiting | null) => void
+}
+
 /** Scrolls a card of the thread into view and highlights it for a moment. */
-export const useOfficeJump = () => {
+export const useOfficeJump = (): UseOfficeJumpResult => {
     const [target, setTarget] = useState<JumpTarget | null>(null)
 
     useEffect(() => {
@@ -23,11 +31,11 @@ export const useOfficeJump = () => {
         return () => window.clearTimeout(timer)
     }, [target])
 
-    const jumpApproval = useCallback((id: string) => setTarget({ id, anchor: approvalCardAnchor(id) }), [])
-    const jumpException = useCallback((id: string) => setTarget({ id, anchor: exceptionCardAnchor(id) }), [])
-    const jumpCard = useCallback((id: string) => setTarget({ id, anchor: resultCardAnchor(id) }), [])
+    const jumpApproval = useCallback((id: string): void => setTarget({ id, anchor: approvalCardAnchor(id) }), [])
+    const jumpException = useCallback((id: string): void => setTarget({ id, anchor: exceptionCardAnchor(id) }), [])
+    const jumpCard = useCallback((id: string): void => setTarget({ id, anchor: resultCardAnchor(id) }), [])
     const jumpWaiting = useCallback(
-        (waiting: OfficeWaiting | null) => {
+        (waiting: OfficeWaiting | null): void => {
             if (waiting === null) return
             if (waiting.kind === "approval") jumpApproval(waiting.id)
             else jumpException(waiting.id)

@@ -6,8 +6,13 @@ import type { ContractImportField } from "./salescontracts.shared"
 import type { ContractImport } from "./useContractImport"
 import type { ContractImportDialogEvents, ContractImportDialogView, ContractImportRowView } from "@/modules/types"
 
+type UseSalesContractImportViewResult = {
+    dialog: ContractImportDialogView | null
+    on: ContractImportDialogEvents
+}
+
 /** Resolves the actual import state into the dialog's copy, column controls and atomic commands. */
-export const useSalesContractImportView = (importer: ContractImport) => {
+export const useSalesContractImportView = (importer: ContractImport): UseSalesContractImportViewResult => {
     const t = useTranslations("workbenchSales")
     const format = useFormatter()
     return {

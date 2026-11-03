@@ -10,18 +10,40 @@ import { MODULE_KEYS, isModuleKey } from "@/modules/catalog"
 import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
 import type { ContextVersion, SetupSession } from "@/modules/installations"
 import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
-import type { SetupSideKnowledge, SetupSideVersions, SetupSideView } from "@/modules/types"
+import type { DataSlot, SetupSideKnowledge, SetupSideVersions, SetupSideView } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { PLACEHOLDER_GATES, commandsOf, setupRequirementsNoticeOf, versionsViewOf } from "./setupSide.shared"
 
+import type { Dispatch, SetStateAction } from "react"
+
 const GATE_TONE = { missing: "neutral", proposed: "warning", confirmed: "success" } as const
 const NO_VERSIONS: ReadonlyArray<ContextVersion> = []
+
+type UseSetupSideResult = {
+    slot: DataSlot<SetupSideView>
+    placeholder: SetupSideView
+    reload: () => void
+    on: {
+        editText: Dispatch<SetStateAction<string>>
+        gate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string) => undefined
+        startEdit: (gateKey: string, evidence: string) => void
+        stopEdit: () => void
+        apply: () => undefined
+    }
+    setup: {
+        isReady: boolean
+        isChanged: boolean
+        missing: number
+        isApplying: boolean
+        apply: () => Promise<void>
+    }
+}
 
 /**
  * The side column of the Setup tab: the draft, the gate checklist, the knowledge the module runs on and the versions applied, as one
  * view with the commands of the checklist. The module is the type of the url; it reads as the first one if it is unknown.
  */
-export const useSetupSide = (module: string, installationId: string) => {
+export const useSetupSide = (module: string, installationId: string): UseSetupSideResult => {
     const t = useTranslations("moduleSetup")
     const locale = useLocale() === "en" ? "en" : "vi"
     const format = useFormatter()
@@ -86,7 +108,7 @@ export const useSetupSide = (module: string, installationId: string) => {
     return {
         slot: sideSlot,
         placeholder: view,
-        reload: () => {
+        reload: (): void => {
             reload()
             catalog.reload()
             knowledgeSlot.reload()
@@ -136,15 +158,17 @@ const knowledgeOf = (
     }
 }
 
+type GateViewMapperResult = (
+    gate: NonNullable<
+        NonNullable<ReturnType<typeof useModuleCatalog>["modules"][(typeof MODULE_KEYS)[number]]>["gates"]
+    >[number],
+) => SetupSideView["gates"]["gates"][number]
+
 const gateViewMapper = (
     session: SetupSession,
     locale: "vi" | "en",
     t: ReturnType<typeof useTranslations<"moduleSetup">>,
-): ((
-    gate: NonNullable<
-        NonNullable<ReturnType<typeof useModuleCatalog>["modules"][(typeof MODULE_KEYS)[number]]>["gates"]
-    >[number],
-) => SetupSideView["gates"]["gates"][number]) => {
+): GateViewMapperResult => {
     return (gate) => {
         const entry = gateEntry(session.gateEvidence, gate.key)
         return {

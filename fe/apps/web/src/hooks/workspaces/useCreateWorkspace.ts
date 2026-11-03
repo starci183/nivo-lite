@@ -7,11 +7,16 @@ import { useMutateCreateWorkspaceSwr, QUERY_MY_WORKSPACES_SWR_KEY } from "@/hook
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 
+type UseCreateWorkspaceResult = {
+    create: (name: string, businessType: string) => Promise<string | undefined>
+    isCreating: boolean
+}
+
 /**
  * Creates a free workspace with its business type (a known key or the owner's words) through the back end and toasts the outcome. Answers the new workspace id, or `undefined` when it
  * failed (the failure was already toasted with the server-localized message). The workspaces list is revalidated on success.
  */
-export const useCreateWorkspace = () => {
+export const useCreateWorkspace = (): UseCreateWorkspaceResult => {
     const t = useTranslations("onboarding")
     const runGraphQL = useGraphQLWithToast()
     const { trigger, isMutating } = useMutateCreateWorkspaceSwr()

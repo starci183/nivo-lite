@@ -8,7 +8,36 @@ import type { PermissionDraft } from "@/modules/permissions"
 export const usePermissionDrawerCopy = () => {
     const t = useTranslations("permissions")
     const g = useTranslations("governance")
-    return (rule: StoredRule, draft: PermissionDraft, isOwner: boolean) => ({
+    return (
+        rule: StoredRule,
+        draft: PermissionDraft,
+        isOwner: boolean,
+    ): {
+        drawerDesc: string
+        close: string
+        agentsLabel: string
+        agentsHint: string
+        strategyLabel: string
+        unitLabel: string
+        autoMaxLabel: string
+        askMaxLabel: string
+        sliderLabel: string
+        bandsInvalid: string
+        groupLabel: string
+        rolesLabel: string
+        roomsLabel: string
+        roomsNone: string
+        membersLabel: string
+        membersHint: string
+        policyLabel: string
+        timeoutLabel: string
+        timeoutNote: string
+        grantsLabel: string
+        grantsNote: string
+        ownerAlways: string
+        save: string
+        cancel: string
+    } => ({
         drawerDesc: t("drawerDesc", { department: g(`dept_${rule.department}`) }),
         close: t("close"),
         agentsLabel: t("agentsLabel"),

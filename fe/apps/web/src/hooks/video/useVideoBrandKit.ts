@@ -3,8 +3,87 @@ import { slotOfReads } from "@/hooks/slot"
 import { useQueryVideoBrandSwr, useQueryVideoMediaSwr, useQueryVideoScopeSwr } from "@/hooks/swr"
 import { brandOf, mediaItemOf } from "./video.shared"
 
+import type { Brand, MediaItem } from "./video.shared"
+import type { DataSlot } from "@/modules/types"
+import type { SWRResponse } from "swr"
+
+type UseVideoBrandKitResult = {
+    slot: DataSlot<{
+        brand: Brand
+        media: MediaItem[]
+        canEdit: boolean
+    }>
+    reads: (
+        | SWRResponse<
+              {
+                  logoPath: string | null
+                  musicTrack: string | null
+                  primary: string
+                  secondary: string
+                  shopName: string
+                  voice: string
+              },
+              unknown
+          >
+        | SWRResponse<
+              {
+                  kind: string
+                  name: string
+                  path: string
+                  url: string | null
+              }[],
+              unknown
+          >
+        | SWRResponse<
+              {
+                  canEdit: boolean
+                  workspaceId: string
+              },
+              unknown
+          >
+    )[]
+    data:
+        | {
+              brand: Brand
+              media: MediaItem[]
+              canEdit: boolean
+          }
+        | undefined
+    reload: () => Promise<
+        [
+            (
+                | {
+                      canEdit: boolean
+                      workspaceId: string
+                  }
+                | undefined
+            ),
+            (
+                | {
+                      logoPath: string | null
+                      musicTrack: string | null
+                      primary: string
+                      secondary: string
+                      shopName: string
+                      voice: string
+                  }
+                | undefined
+            ),
+            (
+                | {
+                      kind: string
+                      name: string
+                      path: string
+                      url: string | null
+                  }[]
+                | undefined
+            ),
+        ]
+    >
+}
+
 /** Owns the actual scope/brand/media reads shared by the library and editor; disabled keys stay idle. */
-export const useVideoBrandKit = (isActive = true) => {
+export const useVideoBrandKit = (isActive = true): UseVideoBrandKitResult => {
     const scope = useQueryVideoScopeSwr(isActive),
         brand = useQueryVideoBrandSwr(isActive),
         media = useQueryVideoMediaSwr(isActive)
@@ -18,6 +97,36 @@ export const useVideoBrandKit = (isActive = true) => {
         slot,
         reads,
         data: "items" in slot ? slot.items : undefined,
-        reload: () => Promise.all([scope.mutate(), brand.mutate(), media.mutate()]),
+        reload: (): Promise<
+            [
+                (
+                    | {
+                          canEdit: boolean
+                          workspaceId: string
+                      }
+                    | undefined
+                ),
+                (
+                    | {
+                          logoPath: string | null
+                          musicTrack: string | null
+                          primary: string
+                          secondary: string
+                          shopName: string
+                          voice: string
+                      }
+                    | undefined
+                ),
+                (
+                    | {
+                          kind: string
+                          name: string
+                          path: string
+                          url: string | null
+                      }[]
+                    | undefined
+                ),
+            ]
+        > => Promise.all([scope.mutate(), brand.mutate(), media.mutate()]),
     }
 }

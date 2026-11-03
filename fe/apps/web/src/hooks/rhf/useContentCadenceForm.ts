@@ -6,9 +6,31 @@ import { useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { CHANNEL_RULES, channelLabel, type Cadence } from "@/modules/content"
+import type { UseFormReturn } from "react-hook-form"
 
 type ContentCadenceT = ReturnType<typeof useTranslations<"content">>
-const cadenceSchema = (t: ContentCadenceT) =>
+type CadenceSchemaResult = z.ZodObject<{
+    rows: z.ZodArray<
+        z.ZodObject<
+            {
+                channel: z.ZodEnum<{
+                    facebook: "facebook"
+                    zalo: "zalo"
+                    tiktok: "tiktok"
+                    instagram: "instagram"
+                }>
+                label: z.ZodString
+                on: z.ZodBoolean
+                perWeek: z.ZodNumber
+                days: z.ZodArray<z.ZodNumber>
+                time: z.ZodString
+            },
+            z.core.$strip
+        >
+    >
+}>
+
+const cadenceSchema = (t: ContentCadenceT): CadenceSchemaResult =>
     z.object({
         rows: z
             .array(
@@ -29,8 +51,19 @@ const cadenceSchema = (t: ContentCadenceT) =>
 /** Local editable posting rhythm rows. */
 export type ContentCadenceValues = z.infer<ReturnType<typeof cadenceSchema>>
 
+type UseContentCadenceFormResult = UseFormReturn<{
+    rows: {
+        channel: "facebook" | "zalo" | "tiktok" | "instagram"
+        label: string
+        on: boolean
+        perWeek: number
+        days: number[]
+        time: string
+    }[]
+}>
+
 /** Validates weekday, frequency and time fields before saving the posting rhythm. */
-export const useContentCadenceForm = (initial: ReadonlyArray<Cadence>) => {
+export const useContentCadenceForm = (initial: ReadonlyArray<Cadence>): UseContentCadenceFormResult => {
     const t = useTranslations("content")
     const schema = useMemo(() => cadenceSchema(t), [t])
     const values = useMemo(

@@ -3,6 +3,8 @@ import { LANDING_ANCHORS } from "@/hooks/landing"
 import { CONSOLE_PAGES, LANDING_ROUTES, appHref } from "@/modules/routes"
 import { LandingFooterBase } from "./component"
 
+import type { ReactElement } from "react"
+
 /** Where the footer sits relative to the landing anchors. */
 interface LandingFooterProps {
     /** Prefix of the in-page anchors; "/" lets another page reach the landing anchors. */
@@ -43,7 +45,7 @@ const COLUMNS = [
 ] as const
 
 /** The landing footer with its copy resolved on the server. */
-export const LandingFooter = async (props: LandingFooterProps) => {
+export const LandingFooter = async (props: LandingFooterProps): Promise<ReactElement> => {
     const t = await getTranslations("landingBottom")
 
     const locale = await getLocale()

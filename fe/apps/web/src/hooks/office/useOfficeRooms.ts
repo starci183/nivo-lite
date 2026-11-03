@@ -10,14 +10,20 @@ import {
 import { useGraphQLWithToast } from "@/modules/toast"
 import { toOfficeRoom } from "@/modules/office"
 import type {
+    ChatMarkerWire,
     OfficeAgentConversation,
     OfficeChannelWire,
     OfficeConversationUnread,
     OfficeMentionViewer,
     OfficeRoom,
+    TypingSignal,
 } from "@/modules/office"
 import { useOfficeMarkers } from "./useOfficeMarkers"
 import { useOfficeTyping } from "./useOfficeTyping"
+
+import type { OfficeRoomMemberKind } from "@/modules/api/graphql/__generated__/graphql"
+import type { SWRResponse, SWRConfiguration, BareFetcher } from "swr"
+import type { ChatMarkerStateAnswer } from "@/hooks/swr/api/graphql/queries/useQueryChatMarkerStateSwr"
 
 const unreadOf = (entries: ReadonlyArray<{ readonly id: string; readonly unread: number }> | undefined) =>
     new Map((entries ?? []).map((entry) => [entry.id, entry.unread]))
@@ -25,13 +31,210 @@ const unreadOf = (entries: ReadonlyArray<{ readonly id: string; readonly unread:
 const agentConversationsOf = (entries: ReadonlyArray<{ readonly id: string } & OfficeAgentConversation> | undefined) =>
     new Map((entries ?? []).map((entry) => [entry.id, { unread: entry.unread, last: entry.last }]))
 
+type UseOfficeRoomsResult = {
+    rooms: readonly OfficeRoom[]
+    roomRead: SWRResponse<
+        | {
+              key: string | null
+              name: string
+              position: number
+              unread: number
+              unread_mention_bodies: Array<string>
+              last_body: string | null
+              last_author: string | null
+              last_author_user_id: string | null
+              last_at: string | null
+              agent_ids: Array<string>
+              home_agent_ids: Array<string>
+              user_ids: Array<string>
+              members: {
+                  count: number
+                  preview: Array<{
+                      id: string
+                      kind: OfficeRoomMemberKind
+                      module: string | null
+                      name: string
+                      avatarUrl: string | null
+                  }>
+              }
+              pins: Array<{
+                  id: string
+                  title: string
+                  href: string | null
+                  note: string
+              }>
+          }[]
+        | undefined,
+        unknown,
+        SWRConfiguration | undefined
+    >
+    markerRead: SWRResponse<
+        readonly ChatMarkerStateAnswer[],
+        unknown,
+        SWRConfiguration<readonly ChatMarkerStateAnswer[]> | undefined
+    >
+    listReads: (
+        | SWRResponse<
+              | {
+                    key: string | null
+                    name: string
+                    position: number
+                    unread: number
+                    unread_mention_bodies: Array<string>
+                    last_body: string | null
+                    last_author: string | null
+                    last_author_user_id: string | null
+                    last_at: string | null
+                    agent_ids: Array<string>
+                    home_agent_ids: Array<string>
+                    user_ids: Array<string>
+                    members: {
+                        count: number
+                        preview: Array<{
+                            id: string
+                            kind: OfficeRoomMemberKind
+                            module: string | null
+                            name: string
+                            avatarUrl: string | null
+                        }>
+                    }
+                    pins: Array<{
+                        id: string
+                        title: string
+                        href: string | null
+                        note: string
+                    }>
+                }[]
+              | undefined,
+              unknown,
+              SWRConfiguration | undefined
+          >
+        | SWRResponse<
+              readonly ChatMarkerStateAnswer[],
+              unknown,
+              SWRConfiguration<readonly ChatMarkerStateAnswer[]> | undefined
+          >
+        | SWRResponse<
+              | {
+                    agents: Array<{
+                        id: string
+                        unread: number
+                        last: {
+                            body: string
+                            at: string
+                            authorId: string | null
+                            author: string | null
+                        } | null
+                    }>
+                    leads: Array<{
+                        id: string
+                        unread: number
+                    }>
+                }
+              | undefined,
+              unknown,
+              SWRConfiguration | undefined
+          >
+        | SWRResponse<
+              {
+                  id: string
+                  workspaceId: string
+                  provider: string
+                  name: string
+                  meta: unknown
+                  status: string
+                  lastError: string | null
+                  environment: string
+                  isDefault: boolean
+                  lastEventAt: string | null
+                  agentIds: Array<string>
+                  firstEvent: {
+                      amount: number
+                      at: string
+                      content: string
+                  } | null
+                  grants: Array<{
+                      agentId: string
+                      access: string
+                  }>
+              }[],
+              unknown,
+              | SWRConfiguration<
+                    {
+                        id: string
+                        workspaceId: string
+                        provider: string
+                        name: string
+                        meta: unknown
+                        status: string
+                        lastError: string | null
+                        environment: string
+                        isDefault: boolean
+                        lastEventAt: string | null
+                        agentIds: Array<string>
+                        firstEvent: {
+                            amount: number
+                            at: string
+                            content: string
+                        } | null
+                        grants: Array<{
+                            agentId: string
+                            access: string
+                        }>
+                    }[],
+                    any,
+                    BareFetcher<
+                        {
+                            id: string
+                            workspaceId: string
+                            provider: string
+                            name: string
+                            meta: unknown
+                            status: string
+                            lastError: string | null
+                            environment: string
+                            isDefault: boolean
+                            lastEventAt: string | null
+                            agentIds: Array<string>
+                            firstEvent: {
+                                amount: number
+                                at: string
+                                content: string
+                            } | null
+                            grants: Array<{
+                                agentId: string
+                                access: string
+                            }>
+                        }[]
+                    >
+                >
+              | undefined
+          >
+    )[]
+    reload: () => void
+    isLoading: boolean
+    error: unknown
+    channels: readonly OfficeChannelWire[]
+    unread: OfficeConversationUnread
+    markers: ReadonlyMap<string, ChatMarkerWire | undefined>
+    refreshRooms: () => void
+    reloadMarkers: () => void
+    markConversationRead: (kind: "agent" | "lead", id: string) => Promise<void>
+    setMute: (room: string | null, muted: boolean) => Promise<void>
+    peers: {
+        names: string[]
+        byRoom: ReadonlyMap<string, readonly TypingSignal[]>
+        onDraft: (draft: string) => void
+    }
+}
+
 /**
  * The Hub rooms and the direct conversations with the caller's unread counts, and the workspace channels the room panel
  * lists. `markConversationRead` records that the person read an agent's or a customer's
  * conversation (opening it); the room on screen never shows a badge. Each room also carries the caller's side of it: the mute
  * and whether my last line was read (`markers`), and who types in each room.
  */
-export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionViewer) => {
+export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionViewer): UseOfficeRoomsResult => {
     const rooms = useQueryOfficeRoomsSwr()
     const unread = useQueryOfficeConversationUnreadSwr()
     const markerState = useOfficeMarkers((rooms.data ?? []).map((room) => room.key ?? null))
@@ -53,14 +256,14 @@ export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionVie
         () => ({ agents: agentConversationsOf(unread.data?.agents), leads: unreadOf(unread.data?.leads) }),
         [unread.data],
     )
-    const refreshRooms = useCallback(() => {
+    const refreshRooms = useCallback((): void => {
         void mutate()
     }, [mutate])
-    const reloadMarkers = useCallback(() => {
+    const reloadMarkers = useCallback((): void => {
         mutateMarkers().catch((error: unknown) => runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
     }, [runGraphQL, mutateMarkers])
     const markConversationRead = useCallback(
-        async (kind: "agent" | "lead", id: string) => {
+        async (kind: "agent" | "lead", id: string): Promise<void> => {
             const done = await runGraphQL(() => triggerConversation({ kind, id }), { showSuccessToast: false })
             if (done !== undefined) await mutateUnread()
         },
@@ -79,7 +282,7 @@ export const useOfficeRooms = (selected: string | null, viewer: OfficeMentionVie
         roomRead: rooms,
         markerRead: markerState.read,
         listReads: [rooms, unread, connections, markerState.read],
-        reload: () => {
+        reload: (): void => {
             void rooms.mutate()
             void unread.mutate()
             void connections.mutate()

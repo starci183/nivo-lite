@@ -3,6 +3,8 @@ import type { useSetupRequirements } from "@/hooks/setupRequirements"
 import type { SetupSideNotice, SetupSideVersions, SetupSideView } from "@/modules/types"
 import type { useTranslations } from "next-intl"
 
+import type { Dispatch, SetStateAction } from "react"
+
 /** The notice that explains which requirements block setup. */
 export const setupRequirementsNoticeOf = (
     t: ReturnType<typeof useTranslations<"moduleSetup">>,
@@ -47,12 +49,20 @@ const PLACEHOLDER_VERSIONS: SetupSideVersions["versions"] = [
 export const versionsViewOf = (versions: SetupSideVersions, isLoading: boolean): SetupSideVersions =>
     isLoading && versions.versions.length === 0 ? { ...versions, versions: PLACEHOLDER_VERSIONS } : versions
 
+type CommandsOfResult = {
+    editText: Dispatch<SetStateAction<string>>
+    gate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string) => undefined
+    startEdit: (gateKey: string, evidence: string) => void
+    stopEdit: () => void
+    apply: () => undefined
+}
+
 /** The commands of the checklist: edit, confirm, reopen and apply. */
-export const commandsOf = (gatesState: ReturnType<typeof useSetupGates>) => ({
+export const commandsOf = (gatesState: ReturnType<typeof useSetupGates>): CommandsOfResult => ({
     editText: gatesState.setEditText,
-    gate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string) =>
+    gate: (gateKey: string, action: "confirm" | "reopen" | "edit", evidence?: string): undefined =>
         void gatesState.gate(gateKey, { action, evidence }),
     startEdit: gatesState.startEdit,
     stopEdit: gatesState.stopEdit,
-    apply: () => void gatesState.apply(),
+    apply: (): undefined => void gatesState.apply(),
 })

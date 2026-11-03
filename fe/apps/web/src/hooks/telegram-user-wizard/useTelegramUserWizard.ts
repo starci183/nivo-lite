@@ -12,6 +12,17 @@ import { useTelegramUserLogin } from "./useTelegramUserLogin"
 import { useTelegramUserPicks } from "./useTelegramUserPicks"
 import type { Settled } from "../connection-wizard"
 
+import type {
+    TelegramInitial,
+    SinceDays,
+    SentVia,
+    PickedChat,
+    LoginStage,
+    ChatChoice,
+} from "./telegram-user-wizard.shared"
+import type { SetStateAction, Dispatch } from "react"
+import type { SlotRead } from "../slot"
+
 /** What the personal Telegram wizard needs from its drawer. */
 interface TelegramUserWizardInput {
     /** Continue or edit this existing connection. */
@@ -36,11 +47,80 @@ const mergeStep = (state: TelegramUserStep, patch: Partial<TelegramUserStep>): T
 /** The text fields of the personal Telegram wizard. */
 export type TelegramUserField = "name" | "phone" | "code" | "password"
 
+type UseTelegramUserWizardResult = {
+    reads: readonly SlotRead<unknown>[]
+    bootData:
+        | {
+              readonly isConfigured: boolean
+          }
+        | undefined
+    bootError: string | null
+    index: number
+    login: {
+        stage: LoginStage
+        connId: string | null
+        sentVia: SentVia | null
+        setStage: Dispatch<SetStateAction<LoginStage>>
+        sendCode: () => void
+        confirmCode: () => void
+        confirmPassword: () => void
+        resend: () => void
+        cancel: () => void
+    }
+    picks: {
+        reads: readonly SlotRead<unknown>[]
+        loading: boolean
+        failed: boolean
+        failure: string | null
+        picked: readonly PickedChat[]
+        pickedIds: Set<string>
+        visible: readonly ChatChoice[]
+        full: boolean
+        query: string
+        sinceDays: SinceDays
+        every: string
+        change: (ids: ReadonlyArray<string>) => void
+        setQuery: Dispatch<SetStateAction<string>>
+        setSinceDays: Dispatch<SetStateAction<SinceDays>>
+        setEvery: Dispatch<SetStateAction<string>>
+        restore: (initial: TelegramInitial, resumeId: string | undefined) => void
+        load: Dispatch<SetStateAction<string | undefined>>
+        reload: () => void
+    }
+    agentIds: readonly string[]
+    error: string | null
+    isPending: boolean
+    values: {
+        name: string
+        consent: boolean
+        phone: string
+        code: string
+        password: string
+    }
+    valid: {
+        consent: boolean
+        phone: boolean
+        code: boolean
+        password: boolean
+    }
+    on: {
+        go: (to: number) => void
+        setAgentIds: Dispatch<SetStateAction<readonly string[]>>
+        save: () => void
+        finish: () => void
+        field: (name: TelegramUserField, value: string) => void
+        retry: () => void
+        close: () => void
+        consent: (on: boolean) => void
+        reloadChats: () => void
+    }
+}
+
 /**
  * The state machine of the personal Telegram wizard: it first reads whether the server is set up and where a resumed login stands,
  * then runs consent, phone login, chat picks, schedule and agents.
  */
-export const useTelegramUserWizard = (input: TelegramUserWizardInput) => {
+export const useTelegramUserWizard = (input: TelegramUserWizardInput): UseTelegramUserWizardResult => {
     const { resumeId, onClose } = input
     const boot = useTelegramUserBoot(resumeId)
     const forms = useTelegramUserForm(BLANK_INITIAL)

@@ -12,8 +12,74 @@ import { useShiftsImportCommand } from "@/hooks/shiftsCommands"
 
 const BLANK: ImportForm = { positions: "", staff: "", coverage: "" }
 
+type UseShiftsQuickImportViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly createLabel: string
+                  readonly fields: ReadonlyArray<{
+                      readonly id: "positions" | "staff" | "coverage"
+                      readonly label: string
+                      readonly hint: string
+                      readonly placeholder: string
+                      readonly rows: number
+                  }>
+                  readonly form: ShiftsSetupViews["quickImportImportForm"]
+                  readonly isBusy: boolean
+                  readonly canCreate: boolean
+              },
+              never
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly createLabel: string
+                  readonly fields: ReadonlyArray<{
+                      readonly id: "positions" | "staff" | "coverage"
+                      readonly label: string
+                      readonly hint: string
+                      readonly placeholder: string
+                      readonly rows: number
+                  }>
+                  readonly form: ShiftsSetupViews["quickImportImportForm"]
+                  readonly isBusy: boolean
+                  readonly canCreate: boolean
+              },
+              never
+          >
+          data: Pick<
+              {
+                  readonly title: string
+                  readonly hint: string
+                  readonly createLabel: string
+                  readonly fields: ReadonlyArray<{
+                      readonly id: "positions" | "staff" | "coverage"
+                      readonly label: string
+                      readonly hint: string
+                      readonly placeholder: string
+                      readonly rows: number
+                  }>
+                  readonly form: ShiftsSetupViews["quickImportImportForm"]
+                  readonly isBusy: boolean
+                  readonly canCreate: boolean
+              },
+              never
+          >
+          on: {
+              readonly change: (field: "positions" | "staff" | "coverage", value: string) => void
+              readonly create: () => void
+          }
+      }
+
 /** The quick import: positions, staff and coverage typed as plain lines and created in one go by the back end. */
-export const useShiftsQuickImportView = (input: ShiftsPanelInput) => {
+export const useShiftsQuickImportView = (input: ShiftsPanelInput): UseShiftsQuickImportViewResult => {
     const t = useTranslations("shifts")
     const bench = input.bench.data
     const importLines = useShiftsImportCommand()

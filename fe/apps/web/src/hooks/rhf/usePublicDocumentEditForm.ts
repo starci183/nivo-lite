@@ -6,6 +6,7 @@ import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { INPUT_BOUNDS, inputBoundsIssues } from "@/modules/api"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The editable snapshot the owner has reviewed. */
 export interface PublicDocumentEditValues {
@@ -14,7 +15,9 @@ export interface PublicDocumentEditValues {
 }
 
 /** Validates edits against the current backend contract without changing the body the owner reviewed. */
-export const usePublicDocumentEditForm = (values: PublicDocumentEditValues) => {
+export const usePublicDocumentEditForm = (
+    values: PublicDocumentEditValues,
+): UseFormReturn<PublicDocumentEditValues> => {
     const t = useTranslations("publicBrain")
     const schema = useMemo(
         () =>

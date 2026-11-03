@@ -20,11 +20,16 @@ export type GrantsChange = MutateSaveMemberGrantsRequest["grants"]
 /** True for the SWR keys of the approval limits, so a save reads them afresh. */
 const isGrantsKey = (key: unknown): boolean => Array.isArray(key) && key[0] === QUERY_MEMBER_GRANTS_SWR_KEY
 
+type UseSavePermissionResult = {
+    save: (change: PermissionChange, required: ReadonlyArray<string>, limits: GrantsChange | null) => Promise<boolean>
+    isSaving: boolean
+}
+
 /**
  * Saves one rule of the Quyen page: the rule first, then (for the owner, who alone may hand out approval limits) the limits of the
  * members. One toast for the whole save; the rules and the limits are read again afterwards. Answers whether it all saved.
  */
-export const useSavePermission = () => {
+export const useSavePermission = (): UseSavePermissionResult => {
     const t = useTranslations("permissions")
     const runGraphQL = useGraphQLWithToast()
     const rule = useMutateSaveAuthorityRuleSwr()

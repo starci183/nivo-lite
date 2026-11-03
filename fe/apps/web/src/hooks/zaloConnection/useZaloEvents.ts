@@ -6,8 +6,13 @@ import { useQueryZaloConnectionEventsSwr } from "@/hooks/swr"
 import type { DataSlot, ZaloEventLineView, ZaloTone } from "@/modules/types"
 import { ZALO_EVENTS_POLL_MS } from "./zaloConnection.shared"
 
+type UseZaloEventsResult = {
+    lines: DataSlot<readonly ZaloEventLineView[]>
+    reload: () => undefined
+}
+
 /** The live panel: the recent events of the OA, newest first, asked again every few seconds. */
-export const useZaloEvents = (connectionId: string) => {
+export const useZaloEvents = (connectionId: string): UseZaloEventsResult => {
     const t = useTranslations("zaloConnection")
     const format = useFormatter()
     const read = useQueryZaloConnectionEventsSwr(connectionId, { refreshInterval: ZALO_EVENTS_POLL_MS })
@@ -75,5 +80,5 @@ export const useZaloEvents = (connectionId: string) => {
             }
         }),
     )
-    return { lines, reload: () => void read.mutate() }
+    return { lines, reload: (): undefined => void read.mutate() }
 }

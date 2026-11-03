@@ -22,11 +22,17 @@ interface OpenApiResumeInput {
     readonly restorePicks: ReturnType<typeof useOpenApiPicks>["restore"]
 }
 
+type UseOpenApiResumeResult = {
+    reads: readonly SlotRead<unknown>[]
+    error: string | null
+    retry: () => void
+}
+
 /**
  * Opens a saved connection once: its config seeds the steps, then the fresh operations of its spec link (when it has one) replace the
  * stored ones, keeping the stored operations that are pulled or offered as tools. Answers the load failure, if any.
  */
-export const useOpenApiResume = (input: OpenApiResumeInput) => {
+export const useOpenApiResume = (input: OpenApiResumeInput): UseOpenApiResumeResult => {
     const { authForm, restoreSource, setOps, restorePicks } = input
     const saved = useQueryLoadOpenApiConnectionSwr(input.resumeId, ONCE)
     const parsed = useMemo(
@@ -79,7 +85,7 @@ export const useOpenApiResume = (input: OpenApiResumeInput) => {
     return {
         reads,
         error: error instanceof Error ? error.message : null,
-        retry: () => {
+        retry: (): void => {
             if (input.resumeId !== undefined) void saved.mutate()
             if (specUrl !== undefined) void fresh.mutate()
         },

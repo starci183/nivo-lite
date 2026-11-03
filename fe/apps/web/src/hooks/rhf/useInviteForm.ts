@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { EMAIL_PATTERN } from "@/hooks/auth"
 import { NO_STAFF } from "@/hooks/team"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the invite form. */
 export interface InviteValues {
@@ -20,7 +21,7 @@ export interface InviteValues {
 const EMAIL_MAX = 254
 
 /** The invite form: a zod schema whose messages come from the `team` catalog, validated before the mutation runs. */
-export const useInviteForm = () => {
+export const useInviteForm = (): UseFormReturn<InviteValues> => {
     const t = useTranslations("team")
     const schema = useMemo(
         () =>

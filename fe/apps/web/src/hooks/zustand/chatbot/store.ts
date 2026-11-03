@@ -1,6 +1,7 @@
 "use client"
 
 import { create } from "zustand"
+import type { UseBoundStore, StoreApi } from "zustand"
 
 /** A workbench action that holds the workspace's delivery lock. */
 export type ChatbotAction = "reply" | "answer" | "handling"
@@ -54,7 +55,7 @@ const matchesJob = (current: ChatbotJob | undefined, job: ChatbotJob): boolean =
     current?.id === job.id && current.kind === job.kind && current.attempt === job.attempt
 
 /** Keeps action locks and status-toast deduplication across workbench remounts. */
-export const useChatbotStore = create<ChatbotStore>((set) => ({
+export const useChatbotStore: UseBoundStore<StoreApi<ChatbotStore>> = create<ChatbotStore>((set) => ({
     actions: {},
     start: (identity, kind) => {
         let accepted = false

@@ -16,6 +16,8 @@ import type { FlowDecisionRow, SalesDecision, TypedDecisionValues } from "@/modu
 import { digitsToNumber, fieldKey } from "@/modules/utils"
 import { actionWordOf } from "@/hooks/actionWord"
 
+import type { BadgeTone } from "@starci/grammar/common"
+
 type Decision = "approved" | "rejected"
 
 /** Captures non-empty missing fields and preserves their parsed amount separately. */
@@ -105,8 +107,43 @@ const amountLineOf = (
     return format.number(item.amountVnd, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
 }
 
+type PendingSalesRowResult = {
+    id: string
+    anchor: string
+    isFocused: boolean
+    badge: string
+    age: string
+    isStale: boolean
+    customer: string
+    leadHref: string | null
+    actionLabel: string
+    summary: string
+    reasonHint: string | null
+    amountLine: string | null
+    draft: string | null
+    canAct: boolean
+    assignedTo: string | null
+    missing: {
+        name: string
+        label: string
+        value: string
+    }[]
+    isEditing: boolean
+    draftValue: string
+    showDraftField: boolean
+    amountValue: string
+    showAmountField: boolean
+    canEdit: boolean
+    isBusy: boolean
+    isApproveBusy: boolean
+    isRejectBusy: boolean
+    isApproveDisabled: boolean
+    editLabel: string
+    error: string | null
+}
+
 /** Resolves one pending decision using the connected form snapshot. */
-export const pendingSalesRow = (item: SalesDecision, input: SalesDecisionRowInput) => {
+export const pendingSalesRow = (item: SalesDecision, input: SalesDecisionRowInput): PendingSalesRowResult => {
     const { props, t, g, me, actions, nowIso, typed, errors, active, fieldLabel } = input
     const isEditing = typed.editing[item.id] ?? false
     const age = ageParts(item.createdAt, nowIso)
@@ -149,8 +186,20 @@ export const pendingSalesRow = (item: SalesDecision, input: SalesDecisionRowInpu
     }
 }
 
+type DecidedSalesRowResult = {
+    id: string
+    action: string
+    outcomeLabel: string
+    outcomeTone: BadgeTone
+    customer: string
+    href: string | null
+    byline: string
+    basis: string | null
+    rest: string | null
+}
+
 /** Resolves a completed decision and its attribution. */
-export const decidedSalesRow = (row: FlowDecisionRow, input: SalesDecisionsControllerInput) => {
+export const decidedSalesRow = (row: FlowDecisionRow, input: SalesDecisionsControllerInput): DecidedSalesRowResult => {
     const { t, g, format } = input
     const { basis, rest } = splitBasis(row.note)
     return {

@@ -1,7 +1,97 @@
 import type { ModuleDef } from "./catalog.types"
 
+type ShiftsShape = {
+    key: "shifts"
+    order: number
+    icon: string
+    glyph: "moduleShifts"
+    mascot: string
+    category: "operations"
+    status: "early"
+    audience: "internal"
+    includedWithWorkspace: false
+    available: true
+    knowledgeFolder: string
+    workbench: string
+    settingsExtras: null
+    requires: {
+        capabilities: string[]
+        connections: never[]
+    }
+    connectionProviders: string[]
+    defaultOperatingMode: "assist"
+    multiInstance: false
+    gates: {
+        key: string
+    }[]
+    authorityActions: (
+        | {
+              action: "publish_schedule"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "approve_swap"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "approve_leave"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "remind_shift"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+    )[]
+    accepts: (
+        | {
+              command: string
+              action: "publish_schedule"
+              subjectType: string
+              requiredFields: never[]
+          }
+        | {
+              command: string
+              action: "approve_swap"
+              subjectType: string
+              requiredFields: never[]
+          }
+        | {
+              command: string
+              action: "approve_leave"
+              subjectType: string
+              requiredFields: never[]
+          }
+        | {
+              command: string
+              action: "remind_shift"
+              subjectType: string
+              requiredFields: never[]
+          }
+    )[]
+}
+
 /** The shifts module. */
-export const SHIFTS = {
+export const SHIFTS: ShiftsShape = {
     key: "shifts",
     order: 40,
     icon: "review",

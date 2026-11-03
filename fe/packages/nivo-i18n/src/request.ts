@@ -18,7 +18,10 @@ type MissingMessage = { readonly namespace?: string; readonly key: string }
  * not negotiate (api handlers, server actions posted to them) fall back to the cookie, then to Vietnamese. The app supplies only its own
  * catalogue; a key it lacks renders as `<app>:<namespace>.<key>`.
  */
-export const createRequestConfig = (app: "web" | "landing", loadMessages: LoadMessages) =>
+export const createRequestConfig = (
+    app: "web" | "landing",
+    loadMessages: LoadMessages,
+): ReturnType<typeof getRequestConfig> =>
     getRequestConfig(async () => {
         const negotiated = (await headers()).get(LOCALE_HEADER)
         const stored = (await cookies()).get(LOCALE_COOKIE)?.value

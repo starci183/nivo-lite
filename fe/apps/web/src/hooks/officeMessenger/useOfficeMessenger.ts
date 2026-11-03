@@ -25,10 +25,27 @@ import {
     waitingOf,
     withReceipt,
 } from "@/modules/office"
-import type { OfficeRoom, OfficeWaiting } from "@/modules/office"
+import type { OfficeMessage, OfficeRoom, OfficeWaiting } from "@/modules/office"
 import { useOfficePanels } from "./useOfficePanels"
 import { officeReadSlots } from "./officeMessenger.shared"
 import { useOfficeThreadView } from "./useOfficeThreadView"
+
+import type {
+    OfficeThreadItem,
+    DataSlot,
+    OfficeOutboxView,
+    OfficeWorkDecision,
+    OfficeListView,
+    OfficeInfoView,
+    OfficeTaskView,
+    OfficeMentionView,
+    OfficeAvatarView,
+    OfficeText,
+} from "@/modules/types"
+import type { ChatFileProblem } from "../chatFile/chatFile.shared"
+import type { OfficeRead } from "../office/office.shared"
+import type { SendPlan, ReadingAgent } from "@/hooks/office/useOfficeSend"
+import type { ChatFileAddress, UploadedChatFile } from "@/hooks/chatFile/useChatFile"
 
 /** Where the header chip jumps: the oldest thing that waits for a person's decision; none when nothing waits. */
 const firstJumpOf = (waiting: ReadonlyArray<OfficeWaiting>): OfficeWaiting | null => waiting[0] ?? null
@@ -108,8 +125,89 @@ const readingOf = (reading: ReturnType<typeof useOfficeSend>["reading"], words: 
     }
 }
 
+type UseOfficeMessengerResult = {
+    items: readonly OfficeThreadItem[]
+    thread: {
+        readonly slot: DataSlot<ReadonlyArray<OfficeMessage>>
+        readonly read: OfficeRead<ReadonlyArray<OfficeMessage>>
+        readonly reload: () => void
+        readonly hasEarlier: boolean
+        readonly isLoadingEarlier: boolean
+        readonly loadEarlier: () => void
+    }
+    sender: {
+        send: (plan: SendPlan) => Promise<boolean>
+        dismissFailed: () => void
+        outbox: readonly OfficeOutboxView[]
+        typing: string | null
+        reading: ReadingAgent | null
+        isSending: boolean
+        fileControl: {
+            accept: string
+            file: File | null
+            problem: ChatFileProblem | null
+            choose: (chosen: File) => void
+            clear: () => void
+            upload: (
+                addressOf: (chosen: File) => Promise<ChatFileAddress | undefined>,
+            ) => Promise<UploadedChatFile | null | undefined>
+        }
+    }
+    decisions: {
+        busyId: string | null
+        alreadyIds: readonly string[]
+        decideApproval: (
+            executionId: string,
+            decision: "approved" | "rejected",
+            editedDraft: string | null,
+        ) => Promise<void>
+        decideWork: (workItemId: string, choice: OfficeWorkDecision) => Promise<void>
+        confirmCommand: (candidateId: string) => Promise<void>
+        cancelCommand: (candidateId: string) => Promise<void>
+    }
+    panels: {
+        list: OfficeListView
+        info: OfficeInfoView
+        tasks: readonly OfficeTaskView[]
+        mentions: readonly OfficeMentionView[]
+    }
+    waitingCount: number
+    firstJump: OfficeWaiting | null
+    taskCount: number
+    memberCount: number
+    agentCount: number
+    roomTitle: string | null
+    isMuted: boolean
+    setMuted: (muted: boolean) => Promise<void>
+    peersTyping: string[]
+    onDraft: (draft: string) => void
+    onDutyCount: number
+    reading: {
+        avatar: OfficeAvatarView
+        ask: string
+        agent: string
+        label: string
+        gateNote: string
+    } | null
+    chatbotHandle: string | null
+    text: OfficeText
+    send: (body: string) => Promise<boolean>
+    markConversationRead: (kind: "agent" | "lead", id: string) => Promise<void>
+    slot: DataSlot<readonly OfficeMessage[]>
+    listSlot: DataSlot<OfficeListView>
+    threadSlot: DataSlot<boolean>
+    composerSlot: DataSlot<boolean>
+    retryList: () => void
+    retryThread: () => void
+    retryComposer: () => void
+}
+
 /** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
-export const useOfficeMessenger = (focusedId: string | null, roomKey: string | null, isThreadVisible: boolean) => {
+export const useOfficeMessenger = (
+    focusedId: string | null,
+    roomKey: string | null,
+    isThreadVisible: boolean,
+): UseOfficeMessengerResult => {
     const me = useMember()
     useSubscribeOfficeActivitySwr()
     const words = useOfficeWords()
@@ -156,7 +254,7 @@ export const useOfficeMessenger = (focusedId: string | null, roomKey: string | n
         agentCount: roomAgents.length,
         roomTitle: current === null ? null : current.name,
         isMuted: marker?.muted ?? false,
-        setMuted: (muted: boolean) => hub.setMute(roomKey, muted),
+        setMuted: (muted: boolean): Promise<void> => hub.setMute(roomKey, muted),
         peersTyping: hub.peers.names,
         onDraft: hub.peers.onDraft,
         onDutyCount: roomAgents.filter((agent) => agent.isActive).length,

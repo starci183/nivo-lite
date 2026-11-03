@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { ASPECTS, TARGET_SECONDS_MAX, TARGET_SECONDS_MIN } from "@/modules/video"
 import type { Aspect, Goal } from "@/modules/video"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The choices that create or update a video's goal. */
 export interface VideoGoalValues {
@@ -21,7 +22,7 @@ export interface VideoGoalValues {
 }
 
 /** Validates the goal step with localized messages before its GraphQL mutation runs. */
-export const useVideoGoalForm = (initial: VideoGoalValues) => {
+export const useVideoGoalForm = (initial: VideoGoalValues): UseFormReturn<VideoGoalValues> => {
     const t = useTranslations("video")
     const schema = useMemo(() => {
         const error = t("err_default")

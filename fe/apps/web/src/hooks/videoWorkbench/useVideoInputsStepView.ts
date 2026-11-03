@@ -2,8 +2,8 @@
 
 import type { VideoEditorActions, VideoEditorViews } from "@/modules/types"
 type VideoInputsFormFields = VideoEditorViews["inputs"]
-type VideoInputsFormActions = VideoEditorActions["inputs"]
-import type { ProjectInputs } from "@/modules/video"
+export type VideoInputsFormActions = VideoEditorActions["inputs"]
+import type { MediaItem, ProjectInputs } from "@/modules/video"
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useVideoActions, useVideoUpload } from "@/hooks/video"
@@ -77,8 +77,43 @@ const inputsFieldsOf = (context: InputsProjection) => {
                   },
     }
 }
+type UseVideoInputsStepViewResult = {
+    on: VideoInputsFormActions
+    mediaPaths: string[]
+    ui: {
+        heading: string
+        sourcesHeading: string
+        sourcesHint: string
+        sourcesEmpty: string
+        sourceIds: readonly string[]
+        notesLabel: string
+        notesHint: string
+        notes: string
+        mediaHeading: string
+        mediaHint: string
+        mediaEmpty: string
+        uploadLabel: string
+        backLabel: string
+        nextLabel: string
+        busy: boolean
+        message: {
+            readonly tone: "negative" | "informative"
+            readonly text: string
+        } | null
+    }
+    read: {
+        sources: {
+            value: string
+            label: string
+            excerpt: string
+        }[]
+        media: readonly MediaItem[]
+        canEdit: boolean
+    } | null
+}
+
 /** The selected project's material form, upload and save retain their original commands. */
-export const useVideoInputsStepView = (input: VideoViewInput) => {
+export const useVideoInputsStepView = (input: VideoViewInput): UseVideoInputsStepViewResult => {
     const t = useTranslations("video"),
         owner = videoOwnerOf(input, "inputs"),
         lifetime = useFeatureLifetime(owner.isActive, owner.scope),

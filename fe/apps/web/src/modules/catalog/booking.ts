@@ -1,7 +1,112 @@
 import type { ModuleDef } from "./catalog.types"
 
+type BookingShape = {
+    key: "booking"
+    order: number
+    icon: string
+    glyph: "moduleBooking"
+    mascot: string
+    category: "operations"
+    status: "early"
+    audience: "customer"
+    includedWithWorkspace: false
+    available: true
+    knowledgeFolder: string
+    workbench: string
+    settingsExtras: null
+    requires: {
+        capabilities: string[]
+        connections: never[]
+    }
+    connectionProviders: string[]
+    defaultOperatingMode: "assist"
+    multiInstance: true
+    gates: {
+        key: string
+    }[]
+    authorityActions: (
+        | {
+              action: "confirm_booking"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: string[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "reschedule"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "cancel_with_fee"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: true
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "cancel_booking"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "remind_booking"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+    )[]
+    accepts: (
+        | {
+              command: string
+              action: "confirm_booking"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "reschedule"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "cancel_with_fee"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "cancel_booking"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "remind_booking"
+              subjectType: string
+              requiredFields: string[]
+          }
+    )[]
+}
+
 /** The booking module. */
-export const BOOKING = {
+export const BOOKING: BookingShape = {
     key: "booking",
     order: 50,
     icon: "saved",

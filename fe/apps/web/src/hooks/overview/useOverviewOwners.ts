@@ -7,9 +7,22 @@ import { CONSOLE_ROUTES } from "@/modules/routes"
 import { trimGroups } from "./overview.shared"
 import { useOverviewData } from "./useOverviewData"
 import { useOverviewRows } from "./useOverviewRows"
+import type { OwnerGroupModel } from "@/hooks/overviewRows"
+
+type UseOverviewOwnersResult =
+    | {
+          title: string
+          verifiedLabel: string
+          groups: OwnerGroupModel[]
+          emptyMessage: string
+          emptyDescription: string
+          emptyActionLabel: string
+          emptyHref: "/leads?new=1" | "/modules"
+      }
+    | undefined
 
 /** The open work by owner with the words of its empty state; undefined until the dashboard is read. */
-export const useOverviewOwners = () => {
+export const useOverviewOwners = (): UseOverviewOwnersResult => {
     const t = useTranslations("overview")
     const format = useFormatter()
     const { dashboard } = useOverviewData()

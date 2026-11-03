@@ -37,7 +37,52 @@ const paramSchema = z.object({
     required: z.boolean().catch(false),
 })
 
-const opSchema = z.object({
+type OpSchemaShape = z.ZodObject<
+    {
+        id: z.ZodString
+        method: z.ZodEnum<{
+            GET: "GET"
+            POST: "POST"
+            PUT: "PUT"
+            PATCH: "PATCH"
+            DELETE: "DELETE"
+        }>
+        path: z.ZodString
+        summary: z.ZodCatch<z.ZodString>
+        params: z.ZodCatch<
+            z.ZodArray<
+                z.ZodObject<
+                    {
+                        name: z.ZodString
+                        in: z.ZodEnum<{
+                            query: "query"
+                            header: "header"
+                            path: "path"
+                        }>
+                        required: z.ZodCatch<z.ZodBoolean>
+                    },
+                    z.core.$strip
+                >
+            >
+        >
+        hasBody: z.ZodCatch<z.ZodBoolean>
+        suggest: z.ZodCatch<
+            z.ZodOptional<
+                z.ZodObject<
+                    {
+                        itemsPath: z.ZodString
+                        idField: z.ZodString
+                        titleField: z.ZodString
+                    },
+                    z.core.$strip
+                >
+            >
+        >
+    },
+    z.core.$strip
+>
+
+const opSchema: OpSchemaShape = z.object({
     id: z.string().min(1),
     method: z.enum(OPEN_API_METHODS),
     path: z.string().startsWith("/"),
@@ -50,7 +95,27 @@ const opSchema = z.object({
         .catch(undefined),
 })
 
-const pullSchema = z.object({
+type PullSchemaShape = z.ZodObject<
+    {
+        opId: z.ZodString
+        entity: z.ZodCatch<
+            z.ZodEnum<{
+                customer: "customer"
+                order: "order"
+                product: "product"
+                transaction: "transaction"
+                other: "other"
+            }>
+        >
+        itemsPath: z.ZodCatch<z.ZodString>
+        idField: z.ZodCatch<z.ZodString>
+        titleField: z.ZodCatch<z.ZodString>
+        fixedQuery: z.ZodCatch<z.ZodString>
+    },
+    z.core.$strip
+>
+
+const pullSchema: PullSchemaShape = z.object({
     opId: z.string(),
     entity: z.enum(OPEN_API_PULL_ENTITIES).catch("other"),
     itemsPath: z.string().catch(""),

@@ -14,7 +14,10 @@ import type { CategoryView, DossierStatus, DossierView } from "./dossiers"
 export const MAP_ROOT_ID = "root"
 
 /** The status filter of the map: every dossier, or those standing at one status. */
-export const MAP_STATUS_FILTERS = ["all", ...DOSSIER_STATUS_ORDER] as const
+export const MAP_STATUS_FILTERS: readonly ["all", "present", "partial", "drafted", "missing", "template"] = [
+    "all",
+    ...DOSSIER_STATUS_ORDER,
+] as const
 
 /** One of the status filters of the map. */
 export type MapStatusFilter = (typeof MAP_STATUS_FILTERS)[number]

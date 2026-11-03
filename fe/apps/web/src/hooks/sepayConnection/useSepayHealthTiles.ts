@@ -3,12 +3,18 @@
 import { useFormatter, useTranslations } from "next-intl"
 import type { Figure } from "@starci/grammar/common"
 import { mapSlot } from "@/hooks/slot"
-import type { SepayConnectionView } from "@/modules/types"
+import type { DataSlot, SepayConnectionView } from "@/modules/types"
 import { useSepayConnection } from "./useSepayConnection"
 import { useSepayPlaceholder } from "./useSepayPlaceholder"
 
+type UseSepayHealthTilesResult = {
+    slot: DataSlot<readonly Figure[]>
+    placeholder: readonly Figure[]
+    retry: () => void
+}
+
 /** The three health tiles of a SePay connection, worded, with the slot they come from and a same-shape placeholder. */
-export const useSepayHealthTiles = (connectionId: string) => {
+export const useSepayHealthTiles = (connectionId: string): UseSepayHealthTilesResult => {
     const t = useTranslations("sepayConnection")
     const format = useFormatter()
     const placeholder = useSepayPlaceholder()

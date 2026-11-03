@@ -8,14 +8,17 @@ import { bodyPartsOf } from "@/modules/office"
 import type { OfficeOutboxView } from "@/modules/types"
 import { refreshOffice } from "./office.shared"
 
+import type { ChatFileProblem } from "../chatFile/chatFile.shared"
+import type { ChatFileAddress, UploadedChatFile } from "@/hooks/chatFile/useChatFile"
+
 /** The one agent that takes commands, drawn as the card skeleton while the line is read. */
-interface ReadingAgent {
+export interface ReadingAgent {
     readonly handle: string
     readonly module: string
 }
 
 /** What a send needs to know about the line. */
-interface SendPlan {
+export interface SendPlan {
     readonly body: string
     /** The Hub room the line is posted in; null is the Office room. */
     readonly room: string | null
@@ -32,12 +35,31 @@ interface OutboxRow {
     readonly postedId: string | null
 }
 
+type UseOfficeSendResult = {
+    send: (plan: SendPlan) => Promise<boolean>
+    dismissFailed: () => void
+    outbox: readonly OfficeOutboxView[]
+    typing: string | null
+    reading: ReadingAgent | null
+    isSending: boolean
+    fileControl: {
+        accept: string
+        file: File | null
+        problem: ChatFileProblem | null
+        choose: (chosen: File) => void
+        clear: () => void
+        upload: (
+            addressOf: (chosen: File) => Promise<ChatFileAddress | undefined>,
+        ) => Promise<UploadedChatFile | null | undefined>
+    }
+}
+
 /**
  * Posts a line to the Office: an optimistic bubble kept until the server copy is in the thread data, then the post. The server reads the
  * tags of the line in the same transaction and wakes each agent it may ask, so the command card and the answer arrive by the chat
  * activity refresh; the client no longer asks for the command read.
  */
-export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
+export const useOfficeSend = (knownIds: ReadonlySet<string>): UseOfficeSendResult => {
     const runGraphQL = useGraphQLWithToast()
     const post = useMutatePostOfficeMessageSwr()
     const uploadAddress = useMutateRequestOfficeFileUploadSwr()
@@ -83,7 +105,7 @@ export const useOfficeSend = (knownIds: ReadonlySet<string>) => {
         [runGraphQL, post, isSettled, file, uploadAddress],
     )
 
-    const dismissFailed = useCallback(() => setOutbox((current) => current.filter((row) => !row.isFailed)), [])
+    const dismissFailed = useCallback((): void => setOutbox((current) => current.filter((row) => !row.isFailed)), [])
     const views = useMemo<ReadonlyArray<OfficeOutboxView>>(
         () =>
             outbox

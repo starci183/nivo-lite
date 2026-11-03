@@ -8,8 +8,40 @@ import { mutate } from "@/modules/viewer-cache"
 import { matchesSwrKey } from "@/modules/utils"
 import type { SepayAgentView, SlotRead } from "@/modules/types"
 
+type UseSepayAgentsResult = {
+    read: SlotRead<SepayAgentView[] | undefined>
+    slot:
+        | {
+              readonly isLoading: true
+          }
+        | {
+              readonly isForbidden: true
+          }
+        | {
+              readonly isError: true
+          }
+        | {
+              readonly isEmpty: true
+              readonly isValidating?: boolean
+          }
+        | {
+              readonly items: SepayAgentView[] | undefined
+              readonly isValidating?: boolean
+          }
+        | {
+              readonly items: readonly SepayAgentView[]
+              readonly isValidating?: boolean
+          }
+    retry: () => void
+    toggle: (agentId: string, isOn: boolean) => Promise<void>
+}
+
 /** The accounting agents of the workspace and which of them work through this SePay connection. */
-export const useSepayAgents = (connectionId: string, agentIds: ReadonlyArray<string>, isReady: boolean) => {
+export const useSepayAgents = (
+    connectionId: string,
+    agentIds: ReadonlyArray<string>,
+    isReady: boolean,
+): UseSepayAgentsResult => {
     const query = useQueryConnectionAgentsSwr()
     const save = useSetConnectionAgents()
     const rows = useMemo(
@@ -32,10 +64,10 @@ export const useSepayAgents = (connectionId: string, agentIds: ReadonlyArray<str
     return {
         read,
         slot: isReady ? slotOfSwr(read) : loadingSlot<ReadonlyArray<SepayAgentView>>(),
-        retry: () => {
+        retry: (): void => {
             void query.mutate()
         },
-        toggle: async (agentId: string, isOn: boolean) => {
+        toggle: async (agentId: string, isOn: boolean): Promise<void> => {
             const wanted = isOn ? [...agentIds, agentId] : agentIds.filter((id) => id !== agentId)
             const settled = await save(connectionId, wanted)
             if (settled.kind === "ok") await mutate(matchesSwrKey(QUERY_SEPAY_CONNECTION_SWR_KEY))

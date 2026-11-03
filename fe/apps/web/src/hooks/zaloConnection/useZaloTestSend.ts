@@ -8,9 +8,22 @@ import { mapSlot } from "@/hooks/slot"
 import { QUERY_ZALO_CONNECTION_EVENTS_SWR_KEY, useMutateSendZaloTestMessageSwr } from "@/hooks/swr"
 import type { DataSlot, ZaloSendView } from "@/modules/types"
 import { useZaloPage } from "./useZaloPage"
+import type { SetStateAction, Dispatch } from "react"
+
+type UseZaloTestSendResult = {
+    view: DataSlot<ZaloSendView>
+    recipientId: string
+    setRecipient: Dispatch<SetStateAction<string>>
+    text: string
+    setText: Dispatch<SetStateAction<string>>
+    send: () => Promise<void>
+    isSending: boolean
+    note: string
+    isNoteOk: boolean
+}
 
 /** The test send: who the free 48 hours allow, the text, and the real send through the delivery path. */
-export const useZaloTestSend = (connectionId: string) => {
+export const useZaloTestSend = (connectionId: string): UseZaloTestSendResult => {
     const t = useTranslations("zaloConnection")
     const format = useFormatter()
     const settle = useSettledGraphQL()

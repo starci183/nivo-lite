@@ -5,9 +5,75 @@ import { pageDays, resultKey } from "./publicBooking.shared"
 import { usePublicBooking } from "./usePublicBooking"
 import { wallClockText, wallDate, wallMinutes } from "@/modules/i18n"
 import type { PublicBookingPageData } from "@/modules/types"
+import type { PublicBookingFields } from "./usePublicBooking"
+
+type UsePublicBookingFormResult = {
+    props: {
+        refusal?: {
+            message: string
+            alternatives: {
+                value: string
+                label: string
+                date: string
+            }[]
+        }
+        done?: {
+            title: string
+            message: string
+            alternatives: {
+                value: string
+                label: string
+                date: string
+            }[]
+        }
+        formLabel: string
+        fields: PublicBookingFields
+        services: {
+            value: string
+            label: string
+            description: string
+        }[]
+        noServicesText: string
+        days: {
+            value: string
+            label: string
+        }[]
+        times:
+            | {
+                  value: string
+                  label: string
+              }[]
+            | null
+        labels: {
+            step1: string
+            step2: string
+            step3: string
+            finding: string
+            noTimes: string
+            pickTime: string
+            name: string
+            phone: string
+            email: string
+            party: string
+            note: string
+            website: string
+            submit: string
+            footnote: string
+            again: string
+            alternatives: string
+        }
+        isBusy: boolean
+    }
+    on: {
+        change: (patch: Partial<PublicBookingFields>) => void
+        submit: () => void
+        again: () => void
+        pickAlternative: (start: string, date: string) => void
+    }
+}
 
 /** The connected public booking form: free times follow the service and the day through the `publicBookingTimes` query, and a send goes through `requestPublicBooking`. */
-export const usePublicBookingForm = (page: PublicBookingPageData | null | undefined) => {
+export const usePublicBookingForm = (page: PublicBookingPageData | null | undefined): UsePublicBookingFormResult => {
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
     const booking = usePublicBooking(page)

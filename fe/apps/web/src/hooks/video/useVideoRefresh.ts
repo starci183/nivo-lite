@@ -28,8 +28,18 @@ type Operation = () => boolean
 /** What the owner of the video commands hands out: the refresh, the guarded completion and whether one is pending. */
 export type VideoRefresh = ReturnType<typeof useVideoRefresh>
 
+type UseVideoRefreshResult = {
+    refresh: () => Promise<unknown>
+    complete: <T>(
+        work: () => Promise<T>,
+        successMessage: string,
+        onResult?: (result: T | undefined) => void,
+    ) => Promise<T | undefined>
+    isPending: boolean
+}
+
 /** Existing command owner: standard feedback and exact cache refresh precede current-origin completion and pending settlement. */
-export const useVideoRefresh = (owner?: VideoOwner) => {
+export const useVideoRefresh = (owner?: VideoOwner): UseVideoRefreshResult => {
     const runGraphQL = useGraphQLWithToast()
     const { activeWorkspaceId: workspaceId } = useActiveWorkspace()
     const isActive = owner?.isActive ?? true,
@@ -38,11 +48,15 @@ export const useVideoRefresh = (owner?: VideoOwner) => {
     const [pending, setPending] = useState<ReadonlyArray<Operation>>([])
     useFeatureReset({ isActive, isReady: true, scope, onReset: () => setPending([]) })
     const refresh = useCallback(
-        () => mutate((key) => Array.isArray(key) && key[1] === workspaceId && VIDEO_KEYS.has(key[0])),
+        (): Promise<unknown> => mutate((key) => Array.isArray(key) && key[1] === workspaceId && VIDEO_KEYS.has(key[0])),
         [workspaceId],
     )
     const complete = useCallback(
-        async <T>(work: () => Promise<T>, successMessage: string, onResult?: (result: T | undefined) => void) => {
+        async <T>(
+            work: () => Promise<T>,
+            successMessage: string,
+            onResult?: (result: T | undefined) => void,
+        ): Promise<T | undefined> => {
             const isCurrent = lifetime.capture()
             if (!isCurrent()) return undefined
             setPending((current) => [...current, isCurrent])

@@ -12,7 +12,7 @@ const MIME: Readonly<Record<string, string>> = {
 }
 
 /** The file types a document may have. */
-export const SUPPORTED_FILE = /\.(txt|md|markdown|csv|pdf|docx|xlsx|pptx)$/i
+export const SUPPORTED_FILE: RegExp = /\.(txt|md|markdown|csv|pdf|docx|xlsx|pptx)$/i
 
 const extOf = (name: string): string => /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase() ?? ""
 

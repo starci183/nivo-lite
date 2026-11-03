@@ -1,7 +1,67 @@
 import type { ModuleDef } from "./catalog.types"
 
+type VideoShape = {
+    key: "video"
+    order: number
+    icon: string
+    glyph: "moduleVideo"
+    mascot: string
+    category: "marketing"
+    status: "early"
+    audience: "internal"
+    includedWithWorkspace: false
+    available: true
+    knowledgeFolder: string
+    workbench: string
+    settingsExtras: null
+    requires: {
+        capabilities: string[]
+        connections: never[]
+    }
+    connectionProviders: never[]
+    defaultOperatingMode: "assist"
+    multiInstance: false
+    gates: {
+        key: string
+    }[]
+    authorityActions: (
+        | {
+              action: "render_draft"
+              mode: "auto"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: null
+              next: never[]
+          }
+        | {
+              action: "publish_video"
+              mode: "ask"
+              limitVnd: null
+              requiredFields: never[]
+              amountLimit: false
+              maxMode: "ask"
+              next: never[]
+          }
+    )[]
+    accepts: (
+        | {
+              command: string
+              action: "render_draft"
+              subjectType: string
+              requiredFields: string[]
+          }
+        | {
+              command: string
+              action: "publish_video"
+              subjectType: string
+              requiredFields: string[]
+          }
+    )[]
+}
+
 /** The video module. */
-export const VIDEO = {
+export const VIDEO: VideoShape = {
     key: "video",
     order: 80,
     icon: "apps",

@@ -4,9 +4,22 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
+
+type UseAccountingAdjustmentFormResult = {
+    form: UseFormReturn<{
+        note: string
+        amount: string
+    }>
+    values: {
+        note?: string
+        amount?: string
+    }
+    error: string | null
+}
 
 /** The accounting correction form, validated before calling the mutation. */
-export const useAccountingAdjustmentForm = () => {
+export const useAccountingAdjustmentForm = (): UseAccountingAdjustmentFormResult => {
     const t = useTranslations("workbenchAccounting")
     const schema = z.object({
         note: z.string().trim().min(5, t("errAdjustNote")).max(1000, t("errAdjustNote")),

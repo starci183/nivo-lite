@@ -2,8 +2,16 @@ import { useShiftsRequestCommands } from "@/hooks/shiftsCommands"
 import type { ShiftsRequestActions } from "@/modules/types"
 import { useShiftsOperation } from "./useShiftsOperation"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
+type UseShiftsRequestsActionsResult = {
+    isBusy: boolean
+    on: {
+        readonly approve: (kind: "item" | "availability", targetId: string) => void
+        readonly decline: (kind: "item" | "availability", targetId: string) => void
+    }
+}
+
 /** Keeps the requests card's decision feedback and cache work in the initiating pending session. */
-export const useShiftsRequestsActions = (input: ShiftsPanelInput) => {
+export const useShiftsRequestsActions = (input: ShiftsPanelInput): UseShiftsRequestsActionsResult => {
     const commands = useShiftsRequestCommands(),
         operation = useShiftsOperation(input)
     const decide = (kind: "item" | "availability", targetId: string, approve: boolean) => {

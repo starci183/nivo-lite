@@ -168,8 +168,57 @@ const createShiftsRequestsActions = (context: ReturnType<typeof createShiftsRequ
 
     return { ...context, recent, openSections }
 }
+type UseShiftsRequestsViewResult =
+    | {
+          copy: Omit<
+              {
+                  readonly emptyTitle: string
+                  readonly emptyBody: string
+                  readonly recentTitle: string
+                  readonly approveLabel: string
+                  readonly declineLabel: string
+                  readonly sections: ReadonlyArray<ShiftsRequestViews["requestsRequestSectionView"]>
+                  readonly recent: ReadonlyArray<ShiftsRequestViews["requestsRequestRowView"]>
+                  readonly isBusy: boolean
+              },
+              "sections" | "recent"
+          >
+          data: undefined
+          on: undefined
+      }
+    | {
+          copy: Omit<
+              {
+                  readonly emptyTitle: string
+                  readonly emptyBody: string
+                  readonly recentTitle: string
+                  readonly approveLabel: string
+                  readonly declineLabel: string
+                  readonly sections: ReadonlyArray<ShiftsRequestViews["requestsRequestSectionView"]>
+                  readonly recent: ReadonlyArray<ShiftsRequestViews["requestsRequestRowView"]>
+                  readonly isBusy: boolean
+              },
+              "sections" | "recent"
+          >
+          data: {
+              sections: ShiftsRequestViews["requestsRequestSectionView"][]
+              recent: {
+                  decision: null
+                  tone: "success" | "neutral" | "warning"
+                  badge: string
+                  id: string
+                  title: string
+                  notes: never[]
+              }[]
+          }
+          on: {
+              readonly approve: (kind: "item" | "availability", targetId: string) => void
+              readonly decline: (kind: "item" | "availability", targetId: string) => void
+          }
+      }
+
 /** The leave, swap and availability requests of the staff with approve and decline, through the back end GraphQL API. */
-export const useShiftsRequestsView = (input: ShiftsPanelInput) => {
+export const useShiftsRequestsView = (input: ShiftsPanelInput): UseShiftsRequestsViewResult => {
     const t = useTranslations("shifts")
     const bench = input.bench.data
     const format = useShiftsFormat()

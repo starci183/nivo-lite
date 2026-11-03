@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the sender and password step. */
 export interface SmtpSenderValues {
@@ -28,7 +29,7 @@ interface SmtpSenderRules {
 const isEmail = (value: string): boolean => z.email().safeParse(value).success
 
 /** The sender and password step of the outgoing-email wizard: a zod schema (words from the `email` catalog) that follows the chosen provider. */
-export const useSmtpSenderForm = (rules: SmtpSenderRules) => {
+export const useSmtpSenderForm = (rules: SmtpSenderRules): UseFormReturn<SmtpSenderValues> => {
     const t = useTranslations("email")
     const { needsPassword, fixedUser, userIsEmail } = rules
     const schema = useMemo(

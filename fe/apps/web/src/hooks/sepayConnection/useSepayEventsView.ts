@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import type { SepayEventView } from "@/modules/types"
+import type { DataSlot, SepayEventView, SlotLabels } from "@/modules/types"
 import { SEPAY_EVENTS_PLACEHOLDER } from "./sepayConnection.shared"
 import { useSepayEvents } from "./useSepayEvents"
 
@@ -17,8 +17,34 @@ const detailOf = (t: Translate, event: SepayEventView, time: string): string => 
 
 const TONES = { accepted: "success", duplicate: "neutral", unauthorized: "danger" } as const
 
+type UseSepayEventsViewResult = {
+    events: {
+        title: string
+        liveLabel: string
+        footnote: string
+        slot: DataSlot<
+            {
+                id: string
+                title: string
+                statusLabel: string
+                statusTone: "success" | "neutral" | "danger"
+                detail: string
+            }[]
+        >
+        placeholder: {
+            id: string
+            title: string
+            statusLabel: string
+            statusTone: "success" | "neutral" | "danger"
+            detail: string
+        }[]
+        labels: SlotLabels
+    }
+    retry: () => void
+}
+
 /** The live rail of the webhook deliveries of a SePay connection in the words of the reader. */
-export const useSepayEventsView = (connectionId: string) => {
+export const useSepayEventsView = (connectionId: string): UseSepayEventsViewResult => {
     const t = useTranslations("sepayConnection")
     const format = useFormatter()
     const slotLabels = useSlotLabels()
