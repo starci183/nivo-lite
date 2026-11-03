@@ -26,7 +26,8 @@ services:
 
   nivo-redis:
     image: redis:7.4-alpine@sha256:57e4255cc971b1c8d6f8a6ca283ac01bc3ecdd914273ef6bfaede87aaecd6541
-    command: ["redis-server", "--appendonly", "yes"]
+    # The api refuses a Redis that may evict jobs (platform/queue isQueueMemoryBounded): bounded like production, noeviction.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
     ports:
       - "127.0.0.1:${STACK_PORT_REDIS}:6379"
     volumes:
