@@ -13,6 +13,10 @@ export enum GraphNodesErrorCode {
     ExecutorMissing = "GRAPH_NODES_EXECUTOR_MISSING",
     /** A node called a tool while no NIVO MCP door is bound. */
     ToolDoorMissing = "GRAPH_NODES_TOOL_DOOR_MISSING",
+    /** A node called a capability tool the workspace has no connected provider for: the node turns it into a connect work item. */
+    ToolNotConnected = "GRAPH_NODES_TOOL_NOT_CONNECTED",
+    /** The NIVO MCP door refused or failed a node tool call (the reason rides in the params). */
+    ToolFailed = "GRAPH_NODES_TOOL_FAILED",
 }
 
 /** How each graph-nodes code travels. */
@@ -22,6 +26,8 @@ export const GRAPH_NODES_ERROR_KINDS: Record<GraphNodesErrorCode, ErrorKind> = {
     [GraphNodesErrorCode.PortMissing]: "internal",
     [GraphNodesErrorCode.ExecutorMissing]: "internal",
     [GraphNodesErrorCode.ToolDoorMissing]: "internal",
+    [GraphNodesErrorCode.ToolNotConnected]: "not-found",
+    [GraphNodesErrorCode.ToolFailed]: "unavailable",
 }
 
 /** The one error class of the graph-nodes capability. */

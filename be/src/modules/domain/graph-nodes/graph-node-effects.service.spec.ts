@@ -7,11 +7,23 @@ import type { Logger } from "@modules/platform/logging"
 import { GraphNodeEffectsService, ledgerKeyOf } from "./graph-node-effects.service"
 import { GraphNodeEffectEntity } from "./persistence/entities"
 
-const ROW = { workspaceId: "ws-1", ledgerKey: "call:run:0", effect: "core.send", subjectKind: "message", subjectId: "m-1" }
+const ROW = {
+    workspaceId: "ws-1",
+    ledgerKey: "call:run:0",
+    effect: "core.send",
+    subjectKind: "message",
+    subjectId: "m-1",
+}
 
 /** The stored row of the ledger, as the database answers it. */
 const stored = (overrides: Partial<GraphNodeEffectEntity> = {}): GraphNodeEffectEntity =>
-    Object.assign(new GraphNodeEffectEntity(), { id: "e-1", createdAt: new Date(0), updatedAt: new Date(0), ...ROW, ...overrides })
+    Object.assign(new GraphNodeEffectEntity(), {
+        id: "e-1",
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+        ...ROW,
+        ...overrides,
+    })
 
 const build = async (em: ReturnType<typeof mockEntityManager>) => {
     const logger = mock<Logger>()
@@ -60,7 +72,13 @@ describe("GraphNodeEffectsService.once", () => {
             id: "m-1",
         })
         expect(act).not.toHaveBeenCalled()
-        expect(em.findOneBy).toHaveBeenCalledWith(GraphNodeEffectEntity, { workspaceId: "ws-1", ledgerKey: "dedupe:pay:o1" })
-        expect(logger.info).toHaveBeenCalledWith("graph_nodes.effect_replayed", { workspaceId: "ws-1", effect: "core.send" })
+        expect(em.findOneBy).toHaveBeenCalledWith(GraphNodeEffectEntity, {
+            workspaceId: "ws-1",
+            ledgerKey: "dedupe:pay:o1",
+        })
+        expect(logger.info).toHaveBeenCalledWith("graph_nodes.effect_replayed", {
+            workspaceId: "ws-1",
+            effect: "core.send",
+        })
     })
 })

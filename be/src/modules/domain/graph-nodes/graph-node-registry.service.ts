@@ -64,7 +64,8 @@ export class GraphNodeRegistryService implements OnApplicationBootstrap {
     /** The installed node of an id; refused when the app did not install it. */
     nodeOf(id: string): NodeDefinition {
         const node = this.index.nodes.get(id)
-        if (node === undefined) throw new GraphNodesError({ code: GraphNodesErrorCode.NodeUnknown, params: { node: id } })
+        if (node === undefined)
+            throw new GraphNodesError({ code: GraphNodesErrorCode.NodeUnknown, params: { node: id } })
         return node
     }
 
