@@ -1,7 +1,7 @@
 import { moduleListProblems } from "@nivo/agent-sdk/module"
-import { specProblems } from "@nivo/agent-sdk/workbench/contract"
-import type { WorkbenchSpecDocument } from "@nivo/agent-sdk/workbench/contract"
-import { REGISTERED_MODULE_KEYS } from "./index"
+import { specProblems } from "@nivo/agent-sdk/workbench/spec"
+import type { WorkbenchSpecDocument } from "@nivo/agent-sdk/workbench/spec"
+import { REGISTERED_MODULE_KEYS } from "./registered-module-keys"
 import { MODULE_SERVERS } from "./template"
 import { MODULE_WORKBENCHES, SPEC_REGISTRY } from "./manifest"
 
@@ -49,7 +49,7 @@ const LOYALTY_OVERVIEW: WorkbenchSpecDocument = {
                         id: "list",
                         block: "record-list",
                         props: {
-                            label: { vi: "Khách thân", en: "Regulars" },
+                            label: { vi: "Regulars in vi", en: "Regulars" },
                             empty: { key: "membersEmpty" },
                             idPath: "id",
                             titlePath: "name",
