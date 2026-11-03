@@ -549,10 +549,6 @@ environments:
             SITE_URL: "https://nivo-local-app.starci.org"
             PUBLIC_SITE_URL: "https://nivo-local-app.starci.org"
             AUTH_WEB_ORIGIN: "https://nivo-local-app.starci.org"
-            # The refresh cookie is shared across the tunnel hosts (the console and the api are both under starci.org). A Domain of starci.org is
-            # refused by a browser on localhost, so login on localhost:3000 needs the @starci/auth `domains` change of harness release 4; this
-            # key then becomes AUTH_COOKIE_DOMAINS.
-            AUTH_COOKIE_DOMAIN: "starci.org"
             AUTH_GOOGLE_CALLBACK_URL: "http://localhost:${port.api}/auth/google/callback"
             # The refresh cookie takes Domain=starci.org on the dev tunnel host and stays host-only on localhost (@starci/auth 0.4.0 domains).
             AUTH_COOKIE_DOMAINS: "starci.org"
