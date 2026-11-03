@@ -23,8 +23,6 @@ import { PaymentReconciledEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
-import { OrderPaymentReconcileService } from "./order-payment-reconcile.service"
-import { ORDER_TARGET } from "./order-payment.policy"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref, numberOf, textOf } from "./performer.policy"
 import { bankNameOf, candidateOf, claimKeyOf, matchPayment } from "./payment-match.policy"
@@ -63,7 +61,6 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
         private readonly workItems: WorkItemsService,
         private readonly evidence: EvidenceService,
         private readonly leads: LeadRecordsService,
-        private readonly orderPayments: OrderPaymentReconcileService,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectEventBus() private readonly bus: EventBus,
     ) {}
@@ -131,7 +128,6 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
      * customer's "I paid" checks the bank credit just made redundant.
      */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
-        if (proposal.fields.target === ORDER_TARGET) return this.orderPayments.settle(ctx, item, proposal, by)
         const [chosen] = proposal.candidates ?? []
         if (chosen === undefined || proposal.candidates?.length !== 1) {
             throw new DecisionsError({ code: DecisionsErrorCode.ChooseCandidate })

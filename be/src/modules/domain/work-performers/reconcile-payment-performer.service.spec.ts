@@ -11,7 +11,6 @@ import { PaymentReconciledEvent } from "@modules/events/api"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { EVENT_BUS } from "@modules/platform/event-bus"
 import type { BaseEvent } from "@modules/platform/event-bus"
-import { OrderPaymentReconcileService } from "./order-payment-reconcile.service"
 import { PerformerKitService } from "./performer-kit.service"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
 import {
@@ -55,7 +54,6 @@ const build = async () => {
     workItems.settleClaims.mockResolvedValue([])
     const evidence = mock<EvidenceService>()
     const leads = mock<LeadRecordsService>()
-    const orderPayments = mock<OrderPaymentReconcileService>()
     const bus = recordingEventBus<BaseEvent>()
     const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
@@ -69,7 +67,6 @@ const build = async () => {
             { provide: WorkItemsService, useValue: workItems },
             { provide: EvidenceService, useValue: evidence },
             { provide: LeadRecordsService, useValue: leads },
-            { provide: OrderPaymentReconcileService, useValue: orderPayments },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: EVENT_BUS, useValue: bus },
         ],
@@ -83,7 +80,6 @@ const build = async () => {
         workItems,
         evidence,
         leads,
-        orderPayments,
         bus,
         tx,
     }
@@ -466,20 +462,5 @@ describe("ReconcilePaymentPerformerService clearlyMatches", () => {
 
         await expect(service.clearlyMatches(ctx, "ev-1")).resolves.toBe(clear)
         expect(inbound.find).toHaveBeenCalledWith("ws-1", "ev-1")
-    })
-})
-
-describe("ReconcilePaymentPerformerService perform for an order", () => {
-    it("hands a proposal that targets a sales order to the order reconciliation and touches no invoice", async () => {
-        const { service, orderPayments, invoices } = await build()
-        const performed = { summary: "paid", evidence: "verified" as const }
-        orderPayments.settle.mockResolvedValue(performed)
-        const item = itemOf({ subject_type: "transaction", subject_id: "tx-1" })
-        const proposal = proposalOf({ candidates: [{ id: "order-1", label: "o", amount_vnd: 5000 }], fields: { target: "order" } })
-
-        await expect(service.perform(ctx, item, proposal, { name: "NIVO" } as never)).resolves.toBe(performed)
-
-        expect(orderPayments.settle).toHaveBeenCalledWith(ctx, item, proposal, { name: "NIVO" })
-        expect(invoices.markPaid).not.toHaveBeenCalled()
     })
 })

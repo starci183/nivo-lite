@@ -23,8 +23,6 @@ import { FollowUpPerformerService } from "./follow-up-performer.service"
 import { HandoffLeadPerformerService } from "./handoff-lead-performer.service"
 import { IssueInvoicePerformerService } from "./issue-invoice-performer.service"
 import { PaymentInstructionsService } from "./payment-instructions.service"
-import { OrderPaymentJudgeService } from "./order-payment-judge.service"
-import { OrderPaymentReconcileService } from "./order-payment-reconcile.service"
 import { PerformerKitService } from "./performer-kit.service"
 import { QuotePerformerService } from "./quote-performer.service"
 import { RedeemRewardPerformerService } from "./redeem-reward-performer.service"
@@ -69,8 +67,6 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 IssueInvoicePerformerService,
                 ReconcilePaymentPerformerService,
                 BankCreditSettlementService,
-                OrderPaymentJudgeService,
-                OrderPaymentReconcileService,
                 ReplyCustomerPerformerService,
                 SendEmailPerformerService,
                 BookingPerformerService,
@@ -91,7 +87,6 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
             exports: [
                 CustomerDeliveryService,
                 BankCreditSettlementService,
-                OrderPaymentReconcileService,
                 BookingChatService,
                 BookingToolsService,
                 PerformerKitService,

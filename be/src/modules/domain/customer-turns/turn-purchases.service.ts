@@ -5,8 +5,7 @@ import { WorkEngineService, formatVnd } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { InvoiceRow } from "@modules/domain/invoices"
-import { AWAITING_PAYMENT_STATUSES, OrderPaymentClaimsService, OrdersService } from "@modules/domain/orders"
-import { claimAmountOf, claimNamesOf } from "@modules/domain/work-performers"
+import { OrdersService } from "@modules/domain/orders"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { OPEN_ORDER_STATUSES, sameItems } from "./customer-turn.policy"
@@ -27,7 +26,6 @@ export class TurnPurchasesService {
         private readonly orders: OrdersService,
         private readonly conversations: AgentConversationsService,
         private readonly claims: PaymentClaimsService,
-        private readonly orderClaims: OrderPaymentClaimsService,
     ) {}
 
     /** A clear purchase of a listed item is one order input per message; the same item again while its order is open is not a second order. */
@@ -116,31 +114,6 @@ export class TurnPurchasesService {
             return { lines: [], changed: false, leadId: null }
         }
         return { lines: [this.text("claimRecorded", { no: invoice.invoice_no })], changed: true, leadId: null }
-    }
-
-    /** Whether the customer has an order that waits for money, so that "I paid" is a claim for Accounting to hold and not a case for the owner. */
-    async awaitsPayment(workspaceId: string, leadId: string): Promise<boolean> {
-        const orders = await this.orders.listForLead(workspaceId, leadId)
-        return orders.some((entry) => AWAITING_PAYMENT_STATUSES.some((status) => status === entry.status))
-    }
-
-    /**
-     * "I have paid" an order that waits for money: the claim (amount and account holder read from the words) goes to Accounting's ledger,
-     * where it waits for the money. It confirms nothing; Accounting settles it when a matching credit arrives or asks the owner when none does.
-     */
-    async recordOrderClaim(ctx: WorkContext, turn: CustomerTurn, claimed: boolean): Promise<TurnSettled> {
-        const leadId = turn.conversation.leadId
-        if (!claimed || leadId === null) return { lines: [], changed: false, leadId }
-        const written = await this.orderClaims.record({
-            workspaceId: ctx.workspaceId,
-            leadId,
-            conversationId: turn.conversation.id,
-            amountVnd: claimAmountOf(turn.body),
-            names: claimNamesOf(turn.body),
-            body: turn.body,
-            dedupeKey: `${turn.channelEventId}:order-claim`,
-        })
-        return { lines: written ? [this.text("orderClaimRecorded", {})] : [], changed: written, leadId }
     }
 
     private text(key: string, params: Readonly<Record<string, string>>): string {

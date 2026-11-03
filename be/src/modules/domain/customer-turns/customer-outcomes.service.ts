@@ -97,7 +97,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             leadId: handoff.leadId,
         })
         const claim = await this.purchases.recordClaim(ctx, turn, judged.claimOpen, channel)
-        const orderClaim = await this.purchases.recordOrderClaim(ctx, turn, judged.orderClaim === true)
         const extra = judged.needsHuman ? { reply: null, lines: [] } : await this.modules.settle(ctx, turn, reply)
         const waiting = judged.needsHuman ? await this.askPerson(ctx, turn, reply, judged, order.leadId) : []
         const leaving = extra.reply ?? application.reply
@@ -133,7 +132,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             handoff.changed ||
             order.changed ||
             claim.changed ||
-            orderClaim.changed ||
             application.changed ||
             waiting.length > 0 ||
             extra.lines.length > 0 ||
@@ -148,7 +146,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
                 ...handoff.lines,
                 ...order.lines,
                 ...claim.lines,
-                ...orderClaim.lines,
                 ...extra.lines,
                 ...waiting,
             ],
@@ -223,9 +220,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
                 needsHuman: false,
                 paid,
             }
-        }
-        if (leadId !== null && (await this.purchases.awaitsPayment(conversation.workspaceId, leadId))) {
-            return { ...base, reply: this.text("orderClaimReply", {}), needsHuman: false, orderClaim: true }
         }
         // A payment with no open invoice of ours: a person has to look at it (the reply only says the shop will check).
         return { ...base, needsHuman: true, reason: "unclear_outcome" }
