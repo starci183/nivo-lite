@@ -1,3 +1,4 @@
+import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import { z } from "zod"
 import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { MAX_LIMITS, MAX_LIMIT_LENGTH, MAX_TASK_LENGTH } from "./agent-graphs-contract.contracts"
@@ -279,5 +280,6 @@ export const graphDocumentSchema: z.ZodType<GraphDocument> = z
         nodes: z.array(nodeSchema).max(MAX_GRAPH_NODES * 2),
         rights: z.array(rightSchema).max(10),
         contracts: z.array(intentBusinessSchema).max(MAX_GRAPH_NODES).optional(),
+        flow: graphSpecSchema.optional(),
     })
     .strict()

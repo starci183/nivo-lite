@@ -1,6 +1,7 @@
 export { WorkspaceSeedModule } from "./workspace-seed.module"
 export { WorkspaceSeedService } from "./workspace-seed.service"
 export { WorkspaceProfileService } from "./workspace-profile.service"
+export { GraphSeedService } from "./graph-seed.service"
 export { OfficeSeedService } from "./office-seed.service"
 export type { OfficeCommand, ResolvedOfficeAuthority } from "./office-seed.contracts"
 export type { OfficeAuthorityPort } from "./office-seed.port"

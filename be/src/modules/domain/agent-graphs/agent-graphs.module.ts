@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common"
-import type { DynamicModule, Type } from "@nestjs/common"
+import type { DynamicModule, Provider, Type } from "@nestjs/common"
 import { SETUP_GRAPH } from "@modules/domain/modules"
 import { OUTPUT_NODE_READER, WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import { DATA_RIGHTS_GATE, TOOL_GRAPH_GATE } from "@modules/domain/mcp-gateway"
@@ -13,6 +13,7 @@ import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.ser
 import { AgentGraphContractsService } from "./agent-graph-contracts.service"
 import { AgentGraphChecksService } from "./agent-graph-checks.service"
 import { AgentGraphDeciderService } from "./agent-graph-decider.service"
+import { AgentGraphFlowService } from "./agent-graph-flow.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import {
     AGENT_GRAPH_APPROVALS,
@@ -78,6 +79,9 @@ const RIGHTS_ONLY: Part = {
     ports: [RIGHTS_PORT, TOOL_PORT, OUTPUT_NODES_PORT],
 }
 
+/** The store alone, with the publishing of a flow: what an app that only seeds graphs carries. */
+const STORE_ONLY: Part = { services: [AgentGraphsService, AgentGraphFlowService], ports: [] }
+
 /** The reader of the amount of the work item itself, which every app that decides branches carries beside the readers of its modules. */
 const WORK_AMOUNT: Type = WorkAmountFactReaderService
 
@@ -115,6 +119,7 @@ const WHOLE: Part = {
         OUTGOING_FACTS,
         AgentGraphContextService,
         AgentGraphSeedService,
+        AgentGraphFlowService,
         AgentGraphPublishService,
         AgentGraphProposalsService,
         AgentGraphViewService,
@@ -140,8 +145,30 @@ const WHOLE: Part = {
     ],
 }
 
+/** The registry of the fact readers and the registration of the configured ones, for an app that decides branches. */
+const factReaders = (options: typeof OPTIONS_TYPE): Array<Provider> => [
+    GraphFactReadersService,
+    {
+        provide: GRAPH_FACT_READERS,
+        useFactory: (registry: GraphFactReadersService) => registry.all(),
+        inject: [GraphFactReadersService],
+    },
+    {
+        provide: FACT_READERS_READY,
+        useFactory: (registry: GraphFactReadersService, ...readers: ReadonlyArray<GraphFactReader>) =>
+            registry.register(readers),
+        inject: [
+            GraphFactReadersService,
+            ...(options.readers ?? []),
+            OUTGOING_FACTS,
+            ...(options.rightsOnly === true ? [] : [WORK_AMOUNT]),
+        ],
+    },
+]
+
 /** The part of the capability an app asked for. */
 const partOf = (options: typeof OPTIONS_TYPE): Part => {
+    if (options.storeOnly === true) return STORE_ONLY
     if (options.rightsOnly === true) return RIGHTS_ONLY
     return options.deciderOnly === true ? DECIDER_ONLY : WHOLE
 }
@@ -163,27 +190,11 @@ export class AgentGraphsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 ...part.services,
-                GraphFactReadersService,
                 { provide: AGENT_GRAPHS_OPTIONS, useValue: options },
                 ...(options.workDecisions === undefined
                     ? []
                     : [{ provide: GRAPH_WORK_DECISIONS, useExisting: options.workDecisions }]),
-                {
-                    provide: GRAPH_FACT_READERS,
-                    useFactory: (registry: GraphFactReadersService) => registry.all(),
-                    inject: [GraphFactReadersService],
-                },
-                {
-                    provide: FACT_READERS_READY,
-                    useFactory: (registry: GraphFactReadersService, ...readers: ReadonlyArray<GraphFactReader>) =>
-                        registry.register(readers),
-                    inject: [
-                        GraphFactReadersService,
-                        ...(options.readers ?? []),
-                        OUTGOING_FACTS,
-                        ...(options.rightsOnly === true ? [] : [WORK_AMOUNT]),
-                    ],
-                },
+                ...(options.storeOnly === true ? [] : factReaders(options)),
                 ...part.ports,
             ],
             exports: [...part.services, ...part.ports.map((port) => port.provide)],
