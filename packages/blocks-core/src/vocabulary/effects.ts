@@ -59,6 +59,8 @@ export interface AgentTagPayload {
     readonly channel?: string | undefined
     /** Plain data for the target's graph, which reads it as `trigger.context`. */
     readonly context?: Readonly<Record<string, unknown>> | undefined
+    /** How the customer sees the hand-over: in the same chat (the default), or redirected to the tagged agent. */
+    readonly visibility?: "chat" | "redirect" | undefined
 }
 
 /** A piece of work raised for a person or the gate. */
@@ -128,6 +130,7 @@ const agentTagPayload: z.ZodType<AgentTagPayload> = z
         leadId: id.optional(),
         channel: id.optional(),
         context: z.record(z.string(), z.unknown()).optional(),
+        visibility: z.enum(["chat", "redirect"]).optional(),
     })
     .refine((payload) => (payload.toAgentId === undefined) !== (payload.toModuleKey === undefined))
 

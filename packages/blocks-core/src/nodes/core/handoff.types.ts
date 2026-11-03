@@ -4,6 +4,17 @@ import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 export interface HandoffParams {
     /** The key of the agent to tag, as the module JSON names it. */
     readonly toModuleKey: string
+    /** `chat` shows the hand-off as a tag in the conversation; `redirect` is a silent direct hand-off. */
+    readonly visibility: HandoffVisibility
+}
+
+/** How a hand-off shows. */
+export type HandoffVisibility = "chat" | "redirect"
+
+/** The params as a graph spec writes them: the visibility may be left out. */
+export interface HandoffParamsIn {
+    readonly toModuleKey: string
+    readonly visibility?: HandoffVisibility | undefined
 }
 
 /** What the tagged agent is told. */
