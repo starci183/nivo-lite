@@ -1,4 +1,4 @@
-import { vietQrUrl } from "@modules/domain/channel-connections"
+import { vietQrUrl } from "@modules/domain/sepay-provider"
 import type { SepayPayload } from "./billing.contracts"
 import type { BankAccountOptions } from "./billing.options"
 import { sameText } from "./channel-secret.policy"

@@ -1,5 +1,5 @@
 import type { SepayTransaction } from "@modules/integrations/sepay"
-import type { PolledCredit } from "./bank-feed-poll.contracts"
+import type { BankTransaction, PolledCredit } from "@modules/domain/provider-registry"
 
 /** The bank name shown when SePay lists none. */
 const FALLBACK_BANK = "SePay"
@@ -22,5 +22,20 @@ export const sepayPolledCredit = (connectionId: string, row: SepayTransaction): 
             fallbackBankName: row.bank ?? FALLBACK_BANK,
             ...(credit ? {} : { direction: "debit" as const }),
         },
+    }
+}
+
+/** One listed SePay transaction in the bank-feed shape nodes and agents read; a row that moved no money is nothing. */
+export const sepayBankTransaction = (row: SepayTransaction): BankTransaction | undefined => {
+    const credit = row.amountIn > 0
+    const amountVnd = credit ? row.amountIn : row.amountOut
+    if (amountVnd <= 0) return undefined
+    return {
+        id: `sepay:${row.id}`,
+        direction: credit ? "credit" : "debit",
+        amountVnd,
+        content: row.content !== "" ? row.content : (row.code ?? ""),
+        occurredAt: row.occurredAt.toISOString(),
+        bankName: row.bank ?? FALLBACK_BANK,
     }
 }

@@ -17,6 +17,15 @@ const TOO_MANY_REQUESTS = 429
 export const toSepayTime = (at: Date): string =>
     new Date(at.getTime() + VIETNAM_OFFSET_MS).toISOString().slice(0, 19).replace("T", " ")
 
+const UNAUTHORIZED = 401
+const FORBIDDEN = 403
+
+/** The seconds SePay asked the caller to wait (`Retry-After` as a number of seconds), or 0 when it named none. */
+const retryAfterOf = (header: string | undefined): number => {
+    const seconds = Number(header)
+    return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 0
+}
+
 const textOf = (value: unknown): string | null => {
     if (typeof value === "number" && Number.isFinite(value)) return String(value)
     return typeof value === "string" && value.trim() !== "" ? value.trim() : null
@@ -75,7 +84,15 @@ export class SepayClient {
             .catch((cause: unknown) => {
                 throw new SepayError({ code: SepayErrorCode.Unavailable, cause })
             })
-        if (answer.status === TOO_MANY_REQUESTS) throw new SepayError({ code: SepayErrorCode.RateLimited })
+        if (answer.status === TOO_MANY_REQUESTS) {
+            throw new SepayError({
+                code: SepayErrorCode.RateLimited,
+                params: { retryAfterSeconds: retryAfterOf(answer.headers?.["retry-after"]) },
+            })
+        }
+        if (answer.status === UNAUTHORIZED || answer.status === FORBIDDEN) {
+            throw new SepayError({ code: SepayErrorCode.AuthFailed, params: { reason: String(answer.status) } })
+        }
         if (answer.status < 200 || answer.status >= 300) {
             throw new SepayError({
                 code:

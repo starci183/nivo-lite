@@ -45,6 +45,7 @@ const options = {
     connectionSecrets: { tokenKey: new Secret(Buffer.alloc(32, 9).toString("base64")) },
     mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 },
     ai: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
+    sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
 }
 
 /** The existing database and queue tokens of the real registered modules, each answered by a double that refuses to run. */
@@ -159,6 +160,7 @@ type BuildWiringProofResultOptionsShape = {
     connectionSecrets: BuildWiringProofResultOptionsConnectionSecretsShape
     mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
     ai: BuildWiringProofResultOptionsAiShape
+    sepay: { apiBase: string; timeoutMs: number }
 }
 
 type BuildWiringProofResultShape = {

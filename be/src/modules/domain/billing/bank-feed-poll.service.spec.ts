@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { ConnectionPollLogEvent } from "@modules/domain/connection-poll"
+import { BankFeedPollerRegistry } from "@modules/domain/provider-registry"
+import type { BankFeedPoller } from "@modules/domain/provider-registry"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord, HealthCandidate } from "@modules/domain/connections"
 import { CLOCK } from "@modules/platform/clock"
@@ -9,7 +11,7 @@ import type { Logger } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import { BankFeedPollService } from "./bank-feed-poll.service"
-import { SepayFeedPoller } from "./sepay-feed-poller.service"
+import { BankFeedService } from "./bank-feed.service"
 
 const recordOf = (
     id: string,
@@ -47,8 +49,11 @@ const build = async () => {
     const connections = mock<ConnectionsService>()
     connections.get.mockResolvedValue(recordOf("sepay-1", "sepay"))
     connections.patch.mockResolvedValue(undefined)
-    const sepay = Object.assign(mock<SepayFeedPoller>(), { provider: "sepay" as const })
+    const sepay = Object.assign(mock<BankFeedPoller>(), { provider: "sepay", inboxProvider: "sepay-feed" as const })
     sepay.fetch.mockResolvedValue({ kind: "skipped", reason: "no_token" })
+    const pollers = new BankFeedPollerRegistry()
+    pollers.register(sepay)
+    const feed = mock<BankFeedService>()
     const logger = mock<Logger>()
     const timer = mock<Timer>()
     const moduleRef = await Test.createTestingModule({
@@ -58,10 +63,11 @@ const build = async () => {
             { provide: LOGGER, useValue: logger },
             { provide: TIMER, useValue: timer },
             { provide: ConnectionsService, useValue: connections },
-            { provide: SepayFeedPoller, useValue: sepay },
+            { provide: BankFeedPollerRegistry, useValue: pollers },
+            { provide: BankFeedService, useValue: feed },
         ],
     }).compile()
-    return { service: moduleRef.get(BankFeedPollService), connections, sepay, logger }
+    return { service: moduleRef.get(BankFeedPollService), connections, sepay, logger, feed }
 }
 
 describe("BankFeedPollService reconcileAll", () => {
@@ -138,5 +144,25 @@ describe("BankFeedPollService reconcileFromJob", () => {
 
         await expect(service.reconcileOne("ws-1", "x")).resolves.toMatchObject({ connections: 0 })
         expect(sepay.fetch).not.toHaveBeenCalled()
+    })
+})
+
+describe("BankFeedPollService storing", () => {
+    it("stores a polled credit through the feed receipt under the webhook key of the provider inbox identity", async () => {
+        const { service, connections, sepay, feed } = await build()
+        const credit = { amount: 5000, content: "x", eventId: "sepay:1", fallbackBankName: "MBBank" }
+        connections.find.mockResolvedValue(recordOf("sepay-1", "sepay"))
+        sepay.fetch.mockResolvedValue({
+            kind: "page",
+            items: [{ deliveryId: "sepay-1:sepay:1", credit }],
+            fetched: 1,
+            oldestAt: new Date("2026-11-04T01:06:00.000Z"),
+            newestAt: new Date("2026-11-04T01:06:00.000Z"),
+        })
+        feed.acceptPolledCredit.mockResolvedValue(true)
+
+        await expect(service.reconcileOne("ws-1", "sepay-1")).resolves.toMatchObject({ fetched: 1, recorded: 1 })
+
+        expect(feed.acceptPolledCredit).toHaveBeenCalledWith("sepay-1", "sepay-feed", "sepay-1:sepay:1", credit)
     })
 })

@@ -20,10 +20,13 @@ import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
+import { ProviderRegistryModule } from "@modules/domain/provider-registry"
+import { SepayProviderModule } from "@modules/domain/sepay-provider"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { appPgTypes } from "@modules/integrations/data-sources"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
+import { SEPAY_ERROR_KINDS, SEPAY_MESSAGES, SepayModule } from "@modules/integrations/sepay"
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
@@ -61,6 +64,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
             MCP_GATEWAY_MESSAGES,
             MCP_GATEWAY_RECEIPTS_MESSAGES,
             MCP_MESSAGES,
+            SEPAY_MESSAGES,
             TRANSACTIONS_MESSAGES,
         ],
     }),
@@ -76,6 +80,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
             MCP_GATEWAY_ERROR_KINDS,
             MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
             MCP_ERROR_KINDS,
+            SEPAY_ERROR_KINDS,
             TRANSACTIONS_ERROR_KINDS,
         ],
     }),
@@ -106,6 +111,9 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     DataRecordsModule.register({ isGlobal: true }),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     ...mcpKnowledgeModules(options),
+    ProviderRegistryModule.register({ isGlobal: true }),
+    SepayModule.register({ isGlobal: true, ...options.sepay }),
+    SepayProviderModule.register({}),
     McpCallLogModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,
