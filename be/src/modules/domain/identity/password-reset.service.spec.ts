@@ -3,37 +3,30 @@ import { IsNull, MoreThan } from "typeorm"
 import { FakeClock, builder, fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { MAIL } from "@modules/integrations/mail"
 import type { MailClient } from "@modules/integrations/mail"
-import { PASSPORT_PASSWORDS } from "@modules/integrations/passport"
-import type { PassportPasswordsClient } from "@modules/integrations/passport"
+import { PASSPORT_PASSWORDS, PASSPORT_SIGN_IN_BUDGET, digestOf } from "@modules/integrations/passport"
+import type { AuthPasswords, SignInBudget } from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { Principal } from "@modules/platform/cqrs"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { IdentityAttemptsService } from "./attempts.service"
-import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
+import { behaveAsSignInBudget } from "@tests/fixtures/builders/sign-in-budget.builder"
+import { IdentityErrorCode } from "./errors/identity.error"
 import { IDENTITY_AUTH_OPTIONS } from "./identity-auth.decorators"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { IdentityPasswordResetService } from "./password-reset.service"
-import { digestOf } from "./password.policy"
-import { IdentityPasswordTokenEntity } from "./persistence/entities"
+import { IdentityPasswordTokenEntity, IdentitySessionEntity } from "./persistence/entities"
 
 /** The statements `callDbFunction` sends for the account doors. */
 const USER_BY_EMAIL = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
 const SET_PASSWORD = 'SELECT * FROM "public"."be_auth_set_password"($1, $2, $3)'
-const CLOSE_USER_SESSIONS = 'SELECT * FROM "public"."be_auth_close_user_sessions"($1)'
 
 const NOW = "2026-11-09T10:00:00.000Z"
 const OPTIONS: IdentityAuthOptions = {
     webOrigin: "https://app.example.test",
-    cookieDomain: undefined,
-    refreshTtlSeconds: 3600,
     resetTtlSeconds: 3600,
     inviteTtlSeconds: 7200,
-    loginAttempts: 3,
-    resetAttempts: 2,
-    attemptWindowMs: 60_000,
 }
 const passwordTokenFor = (purpose: IdentityPasswordTokenEntity["purpose"]): IdentityPasswordTokenEntity =>
     builder<IdentityPasswordTokenEntity>({
@@ -66,12 +59,13 @@ const build = async (stubs: Stubs, allowed = true) => {
         findOne: [IdentityPasswordTokenEntity, stubs.token ?? null],
         insert: [IdentityPasswordTokenEntity, {}],
         update: [IdentityPasswordTokenEntity, { affected: 1 }],
+        delete: [IdentitySessionEntity, { affected: 2 }],
     })
     fakeTransaction(em)
-    const passwords = mock<PassportPasswordsClient>()
+    const passwords = mock<AuthPasswords>()
     passwords.hash.mockResolvedValue("$2b$10$new")
-    const attempts = mock<IdentityAttemptsService>()
-    if (!allowed) attempts.admit.mockRejectedValue(new IdentityError({ code: IdentityErrorCode.TooManyAttempts }))
+    const budget = mock<SignInBudget>()
+    behaveAsSignInBudget(budget, allowed)
     const mail = mock<MailClient>()
     mail.sendThroughPlatform.mockResolvedValue({ messageId: "m1" })
     const moduleRef = await Test.createTestingModule({
@@ -79,7 +73,7 @@ const build = async (stubs: Stubs, allowed = true) => {
             IdentityPasswordResetService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: PASSPORT_PASSWORDS, useValue: passwords },
-            { provide: IdentityAttemptsService, useValue: attempts },
+            { provide: PASSPORT_SIGN_IN_BUDGET, useValue: budget },
             { provide: MAIL, useValue: mail },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: IDS, useValue: fakeIds() },
@@ -87,7 +81,7 @@ const build = async (stubs: Stubs, allowed = true) => {
             { provide: LOGGER, useValue: mock<Logger>() },
         ],
     }).compile()
-    return { service: moduleRef.get(IdentityPasswordResetService), em, mail, attempts, passwords }
+    return { service: moduleRef.get(IdentityPasswordResetService), em, mail, budget, passwords }
 }
 
 describe("IdentityPasswordResetService / request", () => {
@@ -115,13 +109,13 @@ describe("IdentityPasswordResetService / request", () => {
     })
 
     it("rate limits an address", async () => {
-        const { service, mail, attempts } = await build({}, false)
+        const { service, mail, budget } = await build({}, false)
 
         await expect(service.request("an@example.test")).rejects.toMatchObject({
             code: IdentityErrorCode.TooManyAttempts,
         })
 
-        expect(attempts.admit).toHaveBeenCalledWith("reset", "an@example.test")
+        expect(budget.admit).toHaveBeenCalledWith("reset", "an@example.test")
         expect(mail.sendThroughPlatform).not.toHaveBeenCalled()
     })
 
@@ -138,10 +132,7 @@ describe("IdentityPasswordResetService / request", () => {
 describe("IdentityPasswordResetService / complete", () => {
     it("spends the link, sets the password and ends every session", async () => {
         const { service, em } = await build({
-            query: [
-                [SET_PASSWORD, []],
-                [CLOSE_USER_SESSIONS, [{ be_auth_close_user_sessions: 2 }]],
-            ],
+            query: [[SET_PASSWORD, []]],
             token: passwordTokenFor("reset"),
         })
 
@@ -157,15 +148,12 @@ describe("IdentityPasswordResetService / complete", () => {
             { usedAt: new Date(NOW) },
         )
         expect(em.query).toHaveBeenCalledWith(SET_PASSWORD, ["u1", "$2b$10$new", new Date(NOW)])
-        expect(em.query).toHaveBeenCalledWith(CLOSE_USER_SESSIONS, ["u1"])
+        expect(em.delete).toHaveBeenCalledWith(IdentitySessionEntity, { userId: "u1" })
     })
 
     it("spends an invitation link the same way", async () => {
         const { service, em } = await build({
-            query: [
-                [SET_PASSWORD, []],
-                [CLOSE_USER_SESSIONS, [{ be_auth_close_user_sessions: 0 }]],
-            ],
+            query: [[SET_PASSWORD, []]],
             token: passwordTokenFor("invite"),
         })
 
@@ -201,7 +189,7 @@ const STORED = { ...ACCOUNT, encrypted_password: "$2a$10$stored" }
 
 describe("IdentityPasswordResetService / change", () => {
     it("sets the new password of a person who proves the current one", async () => {
-        const { service, em, passwords, attempts } = await build({
+        const { service, em, passwords, budget } = await build({
             query: [
                 [USER_BY_EMAIL, [STORED]],
                 [SET_PASSWORD, []],
@@ -211,8 +199,8 @@ describe("IdentityPasswordResetService / change", () => {
 
         await expect(service.change(PRINCIPAL, "current-pw", "a-new-password")).resolves.toBeUndefined()
 
-        expect(attempts.admit).toHaveBeenCalledWith("login", "an@example.test")
-        expect(attempts.clear.mock.calls).toEqual([["login", "an@example.test"]])
+        expect(budget.admit).toHaveBeenCalledWith("login", "an@example.test")
+        expect(budget.clear.mock.calls).toEqual([["login", "an@example.test"]])
         expect(passwords.verify).toHaveBeenCalledWith("current-pw", "$2a$10$stored")
         expect(em.query).toHaveBeenCalledWith(SET_PASSWORD, ["u1", "$2b$10$new", new Date(NOW)])
     })
@@ -235,7 +223,7 @@ describe("IdentityPasswordResetService / change", () => {
         await expect(wrong.service.change(PRINCIPAL, "wrong", "a-new-password")).rejects.toMatchObject({
             code: IdentityErrorCode.InvalidCredentials,
         })
-        expect(wrong.attempts.clear).not.toHaveBeenCalled()
+        expect(wrong.budget.clear).not.toHaveBeenCalled()
 
         const long = await build({ query: [[USER_BY_EMAIL, [STORED]]] })
         long.passwords.verify.mockResolvedValue(false)

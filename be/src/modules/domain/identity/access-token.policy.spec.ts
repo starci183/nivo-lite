@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { ok, refused } from "@modules/platform/primitives"
+import type { PrincipalVerifier } from "@modules/integrations/passport"
 import { createAccessTokenVerifier, refuseSessions } from "./access-token.policy"
-import type { AccessTokenSource } from "./access-token.policy"
 import { IdentityErrorCode } from "./errors/identity.error"
 
 const SUBJECT = Symbol("access-token.policy")
@@ -16,35 +16,26 @@ const build = async () => {
 }
 
 describe("createAccessTokenVerifier", () => {
-    it("turns verified claims into the same principal shape the resolvers already read", async () => {
+    it("hands the principal the package verified to the guard, checked at the instant of the clock", async () => {
         const subject = await build()
-        const tokens = mock<AccessTokenSource>()
-        tokens.verify.mockResolvedValue(ok({ sub: "u1", email: "an@example.test", sessionId: "s1" }))
+        const verifier = mock<PrincipalVerifier>()
+        const principal = { id: "u1", email: "an@example.test", role: "authenticated", sessionId: "s1" } as const
+        verifier.verify.mockResolvedValue(ok(principal))
         const clock = new FakeClock("2026-11-09T10:00:00.000Z")
 
-        await expect(subject.createAccessTokenVerifier(tokens, clock)("jwt")).resolves.toEqual({
+        await expect(subject.createAccessTokenVerifier(verifier, clock)("jwt")).resolves.toEqual({
             kind: "ok",
-            value: { id: "u1", email: "an@example.test", role: "authenticated", sessionId: "s1" },
+            value: principal,
         })
-        expect(tokens.verify).toHaveBeenCalledWith("jwt", new Date("2026-11-09T10:00:00.000Z"))
+        expect(verifier.verify).toHaveBeenCalledWith("jwt", new Date("2026-11-09T10:00:00.000Z"))
     })
 
-    it("omits the email when the token carries none", async () => {
+    it("refuses what the package refuses, under the identity code", async () => {
         const subject = await build()
-        const tokens = mock<AccessTokenSource>()
-        tokens.verify.mockResolvedValue(ok({ sub: "u1", sessionId: "s1" }))
+        const verifier = mock<PrincipalVerifier>()
+        verifier.verify.mockResolvedValue(refused("PASSPORT_ACCESS_TOKEN_INVALID"))
 
-        const verified = await subject.createAccessTokenVerifier(tokens, new FakeClock())("jwt")
-
-        expect(verified).toEqual({ kind: "ok", value: { id: "u1", role: "authenticated", sessionId: "s1" } })
-    })
-
-    it("refuses what the token client refuses", async () => {
-        const subject = await build()
-        const tokens = mock<AccessTokenSource>()
-        tokens.verify.mockResolvedValue(refused("PASSPORT_ACCESS_TOKEN_INVALID"))
-
-        await expect(subject.createAccessTokenVerifier(tokens, new FakeClock())("jwt")).resolves.toMatchObject({
+        await expect(subject.createAccessTokenVerifier(verifier, new FakeClock())("jwt")).resolves.toMatchObject({
             kind: "refused",
             code: IdentityErrorCode.AccessTokenInvalid,
         })

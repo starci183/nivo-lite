@@ -1,4 +1,4 @@
-import type { InjectionToken, Type } from "@nestjs/common"
+import type { Type } from "@nestjs/common"
 import type { CredentialAuthenticator } from "./credential.contracts"
 import type { VerifyAccessToken } from "./identity.contracts"
 import type { IdentityAuthOptions } from "./identity-auth.options"
@@ -9,8 +9,8 @@ export interface IdentityOptions {
     readonly credentialAuthenticator?: Type<CredentialAuthenticator>
     /** Cryptographically verifies an access token before it can become a principal. */
     readonly verifyAccessToken?: VerifyAccessToken
-    /** The provider token of the access-token client (our passport tokens): when set, the guard verifies our own tokens through it. */
-    readonly tokens?: InjectionToken
+    /** Whether the guard verifies our own access tokens through the sign-in package (the app registers `passportModule`). */
+    readonly ownTokens?: boolean
     /** The sign-in side (sessions, passwords, signup, accounts); absent in an app that only verifies tokens. */
     readonly auth?: IdentityAuthOptions
 }

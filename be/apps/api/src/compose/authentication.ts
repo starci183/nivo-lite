@@ -6,12 +6,7 @@ import {
     IdentityModule,
 } from "@modules/domain/identity"
 import { ApiCredentialAuthenticatorService, ApiCredentialsModule } from "@modules/domain/api-credentials"
-import {
-    PASSPORT_ERROR_KINDS,
-    PASSPORT_MESSAGES,
-    PASSPORT_TOKENS,
-    PassportModule,
-} from "@modules/integrations/passport"
+import { PASSPORT_ERROR_KINDS, PASSPORT_MESSAGES, PassportModule } from "@modules/integrations/passport"
 import type { ApiOptions } from "../api.options"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
@@ -22,7 +17,7 @@ export const authenticationModules = (options: ApiOptions): Array<DynamicModule>
     ApiCredentialsModule.register({ isGlobal: true }),
     IdentityModule.register({
         isGlobal: true,
-        tokens: PASSPORT_TOKENS,
+        ownTokens: true,
         auth: options.identityAuth,
         credentialAuthenticator: ApiCredentialAuthenticatorService,
     }),

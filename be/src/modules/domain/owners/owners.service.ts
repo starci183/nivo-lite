@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { IdentityError, IdentityErrorCode, isAcceptablePassword, normalizeEmail } from "@modules/domain/identity"
+import { IdentityError, IdentityErrorCode } from "@modules/domain/identity"
+import { isAcceptablePassword, normalizeEmail } from "@modules/integrations/passport"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"

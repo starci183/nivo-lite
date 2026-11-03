@@ -1,15 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { PASSPORT_PASSWORDS } from "@modules/integrations/passport"
-import type { GoogleProfile, PassportPasswordsClient } from "@modules/integrations/passport"
+import { PASSPORT_PASSWORDS, PASSPORT_SIGN_IN_BUDGET } from "@modules/integrations/passport"
+import type { AuthPasswords, GoogleProfile, SignInBudget } from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { IdentityAuthenticatorService } from "./authenticator.service"
-import { IdentityAttemptsService } from "./attempts.service"
-import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
+import { behaveAsSignInBudget } from "@tests/fixtures/builders/sign-in-budget.builder"
+import { IdentityErrorCode } from "./errors/identity.error"
 
 /** The statements `callDbFunction` sends for the account doors. */
 const USER_BY_EMAIL = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
@@ -49,27 +49,27 @@ interface Stubs {
 const build = async (stubs: Stubs, allowed = true, matches = true) => {
     const em = mockEntityManager({ query: stubs.query ?? [] })
     fakeTransaction(em)
-    const passwords = mock<PassportPasswordsClient>()
+    const passwords = mock<AuthPasswords>()
     passwords.verify.mockResolvedValue(matches)
-    const attempts = mock<IdentityAttemptsService>()
-    if (!allowed) attempts.admit.mockRejectedValue(new IdentityError({ code: IdentityErrorCode.TooManyAttempts }))
+    const budget = mock<SignInBudget>()
+    behaveAsSignInBudget(budget, allowed)
     const moduleRef = await Test.createTestingModule({
         providers: [
             IdentityAuthenticatorService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: PASSPORT_PASSWORDS, useValue: passwords },
-            { provide: IdentityAttemptsService, useValue: attempts },
+            { provide: PASSPORT_SIGN_IN_BUDGET, useValue: budget },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: IDS, useValue: fakeIds() },
             { provide: LOGGER, useValue: mock<Logger>() },
         ],
     }).compile()
-    return { service: moduleRef.get(IdentityAuthenticatorService), em, passwords, attempts }
+    return { service: moduleRef.get(IdentityAuthenticatorService), em, passwords, budget }
 }
 
 describe("IdentityAuthenticatorService / verifyPassword", () => {
     it("admits the right password and counts the attempt against the hashed address", async () => {
-        const { service, em, passwords, attempts } = await build({
+        const { service, em, passwords, budget } = await build({
             query: [
                 [USER_BY_EMAIL, [ACCOUNT]],
                 [TOUCH_USER, []],
@@ -81,8 +81,8 @@ describe("IdentityAuthenticatorService / verifyPassword", () => {
             email: "an@example.test",
         })
 
-        expect(attempts.admit).toHaveBeenCalledWith("login", "an@example.test")
-        expect(attempts.clear.mock.calls).toEqual([["login", "an@example.test"]])
+        expect(budget.admit).toHaveBeenCalledWith("login", "an@example.test")
+        expect(budget.clear.mock.calls).toEqual([["login", "an@example.test"]])
         expect(em.query).toHaveBeenCalledWith(USER_BY_EMAIL, ["an@example.test"])
         expect(passwords.verify).toHaveBeenCalledWith("right-pw", "$2a$10$stored")
     })
@@ -92,14 +92,14 @@ describe("IdentityAuthenticatorService / verifyPassword", () => {
         await expect(wrong.service.verifyPassword("an@example.test", "bad")).rejects.toMatchObject({
             code: IdentityErrorCode.InvalidCredentials,
         })
-        expect(wrong.attempts.clear).not.toHaveBeenCalled()
+        expect(wrong.budget.clear).not.toHaveBeenCalled()
 
         const unknown = await build({ query: [[USER_BY_EMAIL, []]] }, true, false)
         await expect(unknown.service.verifyPassword("ghost@example.test", "bad")).rejects.toMatchObject({
             code: IdentityErrorCode.InvalidCredentials,
         })
         expect(unknown.passwords.verify).toHaveBeenCalledWith("bad", "")
-        expect(unknown.attempts.clear).not.toHaveBeenCalled()
+        expect(unknown.budget.clear).not.toHaveBeenCalled()
     })
 })
 
@@ -121,17 +121,17 @@ describe("IdentityAuthenticatorService / verifyPassword refusals", () => {
     })
 
     it("clears the count of an address whose password is right even when the account is refused", async () => {
-        const { service, attempts } = await build({ query: [[USER_BY_EMAIL, [{ ...ACCOUNT, disabled: true }]]] })
+        const { service, budget } = await build({ query: [[USER_BY_EMAIL, [{ ...ACCOUNT, disabled: true }]]] })
 
         await expect(service.verifyPassword("an@example.test", "right-pw")).rejects.toMatchObject({
             code: IdentityErrorCode.AccountDisabled,
         })
 
-        expect(attempts.clear.mock.calls).toEqual([["login", "an@example.test"]])
+        expect(budget.clear.mock.calls).toEqual([["login", "an@example.test"]])
     })
 
     it("rate limits an address before it reads the account", async () => {
-        const { service, em, passwords, attempts } = await build({}, false)
+        const { service, em, passwords, budget } = await build({}, false)
 
         await expect(service.verifyPassword("an@example.test", "guess")).rejects.toMatchObject({
             code: IdentityErrorCode.TooManyAttempts,
@@ -139,7 +139,7 @@ describe("IdentityAuthenticatorService / verifyPassword refusals", () => {
 
         expect(em.query).not.toHaveBeenCalled()
         expect(passwords.verify).not.toHaveBeenCalled()
-        expect(attempts.clear).not.toHaveBeenCalled()
+        expect(budget.clear).not.toHaveBeenCalled()
     })
 
     it("refuses a password longer than bcrypt reads without comparing it", async () => {

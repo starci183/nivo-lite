@@ -1,8 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import { IsNull, MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectPassportPasswords } from "@modules/integrations/passport"
-import type { PassportPasswordsClient } from "@modules/integrations/passport"
+import {
+    InjectAuthPasswords,
+    InjectSignInBudget,
+    digestOf,
+    isAcceptablePassword,
+    isPresentablePassword,
+    normalizeEmail,
+} from "@modules/integrations/passport"
+import type { AuthPasswords, SignInBudget } from "@modules/integrations/passport"
 import type { Principal } from "@modules/platform/cqrs"
 import { InjectMail } from "@modules/integrations/mail"
 import type { MailClient } from "@modules/integrations/mail"
@@ -13,24 +20,23 @@ import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { IdentityAttemptsService } from "./attempts.service"
+import { refusing } from "./auth-refusal.policy"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 import type { PasswordPurpose } from "./identity-auth.contracts"
 import { InjectIdentityAuthOptions } from "./identity-auth.decorators"
 import { IdentityAuthLogEvent } from "./identity-auth.log-events"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { passwordLinkMail } from "./password-mail.policy"
-import { digestOf, isAcceptablePassword, isPresentablePassword, normalizeEmail } from "./password.policy"
 import { authDoors } from "./persistence/auth-doors.port"
-import { IdentityPasswordTokenEntity } from "./persistence/entities"
+import { IdentityPasswordTokenEntity, IdentitySessionEntity } from "./persistence/entities"
 
 @Injectable()
 /** Forgotten and first passwords: a hashed single-use token is emailed, and spending it sets the password and ends every session. */
 export class IdentityPasswordResetService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectPassportPasswords() private readonly passwords: PassportPasswordsClient,
-        private readonly attempts: IdentityAttemptsService,
+        @InjectAuthPasswords() private readonly passwords: AuthPasswords,
+        @InjectSignInBudget() private readonly budget: SignInBudget,
         @InjectMail() private readonly mail: MailClient,
         @InjectClock() private readonly clock: Clock,
         @InjectIds() private readonly ids: Ids,
@@ -41,7 +47,7 @@ export class IdentityPasswordResetService {
     /** Emails a reset link when the address has an account; the answer never says whether it does. */
     async request(email: string): Promise<void> {
         const address = normalizeEmail(email)
-        await this.attempts.admit("reset", address)
+        await refusing(() => this.budget.admit("reset", address))
         const user = await authDoors.userByEmail(this.entityManager, address)
         if (user === undefined || user.disabled) return
         const token = await this.mint(user.id, "reset", this.options.resetTtlSeconds)
@@ -67,7 +73,7 @@ export class IdentityPasswordResetService {
             }
             await scoped.update(IdentityPasswordTokenEntity, { userId: row.userId, usedAt: IsNull() }, { usedAt: now })
             await authDoors.setPassword(scoped, row.userId, hash, now)
-            await authDoors.closeUserSessions(scoped, row.userId)
+            await scoped.delete(IdentitySessionEntity, { userId: row.userId })
         })
     }
 
@@ -91,16 +97,18 @@ export class IdentityPasswordResetService {
         if (email === undefined) throw new IdentityError({ code: IdentityErrorCode.Unauthenticated })
         if (!isAcceptablePassword(next)) throw new IdentityError({ code: IdentityErrorCode.PasswordInvalid })
         const address = normalizeEmail(email)
-        await this.attempts.admit("login", address)
-        const user = await authDoors.userByEmail(this.entityManager, address)
-        const matches = await this.passwords.verify(
-            isPresentablePassword(current) ? current : "",
-            user?.encrypted_password ?? "",
+        const proved = await refusing(() =>
+            this.budget.counted("login", address, async () => {
+                const user = await authDoors.userByEmail(this.entityManager, address)
+                const matches = await this.passwords.verify(
+                    isPresentablePassword(current) ? current : "",
+                    user?.encrypted_password ?? "",
+                )
+                const passed = user?.id === userId && matches
+                return { passed, value: passed }
+            }),
         )
-        if (user?.id !== userId || !matches) {
-            throw new IdentityError({ code: IdentityErrorCode.InvalidCredentials })
-        }
-        await this.attempts.clear("login", address)
+        if (!proved) throw new IdentityError({ code: IdentityErrorCode.InvalidCredentials })
         await authDoors.setPassword(this.entityManager, userId, await this.passwords.hash(next), this.clock.now())
     }
 }

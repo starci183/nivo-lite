@@ -3,19 +3,18 @@ import { IsNull, MoreThan } from "typeorm"
 import { FakeClock, builder, fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { MAIL } from "@modules/integrations/mail"
 import type { MailClient } from "@modules/integrations/mail"
-import { PASSPORT_PASSWORDS } from "@modules/integrations/passport"
-import type { PassportPasswordsClient } from "@modules/integrations/passport"
+import { PASSPORT_PASSWORDS, PASSPORT_SIGN_IN_BUDGET, digestOf } from "@modules/integrations/passport"
+import type { AuthPasswords, SignInBudget } from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { IdentityAttemptsService } from "./attempts.service"
-import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
+import { behaveAsSignInBudget } from "@tests/fixtures/builders/sign-in-budget.builder"
+import { IdentityErrorCode } from "./errors/identity.error"
 import { IDENTITY_AUTH_OPTIONS } from "./identity-auth.decorators"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { IdentityPasswordResetService } from "./password-reset.service"
-import { digestOf } from "./password.policy"
 import { IdentityPasswordTokenEntity } from "./persistence/entities"
 import { IdentitySignupService } from "./signup.service"
 
@@ -28,13 +27,8 @@ const NOW = "2026-11-09T10:00:00.000Z"
 const CREATED = "00000000-0000-4000-8000-000000000001"
 const OPTIONS: IdentityAuthOptions = {
     webOrigin: "https://app.example.test",
-    cookieDomain: undefined,
-    refreshTtlSeconds: 3600,
     resetTtlSeconds: 3600,
     inviteTtlSeconds: 7200,
-    loginAttempts: 3,
-    resetAttempts: 2,
-    attemptWindowMs: 60_000,
 }
 const unconfirmed = {
     id: "u1",
@@ -67,10 +61,10 @@ const build = async (
         update: [IdentityPasswordTokenEntity, { affected: 1 }],
     })
     fakeTransaction(em)
-    const passwords = mock<PassportPasswordsClient>()
+    const passwords = mock<AuthPasswords>()
     passwords.hash.mockResolvedValue("$2b$10$hashed")
-    const attempts = mock<IdentityAttemptsService>()
-    if (!allowed) attempts.admit.mockRejectedValue(new IdentityError({ code: IdentityErrorCode.TooManyAttempts }))
+    const budget = mock<SignInBudget>()
+    behaveAsSignInBudget(budget, allowed)
     const mail = mock<MailClient>()
     mail.sendThroughPlatform.mockResolvedValue({ messageId: "m1" })
     const resets = mock<IdentityPasswordResetService>()
@@ -81,7 +75,7 @@ const build = async (
             IdentitySignupService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: PASSPORT_PASSWORDS, useValue: passwords },
-            { provide: IdentityAttemptsService, useValue: attempts },
+            { provide: PASSPORT_SIGN_IN_BUDGET, useValue: budget },
             { provide: MAIL, useValue: mail },
             { provide: IdentityPasswordResetService, useValue: resets },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
@@ -90,19 +84,19 @@ const build = async (
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(IdentitySignupService), em, mail, attempts, resets, logger }
+    return { service: moduleRef.get(IdentitySignupService), em, mail, budget, resets, logger }
 }
 
 describe("IdentitySignupService / signup", () => {
     it("creates an unconfirmed account with a bcrypt hash and mails the confirmation link", async () => {
-        const { service, em, mail, resets, attempts } = await build([
+        const { service, em, mail, resets, budget } = await build([
             [USER_BY_EMAIL, []],
             [CREATE_USER, [{ be_auth_create_user: CREATED }]],
         ])
 
         await service.signup("An Nguyen", " An@Example.test ", "a-long-password")
 
-        expect(attempts.admit).toHaveBeenCalledWith("signup", "an@example.test")
+        expect(budget.admit).toHaveBeenCalledWith("signup", "an@example.test")
         expect(em.query).toHaveBeenCalledWith(CREATE_USER, [
             CREATED,
             "an@example.test",

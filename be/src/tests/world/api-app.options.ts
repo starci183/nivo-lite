@@ -51,26 +51,22 @@ const providerOptions = () => ({
 
 /** Sign-in settings for a proof: keys that are never loaded and no Google client. */
 const localPassport: ApiOptions["passport"] = {
-    privateKey: new Secret("world-proof"),
-    publicKey: "world-proof",
-    keyId: undefined,
     issuer: "world-proof",
-    returnOrigin: SITE,
     audience: "authenticated",
+    keys: [{ privateKey: new Secret("world-proof"), publicKey: "world-proof", keyId: undefined }],
     accessTtlSeconds: 900,
+    refreshTtlSeconds: 60,
     bcryptCost: 4,
+    returnOrigin: SITE,
     google: null,
+    cookie: { name: "nivo_refresh", domain: undefined },
+    budget: { loginAttempts: 5, resetAttempts: 5, windowMs: 60000 },
 }
 
 const localIdentityAuth: ApiOptions["identityAuth"] = {
     webOrigin: SITE,
-    cookieDomain: undefined,
-    refreshTtlSeconds: 60,
     resetTtlSeconds: 60,
     inviteTtlSeconds: 60,
-    loginAttempts: 5,
-    resetAttempts: 5,
-    attemptWindowMs: 60000,
 }
 
 /** An AI pool with no keys: no router and no gateway are registered, so the api boots and its AI callers fall back without a provider call. */
@@ -187,4 +183,4 @@ export const apiAppModules = (options: ApiProofOptions = {}): Array<DynamicModul
 ]
 
 /** The api's own composition as one module of the world. */
-export const API_APP_MODULES = apiAppModules()
+export const API_APP_MODULES: ReturnType<typeof apiAppModules> = apiAppModules()

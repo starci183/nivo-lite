@@ -2,8 +2,8 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, fakeIds, mock, mockEntityManager } from "@starci/jest-preset"
 import { MAIL } from "@modules/integrations/mail"
 import type { MailClient } from "@modules/integrations/mail"
-import { PASSPORT_PASSWORDS } from "@modules/integrations/passport"
-import type { PassportPasswordsClient } from "@modules/integrations/passport"
+import { AUTH_ERROR_CODES, AuthError, PASSPORT_PASSWORDS, PASSPORT_SESSIONS } from "@modules/integrations/passport"
+import type { AuthPasswords, AuthSessions } from "@modules/integrations/passport"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
@@ -15,10 +15,8 @@ import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 import { ACCESS_TOKEN_VERIFIER } from "./identity.decorators"
 import type { VerifyAccessToken } from "./identity.contracts"
 import { IDENTITY_AUTH_OPTIONS } from "./identity-auth.decorators"
-import type { SessionTokens } from "./identity-auth.contracts"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { IdentityPasswordResetService } from "./password-reset.service"
-import { IdentitySessionsService } from "./sessions.service"
 
 /** The statements `callDbFunction` sends for the account doors. */
 const USER_BY_EMAIL = 'SELECT * FROM "public"."be_auth_user_by_email"($1)'
@@ -32,13 +30,8 @@ const NOW = "2026-11-09T10:00:00.000Z"
 const CREATED = "00000000-0000-4000-8000-000000000001"
 const OPTIONS: IdentityAuthOptions = {
     webOrigin: "https://app.example.test",
-    cookieDomain: undefined,
-    refreshTtlSeconds: 3600,
     resetTtlSeconds: 3600,
     inviteTtlSeconds: 7200,
-    loginAttempts: 3,
-    resetAttempts: 2,
-    attemptWindowMs: 60_000,
 }
 const REDIRECT = "https://app.example.test/auth/confirm?next=%2Finvite%2Ftoken-1"
 const person = (meta: Record<string, unknown>, email: string | null = "an@example.test") => ({
@@ -62,8 +55,8 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]>) => {
     const resets = mock<IdentityPasswordResetService>()
     resets.mint.mockResolvedValue("minted-token")
     const authenticator = mock<IdentityAuthenticatorService>()
-    const sessions = mock<IdentitySessionsService>()
-    const passwords = mock<PassportPasswordsClient>()
+    const sessions = mock<AuthSessions>()
+    const passwords = mock<AuthPasswords>()
     passwords.hash.mockResolvedValue("hashed")
     const verifierDouble = mock<{ verify: VerifyAccessToken }>()
     const verifier = verifierDouble.verify
@@ -72,7 +65,7 @@ const build = async (stubs: ReadonlyArray<readonly [string, unknown]>) => {
             IdentityAccountsService,
             { provide: IdentityPasswordResetService, useValue: resets },
             { provide: IdentityAuthenticatorService, useValue: authenticator },
-            { provide: IdentitySessionsService, useValue: sessions },
+            { provide: PASSPORT_SESSIONS, useValue: sessions },
             { provide: PASSPORT_PASSWORDS, useValue: passwords },
             { provide: ACCESS_TOKEN_VERIFIER, useValue: verifier },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
@@ -227,7 +220,7 @@ describe("IdentityAccountsService / deliverInvite", () => {
     })
 })
 
-const started = (cookieToken: string): SessionTokens => ({
+const started = (cookieToken: string): Awaited<ReturnType<AuthSessions["start"]>> => ({
     accessToken: "access",
     accessExpiresAt: NOW,
     accessExpiresIn: 900,
@@ -382,6 +375,9 @@ describe("IdentityAccountsService / principal sessions and tokens", () => {
 
         await expect(service.openPasswordPrincipal("an@example.test", "wrong")).resolves.toBeNull()
         expect(sessions.start).not.toHaveBeenCalled()
+
+        authenticator.verifyPassword.mockRejectedValueOnce(new AuthError(AUTH_ERROR_CODES.TooManyAttempts))
+        await expect(service.openPasswordPrincipal("an@example.test", "guess")).resolves.toBeNull()
 
         authenticator.verifyPassword.mockRejectedValueOnce(new Error("db down"))
         await expect(service.openPasswordPrincipal("an@example.test", "x")).rejects.toThrow("db down")

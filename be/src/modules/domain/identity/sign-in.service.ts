@@ -1,86 +1,61 @@
 import { Injectable } from "@nestjs/common"
-import { InjectPassportFlows } from "@modules/integrations/passport"
-import type { HttpExchange, PassportFlowsService } from "@modules/integrations/passport"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { AccessGrant, GoogleRedirect, SessionTokens } from "./identity-auth.contracts"
-import { InjectIdentityAuthOptions } from "./identity-auth.decorators"
-import { IdentityAuthLogEvent } from "./identity-auth.log-events"
-import type { IdentityAuthOptions } from "./identity-auth.options"
-import { IdentityRefreshCookieService } from "./refresh-cookie.service"
-import { IdentitySessionsService } from "./sessions.service"
-
-const SEE_OTHER = 303
-
-const accessOf = (tokens: SessionTokens): AccessGrant => ({
-    accessToken: tokens.accessToken,
-    expiresIn: tokens.accessExpiresIn,
-    expiresAt: tokens.accessExpiresAt,
-    user: tokens.user,
-})
+import { InjectAuthDoors, InjectAuthSessions } from "@modules/integrations/passport"
+import type {
+    AccessGrant,
+    AuthDoors,
+    AuthSessions,
+    GoogleRedirect,
+    HttpExchange,
+    JwksDocument,
+} from "@modules/integrations/passport"
+import type { Principal } from "@modules/platform/cqrs"
+import { refusing } from "./auth-refusal.policy"
 
 @Injectable()
-/** The cookie doors of sign-in: runs a strategy or reads the refresh cookie, opens or rotates the session and writes the cookie. */
+/** The cookie doors of sign-in for the transport: the package's doors, with their refusals turned into the passport error family the errors filter maps. */
 export class IdentitySignInService {
     constructor(
-        @InjectPassportFlows() private readonly flows: PassportFlowsService,
-        private readonly sessions: IdentitySessionsService,
-        private readonly cookies: IdentityRefreshCookieService,
-        @InjectIdentityAuthOptions() private readonly options: IdentityAuthOptions,
-        @InjectLogger() private readonly logger: Logger,
+        @InjectAuthDoors() private readonly doors: AuthDoors,
+        @InjectAuthSessions() private readonly sessions: AuthSessions,
     ) {}
 
     /** Email and password through the local strategy; the refresh token goes into the cookie. */
-    async login(exchange: HttpExchange): Promise<AccessGrant> {
-        const subject = await this.flows.authenticateLocal(exchange)
-        const tokens = await this.sessions.start(subject, this.cookies.deviceOf(exchange.req))
-        this.cookies.issue(exchange.res, tokens)
-        return accessOf(tokens)
+    login(exchange: HttpExchange): Promise<AccessGrant> {
+        return refusing(() => this.doors.login(exchange))
     }
 
-    /** Rotates the cookie token and answers a new access token; a cookie that cannot be used is cleared, one a sibling just rotated is left as the sibling wrote it and the refusal rethrown. */
-    async refresh(exchange: HttpExchange): Promise<AccessGrant> {
-        try {
-            const tokens = await this.sessions.refresh(this.cookies.read(exchange.req))
-            if (tokens.cookieKept !== true) this.cookies.issue(exchange.res, tokens)
-            return accessOf(tokens)
-        } catch (cause) {
-            this.cookies.clear(exchange.res)
-            throw cause
-        }
+    /** Rotates the cookie token and answers a new access token; a cookie that cannot be used is cleared. */
+    refresh(exchange: HttpExchange): Promise<AccessGrant> {
+        return refusing(() => this.doors.refresh(exchange))
     }
 
     /** Answers a fresh access token for the cookie session without rotating the cookie. */
-    async session(exchange: HttpExchange): Promise<AccessGrant> {
-        return accessOf(await this.sessions.access(this.cookies.read(exchange.req)))
+    session(exchange: HttpExchange): Promise<AccessGrant> {
+        return refusing(() => this.doors.session(exchange))
     }
 
     /** Ends the session of the cookie and clears it. */
-    async logout(exchange: HttpExchange): Promise<void> {
-        await this.sessions.end(this.cookies.read(exchange.req))
-        this.cookies.clear(exchange.res)
+    logout(exchange: HttpExchange): Promise<void> {
+        return refusing(() => this.doors.logout(exchange))
     }
 
     /** Sends the browser to the Google consent screen. */
     beginGoogle(exchange: HttpExchange): Promise<void> {
-        return this.flows.beginGoogle(exchange)
+        return refusing(() => this.doors.beginGoogle(exchange))
     }
 
-    /**
-     * Finishes the Google round trip: state, PKCE and profile are verified, the account found, linked or created, its session opened and
-     * its cookie set. A failure never throws: the browser is sent back to the sign-in page, because a redirect-only door has nowhere to
-     * show an error body.
-     */
-    async completeGoogle(exchange: HttpExchange): Promise<GoogleRedirect> {
-        try {
-            const completion = await this.flows.completeGoogle(exchange)
-            const tokens = await this.sessions.start(completion.subject, this.cookies.deviceOf(exchange.req))
-            this.cookies.issue(exchange.res, tokens)
-            return { url: `${this.options.webOrigin}${completion.next}`, statusCode: SEE_OTHER }
-        } catch (cause) {
-            this.cookies.clear(exchange.res)
-            this.logger.error(IdentityAuthLogEvent.GoogleSignInFailed, cause)
-            return { url: `${this.options.webOrigin}/sign-in?auth=error`, statusCode: SEE_OTHER }
-        }
+    /** Finishes the Google round trip; a failure redirects to the sign-in page instead of throwing. */
+    completeGoogle(exchange: HttpExchange): Promise<GoogleRedirect> {
+        return refusing(() => this.doors.completeGoogle(exchange))
+    }
+
+    /** The public key document access tokens verify against. */
+    jwks(): Promise<JwksDocument> {
+        return refusing(() => this.sessions.jwks())
+    }
+
+    /** Signs the person out of every other device; the session of the caller stays. */
+    endOthers(principal: Principal): Promise<void> {
+        return refusing(() => this.sessions.endOthers(principal.id, principal.sessionId))
     }
 }

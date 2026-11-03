@@ -3,8 +3,14 @@ import { IsNull, MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectMail } from "@modules/integrations/mail"
 import type { MailClient } from "@modules/integrations/mail"
-import { InjectPassportPasswords } from "@modules/integrations/passport"
-import type { PassportPasswordsClient } from "@modules/integrations/passport"
+import {
+    InjectAuthPasswords,
+    InjectSignInBudget,
+    digestOf,
+    isAcceptablePassword,
+    normalizeEmail,
+} from "@modules/integrations/passport"
+import type { AuthPasswords, SignInBudget } from "@modules/integrations/passport"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -12,13 +18,12 @@ import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { IdentityAttemptsService } from "./attempts.service"
+import { refusing } from "./auth-refusal.policy"
 import { IdentityError, IdentityErrorCode } from "./errors/identity.error"
 import { InjectIdentityAuthOptions } from "./identity-auth.decorators"
 import { IdentityAuthLogEvent } from "./identity-auth.log-events"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 import { passwordLinkMail } from "./password-mail.policy"
-import { digestOf, isAcceptablePassword, normalizeEmail } from "./password.policy"
 import { IdentityPasswordResetService } from "./password-reset.service"
 import { authDoors } from "./persistence/auth-doors.port"
 import { IdentityPasswordTokenEntity } from "./persistence/entities"
@@ -30,8 +35,8 @@ const MAX_NAME_CHARACTERS = 120
 export class IdentitySignupService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectPassportPasswords() private readonly passwords: PassportPasswordsClient,
-        private readonly attempts: IdentityAttemptsService,
+        @InjectAuthPasswords() private readonly passwords: AuthPasswords,
+        @InjectSignInBudget() private readonly budget: SignInBudget,
         @InjectMail() private readonly mail: MailClient,
         private readonly tokens: IdentityPasswordResetService,
         @InjectClock() private readonly clock: Clock,
@@ -86,7 +91,7 @@ export class IdentitySignupService {
 
     private async admit(email: string): Promise<string> {
         const address = normalizeEmail(email)
-        await this.attempts.admit("signup", address)
+        await refusing(() => this.budget.admit("signup", address))
         return address
     }
 
