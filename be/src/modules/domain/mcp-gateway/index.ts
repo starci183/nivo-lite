@@ -46,3 +46,4 @@ export type {
     ToolGraphGate,
     ToolGraphVerdict,
 } from "./mcp-gateway.contracts"
+export { NodeToolDoorService } from "./node-tool-door.service"

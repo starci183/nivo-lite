@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { McpGatewayService, gatewayArgumentsSchema } from "@modules/domain/mcp-gateway"
-import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
-import type { NodeToolDoor, NodeTurn } from "./graph-nodes.contracts"
+import { GraphNodesError, GraphNodesErrorCode } from "@modules/domain/graph-nodes"
+import type { NodeToolDoor, NodeTurn } from "@modules/domain/graph-nodes"
+import { gatewayArgumentsSchema } from "./gateway-tools.schema"
+import { McpGatewayService } from "./mcp-gateway.service"
 
 /** The reason a native tool gives when the workspace has no connected provider for it. */
 const NOT_CONNECTED = "not_connected"
@@ -13,7 +14,7 @@ const NOT_CONNECTED = "not_connected"
  * provider the workspace connected. The call key is the replay key of the step. A workspace with no connected provider is the typed
  * `GRAPH_NODES_TOOL_NOT_CONNECTED`, which the node turns into a connect work item; any other refusal is `GRAPH_NODES_TOOL_FAILED`.
  */
-export class GraphNodeToolDoorService implements NodeToolDoor {
+export class NodeToolDoorService implements NodeToolDoor {
     constructor(private readonly gateway: McpGatewayService) {}
 
     /** Calls the tool for the turn and answers its value. */

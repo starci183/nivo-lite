@@ -1,8 +1,8 @@
 import { mock } from "@starci/jest-preset"
-import { McpGatewayService } from "@modules/domain/mcp-gateway"
-import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
-import { GraphNodeToolDoorService } from "./graph-node-tool-door.service"
-import type { NodeTurn } from "./graph-nodes.contracts"
+import { GraphNodesErrorCode } from "@modules/domain/graph-nodes"
+import type { NodeTurn } from "@modules/domain/graph-nodes"
+import { McpGatewayService } from "./mcp-gateway.service"
+import { NodeToolDoorService } from "./node-tool-door.service"
 
 const TURN: NodeTurn = {
     turnId: "turn-1",
@@ -16,10 +16,10 @@ const ARGS = { orderNo: "DH-7", amountVnd: 5000, transferContent: "DH7 thanh toa
 
 const build = () => {
     const gateway = mock<McpGatewayService>()
-    return { door: new GraphNodeToolDoorService(gateway), gateway }
+    return { door: new NodeToolDoorService(gateway), gateway }
 }
 
-describe("GraphNodeToolDoorService call", () => {
+describe("NodeToolDoorService call", () => {
     it("runs the capability tool through the gateway as the turn agent under the replay key and answers its value", async () => {
         const { door, gateway } = build()
         const value = { provider: "sepay", qrUrl: "https://qr.example/img" }
