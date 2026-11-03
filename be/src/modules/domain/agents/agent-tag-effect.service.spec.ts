@@ -1,0 +1,98 @@
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { NodeRunError, RightsDeniedError } from "@nivo-lite/agent-sdk/node"
+import { AgentTagService } from "@modules/domain/agent-work"
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import type { NodeTurn } from "@modules/domain/graph-nodes"
+import { AgentTagEffectService } from "./agent-tag-effect.service"
+import { AGENTS_INSTALLATIONS } from "./agents.decorators"
+import type { InstallationDirectory } from "./agents.port"
+
+const TURN: NodeTurn = {
+    turnId: "run-1",
+    workspaceId: "ws-1",
+    agentId: "chatbot-1",
+    subject: null,
+    conversationId: "c-1",
+    locale: "vi",
+}
+
+const CALL = { key: "run-1:handoff:0", dedupeKey: "agent-tag:run-1:sales" }
+
+const build = async () => {
+    const registry = mock<GraphNodeRegistryService>()
+    const tags = mock<AgentTagService>({ tagAgent: jest.fn().mockResolvedValue({ tagged: true, wakeId: "wake-9" }) })
+    const installations = mock<InstallationDirectory>()
+    installations.firstOfModule.mockResolvedValue({ agentId: "sales-1" } as Awaited<
+        ReturnType<InstallationDirectory["firstOfModule"]>
+    >)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentTagEffectService,
+            { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: AgentTagService, useValue: tags },
+            { provide: AGENTS_INSTALLATIONS, useValue: installations },
+        ],
+    }).compile()
+    return { executor: moduleRef.get(AgentTagEffectService), registry, tags, installations }
+}
+
+describe("AgentTagEffectService", () => {
+    it("registers as the executor of agent.tag", async () => {
+        const { executor, registry } = await build()
+        executor.onModuleInit()
+        expect(registry.addExecutor).toHaveBeenCalledWith(executor)
+        expect(executor.effect).toBe("agent.tag")
+    })
+
+    it("tags the agent a module runs through the tag door, with everything the tag carries and the ledger key as event key", async () => {
+        const { executor, tags, installations } = await build()
+        const payload = {
+            toModuleKey: "sales",
+            text: "Đặt 2 chậu",
+            subject: { kind: "order", id: "o-1" },
+            leadId: "l-1",
+            channel: "zalo",
+            context: { items: [{ name: "Lan" }] },
+        }
+
+        await expect(executor.execute(TURN, payload, CALL)).resolves.toEqual({ kind: "wake", id: "wake-9" })
+
+        expect(installations.firstOfModule).toHaveBeenCalledWith("ws-1", "sales")
+        expect(tags.tagAgent).toHaveBeenCalledWith({
+            fromAgentId: "chatbot-1",
+            workspaceId: "ws-1",
+            toAgentId: "sales-1",
+            text: "Đặt 2 chậu",
+            conversationId: "c-1",
+            locale: "vi",
+            eventKey: "dedupe:agent-tag:run-1:sales",
+            subject: "order:o-1",
+            leadId: "l-1",
+            channel: "zalo",
+            context: { items: [{ name: "Lan" }] },
+        })
+    })
+
+    it("tags an agent by id in the conversation the payload names, and answers a duplicate with its event key", async () => {
+        const { executor, tags } = await build()
+        tags.tagAgent.mockResolvedValue({ tagged: false, reason: "duplicate" })
+
+        await expect(
+            executor.execute(TURN, { toAgentId: "care-1", text: "hi", conversationId: "c-2" }, { key: "k", dedupeKey: null }),
+        ).resolves.toEqual({ kind: "wake", id: "call:k" })
+        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "care-1", conversationId: "c-2" }))
+    })
+
+    it("refuses a tag the rights refuse, one too large, and one whose module runs no agent", async () => {
+        const { executor, tags, installations } = await build()
+        const payload = { toModuleKey: "sales", text: "hi" }
+
+        tags.tagAgent.mockResolvedValueOnce({ tagged: false, reason: "not_allowed" })
+        await expect(executor.execute(TURN, payload, CALL)).rejects.toThrow(RightsDeniedError)
+        tags.tagAgent.mockResolvedValueOnce({ tagged: false, reason: "too_large" })
+        await expect(executor.execute(TURN, payload, CALL)).rejects.toThrow(NodeRunError)
+        installations.firstOfModule.mockResolvedValueOnce(null)
+        await expect(executor.execute(TURN, payload, CALL)).rejects.toThrow(NodeRunError)
+    })
+})

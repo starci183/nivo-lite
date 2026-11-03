@@ -9,12 +9,26 @@ import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeHostService } from "./graph-node-host.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
 import { GRAPH_NODE_TOOL_DOOR } from "./graph-nodes.decorators"
-import type { NodeDataPort, NodeEffectExecutor, NodeRunInput, NodeToolDoor } from "./graph-nodes.contracts"
+import type {
+    NodeDataPort,
+    NodeEffectExecutor,
+    NodeRunInput,
+    NodeSubjectResolver,
+    NodeToolDoor,
+} from "./graph-nodes.contracts"
 
 const READ = { kind: "record", access: "read", scope: "turn", fields: ["id"] } as const
 const WRITE = { kind: "record", access: "write", scope: "turn", fields: ["id"] } as const
 
-const ping = defineEffect({ id: "core.ping", title: { key: "p" }, payload: z.object({ n: z.number() }), rights: [] })
+const unping = defineEffect({ id: "core.unping", title: { key: "u" }, payload: z.object({ id: z.string() }), rights: [] })
+const ping = defineEffect({
+    id: "core.ping",
+    title: { key: "p" },
+    payload: z.object({ n: z.number() }),
+    rights: [],
+    compensation: "core.unping",
+})
+const lost = defineEffect({ ...ping, id: "core.lost", compensation: "core.gone" })
 const look = defineTool({
     id: "core.look",
     title: { key: "l" },
@@ -63,9 +77,12 @@ const INPUT: NodeRunInput = {
     key: "run-1:node",
 }
 
-const build = async (door: NodeToolDoor | null, port: NodeDataPort) => {
+const build = async (door: NodeToolDoor | null, port: NodeDataPort, resolvers: ReadonlyArray<NodeSubjectResolver> = []) => {
     const registry = mock<GraphNodeRegistryService>()
-    registry.installed.mockReturnValue(nodeIndexOf({ nodes: [probe], effects: [ping], tools: [look], dataKinds: [] }))
+    registry.installed.mockReturnValue(
+        nodeIndexOf({ nodes: [probe], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),
+    )
+    registry.subjectResolvers.mockReturnValue(resolvers)
     registry.nodeOf.mockReturnValue(probe)
     registry.portOf.mockReturnValue(port)
     const executor = mock<NodeEffectExecutor>({ effect: "core.ping" })
@@ -125,5 +142,49 @@ describe("GraphNodeHostService", () => {
     it("refuses a tool call while no NIVO MCP door is bound", async () => {
         const { host } = await build(null, { kind: "record", read: () => Promise.resolve([]) })
         await expect(host.run(INPUT)).rejects.toMatchObject({ code: GraphNodesErrorCode.ToolDoorMissing })
+    })
+})
+
+describe("GraphNodeHostService subjects and undo", () => {
+    const port: NodeDataPort = { kind: "record", read: () => Promise.resolve([]) }
+
+    it("gives a turn with no subject the first subject a resolver knows, and keeps a subject the trigger named", async () => {
+        const none: NodeSubjectResolver = { subjectOf: jest.fn().mockResolvedValue(null) }
+        const lead: NodeSubjectResolver = { subjectOf: jest.fn().mockResolvedValue({ kind: "sales-lead", id: "l-1" }) }
+        const read = jest.fn().mockResolvedValue([])
+        const { host } = await build(door(), { ...port, read }, [none, lead])
+
+        await host.run(INPUT)
+        expect(read.mock.calls[0]?.[0].subject).toEqual({ kind: "sales-lead", id: "l-1" })
+
+        const named = { ...INPUT.turn, subject: { kind: "order", id: "o-1" } }
+        await host.run({ ...INPUT, turn: named })
+        expect(read.mock.calls[1]?.[0].subject).toEqual({ kind: "order", id: "o-1" })
+        expect(none.subjectOf).toHaveBeenCalledTimes(1)
+    })
+
+    it("runs a turn on no subject when no resolver knows one", async () => {
+        const read = jest.fn().mockResolvedValue([])
+        const { host } = await build(door(), { ...port, read }, [{ subjectOf: () => Promise.resolve(null) }])
+        await host.run(INPUT)
+        expect(read.mock.calls[0]?.[0].subject).toBeNull()
+    })
+
+    it("undoes each effect with a compensation, last first, keyed by its place, and skips one with none", async () => {
+        const { host, executor, effects } = await build(door(), port)
+        const done = [
+            { id: "core.ping", subject: { kind: "record", id: "a" } },
+            { id: "core.other", subject: { kind: "record", id: "b" } },
+            { id: "core.lost", subject: { kind: "record", id: "c" } },
+            { id: "core.ping", subject: { kind: "record", id: "d" } },
+        ]
+
+        await host.undo({ turn: INPUT.turn, done, key: "run-1:node" })
+
+        expect(effects.once.mock.calls.map((call) => [call[1], call[2]])).toEqual([
+            ["core.unping", { key: "run-1:node:undo:3", dedupeKey: null }],
+            ["core.unping", { key: "run-1:node:undo:0", dedupeKey: null }],
+        ])
+        expect(executor.execute.mock.calls.map((call) => call[1])).toEqual([{ id: "d" }, { id: "a" }])
     })
 })

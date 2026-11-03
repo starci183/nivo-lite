@@ -10,7 +10,7 @@ import type { AgentStepHandler, StepAnswer, StepJson, StepView } from "@modules/
 import { GraphNodeHostService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { AgentGraphsService } from "./agent-graphs.service"
-import { GraphFlowService } from "./graph-flow.service"
+import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { GRAPH_NODE_STEP_KIND, localeOf, outputsOf } from "./policies/graph-flow.policy"
 import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
 
@@ -60,7 +60,7 @@ const refused = (cause: unknown): cause is NodeRunError | RightsDeniedError | To
  * that refuses (a schema, a right) fails the step at once; anything else is tried again by the engine. A compensable step undoes itself
  * when the engine compensates a run that failed before its first pivot.
  */
-export class GraphNodeStepService implements AgentStepHandler, OnModuleInit {
+export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit {
     /** The kind it runs. */
     readonly kind: string = GRAPH_NODE_STEP_KIND
 
@@ -68,7 +68,7 @@ export class GraphNodeStepService implements AgentStepHandler, OnModuleInit {
         private readonly handlers: AgentRunHandlersService,
         private readonly graphs: AgentGraphsService,
         private readonly host: GraphNodeHostService,
-        private readonly flows: GraphFlowService,
+        private readonly flows: AgentGraphFlowRunsService,
     ) {}
 
     /** Registers with the run engine once the app has started. */
@@ -130,7 +130,7 @@ export class GraphNodeStepService implements AgentStepHandler, OnModuleInit {
         node: GraphSpecNode,
         output: unknown,
         input: GraphNodeStepInput,
-    ): ReadonlyArray<ReturnType<GraphFlowService["stepOf"]>> {
+    ): ReadonlyArray<ReturnType<AgentGraphFlowRunsService["stepOf"]>> {
         const key = nextKeyOf(node, output)
         const following = flow.nodes.find((candidate) => candidate.key === key)
         return following === undefined ? [] : [this.flows.stepOf(following, { ...input, nodeKey: following.key })]

@@ -25,7 +25,7 @@ interface ActiveFlow {
  * flow whose tag trigger names where the wake came from, opens the wake's run and writes the step of the first node; the run engine
  * drives the rest, one durable step per node. The steps that follow are the step handler's to write.
  */
-export class GraphFlowService implements AgentWorkFlow, OnModuleInit {
+export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly graphs: AgentGraphsService,

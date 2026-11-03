@@ -40,8 +40,9 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
     /** Tags the target agent for the turn's agent and answers the wake it wrote. */
     async execute(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef> {
         const tag = agentTagEffect.payload.parse(payload)
-        const toAgentId = tag.toAgentId ?? (await this.agentOfModule(turn.workspaceId, tag.toModuleKey))
-        if (toAgentId === null) throw new NodeRunError("EFFECT_PAYLOAD_INVALID", AGENT_TAG)
+        const toAgentId =
+            tag.toModuleKey === undefined ? tag.toAgentId : await this.agentOfModule(turn.workspaceId, tag.toModuleKey)
+        if (toAgentId == null) throw new NodeRunError("EFFECT_PAYLOAD_INVALID", AGENT_TAG)
         const eventKey = ledgerKeyOf(call)
         const result = await this.tags.tagAgent({
             fromAgentId: turn.agentId,
@@ -62,8 +63,7 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
         throw new NodeRunError("EFFECT_PAYLOAD_INVALID", AGENT_TAG)
     }
 
-    private async agentOfModule(workspaceId: string, moduleKey: string | undefined): Promise<string | null> {
-        if (moduleKey === undefined) return null
+    private async agentOfModule(workspaceId: string, moduleKey: string): Promise<string | null> {
         return (await this.installations.firstOfModule(workspaceId, moduleKey))?.agentId ?? null
     }
 }

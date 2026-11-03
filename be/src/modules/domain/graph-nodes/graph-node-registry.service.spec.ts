@@ -69,6 +69,15 @@ describe("GraphNodeRegistryService", () => {
         expect(registry.installed().effects.get("core.ping")).toBe(ping)
     })
 
+    it("keeps the subject resolvers in the order modules registered them", async () => {
+        const { registry } = await build()
+        const first = { subjectOf: () => Promise.resolve(null) }
+        const second = { subjectOf: () => Promise.resolve(null) }
+        registry.addSubjectResolver(first)
+        registry.addSubjectResolver(second)
+        expect(registry.subjectResolvers()).toEqual([first, second])
+    })
+
     it("refuses a second port or executor, and a node, kind or effect nobody installed or serves", async () => {
         const { registry } = await build()
         registry.addDataPort(port)
