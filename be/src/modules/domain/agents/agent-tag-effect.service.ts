@@ -56,6 +56,7 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
             ...(tag.leadId === undefined ? {} : { leadId: tag.leadId }),
             ...(tag.channel === undefined ? {} : { channel: tag.channel }),
             ...(tag.context === undefined ? {} : { context: tag.context }),
+            ...(tag.visibility === undefined ? {} : { visibility: tag.visibility }),
         })
         if (result.tagged) return { kind: WAKE, id: result.wakeId }
         if (result.reason === "duplicate") return { kind: WAKE, id: eventKey }

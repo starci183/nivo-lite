@@ -4,9 +4,9 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AgentWakeService } from "./agent-wake.service"
 import { tagContextOf, tagPayloadTextOf } from "./agent-tag.policy"
-import { InjectAgentTagRights } from "./agent-work.decorators"
+import { InjectAgentTagRights, InjectAgentTagVisibility } from "./agent-work.decorators"
 import type { AgentTagRequest, AgentTagResult } from "./agent-tag.contracts"
-import type { AgentTagRights } from "./agent-work.port"
+import type { AgentTagRights, AgentTagVisibilityPort } from "./agent-work.port"
 
 @Injectable()
 /**
@@ -19,6 +19,7 @@ export class AgentTagService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly wakes: AgentWakeService,
         @Optional() @InjectAgentTagRights() private readonly rights: AgentTagRights | null = null,
+        @Optional() @InjectAgentTagVisibility() private readonly visibility: AgentTagVisibilityPort | null = null,
     ) {}
 
     /** Tags the agent in the caller's transaction, or in one of its own; answers the wake, or why nothing was written. */
@@ -42,7 +43,23 @@ export class AgentTagService {
             context: tagContextOf(request, payload),
             actorMemberId: "personId" in request ? request.personId : null,
         })
-        return id === null ? { tagged: false, reason: "duplicate" } : { tagged: true, wakeId: id }
+        if (id === null) return { tagged: false, reason: "duplicate" }
+        await this.show(request, tx)
+        return { tagged: true, wakeId: id }
+    }
+
+    /** Shows the hand-off in its conversation (`chat`) or moves the conversation silently (`redirect`); a tag with no conversation shows nothing. */
+    private async show(request: AgentTagRequest, tx: EntityManager): Promise<void> {
+        if (this.visibility === null || request.conversationId == null) return
+        const notice = {
+            workspaceId: request.workspaceId,
+            conversationId: request.conversationId,
+            fromAgentId: "fromAgentId" in request ? request.fromAgentId : null,
+            toAgentId: request.toAgentId,
+            text: request.text,
+        }
+        if (request.visibility === "redirect") await this.visibility.redirect(notice)
+        else await this.visibility.announce(notice, tx)
     }
 
     private async mayTag(fromAgentId: string, toAgentId: string): Promise<boolean> {

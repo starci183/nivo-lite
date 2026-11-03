@@ -1,3 +1,5 @@
+import type { EntityManager } from "typeorm"
+import type { AgentTagNotice } from "./agent-tag.contracts"
 import type { AgentTurnUsage, AgentTurnView, AgentWakeSource, AgentWakeView } from "./agent-work.contracts"
 
 /** A picture sent with a turn. */
@@ -100,4 +102,12 @@ export interface AgentWorkFallback extends AgentWorkHandler {
 export interface AgentTagRights {
     /** Whether the agent may tag the other agent. */
     canTag(agentId: string, targetAgentId: string): Promise<boolean>
+}
+
+/** What the tag door asks of the conversations side: show the hand-off in the conversation, or move the conversation silently. */
+export interface AgentTagVisibilityPort {
+    /** Posts the visible tag line in the conversation, in the caller's transaction. */
+    announce(notice: AgentTagNotice, tx: EntityManager): Promise<void>
+    /** Moves the conversation to the target agent with no line in it. */
+    redirect(notice: AgentTagNotice): Promise<void>
 }
