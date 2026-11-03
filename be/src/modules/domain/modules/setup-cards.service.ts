@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityActionsService, ruleRefusalOf } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
@@ -28,6 +28,8 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Locale } from "@modules/platform/i18n"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
+import { InjectSetupGraph } from "./modules.decorators"
+import type { SetupGraphPort } from "./modules.port"
 import type { CardDecision, CurrentFact, CurrentRule, SetupCardView } from "./module-setup.contracts"
 import type { ModuleDefinition } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
@@ -67,6 +69,18 @@ interface ConfirmFactParams {
     readonly close: CardCloser
 }
 
+/** The authority and selected rule card for confirmation. */
+interface ConfirmRuleParams {
+    readonly workspaceId: string
+    readonly actor: string
+    readonly module: ModuleDefinition
+    readonly installation: InstallationRecord
+    readonly base: RuleCardPayload
+    readonly change: CardDecision
+    readonly locale: Locale
+    readonly close: CardCloser
+}
+
 @Injectable()
 /**
  * The confirm cards of the setup chat: the owner answers become cards (a Second Brain fact or an authority rule) that are written only
@@ -89,6 +103,7 @@ export class SetupCardsService {
         private readonly events: EventsService,
         private readonly changes: InstallationChangesService,
         private readonly branches: SetupBranchCardsService,
+        @Optional() @InjectSetupGraph() private readonly graph: SetupGraphPort | null = null,
     ) {}
 
     /** The cards of the given sessions, each waiting one with the value it would replace. */
@@ -205,7 +220,16 @@ export class SetupCardsService {
             })
         }
         if (card.kind === "rule") {
-            return this.confirmRule(workspaceId, member.displayName, module, card.payload, change, locale, close)
+            return this.confirmRule({
+                workspaceId,
+                actor: member.displayName,
+                module,
+                installation,
+                base: card.payload,
+                change,
+                locale,
+                close,
+            })
         }
         return this.confirmFact({
             workspaceId,
@@ -219,19 +243,12 @@ export class SetupCardsService {
         })
     }
 
-    private async confirmRule(
-        workspaceId: string,
-        actor: string,
-        module: ModuleDefinition,
-        base: RuleCardPayload,
-        change: CardDecision,
-        locale: Locale,
-        close: (
-            status: "applied" | "rejected",
-            payload: FactCardPayload | RuleCardPayload,
-            result: NonNullable<CardRecord["result"]>,
-        ) => Promise<CardRecord>,
-    ): Promise<CardRecord> {
+    /**
+     * Saves a confirmed rule the way the Authority page does, then brings the graph of the installation along: a seed follows the rule
+     * it came from at once, so the draft the setup offers to publish never sits above the limit the owner has just confirmed.
+     */
+    private async confirmRule(params: ConfirmRuleParams): Promise<CardRecord> {
+        const { workspaceId, actor, module, installation, base, change, locale, close } = params
         const mode = change.mode ?? base.mode
         const limitVnd = change.limitVnd === undefined ? base.limitVnd : change.limitVnd
         const have = this.ruleInForce(
@@ -266,6 +283,7 @@ export class SetupCardsService {
             actor,
             summary: `${module.key}.${base.action} -> ${mode}${limit} (${module.name[locale]} setup chat)`,
         })
+        await this.graph?.followRules(workspaceId, installation.id)
         return close("applied", { ...base, mode, limitVnd: saved.limit_vnd }, { outcome: "applied", ruleId: saved.id })
     }
 
