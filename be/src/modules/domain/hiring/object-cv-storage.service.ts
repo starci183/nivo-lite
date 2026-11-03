@@ -28,9 +28,9 @@ export class ObjectCvStorageService extends CvStorage {
         return signed.kind === "ok" ? (signed.value[0]?.signedUrl ?? null) : null
     }
 
-    /** The one-time token the apply page uploads the file at `path` with, or null when Storage refuses. */
-    override async signedUpload(path: string): Promise<string | null> {
-        const signed = await this.objects.signedUpload(BUCKET, path)
-        return signed.kind === "ok" ? signed.value.token : null
+    /** The presigned address the apply page uploads the file at `path` to, signed for `contentType`, or null when Storage refuses. */
+    override async signedUpload(path: string, contentType: string): Promise<string | null> {
+        const signed = await this.objects.signedUpload(BUCKET, path, contentType)
+        return signed.kind === "ok" ? signed.value.signedUrl : null
     }
 }

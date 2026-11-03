@@ -68,6 +68,7 @@ export class AvatarsService {
         const signed = await this.storage.signedUpload(
             AVATAR_BUCKET,
             avatarPathOf(owner, allocated.gen_random_uuid, extension),
+            file.contentType,
         )
         if (signed.kind !== "ok") throw new AvatarsError({ code: AvatarsErrorCode.Unavailable })
         return { ...signed.value, publicUrl: this.storage.publicUrl(AVATAR_BUCKET, signed.value.path) }

@@ -119,7 +119,7 @@ describe("ChatFilesService.requestUpload", () => {
         })
         expect(entitlements.requireStorageFor).toHaveBeenCalledWith("ws-1", PNG.length)
         expect(em.query).toHaveBeenCalledWith('SELECT * FROM "pg_catalog"."gen_random_uuid"()', [])
-        expect(storage.signedUpload).toHaveBeenCalledWith("media", PATH)
+        expect(storage.signedUpload).toHaveBeenCalledWith("media", PATH, "image/png")
     })
 
     it("does not allocate or sign anything when the workspace storage allowance is refused", async () => {

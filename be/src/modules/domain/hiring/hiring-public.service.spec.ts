@@ -63,6 +63,7 @@ const settings: HiringSettings = {
 }
 
 const request = { ws: "shop", job: "cashier" }
+const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 const application: ApplyParams = {
     ...request,
     name: "Alice",
@@ -193,48 +194,74 @@ describe("HiringPublicService job", () => {
 
 describe("HiringPublicService", () => {
     describe("createCvUpload", () => {
-        it.each(["PDF", "doc", "docx", "jpg", "jpeg", "png"])(
+        it.each([
+            ["PDF", "application/pdf"],
+            ["doc", "application/msword"],
+            ["docx", DOCX_TYPE],
+            ["jpg", "image/jpeg"],
+            ["jpeg", "image/jpeg"],
+            ["png", "image/png"],
+        ])(
             "creates an upload path for an allowed %s extension",
-            async (extension) => {
+            async (extension, contentType) => {
                 const { service, data, storage } = await build()
                 const path = `ws-1/job-1/token-1/alice-resume.${extension.toLowerCase()}`
 
                 await expect(
-                    service.createCvUpload({ ...request, fileName: `Alice Resume.${extension}` }),
+                    service.createCvUpload({ ...request, fileName: `Alice Resume.${extension}`, contentType }),
                 ).resolves.toEqual({
                     path,
                     token: "upload-1",
+                    contentType,
                 })
 
                 expect(data.newToken.mock.calls).toEqual([[]])
-                expect(storage.signedUpload.mock.calls).toEqual([[path]])
+                expect(storage.signedUpload.mock.calls).toEqual([[path, contentType]])
             },
         )
+
+        it("signs the type of the extension when the browser reports none or one the CV does not admit", async () => {
+            const { service, storage } = await build()
+
+            await expect(
+                service.createCvUpload({ ...request, fileName: "cv.docx", contentType: "" }),
+            ).resolves.toMatchObject({ contentType: DOCX_TYPE })
+            await expect(
+                service.createCvUpload({ ...request, fileName: "cv.pdf", contentType: "application/octet-stream" }),
+            ).resolves.toMatchObject({ contentType: "application/pdf" })
+            expect(storage.signedUpload).toHaveBeenCalledTimes(2)
+        })
 
         it("uses the fallback name when the file stem has no slug", async () => {
             const { service, storage } = await build()
 
-            await expect(service.createCvUpload({ ...request, fileName: "...PDF" })).resolves.toEqual({
+            await expect(
+                service.createCvUpload({ ...request, fileName: "...PDF", contentType: "application/pdf" }),
+            ).resolves.toEqual({
                 path: "ws-1/job-1/token-1/cv.pdf",
                 token: "upload-1",
+                contentType: "application/pdf",
             })
 
-            expect(storage.signedUpload.mock.calls).toEqual([["ws-1/job-1/token-1/cv.pdf"]])
+            expect(storage.signedUpload.mock.calls).toEqual([["ws-1/job-1/token-1/cv.pdf", "application/pdf"]])
         })
 
         it("limits the file stem to forty characters", async () => {
             const { service } = await build()
 
-            await expect(service.createCvUpload({ ...request, fileName: `${"a".repeat(50)}.pdf` })).resolves.toEqual({
+            await expect(
+                service.createCvUpload({ ...request, fileName: `${"a".repeat(50)}.pdf`, contentType: "application/pdf" }),
+            ).resolves.toEqual({
                 path: `ws-1/job-1/token-1/${"a".repeat(40)}.pdf`,
                 token: "upload-1",
+                contentType: "application/pdf",
             })
         })
 
         it.each(["resume", "resume.exe", "resume."])("rejects the unsupported file %s", async (fileName) => {
             const { service, data, storage } = await build()
 
-            await expect(service.createCvUpload({ ...request, fileName })).rejects.toMatchObject({
+            await expect(service.createCvUpload({ ...request, fileName, contentType: "" })).rejects.toMatchObject({
                 code: HiringErrorCode.PublicNotFound,
             })
 
@@ -246,9 +273,20 @@ describe("HiringPublicService", () => {
             const { service, storage } = await build()
             storage.signedUpload.mockResolvedValue(null)
 
-            await expect(service.createCvUpload({ ...request, fileName: "resume.pdf" })).rejects.toMatchObject({
+            await expect(
+                service.createCvUpload({ ...request, fileName: "resume.pdf", contentType: "application/pdf" }),
+            ).rejects.toMatchObject({
                 code: HiringErrorCode.PublicNotFound,
             })
+        })
+
+        it("rejects an unsupported extension even when the browser reports an admitted type", async () => {
+            const { service, storage } = await build()
+
+            await expect(
+                service.createCvUpload({ ...request, fileName: "resume.exe", contentType: "application/pdf" }),
+            ).rejects.toMatchObject({ code: HiringErrorCode.PublicNotFound })
+            expect(storage.signedUpload).not.toHaveBeenCalled()
         })
     })
 })
@@ -396,7 +434,9 @@ describe("anonymous posting admission before effects", () => {
         { closesAt: "2026-10-12T00:00:00.000Z", code: HiringErrorCode.JobExpired },
     ])("refuses both submission doors before any effect (%p)", async ({ code, ...overrides }) => {
         const { service, storage, candidates, data } = await build(jobOf(overrides))
-        await expect(service.createCvUpload({ ...request, fileName: "resume.pdf" })).rejects.toMatchObject({ code })
+        await expect(service.createCvUpload({ ...request, fileName: "resume.pdf", contentType: "" })).rejects.toMatchObject({
+            code,
+        })
         await expect(service.apply({ ...application, website: "bot" })).rejects.toMatchObject({ code })
         expect(storage.signedUpload).not.toHaveBeenCalled()
         expect(data.newToken).not.toHaveBeenCalled()

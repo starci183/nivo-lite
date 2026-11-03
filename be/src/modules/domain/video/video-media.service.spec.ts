@@ -126,7 +126,7 @@ describe("VideoMediaService", () => {
             })
             expect(members.require).toHaveBeenCalledWith("person-1", WS, ["owner", "manager"])
             expect(entitlements.requireStorageFor).toHaveBeenCalledWith(WS, 1000)
-            expect(storage.signedUpload).toHaveBeenCalledWith("media", path)
+            expect(storage.signedUpload).toHaveBeenCalledWith("media", path, "image/jpeg")
         })
 
         it.each([
@@ -149,7 +149,7 @@ describe("VideoMediaService", () => {
 
             await media.createUpload("person-1", WS, { ...file, name: "..." })
 
-            expect(storage.signedUpload).toHaveBeenCalledWith("media", `${WS}/${UPLOAD_ID}-file`)
+            expect(storage.signedUpload).toHaveBeenCalledWith("media", `${WS}/${UPLOAD_ID}-file`, "image/jpeg")
         })
 
         it("fails when no upload identity is generated", async () => {

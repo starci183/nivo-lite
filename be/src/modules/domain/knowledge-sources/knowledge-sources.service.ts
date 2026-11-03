@@ -10,6 +10,7 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { unwrapOutcome } from "@modules/platform/primitives"
+import { uploadContentTypeOf } from "@modules/integrations/object-storage"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { KnowledgeSourceIndexedEvent } from "@modules/events/api"
 import { InjectEventBus } from "@modules/platform/event-bus"
@@ -20,7 +21,12 @@ import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { ProgressChange } from "./knowledge-progress.contracts"
 import { KnowledgeProgressService } from "./knowledge-progress.service"
-import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING, PUBLIC_DOCUMENT_ORIGIN } from "./knowledge-sources.contracts"
+import {
+    KNOWLEDGE_UPLOAD_BUCKET,
+    KNOWLEDGE_UPLOAD_MIME,
+    STORAGE_OBJECT_MISSING,
+    PUBLIC_DOCUMENT_ORIGIN,
+} from "./knowledge-sources.contracts"
 import type {
     AddSourceInput,
     DeletedSource,
@@ -273,17 +279,29 @@ export class KnowledgeSourcesService {
     }
 
     /** An address a browser uploads one document to: `<workspaceId>/<uuid>/<filename>` in the private bucket. */
-    async createUpload(userId: string, workspaceId: string, filename: string): Promise<UploadAddress> {
+    async createUpload(
+        userId: string,
+        workspaceId: string,
+        filename: string,
+        contentType: string,
+    ): Promise<UploadAddress> {
         await this.members.require(userId, workspaceId, MANAGERS)
         if (filename.trim() === "")
             throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileNameRequired })
+        const signedType = uploadContentTypeOf(KNOWLEDGE_UPLOAD_MIME, filename, contentType)
+        if (signedType === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileTypeUnsupported })
         await this.entitlements.requireStorageFor(workspaceId, 0)
         const path = `${workspaceId}/${this.ids.next()}/${safeFileName(filename)}`
-        const signed = await this.storage.signedUpload(KNOWLEDGE_UPLOAD_BUCKET, path)
+        const signed = await this.storage.signedUpload(KNOWLEDGE_UPLOAD_BUCKET, path, signedType)
         if (signed.kind === "refused") {
             throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.UploadUnavailable })
         }
-        return { path: signed.value.path, token: signed.value.token, signedUrl: signed.value.signedUrl }
+        return {
+            path: signed.value.path,
+            token: signed.value.token,
+            signedUrl: signed.value.signedUrl,
+            contentType: signedType,
+        }
     }
 
     /** Queues the re-embedding of the workspace's stale passages with `model`. */

@@ -117,7 +117,7 @@ export class ContentMediaService {
         const [allocated] = await callDbFunction<AllocatedId>(this.entityManager, "gen_random_uuid", [])
         if (allocated === undefined) throw new ContentMediaError({ code: ContentMediaErrorCode.StorageUnavailable })
         const path = buildContentMediaPath(workspaceId, file.name, allocated.gen_random_uuid)
-        const signed = await this.storage.signedUpload(CONTENT_MEDIA_BUCKET, path)
+        const signed = await this.storage.signedUpload(CONTENT_MEDIA_BUCKET, path, file.contentType)
         if (signed.kind !== "ok") throw new ContentMediaError({ code: ContentMediaErrorCode.StorageUnavailable })
         return { ...signed.value, name: file.name }
     }

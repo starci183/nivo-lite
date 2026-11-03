@@ -36,9 +36,9 @@ describe("ObjectCvStorageService", () => {
         objects.signedUpload.mockResolvedValueOnce(ok({ path: "p", token: "t", signedUrl: "u" }))
         objects.signedUpload.mockResolvedValueOnce(refused("OBJECT_STORAGE_UNAVAILABLE"))
 
-        await expect(storage.signedUpload("p")).resolves.toBe("t")
-        await expect(storage.signedUpload("p")).resolves.toBeNull()
-        expect(objects.signedUpload).toHaveBeenCalledWith("hiring", "p")
+        await expect(storage.signedUpload("p", "application/pdf")).resolves.toBe("u")
+        await expect(storage.signedUpload("p", "application/pdf")).resolves.toBeNull()
+        expect(objects.signedUpload).toHaveBeenCalledWith("hiring", "p", "application/pdf")
     })
 
     it("counts the removed files, none on a Storage failure", async () => {

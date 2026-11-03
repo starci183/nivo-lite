@@ -282,7 +282,7 @@ describe("ContentMediaService", () => {
 
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
         expect(entitlements.requireStorageFor).toHaveBeenCalledWith("ws-1", 1_200)
-        expect(storage.signedUpload).toHaveBeenCalledWith("media", UPLOAD_PATH)
+        expect(storage.signedUpload).toHaveBeenCalledWith("media", UPLOAD_PATH, PICTURE.contentType)
     })
 
     it("refuses a file that is not accepted media", async () => {
