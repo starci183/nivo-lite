@@ -12,6 +12,7 @@ const orderOf = builder<SalesOrderListRow>({
     inbound_event_id: null,
     order_no: "DH-20261013-0001",
     items: "2 x Tea",
+    note: "",
     amount_vnd: 90000,
     status: "shipped",
     confirmed_by: "Lan",

@@ -27,6 +27,10 @@ export class OrderEntity extends UuidAbstractEntity {
     @Column({ name: "items", type: "text", default: () => "''" })
     items!: string
 
+    /** The delivery address and the notes the customer gave with the order; empty when there are none. */
+    @Column({ name: "note", type: "text", default: () => "''" })
+    note!: string
+
     /** The money, VND, or null. */
     @Column({ name: "amount_vnd", type: "bigint", nullable: true, transformer: bigintNumberTransformer })
     amountVnd!: number | null

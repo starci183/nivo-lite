@@ -8,6 +8,7 @@ import { LeadReadService } from "@modules/domain/leads"
 import { z } from "zod"
 import { OrdersError, OrdersErrorCode } from "./errors/orders.error"
 import type { SalesOrderRow } from "./orders.contracts"
+import { OrderConfirmationService } from "./order-confirmation.service"
 import { OrdersService } from "./orders.service"
 import { itemLinesOf, itemsTextOf } from "./order-items.policy"
 
@@ -32,6 +33,7 @@ const rowOf = (order: SalesOrderRow): NodeRow => ({
     orderNo: order.order_no,
     leadId: order.lead_id,
     items: itemLinesOf(order.items),
+    note: order.note,
     amountVnd: order.amount_vnd,
     status: order.status,
     confirmedAt: order.confirmed_at,
@@ -48,6 +50,7 @@ export class OrdersGraphService implements OnModuleInit {
     constructor(
         private readonly orders: OrdersService,
         private readonly leads: LeadReadService,
+        private readonly confirmation: OrderConfirmationService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
@@ -81,7 +84,8 @@ export class OrdersGraphService implements OnModuleInit {
             leadId: given.leadId,
             inboundEventId: null,
             orderNo: null,
-            items: itemsTextOf(given.items, given.note ?? null),
+            items: itemsTextOf(given.items),
+            note: given.note ?? "",
             amountVnd: given.amountVnd,
         })
         return { kind: "order", id: order.id }
@@ -92,12 +96,13 @@ export class OrdersGraphService implements OnModuleInit {
         const order = await this.orders.find(turn.workspaceId, orderId)
         if (order === null) throw new OrdersError({ code: OrdersErrorCode.NotFound, params: { id: orderId } })
         if (order.status === "draft") {
-            await this.orders.confirm({
+            await this.confirmation.confirm({
                 workspaceId: turn.workspaceId,
                 orderId,
                 amountVnd: order.amount_vnd,
                 items: order.items,
                 confirmedBy: CONFIRMED_BY,
+                customer: "",
             })
         }
         return { kind: "order", id: orderId }

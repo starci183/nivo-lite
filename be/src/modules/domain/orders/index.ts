@@ -12,3 +12,5 @@ export type { OrderNameRef, OrdersWorkbenchRow, SalesOrderListRow } from "./orde
 export { ordersEntities } from "./persistence/entities"
 export { OrdersAutomationReadService } from "./orders-automation-read.service"
 export type { SalesOrderRow } from "./orders.contracts"
+export { OrderConfirmationService } from "./order-confirmation.service"
+export type { OrderConfirmationInput, WithinConfirmation } from "./order-confirmation.service"

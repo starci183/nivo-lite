@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { AiGenerationsError, AiGenerationsErrorCode } from "@modules/domain/ai-generations"
+import { evaluateGate } from "@modules/domain/authority-rules"
 import type { GateVerdict, Proposal } from "./decisions.contracts"
 import {
     MAX_ERROR_LENGTH,
@@ -9,6 +10,7 @@ import {
     blockingReasons,
     failureText,
     formatVnd,
+    genericOwnerRule,
     isCustomerOutbound,
     mergeEdits,
     reviewedByPerson,
@@ -277,6 +279,23 @@ describe("work engine policy money", () => {
 
             expect(subject.formatVnd(1500000, "en")).toContain("1,500,000")
             expect(subject.formatVnd(1500000, "vi")).toContain("1.500.000")
+        })
+    })
+})
+
+describe("genericOwnerRule", () => {
+    const proposal: Proposal = { summary: "Connect SePay", fields: {} }
+
+    it("asks the owner for an action nobody listed, whatever the action, and lets the owner approve it", () => {
+        const rule = genericOwnerRule("connect_sepay")
+
+        expect(rule).toMatchObject({ action: "connect_sepay", mode: "ask", limit_vnd: null, required_fields: [] })
+        expect(evaluateGate({ action: "connect_sepay", rule, maxMode: null, proposal, humanApproved: false })).toMatchObject({
+            verdict: "ask",
+            reason: "over_authority",
+        })
+        expect(evaluateGate({ action: "connect_sepay", rule, maxMode: null, proposal, humanApproved: true })).toMatchObject({
+            verdict: "auto",
         })
     })
 })

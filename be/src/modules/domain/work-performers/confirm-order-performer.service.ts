@@ -15,10 +15,10 @@ import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { OptionalInboundEvent } from "@modules/domain/inbound-events"
 import { LeadRecordsService, contactParts } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
-import { OrdersService } from "@modules/domain/orders"
+import { OrderConfirmationService, OrdersService } from "@modules/domain/orders"
 import type { OptionalOrder } from "@modules/domain/orders"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
-import { DealWonEvent, LeadCapturedEvent, OrderConfirmedEvent, whenPresent } from "@modules/events/api"
+import { LeadCapturedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -34,6 +34,7 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
     constructor(
         private readonly kit: PerformerKitService,
         private readonly orders: OrdersService,
+        private readonly confirmation: OrderConfirmationService,
         private readonly leads: LeadRecordsService,
         private readonly inbound: InboundEventsService,
         private readonly agents: AgentsService,
@@ -76,94 +77,41 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
     }
 
     /**
-     * Confirms the draft once (a repeat never re-confirms or rolls back), marks the deal won, leaves the evidence line and publishes
-     * `order_confirmed` and `deal_won`, all in one transaction.
+     * Confirms the draft once (a repeat never re-confirms or rolls back) through the one confirmation path of the orders capability: the
+     * deal is won, `order_confirmed` and `deal_won` are published, and the evidence line is left, all in one transaction.
      */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
         const orderId = this.orderIdOf(item)
         const amount = proposal.amount_vnd ?? numberOf(proposal.fields.amount_vnd)
-        const confirmed = await this.entityManager.transaction(async (tx) => {
-            const order = await this.orders.confirm(
-                {
-                    workspaceId: ctx.workspaceId,
-                    orderId,
-                    amountVnd: amount,
-                    items: textOf(proposal.fields.items),
-                    confirmedBy: by.name,
-                },
-                tx,
-            )
-            if (order === null) return null
-            if (order.lead_id !== null) await this.leads.markWon(ctx.workspaceId, order.lead_id, tx)
-            const summary = this.kit.text(ctx, "orderConfirmed", {
-                no: order.order_no,
-                amount: this.kit.money(ctx, amount),
-            })
-            await this.evidence.log(
-                ctx,
-                {
-                    lead_id: order.lead_id,
-                    work_item_id: item.id,
-                    kind: "order.confirmed",
-                    actor: by.name,
-                    summary,
-                    evidence: textOf(proposal.fields.items) === "" ? null : textOf(proposal.fields.items),
-                },
-                tx,
-            )
-            await this.publishConfirmed(ctx, order, proposal, by, amount, tx)
-            return { order, summary }
-        })
-        if (confirmed === null) return this.alreadyConfirmed(ctx, orderId)
-        return {
-            summary: confirmed.summary,
-            evidence: "captured",
-            href: leadHref(confirmed.order.lead_id),
-            lead_id: confirmed.order.lead_id,
-        }
-    }
-
-    /** `order_confirmed` for the order, and `deal_won` for its customer when it has one: the reactors listening hear them once committed. */
-    private async publishConfirmed(
-        ctx: WorkContext,
-        order: NonNullable<OptionalOrder>,
-        proposal: Proposal,
-        by: PerformedBy,
-        amount: number | null,
-        tx: EntityManager,
-    ): Promise<void> {
-        const buyer = order.lead_id === null ? null : await this.leads.find(ctx.workspaceId, order.lead_id)
-        const customer = buyer?.contact_name ?? textOf(proposal.fields.customer)
-        await this.bus.publish(
-            OrderConfirmedEvent.create({
+        const items = textOf(proposal.fields.items)
+        let summary = ""
+        const confirmed = await this.confirmation.confirm(
+            {
                 workspaceId: ctx.workspaceId,
-                orderId: order.id,
-                orderNo: order.order_no,
-                ...whenPresent("leadId", order.lead_id),
-                customer,
-                items: textOf(proposal.fields.items),
-                ...whenPresent("amountVnd", amount),
-                ...whenPresent("channel", buyer?.channel),
+                orderId,
+                amountVnd: amount,
+                items,
                 confirmedBy: by.name,
-            }),
-            tx,
-            `order_confirmed:${order.id}`,
+                customer: textOf(proposal.fields.customer),
+            },
+            async (order, tx) => {
+                summary = this.kit.text(ctx, "orderConfirmed", { no: order.order_no, amount: this.kit.money(ctx, amount) })
+                await this.evidence.log(
+                    ctx,
+                    {
+                        lead_id: order.lead_id,
+                        work_item_id: item.id,
+                        kind: "order.confirmed",
+                        actor: by.name,
+                        summary,
+                        evidence: items === "" ? null : items,
+                    },
+                    tx,
+                )
+            },
         )
-        if (order.lead_id === null) return
-        await this.bus.publish(
-            DealWonEvent.create({
-                workspaceId: ctx.workspaceId,
-                leadId: order.lead_id,
-                name: customer,
-                ...whenPresent("company", buyer?.company),
-                ...whenPresent("channel", buyer?.channel),
-                ...whenPresent("need", buyer?.need),
-                orderNo: order.order_no,
-                ...whenPresent("amountVnd", amount),
-            }),
-            tx,
-            `deal_won:${order.lead_id}`,
-        )
+        if (confirmed === null) return this.alreadyConfirmed(ctx, orderId)
+        return { summary, evidence: "captured", href: leadHref(confirmed.lead_id), lead_id: confirmed.lead_id }
     }
 
     /** A rejection cancels the draft. */

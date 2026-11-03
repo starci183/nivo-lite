@@ -44,6 +44,7 @@ const toOrderRow = (order: OrderEntity): SalesOrderRow => ({
     inbound_event_id: order.inboundEventId,
     order_no: order.orderNo,
     items: order.items,
+    note: order.note,
     amount_vnd: order.amountVnd,
     status: order.status,
     confirmed_by: order.confirmedBy,
@@ -62,6 +63,7 @@ const isWrittenOrder = rowShape({
     inbound_event_id: "string?",
     order_no: "string",
     items: "string",
+    note: "string",
     amount_vnd: "json",
     status: "string",
     confirmed_by: "string?",
@@ -83,6 +85,7 @@ const fromWritten = (row: WrittenOrder): SalesOrderRow => ({
     inbound_event_id: row.inbound_event_id,
     order_no: row.order_no,
     items: row.items,
+    note: row.note,
     amount_vnd: row.amount_vnd === null ? null : Number(row.amount_vnd),
     status: row.status,
     confirmed_by: row.confirmed_by,
@@ -169,6 +172,7 @@ export class OrdersService {
                 .addSelect("o.inbound_event_id", "inbound_event_id")
                 .addSelect("o.order_no", "order_no")
                 .addSelect("o.items", "items")
+                .addSelect("o.note", "note")
                 .addSelect("o.amount_vnd::float8", "amount_vnd")
                 .addSelect("o.status", "status")
                 .addSelect("o.confirmed_by", "confirmed_by")
@@ -314,6 +318,7 @@ export class OrdersService {
                 inboundEventId: input.inboundEventId,
                 orderNo: orderNumberOf(input.orderNo, prefix, taken, attempt),
                 items: input.items,
+                note: input.note ?? "",
                 amountVnd: input.amountVnd,
                 status: "draft",
             })

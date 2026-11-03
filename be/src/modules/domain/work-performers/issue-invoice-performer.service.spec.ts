@@ -54,6 +54,7 @@ const orderOf = builder<NonNullable<OptionalOrder>>({
     inbound_event_id: null,
     order_no: "SO-1",
     items: "2 tea boxes",
+    note: "",
     amount_vnd: 450000,
     status: "confirmed",
     confirmed_by: "Lan",

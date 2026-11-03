@@ -184,6 +184,19 @@ describe("WorkEngineService / runWork", () => {
         expect(built.recorder.finished).not.toHaveBeenCalled()
     })
 
+    it("makes an action nobody listed and nobody gave a rule a generic owner decision, with its name kept", async () => {
+        const { built, item } = await run(
+            { rule: null, action: null, items: { claim: resolved(fx.itemOf({ action: "connect_sepay" })) } },
+            { action: "connect_sepay", preset: true, forceAsk: "branch_ask" },
+        )
+
+        expect(item.status).toBe("waiting_decision")
+        expect(built.approval.ask).toHaveBeenCalledWith(fx.ctx, anyValue, anyValue, {
+            verdict: objectLike({ verdict: "ask", reason: "branch_ask" }),
+            rule: objectLike({ action: "connect_sepay", mode: "ask", id: "generic:connect_sepay" }),
+        })
+    })
+
     it("asks a person when the item was forced to ask", async () => {
         const { built } = await run({}, { preset: true, forceAsk: "unclear_outcome" })
         expect(built.approval.ask).toHaveBeenCalledWith(fx.ctx, anyValue, anyValue, fx.unclearGate)

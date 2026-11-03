@@ -7,6 +7,7 @@ import { OrderFactReaderService } from "./order-fact-reader.service"
 import { OrdersFiguresService } from "./orders-figures.service"
 import { OrdersReadService } from "./orders-read.service"
 import { OrdersAutomationReadService } from "./orders-automation-read.service"
+import { OrderConfirmationService } from "./order-confirmation.service"
 import { OrdersGraphService } from "./orders-graph.service"
 
 @Module({})
@@ -26,6 +27,7 @@ export class OrdersModule extends ConfigurableModuleClass {
                 OrdersAutomationReadService,
                 OrdersLabelReadService,
                 OrdersGraphService,
+                OrderConfirmationService,
             ],
             exports: [
                 OrdersService,
@@ -34,6 +36,7 @@ export class OrdersModule extends ConfigurableModuleClass {
                 OrderFactReaderService,
                 OrdersAutomationReadService,
                 OrdersLabelReadService,
+                OrderConfirmationService,
             ],
         }
     }

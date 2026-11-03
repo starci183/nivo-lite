@@ -145,6 +145,7 @@ const orderOf = builder<BookOrder>({
     inbound_event_id: "inbound-2",
     order_no: "SO-1",
     items: "Tea",
+    note: "",
     amount_vnd: 120000,
     status: "paid",
     confirmed_by: "Lan",

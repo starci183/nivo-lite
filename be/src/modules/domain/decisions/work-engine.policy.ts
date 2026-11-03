@@ -1,5 +1,6 @@
 import type { Locale } from "@modules/platform/i18n"
 import type { GateVerdict, Proposal, ProposalFieldValue, ReasonCode, WorkEdits } from "./decisions.contracts"
+import type { AuthorityRule } from "@modules/domain/authority-rules"
 import { isDomainError } from "@modules/platform/errors"
 import type { FailureTextLookup, MergedProposal, OutboundAccess } from "./work-engine.contracts"
 
@@ -129,3 +130,16 @@ export const formatVnd = (amount: number, locale: Locale): string =>
     new Intl.NumberFormat(INTL_LOCALE[locale], { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(
         amount,
     )
+
+/**
+ * The rule of an action the work registry does not list and the owner stored no rule for, which a graph node raised for a person to
+ * decide: always ask the owner, with no limit and no required field. The action name and the title stay for display.
+ */
+export const genericOwnerRule = (action: string): AuthorityRule => ({
+    id: `generic:${action}`,
+    department: "owner",
+    action,
+    mode: "ask",
+    limit_vnd: null,
+    required_fields: [],
+})

@@ -55,6 +55,7 @@ export const orderOf: (overrides?: Partial<SalesOrderRow>) => SalesOrderRow = bu
     inbound_event_id: null,
     order_no: "SO-1",
     items: "2 tea boxes",
+    note: "",
     amount_vnd: 300000,
     status: "draft",
     confirmed_by: null,

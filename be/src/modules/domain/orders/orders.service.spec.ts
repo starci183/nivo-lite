@@ -349,6 +349,7 @@ const registerDraft = () => {
                         inboundEventId: "event-1",
                         orderNo: "DH-20261013-0004",
                         items: "2 x Tea",
+                        note: "",
                         amountVnd: 90000,
                         status: "draft",
                     },
@@ -405,7 +406,7 @@ const registerTransitions = () => {
                     {
                         status: "confirmed",
                         amountVnd: 90000,
-                        items: "2 x Tea",
+                        note: "",
                         confirmedBy: "Lan",
                         confirmedAt: new Date(NOW),
                     },

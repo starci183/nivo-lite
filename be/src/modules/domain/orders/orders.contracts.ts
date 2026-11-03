@@ -1,5 +1,5 @@
 /** Where an order stands. */
-export type OrderStatus = "draft" | "confirmed" | "invoiced" | "paid" | "cancelled"
+export type OrderStatus = "draft" | "confirmed" | "invoiced" | "paid" | "cancelled" | "failed_system"
 
 /** An order, or null when the workspace has no such order. */
 export type OptionalOrder = SalesOrderRow | null
@@ -19,6 +19,8 @@ export interface NewOrderDraft {
     readonly orderNo: string | null
     /** What was ordered. */
     readonly items: string
+    /** The delivery address and notes; empty when there are none. */
+    readonly note?: string | undefined
     /** The money, VND, or null when unknown. */
     readonly amountVnd: number | null
 }
@@ -94,9 +96,11 @@ export interface SalesOrderRow {
     readonly order_no: string
     /** What was ordered. */
     readonly items: string
+    /** The delivery address and notes; empty when there are none. */
+    readonly note: string
     /** The money, VND, or null. */
     readonly amount_vnd: number | null
-    /** `draft`, `confirmed`, `invoiced`, `paid` or `cancelled`. */
+    /** `draft`, `confirmed`, `invoiced`, `paid`, `cancelled` or `failed_system`. */
     readonly status: string
     /** Who confirmed it. */
     readonly confirmed_by: string | null
