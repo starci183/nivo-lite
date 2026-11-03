@@ -1,0 +1,17 @@
+{
+  "blockStack": "Stack",
+  "blockCardGrid": "Card grid",
+  "blockSection": "Section",
+  "blockFigures": "Figures",
+  "blockDetail": "Detail",
+  "blockRecordList": "Record list",
+  "blockWaiting": "Waiting",
+  "blockDecisionQueue": "Decision queue",
+  "blockDashboardCards": "Dashboard cards",
+  "blockMasterDetail": "Master and detail",
+  "blockExplanation": "Explanation",
+  "slotEmpty": "Nothing here yet",
+  "slotForbidden": "You do not have access to this",
+  "slotError": "This could not be loaded",
+  "slotRetry": "Try again"
+}

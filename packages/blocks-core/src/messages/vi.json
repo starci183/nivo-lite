@@ -1,0 +1,17 @@
+{
+  "blockStack": "Xếp chồng",
+  "blockCardGrid": "Lưới thẻ",
+  "blockSection": "Mục",
+  "blockFigures": "Dải số liệu",
+  "blockDetail": "Chi tiết",
+  "blockRecordList": "Danh sách bản ghi",
+  "blockWaiting": "Đang chờ",
+  "blockDecisionQueue": "Hàng chờ quyết định",
+  "blockDashboardCards": "Thẻ tổng quan",
+  "blockMasterDetail": "Danh sách và chi tiết",
+  "blockExplanation": "Giải thích",
+  "slotEmpty": "Chưa có gì ở đây",
+  "slotForbidden": "Bạn không có quyền xem mục này",
+  "slotError": "Không tải được mục này",
+  "slotRetry": "Thử lại"
+}
