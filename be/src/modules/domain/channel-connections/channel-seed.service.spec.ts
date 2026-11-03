@@ -1,8 +1,12 @@
 import { createHash } from "node:crypto"
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
+import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
+import type { ConnectionReadyEvent } from "@modules/events/api"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
 import type { ChannelSeed } from "./channel-seed.contracts"
 import { ChannelSeedService } from "./channel-seed.service"
 
@@ -15,6 +19,7 @@ const IDS = {
 }
 const TOKEN = ["123456789", "AAEabcdefghijklmnopqrstuvwxyz012345"].join(":")
 const SEPAY_KEY = ["nivo", "ab12".repeat(16)].join("_")
+const SEPAY_API_TOKEN = ["api", "token", "1"].join("-")
 const hashOf = (text: string): string => createHash("sha256").update(text).digest("hex")
 
 const BARE: ChannelSeed = {
@@ -26,7 +31,14 @@ const BARE: ChannelSeed = {
 const FULL: ChannelSeed = {
     telegram: { id: IDS.telegram, token: TOKEN },
     zaloOa: { id: IDS.zaloOa, appId: "1234567", appSecret: "app-secret-1", oaSecret: "oa-secret-1" },
-    sepay: { id: IDS.sepay, bankCode: "vcb", accountNumber: "0123456789", holder: "nivo", apiKey: SEPAY_KEY },
+    sepay: {
+        id: IDS.sepay,
+        bankCode: "vcb",
+        accountNumber: "0123456789",
+        holder: "nivo",
+        apiKey: SEPAY_KEY,
+        apiToken: SEPAY_API_TOKEN,
+    },
     payos: { id: IDS.payos, clientId: "client", apiKey: "payos-key-1", checksumKey: "checksum-1" },
 }
 
@@ -62,10 +74,21 @@ const build = async (held: Held = {}) => {
         return Promise.resolve(plain === undefined ? null : { plain, webhookSecret: "hook", sealedAt: "now" })
     })
     connections.create.mockImplementation((input) => Promise.resolve(input.id ?? "generated"))
+    const apiTokens = mock<ConnectionApiTokenService>()
+    apiTokens.write.mockResolvedValue(true)
+    const tx = fakeTransaction(mockEntityManager())
+    const bus = recordingEventBus<ConnectionReadyEvent>()
+    const publish = jest.spyOn(bus, "publish")
     const moduleRef = await Test.createTestingModule({
-        providers: [ChannelSeedService, { provide: ConnectionsService, useValue: connections }],
+        providers: [
+            ChannelSeedService,
+            { provide: ConnectionsService, useValue: connections },
+            { provide: ConnectionApiTokenService, useValue: apiTokens },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: EVENT_BUS, useValue: bus },
+        ],
     }).compile()
-    return { service: moduleRef.get(ChannelSeedService), connections }
+    return { service: moduleRef.get(ChannelSeedService), connections, apiTokens, publish, tx }
 }
 
 const createdWith = (connections: jest.Mocked<ConnectionsService>, id: string) =>
@@ -107,6 +130,44 @@ describe("ChannelSeedService > a workspace without the connections", () => {
             account_masked: "•••• 6789",
             account_number: "0123456789",
         })
+    })
+
+    it("seals the SePay API token apart from the webhook key, and only when the seed gives one", async () => {
+        const { service, apiTokens } = await build()
+
+        await service.ensure(ACTOR, FULL)
+        await service.ensure(ACTOR, BARE)
+
+        expect(apiTokens.write).toHaveBeenCalledTimes(1)
+        expect(apiTokens.write).toHaveBeenCalledWith(IDS.sepay, SEPAY_API_TOKEN)
+    })
+
+    it("announces the feed as ready once the API token is stored, so the first poll runs at once", async () => {
+        const { service, publish, tx } = await build()
+
+        await service.ensure(ACTOR, FULL)
+
+        expect(publish).toHaveBeenCalledTimes(1)
+        const [event] = publish.mock.calls[0] ?? []
+        expect(event?.payload).toEqual({
+            workspaceId: "ws-1",
+            connectionId: IDS.sepay,
+            provider: "sepay",
+            dedupeKey: expect.any(String),
+        })
+        expect(event?.payload.dedupeKey).toMatch(new RegExp(`^${IDS.sepay}:api_token:[0-9a-f]{16}$`, "u"))
+        expect(JSON.stringify(event)).not.toContain(SEPAY_API_TOKEN)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("announces nothing when no token is stored", async () => {
+        const { service, apiTokens, publish } = await build()
+        apiTokens.write.mockResolvedValue(false)
+
+        await service.ensure(ACTOR, FULL)
+        await service.ensure(ACTOR, BARE)
+
+        expect(publish).not.toHaveBeenCalled()
     })
 
     it("generates a SePay key only when none is supplied", async () => {

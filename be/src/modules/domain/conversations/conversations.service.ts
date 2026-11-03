@@ -96,10 +96,13 @@ export class ConversationsService {
         await this.greet(meeting, channelEventId, manager)
     }
 
-    /** One Zalo text message: the connection turns connected on its first event, then the message is answered or only stored like a Telegram one. */
-    async acceptZalo(connectionId: string, inbound: ZaloInbound, manager: EntityManager): Promise<void> {
+    /**
+     * One Zalo text message: the connection turns connected on its first event, then the message is answered or only stored like a Telegram one.
+     * Answers true when it went to the agent turn of its conversation or to the person who owns it, false when it was only kept or not for this connection.
+     */
+    async acceptZalo(connectionId: string, inbound: ZaloInbound, manager: EntityManager): Promise<boolean> {
         const connection = await this.connections.intakeOf(connectionId, "zalo_oa", manager)
-        if (connection.kind !== "ok" || (await this.isOtherApp(connectionId, inbound.appId))) return
+        if (connection.kind !== "ok" || (await this.isOtherApp(connectionId, inbound.appId))) return false
         const workspaceId = connection.value.workspaceId
         const known = await this.conversations.find(workspaceId, "zalo", connectionId, inbound.userId, manager)
         const visitor =
@@ -120,7 +123,7 @@ export class ConversationsService {
                 `zalo:${connectionId}:${inbound.messageId}`,
                 manager,
             )
-            return
+            return false
         }
         await this.hear(
             {
@@ -135,6 +138,7 @@ export class ConversationsService {
             },
             manager,
         )
+        return true
     }
 
     /** One Facebook or Instagram direct message: answered by the front-door agent of the connection, or only stored when none is bound. */

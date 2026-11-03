@@ -1,5 +1,5 @@
 import { BankFeedReceiptService } from "@modules/domain/bank-feed-inbox"
-import type { IncomingCredit } from "@modules/domain/bank-feed-inbox"
+import type { FeedReceiptPayload, IncomingCredit } from "@modules/domain/bank-feed-inbox"
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { BANK_FEED_DELIVERY_QUEUE } from "@modules/queues/bank-feed-delivery"
@@ -219,19 +219,43 @@ export class BankFeedService {
         })
     }
 
-    private recordFeedDelivery(
+    /**
+     * Records one transaction a reconcile run read back from its provider, through the receipt path a webhook delivery takes, under the
+     * delivery key the webhook uses: a transaction the webhook already delivered is not recorded again. Answers true when this call
+     * recorded it, that is when the webhook never did.
+     */
+    acceptPolledCredit(
+        connection: string,
+        provider: BankFeedProvider,
+        deliveryId: string,
+        credit: IncomingCredit,
+    ): Promise<boolean> {
+        return this.claimFeedDelivery(provider, deliveryId, { connection, credits: [credit], source: "poll" })
+    }
+
+    private async recordFeedDelivery(
         provider: BankFeedProvider,
         deliveryId: string,
         connection: string,
         credits: ReadonlyArray<IncomingCredit>,
     ): Promise<void> {
-        if (credits.length === 0) return Promise.resolve()
+        await this.claimFeedDelivery(provider, deliveryId, { connection, credits })
+    }
+
+    /** Claims the receipt once and hands it to the deferred booking job in the same transaction; answers false for a repeat or an empty delivery. */
+    private claimFeedDelivery(
+        provider: BankFeedProvider,
+        deliveryId: string,
+        payload: FeedReceiptPayload,
+    ): Promise<boolean> {
+        if (payload.credits.length === 0) return Promise.resolve(false)
         return this.entityManager.transaction(async (manager) => {
-            if (!(await this.bankFeedInbox.claim(manager, provider, deliveryId, { connection, credits }))) return
+            if (!(await this.bankFeedInbox.claim(manager, provider, deliveryId, payload))) return false
             const message: BankFeedDeliveryRecorded = { provider, deliveryId }
             await this.outbox.write(manager, BANK_FEED_DELIVERY_QUEUE, message, {
                 dedupeKey: `${BANK_FEED_DELIVERY_QUEUE}:${provider}:${deliveryId}`,
             })
+            return true
         })
     }
 

@@ -3,6 +3,7 @@ import { AgentWakesMessageModule } from "@features/reactors/agent-wakes"
 import { AgentSyncMessageModule } from "@features/reactors/agent-sync"
 import { AutomationTriggersMessageModule } from "@features/reactors/automation-triggers"
 import { BankCreditSettlementMessageModule } from "@features/reactors/bank-credit-settlement"
+import { BankFeedPollMessageModule } from "@features/reactors/bank-feed-poll"
 import { BookingEffectsMessageModule } from "@features/reactors/booking-effects"
 import { ContentDraftingMessageModule } from "@features/reactors/content-drafting"
 import { ConversationHandbackMessageModule } from "@features/reactors/conversation-handback"
@@ -13,6 +14,7 @@ import { SourceFactsMessageModule } from "@features/reactors/source-facts"
 import { AgentGraphApprovalsMessageModule } from "@features/reactors/agent-graph-approvals"
 import { ThreadOutcomesMessageModule } from "@features/reactors/thread-outcomes"
 import { VideoScriptingMessageModule } from "@features/reactors/video-scripting"
+import { ZaloInboxPollMessageModule } from "@features/reactors/zalo-inbox-poll"
 
 /** The event reactors the api runs: each message module subscribes its consumers to their queues on the event bus. */
 export const API_REACTORS: Array<DynamicModule> = [
@@ -21,6 +23,7 @@ export const API_REACTORS: Array<DynamicModule> = [
     AgentWakesMessageModule.register({}),
     AutomationTriggersMessageModule.register({}),
     BankCreditSettlementMessageModule.register({}),
+    BankFeedPollMessageModule.register({}),
     BookingEffectsMessageModule.register({}),
     ContentDraftingMessageModule.register({}),
     ContractRenewalMessageModule.register({}),
@@ -30,4 +33,5 @@ export const API_REACTORS: Array<DynamicModule> = [
     SourceFactsMessageModule.register({}),
     ThreadOutcomesMessageModule.register({}),
     VideoScriptingMessageModule.register({}),
+    ZaloInboxPollMessageModule.register({}),
 ]

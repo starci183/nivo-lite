@@ -4,6 +4,7 @@ import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import { IsNull } from "typeorm"
 import { ZaloWebhookGateService } from "@modules/domain/channels"
 import { ConversationsService } from "@modules/domain/conversations"
+import { InboundEventsService } from "@modules/domain/inbound-events"
 import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
@@ -22,6 +23,12 @@ const body = Buffer.from(
 )
 const payload = { connection: "c-1", rawBody: body.toString("utf8") }
 
+/** The value the deferred `processedAt` of an update stamps. */
+const stamped = (set: unknown): unknown => {
+    const processedAt: unknown = Reflect.get(Object(set), "processedAt")
+    return typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined
+}
+
 const pendingOf = (over: Partial<ZaloInboxEntity> = {}): ZaloInboxEntity =>
     Object.assign(new ZaloInboxEntity(), { id: "receipt-1", provider: "zalo", payload }, over)
 
@@ -33,9 +40,10 @@ const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = tr
         }),
     )
     const conversations = mock<ConversationsService>()
-    conversations.acceptZalo.mockResolvedValue(undefined)
+    conversations.acceptZalo.mockResolvedValue(true)
     const inbox = fakeInbox()
     if (!claimed) inbox.seen("zalo", "c-1:m-1")
+    const inboundEvents = mock<InboundEventsService>()
     const gate = mock<ZaloWebhookGateService>()
     gate.holdsProofKey.mockResolvedValue(keyed)
     const outbox = recordingQueueOutbox()
@@ -47,10 +55,11 @@ const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = tr
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: ConversationsService, useValue: conversations },
+            { provide: InboundEventsService, useValue: inboundEvents },
             { provide: ZaloWebhookGateService, useValue: gate },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write, inbox, gate }
+    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write, inbox, gate, inboundEvents }
 }
 
 describe("ZaloInboxService receipt delivery", () => {
@@ -96,7 +105,8 @@ describe("ZaloInboxService receipt delivery", () => {
         await service.acceptZaloDelivery(body, "c-1")
         expect(gate.holdsProofKey).toHaveBeenCalledWith("c-1")
         expect(outbox.jobs).toEqual([])
-        expect(stampedValues(tx.em.update.mock.calls[0]?.[2])).toEqual({ processedAt: "function" })
+        expect(stampedValues(tx.em.update.mock.calls[0]?.[2])).toEqual({ processedAt: "function", state: "handled" })
+        expect(stamped(tx.em.update.mock.calls[0]?.[2])).toBe("now()")
         expect(tx.commits).toBe(1)
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
     })
@@ -117,7 +127,7 @@ describe("ZaloInboxService deferred effects", () => {
             expect(isTransactionManager(manager)).toBe(true)
             expect(tx.em.findOne).toHaveBeenCalledTimes(1)
             expect(tx.em.update).not.toHaveBeenCalled()
-            return Promise.resolve()
+            return Promise.resolve(true)
         })
         await service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
         expect(conversations.acceptZalo).toHaveBeenCalledTimes(1)
@@ -131,7 +141,7 @@ describe("ZaloInboxService deferred effects", () => {
             lock: { mode: "pessimistic_write" },
         })
         const [, , set] = tx.em.update.mock.calls[0] ?? []
-        expect(stampedValues(set)).toEqual({ processedAt: "function" })
+        expect(stampedValues(set)).toEqual({ processedAt: "function", state: "handled" })
         const processedAt: unknown = Reflect.get(Object(set), "processedAt")
         const marked: unknown =
             typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined
@@ -163,7 +173,70 @@ describe("ZaloInboxService consumer recovery", () => {
         await expect(service.processRecordedDelivery({ deliveryId: "c-1:m-1" })).rejects.toBe(failure)
         expect(tx.rollbacks).toBe(1)
         expect(tx.em.findOne).toHaveBeenCalledTimes(1)
-        expect(tx.em.update).not.toHaveBeenCalled()
+        expect(tx.em.update).toHaveBeenCalledTimes(1)
+        expect(tx.em.update).toHaveBeenCalledWith(
+            ZaloInboxEntity,
+            { provider: "zalo", deliveryId: "c-1:m-1", processedAt: IsNull() },
+            { state: "failed" },
+        )
+    })
+
+    it("leaves a message that nobody was bound to answer as received", async () => {
+        const { service, conversations, tx } = await build()
+        conversations.acceptZalo.mockResolvedValue(false)
+        await service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
+        expect(stampedValues(tx.em.update.mock.calls[0]?.[2])).toEqual({ processedAt: "function", state: "received" })
+    })
+})
+
+describe("ZaloInboxService polled messages", () => {
+    const message = { messageId: "m-1", userId: "user-1", text: "Hello", sentAt: 1_762_192_200_000 }
+    const fresh = { workspaceId: "w-1", sender: "Bui Nguyen Dinh", stale: false }
+
+    it("claims a fresh polled message under the webhook delivery id, tagged as a poll, and queues it like a webhook delivery", async () => {
+        const { service, write, inbox, conversations } = await build()
+        await expect(service.acceptPolledMessage("c-1", message, fresh)).resolves.toBe(true)
+        expect(inbox.receipts[0]).toMatchObject({ source: "zalo", eventId: "c-1:m-1", entity: ZaloInboxEntity })
+        expect(inbox.receipts[0]?.row).toMatchObject({
+            deliveryId: "c-1:m-1",
+            payload: { connection: "c-1", source: "poll" },
+        })
+        const stored: { readonly payload?: { readonly rawBody?: string } } = Object(inbox.receipts[0]?.row)
+        expect(JSON.parse(stored.payload?.rawBody ?? "{}")).toEqual({
+            event_name: "user_send_text",
+            timestamp: "1762192200000",
+            sender: { id: "user-1" },
+            message: { msg_id: "m-1", text: "Hello" },
+        })
+        expect(write).toHaveBeenCalledWith(
+            expect.anything(),
+            ZALO_DELIVERY_QUEUE,
+            { deliveryId: "c-1:m-1" },
+            { dedupeKey: "zalo-delivery:c-1:m-1" },
+        )
+        expect(conversations.acceptZalo).not.toHaveBeenCalled()
+    })
+
+    it("is a no-op for a message the webhook already delivered", async () => {
+        const { service, outbox, inboundEvents } = await build(null, false)
+        await expect(service.acceptPolledMessage("c-1", message, fresh)).resolves.toBe(false)
+        expect(outbox.jobs).toEqual([])
+        expect(inboundEvents.keepForOwner).not.toHaveBeenCalled()
+    })
+
+    it("closes a stale message as expired and keeps it for the owner without queueing an answer", async () => {
+        const { service, outbox, tx, inboundEvents } = await build()
+        await expect(service.acceptPolledMessage("c-1", message, { ...fresh, stale: true })).resolves.toBe(true)
+        expect(outbox.jobs).toEqual([])
+        expect(stampedValues(tx.em.update.mock.calls[0]?.[2])).toEqual({ processedAt: "function", state: "expired" })
+        expect(stamped(tx.em.update.mock.calls[0]?.[2])).toBe("now()")
+        expect(inboundEvents.keepForOwner).toHaveBeenCalledWith(expect.anything(), {
+            workspaceId: "w-1",
+            channel: "zalo",
+            sender: "Bui Nguyen Dinh",
+            body: "Hello",
+            eventId: "zalo:c-1:m-1",
+        })
     })
 })
 

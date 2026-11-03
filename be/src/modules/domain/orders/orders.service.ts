@@ -21,6 +21,7 @@ import type {
     SalesOrderRow,
 } from "./orders.contracts"
 import { ORDER_NUMBER_ATTEMPTS, orderNumberOf, orderPrefixOf } from "./order-number.policy"
+import { PaymentDemandService } from "./payment-demand.service"
 import { OrderEntity } from "./persistence/entities"
 
 /** The most orders a list reads at once. */
@@ -118,6 +119,7 @@ export class OrdersService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         private readonly leads: LeadReadService,
+        private readonly demand: PaymentDemandService,
     ) {}
 
     /** The order of the workspace, or null when there is none with that id. */
@@ -270,7 +272,11 @@ export class OrdersService {
             .where({ workspaceId: confirmation.workspaceId, id: confirmation.orderId, status: "draft" })
             .returning("*")
             .execute()
-        return firstWritten(confirmed.raw)
+        const order = firstWritten(confirmed.raw)
+        if (order !== null && order.amount_vnd !== null && order.amount_vnd > 0) {
+            await this.demand.orderAwaitingPayment(order.workspace_id)
+        }
+        return order
     }
 
     /** Cancels a draft and answers it; null when the order is no longer a draft. */

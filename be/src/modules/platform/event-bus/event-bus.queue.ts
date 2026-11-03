@@ -106,3 +106,12 @@ export const KNOWLEDGE_SOURCE_INDEXED_AGENT_WAKES_TOPIC_QUEUE = "knowledge_sourc
 
 /** The queue of the `agent_wakes` consumer of `installation_changed`. */
 export const INSTALLATION_CHANGED_AGENT_WAKES_TOPIC_QUEUE = "installation_changed__agent_wakes"
+
+/** The event name and pgmq topic of `connection_ready`. */
+export const CONNECTION_READY_TOPIC = "connection_ready"
+
+/** The queue of the `bank_feed_poll` consumer of `connection_ready`. */
+export const CONNECTION_READY_BANK_FEED_POLL_TOPIC_QUEUE = "connection_ready__bank_feed_poll"
+
+/** The queue of the `zalo_inbox_poll` consumer of `connection_ready`. */
+export const CONNECTION_READY_ZALO_INBOX_POLL_TOPIC_QUEUE = "connection_ready__zalo_inbox_poll"

@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { randomSecret, safeEqual } from "@modules/domain/connection-secrets"
+import type { EntityManager } from "typeorm"
+import { ConnectionApiTokenService, randomSecret, safeEqual } from "@modules/domain/connection-secrets"
 import { ConnectionsService, sha256 } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import { ConnectionReadyEvent } from "@modules/events/api"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectEventBus } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import type {
     ChannelSeed,
     SeedPayos,
@@ -60,7 +65,12 @@ const outcomeOf = (
  * given. Nothing here reaches a provider: the owner checks each connection in the console.
  */
 export class ChannelSeedService {
-    constructor(private readonly connections: ConnectionsService) {}
+    constructor(
+        private readonly connections: ConnectionsService,
+        private readonly apiTokens: ConnectionApiTokenService,
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectEventBus() private readonly bus: EventBus,
+    ) {}
 
     /** Ensures the four connections of the workspace of `actor`; answers what each ended as, never a value. */
     async ensure(actor: ConnectionActor, seed: ChannelSeed): Promise<ReadonlyArray<SeededConnection>> {
@@ -142,7 +152,26 @@ export class ChannelSeedService {
         } else {
             await this.keepSepay(actor, found, key, facts)
         }
+        const apiToken = filled(seed.apiToken)
+        if (apiToken !== undefined && (await this.apiTokens.write(seed.id, apiToken))) {
+            await this.announceReady(actor, seed.id, apiToken)
+        }
         return outcomeOf("sepay", seed.id, found, key !== undefined)
+    }
+
+    /**
+     * Tells the app the feed can be read back from SePay now that its API token is stored, so the first poll runs at once and recovers the
+     * transactions SePay held before the webhook existed. The same token stored again is the same fact.
+     */
+    private announceReady(actor: ConnectionActor, connectionId: string, apiToken: string): Promise<void> {
+        const dedupeKey = `${connectionId}:api_token:${sha256(apiToken).slice(0, 16)}`
+        const event = ConnectionReadyEvent.create({
+            workspaceId: actor.workspaceId,
+            connectionId,
+            provider: "sepay",
+            dedupeKey,
+        })
+        return this.entityManager.transaction((tx) => this.bus.publish(event, tx, dedupeKey))
     }
 
     /** Takes the key and the bank facts given into an existing feed; a key the row already holds is not written again. */

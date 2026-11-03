@@ -152,7 +152,7 @@ export interface OrdersWorkbenchRow extends SalesOrderRow {
 export const AWAITING_PAYMENT_STATUSES: ReadonlyArray<OrderStatus> = ["confirmed", "invoiced"]
 
 /** Where a customer's payment claim stands. */
-export type PaymentClaimStatus = "open" | "settled" | "escalated"
+export type PaymentClaimStatus = "open" | "settled" | "escalated" | "withdrawn"
 
 /** A customer's word that they paid an order, kept until the money is seen. */
 export interface PaymentClaimRow {
@@ -192,4 +192,12 @@ export interface NewPaymentClaim {
     readonly body: string
     /** What makes a repeated message one claim. */
     readonly dedupeKey: string
+}
+
+/** The equalities a read of payment claims may name. */
+export interface PaymentClaimWhere {
+    readonly id?: string
+    readonly leadId?: string
+    readonly conversationId?: string
+    readonly status?: PaymentClaimStatus
 }

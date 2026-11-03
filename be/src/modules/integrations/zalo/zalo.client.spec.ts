@@ -472,3 +472,72 @@ describe("ZaloClient message acknowledgement", () => {
         })
     })
 })
+
+describe("ZaloClient / recentChats and conversation", () => {
+    const row = (over: Record<string, unknown>): Record<string, unknown> => ({
+        src: 1,
+        time: 1_762_192_200_000,
+        type: "text",
+        message: "Tôi cần tư vấn",
+        message_id: "m-1",
+        from_id: "user-1",
+        from_display_name: "Bui Nguyen Dinh",
+        to_id: "oa-1",
+        ...over,
+    })
+
+    it("reads the recent chats from the v2.0 list call and maps a customer row and an OA row to their customer", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({
+            status: 200,
+            body: { error: 0, data: [row({}), row({ src: 0, message_id: "m-2", from_id: "oa-1", to_id: "user-2" })] },
+        })
+
+        const chats = await client.recentChats("token", 20)
+
+        expect(http.request).toHaveBeenCalledWith(
+            objectLike({
+                method: "GET",
+                url: `https://api.test/v2.0/oa/listrecentchat?data=${encodeURIComponent('{"offset":20,"count":10}')}`,
+                headers: { access_token: "token" },
+            }),
+        )
+        expect(chats.map((chat) => [chat.messageId, chat.userId, chat.fromUser])).toEqual([
+            ["m-1", "user-1", true],
+            ["m-2", "user-2", false],
+        ])
+        expect(chats[0]).toEqual({
+            messageId: "m-1",
+            userId: "user-1",
+            userName: "Bui Nguyen Dinh",
+            fromUser: true,
+            kind: "text",
+            text: "Tôi cần tư vấn",
+            sentAt: 1_762_192_200_000,
+        })
+    })
+
+    it("reads one conversation by customer and leaves out rows without an id, a customer or a time, and a non-list answer", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce({
+            status: 200,
+            body: {
+                error: 0,
+                data: [row({ message: 7 }), row({ message_id: "" }), row({ from_id: "" }), row({ time: "x" }), "junk"],
+            },
+        })
+        http.request.mockResolvedValueOnce({ status: 200, body: { error: 0, data: {} } })
+
+        const messages = await client.conversation("token", "user-1", 0, 5)
+        const none = await client.conversation("token", "user-1", 0)
+
+        expect(http.request).toHaveBeenNthCalledWith(
+            1,
+            objectLike({
+                url: `https://api.test/v2.0/oa/conversation?data=${encodeURIComponent('{"user_id":"user-1","offset":0,"count":5}')}`,
+            }),
+        )
+        expect(messages.map((message) => [message.messageId, message.text])).toEqual([["m-1", ""]])
+        expect(none).toEqual([])
+    })
+})
