@@ -17,6 +17,8 @@ import {
 } from "@modules/domain/payment-orders"
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
 import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
+import { ProviderRegistryModule } from "@modules/domain/provider-registry"
+import { SepayProviderModule } from "@modules/domain/sepay-provider"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { BillingGraphqlModule } from "@features/api/billing"
 import { CreditsGraphqlModule } from "@features/api/credits"
@@ -26,7 +28,9 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** The billing area of the API, in registration order. */
 export const billingModules = (options: ApiOptions): Array<DynamicModule> => [
     PaymentOrdersModule.register({ isGlobal: true }),
+    ProviderRegistryModule.register({ isGlobal: true }),
     BankFeedInboxModule.register({ isGlobal: true }),
+    SepayProviderModule.register({}),
     BillingModule.register({ isGlobal: true, ...options.billing }),
     BillingGraphqlModule.register({}),
     SepayTransactionsModule.register({ isGlobal: true }),

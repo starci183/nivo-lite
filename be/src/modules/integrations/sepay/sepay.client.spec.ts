@@ -117,7 +117,9 @@ describe("SepayClient listTransactions", () => {
     })
 
     it.each([
-        [401, SepayErrorCode.Rejected],
+        [401, SepayErrorCode.AuthFailed],
+        [403, SepayErrorCode.AuthFailed],
+        [404, SepayErrorCode.Rejected],
         [500, SepayErrorCode.Unavailable],
         [429, SepayErrorCode.RateLimited],
     ])("answers status %i with %s", async (status, code) => {
@@ -125,6 +127,25 @@ describe("SepayClient listTransactions", () => {
         http.request.mockResolvedValue({ status, body: {} })
 
         await expect(client.listTransactions(TOKEN, QUERY)).rejects.toMatchObject({ code })
+    })
+
+    it.each([
+        ["3", 3],
+        ["2.2", 3],
+        ["soon", 0],
+        [undefined, 0],
+    ])("tells how long to wait when SePay asks to slow down with Retry-After %s", async (header, seconds) => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({
+            status: 429,
+            body: {},
+            headers: header === undefined ? {} : { "retry-after": header },
+        })
+
+        await expect(client.listTransactions(TOKEN, QUERY)).rejects.toMatchObject({
+            code: SepayErrorCode.RateLimited,
+            params: { retryAfterSeconds: seconds },
+        })
     })
 
     it.each([

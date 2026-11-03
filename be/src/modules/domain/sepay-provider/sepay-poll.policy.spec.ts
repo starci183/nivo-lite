@@ -1,5 +1,5 @@
 import type { SepayTransaction } from "@modules/integrations/sepay"
-import { sepayPolledCredit } from "./sepay-poll.policy"
+import { sepayBankTransaction, sepayPolledCredit } from "./sepay-poll.policy"
 
 /** The transfer the owner made on 2026-11-04 01:06: SePay transaction 95958515, +5000 into account 525209999. */
 const REAL: SepayTransaction = {
@@ -42,5 +42,32 @@ describe("sepayPolledCredit", () => {
 
     it("maps a row that moved no money to nothing", () => {
         expect(sepayPolledCredit("conn-1", { ...REAL, amountIn: 0 })).toBeUndefined()
+    })
+})
+
+describe("sepayBankTransaction", () => {
+    it("maps the real transfer to the bank-feed shape", () => {
+        expect(sepayBankTransaction(REAL)).toEqual({
+            id: "sepay:95958515",
+            direction: "credit",
+            amountVnd: 5000,
+            content: "BUI NGUYEN DINH Test sepay Chuyen tien dat chau hoa- Ma GD ACSP/ 7o940",
+            occurredAt: "2026-11-03T18:06:00.000Z",
+            bankName: "MBBank",
+        })
+    })
+
+    it("maps money out to a debit and falls back to the code and to SePay", () => {
+        expect(sepayBankTransaction({ ...REAL, amountIn: 0, amountOut: 120, content: "", code: "DH7", bank: null })).toMatchObject({
+            direction: "debit",
+            amountVnd: 120,
+            content: "DH7",
+            bankName: "SePay",
+        })
+        expect(sepayBankTransaction({ ...REAL, content: "", code: null })?.content).toBe("")
+    })
+
+    it("maps a row that moved no money to nothing", () => {
+        expect(sepayBankTransaction({ ...REAL, amountIn: 0 })).toBeUndefined()
     })
 })

@@ -3,6 +3,8 @@ import { ConnectionPollLogEvent, ConnectionPollRun, emptyPollSummary } from "@mo
 import type { ConnectionPoller, PollSummary } from "@modules/domain/connection-poll"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord, HealthCandidate } from "@modules/domain/connections"
+import { BankFeedPollerRegistry } from "@modules/domain/provider-registry"
+import type { BankFeedPoller, PolledCredit } from "@modules/domain/provider-registry"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
@@ -11,8 +13,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { InjectTimer } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import type { BankFeedPollPayload } from "@modules/queues/bank-feed-poll"
-import type { PolledCredit } from "./bank-feed-poll.contracts"
-import { SepayFeedPoller } from "./sepay-feed-poller.service"
+import { BankFeedService } from "./bank-feed.service"
 
 /** How many connections one page of the connection scan reads. */
 const SCAN_PAGE = 200
@@ -23,7 +24,6 @@ const SCAN_PAGE = 200
  * poller. One connection's failure never stops the run; calls are sequential with a pause between them.
  */
 export class BankFeedPollService {
-    private readonly pollers: ReadonlyArray<ConnectionPoller<PolledCredit>>
     private readonly run: ConnectionPollRun
 
     constructor(
@@ -31,15 +31,15 @@ export class BankFeedPollService {
         @InjectLogger() private readonly logger: Logger,
         @InjectTimer() timer: Timer,
         private readonly connections: ConnectionsService,
-        sepay: SepayFeedPoller,
+        private readonly pollers: BankFeedPollerRegistry,
+        private readonly feed: BankFeedService,
     ) {
-        this.pollers = [sepay]
         this.run = new ConnectionPollRun({ clock, logger, timer, connections })
     }
 
     /** True when connections of the provider can be read back. */
     polls(provider: string): boolean {
-        return this.pollerOf(provider) !== undefined
+        return this.pollers.has(provider)
     }
 
     /** Runs the reconcile a queued job asks for: one connection when the payload names it, else every connection of a polled provider. */
@@ -70,7 +70,7 @@ export class BankFeedPollService {
         const batch = await this.connections.healthBatch(afterId, SCAN_PAGE)
         const last = batch.at(-1)
         if (last === undefined) return
-        const polled = batch.filter((candidate) => this.pollerOf(candidate.provider) !== undefined)
+        const polled = batch.filter((candidate) => this.pollers.has(candidate.provider))
         await eachInOrder(polled, (candidate) => this.pollCandidate(candidate, summary))
         if (batch.length === SCAN_PAGE) await this.scan(last.id, summary)
     }
@@ -81,11 +81,17 @@ export class BankFeedPollService {
     }
 
     private async pollRecord(record: ConnectionRecord, summary: PollSummary): Promise<void> {
-        const poller = this.pollerOf(record.provider)
-        if (poller !== undefined) await this.run.poll(poller, record, summary)
+        const poller = this.pollers.of(record.provider)
+        if (poller !== undefined) await this.run.poll(this.withStore(poller), record, summary)
     }
 
-    private pollerOf(provider: string): ConnectionPoller<PolledCredit> | undefined {
-        return this.pollers.find((poller) => poller.provider === provider)
+    /** The provider's reader with the one store every bank provider shares: the feed receipt its webhook feeds, under the webhook's key. */
+    private withStore(poller: BankFeedPoller): ConnectionPoller<PolledCredit> {
+        return {
+            provider: poller.provider,
+            fetch: (connection, window) => poller.fetch(connection, window),
+            store: (connection, item) =>
+                this.feed.acceptPolledCredit(connection.id, poller.inboxProvider, item.deliveryId, item.credit),
+        }
     }
 }

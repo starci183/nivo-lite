@@ -1,4 +1,4 @@
-import type { ConnectionRecord, ConnectionsService, Provider } from "@modules/domain/connections"
+import type { ConnectionRecord, ConnectionsService } from "@modules/domain/connections"
 import type { Clock } from "@modules/platform/clock"
 import type { Logger } from "@modules/platform/logging"
 import type { Timer } from "@modules/platform/retry"
@@ -37,11 +37,31 @@ export type PollPage<Item> =
  */
 export interface ConnectionPoller<Item> {
     /** The provider of the connections it reads. */
-    readonly provider: Provider
+    readonly provider: string
     /** Reads one page of one connection. */
     fetch(connection: ConnectionRecord, window: PollWindow): Promise<PollPage<Item>>
     /** Stores one item through the receipt path the webhook takes, under the webhook's key; false for a repeat. */
     store(connection: ConnectionRecord, item: Item): Promise<boolean>
+}
+
+/**
+ * How a failed provider call must be treated by the scheduler: wait the named seconds, stop using the credential, retry later, or give up.
+ * The provider classifies its own errors; core never reads a provider error code.
+ */
+export type PollFailure =
+    | { readonly kind: "rate_limited"; readonly retryAfterSeconds: number }
+    | { readonly kind: "auth_failed" }
+    | { readonly kind: "transient" }
+    | { readonly kind: "fatal" }
+
+/** What a provider allows one credential: the scheduler spends a token bucket and a concurrency gate built from it. */
+export interface PollLimits {
+    /** Calls per second the provider allows one credential. */
+    readonly ratePerSecond: number
+    /** The most calls in one burst. */
+    readonly burst: number
+    /** The most calls in flight at once for one credential. */
+    readonly concurrency: number
 }
 
 /** What one poll run did, never a value. */

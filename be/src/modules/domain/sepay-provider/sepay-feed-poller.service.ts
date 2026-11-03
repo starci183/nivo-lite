@@ -1,22 +1,26 @@
 import { Injectable } from "@nestjs/common"
+import type { PollFailure, PollLimits, PollPage, PollWindow } from "@modules/domain/connection-poll"
 import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
-import type { ConnectionPoller, PollPage, PollWindow } from "@modules/domain/connection-poll"
 import type { ConnectionRecord } from "@modules/domain/connections"
-import { InjectSepay } from "@modules/integrations/sepay"
+import type { BankFeedPoller, PolledCredit } from "@modules/domain/provider-registry"
+import { InjectSepay, SepayError, SepayErrorCode } from "@modules/integrations/sepay"
 import type { SepayClient } from "@modules/integrations/sepay"
-import { BankFeedService } from "./bank-feed.service"
-import type { PolledCredit } from "./bank-feed-poll.contracts"
 import { sepayPolledCredit } from "./sepay-poll.policy"
 
 @Injectable()
 /** Reads the transactions of a SePay connection's bank account from the SePay user API, with the API token that connection holds. */
-export class SepayFeedPoller implements ConnectionPoller<PolledCredit> {
+export class SepayFeedPoller implements BankFeedPoller {
     readonly provider = "sepay"
+    readonly inboxProvider = "sepay-feed"
+    /**
+     * Conservative until SePay publishes more: its user API is documented at about two calls per second per account, so one credential
+     * gets that rate, no larger burst and one call at a time.
+     */
+    readonly limits: PollLimits = { ratePerSecond: 2, burst: 2, concurrency: 1 }
 
     constructor(
         @InjectSepay() private readonly sepay: SepayClient,
         private readonly tokens: ConnectionApiTokenService,
-        private readonly feed: BankFeedService,
     ) {}
 
     /** Reads one page; a connection with no API token or no full account number is left out, not failed. */
@@ -44,8 +48,14 @@ export class SepayFeedPoller implements ConnectionPoller<PolledCredit> {
         }
     }
 
-    /** Hands the transaction to the feed receipt the SePay webhook feeds; false when the webhook (or an earlier poll) already did. */
-    store(connection: ConnectionRecord, item: PolledCredit): Promise<boolean> {
-        return this.feed.acceptPolledCredit(connection.id, "sepay-feed", item.deliveryId, item.credit)
+    /** Classifies a SePay failure: asked to slow down, token refused, unreachable (retry later) or anything else (give up). */
+    classify(error: unknown): PollFailure {
+        if (!(error instanceof SepayError)) return { kind: "fatal" }
+        if (error.code === SepayErrorCode.RateLimited) {
+            const seconds: unknown = error.params.retryAfterSeconds
+            return { kind: "rate_limited", retryAfterSeconds: typeof seconds === "number" ? seconds : 0 }
+        }
+        if (error.code === SepayErrorCode.AuthFailed) return { kind: "auth_failed" }
+        return error.code === SepayErrorCode.Unavailable ? { kind: "transient" } : { kind: "fatal" }
     }
 }

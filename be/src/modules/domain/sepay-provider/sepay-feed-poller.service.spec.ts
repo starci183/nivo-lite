@@ -2,9 +2,8 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import type { ConnectionRecord } from "@modules/domain/connections"
-import { SEPAY } from "@modules/integrations/sepay"
+import { SEPAY, SepayError, SepayErrorCode } from "@modules/integrations/sepay"
 import type { SepayClient, SepayTransaction } from "@modules/integrations/sepay"
-import { BankFeedService } from "./bank-feed.service"
 import { SepayFeedPoller } from "./sepay-feed-poller.service"
 
 const TOKEN = ["tok", "1"].join("-")
@@ -39,16 +38,14 @@ const row = (id: string, at: string, amountIn: number): SepayTransaction => ({
 const build = async () => {
     const sepay = mock<SepayClient>()
     const tokens = mock<ConnectionApiTokenService>()
-    const feed = mock<BankFeedService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             SepayFeedPoller,
             { provide: SEPAY, useValue: sepay },
             { provide: ConnectionApiTokenService, useValue: tokens },
-            { provide: BankFeedService, useValue: feed },
         ],
     }).compile()
-    return { poller: moduleRef.get(SepayFeedPoller), sepay, tokens, feed }
+    return { poller: moduleRef.get(SepayFeedPoller), sepay, tokens }
 }
 
 describe("SepayFeedPoller fetch", () => {
@@ -105,17 +102,23 @@ describe("SepayFeedPoller fetch", () => {
     })
 })
 
-describe("SepayFeedPoller store", () => {
-    it("hands the transaction to the feed receipt under the webhook key and answers whether it was new", async () => {
-        const { poller, feed } = await build()
-        feed.acceptPolledCredit.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
-        const item = {
-            deliveryId: "conn-1:sepay:95958515",
-            credit: { amount: 5000, content: "x", eventId: "sepay:95958515", fallbackBankName: "MBBank" },
-        }
+describe("SepayFeedPoller limits and classification", () => {
+    it("declares conservative limits for one credential", async () => {
+        const { poller } = await build()
 
-        await expect(poller.store(record({}), item)).resolves.toBe(true)
-        await expect(poller.store(record({}), item)).resolves.toBe(false)
-        expect(feed.acceptPolledCredit).toHaveBeenCalledWith("conn-1", "sepay-feed", item.deliveryId, item.credit)
+        expect(poller.limits).toEqual({ ratePerSecond: 2, burst: 2, concurrency: 1 })
+    })
+
+    it.each([
+        ["asked to slow down with a wait", new SepayError({ code: SepayErrorCode.RateLimited, params: { retryAfterSeconds: 7 } }), { kind: "rate_limited", retryAfterSeconds: 7 }],
+        ["asked to slow down with no wait", new SepayError({ code: SepayErrorCode.RateLimited }), { kind: "rate_limited", retryAfterSeconds: 0 }],
+        ["a refused token", new SepayError({ code: SepayErrorCode.AuthFailed }), { kind: "auth_failed" }],
+        ["an unreachable API", new SepayError({ code: SepayErrorCode.Unavailable }), { kind: "transient" }],
+        ["a refusal retrying cannot change", new SepayError({ code: SepayErrorCode.Rejected }), { kind: "fatal" }],
+        ["an error that is not SePay", new Error("boom"), { kind: "fatal" }],
+    ])("classifies %s", async (_name, error, expected) => {
+        const { poller } = await build()
+
+        expect(poller.classify(error)).toEqual(expected)
     })
 })
