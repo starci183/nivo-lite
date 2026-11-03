@@ -7,7 +7,7 @@ import { ProcessSepayDeliveryStep } from "../../steps/process-sepay-delivery.ste
 @Injectable()
 /** Consumes the committed sepay receipt using the app's existing fenced job runner. */
 export class SepayDeliveryProcessor extends FencedProcessor {
-    readonly queue = SEPAY_DELIVERY_QUEUE
+    readonly queue: "sepay-delivery" = SEPAY_DELIVERY_QUEUE
 
     constructor(private readonly delivery: ProcessSepayDeliveryStep) {
         super()

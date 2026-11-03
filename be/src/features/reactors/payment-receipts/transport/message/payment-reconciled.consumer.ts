@@ -8,7 +8,7 @@ import { SendPaymentReceiptCommand } from "../../application/send-payment-receip
 @Injectable()
 /** The consumer door of the payment_reconciled event in the payment-receipts reactor: it dispatches one command and forwards the event id. */
 export class PaymentReconciledConsumer implements EventConsumer<PaymentReconciledEvent> {
-    readonly event = PaymentReconciledEvent
+    readonly event: typeof PaymentReconciledEvent = PaymentReconciledEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

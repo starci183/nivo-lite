@@ -7,9 +7,9 @@ import { GenerateWithAgentStep } from "../../steps/generate-with-agent.step"
 @Injectable()
 /** The processor of the generate-with-agent job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class GenerateWithAgentProcessor extends FencedProcessor {
-    readonly queue = AGENTS_QUEUE
+    readonly queue: "agents" = AGENTS_QUEUE
 
-    override readonly job = AgentsJob.Generate
+    override readonly job: AgentsJob.Generate = AgentsJob.Generate
 
     constructor(private readonly step: GenerateWithAgentStep) {
         super()

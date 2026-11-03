@@ -8,7 +8,7 @@ import { PlaceOrderStep } from "../../steps/place-order.step"
 @Injectable()
 /** The processor of the create-payment-order job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class CreatePaymentOrderProcessor extends FencedProcessor {
-    readonly queue = PAYMENT_ORDER_REQUEST_QUEUE
+    readonly queue: "payment_order_requested" = PAYMENT_ORDER_REQUEST_QUEUE
 
     constructor(
         private readonly placeOrder: PlaceOrderStep,

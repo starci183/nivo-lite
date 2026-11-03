@@ -7,7 +7,7 @@ import { RunAutomationsStep } from "../../steps/run-automations.step"
 @Injectable()
 /** The processor of the publish-content job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class PublishContentProcessor extends FencedProcessor {
-    readonly queue = CONTENT_TICK_QUEUE
+    readonly queue: "content_tick" = CONTENT_TICK_QUEUE
 
     constructor(private readonly automations: RunAutomationsStep) {
         super()

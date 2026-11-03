@@ -7,9 +7,9 @@ import { ExpireApprovalsStep } from "../../steps/expire-approvals.step"
 @Injectable()
 /** The processor of the approvals tick of the decisions queue: the runner claims and settles it; `process` delegates to the one step. */
 export class ExpireApprovalsProcessor extends FencedProcessor {
-    readonly queue = DECISIONS_QUEUE
+    readonly queue: "decisions" = DECISIONS_QUEUE
 
-    override readonly job = DecisionsJob.ExpireApprovals
+    override readonly job: DecisionsJob.ExpireApprovals = DecisionsJob.ExpireApprovals
 
     constructor(private readonly step: ExpireApprovalsStep) {
         super()

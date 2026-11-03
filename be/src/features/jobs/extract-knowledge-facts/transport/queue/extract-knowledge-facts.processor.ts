@@ -9,8 +9,8 @@ import { ExtractFactsStep } from "../../steps/extract-facts.step"
 @Injectable()
 /** The processor of the extract-knowledge-facts job: the runner claims and settles it; `process` delegates to the one step. */
 export class ExtractKnowledgeFactsProcessor extends FencedProcessor {
-    override readonly queue = KNOWLEDGE_QUEUE
-    override readonly job = KnowledgeJob.Facts
+    override readonly queue: "knowledge" = KNOWLEDGE_QUEUE
+    override readonly job: KnowledgeJob.Facts = KnowledgeJob.Facts
 
     constructor(
         private readonly extractFacts: ExtractFactsStep,

@@ -7,7 +7,7 @@ import { JudgeConnectionsStep } from "../../steps/judge-connections.step"
 @Injectable()
 /** The processor of the check-connection-health job: every scheduler tick runs the one step. */
 export class CheckConnectionHealthProcessor extends FencedProcessor {
-    readonly queue = CONNECTION_HEALTH_QUEUE
+    readonly queue: "connection_health" = CONNECTION_HEALTH_QUEUE
 
     constructor(private readonly judge: JudgeConnectionsStep) {
         super()

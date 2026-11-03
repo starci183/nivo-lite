@@ -8,7 +8,7 @@ import { ReactToDealWonCommand } from "../../application/react-to-deal-won.comma
 @Injectable()
 /** The consumer door of the deal_won event in the automation-triggers reactor: it dispatches one command and forwards the event id. */
 export class DealWonConsumer implements EventConsumer<DealWonEvent> {
-    readonly event = DealWonEvent
+    readonly event: typeof DealWonEvent = DealWonEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

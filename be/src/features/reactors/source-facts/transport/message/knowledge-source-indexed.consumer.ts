@@ -8,7 +8,7 @@ import { QueueSourceFactsCommand } from "../../application/queue-source-facts.co
 @Injectable()
 /** The consumer door of the knowledge_source_indexed event in the source-facts reactor: it dispatches one command and forwards the event id. */
 export class KnowledgeSourceIndexedConsumer implements EventConsumer<KnowledgeSourceIndexedEvent> {
-    readonly event = KnowledgeSourceIndexedEvent
+    readonly event: typeof KnowledgeSourceIndexedEvent = KnowledgeSourceIndexedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

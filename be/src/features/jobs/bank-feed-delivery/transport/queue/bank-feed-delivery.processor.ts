@@ -7,7 +7,7 @@ import { ProcessBankFeedDeliveryStep } from "../../steps/process-bank-feed-deliv
 @Injectable()
 /** Consumes the committed bank-feed receipt using the app's existing fenced job runner. */
 export class BankFeedDeliveryProcessor extends FencedProcessor {
-    readonly queue = BANK_FEED_DELIVERY_QUEUE
+    readonly queue: "bank-feed-delivery" = BANK_FEED_DELIVERY_QUEUE
 
     constructor(private readonly delivery: ProcessBankFeedDeliveryStep) {
         super()

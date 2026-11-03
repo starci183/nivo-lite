@@ -4,7 +4,9 @@ import { ConfigurableModuleClass } from "./generic-http.module-definition"
 import { GenericWebhook } from "./generic.webhook"
 
 /** The domain proof that authenticates this door before intake. */
-export const webhookVerifiers = [ScopedWebhookVerifier.prototype.verify] as const
+export const webhookVerifiers: readonly [typeof ScopedWebhookVerifier.prototype.verify] = [
+    ScopedWebhookVerifier.prototype.verify,
+] as const
 
 @Module({ controllers: [GenericWebhook] })
 /** The HTTP transport of the generic signed webhook: its door; the intake service and the signature service come from the app capabilities. */

@@ -9,8 +9,8 @@ import { ReviewDossiersStep } from "../../steps/review-dossiers.step"
 @Injectable()
 /** The processor of the review-dossiers job: the runner claims and settles it; `process` delegates to the one step. */
 export class ReviewDossiersProcessor extends FencedProcessor {
-    override readonly queue = KNOWLEDGE_QUEUE
-    override readonly job = KnowledgeJob.DossierReview
+    override readonly queue: "knowledge" = KNOWLEDGE_QUEUE
+    override readonly job: KnowledgeJob.DossierReview = KnowledgeJob.DossierReview
 
     constructor(
         private readonly reviewDossiers: ReviewDossiersStep,

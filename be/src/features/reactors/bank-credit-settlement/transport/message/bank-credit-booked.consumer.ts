@@ -8,7 +8,7 @@ import { SettleBankCreditCommand } from "../../application/settle-bank-credit.co
 @Injectable()
 /** The consumer door of the bank_credit_booked event in the bank-credit-settlement reactor: it dispatches one command and forwards the event id. */
 export class BankCreditBookedConsumer implements EventConsumer<BankCreditBookedEvent> {
-    readonly event = BankCreditBookedEvent
+    readonly event: typeof BankCreditBookedEvent = BankCreditBookedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

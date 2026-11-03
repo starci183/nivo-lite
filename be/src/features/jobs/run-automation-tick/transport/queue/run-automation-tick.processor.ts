@@ -7,8 +7,8 @@ import { RunAutomationTickStep } from "../../steps/tick.step"
 @Injectable()
 /** The processor of the minute tick: the platform scheduler enqueues it, the one step runs the due and retried runs. */
 export class RunAutomationTickProcessor extends FencedProcessor {
-    readonly queue = AUTOMATION_QUEUE
-    override readonly job = AUTOMATION_TICK_JOB
+    readonly queue: "automation" = AUTOMATION_QUEUE
+    override readonly job: "automation.tick" = AUTOMATION_TICK_JOB
 
     constructor(private readonly step: RunAutomationTickStep) {
         super()

@@ -7,7 +7,7 @@ import { RenewTokensStep } from "../../steps/renew-tokens.step"
 @Injectable()
 /** The processor of the refresh-zalo-tokens job: every scheduler tick runs the one step. */
 export class RefreshZaloTokensProcessor extends FencedProcessor {
-    readonly queue = ZALO_REFRESH_QUEUE
+    readonly queue: "zalo_refresh" = ZALO_REFRESH_QUEUE
 
     constructor(private readonly renew: RenewTokensStep) {
         super()

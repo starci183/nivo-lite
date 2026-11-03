@@ -8,9 +8,9 @@ import { RunSetupTurnStep } from "../../steps/run-setup-turn.step"
 @Injectable()
 /** The processor of the run-setup-turn job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class RunSetupTurnProcessor extends FencedProcessor {
-    readonly queue = AGENTS_QUEUE
+    readonly queue: "agents" = AGENTS_QUEUE
 
-    override readonly job = AgentsJob.SetupTurn
+    override readonly job: AgentsJob.SetupTurn = AgentsJob.SetupTurn
 
     constructor(private readonly step: RunSetupTurnStep) {
         super()

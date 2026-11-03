@@ -7,7 +7,7 @@ import { ProcessMetaDeliveryStep } from "../../steps/process-meta-delivery.step"
 @Injectable()
 /** Consumes the committed meta receipt using the app's existing fenced job runner. */
 export class MetaDeliveryProcessor extends FencedProcessor {
-    readonly queue = META_DELIVERY_QUEUE
+    readonly queue: "meta-delivery" = META_DELIVERY_QUEUE
 
     constructor(private readonly delivery: ProcessMetaDeliveryStep) {
         super()

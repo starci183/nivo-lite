@@ -8,7 +8,7 @@ import { ReactToLeadCapturedCommand } from "../../application/react-to-lead-capt
 @Injectable()
 /** The consumer door of the lead_captured event in the automation-triggers reactor: it dispatches one command and forwards the event id. */
 export class LeadCapturedConsumer implements EventConsumer<LeadCapturedEvent> {
-    readonly event = LeadCapturedEvent
+    readonly event: typeof LeadCapturedEvent = LeadCapturedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

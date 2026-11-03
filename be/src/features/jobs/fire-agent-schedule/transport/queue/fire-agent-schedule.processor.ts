@@ -7,9 +7,9 @@ import { FireStep } from "../../steps/fire.step"
 @Injectable()
 /** The processor of the fire queue: every slot of every trigger comes here; the runner claims and settles it and `process` delegates to the one step. */
 export class FireAgentScheduleProcessor extends FencedProcessor {
-    readonly queue = AGENT_SCHEDULE_FIRE_QUEUE
+    readonly queue: "agent_schedule_fire" = AGENT_SCHEDULE_FIRE_QUEUE
 
-    override readonly job = AGENT_SCHEDULE_FIRE_JOB
+    override readonly job: "agent-schedule.fire" = AGENT_SCHEDULE_FIRE_JOB
 
     /** The jobs of this queue come from the job schedulers of the trigger rows, so the worker skips the admission against the outbox. */
     override readonly scheduled = true

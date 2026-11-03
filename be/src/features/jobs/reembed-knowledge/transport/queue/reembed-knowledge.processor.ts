@@ -7,8 +7,8 @@ import { ReembedStep } from "../../steps/reembed.step"
 @Injectable()
 /** The processor of the reembed-knowledge job: the runner claims and settles it; `process` delegates to the one step. */
 export class ReembedKnowledgeProcessor extends FencedProcessor {
-    override readonly queue = KNOWLEDGE_QUEUE
-    override readonly job = KnowledgeJob.Reembed
+    override readonly queue: "knowledge" = KNOWLEDGE_QUEUE
+    override readonly job: KnowledgeJob.Reembed = KnowledgeJob.Reembed
 
     constructor(private readonly reembed: ReembedStep) {
         super()

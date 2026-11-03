@@ -8,7 +8,7 @@ import { SettleApprovalOutcomeCommand } from "../../application/settle-approval-
 @Injectable()
 /** The consumer door of the approval_resolved event in the thread-outcomes reactor: it dispatches one command and forwards the event id. */
 export class ApprovalResolvedConsumer implements EventConsumer<ApprovalResolvedEvent> {
-    readonly event = ApprovalResolvedEvent
+    readonly event: typeof ApprovalResolvedEvent = ApprovalResolvedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

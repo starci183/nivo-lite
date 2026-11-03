@@ -7,7 +7,7 @@ import { CompleteAuthorizationStep } from "../../steps/complete-authorization.st
 @Injectable()
 /** The processor of the complete-zalo-authorization job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class CompleteZaloAuthorizationProcessor extends FencedProcessor {
-    readonly queue = ZALO_AUTHORIZATION_QUEUE
+    readonly queue: "zalo_authorization" = ZALO_AUTHORIZATION_QUEUE
 
     constructor(private readonly complete: CompleteAuthorizationStep) {
         super()

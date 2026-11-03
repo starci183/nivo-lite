@@ -7,9 +7,9 @@ import { SyncAgentsStep } from "../../steps/sync-agents.step"
 @Injectable()
 /** The processor of the sync-agents job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class SyncAgentsProcessor extends FencedProcessor {
-    readonly queue = AGENTS_QUEUE
+    readonly queue: "agents" = AGENTS_QUEUE
 
-    override readonly job = AgentsJob.Sync
+    override readonly job: AgentsJob.Sync = AgentsJob.Sync
 
     constructor(private readonly step: SyncAgentsStep) {
         super()

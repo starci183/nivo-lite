@@ -7,7 +7,7 @@ import { RunAccountingMorningStep } from "../../steps/run.step"
 @Injectable()
 /** The processor of the accounting morning job: the one step runs it. */
 export class RunAccountingMorningProcessor extends FencedProcessor {
-    readonly queue = ACCOUNTING_DESK_QUEUE
+    readonly queue: "accounting_desk" = ACCOUNTING_DESK_QUEUE
 
     constructor(private readonly step: RunAccountingMorningStep) {
         super()

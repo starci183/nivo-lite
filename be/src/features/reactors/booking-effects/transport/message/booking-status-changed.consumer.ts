@@ -8,7 +8,7 @@ import { ApplyBookingEffectsCommand } from "../../application/apply-booking-effe
 @Injectable()
 /** The consumer door of the booking_status_changed event in the booking-effects reactor: it dispatches one command and forwards the event id. */
 export class BookingStatusChangedConsumer implements EventConsumer<BookingStatusChangedEvent> {
-    readonly event = BookingStatusChangedEvent
+    readonly event: typeof BookingStatusChangedEvent = BookingStatusChangedEvent
 
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 

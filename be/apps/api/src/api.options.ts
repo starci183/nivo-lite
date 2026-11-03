@@ -42,10 +42,22 @@ export const MODULE_OPS_PORTS: ModuleOpsPorts = {
 }
 
 /** The delivery of booking notices through the customer's existing conversation and channel. */
-export const BOOKING_PORTS = { notifier: BookingNotifierService }
+export const BOOKING_PORTS: {
+    notifier: typeof BookingNotifierService
+} = { notifier: BookingNotifierService }
 
 /** The ports the agent-tools capability reaches the rest of the app through. */
-export const AGENT_TOOLS_PORTS = {
+export const AGENT_TOOLS_PORTS: {
+    knowledgeSearch: typeof KnowledgeSearchToolService
+    leadWriter: typeof LeadWriterService
+    bookingTools: typeof BookingToolsService
+    approvalRequester: typeof ApprovalRequesterService
+    handoffTool: typeof HandoffToolService
+    conversationLeads: typeof ConversationLeadsService
+    gatewayTools: typeof TurnGatewayToolsService
+    agentHandoff: typeof TurnHandoffService
+    toolTokens: typeof ToolTokenService
+} = {
     knowledgeSearch: KnowledgeSearchToolService,
     leadWriter: LeadWriterService,
     bookingTools: BookingToolsService,
@@ -58,7 +70,18 @@ export const AGENT_TOOLS_PORTS = {
 }
 
 /** The ports the decisions capability reaches the rest of the app through. */
-export const DECISIONS_PORTS = {
+export const DECISIONS_PORTS: {
+    agentDirectory: typeof AgentsService
+    inboundEventStatus: typeof InboundStatusService
+    leadDirectory: typeof LeadReadService
+    workItemLeads: typeof LeadReadService
+    leadGenFlow: typeof LeadFlowChainService
+    moduleCatalog: typeof ModulesService
+    outboundAccessGate: typeof OutboundAccessService
+    threadWorkHistory: typeof ThreadWorkLinksReadService
+    workChainsHistory: typeof WorkChainsHistoryReadService
+    workThreadsHistory: typeof WorkThreadsLeadsReadService
+} = {
     agentDirectory: AgentsService,
     inboundEventStatus: InboundStatusService,
     leadDirectory: LeadReadService,

@@ -7,7 +7,7 @@ import { SweepExpiredEventsStep } from "../../steps/sweep-expired-events.step"
 @Injectable()
 /** The processor of the sweep-realtime-events job: the runner claims and settles every pg_cron tick; `process` delegates the fenced claim to the one step. */
 export class SweepRealtimeEventsProcessor extends FencedProcessor {
-    readonly queue = REALTIME_RETENTION_QUEUE
+    readonly queue: "realtime_retention" = REALTIME_RETENTION_QUEUE
 
     constructor(private readonly sweepExpired: SweepExpiredEventsStep) {
         super()

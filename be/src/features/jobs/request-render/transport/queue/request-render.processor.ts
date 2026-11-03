@@ -8,7 +8,7 @@ import { RequestRenderStep } from "../../steps/request-render.step"
 @Injectable()
 /** The processor of the request-render job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class RequestRenderProcessor extends FencedProcessor {
-    readonly queue = RENDER_REQUEST_QUEUE
+    readonly queue: "render_request" = RENDER_REQUEST_QUEUE
 
     constructor(private readonly request: RequestRenderStep) {
         super()

@@ -7,7 +7,7 @@ import { ReplenishStep } from "../../steps/replenish.step"
 @Injectable()
 /** The processor of the replenish-stock job: the runner claims and settles it; `process` delegates the fenced claim to the one step. */
 export class ReplenishStockProcessor extends FencedProcessor {
-    readonly queue = INVENTORY_REPLENISH_QUEUE
+    readonly queue: "inventory_replenish" = INVENTORY_REPLENISH_QUEUE
 
     constructor(private readonly replenish: ReplenishStep) {
         super()

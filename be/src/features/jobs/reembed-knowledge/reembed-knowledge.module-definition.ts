@@ -1,6 +1,16 @@
 import { ConfigurableModuleBuilder } from "@nestjs/common"
+import type { ConfigurableModuleHost } from "@nestjs/common"
 import type { ReembedKnowledgeOptions } from "./reembed-knowledge.options"
 
+type Host = ConfigurableModuleHost<ReembedKnowledgeOptions, "register", "create">
+
+const definition: Host = new ConfigurableModuleBuilder<ReembedKnowledgeOptions>().setClassMethodName("register").build()
+
 /** The configurable-module base of the reembed-knowledge module. */
-export const { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } =
-    new ConfigurableModuleBuilder<ReembedKnowledgeOptions>().setClassMethodName("register").build()
+export const ConfigurableModuleClass: Host["ConfigurableModuleClass"] = definition.ConfigurableModuleClass
+
+/** The configurable-module base of the reembed-knowledge module. */
+export const MODULE_OPTIONS_TOKEN: Host["MODULE_OPTIONS_TOKEN"] = definition.MODULE_OPTIONS_TOKEN
+
+/** The configurable-module base of the reembed-knowledge module. */
+export const OPTIONS_TYPE: Host["OPTIONS_TYPE"] = definition.OPTIONS_TYPE

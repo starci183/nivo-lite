@@ -7,7 +7,7 @@ import { SweepSystemHistoryStep } from "../../steps/sweep-system-history.step"
 @Injectable()
 /** The processor of the sweep-system-history job: the runner claims and settles every end-of-day tick; `process` delegates to the one step. */
 export class SweepSystemHistoryProcessor extends FencedProcessor {
-    readonly queue = SYSTEM_HISTORY_RETENTION_QUEUE
+    readonly queue: "system_history_retention" = SYSTEM_HISTORY_RETENTION_QUEUE
 
     constructor(private readonly sweep: SweepSystemHistoryStep) {
         super()

@@ -7,8 +7,8 @@ import { EmitWebhookEventStep } from "../../steps/deliver.step"
 @Injectable()
 /** The processor of the webhook delivery job: the runner claims and settles it; the one step posts the signed event to the connection. */
 export class EmitWebhookEventProcessor extends FencedProcessor {
-    readonly queue = N8N_QUEUE
-    override readonly job = N8N_WEBHOOK_JOB
+    readonly queue: "n8n" = N8N_QUEUE
+    override readonly job: "n8n.webhook" = N8N_WEBHOOK_JOB
 
     constructor(private readonly step: EmitWebhookEventStep) {
         super()

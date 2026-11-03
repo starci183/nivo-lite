@@ -7,7 +7,7 @@ import { ProcessTelegramDeliveryStep } from "../../steps/process-telegram-delive
 @Injectable()
 /** Consumes the committed telegram receipt using the app's existing fenced job runner. */
 export class TelegramDeliveryProcessor extends FencedProcessor {
-    readonly queue = TELEGRAM_DELIVERY_QUEUE
+    readonly queue: "telegram-delivery" = TELEGRAM_DELIVERY_QUEUE
 
     constructor(private readonly delivery: ProcessTelegramDeliveryStep) {
         super()
