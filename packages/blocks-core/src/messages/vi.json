@@ -30,5 +30,9 @@
   "effectPaymentClaimRecord": "Ghi báo chuyển khoản",
   "effectAgentTag": "Gắn thẻ trợ lý",
   "effectWorkItemRaise": "Tạo việc cần xử lý",
-  "toolPaymentInstruction": "Hướng dẫn thanh toán"
+  "toolPaymentInstruction": "Hướng dẫn thanh toán",
+  "effectOrderVoid": "Hủy đơn hàng",
+  "effectOrderUnconfirm": "Hủy xác nhận đơn hàng",
+  "effectPaymentClaimWithdraw": "Rút báo chuyển khoản",
+  "effectWorkItemWithdraw": "Rút việc cần xử lý"
 }

@@ -28,6 +28,10 @@
       "types": "./dist/node/index.d.ts",
       "default": "./dist/node/index.js"
     },
+    "./graph": {
+      "types": "./dist/graph/index.d.ts",
+      "default": "./dist/graph/index.js"
+    },
     "./spec": {
       "types": "./dist/spec/index.d.ts",
       "default": "./dist/spec/index.js"

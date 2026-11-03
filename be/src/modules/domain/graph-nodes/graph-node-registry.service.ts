@@ -8,7 +8,7 @@ import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error
 import { InjectGraphNodesOptions } from "./graph-nodes.decorators"
 import { GraphNodesLogEvent } from "./graph-nodes.log-events"
 import type { GraphNodesOptions } from "./graph-nodes.options"
-import type { NodeDataPort, NodeEffectExecutor } from "./graph-nodes.contracts"
+import type { NodeDataPort, NodeEffectExecutor, NodeSubjectResolver } from "./graph-nodes.contracts"
 
 @Injectable()
 /**
@@ -20,6 +20,7 @@ export class GraphNodeRegistryService implements OnApplicationBootstrap {
     private readonly index: NodeIndex
     private readonly ports = new Map<string, NodeDataPort>()
     private readonly executors = new Map<string, NodeEffectExecutor>()
+    private readonly resolvers: Array<NodeSubjectResolver> = []
 
     constructor(
         @InjectGraphNodesOptions() options: GraphNodesOptions,
@@ -54,6 +55,16 @@ export class GraphNodeRegistryService implements OnApplicationBootstrap {
             throw new GraphNodesError({ code: GraphNodesErrorCode.PortDuplicate, params: { kind: executor.effect } })
         }
         this.executors.set(executor.effect, executor)
+    }
+
+    /** Registers a resolver of the subject of a turn whose trigger named none. */
+    addSubjectResolver(resolver: NodeSubjectResolver): void {
+        this.resolvers.push(resolver)
+    }
+
+    /** The resolvers of a turn's subject, in the order they were registered. */
+    subjectResolvers(): ReadonlyArray<NodeSubjectResolver> {
+        return this.resolvers
     }
 
     /** The install by id. */

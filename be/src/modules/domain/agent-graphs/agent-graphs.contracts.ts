@@ -1,3 +1,4 @@
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { ApprovalPolicy, ApproverGroup } from "@modules/domain/authority-rules"
 import type { IntentBusiness } from "@modules/domain/intent-contracts"
 import type { DataRight } from "@modules/domain/mcp-gateway"
@@ -225,7 +226,12 @@ export interface GraphDocument {
     readonly rights: ReadonlyArray<DataRight>
     /** The business half of the contracts the owner approved, by intent; a graph with none runs on the frames alone. */
     readonly contracts?: ReadonlyArray<IntentBusiness> | undefined
+    /** The node graph: a spec composed of installed SDK nodes, which runs the agent's wakes itself, with no model turn. */
+    readonly flow?: GraphSpec | undefined
 }
+
+/** A graph as its row stores it: the node graph kept as plain JSON, which every read parses back with the document schema. */
+export type StoredGraphDocument = Omit<GraphDocument, "flow"> & { readonly flow?: object | undefined }
 
 /** The facts a graph may use, by key. */
 export type FactRegistry = Readonly<Record<string, FactSpec>>

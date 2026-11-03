@@ -11,7 +11,9 @@ export type {
     NodeInstall,
     NodeRow,
     NodeRunInput,
+    NodeSubjectResolver,
     NodeToolDoor,
     NodeTurn,
+    NodeUndoInput,
 } from "./graph-nodes.contracts"
 export { rowsAnswering } from "./node-rows.policy"
