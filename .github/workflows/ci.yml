@@ -115,6 +115,9 @@ jobs:
         run: npm run typecheck
         env:
           NODE_OPTIONS: --max-old-space-size=6144
+      - name: module packages
+        run: npm run test:modules
+
   lint:
     needs: plan
     if: ${{ needs.plan.outputs.checks == 'true' }}
