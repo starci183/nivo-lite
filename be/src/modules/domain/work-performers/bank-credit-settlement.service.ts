@@ -7,6 +7,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectInbox } from "@modules/platform/inbox"
 import type { Inbox } from "@modules/platform/inbox"
 import type { BankCreditBookedPayload } from "@modules/events/api"
+import { OrderPaymentReconcileService } from "./order-payment-reconcile.service"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
 
 /** The action that reconciles a payment with the invoice it settles. */
@@ -19,7 +20,8 @@ const RECORD_LOCALE = "vi"
  * What happens to a booked bank credit. A credit whose transfer content names exactly one issued invoice of the same amount is
  * reconciled by itself: its `reconcile_payment` work runs through the policy gate like a confirmed claim (invoice paid, transaction
  * matched, evidence, waiting claims settled, `payment.received`, the receipt chain), once per credit because the work is keyed on
- * its inbound event. Any other credit is held for the owner's check.
+ * its inbound event. A credit that names no invoice goes through the order run of Accounting (the evidence and the judge, see
+ * `OrderPaymentReconcileService`): a match runs through the gate, an ambiguity asks the owner. Any other credit is held for the owner's check.
  */
 export class BankCreditSettlementService {
     constructor(
@@ -28,6 +30,7 @@ export class BankCreditSettlementService {
         private readonly reconcile: ReconcilePaymentPerformerService,
         private readonly engine: WorkEngineService,
         private readonly inbound: InboundEventsService,
+        private readonly orderPayments: OrderPaymentReconcileService,
     ) {}
 
     /**
@@ -36,10 +39,14 @@ export class BankCreditSettlementService {
      * current inbound event, never the payload's word, and leaves an event already past the owner check as it is.
      */
     async settle(consumer: string, dedupeKey: string, payload: BankCreditBookedPayload): Promise<void> {
+        const ctx: WorkContext = { workspaceId: payload.workspaceId, actor: "NIVO", locale: RECORD_LOCALE }
+        const clear = await this.reconcile.clearlyMatches(ctx, payload.inboundEventId)
+        const event = clear ? null : await this.inbound.find(payload.workspaceId, payload.inboundEventId)
+        // The order run reads the open orders and the customers' claims and may ask the model, so it runs before the transaction opens.
+        const plan = event === null ? null : await this.orderPayments.plan(ctx, event)
         await this.entityManager.transaction(async (tx) => {
             if (!(await this.inbox.claim(consumer, dedupeKey, tx))) return
-            const ctx: WorkContext = { workspaceId: payload.workspaceId, actor: "NIVO", locale: RECORD_LOCALE }
-            if (await this.reconcile.clearlyMatches(ctx, payload.inboundEventId)) {
+            if (clear) {
                 await this.engine.startInboundWork(
                     ctx,
                     { id: payload.inboundEventId },
@@ -49,6 +56,7 @@ export class BankCreditSettlementService {
                 )
                 return
             }
+            if (event !== null && plan !== null && (await this.orderPayments.open(ctx, event, plan)) !== null) return
             await this.inbound.holdForOwnerCheck(payload.inboundEventId, tx)
         })
     }

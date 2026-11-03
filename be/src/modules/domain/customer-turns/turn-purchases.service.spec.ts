@@ -6,7 +6,7 @@ import { WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import type { InvoiceRow } from "@modules/domain/invoices"
-import { OrdersService } from "@modules/domain/orders"
+import { OrderPaymentClaimsService, OrdersService } from "@modules/domain/orders"
 import type { WorkItem } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -91,6 +91,7 @@ const build = async (
         listForLead: jest.fn().mockResolvedValue(openOrders),
         find: jest.fn().mockResolvedValue(recorded),
     })
+    const orderClaims = mock<OrderPaymentClaimsService>({ record: jest.fn().mockResolvedValue(true) })
     const conversations = mock<AgentConversationsService>({ attachLead: jest.fn() })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
     const moduleRef = await Test.createTestingModule({
@@ -102,9 +103,10 @@ const build = async (
             { provide: OrdersService, useValue: orders },
             { provide: AgentConversationsService, useValue: conversations },
             { provide: PaymentClaimsService, useValue: claims },
+            { provide: OrderPaymentClaimsService, useValue: orderClaims },
         ],
     }).compile()
-    return { purchases: moduleRef.get(TurnPurchasesService), engine, inbound, orders, conversations, claims }
+    return { purchases: moduleRef.get(TurnPurchasesService), engine, inbound, orders, conversations, claims, orderClaims }
 }
 
 describe("TurnPurchasesService", () => {
@@ -269,5 +271,48 @@ describe("TurnPurchasesService", () => {
             leadId: "l1",
         })
         expect(inbound.mark).toHaveBeenCalledWith(WS, "e1", "processed", "l1")
+    })
+})
+
+describe("TurnPurchasesService order claims", () => {
+    const claimTurn: CustomerTurn = {
+        ...turn,
+        body: "Tôi đã chuyển khoản 5k, tên BUI NGUYEN DINH",
+        conversation: { ...turn.conversation, leadId: "l1" },
+    }
+
+    it("knows a customer with a confirmed or invoiced order awaits payment, and one with only a paid order does not", async () => {
+        const waiting = await build([{ status: "confirmed", amount_vnd: 5000, items: "Chau hoa" }])
+        await expect(waiting.purchases.awaitsPayment(WS, "l1")).resolves.toBe(true)
+        const paid = await build([{ status: "paid", amount_vnd: 5000, items: "Chau hoa" }])
+        await expect(paid.purchases.awaitsPayment(WS, "l1")).resolves.toBe(false)
+    })
+
+    it("writes the claim with the amount and the account holder read from the words, once per message", async () => {
+        const { purchases, orderClaims } = await build()
+        const settled = await purchases.recordOrderClaim(ctx, claimTurn, true)
+        expect(settled).toEqual({ lines: ["customerTurns.orderClaimRecorded"], changed: true, leadId: "l1" })
+        expect(orderClaims.record).toHaveBeenCalledWith({
+            workspaceId: WS,
+            leadId: "l1",
+            conversationId: "c1",
+            amountVnd: 5000,
+            names: ["BUI NGUYEN DINH"],
+            body: claimTurn.body,
+            dedupeKey: `${claimTurn.channelEventId}:order-claim`,
+        })
+        orderClaims.record.mockResolvedValueOnce(false)
+        await expect(purchases.recordOrderClaim(ctx, claimTurn, true)).resolves.toEqual({
+            lines: [],
+            changed: false,
+            leadId: "l1",
+        })
+    })
+
+    it("writes nothing when the words are no claim or the customer is unknown", async () => {
+        const { purchases, orderClaims } = await build()
+        await purchases.recordOrderClaim(ctx, claimTurn, false)
+        await purchases.recordOrderClaim(ctx, turn, true)
+        expect(orderClaims.record).not.toHaveBeenCalled()
     })
 })

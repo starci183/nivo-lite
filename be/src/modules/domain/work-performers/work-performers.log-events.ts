@@ -10,4 +10,8 @@ export enum WorkPerformersLogEvent {
     ReminderFailed = "work_performers.reminder_failed",
     /** The model could not write the thank-you after a payment; the filled template goes through the gate instead. */
     CareDraftFallback = "work_performers.care_draft_fallback",
+    /** The judge of the order reconciliation answered in a shape the schema does not read; the case goes to a person. */
+    JudgementUnreadable = "work_performers.judgement_unreadable",
+    /** A customer could not be told their payment was received; the order stays paid. */
+    PaymentConfirmationFailed = "work_performers.payment_confirmation_failed",
 }

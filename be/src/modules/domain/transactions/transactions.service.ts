@@ -78,6 +78,12 @@ export class TransactionsService {
         return row === null ? null : toTransactionRow(row)
     }
 
+    /** The transaction recorded for an inbound bank event, or null: a retry of the same credit finds it instead of recording another. */
+    async ofInboundEvent(workspaceId: string, inboundEventId: string): Promise<OptionalTransaction> {
+        const row = await this.entityManager.findOne(TransactionEntity, { where: { workspaceId, inboundEventId } })
+        return row === null ? null : toTransactionRow(row)
+    }
+
     /** The money and the moment of a payment, or null when the workspace has no such payment. */
     async momentOf(workspaceId: string, transactionId: string): Promise<OptionalTransactionMoment> {
         const row = await this.entityManager
@@ -245,6 +251,19 @@ export class TransactionsService {
         manager: EntityManager = this.entityManager,
     ): Promise<void> {
         await manager.update(TransactionEntity, { workspaceId, id: transactionId }, { status: "matched", invoiceId })
+    }
+
+    /**
+     * The payment settled a sales order. One transaction pays one order and one order is paid by one transaction (a unique index), so a
+     * second link for either side is refused by the database.
+     */
+    async matchOrder(
+        workspaceId: string,
+        transactionId: string,
+        orderId: string,
+        manager: EntityManager = this.entityManager,
+    ): Promise<void> {
+        await manager.update(TransactionEntity, { workspaceId, id: transactionId }, { status: "matched", orderId })
     }
 
     /** The payment goes back to the owner's review. */

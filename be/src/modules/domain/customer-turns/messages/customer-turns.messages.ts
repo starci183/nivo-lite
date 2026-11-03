@@ -17,6 +17,9 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
             "Cảm ơn bạn! Shop đã ghi nhận bạn báo chuyển khoản cho mã {{no}}. Shop sẽ kiểm tra và xác nhận lại với bạn sớm nhất nhé.",
         "customerTurns.paymentConfirmedReply":
             "Cảm ơn bạn! Khoản thanh toán cho mã {{no}} đã được shop nhận và xác nhận rồi ạ.",
+        "customerTurns.orderClaimReply":
+            "Cảm ơn bạn! Shop chưa nhận được khoản chuyển khoản, NIVO đang theo dõi và sẽ báo lại ngay khi tiền về nhé.",
+        "customerTurns.orderClaimRecorded": "Khách báo đã chuyển khoản cho đơn đang chờ thanh toán; NIVO theo dõi khoản tiền về",
         "customerTurns.replyAwaitsApproval": "Câu trả lời đang chờ duyệt: agent này chưa được tự gửi qua kênh này",
         "customerTurns.replyAwaitsGraph": "Câu trả lời đang chờ duyệt: sơ đồ của agent yêu cầu người duyệt",
         "customerTurns.replyStoppedByGraph": "Câu trả lời không được gửi: sơ đồ của agent dừng ở bước này",
@@ -73,6 +76,9 @@ export const CUSTOMER_TURNS_MESSAGES: MessageBundle = {
             "Thank you! We have noted that you transferred the payment for {{no}}. The shop will check it and confirm with you shortly.",
         "customerTurns.paymentConfirmedReply":
             "Thank you! Your payment for {{no}} has already been received and confirmed.",
+        "customerTurns.orderClaimReply":
+            "Thank you! The shop has not received the transfer yet. NIVO is watching for it and will tell you as soon as the money arrives.",
+        "customerTurns.orderClaimRecorded": "The customer said they transferred for an order that waits for payment; NIVO watches for the money",
         "customerTurns.replyAwaitsApproval":
             "The reply waits for approval: this agent may not send through this channel on its own",
         "customerTurns.replyAwaitsGraph": "The reply is waiting: the agent's graph needs a person to approve it",

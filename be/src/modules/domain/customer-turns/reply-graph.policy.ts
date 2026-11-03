@@ -46,6 +46,8 @@ export interface Judged {
     readonly order: CapturedOrder | null
     /** The open invoice the customer says they paid, or null. */
     readonly claimOpen: InvoiceRow | null
+    /** True when the customer says they paid an order that waits for money: Accounting keeps the claim until the money is seen. */
+    readonly orderClaim?: boolean
     /** The invoice the books hold as paid lately, or null. */
     readonly paid?: InvoiceRow | null
 }

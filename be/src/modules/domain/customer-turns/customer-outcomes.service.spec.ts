@@ -49,6 +49,8 @@ const build = async () => {
     const inbound = mock<InboundEventsService>()
     const invoices = mock<InvoicesService>()
     const purchases = mock<TurnPurchasesService>()
+    purchases.recordOrderClaim.mockResolvedValue({ lines: [], changed: false, leadId: null })
+    purchases.awaitsPayment.mockResolvedValue(false)
     const gaps = mock<KnowledgeGapNotesService>()
     const modules = mock<TurnModulesService>()
     const conversations = mock<AgentConversationsService>()
@@ -229,6 +231,21 @@ describe("CustomerOutcomesService", () => {
             expect.objectContaining({ key: "telegram" }),
         )
         expect(verdict.lines).toContain("customerTurns.claimRecorded")
+    })
+
+    it("answers a payment claim for an order that waits for money with a neutral reply, keeps the claim and asks no person", async () => {
+        const { outcomes, invoices, purchases } = await build()
+        invoices.latestOfLead.mockResolvedValue(null)
+        purchases.awaitsPayment.mockResolvedValueOnce(true)
+        purchases.recordOrderClaim.mockResolvedValueOnce({
+            lines: ["customerTurns.orderClaimRecorded"],
+            changed: true,
+            leadId: "l1",
+        })
+        const verdict = await outcomes.settle(turnOf("l1"), proposalOf({ payment_claim: true }, { reply: "Paid!" }))
+        expect(verdict.reply).toBe("customerTurns.orderClaimReply")
+        expect(purchases.recordOrderClaim).toHaveBeenCalledWith(expect.any(Object), expect.any(Object), true)
+        expect(verdict.lines).toContain("customerTurns.orderClaimRecorded")
     })
 
     it("hands the question to a person when the AI could not answer", async () => {

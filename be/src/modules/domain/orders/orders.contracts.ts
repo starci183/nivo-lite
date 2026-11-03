@@ -143,3 +143,49 @@ export interface OrdersWorkbenchRow extends SalesOrderRow {
     /** The carrier's tracking code. */
     readonly tracking_code: string | null
 }
+
+/** The statuses in which an order waits for money. */
+export const AWAITING_PAYMENT_STATUSES: ReadonlyArray<OrderStatus> = ["confirmed", "invoiced"]
+
+/** Where a customer's payment claim stands. */
+export type PaymentClaimStatus = "open" | "settled" | "escalated"
+
+/** A customer's word that they paid an order, kept until the money is seen. */
+export interface PaymentClaimRow {
+    /** The claim id. */
+    readonly id: string
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The customer who said it. */
+    readonly leadId: string
+    /** The conversation it was said in, or null. */
+    readonly conversationId: string | null
+    /** The amount the customer named in VND, or null when they named none. */
+    readonly amountVnd: number | null
+    /** The names the customer gave (the account holder). */
+    readonly names: ReadonlyArray<string>
+    /** The customer's own words. */
+    readonly body: string
+    /** When it was said. */
+    readonly claimedAt: Date
+    /** Where it stands. */
+    readonly status: PaymentClaimStatus
+}
+
+/** What recording a payment claim takes. */
+export interface NewPaymentClaim {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The customer. */
+    readonly leadId: string
+    /** The conversation it was said in, or null. */
+    readonly conversationId: string | null
+    /** The amount named in VND, or null. */
+    readonly amountVnd: number | null
+    /** The names given. */
+    readonly names: ReadonlyArray<string>
+    /** The customer's words. */
+    readonly body: string
+    /** What makes a repeated message one claim. */
+    readonly dedupeKey: string
+}

@@ -88,6 +88,47 @@ const RETURNING =
     "id, workspace_id, inbound_event_id, amount_vnd::float8 AS amount_vnd, reference, payer, invoice_id, status"
 
 describe("TransactionsService", () => {
+    describe("ofInboundEvent", () => {
+        it("answers the payment recorded for an inbound event, or null", async () => {
+            const em = mockEntityManager({
+                findOne: [
+                    [TransactionEntity, entityOf()],
+                    [TransactionEntity, null],
+                ],
+            })
+            const transactions = await build(em)
+
+            await expect(transactions.ofInboundEvent("ws-1", "in-1")).resolves.toEqual(transactionOf())
+            await expect(transactions.ofInboundEvent("ws-1", "in-2")).resolves.toBeNull()
+            expect(em.findOne).toHaveBeenNthCalledWith(1, TransactionEntity, {
+                where: { workspaceId: "ws-1", inboundEventId: "in-1" },
+            })
+        })
+    })
+
+    describe("matchOrder", () => {
+        it("links the payment to the sales order it paid, in the caller's transaction", async () => {
+            const own = mockEntityManager()
+            const callers = mockEntityManager({ update: [TransactionEntity, { affected: 1, raw: [], generatedMaps: [] }] })
+            const transactions = await build(own)
+
+            await transactions.matchOrder("ws-1", "tx-1", "order-1", callers)
+
+            expect(callers.update).toHaveBeenCalledWith(TransactionEntity, PAYMENT_KEY, {
+                status: "matched",
+                orderId: "order-1",
+            })
+            expect(own.update).not.toHaveBeenCalled()
+        })
+
+        it("links through its own manager when the caller has none", async () => {
+            const em = mockEntityManager({ update: [TransactionEntity, { affected: 1, raw: [], generatedMaps: [] }] })
+            const transactions = await build(em)
+            await transactions.matchOrder("ws-1", "tx-1", "order-1")
+            expect(em.update).toHaveBeenCalledWith(TransactionEntity, PAYMENT_KEY, { status: "matched", orderId: "order-1" })
+        })
+    })
+
     describe("find", () => {
         it("answers the payment of the workspace, or null", async () => {
             const em = mockEntityManager({

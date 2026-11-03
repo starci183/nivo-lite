@@ -1,8 +1,10 @@
 import type { MessageBundle } from "@modules/platform/i18n"
+import { ORDER_PAYMENT_MESSAGES } from "./order-payment.messages"
 
 /** Display text of the lines the performers write into the workspace (summaries, evidence, replies), Vietnamese and English. */
 export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
     vi: {
+        ...ORDER_PAYMENT_MESSAGES.vi,
         "performers.needsHuman": "Câu trả lời chi tiết cần người duyệt — NIVO đã gửi đề xuất cho chủ doanh nghiệp",
         "performers.emailFooter": "Email này được gửi bởi {{shop}}.",
         "performers.emailRequestSummary": "Gửi email tới {{to}}: {{subject}}",
@@ -143,6 +145,7 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.chatBooking.briefService": "- {{name}}: {{minutes}} phút, giá {{price}} đ",
     },
     en: {
+        ...ORDER_PAYMENT_MESSAGES.en,
         "performers.needsHuman":
             "The detailed answer needs a person: NIVO sent its proposed answer to the owner to approve",
         "performers.emailFooter": "This email was sent by {{shop}}.",
