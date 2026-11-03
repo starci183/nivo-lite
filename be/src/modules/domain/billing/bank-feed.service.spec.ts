@@ -557,6 +557,7 @@ describe("BankFeedService tags the bound agent of a new credit", () => {
             },
             manager,
         )
+        expect(harness.publish).not.toHaveBeenCalled()
     })
 
     it("stores no reference for an empty content", async () => {
@@ -576,6 +577,7 @@ describe("BankFeedService tags the bound agent of a new credit", () => {
 
         expect(harness.transactions.open).not.toHaveBeenCalled()
         expect(harness.tags.tagAgent).not.toHaveBeenCalled()
+        expect(harness.publish).toHaveBeenCalledTimes(1)
     })
 
     it("tags nobody when the app binds no flow port", async () => {

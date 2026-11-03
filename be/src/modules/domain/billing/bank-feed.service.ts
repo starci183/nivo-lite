@@ -289,23 +289,30 @@ export class BankFeedService {
         const [agent] = await this.bindings.agentsFor(connection.connectionId, "bank_feed", { modules: ["accounting"] })
         if (agent === undefined) return { status: "unbound" }
         if (credit.direction === "debit") return this.debit(tx, connection, credit)
-        const booked = await this.book(tx, {
+        const flowOwns = await this.flowOwns(connection.workspaceId, agent.id)
+        const booking = {
             workspaceId: connection.workspaceId,
             amount: credit.amount,
             content: credit.content,
             sender: null,
             eventId: credit.eventId,
             bankName: state?.name ?? credit.fallbackBankName,
-        })
+        }
+        const booked = await this.book(tx, booking, !flowOwns)
         if (booked === null) return { status: "duplicate" }
-        await this.tagFlow(tx, connection, agent.id, credit, booked)
+        if (flowOwns) await this.tagFlow(tx, connection, agent.id, credit, booked)
         return { status: "booked" }
     }
 
+    /** Whether the bound agent's live version has a flow: then the flow alone owns the credit, and the booking path holds nothing. */
+    private async flowOwns(workspaceId: string, agentId: string): Promise<boolean> {
+        return this.flow !== null && (await this.flow.hasLiveFlow(workspaceId, agentId))
+    }
+
     /**
-     * A new credit reaches the agent bound to the connection when that agent's live version has a flow: the transaction is recorded and
-     * the agent is tagged with it, once per transaction (the wake is keyed by the connection and the provider transaction id). An agent
-     * with no flow is not tagged: the credit follows the booking path alone, as before.
+     * A new credit of an agent whose live version has a flow reaches that agent: the transaction is recorded and the agent is tagged with
+     * it, once per transaction (the wake is keyed by the connection and the provider transaction id). Exactly one path takes a credit:
+     * the flow's, or with no flow the booking path alone, as before.
      */
     private async tagFlow(
         tx: EntityManager,
@@ -314,7 +321,6 @@ export class BankFeedService {
         credit: IncomingCredit,
         inboundEventId: string,
     ): Promise<void> {
-        if (this.flow === null || !(await this.flow.hasLiveFlow(connection.workspaceId, agentId))) return
         const amountVnd = Math.round(credit.amount)
         const transaction = await this.transactions.open(
             {
@@ -367,7 +373,7 @@ export class BankFeedService {
     }
 
     /** Records the credit and publishes `bank_credit_booked` in the same transaction; answers the id of the inbound event, or null when the same credit had already been recorded. */
-    private async book(tx: EntityManager, booking: Booking): Promise<string | null> {
+    private async book(tx: EntityManager, booking: Booking, announce = true): Promise<string | null> {
         const amountVnd = Math.round(booking.amount)
         const recorded = await this.inbound.recordBankPayment({
             manager: tx,
@@ -388,6 +394,7 @@ export class BankFeedService {
             providerRef: booking.eventId,
         })
         if (recorded.duplicate) return null
+        if (!announce) return recorded.inboundEventId
         await this.bus.publish(
             BankCreditBookedEvent.create({
                 workspaceId: booking.workspaceId,
