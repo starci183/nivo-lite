@@ -27,6 +27,7 @@ import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-ca
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
+import { PollDueConnectionsQueueModule } from "@features/jobs/poll-due-connections"
 import { ReconcileZaloInboxQueueModule } from "@features/jobs/reconcile-zalo-inbox"
 import { ReconcileBankFeedQueueModule } from "@features/jobs/reconcile-bank-feed"
 import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
@@ -86,6 +87,7 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     CompleteZaloAuthorizationQueueModule.register({}),
     RefreshZaloTokensQueueModule.register({}),
     ReconcileZaloInboxQueueModule.register({}),
+    PollDueConnectionsQueueModule.register({}),
     RunZaloWizardQueueModule.register({}),
     RunChatTurnQueueModule.register({}),
     RunLeadActionQueueModule.register({}),

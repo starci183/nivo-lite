@@ -1,4 +1,5 @@
-import type { PollErrorClass, PollOutcome, PollScheduleOptions, PollScheduleRow } from "./poll-schedule.contracts"
+import type { PollFailure } from "./connection-poll.contracts"
+import type { PollOutcome, PollScheduleOptions, PollScheduleRow } from "./poll-schedule.contracts"
 
 /** The intervals and caps a scheduler runs with when the environment names none. */
 export const DEFAULT_POLL_SCHEDULE: PollScheduleOptions = {
@@ -101,7 +102,7 @@ export const planAfterRead = (
     options: PollScheduleOptions,
     unit: number,
 ): PollPlan => {
-    const closed = closedPlan(row, now, options, unit)
+    const closed = { ...closedPlan(row, now, options, unit), succeeded: outcome.kind !== "skipped" }
     if (outcome.kind !== "partial") return closed
     return {
         ...closed,
@@ -156,14 +157,14 @@ const transientPlan = (row: PollScheduleRow, now: number, options: PollScheduleO
 
 const rateLimitedPlan = (
     row: PollScheduleRow,
-    retryAfterMs: number | undefined,
+    retryAfterMs: number,
     now: number,
     options: PollScheduleOptions,
     unit: number,
 ): PollPlan => {
     const failures = row.failures + 1
     const backoff = backoffMs(failures, options.backoffBaseMs, options.backoffCapMs)
-    const waitMs = Math.max(retryAfterMs ?? 0, jittered(backoff, options.jitterRatio, unit))
+    const waitMs = Math.max(retryAfterMs, jittered(backoff, options.jitterRatio, unit))
     return {
         nextPollAt: now + waitMs,
         intervalMs: waitMs,
@@ -185,14 +186,14 @@ const rateLimitedPlan = (
  */
 export const planAfterFailure = (
     row: PollScheduleRow,
-    failure: PollErrorClass,
+    failure: PollFailure,
     now: number,
     options: PollScheduleOptions,
     unit: number,
 ): PollPlan => {
     switch (failure.kind) {
         case "rate_limited":
-            return rateLimitedPlan(row, failure.retryAfterMs, now, options, unit)
+            return rateLimitedPlan(row, failure.retryAfterSeconds * 1000, now, options, unit)
         case "transient":
             return transientPlan(row, now, options, unit)
         case "auth_failed":

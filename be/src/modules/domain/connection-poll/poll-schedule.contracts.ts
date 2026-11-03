@@ -1,4 +1,4 @@
-import type { ConnectionPoller, PollSkipReason } from "./connection-poll.contracts"
+import type { ConnectionPoller, PollFailure, PollLimits, PollSkipReason } from "./connection-poll.contracts"
 
 /** How one poll of a connection ended, in the terms a scheduler plans the next one with. */
 export type PollOutcome =
@@ -18,41 +18,34 @@ export type PollOutcome =
 /** Where a walk begins and how far one call goes: a chunk of a backfill resumes from the page end the last chunk stopped at. */
 export interface PollWalkOptions {
     /** The end of the page to begin at; undefined begins at the newest. */
-    readonly to?: Date
+    readonly to?: Date | undefined
     /** The newest instant the earlier chunks read. */
-    readonly newest?: Date
+    readonly newest?: Date | undefined
     /** The most pages this call reads; undefined reads up to the default cap and never resumes. */
-    readonly maxPages?: number
-}
-
-/** How a provider failure is handled: the adapter of the provider maps what its client threw to one of these. */
-export type PollErrorClass =
-    | { readonly kind: "rate_limited"; readonly retryAfterMs: number | undefined }
-    | { readonly kind: "auth_failed" }
-    | { readonly kind: "transient" }
-    | { readonly kind: "fatal" }
-
-/** What a provider allows for one connection (one token) and for the app as a whole. */
-export interface PollLimits {
-    /** Calls per second one token may make. */
-    readonly ratePerSecond: number
-    /** Calls one token may make at once after being idle. */
-    readonly burst: number
-    /** Calls to the provider in flight at the same time across all tokens. */
-    readonly concurrency: number
+    readonly maxPages?: number | undefined
 }
 
 /**
- * What a provider registers to be polled by the scheduler: its poller, what the provider allows and how its failures are classified.
- * The provider adds nothing else: intervals, breakers, backoff, jitter and fairness are the scheduler's.
+ * What a provider offers to be polled by the scheduler: its poller with the store of its inbox bound, what the provider allows one credential and
+ * how its failures are classified. The provider adds nothing else: intervals, breakers, backoff, jitter and fairness are the scheduler's.
  */
-export interface ConnectionPollRegistration<Item> {
-    /** Reads one page of a connection and stores its items. */
-    readonly poller: ConnectionPoller<Item>
-    /** What the provider allows. */
+export interface ScheduledPollSource {
+    /** The provider key of the connections it reads. */
+    readonly provider: string
+    /** What the provider allows one credential. */
     readonly limits: PollLimits
+    /** Reads one page of a connection and stores its items through the inbox the provider's webhook feeds. */
+    readonly poller: ConnectionPoller<unknown>
     /** Maps what the poller threw to how the failure is handled. */
-    classify(cause: unknown): PollErrorClass
+    classify(cause: unknown): PollFailure
+}
+
+/** Finds the scheduled sources of one capability (bank feeds, message inboxes) by provider key. */
+export interface PollSourceDirectory {
+    /** The provider keys it can read. */
+    providers(): ReadonlyArray<string>
+    /** The source of a provider, or undefined when it has none. */
+    sourceOf(provider: string): ScheduledPollSource | undefined
 }
 
 /** Where the circuit breaker of a connection stands. */

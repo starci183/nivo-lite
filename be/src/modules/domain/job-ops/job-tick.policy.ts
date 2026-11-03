@@ -2,7 +2,7 @@ import { ACCOUNTING_DESK_QUEUE, ACCOUNTING_MORNING_JOB } from "@modules/queues/a
 import { AGENT_TURN_QUEUE, AgentTurnJob } from "@modules/queues/agent-turn"
 import { AGENTS_QUEUE, AgentsJob } from "@modules/queues/agents"
 import { AUTOMATION_QUEUE, AUTOMATION_TICK_JOB } from "@modules/queues/automation"
-import { BANK_FEED_POLL_QUEUE, RECONCILE_BANK_FEED_JOB } from "@modules/queues/bank-feed-poll"
+import { CONNECTION_POLL_QUEUE, POLL_DUE_CONNECTIONS_JOB } from "@modules/queues/connection-poll"
 import { CONNECTION_HEALTH_QUEUE } from "@modules/queues/connection-health"
 import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
 import { DATA_SYNC_QUEUE } from "@modules/queues/data-sync"
@@ -11,7 +11,6 @@ import { MARKETING_TICK_QUEUE } from "@modules/queues/marketing-tick"
 import { REALTIME_RETENTION_QUEUE } from "@modules/queues/realtime-retention"
 import { SYSTEM_HISTORY_RETENTION_QUEUE } from "@modules/queues/system-history-retention"
 import { SHIFTS_QUEUE, SHIFTS_TICK_JOB } from "@modules/queues/shifts"
-import { RECONCILE_ZALO_INBOX_JOB, ZALO_INBOX_POLL_QUEUE } from "@modules/queues/zalo-inbox-poll"
 import { ZALO_REFRESH_QUEUE } from "@modules/queues/zalo-refresh"
 
 /** A manually triggered migration-owned tick and its idempotency window. */
@@ -37,17 +36,17 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
     "agent-work-sweep": { queue: AGENT_TURN_QUEUE, job: AgentTurnJob.Sweep, payload: {}, minutes: 1 },
     "agents-sync-all": { queue: AGENTS_QUEUE, job: AgentsJob.Sync, payload: {}, minutes: 5 },
     "automation-tick": { queue: AUTOMATION_QUEUE, job: AUTOMATION_TICK_JOB, payload: {}, minutes: 1 },
-    "bank-feed-reconcile-tick": {
-        queue: BANK_FEED_POLL_QUEUE,
-        job: RECONCILE_BANK_FEED_JOB,
-        payload: {},
-        minutes: 5,
-    },
     "connection-health-tick": {
         queue: CONNECTION_HEALTH_QUEUE,
         job: CONNECTION_HEALTH_QUEUE,
         payload: { silentAfterHours: 72 },
         minutes: 15,
+    },
+    "connection-poll-due-tick": {
+        queue: CONNECTION_POLL_QUEUE,
+        job: POLL_DUE_CONNECTIONS_JOB,
+        payload: {},
+        minutes: 1,
     },
     "content-tick": { queue: CONTENT_TICK_QUEUE, job: CONTENT_TICK_QUEUE, payload: {}, minutes: 15 },
     "data-sync-tick": { queue: DATA_SYNC_QUEUE, job: DATA_SYNC_QUEUE, payload: { tick: true }, minutes: 1 },
@@ -65,12 +64,6 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
         job: SYSTEM_HISTORY_RETENTION_QUEUE,
         payload: { doneDays: 1, failedDays: 7, batch: 5000 },
         minutes: 1440,
-    },
-    "zalo-inbox-reconcile-tick": {
-        queue: ZALO_INBOX_POLL_QUEUE,
-        job: RECONCILE_ZALO_INBOX_JOB,
-        payload: {},
-        minutes: 5,
     },
     "zalo-refresh-tick": {
         queue: ZALO_REFRESH_QUEUE,
