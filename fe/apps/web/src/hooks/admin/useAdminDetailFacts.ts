@@ -41,7 +41,14 @@ const detailFacts = (
 }
 
 /** The billing and activity facts of a workspace overview, worded and formatted in the reader's locale. */
-export const useAdminDetailFacts = (detail: AdminWorkspaceDetail | undefined) => {
+export const useAdminDetailFacts = (
+    detail: AdminWorkspaceDetail | undefined,
+):
+    | {
+          readonly billing: ReadonlyArray<AdminFactView>
+          readonly activity: ReadonlyArray<AdminFactView>
+      }
+    | undefined => {
     const { text, format } = useAdminFormat()
     return useMemo(() => (detail === undefined ? undefined : detailFacts(detail, format, text)), [detail, format, text])
 }

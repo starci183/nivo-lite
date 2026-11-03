@@ -3,11 +3,23 @@
 import { useState } from "react"
 import { useFeatureReset } from "@/hooks/reuseables"
 import { matchesInboxFilter, isInboxFilter } from "@/hooks/chatbot"
-import type { ChatbotOverview } from "@/modules/types"
+import type { ChatbotOverview, ChatbotConversation } from "@/modules/types"
 import type { InboxFilters } from "./useChatbotInbox"
 
+/** The view `useChatbotInboxFilters` returns. */
+export interface ChatbotInboxFiltersView {
+    filters: InboxFilters
+    visible: ChatbotConversation[]
+    setQuery: (value: string) => void
+    setFilter: (value: string) => void
+}
+
 /** Owns the inbox filter draft and the conversations matching it. */
-export const useChatbotInboxFilters = (overview: ChatbotOverview | undefined, isActive: boolean, scope: string) => {
+export const useChatbotInboxFilters = (
+    overview: ChatbotOverview | undefined,
+    isActive: boolean,
+    scope: string,
+): ChatbotInboxFiltersView => {
     const [filters, setFilters] = useState<InboxFilters>({ filter: "all", query: "" })
     useFeatureReset({ isActive, isReady: true, scope, onReset: () => setFilters({ filter: "all", query: "" }) })
     const query = filters.query.trim().toLocaleLowerCase()

@@ -34,8 +34,38 @@ const kitInputOf = (kit: BrandKitDraft) => ({
     avoid: [...kit.avoid],
 })
 
+/** The view `useSetupBrandKit` returns. */
+export interface SetupBrandKitView {
+    proposals: readonly {
+        id: string
+        installationId: string | null
+        setupSessionId: string | null
+        fileName: string
+        fileSize: number
+        status: string
+        decidedBy: string | null
+        createdAt: string
+        kit: {
+            brandName: string
+            fonts: Array<string>
+            tone: string
+            address: string
+            imagery: Array<string>
+            avoid: Array<string>
+            colors: Array<{
+                name: string
+                hex: string
+            }>
+        }
+    }[]
+    isReading: boolean
+    decidingId: string
+    attach: (files: ReadonlyArray<File>) => Promise<void>
+    decide: (proposalId: string, choice: "confirm" | "reject", kit?: BrandKitDraft) => Promise<boolean>
+}
+
 /** The brand guideline flow of the setup chat: attach a PDF, read its brand proposal, confirm (edited) or reject it. */
-export const useSetupBrandKit = (scope: SetupBrandKitScope) => {
+export const useSetupBrandKit = (scope: SetupBrandKitScope): SetupBrandKitView => {
     const t = useTranslations("marketing")
     const tToast = useTranslations("toast")
     const runGraphQL = useGraphQLWithToast()

@@ -8,7 +8,7 @@ import { zaloFailureKeyOf } from "@/modules/failure"
  * Words a Zalo failure for the reader: the `zalo` catalog sentence of the refusal's capability code (or of a send failure term),
  * else the back end message the failure arrived with.
  */
-export const useZaloFailureLabel = () => {
+export const useZaloFailureLabel = (): ((code: string | undefined, fallback: string) => string) => {
     const t = useTranslations("zalo")
     return useCallback(
         (code: string | undefined, fallback: string): string => {

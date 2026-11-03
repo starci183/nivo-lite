@@ -25,8 +25,70 @@ interface MemberDetailFormsInput {
     readonly activation: LoyaltyPanelActivation
 }
 
+/** The view `useMemberDetailForms` returns. */
+export interface MemberDetailFormsView {
+    on: {
+        edit: {
+            onName: (text: string) => void
+            onBirthday: (text: string) => void
+            onNote: (text: string) => void
+            onSubmit: () => void
+        }
+        adjust: {
+            onPoints: (text: string) => void
+            onReason: (text: string) => void
+            onSubmit: () => void
+        }
+    }
+    reset: () => void
+    adjust: {
+        isPending: boolean
+        note?: string
+        canSubmit: boolean
+        pointsLabel: string
+        pointsHint: string
+        pointsPlaceholder: string
+        reasonLabel: string
+        submitLabel: string
+        pointsError?: string
+        label: string
+        memberId: string
+        points: string
+        reason: string
+    }
+    edit:
+        | {
+              noteMax: number
+              saveLabel: string
+              isPending: boolean
+              nameLabel: string
+              birthdayLabel: string
+              birthdayPlaceholder: string
+              birthdayHint: string
+              noteLabel: string
+              birthdayError?: string
+              nameError?: string
+              label: string
+              memberId: string
+              name: string
+              birthday: string
+              note: string
+          }
+        | undefined
+    readOnly:
+        | {
+              items: {
+                  id: string
+                  term: string
+                  description: string
+              }[]
+              note: string
+          }
+        | undefined
+}
+
 /** The details form (managers) or the read-only facts (staff), and the point adjustment form, wired to the member mutations. */
-export const useMemberDetailForms = (input: MemberDetailFormsInput) => {
+export const useMemberDetailForms = (input: MemberDetailFormsInput): MemberDetailFormsView => {
     const t = useTranslations("loyalty")
     const feedback = useTranslations("toast")
     const format = useFormatter()

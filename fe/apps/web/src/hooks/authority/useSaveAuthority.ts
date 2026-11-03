@@ -11,8 +11,14 @@ import { mutate } from "@/modules/viewer-cache"
 /** The profile fields one section writes (the back end keeps the rest). */
 export type AuthorityPatch = MutateUpdateAuthorityRequest["patch"]
 
+/** The view `useSaveAuthority` returns. */
+export interface SaveAuthorityView {
+    save: (patch: AuthorityPatch) => Promise<boolean>
+    isSaving: boolean
+}
+
 /** Saves part of the authority profile through the back end and toasts the outcome; the sheet is read again on success. */
-export const useSaveAuthority = () => {
+export const useSaveAuthority = (): SaveAuthorityView => {
     const t = useTranslations("authority")
     const runGraphQL = useGraphQLWithToast()
     const { trigger, isMutating } = useMutateUpdateAuthoritySwr()

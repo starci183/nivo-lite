@@ -10,8 +10,16 @@ const ALL_TABS: ReadonlyArray<AgentTab> = ["setup", "workbench", "work", "perfor
 const PERFORMANCE_MODULES: ReadonlySet<ModuleKey> = new Set<ModuleKey>(["content"])
 const FIRST_TAB: AgentTab = "setup"
 
+/** The view `useInstanceTabs` returns. */
+export interface InstanceTabsView {
+    tabs: AgentTab[]
+    selected: AgentTab
+    open: (id: string) => void
+    hrefOf: (tab: AgentTab) => string
+}
+
 /** The tabs of one agent instance (Setup only for owners and managers, Performance only for the AI Marketing agent): the one the path names, and the way to open another. */
-export const useInstanceTabs = (module: ModuleKey, installationId: string) => {
+export const useInstanceTabs = (module: ModuleKey, installationId: string): InstanceTabsView => {
     const member = useMember()
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()

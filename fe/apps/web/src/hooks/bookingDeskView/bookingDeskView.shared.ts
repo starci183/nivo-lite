@@ -10,9 +10,11 @@ import {
     type useBookingPlacement,
     type useBookingActions,
     type blankPlacementOf,
+    type PlacementFields,
 } from "@/hooks/bookingDesk"
 
 import { shiftDate } from "@/modules/i18n"
+import type { BookingView, BookingServiceView } from "@/modules/types"
 
 /** Inputs owned by this display/state mapping. */
 interface BookingDeskDisplayInput {
@@ -28,6 +30,36 @@ interface BookingDeskDisplayInput {
     readonly loadingSuffix: string
 }
 
+/** What `buildBookingDeskDisplay` returns. */
+export interface BuildBookingDeskDisplayResult {
+    words: {
+        say: ReturnType<typeof useTranslations<"workbenchBooking">>
+        resourceName: (id: string) => string
+        money: (value: number) => string
+    }
+    dayText: (date: string) => string
+    visible: BookingView[]
+    open: BookingView | undefined
+    cancelling: BookingView | undefined
+    activeServices: BookingServiceView[]
+    blank: PlacementFields
+    resourceOptions: {
+        id: string
+        label: string
+    }[]
+    anchor: string
+    nav: {
+        prevLabel: string
+        nextLabel: string
+        thisWeekLabel: string
+        dateLabel: string
+        date: string
+        showCancelledLabel: string
+        showCancelled: boolean
+        rangeText: string
+    }
+}
+
 /** Derives the visible booking agenda and localized navigation. */
 export const buildBookingDeskDisplay = ({
     board,
@@ -40,7 +72,7 @@ export const buildBookingDeskDisplay = ({
     cancelId,
     placement,
     loadingSuffix,
-}: BookingDeskDisplayInput) => {
+}: BookingDeskDisplayInput): BuildBookingDeskDisplayResult => {
     const words = {
         say: t,
         resourceName: (id: string) => board.resources.find((resource) => resource.id === id)?.name ?? "",
@@ -82,7 +114,17 @@ export const buildBookingDeskDisplay = ({
 export const buildBookingCancel = (
     cancelling: NonNullable<ReturnType<typeof useBookingRange>["board"]>["bookings"][number] | undefined,
     t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-) =>
+):
+    | {
+          cancel?: never
+      }
+    | {
+          cancel: {
+              title: string
+              confirmLabel: string
+              keepLabel: string
+          }
+      } =>
     cancelling === undefined
         ? {}
         : {
@@ -99,7 +141,10 @@ export const buildBookingCancel = (
 export const buildBookingLegend = (
     tones: Readonly<Record<string, BadgeTone>>,
     t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-) =>
+): {
+    text: string
+    tone: BadgeTone
+}[] =>
     Object.entries(tones).map(([status, tone]) => ({
         text: t(`status_${status}`),
         tone,
@@ -114,7 +159,46 @@ interface PlacementViewInput {
 }
 
 /** Resolves dialog copy and resource choices for the current add or move session. */
-export const bookingPlacementView = (connected: PlacementViewInput, autoResource: string) => {
+export const bookingPlacementView = (
+    connected: PlacementViewInput,
+    autoResource: string,
+):
+    | {
+          placement?: never
+      }
+    | {
+          placement: {
+              canForce: boolean
+              isPending: boolean
+              refusal?: string
+              mode: "add" | "move"
+              title: string
+              fields: PlacementFields
+              serviceOptions: {
+                  id: string
+                  label: string
+              }[]
+              resourceOptions: readonly {
+                  readonly id: string
+                  readonly label: string
+              }[]
+              labels: {
+                  name: string
+                  phone: string
+                  service: string
+                  date: string
+                  time: string
+                  resource: string
+                  party: string
+                  note: string
+                  notePlaceholder: string
+                  force: string
+                  save: string
+                  cancel: string
+                  close: string
+              }
+          }
+      } => {
     const { place, t } = connected
     if (place.draft === null || place.fields === null) return {}
     return {
@@ -152,8 +236,31 @@ interface BookingDeskEventsInput {
     readonly openMove: (id: string) => void
 }
 
+/** What `buildBookingDeskEvents` returns. */
+export interface BuildBookingDeskEventsResult {
+    add: () => unknown
+    placementChange: (patch: Partial<PlacementFields>) => void
+    placementSubmit: () => void
+    placementClose: () => void
+    prev: () => void
+    next: () => void
+    thisWeek: () => void
+    pickDate: (date: string) => void
+    toggleCancelled: (value: boolean) => void
+    dismissNotice: () => void
+    open: (id: string) => void
+    act: (id: string, action: string) => void
+    confirmCancel: () => void
+    keepBooking: () => void
+    detailAction: (action: string) => void
+    closeDetail: () => void
+}
+
 /** Maps the agenda controls and dialogs to the injected commands. */
-export const buildBookingDeskEvents = (connected: BookingDeskEventsInput, moveAction: string) => {
+export const buildBookingDeskEvents = (
+    connected: BookingDeskEventsInput,
+    moveAction: string,
+): BuildBookingDeskEventsResult => {
     const {
         openAdd,
         place,

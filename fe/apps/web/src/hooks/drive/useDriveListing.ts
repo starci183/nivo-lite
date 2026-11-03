@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react"
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import { useMutateDriveLinkedFolderSwr, useMutateDrivePickedFolderSwr } from "@/hooks/swr"
 import { googlePickerSettings } from "@/modules/config"
@@ -48,11 +48,26 @@ const listingOfChosenFiles = (docs: ReadonlyArray<PickedDoc>): DriveListing => (
     empty: false,
 })
 
+/** The view `useDriveListing` returns. */
+export interface DriveListingViewShape {
+    link: string
+    setLink: Dispatch<SetStateAction<string>>
+    listing: DriveListing | null
+    selected: readonly string[]
+    setSelected: Dispatch<SetStateAction<readonly string[]>>
+    error: string
+    isReading: boolean
+    hasPicker: boolean
+    readFolder: () => Promise<void>
+    pick: () => Promise<void>
+    clear: () => void
+}
+
 /**
  * Reading what can be added from Google Drive: a folder link (listed with the workspace grant) or Google Picker, where the console has
  * its keys (the token it asks for is used for one listing and never stored). The listing comes back with every readable file ticked.
  */
-export const useDriveListing = (failedPickerMessage: string) => {
+export const useDriveListing = (failedPickerMessage: string): DriveListingViewShape => {
     const settle = useSettledGraphQL()
     const { trigger: readLinked } = useMutateDriveLinkedFolderSwr()
     const { trigger: readPicked } = useMutateDrivePickedFolderSwr()

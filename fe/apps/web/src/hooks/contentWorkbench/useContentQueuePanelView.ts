@@ -1,5 +1,5 @@
 "use client"
-import type { ContentViews, ContentActions } from "@/modules/types"
+import type { ContentViews, ContentActions, ContentQueueFields, ContentQueueActions } from "@/modules/types"
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
@@ -18,8 +18,14 @@ interface Deciding {
     readonly id: string
     readonly decision: "approved" | "rejected"
 }
+/** The view `useContentQueuePanelView` returns. */
+export interface ContentQueuePanelView {
+    props: ContentQueueFields | undefined
+    on: ContentQueueActions
+}
+
 /** Owns the actual ContentQueuePanel data derivations and conditional controller lifetime. */
-export const useContentQueuePanelView = (input: ContentViewInput) => {
+export const useContentQueuePanelView = (input: ContentViewInput): ContentQueuePanelView => {
     const data = input.data
     const t = useTranslations("content")
     const actions = useContentItemActions()

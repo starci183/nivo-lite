@@ -14,7 +14,13 @@ import {
     phoneAreasOf,
     phoneRowsOf,
 } from "@/modules/agent-graph"
-import type { AgentGraphAction, AgentGraphPanelView } from "@/modules/types"
+import type {
+    AgentGraphAction,
+    AgentGraphPanelView,
+    DataSlot,
+    AgentGraphSideTab,
+    AgentGraphPhoneView,
+} from "@/modules/types"
 import { performAgentGraphAction } from "./agentGraph.shared"
 import type { AgentGraphSetup } from "./agentGraph.shared"
 import { useAgentGraphCommands } from "./useAgentGraphCommands"
@@ -23,12 +29,32 @@ import { useAgentGraphUi } from "./useAgentGraphUi"
 import { useAgentGraphWords } from "./useAgentGraphWords"
 import { useAgentGraphWrites } from "./useAgentGraphWrites"
 
+/** The view `useAgentGraphPanel` returns. */
+export interface AgentGraphPanelViewShape {
+    props: {
+        graph: DataSlot<AgentGraphPanelView>
+        graphPlaceholder: AgentGraphPanelView
+        sideTab: AgentGraphSideTab
+        phoneView: AgentGraphPhoneView
+        layout: {
+            phoneAreas: readonly string[]
+            phoneRows: readonly ("fill" | "auto")[]
+            mediumAreas: readonly string[]
+            mediumRows: readonly ("fill" | "auto")[]
+        }
+    }
+    on: {
+        retryGraph: () => void
+        graph: (action: AgentGraphAction) => void
+    }
+}
+
 /**
  * The graph panes of the Setup tab as one view with its commands: the map and its cards painted by selection or by a traced run,
  * the seven answers of the selected node, the editor of a decision point, the problems, the proposals and the history. Words are
  * resolved here; the person may edit when they are an owner or manager, and only the owner adds what widens the reach of the agent.
  */
-export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetup) => {
+export const useAgentGraphPanel = (installationId: string, setup: AgentGraphSetup): AgentGraphPanelViewShape => {
     const t = useTranslations("agentGraph")
     const tAgent = useTranslations("modulesCore")
     const tGovernance = useTranslations("governance")

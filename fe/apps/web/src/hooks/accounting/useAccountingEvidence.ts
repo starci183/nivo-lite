@@ -1,6 +1,6 @@
 "use client"
 
-import { creditRecordsOf, invoiceRecordsOf, orderRecordsOf } from "@/hooks/accountingRecords"
+import { creditRecordsOf, invoiceRecordsOf, orderRecordsOf, type AccountingRecordView } from "@/hooks/accountingRecords"
 import { useAccountingEvidenceForm } from "@/hooks/rhf"
 import { useScopedState } from "@/hooks/reuseables"
 import type { AccountingEvidenceValues } from "@/hooks/rhf"
@@ -13,8 +13,92 @@ import { supplierNeedOf } from "@/hooks/accountingUpcoming"
 import { useAccountingSubmit } from "./useAccountingSubmit"
 import { useRecordManualEvidence } from "./useRecordManualEvidence"
 
+/** The view `useAccountingEvidence` returns. */
+export interface AccountingEvidenceView {
+    props: {
+        lists: {
+            credits: {
+                label: string
+                empty: string
+                emptyBody: string
+                records: readonly AccountingRecordView[]
+            }
+            invoices: {
+                label: string
+                empty: string
+                emptyBody: string
+                records: readonly AccountingRecordView[]
+            }
+            orders: {
+                label: string
+                empty: string
+                emptyBody: string
+                records: readonly AccountingRecordView[]
+            }
+        }
+        isFormOpen: boolean
+        formOpenLabel: string
+        form: {
+            amount: string
+            date: string
+            maxDate: string
+            content: string
+            payer: string
+            note: string
+            isSaving: boolean
+            error: string | null
+            notice: string | null
+            dateLabel: string
+            contentLabel: string
+            contentHint: string
+            payerLabel: string
+            noteLabel: string
+            saveLabel: string
+            cancelLabel: string
+            foot: string
+            title: string
+            intro: string
+            amountLabel: string
+            amountHint: string | null
+        }
+        creditsTitle: string
+        creditsIntro: string
+        creditsEmpty: string
+        creditsEmptyBody: string
+        credits: readonly AccountingRecordView[]
+        invoicesTitle: string
+        invoicesIntro: string
+        invoicesEmpty: string
+        invoicesEmptyBody: string
+        internalNote: string
+        invoices: readonly AccountingRecordView[]
+        ordersTitle: string
+        ordersIntro: string
+        ordersEmpty: string
+        ordersEmptyBody: string
+        orders: readonly AccountingRecordView[]
+        supplierNeed: {
+            title: string
+            body: string
+            badge: string
+            actionLabel: string
+            actionHref: "/connections"
+        } | null
+    }
+    on: {
+        openForm: () => void
+        closeForm: () => void
+        changeField: (name: keyof AccountingEvidenceValues, value: string) => void
+        submitForm: () => void
+    }
+}
+
 /** The Evidence tab: credits, invoices and orders without an invoice, plus the manual evidence form. */
-export const useAccountingEvidence = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
+export const useAccountingEvidence = (
+    data: AccountingWorkbenchData,
+    isActive: boolean,
+    scope: string,
+): AccountingEvidenceView => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const [isFormOpen, setIsFormOpen] = useScopedState(false, isActive, scope)

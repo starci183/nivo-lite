@@ -2,8 +2,41 @@
 
 import { useTranslations } from "next-intl"
 
+/** The view `useImapCopy` returns. */
+export interface ImapCopyView {
+    fields: {
+        name: string
+        nameHint: string
+        email: string
+        provider: string
+        host: string
+        port: string
+        security: string
+        user: string
+        userHint: string
+        password: string
+    }
+    text: {
+        back: string
+        next: string
+        close: string
+        done: string
+        save: string
+        test: string
+        intro: string
+        imapOn: string
+        foldersTitle: string
+        foldersHint: string
+        sinceTitle: string
+        sinceHint: string
+        scheduleHint: string
+        scheduleLabel: string
+        saved: string
+    }
+}
+
 /** Owns the mailbox field and action words; pending remains the actual mutation flag. */
-export const useImapCopy = (isPending: boolean) => {
+export const useImapCopy = (isPending: boolean): ImapCopyView => {
     const t = useTranslations("connectorImap")
     return {
         fields: {

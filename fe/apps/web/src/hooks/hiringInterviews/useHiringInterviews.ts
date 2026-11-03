@@ -5,12 +5,29 @@ import type { HiringOwner } from "@/hooks/hiring"
 
 import { useMemo, useState } from "react"
 import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
-import type { HiringWorkbenchData } from "@/hooks/hiringWire"
+import type { HiringWorkbenchData, InterviewView } from "@/hooks/hiringWire"
 import { proposedOf, weekDays } from "./hiringInterviews.shared"
 import { useHiringInterviewCommands } from "./useHiringInterviewCommands"
+import type { CalendarDay } from "./hiringInterviews.shared"
+
+/** The view `useHiringInterviews` returns. */
+export interface HiringInterviewsView {
+    week: number
+    days: CalendarDay[]
+    proposed: InterviewView[]
+    copiedId: string | null
+    isPending: boolean
+    error: string | null
+    clearError: () => void
+    previousWeek: () => void
+    nextWeek: () => void
+    thisWeek: () => void
+    setStatus: (id: string, status: string) => void
+    copyLink: (id: string, link: string) => void
+}
 
 /** The interview calendar: the week being looked at, the invitations waiting, the status commands and the copied link. */
-export const useHiringInterviews = (data: HiringWorkbenchData, owner?: HiringOwner) => {
+export const useHiringInterviews = (data: HiringWorkbenchData, owner?: HiringOwner): HiringInterviewsView => {
     const run = useHiringRun(owner)
     const commands = useHiringInterviewCommands()
     const { copiedId, copy } = useHiringCopy(owner)

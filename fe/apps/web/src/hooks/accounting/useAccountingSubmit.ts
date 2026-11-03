@@ -12,8 +12,17 @@ interface AccountingOperation {
     readonly isCurrent: () => boolean
 }
 
+/** The view `useAccountingSubmit` returns. */
+export interface AccountingSubmitView {
+    isSaving: boolean
+    submit: <Values extends FieldValues>(
+        form: UseFormReturn<Values>,
+        save: (values: Values, isCurrent: () => boolean) => Promise<unknown>,
+    ) => void
+}
+
 /** Submits an editor's form as one operation: it holds the busy state until it ends and never clears a newer operation's. */
-export const useAccountingSubmit = (isActive: boolean, scope: string) => {
+export const useAccountingSubmit = (isActive: boolean, scope: string): AccountingSubmitView => {
     const [operation, setOperation] = useState<AccountingOperation | null>(null)
     const lifetime = useFeatureLifetime(isActive, scope)
     const runGraphQL = useGraphQLWithToast()

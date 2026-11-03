@@ -17,16 +17,94 @@ import {
     useLoyaltyRewardActions,
 } from "@/hooks/loyaltyRewards"
 import { useLoyaltyRewardForm } from "@/hooks/rhf"
-import type { RewardTextField } from "@/modules/types"
+import type { RewardTextField, DataSlot, RewardFormValues, SlotLabels } from "@/modules/types"
 
 /** Which reward the form edits: a reward id, or null for a new one. */
 interface Editing {
     readonly id: string | null
 }
 
+/** The view `useLoyaltyRewardsView` returns. */
+export interface LoyaltyRewardsViewShape {
+    props: {
+        slot: DataSlot<{
+            rows: {
+                id: string
+                name: string
+                kindLabel: string
+                statusLabel: string
+                active: boolean
+                cost: string
+                facts: string
+                note: string
+            }[]
+        }>
+        copy: {
+            form?: {
+                heading: string
+                values: RewardFormValues
+                isPending: boolean
+                nameError: string | undefined
+                costError: string | undefined
+                kindOptions: {
+                    id: string
+                    label: string
+                }[]
+                tierOptions: {
+                    id: string
+                    label: string
+                }[]
+                noteMax: number
+                nameLabel: string
+                kindLabel: string
+                costLabel: string
+                valueLabel: string
+                valueHint: string
+                percentLabel: string
+                stockLabel: string
+                stockHint: string
+                limitLabel: string
+                limitHint: string
+                minTierLabel: string
+                noteLabel: string
+                activeLabel: string
+                saveLabel: string
+                cancelLabel: string
+            }
+            title: string
+            addLabel: string
+            canManage: boolean
+            isPending: boolean
+            emptyTitle: string
+            emptyBody: string
+            presetLabel: string
+            readOnlyNote: string
+            activeLabel: string
+            editLabel: string
+            deleteLabel: string
+            askLabel: string
+            confirmLabel: string
+            cancelLabel: string
+        }
+        labels: SlotLabels
+    }
+    on: {
+        add: () => void
+        preset: () => void
+        edit: (id: string | null) => void
+        toggle: (id: string, active: boolean) => void
+        confirmRemove: (id: string) => Promise<void>
+        change: (field: RewardTextField, value: string) => void
+        setActive: (active: boolean) => void
+        submit: () => void
+        cancelForm: () => void
+        retry: () => void
+    }
+}
+
 /** The connected reward catalogue: managers add, edit, pause and remove rewards (outcome toasted); everyone else reads. */
 /** The connected Rewards tab: reads the loyalty board itself (SWR shares the one request with the other tabs). */
-export const useLoyaltyRewardsView = (input: LoyaltyPanelInput) => {
+export const useLoyaltyRewardsView = (input: LoyaltyPanelInput): LoyaltyRewardsViewShape => {
     const { read, board, slotLabels, retry } = useLoyaltyPanelBoard(input)
     const t = useTranslations("loyalty")
     const format = useFormatter()

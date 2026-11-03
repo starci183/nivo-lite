@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 import { mutate } from "@/modules/viewer-cache"
 import { useRefreshInstallation } from "@/hooks/agentSettings"
 import {
@@ -33,8 +33,22 @@ const APPLY_KEYS: ReadonlySet<unknown> = new Set([
 ])
 const isApplyKey = (key: unknown): boolean => Array.isArray(key) && APPLY_KEYS.has(key[0])
 
+/** The view `useSetupGates` returns. */
+export interface SetupGatesView {
+    editing: string
+    editText: string
+    setEditText: Dispatch<SetStateAction<string>>
+    startEdit: (gateKey: string, evidence: string) => void
+    stopEdit: () => void
+    isGating: boolean
+    gate: (gateKey: string, change: GateChange) => Promise<void>
+    isApplying: boolean
+    applyNote: ApplyNote
+    apply: () => Promise<void>
+}
+
 /** The gate checklist of the setup: confirm, reopen or edit one gate, and apply the draft as a version. A failure was already toasted. */
-export const useSetupGates = (setupSessionId: string, installationId: string) => {
+export const useSetupGates = (setupSessionId: string, installationId: string): SetupGatesView => {
     const runGraphQL = useGraphQLWithToast()
     const setGate = useMutateSetSetupGateSwr()
     const applySetup = useMutateApplySetupSwr()

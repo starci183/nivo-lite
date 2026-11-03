@@ -1,4 +1,4 @@
-import { unstable_serialize } from "swr/infinite"
+import { unstable_serialize, type SWRInfiniteKeyedMutator } from "swr/infinite"
 import type { SWRInfiniteResponse } from "swr/infinite"
 
 /** One forward page of a workspace list. */
@@ -56,7 +56,20 @@ export const connectionPageKey = (
 /** Flattens loaded pages while preserving rows and offering a retry when the next read fails. */
 export const connectionPageView = <Node extends { readonly id: string }>(
     query: SWRInfiniteResponse<ConnectionPage<Node>, Error>,
-) => {
+): {
+    data: Node[] | undefined
+    hasNextPage: boolean
+    isLoadingMore: boolean
+    paginationError: Error | undefined
+    error: Error | undefined
+    loadMore: () => void
+    retry: () => undefined
+    size: number
+    setSize: (size: number | ((_size: number) => number)) => Promise<ConnectionPage<Node>[] | undefined>
+    mutate: SWRInfiniteKeyedMutator<ConnectionPage<Node>[]>
+    isLoading: boolean
+    isValidating: boolean
+} => {
     const pages = query.data
     const last = pages?.at(-1)
     const loadedIds = new Set<string>()

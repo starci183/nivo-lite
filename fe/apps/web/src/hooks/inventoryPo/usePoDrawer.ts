@@ -23,6 +23,93 @@ import {
     type PoDrawerState,
 } from "./inventoryPo.shared"
 
+/** The view `usePoDrawer` returns. */
+export interface PoDrawerView {
+    open: (po: PoView) => void
+    props: {
+        copy: {
+            readonly approveAndSend: string
+            readonly close: string
+            readonly poCancel: string
+            readonly poCopied: string
+            readonly poCopy: string
+            readonly poExpected: string
+            readonly poExpectedHint: string
+            readonly poInvoice: string
+            readonly poInvoiceHint: string
+            readonly poItems: string
+            readonly poMessageDrafted: string
+            readonly poMessageHint: string
+            readonly poQty: string
+            readonly poReceive: string
+            readonly poReceiveCost: string
+            readonly poReceiveHint: string
+            readonly poReceiveQty: string
+            readonly poRemind: string
+            readonly poSaveDraft: string
+            readonly poSendForApproval: string
+            readonly poSentEmail: string
+            readonly poSupplier: string
+            readonly poSupplierHint: string
+            readonly poUnitCost: string
+            readonly reject: string
+        }
+        title: string
+        description: string
+        mode: "read" | "edit" | "receive"
+        summary: string
+        supplierId: string
+        suppliers: {
+            id: string
+            label: string
+        }[]
+        expected: string
+        lines: {
+            id: string
+            name: string
+            hint: string
+            qty: string
+            cost: string
+        }[]
+        readLines: {
+            id: string
+            text: string
+        }[]
+        total: string
+        invoiceNo: string
+        messageTitle: string
+        message: string
+        messageEditable: boolean
+        sendNote: string | null
+        sentByEmail: boolean
+        canEdit: boolean
+        canApprove: boolean
+        canReceive: boolean
+        canCopy: boolean
+        canCancel: boolean
+        copied: boolean
+        isPending: boolean
+        error: string | null
+        notice: string | null
+    } | null
+    on: {
+        supplier: (supplierId: string) => void
+        expected: (expected: string) => void
+        line: (index: number, field: "qty" | "cost", value: string) => void
+        invoice: (invoiceNo: string) => void
+        message: (message: string) => void
+        saveDraft: () => void
+        sendForApproval: () => void
+        approve: () => void
+        reject: () => void
+        receive: () => void
+        remind: () => void
+        copy: () => void
+        cancel: () => void
+        close: () => void
+    }
+}
+
 /** Opens, fills and acts on one purchase order; `props` is null while the drawer is closed. */
 export const usePoDrawer = (
     suppliers: ReadonlyArray<SupplierView>,
@@ -30,7 +117,7 @@ export const usePoDrawer = (
     commands: InventoryCommandSet<"updatePoDraft" | "requestSend" | "cancelPo" | "receivePo">,
     decisions: InventoryDecisions,
     lifetime?: InventoryPanelScope,
-) => {
+): PoDrawerView => {
     const { isActive = true, scope = "" } = lifetime ?? {}
 
     const t = useTranslations("workbenchInventory")

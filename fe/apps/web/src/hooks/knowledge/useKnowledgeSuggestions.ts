@@ -6,11 +6,18 @@ import { toSuggestionContext } from "@/modules/documents"
 import type { SuggestionContext } from "@/modules/documents"
 import { readError } from "@/hooks/workspaceread"
 
+/** The view `useKnowledgeSuggestions` returns. */
+export interface KnowledgeSuggestionsView {
+    context: SuggestionContext | undefined
+    error: unknown
+    isLoading: boolean
+}
+
 /**
  * The suggestion context of the active workspace (business type + the owner's decisions), in the shape the blocks know.
  * `enabled` gates the read to members allowed to see it (owners and managers).
  */
-export const useKnowledgeSuggestions = (enabled: boolean) => {
+export const useKnowledgeSuggestions = (enabled: boolean): KnowledgeSuggestionsView => {
     const swrRead = useQueryKnowledgeSuggestionsSwr(enabled)
     const { data, isLoading } = swrRead
     const error = readError(swrRead)

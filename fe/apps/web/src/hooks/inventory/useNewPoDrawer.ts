@@ -25,12 +25,58 @@ interface NewPoState {
 
 const blankLine = (serial: number): TypedLine => ({ key: `line-${serial}`, itemId: "", qty: "", cost: "" })
 
+/** The view `useNewPoDrawer` returns. */
+export interface NewPoDrawerView {
+    open: () => void
+    props: {
+        copy: {
+            readonly newPoTitle: string
+            readonly newPoHint: string
+            readonly close: string
+            readonly poSupplier: string
+            readonly poSupplierHint: string
+            readonly newPoItemHint: string
+            readonly poQty: string
+            readonly poUnitCost: string
+            readonly newPoAddLine: string
+            readonly newPoCreate: string
+        }
+        supplierId: string
+        suppliers: {
+            id: string
+            label: string
+        }[]
+        items: {
+            id: string
+            label: string
+        }[]
+        lines: {
+            itemLabel: string
+            key: string
+            itemId: string
+            qty: string
+            cost: string
+        }[]
+        isPending: boolean
+        error: string | null
+    } | null
+    on: {
+        supplier: (supplierId: string) => void
+        pick: (index: number, itemId: string) => void
+        qty: (index: number, qty: string) => void
+        cost: (index: number, cost: string) => void
+        addLine: () => void
+        create: () => void
+        close: () => void
+    }
+}
+
 /** Opens, fills and saves the new purchase order form; `props` is null while the drawer is closed. */
 export const useNewPoDrawer = (
     data: InventoryWorkbenchData,
     commands: InventoryCommandSet<"createPo">,
     lifetime?: InventoryPanelScope,
-) => {
+): NewPoDrawerView => {
     const { isActive = true, scope = "" } = lifetime ?? {}
 
     const say = useSay()

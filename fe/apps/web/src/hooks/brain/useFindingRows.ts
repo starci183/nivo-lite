@@ -24,8 +24,13 @@ export interface FindingRowContext {
     readonly upload: UploadTarget | null
 }
 
+/** The view `useFindingRows` returns. */
+export interface FindingRowsView {
+    rowOf: (finding: FindingView, context: FindingRowContext) => FindingRowView
+}
+
 /** Puts a finding into the words of a row: its badges, the one muted line, its evidence and its actions. */
-export const useFindingRows = () => {
+export const useFindingRows = (): FindingRowsView => {
     const t = useTranslations("dossierReview")
     const format = useFormatter()
     const rowOf = (finding: FindingView, context: FindingRowContext): FindingRowView => {

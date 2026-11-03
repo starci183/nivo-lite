@@ -7,8 +7,21 @@ import { navigation } from "@/modules/i18n"
 import { brainTabHref } from "@/modules/routes"
 import { usePublicDocCommands } from "./usePublicDocCommands"
 
+/** The view `usePublicWriteController` returns. */
+export interface PublicWriteControllerView {
+    canWrite: boolean
+    isPending: boolean
+    title: string
+    body: string
+    error: string | undefined
+    close: () => void
+    submit: (e?: React.BaseSyntheticEvent) => Promise<void>
+    setTitle: (value: string) => void
+    setBody: (value: string) => void
+}
+
 /** Owns the separate customer document form and closes it only after its draft is saved. */
-export const usePublicWriteController = (initialTitle: string) => {
+export const usePublicWriteController = (initialTitle: string): PublicWriteControllerView => {
     const t = useTranslations("publicBrain")
     const router = navigation.useRouter()
     const member = useWorkspaceMember()

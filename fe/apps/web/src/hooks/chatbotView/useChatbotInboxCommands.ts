@@ -23,8 +23,23 @@ interface ChatbotInboxCommandsInput {
     readonly setFilter: (filter: string) => void
 }
 
+/** The view `useChatbotInboxCommands` returns. */
+export interface ChatbotInboxCommandsView {
+    query: (value: string) => void
+    filter: (value: string) => void
+    select: (id: string) => void
+    back: () => void
+    toggleInfo: () => void
+    draft: (text: string) => void
+    send: () => void
+    toggleHandling: () => void
+    escalationDraft: (text: string) => void
+    sendAnswer: () => void
+    declineAnswer: () => void
+}
+
 /** Dispatches the original customer interactions and observes the local validation and command tails. */
-export const useChatbotInboxCommands = (input: ChatbotInboxCommandsInput) => {
+export const useChatbotInboxCommands = (input: ChatbotInboxCommandsInput): ChatbotInboxCommandsView => {
     const runGraphQL = useGraphQLWithToast()
     const {
         selectedId,

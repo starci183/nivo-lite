@@ -5,6 +5,7 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
+import type { DataSlot } from "@/modules/types"
 
 /** The tone each input status wears; a status that is not listed is neutral. */
 const STATUS_TONES = {
@@ -25,8 +26,40 @@ const toneOf = (status: string): "neutral" | "success" | "warning" | "danger" =>
  */
 const READABLE_REFERENCE_KINDS: ReadonlySet<string> = new Set(["payment", "order", "invoice"])
 
+/** The view `useInboxFeed` returns. */
+export interface InboxFeedView {
+    slot: DataSlot<
+        {
+            id: string
+            source: string
+            kind: string
+            ago: string
+            status: {
+                label: string
+                tone: "success" | "neutral" | "danger" | "warning"
+            }
+            body: string
+            meta: {
+                key: string
+                text: string
+                strong: boolean
+            }[]
+            duplicates: string | null
+            lead: {
+                href: string
+                label: string
+            } | null
+            office: {
+                href: "/chat"
+                label: string
+            } | null
+        }[]
+    >
+    refresh: () => undefined
+}
+
 /** The inbox feed of the active workspace, every row already in the words of the reader. */
-export const useInboxFeed = () => {
+export const useInboxFeed = (): InboxFeedView => {
     const t = useTranslations("inbox")
     const g = useTranslations("governance")
     const format = useFormatter()

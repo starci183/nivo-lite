@@ -57,8 +57,24 @@ export const maskRewardField = (field: RewardTextField, value: string): string =
 /** The kind a select answered, or a voucher when it is not one of the kinds. */
 export const rewardKindOf = (value: string | null): string => REWARD_KINDS.find((kind) => kind === value) ?? "voucher"
 
+/** What `rewardInputOf` returns. */
+export interface RewardInputOfResult {
+    id: string | null
+    key: string | null
+    name: string
+    kind: string
+    valueVnd: number
+    percent: number | null
+    pointsCost: number
+    stock: number | null
+    perCustomerLimit: number | null
+    minTierKey: string | null
+    note: string
+    active: boolean
+}
+
 /** The mutation input for the form values; `reward` is the one being edited (null creates). */
-export const rewardInputOf = (values: RewardFormValues, reward: LoyaltyRewardType | null) => ({
+export const rewardInputOf = (values: RewardFormValues, reward: LoyaltyRewardType | null): RewardInputOfResult => ({
     id: reward?.id ?? null,
     key: reward?.key ?? null,
     name: values.name.trim(),
@@ -73,6 +89,22 @@ export const rewardInputOf = (values: RewardFormValues, reward: LoyaltyRewardTyp
     active: values.active,
 })
 
+/** What `rewardToggleInputOf` returns. */
+export interface RewardToggleInputOfResult {
+    id: string | null
+    key: string | null
+    name: string
+    kind: string
+    valueVnd: number
+    percent: number | null
+    pointsCost: number
+    stock: number | null
+    perCustomerLimit: number | null
+    minTierKey: string | null
+    note: string
+    active: boolean
+}
+
 /** The mutation input that keeps a reward as it is and only sets whether it can be redeemed. */
-export const rewardToggleInputOf = (reward: LoyaltyRewardType, active: boolean) =>
+export const rewardToggleInputOf = (reward: LoyaltyRewardType, active: boolean): RewardToggleInputOfResult =>
     rewardInputOf({ ...rewardValuesOf(reward), active }, reward)

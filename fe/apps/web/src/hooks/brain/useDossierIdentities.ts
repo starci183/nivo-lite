@@ -12,8 +12,14 @@ export interface DossierIdentity {
     readonly status: string
 }
 
+/** The view `useDossierIdentities` returns. */
+export interface DossierIdentitiesView {
+    identityOf: (dossierId: string | undefined) => DossierIdentity | undefined
+    isLoading: boolean
+}
+
 /** The dossiers the workspace tracks, to look one up by id; the lookup answers undefined until they are read. */
-export const useDossierIdentities = () => {
+export const useDossierIdentities = (): DossierIdentitiesView => {
     const read = useQueryBrainDossiersSwr()
     const identityOf = (dossierId: string | undefined): DossierIdentity | undefined => {
         const record = read.data?.find((one) => one.id === dossierId)

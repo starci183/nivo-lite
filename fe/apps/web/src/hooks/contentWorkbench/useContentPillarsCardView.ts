@@ -1,14 +1,49 @@
 "use client"
 import { useTranslations } from "next-intl"
 import { useContentPillarsForm } from "@/hooks/rhf"
-import type { ContentViews, Pillar } from "@/modules/types"
+import type { ContentViews, Pillar, ContentWorkbenchCopy, ContentNoteView } from "@/modules/types"
 import { canManageContentSettings, contentSettingsNoteOf, type ContentViewInput } from "./contentWorkbench.shared"
 import { useContentPillarsCommands } from "./useContentPillarsCommands"
 
 const EMPTY_PILLARS: ReadonlyArray<Pillar> = []
 
+/** The view `useContentPillarsCardView` returns. */
+export interface ContentPillarsCardView {
+    props:
+        | {
+              copy: ContentWorkbenchCopy
+              rows: {
+                  key: string
+                  name: string
+                  description: string
+                  weight: number
+                  active: boolean
+                  id?: string | undefined
+              }[]
+              canManage: boolean
+              isPending: boolean
+              note: ContentNoteView | null
+          }
+        | undefined
+    on: {
+        change: (key: string, patch: Partial<ContentViews["pillarRow"]>) => void
+        add: () => void
+        remove: (key: string) => void
+        preset: () =>
+            | Promise<
+                  | {
+                        count: number
+                    }
+                  | undefined
+              >
+            | undefined
+        save: () => Promise<void> | undefined
+        dismissNote: () => void
+    }
+}
+
 /** Owns editable themes and resets only when their actual settings lifetime changes. */
-export const useContentPillarsCardView = (input: ContentViewInput) => {
+export const useContentPillarsCardView = (input: ContentViewInput): ContentPillarsCardView => {
     const form = useContentPillarsForm(input.data?.pillars ?? EMPTY_PILLARS)
     const { save, presets } = useContentPillarsCommands(input, form)
     const rows = form.watch("rows")

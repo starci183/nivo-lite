@@ -12,8 +12,36 @@ import { toast } from "@/modules/toast"
 import { useDossierReviewCommands } from "./useDossierReviewCommands"
 import { useDossierReviewSummary } from "./useDossierReviewSummary"
 
+/** The view `useBrainPageActions` returns. */
+export interface BrainPageActionsView {
+    props: {
+        readonly part: {
+            readonly label: string
+            readonly options: ReadonlyArray<{
+                readonly id: string
+                readonly label: string
+            }>
+            readonly value: string
+        }
+        readonly review: {
+            readonly label: string
+            readonly isRunning: boolean
+            readonly isPending: boolean
+            readonly runningLabel: string
+        } | null
+        readonly add: {
+            readonly label: string
+            readonly href: string
+        } | null
+    }
+    on: {
+        reviewAll: () => void
+        setPart: (id: string) => void
+    }
+}
+
 /** The part switch and authorized whole-page commands, through their actual settlement. */
-export const useBrainPageActions = (tab: BrainTab) => {
+export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
     const t = useTranslations("secondBrain")
     const review = useTranslations("dossierReview")
     const feedback = useTranslations("toast")

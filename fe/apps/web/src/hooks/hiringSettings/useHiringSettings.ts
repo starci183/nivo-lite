@@ -12,8 +12,20 @@ import { useMutateSaveHiringSettingsSwr } from "@/hooks/swr"
 import { toSettingsInput } from "./hiringSettings.shared"
 import type { SettingsValues } from "./hiringSettings.shared"
 
+/** The view `useHiringSettings` returns. */
+export interface HiringSettingsView {
+    values: SettingsValues
+    isPending: boolean
+    error: string | null
+    notice: string | null
+    setText: (name: FieldOf<SettingsValues, string>, value: string) => void
+    setNumber: (name: FieldOf<SettingsValues, number>, value: number) => void
+    setFlag: (name: FieldOf<SettingsValues, boolean>, value: boolean) => void
+    save: () => void
+}
+
 /** The settings form: its values, every change of them and the save. */
-export const useHiringSettings = (form: UseFormReturn<SettingsValues>, owner?: HiringOwner) => {
+export const useHiringSettings = (form: UseFormReturn<SettingsValues>, owner?: HiringOwner): HiringSettingsView => {
     const t = useTranslations("hiring")
     const run = useHiringRun(owner)
     const runGraphQL = useGraphQLWithToast()

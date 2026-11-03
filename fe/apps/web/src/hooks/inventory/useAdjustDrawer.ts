@@ -22,13 +22,70 @@ export interface AdjustState {
 
 const modeOf = (value: string): AdjustMode => (value === "delta" || value === "move" ? value : "set")
 
+/** The view `useAdjustDrawer` returns. */
+export interface AdjustDrawerView {
+    open: (item: ItemView) => void
+    props: {
+        copy: {
+            readonly adjustTitle: string
+            readonly close: string
+            readonly adjustMode: string
+            readonly adjustFrom: string
+            readonly adjustAt: string
+            readonly adjustTo: string
+            readonly adjustToHint: string
+            readonly adjustNote: string
+            readonly adjustReason: string
+            readonly adjustReasonHint: string
+            readonly valueLabel: string
+        }
+        itemName: string
+        unit: string
+        summary: string
+        modes: {
+            value: string
+            label: string
+        }[]
+        mode: AdjustMode
+        isMove: boolean
+        showPlaces: boolean
+        places: {
+            id: string
+            label: string
+        }[]
+        targets: {
+            id: string
+            label: string
+        }[]
+        from: string
+        to: string
+        value: string
+        reason: string
+        preview: string | null
+        submitLabel: string
+        canSubmit: boolean
+        isPending: boolean
+        error: string | null
+        notice: string | null
+    } | null
+    on: {
+        mode: (next: string) => void
+        from: (from: string) => void
+        to: (to: string) => void
+        value: (value: string) => void
+        reason: (reason: string) => void
+        submit: () => void
+        close: () => void
+    }
+}
+
 /** Opens, fills and applies the quantity form (set, change or move); `props` is null while the drawer is closed. */
 export const useAdjustDrawer = (
     locations: ReadonlyArray<LocationView>,
     defaultLocationId: string | null,
     commands: InventoryCommandSet<"adjustStock" | "transferStock">,
     lifetime?: InventoryPanelScope,
-) => {
+): AdjustDrawerView => {
     const { isActive = true, scope = "" } = lifetime ?? {}
 
     const t = useTranslations("workbenchInventory")

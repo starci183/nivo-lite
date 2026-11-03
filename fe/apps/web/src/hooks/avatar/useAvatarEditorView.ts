@@ -10,8 +10,20 @@ interface AvatarUploadState {
     readonly isBusy: boolean
 }
 
+/** The view `useAvatarEditorView` returns. */
+export interface AvatarEditorView {
+    label: string
+    prompt: string
+    hint: string
+    accept: string
+    error: string | undefined
+    removeLabel: string
+    canRemove: boolean
+    isBusy: boolean
+}
+
 /** The worded picture editor of a profile card: the picker copy, the refusal of a chosen file and the remove action. */
-export const useAvatarEditorView = (upload: AvatarUploadState, canRemove: boolean) => {
+export const useAvatarEditorView = (upload: AvatarUploadState, canRemove: boolean): AvatarEditorView => {
     const t = useTranslations("avatarEditor")
     return {
         label: t("label"),

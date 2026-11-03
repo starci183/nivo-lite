@@ -6,6 +6,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useOverviewActions } from "@/hooks/loyaltyOverview"
 import type { LoyaltyBoardType } from "@/hooks/swr"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 
 type LoyaltyTranslator = ReturnType<typeof useTranslations<"loyalty">>
 type LoyaltyFormatter = ReturnType<typeof useFormatter>
@@ -66,8 +67,61 @@ const overviewOf = (board: LoyaltyBoardType, words: OverviewWords) => {
     }
 }
 
+/** The view `useLoyaltyOverviewView` returns. */
+export interface LoyaltyOverviewView {
+    props: {
+        syncNote?: {
+            title: string
+            description: string
+        }
+        slot: DataSlot<{
+            tiers: {
+                key: string
+                label: string
+                value: number
+                max: number
+                valueLabel: string
+            }[]
+            stats: {
+                id: string
+                term: string
+                description: string
+            }[]
+            linkUrl: string
+        }>
+        copy: {
+            tiers: {
+                title: string
+                body: string
+            }
+            stats: {
+                title: string
+            }
+            link: {
+                title: string
+                body: string
+                copyLabel: string
+                copiedLabel: string
+                note: string
+            }
+            empty?: {
+                syncLabel?: string
+                title: string
+                body: string
+            }
+        }
+        labels: SlotLabels
+        isSyncing: boolean
+    }
+    on: {
+        sync: () => void
+        copied: () => void
+        retry: () => void
+    }
+}
+
 /** The connected Overview tab: reads the loyalty board itself (SWR shares the one request with the other tabs); tier meters, 30-day figures, the public check link and the sync of customers into members. */
-export const useLoyaltyOverviewView = (input: LoyaltyPanelInput) => {
+export const useLoyaltyOverviewView = (input: LoyaltyPanelInput): LoyaltyOverviewView => {
     const read = input.read
     const slotLabels = useSlotLabels()
     const retry = () => {

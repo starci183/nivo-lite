@@ -8,13 +8,21 @@ import { slotOfSwr } from "@/hooks/slot"
 import { useMutateSetAgentWorkSwr, useQueryAgentWorkSwr } from "@/hooks/swr"
 import { agentLifecycleTone, isSetupPending } from "@/modules/installations"
 import { useGraphQLWithToast } from "@/modules/toast"
-import type { AgentWorkSwitchView } from "@/modules/types"
+import type { AgentWorkSwitchView, DataSlot } from "@/modules/types"
+
+/** The view `useAgentWorkSwitch` returns. */
+export interface AgentWorkSwitchViewShape {
+    slot: DataSlot<AgentWorkSwitchView>
+    change: (enabled: boolean) => Promise<boolean>
+    isChanging: boolean
+    reload: () => undefined
+}
 
 /**
  * The kill switch of one agent: read from the same answer as the Work tab, set by the owner only. Its status is the one state of the
  * agent (the lifecycle): a switch left on never reads as running for an agent that is not set up; off reads as paused.
  */
-export const useAgentWorkSwitch = (installationId: string) => {
+export const useAgentWorkSwitch = (installationId: string): AgentWorkSwitchViewShape => {
     const t = useTranslations("agentWork")
     const tAgent = useTranslations("modulesCore")
     const { slot: installations } = useInstallations()

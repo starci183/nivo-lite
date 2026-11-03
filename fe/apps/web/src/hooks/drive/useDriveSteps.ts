@@ -2,15 +2,28 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import type { DriveStepId } from "./drive.shared"
+import type { DriveStepId, DriveGrantStanding } from "./drive.shared"
 import { useDrivePage } from "./useDrivePage"
 import { useDriveProgress } from "./useDriveProgress"
+
+/** The view `useDriveSteps` returns. */
+export interface DriveStepsView {
+    steps: {
+        id: DriveStepId
+        title: string
+        hint: string
+        summary: string
+        isOpen: boolean
+    }[]
+    standing: DriveGrantStanding | undefined
+    toggle: (id: string, isOpen: boolean) => void
+}
 
 /**
  * The three steps of the Google Drive page (grant the read access, choose documents, find them in Second Brain): the grant is done once
  * Google answered, choosing is done once a source came from Drive, and the first step not done opens on its own.
  */
-export const useDriveSteps = () => {
+export const useDriveSteps = (): DriveStepsView => {
     const t = useTranslations("driveConnection")
     const { slot } = useDrivePage()
     const { count } = useDriveProgress()

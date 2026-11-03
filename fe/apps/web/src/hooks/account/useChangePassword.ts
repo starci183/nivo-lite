@@ -13,8 +13,15 @@ export interface PasswordChange {
     readonly next: string
 }
 
+/** The view `useChangePassword` returns. */
+export interface ChangePasswordView {
+    change: (input: PasswordChange) => Promise<boolean>
+    isPending: boolean
+    error: string | undefined
+}
+
 /** Checks the current password and sets the new one through the `changePassword` mutation, then toasts the outcome. */
-export const useChangePassword = () => {
+export const useChangePassword = (): ChangePasswordView => {
     const t = useTranslations("account")
     const tToast = useTranslations("toast")
     const { trigger, isMutating } = useMutateChangePasswordSwr()

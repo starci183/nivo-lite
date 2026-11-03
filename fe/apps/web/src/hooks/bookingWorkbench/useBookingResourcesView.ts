@@ -18,12 +18,80 @@ import type { ResourceFields } from "@/modules/types"
 
 const BLANK: ResourceFields = { name: "", kind: "staff", capacity: 1, active: true, staffId: "none" }
 
+/** The view `useBookingResourcesView` returns. */
+export interface BookingResourcesView {
+    readonly props: {
+        readonly isPending: boolean
+        readonly notice?: {
+            tone: "negative" | "affirmative"
+            text: string
+        }
+        readonly removing?: {
+            title: string
+            description: string
+            confirmLabel: string
+            cancelLabel: string
+        }
+        readonly form?: {
+            heading: string
+            fields: ResourceFields
+            nameLabel: string
+            kindLabel: string
+            capacityLabel: string
+            activeLabel: string
+            staffLabel: string
+            staffOptions: {
+                id: string
+                label: string
+            }[]
+            hoursHeading: string
+            hoursHint: string
+            hours: {
+                day: 3 | 2 | 1 | 4 | 5 | 6 | 7
+                label: string
+                value: string
+            }[]
+            hoursPlaceholder: string
+            saveLabel: string
+            saveHoursLabel: string
+            cancelLabel: string
+            canSaveHours: boolean
+        }
+        readonly title: string
+        readonly hint: string
+        readonly list: {
+            readonly label: string
+            readonly emptyText: string
+            readonly editLabel: string
+            readonly removeLabel: string
+            readonly rows: {
+                id: string
+                title: string
+                detail: string
+            }[]
+        }
+        readonly addLabel: string
+    }
+    readonly on: {
+        readonly add: () => void
+        readonly edit: (id: string) => void
+        readonly ask: (id: string) => void
+        readonly change: (patch: Partial<ResourceFields>) => false | void
+        readonly changeHours: (day: number, value: string) => false | void
+        readonly save: () => void
+        readonly saveHours: () => void
+        readonly cancelForm: () => void
+        readonly confirmRemove: () => void
+        readonly cancelRemove: () => void
+    }
+}
+
 /** Draws the connected view from its current state. */
 export const useBookingResourcesView = (
     isActive: boolean,
     scope: string,
     boardRead: ReturnType<typeof useBookingBoard>,
-) => {
+): BookingResourcesView => {
     const { board } = boardRead
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()

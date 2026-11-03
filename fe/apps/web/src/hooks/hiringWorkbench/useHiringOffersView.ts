@@ -6,6 +6,8 @@ import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import type { OfferView } from "@/hooks/hiringWire"
 import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
+import type { HiringWorkbenchCopy } from "@/modules/types"
+import type { BadgeTone } from "@starci/grammar/common"
 
 type ResolvedActions = {
     readonly open: (candidateId: string) => void
@@ -19,8 +21,33 @@ const offerCopyLabel = (offer: OfferView, copiedId: string | null, t: ReturnType
     if (offer.status !== "sent") return null
     return t(copiedId === offer.id ? "copiedLink" : "offersCopy")
 }
+/** The view `useHiringOffersView` returns. */
+export interface HiringOffersViewShape {
+    props: {
+        copy: HiringWorkbenchCopy
+        approveLabel: string | null
+        decisionsHref: "/decisions"
+        fact: string
+        rows: {
+            id: string
+            candidateId: string
+            name: string
+            statusLabel: string
+            statusTone: BadgeTone
+            meta: string
+            sent: string | null
+            isWaiting: boolean
+            copyLabel: string | null
+            canCancel: boolean
+        }[]
+        isBusy: boolean
+        error: string | null
+    }
+    on: ResolvedActions
+}
+
 /** Owns HiringOffers's resolved data, commands and actual panel activation. */
-export const useHiringOffersView = (input: HiringViewInput) => {
+export const useHiringOffersView = (input: HiringViewInput): HiringOffersViewShape => {
     const owner = { isActive: input.isActive && input.isReady, scope: input.scope }
 
     const t = useTranslations("hiring")

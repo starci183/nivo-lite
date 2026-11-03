@@ -29,8 +29,103 @@ const messageOf = (error: unknown, fallback: string) => {
     return error ? fallback : undefined
 }
 
+/** The view `useWorkspacePayment` returns. */
+export interface WorkspacePaymentView {
+    workspace:
+        | {
+              id: string
+              name: string
+              status: string
+              planCode: string | null
+              paidUntil: string | null
+              role: string
+          }
+        | undefined
+    payment:
+        | {
+              id: string
+              workspaceId: string
+              planCode: string
+              amountVnd: number
+              orderCode: string
+              status: string
+              expiresAt: string
+              paidAt: string | null
+              createdAt: string
+              kind: string
+              packCode: string | null
+              qrUrl: string
+              detail: {
+                  credit: number | null
+                  credits: number | null
+                  daysLeft: number | null
+                  from: string | null
+                  fromPrice: number | null
+                  paidUntil: string | null
+                  to: string | null
+                  toPrice: number | null
+                  cycle: string | null
+                  tierCredits: number | null
+                  seats: number | null
+                  promo: boolean | null
+              }
+              bank: {
+                  account: string
+                  bank: string
+                  holder: string
+              }
+          }
+        | null
+        | undefined
+    plan:
+        | {
+              code: string
+              nameVi: string
+              nameEn: string
+              priceVnd: number
+              period: string
+              seats: number
+              sort: number
+              aiCreditsPerMonth: number | null
+              isCustom: boolean
+              priceAnnualVnd: number | null
+              annualDiscountPct: number | null
+              promoPriceVnd: number | null
+              promoMonths: number | null
+              storageGb: number | null
+              individual: boolean
+              perSeat: boolean
+              listed: boolean
+              features: {
+                  vi: Array<string>
+                  en: Array<string>
+              }
+              tiers: Array<{
+                  creditsPerMonth: number
+                  priceVnd: number
+                  perSeat: boolean
+              }>
+              packs: Array<{
+                  creditsPerMonth: number
+                  priceVnd: number
+                  perSeat: boolean
+              }>
+          }
+        | null
+        | undefined
+    left: number | undefined
+    error: string | undefined
+    loading: boolean
+    creating: boolean
+    paid: boolean
+    expired: boolean
+    canRegenerate: boolean
+    regenerate: () => void
+    returnTo: string
+}
+
 /** Browser payment state: request a job, then read its order and poll until the transfer settles. */
-export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors) => {
+export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors): WorkspacePaymentView => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
     const { select } = useActiveWorkspace()

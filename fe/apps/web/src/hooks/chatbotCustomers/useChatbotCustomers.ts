@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { useFeatureReset } from "@/hooks/reuseables"
 import { slotOfReads } from "@/hooks/slot"
 import { agentHref } from "@/modules/installations"
@@ -14,9 +14,26 @@ import {
 } from "./chatbotCustomers.shared"
 import type { CustomerFilter } from "./chatbotCustomers.shared"
 import { useChatbotWorkbench } from "@/hooks/chatbot"
+import type { DataSlot, CustomerRowView } from "@/modules/types"
+
+/** The view `useChatbotCustomers` returns. */
+export interface ChatbotCustomersViewShape {
+    slot: DataSlot<readonly CustomerRowView[]>
+    filter: "all" | "progress" | "today" | "needs"
+    query: string
+    isFull: boolean
+    full: string
+    chips: {
+        id: "all" | "progress" | "today" | "needs"
+        label: string
+    }[]
+    setFilter: (id: string) => void
+    setQuery: Dispatch<SetStateAction<string>>
+    reload: () => void
+}
 
 /** The Customers tab of one Chatbot instance: the customers behind its conversations, narrowed by a chip and a search. */
-export const useChatbotCustomers = (installationId: string | null, isActive = true) => {
+export const useChatbotCustomers = (installationId: string | null, isActive = true): ChatbotCustomersViewShape => {
     const t = useTranslations("workbenchChatbot")
     const workbench = useChatbotWorkbench(installationId, null, isActive)
     const [filter, setFilter] = useState<CustomerFilter>("all")

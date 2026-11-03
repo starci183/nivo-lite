@@ -1,4 +1,4 @@
-import type { BookingDetailFact, BookingView } from "@/modules/types"
+import type { BookingDetailFact, BookingView, BookingAction } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
 import { ACTION_KEY, actionsOf, isMovable, isNextAction, MOVE_ACTION, rowIntent } from "@/modules/booking-desk"
 import type { PlacementFields } from "./useBookingPlacement"
@@ -31,8 +31,35 @@ export interface DeskWords {
 
 const joined = (parts: ReadonlyArray<string>): string => parts.filter((part) => part !== "").join(" · ")
 
+/** What `bookingRowOf` returns. */
+export interface BookingRowOfResult {
+    id: string
+    time: string
+    status: {
+        text: string
+        tone: BadgeTone
+    }
+    flags: (
+        | {
+              text: string
+              tone: "neutral"
+          }
+        | {
+              text: string
+              tone: "warning"
+          }
+    )[]
+    who: string
+    where: string
+    actions: {
+        id: "done" | "confirm" | "check-in" | "no-show"
+        label: string
+        intent: "neutral" | "alternative"
+    }[]
+}
+
 /** One booking as the agenda draws it. */
-export const bookingRowOf = (booking: BookingView, words: DeskWords, withActions: boolean) => ({
+export const bookingRowOf = (booking: BookingView, words: DeskWords, withActions: boolean): BookingRowOfResult => ({
     id: booking.id,
     time: `${booking.startClock}-${booking.endClock}`,
     status: {
@@ -107,7 +134,59 @@ const nextOf = (booking: BookingView, words: DeskWords) => {
 }
 
 /** The detail dialog of a booking: its facts, status and the actions its status allows. */
-export const detailOf = (booking: BookingView, words: DeskWords) => ({
+export const detailOf = (
+    booking: BookingView,
+    words: DeskWords,
+):
+    | {
+          actions: (
+              | {
+                    id: BookingAction
+                    label: string
+                    intent: "neutral" | "destructive"
+                }
+              | {
+                    id: string
+                    label: string
+                    intent: "neutral"
+                }
+          )[]
+          next?: never
+          customerLabel: string
+          customerHref?: string
+          title: string
+          description: string
+          closeLabel: string
+          statusLabel: string
+          statusTone: BadgeTone
+          items: readonly BookingDetailFact[]
+      }
+    | {
+          actions: (
+              | {
+                    id: BookingAction
+                    label: string
+                    intent: "neutral" | "destructive"
+                }
+              | {
+                    id: string
+                    label: string
+                    intent: "neutral"
+                }
+          )[]
+          next: {
+              id: BookingAction
+              label: string
+          }
+          customerLabel: string
+          customerHref?: string
+          title: string
+          description: string
+          closeLabel: string
+          statusLabel: string
+          statusTone: BadgeTone
+          items: readonly BookingDetailFact[]
+      } => ({
     title: booking.customer === "" ? words.say("customerFallback") : booking.customer,
     description: booking.service,
     closeLabel: words.say("close"),
@@ -132,13 +211,35 @@ export const detailOf = (booking: BookingView, words: DeskWords) => ({
 })
 
 /** The bookings of a range grouped by local day, oldest first. */
-export const dayGroups = (bookings: ReadonlyArray<BookingView>) => {
+export const dayGroups = (
+    bookings: ReadonlyArray<BookingView>,
+): {
+    id: string
+    rows: BookingView[]
+}[] => {
     const days = [...new Set(bookings.map((booking) => booking.date))].sort((left, right) => left.localeCompare(right))
     return days.map((day) => ({ id: day, rows: bookings.filter((booking) => booking.date === day) }))
 }
 
+/** What `placementLabelsOf` returns. */
+export interface PlacementLabelsOfResult {
+    name: string
+    phone: string
+    service: string
+    date: string
+    time: string
+    resource: string
+    party: string
+    note: string
+    notePlaceholder: string
+    force: string
+    save: string
+    cancel: string
+    close: string
+}
+
 /** The field labels of the add and move dialog; `kind` picks the wording of the save button. */
-export const placementLabelsOf = (say: Say, kind: "add" | "move") => ({
+export const placementLabelsOf = (say: Say, kind: "add" | "move"): PlacementLabelsOfResult => ({
     name: say("fCustomer"),
     phone: say("fPhone"),
     service: say("fService"),

@@ -30,8 +30,26 @@ interface Editing {
     readonly start: AgentGraphDecideForm | null
 }
 
+/** The view `useAgentGraphUi` returns. */
+export interface AgentGraphUiView {
+    ui: AgentGraphUi
+    /** Changes the form being edited with a function of it; nothing when none is open. */
+    changeForm: (change: (form: AgentGraphDecideForm) => AgentGraphDecideForm) => void
+    /** Opens the editor on a decision point and remembers how it started. */
+    openForm: (value: AgentGraphDecideForm) => void
+    closeForm: () => void
+    pickAdder: (field: "action" | "fact", value: string) => void
+    select: (key: string) => void
+    openNode: (key: string) => void
+    closeDrawer: () => void
+    sideTab: (value: string) => void
+    phoneView: (value: string) => void
+    trace: (id: string) => void
+    untrace: () => void
+}
+
 /** The choices a person makes on the graph panes that are not data: what is selected, which tab shows, what is edited or traced. */
-export const useAgentGraphUi = (initialRunId: string) => {
+export const useAgentGraphUi = (initialRunId: string): AgentGraphUiView => {
     const [selectedKey, setSelectedKey] = useState("")
     const [tabs, setTabs] = useState<Tabs>({ sideTab: "chat", phoneView: "branches" })
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)

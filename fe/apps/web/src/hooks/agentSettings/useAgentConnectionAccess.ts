@@ -19,12 +19,19 @@ import { readError } from "@/hooks/workspaceread"
 
 const NO_ACCESS = "none"
 
+/** The view `useAgentConnectionAccess` returns. */
+export interface AgentConnectionAccessView {
+    slot: DataSlot<readonly AgentConnectionView[]>
+    pick: (connection: AgentConnectionView, level: string) => Promise<boolean>
+    isSaving: boolean
+}
+
 /**
  * The connections an agent can work through, with the level it has on each, and the way to change a level ("none" removes it). The agent
  * is offered the data connectors of the workspace and the providers its module declares; a disconnected connection stays only when the
  * agent still holds a grant on it. A change answers whether it worked; a failure was already toasted with the server message.
  */
-export const useAgentConnectionAccess = (agentId: string | null, moduleKey: string) => {
+export const useAgentConnectionAccess = (agentId: string | null, moduleKey: string): AgentConnectionAccessView => {
     const t = useTranslations("modulesCore")
     const runGraphQL = useGraphQLWithToast()
     const all = useQueryConnectionsSwr()

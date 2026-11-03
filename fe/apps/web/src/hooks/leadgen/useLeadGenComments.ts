@@ -7,8 +7,44 @@ import { useLeadGenCommentForm } from "@/hooks/rhf"
 import type { LeadGenComment } from "@/modules/types"
 import { useApproveLeadGenComment } from "./useApproveLeadGenComment"
 
+/** The view `useLeadGenComments` returns. */
+export interface LeadGenCommentsViewShape {
+    props: {
+        label: string
+        emptyTitle: string
+        emptyBody: string
+        draftLabel: string
+        noDraft: string
+        editLabel: string
+        approveLabel: string
+        cancelLabel: string
+        saveApproveLabel: string
+        retryLabel: string
+        busyId: string | null
+        isApproving: boolean
+        rows: {
+            id: string
+            title: string
+            description: string
+            sourceLabel: string
+            comment: string
+            draft: string
+            isEditing: boolean
+            draftValue: string
+            error: string | null
+        }[]
+    }
+    on: {
+        edit: (id: string) => void
+        cancel: () => void
+        draft: (_id: string, value: string) => void
+        approve: (id: string, edited: boolean) => void
+        retry: () => void
+    }
+}
+
 /** The comments tab: the editor, its validation and the approval job, as the words and the actions the tab draws. */
-export const useLeadGenComments = (rows: ReadonlyArray<LeadGenComment>, isActive = true) => {
+export const useLeadGenComments = (rows: ReadonlyArray<LeadGenComment>, isActive = true): LeadGenCommentsViewShape => {
     const t = useTranslations("workbenchLeadGen")
     const format = useFormatter()
     const form = useLeadGenCommentForm()

@@ -115,7 +115,11 @@ export const planCardOf = (
 }
 
 /** The payment history rows: amount, when, plan and order code, and the order status. */
-export const ordersSlotOf = (words: BillingWords, orders: BillingReads["orders"], isRefused: boolean) =>
+export const ordersSlotOf = (
+    words: BillingWords,
+    orders: BillingReads["orders"],
+    isRefused: boolean,
+): DataSlot<readonly BillingRowView[]> =>
     refusedOr(
         isRefused,
         mapSlot(slotOfSwr(orders), (items): ReadonlyArray<BillingRowView> =>
@@ -132,7 +136,11 @@ export const ordersSlotOf = (words: BillingWords, orders: BillingReads["orders"]
     )
 
 /** The transfers held for review: why each is held, its amount and arrival time, and its transfer note. */
-export const reviewSlotOf = (words: BillingWords, review: BillingReads["review"], isRefused: boolean) =>
+export const reviewSlotOf = (
+    words: BillingWords,
+    review: BillingReads["review"],
+    isRefused: boolean,
+): DataSlot<readonly BillingRowView[]> =>
     refusedOr(
         isRefused,
         mapSlot(slotOfSwr(review), (items): ReadonlyArray<BillingRowView> =>

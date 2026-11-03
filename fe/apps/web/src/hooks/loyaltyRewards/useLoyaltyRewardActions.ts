@@ -11,8 +11,17 @@ import {
 import type { rewardInputOf } from "./loyaltyRewards.shared"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 
+/** The view `useLoyaltyRewardActions` returns. */
+export interface LoyaltyRewardActionsView {
+    isPending: boolean
+    save: (input: ReturnType<typeof rewardInputOf>, finish: () => void) => void
+    /** Native confirmation closes only after a real deletion and its workspace refresh settle. */
+    remove: (rewardId: string, finish: () => void) => Promise<void>
+    preset: () => void
+}
+
 /** The commands on the reward catalogue; every answer becomes a toast and revalidates the loyalty board. */
-export const useLoyaltyRewardActions = (activation: LoyaltyPanelActivation) => {
+export const useLoyaltyRewardActions = (activation: LoyaltyPanelActivation): LoyaltyRewardActionsView => {
     const t = useTranslations("loyalty")
     const command = useLoyaltyCommand(activation)
     const tToast = useTranslations("toast")

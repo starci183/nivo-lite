@@ -12,8 +12,24 @@ const CONNECTION_TONE: Readonly<Record<ConnectionState, BadgeTone>> = {
     pending: "neutral",
 }
 
+/** The view `useAgentDashboardConnections` returns. */
+export interface AgentDashboardConnectionsView {
+    manageLabel: string
+    manageHref: "/connections"
+    rows: {
+        id: string
+        name: string
+        description: string
+        statusLabel: string
+        statusTone: BadgeTone
+        accessLabel: string
+    }[]
+    emptyMessage: string
+    emptyDescription: string
+}
+
 /** Resolves connection status, purpose and access copy for the dashboard. */
-export const useAgentDashboardConnections = (dashboard: AgentDashboardView) => {
+export const useAgentDashboardConnections = (dashboard: AgentDashboardView): AgentDashboardConnectionsView => {
     const t = useTranslations("agentDashboard")
     const tc = useTranslations("connections")
     return {

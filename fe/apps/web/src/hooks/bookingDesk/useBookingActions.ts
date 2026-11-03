@@ -20,8 +20,21 @@ import { NOTICE_OF_ACTION } from "@/modules/booking-desk"
 import { useBookingTransition } from "./useBookingTransition"
 import type { DeskNotice } from "./bookingDesk.shared"
 
+/** The view `useBookingActions` returns. */
+export interface BookingActionsView {
+    notice: DeskNotice | null
+    isBusy: boolean
+    dismiss: () => void
+    announce: (code: string, tone?: DeskNotice["tone"]) => void
+    act: (id: string, action: BookingAction, finish: () => void) => void
+}
+
 /** The owner's commands on bookings; every answer becomes a toast and revalidates every cached board. */
-export const useBookingActions = (onChanged: () => Promise<unknown>, isActive = true, scope = "") => {
+export const useBookingActions = (
+    onChanged: () => Promise<unknown>,
+    isActive = true,
+    scope = "",
+): BookingActionsView => {
     const t = useTranslations("workbenchBooking")
     const withToast = useGraphQLWithToast()
     const { mutate } = useSWRConfig()

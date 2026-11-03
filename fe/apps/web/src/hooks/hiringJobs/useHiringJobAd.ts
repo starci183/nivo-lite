@@ -9,8 +9,19 @@ import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
 import type { AdView, JobView } from "@/hooks/hiringWire"
 import { useHiringJobCommands } from "./useHiringJobCommands"
 
+/** The view `useHiringJobAd` returns. */
+export interface HiringJobAdView {
+    ads: AdView | null
+    meta: string | null
+    copiedId: string | null
+    isPending: boolean
+    error: string | null
+    copy: (id: string, text: string) => void
+    generate: () => void
+}
+
 /** The ad dialog of one job: the three variants (stored, or just written), the time the writing took, and the copy buttons. */
-export const useHiringJobAd = (job: JobView | undefined, owner?: HiringOwner) => {
+export const useHiringJobAd = (job: JobView | undefined, owner?: HiringOwner): HiringJobAdView => {
     const t = useTranslations("hiring")
     const run = useHiringRun(owner)
     const lifetime = useFeatureLifetime(owner?.isActive ?? true, owner?.scope ?? "")

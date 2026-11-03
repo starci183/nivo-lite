@@ -74,12 +74,66 @@ const buildBookingServicesState = ({
     return { t, board, format, draft, removing, isPending, setDraft, setRemoveId, save, remove } as const
 }
 
+/** The view `useBookingServicesView` returns. */
+export interface BookingServicesView {
+    readonly props: {
+        readonly isPending: boolean
+        readonly removing?: {
+            title: string
+            description: string
+            confirmLabel: string
+            cancelLabel: string
+        }
+        readonly form?: {
+            heading: string
+            fields: ServiceFields
+            nameLabel: string
+            durationLabel: string
+            bufferLabel: string
+            priceLabel: string
+            pricePlaceholder: string
+            kindLabel: string
+            kindPlaceholder: string
+            followupLabel: string
+            followupPlaceholder: string
+            descriptionLabel: string
+            activeLabel: string
+            saveLabel: string
+            cancelLabel: string
+        }
+        readonly title: string
+        readonly hint: string
+        readonly list: {
+            readonly label: string
+            readonly emptyText: string
+            readonly editLabel: string
+            readonly removeLabel: string
+            readonly rows: {
+                id: string
+                title: string
+                detail: string
+            }[]
+        }
+        readonly addLabel: string
+    }
+    readonly on: {
+        readonly add: () => void
+        readonly edit: (id: string) => void
+        readonly ask: (id: string) => void
+        readonly change: (patch: Partial<ServiceFields>) => false | void
+        readonly save: () => void
+        readonly cancelForm: () => void
+        readonly confirmRemove: () => void
+        readonly cancelRemove: () => void
+    }
+}
+
 /** Draws the connected view from its current state. */
 export const useBookingServicesView = (
     isActive: boolean,
     scope: string,
     boardRead: ReturnType<typeof useBookingBoard>,
-) => {
+): BookingServicesView => {
     const { board } = boardRead
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()

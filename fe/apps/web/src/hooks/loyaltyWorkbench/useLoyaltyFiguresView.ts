@@ -3,9 +3,32 @@ import { toast } from "@/modules/toast"
 
 import { useFormatter, useTranslations } from "next-intl"
 import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import type { DataSlot, SlotLabels } from "@/modules/types"
+
+/** The view `useLoyaltyFiguresView` returns. */
+export interface LoyaltyFiguresView {
+    props: {
+        label: string
+        slot: DataSlot<
+            {
+                id: string
+                value: string
+                meta: string
+            }[]
+        >
+        captions: {
+            id: string
+            term: string
+        }[]
+        labels: SlotLabels
+    }
+    on: {
+        retry: () => void
+    }
+}
 
 /** The connected figures strip of the loyalty workbench: active members, points issued, redemptions and members at risk. */
-export const useLoyaltyFiguresView = (input: LoyaltyPanelInput) => {
+export const useLoyaltyFiguresView = (input: LoyaltyPanelInput): LoyaltyFiguresView => {
     const t = useTranslations("loyalty")
     const format = useFormatter()
     const slotLabels = useSlotLabels()

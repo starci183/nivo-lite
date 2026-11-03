@@ -15,11 +15,17 @@ interface FirstEventWatch {
     readonly isActive: boolean
 }
 
+/** The view `useFirstEvent` returns. */
+export interface FirstEventView {
+    event: FirstEvent | null
+    failed: boolean
+}
+
 /**
  * Waits for the first event of a connection: the status query is asked every few seconds (SWR refresh interval) until an event
  * arrives, then it stops. A failed check is shown softly and tried again on the next tick.
  */
-export const useFirstEvent = (watch: FirstEventWatch) => {
+export const useFirstEvent = (watch: FirstEventWatch): FirstEventView => {
     const [event, setEvent] = useState<FirstEvent | null>(null)
     const listening = watch.isActive && watch.connectionId !== null && event === null
     const read = useQueryConnectionFirstEventSwr(listening ? (watch.connectionId ?? undefined) : undefined, {

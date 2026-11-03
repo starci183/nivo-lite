@@ -9,6 +9,10 @@ import type { AddPreset } from "./useBatchOptions"
 import { useLinkRows } from "./useLinkRows"
 import { useNoteDraft } from "./useNoteDraft"
 import { useQueuedDocs, type QueuedDoc } from "./useQueuedDocs"
+import type { AddQueue } from "./useAddQueue"
+import type { LinkRows } from "./useLinkRows"
+import type { NoteDraft } from "./useNoteDraft"
+import type { BatchOptions } from "./useBatchOptions"
 
 /** What the drawer is adding: files and links, a written note, or a list of questions and answers. */
 export type AddMode = "files" | "write" | "faq"
@@ -30,8 +34,29 @@ const modeOf = (key: string): AddMode => {
     return key === "faq" ? "faq" : "files"
 }
 
+/** The view `useAddDocuments` returns. */
+export interface AddDocumentsView {
+    queue: AddQueue
+    linkRows: LinkRows
+    note: NoteDraft
+    options: BatchOptions
+    mode: AddMode
+    isBusy: boolean
+    failure: string | null
+    queuedCount: number
+    queuedDocs: readonly QueuedDoc[]
+    pendingCount: number
+    hasFailed: boolean
+    isDone: boolean
+    noteBody: string
+    pickMode: (key: string) => void
+    submit: () => undefined
+    retryItem: (id: string) => undefined
+    close: () => void
+}
+
 /** The state and commands of the Add documents drawer. */
-export const useAddDocuments = (input: AddDocumentsInput) => {
+export const useAddDocuments = (input: AddDocumentsInput): AddDocumentsView => {
     const { actions, instances, preset, faqLabels } = input
     const queue = useAddQueue(actions)
     const linkRows = useLinkRows()

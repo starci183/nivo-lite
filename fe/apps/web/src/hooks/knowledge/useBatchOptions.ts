@@ -25,7 +25,7 @@ interface Options {
 }
 
 /** What the batch options give the drawer. */
-interface BatchOptions extends Options {
+export interface BatchOptions extends Options {
     /** The value the "For" select shows. */
     readonly moduleValue: string
     readonly setTopic: (value: string) => void

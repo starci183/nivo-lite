@@ -6,6 +6,7 @@ import {
     toPublicDocument,
     DOSSIER_STATUS_TONE,
     FINDING_FILTERS,
+    type PublicDocument,
 } from "@/modules/brain"
 import type {
     EvidencePlaceView,
@@ -38,7 +39,18 @@ export const dossierBadgesOf = (
     t: Translate,
     brain: ReturnType<typeof useTranslations<"secondBrain">>,
     standing: ReviewedStatus,
-) => [
+): (
+    | {
+          id: string
+          label: string
+          tone: "success" | "neutral" | "danger" | "warning" | "accent"
+      }
+    | {
+          id: string
+          label: string
+          tone: "muted"
+      }
+)[] => [
     { id: "status", label: brain(`status_${standing.status}`), tone: DOSSIER_STATUS_TONE[standing.status] },
     ...(standing.checklist === null
         ? []
@@ -64,8 +76,10 @@ export const dossierReviewedLineOf = (
           })
 
 /** Where a quote sits in its document, in words: "Trang 3", "Slide 2" or the name of the sheet. */
-export const placeWordsOf = (t: Translate) => (place: EvidencePlaceView) =>
-    t(`place_${place.kind}`, { label: place.label })
+export const placeWordsOf =
+    (t: Translate): ((place: EvidencePlaceView) => string) =>
+    (place: EvidencePlaceView) =>
+        t(`place_${place.kind}`, { label: place.label })
 
 /** Where a finding stands, when that is worth saying: confirmed, dismissed, or how it was resolved; nothing for an open one. */
 export const statusPartOf = (t: Translate, finding: FindingView): string | null => {
@@ -156,6 +170,9 @@ export const cardActionsOf = (
 
 /** A command that changes a public document: the runner answers the saved snapshot, and `done` says what was done. */
 export const documentCommandOf =
-    <Request>(run: Run, send: (request: Request) => Promise<Parameters<typeof toPublicDocument>[0]>) =>
+    <Request>(
+        run: Run,
+        send: (request: Request) => Promise<Parameters<typeof toPublicDocument>[0]>,
+    ): ((request: Request, done?: string) => Promise<PublicDocument | undefined>) =>
     (request: Request, done?: string) =>
         run(async () => toPublicDocument(await send(request)), done)

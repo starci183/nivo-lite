@@ -6,8 +6,73 @@ import { useTranslations } from "next-intl"
 import { openById, useInventoryFormat, useRecipeDrawer } from "@/hooks/inventory"
 import { useInventoryCatalogCommands } from "@/hooks/inventoryCommands"
 
+/** The view `useInventoryRecipesView` returns. */
+export interface InventoryRecipesView {
+    readonly props: {
+        readonly addLabel: string | null
+        readonly addDisabled: boolean
+        readonly editLabel: string | null
+        readonly listLabel: string
+        readonly emptyTitle: string
+        readonly emptyBody: string
+        readonly rows: {
+            id: string
+            title: string
+            detail: string
+        }[]
+        readonly drawer: {
+            copy: {
+                recipeEditTitle: string
+                close: string
+                save: string
+                recipeAddTitle: string
+                recipeDrawerHint: string
+                recipeName: string
+                recipeNameHint: string
+                recipeAliases: string
+                recipeAliasesHint: string
+                recipeIngredients: string
+                recipeIngredientHint: string
+                recipeRemoveLine: string
+                recipeAddLine: string
+                recipeDelete: string
+            }
+            editing: string | null
+            name: string
+            aliases: string
+            lines: {
+                ingredientLabel: string
+                quantityLabel: string
+                unit: string
+                key: string
+                itemId: string
+                qty: string
+            }[]
+            items: {
+                id: string
+                label: string
+            }[]
+            isPending: boolean
+            error: string | null
+        } | null
+    }
+    readonly on: {
+        readonly onAdd: () => void
+        readonly onEdit: (id: string) => void
+        readonly onRecipeName: (name: string) => void
+        readonly onRecipeAliases: (aliases: string) => void
+        readonly onRecipeItem: (index: number, itemId: string) => void
+        readonly onRecipeQty: (index: number, qty: string) => void
+        readonly onRecipeRemoveLine: (index: number) => void
+        readonly onRecipeAddLine: () => void
+        readonly onRecipeSave: () => void
+        readonly onRecipeRemove: () => void
+        readonly onRecipeClose: () => void
+    }
+}
+
 /** The recipes tab: the drawer lives in its hook, the drawing in the pure half. */
-export const useInventoryRecipesView = (input: InventoryPanelInput) => {
+export const useInventoryRecipesView = (input: InventoryPanelInput): InventoryRecipesView => {
     const board = input.board
     const lifetime = { isActive: input.isActive, scope: input.scope }
     const t = useTranslations("workbenchInventory")

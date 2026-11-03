@@ -8,8 +8,14 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 import type { RuleChange } from "@/modules/authority"
 
+/** The view `useSaveAuthorityRules` returns. */
+export interface SaveAuthorityRulesView {
+    save: (changes: ReadonlyArray<RuleChange>) => Promise<boolean>
+    isSaving: boolean
+}
+
 /** Writes the edited authority rules through the back end (one write per rule) and toasts the outcome once; the sheet is read again. */
-export const useSaveAuthorityRules = () => {
+export const useSaveAuthorityRules = (): SaveAuthorityRulesView => {
     const t = useTranslations("authority")
     const runGraphQL = useGraphQLWithToast()
     const { trigger, isMutating } = useMutateSaveAuthorityRuleSwr()

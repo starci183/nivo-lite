@@ -6,11 +6,32 @@ import { useTranslations } from "next-intl"
 import { useChatbotActions, useChatbotWorkbench } from "@/hooks/chatbot"
 import { slotOfReads } from "@/hooks/slot"
 import { agentHref } from "@/modules/installations"
-import type { ChatbotWaitingReply } from "@/modules/types"
+import type { ChatbotWaitingReply, DataSlot, WorkbenchRowView } from "@/modules/types"
 import { WAITING_SHOWN, waitingRowOf } from "./chatbotWaiting.shared"
 
+/** The view `useChatbotWaiting` returns. */
+export interface ChatbotWaitingView {
+    slot: DataSlot<WorkbenchRowView[]>
+    count: string | null
+    more: {
+        label: string
+        href: string
+    } | null
+    /** The reply open for editing and what the person has typed; null while none is open. */
+    editing: {
+        readonly workItemId: string
+        readonly conversationId: string
+        readonly text: string
+    } | null
+    changeEdit: (text: string) => void
+    cancelEdit: () => void
+    sendEdit: () => void
+    isBusy: boolean
+    reload: () => void
+}
+
 /** The customer replies of one Chatbot instance that wait for a person, each decided in place. */
-export const useChatbotWaiting = (installationId: string | null, isActive = true) => {
+export const useChatbotWaiting = (installationId: string | null, isActive = true): ChatbotWaitingView => {
     const t = useTranslations("workbenchChatbot")
     const workbench = useChatbotWorkbench(installationId, null, isActive)
     const actions = useChatbotActions(workbench.workspaceId ?? "", workbench.userId, isActive)

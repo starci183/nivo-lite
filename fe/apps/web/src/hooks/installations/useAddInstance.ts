@@ -10,8 +10,14 @@ import { agentHref, cleanInstanceName } from "@/modules/installations"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 
+/** The view `useAddInstance` returns. */
+export interface AddInstanceView {
+    add: (moduleKey: ModuleKey, text: string) => Promise<boolean>
+    isAdding: boolean
+}
+
 /** Adds another instance of a multi-instance agent type through the back end and opens it on its Setup tab. */
-export const useAddInstance = () => {
+export const useAddInstance = (): AddInstanceView => {
     const t = useTranslations("modulesCore")
     const router = navigation.useRouter()
     const runGraphQL = useGraphQLWithToast()

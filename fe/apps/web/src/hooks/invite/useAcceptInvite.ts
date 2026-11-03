@@ -8,12 +8,18 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 
+/** The view `useAcceptInvite` returns. */
+export interface AcceptInviteView {
+    accept: (token: string) => Promise<string | undefined>
+    isAccepting: boolean
+}
+
 /**
  * Accepts an invitation for the signed-in person through the back end and toasts the outcome (a failure shows the server-localized
  * reason). On success the joined workspace becomes the active one and the workspaces list is revalidated. Answers the joined
  * workspace id, or `undefined` when it failed.
  */
-export const useAcceptInvite = () => {
+export const useAcceptInvite = (): AcceptInviteView => {
     const t = useTranslations("invite")
     const runGraphQL = useGraphQLWithToast()
     const { trigger, isMutating } = useMutateAcceptInviteSwr()

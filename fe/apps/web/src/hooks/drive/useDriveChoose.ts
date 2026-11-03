@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 import { useAddQueue, useQueueActions } from "@/hooks/knowledge"
 import { DRIVE_ORIGIN, isReadableDriveFile } from "./drive.shared"
 import type { DriveListing } from "./drive.shared"
@@ -45,11 +45,30 @@ const useDriveAdd = (input: DriveAddInput) => {
     return { isAdding, added, add, reset: () => setAdded(0) }
 }
 
+/** The view `useDriveChoose` returns. */
+export interface DriveChooseView {
+    pick: () => undefined
+    add: () => undefined
+    isAdding: boolean
+    added: number
+    reset: () => void
+    link: string
+    setLink: Dispatch<SetStateAction<string>>
+    listing: DriveListing | null
+    selected: readonly string[]
+    setSelected: Dispatch<SetStateAction<readonly string[]>>
+    error: string
+    isReading: boolean
+    hasPicker: boolean
+    readFolder: () => Promise<void>
+    clear: () => void
+}
+
 /**
  * The choose step of Google Drive, shared by the page and the hub wizard: read a folder link (or choose in Google Picker where the
  * console has its keys), tick the files NIVO can read, and add them.
  */
-export const useDriveChoose = (failedPickerMessage: string) => {
+export const useDriveChoose = (failedPickerMessage: string): DriveChooseView => {
     const reading = useDriveListing(failedPickerMessage)
     const adding = useDriveAdd({ listing: reading.listing, selected: reading.selected, onSent: reading.clear })
     return { ...reading, ...adding, pick: () => void reading.pick(), add: () => void adding.add() }

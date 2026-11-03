@@ -6,11 +6,72 @@ import type { InventoryPanelInput } from "./inventoryWorkbench.shared"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { openById, useInventoryRun, useSupplierDrawer } from "@/hooks/inventory"
-import type { SupplierView } from "@/modules/types"
+import type { SupplierView, SupplierFormValues, SupplierFormField } from "@/modules/types"
 import { useInventoryCatalogCommands } from "@/hooks/inventoryCommands"
 
+/** The view `useInventorySuppliersView` returns. */
+export interface InventorySuppliersView {
+    readonly props: {
+        readonly addLabel: string | null
+        readonly editLabel: string | null
+        readonly listLabel: string
+        readonly emptyTitle: string
+        readonly emptyBody: string
+        readonly rows: {
+            id: string
+            name: string
+            channelLabel: string
+            detail: string
+            itemsText: string
+        }[]
+        readonly locationsTitle: string
+        readonly locationsText: string
+        readonly canAddLocation: boolean
+        readonly locationLabel: string
+        readonly locationAddLabel: string
+        readonly locationName: string
+        readonly isPending: boolean
+        readonly error: string | null
+        readonly drawer: {
+            copy: {
+                supplierEditTitle: string
+                close: string
+                save: string
+                supplierAddTitle: string
+                supplierDrawerHint: string
+                supplierName: string
+                supplierContact: string
+                supplierChannel: string
+                supplierEmail: string
+                supplierPhone: string
+                supplierZalo: string
+                supplierLead: string
+                supplierTerms: string
+                supplierNote: string
+            }
+            editing: string | null
+            values: SupplierFormValues
+            channels: {
+                value: string
+                label: string
+            }[]
+            isPending: boolean
+            error: string | null
+        } | null
+    }
+    readonly on: {
+        readonly onAdd: () => void
+        readonly onEdit: (id: string) => void
+        readonly onLocationName: (value: string) => void
+        readonly onAddLocation: () => void
+        readonly onSupplierField: (name: SupplierFormField, value: string) => void
+        readonly onSupplierSave: () => void
+        readonly onSupplierClose: () => void
+    }
+}
+
 /** The suppliers tab: the typed location name lives here, the drawer in its hook, the drawing in the pure half. */
-export const useInventorySuppliersView = (input: InventoryPanelInput) => {
+export const useInventorySuppliersView = (input: InventoryPanelInput): InventorySuppliersView => {
     const board = input.board
     const lifetime = { isActive: input.isActive, scope: input.scope }
     const t = useTranslations("workbenchInventory")

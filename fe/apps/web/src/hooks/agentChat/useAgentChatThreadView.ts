@@ -21,6 +21,32 @@ interface AgentChatThreadInput {
     readonly messages: ReturnType<typeof useQueryAgentChatMessagesSwr>
 }
 
+/** The view `useAgentChatThreadView` returns. */
+export interface AgentChatThreadView {
+    rows: {
+        id: string
+        kind: ChatTab
+        title: string
+        description: string
+        isSelected: boolean
+    }[]
+    thread: {
+        id: string
+        role: "user" | "system" | "agent"
+        body: string
+        timeLabel: string
+        files: {
+            id: string
+            name: string
+            contentType: string
+            url: string
+        }[]
+    }[]
+    changeTab: (next: ChatTab) => void
+    isLoadingList: boolean
+    isLoadingThread: boolean
+}
+
 /** Formats conversation history and message rows and switches the selected channel. */
 export const useAgentChatThreadView = ({
     hasCustomerChannel,
@@ -33,7 +59,7 @@ export const useAgentChatThreadView = ({
     t,
     selectedId,
     messages,
-}: AgentChatThreadInput) => {
+}: AgentChatThreadInput): AgentChatThreadView => {
     const changeTab = (next: ChatTab) => {
         if (next === "customer" && !hasCustomerChannel) return
         setTab(next)

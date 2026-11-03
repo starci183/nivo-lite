@@ -1,5 +1,5 @@
 "use client"
-import type { ContentViews, ContentActions } from "@/modules/types"
+import type { ContentViews, ContentActions, ContentBalanceFields, ContentBalanceActions } from "@/modules/types"
 
 import { useTranslations } from "next-intl"
 import { useMemo, useState } from "react"
@@ -8,8 +8,20 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import { balanceChannelsOf, balanceThemesOf } from "@/modules/content"
 import type { ContentViewInput } from "./contentWorkbench.shared"
 
+/** The view `useContentBalancePanelView` returns. */
+export interface ContentBalancePanelView {
+    props: ContentBalanceFields | undefined
+    on: ContentBalanceActions
+    loading: {
+        y: number
+        m: number
+        monthTitle: string
+        title: string
+    }
+}
+
 /** Owns the actual ContentBalancePanel data derivations and conditional controller lifetime. */
-export const useContentBalancePanelView = (input: ContentViewInput) => {
+export const useContentBalancePanelView = (input: ContentViewInput): ContentBalancePanelView => {
     const data = input.data
     const t = useTranslations("content")
     const now = useMemo(() => new Date(data?.nowIso ?? input.startedAt), [data?.nowIso, input.startedAt])

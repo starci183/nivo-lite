@@ -2,8 +2,18 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
 
+/** The view `usePaymentOrderInvocation` returns. */
+export interface PaymentOrderInvocationView {
+    read: () => {
+        workspaceId: string | undefined
+        sequence: number
+        live: boolean
+    }
+    begin: () => number
+}
+
 /** Tracks the workspace and lifetime of asynchronous payment-order calls. */
-export const usePaymentOrderInvocation = (workspaceId: string | undefined) => {
+export const usePaymentOrderInvocation = (workspaceId: string | undefined): PaymentOrderInvocationView => {
     const invocation = useRef({ workspaceId, sequence: 0, live: true })
     useLayoutEffect(() => {
         const current = invocation.current

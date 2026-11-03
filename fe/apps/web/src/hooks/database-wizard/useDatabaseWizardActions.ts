@@ -24,6 +24,18 @@ interface DatabaseWizardActionsInput {
     readonly setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>
 }
 
+/** The view `useDatabaseWizardActions` returns. */
+export interface DatabaseWizardActionsView {
+    go: (to: number) => void
+    test: () => void
+    save: () => void
+    finish: () => void
+    setField: (field: TextField) => (value: string) => void
+    setEngine: (value: string | null) => void
+    setSsl: (on: boolean) => void
+    isPending: boolean
+}
+
 /** Owns pending database tests, configuration saves and agent assignment. */
 export const useDatabaseWizardActions = ({
     patch,
@@ -34,7 +46,7 @@ export const useDatabaseWizardActions = ({
     typed,
     input,
     setConnectionAgents,
-}: DatabaseWizardActionsInput) => {
+}: DatabaseWizardActionsInput): DatabaseWizardActionsView => {
     const [isPending, startTransition] = useTransition()
     const go = (to: number) => patch({ error: null, found: null, index: to })
     const fail = (message: string) => patch({ error: message, found: null })

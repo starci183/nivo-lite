@@ -8,8 +8,25 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "@/modules/viewer-cache"
 
+/** The view `useCreateAccountingAdjustment` returns. */
+export interface CreateAccountingAdjustmentView {
+    create: (request: MutateCreateAccountingAdjustmentRequest) => Promise<
+        | {
+              id: string
+              targetType: string
+              targetId: string
+              note: string
+              correctedAmount: number | null
+              createdBy: string
+              createdAt: string
+          }
+        | undefined
+    >
+    isSaving: boolean
+}
+
 /** Records a correction, reports its outcome and refreshes the accounting ledger. */
-export const useCreateAccountingAdjustment = () => {
+export const useCreateAccountingAdjustment = (): CreateAccountingAdjustmentView => {
     const t = useTranslations("workbenchAccounting")
     const { activeWorkspaceId } = useActiveWorkspace()
     const runGraphQL = useGraphQLWithToast()

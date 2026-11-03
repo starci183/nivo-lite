@@ -6,11 +6,20 @@ import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
 import { avatarProblemOf } from "./avatar.shared"
 import type { AvatarDoors, AvatarProblem } from "./avatar.shared"
 
+/** The view `useAvatarUpload` returns. */
+export interface AvatarUploadView {
+    preview: string | null
+    problem: AvatarProblem | null
+    isBusy: boolean
+    choose: (files: ReadonlyArray<File>) => Promise<void>
+    remove: () => Promise<void>
+}
+
 /**
  * Uploads a picture straight to Storage and keeps it, or removes it. The chosen file previews at once (a local object URL) while
  * it uploads; a refused type or size is reported before anything is sent; every back end failure is toasted.
  */
-export const useAvatarUpload = (doors: AvatarDoors) => {
+export const useAvatarUpload = (doors: AvatarDoors): AvatarUploadView => {
     const runGraphQL = useGraphQLWithToast()
     const runRest = useRestWithToast()
     const { trigger: putPresigned } = usePutPresignedSwr()

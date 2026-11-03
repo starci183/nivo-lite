@@ -4,7 +4,7 @@ import { useCsvImportFields } from "./useCsvImportFields"
 import { useCsvImportWorkflow } from "./useCsvImportWorkflow"
 import { useSetConnectionAgents } from "@/hooks/connections"
 import { useCsvImportForm } from "@/hooks/rhf"
-import type { AgentOption, WizardNote } from "@/modules/types"
+import type { AgentOption, WizardNote, SlotRead } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import {
     CSV_SOURCES,
@@ -16,10 +16,12 @@ import {
     type CsvSavedImport,
     type CsvSource,
     type CsvStep,
+    type Grid,
 } from "./csv-import-wizard.shared"
 import { useCsvImportCommands } from "./useCsvImportCommands"
 import { useCsvImportGrid } from "./useCsvImportGrid"
 import { useCsvImportResume } from "./useCsvImportResume"
+import type { Dispatch, SetStateAction } from "react"
 
 /** What the import wizard needs from its drawer. */
 export interface CsvImportWizardInput {
@@ -46,12 +48,66 @@ export interface CsvImportFields {
     readonly note: WizardNote | null
 }
 
+/** The view `useCsvImportWizard` returns. */
+export interface CsvImportWizardView {
+    reads: readonly SlotRead<unknown>[]
+    isLoading: boolean
+    loadError: string | null
+    saved: CsvSavedImport | null
+    index: number
+    steps: readonly CsvStep[]
+    step: CsvStep
+    canGoBack: boolean
+    form: {
+        name: string
+        entity: "other" | "transaction" | "customer" | "order" | "product"
+        schedule: string
+        link: string
+        paste: string
+    }
+    source: CsvSource
+    grid: Grid
+    file: File | null
+    docs: readonly File[]
+    preview: CsvPreview | null
+    mapping: CsvMapping | null
+    result: CsvImportResult | null
+    note: WizardNote | null
+    agentIds: readonly string[]
+    isPending: boolean
+    on: {
+        go: (to: number) => void
+        read: () => undefined
+        sheet: (sheet: string) => undefined
+        runImport: () => undefined
+        finish: () => undefined
+        close: () => void
+        retry: () => void
+        name: (value: string) => void
+        entity: (value: string | null) => void
+        source: (value: string) => void
+        schedule: (value: string | null) => void
+        file: (files: ReadonlyArray<File>) => void
+        link: (value: string) => void
+        docs: (files: ReadonlyArray<File>) => void
+        column: (key: "idColumn" | "titleColumn" | "dateColumn", value: string | null) => void
+        agents: (ids: ReadonlyArray<string>) => void
+        paste: Dispatch<SetStateAction<string>>
+        applyPaste: () => void
+        rename: (columnId: string, name: string) => void
+        cell: (rowId: string, columnId: string, value: string) => void
+        addRow: () => void
+        removeRow: (rowId: string) => void
+        addColumn: () => void
+    }
+}
+
 /**
  * The import wizard's state machine: name, kind of rows and source; the data (file, Google Sheets link, typed grid or documents); the
  * column mapping with a preview; the import; the agents that may read it. When resuming it loads the saved import first, then starts
  * on the data step with the saved source, link, columns, schedule and agents.
  */
-export const useCsvImportWizard = (input: CsvImportWizardInput) => {
+export const useCsvImportWizard = (input: CsvImportWizardInput): CsvImportWizardView => {
     const t = useTranslations("connectorCsv")
     const resume = useCsvImportResume(input.resumeId)
     const saved = resume.saved

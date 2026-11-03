@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import Papa from "papaparse"
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { MAX_GRID_ROWS } from "./csv-import-wizard.shared"
 import type { CsvEntity, Grid } from "./csv-import-wizard.shared"
 
@@ -60,11 +60,34 @@ interface CsvImportGridInput {
     readonly savedColumns: ReadonlyArray<string> | null
 }
 
+/** The view `useCsvImportGrid` returns. */
+export interface CsvImportGridViewShape {
+    grid: Grid
+    paste: string
+    hasRows: boolean
+    /** The grid as the back end reads it: the column names and the rows of cells. */
+    source: {
+        headers: string[]
+        rows: (readonly string[])[]
+    }
+    /** Starts the empty grid again from the starter columns of another kind of rows. */
+    restart: (entity: Exclude<CsvEntity, "document">) => void
+    on: {
+        paste: Dispatch<SetStateAction<string>>
+        applyPaste: () => void
+        rename: (columnId: string, name: string) => void
+        cell: (rowId: string, columnId: string, value: string) => void
+        addRow: () => void
+        removeRow: (rowId: string) => void
+        addColumn: () => void
+    }
+}
+
 /**
  * The typed grid of the import wizard and the text pasted into it. Until it is edited the grid is derived from the saved import (or
  * the starter columns), so it follows the saved import once that has loaded.
  */
-export const useCsvImportGrid = (input: CsvImportGridInput) => {
+export const useCsvImportGrid = (input: CsvImportGridInput): CsvImportGridViewShape => {
     const t = useTranslations("connectorCsv")
     const [edited, setEdited] = useState<Grid | null>(null)
     const [paste, setPaste] = useState("")

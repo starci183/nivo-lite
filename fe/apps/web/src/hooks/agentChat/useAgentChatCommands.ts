@@ -123,8 +123,14 @@ const createAgentChatActionsActions = ({
     return { start, send }
 }
 
+/** The view `useAgentChatCommands` returns. */
+export interface AgentChatCommandsView {
+    start: () => Promise<void>
+    send: (prompt?: string) => Promise<void>
+}
+
 /** Owns the chat command lock and its actions. */
-export const useAgentChatCommands = (input: AgentChatCommandsInput) => {
+export const useAgentChatCommands = (input: AgentChatCommandsInput): AgentChatCommandsView => {
     const {
         target,
         visitor,

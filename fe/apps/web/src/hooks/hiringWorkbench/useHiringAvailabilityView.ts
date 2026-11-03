@@ -2,6 +2,7 @@
 import { useTranslations } from "next-intl"
 import { WEEKDAYS, useHiringAvailability } from "@/hooks/hiringAvailability"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
+import type { HiringWorkbenchCopy } from "@/modules/types"
 
 type ResolvedActions = {
     readonly member: (id: string) => void
@@ -9,8 +10,31 @@ type ResolvedActions = {
     readonly save: () => void
 }
 
+/** The view `useHiringAvailabilityView` returns. */
+export interface HiringAvailabilityViewShape {
+    props: {
+        copy: HiringWorkbenchCopy
+        members: {
+            id: string
+            label: string
+        }[]
+        who: string
+        days: {
+            weekday: number
+            label: string
+            text: string
+            isInvalid: boolean
+        }[]
+        canSave: boolean
+        isBusy: boolean
+        error: string | null
+        notice: string | null
+    }
+    on: ResolvedActions
+}
+
 /** Owns HiringAvailability's resolved data, commands and actual panel activation. */
-export const useHiringAvailabilityView = (input: HiringViewInput) => {
+export const useHiringAvailabilityView = (input: HiringViewInput): HiringAvailabilityViewShape => {
     const owner = { isActive: input.isActive && input.isReady, scope: input.scope }
 
     const t = useTranslations("hiring")

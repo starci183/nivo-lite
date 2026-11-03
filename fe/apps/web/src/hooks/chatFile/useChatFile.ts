@@ -18,11 +18,22 @@ interface UploadedChatFile {
     readonly name: string
 }
 
+/** The view `useChatFile` returns. */
+export interface ChatFileView {
+    file: File | null
+    problem: ChatFileProblem | null
+    choose: (chosen: File) => void
+    clear: () => void
+    upload: (
+        addressOf: (chosen: File) => Promise<ChatFileAddress | undefined>,
+    ) => Promise<UploadedChatFile | null | undefined>
+}
+
 /**
  * The file that goes with the next message of a composer, a chat or the Office: the choice, its refusal at once, and the upload
  * straight to the store through the address the caller asks for. The back end checks what landed when the message is sent.
  */
-export const useChatFile = () => {
+export const useChatFile = (): ChatFileView => {
     const runRest = useRestWithToast()
     const { trigger: putFile } = usePutPresignedSwr()
     const [file, setFile] = useState<File | null>(null)

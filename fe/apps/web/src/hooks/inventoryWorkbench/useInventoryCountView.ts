@@ -8,8 +8,40 @@ import { useState } from "react"
 import { includesText, num, useInventoryFormat, useInventoryRun } from "@/hooks/inventory"
 import { useInventoryStockCommands } from "@/hooks/inventoryCommands"
 
+/** The view `useInventoryCountView` returns. */
+export interface InventoryCountView {
+    readonly props: {
+        readonly intro: string
+        readonly searchLabel: string
+        readonly searchPlaceholder: string
+        readonly clearLabel: string
+        readonly listLabel: string
+        readonly emptyTitle: string
+        readonly emptyBody: string
+        readonly submitLabel: string
+        readonly query: string
+        readonly rows: {
+            id: string
+            name: string
+            machine: string
+            fieldLabel: string
+            unit: string
+            value: string
+        }[]
+        readonly canSubmit: boolean
+        readonly isPending: boolean
+        readonly error: string | null
+        readonly notice: string | null
+    }
+    readonly on: {
+        readonly onQuery: (value: string) => void
+        readonly onCount: (id: string, value: string) => void
+        readonly onSubmit: () => void
+    }
+}
+
 /** The stock count tab: the search text and the typed counts live here, the drawing in the pure half. */
-export const useInventoryCountView = (input: InventoryPanelInput) => {
+export const useInventoryCountView = (input: InventoryPanelInput): InventoryCountView => {
     const board = input.board
     const t = useTranslations("workbenchInventory")
     const format = useInventoryFormat()

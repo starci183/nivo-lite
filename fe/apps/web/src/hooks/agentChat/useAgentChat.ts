@@ -12,6 +12,7 @@ import { useAgentChatActions } from "./useAgentChatActions"
 import { readError } from "@/hooks/workspaceread"
 import { slotOfReads } from "@/hooks/slot"
 import type { SlotRead } from "@/hooks/slot"
+import type { DataSlot } from "@/modules/types"
 
 /** Which channel the owner is looking at. */
 export type ChatTab = "test" | "customer"
@@ -51,8 +52,83 @@ const routeSelectionOf = (hasCustomerChannel: boolean, route: AgentChatRoute): S
     }
 }
 
+/** The view `useAgentChat` returns. */
+export interface AgentChatView {
+    railSlot: DataSlot<
+        {
+            id: string
+            kind: ChatTab
+            title: string
+            description: string
+            isSelected: boolean
+        }[]
+    >
+    threadSlot: DataSlot<{
+        hasSelection: boolean
+    }>
+    retryRail: () => void
+    retryThread: () => void
+    agent:
+        | {
+              id: string
+              module: string
+              name: string
+              handle: string
+              role: string
+              avatarUrl: string | null
+              isActive: boolean
+              hasCustomerChannel: boolean
+              workspaceId: string
+              showWelcome: boolean
+          }
+        | undefined
+    pageError: string | null
+    tab: ChatTab
+    rows: {
+        id: string
+        kind: ChatTab
+        title: string
+        description: string
+        isSelected: boolean
+    }[]
+    thread: {
+        id: string
+        role: "user" | "system" | "agent"
+        body: string
+        timeLabel: string
+        files: {
+            id: string
+            name: string
+            contentType: string
+            url: string
+        }[]
+    }[]
+    draft: string
+    visitorName: string
+    error: string | null
+    isLoadingList: boolean
+    isLoadingThread: boolean
+    isSending: boolean
+    isAwaitingReply: boolean
+    isStarting: boolean
+    isTakingOver: boolean
+    isTakenOver: boolean
+    hasSelection: boolean
+    leadId: string | null
+    setDraft: (body: string) => void
+    setVisitorName: (visitorName: string) => void
+    start: () => Promise<void>
+    send: (prompt?: string) => Promise<void>
+    file: File | null
+    chooseFile: (chosen: File) => void
+    clearFile: () => void
+    toggleTakeover: () => Promise<void>
+    changeTab: (next: ChatTab) => void
+    select: (conversationId: string, kind: ChatTab) => void
+}
+
 /** Conversation selection, SWR history and validated chat mutations. */
-export const useAgentChat = (route: AgentChatRoute) => {
+export const useAgentChat = (route: AgentChatRoute): AgentChatView => {
     const t = useTranslations("agentChat")
     const { activeWorkspaceId } = useActiveWorkspace()
     const page = useQueryAgentChatPageSwr(activeWorkspaceId, route.agentId, route.welcome)

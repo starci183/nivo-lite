@@ -3,17 +3,40 @@
 import { allAgentIds } from "@/hooks/connection-wizard"
 import { useCsvImportForm } from "@/hooks/rhf"
 import { useState } from "react"
-import { DOC_STEPS, NO_COLUMN, TABLE_STEPS, type CsvSavedImport } from "./csv-import-wizard.shared"
+import {
+    DOC_STEPS,
+    NO_COLUMN,
+    TABLE_STEPS,
+    type CsvSavedImport,
+    type CsvSource,
+    type CsvStep,
+} from "./csv-import-wizard.shared"
 import type { CsvImportFields, CsvImportWizardInput } from "./useCsvImportWizard"
 
 const START: CsvImportFields = { file: null, docs: [], preview: null, mapping: null, result: null, note: null }
+
+/** The view `useCsvImportFields` returns. */
+export interface CsvImportFieldsView {
+    fields: CsvImportFields
+    patch: (next: Partial<CsvImportFields>) => void
+    name: string
+    entity: "other" | "transaction" | "customer" | "order" | "product"
+    source: CsvSource
+    schedule: string
+    link: string
+    index: number
+    steps: readonly CsvStep[]
+    connectionId: string | undefined
+    agentIds: readonly string[]
+    column: (key: "idColumn" | "titleColumn" | "dateColumn", value: string | null) => void
+}
 
 /** Owns the editable import draft and derives its current source, mapping and agents. */
 export const useCsvImportFields = (
     input: CsvImportWizardInput,
     saved: CsvSavedImport | null,
     form: ReturnType<typeof useCsvImportForm>,
-) => {
+): CsvImportFieldsView => {
     const [fields, setFields] = useState<CsvImportFields>(START)
 
     const patch = (next: Partial<CsvImportFields>) => setFields((current) => ({ ...current, ...next }))

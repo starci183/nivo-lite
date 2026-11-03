@@ -9,7 +9,7 @@ import {
 import type { BillingPlanType } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
 import { workspaceRenewalPaymentPath } from "@/modules/routes"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
 import { readError } from "@/hooks/workspaceread"
 
@@ -37,8 +37,92 @@ const selectionOf = (
     seats: plan.perSeat ? seats : null,
 })
 
+/** The view `usePlanChoices` returns. */
+export interface PlanChoicesView {
+    plans:
+        | {
+              code: string
+              nameVi: string
+              nameEn: string
+              priceVnd: number
+              period: string
+              seats: number
+              sort: number
+              aiCreditsPerMonth: number | null
+              isCustom: boolean
+              priceAnnualVnd: number | null
+              annualDiscountPct: number | null
+              promoPriceVnd: number | null
+              promoMonths: number | null
+              storageGb: number | null
+              individual: boolean
+              perSeat: boolean
+              listed: boolean
+              features: {
+                  vi: Array<string>
+                  en: Array<string>
+              }
+              tiers: Array<{
+                  creditsPerMonth: number
+                  priceVnd: number
+                  perSeat: boolean
+              }>
+              packs: Array<{
+                  creditsPerMonth: number
+                  priceVnd: number
+                  perSeat: boolean
+              }>
+          }[]
+        | undefined
+    workspace:
+        | {
+              id: string
+              name: string
+              status: string
+              planCode: string | null
+              paidUntil: string | null
+              tierCredits: number | null
+              seatCount: number | null
+              billingCycle: string | null
+              billedMonthlyVnd: number | null
+              role: string
+          }
+        | undefined
+    storage:
+        | {
+              usedBytes: number
+              quotaBytes: number | null
+          }
+        | undefined
+    error: unknown
+    selections: PlanSelection[]
+    quotes:
+        | ({
+              planCode: string
+              cycle: string
+              months: number
+              amountVnd: number
+              listMonthlyVnd: number
+              promo: boolean
+              tierCredits: number | null
+              seats: number
+              creditsPerMonth: number | null
+          } | null)[]
+        | undefined
+    isQuoting: boolean
+    isLoading: boolean
+    cycle: PlanCycle
+    tiers: Readonly<Record<string, number | null>>
+    seats: number
+    isRequesting: boolean
+    setCycle: Dispatch<SetStateAction<PlanCycle>>
+    setTier: (planCode: string, creditsPerMonth: number | null) => void
+    setSeats: Dispatch<SetStateAction<number>>
+    choose: (planCode: string) => void
+}
+
 /** The plan catalogue of a workspace: selection state, server prices, and the purchase that opens the payment screen. */
-export const usePlanChoices = (workspaceId: string) => {
+export const usePlanChoices = (workspaceId: string): PlanChoicesView => {
     const router = navigation.useRouter()
     const workspace = useQueryBillingWorkspaceSwr(workspaceId)
     const plans = useQueryBillingPlansSwr()

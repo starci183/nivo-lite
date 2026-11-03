@@ -12,6 +12,8 @@ import {
 } from "./loyaltyPromo.shared"
 import { useSegmentLabel } from "./useSegmentLabel"
 import type { useLoyaltyPromo } from "./useLoyaltyPromo"
+import type { BadgeTone } from "@starci/grammar/common"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 /** Inputs needed to build the LoyaltyPromoContent section. */
 interface BuildPromotionCopyContext {
     readonly t: ReturnType<typeof useTranslations<"loyalty">>
@@ -98,8 +100,95 @@ const buildPromotionView = ({ board, t, values, promo, reachNobody, format, labe
         })),
     }) as const
 
+/** The view `useLoyaltyPromotionView` returns. */
+export interface LoyaltyPromotionView {
+    data: {
+        readonly canManage: boolean
+        readonly copy: {
+            readonly title: string
+            readonly body: string
+            readonly tiers: string
+            readonly tiersHint: string
+            readonly inactive: string
+            readonly inactiveHint: string
+            readonly spend: string
+            readonly spendHint: string
+            readonly birthday: string
+            readonly name: string
+            readonly nameHint: string
+            readonly brief: string
+            readonly briefHint: string
+            readonly submit: string
+            readonly drafting: string
+            readonly failedTitle: string
+            readonly draftLabel: string
+            readonly managersOnly: string
+            readonly managersOnlyBody: string
+            readonly campaignsTitle: string
+            readonly campaignsEmptyTitle: string
+            readonly campaignsEmptyBody: string
+        }
+        readonly tierOptions: {
+            value: string
+            label: string
+        }[]
+        readonly values: {
+            readonly tiers: string[]
+            readonly inactive: string
+            readonly spend: string
+            readonly birthday: boolean
+            readonly name: string
+            readonly brief: string
+        }
+        readonly briefError: string | undefined
+        readonly briefMax: 500
+        readonly isBusy: boolean
+        readonly isDrafting: boolean
+        readonly isSubmitDisabled: boolean
+        readonly rows: {
+            id: string
+            name: string
+            statusLabel: string
+            statusTone: BadgeTone
+            counts: string
+            meta: string
+            draft: string
+        }[]
+    }
+    preview: {
+        slot: DataSlot<
+            {
+                readonly id: string
+                readonly text: string
+                readonly emphasis: boolean
+            }[]
+        >
+        labels: SlotLabels
+        loadingLabel: string
+        audienceLabel: string
+    }
+    campaign: {
+        slot: DataSlot<{
+            result:
+                | {
+                      readonly title: string
+                      readonly recipients: string
+                      readonly time: string
+                      readonly draft: string
+                  }
+                | undefined
+            failure: string | undefined
+        }>
+        labels: SlotLabels
+        hasCampaign: boolean
+    }
+}
+
 /** Owns ready promotion atoms and folds each actual preview/campaign read independently. */
-export const useLoyaltyPromotionView = (board: LoyaltyBoardType, promo: ReturnType<typeof useLoyaltyPromo>) => {
+export const useLoyaltyPromotionView = (
+    board: LoyaltyBoardType,
+    promo: ReturnType<typeof useLoyaltyPromo>,
+): LoyaltyPromotionView => {
     const t = useTranslations("loyalty")
     const format = useFormatter()
     const slotLabels = useSlotLabels()

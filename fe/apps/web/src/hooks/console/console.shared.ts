@@ -159,8 +159,16 @@ export const accountEntriesOf = (input: AccountEntriesInput): ReadonlyArray<Drop
 /** Translates one key of the shell catalog. */
 type ShellWords = (key: string, values?: Record<string, string | number>) => string
 
+/** What `notificationsCopyOf` returns. */
+export interface NotificationsCopyOfResult {
+    bell: string
+    title: string
+    nothingWaiting: string
+    openOffice: string
+}
+
 /** The words of the notifications bell and its panel for a number of waiting approvals. */
-export const notificationsCopyOf = (t: ShellWords, pendingCount: number) => ({
+export const notificationsCopyOf = (t: ShellWords, pendingCount: number): NotificationsCopyOfResult => ({
     bell: t("notifications"),
     title: pendingCount === 0 ? t("notifications") : t("pendingTitle", { count: pendingCount }),
     nothingWaiting: t("nothingWaiting"),

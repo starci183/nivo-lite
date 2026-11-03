@@ -3,8 +3,49 @@
 import type { useBookingBoard } from "@/hooks/bookingBoard"
 import { useFormatter, useTranslations } from "next-intl"
 
+/** The view `useBookingStatsView` returns. */
+export interface BookingStatsViewShape {
+    readonly props: {
+        readonly rangeText: string
+        readonly label: string
+        readonly stats: readonly [
+            {
+                readonly id: "total"
+                readonly term: string
+                readonly value: string
+            },
+            {
+                readonly id: "done"
+                readonly term: string
+                readonly value: string
+            },
+            {
+                readonly id: "no_show"
+                readonly term: string
+                readonly value: string
+                readonly unit: `(${number}%)`
+            },
+            {
+                readonly id: "revenue"
+                readonly term: string
+                readonly value: string
+            },
+        ]
+        readonly utilisationLabel: string
+        readonly utilisationEmpty: string
+        readonly resources: {
+            id: string
+            name: string
+            pct: number
+            valueLabel: string
+            hoursText: string
+        }[]
+    }
+    readonly on: {}
+}
+
 /** The statistics of the week: bookings by outcome, revenue of the finished ones, and utilisation per resource. */
-export const useBookingStatsView = (boardRead: ReturnType<typeof useBookingBoard>) => {
+export const useBookingStatsView = (boardRead: ReturnType<typeof useBookingBoard>): BookingStatsViewShape => {
     const { board } = boardRead
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()

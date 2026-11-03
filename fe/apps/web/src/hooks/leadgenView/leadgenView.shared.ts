@@ -41,13 +41,31 @@ const whenOf = (format: LeadGenFormat, iso: string): string =>
 const scoreLabelOf = (t: LeadGenTranslator, score: LeadScore | null): string =>
     score ? t(`score_${score}`) : t("score_none")
 
+/** What `leadsViewOf` returns. */
+export interface LeadsViewOfResult {
+    label: string
+    emptyTitle: string
+    emptyBody: string
+    hiddenText: string | null
+    rows: {
+        id: string
+        title: string
+        href: string
+        description: string
+        badges: {
+            label: string
+            tone: BadgeTone
+        }[]
+    }[]
+}
+
 /** The words and rows of the prospects list. */
 export const leadsViewOf = (
     t: LeadGenTranslator,
     format: LeadGenFormat,
     rows: ReadonlyArray<LeadGenLead>,
     hidden: number,
-) => ({
+): LeadsViewOfResult => ({
     label: t("leadsLabel"),
     emptyTitle: t("leadsEmptyTitle"),
     emptyBody: t("leadsEmptyBody"),
@@ -78,8 +96,26 @@ const sourceNameOf = (t: LeadGenTranslator, source: LeadGenSource): string => {
     return t(REF_KEYS[refKind] ?? "refPost", { id: refId })
 }
 
+/** What `sourcesViewOf` returns. */
+export interface SourcesViewOfResult {
+    label: string
+    emptyTitle: string
+    emptyBody: string
+    hiddenText: null
+    rows: {
+        id: string
+        title: string
+        href: null
+        description: string
+        badges: {
+            label: string
+            tone: "neutral"
+        }[]
+    }[]
+}
+
 /** The words and rows of the sources tab. */
-export const sourcesViewOf = (t: LeadGenTranslator, rows: ReadonlyArray<LeadGenSource>) => ({
+export const sourcesViewOf = (t: LeadGenTranslator, rows: ReadonlyArray<LeadGenSource>): SourcesViewOfResult => ({
     label: t("sourcesLabel"),
     emptyTitle: t("sourcesEmptyTitle"),
     emptyBody: t("sourcesEmptyBody"),
@@ -105,8 +141,38 @@ export const sourcesViewOf = (t: LeadGenTranslator, rows: ReadonlyArray<LeadGenS
 const stageNameOf = (t: LeadGenTranslator, stage: string): string =>
     LEAD_STAGES.has(stage) ? t(`stage_${stage}`) : stage
 
+/** What `handoffsViewOf` returns. */
+export interface HandoffsViewOfResult {
+    label: string
+    emptyTitle: string
+    emptyBody: string
+    hiddenText: null
+    rows: {
+        id: string
+        title: string
+        href: string
+        description: string
+        badges: (
+            | {
+                  label: string
+                  tone: BadgeTone
+                  isDot?: never
+              }
+            | {
+                  label: string
+                  tone: BadgeTone
+                  isDot: boolean
+              }
+        )[]
+    }[]
+}
+
 /** The words and rows of the hand-offs tab. */
-export const handoffsViewOf = (t: LeadGenTranslator, format: LeadGenFormat, rows: ReadonlyArray<LeadGenHandoff>) => ({
+export const handoffsViewOf = (
+    t: LeadGenTranslator,
+    format: LeadGenFormat,
+    rows: ReadonlyArray<LeadGenHandoff>,
+): HandoffsViewOfResult => ({
     label: t("handoffsLabel"),
     emptyTitle: t("handoffsEmptyTitle"),
     emptyBody: t("handoffsEmptyBody"),
@@ -145,13 +211,40 @@ const commentErrorOf = (row: LeadGenComment, state: CommentsViewState): string |
     return state.editingId === row.workItemId ? state.formError : null
 }
 
+/** What `commentsViewOf` returns. */
+export interface CommentsViewOfResult {
+    label: string
+    emptyTitle: string
+    emptyBody: string
+    draftLabel: string
+    noDraft: string
+    editLabel: string
+    approveLabel: string
+    cancelLabel: string
+    saveApproveLabel: string
+    retryLabel: string
+    busyId: string | null
+    isApproving: boolean
+    rows: {
+        id: string
+        title: string
+        description: string
+        sourceLabel: string
+        comment: string
+        draft: string
+        isEditing: boolean
+        draftValue: string
+        error: string | null
+    }[]
+}
+
 /** The words and rows of the comments tab. */
 export const commentsViewOf = (
     t: LeadGenTranslator,
     format: LeadGenFormat,
     rows: ReadonlyArray<LeadGenComment>,
     state: CommentsViewState,
-) => ({
+): CommentsViewOfResult => ({
     label: t("commentsLabel"),
     emptyTitle: t("commentsEmptyTitle"),
     emptyBody: t("commentsEmptyBody"),

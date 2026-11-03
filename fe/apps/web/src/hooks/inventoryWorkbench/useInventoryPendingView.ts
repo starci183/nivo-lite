@@ -5,8 +5,30 @@ import type { InventoryPanelInput } from "./inventoryWorkbench.shared"
 import { useTranslations } from "next-intl"
 import { useInventoryDecisions, useInventoryRun } from "@/hooks/inventory"
 
+/** The view `useInventoryPendingView` returns. */
+export interface InventoryPendingView {
+    readonly props: {
+        readonly title: string
+        readonly description: string
+        readonly count: number
+        readonly rejectLabel: string
+        readonly rows: {
+            id: string
+            summary: string
+            draft: string | null
+            approveLabel: string
+        }[]
+        readonly isPending: boolean
+        readonly error: string | null
+    }
+    readonly on: {
+        readonly onApprove: (id: string) => void
+        readonly onReject: (id: string) => void
+    }
+}
+
 /** The waiting decisions: the owner approves or rejects each one here. */
-export const useInventoryPendingView = (input: InventoryPanelInput) => {
+export const useInventoryPendingView = (input: InventoryPanelInput): InventoryPendingView => {
     const board = input.board
     const t = useTranslations("workbenchInventory")
     const decisions = useInventoryDecisions()

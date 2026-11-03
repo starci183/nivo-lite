@@ -32,6 +32,18 @@ interface ImapWizardActionsInput {
     readonly startSync: (connectionId: string) => Promise<void>
 }
 
+/** The view `useImapWizardActions` returns. */
+export interface ImapWizardActionsView {
+    go: (to: number) => void
+    setField: (key: TextField) => (value: string) => void
+    pickPreset: (id: string) => void
+    pickSecurity: (value: string) => void
+    check: () => void
+    save: () => void
+    finish: () => void
+    isPending: boolean
+}
+
 /** Owns mailbox test, save and agent-assignment transitions. */
 export const useImapWizardActions = ({
     patch,
@@ -43,7 +55,7 @@ export const useImapWizardActions = ({
     onClose,
     setConnectionAgents,
     startSync,
-}: ImapWizardActionsInput) => {
+}: ImapWizardActionsInput): ImapWizardActionsView => {
     const [isPending, startTransition] = useTransition()
     const setField = (key: TextField) => (value: string) => {
         patch({ tested: null })

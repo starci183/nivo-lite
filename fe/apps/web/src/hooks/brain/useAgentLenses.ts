@@ -6,9 +6,19 @@ import { slotOfSwr } from "@/hooks/slot"
 import { toAgentLens } from "@/modules/brain"
 import type { AgentLens } from "@/modules/brain"
 import { readError } from "@/hooks/workspaceread"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useAgentLenses` returns. */
+export interface AgentLensesView {
+    lenses: readonly AgentLens[] | undefined
+    error: unknown
+    isLoading: boolean
+    slot: DataSlot<readonly AgentLens[]>
+    reload: () => undefined
+}
 
 /** What each view of the shared knowledge reads: the customer's, then every installed agent's. */
-export const useAgentLenses = () => {
+export const useAgentLenses = (): AgentLensesView => {
     const swrRead = useQueryAgentKnowledgeLensesSwr()
     const { data, isLoading } = swrRead
     const error = readError(swrRead)

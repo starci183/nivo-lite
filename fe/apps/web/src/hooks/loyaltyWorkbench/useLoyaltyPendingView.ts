@@ -5,10 +5,55 @@ import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { pendingOf, useLoyaltyPending } from "@/hooks/loyaltyPending"
 import { canDecideItem, useMember } from "@/hooks/member"
+import type { DataSlot, SlotLabels } from "@/modules/types"
+
+/** The view `useLoyaltyPendingView` returns. */
+export interface LoyaltyPendingView3 {
+    props: {
+        slot: DataSlot<{
+            rows: {
+                id: string
+                actionLabel: string
+                age: string
+                customer: string
+                summary: string
+                reason: string
+                value: string
+                draft: string
+                canAct: boolean
+                canEditDraft: boolean
+                isEditing: boolean
+                isApproving: boolean
+                isRejecting: boolean
+            }[]
+        }>
+        labels: SlotLabels
+        copy: {
+            label: string
+            emptyTitle: string
+            emptyBody: string
+            draftLabel: string
+            draftHint: string
+            waitingManager: string
+            approve: string
+            reject: string
+            edit: string
+            editDone: string
+            isPending: boolean
+        }
+    }
+    on: {
+        approve: (id: string) => void
+        reject: (id: string) => void
+        toggleEdit: (id: string) => void
+        setDraft: (id: string, value: string) => void
+        retry: () => void
+    }
+}
 
 /** The connected pending tab: the loyalty decisions (points, rewards, offers) waiting for a person, decided through `decideWorkItem` with the outcome toasted. */
 /** The connected Pending tab: reads the loyalty board itself (SWR shares the one request with the other tabs). */
-export const useLoyaltyPendingView = (input: LoyaltyPanelInput) => {
+export const useLoyaltyPendingView = (input: LoyaltyPanelInput): LoyaltyPendingView3 => {
     const read = input.read
     const slotLabels = useSlotLabels()
     const t = useTranslations("loyalty")

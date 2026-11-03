@@ -5,13 +5,19 @@ import type { navigation } from "@/modules/i18n"
 import { agentChatConversationHref } from "@/modules/routes"
 import type { ChatTab, AgentChatAgent, Selection } from "./useAgentChat"
 
+/** The view `useAgentChatNavigation` returns. */
+export interface AgentChatNavigationView {
+    opened: (kind: ChatTab, id: string) => void
+    navigate: (kind: ChatTab, id: string | null) => void
+}
+
 /** Keeps opened conversation selection and URL navigation in step. */
 export const useAgentChatNavigation = (
     agent: AgentChatAgent | undefined,
     router: ReturnType<typeof navigation.useRouter>,
     setSelected: import("react").Dispatch<import("react").SetStateAction<Selection>>,
     setTab: import("react").Dispatch<import("react").SetStateAction<ChatTab>>,
-) => {
+): AgentChatNavigationView => {
     const navigate = useCallback(
         (kind: ChatTab, id: string | null) => {
             if (agent === undefined) return

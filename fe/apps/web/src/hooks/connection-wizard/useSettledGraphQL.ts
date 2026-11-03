@@ -18,7 +18,10 @@ export type Settled<T> =
  * given; a failure is not toasted but handed back with the message the back end sent, so the wizard or row that asked shows it
  * on the line where the owner is looking.
  */
-export const useSettledGraphQL = () => {
+export const useSettledGraphQL = (): (<T>(
+    action: () => Promise<T>,
+    successMessage?: string,
+) => Promise<Settled<T>>) => {
     const t = useTranslations("toast")
     const runGraphQL = useGraphQLWithToast()
     return useCallback(

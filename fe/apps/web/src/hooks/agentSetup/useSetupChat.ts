@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 import { mutate } from "@/modules/viewer-cache"
 import type { SetupWriteDecision } from "@/modules/types"
 import { useGraphQLWithToast } from "@/modules/toast"
@@ -9,11 +9,21 @@ import { useMutateDecideSetupCardSwr, useMutatePostSetupMessageSwr, QUERY_SETUP_
 
 const isSetupStateKey = (key: unknown): boolean => Array.isArray(key) && key[0] === QUERY_SETUP_STATE_SWR_KEY
 
+/** The view `useSetupChat` returns. */
+export interface SetupChatView {
+    text: string
+    setText: Dispatch<SetStateAction<string>>
+    isSending: boolean
+    send: () => Promise<void>
+    decide: (cardId: string, change: SetupWriteDecision) => Promise<void>
+    decidingId: string
+}
+
 /**
  * The commands of the setup chat: the owner writes a message (NIVO answers in the background; the state is read again until the reply
  * is in) and settles the confirm cards. A failure was already toasted with the server message.
  */
-export const useSetupChat = (setupSessionId: string, isAnswering: boolean) => {
+export const useSetupChat = (setupSessionId: string, isAnswering: boolean): SetupChatView => {
     const runGraphQL = useGraphQLWithToast()
     const post = useMutatePostSetupMessageSwr()
     const decideCard = useMutateDecideSetupCardSwr()

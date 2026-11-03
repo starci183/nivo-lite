@@ -78,7 +78,16 @@ export const accountingUpcomingRowsOf = (
     }))
 
 /** The block that says supplier invoices need an invoice connector, with the one place to connect it; null once one is connected. */
-export const supplierNeedOf = (t: AccountingTranslator, payablesSource: string | null) =>
+export const supplierNeedOf = (
+    t: AccountingTranslator,
+    payablesSource: string | null,
+): {
+    title: string
+    body: string
+    badge: string
+    actionLabel: string
+    actionHref: "/connections"
+} | null =>
     payablesSource === null
         ? {
               title: t("supplierNeedTitle"),

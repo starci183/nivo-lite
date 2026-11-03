@@ -8,7 +8,16 @@ import { useConnectionsRole } from "./useConnectionsRole"
  * The notice a provider page draws for a member who is neither owner nor manager, in place of a page whose every read would be refused;
  * undefined for anyone else and while the role is on its way.
  */
-export const useConnectionRefusal = () => {
+export const useConnectionRefusal = ():
+    | {
+          title: string
+          crumbLabel: string
+          homeLabel: string
+          homeHref: "/dashboard"
+          message: string
+          description: string
+      }
+    | undefined => {
     const t = useTranslations("connections")
     const { role, isLoading } = useConnectionsRole()
     if (isLoading || role === undefined || role === "owner" || role === "manager") return undefined

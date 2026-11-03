@@ -5,17 +5,58 @@ import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { loadingSlot, slotOfReads } from "@/hooks/slot"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import { agentLifecycleOf, agentLifecycleTone, agentSubtitleOf, installationPersonName } from "@/modules/installations"
+import {
+    agentLifecycleOf,
+    agentLifecycleTone,
+    agentSubtitleOf,
+    installationPersonName,
+    type AgentLifecycle,
+    type InstallationConnectionNeed,
+} from "@/modules/installations"
 import { agentChatHref, agentProfileHref } from "@/modules/routes"
 import { useInstanceChannels } from "./useInstanceChannels"
 import { useInstanceGuard } from "./useInstanceGuard"
 import { useInstallations } from "./useInstallations"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useInstanceHeader` returns. */
+export interface InstanceHeaderViewShape {
+    retry: () => void
+    slot: DataSlot<{
+        name: string
+        handle: string
+        seed: string
+        avatarUrl: string | null
+        typeName: string
+        subtitle: string
+        isEarly: boolean
+        lifecycle: AgentLifecycle
+        statusTone: "success" | "neutral" | "warning" | "accent"
+        channels: readonly string[]
+        connectionNeeds: readonly InstallationConnectionNeed[]
+        chatHref: string | null
+        profileHref: string | null
+    }>
+    name: string
+    handle: string
+    seed: string
+    avatarUrl: string | null
+    typeName: string
+    subtitle: string
+    isEarly: boolean
+    lifecycle: AgentLifecycle
+    statusTone: "success" | "neutral" | "warning" | "accent"
+    channels: readonly string[]
+    connectionNeeds: readonly InstallationConnectionNeed[]
+    chatHref: string | null
+    profileHref: string | null
+}
 
 /**
  * The header of one agent instance: the person (name, handle, avatar seed), the role, the lifecycle and the channels; skeleton
  * data until the instance is known. If the installed agents cannot be read the header stops waiting and names the role.
  */
-export const useInstanceHeader = (module: ModuleKey, installationId: string) => {
+export const useInstanceHeader = (module: ModuleKey, installationId: string): InstanceHeaderViewShape => {
     const t = useTranslations("modulesCore")
     const locale = useLocale() === "en" ? "en" : "vi"
     const guard = useInstanceGuard(module, installationId)

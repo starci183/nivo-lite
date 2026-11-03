@@ -1,11 +1,24 @@
 "use client"
 
 import { isSmallAdjustment, num } from "./inventory.shared"
-import { useInventoryFormat } from "./useInventoryFormat"
+import { useInventoryFormat, type InventoryFormat } from "./useInventoryFormat"
 import type { AdjustState } from "./useAdjustDrawer"
 
+/** The view `useAdjustmentPreview` returns. */
+export interface AdjustmentPreviewView {
+    format: InventoryFormat
+    effect: {
+        current: number
+        target: number
+        delta: number
+        small: boolean
+        move: boolean
+        submitKey: string
+    } | null
+}
+
 /** Resolves the quantity effect and its locale formatting for the adjustment preview. */
-export const useAdjustmentPreview = (state: AdjustState | null, several: boolean) => {
+export const useAdjustmentPreview = (state: AdjustState | null, several: boolean): AdjustmentPreviewView => {
     const format = useInventoryFormat()
     const effect = state === null ? null : effectOf(state, several)
     return { format, effect }

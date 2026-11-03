@@ -7,8 +7,50 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import { MEMBER_PAGE_SIZE, MEMBER_SORTS, matchesQuery, sortValue } from "./loyaltyMembers.shared"
 import type { MemberSortKey } from "./loyaltyMembers.shared"
 
+/** The view `useMemberList` returns. */
+export interface MemberListView {
+    rows: {
+        birthday: string | null
+        email: string | null
+        id: string
+        joinedAt: string
+        lastVisitAt: string | null
+        lifetimeSpendVnd: number
+        name: string
+        note: string
+        phone: string | null
+        points: number
+        tierKey: string | null
+        visits: number
+    }[]
+    shown: {
+        birthday: string | null
+        email: string | null
+        id: string
+        joinedAt: string
+        lastVisitAt: string | null
+        lifetimeSpendVnd: number
+        name: string
+        note: string
+        phone: string | null
+        points: number
+        tierKey: string | null
+        visits: number
+    }[]
+    remaining: number
+    query: string
+    tier: string
+    sort: MemberSortKey
+    selected: string | null
+    setQuery: (value: string) => void
+    setTier: (value: string | null) => void
+    setSort: (value: string | null) => void
+    showMore: () => void
+    select: (id: string | null) => void
+}
+
 /** The member list's search, tier filter, sort and paging, and the member picked for the detail. */
-export const useMemberList = (board: LoyaltyBoardType, activation: LoyaltyPanelActivation) => {
+export const useMemberList = (board: LoyaltyBoardType, activation: LoyaltyPanelActivation): MemberListView => {
     const [sessionScope, setSessionScope] = useState<string | null>(null)
     const isCurrent = activation.isActive && activation.isReady && sessionScope === activation.scope
     const [queryState, setQuery] = useState("")

@@ -3,13 +3,24 @@
 import { useFeatureReset, useFeatureLifetime } from "@/hooks/reuseables"
 import type { HiringOwner } from "@/hooks/hiring"
 
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { useHiringRun } from "@/hooks/hiring"
 import { REASON_MIN } from "./hiringPipeline.shared"
 import { useHiringMove } from "./useHiringMove"
 
+/** The view `useHiringReject` returns. */
+export interface HiringRejectView {
+    reason: string
+    setReason: Dispatch<SetStateAction<string>>
+    canConfirm: boolean
+    isPending: boolean
+    error: string | null
+    confirm: (candidateId: string) => void
+    reset: () => void
+}
+
 /** The reason being typed before a candidate is rejected, and the move that carries it; `onDone` runs once the back end took the rejection. */
-export const useHiringReject = (onDone: () => void, owner?: HiringOwner) => {
+export const useHiringReject = (onDone: () => void, owner?: HiringOwner): HiringRejectView => {
     const run = useHiringRun(owner)
     const lifetime = useFeatureLifetime(owner?.isActive ?? true, owner?.scope ?? "")
     const move = useHiringMove()

@@ -52,7 +52,7 @@ export const NO_COLUMN = "__none__"
 export const SCHEDULES: ReadonlyArray<number | null> = [null, 60, 360, 1440]
 
 /** The largest file the browser sends: ten megabytes (the same total applies to several documents). */
-export const MAX_FILE_BYTES = 10 * 1024 * 1024
+export const MAX_FILE_BYTES: number = 10 * 1024 * 1024
 
 /** The column mapping of an import. */
 export interface CsvMapping {

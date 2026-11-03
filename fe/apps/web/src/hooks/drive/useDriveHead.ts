@@ -21,11 +21,23 @@ const CHIP_TONES: Readonly<Record<DriveGrantStanding, ConnectionTone>> = {
     lost: "danger",
 }
 
+/** The view `useDriveHead` returns. */
+export interface DriveHeadView {
+    head: DataSlot<ConnectionHeadView>
+    notices: readonly ConnectionNotice[]
+    grant: () => undefined
+    isGranting: boolean
+    disconnect: () => Promise<void>
+    isDisconnecting: boolean
+    isOwner: boolean
+    standing: DriveGrantStanding | undefined
+}
+
 /**
  * The header of the Google Drive page, its standing, its notices, and its two commands: grant (or grant again) through Google, and the
  * owner's disconnect, which forgets the stored tokens and leaves the page for the hub. Nothing is read while `enabled` is false.
  */
-export const useDriveHead = (enabled = true) => {
+export const useDriveHead = (enabled = true): DriveHeadView => {
     const t = useTranslations("driveConnection")
     const tw = useTranslations("driveWizard")
     const settle = useSettledGraphQL()

@@ -6,18 +6,24 @@ import { useAgentInstallation, useAgentRights } from "@/hooks/agentSettings"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryAgentWorkSwr, useQueryWorkspaceAgentWorkSwr } from "@/hooks/swr"
 import { workItemHref } from "@/modules/routes"
-import type { AgentWorkView } from "@/modules/types"
+import type { AgentWorkView, DataSlot } from "@/modules/types"
 import { WORK_POLL_BUSY_MS, WORK_POLL_IDLE_MS, toWorkView } from "@/modules/agentWork"
 
 /** True when a turn of the answer is still running. */
 const isRunning = (latest: { readonly turns: ReadonlyArray<{ readonly status: string }> } | undefined): boolean =>
     latest?.turns.some((turn) => turn.status === "running") === true
 
+/** The view `useAgentWork` returns. */
+export interface AgentWorkViewShape {
+    slot: DataSlot<AgentWorkView>
+    reload: () => undefined
+}
+
 /**
  * The Work tab of one agent instance, in words: asked again every 5 seconds while a turn runs and every 30 seconds otherwise. A paused
  * installation and a workspace with work switched off are read beside it, so the status band says which one stops the agent.
  */
-export const useAgentWork = (module: string, installationId: string) => {
+export const useAgentWork = (module: string, installationId: string): AgentWorkViewShape => {
     const t = useTranslations("agentWork")
     const tAgent = useTranslations("modulesCore")
     const format = useFormatter()

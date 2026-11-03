@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl"
 import { RETENTION_MAX_DAYS, RETENTION_MIN_DAYS, settingsDefaults, useHiringSettings } from "@/hooks/hiringSettings"
 import { useHiringSettingsForm } from "@/hooks/rhf"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
-import type { FieldOf } from "@/modules/types"
+import type { FieldOf, HiringWorkbenchCopy } from "@/modules/types"
 
 import { useFeatureReset } from "@/hooks/reuseables"
 import type { SettingsValues } from "@/hooks/hiringSettings"
@@ -15,8 +15,23 @@ type ResolvedActions = {
     readonly save: () => void
 }
 
+/** The view `useHiringSettingsView` returns. */
+export interface HiringSettingsViewShape {
+    props: {
+        copy: HiringWorkbenchCopy
+        slugHint: string
+        values: SettingsValues
+        retentionMin: number
+        retentionMax: number
+        isBusy: boolean
+        error: string | null
+        notice: string | null
+    }
+    on: ResolvedActions
+}
+
 /** Owns HiringSettings's resolved data, commands and actual panel activation. */
-export const useHiringSettingsView = (input: HiringViewInput) => {
+export const useHiringSettingsView = (input: HiringViewInput): HiringSettingsViewShape => {
     const owner = { isActive: input.isActive && input.isReady, scope: input.scope }
 
     const t = useTranslations("hiring")

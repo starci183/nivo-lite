@@ -3,13 +3,30 @@
 import { useFeatureReset } from "@/hooks/reuseables"
 import type { HiringOwner } from "@/hooks/hiring"
 
-import { useState } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
 import type { HiringWorkbenchData, JobView } from "@/hooks/hiringWire"
 import { useHiringJobCommands } from "./useHiringJobCommands"
 
+/** The view `useHiringJobs` returns. */
+export interface HiringJobsView {
+    copiedId: string | null
+    isPending: boolean
+    error: string | null
+    editing: "new" | JobView | null
+    editorJob: JobView | null
+    adJob: JobView | undefined
+    create: () => void
+    edit: (id: string) => void
+    closeEditor: () => void
+    openAd: Dispatch<SetStateAction<string | null>>
+    closeAd: () => void
+    copyLink: (id: string) => void
+    transition: (id: string, to: string) => void
+}
+
 /** The jobs tab: the job being edited and the one whose ad is open, the status commands and the copied link. */
-export const useHiringJobs = (data: HiringWorkbenchData, owner?: HiringOwner) => {
+export const useHiringJobs = (data: HiringWorkbenchData, owner?: HiringOwner): HiringJobsView => {
     const run = useHiringRun(owner)
     const commands = useHiringJobCommands()
     const { copiedId, copy } = useHiringCopy(owner)

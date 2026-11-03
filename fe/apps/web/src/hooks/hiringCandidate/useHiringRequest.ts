@@ -4,7 +4,7 @@ import { useFeatureReset, useFeatureLifetime } from "@/hooks/reuseables"
 import { useState } from "react"
 import type { FieldValues, UseFormReturn } from "react-hook-form"
 import { useHiringRun, type HiringOwner } from "@/hooks/hiring"
-import type { HiringViews } from "@/modules/types"
+import type { HiringViews, HiringRequestOutcome } from "@/modules/types"
 
 /** Sends the submitted form and resolves with what the request came to. */
 type HiringRequestSend<Values> = (submitted: Values) => Promise<HiringViews["requestOutcome"]>
@@ -14,7 +14,13 @@ export const useHiringRequest = <Values extends FieldValues>(
     form: UseFormReturn<Values>,
     owner: HiringOwner | undefined,
     sendRequest: HiringRequestSend<Values>,
-) => {
+): {
+    outcome: HiringRequestOutcome | null
+    isPending: boolean
+    error: string | null
+    send: () => void
+    reset: () => void
+} => {
     const run = useHiringRun(owner)
     const runGraphQL = useGraphQLWithToast()
     const lifetime = useFeatureLifetime(owner?.isActive ?? true, owner?.scope ?? "")

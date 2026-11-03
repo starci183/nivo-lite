@@ -1,4 +1,4 @@
-import type { SWRResponse } from "swr"
+import type { SWRResponse, KeyedMutator } from "swr"
 import { slotOfSwr } from "@/hooks/slot"
 import { isInvalidFailure, isNotFoundFailure } from "@/modules/failure"
 import { CONSOLE_ROUTES } from "@/modules/routes"
@@ -31,7 +31,15 @@ const isMissingPageRead = (error: unknown): boolean =>
  * What a connection page makes of its read: the slot, `isMissing` once the back end says no such connection exists (the page then
  * answers `notFound()` once), and the two ways to ask again.
  */
-export const connectionPageOf = <T>(read: SWRResponse<T, unknown>) => ({
+export const connectionPageOf = <T>(
+    read: SWRResponse<T, unknown>,
+): {
+    read: SWRResponse<T, unknown>
+    slot: DataSlot<T>
+    isMissing: boolean
+    reload: () => undefined
+    mutate: KeyedMutator<T>
+} => ({
     read,
     slot: slotOfSwr(read),
     isMissing: isMissingPageRead(read.error),
@@ -78,7 +86,16 @@ interface SetupStepSource<Id extends string> {
 }
 
 /** The step of the given id (the first when none matches), with every word empty while the steps are not read yet. */
-export const setupStepViewOf = <Id extends string>(steps: ReadonlyArray<SetupStepSource<Id>>, id: Id) => {
+export const setupStepViewOf = <Id extends string>(
+    steps: ReadonlyArray<SetupStepSource<Id>>,
+    id: Id,
+): {
+    ordinal: number
+    title: string
+    summary: string
+    hint: string
+    isOpen: boolean
+} => {
     const step = steps.find((candidate) => candidate.id === id) ?? steps[0]
     return {
         ordinal: step?.ordinal ?? 1,

@@ -2,7 +2,7 @@ import type { InterviewView } from "@/hooks/hiringWire"
 import { PRODUCT_TIME_ZONE, shiftDate, wallDate, wallInstant, weekStartOf } from "@/modules/i18n"
 
 /** One day of the week calendar on the Vietnam clock, with the confirmed interviews that start in it. */
-interface CalendarDay {
+export interface CalendarDay {
     readonly date: string
     /** The first instant of the day, ISO. */
     readonly startIso: string

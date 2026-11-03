@@ -4,8 +4,14 @@ import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import type { HiringOwner } from "./useHiringRun"
 import { useCallback, useState } from "react"
 
+/** The view `useHiringCopy` returns. */
+export interface HiringCopyView {
+    copiedId: string | null
+    copy: (id: string, text: string) => void
+}
+
 /** Copies a link to the clipboard and remembers which row it was for, so that row can say "copied". */
-export const useHiringCopy = (owner?: HiringOwner) => {
+export const useHiringCopy = (owner?: HiringOwner): HiringCopyView => {
     const [copiedId, setCopiedId] = useState<string | null>(null)
     const lifetime = useFeatureLifetime(owner?.isActive ?? true, owner?.scope ?? "")
     useFeatureReset({

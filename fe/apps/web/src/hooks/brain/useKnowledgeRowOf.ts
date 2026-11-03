@@ -16,9 +16,11 @@ import {
 } from "@/hooks/knowledge"
 import { appliedBatchOf, waitingFactCountOf } from "@/modules/brain"
 import type { DocumentRowBadgeView, DocumentRowView, LiveProgress } from "@/modules/documents"
-import type { BrainExtraction, KnowledgeDocument, RowActionView } from "@/modules/types"
+import type { BrainExtraction, KnowledgeDocument, RowActionView, IdeaDecision } from "@/modules/types"
 import { toast } from "@/modules/toast"
 import { useBrainBoard } from "./useBrainBoard"
+import type { BrainBoard } from "./useBrainBoard"
+import type { WorkspaceMember } from "@/hooks/knowledge"
 
 type Translate = ReturnType<typeof useTranslations<"knowledge">>
 
@@ -99,12 +101,56 @@ const retryActionsOf = (t: Translate, choice: RetryChoice, pending: string | und
         disabledReason: t("actionBusy"),
     }))
 
+/** The view `useKnowledgeRowOf` returns. */
+export interface KnowledgeRowOfView {
+    rowOf: (source: KnowledgeDocument) => DocumentRowView
+    commands: {
+        pending: Readonly<Record<string, string>>
+        retrying: ReadonlySet<string>
+        isPending: boolean
+        retry: (sourceId: string) => Promise<
+            | {
+                  id: string
+              }
+            | undefined
+        >
+        reread: (sourceId: string) => Promise<
+            | {
+                  id: string
+              }
+            | undefined
+        >
+        applyFacts: (sourceId: string) => Promise<
+            | {
+                  applied: number
+                  batchId: string
+                  skipped: number
+              }
+            | undefined
+        >
+        undoFacts: (
+            batchId: string,
+            sourceId: string,
+        ) => Promise<
+            | {
+                  kept: number
+                  restored: number
+              }
+            | undefined
+        >
+        decide: (key: string, state: IdeaDecision | null) => Promise<boolean | undefined>
+    }
+    member: WorkspaceMember
+    board: BrainBoard
+    dispatch: (sourceId: string, actionId: string) => void
+}
+
 /**
  * The row of a document as every list of documents draws it: the kind, topic and date, where it stands, the plain reason it failed,
  * who may read it, the live stage with its count and bar while a worker is on it, and the retry when it may be run again.
  * `live` is what `useKnowledgeSources` gives; the facts reading comes from the Second Brain.
  */
-export const useKnowledgeRowOf = (live: Readonly<Record<string, LiveProgress>>) => {
+export const useKnowledgeRowOf = (live: Readonly<Record<string, LiveProgress>>): KnowledgeRowOfView => {
     const t = useTranslations("knowledge")
     const feedback = useTranslations("toast")
     const format = useFormatter()

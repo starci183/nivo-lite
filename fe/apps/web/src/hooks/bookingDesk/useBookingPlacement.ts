@@ -77,13 +77,26 @@ const triggerPlacement = (input: PlacementWrite) => {
     }
 }
 
+/** The view `useBookingPlacement` returns. */
+export interface BookingPlacementView {
+    draft: PlacementDraft | null
+    fields: PlacementFields | null
+    reason: string | null
+    isBusy: boolean
+    canForce: boolean
+    open: (next: PlacementDraft, start: PlacementFields) => void
+    change: (patch: Partial<PlacementFields>) => void
+    submit: () => void
+    close: () => void
+}
+
 /** The owner's add and move of a booking: one dialog, one set of fields, and the refusal reason kept on screen until the owner changes the plan. A placed booking toasts and revalidates every cached board. */
 export const useBookingPlacement = (
     timezone: string,
     onPlaced: (kind: PlacementDraft["kind"]) => Promise<unknown>,
     isActive = true,
     scope = "",
-) => {
+): BookingPlacementView => {
     const t = useTranslations("workbenchBooking")
     const tToast = useTranslations("toast")
     const withToast = useGraphQLWithToast()

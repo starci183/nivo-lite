@@ -6,8 +6,14 @@ import { useRequestPaymentOrder } from "@/hooks/billing"
 import { useCreditsCheckoutStore } from "@/hooks/zustand/creditsCheckout"
 import type { PayTarget } from "@/modules/types"
 
+/** The view `useCreditsOrder` returns. */
+export interface CreditsOrderView {
+    begin: (next: PayTarget) => Promise<void>
+    busy: string | null
+}
+
 /** Enqueues purchases only from user events and shares progress with the payment slot. */
-export const useCreditsOrder = (workspaceId: string | undefined) => {
+export const useCreditsOrder = (workspaceId: string | undefined): CreditsOrderView => {
     const t = useTranslations("credits")
     const { target, isRequesting: checkoutPending, open, close, update, registerRequest } = useCreditsCheckoutStore()
     const { request, orderId, isRequesting, status, error } = useRequestPaymentOrder(workspaceId)

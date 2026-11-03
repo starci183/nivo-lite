@@ -8,9 +8,53 @@ import { useState } from "react"
 import { useInventoryRun } from "@/hooks/inventory"
 import { useInventoryStockCommands } from "@/hooks/inventoryCommands"
 import { useInventoryTemplates } from "@/hooks/inventoryStarter"
+import type { InventoryTemplateChoice } from "@/modules/types"
+import type { SWRResponse } from "swr"
+
+/** The view `useInventoryImportView` returns. */
+export interface InventoryImportView {
+    readonly props: {
+        readonly allowed: boolean
+        readonly deniedTitle: string
+        readonly deniedBody: string
+        readonly pasteTitle: string
+        readonly pasteHelp: string
+        readonly pasteLabel: string
+        readonly pastePlaceholder: string
+        readonly pasteSubmit: string
+        readonly text: string
+        readonly startTitle: string
+        readonly startFooter: string
+        readonly loadLabel: string
+        readonly templates: InventoryTemplateChoice[]
+        readonly isPending: boolean
+        readonly error: string | null
+        readonly notice: string | null
+    }
+    readonly on: {
+        readonly onText: (value: string) => void
+        readonly onPaste: () => void
+        readonly onLoad: (key: string) => void
+    }
+    readonly templateRead: SWRResponse<
+        {
+            description: string
+            key: string
+            name: string
+        }[]
+    >
+    readonly retryTemplates: () => Promise<
+        | {
+              description: string
+              key: string
+              name: string
+          }[]
+        | undefined
+    >
+}
 
 /** The import tab: the pasted text lives here, the drawing in the pure half. */
-export const useInventoryImportView = (input: InventoryPanelInput) => {
+export const useInventoryImportView = (input: InventoryPanelInput): InventoryImportView => {
     const board = input.board
     const t = useTranslations("workbenchInventory")
     const commands = useInventoryStockCommands()

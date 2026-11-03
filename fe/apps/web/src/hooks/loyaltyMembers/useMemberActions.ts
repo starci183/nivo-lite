@@ -44,8 +44,23 @@ const useCommandToken = (): CommandToken => {
     }
 }
 
+/** The view `useMemberActions` returns. */
+export interface MemberActionsView {
+    /** Saves name, birthday and note. */
+    save: (fields: MemberFields) => void
+    /** Records a signed point adjustment; calls `onDone` when the back end took it (posted or waiting). */
+    adjust: (points: number, reason: string, onDone: () => void) => void
+    /** Redeems a reward for the member and tells whether it went through or waits for approval. */
+    redeem: (rewardId: string) => void
+    isPending: boolean
+    clear: () => void
+    busyReward: string | null
+    adjustNote: string | null
+    redeemNote: ActionNote | null
+}
+
 /** What the member page writes: details, point adjustments and redemptions, each toasted and followed by a revalidation. */
-export const useMemberActions = (customerId: string, activation: LoyaltyPanelActivation) => {
+export const useMemberActions = (customerId: string, activation: LoyaltyPanelActivation): MemberActionsView => {
     const t = useTranslations("loyalty")
     const withToast = useGraphQLWithToast()
     const updateMember = useMutateUpdateLoyaltyMemberSwr()
@@ -119,8 +134,18 @@ interface MemberCommandsContext {
     readonly setRedeemNote: (value: ActionNote | null) => void
     readonly refresh: () => Promise<void>
 }
+/** What `memberCommandsOf` returns. */
+export interface MemberCommandsOfResult {
+    /** Saves name, birthday and note. */
+    save: (fields: MemberFields) => void
+    /** Records a signed point adjustment; calls `onDone` when the back end took it (posted or waiting). */
+    adjust: (points: number, reason: string, onDone: () => void) => void
+    /** Redeems a reward for the member and tells whether it went through or waits for approval. */
+    redeem: (rewardId: string) => void
+}
+
 /** The three member commands retain their transport, feedback and exact-cache settlement as one owner. */
-const memberCommandsOf = (input: MemberCommandsContext) => {
+const memberCommandsOf = (input: MemberCommandsContext): MemberCommandsOfResult => {
     const {
         customerId,
         activation,

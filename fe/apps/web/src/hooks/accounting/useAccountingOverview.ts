@@ -12,11 +12,55 @@ const AGEING_BUCKETS = [
     { id: "d60", key: "ageingD60", tone: "negative" },
 ] as const
 
+/** The view `useAccountingOverview` returns. */
+export interface AccountingOverviewView {
+    props: {
+        title: string
+        intro: string
+        periodLabel: string
+        periodItems: {
+            id: string
+            label: string
+        }[]
+        selectedPeriod: AccountingPeriodKey
+        excludedNote: string | null
+        trendTitle: string
+        trendIntro: string
+        trendSource: string
+        trendEmpty: string
+        ageingTitle: string
+        ageingIntro: string
+        ageingEmpty: string
+        ageingMax: number
+        ageing: {
+            id: "d0" | "d30" | "d60"
+            label: string
+            total: number
+            reading: string
+            tone: "neutral" | "cautionary" | "negative"
+        }[]
+        weekMax: number
+        weeks: {
+            id: string
+            label: string
+            total: number
+            reading: string
+        }[]
+    }
+    on: {
+        selectPeriod: (key: string) => void
+    }
+}
+
 /**
  * The Period overview tab: the period choice lives here, the drawing in the pure half. The figures of the period are the ribbon of
  * the desk, so this tab holds only what the ribbon does not: the ageing and the weeks of income.
  */
-export const useAccountingOverview = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
+export const useAccountingOverview = (
+    data: AccountingWorkbenchData,
+    isActive: boolean,
+    scope: string,
+): AccountingOverviewView => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const [periodKey, setPeriodKey] = useScopedState<AccountingPeriodKey>("this", isActive, scope)

@@ -6,12 +6,48 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { agentHref } from "@/modules/installations"
 import { chatbotFiguresOf } from "@/modules/chatbot"
 import { useChatbotOverview } from "./useChatbotOverview"
+import type { ChatbotOverviewView } from "./useChatbotOverview"
+import type { ChatbotOverview, WorkbenchFigureData } from "@/modules/types"
 
 /** How many waiting conversations the "waiting for you" card lists. */
 const WAITING_ROWS = 5
 
+/** The view `useChatbotWorkbench` returns. */
+export interface ChatbotWorkbenchView {
+    reads: (ReturnType<typeof useQueryMyWorkspacesSwr> | ChatbotOverviewView)[]
+    workspaceId: string | undefined
+    isLoading: boolean
+    isFailed: boolean
+    overview: ChatbotOverview | undefined
+    selectedId: string | null
+    userName: string
+    userId: string
+    canFillGaps: boolean
+    figures: readonly WorkbenchFigureData[]
+    /** The conversations waiting for a person, each leading to the inbox opened on it. */
+    waiting: {
+        total: number
+        rows: {
+            id: string
+            title: string
+            description: string
+            href: string
+        }[]
+    }
+    failure: {
+        title: string
+        description: string
+        retryLabel: string
+    } | null
+    reload: () => void
+}
+
 /** One Chatbot instance as its workbench panels read it: inbox snapshot, figures, waiting conversations and who is looking. */
-export const useChatbotWorkbench = (installationId: string | null, focus: string | null, isActive = true) => {
+export const useChatbotWorkbench = (
+    installationId: string | null,
+    focus: string | null,
+    isActive = true,
+): ChatbotWorkbenchView => {
     const t = useTranslations("workbenchChatbot")
     const frame = useTranslations("agentDashboard")
     const { activeWorkspaceId } = useActiveWorkspace()

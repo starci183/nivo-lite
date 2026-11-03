@@ -4,11 +4,17 @@ import { useCallback } from "react"
 import { useMutateDisconnectConnectionSwr, useMutateDisconnectDriveSwr } from "@/hooks/swr"
 import type { Provider } from "@/modules/types"
 
+/** The view `useDisconnectConnection` returns. */
+export interface DisconnectConnectionView {
+    trigger: (connectionId: string) => Promise<boolean>
+    isMutating: boolean
+}
+
 /**
  * Disconnects one connection of a provider. Google Drive disconnects through its grant, which also forgets the stored tokens (owner
  * only); every other provider goes through the generic disconnect of its connection.
  */
-export const useDisconnectConnection = (provider: Provider) => {
+export const useDisconnectConnection = (provider: Provider): DisconnectConnectionView => {
     const connection = useMutateDisconnectConnectionSwr()
     const drive = useMutateDisconnectDriveSwr()
     const { trigger: triggerConnection } = connection

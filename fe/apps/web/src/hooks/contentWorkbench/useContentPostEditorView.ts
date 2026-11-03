@@ -14,9 +14,10 @@ import { useContentEditorForm } from "@/hooks/rhf"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useContentEditorFields } from "@/hooks/contentEditorView"
 import type { ContentViewInput } from "./contentWorkbench.shared"
+import type { ContentEditorView } from "@/modules/types"
 
 /** Owns the keyed focus editor's real selection, forms, dialogs and AI job lifetime. */
-export const useContentPostEditorView = (input: ContentViewInput) => {
+export const useContentPostEditorView = (input: ContentViewInput): ContentEditorView => {
     const item =
         input.isActive && input.isReady
             ? (input.data?.items.find((item) => item.id === input.focus || item.work_item_id === input.focus) ?? null)

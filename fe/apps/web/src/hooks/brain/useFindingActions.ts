@@ -6,12 +6,22 @@ import { navigation } from "@/modules/i18n"
 import { brainDossierHref } from "@/modules/routes"
 import { useDossierReviewCommands } from "./useDossierReviewCommands"
 import { useFindingDialog } from "./useFindingDialog"
+import type { FindingDialog } from "./useFindingDialog"
+
+/** The view `useFindingActions` returns. */
+export interface FindingActionsView {
+    act: (findingId: string, action: FindingCardActionView) => void
+    dialog: FindingDialog
+}
 
 /**
  * What a card of the queue does when one of its actions is pressed: a short task opens its dialog, a confirmation or reopening
  * goes straight to the back end, and a draft opens in the drawer of its dossier. Gives the dialog the pressed action opened.
  */
-export const useFindingActions = (findings: ReadonlyArray<FindingView>, members: ReadonlyArray<MemberOption>) => {
+export const useFindingActions = (
+    findings: ReadonlyArray<FindingView>,
+    members: ReadonlyArray<MemberOption>,
+): FindingActionsView => {
     const router = navigation.useRouter()
     const commands = useDossierReviewCommands()
     const openDraft = (finding: FindingView, draftId: string) => {

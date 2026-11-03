@@ -23,12 +23,20 @@ const historyOf = (messages: ReadonlyArray<GuideConversationMessage>): Array<Gui
         message.role === "user" ? { role: "user", text: message.text } : { role: "guide", text: message.reply.answer },
     )
 
+/** The view `useGuideConversation` returns. */
+export interface GuideConversationView {
+    messages: readonly GuideConversationMessage[]
+    isAsking: boolean
+    ask: (question: string, path: string) => Promise<void>
+    restart: () => void
+}
+
 /**
  * The NIVO guide conversation. A question that clearly names a place is answered from the site map at once (no tokens); anything else
  * goes to the be `askGuide` door (which builds the prompt and limits each member) and its queued text is polled until the model
  * answers, the status cannot be read, or a minute passes.
  */
-export const useGuideConversation = (isManager: boolean) => {
+export const useGuideConversation = (isManager: boolean): GuideConversationView => {
     const t = useTranslations("guide")
     const text = useGuideText()
     const runGraphQL = useGraphQLWithToast()

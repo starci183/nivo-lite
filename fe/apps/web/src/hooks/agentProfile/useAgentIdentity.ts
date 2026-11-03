@@ -1,9 +1,9 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react"
 import { mutate } from "@/modules/viewer-cache"
-import { useAvatarUpload } from "@/hooks/avatar"
+import { useAvatarUpload, type AvatarProblem } from "@/hooks/avatar"
 import type { AvatarDoors } from "@/hooks/avatar"
 import {
     QUERY_MODULE_INSTALLATIONS_SWR_KEY,
@@ -13,14 +13,34 @@ import {
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
-import { AGENT_NAME_LIMITS } from "./agentProfile.shared"
+import { AGENT_NAME_LIMITS, type AgentProfileView } from "./agentProfile.shared"
 import { useAgentProfile } from "./useAgentProfile"
+import type { DataSlot } from "@/modules/types"
+
+/** The view `useAgentIdentity` returns. */
+export interface AgentIdentityView {
+    agent: AgentProfileView | undefined
+    slot: DataSlot<AgentProfileView>
+    reload: () => void
+    name: string
+    setName: Dispatch<SetStateAction<string | null>>
+    isNameInvalid: boolean
+    saveName: () => Promise<void>
+    isSaving: boolean
+    avatar: {
+        preview: string | null
+        problem: AvatarProblem | null
+        isBusy: boolean
+        choose: (files: ReadonlyArray<File>) => Promise<void>
+        remove: () => Promise<void>
+    }
+}
 
 /**
  * The display identity of an agent a manager edits on its profile, like a person's: the name (free text, the @handle stays) and
  * the picture. Each save is toasted, then the profile and the Office board read the agent again.
  */
-export const useAgentIdentity = (agentId: string) => {
+export const useAgentIdentity = (agentId: string): AgentIdentityView => {
     const t = useTranslations("agentProfile")
     const runGraphQL = useGraphQLWithToast()
     const { slot, reload } = useAgentProfile(agentId)

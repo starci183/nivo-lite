@@ -10,12 +10,20 @@ import {
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 
+/** The view `useAccountCommands` returns. */
+export interface AccountCommandsView {
+    saveProfile: (name: string) => Promise<boolean>
+    isSaving: boolean
+    revokeSession: (sessionId: string) => Promise<boolean>
+    isRevoking: boolean
+}
+
 /**
  * The account writes that go through the back end, each toasted (the failure with the server-localized message):
  * `saveProfile` saves the display name (the viewer's account and workspaces are revalidated), `revokeSession` signs one other device
  * out (the device list is revalidated). Each answers whether it worked.
  */
-export const useAccountCommands = () => {
+export const useAccountCommands = (): AccountCommandsView => {
     const t = useTranslations("account")
     const runGraphQL = useGraphQLWithToast()
     const profile = useMutateUpdateProfileSwr()

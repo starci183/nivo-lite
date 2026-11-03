@@ -9,7 +9,11 @@ import type { Access } from "@/modules/types"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
 
 /** Gives one agent a level through a connection, or removes its access (`null`), and toasts the outcome. */
-export const useSetConnectionGrant = () => {
+export const useSetConnectionGrant = (): ((
+    connectionId: string,
+    agentId: string,
+    access: Access | null,
+) => Promise<Settled<true>>) => {
     const t = useTranslations("connections")
     const settle = useSettledGraphQL()
     const refresh = useConnectionsRefresh()

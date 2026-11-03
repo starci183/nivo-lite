@@ -8,7 +8,7 @@ import type { LinkInput } from "@/modules/documents"
 const newRow = (value = ""): LinkInput => ({ id: nextId(), value })
 
 /** What the links list gives the drawer. */
-interface LinkRows {
+export interface LinkRows {
     readonly rows: ReadonlyArray<LinkInput>
     /** Why each row cannot be added, by row id (the catalog key). */
     readonly errors: Readonly<Record<string, string>>

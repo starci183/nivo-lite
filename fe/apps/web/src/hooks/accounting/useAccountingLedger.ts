@@ -1,10 +1,10 @@
 "use client"
 
-import { ledgerRecordsOf } from "@/hooks/accountingRecords"
+import { ledgerRecordsOf, type AccountingRecordView } from "@/hooks/accountingRecords"
 import { useAccountingAdjustmentForm } from "@/hooks/rhf"
 import { useScopedState } from "@/hooks/reuseables"
 import type { AccountingLedgerKind, AccountingWorkbenchData } from "@/modules/types"
-import { accountingStampOf, lineageItemsOf, moneyOf } from "@/modules/utils"
+import { accountingStampOf, lineageItemsOf, moneyOf, type AccountingLineageItem } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { useAccountingSubmit } from "./useAccountingSubmit"
@@ -30,8 +30,68 @@ const adjustModeOf = (
     return isAdjusting ? "form" : "button"
 }
 
+/** The view `useAccountingLedger` returns. */
+export interface AccountingLedgerView {
+    props: {
+        selectedFilter: LedgerFilter
+        records: readonly AccountingRecordView[]
+        drawer: {
+            isOpen: boolean
+            title: string
+            subtitle: string | null
+            closeLabel: string
+            lineageTitle: string
+            lineageIntro: string
+            lineage: readonly AccountingLineageItem[]
+            adjustTitle: string
+            adjustMode: "form" | "notReady" | "managersOnly" | "button" | "unavailable"
+            unavailableText: string
+            notReadyText: string
+            managersOnlyText: string
+            openLabel: string
+            form: {
+                note: string
+                amount: string
+                isSaving: boolean
+                error: string | null
+                intro: string
+                noteLabel: string
+                noteHint: string
+                amountLabel: string
+                amountHint: string
+                saveLabel: string
+                cancelLabel: string
+            }
+        }
+        title: string
+        intro: string
+        foot: string
+        empty: string
+        emptyBody: string
+        filterLabel: string
+        filterItems: {
+            id: string
+            label: string
+        }[]
+    }
+    on: {
+        selectFilter: (key: string) => void
+        openEntry: (id: string) => void
+        closeDrawer: () => void
+        startAdjust: () => void
+        cancelAdjust: () => void
+        changeNote: (note: string) => void
+        changeAmount: (amount: string) => void
+        submitAdjust: () => void
+    }
+}
+
 /** The Ledger tab: the filter, the open line and the correction form live here, the drawing in the pure half. */
-export const useAccountingLedger = (data: AccountingWorkbenchData, isActive: boolean, scope: string) => {
+export const useAccountingLedger = (
+    data: AccountingWorkbenchData,
+    isActive: boolean,
+    scope: string,
+): AccountingLedgerView => {
     const t = useTranslations("workbenchAccounting")
     const format = useFormatter()
     const [filter, setFilter] = useScopedState<LedgerFilter>("all", isActive, scope)

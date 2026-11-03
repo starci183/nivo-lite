@@ -21,11 +21,18 @@ const TONES: Readonly<Record<KnowledgeDocument["status"], ConnectionTone>> = {
     blocked_credits: "warning",
 }
 
+/** The view `useDriveProgress` returns. */
+export interface DriveProgressView {
+    lines: DataSlot<readonly ConnectionLineView[]>
+    count: number
+    reload: () => undefined
+}
+
 /**
  * The sources that came from Google Drive and where each one stands, newest first: Drive sends no webhook, so the page asks the job
  * queue every few seconds. A failed file carries its note and a retry; a file that ran out of credit says it is saved and searchable.
  */
-export const useDriveProgress = (enabled = true) => {
+export const useDriveProgress = (enabled = true): DriveProgressView => {
     const t = useTranslations("driveConnection")
     const tk = useTranslations("knowledge")
     const feedback = useTranslations("toast")

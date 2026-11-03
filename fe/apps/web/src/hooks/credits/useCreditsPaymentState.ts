@@ -6,8 +6,18 @@ import { useQueryPaymentOrderSwr } from "@/hooks/swr"
 import { toast } from "@/modules/toast"
 import type { PayOrder } from "@/modules/types"
 
+/** The view `useCreditsPaymentState` returns. */
+export interface CreditsPaymentStateView {
+    phase: "paid" | "pending" | "expired"
+    left: number | null
+}
+
 /** Polls settlement through SWR and refreshes balances after one paid notification. */
-export const useCreditsPaymentState = (workspaceId: string, order: PayOrder | null, onPaid: () => void) => {
+export const useCreditsPaymentState = (
+    workspaceId: string,
+    order: PayOrder | null,
+    onPaid: () => void,
+): CreditsPaymentStateView => {
     const t = useTranslations("credits")
     const now = useNow({ updateInterval: 1000 })
     const notified = useRef<string | undefined>(undefined)

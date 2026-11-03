@@ -8,12 +8,18 @@ import { navigation } from "@/modules/i18n"
 import type { ConnectionPageHeadCommands, ConnectionPageHeadView } from "@/modules/types"
 import { useDriveHead } from "./useDriveHead"
 
+/** The view `useDrivePageHead` returns. */
+export interface DrivePageHeadView {
+    view: ConnectionPageHeadView
+    on: ConnectionPageHeadCommands
+}
+
 /**
  * The frame of the Google Drive page: the header with the grant-again command, the notices (the grant was revoked, Google sent the
  * owner back with a reason, a refused command), the progress rail's drawer and the owner's disconnect, which asks first. Nothing is
  * read while `enabled` is false (the frame is serving another provider).
  */
-export const useDrivePageHead = (enabled: boolean) => {
+export const useDrivePageHead = (enabled: boolean): DrivePageHeadView => {
     const t = useTranslations("driveConnection")
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()

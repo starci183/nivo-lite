@@ -47,8 +47,15 @@ const journeyOf = (detail: LeadJourneyType): LeadJourney => ({
     })),
 })
 
+/** The view `useLeadJourney` returns. */
+export interface LeadJourneyView extends ReturnType<typeof useQueryLeadJourneySwr> {
+    detail: LeadJourney | null
+    slot: DataSlot<LeadJourney>
+    channelLabel: string
+}
+
 /** Reads the lead once through the shared SWR cache and prepares the existing panel view. */
-export const useLeadJourney = (leadId: string | undefined) => {
+export const useLeadJourney = (leadId: string | undefined): LeadJourneyView => {
     const { activeWorkspaceId } = useActiveWorkspace()
     const query = useQueryLeadJourneySwr(activeWorkspaceId, leadId)
     const t = useTranslations("leads")

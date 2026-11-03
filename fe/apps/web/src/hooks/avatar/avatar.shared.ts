@@ -2,10 +2,10 @@
 export const AVATAR_TYPES: ReadonlyArray<string> = ["image/png", "image/jpeg", "image/webp"]
 
 /** The native `accept` list of the picture picker (a hint to the picker; the bucket and the server check again). */
-export const AVATAR_ACCEPT = AVATAR_TYPES.join(",")
+export const AVATAR_ACCEPT: string = AVATAR_TYPES.join(",")
 
 /** The largest picture, in bytes (2 MB, the bucket's own limit). */
-export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+export const AVATAR_MAX_BYTES: number = 2 * 1024 * 1024
 
 /** Why a chosen picture cannot be uploaded: its type, or its size. */
 export type AvatarProblem = "type" | "size"
