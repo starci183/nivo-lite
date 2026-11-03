@@ -3136,7 +3136,7 @@
     "errBadType": "Only .txt, .md, .csv, .pdf, .docx, .xlsx, .pptx and .zip files can be added.",
     "errTooBig": "This file is larger than 50 MB.",
     "usageLabel": "Uploaded files (written text and links do not count)",
-    "usageValue": "{used} / {limit} MB used",
+    "usageValue": "{used} / {limit} used",
     "errBadLink": "This is not a valid link.",
     "driveAlertBody": "NIVO only reads. It never edits or deletes anything in your Drive, and you can disconnect at any time.",
     "driveLostBody": "Drive access was revoked in your Google account. Grant it again to read private files and folders.",

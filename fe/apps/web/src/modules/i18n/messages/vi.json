@@ -3141,7 +3141,7 @@
     "errBadType": "Chỉ thêm được tệp .txt, .md, .csv, .pdf, .docx, .xlsx, .pptx và .zip.",
     "errTooBig": "Tệp này lớn hơn 50 MB.",
     "usageLabel": "Tệp đã tải lên (văn bản viết tay và link không tính)",
-    "usageValue": "Đã dùng {used} / {limit} MB",
+    "usageValue": "Đã dùng {used} / {limit}",
     "errBadLink": "Đây không phải liên kết hợp lệ.",
     "driveAlertBody": "NIVO chỉ đọc, không sửa hay xoá gì trong Drive của bạn, và bạn có thể ngắt kết nối bất cứ lúc nào.",
     "driveLostBody": "Quyền Drive đã bị thu hồi trong tài khoản Google của bạn. Hãy cấp lại để đọc tệp và thư mục riêng tư.",
