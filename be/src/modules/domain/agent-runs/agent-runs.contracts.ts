@@ -1,6 +1,9 @@
 /** A JSON object a step keeps: bounded, masked, and enough to resume from the row alone. */
 export type StepJson = Readonly<Record<string, unknown>>
 
+/** A step input read afresh, or undefined to keep the stored one. */
+export type OptionalStepJson = StepJson | undefined
+
 /** The active persisted wait of a work item, or null once no running step owns it. */
 export type OptionalRunWait = StepView | null
 
@@ -142,6 +145,8 @@ export interface AgentStepHandler {
     onDecided?(step: StepView, decision: StepDecision): StepAnswer
     /** Undoes a done step, when this kind is the compensation another step named. */
     compensate?(step: StepView, signal: AbortSignal): Promise<void>
+    /** The input of a step about to run again after a fix, read afresh (a trigger scope that changed, a setting): absent keeps the stored one. */
+    refresh?(step: StepView): Promise<OptionalStepJson>
     /** Tells a person a run died at this step, with the trigger intact, and the customer the honest holding line. */
     deadLetter?(step: StepView, code: string): Promise<void>
 }

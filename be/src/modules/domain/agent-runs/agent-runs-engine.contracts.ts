@@ -184,6 +184,8 @@ export interface RunSweepReport {
     readonly unspoken: number
     /** Waits whose work item had already closed by a decision, finished with that decision. */
     readonly recovered: number
+    /** Parked runs put back on their failed step. */
+    readonly parked: number
 }
 
 /** What the graph's timeout did with a wait that ran out. */
@@ -206,3 +208,81 @@ export interface AgentRunItemVerdicts {
 /** The owner's locked decision state before the clock can change a wait. */
 export type RunTimeoutClaim =
     { readonly kind: "busy" } | { readonly kind: "open" } | { readonly kind: "closed"; readonly decision: StepDecision }
+
+/** Who asks to run a parked run again and why; recorded on the run. */
+export interface ResumeRequest {
+    /** The run. */
+    readonly runId: string
+    /** A member id for a person, `build` or `sweep` for the machine. */
+    readonly actor: string
+    /** The reason in a few words. */
+    readonly reason: string
+}
+
+/** What a resume did. */
+export type ResumeResult =
+    | { readonly kind: "resumed"; readonly stepKey: string; readonly workspaceId: string }
+    | {
+          readonly kind: "not_found" | "compensated" | "not_parked" | "no_failed_step" | "exhausted" | "outcome_unknown"
+      }
+
+/** What a pass over the parked runs did. */
+export interface ParkedPassReport {
+    /** The runs put back on their failed step. */
+    readonly resumed: number
+    /** The runs looked at. */
+    readonly looked: number
+}
+
+/** The answer of the resume function, before the engine adds what it knows. */
+export type ResumeAnswer =
+    | {
+          readonly kind: "resumed"
+          readonly stepKey: string
+          readonly workspaceId: string
+          readonly errorCode: string | null
+          readonly at: number
+      }
+    | { readonly kind: "not_found" | "compensated" | "not_parked" | "no_failed_step" | "exhausted" }
+
+/** A parked run a pass may run again. */
+export interface ParkedRef {
+    /** The run. */
+    readonly runId: string
+    /** Its workspace. */
+    readonly workspaceId: string
+}
+
+/** What the resume function is asked. */
+export interface ResumeWrite {
+    /** The run. */
+    readonly runId: string
+    /** Who. */
+    readonly actor: string
+    /** Why. */
+    readonly reason: string
+    /** The failed step's new input, or absent to keep it. */
+    readonly input?: StepJson | undefined
+    /** Whether the machine asks (bounded) rather than a person. */
+    readonly auto: boolean
+    /** The most machine resumes of one run. */
+    readonly max: number
+    /** The first spacing between machine resumes, seconds; it doubles with each. */
+    readonly backoffSeconds: number
+}
+
+/** Which parked runs a pass may take. */
+export interface ParkedQuery {
+    /** The most runs. */
+    readonly limit: number
+    /** The running build. */
+    readonly build: string
+    /** Only runs parked under another build. */
+    readonly byBuild: boolean
+    /** How long a run has been parked, at least, seconds. */
+    readonly minAgeSeconds: number
+    /** The cap of machine resumes. */
+    readonly max: number
+    /** Failure codes that stay with a person. */
+    readonly exclude: ReadonlyArray<string>
+}

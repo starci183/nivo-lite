@@ -2,7 +2,7 @@ import type { EntityManager } from "typeorm"
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { JobsOptions } from "./jobs.options"
-import type { JobClaims, JobProcessorRegistry, JobTickScheduler } from "./jobs.port"
+import type { FlowAlerts, JobClaims, JobProcessorRegistry, JobTickScheduler } from "./jobs.port"
 import type { JobFenceService } from "./job-fence.service"
 
 /** Token of the options of the jobs, exported so a spec can provide it. */
@@ -43,3 +43,9 @@ export const InjectJobsManagers = (): TypedParameterDecorator<ReadonlyArray<Enti
 /** Injects the scheduler that fires the ticks. Parameter type: JobTickScheduler. */
 export const InjectJobTickScheduler = (): TypedParameterDecorator<JobTickScheduler> =>
     injector<JobTickScheduler>(JOB_TICK_SCHEDULER)
+
+/** Token of the flow alerts port: absent until a capability binds one, and then a parked flow raises nothing. */
+export const FLOW_ALERTS: unique symbol = Symbol("platform.jobs.flow-alerts")
+
+/** Injects the flow alerts port. Parameter type: FlowAlerts. */
+export const InjectFlowAlerts = (): TypedParameterDecorator<FlowAlerts> => injector<FlowAlerts>(FLOW_ALERTS)

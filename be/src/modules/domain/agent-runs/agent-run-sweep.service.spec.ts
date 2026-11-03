@@ -7,6 +7,7 @@ import type { Logger } from "@modules/platform/logging"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
+import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunSweepService } from "./agent-run-sweep.service"
@@ -48,6 +49,8 @@ interface Options {
     readonly expiry?: WaitExpiry | null
     readonly decides?: boolean
     readonly verdicts?: ReadonlyMap<string, StepDecision>
+    readonly parked?: number
+    readonly parkedFails?: boolean
 }
 
 const build = async (options: Options) => {
@@ -91,6 +94,12 @@ const build = async (options: Options) => {
     store.openWaits.mockResolvedValue(options.verdicts === undefined ? [] : [waiting()])
     bound.expire.mockReset()
     bound.expire.mockResolvedValue(options.expiry ?? { kind: "ended" })
+    const resume = mock<AgentRunResumeService>({
+        resumeParked:
+            options.parkedFails === true
+                ? jest.fn().mockRejectedValue(new Error("boom"))
+                : jest.fn().mockResolvedValue({ looked: 0, resumed: options.parked ?? 0 }),
+    })
     const container = await Test.createTestingModule({
         providers: [
             AgentRunSweepService,
@@ -103,12 +112,13 @@ const build = async (options: Options) => {
             { provide: AgentStepLedgerService, useValue: ledger },
             { provide: AgentRunCompensationService, useValue: compensation },
             { provide: AgentRunDeadLetterService, useValue: deadLetter },
+            { provide: AgentRunResumeService, useValue: resume },
             { provide: AGENT_RUN_ITEM_VERDICTS, useValue: verdictPort },
             { provide: AGENT_RUN_WAIT_TIMEOUT, useValue: bound },
         ],
     }).compile()
     const service = container.get(AgentRunSweepService)
-    return { service, store, runs, steps, ledger, compensation, deadLetter, timeouts: bound, logger }
+    return { service, store, runs, steps, ledger, compensation, deadLetter, timeouts: bound, logger, resume }
 }
 
 describe("AgentRunSweepService.sweep", () => {
@@ -121,6 +131,7 @@ describe("AgentRunSweepService.sweep", () => {
             compensating: 0,
             unspoken: 0,
             recovered: 0,
+            parked: 0,
         })
 
         expect(runs.advance).toHaveBeenCalledWith("run-1", expect.any(AbortSignal))
@@ -150,6 +161,7 @@ describe("AgentRunSweepService.sweep", () => {
             compensating: 1,
             unspoken: 1,
             recovered: 0,
+            parked: 0,
         })
 
         expect(runs.advance).toHaveBeenCalledTimes(1)
@@ -399,5 +411,23 @@ describe("AgentRunSweepService timeout missing principal", () => {
         )
         expect(runs.resumeWaiting).not.toHaveBeenCalled()
         expect(timeouts.expire).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentRunSweepService.sweep parked runs", () => {
+    it("reports the parked runs it put back on their failed step", async () => {
+        const { service, resume } = await build({ items: [], parked: 2 })
+
+        await expect(service.sweep()).resolves.toMatchObject({ parked: 2 })
+        expect(resume.resumeParked).toHaveBeenCalledWith(false)
+    })
+
+    it("logs a failing parked pass and still answers the rest of the report", async () => {
+        const { service, logger } = await build({ items: [], parkedFails: true })
+
+        await expect(service.sweep()).resolves.toMatchObject({ parked: 0 })
+        expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.SweepItemFailed, expect.any(Error), {
+            kind: "parked",
+        })
     })
 })

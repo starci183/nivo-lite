@@ -7,6 +7,8 @@ export { AgentRunsService } from "./agent-runs.service"
 export { AgentRunHandlersService } from "./agent-run-handlers.service"
 export { AgentRunSweepService } from "./agent-run-sweep.service"
 export { AgentStepJobService } from "./agent-step-job.service"
+export { parseAgentRunsConfig } from "./agent-runs.config"
+export type { AgentRunsOptions } from "./agent-runs.options"
 export { TOOL_OUTCOME_UNKNOWN, DECISION_ACTOR_UNKNOWN } from "./policies/agent-runs.policy"
 export type {
     AgentStepHandler,

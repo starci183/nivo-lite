@@ -2,6 +2,8 @@ export { JOBS_ERROR_KINDS } from "./errors/jobs.error"
 export { parseJobsConfig } from "./jobs.config"
 export type { ClaimedJob } from "./jobs.contracts"
 export {
+    FLOW_ALERTS,
+    InjectFlowAlerts,
     InjectJobClaims,
     InjectJobProcessorRegistry,
     InjectJobFence,
@@ -10,7 +12,7 @@ export {
     JOB_PROCESSOR_REGISTRY,
 } from "./jobs.decorators"
 export { JobsModule } from "./jobs.module"
-export type { JobClaims, JobProcessorRegistry, JobStep } from "./jobs.port"
+export type { FlowAlerts, JobClaims, ParkedFlowAlert, JobProcessorRegistry, JobStep } from "./jobs.port"
 export { FencedProcessor } from "./fenced.processor"
 export { AdvancingJobStepPolicy } from "./advancing.policy"
 export { JobFenceService } from "./job-fence.service"
