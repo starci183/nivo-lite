@@ -69,7 +69,7 @@ interface Node {
     }>
     readonly does: string
     readonly uses: ReadonlyArray<{
-        readonly provider: "brain" | "drive" | "sepay" | "zalo" | "telegram" | "office" | "mcp"
+        readonly provider: string
         readonly tool: string | null
         readonly scope: "read" | "write"
         readonly label: string

@@ -86,6 +86,24 @@ export class AgentGraphPublishService {
         return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "conflict")
     }
 
+    /**
+     * Publishes the graph a template made as the next version, under the same checks as any change: nothing above the ceiling of the
+     * authority rules of this workspace, and a widening only by the owner. The first version a template gives an agent (the agent is
+     * still on its seed or has no version) is the owner's alone, even when it widens nothing, since it hands the agent a process a
+     * stranger wrote.
+     */
+    async publishTemplate(
+        workspaceId: string,
+        agentId: string,
+        document: GraphDocument,
+        by: Publisher,
+    ): Promise<GraphVersionView> {
+        const state = await this.requireState(workspaceId, agentId)
+        const first = state.activeKind === null || state.activeKind === "seed"
+        if (first && by.role !== "owner") throw new AgentGraphsError({ code: AgentGraphsErrorCode.WidensNeedsOwner })
+        return this.publishDocument(state, document, by, "", "template")
+    }
+
     /** Goes back to an older version by publishing it again as a new one, so nothing in the history changes. */
     async restore(workspaceId: string, agentId: string, versionId: string, by: Publisher): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)

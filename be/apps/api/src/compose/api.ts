@@ -25,6 +25,7 @@ import { PublicDocumentsGraphqlModule } from "@features/api/public-documents"
 import { DossierReviewGraphqlModule } from "@features/api/dossier-review"
 import { EvidenceGraphqlModule } from "@features/api/evidence"
 import { AgentGraphsGraphqlModule } from "@features/api/agent-graphs"
+import { TemplateMarketplaceGraphqlModule } from "@features/api/template-marketplace"
 import { McpGatewayGraphqlModule } from "@features/api/mcp-gateway"
 import { AuthGraphqlModule, AuthHttpModule } from "@features/api/auth"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
@@ -64,6 +65,7 @@ export const apiModules = (): Array<DynamicModule> => [
     EvidenceGraphqlModule.register({}),
     McpGatewayGraphqlModule.register({}),
     AgentGraphsGraphqlModule.register({}),
+    TemplateMarketplaceGraphqlModule.register({}),
     AuthGraphqlModule.register({}),
     AuthHttpModule.register({}),
     GoogleConnectionsHttpModule.register({}),

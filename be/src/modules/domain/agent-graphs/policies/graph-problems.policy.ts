@@ -1,5 +1,6 @@
+import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { dataKindOfTool } from "@modules/domain/mcp-gateway"
-import { MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH, STEPS_OF_KIND } from "../agent-graphs.contracts"
+import { MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "../agent-graphs.contracts"
 import type {
     CeilingRule,
     DecidePoint,
@@ -89,7 +90,7 @@ const entryProblems = (graph: GraphDocument): ReadonlyArray<GraphProblem> => {
             .filter((node) => node.kind !== "trigger" && !reached.has(node.key))
             .map((node) => problem("not_from_trigger", node.key)),
         ...graph.nodes
-            .filter((node) => !STEPS_OF_KIND[node.kind].includes(node.step))
+            .filter((node) => !graphVocabulary.stepsOf(node.kind).includes(node.step))
             .map((node) => problem("bad_step", node.key, null, node.step)),
     ]
 }

@@ -1,3 +1,4 @@
+export { AdminAccessService } from "./admin-access.service"
 export { AdminDirectoryService } from "./admin-directory.service"
 export { AdminSupportService } from "./admin-support.service"
 export { PLATFORM_ADMIN_ERROR_KINDS } from "./errors/platform-admin.error"

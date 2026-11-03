@@ -12,6 +12,8 @@ import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { SEPAY_DELIVERY_QUEUE } from "@modules/queues/sepay-delivery"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { SepayTransactionEntity } from "./persistence/entities"
+import { PAID_ORDER_FULFILMENT } from "./sepay-transactions.decorators"
+import type { PaidOrderFulfilment } from "./sepay-transactions.port"
 import { SepayTransactionsService } from "./sepay-transactions.service"
 
 const AUTHORIZATION = "Apikey billing-key"
@@ -41,7 +43,11 @@ const COMPLETED = "completed" as const
 
 type Stub = readonly [string, unknown] | typeof PENDING | typeof UPDATE_SEPAY_RESULT | typeof COMPLETED
 
-const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> = {}) => {
+const build = async (
+    stubs: ReadonlyArray<Stub>,
+    patch: Record<string, unknown> = {},
+    fulfilment: PaidOrderFulfilment | null = null,
+) => {
     const settles = stubs.flatMap((stub) =>
         typeof stub === "string" || stub[0] !== SETTLE_PAYMENT_ORDER ? [] : [stub],
     )
@@ -80,6 +86,7 @@ const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> 
             { provide: INBOX, useValue: inbox },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: PaymentOrdersService, useValue: orders },
+            ...(fulfilment === null ? [] : [{ provide: PAID_ORDER_FULFILMENT, useValue: fulfilment }]),
         ],
     }).compile()
     return { settlement: moduleRef.get(SepayTransactionsService), tx, proof, inbox, outbox, claims, orders }
@@ -183,6 +190,32 @@ describe("SepayTransactionsService verification", () => {
 
 describe("SepayTransactionsService", () => {
     describe("processRecordedDelivery", () => {
+        it("hands a settled order to the fulfilment in the transaction of the settlement, and only when it was paid", async () => {
+            const fulfilment = { fulfil: jest.fn().mockResolvedValue(undefined) }
+            const paid = await build(
+                [PENDING, [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "paid" }]], UPDATE_SEPAY_RESULT, COMPLETED],
+                {},
+                fulfilment,
+            )
+            const underpaid = await build(
+                [
+                    PENDING,
+                    [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "underpaid" }]],
+                    UPDATE_SEPAY_RESULT,
+                    COMPLETED,
+                ],
+                {},
+                fulfilment,
+            )
+
+            await paid.settlement.processRecordedDelivery({ deliveryId: "9001" })
+            expect(fulfilment.fulfil).toHaveBeenCalledTimes(1)
+            await underpaid.settlement.processRecordedDelivery({ deliveryId: "9001" })
+
+            expect(fulfilment.fulfil).toHaveBeenCalledTimes(1)
+            expect(fulfilment.fulfil).toHaveBeenCalledWith(expect.anything(), expect.any(String))
+        })
+
         it("proves and records the delivery, then settles and completes its queued receipt", async () => {
             const { settlement, tx, proof, inbox, outbox } = await build([
                 PENDING,

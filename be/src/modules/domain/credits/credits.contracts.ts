@@ -86,3 +86,17 @@ export interface UpgradeParams {
     /** The target plan code. */
     readonly planCode: string
 }
+
+/** What an order for a paid listing of the template marketplace takes. */
+export interface AgentTemplateOrderParams {
+    /** The workspace that pays. */
+    readonly workspaceId: string
+    /** The listing bought. */
+    readonly listingId: string
+    /** The template of the listing. */
+    readonly templateKey: string
+    /** The version of the listing. */
+    readonly version: number
+    /** The price in VND. */
+    readonly amountVnd: number
+}

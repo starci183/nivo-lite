@@ -78,7 +78,7 @@ export interface KnownItem {
 /** One provider tool a node uses. */
 export interface ToolUse {
     /** The provider. */
-    readonly provider: "brain" | "drive" | "sepay" | "zalo" | "telegram" | "office" | "mcp"
+    readonly provider: string
     /** The tool. */
     readonly tool: string | null
     /** The scope. */

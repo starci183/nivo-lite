@@ -1,10 +1,24 @@
+import { graphVocabulary } from "@modules/domain/intent-contracts"
+import { dataKindOfTool } from "@modules/domain/mcp-gateway"
+import type { DataRight } from "@modules/domain/mcp-gateway"
 import type { Locale } from "@modules/platform/i18n"
 import { MAX_DOES_LENGTH, MAX_TITLE_LENGTH, kindOfStep } from "../agent-graphs.contracts"
 import type { GraphDocument, GraphNode, GraphSource, NodeAnswerKey, Say, ToolUse } from "../agent-graphs.contracts"
 import type { SeedAction, SeedModule, SeedRule, SeedTemplate } from "../agent-graphs-seed.contracts"
 import { approverOfRule, branchesFromRule } from "./seed-from-rules.policy"
 
-const PROVIDERS: ReadonlyArray<ToolUse["provider"]> = ["brain", "drive", "sepay", "zalo", "telegram", "office", "mcp"]
+/**
+ * The grant a seed carries: the data kinds the tools of its module reach (the Brain always), each narrowed to the rows of the
+ * conversation it serves, hiding and masking nothing. A seed is governed like any graph, so what is not here is a deny; the owner
+ * widens it by publishing a version of their own.
+ */
+export const grantsOf = (module: SeedModule): ReadonlyArray<DataRight> => {
+    const kinds = ["brain", ...module.connectionProviders].flatMap((provider) => {
+        const kind = dataKindOfTool(`${provider}.`)
+        return kind === null ? [] : [kind]
+    })
+    return [...new Set(kinds)].map((kind) => ({ kind, scope: "conversation" as const, hide: [], mask: [] }))
+}
 
 /** The language of the graph being written: the locale that picks a name from the catalogue data and the lookup of the wording. */
 export interface Voice {
@@ -54,8 +68,9 @@ const nodeOf = (
 
 const toolsOf = (module: SeedModule): ReadonlyArray<ToolUse> =>
     module.connectionProviders.flatMap((provider) => {
-        const known = PROVIDERS.find((entry) => entry === provider)
-        return known === undefined ? [] : [{ provider: known, tool: null, scope: "read" as const, label: provider }]
+        return graphVocabulary.hasProvider(provider)
+            ? [{ provider, tool: null, scope: "read" as const, label: provider }]
+            : []
     })
 
 const factOf = (action: SeedAction): string => action.graphFacts?.[0] ?? `${action.action}.amount_vnd`
@@ -193,5 +208,5 @@ export const baseGraphOf = (
             ? [startOf(undefined, voice, understand.key)]
             : templates.map((template, index) => startOf(template, voice, chains[index]?.[0]?.key ?? understand.key))
     const nodes = [...starts, tagOf(voice, understand.key), understand, ...actions.flat(), ...chains.flat(), end]
-    return { nodes, rights: [] }
+    return { nodes, rights: grantsOf(module) }
 }
