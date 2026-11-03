@@ -1,4 +1,8 @@
-export { AGENT_CONNECTIONS_ERROR_KINDS } from "./errors/agent-connections.error"
+export {
+    AGENT_CONNECTIONS_ERROR_KINDS,
+    AgentConnectionsError,
+    AgentConnectionsErrorCode,
+} from "./errors/agent-connections.error"
 export { AGENT_CONNECTIONS_MESSAGES } from "./messages/agent-connections.messages"
 export { AgentBindingsService } from "./agent-bindings.service"
 export { AgentConnectionsModule } from "./agent-connections.module"

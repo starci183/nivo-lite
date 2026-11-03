@@ -3,6 +3,7 @@ import type { DynamicModule, Provider, Type } from "@nestjs/common"
 import { SETUP_GRAPH } from "@modules/domain/modules"
 import { OUTPUT_NODE_READER, WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import { DATA_RIGHTS_GATE, TOOL_GRAPH_GATE } from "@modules/domain/mcp-gateway"
+import { BANK_FEED_FLOW } from "@modules/domain/billing/billing.decorators"
 import { AgentDataRightsService } from "./agent-data-rights.service"
 import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import { AGENT_RUN_WAIT_TIMEOUT } from "@modules/domain/agent-runs"
@@ -146,6 +147,7 @@ const WHOLE: Part = {
         OUTPUT_NODES_PORT,
         { provide: SETUP_GRAPH, useExisting: AgentGraphSetupService },
         { provide: AGENT_RUN_WAIT_TIMEOUT, useExisting: AgentGraphWaitTimeoutService },
+        { provide: BANK_FEED_FLOW, useExisting: AgentGraphsService },
     ],
 }
 

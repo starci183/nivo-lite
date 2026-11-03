@@ -88,6 +88,24 @@ const RETURNING =
     "id, workspace_id, inbound_event_id, amount_vnd::float8 AS amount_vnd, reference, payer, invoice_id, status"
 
 describe("TransactionsService", () => {
+    describe("ofInboundEvent", () => {
+        it("answers the payment recorded for an inbound event, or null", async () => {
+            const em = mockEntityManager({
+                findOne: [
+                    [TransactionEntity, entityOf()],
+                    [TransactionEntity, null],
+                ],
+            })
+            const transactions = await build(em)
+
+            await expect(transactions.ofInboundEvent("ws-1", "in-1")).resolves.toEqual(transactionOf())
+            await expect(transactions.ofInboundEvent("ws-1", "in-2")).resolves.toBeNull()
+            expect(em.findOne).toHaveBeenNthCalledWith(1, TransactionEntity, {
+                where: { workspaceId: "ws-1", inboundEventId: "in-1" },
+            })
+        })
+    })
+
     describe("matchOrder", () => {
         it("links the payment to the sales order it paid, in the caller's transaction", async () => {
             const own = mockEntityManager()

@@ -26,7 +26,7 @@ import type { Logger } from "@modules/platform/logging"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { AgentGraphsService } from "./agent-graphs.service"
-import { triggerScopeOf } from "./policies/graph-flow.policy"
+import { tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
 import type { FlowWake } from "./policies/graph-flow.policy"
 
 /** The flow F graphs as the seed ships them. */
@@ -282,5 +282,35 @@ describe("flow F graphs on fake ports", () => {
         expect(run.failed).toBeNull()
         expect(run.path).toEqual(["evidence", "match-code", "judge", "claim-wait"])
         expect(world.ran).toEqual([])
+    })
+})
+
+describe("the origin of the wakes the connections start", () => {
+    it("takes an inbound message of a connection (Zalo OA or Telegram) as a channel origin, which the chatbot graph's trigger accepts", () => {
+        const wake: FlowWake = {
+            source: "customer",
+            actorMemberId: null,
+            context: { conversationId: "conv-1", messageId: "msg-1", channelEventId: "zalo:1", lookupName: true },
+        }
+
+        expect(tagSourceOf(wake)).toBe("channel")
+        expect(graphOf("chatbot").trigger.sources).toContain(tagSourceOf(wake))
+        expect(triggerScopeOf(wake)).toMatchObject({ origin: "channel", source: "channel", conversationId: "conv-1" })
+    })
+
+    it("takes the tag the bank feed writes for a new credit as a system event, which the accounting graph's trigger accepts", () => {
+        const wake: FlowWake = {
+            source: "tag",
+            actorMemberId: null,
+            context: { text: "Tiền về", tagSource: "bank_feed", subject: "bank-transaction:tx-1" },
+        }
+
+        expect(tagSourceOf(wake)).toBe("system-event")
+        expect(graphOf("accounting").trigger.sources).toContain(tagSourceOf(wake))
+        expect(triggerScopeOf(wake)).toMatchObject({
+            origin: "system-event",
+            source: "bank_feed",
+            subject: { kind: "bank-transaction", id: "tx-1" },
+        })
     })
 })

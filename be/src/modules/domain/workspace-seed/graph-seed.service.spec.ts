@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
+import { AgentBindingsService, AgentConnectionsError, AgentConnectionsErrorCode } from "@modules/domain/agent-connections"
 import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -68,6 +69,7 @@ const build = async (scenario: Scenario = {}) => {
     activation.activate.mockResolvedValue({ sales: scenario.status ?? "live" } as never)
     const flows = mock<AgentGraphFlowService>()
     flows.publish.mockResolvedValue("created")
+    const bindings = mock<AgentBindingsService>()
     const print = jest.fn<void, [string]>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -83,9 +85,10 @@ const build = async (scenario: Scenario = {}) => {
             { provide: AuthorityRulesService, useValue: rules },
             { provide: ProfileActivationService, useValue: activation },
             { provide: AgentGraphFlowService, useValue: flows },
+            { provide: AgentBindingsService, useValue: bindings },
         ],
     }).compile()
-    return { service: moduleRef.get(GraphSeedService), agents, installations, rules, activation, flows, print }
+    return { service: moduleRef.get(GraphSeedService), agents, installations, rules, activation, flows, print, bindings, modules }
 }
 
 const failure = (code: WorkspaceSeedErrorCode) => new WorkspaceSeedError({ code })
@@ -119,7 +122,7 @@ describe("GraphSeedService > run", () => {
         })
         expect(agents.ensureByHandle).not.toHaveBeenCalled()
         expect(installations.insert).not.toHaveBeenCalled()
-        expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph created"]])
+        expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph created, 0 connections assigned"]])
     })
 
     it("installs the module first when the workspace has none: its agent under the handle of the module, then the installation", async () => {
@@ -172,8 +175,8 @@ describe("GraphSeedService > run", () => {
         await waiting.service.run(TEXT, "NIVO")
         await silent.service.run(TEXT, "NIVO")
 
-        expect(waiting.print).toHaveBeenCalledWith("sales agent agent-1 needs_connection, graph created")
-        expect(silent.print).toHaveBeenCalledWith("sales agent agent-1 unknown, graph created")
+        expect(waiting.print).toHaveBeenCalledWith("sales agent agent-1 needs_connection, graph created, 0 connections assigned")
+        expect(silent.print).toHaveBeenCalledWith("sales agent agent-1 unknown, graph created, 0 connections assigned")
     })
 
     it("refuses a workspace that has no owner, before anything is installed", async () => {
@@ -211,5 +214,73 @@ describe("GraphSeedService > run", () => {
         const { service } = await build()
 
         await expect(service.run("{}", "NIVO")).rejects.toThrow(failure(WorkspaceSeedErrorCode.InputInvalid))
+    })
+})
+
+describe("GraphSeedService > connection assignment", () => {
+    const SEPAY = "44c471c0-1a75-42e2-ac4b-09dded78c263"
+    const ZALO_OA = "ff2e59dc-5ed2-4327-8a73-ca3526bc3b6f"
+    const TELEGRAM = "72f2699d-7f93-45e1-964a-8a2228137985"
+
+    const asModule = async (key: string, scenario: Scenario = {}) => {
+        const built = await build({ held: [record({ moduleKey: key })], ...scenario })
+        built.modules.find.mockResolvedValue({ ...MODULE, key, agent: { ...MODULE.agent, handle: key } } as ModuleDefinition)
+        built.activation.activate.mockResolvedValue({ [key]: "live" } as never)
+        const text = `${JSON.stringify({ documents: [{ path: `data/graphs/${key}.json`, document: { ...SPEC, moduleKey: key } }] })}
+`
+        return { ...built, text }
+    }
+
+    it("assigns the accounting agent to the SePay feed for its bank feed", async () => {
+        const { service, bindings, print, text } = await asModule("accounting")
+
+        await service.run(text, "NIVO")
+
+        expect(bindings.grant).toHaveBeenCalledTimes(1)
+        expect(bindings.grant).toHaveBeenCalledWith("owner-1", {
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            connectionId: SEPAY,
+            purpose: "bank_feed",
+            access: "auto",
+        })
+        expect(print).toHaveBeenCalledWith("accounting agent agent-1 live, graph created, 1 connections assigned")
+    })
+
+    it("assigns the chatbot to the Zalo OA and to Telegram for inbound chat", async () => {
+        const { service, bindings, text } = await asModule("chatbot")
+
+        await service.run(text, "NIVO")
+
+        expect(bindings.grant.mock.calls.map(([, grant]) => [grant.connectionId, grant.purpose])).toEqual([
+            [ZALO_OA, "inbound_chat"],
+            [TELEGRAM, "inbound_chat"],
+        ])
+    })
+
+    it("assigns again on a rerun without error, and assigns nothing for a module with no connection", async () => {
+        const rerun = await asModule("accounting")
+        const sales = await build()
+
+        await rerun.service.run(rerun.text, "NIVO")
+        await sales.service.run(TEXT, "NIVO")
+
+        expect(rerun.bindings.grant).toHaveBeenCalledTimes(1)
+        expect(sales.bindings.grant).not.toHaveBeenCalled()
+    })
+
+    it("skips a connection the workspace does not hold and still assigns the others, but stops on any other refusal", async () => {
+        const skipping = await asModule("chatbot")
+        skipping.bindings.grant
+            .mockRejectedValueOnce(new AgentConnectionsError({ code: AgentConnectionsErrorCode.TargetNotFound }))
+            .mockResolvedValueOnce(undefined)
+        const failing = await asModule("chatbot")
+        failing.bindings.grant.mockRejectedValue(new Error("db down"))
+
+        await skipping.service.run(skipping.text, "NIVO")
+        await expect(failing.service.run(failing.text, "NIVO")).rejects.toThrow("db down")
+
+        expect(skipping.bindings.grant).toHaveBeenCalledTimes(2)
+        expect(skipping.print).toHaveBeenCalledWith("chatbot agent agent-1 live, graph created, 1 connections assigned")
     })
 })

@@ -4,7 +4,7 @@ import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { BANK_FEED_DELIVERY_QUEUE } from "@modules/queues/bank-feed-delivery"
 import type { BankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { FeedWebhookRegistry } from "@modules/domain/provider-registry"
@@ -20,6 +20,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { createHash } from "node:crypto"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { AgentTagService } from "@modules/domain/agent-work"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -33,6 +34,8 @@ import type {
     ProvenConnection,
 } from "./billing.contracts"
 import { cassoCredits, isCassoError } from "./casso.policy"
+import { InjectBankFeedFlow } from "./billing.decorators"
+import type { BankFeedFlow } from "./billing.decorators"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 import { payosBodyOf, readPayosDelivery } from "./payos.policy"
@@ -41,6 +44,9 @@ import { ConnectionBindingsReadService } from "@modules/domain/connections"
 
 /** The locale of the lines billing writes into the shared records: the workspace owners read them in Vietnamese. */
 const RECORD_LOCALE = "vi"
+
+/** What a tag of the bound agent says started it: the bank feed. */
+const BANK_FEED_TAG_SOURCE = "bank_feed"
 
 /** Who may enter money by hand. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
@@ -87,6 +93,8 @@ export class BankFeedService {
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly bindings: AgentBindingsService,
         private readonly connections: ConnectionBindingsReadService,
+        private readonly tags: AgentTagService,
+        @Optional() @InjectBankFeedFlow() private readonly flow: BankFeedFlow | null = null,
     ) {}
 
     /**
@@ -99,7 +107,7 @@ export class BankFeedService {
         const member = await this.members.require(userId, workspaceId, MANAGERS)
         const amount = Math.round(credit.amount)
         return this.entityManager.transaction(async (tx) => {
-            const duplicate = await this.book(tx, {
+            const booked = await this.book(tx, {
                 workspaceId,
                 amount,
                 content: credit.content,
@@ -108,6 +116,7 @@ export class BankFeedService {
                 eventId: `manual:${credit.date}:${amount}:${credit.content}`,
                 bankName: this.catalog.get("billing.manualBank", {}, RECORD_LOCALE),
             })
+            const duplicate = booked === null
             if (!duplicate) {
                 await this.events.record(
                     {
@@ -280,7 +289,7 @@ export class BankFeedService {
         const [agent] = await this.bindings.agentsFor(connection.connectionId, "bank_feed", { modules: ["accounting"] })
         if (agent === undefined) return { status: "unbound" }
         if (credit.direction === "debit") return this.debit(tx, connection, credit)
-        const duplicate = await this.book(tx, {
+        const booked = await this.book(tx, {
             workspaceId: connection.workspaceId,
             amount: credit.amount,
             content: credit.content,
@@ -288,7 +297,50 @@ export class BankFeedService {
             eventId: credit.eventId,
             bankName: state?.name ?? credit.fallbackBankName,
         })
-        return { status: duplicate ? "duplicate" : "booked" }
+        if (booked === null) return { status: "duplicate" }
+        await this.tagFlow(tx, connection, agent.id, credit, booked)
+        return { status: "booked" }
+    }
+
+    /**
+     * A new credit reaches the agent bound to the connection when that agent's live version has a flow: the transaction is recorded and
+     * the agent is tagged with it, once per transaction (the wake is keyed by the connection and the provider transaction id). An agent
+     * with no flow is not tagged: the credit follows the booking path alone, as before.
+     */
+    private async tagFlow(
+        tx: EntityManager,
+        connection: ProvenConnection,
+        agentId: string,
+        credit: IncomingCredit,
+        inboundEventId: string,
+    ): Promise<void> {
+        if (this.flow === null || !(await this.flow.hasLiveFlow(connection.workspaceId, agentId))) return
+        const amountVnd = Math.round(credit.amount)
+        const transaction = await this.transactions.open(
+            {
+                workspaceId: connection.workspaceId,
+                inboundEventId,
+                amountVnd,
+                reference: credit.content === "" ? null : credit.content,
+                payer: null,
+            },
+            tx,
+        )
+        await this.tags.tagAgent(
+            {
+                source: BANK_FEED_TAG_SOURCE,
+                workspaceId: connection.workspaceId,
+                toAgentId: agentId,
+                text: this.catalog.get(
+                    "billing.bankFeedTag",
+                    { amount: amountVnd, content: credit.content },
+                    RECORD_LOCALE,
+                ),
+                subject: `bank-transaction:${transaction.id}`,
+                eventKey: `bank-feed:${connection.connectionId}:${credit.eventId}`,
+            },
+            tx,
+        )
     }
 
     /**
@@ -314,8 +366,8 @@ export class BankFeedService {
         return { status: "debited" }
     }
 
-    /** Records the credit and publishes `bank_credit_booked` in the same transaction; answers whether the same credit had already been recorded. */
-    private async book(tx: EntityManager, booking: Booking): Promise<boolean> {
+    /** Records the credit and publishes `bank_credit_booked` in the same transaction; answers the id of the inbound event, or null when the same credit had already been recorded. */
+    private async book(tx: EntityManager, booking: Booking): Promise<string | null> {
         const amountVnd = Math.round(booking.amount)
         const recorded = await this.inbound.recordBankPayment({
             manager: tx,
@@ -335,7 +387,7 @@ export class BankFeedService {
             externalRef: booking.content || null,
             providerRef: booking.eventId,
         })
-        if (recorded.duplicate) return true
+        if (recorded.duplicate) return null
         await this.bus.publish(
             BankCreditBookedEvent.create({
                 workspaceId: booking.workspaceId,
@@ -345,6 +397,6 @@ export class BankFeedService {
             tx,
             `bank_credit_booked:${recorded.inboundEventId}`,
         )
-        return false
+        return recorded.inboundEventId
     }
 }

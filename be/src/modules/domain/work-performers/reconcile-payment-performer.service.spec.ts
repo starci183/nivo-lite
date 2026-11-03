@@ -33,6 +33,7 @@ const build = async () => {
     )
     const transactions = mock<TransactionsService>()
     transactions.find.mockResolvedValue(transactionOf())
+    transactions.ofInboundEvent.mockResolvedValue(null)
     transactions.open.mockResolvedValue(transactionOf({ id: "tx-2", amount_vnd: 300000, reference: null, payer: null }))
     const invoices = mock<InvoicesService>()
     invoices.listIssued.mockResolvedValue([
@@ -94,6 +95,19 @@ describe("ReconcilePaymentPerformerService prepare", () => {
         expect(prepared.proposal.amount_vnd).toBe(0)
         expect(prepared.proposal.evidence).toEqual([{ key: "amount_vnd", value: 0, kind: "received", via: "sepay" }])
         expect(transactions.open.mock.calls[0]?.[0].amountVnd).toBe(0)
+    })
+
+    it("uses the transaction the bank feed already recorded for the credit instead of recording another", async () => {
+        const { service, inbound, transactions } = await build()
+        inbound.find.mockResolvedValue(eventOf({ amount_vnd: 300000 }))
+        transactions.ofInboundEvent.mockResolvedValue(transactionOf({ id: "tx-feed", amount_vnd: 300000 }))
+        const item = itemOf({ subject_type: "inbound", subject_id: "ev-1", inbound_event_id: "ev-1" })
+
+        const prepared = await service.prepare(ctx, item)
+
+        expect(transactions.ofInboundEvent).toHaveBeenCalledWith("ws-1", "ev-1")
+        expect(transactions.open).not.toHaveBeenCalled()
+        expect(prepared.patch?.subject_id).toBe("tx-feed")
     })
 
     it("clears a payment whose transfer content names one invoice of the same amount", async () => {

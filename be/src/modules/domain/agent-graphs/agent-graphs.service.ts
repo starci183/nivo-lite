@@ -125,6 +125,12 @@ export class AgentGraphsService {
         return row === null ? null : this.stateOf(row)
     }
 
+    /** Whether the live version of the agent's graph has a flow of nodes, so a tag or a message can start it. */
+    async hasLiveFlow(workspaceId: string, agentId: string): Promise<boolean> {
+        const state = await this.stateOfAgent(workspaceId, agentId)
+        return state?.active?.flow !== undefined
+    }
+
     /** The graph of the agent, or null when it has none or it cannot be read. */
     async stateOfAgent(workspaceId: string, agentId: string): Promise<OptionalGraphState> {
         const row = await this.entityManager.findOne(AgentGraphEntity, { where: { workspaceId, agentId } })

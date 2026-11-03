@@ -1,4 +1,6 @@
 import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
+import type { Access, Purpose } from "@modules/domain/agent-connections"
+import type { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 
@@ -29,4 +31,26 @@ export const readGraphSpecs = (text: string): ReadonlyArray<GraphSpec> => {
     })
     const keys = specs.map((spec) => spec.moduleKey)
     return new Set(keys).size === keys.length ? specs : invalid()
+}
+
+/** One connection of the management workspace a module's agent is assigned to ("Giao cho agent"). */
+export interface ConnectionBinding {
+    /** Which of the management connections. */
+    readonly connection: keyof typeof MANAGEMENT_CONNECTION_IDS
+    /** What the agent uses it for. */
+    readonly purpose: Purpose
+    /** What the agent may do through it. */
+    readonly access: Access
+}
+
+/**
+ * The connections each module's agent is assigned to in the seeded workspace, by module key: the accounting agent reads the SePay bank
+ * feed, the chatbot answers on the Zalo OA and on Telegram. A connection the workspace does not hold is skipped by the seed.
+ */
+export const CONNECTION_BINDINGS: Readonly<Record<string, ReadonlyArray<ConnectionBinding>>> = {
+    accounting: [{ connection: "sepay", purpose: "bank_feed", access: "auto" }],
+    chatbot: [
+        { connection: "zaloOa", purpose: "inbound_chat", access: "auto" },
+        { connection: "telegram", purpose: "inbound_chat", access: "auto" },
+    ],
 }

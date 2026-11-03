@@ -1,15 +1,18 @@
 import { Injectable } from "@nestjs/common"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
+import { AgentBindingsService, AgentConnectionsError, AgentConnectionsErrorCode } from "@modules/domain/agent-connections"
 import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
+import { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { ModulesService, defaultRulesOf } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { WorkspacesService } from "@modules/domain/workspaces"
+import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
-import { readGraphSpecs } from "./graph-seed.policy"
+import { CONNECTION_BINDINGS, readGraphSpecs } from "./graph-seed.policy"
 import { ProfileActivationService } from "./profile-activation.service"
 import { InjectSeedAgents, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
 import type { WorkspaceSeedOptions } from "./workspace-seed.options"
@@ -44,6 +47,7 @@ export class GraphSeedService {
         private readonly rules: AuthorityRulesService,
         private readonly activation: ProfileActivationService,
         private readonly flows: AgentGraphFlowService,
+        private readonly bindings: AgentBindingsService,
     ) {}
 
     /** Seeds every graph of the envelope read from `text` into the workspace named `workspaceName`; a refused graph stops the run. */
@@ -70,10 +74,36 @@ export class GraphSeedService {
                 flow: spec,
                 installed,
             })
+            const bound = await this.bindConnections(workspaceId, ownerId, module.key, agentId)
             this.options.print(
-                `${module.key} agent ${agentId} ${statuses[module.agent.handle] ?? "unknown"}, graph ${published}`,
+                `${module.key} agent ${agentId} ${statuses[module.agent.handle] ?? "unknown"}, graph ${published}, ${bound} connections assigned`,
             )
         }
+    }
+
+    /**
+     * Assigns the agent to the connections its module is meant to serve, through the same grant the console's "assign agent to connection"
+     * uses; a grant is an upsert, so a rerun changes nothing. A connection the workspace does not hold is skipped. Answers how many were assigned.
+     */
+    private async bindConnections(workspaceId: string, ownerId: string, moduleKey: string, agentId: string): Promise<number> {
+        const wanted = CONNECTION_BINDINGS[moduleKey] ?? []
+        let assigned = 0
+        await eachInOrder(wanted, async (binding) => {
+            try {
+                await this.bindings.grant(ownerId, {
+                    workspaceId,
+                    agentId,
+                    connectionId: MANAGEMENT_CONNECTION_IDS[binding.connection],
+                    purpose: binding.purpose,
+                    access: binding.access,
+                })
+                assigned += 1
+            } catch (cause) {
+                const missing = cause instanceof AgentConnectionsError && cause.code === AgentConnectionsErrorCode.TargetNotFound
+                if (!missing) throw cause
+            }
+        })
+        return assigned
     }
 
     private installedNodes(): NodeIndex {

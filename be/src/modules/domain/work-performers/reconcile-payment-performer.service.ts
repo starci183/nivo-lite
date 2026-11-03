@@ -269,6 +269,11 @@ export class ReconcilePaymentPerformerService implements WorkPerformer {
                 ? await this.transactions.find(ctx.workspaceId, item.subject_id)
                 : null
         if (existing !== null) return existing
+        const recorded =
+            item.inbound_event_id === null
+                ? null
+                : await this.transactions.ofInboundEvent(ctx.workspaceId, item.inbound_event_id)
+        if (recorded !== null) return recorded
         return this.transactions.open({
             workspaceId: ctx.workspaceId,
             inboundEventId: item.inbound_event_id,

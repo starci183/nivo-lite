@@ -46,6 +46,7 @@ export const BILLING_MESSAGES: MessageBundle = {
         "errors.BILLING_STORAGE_QUOTA_EXCEEDED":
             "The storage of your plan ({{quotaGb}} GB) is full. Delete some files or upgrade your plan.",
         "billing.bankEventBody": "{{bank}} credit: {{content}}",
+        "billing.bankFeedTag": "Money in: +{{amount}} VND, content: {{content}}",
         "billing.manualBank": "Manual",
         "billing.manualEvidenceLog": "Manual evidence of {{amount}} VND dated {{date}}",
     },
