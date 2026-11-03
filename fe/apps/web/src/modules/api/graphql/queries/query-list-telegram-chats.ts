@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -42,7 +42,7 @@ export const queryListTelegramChats = async ({
     query = QueryListTelegramChats.Query1,
     request,
     signal,
-}: ListTelegramChatsParams) => {
+}: ListTelegramChatsParams): Promise<ApolloClient.QueryResult<QueryListTelegramChatsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -57,7 +57,7 @@ export const queryLoadDatabaseConnection = async ({
     query = QueryLoadDatabaseConnection.Query1,
     request,
     signal,
-}: QueryLoadDatabaseConnectionParams) => {
+}: QueryLoadDatabaseConnectionParams): Promise<ApolloClient.QueryResult<QueryLoadDatabaseConnectionResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

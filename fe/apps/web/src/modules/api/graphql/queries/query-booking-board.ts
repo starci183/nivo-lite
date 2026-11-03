@@ -1,5 +1,5 @@
 import type { BookingBoardQuery } from "../__generated__/graphql"
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams } from "../types"
@@ -152,7 +152,7 @@ export const queryBookingBoard = async ({
     query = QueryBookingBoard.Query1,
     request,
     signal,
-}: QueryBookingBoardParams) => {
+}: QueryBookingBoardParams): Promise<ApolloClient.QueryResult<BookingBoardQuery>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query<BookingBoardQuery, InputVariables<QueryBookingBoardRequest>>({
         query: queryMap[query],

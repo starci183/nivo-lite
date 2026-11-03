@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -46,7 +46,10 @@ const queryMap: Record<QueryConnections, TypedDocumentNode<QueryConnectionsRespo
 type QueryConnectionsParams = QueryParams<QueryConnections>
 
 /** The connections of the workspace with the agents bound to each. Rejects with the back end failure. */
-export const queryConnections = async ({ query = QueryConnections.Query1, signal }: QueryConnectionsParams = {}) => {
+export const queryConnections = async ({
+    query = QueryConnections.Query1,
+    signal,
+}: QueryConnectionsParams = {}): Promise<ApolloClient.QueryResult<QueryConnectionsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

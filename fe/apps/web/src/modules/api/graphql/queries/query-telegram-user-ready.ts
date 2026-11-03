@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -30,7 +30,7 @@ type TelegramUserReadyParams = QueryParams<QueryTelegramUserReady>
 export const queryTelegramUserReady = async ({
     query = QueryTelegramUserReady.Query1,
     signal,
-}: TelegramUserReadyParams = {}) => {
+}: TelegramUserReadyParams = {}): Promise<ApolloClient.QueryResult<QueryTelegramUserReadyResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

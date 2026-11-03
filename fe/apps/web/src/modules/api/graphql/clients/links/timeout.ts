@@ -5,7 +5,7 @@ import { graphqlTuning } from "@/modules/config"
  * Fails the operation when the downstream observable does not finish within the configured window. Placed after the error
  * link and before the HTTP link so upstream links still receive the timeout error.
  */
-export const createTimeoutLink = () =>
+export const createTimeoutLink = (): ApolloLink =>
     new ApolloLink(
         (operation, forward) =>
             new Observable((observer) => {

@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -46,7 +46,10 @@ const queryMap: Record<QueryChatbotGaps, Document> = {
 type QueryChatbotGapsParams = QueryParams<QueryChatbotGaps>
 
 /** Reads the back end `chatbotGaps` query with the caller's workspace context. */
-export const queryChatbotGaps = async ({ query = QueryChatbotGaps.Query1, signal }: QueryChatbotGapsParams = {}) => {
+export const queryChatbotGaps = async ({
+    query = QueryChatbotGaps.Query1,
+    signal,
+}: QueryChatbotGapsParams = {}): Promise<ApolloClient.QueryResult<QueryChatbotGapsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

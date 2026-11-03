@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -95,7 +95,9 @@ type QueryBrainParams = QueryParams<QueryBrain>
  * Reads the shared Second Brain of the workspace: the facts, lessons, unanswered questions, lenses and document readings
  * (the back end `brain` query). Rejects with the back end failure (`CombinedGraphQLErrors`, message localized by the server).
  */
-export const queryBrain = async ({ query = QueryBrain.Query1, signal }: QueryBrainParams = {}) => {
+export const queryBrain = async ({ query = QueryBrain.Query1, signal }: QueryBrainParams = {}): Promise<
+    ApolloClient.QueryResult<QueryBrainResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

@@ -8,7 +8,7 @@ import { graphqlTuning } from "@/modules/config"
  *
  * @see {@link https://www.apollographql.com/docs/react/api/link/apollo-link-retry | RetryLink API}
  */
-export const createRetryLink = () =>
+export const createRetryLink = (): RetryLink =>
     new RetryLink({
         delay: { initial: graphqlTuning.retryInitialDelayMs, max: graphqlTuning.retryMaxDelayMs, jitter: true },
         attempts: { max: graphqlTuning.retryMaxAttempts, retryIf: (error) => !!error },

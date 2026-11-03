@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -64,7 +64,7 @@ type QueryContentConfigurationParams = QueryParams<QueryContentConfiguration>
 export const queryContentConfiguration = async ({
     query = QueryContentConfiguration.Query1,
     signal,
-}: QueryContentConfigurationParams = {}) => {
+}: QueryContentConfigurationParams = {}): Promise<ApolloClient.QueryResult<QueryContentConfigurationResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], fetchPolicy: "no-cache" })
 }

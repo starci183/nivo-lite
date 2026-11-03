@@ -1,4 +1,4 @@
-import { gql, type TypedDocumentNode } from "@apollo/client"
+import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
 import type { PublicDocumentsQuery } from "../__generated__/graphql"
@@ -46,7 +46,7 @@ const queryMap: Record<QueryPublicDocuments, typeof query1> = { [QueryPublicDocu
 export const queryPublicDocuments = async ({
     query = QueryPublicDocuments.Query1,
     signal,
-}: QueryParams<QueryPublicDocuments> = {}) => {
+}: QueryParams<QueryPublicDocuments> = {}): Promise<ApolloClient.QueryResult<QueryPublicDocumentsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

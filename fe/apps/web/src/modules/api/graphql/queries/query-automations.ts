@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -169,7 +169,10 @@ type QueryAutomationsParams = QueryParams<QueryAutomations>
  * for and the sample values of the previews (the back end `automations` query). Rejects with the back end failure
  * (`CombinedGraphQLErrors`, message localized by the server) instead of answering partial data.
  */
-export const queryAutomations = async ({ query = QueryAutomations.Query1, signal }: QueryAutomationsParams = {}) => {
+export const queryAutomations = async ({
+    query = QueryAutomations.Query1,
+    signal,
+}: QueryAutomationsParams = {}): Promise<ApolloClient.QueryResult<QueryAutomationsResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

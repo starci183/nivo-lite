@@ -15,7 +15,7 @@ export interface CreateAttachAccessTokenLinkParams {
 /** Attaches `Authorization: Bearer <access token>` of the browser session to every operation (none when signed out). */
 export const createAttachAccessTokenLink = ({
     getToken = sessionAccessToken,
-}: CreateAttachAccessTokenLinkParams = {}) =>
+}: CreateAttachAccessTokenLinkParams = {}): ApolloLink =>
     new ApolloLink(
         (operation, forward) =>
             new Observable((observer) => {

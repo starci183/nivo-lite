@@ -1,5 +1,5 @@
 import type { PreviewLoyaltySegmentMutation } from "../__generated__/graphql"
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams } from "../types"
@@ -38,7 +38,7 @@ export const mutatePreviewLoyaltySegment = async ({
     mutation = MutationPreviewLoyaltySegment.Mutation1,
     request,
     signal,
-}: MutationPreviewLoyaltySegmentParams) => {
+}: MutationPreviewLoyaltySegmentParams): Promise<ApolloClient.MutateResult<PreviewLoyaltySegmentMutation>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate<PreviewLoyaltySegmentMutation, InputVariables<MutatePreviewLoyaltySegmentRequest>>({
         mutation: mutationMap[mutation],

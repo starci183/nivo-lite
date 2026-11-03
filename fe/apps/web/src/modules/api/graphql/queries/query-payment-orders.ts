@@ -1,4 +1,4 @@
-import { gql, type TypedDocumentNode } from "@apollo/client"
+import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
 import type { PaymentOrdersQuery } from "../__generated__/graphql"
@@ -52,7 +52,7 @@ const queryMap: Record<QueryPaymentOrders, typeof query1> = { [QueryPaymentOrder
 export const queryPaymentOrders = async ({
     query = QueryPaymentOrders.Query1,
     signal,
-}: QueryParams<QueryPaymentOrders> = {}) => {
+}: QueryParams<QueryPaymentOrders> = {}): Promise<ApolloClient.QueryResult<QueryPaymentOrdersResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

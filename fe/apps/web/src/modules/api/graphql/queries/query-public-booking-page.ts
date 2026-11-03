@@ -1,5 +1,5 @@
 import type { PublicBookingPageQuery, PublicBookingPageQueryVariables } from "../__generated__/graphql"
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createNoAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -44,7 +44,7 @@ export const queryPublicBookingPage = async ({
     query = QueryPublicBookingPage.Query1,
     request,
     signal,
-}: QueryPublicBookingPageParams) => {
+}: QueryPublicBookingPageParams): Promise<ApolloClient.QueryResult<PublicBookingPageQuery>> => {
     const apollo = createNoAuthApolloClient({ signal })
     return apollo.query<PublicBookingPageQuery, InputVariables<QueryPublicBookingPageRequest>>({
         query: queryMap[query],

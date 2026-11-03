@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -32,7 +32,11 @@ const queryMap: Record<QueryLeadWait, Document> = { [QueryLeadWait.Query1]: quer
 type QueryLeadWaitParams = QueryParams<QueryLeadWait, QueryLeadWaitRequest> & { request: QueryLeadWaitRequest }
 
 /** Reads factual response delay for a lead in the selected workspace. */
-export const queryLeadWait = async ({ query = QueryLeadWait.Query1, request, signal }: QueryLeadWaitParams) => {
+export const queryLeadWait = async ({
+    query = QueryLeadWait.Query1,
+    request,
+    signal,
+}: QueryLeadWaitParams): Promise<ApolloClient.QueryResult<QueryLeadWaitResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

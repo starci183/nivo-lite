@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -48,7 +48,7 @@ export const queryInboundEvents = ({
     request = { limit: 40 },
     signal,
     headers,
-}: QueryInboundEventsParams = {}) =>
+}: QueryInboundEventsParams = {}): Promise<ApolloClient.QueryResult<QueryInboundEventsResponse>> =>
     createAuthApolloClient({ signal, headers }).query({
         query: queryMap[query],
         variables: { input: request },

@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -35,7 +35,7 @@ type QueryApproverDirectoryParams = QueryParams<QueryApproverDirectory>
 export const queryApproverDirectory = async ({
     query = QueryApproverDirectory.Query1,
     signal,
-}: QueryApproverDirectoryParams = {}) => {
+}: QueryApproverDirectoryParams = {}): Promise<ApolloClient.QueryResult<QueryApproverDirectoryResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

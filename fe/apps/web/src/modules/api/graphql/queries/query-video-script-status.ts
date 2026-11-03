@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -43,7 +43,7 @@ export const queryVideoScriptStatus = async ({
     query = QueryVideoScriptStatus.Query1,
     request,
     signal,
-}: QueryVideoScriptStatusParams) => {
+}: QueryVideoScriptStatusParams): Promise<ApolloClient.QueryResult<QueryVideoScriptStatusResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

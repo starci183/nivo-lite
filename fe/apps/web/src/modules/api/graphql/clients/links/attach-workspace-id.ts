@@ -4,7 +4,7 @@ import { GraphQLHeadersKey } from "../../types"
 import { headersOf } from "./headers-of"
 
 /** Attaches the workspace the person works in (the persisted active workspace) as `X-Workspace-Id`; none when no workspace is selected. */
-export const createAttachWorkspaceIdLink = () =>
+export const createAttachWorkspaceIdLink = (): SetContextLink =>
     new SetContextLink((previous) => {
         const workspaceId = LocalStorage.get<string>(StorageId.ActiveWorkspaceId)
         return {

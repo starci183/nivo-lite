@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams, WireInput } from "../types"
@@ -46,7 +46,7 @@ export const mutateAdminSetWorkspaceStatus = async ({
     mutation = MutationAdminSetWorkspaceStatus.Mutation1,
     request,
     signal,
-}: MutateAdminSetWorkspaceStatusParams) => {
+}: MutateAdminSetWorkspaceStatusParams): Promise<ApolloClient.MutateResult<MutateAdminSetWorkspaceStatusResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],

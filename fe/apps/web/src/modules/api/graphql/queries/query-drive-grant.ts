@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -31,7 +31,9 @@ type QueryDriveGrantParams = QueryParams<QueryDriveGrant>
  * Where the Google Drive read grant of the active workspace stands (`none`, `connected` or `lost`) and which Google account
  * gave it (the back end `driveGrant` query, owner or manager). Rejects with the back end failure.
  */
-export const queryDriveGrant = async ({ query = QueryDriveGrant.Query1, signal }: QueryDriveGrantParams = {}) => {
+export const queryDriveGrant = async ({ query = QueryDriveGrant.Query1, signal }: QueryDriveGrantParams = {}): Promise<
+    ApolloClient.QueryResult<QueryDriveGrantResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], fetchPolicy: "no-cache" })
 }

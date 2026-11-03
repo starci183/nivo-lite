@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -40,7 +40,7 @@ type QueryNivoKnowledgeParams = QueryParams<QueryNivoKnowledge>
 export const queryNivoKnowledge = async ({
     query = QueryNivoKnowledge.Query1,
     signal,
-}: QueryNivoKnowledgeParams = {}) => {
+}: QueryNivoKnowledgeParams = {}): Promise<ApolloClient.QueryResult<QueryNivoKnowledgeResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

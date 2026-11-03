@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -56,7 +56,9 @@ const queryMap: Record<QueryAuthority, TypedDocumentNode<QueryAuthorityResponse,
 type QueryAuthorityParams = QueryParams<QueryAuthority>
 
 /** The back end `authority` query. Rejects with the back end failure (message localized by the server). */
-export const queryAuthority = async ({ query = QueryAuthority.Query1, signal }: QueryAuthorityParams = {}) => {
+export const queryAuthority = async ({ query = QueryAuthority.Query1, signal }: QueryAuthorityParams = {}): Promise<
+    ApolloClient.QueryResult<QueryAuthorityResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

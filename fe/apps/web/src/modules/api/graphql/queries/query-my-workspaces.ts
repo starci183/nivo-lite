@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -45,7 +45,10 @@ type QueryMyWorkspacesParams = QueryParams<QueryMyWorkspaces>
  * Lists every workspace the signed-in person belongs to with their membership in each (the back end `myWorkspaces` query).
  * Rejects with the back end failure (`CombinedGraphQLErrors`, message localized by the server) instead of answering partial data.
  */
-export const queryMyWorkspaces = async ({ query = QueryMyWorkspaces.Query1, signal }: QueryMyWorkspacesParams = {}) => {
+export const queryMyWorkspaces = async ({
+    query = QueryMyWorkspaces.Query1,
+    signal,
+}: QueryMyWorkspacesParams = {}): Promise<ApolloClient.QueryResult<QueryMyWorkspacesResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

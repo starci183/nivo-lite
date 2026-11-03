@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -50,7 +50,7 @@ export const queryDrivePickedFolder = async ({
     query = QueryDrivePickedFolder.Query1,
     request,
     signal,
-}: QueryDrivePickedFolderParams) => {
+}: QueryDrivePickedFolderParams): Promise<ApolloClient.QueryResult<QueryDrivePickedFolderResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

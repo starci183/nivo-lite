@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -97,7 +97,11 @@ type QueryAgentPageParams = QueryParams<QueryAgentPage, QueryAgentPageRequest> &
 }
 
 /** The back end `agentPage` query. Rejects with the back end failure (message localized by the server). */
-export const queryAgentPage = async ({ query = QueryAgentPage.Query1, request, signal }: QueryAgentPageParams) => {
+export const queryAgentPage = async ({
+    query = QueryAgentPage.Query1,
+    request,
+    signal,
+}: QueryAgentPageParams): Promise<ApolloClient.QueryResult<QueryAgentPageResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }

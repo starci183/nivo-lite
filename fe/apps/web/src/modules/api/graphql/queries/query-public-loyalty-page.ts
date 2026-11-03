@@ -1,5 +1,5 @@
 import type { PublicLoyaltyPageQuery } from "../__generated__/graphql"
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createNoAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams } from "../types"
@@ -33,7 +33,7 @@ export const queryPublicLoyaltyPage = async ({
     query = QueryPublicLoyaltyPage.Query1,
     request,
     signal,
-}: QueryPublicLoyaltyPageParams) => {
+}: QueryPublicLoyaltyPageParams): Promise<ApolloClient.QueryResult<PublicLoyaltyPageQuery>> => {
     const apollo = createNoAuthApolloClient({ signal })
     return apollo.query<PublicLoyaltyPageQuery, InputVariables<QueryPublicLoyaltyPageRequest>>({
         query: queryMap[query],

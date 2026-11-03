@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -51,7 +51,7 @@ export const queryTestOpenApiOperation = async ({
     query = QueryTestOpenApiOperationKind.Query1,
     request,
     signal,
-}: QueryTestOpenApiOperationParams) => {
+}: QueryTestOpenApiOperationParams): Promise<ApolloClient.QueryResult<QueryTestOpenApiOperationResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -33,7 +33,7 @@ type QueryWorkspaceAgentWorkParams = QueryParams<QueryWorkspaceAgentWork>
 export const queryWorkspaceAgentWork = async ({
     query = QueryWorkspaceAgentWork.Query1,
     signal,
-}: QueryWorkspaceAgentWorkParams = {}) => {
+}: QueryWorkspaceAgentWorkParams = {}): Promise<ApolloClient.QueryResult<QueryWorkspaceAgentWorkResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], fetchPolicy: "no-cache" })
 }

@@ -1,5 +1,5 @@
 import type { SyncLoyaltyMembersMutation } from "../__generated__/graphql"
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { DocumentNode } from "graphql"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
@@ -28,7 +28,7 @@ type MutationSyncLoyaltyMembersParams = Omit<MutateParams<MutationSyncLoyaltyMem
 export const mutateSyncLoyaltyMembers = async ({
     mutation = MutationSyncLoyaltyMembers.Mutation1,
     signal,
-}: MutationSyncLoyaltyMembersParams = {}) => {
+}: MutationSyncLoyaltyMembersParams = {}): Promise<ApolloClient.MutateResult<SyncLoyaltyMembersMutation>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate<SyncLoyaltyMembersMutation>({ mutation: mutationMap[mutation] })
 }

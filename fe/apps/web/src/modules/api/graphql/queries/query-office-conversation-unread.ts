@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -42,7 +42,9 @@ const queryMap: Record<
 export const queryOfficeConversationUnread = async ({
     query = QueryOfficeConversationUnread.Query1,
     signal,
-}: QueryParams<QueryOfficeConversationUnread> = {}) => {
+}: QueryParams<QueryOfficeConversationUnread> = {}): Promise<
+    ApolloClient.QueryResult<QueryOfficeConversationUnreadResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

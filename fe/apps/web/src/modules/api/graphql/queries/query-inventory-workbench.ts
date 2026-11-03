@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -140,7 +140,7 @@ type QueryInventoryWorkbenchParams = QueryParams<QueryInventoryWorkbench>
 export const queryInventoryWorkbench = async ({
     query = QueryInventoryWorkbench.Query1,
     signal,
-}: QueryInventoryWorkbenchParams = {}) => {
+}: QueryInventoryWorkbenchParams = {}): Promise<ApolloClient.QueryResult<QueryInventoryWorkbenchResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

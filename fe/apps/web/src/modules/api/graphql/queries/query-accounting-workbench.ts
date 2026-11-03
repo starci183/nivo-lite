@@ -1,4 +1,4 @@
-import { gql, type TypedDocumentNode } from "@apollo/client"
+import { gql, type TypedDocumentNode, type ApolloClient } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
 import type { AccountingWorkbenchQuery } from "../__generated__/graphql"
@@ -218,7 +218,7 @@ const queryMap: Record<QueryAccountingWorkbench, typeof query1> = { [QueryAccoun
 export const queryAccountingWorkbench = async ({
     query = QueryAccountingWorkbench.Query1,
     signal,
-}: QueryParams<QueryAccountingWorkbench> = {}) => {
+}: QueryParams<QueryAccountingWorkbench> = {}): Promise<ApolloClient.QueryResult<QueryAccountingWorkbenchResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query] })
 }

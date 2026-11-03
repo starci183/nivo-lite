@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams, WireInput } from "../types"
@@ -46,7 +46,7 @@ export const mutateAdminExtendSubscription = async ({
     mutation = MutationAdminExtendSubscription.Mutation1,
     request,
     signal,
-}: MutateAdminExtendSubscriptionParams) => {
+}: MutateAdminExtendSubscriptionParams): Promise<ApolloClient.MutateResult<MutateAdminExtendSubscriptionResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],

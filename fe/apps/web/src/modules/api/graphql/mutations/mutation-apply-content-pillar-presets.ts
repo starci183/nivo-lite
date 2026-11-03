@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
@@ -32,7 +32,9 @@ type MutateApplyContentPillarPresetsParams = Omit<MutateParams<MutationApplyCont
 export const mutateApplyContentPillarPresets = async ({
     mutation = MutationApplyContentPillarPresets.Mutation1,
     signal,
-}: MutateApplyContentPillarPresetsParams = {}) => {
+}: MutateApplyContentPillarPresetsParams = {}): Promise<
+    ApolloClient.MutateResult<MutateApplyContentPillarPresetsResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],

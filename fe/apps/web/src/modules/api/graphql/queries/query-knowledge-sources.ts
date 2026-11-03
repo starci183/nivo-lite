@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -60,7 +60,7 @@ export const queryKnowledgeSources = async ({
     query = QueryKnowledgeSources.Query1,
     request,
     signal,
-}: QueryKnowledgeSourcesParams) => {
+}: QueryKnowledgeSourcesParams): Promise<ApolloClient.QueryResult<QueryKnowledgeSourcesResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

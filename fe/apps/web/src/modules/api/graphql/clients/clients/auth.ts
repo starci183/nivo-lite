@@ -45,7 +45,7 @@ export const createAuthApolloClient = ({
     headers = {},
     signal,
     uri,
-}: CreateAuthApolloClientOptions = {}) =>
+}: CreateAuthApolloClientOptions = {}): ApolloClient =>
     new ApolloClient({
         link: ApolloLink.from([
             createRetryLink(),

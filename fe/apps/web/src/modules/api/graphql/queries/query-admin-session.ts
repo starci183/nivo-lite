@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -30,7 +30,10 @@ type QueryAdminSessionParams = QueryParams<QueryAdminSession>
  * Asks who the signed-in platform admin is; anyone else is refused as not found (the back end `adminSession` query).
  * Rejects with the back end failure (`CombinedGraphQLErrors`, message localized by the server) instead of answering partial data.
  */
-export const queryAdminSession = async ({ query = QueryAdminSession.Query1, signal }: QueryAdminSessionParams = {}) => {
+export const queryAdminSession = async ({
+    query = QueryAdminSession.Query1,
+    signal,
+}: QueryAdminSessionParams = {}): Promise<ApolloClient.QueryResult<QueryAdminSessionResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({
         query: queryMap[query],

@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { QueryParams } from "../types"
@@ -195,7 +195,9 @@ const queryMap: Record<QueryDashboard, TypedDocumentNode<QueryDashboardResponse>
 type QueryDashboardParams = QueryParams<QueryDashboard>
 
 /** Reads everything the overview page shows about the active workspace (the back end `dashboard` query). */
-export const queryDashboard = async ({ query = QueryDashboard.Query1, signal }: QueryDashboardParams = {}) => {
+export const queryDashboard = async ({ query = QueryDashboard.Query1, signal }: QueryDashboardParams = {}): Promise<
+    ApolloClient.QueryResult<QueryDashboardResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], fetchPolicy: "no-cache" })
 }

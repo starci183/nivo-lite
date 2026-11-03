@@ -11,7 +11,7 @@ import { loginPath } from "@/modules/routes"
  *
  * @see {@link https://www.apollographql.com/docs/react/api/link/apollo-link-error | ErrorLink API}
  */
-export const createErrorLink = () =>
+export const createErrorLink = (): ErrorLink =>
     new ErrorLink(({ error }) => {
         if (!CombinedGraphQLErrors.is(error)) return
         if (!error.errors.some((failure) => failure.extensions?.kind === "unauthenticated")) return

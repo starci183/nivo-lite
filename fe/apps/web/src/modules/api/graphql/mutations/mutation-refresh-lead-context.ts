@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams, WireInput } from "../types"
@@ -38,7 +38,7 @@ export const mutateRefreshLeadContext = async ({
     request,
     signal,
     headers,
-}: MutateRefreshLeadContextParams) => {
+}: MutateRefreshLeadContextParams): Promise<ApolloClient.MutateResult<MutateRefreshLeadContextResponse>> => {
     const apollo = createAuthApolloClient({ signal, headers })
     return apollo.mutate({
         mutation: mutationMap[mutation],

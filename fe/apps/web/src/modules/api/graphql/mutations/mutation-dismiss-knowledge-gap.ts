@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams, WireInput } from "../types"
@@ -41,7 +41,7 @@ export const mutateDismissKnowledgeGap = async ({
     mutation = MutationDismissKnowledgeGap.Mutation1,
     request,
     signal,
-}: MutateDismissKnowledgeGapParams) => {
+}: MutateDismissKnowledgeGapParams): Promise<ApolloClient.MutateResult<MutateDismissKnowledgeGapResponse>> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],

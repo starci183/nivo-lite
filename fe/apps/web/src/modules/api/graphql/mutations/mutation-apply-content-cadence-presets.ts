@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
@@ -32,7 +32,9 @@ type MutateApplyContentCadencePresetsParams = Omit<MutateParams<MutationApplyCon
 export const mutateApplyContentCadencePresets = async ({
     mutation = MutationApplyContentCadencePresets.Mutation1,
     signal,
-}: MutateApplyContentCadencePresetsParams = {}) => {
+}: MutateApplyContentCadencePresetsParams = {}): Promise<
+    ApolloClient.MutateResult<MutateApplyContentCadencePresetsResponse>
+> => {
     const apollo = createAuthApolloClient({ signal })
     return apollo.mutate({
         mutation: mutationMap[mutation],

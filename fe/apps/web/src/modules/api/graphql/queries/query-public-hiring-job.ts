@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql, type ApolloClient } from "@apollo/client"
 import type { TypedDocumentNode } from "@apollo/client"
 import { createNoAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
@@ -68,7 +68,7 @@ export const queryPublicHiringJob = async ({
     query = QueryPublicHiringJob.Query1,
     request,
     signal,
-}: QueryPublicHiringJobParams) => {
+}: QueryPublicHiringJobParams): Promise<ApolloClient.QueryResult<QueryPublicHiringJobResponse>> => {
     const apollo = createNoAuthApolloClient({ signal })
     return apollo.query({ query: queryMap[query], variables: { input: request } })
 }
