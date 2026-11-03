@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto"
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
+import type { ConnectionReadyEvent } from "@modules/events/api"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
 import type { ChannelSeed } from "./channel-seed.contracts"
 import { ChannelSeedService } from "./channel-seed.service"
 
@@ -73,14 +76,19 @@ const build = async (held: Held = {}) => {
     connections.create.mockImplementation((input) => Promise.resolve(input.id ?? "generated"))
     const apiTokens = mock<ConnectionApiTokenService>()
     apiTokens.write.mockResolvedValue(true)
+    const tx = fakeTransaction(mockEntityManager())
+    const bus = recordingEventBus<ConnectionReadyEvent>()
+    const publish = jest.spyOn(bus, "publish")
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelSeedService,
             { provide: ConnectionsService, useValue: connections },
             { provide: ConnectionApiTokenService, useValue: apiTokens },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: EVENT_BUS, useValue: bus },
         ],
     }).compile()
-    return { service: moduleRef.get(ChannelSeedService), connections, apiTokens }
+    return { service: moduleRef.get(ChannelSeedService), connections, apiTokens, publish, tx }
 }
 
 const createdWith = (connections: jest.Mocked<ConnectionsService>, id: string) =>
@@ -132,6 +140,34 @@ describe("ChannelSeedService > a workspace without the connections", () => {
 
         expect(apiTokens.write).toHaveBeenCalledTimes(1)
         expect(apiTokens.write).toHaveBeenCalledWith(IDS.sepay, SEPAY_API_TOKEN)
+    })
+
+    it("announces the feed as ready once the API token is stored, so the first poll runs at once", async () => {
+        const { service, publish, tx } = await build()
+
+        await service.ensure(ACTOR, FULL)
+
+        expect(publish).toHaveBeenCalledTimes(1)
+        const [event] = publish.mock.calls[0] ?? []
+        expect(event?.payload).toEqual({
+            workspaceId: "ws-1",
+            connectionId: IDS.sepay,
+            provider: "sepay",
+            dedupeKey: expect.any(String),
+        })
+        expect(event?.payload.dedupeKey).toMatch(new RegExp(`^${IDS.sepay}:api_token:[0-9a-f]{16}$`, "u"))
+        expect(JSON.stringify(event)).not.toContain(SEPAY_API_TOKEN)
+        expect(tx.commits).toBe(1)
+    })
+
+    it("announces nothing when no token is stored", async () => {
+        const { service, apiTokens, publish } = await build()
+        apiTokens.write.mockResolvedValue(false)
+
+        await service.ensure(ACTOR, FULL)
+        await service.ensure(ACTOR, BARE)
+
+        expect(publish).not.toHaveBeenCalled()
     })
 
     it("generates a SePay key only when none is supplied", async () => {
