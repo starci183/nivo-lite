@@ -1,5 +1,5 @@
 import type { InterviewView } from "@/hooks/hiringWire"
-import { PRODUCT_TIME_ZONE, shiftDate, wallDate, wallInstant, weekStartOf } from "@/modules/i18n"
+import { i18n, shiftDate, wallDate, wallInstant, weekStartOf } from "@/modules/i18n"
 
 /** One day of the week calendar on the Vietnam clock, with the confirmed interviews that start in it. */
 export interface CalendarDay {
@@ -18,13 +18,13 @@ export const weekDays = (
     offset: number,
     interviews: ReadonlyArray<InterviewView>,
 ): Array<CalendarDay> => {
-    const today = wallDate(Date.parse(nowIso), PRODUCT_TIME_ZONE)
+    const today = wallDate(Date.parse(nowIso), i18n.timeZone)
     const monday = shiftDate(weekStartOf(today), offset * DAYS_IN_WEEK)
     const confirmed = interviews.filter((interview) => interview.status === "confirmed" && interview.slotStart !== null)
     return Array.from({ length: DAYS_IN_WEEK }, (_, index) => {
         const date = shiftDate(monday, index)
-        const start = wallInstant(date, "00:00", PRODUCT_TIME_ZONE)
-        const end = wallInstant(shiftDate(date, 1), "00:00", PRODUCT_TIME_ZONE)
+        const start = wallInstant(date, "00:00", i18n.timeZone)
+        const end = wallInstant(shiftDate(date, 1), "00:00", i18n.timeZone)
         return {
             date,
             startIso: new Date(start).toISOString(),

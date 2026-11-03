@@ -1,8 +1,8 @@
-import { negotiateLocale } from "@nivo-lite/i18n/proxy"
+import { createProxy } from "@starci/next-i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
 import { sessionCookieOptions } from "./modules/config"
 import { checkSession, onPublicOrigin } from "./modules/auth"
-import { LOCALES, LOCALE_COOKIE } from "./modules/i18n"
+import { i18n } from "./modules/i18n"
 
 // The two destinations the proxy redirects to; the proxy cannot evaluate the routes barrel, so it names them itself.
 const LOGIN_PATH = "/login"
@@ -30,9 +30,9 @@ const PUBLIC_PATHS = [
     "/health",
 ] // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
 
-// Roots the locale rewrite never touches: handlers, liveness and framework files. Every other path is served
-// from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides).
-const UNNEGOTIATED_ROOTS: ReadonlySet<string> = new Set(["api", "health", "_next", "_vercel"])
+// Every path is served from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides);
+// the shared proxy leaves handlers, liveness and framework files (its default roots) alone.
+const negotiateLocale = createProxy(i18n)
 
 /** Segment-aware prefix match, so "/auth" never swallows "/authority". */
 const isPublicPath = (pathname: string): boolean =>
@@ -53,17 +53,17 @@ const incomingOf = (request: NextRequest): NextRequest => {
 }
 
 /** The language the landing site hands over (`?lang=vi|en`), or null when the address carries none. */
-const handedOverLocale = (request: NextRequest): (typeof LOCALES)[number] | null => {
+const handedOverLocale = (request: NextRequest): (typeof i18n.locales)[number] | null => {
     const lang = request.nextUrl.searchParams.get("lang")
-    return LOCALES.find((locale) => locale === lang) ?? null
+    return i18n.locales.find((locale) => locale === lang) ?? null
 }
 
 /** Stores the handed-over language in the locale cookie and reopens the same address without the parameter. */
-const adoptLocale = (request: NextRequest, locale: (typeof LOCALES)[number]): NextResponse => {
+const adoptLocale = (request: NextRequest, locale: (typeof i18n.locales)[number]): NextResponse => {
     const clean = request.nextUrl.clone()
     clean.searchParams.delete("lang")
     const out = NextResponse.redirect(onPublicOrigin(request, clean))
-    out.cookies.set(LOCALE_COOKIE, locale, { ...sessionCookieOptions, path: "/", maxAge: 60 * 60 * 24 * 365 })
+    out.cookies.set(i18n.localeCookieName, locale, { ...sessionCookieOptions, path: "/", maxAge: 60 * 60 * 24 * 365 })
     return out
 }
 
@@ -73,7 +73,7 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     const { pathname } = request.nextUrl
     const handedOver = handedOverLocale(request)
     if (handedOver !== null) return adoptLocale(request, handedOver)
-    const stamped = (): NextResponse => negotiateLocale(request, UNNEGOTIATED_ROOTS)
+    const stamped = (): NextResponse => negotiateLocale(request)
     const response = stamped()
     const principal = await checkSession(request)
     const isPublic = isPublicPath(pathname)

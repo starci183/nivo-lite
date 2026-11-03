@@ -1,13 +1,10 @@
-import { createRequestConfig } from "@nivo-lite/i18n/request"
+import { createRequestConfig } from "@starci/next-i18n/request"
+import type { I18nRequestConfig } from "@starci/next-i18n/request"
+import { i18n } from "./routing"
 
-/** A loaded catalogue module: the messages are its default export. */
-const isCatalogue = (value: unknown): value is { readonly default: Record<string, unknown> } =>
-    typeof value === "object" && value !== null && "default" in value && typeof value.default === "object"
-
-/** Loads the console's own catalogue of the requested locale; the i18n package resolves the locale and the time zone. */
-const requestConfig: ReturnType<typeof createRequestConfig> = createRequestConfig("web", async (locale) => {
-    const loaded: unknown = await import(`./messages/${locale}.json`)
-    if (!isCatalogue(loaded)) throw new Error(`The ${locale} catalogue has no messages`)
-    return loaded.default
+/** The console's own catalogue of the requested locale over the shared stack, which resolves the locale and the time zone. */
+const requestConfig: I18nRequestConfig = createRequestConfig(i18n, {
+    app: "web",
+    loadMessages: (locale) => import(`./messages/${locale}.json`),
 })
 export default requestConfig

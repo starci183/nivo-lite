@@ -6,7 +6,7 @@ import type {
     useQueryPaymentOrdersSwr,
 } from "@/hooks/swr"
 import { mapSlot, slotOfReads, slotOfSwr } from "@/hooks/slot"
-import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
+import { i18n } from "@/modules/i18n"
 import type { BillingPlanView, BillingRowView, BillingTone, DataSlot } from "@/modules/types"
 
 type BillingTranslator = ReturnType<typeof useTranslations<"billing">>
@@ -53,7 +53,7 @@ export const billingWordsOf = (t: BillingTranslator, format: BillingFormatter): 
     format,
     money: (amount: number) => format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
     stamp: (value: string) =>
-        format.dateTime(new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone: PRODUCT_TIME_ZONE }),
+        format.dateTime(new Date(value), { dateStyle: "medium", timeStyle: "short", timeZone: i18n.timeZone }),
     statusLabels: {
         pending_payment: t("statusPending_payment"),
         active: t("statusActive"),
@@ -103,7 +103,7 @@ export const planCardOf = (
                   status: words.statusLabels[item.status] ?? t("statusCancelled"),
                   statusTone: STATUS_TONES[item.status] ?? "neutral",
                   paidUntil: item.paidUntil
-                      ? format.dateTime(new Date(item.paidUntil), { dateStyle: "long", timeZone: PRODUCT_TIME_ZONE })
+                      ? format.dateTime(new Date(item.paidUntil), { dateStyle: "long", timeZone: i18n.timeZone })
                       : t("notPaid"),
                   canRenew: Boolean(plan.data && !plan.data.isCustom),
               }
