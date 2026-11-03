@@ -1,4 +1,4 @@
-import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError } from "@starci/object-storage"
+import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
 
 /** The longest a SigV4 presigned address lives (seven days). */
 export const MAX_PRESIGN_SECONDS = 604_800
@@ -17,7 +17,7 @@ export const presignSecondsOf = (requested: number): number =>
 export const bucketNameOf = (prefix: string, purpose: string): string => {
     const name = `${prefix}-${purpose.toLowerCase().replaceAll("_", "-")}`
     if (!PREFIX.test(prefix) || !BUCKET_NAME.test(name)) {
-        throw new ObjectStorageError(OBJECT_STORAGE_ERROR_CODES.BucketInvalid, { context: { bucket: name } })
+        throw new ObjectStorageError({ code: ObjectStorageErrorCode.BucketInvalid, params: { bucket: name } })
     }
     return name
 }
@@ -39,6 +39,15 @@ export const STORAGE_BUCKETS: ReadonlyArray<StorageBucket> = [
     { purpose: "knowledge-uploads", publicRead: false },
 ]
 
+/** The content type an upload is signed with, or null when the kind admits none. */
+export type UploadContentType = string | null
+
+/** The content type the browser reported when the kind admits it (case and parameters ignored), else null. */
+export const reportedUploadTypeOf = (admitted: ReadonlyMap<string, string>, given: string): UploadContentType => {
+    const asked = given.replace(/;.*/su, "").trim().toLowerCase()
+    return [...admitted.values()].includes(asked) ? asked : null
+}
+
 /**
  * The content type an upload of one kind is signed with: the browser's own when the kind admits it, else the one the extension of
  * the file name names; null when the kind admits neither, so the upload is refused and never signed as an anonymous binary.
@@ -47,9 +56,9 @@ export const uploadContentTypeOf = (
     admitted: ReadonlyMap<string, string>,
     filename: string,
     given: string,
-): string | null => {
-    const asked = (given.split(";")[0] ?? "").trim().toLowerCase()
-    if ([...admitted.values()].includes(asked)) return asked
+): UploadContentType => {
+    const reported = reportedUploadTypeOf(admitted, given)
+    if (reported !== null) return reported
     const dot = filename.lastIndexOf(".")
     return dot < 0 ? null : (admitted.get(filename.slice(dot + 1).toLowerCase()) ?? null)
 }

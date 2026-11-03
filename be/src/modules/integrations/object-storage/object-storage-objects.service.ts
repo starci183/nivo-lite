@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError } from "@starci/object-storage"
+import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError as StoreFailure } from "@starci/object-storage"
 import type { ObjectStorage } from "@starci/object-storage"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder, ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
+import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
 import type { SignedObjectUrl, StorageFailureCode } from "./object-storage.contracts"
 import { InjectObjectStorage, InjectStorageOptions } from "./object-storage.decorators"
 import { StorageLogEvent } from "./object-storage.log-events"
@@ -24,7 +25,7 @@ const SIGN_PARALLEL = 16
 
 /** The failure of an object that is not there. */
 const missing = (bucket: string): ObjectStorageError =>
-    new ObjectStorageError(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound, { context: { bucket } })
+    new ObjectStorageError({ code: ObjectStorageErrorCode.ObjectNotFound, params: { bucket } })
 
 @Injectable()
 /** Issues upload addresses and reads objects through the object storage port; the only door domains have to storage. */
@@ -120,7 +121,10 @@ export class StorageObjectsService implements StorageObjectsPort {
         try {
             return ok(await run())
         } catch (failure) {
-            if (failure instanceof ObjectStorageError && failure.kind !== "unavailable") {
+            if (
+                failure instanceof ObjectStorageError ||
+                (failure instanceof StoreFailure && failure.kind !== "unavailable")
+            ) {
                 return refused(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound)
             }
             this.logger.error(StorageLogEvent.Failed, failure, { bucket })
