@@ -1,3 +1,5 @@
+import type { AgentLocale } from "./agent-work.contracts"
+
 /** What a tag is about, whoever tags: the words, and the record or conversation it concerns. */
 export interface AgentTagBody {
     /** The workspace of both agents. */
@@ -10,6 +12,12 @@ export interface AgentTagBody {
     readonly subject?: string | null | undefined
     /** The conversation the tag belongs to, when it belongs to one. */
     readonly conversationId?: string | null | undefined
+    /** The channel of that conversation, when known. */
+    readonly channel?: string | null | undefined
+    /** The customer the tag is about, when known. */
+    readonly leadId?: string | null | undefined
+    /** The language the target answers in; vi when absent. */
+    readonly locale?: AgentLocale | undefined
     /** Plain data for the target's graph (objects and arrays allowed): it becomes trigger.context there. Kept as JSON text, at most 8000 characters. */
     readonly context?: Readonly<Record<string, unknown>> | undefined
     /** Stable for one fact, so the same tag written twice wakes once; a fresh key per call when absent. */

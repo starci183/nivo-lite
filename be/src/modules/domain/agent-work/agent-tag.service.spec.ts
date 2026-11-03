@@ -37,7 +37,13 @@ describe("AgentTagService.tagAgent", () => {
             agentId: "sales",
             source: "tag",
             eventKey: "order:1",
-            context: { text: "Order for 5 baskets", subject: "order-1", conversationId: "c1", fromAgentId: "chat" },
+            context: {
+                text: "Order for 5 baskets",
+                subject: "order-1",
+                conversationId: "c1",
+                authorAgentId: "chat",
+                locale: "vi",
+            },
             actorMemberId: null,
         })
     })
@@ -78,7 +84,7 @@ describe("AgentTagService.tagAgent", () => {
             expect.anything(),
             expect.objectContaining({
                 actorMemberId: null,
-                context: { text: "Order for 5 baskets", tagSource: "bank-feed" },
+                context: { text: "Order for 5 baskets", locale: "vi", tagSource: "bank-feed" },
             }),
         )
     })

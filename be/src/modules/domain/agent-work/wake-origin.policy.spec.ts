@@ -21,7 +21,7 @@ describe("wakeOriginOf", () => {
         ],
         [
             "a tag that names the agent behind it",
-            { source: "tag", context: { fromAgentId: "a1", conversationId: "c1" }, actorMemberId: null },
+            { source: "tag", context: { authorAgentId: "a1", conversationId: "c1" }, actorMemberId: null },
             "agent",
         ],
         [

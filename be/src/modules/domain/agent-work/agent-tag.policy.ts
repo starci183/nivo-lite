@@ -7,6 +7,9 @@ export const TAG_TEXT_MAX = 2000
 /** The most characters of a source name or a subject a wake keeps. */
 const TAG_LABEL_MAX = 200
 
+/** The language of a tag that names none. */
+const DEFAULT_TAG_LOCALE = "vi"
+
 /** The most characters of the plain data a tag hands over, as JSON text. */
 export const TAG_CONTEXT_MAX = 8000
 
@@ -32,6 +35,9 @@ export const tagContextOf = (request: AgentTagRequest, payload?: string): AgentW
     ...(payload === undefined ? {} : { tagContext: payload }),
     ...(request.subject == null ? {} : { subject: request.subject.slice(0, TAG_LABEL_MAX) }),
     ...(request.conversationId == null ? {} : { conversationId: request.conversationId }),
-    ...("fromAgentId" in request ? { fromAgentId: request.fromAgentId } : {}),
+    ...(request.channel == null ? {} : { channel: request.channel.slice(0, TAG_LABEL_MAX) }),
+    ...(request.leadId == null ? {} : { leadId: request.leadId }),
+    locale: request.locale ?? DEFAULT_TAG_LOCALE,
+    ...("fromAgentId" in request ? { authorAgentId: request.fromAgentId } : {}),
     ...("source" in request ? { tagSource: request.source.slice(0, TAG_LABEL_MAX) } : {}),
 })

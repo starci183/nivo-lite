@@ -62,14 +62,22 @@ export interface AgentWakeContext {
     readonly room?: string
     /** The work thread of a tag. */
     readonly threadId?: string
+    /** The messages of the same conversation that arrived within the burst window and were taken into this wake's turn, oldest first, as ids joined with commas. */
+    readonly mergedMessageIds?: string
+    /** The plain data the tagger handed over, as JSON text; `tagPayloadOf` reads it. */
+    readonly tagContext?: string
     /** What the tagger said, for a tag. */
     readonly text?: string
     /** The record a tag is about. */
     readonly subject?: string
     /** What started a tag that no agent or person made, for example a feed. */
     readonly tagSource?: string
+    /** The channel of the conversation a tag belongs to, when the tagger knows it. */
+    readonly channel?: string
+    /** The customer a tag is about, when the tagger knows it. */
+    readonly leadId?: string
     /** The agent whose end node tagged this one. */
-    readonly fromAgentId?: string
+    readonly authorAgentId?: string
     /** The account that wrote the tagging message. */
     readonly authorUserId?: string
     /** The language of the reply. */

@@ -11,13 +11,15 @@ describe("tagContextOf", () => {
                 conversationId: "c",
                 fromAgentId: "f",
             }),
-        ).toEqual({ text: "hi", subject: "s", conversationId: "c", fromAgentId: "f" })
+        ).toEqual({ text: "hi", subject: "s", conversationId: "c", authorAgentId: "f", locale: "vi" })
         expect(tagContextOf({ workspaceId: "w", toAgentId: "a", text: "hi", source: "feed" })).toEqual({
             text: "hi",
+            locale: "vi",
             tagSource: "feed",
         })
         expect(tagContextOf({ workspaceId: "w", toAgentId: "a", text: "hi", personId: "p", subject: null })).toEqual({
             text: "hi",
+            locale: "vi",
         })
     })
 
@@ -33,6 +35,22 @@ describe("tagContextOf", () => {
         expect(context.text).toHaveLength(TAG_TEXT_MAX)
         expect(context.subject).toHaveLength(200)
         expect(context.tagSource).toHaveLength(200)
+    })
+})
+
+describe("tag context names", () => {
+    it("writes the names the graph trigger reads: channel, customer, language and the agent behind the tag", () => {
+        expect(
+            tagContextOf({
+                workspaceId: "w",
+                toAgentId: "a",
+                text: "hi",
+                fromAgentId: "f",
+                channel: "zalo",
+                leadId: "l1",
+                locale: "en",
+            }),
+        ).toEqual({ text: "hi", channel: "zalo", leadId: "l1", locale: "en", authorAgentId: "f" })
     })
 })
 
