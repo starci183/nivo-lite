@@ -1,17 +1,10 @@
-import { createRequestConfig } from "@nivo-lite/i18n/request"
+import { createRequestConfig } from "@starci/next-i18n/request"
+import type { I18nRequestConfig } from "@starci/next-i18n/request"
+import { i18n } from "./routing"
 
-/** A message tree is an object, never a primitive. */
-const isCatalogue = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
-
-/** The default export of a catalogue module, read as `unknown` and checked, never trusted as `any`. */
-const catalogueOf = (loaded: unknown): Record<string, unknown> => {
-    const catalogue = isCatalogue(loaded) ? loaded["default"] : undefined
-    if (!isCatalogue(catalogue)) throw new TypeError("A message catalogue module must export its messages as default")
-    return catalogue
-}
-
-/** Loads the landing's own catalogue of the requested locale; the i18n package resolves the locale and the time zone. */
-const requestConfig: ReturnType<typeof createRequestConfig> = createRequestConfig("landing", async (locale) =>
-    catalogueOf(await import(`./messages/${locale}.json`)),
-)
+/** The landing's own catalogue of the requested locale over the shared stack, which resolves the locale and the time zone. */
+const requestConfig: I18nRequestConfig = createRequestConfig(i18n, {
+    app: "landing",
+    loadMessages: (locale) => import(`./messages/${locale}.json`),
+})
 export default requestConfig

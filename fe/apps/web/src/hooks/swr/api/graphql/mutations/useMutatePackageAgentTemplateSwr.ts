@@ -1,6 +1,8 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { PackageAgentTemplateData } from "@/modules/api/graphql"
 import { mutatePackageAgentTemplate } from "@/modules/api/graphql/mutations/mutation-package-agent-template"
 import type { MutatePackageAgentTemplateRequest } from "@/modules/api/graphql/mutations/mutation-package-agent-template"
 
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** The back end `packageAgentTemplate` mutation. */
-export const useMutatePackageAgentTemplateSwr = () =>
+export const useMutatePackageAgentTemplateSwr = (): SWRMutationResponse<
+    PackageAgentTemplateData,
+    Error,
+    string,
+    MutatePackageAgentTemplateRequest
+> =>
     useSWRMutation(MUTATE_PACKAGE_AGENT_TEMPLATE_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutatePackageAgentTemplate({ request: arg })
         if (!result.data) throw new Error("packageAgentTemplate answered no data")

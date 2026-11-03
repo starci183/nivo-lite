@@ -10,7 +10,7 @@ import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors
 import type { LikenessGrantView } from "./template-marketplace.contracts"
 import { TemplateLikenessGrantEntity } from "./persistence/entities"
 import { consentCovers } from "./policies/likeness.policy"
-import type { LikenessClaim } from "@modules/domain/agent-templates"
+import type { LikenessClaim } from "@nivo/agent-sdk/template"
 
 /** What the creator records. */
 export interface LikenessGrantRequest {

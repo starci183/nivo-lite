@@ -6,11 +6,13 @@ import {
     signUp,
     startOAuth,
     updatePassword,
-} from "@/modules/auth"
+} from "./actions"
+import type { PasswordReset, SignInInput, SignInResult, SignUpResult } from "./actions"
 
 import type { GraphQLResponse } from "../types"
-import type { SignInResult, SignUpResult, PasswordReset } from "../auth/actions"
-import type { SignInInput } from "@/modules/auth/actions"
+
+export { confirmEmail, endSession } from "./actions"
+export type { PasswordReset, SignInInput, SignInResult, SignUpResult } from "./actions"
 
 type AuthActionsOfResult = {
     endSession: () => Promise<GraphQLResponse<true>>

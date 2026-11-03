@@ -1,11 +1,4 @@
-export {
-    DEFAULT_LOCALE,
-    LOCALES,
-    LOCALE_COOKIE,
-    PRODUCT_TIME_ZONE,
-    appLocaleOf,
-    intlTagOf,
-    navigation,
-} from "@nivo-lite/i18n"
+export { DEFAULT_LOCALE, i18n } from "./routing"
+export { navigation } from "./navigation"
 export { shiftDate, wallClockText, wallDate, wallInstant, wallMinutes, weekStartOf } from "./zoned-time"
 export { withoutParentheses } from "./name-text"

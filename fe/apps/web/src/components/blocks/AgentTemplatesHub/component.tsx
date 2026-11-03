@@ -1,4 +1,5 @@
 import { Alert, Button, EmptyNotice, Input, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import type { ReactElement } from "react"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, BLOCK_CLASS_NAME, CARD_CLASS_NAME } from "./classNames"
@@ -31,42 +32,129 @@ export interface AgentTemplatesHubData {
     readonly offers: ReadonlyArray<OfferView>
 }
 
+/** The words of the hub. */
+interface HubCopy {
+    readonly mineTitle: string
+    readonly offersTitle: string
+    readonly valuesLabel: string
+    readonly valuesHint: string
+    readonly priceLabel: string
+    readonly importLabel: string
+    readonly submitLabel: string
+    readonly acceptSafeLabel: string
+    readonly acceptUnitLabel: string
+    readonly noOffers: string
+}
+
+/** The commands of the hub. */
+interface HubCommands {
+    readonly importVersion: (key: string, version: number) => void
+    readonly submitVersion: (key: string, version: number) => void
+    readonly accept: (installationId: string, unitIds: Array<string>) => void
+}
+
 /** Copy, values and state the connected hub supplies. */
 export interface AgentTemplatesHubBaseProps {
-    readonly props: {
+    readonly props: HubCopy & {
         readonly slot: DataSlot<AgentTemplatesHubData>
         readonly placeholder: AgentTemplatesHubData
         readonly slotLabels: SlotLabels
-        readonly mineTitle: string
-        readonly offersTitle: string
-        readonly valuesLabel: string
-        readonly valuesHint: string
         readonly valuesText: string
-        readonly priceLabel: string
         readonly price: string
-        readonly importLabel: string
-        readonly submitLabel: string
-        readonly acceptSafeLabel: string
-        readonly acceptUnitLabel: string
-        readonly noOffers: string
         readonly notice: string | undefined
         readonly isPending: boolean
     }
-    readonly on: {
+    readonly on: HubCommands & {
         readonly retry: () => void
         readonly setValuesText: (value: string) => void
         readonly setPrice: (value: string) => void
-        readonly importVersion: (key: string, version: number) => void
-        readonly submitVersion: (key: string, version: number) => void
-        readonly accept: (installationId: string, unitIds: Array<string>) => void
     }
 }
+
+/** What the rows of one template draw. */
+interface TemplateRowsProps {
+    readonly template: TemplateView
+    readonly copy: HubCopy
+    readonly isPending: boolean
+    readonly isLoading: boolean
+    readonly on: HubCommands
+}
+
+/** The versions of one template, each with the commands to install it here and to offer it. */
+const TemplateRows = (props: TemplateRowsProps): ReactElement => (
+    <div className={CARD_CLASS_NAME}>
+        <Text size="sm">{`${props.template.name} (${props.template.key})`}</Text>
+        {props.template.versions.map((version) => (
+            <div key={version.version} className={CARD_CLASS_NAME}>
+                <Text size="sm" tone="muted">
+                    {version.line}
+                </Text>
+                <div className={ACTIONS_CLASS_NAME}>
+                    <Button
+                        intent="alternative"
+                        isPending={props.isPending}
+                        isDisabled={props.isLoading}
+                        onPress={() => props.on.importVersion(props.template.key, version.version)}
+                    >
+                        {props.copy.importLabel}
+                    </Button>
+                    <Button
+                        intent="neutral"
+                        isPending={props.isPending}
+                        isDisabled={props.isLoading}
+                        onPress={() => props.on.submitVersion(props.template.key, version.version)}
+                    >
+                        {props.copy.submitLabel}
+                    </Button>
+                </div>
+            </div>
+        ))}
+    </div>
+)
+
+/** What the rows of one offer draw. */
+interface OfferRowsProps {
+    readonly offer: OfferView
+    readonly copy: HubCopy
+    readonly isPending: boolean
+    readonly on: HubCommands
+}
+
+/** One offer of a newer version, branch by branch. */
+const OfferRows = (props: OfferRowsProps): ReactElement => (
+    <div className={CARD_CLASS_NAME}>
+        <Text size="sm">{props.offer.title}</Text>
+        <Text size="xs" tone="muted">
+            {props.offer.changelog}
+        </Text>
+        {props.offer.units.map((unit) => (
+            <div key={unit.id} className={ACTIONS_CLASS_NAME}>
+                <Text size="sm">{unit.line}</Text>
+                <Button
+                    intent="neutral"
+                    isPending={props.isPending}
+                    onPress={() => props.on.accept(props.offer.installationId, [unit.id])}
+                >
+                    {props.copy.acceptUnitLabel}
+                </Button>
+            </div>
+        ))}
+        <Button
+            intent="alternative"
+            isPending={props.isPending}
+            isDisabled={props.offer.safeUnitIds.length === 0}
+            onPress={() => props.on.accept(props.offer.installationId, [...props.offer.safeUnitIds])}
+        >
+            {props.copy.acceptSafeLabel}
+        </Button>
+    </div>
+)
 
 /**
  * Draws the templates of the caller: each version with the commands to install it in this workspace (shadow mode) and to offer it on the
  * marketplace, then the newer versions offered to the agents installed from a template, branch by branch.
  */
-export const AgentTemplatesHubBase = (props: AgentTemplatesHubBaseProps) => {
+export const AgentTemplatesHubBase = (props: AgentTemplatesHubBaseProps): ReactElement => {
     const view = props.props
     return (
         <div className={BLOCK_CLASS_NAME}>
@@ -99,79 +187,26 @@ export const AgentTemplatesHubBase = (props: AgentTemplatesHubBaseProps) => {
                         render={(data, isLoading) => (
                             <>
                                 {data.templates.map((template) => (
-                                    <SurfaceCard
+                                    <TemplateRows
                                         key={template.key}
-                                        label={`${template.name} (${template.key})`}
-                                        headingLevel={3}
-                                    >
-                                        <div className={CARD_CLASS_NAME}>
-                                            {template.versions.map((version) => (
-                                                <div key={version.version} className={CARD_CLASS_NAME}>
-                                                    <Text size="sm">{version.line}</Text>
-                                                    <div className={ACTIONS_CLASS_NAME}>
-                                                        <Button
-                                                            intent="commit"
-                                                            isPending={view.isPending}
-                                                            isDisabled={isLoading}
-                                                            onPress={() =>
-                                                                props.on.importVersion(template.key, version.version)
-                                                            }
-                                                        >
-                                                            {view.importLabel}
-                                                        </Button>
-                                                        <Button
-                                                            intent="neutral"
-                                                            isPending={view.isPending}
-                                                            isDisabled={isLoading}
-                                                            onPress={() =>
-                                                                props.on.submitVersion(template.key, version.version)
-                                                            }
-                                                        >
-                                                            {view.submitLabel}
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </SurfaceCard>
+                                        template={template}
+                                        copy={view}
+                                        isPending={view.isPending}
+                                        isLoading={isLoading}
+                                        on={props.on}
+                                    />
                                 ))}
-                                <SurfaceCard label={view.offersTitle} headingLevel={2}>
-                                    <div className={CARD_CLASS_NAME}>
-                                        {data.offers.length === 0 ? <EmptyNotice message={view.noOffers} /> : null}
-                                        {data.offers.map((offer) => (
-                                            <div key={offer.installationId} className={CARD_CLASS_NAME}>
-                                                <Text size="sm">{offer.title}</Text>
-                                                <Text size="xs" tone="muted">
-                                                    {offer.changelog}
-                                                </Text>
-                                                {offer.units.map((unit) => (
-                                                    <div key={unit.id} className={ACTIONS_CLASS_NAME}>
-                                                        <Text size="sm">{unit.line}</Text>
-                                                        <Button
-                                                            intent="neutral"
-                                                            isPending={view.isPending}
-                                                            onPress={() =>
-                                                                props.on.accept(offer.installationId, [unit.id])
-                                                            }
-                                                        >
-                                                            {view.acceptUnitLabel}
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                                <Button
-                                                    intent="commit"
-                                                    isPending={view.isPending}
-                                                    isDisabled={offer.safeUnitIds.length === 0}
-                                                    onPress={() =>
-                                                        props.on.accept(offer.installationId, [...offer.safeUnitIds])
-                                                    }
-                                                >
-                                                    {view.acceptSafeLabel}
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </SurfaceCard>
+                                <Text size="sm">{view.offersTitle}</Text>
+                                {data.offers.length === 0 ? <EmptyNotice message={view.noOffers} /> : null}
+                                {data.offers.map((offer) => (
+                                    <OfferRows
+                                        key={offer.installationId}
+                                        offer={offer}
+                                        copy={view}
+                                        isPending={view.isPending}
+                                        on={props.on}
+                                    />
+                                ))}
                             </>
                         )}
                     />

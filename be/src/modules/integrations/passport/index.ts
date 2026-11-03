@@ -11,6 +11,7 @@ export type {
     HttpExchange,
     NewSession,
     PrincipalVerifier,
+    RateCounter,
     RefreshTokenRecord,
     SessionStore,
     SessionTransaction,
@@ -21,10 +22,6 @@ export type { AccessGrant, GoogleRedirect, JwksDocument } from "@starci/auth/con
 export { PASSPORT_MESSAGES } from "./messages/passport.messages"
 export { parsePassportConfig } from "./passport.config"
 export {
-    InjectAuthDoors,
-    InjectAuthPasswords,
-    InjectAuthSessions,
-    InjectSignInBudget,
     PASSPORT_ACCOUNTS,
     PASSPORT_DOORS,
     PASSPORT_PASSWORDS,

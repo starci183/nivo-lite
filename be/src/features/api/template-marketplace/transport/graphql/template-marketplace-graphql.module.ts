@@ -17,11 +17,15 @@ import { AcceptTemplateUpdateResolver } from "./accept-template-update.resolver"
 import { MyCreatorLedgerResolver } from "./my-creator-ledger.resolver"
 import { RecordTemplateLikenessResolver } from "./record-template-likeness.resolver"
 import { VerifyTemplateLikenessResolver } from "./verify-template-likeness.resolver"
+import { ForkFirstPartyTemplateResolver } from "./fork-first-party-template.resolver"
+import { SyncFirstPartyTemplatesResolver } from "./sync-first-party-templates.resolver"
 import { ConfigurableModuleClass } from "./template-marketplace-graphql.module-definition"
 
 @Module({
     imports: [TemplateMarketplaceApiModule.register({})],
     providers: [
+        SyncFirstPartyTemplatesResolver,
+        ForkFirstPartyTemplateResolver,
         PreviewAgentTemplateResolver,
         PackageAgentTemplateResolver,
         MyAgentTemplatesResolver,

@@ -2,14 +2,14 @@
 
 import { I18nProvider, ToastProvider } from "@heroui/react"
 import { GrammarRoot } from "@starci/grammar/common"
+import { viewerCacheKey, viewerSwrConfig } from "@starci/next-data"
 import { NextIntlClientProvider } from "next-intl"
 import { ThemeProvider } from "next-themes"
 import { SWRConfig, useSWRConfig } from "swr"
 import type { ReactNode } from "react"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
-import { intlTagOf, navigation } from "@/modules/i18n"
-import { pollingRestart } from "@/modules/swr-polling"
-import { bindViewerCache } from "@/modules/viewer-cache"
+import { i18n, navigation } from "@/modules/i18n"
+import { viewerCache } from "@/modules/viewer-cache"
 import { ReduxProvider, useAppSelector } from "@/redux"
 
 /** What the provider stack takes from the locale layout. */
@@ -35,14 +35,14 @@ const GrammarRouting = (props: LayerProps) => {
 
 /**
  * Reads with a function `refreshInterval` start polling again when newer data makes it answer above zero after it stopped
- * (modules/swr-polling). A focus regain revalidates at most once per interval instead of on every tab switch. Reads that want to keep their last
+ * (`pollingRestart` of `@starci/next-data`). A focus regain revalidates at most once per interval instead of on every tab switch. Reads that want to keep their last
  * answer while a new one is in flight opt in per read (useBookingRange, useBookingBoard, useQueryAgentChatPageSwr).
  */
 const READ_DEFAULTS = { focusThrottleInterval: 30_000 } as const
 
 /** Points the writes of every hook at the cache around it. */
 const ViewerCacheBinding = () => {
-    bindViewerCache(useSWRConfig().mutate)
+    viewerCache.bind(useSWRConfig().mutate)
     return null
 }
 
@@ -51,8 +51,8 @@ const ViewerCache = (props: LayerProps) => {
     const viewerId = useAppSelector((state) => state.viewer.viewerId)
     return (
         <SWRConfig
-            key={viewerId === undefined ? "pending" : (viewerId ?? "signed-out")}
-            value={{ ...READ_DEFAULTS, use: [pollingRestart], provider: () => new Map() }}
+            key={viewerCacheKey(viewerId)}
+            value={viewerSwrConfig(READ_DEFAULTS)}
         >
             <ViewerCacheBinding />
             {props.children}
@@ -64,7 +64,7 @@ const ViewerCache = (props: LayerProps) => {
 export const Providers = (props: ProvidersProps) => (
     <NextIntlClientProvider locale={props.locale} messages={props.messages} timeZone={props.timeZone}>
         <ReduxProvider>
-            <I18nProvider locale={intlTagOf(props.locale)}>
+            <I18nProvider locale={i18n.intlTagOf(props.locale)}>
                 <GrammarRouting>
                     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
                         <ViewerCache>

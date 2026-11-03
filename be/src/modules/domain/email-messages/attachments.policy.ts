@@ -12,7 +12,7 @@ export const mailAttachmentsOf = (list: ReadonlyArray<EmailAttachment>): Readonl
     list.slice(0, MAX_ATTACHMENTS).map((attachment) => ({
         filename: attachment.filename.replace(/[^\w.\- ]+/gu, "_").slice(0, FILENAME_MAX) || "attachment",
         content: Buffer.from(attachment.content, attachment.encoding === "base64" ? "base64" : "utf8"),
-        contentType: attachment.contentType,
+        ...(attachment.contentType === undefined ? {} : { contentType: attachment.contentType }),
     }))
 
 /** True when the files together are within the size one email may carry. */

@@ -52,7 +52,7 @@ The key roster with semantics is `.starcistacks/production/runtime/env/KEYS.md`.
 | Slug | Consumer | Keys |
 | --- | --- | --- |
 | `nivo` | api task (`<KEY>_FILE`); mcp task (`CHANNEL_TOKEN_KEY` only) | `CHANNEL_TOKEN_KEY`, `OTP_PEPPER`, `WEBHOOK_SIGNING_SECRET`, `NIVO_PLATFORM_ADMINS`. Remote MCP connector credentials are not custody keys: they are sealed per workspace in the database from the console |
-| `smtp` | api task | `SMTP_URL`, `SMTP_FROM` |
+| `mail` | api task (`<KEY>_FILE`) | `MAIL_HOST`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` (the platform sender of sign-in, invitation and owner-notice mail; the port, security, sender name and default language are in `api-public.conf`) |
 | `sepay` | api task | `SEPAY_WEBHOOK_API_KEY`, `SEPAY_BANK_ACCOUNT`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NAME` |
 | `auth` | api task | `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY` (the own Passport signing pair) |
 | `google` | api task | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` (own Google sign-in) |

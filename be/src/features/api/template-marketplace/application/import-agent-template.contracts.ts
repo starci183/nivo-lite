@@ -1,4 +1,4 @@
-import type { ParameterValues } from "@modules/domain/agent-templates"
+import type { ParameterValues } from "@nivo/agent-sdk/template"
 
 /** What the ImportAgentTemplate operation takes. */
 export interface ImportAgentTemplateRequest {

@@ -1,5 +1,5 @@
 import { Command } from "@nestjs/cqrs"
-import type { UpdateOffer } from "@modules/domain/agent-templates"
+import type { UpdateOffer } from "@nivo/agent-sdk/template"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { AcceptTemplateUpdateRequest } from "./accept-template-update.contracts"
 

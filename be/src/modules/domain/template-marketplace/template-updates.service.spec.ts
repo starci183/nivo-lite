@@ -1,13 +1,15 @@
 import { Test } from "@nestjs/testing"
+import * as sdk from "@nivo/agent-sdk/template"
+import type { GraphDocument as SdkGraph } from "@nivo/agent-sdk/template"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentGraphPublishService, AgentGraphsService } from "@modules/domain/agent-graphs"
+import { AgentGraphPublishService, AgentGraphsService, graphDocumentSchema } from "@modules/domain/agent-graphs"
 import type { GraphDocument } from "@modules/domain/agent-graphs"
 import {
     AgentTemplateVersionsService,
-    instantiate,
     TemplateInstallEntity,
     TemplateLicenseEntity,
 } from "@modules/domain/agent-templates"
+import { instantiate } from "@nivo/agent-sdk/template"
 import type { StoredVersion } from "@modules/domain/agent-templates"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
@@ -29,7 +31,7 @@ const BUYER = "99999999-9999-4999-8999-999999999999"
 
 const v1 = packageOf()
 /** Version 2 of the creator: a stricter approval on the middle branch, and a new branch. */
-const stricter = (graph: GraphDocument): GraphDocument => ({
+const stricter = (graph: SdkGraph): SdkGraph => ({
     ...graph,
     nodes: graph.nodes.map((node) =>
         node.decide === undefined
@@ -111,7 +113,10 @@ interface Options {
 }
 
 const build = async (options: Options = {}) => {
-    const current = options.current === undefined ? editedSmall(instantiate(v1, VALUES)) : options.current
+    const current =
+        options.current === undefined
+            ? editedSmall(graphDocumentSchema.parse(instantiate(v1, VALUES)))
+            : options.current
     const em = mockEntityManager({
         find: [TemplateInstallEntity, options.install === null ? [] : [options.install ?? installRow()]],
         findOne: [
@@ -216,7 +221,7 @@ describe("TemplateUpdatesService.offer", () => {
         const revoked = await build({ license: licenseRow({ status: "revoked" }) })
         const noLicense = await build({ install: installRow({ licenseId: null }) })
         const none = await build({ install: null })
-        const same = await build({ current: instantiate(v2, VALUES) })
+        const same = await build({ current: graphDocumentSchema.parse(instantiate(v2, VALUES)) })
 
         await expect(revoked.service.offer(BUYER, "ws-buyer", "inst-1")).resolves.toBeNull()
         await expect(noLicense.service.offer(BUYER, "ws-buyer", "inst-1")).resolves.toBeNull()
@@ -313,6 +318,19 @@ describe("TemplateUpdatesService.accept", () => {
 
         await expect(service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"])).rejects.toThrow("staff")
         expect(members.require).toHaveBeenCalledWith(BUYER, "ws-buyer", ["owner", "manager"])
+        expect(publish.publishTemplate).not.toHaveBeenCalled()
+    })
+
+    it("refuses, publishing nothing, a result the graph schema cannot read", async () => {
+        const { service, publish } = await build()
+        const unreadable = Object.assign({}, graphDocumentSchema.parse(instantiate(v2, VALUES)), {
+            nodes: [{ key: "x" }],
+        })
+        jest.spyOn(sdk, "applyUnits").mockReturnValueOnce(unreadable)
+
+        expect(await codeOf(service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"]))).toBe(
+            TemplateMarketplaceErrorCode.UpdateUnavailable,
+        )
         expect(publish.publishTemplate).not.toHaveBeenCalled()
     })
 })

@@ -1,0 +1,41 @@
+# TEST-RUN OVERRIDE, never the default: the development mail catcher (Mailpit, the sink of the harness lite starter) for runs whose
+# synthetic example.test addresses would bounce on the owner SMTP server. The A-E kit adds it as a second file:
+#   docker stack config -c .starcistacks/dev/infra/swarm/stack.yaml -c .starcistacks/dev/infra/swarm/mail-catcher.override.yaml -c dev.images.override.yaml ...
+# and deploys with an untracked api.test.env that omits the MAIL_USER_FILE and MAIL_PASSWORD_FILE pointers: the platform mail then goes to
+# nivo-mail:1025 with no login and no encryption (a login over security none is refused at boot by @starci/mail, so a leftover pointer fails loudly,
+# it never sends credentials in the clear). The inbox is read at http://mail.localhost. Memory only.
+version: "3.8"
+
+services:
+  nivo-api:
+    environment:
+      MAIL_HOST: nivo-mail
+      MAIL_PORT: "1025"
+      MAIL_SECURITY: none
+      MAIL_FROM: no-reply@nivo.localhost
+
+  nivo-mail:
+    image: axllent/mailpit:v1.31.6@sha256:23fe39e81bde596a918000b3135c0f85dc8bb4c9ea6be274b051143f3e300387
+    environment:
+      MP_SMTP_BIND_ADDR: 0.0.0.0:1025
+      MP_UI_BIND_ADDR: 0.0.0.0:8025
+      MP_MAX_MESSAGES: "500"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    deploy:
+      replicas: 1
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.dev-mail.entrypoints: web
+        traefik.http.routers.dev-mail.rule: Host(`mail.localhost`)
+        traefik.http.routers.dev-mail.priority: "100"
+        traefik.http.routers.dev-mail.service: dev-mail
+        traefik.http.services.dev-mail.loadbalancer.server.port: "8025"
+      update_config: { order: stop-first, failure_action: rollback, monitor: 30s }
+      rollback_config: { order: stop-first, monitor: 30s }
+      restart_policy: { condition: any, delay: 5s }
+

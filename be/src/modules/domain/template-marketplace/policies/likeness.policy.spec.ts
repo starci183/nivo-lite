@@ -1,4 +1,4 @@
-import type { LikenessClaim } from "@modules/domain/agent-templates"
+import type { LikenessClaim } from "@nivo/agent-sdk/template"
 import { consentCovers } from "./likeness.policy"
 import type { ConsentRecord } from "./likeness.policy"
 

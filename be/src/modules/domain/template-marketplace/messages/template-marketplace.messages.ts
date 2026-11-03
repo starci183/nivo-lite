@@ -15,6 +15,7 @@ export const TEMPLATE_MARKETPLACE_MESSAGES: MessageBundle = {
         "errors.TEMPLATE_MARKETPLACE_PRICE_INVALID": "Giá phải là số đồng nguyên, không âm.",
         "errors.TEMPLATE_MARKETPLACE_NOT_A_TEMPLATE_INSTALL": "Agent này không cài từ mẫu.",
         "errors.TEMPLATE_MARKETPLACE_UPDATE_UNAVAILABLE": "Không có bản cập nhật này để áp dụng.",
+        "errors.TEMPLATE_MARKETPLACE_FORK_NOT_ALLOWED": "Chỉ làm tiếp được từ gói của Nivo, với mã đúng dạng.",
         "errors.TEMPLATE_MARKETPLACE_GRANT_NOT_FOUND": "Không tìm thấy giấy đồng ý này.",
     },
     en: {
@@ -29,6 +30,8 @@ export const TEMPLATE_MARKETPLACE_MESSAGES: MessageBundle = {
         "errors.TEMPLATE_MARKETPLACE_PRICE_INVALID": "The price must be a whole, non-negative amount of dong.",
         "errors.TEMPLATE_MARKETPLACE_NOT_A_TEMPLATE_INSTALL": "This agent was not installed from a template.",
         "errors.TEMPLATE_MARKETPLACE_UPDATE_UNAVAILABLE": "That update is not available to apply.",
+        "errors.TEMPLATE_MARKETPLACE_FORK_NOT_ALLOWED":
+            "Only a first-party package can be forked, under a key of the right shape.",
         "errors.TEMPLATE_MARKETPLACE_GRANT_NOT_FOUND": "That consent record was not found.",
     },
 }

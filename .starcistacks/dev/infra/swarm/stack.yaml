@@ -37,6 +37,12 @@ services:
       QUEUE_REDIS_PREFIX: nivo
       REALTIME_HUB: redis
       REALTIME_REDIS_PREFIX: nivo-realtime
+      # Platform mail is the owner own SMTP server, the same as production: MAIL_HOST, MAIL_USER, MAIL_PASSWORD and MAIL_FROM are the sealed
+      # dev member mail (pointers in the untracked api.dev.env); the rest is plain configuration. mail-catcher.override.yaml is the test-run override.
+      MAIL_PORT: "587"
+      MAIL_SECURITY: starttls
+      MAIL_FROM_NAME: NIVO
+      MAIL_DEFAULT_LANGUAGE: en
     extra_hosts:
       - host.docker.internal:host-gateway
     healthcheck:

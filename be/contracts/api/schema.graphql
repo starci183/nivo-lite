@@ -3620,6 +3620,18 @@ type FirstEventType {
   text: String
 }
 
+type FirstPartySyncReportType {
+  adopted: Int!
+  packaged: [String!]!
+  refused: [String!]!
+  unchanged: [String!]!
+}
+
+input ForkFirstPartyTemplateInput {
+  key: String!
+  sourceKey: String! @inputBounds(maxLength: 60)
+}
+
 type GenerateAdType {
   attempts: Int!
   facebook: String!
@@ -5708,6 +5720,7 @@ type Mutation {
   enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
   explainShiftsSchedule(input: ShiftsScheduleRefInput!): ExplainScheduleType!
   finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
+  forkFirstPartyTemplate(input: ForkFirstPartyTemplateInput!): TemplateVersionType!
   generateHiringAd(input: HiringJobRefInput!): GenerateAdType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
@@ -5917,6 +5930,7 @@ type Mutation {
   submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
   submitTemplateListing(input: SubmitTemplateListingInput!): ListingType!
   suggestLeadOwner(input: SuggestLeadOwnerInput!): LeadActionQueuedType!
+  syncFirstPartyTemplates: FirstPartySyncReportType!
   syncLoyaltyMembers: SyncLoyaltyMembersType!
   syncMcpConnector(input: SyncMcpConnectorInput!): Int!
   takeInventoryStock(input: TakeInventoryStockInput!): TakeStockType!

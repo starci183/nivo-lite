@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import * as sdk from "@nivo/agent-sdk/template"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentGraphPublishService, AgentGraphSeedService } from "@modules/domain/agent-graphs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -176,8 +177,8 @@ describe("AgentTemplateInstallerService.install", () => {
         await service.install(BUYER, REQUEST)
 
         expect(documents.write).toHaveBeenCalledWith(BUYER, "ws-buyer", {
-            title: "Giờ mở cửa",
-            body: "Spa mở cửa từ 9 giờ đến 21 giờ mỗi ngày.",
+            title: "Gio mo cua",
+            body: "Spa mo cua tu 9 gio den 21 gio moi ngay.",
         })
         expect(tx.commits).toBe(1)
         expect(em.insert).toHaveBeenCalledWith(
@@ -276,5 +277,16 @@ describe("AgentTemplateInstallerService.install", () => {
         await expect(service.install(BUYER, REQUEST)).rejects.toThrow("above the ceiling")
         expect(em.insert).not.toHaveBeenCalled()
         expect(publish.setMode).not.toHaveBeenCalled()
+    })
+
+    it("refuses, publishing nothing, a filled graph the graph schema cannot read", async () => {
+        const { service, publish } = await build()
+        jest.spyOn(sdk, "instantiate").mockReturnValueOnce({
+            nodes: [],
+            rights: [{ kind: "bogus", scope: "workspace", hide: [], mask: [] }],
+        })
+
+        expect(await codeOf(service.install(BUYER, REQUEST))).toBe(AgentTemplatesErrorCode.ValuesRefused)
+        expect(publish.publishTemplate).not.toHaveBeenCalled()
     })
 })

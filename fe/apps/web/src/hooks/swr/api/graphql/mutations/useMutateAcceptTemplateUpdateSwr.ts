@@ -1,6 +1,8 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
+import type { SWRMutationResponse } from "swr/mutation"
+import type { AcceptTemplateUpdateData } from "@/modules/api/graphql"
 import { mutateAcceptTemplateUpdate } from "@/modules/api/graphql/mutations/mutation-accept-template-update"
 import type { MutateAcceptTemplateUpdateRequest } from "@/modules/api/graphql/mutations/mutation-accept-template-update"
 
@@ -13,7 +15,12 @@ interface TriggerArg {
 }
 
 /** The back end `acceptTemplateUpdate` mutation. */
-export const useMutateAcceptTemplateUpdateSwr = () =>
+export const useMutateAcceptTemplateUpdateSwr = (): SWRMutationResponse<
+    AcceptTemplateUpdateData,
+    Error,
+    string,
+    MutateAcceptTemplateUpdateRequest
+> =>
     useSWRMutation(MUTATE_ACCEPT_TEMPLATE_UPDATE_SWR_KEY, async (_key: string, { arg }: TriggerArg) => {
         const result = await mutateAcceptTemplateUpdate({ request: arg })
         if (!result.data) throw new Error("acceptTemplateUpdate answered no data")

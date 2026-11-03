@@ -1,29 +1,15 @@
-import type { EmailLayoutInput, RenderedEmail, TemplateVars } from "./mail.contracts"
+import { escapeHtml, oneLine as collapse } from "@starci/mail"
+import type { EmailLayoutInput, RenderedEmail } from "./mail.contracts"
 
 /** The default accent of the email layout. */
 export const NIVO_ACCENT = "#e11d48"
-
-const CONTROL_CHARACTERS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/gu
 
 type Block =
     | { readonly kind: "p"; readonly lines: ReadonlyArray<string> }
     | { readonly kind: "ul"; readonly items: ReadonlyArray<string> }
 
-const escapeHtml = (text: string): string =>
-    text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;")
-
-/** Fills `{name}` or `{{name}}` from `vars` (an unknown name becomes empty); control characters never survive. */
-export const renderTemplate = (template: string, vars: TemplateVars): string =>
-    template
-        .replace(/\{\{?\s*([a-z0-9_]+)\s*\}?\}/giu, (_match, name: string) => String(vars[name] ?? ""))
-        .replace(CONTROL_CHARACTERS, "")
-
-/** A subject is one line. */
-export const oneLine = (text: string, max: number = 200): string =>
-    text
-        .replace(/[\r\n]+/gu, " ")
-        .trim()
-        .slice(0, max)
+/** A subject is one line, at most `max` characters. */
+const oneLine = (text: string, max: number = 200): string => collapse(text).slice(0, max)
 
 const isBullet = (line: string): boolean => /^\s*[-•]\s+/u.test(line)
 const withoutBullet = (line: string): string => line.replace(/^\s*[-•]\s+/u, "")

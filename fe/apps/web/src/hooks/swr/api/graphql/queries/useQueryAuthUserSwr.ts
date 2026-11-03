@@ -1,6 +1,6 @@
 "use client"
 
-import { sessionUser } from "@/modules/auth"
+import { sessionUser } from "@/modules/auth-session"
 import useSWR from "swr"
 import { useViewerKey } from "@/hooks/workspaceKey"
 import type { ReadResponse } from "@/hooks/workspaceread"

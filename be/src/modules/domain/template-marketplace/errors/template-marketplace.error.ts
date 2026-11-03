@@ -25,6 +25,8 @@ export enum TemplateMarketplaceErrorCode {
     NotATemplateInstall = "TEMPLATE_MARKETPLACE_NOT_A_TEMPLATE_INSTALL",
     /** The update has no such unit, or no newer version. */
     UpdateUnavailable = "TEMPLATE_MARKETPLACE_UPDATE_UNAVAILABLE",
+    /** Only a first-party package can be forked, under a key of the right shape. */
+    ForkNotAllowed = "TEMPLATE_MARKETPLACE_FORK_NOT_ALLOWED",
     /** The consent record is not found. */
     GrantNotFound = "TEMPLATE_MARKETPLACE_GRANT_NOT_FOUND",
 }
@@ -42,6 +44,7 @@ export const TEMPLATE_MARKETPLACE_ERROR_KINDS: Record<TemplateMarketplaceErrorCo
     [TemplateMarketplaceErrorCode.PriceInvalid]: "invalid",
     [TemplateMarketplaceErrorCode.NotATemplateInstall]: "not-found",
     [TemplateMarketplaceErrorCode.UpdateUnavailable]: "conflict",
+    [TemplateMarketplaceErrorCode.ForkNotAllowed]: "invalid",
     [TemplateMarketplaceErrorCode.GrantNotFound]: "not-found",
 }
 

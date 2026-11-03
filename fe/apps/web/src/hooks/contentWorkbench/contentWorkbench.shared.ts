@@ -4,7 +4,7 @@ import { parseDate } from "@internationalized/date"
 import type { useFormatter, useTranslations } from "next-intl"
 import { calendarMonthView } from "@/hooks/contentCalendar"
 import { postView, vietnamClock, vnDateKey } from "@/hooks/content"
-import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
+import { i18n } from "@/modules/i18n"
 import type { BadgeTone } from "@starci/grammar/common"
 
 /** Current content data and the actual conditional lifetime of one module surface. */
@@ -209,9 +209,9 @@ export const contentCalendarFields = (input: ContentCalendarFieldsInput): Conten
             label:
                 cell.day === null
                     ? ""
-                    : format.dateTime(parseDate(cell.dateKey).toDate(PRODUCT_TIME_ZONE), {
+                    : format.dateTime(parseDate(cell.dateKey).toDate(i18n.timeZone), {
                           dateStyle: "full",
-                          timeZone: PRODUCT_TIME_ZONE,
+                          timeZone: i18n.timeZone,
                       }) + (cell.dateKey === vnDateKey(now) ? " · " + t("today") : ""),
             posts: shown.map((post) => ({ ...post, pickLabel: t("calendarPickMove") + ": " + post.title })),
             moreLabel:

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { slotOfSwr } from "@/hooks/slot"
+import type { DataSlot } from "@/modules/types"
 import {
     useMutateAcceptTemplateUpdateSwr,
     useMutateImportAgentTemplateSwr,
@@ -12,9 +13,40 @@ import {
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { acceptInputOf, safeUnitIds, valuesOfText } from "./templates.shared"
+import type { MyAgentTemplatesData, TemplateUpdateOffersData } from "./templates.shared"
+
+/** What the hub of templates reads and does. */
+export interface TemplatesHubController {
+    /** The templates of the caller. */
+    readonly slot: DataSlot<MyAgentTemplatesData>
+    /** The newer versions offered. */
+    readonly offerSlot: DataSlot<TemplateUpdateOffersData>
+    /** Reads the templates again. */
+    readonly reload: () => void
+    /** The values the buyer wrote, as JSON text. */
+    readonly valuesText: string
+    /** Writes the values. */
+    readonly setValuesText: (value: string) => void
+    /** The price the creator wrote. */
+    readonly price: string
+    /** Writes the price. */
+    readonly setPrice: (value: string) => void
+    /** What went wrong before a command was sent, or undefined. */
+    readonly notice: string | undefined
+    /** True while a command runs. */
+    readonly isPending: boolean
+    /** Installs a version in this workspace. */
+    readonly importVersion: (templateKey: string, version: number) => Promise<void>
+    /** Offers a version on the marketplace. */
+    readonly submitVersion: (templateKey: string, version: number) => Promise<void>
+    /** Takes units of an update. */
+    readonly accept: (installationId: string, unitIds: Array<string>) => Promise<void>
+    /** The ids of an offer that are safe to take at once. */
+    readonly safeUnitIds: typeof safeUnitIds
+}
 
 /** The hub of the templates of the caller: their versions, the install of one in this workspace, the listing of one, and the updates offered. */
-export const useTemplatesHub = () => {
+export const useTemplatesHub = (): TemplatesHubController => {
     const t = useTranslations("agentTemplates")
     const run = useGraphQLWithToast()
     const templates = useQueryMyAgentTemplatesSwr()

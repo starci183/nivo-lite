@@ -110,8 +110,22 @@ export type BuildWiringProofResultOptionsPlatformAdminShape = { admins: Array<ne
 export type BuildWiringProofResultOptionsTelegramUserShape = { app: null }
 /** The build wiring proof result options data sources record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsDataSourcesShape = { allowPrivateHosts: boolean }
+/** The sender of the mail record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsMailFromShape = { name: string; address: string }
 /** The build wiring proof result options mail record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsMailShape = { allowPrivateHosts: boolean; platform: null; helloName: string }
+export type BuildWiringProofResultOptionsMailShape = {
+    host: string
+    port: number
+    security: "none"
+    from: BuildWiringProofResultOptionsMailFromShape
+    helloName: string
+    webOrigin: string
+    brandName: string
+    defaultLanguage: "en"
+    confirmTtlSeconds: number
+    resetTtlSeconds: number
+    allowPrivateHosts: boolean
+}
 /** The build wiring proof result options zalo record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsZaloShape = {
     oauthBase: string
@@ -178,26 +192,26 @@ export type BuildWiringProofResultOptionsDocumentsShape = {
 }
 /** The build wiring proof result options identity auth record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsIdentityAuthShape = {
-    webOrigin: string
-    cookieDomain: undefined
-    refreshTtlSeconds: number
-    resetTtlSeconds: number
     inviteTtlSeconds: number
-    loginAttempts: number
-    resetAttempts: number
-    attemptWindowMs: number
 }
+/** The signing key of the passport record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsPassportKeyShape = { privateKey: Secret; publicKey: string; keyId: undefined }
+/** The refresh cookie of the passport record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsPassportCookieShape = { name: string; domain: undefined }
+/** The sign-in budget of the passport record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsPassportBudgetShape = { loginAttempts: number; resetAttempts: number; windowMs: number }
 /** The build wiring proof result options passport record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsPassportShape = {
-    privateKey: Secret
-    publicKey: string
-    keyId: undefined
     issuer: string
-    returnOrigin: string
     audience: string
+    keys: Array<BuildWiringProofResultOptionsPassportKeyShape>
     accessTtlSeconds: number
+    refreshTtlSeconds: number
     bcryptCost: number
+    returnOrigin: string
     google: null
+    cookie: BuildWiringProofResultOptionsPassportCookieShape
+    budget: BuildWiringProofResultOptionsPassportBudgetShape
 }
 /** The build wiring proof result options ai gateway models record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsAiGatewayModelsShape = { work: string; embed: string }

@@ -23,27 +23,31 @@ const wiringSettings = {
         schema: "public",
     },
     passport: {
-        privateKey: new Secret("wiring-fixture"),
-        publicKey: "wiring-fixture",
-        keyId: undefined,
         issuer: "wiring",
-        returnOrigin: "https://site.invalid",
         audience: "authenticated",
+        keys: [{ privateKey: new Secret("wiring-fixture"), publicKey: "wiring-fixture", keyId: undefined }],
         accessTtlSeconds: 900,
-        bcryptCost: 4,
-        google: null,
-    },
-    identityAuth: {
-        webOrigin: "https://site.invalid",
-        cookieDomain: undefined,
         refreshTtlSeconds: 60,
-        resetTtlSeconds: 60,
-        inviteTtlSeconds: 60,
-        loginAttempts: 5,
-        resetAttempts: 5,
-        attemptWindowMs: 60000,
+        bcryptCost: 4,
+        returnOrigin: "https://site.invalid",
+        google: null,
+        cookie: { name: "nivo_refresh", domain: undefined },
+        budget: { loginAttempts: 5, resetAttempts: 5, windowMs: 60000 },
     },
-    mail: { allowPrivateHosts: true, platform: null, helloName: "wiring.invalid" },
+    identityAuth: { inviteTtlSeconds: 60 },
+    mail: {
+        host: "127.0.0.1",
+        port: 2525,
+        security: "none" as const,
+        from: { name: "Wiring", address: "no-reply@wiring.invalid" },
+        helloName: "wiring.invalid",
+        webOrigin: "https://site.invalid",
+        brandName: "Wiring",
+        defaultLanguage: "en" as const,
+        confirmTtlSeconds: 60,
+        resetTtlSeconds: 60,
+        allowPrivateHosts: true,
+    },
     ai: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
     storage: {
         endpoint: "https://storage.invalid:9000",
@@ -240,32 +244,34 @@ type BuildWiringProofResultOptionsStorageShape = {
 }
 
 type BuildWiringProofResultOptionsMailShape = {
-    allowPrivateHosts: boolean
-    platform: null
+    host: string
+    port: number
+    security: "none"
+    from: { name: string; address: string }
     helloName: string
+    webOrigin: string
+    brandName: string
+    defaultLanguage: "en"
+    confirmTtlSeconds: number
+    resetTtlSeconds: number
+    allowPrivateHosts: boolean
 }
 
 type BuildWiringProofResultOptionsIdentityAuthShape = {
-    webOrigin: string
-    cookieDomain: undefined
-    refreshTtlSeconds: number
-    resetTtlSeconds: number
     inviteTtlSeconds: number
-    loginAttempts: number
-    resetAttempts: number
-    attemptWindowMs: number
 }
 
 type BuildWiringProofResultOptionsPassportShape = {
-    privateKey: Secret
-    publicKey: string
-    keyId: undefined
     issuer: string
-    returnOrigin: string
     audience: string
+    keys: Array<{ privateKey: Secret; publicKey: string; keyId: undefined }>
     accessTtlSeconds: number
+    refreshTtlSeconds: number
     bcryptCost: number
+    returnOrigin: string
     google: null
+    cookie: { name: string; domain: undefined }
+    budget: { loginAttempts: number; resetAttempts: number; windowMs: number }
 }
 
 type BuildWiringProofResultOptionsConnectionsShape = {

@@ -1,3 +1,5 @@
+import { tenantKey } from "@starci/next-data"
+import type { KeyOrWait } from "@starci/next-data"
 import { useAppSelector } from "@/redux"
 
 /**
@@ -8,7 +10,5 @@ export const useWorkspaceKey = <Rest extends ReadonlyArray<string | null>>(
     name: string,
     rest: Rest,
     enabled = true,
-): readonly [string, string, ...Rest] | null => {
-    const activeWorkspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
-    return activeWorkspaceId === undefined || !enabled ? null : [name, activeWorkspaceId, ...rest]
-}
+): KeyOrWait<readonly [string, string, ...Rest]> =>
+    tenantKey(name, useAppSelector((state) => state.workspace.activeWorkspaceId), rest, enabled)

@@ -1,4 +1,5 @@
 import { Alert, Button, Input, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import type { ReactElement } from "react"
 import { SlotView } from "@/components/composites/SlotView"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, BLOCK_CLASS_NAME, CARD_CLASS_NAME } from "./classNames"
@@ -50,11 +51,82 @@ export interface AgentTemplatePackageBaseProps {
     }
 }
 
+/** What the preview card draws. */
+interface PreviewCardProps {
+    readonly copy: AgentTemplatePackageBaseProps["props"]
+    readonly preview: PreviewView
+}
+
+/** What the preview says, in its own card. */
+const PreviewCard = (props: PreviewCardProps): ReactElement => (
+    <SurfaceCard label={props.copy.previewTitle} headingLevel={2}>
+        <div className={CARD_CLASS_NAME}>
+            {props.preview.lines.map((line) => (
+                <Text key={line} size="sm">
+                    {line}
+                </Text>
+            ))}
+            {props.preview.problems.length === 0 ? null : (
+                <Alert
+                    tone="negative"
+                    title={props.copy.problemsTitle}
+                    description={props.preview.problems.join(" | ")}
+                />
+            )}
+            {props.preview.suggestions.length === 0 ? null : (
+                <>
+                    <Text size="sm">{props.copy.suggestionsTitle}</Text>
+                    {props.preview.suggestions.map((line) => (
+                        <Text key={line} size="xs" tone="muted">
+                            {line}
+                        </Text>
+                    ))}
+                </>
+            )}
+        </div>
+    </SurfaceCard>
+)
+
+/** The text fields of the card of the template. */
+const CardFields = (props: Pick<AgentTemplatePackageBaseProps, "props" | "on">): ReactElement => (
+    <>
+        {props.props.fields.map((field) => (
+            <Input
+                key={field.name}
+                id={`package-${field.name}`}
+                name={field.name}
+                label={field.label}
+                value={field.value}
+                isDisabled={props.props.isPending}
+                onValueChange={(value) => props.on.setField(field.name, value)}
+            />
+        ))}
+        <Textarea
+            id="package-soul"
+            name="soul"
+            label={props.props.soulLabel}
+            rows={3}
+            value={props.props.soul}
+            isDisabled={props.props.isPending}
+            onValueChange={props.on.setSoul}
+        />
+        <Textarea
+            id="package-changelog"
+            name="changelog"
+            label={props.props.changelogLabel}
+            rows={2}
+            value={props.props.changelog}
+            isDisabled={props.props.isPending}
+            onValueChange={props.on.setChangelog}
+        />
+    </>
+)
+
 /**
  * Draws the packaging of the process of one agent: the version that is frozen, the card of the template, what the package keeps, leaves
  * out and needs from the buyer (the preview), and the commands to preview and to save the next version.
  */
-export const AgentTemplatePackageBase = (props: AgentTemplatePackageBaseProps) => {
+export const AgentTemplatePackageBase = (props: AgentTemplatePackageBaseProps): ReactElement => {
     const view = props.props
     return (
         <div className={BLOCK_CLASS_NAME}>
@@ -70,35 +142,7 @@ export const AgentTemplatePackageBase = (props: AgentTemplatePackageBaseProps) =
                     <Text size="sm" tone="muted">
                         {view.note}
                     </Text>
-                    {view.fields.map((field) => (
-                        <Input
-                            key={field.name}
-                            id={`package-${field.name}`}
-                            name={field.name}
-                            label={field.label}
-                            value={field.value}
-                            isDisabled={view.isPending}
-                            onValueChange={(value) => props.on.setField(field.name, value)}
-                        />
-                    ))}
-                    <Textarea
-                        id="package-soul"
-                        name="soul"
-                        label={view.soulLabel}
-                        rows={3}
-                        value={view.soul}
-                        isDisabled={view.isPending}
-                        onValueChange={props.on.setSoul}
-                    />
-                    <Textarea
-                        id="package-changelog"
-                        name="changelog"
-                        label={view.changelogLabel}
-                        rows={2}
-                        value={view.changelog}
-                        isDisabled={view.isPending}
-                        onValueChange={props.on.setChangelog}
-                    />
+                    <CardFields props={view} on={props.on} />
                     <div className={ACTIONS_CLASS_NAME}>
                         <Button intent="neutral" isDisabled={view.isPending} onPress={props.on.toggleBreaking}>
                             {view.breakingLabel}
@@ -117,34 +161,7 @@ export const AgentTemplatePackageBase = (props: AgentTemplatePackageBaseProps) =
                     </div>
                 </div>
             </SurfaceCard>
-            {view.preview === undefined ? null : (
-                <SurfaceCard label={view.previewTitle} headingLevel={2}>
-                    <div className={CARD_CLASS_NAME}>
-                        {view.preview.lines.map((line) => (
-                            <Text key={line} size="sm">
-                                {line}
-                            </Text>
-                        ))}
-                        {view.preview.problems.length === 0 ? null : (
-                            <Alert
-                                tone="negative"
-                                title={view.problemsTitle}
-                                description={view.preview.problems.join(" | ")}
-                            />
-                        )}
-                        {view.preview.suggestions.length === 0 ? null : (
-                            <>
-                                <Text size="sm">{view.suggestionsTitle}</Text>
-                                {view.preview.suggestions.map((line) => (
-                                    <Text key={line} size="xs" tone="muted">
-                                        {line}
-                                    </Text>
-                                ))}
-                            </>
-                        )}
-                    </div>
-                </SurfaceCard>
-            )}
+            {view.preview === undefined ? null : <PreviewCard copy={view} preview={view.preview} />}
         </div>
     )
 }

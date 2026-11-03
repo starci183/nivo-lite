@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentGraphPublishService, AgentGraphSeedService } from "@modules/domain/agent-graphs"
+import { AgentGraphPublishService, AgentGraphSeedService, graphDocumentSchema } from "@modules/domain/agent-graphs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModuleInstallService, ModulesService } from "@modules/domain/modules"
 import { PublicDocumentsService } from "@modules/domain/public-documents"
@@ -12,8 +12,8 @@ import { AgentTemplateVersionsService } from "./agent-template-versions.service"
 import type { InstalledTemplate } from "./agent-templates.contracts"
 import { TemplateInstallEntity, TemplateLicenseEntity } from "./persistence/entities"
 import { insertedId } from "./policies/inserted-id.policy"
-import { instantiate, resolveValues } from "./policies/template-parameters.policy"
-import type { ParameterValues } from "./policies/template-parameters.policy"
+import { instantiate, resolveValues } from "@nivo/agent-sdk/template"
+import type { ParameterValues } from "@nivo/agent-sdk/template"
 
 /** How the buyer came to hold the right to run the template. */
 export type InstallAccess =
@@ -97,7 +97,9 @@ export class AgentTemplateInstallerService {
         if (made.agentId === null) throw new AgentTemplatesError({ code: AgentTemplatesErrorCode.BaseAgentExists })
         await this.seed.ensureFor(made.installationId, request.locale)
         const by = { memberId: await this.members.idOf(userId, request.workspaceId), role: member.role }
-        await this.publish.publishTemplate(request.workspaceId, made.agentId, instantiate(pkg, resolved.values), by)
+        const filled = graphDocumentSchema.safeParse(instantiate(pkg, resolved.values))
+        if (!filled.success) throw new AgentTemplatesError({ code: AgentTemplatesErrorCode.ValuesRefused })
+        await this.publish.publishTemplate(request.workspaceId, made.agentId, filled.data, by)
         await this.publish.setMode(request.workspaceId, made.agentId, "shadow", by)
         for (const document of pkg.starterKnowledge) {
             await this.documents.write(userId, request.workspaceId, { title: document.title, body: document.body })

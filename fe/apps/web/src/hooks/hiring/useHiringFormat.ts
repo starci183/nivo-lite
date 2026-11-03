@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { PRODUCT_TIME_ZONE } from "@/modules/i18n"
+import { i18n } from "@/modules/i18n"
 
 /** The formatters of the Hiring screens: money, pay ranges, dates on the Vietnam clock, relative times and catalog labels of a value. */
 export interface HiringFormat {
@@ -49,23 +49,23 @@ export const useHiringFormat = (): HiringFormat => {
                     day: "2-digit",
                     month: "2-digit",
                     year: "numeric",
-                    timeZone: PRODUCT_TIME_ZONE,
+                    timeZone: i18n.timeZone,
                 }),
             date: (iso) =>
                 format.dateTime(new Date(iso), {
                     day: "2-digit",
                     month: "2-digit",
                     year: "numeric",
-                    timeZone: PRODUCT_TIME_ZONE,
+                    timeZone: i18n.timeZone,
                 }),
             time: (iso) =>
-                format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit", timeZone: PRODUCT_TIME_ZONE }),
+                format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit", timeZone: i18n.timeZone }),
             dayLabel: (iso) =>
                 format.dateTime(new Date(iso), {
                     weekday: "long",
                     day: "2-digit",
                     month: "2-digit",
-                    timeZone: PRODUCT_TIME_ZONE,
+                    timeZone: i18n.timeZone,
                 }),
             ago: (iso, nowIso) => format.relativeTime(new Date(iso), new Date(nowIso)),
             label,

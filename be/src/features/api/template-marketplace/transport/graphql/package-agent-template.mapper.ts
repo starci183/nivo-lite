@@ -1,5 +1,5 @@
 import type { PackageAgentTemplateRequest } from "../../application/package-agent-template.contracts"
-import type { TemplateVersionView } from "@modules/domain/agent-templates"
+import type { TemplateVersionView } from "@nivo/agent-sdk/template"
 import type { PackageAgentTemplateInput } from "./dto/package-agent-template.input"
 import type { TemplateVersionType } from "./dto/template-version.type"
 import { toPackageRequest, toTemplateVersionType } from "./template-marketplace.records.mapper"

@@ -139,7 +139,7 @@ describe("TemplateListingsService.submit", () => {
         expect(view).toMatchObject({
             status: "submitted",
             priceVnd: 99_000,
-            name: { vi: "Đặt lịch spa" },
+            name: { vi: "Dat lich spa" },
             checks: PASSING,
         })
     })
