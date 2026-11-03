@@ -56,8 +56,12 @@ services:
   # The wrapper reads its three secrets from /run/secrets, which here is the least grant of this service alone.
   nivo-openclaw:
     image: ghcr.io/openclaw/openclaw:2026.7.1@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c
-    entrypoint: ["tini", "-s", "--", "sh", "/opt/nivo/entrypoint.sh"]
+    # A bind mount from a Windows folder shows mode 777 and OpenClaw blocks a world-writable plugin path ("blocked plugin candidate:
+    # world-writable path"), which leaves the agents no nivo_call tool. The bridge is mounted as a source and copied with safe modes into the
+    # gateway user's home before the production entrypoint runs; NIVO_BRIDGE_PATH points openclaw-init.mjs at the copy.
+    entrypoint: ["tini", "-s", "--", "sh", "-c", "rm -rf /home/node/nivo-bridge && cp -r /opt/nivo/nivo-bridge-src /home/node/nivo-bridge && chmod 755 /home/node/nivo-bridge && chmod 444 /home/node/nivo-bridge/* && exec sh /opt/nivo/entrypoint.sh"]
     environment:
+      NIVO_BRIDGE_PATH: /home/node/nivo-bridge
       OPENCLAW_RELAY_PORT: "18790"
       OPENCLAW_SKIP_CRON: "1"
       OPENCLAW_BRIDGE_URL: http://host.docker.internal:${STACK_PORT_API}/agent-tools
@@ -72,7 +76,7 @@ services:
       - ../../../production/infra/swarm/openclaw/entrypoint.sh:/opt/nivo/entrypoint.sh:ro
       - ../../../production/infra/swarm/openclaw/openclaw-init.mjs:/opt/nivo/openclaw-init.mjs:ro
       - ../../../production/infra/swarm/openclaw/openclaw-relay.mjs:/opt/nivo/openclaw-relay.mjs:ro
-      - ../../../production/infra/swarm/openclaw/nivo-bridge:/opt/nivo/nivo-bridge:ro
+      - ../../../production/infra/swarm/openclaw/nivo-bridge:/opt/nivo/nivo-bridge-src:ro
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18790/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
@@ -86,3 +90,4 @@ volumes:
   db-data: {}
   redis-data: {}
   minio-data: {}
+

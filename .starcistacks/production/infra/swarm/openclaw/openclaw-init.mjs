@@ -19,10 +19,13 @@ config.cron = { ...(config.cron || {}), enabled: false }
 config.agents.defaults.heartbeat = { ...(config.agents.defaults.heartbeat || {}), every: "0m" }
 // The one tool an agent has besides session_status is nivo_call, from the bridge plugin mounted at /opt/nivo/nivo-bridge: it runs a NIVO
 // tool through the api for the turn that is running. Other plugin paths and entries an operator added are kept.
-const bridgePath = "/opt/nivo/nivo-bridge"
+// NIVO_BRIDGE_PATH moves it where a host cannot mount it read-only with a safe mode (the dev compose copies it there, since a Windows bind
+// mount shows mode 777 and OpenClaw blocks a world-writable plugin path); the default path is then dropped from the load paths.
+const defaultBridgePath = "/opt/nivo/nivo-bridge"
+const bridgePath = process.env.NIVO_BRIDGE_PATH || defaultBridgePath
 const plugins = config.plugins || {}
 const load = plugins.load || {}
-const paths = Array.isArray(load.paths) ? load.paths : []
+const paths = (Array.isArray(load.paths) ? load.paths : []).filter((path) => path === bridgePath || path !== defaultBridgePath)
 config.plugins = {
     ...plugins,
     load: { ...load, paths: paths.includes(bridgePath) ? paths : [...paths, bridgePath] },
