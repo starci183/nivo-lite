@@ -554,6 +554,8 @@ environments:
             # key then becomes AUTH_COOKIE_DOMAINS.
             AUTH_COOKIE_DOMAIN: "starci.org"
             AUTH_GOOGLE_CALLBACK_URL: "http://localhost:${port.api}/auth/google/callback"
+            # The refresh cookie takes Domain=starci.org on the dev tunnel host and stays host-only on localhost (@starci/auth 0.4.0 domains).
+            AUTH_COOKIE_DOMAINS: "starci.org"
             PUBLIC_API_URL: "https://nivo-local.starci.org"
             HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing},https://nivo-local-app.starci.org"
             # SITE_URL is the public tunnel origin, so the private-target guards of a workspace SMTP account and a data source no longer see a development site.

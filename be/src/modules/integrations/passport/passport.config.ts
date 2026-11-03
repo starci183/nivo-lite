@@ -50,6 +50,7 @@ export const parsePassportConfig = (env: EnvSource): PassportOptions => ({
     cookie: {
         name: REFRESH_COOKIE_NAME,
         domain: env.optional("AUTH_COOKIE_DOMAIN"),
+        domains: env.domains("AUTH_COOKIE_DOMAINS"),
         path: REFRESH_COOKIE_PATH,
         legacyPaths: REFRESH_COOKIE_LEGACY_PATHS,
         sameSite: "lax",
