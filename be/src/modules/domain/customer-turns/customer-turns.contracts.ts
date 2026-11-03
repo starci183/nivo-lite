@@ -147,12 +147,7 @@ export interface TurnSettled {
     readonly leadId: string | null
     /** The amount on the order record of this turn, or null when it has no record or the record has no amount. */
     readonly orderAmountVnd?: number | null
-    /** Where the order of this turn stands, when it has one: what its reply may claim. */
-    readonly orderState?: OrderState
 }
-
-/** Where the order of a turn stands once its work ran: on record, waiting for a person's approval, or confirmed. */
-export type OrderState = "recorded" | "awaiting_approval" | "confirmed"
 
 /** An order a reply proposed, judged and ready to record. */
 export interface OrderRequest {

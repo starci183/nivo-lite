@@ -9,14 +9,8 @@ import { OrdersService } from "@modules/domain/orders"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { OPEN_ORDER_STATUSES, sameItems } from "./customer-turn.policy"
-import type { CapturedOrder, CustomerChannel, OrderRequest, OrderState, TurnSettled } from "./customer-turns.contracts"
+import type { CapturedOrder, CustomerChannel, OrderRequest, TurnSettled } from "./customer-turns.contracts"
 import { PaymentClaimsService } from "./payment-claims.service"
-
-/** Where an order stands once its confirm work ran: confirmed when it is done, waiting when a person decides, else on record. */
-const orderStateOf = (item: WorkItem): OrderState => {
-    if (item.status === "done") return "confirmed"
-    return item.status === "waiting_decision" ? "awaiting_approval" : "recorded"
-}
 
 @Injectable()
 /**
@@ -53,13 +47,7 @@ export class TurnPurchasesService {
         const open = leadId === null ? undefined : await this.openOrderOf(ctx.workspaceId, leadId, order)
         if (open !== undefined) {
             await this.inbound.mark(ctx.workspaceId, recorded.inboundEventId, "processed", leadId)
-            return {
-                lines: [],
-                changed: false,
-                leadId,
-                orderAmountVnd: open.amount_vnd,
-                orderState: open.status === "draft" ? "recorded" : "confirmed",
-            }
+            return { lines: [], changed: false, leadId, orderAmountVnd: open.amount_vnd }
         }
         const item = await this.engine.startOrderWork(
             ctx,
@@ -75,7 +63,6 @@ export class TurnPurchasesService {
             changed: true,
             leadId: ordered,
             orderAmountVnd: await this.recordAmountOf(ctx.workspaceId, item),
-            orderState: orderStateOf(item),
         }
     }
 

@@ -22,8 +22,6 @@ import { handoffTranscriptOf, isRecentlyPaid, latestQuestionOf } from "./custome
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import type { CustomerChannel, CustomerReply, TurnSettled } from "./customer-turns.contracts"
 import { isKnownPrice } from "./knowledge-price.policy"
-import { withMessageOrder } from "./order-reading.policy"
-import { claimTruthOf, unclaimedReplyOf } from "./reply-claims.policy"
 import { REPLY_ACTION, evidenceOfTurn, replyCheckOf } from "./reply-graph.policy"
 import type { Judged, OpenedReplyItem, ReplyItemSpec, ReplyScope } from "./reply-graph.policy"
 import { findingsOf, humanReasonOf } from "./reply-reading.policy"
@@ -81,13 +79,13 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     /** Interprets the proposed reply through the gate and answers what leaves and which lines the workbench shows. */
     async settle(turn: CustomerTurn, proposal: ChatTurnProposal): Promise<TurnVerdict> {
         const ctx = this.ctxOf(turn)
-        const reply = withMessageOrder(turn.conversation.agent.knowledge, turn.body, {
+        const reply: CustomerReply = {
             reply: proposal.reply,
             needsHuman: proposal.needsHuman,
             reason: humanReasonOf(proposal.reason, proposal.needsHuman),
             proposedAnswer: proposal.proposedAnswer.trim() === "" ? null : proposal.proposedAnswer,
             ...findingsOf(proposal.detail),
-        })
+        }
         const judged = await this.judge(turn.conversation, reply)
         const application = await this.applyApplication(turn, reply, judged.reply)
         const channel = this.channelOf(turn.conversation)
@@ -101,11 +99,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         const claim = await this.purchases.recordClaim(ctx, turn, judged.claimOpen, channel)
         const extra = judged.needsHuman ? { reply: null, lines: [] } : await this.modules.settle(ctx, turn, reply)
         const waiting = judged.needsHuman ? await this.askPerson(ctx, turn, reply, judged, order.leadId) : []
-        const leaving = unclaimedReplyOf(
-            extra.reply ?? application.reply,
-            claimTruthOf(order.orderState),
-            this.text("claimFreeReply", {}),
-        )
+        const leaving = extra.reply ?? application.reply
         const approval =
             turn.finalOwed === true
                 ? []
