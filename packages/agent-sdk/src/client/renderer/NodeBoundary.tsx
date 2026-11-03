@@ -1,3 +1,5 @@
+"use client"
+
 import { Component } from "react"
 import type { ReactNode } from "react"
 import { EmptyNotice } from "@starci/grammar/common"

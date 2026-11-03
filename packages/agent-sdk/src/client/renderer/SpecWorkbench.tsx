@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo } from "react"
 import type { ReactNode } from "react"
 import { Alert, EmptyNotice, Stack, Tabs } from "@starci/grammar/common"
