@@ -64,4 +64,23 @@ describe("WorkspaceSetupService", () => {
             expect(granted).not.toContain(module.key)
         })
     })
+
+    it("starts the first workspace with its authority sheet and the default rules", async () => {
+        const { service, workspaces, authority, rules } = await build(true)
+        workspaces.startFirst.mockResolvedValue({ id: "ws-1" })
+
+        await expect(service.startFirst("user-1")).resolves.toEqual({ id: "ws-1" })
+
+        expect(authority.ensureSheet).toHaveBeenCalledWith("ws-1")
+        expect(rules.seedDefaults).toHaveBeenCalledTimes(STABLE.length)
+    })
+
+    it("lays down nothing when no first workspace was made", async () => {
+        const { service, workspaces, authority } = await build(true)
+        workspaces.startFirst.mockResolvedValue({ id: null })
+
+        await expect(service.startFirst("user-1")).resolves.toEqual({ id: null })
+
+        expect(authority.ensureSheet).not.toHaveBeenCalled()
+    })
 })
