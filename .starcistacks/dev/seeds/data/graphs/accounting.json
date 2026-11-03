@@ -3,7 +3,16 @@
   "moduleKey": "accounting",
   "trigger": { "kind": "tag", "sources": ["channel", "chats-group", "agent", "system-event", "schedule"] },
   "grant": {
-    "rights": [],
+    "rights": [
+      { "kind": "bank-transaction", "access": "read", "scope": "workspace", "fields": ["id", "amountVnd", "content", "counterpartName", "receivedAt", "orderId", "status"] },
+      { "kind": "bank-transaction", "access": "write", "scope": "workspace", "fields": ["orderId"] },
+      { "kind": "order", "access": "read", "scope": "workspace", "fields": ["id", "orderNo", "leadId", "items", "amountVnd", "status", "confirmedAt", "createdAt"] },
+      { "kind": "order", "access": "write", "scope": "workspace", "fields": ["status"] },
+      { "kind": "payment-claim", "access": "read", "scope": "workspace", "fields": ["id", "leadId", "conversationId", "amountVnd", "names", "body", "claimedAt", "status"] },
+      { "kind": "sales-lead", "access": "read", "scope": "workspace", "fields": ["id", "contactName"] },
+      { "kind": "conversation", "access": "read", "scope": "workspace", "fields": ["id", "leadId", "lastMessageAt"] },
+      { "kind": "message", "access": "write", "scope": "turn", "fields": ["body"] }
+    ],
     "tools": [],
     "effects": ["payment.mark-paid", "channel.send", "work-item.raise"]
   },
@@ -33,6 +42,7 @@
       },
       "input": {
         "transactionId": { "$ref": "trigger.subject.id" },
+        "claimId": null,
         "mode": "apply",
         "candidateIds": { "$ref": "match-code.candidateIds" },
         "reasons": { "$ref": "match-code.reasons" }
@@ -48,6 +58,7 @@
       },
       "input": {
         "transactionId": { "$ref": "trigger.subject.id" },
+        "claimId": null,
         "mode": "ask",
         "candidateIds": { "$ref": "match-code.candidateIds" },
         "reasons": { "$ref": "match-code.reasons" }
@@ -74,6 +85,7 @@
       },
       "input": {
         "transactionId": { "$ref": "trigger.subject.id" },
+        "claimId": null,
         "mode": "apply",
         "candidateIds": { "$ref": "judge.candidateIds" },
         "reasons": { "$ref": "judge.reasons" }

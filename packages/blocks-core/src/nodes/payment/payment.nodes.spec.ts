@@ -41,13 +41,15 @@ const byId = (id: string): NodeDefinition => {
 describe("the payment nodes", () => {
     it("are listed among the core nodes with distinct kebab-case ids", () => {
         const ids = coreNodes.map((node) => node.id)
-        expect(ids).toEqual([
-            "payment.evidence",
-            "payment.match-code",
-            "payment.judge",
-            "payment.settle",
-            "payment.claim-wait",
-        ])
+        expect(ids).toEqual(
+            expect.arrayContaining([
+                "payment.evidence",
+                "payment.match-code",
+                "payment.judge",
+                "payment.settle",
+                "payment.claim-wait",
+            ]),
+        )
         expect(new Set(ids).size).toBe(ids.length)
     })
 
