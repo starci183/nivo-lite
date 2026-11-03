@@ -55,3 +55,5 @@ export type { InboundEventStatus, LeadGenFlow, OutboundAccessGate } from "./work
 export type { AccountingDecisionRow } from "./decision-log.rows"
 export type { AccountingWaitingWorkRow } from "./work-item-views.rows"
 export { decisionsEntities } from "./persistence/entities"
+export { WORK_RAISED } from "./work-engine.decorators"
+export type { WorkRaisedHook } from "./work-engine.port"

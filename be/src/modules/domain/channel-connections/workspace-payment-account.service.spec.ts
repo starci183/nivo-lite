@@ -46,6 +46,7 @@ describe("WorkspacePaymentAccountService accountOf", () => {
             bankCode: "VCB",
             holder: "LAN",
             provider: "sepay",
+            connectionId: "c1",
         })
         expect(connections.listByProvider).toHaveBeenCalledWith("ws-1", "sepay", { includeDisconnected: false })
         expect(connections.listByProvider).toHaveBeenCalledWith("ws-1", "casso", { includeDisconnected: false })
@@ -87,6 +88,7 @@ describe("WorkspacePaymentAccountService accountOf", () => {
             bankCode: "ACB",
             holder: null,
             provider: "casso",
+            connectionId: "casso",
         })
     })
 

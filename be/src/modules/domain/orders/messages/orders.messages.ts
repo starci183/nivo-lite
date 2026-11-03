@@ -9,6 +9,7 @@ export const ORDERS_MESSAGES: MessageBundle = {
         "errors.ORDERS_ALREADY_INVOICED": "Đơn hàng đã có hóa đơn.",
         "sales.shipped": "{{who}} đã giao đơn {{no}} cho {{carrier}}.",
         "errors.ORDERS_NOT_NUMBERED": "Không tạo được mã đơn hàng.",
+        "errors.ORDERS_NOT_FOUND": "Không tìm thấy đơn hàng.",
     },
     en: {
         "errors.ORDERS_SHIPMENT_INVALID": "Enter a valid carrier and tracking code.",
@@ -17,5 +18,6 @@ export const ORDERS_MESSAGES: MessageBundle = {
         "errors.ORDERS_ALREADY_INVOICED": "The order already has an invoice.",
         "sales.shipped": "{{who}} handed order {{no}} to {{carrier}}.",
         "errors.ORDERS_NOT_NUMBERED": "The order number could not be created.",
+        "errors.ORDERS_NOT_FOUND": "The order was not found.",
     },
 }

@@ -67,6 +67,14 @@ export class LeadRecordsService {
         return lead ?? null
     }
 
+    /** The newest leads of the workspace, at most `limit`. */
+    list(workspaceId: string, limit: number): Promise<Array<LeadRecordRow>> {
+        return this.recordQuery(this.entityManager, workspaceId)
+            .orderBy("l.created_at", "DESC")
+            .limit(limit)
+            .getRawMany<LeadRecordRow>()
+    }
+
     /** The lead of the workspace; refused when there is none. */
     async require(workspaceId: string, leadId: string): Promise<LeadRecordRow> {
         const lead = await this.find(workspaceId, leadId)

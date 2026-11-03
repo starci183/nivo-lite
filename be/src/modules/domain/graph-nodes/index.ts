@@ -14,3 +14,4 @@ export type {
     NodeToolDoor,
     NodeTurn,
 } from "./graph-nodes.contracts"
+export { rowsAnswering } from "./node-rows.policy"

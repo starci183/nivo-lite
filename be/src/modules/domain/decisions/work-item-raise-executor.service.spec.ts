@@ -1,0 +1,114 @@
+import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
+import { WORK_RAISED } from "./work-engine.decorators"
+import type { WorkRaisedHook } from "./work-engine.port"
+import { WorkEngineService } from "./work-engine.service"
+import { WorkItemRaiseExecutorService } from "./work-item-raise-executor.service"
+import type { WorkItem } from "./decisions.contracts"
+
+const TURN: NodeTurn = {
+    turnId: "turn-1",
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    subject: null,
+    conversationId: "conv-1",
+    locale: "vi",
+}
+
+const build = async (options: { registry?: boolean; hook?: boolean } = {}) => {
+    const { registry: withRegistry = true, hook: withHook = true } = options
+    const engine = mock<WorkEngineService>()
+    engine.runWork.mockResolvedValue({ id: "item-1" } as WorkItem)
+    const registry = mock<GraphNodeRegistryService>()
+    const hook = mock<WorkRaisedHook>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            WorkItemRaiseExecutorService,
+            { provide: WorkEngineService, useValue: engine },
+            ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
+            ...(withHook ? [{ provide: WORK_RAISED, useValue: hook }] : []),
+        ],
+    }).compile()
+    moduleRef.get(WorkItemRaiseExecutorService).onModuleInit()
+    return { engine, registry, hook, executor: registry.addExecutor.mock.calls[0]?.[0] as NodeEffectExecutor }
+}
+
+describe("WorkItemRaiseExecutorService", () => {
+    it("registers the work-item.raise executor, and nothing when the app hosts no graph nodes", async () => {
+        const { executor } = await build()
+        const { registry } = await build({ registry: false })
+
+        expect(executor.effect).toBe("work-item.raise")
+        expect(registry.addExecutor).not.toHaveBeenCalled()
+    })
+
+    it("opens an item that waits for the owner, about the order, once per business key", async () => {
+        const { engine, hook, executor } = await build()
+
+        const subject = await executor.execute(
+            TURN,
+            {
+                action: "confirm_order",
+                title: "Order waits",
+                payload: { orderId: "o1", leadId: "lead-1", total: 5000000, flag: true, note: null },
+                amountVnd: 5000000,
+            },
+            { key: "run:1", dedupeKey: "order-owner:o1" },
+        )
+
+        expect(engine.runWork).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", actor: "NIVO", locale: "vi" },
+            {
+                action: "confirm_order",
+                subject_type: "order",
+                subject_id: "o1",
+                lead_id: "lead-1",
+                dedupeKey: "graph-node:work-item.raise:order-owner:o1",
+                seed: {
+                    summary: "Order waits",
+                    amount_vnd: 5000000,
+                    fields: { orderId: "o1", leadId: "lead-1", total: 5000000, note: null },
+                },
+                preset: true,
+                forceAsk: "branch_ask",
+            },
+        )
+        expect(subject).toEqual({ kind: "work-item", id: "item-1" })
+        expect(hook.raised).not.toHaveBeenCalled()
+    })
+
+    it("keys the item by the call when the node gave no business key, and by the customer or the conversation when no order is named", async () => {
+        const { engine, executor } = await build()
+
+        await executor.execute(TURN, { action: "connect_sepay", title: "Connect", payload: { leadId: "lead-1" } }, { key: "run:2", dedupeKey: null })
+        await executor.execute(TURN, { action: "connect_sepay", title: "Connect", payload: {} }, { key: "run:3", dedupeKey: null })
+
+        const [first, second] = engine.runWork.mock.calls.map(([, spec]) => spec)
+        expect(first).toMatchObject({ subject_type: "lead", subject_id: "lead-1", dedupeKey: "graph-node:work-item.raise:run:2" })
+        expect(first?.seed?.amount_vnd).toBeNull()
+        expect(second).toMatchObject({ subject_type: "conversation", subject_id: "conv-1", lead_id: null })
+    })
+
+    it("tells the claim hook which item answers the claim", async () => {
+        const { hook, executor } = await build()
+
+        await executor.execute(
+            TURN,
+            { action: "review_claim", title: "Claim", payload: {}, claimId: "claim-1" },
+            { key: "run:4", dedupeKey: null },
+        )
+
+        expect(hook.raised).toHaveBeenCalledWith("ws-1", "claim-1", "item-1")
+    })
+
+    it("opens the item and skips the claim when no capability bound the hook", async () => {
+        const { engine, executor } = await build({ hook: false })
+
+        await expect(
+            executor.execute(TURN, { action: "x_action", title: "T", payload: {}, claimId: "claim-1" }, { key: "k", dedupeKey: null }),
+        ).resolves.toEqual({ kind: "work-item", id: "item-1" })
+        expect(engine.runWork).toHaveBeenCalledTimes(1)
+    })
+})

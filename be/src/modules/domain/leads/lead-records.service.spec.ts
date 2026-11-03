@@ -49,6 +49,14 @@ describe("LeadRecordsService", () => {
         expect(fakes[0]?.callsOf("andWhere")).toEqual([["l.id = :leadId", { leadId: "lead-1" }]])
     })
 
+    it("lists the newest leads of the workspace up to the limit", async () => {
+        const { records, fakes } = await build([{ getRawMany: [ROW] }])
+
+        await expect(records.list("ws-1", 500)).resolves.toEqual([ROW])
+        expect(fakes[0]?.callsOf("orderBy")).toEqual([["l.created_at", "DESC"]])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[500]])
+    })
+
     it("answers null when the lead is absent and refuses require", async () => {
         const { records } = await build([found(undefined), found(undefined)])
 
