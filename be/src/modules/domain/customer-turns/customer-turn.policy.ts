@@ -72,4 +72,7 @@ export const turnRefOf = (context: AgentWakeContext): TurnRef | null =>
               conversationId: context.conversationId,
               messageId: context.messageId,
               channelEventId: context.channelEventId,
+              ...(context.mergedMessageIds === undefined
+                  ? {}
+                  : { mergedMessageIds: context.mergedMessageIds.split(",") }),
           }

@@ -8,6 +8,7 @@ import {
 } from "@modules/domain/workspace-members"
 import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
 import {
     ROOM_KEYS,
     isAssignableRole,
@@ -93,6 +94,27 @@ export class AgentOwnershipService {
             sameAgent: from.id === to.id,
         }
         return mayTag(context)
+    }
+
+    /** Adds tag rights to the lists of the tagging agents of one workspace; a right already held stays as it is. */
+    async grantTags(
+        workspaceId: string,
+        grants: ReadonlyArray<{ readonly from: string; readonly to: string }>,
+    ): Promise<void> {
+        const taggers = [...new Set(grants.map((grant) => grant.from))]
+        if (taggers.length === 0) return
+        const rows = await this.entityManager.find(AgentEntity, {
+            select: { id: true, canTagAgentIds: true },
+            where: { workspaceId, id: In(taggers) },
+            take: taggers.length,
+        })
+        await eachInOrder(rows, (row) => {
+            const added = grants.filter((grant) => grant.from === row.id).map((grant) => grant.to)
+            const listed = [...new Set([...row.canTagAgentIds, ...added])]
+            return listed.length === row.canTagAgentIds.length
+                ? Promise.resolve()
+                : this.entityManager.update(AgentEntity, { id: row.id, workspaceId }, { canTagAgentIds: listed })
+        })
     }
 
     /** Whether a member may hand an agent work: by role or by a seat in a room the agent is open to; nobody may for a paused agent. */

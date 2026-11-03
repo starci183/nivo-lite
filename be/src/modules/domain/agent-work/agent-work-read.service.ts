@@ -1,3 +1,5 @@
+import { wakeOriginOf } from "./wake-origin.policy"
+import type { WakeOrigin } from "./wake-origin.policy"
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
@@ -43,6 +45,15 @@ export class AgentWorkReadService {
             where: { id: wakeId, workspaceId },
         })
         return wake?.source ?? null
+    }
+
+    /** Where the wake came from, or null when the wake is gone. */
+    async wakeOriginOf(workspaceId: string, wakeId: string): Promise<WakeOrigin | null> {
+        const wake = await this.entityManager.findOne(AgentWakeEntity, {
+            select: { source: true, context: true, actorMemberId: true },
+            where: { id: wakeId, workspaceId },
+        })
+        return wake === null ? null : wakeOriginOf(wake)
     }
 
     /** The work of one agent of the workspace. */

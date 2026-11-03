@@ -23,6 +23,10 @@ export class AgentGraphRunType {
     @Field(() => String, { nullable: true })
     trigger!: string | null
 
+    /** Where the wake came from: channel, person, agent, event or schedule; null when the wake is gone. */
+    @Field(() => String, { nullable: true })
+    origin!: string | null
+
     /** The branch the condition took. */
     @Field(() => String)
     branchKey!: string

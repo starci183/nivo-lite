@@ -68,6 +68,8 @@ export interface QueueWriteOptions {
     readonly job?: string
     /** The identity of the job (`<job>:<subject>`): the same key written twice is one job. A fresh key per write when absent. */
     readonly dedupeKey?: string | undefined
+    /** The job waits this many milliseconds before the broker runs it; none when absent. Set only when the row is first written. */
+    readonly delayMs?: number | undefined
 }
 
 /** One job to send, resolved: what the writer inserts into the outbox in the caller's transaction. */
@@ -82,6 +84,8 @@ export interface QueueJob {
     readonly workspaceId: string | null
     /** The payload. */
     readonly payload: object
+    /** The wait before the broker runs it, in milliseconds; zero runs it at once. */
+    readonly delayMs: number
 }
 
 /**

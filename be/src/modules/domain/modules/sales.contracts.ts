@@ -34,6 +34,7 @@ export const SALES_MODULE: ModuleDefinition = {
     connectionProviders: ["telegram", "zalo_oa", "meta"],
     defaultOperatingMode: "assist",
     multiInstance: false,
+    tags: ["accounting"],
     agent: {
         label: catalogText("modulesCatalog.sales.agent.label"),
         handle: "sales",

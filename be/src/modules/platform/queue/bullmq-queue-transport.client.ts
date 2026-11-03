@@ -71,11 +71,12 @@ export class BullmqQueueTransportClient implements QueueTransport {
     ) {}
 
     /** Adds the job with the outbox row id as its BullMQ id, so adding it twice leaves one job. */
-    async add(queue: string, job: string, jobId: string, payload: object): Promise<void> {
+    async add(queue: string, job: string, jobId: string, payload: object, delayMs = 0): Promise<void> {
         await this.command(this.verify(queue))
         await this.command(
             this.queueOf(queue).add(job, payload, {
                 jobId,
+                ...(delayMs > 0 ? { delay: delayMs } : {}),
                 attempts: ATTEMPTS,
                 backoff: { type: "nivo", delay: BACKOFF_MS },
                 removeOnComplete: { age: KEEP_COMPLETED_SECONDS },

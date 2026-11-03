@@ -230,7 +230,14 @@ describe("queue policy jobOf", () => {
             dedupeKey: null,
             workspaceId: WORKSPACE,
             payload: { workspaceId: WORKSPACE },
+            delayMs: 0,
         })
+    })
+
+    it("waits the delay the producer asked for, whole milliseconds, never below zero", async () => {
+        const subject = await build()
+        expect(subject.jobOf("q", {}, { delayMs: 2500.9 }).delayMs).toBe(2500)
+        expect(subject.jobOf("q", {}, { delayMs: -5 }).delayMs).toBe(0)
     })
 
     it("keeps the job name and the dedupe key the producer chose", async () => {
@@ -247,6 +254,7 @@ describe("queue policy jobOf", () => {
             dedupeKey: "knowledge.index:s-1",
             workspaceId: null,
             payload: { sourceId: "s-1" },
+            delayMs: 0,
         })
     })
 })

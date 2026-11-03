@@ -95,3 +95,9 @@ export interface AgentWorkFallback extends AgentWorkHandler {
     /** True for a source this fallback takes when no handler registered for it. */
     answers(source: AgentWakeSource): boolean
 }
+
+/** The one question the tag door asks the agents capability: the lists of who may tag whom. */
+export interface AgentTagRights {
+    /** Whether the agent may tag the other agent. */
+    canTag(agentId: string, targetAgentId: string): Promise<boolean>
+}

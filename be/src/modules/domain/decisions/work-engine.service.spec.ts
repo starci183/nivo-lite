@@ -184,6 +184,17 @@ describe("WorkEngineService / runWork", () => {
         expect(built.recorder.finished).not.toHaveBeenCalled()
     })
 
+    it("runs by the tag right when the owner has granted no rule, and leaves a stored ask rule to the owner", async () => {
+        const tagged = await run({ rule: null }, { tagGrant: true })
+        const stored = await run({ rule: fx.ruleOf({ mode: "ask" }) }, { tagGrant: true })
+
+        expect(tagged.built.modules.tagRuleOf).toHaveBeenCalledWith(expect.any(String))
+        expect(tagged.built.approval.ask).not.toHaveBeenCalled()
+        expect(tagged.built.recorder.finished).toHaveBeenCalledTimes(1)
+        expect(stored.built.modules.tagRuleOf).not.toHaveBeenCalled()
+        expect(stored.built.approval.ask).toHaveBeenCalled()
+    })
+
     it("asks a person when the item was forced to ask", async () => {
         const { built } = await run({}, { preset: true, forceAsk: "unclear_outcome" })
         expect(built.approval.ask).toHaveBeenCalledWith(fx.ctx, anyValue, anyValue, fx.unclearGate)

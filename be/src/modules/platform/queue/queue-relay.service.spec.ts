@@ -20,6 +20,7 @@ const ROW: QueueRelayRow = {
     payload: { sourceId: "s-1" },
     lease_token: "relay-1",
     retry_requested: false,
+    delay_ms: 0,
 }
 const REPAIR: QueueReconcileRow = { ...ROW, state: "queued", attempts: 1, run_token: "run-1" }
 const options: QueueOptions = {
@@ -109,10 +110,27 @@ describe("outbox relay", () => {
         const world = await build([[ROW]])
         await run(world)
         expect(world.em.transaction).not.toHaveBeenCalled()
-        expect(world.transport.add).toHaveBeenCalledWith("knowledge", "knowledge.index", "row-1", { sourceId: "s-1" })
+        expect(world.transport.add).toHaveBeenCalledWith(
+            "knowledge",
+            "knowledge.index",
+            "row-1",
+            { sourceId: "s-1" },
+            0,
+        )
         expect(calls(world, "job_relay_claim")[0]?.[1]).toEqual([50, 60])
         expect(calls(world, "job_relay_sent")[0]?.[1]).toEqual(["row-1", "relay-1", 15])
         expect(world.cancel).toHaveBeenCalled()
+    })
+    it("publishes a delayed row with the delay the database still owes", async () => {
+        const world = await build([[{ ...ROW, delay_ms: 2500 }]])
+        await run(world)
+        expect(world.transport.add).toHaveBeenCalledWith(
+            "knowledge",
+            "knowledge.index",
+            "row-1",
+            { sourceId: "s-1" },
+            2500,
+        )
     })
     it("explicitly republishes an operator retry instead of adding over a retained failed id", async () => {
         const world = await build([[{ ...ROW, retry_requested: true }]])

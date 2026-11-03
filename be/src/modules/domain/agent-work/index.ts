@@ -10,10 +10,12 @@ export { AgentTriggersService } from "./agent-triggers.service"
 export { AgentTurnsService } from "./agent-turns.service"
 export { AgentWakeRetentionService } from "./agent-wake-retention.service"
 export { AgentWakeService } from "./agent-wake.service"
+export { AgentTagService } from "./agent-tag.service"
+export { tagPayloadOf } from "./agent-tag.policy"
 export { AgentWorkHandlersService } from "./agent-work-handlers.service"
 export { AgentWorkReadService } from "./agent-work-read.service"
 export { AgentWorkSettingsService } from "./agent-work-settings.service"
-export { AGENT_TURN_EXECUTOR, AGENT_WAKE_INTERRUPTIONS } from "./agent-work.decorators"
+export { AGENT_TAG_RIGHTS, AGENT_TURN_EXECUTOR, AGENT_WAKE_INTERRUPTIONS } from "./agent-work.decorators"
 export { AgentWorkAccessService } from "./agent-work-access.service"
 export { decodeInbound, encodeInbound } from "./agent-work-inbound.policy"
 export { WAKE_SOURCE_KEY, wakeSources } from "./agent-wake-source.policy"
@@ -54,3 +56,12 @@ export type {
     AgentWorkHandler,
 } from "./agent-work.port"
 export type { AgentBegin } from "./agent-work-turns.contracts"
+export type { WakeOrigin } from "./wake-origin.policy"
+export type {
+    AgentTagRequest,
+    AgentTagResult,
+    AgentTaggedByAgent,
+    AgentTaggedByPerson,
+    AgentTaggedBySource,
+} from "./agent-tag.contracts"
+export type { AgentTagRights } from "./agent-work.port"

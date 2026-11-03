@@ -87,6 +87,7 @@ export const jobOf = (queue: string, payload: object, options: QueueWriteOptions
     dedupeKey: options.dedupeKey ?? null,
     workspaceId: workspaceOf(payload),
     payload,
+    delayMs: Math.max(0, Math.floor(options.delayMs ?? 0)),
 })
 
 /** The pause between two tries of one delivery, in milliseconds: a retry hint of the failing error, else the backoff. */
