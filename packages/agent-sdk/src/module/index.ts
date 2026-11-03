@@ -1,0 +1,21 @@
+export type {
+    Bilingual,
+    BilingualList,
+    ModuleAudience,
+    ModuleAuthorityMode,
+    ModuleCapabilityRole,
+    ModuleFactSubject,
+    ModuleGateWrite,
+    ModuleListProblem,
+    ModuleListProblemCode,
+    ModuleServer,
+    ModuleTemplate,
+    ModuleTemplateAction,
+    ModuleTemplateAgent,
+    ModuleTemplateCommand,
+    ModuleTemplateGate,
+    ModuleTemplateRequirements,
+    ModuleTemplateTrigger,
+    ModuleTriggerPreset,
+} from "./module.types"
+export { moduleListProblems, templatesOf } from "./registry"

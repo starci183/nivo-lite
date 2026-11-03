@@ -1,0 +1,36 @@
+{
+  "name": "@nivo/agent-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The one SDK every Nivo agent kind is built on. This branch carries the module template contract (./module), the React-free workbench contract and spec validator (./workbench/contract) and the Grammar-only workbench blocks, host provider and spec renderer (./workbench); ./node, ./template and ./testing arrive from the marketplace branch.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./module": {
+      "types": "./dist/module/index.d.ts",
+      "default": "./dist/module/index.js"
+    },
+    "./workbench": {
+      "types": "./dist/workbench/index.d.ts",
+      "default": "./dist/workbench/index.js"
+    },
+    "./workbench/contract": {
+      "types": "./dist/workbench/contract/index.d.ts",
+      "default": "./dist/workbench/contract/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "peerDependencies": {
+    "@starci/grammar": "0.21.11",
+    "react": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}
