@@ -57,6 +57,8 @@
       "params": { "toModuleKey": "sales" },
       "input": {
         "text": { "$ref": "trigger.text" },
+        "leadId": { "$ref": "trigger.leadId" },
+        "channel": { "$ref": "trigger.channel" },
         "conversationId": { "$ref": "trigger.conversationId" },
         "context": { "$ref": "classify.order" }
       },
@@ -91,6 +93,8 @@
       "params": { "toModuleKey": "accounting" },
       "input": {
         "text": { "$ref": "trigger.text" },
+        "leadId": { "$ref": "trigger.leadId" },
+        "channel": { "$ref": "trigger.channel" },
         "conversationId": { "$ref": "trigger.conversationId" },
         "context": { "claimKind": { "$ref": "claim-ack.claim.kind" }, "claimId": { "$ref": "claim-ack.claim.id" } }
       }
