@@ -3,8 +3,7 @@
   "ui": "stream",
   "agentGuidance": false,
   // Turbo strips undeclared env from task processes: the SWC cache variable must pass so next finds its native-binding cache when the default cache root has a host ACL @swc/core refuses (a Windows AppContainer grant).
-  // PORT too: the dev environment gives the console and the landing their own declared ports (starci app stack up --env dev); stripped, both `next dev` fall back to 3000.
-  "globalPassThroughEnv": ["SWC_NATIVE_BINDING_CACHE", "NEXT_TELEMETRY_DISABLED", "PORT"],
+  "globalPassThroughEnv": ["SWC_NATIVE_BINDING_CACHE", "NEXT_TELEMETRY_DISABLED"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -13,9 +12,6 @@
     "dev": {
       "cache": false,
       "persistent": true
-    },
-    "lint": {
-      "dependsOn": ["^build"]
     },
     "typecheck": {
       "dependsOn": ["^build"]
