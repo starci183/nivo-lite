@@ -1,5 +1,6 @@
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { Injectable } from "@nestjs/common"
+import type { OptionalAuthorityRule } from "@modules/domain/authority-rules"
 import type { Locale } from "@modules/platform/i18n"
 import type { ModuleCommand, OptionalActionEntry, OptionalModuleEntry } from "./decisions.contracts"
 import { toActionEntry, toModuleEntry } from "./module-catalog.mapper"
@@ -33,6 +34,24 @@ export class ModuleCatalogService {
         const module = await this.performerOf(action)
         const definition = module?.authorityActions.find((candidate) => candidate.action === action)
         return module === undefined || definition === undefined ? null : toActionEntry(module.key, definition)
+    }
+
+    /**
+     * The rule a tag right stands for when the owner stored none: the action runs alone, asking for the fields the catalogue lists. Null
+     * when the registry does not know the action.
+     */
+    async tagRuleOf(action: string): Promise<OptionalAuthorityRule> {
+        const module = await this.performerOf(action)
+        const definition = module?.authorityActions.find((candidate) => candidate.action === action)
+        if (module === undefined || definition === undefined) return null
+        return {
+            id: `tag:${action}`,
+            department: module.key,
+            action,
+            mode: "auto",
+            limit_vnd: null,
+            required_fields: definition.requiredFields,
+        }
     }
 
     /** The module of the catalogue that performs an action, with the definition of that action; undefined when no module lists it. */

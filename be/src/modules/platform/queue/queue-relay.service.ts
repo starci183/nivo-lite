@@ -106,7 +106,7 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
     private async publish(row: QueueRelayRow): Promise<void> {
         if (!this.running) return
         if (row.retry_requested) await this.transport.republish(row.queue, row.name, row.id, row.payload)
-        else await this.transport.add(row.queue, row.name, row.id, row.payload)
+        else await this.transport.add(row.queue, row.name, row.id, row.payload, row.delay_ms)
         await callDbFunction(this.entityManager, "public.job_relay_sent", [
             row.id,
             row.lease_token,

@@ -3,10 +3,21 @@ import type { ProcessOptions } from "./work-engine.contracts"
 
 /** Stores execution choices with a proposal so a later worker makes the same admission decisions. */
 export const proposalWithOptions = <T extends Partial<Proposal>>(proposal: T, options: ProcessOptions): T => {
-    if (options.preset === undefined && options.noChain === undefined && options.forceAsk === undefined) return proposal
+    if (
+        options.preset === undefined &&
+        options.noChain === undefined &&
+        options.forceAsk === undefined &&
+        options.tagGrant === undefined
+    )
+        return proposal
     return {
         ...proposal,
-        execution: { preset: options.preset, noChain: options.noChain, forceAsk: options.forceAsk },
+        execution: {
+            preset: options.preset,
+            noChain: options.noChain,
+            forceAsk: options.forceAsk,
+            tagGrant: options.tagGrant,
+        },
     }
 }
 
@@ -15,4 +26,5 @@ export const processOptionsOf = (proposal: Proposal, options: ProcessOptions = {
     preset: options.preset ?? proposal.execution?.preset,
     noChain: options.noChain ?? proposal.execution?.noChain,
     forceAsk: options.forceAsk ?? proposal.execution?.forceAsk,
+    tagGrant: options.tagGrant ?? proposal.execution?.tagGrant,
 })

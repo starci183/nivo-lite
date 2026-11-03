@@ -32,6 +32,7 @@ import {
     instanceNameKey,
     nextInstanceName,
     settingOf,
+    tagGrantsOf,
     withSetting,
 } from "./policies/instance.policy"
 import type { SettingValue } from "./policies/instance.policy"
@@ -111,12 +112,26 @@ export class ModuleInstallService {
                 ? await this.create(principalId, member, module, request, wanted)
                 : { installationId: existing.id, agentId: existing.agentId, created: false }
         await this.rules.seedDefaults(request.workspaceId, module.key, defaultRulesOf(module))
+        if (made.agentId !== null) await this.grantTags(request.workspaceId, module, made.agentId)
         await this.changes.announceNow({
             workspaceId: request.workspaceId,
             installationId: made.installationId,
             force: true,
         })
         return made
+    }
+
+    /** Grants the tag rights the new agent and the agents already installed need to pass work to each other. */
+    private async grantTags(workspaceId: string, module: ModuleDefinition, agentId: string): Promise<void> {
+        const peers = (await this.installations.list(workspaceId)).flatMap((record) =>
+            record.agentId === null ? [] : [{ agentId: record.agentId, moduleKey: record.moduleKey }],
+        )
+        const peerModules = await Promise.all(
+            [...new Set(peers.map((peer) => peer.moduleKey))].map((key) => this.catalog.find(key)),
+        )
+        const tagsOf = (key: string): ReadonlyArray<string> =>
+            peerModules.filter((peer) => peer.key === key).flatMap((peer) => peer.tags ?? [])
+        await this.agents.grantTags(workspaceId, tagGrantsOf(module, agentId, peers, tagsOf))
     }
 
     /** Renames an instance: its label in lists, the chrome and Office; unique per type in the workspace, case-insensitive. */

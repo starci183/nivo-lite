@@ -70,6 +70,20 @@ export interface AgentWorkHandler {
     holdOver(wake: AgentWakeView, reason: string): Promise<AgentHandlerEnding>
 }
 
+/**
+ * A graph that runs a wake itself, with no model turn: an agent whose published graph is composed of nodes. The drain asks it before
+ * any handler; a wake it does not take goes to the handler of its source as before.
+ */
+export interface AgentWorkFlow {
+    /** True when the agent's active graph runs this wake. */
+    takes(turn: AgentTurnView): Promise<boolean>
+    /** Runs the wake through the graph and answers how the wake ends. */
+    run(turn: AgentTurnView, signal: AbortSignal): Promise<AgentHandlerEnding>
+}
+
+/** The flow, or undefined while no capability set one. */
+export type OptionalAgentWorkFlow = AgentWorkFlow | undefined
+
 /** Told when the runtime that was answering a wake goes down, so the durable run of the wake retries its step and reaches a person when the tries are spent. */
 export interface WakeInterruptions {
     /** The runtime went down while the wake's turn ran; `code` says why. */
@@ -80,4 +94,10 @@ export interface WakeInterruptions {
 export interface AgentWorkFallback extends AgentWorkHandler {
     /** True for a source this fallback takes when no handler registered for it. */
     answers(source: AgentWakeSource): boolean
+}
+
+/** The one question the tag door asks the agents capability: the lists of who may tag whom. */
+export interface AgentTagRights {
+    /** Whether the agent may tag the other agent. */
+    canTag(agentId: string, targetAgentId: string): Promise<boolean>
 }

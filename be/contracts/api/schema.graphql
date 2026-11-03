@@ -987,6 +987,7 @@ type AgentGraphRunType {
   closedAs: String
   decisionId: String!
   factsJson: String!
+  origin: String
   outcome: String!
   shadowDiff: Boolean!
   traceJson: String!

@@ -32,6 +32,8 @@ export interface WorkExecutionOptions {
     readonly noChain?: boolean | undefined
     /** Ask for approval even when the authority rule permits automatic work. */
     readonly forceAsk?: ReasonCode | undefined
+    /** The tag right of the sender already let this work in: with no rule stored it runs under the action's catalogue default; a stored rule still decides. */
+    readonly tagGrant?: boolean | undefined
 }
 
 /** What an agent proposes to do: the summary, an optional draft and the structured fields the gate and the performer read. */

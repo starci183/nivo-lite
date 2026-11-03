@@ -33,9 +33,10 @@ export class AgentGraphRunService {
     async runOf(workspaceId: string, workItemId: string): Promise<AgentGraphRunWire> {
         const run = await this.decisions.runOf(workspaceId, workItemId)
         if (run === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.RunNotFound })
-        const [drawn, source] = await Promise.all([
+        const [drawn, source, origin] = await Promise.all([
             this.graphs.versionAt(workspaceId, run.agentId, run.versionId),
             run.wakeId === null ? Promise.resolve(null) : this.work.wakeSourceOf(workspaceId, run.wakeId),
+            run.wakeId === null ? Promise.resolve(null) : this.work.wakeOriginOf(workspaceId, run.wakeId),
         ])
         const trigger = triggerStepOf(source)
         return {
@@ -44,6 +45,7 @@ export class AgentGraphRunService {
             versionId: run.versionId,
             version: drawn.version,
             trigger,
+            origin,
             branchKey: run.branchKey,
             outcome: run.outcome,
             closedAs: run.closedAs,

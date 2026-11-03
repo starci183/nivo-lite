@@ -1,8 +1,10 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { LEASE_SECONDS, BREAKER_AFTER, BREAKER_SECONDS, retryWaitOf } from "./agent-work.policy"
+import { InjectAgentWorkOptions } from "./agent-work.decorators"
+import { LEASE_SECONDS, BREAKER_AFTER, BREAKER_SECONDS, debounceMsOf, retryWaitOf } from "./agent-work.policy"
+import type { AgentWorkOptions } from "./agent-work.options"
 import { parseBegin, parseDue, parseFinish, parsePropose } from "./agent-work-results.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentTurnEntity, AgentWakeEntity } from "./persistence/entities"
@@ -28,7 +30,10 @@ const jsonParameter = (value: unknown): string | null =>
  * by the functions only; the back end never updates them.
  */
 export class AgentTurnsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @Optional() @InjectAgentWorkOptions() private readonly options: AgentWorkOptions | null = null,
+    ) {}
 
     /** Takes the next wake of the scope for `owner`: killed, busy, idle, or a turn begun with its fence. */
     async begin(agentId: string, scopeKey: string, owner: string): Promise<AgentBegin> {
@@ -37,6 +42,7 @@ export class AgentTurnsService {
             scopeKey,
             owner,
             LEASE_SECONDS,
+            debounceMsOf(this.options?.debounceMs),
         ])
         const begin = parseBegin(row?.agent_turn_begin, agentId, scopeKey)
         if (begin === null) throw rejected()

@@ -208,6 +208,11 @@ export class AgentsService {
         return this.ownership.canTag(agentId, targetAgentId)
     }
 
+    /** Grants the tag rights named, in one workspace (see AgentOwnershipService). */
+    grantTags(workspaceId: string, grants: ReadonlyArray<{ readonly from: string; readonly to: string }>): Promise<void> {
+        return this.ownership.grantTags(workspaceId, grants)
+    }
+
     /** Whether a member may hand an agent work (see AgentOwnershipService). */
     canAssign(memberId: string, agentId: string): Promise<boolean> {
         return this.ownership.canAssign(memberId, agentId)

@@ -84,3 +84,39 @@ export const withSetting = (
     change: SettingChange,
 ): InstallationRecord["settings"] =>
     Object.fromEntries(Object.entries({ ...settings, [change.name]: change.value }).filter(([, kept]) => kept !== null))
+
+/** One tag right: the agent `from` may tag the agent `to`. */
+export interface TagGrant {
+    /** The agent that tags. */
+    readonly from: string
+    /** The agent that is tagged. */
+    readonly to: string
+}
+
+/** A live agent of the workspace and the module it belongs to. */
+export interface TagPeer {
+    /** The agent. */
+    readonly agentId: string
+    /** The module key of its installation. */
+    readonly moduleKey: string
+}
+
+/**
+ * The tag rights installing an agent of `module` grants: the new agent may tag the peers its module lists, and the peers whose
+ * module lists this one may tag it. A module that lists nobody grants nothing, and an agent never tags itself.
+ */
+export const tagGrantsOf = (
+    module: ModuleDefinition,
+    agentId: string,
+    peers: ReadonlyArray<TagPeer>,
+    tagsOf: (moduleKey: string) => ReadonlyArray<string>,
+): ReadonlyArray<TagGrant> => {
+    const others = peers.filter((peer) => peer.agentId !== agentId)
+    const outgoing = others
+        .filter((peer) => (module.tags ?? []).includes(peer.moduleKey))
+        .map((peer): TagGrant => ({ from: agentId, to: peer.agentId }))
+    const incoming = others
+        .filter((peer) => tagsOf(peer.moduleKey).includes(module.key))
+        .map((peer): TagGrant => ({ from: peer.agentId, to: agentId }))
+    return [...outgoing, ...incoming]
+}

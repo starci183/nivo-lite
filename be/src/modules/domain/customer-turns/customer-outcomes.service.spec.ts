@@ -18,6 +18,7 @@ import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { KnowledgeGapNotesService } from "@modules/domain/agent-knowledge"
@@ -50,6 +51,7 @@ const build = async () => {
     const invoices = mock<InvoicesService>()
     const purchases = mock<TurnPurchasesService>()
     const gaps = mock<KnowledgeGapNotesService>()
+    const directory = mock<AgentDirectoryService>()
     const modules = mock<TurnModulesService>()
     const conversations = mock<AgentConversationsService>()
     const evidence = mock<EvidenceService>()
@@ -75,6 +77,7 @@ const build = async () => {
         rules,
         hiring,
         staff,
+        directory,
         logger,
         catalog,
     }
@@ -99,6 +102,7 @@ const build = async () => {
             { provide: StaffEscalationService, useValue: staff },
             { provide: KnowledgeGapNotesService, useValue: gaps },
             { provide: TurnModulesService, useValue: modules },
+            { provide: AgentDirectoryService, useValue: directory },
         ],
     }).compile()
     return { outcomes: moduleRef.get(CustomerOutcomesService), ...doubles }
@@ -376,6 +380,29 @@ describe("CustomerOutcomesService", () => {
             lines: ["conversations.chatNeedsHuman"],
         })
         expect(unknown.invoices.latestOfLead).not.toHaveBeenCalled()
+    })
+
+    it("lets the tag right of the chat agent hand the lead to Sales, and holds it to the owner's rule without one", async () => {
+        const granted = await build()
+        const agentId = turnOf().conversation.agent.id
+        granted.directory.activeOf.mockResolvedValue([
+            { id: agentId, name: "Chat", module: "chatbot", canTagAgentIds: ["sales-1"] },
+            { id: "sales-1", name: "Sales", module: "sales", canTagAgentIds: [] },
+        ])
+        const none = await build()
+        const lead = { lead: { contact_name: "Lan", need: "tea", phone: "0900" } }
+
+        await granted.outcomes.settle(turnOf(), proposalOf(lead))
+        await none.outcomes.settle(turnOf(), proposalOf(lead))
+
+        expect(granted.bus.sendCommandItem).toHaveBeenCalledWith(
+            expect.any(Object),
+            expect.objectContaining({ command: "handoff_lead", tagGrant: true }),
+        )
+        expect(none.bus.sendCommandItem).toHaveBeenCalledWith(
+            expect.any(Object),
+            expect.objectContaining({ command: "handoff_lead", tagGrant: false }),
+        )
     })
 
     it("does not hand off a duplicate lead and asks when the gate is not finished", async () => {

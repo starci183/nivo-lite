@@ -133,6 +133,27 @@ describe("graphSpecProblems", () => {
         expect(graphSpecProblems(spec, bare)).toEqual([])
     })
 
+    it("names a compensable node a pivot can reach, which could never be undone", () => {
+        const undo = defineEffect({ id: "order.void", title: { key: "v" }, payload: z.object({ id: z.string() }), rights: [] })
+        const record = defineEffect({ ...undo, id: "order.record", compensation: "order.void" })
+        const keep = defineNode({ ...base, id: "order.keep", role: "output", output: z.object({}), rights: [], effects: ["order.record"], examples: [example] }) as unknown as NodeDefinition
+        const saga = nodeIndexOf({ nodes: [keep, reply], effects: [send, undo, record], tools: [], dataKinds: [] })
+        const spec: GraphSpec = {
+            ...SPEC,
+            grant: { rights: [SEND], tools: [], effects: ["order.record", "channel.send"] },
+            nodes: [
+                { key: "keep", kind: "output", step: "order.keep", next: "say" },
+                { key: "say", kind: "output", step: "core.reply", next: "again" },
+                { key: "again", kind: "output", step: "order.keep", next: "end" },
+                { key: "end", kind: "output", step: "stop" },
+            ],
+        }
+        expect(graphSpecProblems(spec, saga)).toEqual([{ code: "GRAPH_COMPENSABLE_AFTER_PIVOT", at: "again" }])
+        expect(graphSpecProblems({ ...spec, nodes: [...spec.nodes.slice(0, 2), { key: "again", kind: "output", step: "order.gone" }] }, saga)).toEqual([
+            { code: "NODE_UNKNOWN", at: "again" },
+        ])
+    })
+
     it("judges nothing reachable in an empty spec", () => {
         expect(graphSpecProblems({ ...SPEC, nodes: [] }, index)).toEqual([
             { code: "GRAPH_GRANT_EXCESS", at: "order:read.id" },

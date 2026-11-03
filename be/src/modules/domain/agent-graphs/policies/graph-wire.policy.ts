@@ -106,6 +106,8 @@ export interface AgentGraphRunWire {
     readonly version: number
     /** The trigger that woke the agent, or null when the wake is gone. */
     readonly trigger: string | null
+    /** Where the wake came from: channel, person, agent, event or schedule; null when the wake is gone. */
+    readonly origin: string | null
     /** The branch the condition took. */
     readonly branchKey: string
     /** What the branch did: auto, ask or stop. */

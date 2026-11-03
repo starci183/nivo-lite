@@ -10,6 +10,10 @@ export interface HandoffParams {
 export interface HandoffInput {
     /** The note: why the conversation goes there. */
     readonly text: string
+    /** The customer the hand-off is about, or null. */
+    readonly leadId: string | null
+    /** The channel the conversation runs on, or null. */
+    readonly channel: string | null
     /** The conversation the tagged agent takes over, or null. */
     readonly conversationId: string | null
     /** The facts of the turn the agent needs, or null. */

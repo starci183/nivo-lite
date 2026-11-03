@@ -37,6 +37,25 @@ export interface NodeEffectExecutor {
     execute(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef>
 }
 
+/**
+ * Finds the record a turn is about when its trigger named none, for example the customer of the conversation it serves. A module that
+ * owns such records registers it; the host asks each in turn and keeps the first answer.
+ */
+export interface NodeSubjectResolver {
+    /** The subject of the turn, or null when this resolver knows none. */
+    subjectOf(turn: NodeTurn): Promise<SubjectRef | null>
+}
+
+/** The effects a node step ran, to undo when its run fails before a pivot. */
+export interface NodeUndoInput {
+    /** The turn the node ran in. */
+    readonly turn: NodeTurn
+    /** The effects it ran, in order, with the subjects the ledger kept. */
+    readonly done: ReadonlyArray<{ readonly id: string; readonly subject: SubjectRef }>
+    /** The run step's idempotency key. */
+    readonly key: string
+}
+
 /** The door every node tool call goes through: the NIVO MCP, resolved to the provider the workspace connected. */
 export interface NodeToolDoor {
     /** Calls one tool for the turn under the call's replay key. */

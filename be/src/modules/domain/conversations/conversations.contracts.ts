@@ -54,6 +54,8 @@ export interface TurnRef {
     readonly messageId: string
     /** The channel's own id of that message. */
     readonly channelEventId: string
+    /** The messages that arrived within the burst window and are answered by the same turn, oldest first. */
+    readonly mergedMessageIds?: ReadonlyArray<string> | undefined
 }
 
 /** A stored customer message that is waiting to be answered. */
