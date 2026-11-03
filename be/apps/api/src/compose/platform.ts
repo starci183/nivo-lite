@@ -49,6 +49,7 @@ import { identityErrorKinds, identityMessages } from "./identity"
 import { knowledgeErrorKinds, knowledgeMessages } from "./knowledge"
 import { loyaltyErrorKinds, loyaltyMessages } from "./loyalty"
 import { messagingErrorKinds, messagingMessages } from "./messaging"
+import { agentGraphsErrorKinds, agentGraphsMessages } from "./agent-graphs"
 import { modulesErrorKinds, modulesMessages } from "./modules"
 import { salesErrorKinds, salesMessages } from "./sales"
 import { videoErrorKinds, videoMessages } from "./video"
@@ -81,6 +82,7 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
             ...loyaltyMessages,
             ...messagingMessages,
             ...modulesMessages,
+            ...agentGraphsMessages,
             ...salesMessages,
             ...videoMessages,
         ],
@@ -108,6 +110,7 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
             ...loyaltyErrorKinds,
             ...messagingErrorKinds,
             ...modulesErrorKinds,
+            ...agentGraphsErrorKinds,
             ...salesErrorKinds,
             ...videoErrorKinds,
             REALTIME_ERROR_KINDS,

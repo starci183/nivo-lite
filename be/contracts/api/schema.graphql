@@ -4,6 +4,11 @@ type AcceptInviteType {
   workspaceId: ID!
 }
 
+input AcceptTemplateUpdateInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  unitIds: [String!]! @inputBounds(maxItems: 200, itemMaxLength: 140)
+}
+
 type AccountingAgeingType {
   d0: AccountingMeasureType!
   d30: AccountingMeasureType!
@@ -1618,6 +1623,14 @@ type BillingWorkspaceType {
   tierCredits: Float
 }
 
+type BindingSuggestionType {
+  branchKey: String!
+  nodeKey: String!
+  parameter: String!
+  target: String!
+  termIndex: Int
+}
+
 type BodyProposalType {
   body: String!
   contextVersion: Int
@@ -2859,6 +2872,11 @@ type CreatedWebhookType {
   signingSecret: String!
 }
 
+type CreatorLedgerType {
+  lines: [LedgerLineType!]!
+  owedVnd: Int!
+}
+
 type CreditDailyUsageType {
   credits: Float!
   day: String!
@@ -4017,6 +4035,13 @@ type ImapFoldersType {
   folders: [String!]!
 }
 
+input ImportAgentTemplateInput {
+  name: String @inputBounds(maxLength: 80)
+  templateKey: String! @inputBounds(maxLength: 60)
+  values: JsonObject!
+  version: Int! @inputBounds(min: 1, max: 100000)
+}
+
 input ImportBrainDossiersInput {
   contentBase64: String! @inputBounds(maxLength: 14000000)
   name: String! @inputBounds(maxLength: 255)
@@ -4070,6 +4095,20 @@ input InstallModuleInput {
   moduleKey: String! @inputBounds(maxLength: 24)
   name: String = null @inputBounds(maxLength: 160)
   newInstance: Boolean = false
+}
+
+input InstallTemplateListingInput {
+  listingId: ID! @inputBounds(maxLength: 36)
+  name: String @inputBounds(maxLength: 80)
+  values: JsonObject!
+}
+
+type InstalledTemplateType {
+  agentId: ID!
+  installationId: ID!
+  key: String!
+  licenseId: ID!
+  version: Int!
 }
 
 input InstanceOfRecordInput {
@@ -4707,6 +4746,15 @@ type LeadWaitType {
   show: Boolean!
 }
 
+type LedgerLineType {
+  amountVnd: Int!
+  createdAt: String!
+  id: ID!
+  kind: String!
+  orderId: ID!
+  templateKey: String!
+}
+
 input LessonMiningStatusInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -4719,6 +4767,27 @@ type LessonMiningStatusType {
   proposed: Int
   reason: String
   status: String!
+}
+
+input LikenessClaimInput {
+  allowedUses: [String!]! @inputBounds(maxItems: 4)
+  disclosure: String! @inputBounds(maxLength: 300)
+  personName: String! @inputBounds(maxLength: 120)
+}
+
+input LikenessGrantIdInput {
+  grantId: ID! @inputBounds(maxLength: 36)
+}
+
+type LikenessGrantType {
+  allowedUses: [String!]!
+  disclosure: String!
+  expiresAt: String
+  id: ID!
+  personName: String!
+  revoked: Boolean!
+  templateKey: String!
+  verified: Boolean!
 }
 
 type LinkContractCustomersType {
@@ -4796,6 +4865,43 @@ input ListWorkThreadsInput {
 
 input ListZaloEventsInput {
   connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+type ListingCardType {
+  category: String!
+  firstParty: Boolean!
+  id: ID!
+  name: TemplateTextType!
+  parameters: [TemplateParameterType!]!
+  personName: String
+  points: [TemplateTextType!]!
+  priceVnd: Int!
+  publisherName: String!
+  requiredAuthorityActions: [String!]!
+  requiredProviders: [String!]!
+  summary: TemplateTextType!
+  templateKey: String!
+  version: Int!
+}
+
+type ListingCheckType {
+  detail: String!
+  id: String!
+  ok: Boolean!
+}
+
+type ListingType {
+  checks: [ListingCheckType!]!
+  firstParty: Boolean!
+  id: ID!
+  name: TemplateTextType!
+  priceVnd: Int!
+  revenueSharePct: Int!
+  reviewNote: String!
+  status: String!
+  templateKey: String!
+  updatedAt: String!
+  version: Int!
 }
 
 input LoadCsvImportInput {
@@ -5502,6 +5608,7 @@ input MoveHiringCandidateInput {
 
 type Mutation {
   acceptInvite(input: InviteTokenInput!): AcceptInviteType!
+  acceptTemplateUpdate(input: AcceptTemplateUpdateInput!): UpdateOfferType
   addBooking(input: AddBookingInput!): AddBookingType!
   addLoyaltyPresetRewards: AddLoyaltyPresetRewardsType!
   addResponsibility(input: AddResponsibilityInput!): LeadResponsibilityType!
@@ -5605,10 +5712,12 @@ type Mutation {
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
   holdWorkItem(input: HoldWorkItemInput!): WorkItemType!
+  importAgentTemplate(input: ImportAgentTemplateInput!): InstalledTemplateType!
   importBrainDossiers(input: ImportBrainDossiersInput!): BrainDossierImportType!
   importContracts(input: ImportContractsInput!): ImportContractsType!
   importInventoryPaste(input: ImportInventoryPasteInput!): ImportPasteType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
+  installTemplateListing(input: InstallTemplateListingInput!): InstalledTemplateType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
   linkContractCustomers: LinkContractCustomersType!
   linkHiringStaff(input: HiringCandidateRefInput!): LinkStaffType!
@@ -5625,6 +5734,8 @@ type Mutation {
   moveBooking(input: MoveBookingInput!): MoveBookingType!
   moveContentItem(input: MoveContentItemInput!): ContentItemType!
   moveHiringCandidate(input: MoveHiringCandidateInput!): MoveCandidateType!
+  orderTemplateListing(input: OrderTemplateListingInput!): TemplateOrderType!
+  packageAgentTemplate(input: PackageAgentTemplateInput!): TemplateVersionType!
   postMarketingWeeklyReport: WeeklyReportType!
   postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
@@ -5640,6 +5751,7 @@ type Mutation {
   recheckZaloConnection(input: RecheckZaloConnectionInput!): ZaloPageType!
   recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
   recordOutcome(input: RecordOutcomeInput!): RecordOutcomeType!
+  recordTemplateLikeness(input: RecordTemplateLikenessInput!): LikenessGrantType!
   redeemLoyaltyReward(input: RedeemLoyaltyRewardInput!): RedeemLoyaltyRewardType!
   redraftPublicDocument(input: PublicDocumentIdInput!): PublicDocumentType!
   reembedKnowledge: Boolean!
@@ -5701,6 +5813,7 @@ type Mutation {
   retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
   returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
   revealSepayKey(input: RevealSepayKeyInput!): SepayKeyType!
+  reviewTemplateListing(input: ReviewTemplateListingInput!): ListingType!
   revokeAgentConnection(input: RevokeAgentConnectionInput!): AgentAckType!
   revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
   revokeInvite(input: InviteRefInput!): Boolean!
@@ -5802,6 +5915,7 @@ type Mutation {
   submitShiftsAvailability(input: SaveShiftsAvailabilityInput!): ShiftsRefType!
   submitTelegramCode(input: SubmitTelegramCodeInput!): TelegramLoginStageType!
   submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
+  submitTemplateListing(input: SubmitTemplateListingInput!): ListingType!
   suggestLeadOwner(input: SuggestLeadOwnerInput!): LeadActionQueuedType!
   syncLoyaltyMembers: SyncLoyaltyMembersType!
   syncMcpConnector(input: SyncMcpConnectorInput!): Int!
@@ -5824,6 +5938,7 @@ type Mutation {
   updateVideoProject(input: UpdateVideoProjectInput!): VideoProjectType!
   updateWebhookEvents(input: UpdateWebhookEventsInput!): WebhookEventsType!
   verifyLoyaltyCode(input: VerifyLoyaltyCodeInput!): VerifyLoyaltyCodeType!
+  verifyTemplateLikeness(input: LikenessGrantIdInput!): LikenessGrantType!
   wantConnector(input: WantConnectorInput!): Boolean!
   writePublicDocument(input: WritePublicDocumentInput!): PublicDocumentType!
 }
@@ -6097,6 +6212,63 @@ input OpeningHoursInput {
   weekday: Int! @inputBounds(min: 0, max: 6)
 }
 
+input OrderTemplateListingInput {
+  listingId: ID! @inputBounds(maxLength: 36)
+}
+
+input PackageAgentTemplateInput {
+  agentId: ID! @inputBounds(maxLength: 36)
+  bindings: [ParameterBindingInput!]! @inputBounds(maxItems: 60)
+  breaking: Boolean!
+  category: String! @inputBounds(maxLength: 60)
+  changelog: String! @inputBounds(maxLength: 2000)
+  graphVersionId: ID! @inputBounds(maxLength: 36)
+  key: String!
+  likeness: LikenessClaimInput
+  name: TemplateTextInput!
+  parameters: [TemplateParameterInput!]! @inputBounds(maxItems: 20)
+  soul: String! @inputBounds(maxLength: 4000)
+  starterDocumentIds: [ID!]! @inputBounds(maxItems: 20)
+  summary: TemplateTextInput!
+}
+
+type PackagePreviewType {
+  package: PackageSummaryType
+  problems: [String!]!
+  report: PackageReportType!
+  suggestions: [BindingSuggestionType!]!
+}
+
+type PackageReportType {
+  brainRefs: Int!
+  branches: Int!
+  nodes: Int!
+  people: Int!
+  privateSources: Int!
+  rights: Int!
+}
+
+type PackageSummaryType {
+  baseModule: String!
+  hash: String!
+  key: String!
+  parameters: [TemplateParameterType!]!
+  personName: String
+  proposedRights: [ProposedRightType!]!
+  requiredAuthorityActions: [String!]!
+  requiredProviders: [String!]!
+  starterKnowledge: Int!
+  version: Int!
+}
+
+input ParameterBindingInput {
+  branchKey: String! @inputBounds(maxLength: 60)
+  nodeKey: String! @inputBounds(maxLength: 60)
+  parameter: String! @inputBounds(maxLength: 40)
+  target: String!
+  termIndex: Int @inputBounds(min: 0, max: 30)
+}
+
 input PaymentOrderInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -6280,6 +6452,11 @@ type ProposeWeekType {
   shifts: Int!
   short: Int!
   version: Int!
+}
+
+type ProposedRightType {
+  kind: String!
+  scope: String!
 }
 
 input ProviderKeysInput {
@@ -6516,6 +6693,7 @@ type Query {
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
+  agentTemplatePreview(input: PackageAgentTemplateInput!): PackagePreviewType!
   agentWork(input: AgentWorkInstanceInput!): AgentWorkType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
@@ -6576,6 +6754,7 @@ type Query {
   driveGrant: DriveGrantType!
   driveLinkedFolder(input: DriveLinkedFolderInput!): DriveFolderType!
   drivePickedFolder(input: DrivePickedFolderInput!): PickedFolderType!
+  exportAgentTemplate(input: TemplateVersionRefInput!): String!
   foundingMember: Boolean!
   getAgentGraph(input: GetAgentGraphInput!): AgentGraphType!
   googleConnectionState: GoogleStateType!
@@ -6612,6 +6791,7 @@ type Query {
   loyaltyMember(input: LoyaltyMemberInput!): LoyaltyMemberDetailType!
   loyaltyProgram: LoyaltyProgramSettingsType!
   marketingWeeklyReport(input: MarketingReportInput!): WeeklyReportType!
+  marketplaceListings: [ListingCardType!]!
   mcpCallLog(input: McpCallLogInput): [McpCallLogType!]!
   mcpConnectors: [McpConnectorType!]!
   mcpToolGrants: [McpToolGrantType!]!
@@ -6625,6 +6805,9 @@ type Query {
   modulesCatalog: ModulesCatalogType!
   moneyConnection(input: GetMoneyConnectionInput!): WizardConnectionType!
   myAccount: MyAccountType!
+  myAgentTemplates: [TemplateType!]!
+  myCreatorLedger: CreatorLedgerType!
+  myTemplateListings: [ListingType!]!
   myWorkspaceRole: WorkspaceRole!
   myWorkspaces: [MembershipType!]!
   nivoKnowledge: [NivoEntryType!]!
@@ -6667,6 +6850,8 @@ type Query {
   telegramEvents(input: ListTelegramEventsInput!): [TelegramEventType!]!
   telegramPage(input: GetTelegramPageInput!): TelegramPageType!
   telegramUserReady: TelegramUserReadyType!
+  templateReviewQueue: [ListingType!]!
+  templateUpdateOffers: [UpdateOfferType!]!
   testDatabase(input: TestDatabaseInput!): [DatabaseTableType!]!
   testImapConnection(input: TestImapConnectionInput!): ImapFoldersType!
   testOpenApiOperation(input: TestOpenApiOperationInput!): OpenApiTestType!
@@ -6790,6 +6975,14 @@ type RecordOutcomeType {
   leadId: ID!
   need: String!
   stage: String!
+}
+
+input RecordTemplateLikenessInput {
+  allowedUses: [String!]! @inputBounds(maxItems: 4)
+  disclosure: String! @inputBounds(maxLength: 300)
+  expiresAt: String
+  personName: String! @inputBounds(maxLength: 120)
+  templateKey: String! @inputBounds(maxLength: 60)
 }
 
 input RedeemLoyaltyRewardInput {
@@ -7206,6 +7399,13 @@ input ReturnZaloAuthorizationInput {
 
 input RevealSepayKeyInput {
   connectionId: ID! @inputBounds(maxLength: 64)
+}
+
+input ReviewTemplateListingInput {
+  decision: String!
+  listingId: ID! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 2000)
+  revenueSharePct: Int @inputBounds(min: 0, max: 100)
 }
 
 input RevokeAgentConnectionInput {
@@ -8671,6 +8871,12 @@ input SubmitTelegramPasswordInput {
   password: String! @inputBounds(maxLength: 256)
 }
 
+input SubmitTemplateListingInput {
+  priceVnd: Int! @inputBounds(min: 0, max: 2000000000)
+  templateKey: String! @inputBounds(maxLength: 60)
+  version: Int! @inputBounds(min: 1, max: 100000)
+}
+
 input SuggestLeadOwnerInput {
   leadId: String! @inputBounds(maxLength: 36)
 }
@@ -8814,6 +9020,39 @@ type TemplateN8nType {
   webhook: String!
 }
 
+type TemplateOrderType {
+  account: String!
+  amountVnd: Int!
+  bank: String!
+  expiresAt: String!
+  holder: String!
+  orderCode: String!
+  orderId: ID!
+  qrUrl: String!
+}
+
+input TemplateParameterInput {
+  defaultValue: String! @inputBounds(maxLength: 2000)
+  hint: TemplateTextInput
+  key: String!
+  kind: String!
+  label: TemplateTextInput!
+  max: Float
+  min: Float
+  required: Boolean!
+}
+
+type TemplateParameterType {
+  defaultValue: String!
+  hint: TemplateTextType
+  key: String!
+  kind: String!
+  label: TemplateTextType!
+  max: Float
+  min: Float
+  required: Boolean!
+}
+
 type TemplateRequirementsType {
   capabilities: [String!]!
   channels: [String!]!
@@ -8833,10 +9072,43 @@ type TemplateSettingType {
   suffix: LocalizedTextType
 }
 
+input TemplateTextInput {
+  en: String! @inputBounds(maxLength: 400)
+  vi: String! @inputBounds(maxLength: 400)
+}
+
+type TemplateTextType {
+  en: String!
+  vi: String!
+}
+
 type TemplateTriggerType {
   event: String!
   kind: String!
   line: LocalizedTextType!
+}
+
+type TemplateType {
+  baseModule: String!
+  id: String!
+  key: String!
+  name: TemplateTextType!
+  versions: [TemplateVersionType!]!
+}
+
+input TemplateVersionRefInput {
+  templateKey: String! @inputBounds(maxLength: 60)
+  version: Int! @inputBounds(min: 1, max: 100000)
+}
+
+type TemplateVersionType {
+  breaking: Boolean!
+  changelog: String!
+  createdAt: String!
+  hash: String!
+  id: String!
+  key: String!
+  version: Int!
 }
 
 input TestDatabaseInput {
@@ -9022,6 +9294,16 @@ input UpdateMoneyConnectionInput {
   name: String! @inputBounds(maxLength: 120)
 }
 
+type UpdateOfferType {
+  breaking: Boolean!
+  changelog: String!
+  installationId: ID!
+  installed: Int!
+  key: String!
+  offered: Int!
+  units: [UpdateUnitType!]!
+}
+
 input UpdatePoLineInput {
   lineId: ID! @inputBounds(maxLength: 36)
   qty: String! @inputBounds(maxLength: 40)
@@ -9041,6 +9323,13 @@ input UpdatePublicDocumentInput {
 input UpdateResponsibilityStatusInput {
   responsibilityId: ID! @inputBounds(maxLength: 36)
   status: String!
+}
+
+type UpdateUnitType {
+  branchKey: String
+  change: String!
+  id: ID!
+  nodeKey: String!
 }
 
 input UpdateVideoProjectInput {
