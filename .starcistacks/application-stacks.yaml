@@ -253,6 +253,13 @@ environments:
         where: secrets/ai
         recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the owner key per .sops.yaml; keys STARCI_AI_KEY (dev's own virtual key) and OPENROUTER_API_KEY.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
+      - name: seeds-nivo-workspace
+        runtimeName: nivo-dev-seeds-nivo-workspace-v1
+        version: 1
+        where: secrets/seeds-nivo-workspace
+        keys: [WORKSPACE_SEPAY_BANK_ACCOUNT, WORKSPACE_SEPAY_BANK_CODE, WORKSPACE_SEPAY_ACCOUNT_HOLDER, WORKSPACE_SEPAY_API_KEY, WORKSPACE_PAYOS_CLIENT_ID, WORKSPACE_PAYOS_API_KEY, WORKSPACE_PAYOS_CHECKSUM_KEY]
+        recipientPolicy: SOPS/age, one member (seeds-nivo-workspace.enc.yaml) for the dev seed of the NIVO management workspace, mirroring production's member for the providers reached through the dev tunnel (nivo-local.starci.org); the same SePay webhook API key as production. Sealed to the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; local dev decrypts with it. Never printed.
   production:
     status: supported
     runtime: docker-swarm
