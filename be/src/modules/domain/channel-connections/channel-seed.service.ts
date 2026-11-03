@@ -15,7 +15,7 @@ import type {
     SeedTelegram,
     SeedZaloOa,
 } from "./channel-seed.contracts"
-import { bankFactsOf, filled, invalidSeed, oaSecretOf, payosKeysOf, sepayKeyOf } from "./channel-seed.policy"
+import { bankFactsOf, filled, invalidSeed, issuedOf, payosKeysOf, sepayKeyOf } from "./channel-seed.policy"
 import { isTelegramToken, isZaloAppId, sepayFeedSecret } from "./money-provider.policy"
 import { parseZaloSecret } from "./zalo-secret.policy"
 
@@ -102,9 +102,9 @@ export class ChannelSeedService {
     }
 
     private async zaloOa(actor: ConnectionActor, seed: SeedZaloOa): Promise<SeededConnection> {
-        const appId = filled(seed.appId)
+        const appId = issuedOf(seed.appId)
         if (appId !== undefined && !isZaloAppId(appId)) invalidSeed("zalo.appId")
-        const given: ZaloGiven = { appId, appSecret: filled(seed.appSecret), oaSecret: oaSecretOf(seed.oaSecret) }
+        const given: ZaloGiven = { appId, appSecret: issuedOf(seed.appSecret), oaSecret: issuedOf(seed.oaSecret) }
         const found = await this.connections.find(actor.workspaceId, seed.id)
         if (found === null) {
             await this.create(actor, {

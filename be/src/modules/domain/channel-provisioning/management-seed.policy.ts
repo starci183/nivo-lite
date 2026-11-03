@@ -6,20 +6,20 @@ import type { ManagementSeed, ManagementSmtp } from "./management-seed.contracts
 const NAME_MAX = 120
 const PORT_MAX = 65_535
 
-type Values = Readonly<Record<string, string>>
+export type Values = Readonly<Record<string, string>>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === "object" && !Array.isArray(value)
 
-const invalid = (field: string): never => {
+export const invalid = (field: string): never => {
     throw new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
 }
 
-const textOf = (value: unknown, field: string): string =>
+export const textOf = (value: unknown, field: string): string =>
     typeof value === "string" && value.trim() !== "" && value.length <= NAME_MAX * 4 ? value.trim() : invalid(field)
 
 /** The sealed values of a document: every one a text, the names those of the workspace member. */
-const valuesOf = (raw: unknown): Values => {
+export const valuesOf = (raw: unknown): Values => {
     if (raw === undefined) return {}
     if (!isRecord(raw)) return invalid("values")
     return Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, textOf(value, key)]))

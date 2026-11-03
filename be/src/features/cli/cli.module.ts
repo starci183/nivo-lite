@@ -14,6 +14,7 @@ import { SeedAutomationsModule } from "./seed-automations/seed-automations.modul
 import { SeedManagementModule } from "./seed-management/seed-management.module"
 import { SeedMediaModule } from "./seed-media/seed-media.module"
 import { SeedModulesModule } from "./seed-modules/seed-modules.module"
+import { SeedTestAccountsModule } from "./seed-test-accounts/seed-test-accounts.module"
 import { SeedWorkspaceModule } from "./seed-workspace/seed-workspace.module"
 import { StorageCliModule } from "./storage/storage.module"
 import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
@@ -33,6 +34,7 @@ import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
         SeedManagementModule.register({}),
         SeedMediaModule.register({}),
         SeedModulesModule.register({}),
+        SeedTestAccountsModule.register({}),
         SeedWorkspaceModule.register({}),
         SeedAutomationsModule.register({}),
         StorageCliModule.register({}),

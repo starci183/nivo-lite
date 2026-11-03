@@ -4,7 +4,7 @@ entries:
     kind: data
     path: data/nivo-workspace.json
     target: [node, be/dist/apps/cli/src/main.js, seed-management]
-    mode: once
+    mode: upsert
     schema: be/src/modules/domain/channel-provisioning/management-seed.schema.json
   - id: agent-graphs
     kind: data
@@ -13,3 +13,11 @@ entries:
     mode: upsert
     after: [nivo-workspace]
     schema: be/src/modules/domain/agent-graphs/agent-graph-spec.schema.json
+  - id: test-accounts
+    kind: test-account
+    path: data/test-accounts.json
+    target: [node, be/dist/apps/cli/src/main.js, seed-test-accounts]
+    mode: upsert
+    after: [nivo-workspace]
+    schema: be/src/modules/domain/channel-provisioning/test-accounts-seed.schema.json
+    reason: The sign-ins the dev stack is tested with (owner and staff of the NIVO workspace and of the demo workspace, @example.test addresses); their addresses and passwords are sealed in seeds-test-accounts, never typed.

@@ -19,8 +19,8 @@ export const filled = (value: string | undefined): string | undefined => {
     return text === "" ? undefined : text
 }
 
-/** The OA secret key, or undefined when it is absent or a `PENDING-` placeholder: such a value is never stored. */
-export const oaSecretOf = (value: string | undefined): string | undefined => {
+/** A sealed Zalo value (app id, app secret, OA secret key), or undefined when it is absent or a `PENDING-` placeholder: such a value is never stored. */
+export const issuedOf = (value: string | undefined): string | undefined => {
     const text = filled(value)
     return text?.startsWith(PENDING_PREFIX) === true ? undefined : text
 }

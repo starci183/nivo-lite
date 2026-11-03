@@ -22,8 +22,20 @@ export const sessionCookieOptions: SessionCookieOptionsShape = {
     sameSite: "lax",
 } as const
 
-/** The origin of the back end api the browser calls directly (GraphQL at `/graphql`, REST beside it) and whose auth doors modules/auth calls. */
-export const apiUrl = (): string => required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
+/** True when the console is opened on a host of the local machine: the browser then reaches the local api, whose cookie is same-site there. */
+const onLocalHost = (): boolean =>
+    typeof window !== "undefined" && ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)
+
+/**
+ * The origin of the back end api the browser calls directly (GraphQL at `/graphql`, REST beside it) and whose auth doors modules/auth calls.
+ * A dev stack served through a tunnel sets NEXT_PUBLIC_LOCAL_API_URL too: the console opened on localhost keeps its local api (the refresh cookie
+ * stays same-site), the console opened on the tunnel origin calls the tunnel api.
+ */
+export const apiUrl = (): string => {
+    const local = process.env.NEXT_PUBLIC_LOCAL_API_URL
+    if (local !== undefined && local !== "" && onLocalHost()) return local
+    return required("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL)
+}
 /** The GraphQL endpoint of the back end api. */
 export const graphqlUrl = (): string => `${apiUrl()}/graphql`
 /** The back end's event-stream endpoint at `path`, on the origin of its GraphQL endpoint (the streams of modules/api/sse). */

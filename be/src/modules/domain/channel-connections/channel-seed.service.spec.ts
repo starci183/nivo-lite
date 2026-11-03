@@ -200,6 +200,22 @@ describe("ChannelSeedService > a workspace without the connections", () => {
         expect(created?.secret.plain).not.toContain("PENDING")
     })
 
+    const PENDING = "PENDING-SET-AFTER-DOMAIN-VERIFY"
+
+    it("treats a PENDING- Zalo app id and app secret as unset, never refusing the run", async () => {
+        const { service, connections } = await build()
+
+        const [, zalo] = await service.ensure(ACTOR, {
+            ...FULL,
+            zaloOa: { ...FULL.zaloOa, appId: PENDING, appSecret: PENDING },
+        })
+
+        const created = createdWith(connections, IDS.zaloOa)
+        expect(zalo).toMatchObject({ credentials: "missing" })
+        expect(created?.meta).toEqual({ oa_secret_saved: "true" })
+        expect(created?.secret.plain).not.toContain("PENDING")
+    })
+
     it("creates every connection without credentials when none are supplied", async () => {
         const { service, connections } = await build()
 
