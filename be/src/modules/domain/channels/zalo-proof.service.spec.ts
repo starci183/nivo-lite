@@ -92,4 +92,15 @@ describe("ZaloProofService", () => {
             )
         })
     })
+
+    describe("facts", () => {
+        it("names the event of a refused delivery when the body says one, and nothing otherwise", async () => {
+            const { proof } = await build(true)
+            const named = Buffer.from(JSON.stringify({ event_name: "user_send_image" }))
+
+            expect(proof.facts(request(CONNECTION, named, "x"))).toEqual({ eventName: "user_send_image" })
+            expect(proof.facts(request(CONNECTION, Buffer.from("junk"), "x"))).toEqual({})
+            expect(proof.facts(request(CONNECTION, undefined, "x"))).toEqual({})
+        })
+    })
 })

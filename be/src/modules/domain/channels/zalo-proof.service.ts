@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { isValidZaloMac } from "@modules/integrations/zalo"
+import { isValidZaloMac, zaloEventNameOf } from "@modules/integrations/zalo"
 import { InjectWebhookProofRegistry } from "@modules/platform/http-security"
 import type { WebhookProof, WebhookProofRegistry, WebhookProofRequest } from "@modules/platform/http-security"
 import { InjectLogger } from "@modules/platform/logging"
@@ -27,6 +27,12 @@ export class ZaloProofService implements WebhookProof, OnModuleInit {
     /** Registers this proof for the zalo door. */
     onModuleInit(): void {
         this.registry.add(this)
+    }
+
+    /** The event name of the refused delivery when it can be read from the body, for the refusal log; the body itself is never logged. */
+    facts(request: WebhookProofRequest): Readonly<Record<string, string>> {
+        const eventName = zaloEventNameOf(request.rawBody)
+        return eventName === null ? {} : { eventName }
     }
 
     /**

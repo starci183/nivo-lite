@@ -11,10 +11,14 @@ import type { EntityManager } from "typeorm"
 import { ZaloWebhookGateService } from "@modules/domain/channels"
 import { ConversationsService, readZaloEvent } from "@modules/domain/conversations"
 import { InboundEventsService } from "@modules/domain/inbound-events"
+import { zaloEventNameOf } from "@modules/integrations/zalo"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { zaloDeliveryIdOf } from "./zalo-delivery-id.policy"
 import { polledRawBody } from "./zalo-polled-body.policy"
 import { ZaloInboxEntity } from "./persistence/entities"
+import { ZaloInboxLogEvent } from "./zalo-inbox.log-events"
 
 @Injectable()
 /** Claims each Zalo message once, then publishes its durable receipt; a deferred consumer stores it and queues its answer. */
@@ -26,6 +30,7 @@ export class ZaloInboxService {
         @InjectEntityInbox() private readonly inbox: EntityInbox,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly gate: ZaloWebhookGateService,
+        @InjectLogger() private readonly logger: Logger,
     ) {}
 
     /** A redelivered message is acknowledged without being processed again; every event type has its own id, so a follow event is claimed once and never overwrites another. */
@@ -35,7 +40,11 @@ export class ZaloInboxService {
             if (receipt === undefined) return
             // A connection that holds no OA secret key yet proved nothing: the call is acknowledged and closed, never read as an event.
             if (!(await this.gate.holdsProofKey(connection))) {
-                await manager.update(ZaloInboxEntity, { id: receipt.id }, { processedAt: () => "now()", state: "handled" })
+                await manager.update(
+                    ZaloInboxEntity,
+                    { id: receipt.id },
+                    { processedAt: () => "now()", state: "handled" },
+                )
                 return
             }
             await this.queueConsumer(manager, receipt.deliveryId)
@@ -93,6 +102,13 @@ export class ZaloInboxService {
         if (pending === null) return
         const rawBody = Buffer.from(pending.payload.rawBody, "utf8")
         const inbound = readZaloEvent(rawBody)
+        if (inbound.kind !== "ok") {
+            this.logger.info(ZaloInboxLogEvent.EventIgnored, {
+                connectionId: pending.payload.connection,
+                eventName: zaloEventNameOf(rawBody) ?? "unreadable",
+                reason: inbound.code,
+            })
+        }
         const answered =
             inbound.kind === "ok"
                 ? await this.conversations.acceptZalo(pending.payload.connection, inbound.value, manager)
@@ -128,6 +144,8 @@ export class ZaloInboxService {
 
     private async queueConsumer(manager: EntityManager, deliveryId: string): Promise<void> {
         const message: ZaloDeliveryRecorded = { deliveryId }
-        await this.outbox.write(manager, ZALO_DELIVERY_QUEUE, message, { dedupeKey: `${ZALO_DELIVERY_QUEUE}:${deliveryId}` })
+        await this.outbox.write(manager, ZALO_DELIVERY_QUEUE, message, {
+            dedupeKey: `${ZALO_DELIVERY_QUEUE}:${deliveryId}`,
+        })
     }
 }

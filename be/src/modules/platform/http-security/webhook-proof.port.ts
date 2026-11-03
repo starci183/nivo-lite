@@ -16,6 +16,11 @@ export interface WebhookProof {
     readonly provider: string
     /** True only when the delivery proves the secret of its scope; a missing scope or secret is false, never a throw. */
     prove(request: WebhookProofRequest): Promise<boolean>
+    /**
+     * What may be logged of a refused delivery besides the provider and scope (for example the event name), read without trusting the
+     * body. Short plain values only: never the body, a secret, a signature or a token.
+     */
+    facts?(request: WebhookProofRequest): Readonly<Record<string, string>>
 }
 
 /** Where a domain module registers the proof of a provider whose secrets live in the database. */

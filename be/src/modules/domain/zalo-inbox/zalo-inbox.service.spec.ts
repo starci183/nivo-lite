@@ -8,6 +8,8 @@ import { InboundEventsService } from "@modules/domain/inbound-events"
 import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { ZaloInboxService } from "./zalo-inbox.service"
 import { ZALO_DELIVERY_QUEUE } from "./zalo-inbox.contracts"
@@ -46,6 +48,7 @@ const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = tr
     const inboundEvents = mock<InboundEventsService>()
     const gate = mock<ZaloWebhookGateService>()
     gate.holdsProofKey.mockResolvedValue(keyed)
+    const logger = mock<Logger>()
     const outbox = recordingQueueOutbox()
     const write = jest.spyOn(outbox, "write")
     const moduleRef = await Test.createTestingModule({
@@ -57,9 +60,20 @@ const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = tr
             { provide: ConversationsService, useValue: conversations },
             { provide: InboundEventsService, useValue: inboundEvents },
             { provide: ZaloWebhookGateService, useValue: gate },
+            { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloInboxService), tx, conversations, outbox, write, inbox, gate, inboundEvents }
+    return {
+        service: moduleRef.get(ZaloInboxService),
+        tx,
+        conversations,
+        outbox,
+        write,
+        inbox,
+        gate,
+        inboundEvents,
+        logger,
+    }
 }
 
 describe("ZaloInboxService receipt delivery", () => {
@@ -159,11 +173,32 @@ describe("ZaloInboxService deferred effects", () => {
 })
 
 describe("ZaloInboxService consumer recovery", () => {
-    it("completes an ignored decoded message without a conversation effect", async () => {
-        const { service, conversations, tx } = await build(pendingOf({ payload: { connection: "c-1", rawBody: "{}" } }))
+    it("completes an ignored decoded message without a conversation effect, and logs that it was dropped", async () => {
+        const { service, conversations, tx, logger } = await build(
+            pendingOf({ payload: { connection: "c-1", rawBody: "{}" } }),
+        )
         await service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
         expect(tx.em.update).toHaveBeenCalledTimes(1)
+        expect(logger.info).toHaveBeenCalledWith("zalo_inbox.event_ignored", {
+            connectionId: "c-1",
+            eventName: "unreadable",
+            reason: expect.any(String),
+        })
+    })
+
+    it("names the event it ignored, an image for one, and logs nothing for the text it answers", async () => {
+        const image = JSON.stringify({ event_name: "user_send_image", sender: { id: "u" }, message: { msg_id: "m" } })
+        const ignored = await build(pendingOf({ payload: { connection: "c-1", rawBody: image } }))
+        await ignored.service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
+        expect(ignored.logger.info).toHaveBeenCalledWith(
+            "zalo_inbox.event_ignored",
+            expect.objectContaining({ eventName: "user_send_image" }),
+        )
+
+        const answered = await build()
+        await answered.service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
+        expect(answered.logger.info).not.toHaveBeenCalled()
     })
 
     it("leaves completion unwritten and rolls back a failed consumer", async () => {
