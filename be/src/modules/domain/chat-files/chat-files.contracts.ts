@@ -83,6 +83,9 @@ export interface ChatFileRead {
 /** The read of a message's file, or null when the message holds none. */
 export type OptionalChatFileRead = ChatFileRead | null
 
+/** The fenced text of a message's document for a turn to read, or null for a picture or a message with no file. */
+export type OptionalDocumentBlock = string | null
+
 /** The bytes of a file for a turn to read. */
 export interface ChatFileBytes {
     /** The name the sender gave it. */

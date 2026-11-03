@@ -39,4 +39,5 @@ export const NO_CHAT_FILES = {
 export const NO_CHAT_FILE_READS = {
     readOf: () => Promise.resolve(null),
     attachmentsOf: () => Promise.resolve([]),
+    documentBlockOf: () => Promise.resolve(null),
 }
