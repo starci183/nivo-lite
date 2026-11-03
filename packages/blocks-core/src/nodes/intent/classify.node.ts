@@ -3,7 +3,7 @@ import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
 import { CLASSIFY_INSTRUCTIONS } from "./classify.messages"
-import { classificationOf } from "./classify.policy"
+import { classificationOf, messagesOf } from "./classify.policy"
 import { classifyInputSchema, classifyOutputSchema, modelReplySchema } from "./classify.schema"
 import type { ClassifyInput, ClassifyOutput } from "./classify.types"
 
@@ -29,7 +29,7 @@ export const intentClassifyNode: NodeDefinition<
         const reply = await context.model.json(modelReplySchema, {
             purpose: "intent-classify",
             instructions: CLASSIFY_INSTRUCTIONS,
-            input: { messages: given.text.split("\n").filter((line) => line.trim() !== "") },
+            input: { messages: messagesOf(given.text) },
         })
         return classificationOf(reply)
     },

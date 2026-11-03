@@ -20,6 +20,9 @@ const WITH_UNIT = /^\d+(?:[.,]\d+)?\s*(?:k|nghìn|ngàn|nghin|ngan|tr|triệu|tr
 const CURRENCY_TAIL = /(?:vnđ|vnd|đ)\s*$/u
 const MILLION_UNIT = /(?:tr|triệu|trieu)$/u
 
+/** The pending messages of a batch: one per non-blank line. */
+export const messagesOf = (text: string): ReadonlyArray<string> => text.split("\n").filter((line) => line.trim() !== "")
+
 const textOrNull = (value: string | null, max: number): string | null => {
     const text = value?.trim().slice(0, max) ?? ""
     return text === "" ? null : text

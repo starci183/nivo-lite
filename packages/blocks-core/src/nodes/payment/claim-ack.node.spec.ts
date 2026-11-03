@@ -1,27 +1,22 @@
-import { expectedEffects, runExample } from "../node-examples.fixture"
+import { nodeExampleMismatches } from "@nivo-lite/agent-sdk/testing"
+import { coreEffects } from "../../vocabulary/effects"
 import { paymentClaimAckNode } from "./claim-ack.node"
 import { claimAckOf } from "./claim-ack.policy"
 
 describe("payment.claim-ack", () => {
-    it.each(paymentClaimAckNode.examples.map((example) => [example.name, example] as const))(
+    it.each(paymentClaimAckNode.examples.map((each) => [each.name, each] as const))(
         "example: %s",
-        async (_name, example) => {
-            const run = await runExample(paymentClaimAckNode, example)
-            expect(run.output).toEqual(example.output)
-            expect(run.effects).toEqual(expectedEffects(example))
+        async (_name, each) => {
+            await expect(nodeExampleMismatches(paymentClaimAckNode, each, coreEffects)).resolves.toEqual([])
         },
     )
 
-    it("records the claim on the turn when it has no subject", async () => {
+    it("records before it sends, so a reply never goes out for a claim that was not recorded", () => {
         const [example] = paymentClaimAckNode.examples
-        const run = await runExample(paymentClaimAckNode, example, { subject: null })
-        expect(run.output).toMatchObject({ claim: { kind: "turn", id: "turn-1" } })
-    })
-
-    it("records before it sends, so a reply never goes out for a claim that was not recorded", async () => {
-        const [example] = paymentClaimAckNode.examples
-        const run = await runExample(paymentClaimAckNode, example)
-        expect(run.effects.map((effect) => effect.kind)).toEqual(["payment-claim.record", "channel.send"])
+        expect(example.effects.map((effect) => (typeof effect === "string" ? effect : effect.kind))).toEqual([
+            "payment-claim.record",
+            "channel.send",
+        ])
     })
 })
 

@@ -11,6 +11,8 @@ export interface HandoffParams {
 export interface HandoffInput {
     /** The note: why the conversation goes there. */
     readonly text: string
+    /** The conversation the tagged agent takes over, or null. */
+    readonly conversationId: string | null
     /** The facts of the turn the agent needs, or null. */
     readonly context: Readonly<Record<string, ContextValue>> | null
 }

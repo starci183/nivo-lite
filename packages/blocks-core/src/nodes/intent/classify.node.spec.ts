@@ -1,44 +1,20 @@
-import { classificationOf, vndOf } from "./classify.policy"
+import { nodeExampleMismatches } from "@nivo-lite/agent-sdk/testing"
+import { coreEffects } from "../../vocabulary/effects"
 import { intentClassifyNode } from "./classify.node"
-import { expectedEffects, runExample } from "../node-examples.fixture"
+import { classificationOf, messagesOf, vndOf } from "./classify.policy"
 
 describe("intent.classify", () => {
-    it.each(intentClassifyNode.examples.map((example) => [example.name, example] as const))(
+    it.each(intentClassifyNode.examples.map((each) => [each.name, each] as const))(
         "example: %s",
-        async (_name, example) => {
-            const run = await runExample(intentClassifyNode, example)
-            expect(run.output).toEqual(example.output)
-            expect(run.effects).toEqual(expectedEffects(example))
+        async (_name, each) => {
+            await expect(nodeExampleMismatches(intentClassifyNode, each, coreEffects)).resolves.toEqual([])
         },
     )
+})
 
-    it("hands the model the messages one per line, blanks dropped, and records no effect", async () => {
-        const [example] = intentClassifyNode.examples
-        const asks: Array<unknown> = []
-        const run = await intentClassifyNode.run(
-            { text: "một\n\n  \nhai" },
-            {
-                turn: { turnId: "t", workspaceId: "w", agentId: "a", subject: null },
-                params: {},
-                data: { read: () => Promise.resolve([]), write: () => Promise.reject(new Error("no write")) },
-                effect: () => Promise.reject(new Error("no effect")),
-                model: {
-                    text: () => Promise.reject(new Error("no text")),
-                    json: (schema, ask) => {
-                        asks.push(ask)
-                        return Promise.resolve(
-                            schema.parse({ intents: ["question"], order: null, payment_claim: null }),
-                        )
-                    },
-                },
-                now: () => new Date(0),
-            },
-        )
-        expect(run).toEqual({ intents: ["question"], order: null, paymentClaim: null })
-        expect(asks).toEqual([
-            expect.objectContaining({ purpose: "intent-classify", input: { messages: ["một", "hai"] } }),
-        ])
-        expect(example?.effects).toEqual([])
+describe("messagesOf", () => {
+    it("is one message per non-blank line", () => {
+        expect(messagesOf("một\n\n  \nhai")).toEqual(["một", "hai"])
     })
 })
 

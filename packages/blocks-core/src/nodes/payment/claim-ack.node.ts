@@ -39,22 +39,21 @@ export const paymentClaimAckNode: NodeDefinition<
     params,
     input,
     output,
-    rights: [],
+    rights: [
+        { kind: "payment-claim", access: "write", scope: "turn", fields: ["leadId", "amountVnd", "names", "body"] },
+        { kind: "message", access: "write", scope: "turn", fields: ["body"] },
+    ],
     effects: ["payment-claim.record", "channel.send"],
     run: async (given, context) => {
-        const claim = await context.effect(
-            "payment-claim.record",
-            context.turn.subject ?? { kind: "turn", id: context.turn.turnId },
-            {
-                leadId: given.leadId,
-                conversationId: given.conversationId,
-                amountVnd: given.amountVnd ?? undefined,
-                names: given.payerName === null ? [] : [given.payerName],
-                body: given.body,
-            },
-        )
+        const claim = await context.effect("payment-claim.record", {
+            leadId: given.leadId,
+            conversationId: given.conversationId,
+            ...(given.amountVnd === null ? {} : { amountVnd: given.amountVnd }),
+            names: given.payerName === null ? [] : [given.payerName],
+            body: given.body,
+        })
         const reply = claimAckOf(given.amountVnd, context.params.locale)
-        await context.effect("channel.send", claim, { conversationId: given.conversationId, text: reply })
+        await context.effect("channel.send", { conversationId: given.conversationId, text: reply })
         return { reply, claim }
     },
     examples: [
@@ -70,7 +69,7 @@ export const paymentClaimAckNode: NodeDefinition<
             },
             output: {
                 reply: "Em đang kiểm tra giao dịch 5.000đ của bạn ạ.",
-                claim: { kind: "conversation", id: "c1" },
+                claim: { kind: "payment-claim.record", id: "payment-claim.record-1" },
             },
             effects: [
                 {
@@ -93,7 +92,10 @@ export const paymentClaimAckNode: NodeDefinition<
             name: "a claim with no amount gets the plain line",
             params: { locale: "en" },
             input: { conversationId: "c1", leadId: "l1", body: "I paid already", amountVnd: null, payerName: null },
-            output: { reply: "We are checking your transaction.", claim: { kind: "conversation", id: "c1" } },
+            output: {
+                reply: "We are checking your transaction.",
+                claim: { kind: "payment-claim.record", id: "payment-claim.record-1" },
+            },
             effects: [
                 {
                     kind: "payment-claim.record",

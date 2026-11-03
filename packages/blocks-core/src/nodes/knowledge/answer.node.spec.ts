@@ -1,93 +1,106 @@
-import { expectedEffects, runExample } from "../node-examples.fixture"
+import { nodeExampleMismatches } from "@nivo-lite/agent-sdk/testing"
+import { coreEffects } from "../../vocabulary/effects"
 import { knowledgeAnswerNode } from "./answer.node"
 import { publicDocumentsOf } from "./answer.policy"
 import { guardClaims, plainOf } from "./claims.policy"
 import { amountsIn, hasInventedFigure } from "./figures.policy"
 
-const [priced, ...others] = knowledgeAnswerNode.examples
-const BASE = priced
+const [priced] = knowledgeAnswerNode.examples
+const KEPT_GAP = (question: string, locale: "vi" | "en" = "vi") => ({
+    reply: locale === "vi" ? "Em chưa có thông tin về nội dung này ạ." : "I do not have information on this yet.",
+    grounded: false,
+    rewritten: false,
+    removedClaims: [] as Array<string>,
+    knowledgeGap: question,
+})
+
+/** The mismatches of the priced example changed by what a test sets. */
+const mismatchesOf = (change: Partial<typeof priced>): Promise<ReadonlyArray<string>> =>
+    nodeExampleMismatches(knowledgeAnswerNode, { ...priced, ...change }, coreEffects)
 
 describe("knowledge.answer", () => {
-    it.each([priced, ...others].map((example) => [example.name, example] as const))(
+    it.each(knowledgeAnswerNode.examples.map((each) => [each.name, each] as const))(
         "example: %s",
-        async (_name, example) => {
-            const run = await runExample(knowledgeAnswerNode, example)
-            expect(run.output).toEqual(example.output)
-            expect(run.effects).toEqual(expectedEffects(example))
+        async (_name, each) => {
+            await expect(nodeExampleMismatches(knowledgeAnswerNode, each, coreEffects)).resolves.toEqual([])
         },
     )
 
     it("is a gap, with no model call, when the store holds no public document", async () => {
-        const run = await runExample(knowledgeAnswerNode, {
-            ...BASE,
-            store: { "knowledge-document": [{ id: "d2", title: "t", body: "b", visibility: "internal" }] },
-            model: [],
-        })
-        expect(run.output).toEqual({
-            reply: "Em chưa có thông tin về nội dung này ạ.",
-            grounded: false,
-            rewritten: false,
-            removedClaims: [],
-            knowledgeGap: "Chậu hoa giá bao nhiêu?",
-        })
+        await expect(
+            mismatchesOf({
+                store: { "knowledge-document": [{ id: "d2", title: "t", body: "b", visibility: "internal" }] },
+                model: [],
+                output: KEPT_GAP("Chậu hoa giá bao nhiêu?"),
+            }),
+        ).resolves.toEqual([])
     })
 
     it("is a gap when the model finds no answer, and in English when the graph says so", async () => {
-        const run = await runExample(knowledgeAnswerNode, {
-            ...BASE,
-            params: { locale: "en", claims: null },
-            model: ["NO_ANSWER"],
-        })
-        expect(run.output).toMatchObject({ reply: "I do not have information on this yet.", grounded: false })
+        await expect(
+            mismatchesOf({
+                params: { locale: "en", claims: null },
+                model: ["NO_ANSWER"],
+                output: KEPT_GAP("Chậu hoa giá bao nhiêu?", "en"),
+            }),
+        ).resolves.toEqual([])
     })
 
-    it("is a gap when the model answers nothing", async () => {
-        const run = await runExample(knowledgeAnswerNode, { ...BASE, model: ["   "] })
-        expect(run.output).toMatchObject({ grounded: false, knowledgeGap: "Chậu hoa giá bao nhiêu?" })
-    })
-
-    it("is a gap when the reply names a price the documents do not write", async () => {
-        const run = await runExample(knowledgeAnswerNode, { ...BASE, model: ["Chậu hoa giá 99.000 đồng ạ."] })
-        expect(run.output).toMatchObject({ grounded: false })
+    it("is a gap when the model answers nothing, or names a price the documents do not write", async () => {
+        for (const text of ["   ", "Chậu hoa giá 99.000 đồng ạ."])
+            await expect(mismatchesOf({ model: [text], output: KEPT_GAP("Chậu hoa giá bao nhiêu?") })).resolves.toEqual(
+                [],
+            )
     })
 
     it("lets a claim through when the turn recorded its effect", async () => {
-        const run = await runExample(knowledgeAnswerNode, {
-            ...BASE,
-            input: { question: "Đơn của mình?", recordedEffects: ["order.record"] },
-            model: ["Em đã ghi nhận đơn của bạn ạ."],
-        })
-        expect(run.output).toMatchObject({ reply: "Em đã ghi nhận đơn của bạn ạ.", rewritten: false })
+        await expect(
+            mismatchesOf({
+                input: { question: "Đơn của mình?", recordedEffects: ["order.record"] },
+                model: ["Em đã ghi nhận đơn của bạn ạ."],
+                output: {
+                    reply: "Em đã ghi nhận đơn của bạn ạ.",
+                    grounded: true,
+                    rewritten: false,
+                    removedClaims: [],
+                    knowledgeGap: null,
+                },
+            }),
+        ).resolves.toEqual([])
     })
 
     it("answers neutrally when every sentence claimed an action the turn did not do", async () => {
-        const run = await runExample(knowledgeAnswerNode, {
-            ...BASE,
-            model: ["Em đã nhận được tiền của bạn. Thanh toán thành công."],
-        })
-        expect(run.output).toEqual({
-            reply: "Em đã nhận được tin nhắn của bạn ạ.",
-            grounded: true,
-            rewritten: true,
-            removedClaims: ["payment-received"],
-            knowledgeGap: null,
-        })
+        await expect(
+            mismatchesOf({
+                model: ["Em đã nhận được tiền của bạn. Thanh toán thành công."],
+                output: {
+                    reply: "Em đã nhận được tin nhắn của bạn ạ.",
+                    grounded: true,
+                    rewritten: true,
+                    removedClaims: ["payment-received"],
+                    knowledgeGap: null,
+                },
+            }),
+        ).resolves.toEqual([])
     })
 
     it("uses the claim rules of the graph instead of the default ones", async () => {
-        const run = await runExample(knowledgeAnswerNode, {
-            ...BASE,
-            params: {
-                locale: "en",
-                claims: [{ id: "gift", requires: "gift.send", phrases: { vi: [], en: ["gift is on its way"] } }],
-            },
-            model: ["Your gift is on its way. Order recorded."],
-        })
-        expect(run.output).toMatchObject({
-            reply: "Order recorded.",
-            rewritten: true,
-            removedClaims: ["gift"],
-        })
+        await expect(
+            mismatchesOf({
+                params: {
+                    locale: "en",
+                    claims: [{ id: "gift", requires: "gift.send", phrases: { vi: [], en: ["gift is on its way"] } }],
+                },
+                model: ["Your gift is on its way. Order recorded."],
+                output: {
+                    reply: "Order recorded.",
+                    grounded: true,
+                    rewritten: true,
+                    removedClaims: ["gift"],
+                    knowledgeGap: null,
+                },
+            }),
+        ).resolves.toEqual([])
     })
 })
 

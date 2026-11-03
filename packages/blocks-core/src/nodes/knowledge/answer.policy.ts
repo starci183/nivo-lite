@@ -1,4 +1,4 @@
-import type { ModelAsk } from "@nivo-lite/agent-sdk/node"
+import type { NodeModelRequest } from "@nivo-lite/agent-sdk/node"
 import { ANSWER_INSTRUCTIONS, ANSWER_WORDS, DEFAULT_CLAIMS, NO_ANSWER } from "./answer.messages"
 import type { AnswerInput, AnswerOutput, AnswerParams, DocumentRow } from "./answer.types"
 import { guardClaims } from "./claims.policy"
@@ -18,7 +18,7 @@ export const documentsTextOf = (documents: ReadonlyArray<DocumentRow>): string =
     documents.map((document) => `${document.title}\n${document.body}`).join("\n")
 
 /** The model call: the rules as instructions, the question and the public documents as data. */
-export const answerAsk = (question: string, documents: ReadonlyArray<DocumentRow>): ModelAsk => ({
+export const answerAsk = (question: string, documents: ReadonlyArray<DocumentRow>): NodeModelRequest => ({
     purpose: "knowledge-answer",
     instructions: ANSWER_INSTRUCTIONS,
     input: {

@@ -15,6 +15,7 @@ const params: NodeSchema<HandoffParams> = z.object({ toAgentKey: z.string().min(
 
 const input: NodeSchema<HandoffInput> = z.object({
     text: z.string().min(1).max(TEXT_MAX),
+    conversationId: z.string().min(1).max(TARGET_MAX).nullable(),
     context: z
         .record(z.string().max(TARGET_MAX), contextValue)
         .refine((entries) => Object.keys(entries).length <= CONTEXT_KEYS_MAX)
@@ -41,11 +42,11 @@ export const coreHandoffNode: NodeDefinition<
     rights: [],
     effects: ["agent.tag"],
     run: async (given, context) => {
-        const subject = context.turn.subject ?? { kind: "turn", id: context.turn.turnId }
-        const tag = await context.effect("agent.tag", subject, {
-            toAgentKey: context.params.toAgentKey,
+        const tag = await context.effect("agent.tag", {
+            toModuleKey: context.params.toAgentKey,
             text: tagTextOf(given),
-            subject: context.turn.subject ?? undefined,
+            ...(given.conversationId === null ? {} : { conversationId: given.conversationId }),
+            ...(context.turn.subject === null ? {} : { subject: context.turn.subject }),
         })
         return { toAgentKey: context.params.toAgentKey, tag }
     },
@@ -53,15 +54,19 @@ export const coreHandoffNode: NodeDefinition<
         {
             name: "tags the target agent with the note and the context",
             params: { toAgentKey: "sales" },
-            input: { text: "Khách muốn đặt 1 chậu hoa", context: { intent: "order", address: "69 Hàng Xanh" } },
-            output: { toAgentKey: "sales", tag: { kind: "conversation", id: "c1" } },
+            input: {
+                text: "Khách muốn đặt 1 chậu hoa",
+                conversationId: "c1",
+                context: { intent: "order", address: "69 Hàng Xanh" },
+            },
+            output: { toAgentKey: "sales", tag: { kind: "agent.tag", id: "agent.tag-1" } },
             effects: [
                 {
                     kind: "agent.tag",
                     payload: {
-                        toAgentKey: "sales",
+                        toModuleKey: "sales",
                         text: 'Khách muốn đặt 1 chậu hoa\n{"intent":"order","address":"69 Hàng Xanh"}',
-                        subject: { kind: "conversation", id: "c1" },
+                        conversationId: "c1",
                     },
                 },
             ],
@@ -69,15 +74,14 @@ export const coreHandoffNode: NodeDefinition<
         {
             name: "tags with the note alone",
             params: { toAgentKey: "care" },
-            input: { text: "Khách cần hỗ trợ sau mua", context: null },
-            output: { toAgentKey: "care", tag: { kind: "conversation", id: "c1" } },
+            input: { text: "Khách cần hỗ trợ sau mua", conversationId: null, context: null },
+            output: { toAgentKey: "care", tag: { kind: "agent.tag", id: "agent.tag-1" } },
             effects: [
                 {
                     kind: "agent.tag",
                     payload: {
-                        toAgentKey: "care",
+                        toModuleKey: "care",
                         text: "Khách cần hỗ trợ sau mua",
-                        subject: { kind: "conversation", id: "c1" },
                     },
                 },
             ],
