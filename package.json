@@ -26,6 +26,7 @@
     "@starci/ai-router": "0.5.0",
     "@starci/auth": "0.2.0",
     "@starci/nest-kit": "0.1.0",
+    "@starci/object-storage": "0.1.0",
     "bullmq": "6.3.11",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
