@@ -62,6 +62,12 @@ export interface AgentWakeContext {
     readonly room?: string
     /** The work thread of a tag. */
     readonly threadId?: string
+    /** What the tagger said, for a tag. */
+    readonly text?: string
+    /** The record a tag is about. */
+    readonly subject?: string
+    /** What started a tag that no agent or person made, for example a feed. */
+    readonly tagSource?: string
     /** The agent whose end node tagged this one. */
     readonly fromAgentId?: string
     /** The account that wrote the tagging message. */

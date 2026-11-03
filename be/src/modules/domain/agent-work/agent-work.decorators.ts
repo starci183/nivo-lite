@@ -1,6 +1,6 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { AgentTurnExecutor, WakeInterruptions } from "./agent-work.port"
+import type { AgentTagRights, AgentTurnExecutor, WakeInterruptions } from "./agent-work.port"
 
 /** Token of the turn executor port: absent until a capability binds one, and then every wake is held for want of it. */
 export const AGENT_TURN_EXECUTOR: unique symbol = Symbol("domain.agent-work.turn-executor")
@@ -15,3 +15,10 @@ export const AGENT_WAKE_INTERRUPTIONS: unique symbol = Symbol("domain.agent-work
 /** Injects the wake interruptions port. Parameter type: WakeInterruptions. */
 export const InjectWakeInterruptions = (): TypedParameterDecorator<WakeInterruptions> =>
     injector<WakeInterruptions>(AGENT_WAKE_INTERRUPTIONS)
+
+/** Token of the tag rights port: absent until a capability binds one, and then no agent may tag another. */
+export const AGENT_TAG_RIGHTS: unique symbol = Symbol("domain.agent-work.tag-rights")
+
+/** Injects the tag rights port. Parameter type: AgentTagRights. */
+export const InjectAgentTagRights = (): TypedParameterDecorator<AgentTagRights> =>
+    injector<AgentTagRights>(AGENT_TAG_RIGHTS)

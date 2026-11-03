@@ -24,6 +24,11 @@ describe("wakeOriginOf", () => {
             { source: "tag", context: { fromAgentId: "a1", conversationId: "c1" }, actorMemberId: null },
             "agent",
         ],
+        [
+            "a tag a feed or an event started",
+            { source: "tag", context: { tagSource: "feed" }, actorMemberId: null },
+            "event",
+        ],
         ["another agent's end node", { source: "tag", context: { threadId: "t1" }, actorMemberId: null }, "agent"],
     ] as const)("names %s", (_case, wake, origin) => {
         expect(wakeOriginOf(wake)).toBe(origin)

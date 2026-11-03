@@ -1,0 +1,95 @@
+import { Test } from "@nestjs/testing"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { AgentTagService } from "./agent-tag.service"
+import { AgentWakeService } from "./agent-wake.service"
+import { AGENT_TAG_RIGHTS } from "./agent-work.decorators"
+import type { AgentTagRights } from "./agent-work.port"
+
+const BASE = { workspaceId: "ws-1", toAgentId: "sales", text: "Order for 5 baskets", eventKey: "order:1" }
+
+const build = async (rights: AgentTagRights | null) => {
+    const tx = fakeTransaction(mockEntityManager())
+    const wakes = mock<AgentWakeService>()
+    wakes.write.mockResolvedValue("wake-1")
+    const providers = [
+        AgentTagService,
+        { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+        { provide: AgentWakeService, useValue: wakes },
+        ...(rights === null ? [] : [{ provide: AGENT_TAG_RIGHTS, useValue: rights }]),
+    ]
+    const moduleRef = await Test.createTestingModule({ providers }).compile()
+    return { service: moduleRef.get(AgentTagService), wakes, tx }
+}
+
+describe("AgentTagService.tagAgent", () => {
+    it("wakes the target at its tag trigger with the words, the conversation and the agent behind the tag", async () => {
+        const rights = mock<AgentTagRights>({ canTag: jest.fn().mockResolvedValue(true) })
+        const { service, wakes } = await build(rights)
+
+        await expect(
+            service.tagAgent({ ...BASE, fromAgentId: "chat", subject: "order-1", conversationId: "c1" }),
+        ).resolves.toEqual({ tagged: true, wakeId: "wake-1" })
+
+        expect(rights.canTag).toHaveBeenCalledWith("chat", "sales")
+        expect(wakes.write).toHaveBeenCalledWith(expect.anything(), {
+            workspaceId: "ws-1",
+            agentId: "sales",
+            source: "tag",
+            eventKey: "order:1",
+            context: { text: "Order for 5 baskets", subject: "order-1", conversationId: "c1", fromAgentId: "chat" },
+            actorMemberId: null,
+        })
+    })
+
+    it("refuses an agent the lists do not allow, an agent that tags itself, and any agent when no right is bound", async () => {
+        const denying = await build(mock<AgentTagRights>({ canTag: jest.fn().mockResolvedValue(false) }))
+        const itself = await build(mock<AgentTagRights>({ canTag: jest.fn().mockResolvedValue(true) }))
+        const unbound = await build(null)
+
+        await expect(denying.service.tagAgent({ ...BASE, fromAgentId: "chat" })).resolves.toEqual({
+            tagged: false,
+            reason: "not_allowed",
+        })
+        await expect(itself.service.tagAgent({ ...BASE, fromAgentId: "sales" })).resolves.toMatchObject({
+            tagged: false,
+        })
+        await expect(unbound.service.tagAgent({ ...BASE, fromAgentId: "chat" })).resolves.toMatchObject({
+            tagged: false,
+        })
+        expect(denying.wakes.write).not.toHaveBeenCalled()
+        expect(unbound.wakes.write).not.toHaveBeenCalled()
+    })
+
+    it("records the person behind an @ tag and the source of a system tag, with no right to check", async () => {
+        const { service, wakes } = await build(null)
+        const { eventKey: _unused, ...open } = BASE
+
+        await service.tagAgent({ ...open, personId: "m1" })
+        await service.tagAgent({ ...open, source: "bank-feed" }, mockEntityManager())
+
+        expect(wakes.write).toHaveBeenNthCalledWith(
+            1,
+            expect.anything(),
+            expect.objectContaining({ actorMemberId: "m1", eventKey: expect.stringMatching(/^tag:/u) }),
+        )
+        expect(wakes.write).toHaveBeenNthCalledWith(
+            2,
+            expect.anything(),
+            expect.objectContaining({
+                actorMemberId: null,
+                context: { text: "Order for 5 baskets", tagSource: "bank-feed" },
+            }),
+        )
+    })
+
+    it("answers a duplicate when the same fact was already written", async () => {
+        const { service, wakes } = await build(null)
+        wakes.write.mockResolvedValue(null)
+
+        await expect(service.tagAgent({ ...BASE, source: "bank-feed" })).resolves.toEqual({
+            tagged: false,
+            reason: "duplicate",
+        })
+    })
+})
