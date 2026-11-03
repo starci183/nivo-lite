@@ -12,6 +12,7 @@
       "name": "NIVO Demo",
       "seats": [
         { "role": "owner", "name": "Demo owner", "emailKey": "DEMO_OWNER_EMAIL", "passwordKey": "DEMO_OWNER_PASSWORD" },
+        { "role": "manager", "name": "Demo manager", "emailKey": "DEMO_MANAGER_EMAIL", "passwordKey": "DEMO_MANAGER_PASSWORD" },
         { "role": "staff", "name": "Demo staff", "emailKey": "DEMO_STAFF_EMAIL", "passwordKey": "DEMO_STAFF_PASSWORD" }
       ]
     }
