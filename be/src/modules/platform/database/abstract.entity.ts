@@ -2,8 +2,8 @@ import { Column, PrimaryGeneratedColumn } from "typeorm"
 
 /** The timestamp columns every table of a migration carries: an entity extends this base instead of declaring them; it maps no table itself. */
 export abstract class AbstractEntity {
-    /** When the row was created; the database sets it (`DEFAULT now()`) unless the insert names a time, and no update changes it. */
-    @Column({ name: "created_at", type: "timestamptz", insert: true, update: false })
+    /** When the row was created; the database sets it. An entity whose rows carry an outside time opens it to insert on its own column. */
+    @Column({ name: "created_at", type: "timestamptz", insert: false, update: false })
     createdAt!: Date
 
     /** When the row last changed; the database trigger sets it. */

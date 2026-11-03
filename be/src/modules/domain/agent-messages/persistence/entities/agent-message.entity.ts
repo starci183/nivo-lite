@@ -4,6 +4,13 @@ import { Column, Entity } from "typeorm"
 @Entity({ schema: "public", name: "agent_messages" })
 /** One message of a conversation between a customer and an agent: what a person wrote, what the agent answered, or a workbench line. */
 export class AgentMessageEntity extends UuidAbstractEntity {
+    /**
+     * When the message was said: the database sets it (`DEFAULT now()`), unless the insert names the time an imported, polled or
+     * webhook message carried. Open to insert on this entity alone, so no other table takes a time from its caller; no update changes it.
+     */
+    @Column({ name: "created_at", type: "timestamptz", insert: true, update: false })
+    declare createdAt: Date
+
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })
     workspaceId!: string
