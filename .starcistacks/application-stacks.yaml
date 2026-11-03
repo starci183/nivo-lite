@@ -66,13 +66,13 @@ components:
     required: true
   nivo-openclaw:
     role: stateful
-    image: ghcr.io/openclaw/openclaw:2026.7.1@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c
+    image: ghcr.io/starci183/nivo-lite-openclaw:0.3.0@sha256:0000000000000000000000000000000000000000000000000000000000000000
     compose: infra/swarm/stack.yaml
-    purpose: The OpenClaw agent gateway. Private network only; the api reaches it by service DNS through the loopback relay of the entrypoint wrapper.
+    purpose: The OpenClaw agent gateway, built from .starcistacks/images/openclaw/Dockerfile (the StarCi OpenClaw fork plus the NIVO wrapper and nivo-bridge plugin). Private network only; the api reaches it by service DNS through the loopback relay of the entrypoint wrapper.
     required: true
   nivo-minio:
     role: stateful
-    image: ghcr.io/starci183/minio:RELEASE.2025-10-15T17-29-55Z-starci.1
+    image: ghcr.io/starci183/minio:RELEASE.2025-10-15T17-29-55Z-starci.1@sha256:ec6dfba54eaa8e0d77bed9e7c6d86df90ad341f914ecfd3d613f0f811155f40f
     compose: infra/compose/compose.yaml
     purpose: The S3-compatible object store of the dev environment (production uses the host's MinIO through STORAGE_ENDPOINT). Loopback only, on the persisted volume minio-data.
     required: false
@@ -261,7 +261,7 @@ environments:
         - {name: nivo-redis, wait: healthy}
         - {name: nivo-minio, wait: tcp, port: minio}
         - {name: nivo-openclaw, wait: healthy}
-      dirs: [openclaw, ai-router]
+      dirs: [openclaw-state, ai-router]
       database:
         service: db
         port: db
@@ -292,6 +292,17 @@ environments:
         # The api and the mcp gateway run compiled: Nest reads GraphQL field types from the decorator metadata only tsc emits,
         # so a transpile-only loader leaves a union-typed field (RunFlowInput.kind) as Object and boot fails.
         - {name: build-be, argv: [npm, run, build:be], heavy: build}
+        # The console runs compiled (next build, then next start): under next dev a page compiles on its first request, and a browser walk
+        # met an unhydrated sign-in form for seconds. The public build values are the dev origins.
+        - name: build-web
+          argv: [npx, next, build]
+          cwd: fe/apps/web
+          heavy: build
+          env:
+            NEXT_PUBLIC_API_URL: "http://localhost:${port.api}"
+            NEXT_PUBLIC_DEVELOPER_API_URL: "http://localhost:${port.api}"
+            NEXT_PUBLIC_SITE_URL: "http://localhost:${port.web}"
+            NEXT_PUBLIC_LANDING_URL: "http://localhost:${port.landing}"
       processes:
         - name: api
           argv: [node, dist/apps/api/src/main.js]
@@ -318,7 +329,7 @@ environments:
             AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
             AI_ROUTER_KEYS_PATH: "${data}/ai-router/keys.db"
             OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:${port.openclaw}"
-            OPENCLAW_CONFIG_DIR: "${data}/openclaw"
+            OPENCLAW_CONFIG_DIR: "${data}/openclaw-state"
             OPENCLAW_MANAGE_AGENTS: "true"
             WORKSPACE_SIGNUP_ENABLED: "true"
           health: {url: "http://localhost:${port.api}/healthz"}
@@ -338,17 +349,19 @@ environments:
             AI_BASE_URL: "http://127.0.0.1:${port.gateway}/v1"
           health: {url: "http://localhost:${port.mcp}/healthz"}
         - name: web
-          argv: [npm, run, dev:fe:web]
+          # The build of the setup step build-web, served by next start in the app folder (turbo strips undeclared env such as PORT from
+          # its tasks, and turbo.json is a managed file).
+          argv: [npx, next, start]
+          cwd: fe/apps/web
           port: web
           env:
             PORT: "${port.web}"
-            NEXT_PUBLIC_API_URL: "http://localhost:${port.api}"
-            NEXT_PUBLIC_DEVELOPER_API_URL: "http://localhost:${port.api}"
-            NEXT_PUBLIC_SITE_URL: "http://localhost:${port.web}"
-            NEXT_PUBLIC_LANDING_URL: "http://localhost:${port.landing}"
           health: {url: "http://localhost:${port.web}/health/live"}
         - name: landing
-          argv: [npm, run, dev:fe:landing]
+          # next dev directly in the app folder (the setup ran codegen): turbo strips undeclared env such as PORT from its tasks, and
+          # turbo.json is a managed file, so `npm run dev:fe:landing` would start on 3000 whatever port is declared.
+          argv: [npx, next, dev]
+          cwd: fe/apps/landing
           port: landing
           env:
             PORT: "${port.landing}"
@@ -686,6 +699,9 @@ environments:
         nivo-api: {app: api}
         nivo-mcp: {app: mcp}
         db: {app: db}
+        # nivo-openclaw is built from .starcistacks/images/openclaw/Dockerfile, but deploy.images accepts only an app hfs.json declares (and the
+        # db image), so it is not listed here yet: the harness's image build (stack build, images.yml) resolves no other .starcistacks image.
+        # Until it does, a deploy passes --image nivo-openclaw=<pushed digest> by hand.
         nivo-web-app:
           app: web
           buildArgs:
@@ -779,13 +795,6 @@ environments:
           settings:
             OPENCLAW_MODEL: {key: OPENCLAW_MODEL, default: nivo-ai/work}
       configs:
-        - {name: openclaw-entrypoint, file: infra/swarm/openclaw/entrypoint.sh, env: NIVO_CFG_OPENCLAW_ENTRYPOINT}
-        - {name: openclaw-init, file: infra/swarm/openclaw/openclaw-init.mjs, env: NIVO_CFG_OPENCLAW_INIT}
-        - {name: openclaw-relay, file: infra/swarm/openclaw/openclaw-relay.mjs, env: NIVO_CFG_OPENCLAW_RELAY}
-        - {name: nivo-bridge-manifest, file: infra/swarm/openclaw/nivo-bridge/openclaw.plugin.json, env: NIVO_CFG_NIVO_BRIDGE_MANIFEST}
-        - {name: nivo-bridge-package, file: infra/swarm/openclaw/nivo-bridge/package.json, env: NIVO_CFG_NIVO_BRIDGE_PACKAGE}
-        - {name: nivo-bridge-index, file: infra/swarm/openclaw/nivo-bridge/index.js, env: NIVO_CFG_NIVO_BRIDGE_INDEX}
-        - {name: nivo-bridge-token, file: infra/swarm/openclaw/nivo-bridge/bridge-token.js, env: NIVO_CFG_NIVO_BRIDGE_TOKEN}
         - {name: postgres-backup, file: infra/swarm/postgres/backup.sh, env: NIVO_CFG_POSTGRES_BACKUP}
       verify:
         http:

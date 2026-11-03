@@ -89,3 +89,5 @@ secrets.env
 
 # Written by the Next dev server (nextjs-agent-rules); generated, never tracked.
 fe/apps/web/AGENTS.md
+# The NIVO OpenClaw image (.starcistacks/images/openclaw): its Dockerfile, the wrapper and the nivo-bridge plugin (value-free sources).
+!.starcistacks/images/openclaw/**

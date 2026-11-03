@@ -1,5 +1,5 @@
 #!/bin/sh
-# Entrypoint wrapper of the OpenClaw gateway on Swarm (a config object mounted at /opt/nivo/entrypoint.sh).
+# Entrypoint wrapper of the NIVO OpenClaw image (.starcistacks/images/openclaw/Dockerfile copies it to /opt/nivo/entrypoint.sh).
 #
 # 1. The OpenClaw image has no `<NAME>_FILE` support, so the gateway token and the StarCi AI gateway virtual key (STARCI_AI_KEY) are exported from the Swarm secrets
 #    under /run/secrets into THIS process tree only: no env file on the host, no value in the service specification.
