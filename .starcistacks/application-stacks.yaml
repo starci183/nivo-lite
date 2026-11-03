@@ -556,6 +556,9 @@ environments:
             HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing},https://nivo-local-app.starci.org"
             # SITE_URL is the public tunnel origin, so the private-target guards of a workspace SMTP account and a data source no longer see a development site.
             DATA_ALLOW_PRIVATE_HOSTS: "true"
+            # The burst window of a conversation (agent-work): quiet for 6s before the agent answers, never more than 20s of waiting.
+            AGENT_BURST_WINDOW: "6s"
+            AGENT_BURST_MAX_WAIT: "20s"
             SMTP_ALLOW_PRIVATE_HOSTS: "true"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
