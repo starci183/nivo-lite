@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AGENT_TURN_EXECUTOR } from "./agent-work.decorators"
-import type { AgentTurnExecutor, AgentWorkFallback, AgentWorkHandler } from "./agent-work.port"
+import type { AgentTurnExecutor, AgentWorkFallback, AgentWorkFlow, AgentWorkHandler } from "./agent-work.port"
 
 const handler = (...sources: AgentWorkHandler["sources"]): AgentWorkHandler => mock<AgentWorkHandler>({ sources })
 
@@ -62,6 +62,21 @@ describe("AgentWorkHandlersService", () => {
             new AgentWorkError({ code: AgentWorkErrorCode.HandlerDuplicate, params: { source: "tag" } }),
         )
         expect(service.of("customer")).toBeUndefined()
+    })
+})
+
+describe("AgentWorkHandlersService flow", () => {
+    it("answers no flow until one is set, then the one set, and refuses a second", async () => {
+        const service = await build()
+        const flow = mock<AgentWorkFlow>()
+        expect(service.flowOf()).toBeUndefined()
+
+        service.setFlow(flow)
+
+        expect(service.flowOf()).toBe(flow)
+        expect(() => service.setFlow(flow)).toThrow(
+            new AgentWorkError({ code: AgentWorkErrorCode.HandlerDuplicate, params: { source: "flow" } }),
+        )
     })
 })
 

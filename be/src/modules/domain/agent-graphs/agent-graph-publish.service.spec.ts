@@ -1,5 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { z } from "zod"
+import { defineNode, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
+import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import {
     OWNER_EXAMPLE,
@@ -31,6 +36,27 @@ const VERSION = {
 }
 const INSTALLATION = { id: "inst-1", moduleKey: "accounting" }
 
+const echo = defineNode({
+    id: "core.echo",
+    role: "output",
+    title: { key: "e" },
+    params: z.object({}),
+    input: z.object({}),
+    output: z.object({}),
+    rights: [],
+    effects: [],
+    run: () => Promise.resolve({}),
+    examples: [{ name: "e", params: {}, input: {}, output: {}, effects: [] }],
+}) as unknown as NodeDefinition
+
+const FLOW: GraphSpec = {
+    schema: "nivo/agent-graph@1",
+    moduleKey: "accounting",
+    trigger: { kind: "tag", sources: ["agent"] },
+    grant: { rights: [], tools: [], effects: [] },
+    nodes: [{ key: "echo", kind: "output", step: "core.echo" }],
+}
+
 const build = async (state: OptionalGraphState, options: { context?: GraphContext; installation?: boolean } = {}) => {
     const graphs = mock<AgentGraphsService>({
         stateOfAgent: jest.fn().mockResolvedValue(state),
@@ -50,6 +76,12 @@ const build = async (state: OptionalGraphState, options: { context?: GraphContex
             { provide: AgentGraphsService, useValue: graphs },
             { provide: AgentGraphContextService, useValue: context },
             { provide: InstallationRecordsService, useValue: installations },
+            {
+                provide: GraphNodeRegistryService,
+                useValue: mock<GraphNodeRegistryService>({
+                    installed: jest.fn().mockReturnValue(nodeIndexOf({ nodes: [echo], effects: [], tools: [], dataKinds: [] })),
+                }),
+            },
         ],
     }).compile()
     return { service: moduleRef.get(AgentGraphPublishService), graphs, context }
@@ -251,6 +283,30 @@ describe("AgentGraphPublishService.publishLearned", () => {
         const { service, graphs } = await build(stateOf())
 
         expect(await codeOf(service.publishLearned("ws-1", "agent-1", raised(stateOf()), MANAGER))).toBe(
+            AgentGraphsErrorCode.WidensNeedsOwner,
+        )
+        expect(graphs.publish).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphPublishService, a node graph", () => {
+    it("publishes a version whose node graph the installed nodes take, by the owner", async () => {
+        const { service, graphs } = await build(stateOf())
+        const document = { ...stateOf().draft, flow: FLOW }
+
+        await expect(service.publishLearned("ws-1", "agent-1", document, OWNER)).resolves.toBe(VERSION)
+
+        expect(graphs.publish).toHaveBeenCalledWith(expect.objectContaining({ document }))
+    })
+
+    it("refuses a node graph that names a node the app did not install, and a change of it by anyone but the owner", async () => {
+        const { service, graphs } = await build(stateOf())
+        const ghost = { ...FLOW, nodes: [{ key: "x", kind: "output" as const, step: "core.ghost" }] }
+
+        expect(await codeOf(service.publishLearned("ws-1", "agent-1", { ...stateOf().draft, flow: ghost }, OWNER))).toBe(
+            AgentGraphsErrorCode.PublishRefused,
+        )
+        expect(await codeOf(service.publishLearned("ws-1", "agent-1", { ...stateOf().draft, flow: FLOW }, MANAGER))).toBe(
             AgentGraphsErrorCode.WidensNeedsOwner,
         )
         expect(graphs.publish).not.toHaveBeenCalled()

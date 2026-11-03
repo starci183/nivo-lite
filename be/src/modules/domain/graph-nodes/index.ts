@@ -11,6 +11,8 @@ export type {
     NodeInstall,
     NodeRow,
     NodeRunInput,
+    NodeSubjectResolver,
     NodeToolDoor,
     NodeTurn,
+    NodeUndoInput,
 } from "./graph-nodes.contracts"

@@ -132,11 +132,15 @@ export class AgentDrainService {
         }
     }
 
-    private run(turn: AgentTurnView, signal: AbortSignal): Promise<Step> {
+    private async run(turn: AgentTurnView, signal: AbortSignal): Promise<Step> {
+        const flow = this.handlers.flowOf()
+        if (flow !== undefined && (await flow.takes(turn))) {
+            return { kind: "ending", ending: endingOf(await flow.run(turn, signal), null) }
+        }
         const handler = this.handlers.of(turn.source)
         if (handler === undefined) {
             this.logger.warn(AgentWorkLogEvent.NoHandler, { agentId: turn.agentId, source: turn.source })
-            return Promise.resolve({ kind: "ending", ending: heldBy("no_handler") })
+            return { kind: "ending", ending: heldBy("no_handler") }
         }
         if (turn.proposal !== null) return this.settle(handler, turn, turn.proposal, null, signal)
         return this.propose(handler, turn, signal)

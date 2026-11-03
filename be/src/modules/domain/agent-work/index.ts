@@ -50,6 +50,7 @@ export type {
     AgentTurnPrep,
     AgentTurnRun,
     AgentWorkFallback,
+    AgentWorkFlow,
     AgentWorkHandler,
 } from "./agent-work.port"
 export type { AgentBegin } from "./agent-work-turns.contracts"

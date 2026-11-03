@@ -34,6 +34,8 @@ import { AgentGraphToolGateService } from "./agent-graph-tool-gate.service"
 import { AgentGraphWatchService } from "./agent-graph-watch.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsService } from "./agent-graphs.service"
+import { GraphFlowService } from "./graph-flow.service"
+import { GraphNodeStepService } from "./graph-node-step.service"
 import { GraphFactsService } from "./graph-facts.service"
 import { GraphFactReadersService } from "./graph-fact-readers.service"
 import type { GraphFactReader } from "./agent-graphs.port"
@@ -127,6 +129,8 @@ const WHOLE: Part = {
         AgentGraphSetupService,
         AgentGraphContractSetupService,
         AgentGraphWaitTimeoutService,
+        GraphFlowService,
+        GraphNodeStepService,
     ],
     ports: [
         { provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService },
