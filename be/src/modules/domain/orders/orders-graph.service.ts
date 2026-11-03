@@ -27,8 +27,6 @@ const recordPayload = z.object({
 
 const confirmPayload = z.object({ orderId: z.string().min(1) })
 
-const undoPayload = z.object({ id: z.string().min(1) })
-
 /** The order as the `order` data kind names its fields. */
 const rowOf = (order: SalesOrderRow): NodeRow => ({
     id: order.id,
@@ -61,7 +59,6 @@ export class OrdersGraphService implements OnModuleInit {
         this.registry?.addDataPort({ kind: "order", read: (turn, query, scope) => this.read(turn, query, scope) })
         this.registry?.addExecutor({ effect: "order.record", execute: (turn, payload) => this.record(turn, payload) })
         this.registry?.addExecutor({ effect: "order.confirm", execute: (turn, payload) => this.confirm(turn, payload) })
-        this.registry?.addExecutor({ effect: "order.unconfirm", execute: (turn, payload) => this.unconfirm(turn, payload) })
     }
 
     private async read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<ReadonlyArray<NodeRow>> {
@@ -109,12 +106,5 @@ export class OrdersGraphService implements OnModuleInit {
             })
         }
         return { kind: "order", id: orderId }
-    }
-
-    /** Takes the confirmation of an order back; an order that is not confirmed (or not in the workspace) stays as it is. */
-    private async unconfirm(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
-        const { id } = undoPayload.parse(payload)
-        await this.orders.unconfirm(turn.workspaceId, id)
-        return { kind: "order", id }
     }
 }

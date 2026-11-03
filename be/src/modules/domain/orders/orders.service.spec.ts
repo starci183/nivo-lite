@@ -441,21 +441,6 @@ const registerTransitions = () => {
 }
 
 const registerUndo = () => {
-    describe("unconfirm", () => {
-        it("makes a confirmed order a draft again, and answers null once it is not confirmed", async () => {
-            const draft = orderOf({ status: "draft" })
-            const em = mockEntityManager()
-            const update = fakeQueryBuilder({ execute: { raw: [writtenOf(draft)] } })
-            answerQueryBuilders(em, update)
-            const orders = await build(em)
-
-            await expect(orders.unconfirm("ws-1", "order-1")).resolves.toEqual(draft)
-            expect(update.argsOf("set")).toEqual([[{ status: "draft", confirmedBy: null, confirmedAt: null }]])
-            expect(update.argsOf("where")).toEqual([[{ workspaceId: "ws-1", id: "order-1", status: "confirmed" }]])
-            await expect((await build(writing([]).em)).unconfirm("ws-1", "order-1")).resolves.toBeNull()
-        })
-    })
-
     describe("markFailedSystem", () => {
         it("marks the order failed_system in its workspace, and answers null when it already is", async () => {
             const failed = orderOf({ status: "failed_system" })
