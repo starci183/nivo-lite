@@ -289,10 +289,12 @@ environments:
       setup:
         - {name: install, argv: [npm, ci], heavy: install, skipIfExists: node_modules}
         - {name: codegen, argv: [npm, run, codegen, --silent], heavy: build}
+        # The api and the mcp gateway run compiled: Nest reads GraphQL field types from the decorator metadata only tsc emits,
+        # so a transpile-only loader leaves a union-typed field (RunFlowInput.kind) as Object and boot fails.
+        - {name: build-be, argv: [npm, run, build:be], heavy: build}
       processes:
         - name: api
-          # Transpile only: the type check is the typecheck and lint gates' job, not the dev loop's.
-          argv: [npx, ts-node-dev, --transpile-only, --respawn, -r, tsconfig-paths/register, apps/api/src/main.ts]
+          argv: [node, dist/apps/api/src/main.js]
           cwd: be
           port: api
           files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET]
@@ -321,7 +323,7 @@ environments:
             WORKSPACE_SIGNUP_ENABLED: "true"
           health: {url: "http://localhost:${port.api}/healthz"}
         - name: mcp
-          argv: [npx, ts-node-dev, --transpile-only, --respawn, -r, tsconfig-paths/register, apps/mcp/src/main.ts]
+          argv: [node, dist/apps/mcp/src/main.js]
           cwd: be
           port: mcp
           files: [CHANNEL_TOKEN_KEY, STARCI_AI_KEY]
