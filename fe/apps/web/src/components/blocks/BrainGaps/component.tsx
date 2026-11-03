@@ -5,7 +5,7 @@ import {
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 
 /** The list the connected the questions customers asked that the brain could not answer supplies. */
 export interface BrainGapsBaseProps {

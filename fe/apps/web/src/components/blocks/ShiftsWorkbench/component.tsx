@@ -3,16 +3,16 @@ import { ShiftsWeek } from "@/components/frames/ShiftsWeek"
 import { ShiftsSetup } from "@/components/frames/ShiftsSetup"
 import { ShiftsMyRoster } from "@/components/frames/ShiftsMyRoster"
 import { ShiftsPersonalRequests } from "@/components/frames/ShiftsPersonalRequests"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
 import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
+import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ShiftsFigures } from "@/components/composites/ShiftsFigures"
 import { ShiftsRequests } from "@/components/composites/ShiftsRequests"
 import { ShiftsQuickImport } from "@/components/composites/ShiftsQuickImport"
-import { SlotView } from "@/components/composites/SlotView"
 import type {
     ShiftsWorkbenchData,
     ShiftsWorkbenchOn,

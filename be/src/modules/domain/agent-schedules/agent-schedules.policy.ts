@@ -24,7 +24,7 @@ export const BRIEF_ITEMS = 5
 
 /** The triggers the module with this key declares for its agent; none when the catalogue has no such module or it declares none. */
 export const triggersOfModule = (
-    catalog: ReadonlyArray<{ readonly key: string; readonly triggers?: ReadonlyArray<ModuleTrigger> }>,
+    catalog: ReadonlyArray<{ readonly key: string; readonly triggers?: ReadonlyArray<ModuleTrigger> | undefined }>,
     moduleKey: string,
 ): ReadonlyArray<ModuleTrigger> => catalog.find((entry) => entry.key === moduleKey)?.triggers ?? []
 

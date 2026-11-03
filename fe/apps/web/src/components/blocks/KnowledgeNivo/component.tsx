@@ -1,6 +1,6 @@
 import { KNOWLEDGE_ROWS_PLACEHOLDER, KnowledgeRowList } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeRowView, DataSlot, SlotLabels } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 
 /** The rows and the copy of their status the connected base knowledge supplies. */
 export interface KnowledgeNivoBaseProps {

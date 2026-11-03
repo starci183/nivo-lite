@@ -1,5 +1,5 @@
 import { Alert, RadioGroup, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { WizardTestButtons } from "@/components/composites/WizardTestButtons"
 import {

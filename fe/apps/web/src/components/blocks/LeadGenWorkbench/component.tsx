@@ -1,16 +1,16 @@
 import type { ReactElement } from "react"
 import { type LeadGenWorkbenchDataView, type LeadGenWorkbenchActions, LEADGEN_TABS } from "@/modules/types"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
 import { FiguresStrip } from "@/components/composites/FiguresStrip"
 import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { LeadGenCommentList } from "@/components/composites/LeadGenCommentList"
-import { LeadGenRowList } from "@/components/composites/LeadGenRowList"
-import { SlotView } from "@/components/composites/SlotView"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
+import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { LeadGenCommentList } from "@/components/composites/LeadGenCommentList"
+import { LeadGenRowList } from "@/components/composites/LeadGenRowList"
 
 /** The four actual Lead Gen panels and the recorded-explanation arrangement. */
 export const LEADGEN_WORKBENCH_SHAPES: readonly [...typeof LEADGEN_TABS, "explanation"] = [...LEADGEN_TABS, "explanation"]

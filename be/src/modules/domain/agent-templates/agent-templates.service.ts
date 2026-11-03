@@ -18,7 +18,7 @@ import type {
     TemplateVersionView,
     TemplateView,
 } from "./agent-templates.contracts"
-import { canonicalJson, previewPackage } from "@nivo/agent-sdk/template"
+import { canonicalJson, previewPackage } from "@nivo-lite/agent-sdk/template"
 
 /** What the creator gives to package one version of an agent. */
 export interface PackageRequest {

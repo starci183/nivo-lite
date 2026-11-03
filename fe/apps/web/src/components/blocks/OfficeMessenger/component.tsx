@@ -1,5 +1,5 @@
 import { Page, PaneSection } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { OfficeComposer } from "@/components/composites/OfficeComposer"
 import { OfficeConversations } from "@/components/composites/OfficeConversations"
 import { OfficeTasks } from "@/components/composites/OfficeTasks"

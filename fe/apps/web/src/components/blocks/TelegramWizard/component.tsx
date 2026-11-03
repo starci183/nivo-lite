@@ -1,5 +1,5 @@
 import type { DataSlot, SlotLabels, AgentStepView, CopyLabels, GuideScreen, WizardNote } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, Button, Cluster, Grid, Input, Text } from "@starci/grammar/common"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { backAction, nextAction, startActions, WizardFooter } from "@/components/branches/WizardFooter"

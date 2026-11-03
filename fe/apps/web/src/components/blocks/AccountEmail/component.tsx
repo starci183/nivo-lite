@@ -1,5 +1,5 @@
 import { DescriptionList, SurfaceCard, Text, Stack } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 /** Copy and values the connected email card supplies. */
 export interface AccountEmailBaseProps {

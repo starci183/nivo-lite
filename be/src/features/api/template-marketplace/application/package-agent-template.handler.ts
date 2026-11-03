@@ -1,6 +1,6 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { AgentTemplatesService } from "@modules/domain/agent-templates"
-import type { TemplateVersionView } from "@nivo/agent-sdk/template"
+import type { TemplateVersionView } from "@nivo-lite/agent-sdk/template"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"

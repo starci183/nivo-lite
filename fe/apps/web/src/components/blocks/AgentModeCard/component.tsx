@@ -1,5 +1,5 @@
 import { SegmentedControl, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** What the mode card shows once the installation arrived. */

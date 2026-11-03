@@ -1,6 +1,6 @@
 import { Grid, Page } from "@starci/grammar/common"
 import { AdminRowsCard } from "@/components/composites/AdminRowsCard"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { AdminCardView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** Copy and cards the platform health page supplies. */

@@ -1,5 +1,5 @@
 import type { AgentStepView, DataSlot, SlotLabels, WizardResume } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, Button, CheckboxGroup, RadioGroup, Text } from "@starci/grammar/common"
 import { ImapAccountFields, type ImapAccountFieldsProps } from "@/components/composites/ImapAccountFields"
 

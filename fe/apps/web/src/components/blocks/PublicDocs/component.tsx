@@ -6,7 +6,7 @@ import {
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { COMPOSE_ACTIONS_CLASS_NAME, COMPOSE_CLASS_NAME, PUBLIC_DOCS_CLASS_NAME } from "./classNames"
 
 /** The words and links of the card that starts a public document. */

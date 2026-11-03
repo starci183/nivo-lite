@@ -1,6 +1,6 @@
 import { DescriptionList, Text } from "@starci/grammar/common"
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels, ZaloFactView } from "@/modules/types"
 
 /** Fake rows of the same shape: the skeleton reuses the ready tree. */

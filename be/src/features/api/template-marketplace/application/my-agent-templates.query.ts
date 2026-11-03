@@ -1,5 +1,5 @@
 import { Query } from "@nestjs/cqrs"
-import type { TemplateView } from "@nivo/agent-sdk/template"
+import type { TemplateView } from "@nivo-lite/agent-sdk/template"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { MyAgentTemplatesRequest } from "./my-agent-templates.contracts"
 

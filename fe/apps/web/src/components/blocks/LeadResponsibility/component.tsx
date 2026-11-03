@@ -14,7 +14,7 @@ import {
     type BadgeTone,
 } from "@starci/grammar/common"
 
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { StepForm, type StepFormLabels } from "@/components/composites/StepForm"
 
 import { AgentMark } from "@/components/leaves/AgentMark"

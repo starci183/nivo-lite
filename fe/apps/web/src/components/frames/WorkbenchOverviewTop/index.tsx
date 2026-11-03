@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { Tabs } from "@starci/grammar/common"
 import { FiguresStrip } from "@/components/composites/FiguresStrip"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import type { WorkbenchDashboardRegions, WorkbenchFigureRegion } from "@/modules/types"
 

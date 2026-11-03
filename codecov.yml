@@ -16,6 +16,8 @@ coverage:
           - "be/src/modules/integrations/*/**"
           - "be/src/modules/platform/*/**"
           - "be/src/modules/projections/*/**"
+          - "packages/module-loyalty/src/manifest/**"
+          - "packages/module-loyalty/src/template/**"
     patch:
       default:
         target: 100%
@@ -25,6 +27,8 @@ coverage:
           - "be/src/modules/integrations/*/**"
           - "be/src/modules/platform/*/**"
           - "be/src/modules/projections/*/**"
+          - "packages/module-loyalty/src/manifest/**"
+          - "packages/module-loyalty/src/template/**"
 component_management:
   default_rules:
     statuses:
@@ -356,3 +360,5 @@ ignore:
   - "be/tsconfig.build.json"
   - "be/tsconfig.json"
   - "fe/**"
+  - "packages/module-loyalty/src/workbench/**"
+  - "packages/module-loyalty/src/**/index.ts"

@@ -1,5 +1,5 @@
 import type { ForkFirstPartyTemplateRequest } from "../../application/fork-first-party-template.contracts"
-import type { TemplateVersionView } from "@nivo/agent-sdk/template"
+import type { TemplateVersionView } from "@nivo-lite/agent-sdk/template"
 import type { ForkFirstPartyTemplateInput } from "./dto/fork-first-party-template.input"
 import type { TemplateVersionType } from "./dto/template-version.type"
 import { toTemplateVersionType } from "./template-marketplace.records.mapper"

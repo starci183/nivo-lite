@@ -1,6 +1,6 @@
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { Switch, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SepayAgentView, SlotLabels } from "@/modules/types"
 
 /** Props for {@link SepayAgentsBase}. */

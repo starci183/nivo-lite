@@ -4,7 +4,7 @@ import type { DossierFindingsFrameView } from "@/components/frames/DossierFindin
 import { DossierFindingRows } from "@/components/composites/DossierFindingRows"
 import type { FindingAction, FindingRowView } from "@/components/composites/DossierFindingRows"
 import type { FindingDialogValues } from "@/components/composites/DossierFindingDialogs"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The same ready rows own the drawer's pending geometry. */

@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import * as sdk from "@nivo/agent-sdk/template"
+import * as sdk from "@nivo-lite/agent-sdk/template"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentGraphPublishService, AgentGraphSeedService } from "@modules/domain/agent-graphs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"

@@ -1,7 +1,7 @@
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { EmptyNotice, SurfaceCard, Switch } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels, ZaloAgentRowView } from "@/modules/types"
 
 /** Fake rows of the same shape: the skeleton reuses the ready tree. */

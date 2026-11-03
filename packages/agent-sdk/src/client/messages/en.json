@@ -1,0 +1,10 @@
+{
+  "renderer": {
+    "problems": "The saved layout of this screen no longer fits the installed blocks, so the default layout is shown.",
+    "crashed": "This part of the screen could not be drawn.",
+    "retry": "Try again",
+    "noView": "This screen has no layout to show.",
+    "tabs": "Views",
+    "unbound": "This action is not set up."
+  }
+}

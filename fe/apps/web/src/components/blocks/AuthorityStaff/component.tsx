@@ -1,5 +1,5 @@
 import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** One staff member as the list draws it. */

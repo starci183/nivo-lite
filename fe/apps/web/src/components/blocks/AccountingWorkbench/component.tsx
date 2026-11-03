@@ -7,17 +7,17 @@ import { AccountingAdjustment } from "@/components/branches/AccountingAdjustment
 import { AccountingEvidence, AccountingEvidenceForm } from "@/components/composites/AccountingEvidence"
 import { AccountingLedger, AccountingLedgerLineage } from "@/components/composites/AccountingLedger"
 import { Button, Grid, Stack, Tabs, Text } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
-import { AccountingOverview } from "@/components/composites/AccountingOverview"
-import { AccountingQuestions } from "@/components/composites/AccountingQuestions"
-import { AccountingUpcomingRows } from "@/components/composites/AccountingUpcomingRows"
-import { AccountingWaitingRows } from "@/components/composites/AccountingWaitingRows"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
 import { DoneRegion } from "@/components/composites/DoneRegion"
 import { FiguresStrip } from "@/components/composites/FiguresStrip"
 import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { SlotView } from "@/components/composites/SlotView"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
+import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { AccountingOverview } from "@/components/composites/AccountingOverview"
+import { AccountingQuestions } from "@/components/composites/AccountingQuestions"
+import { AccountingUpcomingRows } from "@/components/composites/AccountingUpcomingRows"
+import { AccountingWaitingRows } from "@/components/composites/AccountingWaitingRows"
 
 /** The real Accounting areas and the explanation arrangement. */
 export const ACCOUNTING_WORKBENCH_SHAPES: readonly [...typeof ACCOUNTING_TABS, "explanation"] = [...ACCOUNTING_TABS, "explanation"]

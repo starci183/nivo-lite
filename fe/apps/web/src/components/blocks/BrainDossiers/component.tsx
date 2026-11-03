@@ -3,7 +3,7 @@ import { ChecklistImportDialog } from "@/components/composites/ChecklistImportDi
 import type { ChecklistImportDialogProps } from "@/components/composites/ChecklistImportDialog"
 import { DossierRowsCard } from "@/components/composites/DossierRowsCard"
 import type { DossierRowView } from "@/components/composites/DossierRowsCard"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { DOSSIERS_CLASS_NAME } from "./classNames"
 

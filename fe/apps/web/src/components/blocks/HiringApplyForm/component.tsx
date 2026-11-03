@@ -16,7 +16,7 @@ import {
 
 import { HiringJobPost } from "@/components/composites/HiringJobPost"
 import type { HiringJobPostProps } from "@/components/composites/HiringJobPost"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { ApplyValues, DataSlot, FieldOf, HiringSay, PublicQuestionView, SlotLabels } from "@/modules/types"
 import { FOOT_CLASS_NAME, HONEYPOT_CLASS_NAME } from "./classNames"
 

@@ -36,9 +36,9 @@ export interface TriggerSeed {
     /** How often it fires. */
     readonly preset: AgentTriggerPreset
     /** The time of day (`HH:MM`) of a daily preset. */
-    readonly atTime?: string
+    readonly atTime?: string | undefined
     /** The probe that decides whether a fire has work. */
-    readonly probeKey?: string
+    readonly probeKey?: string | undefined
 }
 
 /** What one pass of the minute sweep did. */

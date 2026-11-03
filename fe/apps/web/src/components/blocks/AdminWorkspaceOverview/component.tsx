@@ -1,6 +1,6 @@
 import { Badge, DescriptionList, SurfaceCard, Text } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { FACTS_CLASS_NAME } from "./classNames"
 

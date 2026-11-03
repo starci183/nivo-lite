@@ -2,7 +2,7 @@ import type { ComponentProps } from "react"
 import { Badge, Cluster, DescriptionList, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { BillingHistoryList, type BillingHistoryRow } from "@/components/composites/BillingHistoryList"
 import { BillingRenewal } from "@/components/composites/BillingRenewal"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { UsageCard } from "@/components/composites/UsageCard"
 import type { BillingPlanView, DataSlot, SlotLabels } from "@/modules/types"
 

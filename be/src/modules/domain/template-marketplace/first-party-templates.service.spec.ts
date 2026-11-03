@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { hashOfPackage, TEMPLATE_FORMAT } from "@nivo/agent-sdk/template"
-import type { AgentTemplatePackage } from "@nivo/agent-sdk/template"
-import { packageOf } from "@nivo/agent-sdk/testing"
+import { hashOfPackage, TEMPLATE_FORMAT } from "@nivo-lite/agent-sdk/template"
+import type { AgentTemplatePackage } from "@nivo-lite/agent-sdk/template"
+import { packageOf } from "@nivo-lite/agent-sdk/testing"
 import {
     AgentTemplateVersionsService,
     AgentTemplatesErrorCode,
