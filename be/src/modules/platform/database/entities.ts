@@ -19,6 +19,7 @@ import { automationPipelinesEntities } from "@modules/domain/automation-pipeline
 import { automationRunsEntities } from "@modules/domain/automation-runs"
 import { automationTemplatesEntities } from "@modules/domain/automation-templates"
 import { bankFeedInboxEntities } from "@modules/domain/bank-feed-inbox"
+import { connectionPollEntities } from "@modules/domain/connection-poll"
 import { billingEntities } from "@modules/domain/billing"
 import { bookingExceptionsEntities } from "@modules/domain/booking-exceptions"
 import { bookingHoursEntities } from "@modules/domain/booking-hours"
@@ -168,6 +169,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...automationRunsEntities,
     ...automationTemplatesEntities,
     ...bankFeedInboxEntities,
+    ...connectionPollEntities,
     ...billingEntities,
     ...bookingExceptionsEntities,
     ...bookingHoursEntities,
