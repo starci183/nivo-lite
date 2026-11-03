@@ -1,23 +1,25 @@
 import type { SalesWorkbenchViewData, SalesWorkbenchActions } from "@/modules/types"
 import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
 import { Button, Grid, Stack, Tabs, Text } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import {
+    ConnectionsRegion,
+    DoneRegion,
+    FiguresStrip,
+    KnowledgeRegion,
+    SlotView,
+    WorkbenchPaneRows,
+    WorkbenchWaitingList,
+    WorkbenchWhyFrame,
+} from "@nivo/agent-sdk/workbench"
 import { SalesContractsBody } from "@/components/frames/SalesContractsBody"
 import { SalesDecisionsBody } from "@/components/frames/SalesDecisionsBody"
 import { SalesHandoffsBody } from "@/components/frames/SalesHandoffsBody"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
 import { GateBody } from "@/components/composites/GateBody"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
 import { SalesActivityRows } from "@/components/composites/SalesActivityRows"
 import { SalesAttentionRows } from "@/components/composites/SalesAttentionRows"
 import { SalesContractRows } from "@/components/composites/SalesContractRows"
 import { SalesOrderRows } from "@/components/composites/SalesOrderRows"
 import { SalesPipelineBoard } from "@/components/composites/SalesPipelineBoard"
-import { SlotView } from "@/components/composites/SlotView"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
-import { WorkbenchWaitingList } from "@/components/composites/WorkbenchWaitingList"
 import { SALES_WORKBENCH_TABS as SALES_TABS } from "@/modules/types"
 /** The six Sales areas, optional customer conversation and explanation drawings. */
 export const SALES_WORKBENCH_SHAPES = [...SALES_TABS, "conversation", "explanation"] as const

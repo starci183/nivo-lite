@@ -1,7 +1,16 @@
 import { type BookingWorkbenchDataView, type BookingWorkbenchActions, BOOKING_TABS } from "@/modules/types"
 import type { ReactNode } from "react"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import {
+    ConnectionsRegion,
+    DoneRegion,
+    FiguresStrip,
+    KnowledgeRegion,
+    SlotView,
+    WaitingRegion,
+    WorkbenchPaneRows,
+    WorkbenchWhyFrame,
+} from "@nivo/agent-sdk/workbench"
 import { BookingSetupSection } from "@/components/frames/BookingSetupSection"
 import { BookingDesk } from "@/components/frames/BookingDesk"
 import { BookingStats } from "@/components/frames/BookingStats"
@@ -11,13 +20,6 @@ import { BookingExceptions } from "@/components/frames/BookingExceptions"
 import { BookingPolicyForm } from "@/components/composites/BookingPolicyForm"
 import { BookingPublicPageForm } from "@/components/composites/BookingPublicPageForm"
 import { BookingWaitlist } from "@/components/composites/BookingWaitlist"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresRibbon } from "@/components/composites/FiguresRibbon"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { SlotView } from "@/components/composites/SlotView"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 /** The five real booking panels and the recorded-explanation arrangement. */
 export const BOOKING_WORKBENCH_SHAPES = [...BOOKING_TABS, "explanation"] as const
 type BookingWorkbenchShape = (typeof BOOKING_WORKBENCH_SHAPES)[number]
@@ -144,7 +146,7 @@ const Overview = (props: BookingWorkbenchBaseProps) => {
                 forbidden="notice"
                 onRetry={props.on.retryRibbon}
                 render={(items, isLoading) => (
-                    <FiguresRibbon label={view.ribbon.label} items={items} isLoading={isLoading} />
+                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
                 )}
             />
             <Tabs

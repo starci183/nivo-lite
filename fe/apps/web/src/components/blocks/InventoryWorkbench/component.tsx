@@ -1,6 +1,15 @@
 import { type InventoryWorkbenchDataView, type InventoryWorkbenchActions, INVENTORY_TABS } from "@/modules/types"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import {
+    ConnectionsRegion,
+    DoneRegion,
+    FiguresStrip,
+    KnowledgeRegion,
+    SlotView,
+    WaitingRegion,
+    WorkbenchPaneRows,
+    WorkbenchWhyFrame,
+} from "@nivo/agent-sdk/workbench"
 import { InventoryStock } from "@/components/frames/InventoryStock"
 import { InventoryOrders } from "@/components/frames/InventoryOrders"
 import { InventorySuppliers } from "@/components/frames/InventorySuppliers"
@@ -9,13 +18,6 @@ import { InventoryPending } from "@/components/composites/InventoryPending"
 import { InventoryHistory } from "@/components/composites/InventoryHistory"
 import { InventoryCount } from "@/components/composites/InventoryCount"
 import { InventoryImport } from "@/components/composites/InventoryImport"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresRibbon } from "@/components/composites/FiguresRibbon"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { SlotView } from "@/components/composites/SlotView"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 /** The seven original Inventory panels and the recorded-explanation arrangement. */
 export const INVENTORY_WORKBENCH_SHAPES = [...INVENTORY_TABS, "explanation"] as const
 type InventoryWorkbenchShape = (typeof INVENTORY_WORKBENCH_SHAPES)[number]
@@ -112,7 +114,7 @@ const Overview = (props: InventoryWorkbenchBaseProps) => {
                 forbidden="notice"
                 onRetry={props.on.retryPanel}
                 render={(items, isLoading) => (
-                    <FiguresRibbon label={view.ribbon.label} items={items} isLoading={isLoading} />
+                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
                 )}
             />
             <Tabs

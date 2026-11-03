@@ -6,7 +6,7 @@ import {
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 
 /** The words and values of the part that studies corrections and writes a lesson by hand. */
 interface WriteView {

@@ -13,7 +13,7 @@ import {
 } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { AgentMark } from "@/components/leaves/AgentMark"
 

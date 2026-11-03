@@ -6,7 +6,7 @@ import {
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView, KnowledgeRowView } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 
 /** The lists the connected suggestions supply. */
 export interface KnowledgeSuggestionsBaseProps {

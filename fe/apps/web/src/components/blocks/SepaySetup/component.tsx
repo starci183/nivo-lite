@@ -1,7 +1,7 @@
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { Button, CopyField, DescriptionList, Fieldset, Input, Select, Text, Grid } from "@starci/grammar/common"
 import { SepayConfirm } from "@/components/composites/SepayConfirm"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SepayAccountForm, SlotLabels } from "@/modules/types"
 
 /** What the setup tab shows once the connection is read. */

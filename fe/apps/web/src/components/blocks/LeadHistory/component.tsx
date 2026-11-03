@@ -1,5 +1,5 @@
 import { Stack, SurfaceCard, Text, Timeline, Section, type TimelineItem } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { LeadMark } from "@/components/composites/LeadMark"
 import { HISTORY_ANCHOR_CLASS_NAME } from "./classNames"
 import type { LeadIcon, DataSlot, SlotLabels } from "@/modules/types"

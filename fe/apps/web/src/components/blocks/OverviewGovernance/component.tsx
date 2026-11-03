@@ -1,5 +1,5 @@
 import { Stack } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { OverviewGovSummary, type OverviewGovSummaryProps } from "@/components/composites/OverviewGovSummary"
 import { OverviewGovResults, type OverviewGovResultsProps } from "@/components/composites/OverviewGovResults"

@@ -1,7 +1,7 @@
 import { Form, Input, Select, SurfaceCard, Text, Stack, Grid } from "@starci/grammar/common"
 import { FormActions } from "@/components/composites/FormActions"
 import { InviteLink } from "@/components/branches/InviteLink"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** One choice of a select. */

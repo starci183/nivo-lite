@@ -17,7 +17,7 @@ import {
     type BubbleMapNode,
 } from "@starci/grammar/common"
 
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { BrainPageActions } from "@/components/composites/BrainPageActions"
 import type { BrainPageHeaderView, DataSlot, SlotLabels } from "@/modules/types"
 

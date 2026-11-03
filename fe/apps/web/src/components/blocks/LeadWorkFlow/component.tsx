@@ -1,6 +1,6 @@
 import { EmptyNotice, Section, Stack, Text, type ListRowData } from "@starci/grammar/common"
 import { LeadPanel } from "@/components/frames/LeadPanel"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, FlowEntryView, FlowView, SlotLabels } from "@/modules/types"
 
 /** The words of the work flow card. */

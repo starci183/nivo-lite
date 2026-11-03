@@ -1,7 +1,7 @@
 import { Button, Grid, NumberField, Section, SegmentedControl, Text } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/frames/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** One mode a rule can be set to. */

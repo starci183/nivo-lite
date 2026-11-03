@@ -1,6 +1,6 @@
 import { Alert, EmptyNotice, Section, Link } from "@starci/grammar/common"
 import type { ComponentType, ReactNode } from "react"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { AgentOption, Connection, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One connection of a provider list with the names of the agents bound to it. */

@@ -1,0 +1,14 @@
+{
+  "extends": "@starci/tsconfig/next.json",
+  "compilerOptions": {
+    "incremental": false,
+    "types": ["jest", "node"],
+    "paths": {
+      "@nivo/agent-sdk": ["../agent-sdk/src/index.ts"],
+      "@nivo/agent-sdk/*": ["../agent-sdk/src/*"],
+      "@nivo/module-loyalty/*": ["../module-loyalty/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json"],
+  "exclude": ["node_modules", "dist"]
+}

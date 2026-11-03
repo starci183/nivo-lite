@@ -16,7 +16,7 @@ import { AgentChatThread, type AgentChatThreadProps } from "@/components/composi
 
 import { PromoWelcomeBand, type PromoWelcomeBandProps } from "@/components/composites/PromoWelcomeBand"
 
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** Which channel the owner is looking at. */

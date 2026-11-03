@@ -8,7 +8,7 @@ import { AgentWorkSchedule } from "@/components/composites/AgentWorkSchedule"
 import { AgentWorkTasks } from "@/components/composites/AgentWorkTasks"
 import { AgentWorkStatus } from "@/components/composites/AgentWorkStatus"
 import { AgentWorkTurns } from "@/components/composites/AgentWorkTurns"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { AgentWorkGoalView, AgentWorkTriggerView, AgentWorkView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** The words of the Work tab that do not come from the data. */

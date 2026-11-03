@@ -1,5 +1,5 @@
 import { Alert, Button, Heading, Mascot, Stepper, SurfaceCard, Text, Stack } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { APP_ROUTES } from "@/modules/routes"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 

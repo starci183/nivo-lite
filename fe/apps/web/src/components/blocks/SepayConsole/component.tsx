@@ -21,7 +21,7 @@ import {
 import type { ReactNode } from "react"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { SepayConfirm } from "@/components/composites/SepayConfirm"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { ConnectionRefusalView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One delivery of the live rail as it is worded. */

@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "declaration": true,
+    "isolatedDeclarations": true,
+    "types": [],
+    "paths": {
+      "@nivo/agent-sdk": ["../agent-sdk/dist/index.d.ts"],
+      "@nivo/agent-sdk/*": ["../agent-sdk/dist/*/index.d.ts"],
+      "@nivo/module-loyalty/*": ["../module-loyalty/dist/*/index.d.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "src/**/*.spec.ts"]
+}

@@ -1,14 +1,16 @@
 import { CONTENT_TABS, type ContentViews, type ContentActions } from "@/modules/types"
 import { Alert, Cluster, Grid, Stack } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import {
+    ConnectionsRegion,
+    DoneRegion,
+    KnowledgeRegion,
+    SlotView,
+    WorkbenchOverviewTop,
+    WorkbenchPaneRows,
+    WorkbenchWhyFrame,
+} from "@nivo/agent-sdk/workbench"
 import { ContentSettingsCard } from "@/components/frames/ContentSettingsCard"
 import { ContentPostEditorView } from "@/components/frames/ContentPostEditorView"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { SlotView } from "@/components/composites/SlotView"
-import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { ContentAddPostControls } from "@/components/composites/ContentAddPostControls"
 import { ContentQuickIdeaControls } from "@/components/composites/ContentQuickIdeaControls"
 import { ContentPlanControls } from "@/components/composites/ContentPlanControls"

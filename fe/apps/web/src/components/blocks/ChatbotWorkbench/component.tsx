@@ -1,17 +1,19 @@
 import type { ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "@/modules/types"
 import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import {
+    ConnectionsRegion,
+    DoneRegion,
+    FiguresStrip,
+    KnowledgeRegion,
+    SlotView,
+    WorkbenchPaneRows,
+    WorkbenchWaitingList,
+    WorkbenchWhyFrame,
+} from "@nivo/agent-sdk/workbench"
 import { ChatbotReplyEditor } from "@/components/branches/ChatbotReplyEditor"
 import { ChatbotCustomerRows } from "@/components/composites/ChatbotCustomerRows"
 import { ChatbotGapRows } from "@/components/composites/ChatbotGapRows"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { SlotView } from "@/components/composites/SlotView"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
-import { WorkbenchWaitingList } from "@/components/composites/WorkbenchWaitingList"
 import { CHATBOT_WORKBENCH_TABS as CHATBOT_TABS } from "@/modules/types"
 /** The actual Chatbot list, conversation, gaps and explanation drawings. */
 export const CHATBOT_WORKBENCH_SHAPES = [...CHATBOT_TABS, "conversation", "explanation"] as const

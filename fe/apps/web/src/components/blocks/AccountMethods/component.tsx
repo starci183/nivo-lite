@@ -1,5 +1,5 @@
 import { EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, MethodView, SlotLabels } from "@/modules/types"
 
 /** Copy and values the connected sign-in methods list supplies. */

@@ -7,7 +7,7 @@ import type {
     TelegramUserChatsView as ChatsView,
 } from "@/modules/types"
 import { Alert } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { TelegramUserChats } from "@/components/composites/TelegramUserChats"
 import { TelegramUserLogin } from "@/components/composites/TelegramUserLogin"
 import { TelegramUserConsentStep } from "@/components/composites/TelegramUserConsentStep"

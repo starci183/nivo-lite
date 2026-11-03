@@ -1,4 +1,4 @@
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, ModuleIconName, SlotLabels } from "@/modules/types"
 import { Button, Cluster, Input, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { AgentMark } from "../../leaves/AgentMark"

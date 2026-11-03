@@ -1,5 +1,5 @@
 import { Alert, Badge, Cluster, Link, Select, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** One connection of the workspace this agent can work through. */

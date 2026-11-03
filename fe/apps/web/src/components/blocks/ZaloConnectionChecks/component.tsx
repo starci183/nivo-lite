@@ -1,5 +1,5 @@
 import { ConnectionLines } from "@/components/composites/ConnectionLines"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { ZaloTestSend } from "@/components/composites/ZaloTestSend"
 import type { ZaloTestSendProps } from "@/components/composites/ZaloTestSend"
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"

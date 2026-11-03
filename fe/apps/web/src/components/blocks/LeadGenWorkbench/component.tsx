@@ -1,15 +1,17 @@
 import { type LeadGenWorkbenchDataView, type LeadGenWorkbenchActions, LEADGEN_TABS } from "@/modules/types"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
+import {
+    ConnectionsRegion,
+    DoneRegion,
+    FiguresStrip,
+    KnowledgeRegion,
+    SlotView,
+    WaitingRegion,
+    WorkbenchPaneRows,
+    WorkbenchWhyFrame,
+} from "@nivo/agent-sdk/workbench"
 import { LeadGenCommentList } from "@/components/composites/LeadGenCommentList"
 import { LeadGenRowList } from "@/components/composites/LeadGenRowList"
-import { SlotView } from "@/components/composites/SlotView"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 
 /** The four actual Lead Gen panels and the recorded-explanation arrangement. */
 export const LEADGEN_WORKBENCH_SHAPES = [...LEADGEN_TABS, "explanation"] as const

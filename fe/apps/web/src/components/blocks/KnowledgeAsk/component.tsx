@@ -13,7 +13,7 @@ import { AgentMark } from "@/components/leaves/AgentMark"
 import { FormActions } from "@/components/composites/FormActions"
 import { KNOWLEDGE_ROWS_PLACEHOLDER, KnowledgeRowList } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeRowView, DataSlot, SlotLabels } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 
 /** The agent the question is asked as. */
 interface IdentityView {

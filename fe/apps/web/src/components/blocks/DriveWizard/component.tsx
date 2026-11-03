@@ -1,5 +1,5 @@
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { Alert, Text, Stack } from "@starci/grammar/common"
 import type { ComponentProps } from "react"
 import { WizardFrame, frameOf } from "@/components/frames/WizardFrame"

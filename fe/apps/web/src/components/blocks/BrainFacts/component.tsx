@@ -6,7 +6,7 @@ import {
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 
 /** The list the connected the facts in force and the scheduled ones supplies. */
 export interface BrainFactsBaseProps {

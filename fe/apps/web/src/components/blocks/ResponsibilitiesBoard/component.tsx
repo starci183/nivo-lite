@@ -2,7 +2,7 @@ import { Button, Cluster, Page, SearchField, Section, Select, Stack, Tabs, TextA
 import type { BreadcrumbItem } from "@starci/grammar/common"
 import { OwnerGroupList } from "@/components/composites/OwnerGroupList"
 import type { OwnerGroupListLabels } from "@/components/composites/OwnerGroupList"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, OwnerGroupView, ResponsibilityRowView, SlotLabels } from "@/modules/types"
 import { SEARCH_CLASS, SORT_CLASS } from "./classNames"
 

@@ -1,6 +1,6 @@
 import { Button, EmptyNotice, Link, Page, Section, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { APP_ROUTES } from "@/modules/routes"
 

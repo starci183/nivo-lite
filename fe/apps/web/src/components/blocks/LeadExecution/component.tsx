@@ -1,5 +1,5 @@
 import { Alert, Button, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { ApprovalCard } from "@/components/composites/ApprovalCard"
 import type { ApprovalCardLabels, ApprovalCardView } from "@/components/composites/ApprovalCard"
 import type { DataSlot, SlotLabels } from "@/modules/types"

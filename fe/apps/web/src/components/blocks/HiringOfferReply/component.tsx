@@ -1,6 +1,6 @@
 import { Alert, Button, Heading, Text, Stack } from "@starci/grammar/common"
 import { HiringReplyCard } from "@/components/frames/HiringReplyCard"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, HiringSay, SlotLabels } from "@/modules/types"
 import { PRE_WRAP_CLASS_NAME } from "./classNames"
 

@@ -4,7 +4,10 @@
     "paths": {
       "@features/*": ["./src/features/*"],
       "@modules/*": ["./src/modules/*"],
-      "@tests/*": ["./src/tests/*"]
+      "@tests/*": ["./src/tests/*"],
+      "@nivo/agent-sdk/*": ["../packages/agent-sdk/src/*"],
+      "@nivo/module-loyalty/*": ["../packages/module-loyalty/src/*"],
+      "@nivo/modules/*": ["../packages/modules/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", "src/tests/world", "src/tests/integration", "src/tests/e2e", "src/tests/contract"]

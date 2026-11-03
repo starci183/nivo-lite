@@ -1,7 +1,7 @@
 import { Form, Input, Stack, SurfaceCard } from "@starci/grammar/common"
 import { AvatarEditor } from "@/components/composites/AvatarEditor"
 import { FormActions } from "@/components/composites/FormActions"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 

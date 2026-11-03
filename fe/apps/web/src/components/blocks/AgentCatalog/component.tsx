@@ -3,7 +3,7 @@ import { FilterButtonGroup, EmptyNotice, Grid, SearchField, SurfaceCard, Section
 import type { BadgeTone, ListRowData } from "@starci/grammar/common"
 import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
 import { AgentTeamRow } from "@/components/composites/AgentTeamRow"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** What one installed agent shows on the catalogue, already in the reader language. */

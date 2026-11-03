@@ -1,6 +1,6 @@
 import type { ChatbotConversationView, ChatbotInboxActions, SlotPanelProps } from "@/modules/types"
 import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 /** Supplies the conversation read and retry action to the standalone inbox. */
 export interface ChatbotInboxBaseProps {
     readonly props: SlotPanelProps<ChatbotConversationView>

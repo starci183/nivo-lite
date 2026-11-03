@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { Badge, Button, DropdownMenu, Icon, Page, Pane, PaneGrid, Cluster } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"

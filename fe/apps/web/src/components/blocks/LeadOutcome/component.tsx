@@ -11,7 +11,7 @@ import {
     Textarea,
 } from "@starci/grammar/common"
 import { LeadPanel } from "@/components/frames/LeadPanel"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { nivoIconSource } from "@/components/leaves/Icon"
 
 import type { DataSlot, SlotLabels } from "@/modules/types"

@@ -1,7 +1,7 @@
 import { Button, EmptyNotice, Stack, Text, Section } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SessionRowView, SlotLabels } from "@/modules/types"
 
 /** Copy, rows and state the connected sessions section supplies. */

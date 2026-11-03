@@ -14,7 +14,7 @@ import {
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { LeadPanel } from "@/components/frames/LeadPanel"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { LeadIcon, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One line of the AI brief with its glyph. */

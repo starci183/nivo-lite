@@ -1,6 +1,6 @@
 import { ListRegion } from "@/components/composites/ListRegion"
 import type { ListRegionProps } from "@/components/composites/ListRegion"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { ProfileRegionBaseProps } from "@/modules/types"
 
 /** Props for {@link AgentProfileRecentBase}: the card copy and its lines as a slot. */

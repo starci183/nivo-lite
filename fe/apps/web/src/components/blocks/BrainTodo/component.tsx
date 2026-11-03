@@ -3,7 +3,7 @@ import { DossierFindingDialogs } from "@/components/composites/DossierFindingDia
 import type { FindingDialogValues, FindingDialogView } from "@/components/composites/DossierFindingDialogs"
 import { FindingCards } from "@/components/composites/FindingCards"
 import type { FindingCardActionView, FindingCardView } from "@/components/composites/FindingCards"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { FilterButtons } from "@/components/leaves/FilterButtons"
 import type { FilterButtonView } from "@/components/leaves/FilterButtons"
 import type { DataSlot, SlotLabels, KnowledgeListView } from "@/modules/types"

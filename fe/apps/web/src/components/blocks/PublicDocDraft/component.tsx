@@ -1,5 +1,5 @@
 import { Alert, Badge, Button, Drawer, Form, Input, Text, Textarea } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { FOOTER_CLASS_NAME, FORM_CLASS_NAME, SOURCES_CLASS_NAME } from "./classNames"
 

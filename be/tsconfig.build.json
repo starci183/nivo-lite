@@ -1,5 +1,15 @@
 {
   "extends": ["./tsconfig.json", "@starci/tsconfig/build.json"],
-  "compilerOptions": { "outDir": "./dist" },
+  "compilerOptions": {
+    "outDir": "./dist",
+    "paths": {
+      "@features/*": ["./src/features/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@tests/*": ["./src/tests/*"],
+      "@nivo/agent-sdk/*": ["../packages/agent-sdk/dist/*/index.d.ts"],
+      "@nivo/module-loyalty/*": ["../packages/module-loyalty/dist/*/index.d.ts"],
+      "@nivo/modules/*": ["../packages/modules/dist/*/index.d.ts"]
+    }
+  },
   "exclude": ["node_modules", "dist", "**/*.spec.ts", "src/tests"]
 }

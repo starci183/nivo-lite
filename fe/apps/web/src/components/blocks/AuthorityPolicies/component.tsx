@@ -1,7 +1,7 @@
 import { Button, Textarea } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/frames/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** Copy, values and state of the policies section. */

@@ -2,7 +2,7 @@ import { Avatar, Cluster, DataTable, EmptyNotice, Section, Text } from "@starci/
 import type { DataTableRow } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { Icon } from "@/components/leaves/Icon"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 /** One audience of the matrix: the customer, or an installed agent by its human name. */
 export interface AudienceView {

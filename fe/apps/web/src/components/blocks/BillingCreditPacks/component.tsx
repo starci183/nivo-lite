@@ -1,5 +1,5 @@
 import { CreditsCatalogue } from "@/components/composites/CreditsCatalogue"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { CreditsOverviewView, DataSlot, PayTarget, SlotLabels } from "@/modules/types"
 
 /** Settled copy and rows of the "Buy more credits" section. */

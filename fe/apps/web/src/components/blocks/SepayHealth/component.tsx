@@ -1,6 +1,6 @@
 import { Section, PaneSection } from "@starci/grammar/common"
 import type { Figure } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** Props for {@link SepayHealthBase}. */

@@ -24,7 +24,7 @@ import type { ReactNode } from "react"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { ConnectionDisconnect } from "@/components/composites/ConnectionDisconnect"
 import { ConnectionLines } from "@/components/composites/ConnectionLines"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { ConnectionRefusalView, DataSlot, SlotLabels, ZaloEventLineView, ZaloHeadView } from "@/modules/types"
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */

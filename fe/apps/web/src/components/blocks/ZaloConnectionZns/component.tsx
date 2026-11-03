@@ -1,5 +1,5 @@
 import { Alert, Button, Disclosure, Fieldset, Input, PaneSection, Grid } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels, ZnsRenewalForm } from "@/modules/types"
 
 /** The fields of the form, in the order they are drawn. */

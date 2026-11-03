@@ -11,7 +11,7 @@ import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import { ConnectionDisconnectBand } from "@/components/branches/ConnectionDisconnectBand"
 import { ConnectionDisconnectDialog } from "@/components/branches/ConnectionDisconnectDialog"
 import { CONNECTION_LINES_PLACEHOLDER, ConnectionLines } from "@/components/composites/ConnectionLines"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type {
     ConnectionHeadView,
     ConnectionRefusalView,

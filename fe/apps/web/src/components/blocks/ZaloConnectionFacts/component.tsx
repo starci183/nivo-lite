@@ -1,6 +1,6 @@
 import { PaneSection } from "@starci/grammar/common"
 import { ConnectionFactsPane } from "@/components/frames/ConnectionFactsPane"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels, ZaloFactView } from "@/modules/types"
 
 /** Fake rows of the same shape: the skeleton reuses the ready tree. */

@@ -1,5 +1,5 @@
 import { Text, Link } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The line that sends the owner to the queue where the facts read from the documents wait. */

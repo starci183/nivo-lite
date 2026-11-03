@@ -3,7 +3,7 @@ import { DatabaseConnectFields } from "@/components/composites/DatabaseConnectFi
 import type { DatabaseConnectFieldsProps } from "@/components/composites/DatabaseConnectFields"
 import { DatabaseTableMapper } from "@/components/composites/DatabaseTableMapper"
 import type { DatabaseTableMapperProps } from "@/components/composites/DatabaseTableMapper"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import { WizardFooter, backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"

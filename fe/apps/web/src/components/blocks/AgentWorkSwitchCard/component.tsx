@@ -1,4 +1,4 @@
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { SwitchStatus } from "@/components/composites/SwitchStatus"
 import { SwitchStatusCard } from "@/components/frames/SwitchStatusCard"
 import type { AgentWorkSwitchView, DataSlot, SlotLabels } from "@/modules/types"

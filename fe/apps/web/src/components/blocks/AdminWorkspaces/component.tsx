@@ -17,7 +17,7 @@ import {
 import { AdminBadges } from "@/components/leaves/AdminBadges"
 import { ADMIN_ROUTES } from "@/modules/routes"
 
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { AdminWorkspaceRowView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One filter chip of the list. */

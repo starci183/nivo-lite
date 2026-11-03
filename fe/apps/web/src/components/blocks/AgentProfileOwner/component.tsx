@@ -1,5 +1,5 @@
 import { Alert, Badge, Cluster, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { COPY_CLASS } from "./classNames"

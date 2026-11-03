@@ -1,6 +1,6 @@
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { Button, CopyField, Fieldset, Input, Grid } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import type { DataSlot, SlotLabels, ZaloPasteView } from "@/modules/types"
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */

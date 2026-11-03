@@ -1,3 +1,5 @@
+import type { ModuleTriggerPreset } from "@nivo/agent-sdk/module"
+
 /**
  * What starts a wake: the key of the adapter that normalized the fact. The four built-in keys are listed so they read well; an adapter
  * registered at the inbound door adds its own, and what a source means to the work core is its traits, never its name.
@@ -29,7 +31,7 @@ export type AgentTaskStatus = "open" | "waiting" | "done" | "dropped"
 export type AgentTaskWaitingOn = "approval" | "member" | "event"
 
 /** How often a schedule trigger fires; the owner picks a preset, never free cron. */
-export type AgentTriggerPreset = "every_15m" | "hourly" | "daily_at" | "weekdays_at"
+export type AgentTriggerPreset = ModuleTriggerPreset
 
 /** A trigger wakes the agent on a clock or on an internal event. */
 export type AgentTriggerKind = "schedule" | "event"

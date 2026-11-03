@@ -11,7 +11,7 @@ import {
     TextAction,
 } from "@starci/grammar/common"
 import type { BadgeTone } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 import { LeadRowMenu } from "@/components/composites/LeadRowMenu"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { SEARCH_CLASS_NAME } from "./classNames"

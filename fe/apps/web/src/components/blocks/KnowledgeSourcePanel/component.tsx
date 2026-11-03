@@ -5,7 +5,7 @@ import {
     KnowledgeRowsSection,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView, KnowledgeRowView, DataSlot, SlotLabels } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo/agent-sdk/workbench"
 /** What the head of the document says: its status, who may read it and what the owner may do. */
 interface HeadView {
     readonly statusLabel: string
