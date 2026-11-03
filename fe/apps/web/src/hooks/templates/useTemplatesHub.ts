@@ -1,0 +1,72 @@
+"use client"
+
+import { useTranslations } from "next-intl"
+import { useState } from "react"
+import { slotOfSwr } from "@/hooks/slot"
+import {
+    useMutateAcceptTemplateUpdateSwr,
+    useMutateImportAgentTemplateSwr,
+    useMutateSubmitTemplateListingSwr,
+    useQueryMyAgentTemplatesSwr,
+    useQueryTemplateUpdateOffersSwr,
+} from "@/hooks/swr"
+import { useGraphQLWithToast } from "@/modules/toast"
+import { acceptInputOf, safeUnitIds, valuesOfText } from "./templates.shared"
+
+/** The hub of the templates of the caller: their versions, the install of one in this workspace, the listing of one, and the updates offered. */
+export const useTemplatesHub = () => {
+    const t = useTranslations("agentTemplates")
+    const run = useGraphQLWithToast()
+    const templates = useQueryMyAgentTemplatesSwr()
+    const offers = useQueryTemplateUpdateOffersSwr()
+    const importer = useMutateImportAgentTemplateSwr()
+    const submitter = useMutateSubmitTemplateListingSwr()
+    const accepter = useMutateAcceptTemplateUpdateSwr()
+    const [valuesText, setValuesText] = useState("")
+    const [price, setPrice] = useState("0")
+    const [notice, setNotice] = useState<string | undefined>(undefined)
+    const slot = slotOfSwr({ data: templates.data, error: templates.error, isLoading: templates.isLoading })
+    const offerSlot = slotOfSwr({ data: offers.data, error: offers.error, isLoading: offers.isLoading })
+    const importVersion = async (templateKey: string, version: number) => {
+        const values = valuesOfText(valuesText)
+        if (values === null) {
+            setNotice(t("valuesInvalid"))
+            return
+        }
+        const made = await run(() => importer.trigger({ templateKey, version, values }), {
+            successMessage: t("imported"),
+        })
+        if (made !== undefined) setNotice(undefined)
+        void offers.mutate()
+    }
+    const submitVersion = async (templateKey: string, version: number) => {
+        const priceVnd = Math.round(Number(price))
+        if (!Number.isFinite(priceVnd) || priceVnd < 0) {
+            setNotice(t("priceInvalid"))
+            return
+        }
+        const listing = await run(() => submitter.trigger({ templateKey, version, priceVnd }), {
+            successMessage: t("submitted"),
+        })
+        setNotice(listing === undefined ? undefined : t(`listing_${listing.status}`))
+    }
+    const accept = async (installationId: string, unitIds: Array<string>) => {
+        await run(() => accepter.trigger(acceptInputOf(installationId, unitIds)), { successMessage: t("accepted") })
+        void offers.mutate()
+    }
+    return {
+        slot,
+        offerSlot,
+        reload: () => void templates.mutate(),
+        valuesText,
+        setValuesText,
+        price,
+        setPrice,
+        notice,
+        isPending: importer.isMutating || submitter.isMutating || accepter.isMutating,
+        importVersion,
+        submitVersion,
+        accept,
+        safeUnitIds,
+    }
+}
