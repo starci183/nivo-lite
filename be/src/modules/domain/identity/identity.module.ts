@@ -37,6 +37,7 @@ import { IdentitySessionStoreService } from "./session-store.service"
 import { IdentitySignInService } from "./sign-in.service"
 
 const SIGN_IN_EXPORTS = [
+    IdentityAccountsService,
     IDENTITY_AUTHENTICATOR,
     IDENTITY_ACCOUNTS,
     IdentityEmailService,

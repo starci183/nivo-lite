@@ -20,7 +20,7 @@ describe("mail config / parseMailConfig", () => {
             helloName: "nivo.vn",
             webOrigin: "https://app.nivo.test",
             brandName: "Nivo",
-            defaultLanguage: "en",
+            defaultLanguage: "vi",
             confirmTtlSeconds: 86_400,
             resetTtlSeconds: 3_600,
             allowPrivateHosts: true,
@@ -33,7 +33,7 @@ describe("mail config / parseMailConfig", () => {
             MAIL_USER: "mailer",
             MAIL_PASSWORD: "p4ss-fixture",
             MAIL_HELLO_NAME: "mx.nivo.test",
-            MAIL_DEFAULT_LANGUAGE: "vi",
+            MAIL_DEFAULT_LANGUAGE: "en",
             MAIL_CONFIRM_TTL_SECONDS: "7200",
             MAIL_RESET_TTL_SECONDS: "600",
         })
@@ -42,7 +42,7 @@ describe("mail config / parseMailConfig", () => {
             port: 465,
             security: "tls",
             helloName: "mx.nivo.test",
-            defaultLanguage: "vi",
+            defaultLanguage: "en",
             confirmTtlSeconds: 7200,
             resetTtlSeconds: 600,
         })
