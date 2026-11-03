@@ -7,7 +7,7 @@ import { ZaloInboxPageReadService } from "./zalo-inbox-page-read.service"
 import { ZaloInboxService } from "./zalo-inbox.service"
 import { ZaloInboxPoller } from "./zalo-inbox-poller.service"
 import { ZaloInboxPollService } from "./zalo-poll.service"
-import { ZaloInboxPollQueue } from "@modules/queues/zalo-inbox-poll"
+import { ZaloInboxPollTriggerService } from "./zalo-poll-trigger.service"
 
 @Module({})
 /** The durable inbox of the zalo-inbox webhook, over the primary PostgreSQL connection. */
@@ -21,13 +21,13 @@ export class ZaloInboxModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: INBOX, useClass: InboxService },
                 ZaloInboxService,
-                ZaloInboxPollQueue,
                 ZaloInboxPoller,
                 ZaloInboxPollService,
+                ZaloInboxPollTriggerService,
                 ZaloInboxPageReadService,
                 ZaloDeliveryPolicy,
             ],
-            exports: [ZaloInboxService, ZaloInboxPollService, ZaloInboxPageReadService, ZaloDeliveryPolicy],
+            exports: [ZaloInboxService, ZaloInboxPollService, ZaloInboxPollTriggerService, ZaloInboxPageReadService, ZaloDeliveryPolicy],
         }
     }
 }

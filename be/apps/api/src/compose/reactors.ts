@@ -14,6 +14,7 @@ import { SourceFactsMessageModule } from "@features/reactors/source-facts"
 import { AgentGraphApprovalsMessageModule } from "@features/reactors/agent-graph-approvals"
 import { ThreadOutcomesMessageModule } from "@features/reactors/thread-outcomes"
 import { VideoScriptingMessageModule } from "@features/reactors/video-scripting"
+import { ZaloInboxPollMessageModule } from "@features/reactors/zalo-inbox-poll"
 
 /** The event reactors the api runs: each message module subscribes its consumers to their queues on the event bus. */
 export const API_REACTORS: Array<DynamicModule> = [
@@ -32,4 +33,5 @@ export const API_REACTORS: Array<DynamicModule> = [
     SourceFactsMessageModule.register({}),
     ThreadOutcomesMessageModule.register({}),
     VideoScriptingMessageModule.register({}),
+    ZaloInboxPollMessageModule.register({}),
 ]

@@ -1,15 +1,13 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { ConnectionPollLogEvent } from "@modules/domain/connection-poll"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord, HealthCandidate } from "@modules/domain/connections"
 import { CLOCK } from "@modules/platform/clock"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
-import { ZaloInboxPollQueue } from "@modules/queues/zalo-inbox-poll"
 import { ZaloInboxPoller } from "./zalo-inbox-poller.service"
 import { ZaloInboxPollService } from "./zalo-poll.service"
 
@@ -34,23 +32,19 @@ const build = async () => {
     connections.patch.mockResolvedValue(undefined)
     const poller = Object.assign(mock<ZaloInboxPoller>(), { provider: "zalo_oa" as const })
     poller.fetch.mockResolvedValue({ kind: "skipped", reason: "no_token" })
-    const queue = mock<ZaloInboxPollQueue>()
-    const tx = fakeTransaction(mockEntityManager())
     const logger = mock<Logger>()
     const timer = mock<Timer>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloInboxPollService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: TIMER, useValue: timer },
             { provide: ConnectionsService, useValue: connections },
             { provide: ZaloInboxPoller, useValue: poller },
-            { provide: ZaloInboxPollQueue, useValue: queue },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloInboxPollService), connections, poller, queue, logger }
+    return { service: moduleRef.get(ZaloInboxPollService), connections, poller, logger }
 }
 
 describe("ZaloInboxPollService reconcileAll", () => {
@@ -130,16 +124,11 @@ describe("ZaloInboxPollService reconcileFromJob", () => {
     })
 })
 
-describe("ZaloInboxPollService requestReconcile", () => {
-    it("enqueues the reconcile of the connection in one transaction at the current time", async () => {
-        const { service, queue } = await build()
+describe("ZaloInboxPollService polls", () => {
+    it("reads back the connections of Zalo and no other provider", async () => {
+        const { service } = await build()
 
-        await service.requestReconcile("ws-1", "zalo-1")
-
-        expect(queue.enqueueReconcile).toHaveBeenCalledWith(
-            { workspaceId: "ws-1", connectionId: "zalo-1" },
-            new Date(NOW),
-            expect.anything(),
-        )
+        expect(service.polls("zalo_oa")).toBe(true)
+        expect(service.polls("sepay")).toBe(false)
     })
 })

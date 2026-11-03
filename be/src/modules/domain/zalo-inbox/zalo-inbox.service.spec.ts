@@ -23,6 +23,12 @@ const body = Buffer.from(
 )
 const payload = { connection: "c-1", rawBody: body.toString("utf8") }
 
+/** The value the deferred `processedAt` of an update stamps. */
+const stamped = (set: unknown): unknown => {
+    const processedAt: unknown = Reflect.get(Object(set), "processedAt")
+    return typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined
+}
+
 const pendingOf = (over: Partial<ZaloInboxEntity> = {}): ZaloInboxEntity =>
     Object.assign(new ZaloInboxEntity(), { id: "receipt-1", provider: "zalo", payload }, over)
 
@@ -100,6 +106,7 @@ describe("ZaloInboxService receipt delivery", () => {
         expect(gate.holdsProofKey).toHaveBeenCalledWith("c-1")
         expect(outbox.jobs).toEqual([])
         expect(stampedValues(tx.em.update.mock.calls[0]?.[2])).toEqual({ processedAt: "function", state: "handled" })
+        expect(stamped(tx.em.update.mock.calls[0]?.[2])).toBe("now()")
         expect(tx.commits).toBe(1)
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
     })
@@ -222,6 +229,7 @@ describe("ZaloInboxService polled messages", () => {
         await expect(service.acceptPolledMessage("c-1", message, { ...fresh, stale: true })).resolves.toBe(true)
         expect(outbox.jobs).toEqual([])
         expect(stampedValues(tx.em.update.mock.calls[0]?.[2])).toEqual({ processedAt: "function", state: "expired" })
+        expect(stamped(tx.em.update.mock.calls[0]?.[2])).toBe("now()")
         expect(inboundEvents.keepForOwner).toHaveBeenCalledWith(expect.anything(), {
             workspaceId: "w-1",
             channel: "zalo",

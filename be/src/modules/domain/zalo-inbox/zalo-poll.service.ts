@@ -1,18 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { ConnectionPollLogEvent, ConnectionPollRun, emptyPollSummary } from "@modules/domain/connection-poll"
 import type { PollSummary } from "@modules/domain/connection-poll"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { HealthCandidate } from "@modules/domain/connections"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { ConnectionsService } from "@modules/domain/connections"
+import type { HealthCandidate } from "@modules/domain/connections"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectTimer } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
-import { ZaloInboxPollQueue } from "@modules/queues/zalo-inbox-poll"
 import type { ZaloInboxPollPayload } from "@modules/queues/zalo-inbox-poll"
 import { ZaloInboxPoller } from "./zalo-inbox-poller.service"
 
@@ -28,22 +25,18 @@ export class ZaloInboxPollService {
     private readonly run: ConnectionPollRun
 
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectClock() private readonly clock: Clock,
+        @InjectClock() clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         @InjectTimer() timer: Timer,
         private readonly connections: ConnectionsService,
         private readonly poller: ZaloInboxPoller,
-        private readonly queue: ZaloInboxPollQueue,
     ) {
         this.run = new ConnectionPollRun({ clock, logger, timer, connections })
     }
 
-    /** Asks for the reconcile of one connection that just became ready (the owner authorised it): the job reads its backfill window back without making the caller wait. */
-    requestReconcile(workspaceId: string, connectionId: string): Promise<void> {
-        return this.entityManager.transaction((manager) =>
-            this.queue.enqueueReconcile({ workspaceId, connectionId }, this.clock.now(), manager),
-        )
+    /** True when connections of the provider can be read back. */
+    polls(provider: string): boolean {
+        return provider === this.poller.provider
     }
 
     /** Runs the reconcile a queued job asks for: one connection when the payload names it, else every Zalo connection. */

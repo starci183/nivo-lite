@@ -112,3 +112,6 @@ export const CONNECTION_READY_TOPIC = "connection_ready"
 
 /** The queue of the `bank_feed_poll` consumer of `connection_ready`. */
 export const CONNECTION_READY_BANK_FEED_POLL_TOPIC_QUEUE = "connection_ready__bank_feed_poll"
+
+/** The queue of the `zalo_inbox_poll` consumer of `connection_ready`. */
+export const CONNECTION_READY_ZALO_INBOX_POLL_TOPIC_QUEUE = "connection_ready__zalo_inbox_poll"
