@@ -1,5 +1,7 @@
 /** Log events of the channels capability. */
 export enum ChannelsLogEvent {
+    /** A reply was kept in the conversation and not pushed, because the customer has no recipient on the channel yet. */
+    RecipientNotLinked = "channels.delivery.recipient_not_linked",
     /** A scheduled Zalo token refresh failed for one connection; the connection id rides in the fields. */
     ZaloRefreshFailed = "channels.zalo.refresh-failed",
     /** A reply could not be pushed to the customer's channel; the reply stays stored and visible. */

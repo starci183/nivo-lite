@@ -11,6 +11,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectChannelSenderRegistry } from "./channels.decorators"
 import type { ChannelSenderRegistry, DeliveryRequest, DeliveryReceipt, PersonMessage } from "./channels.contracts"
+import { RECIPIENT_NOT_LINKED, recipientLinked } from "./delivery-recipient.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
@@ -83,6 +84,9 @@ export class ChannelDeliveryService {
             }
             result = this.failed(target.value, cause)
         }
+        if (result.outcome === "rejected" && !recipientLinked(target.value)) {
+            return this.keptUndelivered(target.value, request.messageId)
+        }
         await this.messages.markDelivery(request.messageId, result.delivered, deliveryErrorOf(result))
         return result
     }
@@ -150,6 +154,17 @@ export class ChannelDeliveryService {
             () => DELIVERED,
             (cause: unknown) => this.failed(target, cause),
         )
+    }
+
+    /**
+     * A reply the channel refused to a customer with no recipient on it yet stays in the conversation, marked as not sent for want of a
+     * recipient (the same verdict a graph's send keeps), not as a refusal of the channel. A route that reaches such a customer anyway
+     * (a Zalo fallback) still delivers.
+     */
+    private async keptUndelivered(target: ConversationTarget, messageId: string): Promise<DeliveryReceipt> {
+        await this.messages.markDelivery(messageId, false, RECIPIENT_NOT_LINKED)
+        this.logger.info(ChannelsLogEvent.RecipientNotLinked, { conversationId: target.id, channel: target.channel })
+        return NOT_DELIVERED
     }
 
     private failed(target: ConversationTarget, cause: unknown): DeliveryReceipt {

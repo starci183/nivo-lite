@@ -176,7 +176,7 @@ describe("ChannelDeliveryService", () => {
 
         it(
             "counts a website conversation as delivered on the page and sends nothing for a Telegram one " +
-                "without an external id",
+                "without an external id, kept as not linked",
             async () => {
                 const website = await build(target({ channel: "website" }))
                 const anonymous = await build(target({ externalId: null }))
@@ -194,7 +194,11 @@ describe("ChannelDeliveryService", () => {
                 expect(website.telegram.sendMessage).not.toHaveBeenCalled()
                 expect(anonymous.telegram.sendMessage).not.toHaveBeenCalled()
                 expect(website.messages.markDelivery).toHaveBeenCalledWith("msg-1", true, undefined)
-                expect(anonymous.messages.markDelivery).toHaveBeenCalledWith("msg-1", false, "delivery_rejected")
+                expect(anonymous.messages.markDelivery).toHaveBeenCalledWith("msg-1", false, "recipient_not_linked")
+                expect(anonymous.logger.info).toHaveBeenCalledWith("channels.delivery.recipient_not_linked", {
+                    conversationId: "conv-1",
+                    channel: "telegram",
+                })
             },
         )
     })

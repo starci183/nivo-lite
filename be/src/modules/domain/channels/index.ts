@@ -25,3 +25,4 @@ export type {
     ZnsRenewalSettings,
     OptionalZnsRenewal,
 } from "./channels.contracts"
+export { RECIPIENT_NOT_LINKED, recipientLinked } from "./delivery-recipient.policy"
