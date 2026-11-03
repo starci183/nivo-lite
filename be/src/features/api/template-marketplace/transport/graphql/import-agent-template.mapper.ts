@@ -1,5 +1,5 @@
 import type { ImportAgentTemplateRequest } from "../../application/import-agent-template.contracts"
-import type { InstalledTemplate } from "@nivo/agent-sdk/template"
+import type { InstalledTemplate } from "@nivo-lite/agent-sdk/template"
 import type { ImportAgentTemplateInput } from "./dto/import-agent-template.input"
 import type { InstalledTemplateType } from "./dto/installed-template.type"
 import { toInstalledTemplateType, valuesOf } from "./template-marketplace.records.mapper"

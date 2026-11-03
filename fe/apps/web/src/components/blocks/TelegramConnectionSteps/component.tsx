@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { ConnectionAgentSwitches } from "@/components/composites/ConnectionAgentSwitches"
 import { CONNECTION_LINES_PLACEHOLDER, ConnectionLines } from "@/components/composites/ConnectionLines"
 import { ConnectionSteps } from "@/components/composites/ConnectionSteps"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { ConnectionAgentRowView, ConnectionLineView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One setup step as it is worded: its title, the summary beside it, the guidance under it, and whether it is open. */

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Drawer } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { SlotRead, AgentOption, DataSlot, Provider, ProviderKind, SlotLabels } from "@/modules/types"
 import { CsvImportWizard } from "@/components/blocks/CsvImportWizard"
 import { DatabaseWizard } from "@/components/blocks/DatabaseWizard"

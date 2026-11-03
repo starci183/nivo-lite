@@ -5,13 +5,13 @@ type VideoEditorPanelFields = VideoWorkbenchViews["editorPanel"]
 type VideoNormalPanelFields = VideoWorkbenchViews["normalPanel"]
 
 import { Button, Grid, Stack } from "@starci/grammar/common"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
-import { SlotView } from "@/components/composites/SlotView"
-import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
-import { DoneRegion } from "@/components/composites/DoneRegion"
 import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
+import { DoneRegion } from "@/components/composites/DoneRegion"
 import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
+import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
+import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { VideoGoalForm } from "@/components/composites/VideoGoalForm"
 import { VideoInputsForm } from "@/components/composites/VideoInputsForm"
 import { VideoBrandSettings } from "@/components/composites/VideoBrandSettings"

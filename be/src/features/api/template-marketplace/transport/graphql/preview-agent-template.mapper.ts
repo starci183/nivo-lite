@@ -1,5 +1,5 @@
 import type { PreviewAgentTemplateRequest } from "../../application/preview-agent-template.contracts"
-import type { PackagePreview } from "@nivo/agent-sdk/template"
+import type { PackagePreview } from "@nivo-lite/agent-sdk/template"
 import type { PackageAgentTemplateInput } from "./dto/package-agent-template.input"
 import type { PackagePreviewType } from "./dto/package-preview.type"
 import { toPackagePreviewType, toPackageRequest } from "./template-marketplace.records.mapper"

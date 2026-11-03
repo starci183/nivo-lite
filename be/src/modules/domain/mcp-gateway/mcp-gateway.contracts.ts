@@ -1,3 +1,4 @@
+import type { ModuleCapabilityRole } from "@nivo-lite/agent-sdk/module"
 import type { ConnectionActor } from "@modules/domain/connections"
 import type { CredentialState } from "@modules/domain/mcp-connectors"
 import type { GatewayApprovalReason, GatewayJson } from "@modules/domain/mcp-gateway-receipts"
@@ -72,14 +73,7 @@ export interface GatewayToolSpec {
  * - `invoice.list` `{ since?: YYYY-MM-DD, limit? }` -> `{ invoices: [{ id, sellerTaxCode, sellerName, number, series, issuedOn,
  *   totalVnd, vatVnd, format }] }`
  */
-export type CapabilityRole =
-    | "identity.find"
-    | "identity.upsert"
-    | "receivable.find"
-    | "receivable.recordPayment"
-    | "payment.credits.list"
-    | "payment.debits.list"
-    | "invoice.list"
+export type CapabilityRole = ModuleCapabilityRole
 
 /** The tool a workspace plays a role with. */
 export interface RoleTool {

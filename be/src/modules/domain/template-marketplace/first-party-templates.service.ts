@@ -19,7 +19,7 @@ import type { Principal } from "@modules/platform/cqrs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { hashOfPackage, previewPackage, TEMPLATE_KEY_PATTERN } from "@nivo/agent-sdk/template"
+import { hashOfPackage, previewPackage, TEMPLATE_KEY_PATTERN } from "@nivo-lite/agent-sdk/template"
 import type {
     AgentTemplatePackage,
     GraphDocument,
@@ -27,7 +27,7 @@ import type {
     ParameterBinding,
     TemplateParameter,
     TemplateVersionView,
-} from "@nivo/agent-sdk/template"
+} from "@nivo-lite/agent-sdk/template"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"
 import { TemplateListingEntity } from "./persistence/entities"

@@ -2,7 +2,7 @@ import { Alert, Button, Cluster, Drawer, Form, Input, Section, Stack, Text, Text
 import type { PresentationState } from "@starci/grammar/common"
 import { DossierStaticRows } from "@/components/leaves/DossierStaticRows"
 import type { EvidenceItemView } from "@/components/leaves/DossierStaticRows"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The draft as the drawer draws it. */

@@ -1,8 +1,9 @@
+import { LOYALTY_VIEW_IDS } from "@nivo-lite/module-loyalty/manifest"
 import type { LoyaltyBoardType, LoyaltyConfigType, LoyaltyTierType, useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import type { BadgeTone } from "@starci/grammar/common"
 
-/** The actual Loyalty panels, in the existing strip order. */
-export const LOYALTY_TABS = ["overview", "members", "rewards", "promo", "pending"] as const
+/** The actual Loyalty panels, in the strip order the module package declares. */
+export const LOYALTY_TABS: typeof LOYALTY_VIEW_IDS = LOYALTY_VIEW_IDS
 /** One real panel of the Loyalty workbench. */
 export type LoyaltyTab = (typeof LOYALTY_TABS)[number]
 /** Shared read identity with the formerly conditional panel's own activation and local-session scope. */

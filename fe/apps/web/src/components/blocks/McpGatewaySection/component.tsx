@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react"
 import { McpConnectorForms } from "@/components/composites/McpConnectorForms"
 import { McpGatewayRegion } from "@/components/composites/McpGatewayRegion"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The cards the gateway region draws. */

@@ -1,5 +1,5 @@
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, Button } from "@starci/grammar/common"
 import { WizardConsentCopy } from "@/components/composites/WizardConsentCopy"
 import { WizardFrame } from "@/components/frames/WizardFrame"

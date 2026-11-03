@@ -3,7 +3,7 @@ import { Stack, Grid, Alert } from "@starci/grammar/common"
 import { CreditsBalance } from "@/components/composites/CreditsBalance"
 import { CreditsCatalogue } from "@/components/composites/CreditsCatalogue"
 import { CreditsUpgrade } from "@/components/composites/CreditsUpgrade"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { CreditsOverviewView, DataSlot, PayTarget, SlotLabels } from "@/modules/types"
 
 /** The resolved words of the overview. */

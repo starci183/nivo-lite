@@ -317,7 +317,7 @@ export type {
     TierErrorView,
     TierTextField,
     TierValues,
-} from "./loyalty-program"
+} from "@nivo-lite/module-loyalty/workbench"
 export type { GraphQLResponse } from "./outcome"
 export type { SetupWriteDraft } from "./setup-write-draft"
 export type { ModuleIconName } from "./module-icon"
@@ -359,7 +359,7 @@ export type {
     HiringSay,
     PublicQuestionView,
 } from "./hiring"
-export type { RewardFormValues, RewardTextField } from "./loyalty-rewards"
+export type { RewardFormValues, RewardTextField } from "@nivo-lite/module-loyalty/workbench"
 export type {
     ContentChannel,
     ContentT,
@@ -440,9 +440,9 @@ export type { InventoryNewPoEditorData } from "./inventory-editors"
 export type { InventoryPoEditorData } from "./inventory-editors"
 export type { InventorySupplierEditorData } from "./inventory-editors"
 export type { InventoryRecipeEditorData } from "./inventory-editors"
-export type { LoyaltyViews } from "./loyalty-views"
-export type { LoyaltyActions } from "./loyalty-views"
-export type { LoyaltyWorkbenchData, LoyaltyWorkbenchOn } from "./loyalty-workbench"
+export type { LoyaltyViews } from "@nivo-lite/module-loyalty/workbench"
+export type { LoyaltyActions } from "@nivo-lite/module-loyalty/workbench"
+export type { LoyaltyWorkbenchData, LoyaltyWorkbenchOn } from "@nivo-lite/module-loyalty/workbench"
 export type { WorkbenchFigureData } from "./workbench-dashboard"
 export type { WorkbenchWaitingRegionView, WorkbenchDoneRegionView } from "./workbench-dashboard"
 export type { WorkbenchConnectionsRegionView, WorkbenchKnowledgeRegionView } from "./workbench-dashboard"

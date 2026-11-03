@@ -6,8 +6,8 @@ import {
     TemplateInstallEntity,
     TemplateLicenseEntity,
 } from "@modules/domain/agent-templates"
-import { applyUnits, instantiate, resolveValues, updateUnits } from "@nivo/agent-sdk/template"
-import type { UpdateOffer } from "@nivo/agent-sdk/template"
+import { applyUnits, instantiate, resolveValues, updateUnits } from "@nivo-lite/agent-sdk/template"
+import type { UpdateOffer } from "@nivo-lite/agent-sdk/template"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"

@@ -1,7 +1,7 @@
 import { AlertDialog, EmptyNotice, Stack, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
 import { TeamInviteRowDetail } from "@/components/composites/TeamInviteRowDetail"
 
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 
 import type { DataSlot, InviteRowView, SlotLabels } from "@/modules/types"
 

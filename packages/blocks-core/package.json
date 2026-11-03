@@ -1,0 +1,30 @@
+{
+  "name": "@nivo-lite/blocks-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The basic blocks the Sales and Chatbot workbenches are composed from, each made with defineBlock of @nivo-lite/agent-sdk. The root export holds the React-free definitions; ./client holds their Grammar-only components.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/esm/client/index.d.ts",
+      "default": "./dist/esm/client/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.client.json",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "peerDependencies": {
+    "@nivo-lite/agent-sdk": "*",
+    "@starci/grammar": "0.21.15",
+    "react": "19.2.3",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}

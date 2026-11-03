@@ -1,0 +1,6 @@
+{
+  "extends": "@starci/tsconfig/next.json",
+  "compilerOptions": { "incremental": false, "types": ["jest", "node"] },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

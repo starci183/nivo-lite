@@ -1,5 +1,5 @@
 import type { DataSlot, SlotLabels, CopyLabels } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, CheckboxGroup, EmptyNotice, Input, Section, Stack, Text } from "@starci/grammar/common"
 import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
 import { WizardCodeBlock } from "@/components/composites/WizardCodeBlock"

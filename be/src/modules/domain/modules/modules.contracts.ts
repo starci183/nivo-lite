@@ -129,7 +129,7 @@ export interface ModuleRequirements {
     /** The connection providers the workspace should have connected. */
     readonly connections: ReadonlyArray<string>
     /** The connector capability roles the module's agent needs, never a named connector; absent means none. */
-    readonly roles?: ModuleRoles
+    readonly roles?: ModuleRoles | undefined
 }
 
 /** The capability roles of a module: without every required one the agent waits for a connection; a used one only feeds a feature. */
@@ -163,9 +163,9 @@ export interface ModuleTrigger {
     /** How often it fires; the owner can change it later. */
     readonly preset: AgentTriggerPreset
     /** The time of day (`HH:MM`) of a daily preset. */
-    readonly atTime?: string
+    readonly atTime?: string | undefined
     /** The probe that decides whether a fire has work; always works when absent. */
-    readonly probeKey?: string
+    readonly probeKey?: string | undefined
 }
 
 /** One module of the catalogue: everything the product knows about an installable agent type. */
@@ -223,7 +223,7 @@ export interface ModuleDefinition {
     /** The commands other agents may ask the module to run. */
     readonly accepts: ReadonlyArray<AcceptedCommand>
     /** The clock triggers seeded for the module's agent; none when absent. */
-    readonly triggers?: ReadonlyArray<ModuleTrigger>
+    readonly triggers?: ReadonlyArray<ModuleTrigger> | undefined
 }
 
 /** The whole catalogue as the front end reads it. */

@@ -9,7 +9,7 @@ import type {
     TemplateVersionView,
     TemplateView,
     UpdateOffer,
-} from "@nivo/agent-sdk/template"
+} from "@nivo-lite/agent-sdk/template"
 import type {
     CreatorLedgerView,
     FirstPartySyncReport,

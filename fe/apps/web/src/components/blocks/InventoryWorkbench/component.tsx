@@ -1,7 +1,14 @@
 import type { ReactElement } from "react"
 import { type InventoryWorkbenchDataView, type InventoryWorkbenchActions, INVENTORY_TABS } from "@/modules/types"
 import { Grid, Stack, Tabs } from "@starci/grammar/common"
+import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
+import { DoneRegion } from "@/components/composites/DoneRegion"
+import { FiguresStrip } from "@/components/composites/FiguresStrip"
+import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
+import { WaitingRegion } from "@/components/composites/WaitingRegion"
+import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { InventoryStock } from "@/components/frames/InventoryStock"
 import { InventoryOrders } from "@/components/frames/InventoryOrders"
 import { InventorySuppliers } from "@/components/frames/InventorySuppliers"
@@ -10,13 +17,6 @@ import { InventoryPending } from "@/components/composites/InventoryPending"
 import { InventoryHistory } from "@/components/composites/InventoryHistory"
 import { InventoryCount } from "@/components/composites/InventoryCount"
 import { InventoryImport } from "@/components/composites/InventoryImport"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresRibbon } from "@/components/composites/FiguresRibbon"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { SlotView } from "@/components/composites/SlotView"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 /** The seven original Inventory panels and the recorded-explanation arrangement. */
 export const INVENTORY_WORKBENCH_SHAPES: readonly [...typeof INVENTORY_TABS, "explanation"] = [...INVENTORY_TABS, "explanation"]
 type InventoryWorkbenchShape = (typeof INVENTORY_WORKBENCH_SHAPES)[number]
@@ -113,7 +113,7 @@ const Overview = (props: InventoryWorkbenchBaseProps) => {
                 forbidden="notice"
                 onRetry={props.on.retryPanel}
                 render={(items, isLoading) => (
-                    <FiguresRibbon label={view.ribbon.label} items={items} isLoading={isLoading} />
+                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
                 )}
             />
             <Tabs

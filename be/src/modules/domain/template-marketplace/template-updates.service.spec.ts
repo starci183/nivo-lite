@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
-import * as sdk from "@nivo/agent-sdk/template"
-import type { GraphDocument as SdkGraph } from "@nivo/agent-sdk/template"
+import * as sdk from "@nivo-lite/agent-sdk/template"
+import type { GraphDocument as SdkGraph } from "@nivo-lite/agent-sdk/template"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { AgentGraphPublishService, AgentGraphsService, graphDocumentSchema } from "@modules/domain/agent-graphs"
 import type { GraphDocument } from "@modules/domain/agent-graphs"
@@ -9,7 +9,7 @@ import {
     TemplateInstallEntity,
     TemplateLicenseEntity,
 } from "@modules/domain/agent-templates"
-import { instantiate } from "@nivo/agent-sdk/template"
+import { instantiate } from "@nivo-lite/agent-sdk/template"
 import type { StoredVersion } from "@modules/domain/agent-templates"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"

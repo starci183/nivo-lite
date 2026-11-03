@@ -11,7 +11,7 @@ import {
     SurfaceCard,
     Text,
 } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ThreadChainPanel } from "@/components/composites/ThreadChainPanel"
 import { ThreadComposer } from "@/components/composites/ThreadComposer"
 import { ThreadFeed } from "@/components/composites/ThreadFeed"

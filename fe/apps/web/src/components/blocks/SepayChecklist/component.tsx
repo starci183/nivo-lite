@@ -2,7 +2,7 @@ import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { Alert, Stepper, Text } from "@starci/grammar/common"
 import type { StepperStep, StepperStepState } from "@starci/grammar/common"
 import { Icon } from "@/components/leaves/Icon"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** One step of the checklist as it is worded. */

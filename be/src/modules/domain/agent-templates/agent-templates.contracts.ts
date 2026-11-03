@@ -1,5 +1,5 @@
 /** The contracts of the agent templates are the SDK's: the package format, parameters, provenance, installs and update offers. */
-export { MAX_PARAMETERS, TEMPLATE_FORMAT, TEMPLATE_KEY_PATTERN } from "@nivo/agent-sdk/template"
+export { MAX_PARAMETERS, TEMPLATE_FORMAT, TEMPLATE_KEY_PATTERN } from "@nivo-lite/agent-sdk/template"
 export type {
     AgentTemplatePackage,
     InstalledTemplate,
@@ -21,4 +21,4 @@ export type {
     UpdateOffer,
     UpdateUnit,
     UnitChange,
-} from "@nivo/agent-sdk/template"
+} from "@nivo-lite/agent-sdk/template"

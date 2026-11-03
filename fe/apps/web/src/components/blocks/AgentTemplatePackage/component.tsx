@@ -1,6 +1,6 @@
 import { Alert, Button, Input, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import type { ReactElement } from "react"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { ACTIONS_CLASS_NAME, BLOCK_CLASS_NAME, CARD_CLASS_NAME } from "./classNames"
 

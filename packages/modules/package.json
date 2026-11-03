@@ -1,0 +1,31 @@
+{
+  "name": "@nivo-lite/modules",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The one list of Nivo modules built on the agent SDK, all React-free: ./template (every module's server half, for the back end) and ./manifest (every workbench declaration and the spec registry they assemble, for the back end that validates specs and the front end that draws them).",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./template": {
+      "types": "./dist/template/index.d.ts",
+      "default": "./dist/template/index.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest/index.d.ts",
+      "default": "./dist/manifest/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "dependencies": {
+    "@nivo-lite/agent-sdk": "*",
+    "@nivo-lite/module-loyalty": "*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

@@ -1,5 +1,5 @@
 import { PaneSection } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ConnectionFactsPane } from "@/components/frames/ConnectionFactsPane"
 import type { ConnectionFactView, DataSlot, SlotLabels } from "@/modules/types"
 

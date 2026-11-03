@@ -1,0 +1,75 @@
+{
+  "name": "@nivo-lite/agent-sdk",
+  "version": "0.2.0",
+  "private": true,
+  "description": "The SDK other parties code against: defineBlock and defineNode, the block host and read and action handles, the workbench spec format with its validator, the generic spec renderer (./client), the minimal module document types and the testing fakes. It holds no concrete block: those are packages built on it (@nivo-lite/blocks-core). React-free except ./client.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "default": "./dist/schema/index.js"
+    },
+    "./rights": {
+      "types": "./dist/rights/index.d.ts",
+      "default": "./dist/rights/index.js"
+    },
+    "./block": {
+      "types": "./dist/block/index.d.ts",
+      "default": "./dist/block/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "default": "./dist/node/index.js"
+    },
+    "./spec": {
+      "types": "./dist/spec/index.d.ts",
+      "default": "./dist/spec/index.js"
+    },
+    "./module": {
+      "types": "./dist/module/index.d.ts",
+      "default": "./dist/module/index.js"
+    },
+    "./template": {
+      "types": "./dist/template/index.d.ts",
+      "default": "./dist/template/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    },
+    "./client": {
+      "types": "./dist/esm/client/index.d.ts",
+      "default": "./dist/esm/client/index.js"
+    },
+    "./client/messages/vi.json": "./dist/esm/client/messages/vi.json",
+    "./client/messages/en.json": "./dist/esm/client/messages/en.json",
+    "./workbench/contract": {
+      "types": "./dist/workbench/contract/index.d.ts",
+      "default": "./dist/workbench/contract/index.js"
+    },
+    "./workbench/spec": {
+      "types": "./dist/workbench/spec/index.d.ts",
+      "default": "./dist/workbench/spec/index.js"
+    },
+    "./workbench/view": {
+      "types": "./dist/workbench/view/index.d.ts",
+      "default": "./dist/workbench/view/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.client.json",
+    "typecheck": "tsc --noEmit --pretty false"
+  },
+  "peerDependencies": {
+    "@starci/grammar": "0.21.15",
+    "react": "19.2.3",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}

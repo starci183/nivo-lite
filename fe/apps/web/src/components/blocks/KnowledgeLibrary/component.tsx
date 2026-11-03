@@ -6,7 +6,7 @@ import {
     rowListPropsOf,
 } from "@/components/composites/KnowledgeRows"
 import type { KnowledgeListView } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { FILTER_CLASS_NAME } from "./classNames"
 
 /** The list and the filter the connected documents list supplies. */

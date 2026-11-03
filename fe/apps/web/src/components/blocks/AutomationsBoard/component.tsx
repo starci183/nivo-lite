@@ -8,7 +8,7 @@ import { AutomationHiddenList } from "@/components/composites/AutomationHiddenLi
 import { AutomationMessage } from "@/components/composites/AutomationMessage"
 import { AutomationRuns } from "@/components/composites/AutomationRuns"
 import { AutomationSettings } from "@/components/composites/AutomationSettings"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { AutomationsBoardView, CardView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** The words that belong to no data. */

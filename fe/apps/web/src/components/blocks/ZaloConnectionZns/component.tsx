@@ -1,6 +1,6 @@
 import type { ReactElement } from "react"
 import { Alert, Button, Disclosure, Fieldset, Input, PaneSection, Grid } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels, ZnsRenewalForm } from "@/modules/types"
 
 /** The fields of the form, in the order they are drawn. */

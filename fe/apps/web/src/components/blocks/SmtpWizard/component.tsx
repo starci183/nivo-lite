@@ -1,5 +1,5 @@
 import type { DataSlot, SlotLabels, SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, CheckboxGroup, Input, RadioGroup, Text } from "@starci/grammar/common"
 import { SmtpAccountStep } from "@/components/composites/SmtpAccountStep"
 import { SmtpGuideStep } from "@/components/composites/SmtpGuideStep"

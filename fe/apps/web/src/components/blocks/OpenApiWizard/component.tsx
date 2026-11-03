@@ -1,5 +1,5 @@
 import type { DataSlot, SlotLabels, AgentStepView, WizardNote } from "@/modules/types"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Stack, Alert, Input, Select, Text, Textarea } from "@starci/grammar/common"
 
 import { OpenApiAuthStep } from "@/components/composites/OpenApiAuthStep"

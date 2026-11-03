@@ -1,5 +1,5 @@
 import { Alert, Button, EmptyNotice, Form, Heading, Input, SurfaceCard, Text, Stack } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The drawn shapes of the public points check, in the order the visitor meets them. */

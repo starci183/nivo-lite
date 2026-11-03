@@ -6,4 +6,4 @@ export {
     leakyGraph,
     packageOf,
     withExtraBranch,
-} from "@nivo/agent-sdk/testing"
+} from "@nivo-lite/agent-sdk/testing"

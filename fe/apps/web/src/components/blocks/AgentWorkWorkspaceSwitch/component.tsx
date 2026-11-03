@@ -1,5 +1,5 @@
 import { Alert, Cluster, Stack, SurfaceCard, Switch, Text } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels, WorkspaceAgentWorkView } from "@/modules/types"
 
 /** Copy and slot of the work switch of the whole workspace. */

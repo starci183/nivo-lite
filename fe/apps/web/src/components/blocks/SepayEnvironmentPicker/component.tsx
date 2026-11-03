@@ -1,6 +1,6 @@
 import { SegmentedControl } from "@starci/grammar/common"
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SepayEnvironment, SlotLabels } from "@/modules/types"
 
 /** The selected environment and the authority to change it, from the connection's own read. */

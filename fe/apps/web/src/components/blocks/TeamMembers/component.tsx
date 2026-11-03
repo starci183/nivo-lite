@@ -13,7 +13,7 @@ import {
 } from "@starci/grammar/common"
 
 import { TeamSection } from "@/components/frames/TeamSection"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, MemberRowView, SlotLabels } from "@/modules/types"
 import { IDENTITY_CLASS_NAME } from "./classNames"

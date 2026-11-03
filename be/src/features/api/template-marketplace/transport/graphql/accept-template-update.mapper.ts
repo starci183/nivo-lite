@@ -1,5 +1,5 @@
 import type { AcceptTemplateUpdateRequest } from "../../application/accept-template-update.contracts"
-import type { UpdateOffer } from "@nivo/agent-sdk/template"
+import type { UpdateOffer } from "@nivo-lite/agent-sdk/template"
 import type { AcceptTemplateUpdateInput } from "./dto/accept-template-update.input"
 import type { UpdateOfferType } from "./dto/update-offer.type"
 import { toUpdateOfferType } from "./template-marketplace.records.mapper"

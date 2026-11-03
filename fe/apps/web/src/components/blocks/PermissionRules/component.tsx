@@ -2,7 +2,7 @@ import { EmptyNotice, type ListRowData, SurfaceCard, type BadgeTone } from "@sta
 
 import { PermissionRuleDrawer } from "@/components/composites/PermissionRuleDrawer"
 import type { PermissionRuleDrawerProps } from "@/components/composites/PermissionRuleDrawer"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PermissionGrantsFields, type PermissionGrantsFieldsProps } from "@/components/branches/PermissionGrantsFields"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 

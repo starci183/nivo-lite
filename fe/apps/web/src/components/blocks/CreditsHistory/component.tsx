@@ -1,5 +1,5 @@
 import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import { SlotView } from "@/components/composites/SlotView"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { CreditsHistoryRow, DataSlot, SlotLabels } from "@/modules/types"
 
 /** The payment history: its title, the placeholder word, the rows slot and the words of its states. */
