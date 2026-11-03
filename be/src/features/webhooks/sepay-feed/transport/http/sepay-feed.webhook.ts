@@ -5,6 +5,9 @@ import { BankFeedService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 
+/** The provider this door speaks for: the key of its webhook in the registry. */
+const PROVIDER = "sepay"
+
 /** The fixed response SePay requires for an accepted delivery. */
 export const PROVIDER_ACK = { success: true } as const
 
@@ -27,8 +30,8 @@ export class SepayFeedWebhook {
         @Param("connectionId") connectionId: string,
         @Headers("authorization") authorization: string | undefined,
     ): Promise<typeof PROVIDER_ACK> {
-        await this.feed.verifySepayFeedDelivery(authorization, connectionId, request.rawBody)
-        await this.feed.acceptSepayFeedDelivery(request.rawBody, connectionId)
+        await this.feed.verifyFeedDelivery(authorization, connectionId, request.rawBody, PROVIDER)
+        await this.feed.acceptFeedDelivery(request.rawBody, connectionId, PROVIDER)
         return PROVIDER_ACK
     }
 }

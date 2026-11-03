@@ -1,6 +1,7 @@
 export type { Outcome } from "./outcome.contracts"
 export { ok, refused, unwrapOutcome } from "./outcome.mapper"
 export { isRecord } from "./record.policy"
+export { numberOf, textOf, textOrNull } from "./field-read.policy"
 export { parseJsonText } from "./json-read.policy"
 export { deriveStateKey, sameSitePath, signStateToken, verifyStateToken } from "./signed-state.policy"
 export { eachInOrder } from "./sequence.policy"

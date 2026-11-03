@@ -186,7 +186,9 @@ const drainEvents = async (): Promise<void> => {
  * reactor renews the contract the settled invoice paid for.
  */
 const deliverSepay = async (id: number, amount: number, content: string): Promise<void> => {
-    await world.resolve(BankFeedService).acceptSepayFeedDelivery(sepayBody(id, amount, content), identity.connectionId)
+    await world
+        .resolve(BankFeedService)
+        .acceptFeedDelivery(sepayBody(id, amount, content), identity.connectionId, "sepay")
     await runQueued(await feedReceipts(), world.resolve(BankFeedDeliveryProcessor))
     await drainEvents()
 }

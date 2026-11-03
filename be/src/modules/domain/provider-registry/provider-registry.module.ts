@@ -4,6 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./provider-registry.modul
 import {
     BankFeedPollerRegistry,
     BankTransactionsRegistry,
+    FeedWebhookRegistry,
     PaymentInstructionRegistry,
 } from "./provider-registries.service"
 
@@ -13,7 +14,12 @@ export class ProviderRegistryModule extends ConfigurableModuleClass {
     /** Registers the registries once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        const registries = [BankFeedPollerRegistry, PaymentInstructionRegistry, BankTransactionsRegistry]
+        const registries = [
+            BankFeedPollerRegistry,
+            PaymentInstructionRegistry,
+            BankTransactionsRegistry,
+            FeedWebhookRegistry,
+        ]
         return { ...base, providers: [...(base.providers ?? []), ...registries], exports: registries }
     }
 }

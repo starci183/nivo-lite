@@ -184,23 +184,7 @@ export interface PayableOrder {
     readonly bank: BankAccountOptions
 }
 
-/** SePay's webhook body reduced to the fields NIVO reads (names exactly as in https://docs.sepay.vn); only `id` is required. */
-export interface SepayPayload {
-    /** SePay's own transaction id: the idempotency key. */
-    readonly id: number
-    /** The bank gateway name. */
-    readonly gateway: string | undefined
-    /** `in` for a credit, `out` for a debit. */
-    readonly transferType: string | undefined
-    /** The amount in VND; 0 when absent, undefined when unreadable. */
-    readonly transferAmount: number | undefined
-    /** The transfer content. */
-    readonly content: string | null
-    /** The payment code SePay extracted from the content. */
-    readonly code: string | null
-    /** SePay's description line. */
-    readonly description: string | null
-}
+export type { SepayPayload } from "@modules/domain/sepay-provider"
 
 /** A delivery to NIVO's own billing door: SePay's key and the exact bytes it posted. */
 export interface SepayDelivery {
@@ -210,8 +194,8 @@ export interface SepayDelivery {
     readonly rawBody: RawBody
 }
 
-/** A delivery to a workspace's own SePay feed. */
-export interface SepayFeedDelivery extends SepayDelivery {
+/** A delivery to a workspace's own bank feed, in the scheme of one provider. */
+export interface FeedDelivery extends SepayDelivery {
     /** The connection id from the url. */
     readonly connectionId: string
 }

@@ -35,6 +35,8 @@ import { InboundEventsService } from "@modules/domain/inbound-events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BankFeedReceiptService } from "@modules/domain/bank-feed-inbox"
 import { SepayConnectionService } from "@modules/domain/channel-connections"
+import { FeedWebhookRegistry } from "@modules/domain/provider-registry"
+import { SepayFeedWebhookService } from "@modules/domain/sepay-provider/sepay-feed-webhook.service"
 import { BankCreditBookedEvent } from "@modules/events/api"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -89,6 +91,8 @@ const build = async (world: Partial<FeedWorld> = {}) => {
     const sepayPage = mock<SepayConnectionService>()
     sepayPage.traceIntake.mockImplementation((_feed, _raw, intake) => intake())
     sepayPage.traceRefusal.mockResolvedValue(undefined)
+    const webhooks = new FeedWebhookRegistry()
+    webhooks.register(new SepayFeedWebhookService(sepayPage))
     const moduleRef = await Test.createTestingModule({
         providers: [
             BankFeedService,
@@ -102,7 +106,7 @@ const build = async (world: Partial<FeedWorld> = {}) => {
             { provide: EventsService, useValue: events },
             { provide: TransactionsService, useValue: transactions },
             { provide: BankFeedReceiptService, useValue: feedInbox },
-            { provide: SepayConnectionService, useValue: sepayPage },
+            { provide: FeedWebhookRegistry, useValue: webhooks },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: AgentBindingsService, useValue: bindings },
             { provide: ConnectionBindingsReadService, useValue: connections },
@@ -129,7 +133,7 @@ const build = async (world: Partial<FeedWorld> = {}) => {
 const acceptReceipt = (feed: BankFeedService, provider: BankFeedProvider, body: object) => {
     if (provider === "casso") return feed.acceptCassoDelivery(raw(body), "conn-1")
     if (provider === "payos") return feed.acceptPayosDelivery(raw(body), "conn-1")
-    return feed.acceptSepayFeedDelivery(raw(body), "conn-1")
+    return feed.acceptFeedDelivery(raw(body), "conn-1", "sepay")
 }
 // Each intake and consumption uses its own transaction; the stored payload crosses that boundary.
 const consumeFeed = async (harness: Awaited<ReturnType<typeof build>>, provider: BankFeedProvider, body: object) => {
@@ -231,18 +235,32 @@ describe("BankFeedService provider receipt intake", () => {
         await feed.acceptCassoDelivery(raw({ error: 0, data: [{ id: 9, amount: -1 }] }), "conn-1")
         await feed.acceptPayosDelivery(raw({ code: "00", data: { orderCode: 123, amount: 1 } }), "conn-1")
         await feed.acceptPayosDelivery(raw({ code: "01", data: {} }), "conn-1")
-        await feed.acceptSepayFeedDelivery(raw({ ...incoming, transferType: "refund" }), "conn-1")
-        await feed.acceptSepayFeedDelivery(raw({ ...incoming, transferType: "out", transferAmount: 0 }), "conn-1")
-        await feed.acceptSepayFeedDelivery(raw({ ...incoming, transferAmount: 0 }), "conn-1")
-        await feed.acceptSepayFeedDelivery(raw({ ...incoming, transferAmount: "lots" }), "conn-1")
+        await feed.acceptFeedDelivery(raw({ ...incoming, transferType: "refund" }), "conn-1", "sepay")
+        await feed.acceptFeedDelivery(raw({ ...incoming, transferType: "out", transferAmount: 0 }), "conn-1", "sepay")
+        await feed.acceptFeedDelivery(raw({ ...incoming, transferAmount: 0 }), "conn-1", "sepay")
+        await feed.acceptFeedDelivery(raw({ ...incoming, transferAmount: "lots" }), "conn-1", "sepay")
         expect(feedInbox.claim).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual([])
     })
     it("acknowledges a SePay test ping without an id and settles nothing", async () => {
         const { feed, tx, feedInbox } = await build()
-        await expect(feed.acceptSepayFeedDelivery(raw({}), "conn-1")).resolves.toBeUndefined()
+        await expect(feed.acceptFeedDelivery(raw({}), "conn-1", "sepay")).resolves.toBeUndefined()
         expect(feedInbox.claim).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual([])
+    })
+    it("refuses a money delivery without a usable id and a delivery for a provider that registered no webhook", async () => {
+        const { feed, feedInbox } = await build()
+        await expect(feed.acceptFeedDelivery(raw({ ...incoming, id: 1.5 }), "conn-1", "sepay")).rejects.toEqual(refusal)
+        await expect(feed.acceptFeedDelivery(raw(incoming), "conn-1", "unknown")).rejects.toEqual(refusal)
+        expect(feedInbox.claim).not.toHaveBeenCalled()
+    })
+    it("leaves a refused key of a provider with no webhook unremembered", async () => {
+        const { feed, proof, sepayPage } = await build()
+        proof.proveFeed.mockRejectedValue(new BillingError({ code: BillingErrorCode.WebhookUnauthorized }))
+        await expect(
+            feed.verifyFeedDelivery("Apikey k", "conn-1", Buffer.from("{}"), "unknown"),
+        ).rejects.toBeInstanceOf(BillingError)
+        expect(sepayPage.traceRefusal).not.toHaveBeenCalled()
     })
     it("rejects an absent Casso body before intake", async () => {
         const { feed, tx } = await build()
@@ -253,11 +271,11 @@ describe("BankFeedService provider receipt intake", () => {
     })
     it.each([false, true])("propagates SePay proof failure %s before intake", async (fails) => {
         const { feed, proof, tx } = await build()
-        if (fails) proof.proveSepayFeed.mockRejectedValue(refusal)
-        const result = feed.verifySepayFeedDelivery(feedDelivery.authorization, "conn-1", feedDelivery.rawBody)
+        if (fails) proof.proveFeed.mockRejectedValue(refusal)
+        const result = feed.verifyFeedDelivery(feedDelivery.authorization, "conn-1", feedDelivery.rawBody, "sepay")
         if (fails) await expect(result).rejects.toBe(refusal)
         else await expect(result).resolves.toBeUndefined()
-        expect(proof.proveSepayFeed).toHaveBeenCalledWith(feedDelivery)
+        expect(proof.proveFeed).toHaveBeenCalledWith("sepay", feedDelivery)
         expect(tx.outcomes).toEqual([])
     })
 })
@@ -267,15 +285,15 @@ describe("BankFeedService SePay connection page", () => {
         [refusal, 0],
     ])("remembers a refused key only, and rethrows %p", async (failure, traced) => {
         const { feed, proof, sepayPage } = await build()
-        proof.proveSepayFeed.mockRejectedValue(failure)
-        const result = feed.verifySepayFeedDelivery(feedDelivery.authorization, "conn-1", feedDelivery.rawBody)
+        proof.proveFeed.mockRejectedValue(failure)
+        const result = feed.verifyFeedDelivery(feedDelivery.authorization, "conn-1", feedDelivery.rawBody, "sepay")
         await expect(result).rejects.toBe(failure)
         expect(sepayPage.traceRefusal).toHaveBeenCalledTimes(traced)
     })
     it("hands the raw delivery to the page trace around the intake", async () => {
         const { feed, sepayPage } = await build()
         const body = raw({ ...incoming })
-        await feed.acceptSepayFeedDelivery(body, "conn-1")
+        await feed.acceptFeedDelivery(body, "conn-1", "sepay")
         expect(sepayPage.traceIntake).toHaveBeenCalledWith("conn-1", body, expect.any(Function))
     })
 })
@@ -435,7 +453,7 @@ describe("BankFeedService debits", () => {
     const outgoing = { ...incoming, id: 654, transferType: "out", transferAmount: 45000.4, content: "Pay supplier" }
     it("claims a SePay transfer out as a debit receipt", async () => {
         const { feed, feedInbox } = await build()
-        await feed.acceptSepayFeedDelivery(raw(outgoing), "conn-1")
+        await feed.acceptFeedDelivery(raw(outgoing), "conn-1", "sepay")
         expect(feedInbox.claim).toHaveBeenCalledWith(expect.anything(), "sepay-feed", "conn-1:sepay:654", {
             connection: "conn-1",
             credits: [
