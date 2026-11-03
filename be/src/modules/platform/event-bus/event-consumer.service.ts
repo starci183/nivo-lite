@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common"
+import { Inject, Injectable, Optional } from "@nestjs/common"
 import type { BeforeApplicationShutdown, OnApplicationBootstrap } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { CqrsReadinessService } from "@modules/platform/cqrs"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -62,6 +63,7 @@ export class EventConsumerService implements EventConsumerRegistry, OnApplicatio
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectEventBusOptions() private readonly options: EventBusOptions,
         @InjectLogger() private readonly logger: Logger,
+        @Optional() @Inject(CqrsReadinessService) private readonly cqrs: CqrsReadinessService | null = null,
     ) {}
 
     /** Adds one static subscription; the registry is filled by the reactors' own modules before bootstrap. */
@@ -73,13 +75,17 @@ export class EventConsumerService implements EventConsumerRegistry, OnApplicatio
         this.subscriptions.push({ queue, consumer, maxDeliveries: options.maxDeliveries ?? DEFAULT_MAX_DELIVERIES })
     }
 
-    /** Starts one read loop per subscription, only in the app that enables consumers. */
+    /**
+     * Starts one read loop per subscription, only in the app that enables consumers, and only once the command, query and event
+     * handlers are registered: a consumer drives them from outside a request, so the first message read must find its handler.
+     */
     onApplicationBootstrap(): void {
         if (this.options.consumersEnabled !== true) {
             this.logger.info(EventBusLogEvent.ConsumersDisabled, { subscriptions: this.subscriptions.length })
             return
         }
-        this.loops = Promise.all(this.subscriptions.map((subscription) => this.run(subscription)))
+        const ready = this.cqrs === null || this.cqrs.isReady() ? Promise.resolve() : this.cqrs.whenReady()
+        this.loops = ready.then(() => Promise.all(this.subscriptions.map((subscription) => this.run(subscription))))
     }
 
     /** Stops admitting reads, wakes the pauses and waits for the batch in flight to settle. */

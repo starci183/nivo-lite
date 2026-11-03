@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { CqrsReadinessService } from "@modules/platform/cqrs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -105,13 +106,18 @@ class RecordingConsumer implements EventConsumer<ReceiptRecordedEvent> {
 
 const logger = mock<Logger>()
 
-const build = async (primary: ReturnType<typeof mockEntityManager>, options: EventBusOptions = {}) => {
+const build = async (
+    primary: ReturnType<typeof mockEntityManager>,
+    options: EventBusOptions = {},
+    cqrs: CqrsReadinessService | null = null,
+) => {
     const module = await Test.createTestingModule({
         providers: [
             EventConsumerService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: primary },
             { provide: EVENT_BUS_OPTIONS, useValue: builder<EventBusOptions>({})(options) },
             { provide: LOGGER, useValue: logger },
+            ...(cqrs === null ? [] : [{ provide: CqrsReadinessService, useValue: cqrs }]),
         ],
     }).compile()
     return module.get(EventConsumerService)
@@ -344,6 +350,39 @@ describe("EventConsumerService loops", () => {
         await new Promise((resolve) => setImmediate(resolve))
         await subject.beforeApplicationShutdown()
 
+        expect(primary.query).toHaveBeenCalledWith(READ, [QUEUE, 30, 10])
+    })
+
+    it("starts no read before the handlers are registered, and reads once they are", async () => {
+        const primary = mockEntityManager({ query: [READ, []] })
+        let open!: () => void
+        const ready = new Promise<void>((resolve) => {
+            open = resolve
+        })
+        const cqrs = mock<CqrsReadinessService>({ isReady: jest.fn().mockReturnValue(false), whenReady: () => ready })
+        const subject = await build(primary, { consumersEnabled: true, idleMs: 60_000 }, cqrs)
+        subject.subscribe(QUEUE, new RecordingConsumer())
+
+        subject.onApplicationBootstrap()
+        await new Promise((resolve) => setImmediate(resolve))
+        expect(primary.query).not.toHaveBeenCalled()
+
+        open()
+        await new Promise((resolve) => setImmediate(resolve))
+        await subject.beforeApplicationShutdown()
+        expect(primary.query).toHaveBeenCalledWith(READ, [QUEUE, 30, 10])
+    })
+
+    it("reads at once when the handlers are already registered", async () => {
+        const primary = mockEntityManager({ query: [READ, []] })
+        const cqrs = mock<CqrsReadinessService>({ isReady: jest.fn().mockReturnValue(true) })
+        const subject = await build(primary, { consumersEnabled: true, idleMs: 60_000 }, cqrs)
+        subject.subscribe(QUEUE, new RecordingConsumer())
+
+        subject.onApplicationBootstrap()
+        await new Promise((resolve) => setImmediate(resolve))
+        await subject.beforeApplicationShutdown()
+        expect(cqrs.whenReady).not.toHaveBeenCalled()
         expect(primary.query).toHaveBeenCalledWith(READ, [QUEUE, 30, 10])
     })
 
