@@ -1,6 +1,6 @@
-import type { InventoryPanelScope } from "./inventory.shared"
-;("use client")
+"use client"
 
+import type { InventoryPanelScope } from "./inventory.shared"
 import type { ItemView, RecipeView } from "@/modules/types"
 import { changeAt } from "./inventory.shared"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"

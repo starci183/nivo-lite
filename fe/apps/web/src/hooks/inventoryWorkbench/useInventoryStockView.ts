@@ -1,3 +1,5 @@
+"use client"
+
 import {
     stockToggleLabel,
     stockDetailOf,
@@ -13,8 +15,6 @@ import {
     useItemDrawer,
     type StockFilter,
 } from "@/hooks/inventory"
-;("use client")
-
 import { useFeatureReset } from "@/hooks/reuseables"
 import type { InventoryPanelInput } from "./inventoryWorkbench.shared"
 

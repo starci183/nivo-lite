@@ -1,6 +1,6 @@
-import type { InventoryPanelScope } from "./inventory.shared"
-;("use client")
+"use client"
 
+import type { InventoryPanelScope } from "./inventory.shared"
 import type { ItemView, SupplierView } from "@/modules/types"
 import { unitsText, type ItemFormField, type ItemFormValues } from "./inventory.shared"
 

@@ -1,6 +1,6 @@
-import { useActiveWorkspace } from "@/hooks/workspaces"
-;("use client")
+"use client"
 
+import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useMutateDecideShiftsAvailabilitySwr, useMutateDecideWorkItemSwr } from "@/hooks/swr"

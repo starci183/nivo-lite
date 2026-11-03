@@ -1,8 +1,8 @@
+"use client"
+
 import { usePoCopy } from "./usePoCopy"
 import { useFeatureLifetime } from "@/hooks/reuseables"
 import type { InventoryPanelScope } from "@/hooks/inventory"
-;("use client")
-
 import {
     useDrawer,
     useInventoryFormat,
