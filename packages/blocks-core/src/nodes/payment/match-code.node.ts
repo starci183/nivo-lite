@@ -57,11 +57,7 @@ export const paymentMatchCodeNode: NodeDefinition<
         if (effect.kind === "apply") {
             return Promise.resolve({ branch: "matched", candidateIds: [effect.candidateId], reasons: decided.reasons })
         }
-        return Promise.resolve({
-            branch: "mismatch",
-            candidateIds: effect.kind === "ask" ? effect.candidateIds : [],
-            reasons: decided.reasons,
-        })
+        return Promise.resolve({ branch: "mismatch", candidateIds: effect.candidateIds, reasons: decided.reasons })
     },
     examples: [
         {
