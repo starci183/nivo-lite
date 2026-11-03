@@ -29,7 +29,10 @@ const build = async (run: DecisionRun | null = RUN, source: "customer" | "tag" |
     const graphs = mock<AgentGraphsService>({
         versionAt: jest.fn().mockResolvedValue({ version: 4, document: graphOf(OWNER_EXAMPLE) }),
     })
-    const work = mock<AgentWorkReadService>({ wakeSourceOf: jest.fn().mockResolvedValue(source) })
+    const work = mock<AgentWorkReadService>({
+        wakeSourceOf: jest.fn().mockResolvedValue(source),
+        wakeOriginOf: jest.fn().mockResolvedValue(source === null ? null : "agent"),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphRunService,
@@ -92,6 +95,7 @@ describe("AgentGraphRunService.runOf", () => {
             versionId: "version-1",
             version: 4,
             trigger: "tag",
+            origin: "agent",
             branchKey: "middle",
             outcome: "ask",
             closedAs: "approved",
@@ -113,6 +117,7 @@ describe("AgentGraphRunService.runOf", () => {
         await expect(noWake.service.runOf("ws-1", "item-9")).resolves.toMatchObject({ trigger: null })
         await expect(gone.service.runOf("ws-1", "item-9")).resolves.toMatchObject({ trigger: null })
         expect(noWake.work.wakeSourceOf).not.toHaveBeenCalled()
+        expect(noWake.work.wakeOriginOf).not.toHaveBeenCalled()
     })
 
     it("refuses a work item the graph never decided", async () => {

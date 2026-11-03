@@ -192,3 +192,18 @@ describe("AgentWorkReadService.wakeSourceOf", () => {
         })
     })
 })
+
+describe("AgentWorkReadService.wakeOriginOf", () => {
+    it("answers where the wake came from, and null when the wake is gone", async () => {
+        const found = mockEntityManager({
+            findOne: [
+                AgentWakeEntity,
+                Object.assign(new AgentWakeEntity(), { source: "tag", context: {}, actorMemberId: "m1" }),
+            ],
+        })
+        const gone = mockEntityManager({ findOne: [AgentWakeEntity, null] })
+
+        await expect((await build(found)).service.wakeOriginOf("ws-1", "wake-1")).resolves.toBe("person")
+        await expect((await build(gone)).service.wakeOriginOf("ws-1", "wake-1")).resolves.toBeNull()
+    })
+})

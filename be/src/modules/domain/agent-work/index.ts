@@ -53,3 +53,4 @@ export type {
     AgentWorkHandler,
 } from "./agent-work.port"
 export type { AgentBegin } from "./agent-work-turns.contracts"
+export type { WakeOrigin } from "./wake-origin.policy"
