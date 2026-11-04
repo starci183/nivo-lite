@@ -1,4 +1,5 @@
-import { Button, PaneHeader, PaneSection } from "@starci/grammar/common"
+import { Button, IconButton, PaneHeader, PaneSection } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import type { PaneHeaderProps } from "@starci/grammar/common"
 import { WIDE_ONLY_CLASS_NAME } from "./classNames"
 
@@ -12,6 +13,10 @@ export interface PanePrimary {
 /** What a pane head band draws: the head, and the pane's one primary command when it has one. */
 interface PaneHeadProps extends PaneHeaderProps {
     readonly primary?: PanePrimary
+    /** Closes this pane (a side pane at the wide width, where it is a column with no drawer close): the last control of the row. */
+    readonly close?: { readonly label: string; readonly onPress: () => void }
+    /** Where a phone draws the primary command: under the head (default, drawn by `PaneBody`) or in the head row. */
+    readonly primaryOnPhone?: "body" | "head"
 }
 
 /**
@@ -19,19 +24,19 @@ interface PaneHeadProps extends PaneHeaderProps {
  * medium breakpoint; a phone gets it as a full-width button under the head (the frame draws that one), so the title keeps its width.
  */
 export const PaneHead = (props: PaneHeadProps) => {
-    const { primary, actions, ...head } = props
+    const { primary, close, primaryOnPhone, actions, ...head } = props
     return (
         <PaneSection align="center">
             <PaneHeader
                 {...head}
-                {...(actions === undefined && primary === undefined
+                {...(actions === undefined && primary === undefined && close === undefined
                     ? {}
                     : {
                           actions: (
                               <>
                                   {actions}
                                   {primary === undefined ? null : (
-                                      <div className={WIDE_ONLY_CLASS_NAME}>
+                                      <div className={primaryOnPhone === "head" ? undefined : WIDE_ONLY_CLASS_NAME}>
                                           <Button
                                               intent="commit"
                                               size="sm"
@@ -41,6 +46,14 @@ export const PaneHead = (props: PaneHeadProps) => {
                                               {primary.label}
                                           </Button>
                                       </div>
+                                  )}
+                                  {close === undefined ? null : (
+                                      <IconButton
+                                          intent="dismiss"
+                                          source={nivoIconSource("close", "leading")}
+                                          label={close.label}
+                                          onPress={close.onPress}
+                                      />
                                   )}
                               </>
                           ),

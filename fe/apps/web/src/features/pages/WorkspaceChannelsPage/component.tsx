@@ -22,7 +22,7 @@ export const WorkspaceChannelsPageBase = (props: WorkspaceChannelsPageBaseProps)
             artwork={
                 <Mascot
                     src="/images/entry/onboarding-channels.webp"
-                    size="lg"
+                    size="md"
                     loading="eager"
                     assetSlot="onboarding-channels"
                     assetSha256="e0153ebab0414d8c75209691cb02a5c755ba4b6a75283894d10f04c8b2b4d88e"

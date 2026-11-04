@@ -29,3 +29,11 @@ export const WAITING_ROWS_PLACEHOLDER: ReadonlyArray<WorkbenchRowView> = [
         waitingFor: null,
     },
 ]
+
+/**
+ * The page-level "first load" flag of skeleton coherence: true while any of the page's slots has no data yet, so every region
+ * draws its skeleton at once and none shows data beside a skeleton. Hand it to `PaneHead` (`isLoading`), `PaneList`, `PaneBody`
+ * (`isWaiting`) and every input (never pre-filled while it is true). Only a region that depends on a user action reloads alone.
+ */
+export const isWaitingOf = (...slots: ReadonlyArray<DataSlot<unknown>>): boolean =>
+    slots.some((slot) => "isLoading" in slot)

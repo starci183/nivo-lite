@@ -1,15 +1,4 @@
-import {
-    Alert,
-    Button,
-    Cluster,
-    Image,
-    MediaFrame,
-    Page,
-    Stack,
-    Stepper,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
+import { Alert, Button, Cluster, Image, MediaFrame, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { WorkspacePaymentDetails } from "@/components/composites/WorkspacePaymentDetails"
 import type { WorkspacePaymentDetailsProps } from "@/components/composites/WorkspacePaymentDetails"
 import { CENTERED_CLASS_NAME, MASCOT_CLASS_NAME, MEASURE_CLASS_NAME } from "./classNames"
@@ -19,7 +8,10 @@ export interface WorkspacePaymentBaseProps {
     readonly props: {
         readonly title: string
         readonly description: string
-        readonly steps: ReadonlyArray<string>
+        /** The trail: the page above and its words. */
+        readonly crumbLabel: string
+        readonly crumbHomeLabel: string
+        readonly crumbHomeHref: string
         readonly phase: "loading" | "creating" | "paid" | "expired" | "pending" | "missing" | "error"
         readonly loadingLabel: string
         readonly creatingLabel: string
@@ -93,23 +85,25 @@ const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
     )
 }
 
-/** Draws the payment page without reading data: the header band, then the steps and payment progress, a paid outcome, or an expired code. */
+/** Draws the payment page without reading data: the header band with its trail, then the payment progress, a paid outcome, or an expired code. */
 export const WorkspacePaymentBase = (props: WorkspacePaymentBaseProps) => (
     <Page
         measure="product"
         isLoading={props.props.phase === "loading" || props.props.phase === "creating"}
         header={{
+            breadcrumbs: {
+                label: props.props.crumbLabel,
+                items: [
+                    { id: "workspaces", label: props.props.crumbHomeLabel, href: props.props.crumbHomeHref },
+                    { id: "payment", label: props.props.title },
+                ],
+            },
             title: props.props.title,
             description: props.props.description === "" ? undefined : props.props.description,
         }}
     >
         <div className={MEASURE_CLASS_NAME}>
             <Stack gap="section">
-                <Stepper
-                    label={props.props.title}
-                    steps={props.props.steps.map((label, index) => ({ id: `step-${index + 1}`, label }))}
-                    currentStepId="step-3"
-                />
                 <PaymentSituation {...props} />
             </Stack>
         </div>
