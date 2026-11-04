@@ -150,25 +150,25 @@ describe("classificationOf", () => {
 
 describe("the delivery address", () => {
     it.each([
-        ["Cho mình đặt 1 giỏ hoa nhỏ, giao 25 Nguyễn Huệ", "25 Nguyễn Huệ"],
-        ["Alo, đặt giùm Định 1 chậu hoa, giao tới địa chỉ 69 Hàng Xanh", "69 Hàng Xanh"],
-        ["Đặt 2 chậu, giao đến 12 Lê Lợi, Huế.", "12 Lê Lợi, Huế"],
-        ["Mình ở xa, giao hàng tới địa chỉ chợ Đông Ba nhé", "chợ Đông Ba nhé"],
+        [sampleOf("sampleChoMinhDat1GioHoa"), sampleOf("sample25NguyenHue")],
+        [sampleOf("sampleAloDatGiumDinh1Chau"), sampleOf("sample69HangXanh")],
+        [sampleOf("sampleDat2ChauGiaoDen12Le"), sampleOf("sample12LeLoiHue")],
+        [sampleOf("sampleMinhOXaGiaoHangToiDia"), sampleOf("sampleChoDongBaNhe")],
         ["mua 1 chau hoa\ngiao toi 7 Tran Phu", "7 Tran Phu"],
     ])("reads the address after a delivery word in %p", (text, address) => {
         expect(addressInWords(text)).toBe(address)
     })
 
     it("reads no address from a delivery word that names no place", () => {
-        expect(addressInWords("Giao hàng nhanh nhé")).toBeNull()
-        expect(addressInWords("Cho mình đặt chậu hoa")).toBeNull()
-        expect(addressInWords("giaodich xong rồi")).toBeNull()
+        expect(addressInWords(sampleOf("sampleGiaoHangNhanhNhe"))).toBeNull()
+        expect(addressInWords(sampleOf("sampleChoMinhDatChauHoa"))).toBeNull()
+        expect(addressInWords(sampleOf("sampleGiaodichXongRoi"))).toBeNull()
         expect(addressInWords("giao")).toBeNull()
     })
 
     it.each([
-        ["Cho mình đặt 1 giỏ hoa nhỏ, giao 25 Nguyễn Huệ", "25 Nguyễn Huệ"],
-        ["Alo, đặt giùm Định 1 chậu hoa, giao tới địa chỉ 69 Hàng Xanh", "69 Hàng Xanh"],
+        [sampleOf("sampleChoMinhDat1GioHoa"), sampleOf("sample25NguyenHue")],
+        [sampleOf("sampleAloDatGiumDinh1Chau"), sampleOf("sample69HangXanh")],
     ])("fills the address the model left null from %p", (text, address) => {
         const output = classified(
             { intents: ["order"], order: { items: [{ name: "hoa" }], address: null }, images: [] },
@@ -180,35 +180,43 @@ describe("the delivery address", () => {
 
     it("keeps the address the model gave, and takes it from another member name when it used one", () => {
         const given = classified(
-            { intents: ["order"], order: { items: [], address: "1 Lê Lợi" }, images: [] },
+            { intents: ["order"], order: { items: [], address: sampleOf("sample1LeLoi") }, images: [] },
             0,
-            "giao 25 Nguyễn Huệ",
+            sampleOf("sampleGiao25NguyenHue"),
         )
-        expect(given.order?.address).toBe("1 Lê Lợi")
+        expect(given.order?.address).toBe(sampleOf("sample1LeLoi"))
         const aliased = classified(
-            { intents: ["order"], order: { items: [], delivery_address: "  9 Hàng Bài ", location: 5 }, images: [] },
+            {
+                intents: ["order"],
+                order: { items: [], delivery_address: sampleOf("sample9HangBai"), location: 5 },
+                images: [],
+            },
             0,
-            "đặt hoa",
+            sampleOf("sampleDatHoa"),
         )
-        expect(aliased.order?.address).toBe("9 Hàng Bài")
+        expect(aliased.order?.address).toBe(sampleOf("sample9HangBai2"))
     })
 
     it("makes an order slot of the address alone when the model named the order but gave no slot", () => {
-        expect(classified({ intents: ["order"], images: [] }, 0, "đặt hoa, giao 25 Nguyễn Huệ").order).toEqual({
+        expect(
+            classified({ intents: ["order"], images: [] }, 0, sampleOf("sampleDatHoaGiao25NguyenHue")).order,
+        ).toEqual({
             items: [],
-            address: "25 Nguyễn Huệ",
+            address: sampleOf("sample25NguyenHue"),
             customer: null,
         })
-        expect(classified({ intents: ["question"], images: [] }, 0, "giao 25 Nguyễn Huệ được không").order).toBeNull()
-        expect(classified({ intents: ["order"], images: [] }, 0, "đặt hoa").order).toBeNull()
+        expect(
+            classified({ intents: ["question"], images: [] }, 0, sampleOf("sampleGiao25NguyenHueDuocKhong")).order,
+        ).toBeNull()
+        expect(classified({ intents: ["order"], images: [] }, 0, sampleOf("sampleDatHoa")).order).toBeNull()
     })
 
     it("lets the model's reply keep a member under another name through the schema", () => {
         const parsed = modelReplySchema.parse({
             intents: ["order"],
-            order: { items: [], shipping_address: "3 Trần Phú" },
+            order: { items: [], shipping_address: sampleOf("sample3TranPhu") },
         })
-        expect(classified(parsed, 0).order?.address).toBe("3 Trần Phú")
+        expect(classified(parsed, 0).order?.address).toBe(sampleOf("sample3TranPhu"))
     })
 
     it("asks the model for the exact member names, the address included", () => {

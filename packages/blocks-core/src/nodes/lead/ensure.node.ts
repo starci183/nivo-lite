@@ -1,6 +1,7 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
+import { bilingualOf } from "../../messages/catalog"
 import type { NodeSchema } from "../node-schema.types"
 
 const ID_MAX = 100
@@ -35,7 +36,7 @@ const input: NodeSchema<LeadEnsureInput> = z.object({
     channel: z.string().min(1).max(ID_MAX),
 })
 
-const output: NodeSchema<LeadEnsureOutput> = z.object({ leadId: z.string().min(1) })
+const output: NodeSchema<LeadEnsureOutput> = z.object({ leadId: z.string().min(1).max(ID_MAX) })
 
 /** What the agent must hold for the effect: the host checks it, the node itself reads and writes no data. */
 const EFFECT_GRANT = {
@@ -54,7 +55,7 @@ export const leadEnsureNode: NodeDefinition<
 > = defineNode({
     id: "lead.ensure",
     role: "output",
-    title: { vi: "Xác định khách hàng", en: "Make sure the customer is known" },
+    title: bilingualOf("nodeLeadEnsureTitle"),
     params,
     input,
     output,

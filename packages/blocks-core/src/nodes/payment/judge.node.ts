@@ -165,13 +165,13 @@ export const paymentJudgeNode: NodeDefinition<
                 {
                     verdict: "ambiguous",
                     candidate_id: null,
-                    reasons: ["Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ"],
+                    reasons: [sampleOf("sampleSoTienKhopLoiBaoCuaKhach")],
                 },
             ],
             output: {
                 branch: "ambiguous",
                 candidateIds: ["order-dinh"],
-                reasons: ["Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ"],
+                reasons: [sampleOf("sampleSoTienKhopLoiBaoCuaKhach")],
             },
             effects: [],
         },

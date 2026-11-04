@@ -1,4 +1,4 @@
-import type { z } from "../schema/zod.schema"
+import type { z } from "../schema/zod-entry"
 import type { Namespaced, SpecText } from "../schema/schema.types"
 import type { DataRight, RightsGrant } from "../rights/rights.types"
 

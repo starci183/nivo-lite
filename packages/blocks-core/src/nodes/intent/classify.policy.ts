@@ -4,6 +4,7 @@ import type {
     AttachmentSlot,
     ClassifyInput,
     ClassifyOutput,
+    DeliveryPlace,
     Intent,
     ModelClaim,
     ModelOrder,
@@ -74,21 +75,73 @@ const addressOf = (order: ModelOrder): string | null => {
     return found.find((address) => address !== null) ?? null
 }
 
-/** "giao", "giao tới", "giao đến", "giao hàng tới", then "địa chỉ" when the customer says it, then the place to the end of the line. */
-const DELIVER_TO =
-    /(?<![\p{L}\p{N}])giao(?:\s+h(?:àng|ang))?(?:\s+(?:tới|toi|đến|den|tại|tai|ở))?(?:\s+(địa\s*chỉ|dia\s*chi|đc|dc))?\s*[:-]?\s*(\S[^\n]*)$/iu
+const DELIVERY_WORD = "giao"
+const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u
+
+/** Where the first delivery word starts in a line, or -1; a word that continues a longer one ("tragiao") does not count. */
+const deliveryWordAt = (line: string): number => {
+    const lower = line.toLowerCase()
+    for (let from = lower.indexOf(DELIVERY_WORD); from !== -1; from = lower.indexOf(DELIVERY_WORD, from + 1)) {
+        const before = Array.from(line.slice(0, from)).at(-1)
+        if (before === undefined || !LETTER_OR_DIGIT.test(before)) return from
+    }
+    return -1
+}
 const HAS_DIGIT = /\d/u
-const TRAILING_MARKS = /[\s.,;!]+$/u
+const TRAILING_MARKS = ".,;!"
+
+/** The text without the spaces and punctuation marks that end it. */
+const withoutTrailingMarks = (text: string): string => {
+    let end = text.length
+    while (end > 0 && (TRAILING_MARKS.includes(text.charAt(end - 1)) || text.charAt(end - 1).trim() === "")) end -= 1
+    return text.slice(0, end)
+}
+const LEADING_SEPARATOR = /^[:-]/u
+
+const GOODS_WORDS = wordListOf("deliverGoodsWords")
+const PLACE_WORDS = wordListOf("deliverToWords")
+const ADDRESS_WORDS = wordListOf("deliverAddressWords")
+
+/** What is left of a text after one word of a list (written with or without accents, any case) once some space has passed; a space inside the word stands for any run of spaces. Null when no word leads the text. */
+const afterLeadingWord = (text: string, words: ReadonlyArray<string>): string | null => {
+    if (text.trimStart().length === text.length) return null
+    for (const word of words) {
+        let rest = text
+        const parts = word.split(" ")
+        const matched = parts.every((part) => {
+            rest = rest.trimStart()
+            if (!rest.toLowerCase().startsWith(part.toLowerCase())) return false
+            rest = rest.slice(part.length)
+            return true
+        })
+        if (matched) return rest
+    }
+    return null
+}
+
+/** The place written after a delivery word ("giao", then the goods or the place word, then the address word when the customer says it), and whether the customer named it an address. */
+const deliveryPlaceOf = (line: string): DeliveryPlace | null => {
+    const start = deliveryWordAt(line)
+    if (start === -1) return null
+    const afterDelivery = line.slice(start + DELIVERY_WORD.length)
+    const afterGoods = afterLeadingWord(afterDelivery, GOODS_WORDS) ?? afterDelivery
+    const afterPlaceWord = afterLeadingWord(afterGoods, PLACE_WORDS) ?? afterGoods
+    const afterAddressWord = afterLeadingWord(afterPlaceWord, ADDRESS_WORDS)
+    const trimmed = (afterAddressWord ?? afterPlaceWord).trimStart()
+    const place = trimmed.replace(LEADING_SEPARATOR, "").trimStart()
+    return place === "" ? null : { place, named: afterAddressWord !== null }
+}
 
 /**
- * The delivery address written in the words of the customer, for when the model left it out: what follows a delivery word ("giao 25 Nguyễn Huệ",
- * "giao tới địa chỉ 69 Hàng Xanh"). The place counts when the customer said "địa chỉ" or when it holds a number, so "giao hàng nhanh nhé" is no address.
+ * The delivery address written in the words of the customer, for when the model left it out: what follows a delivery word ("giao 25 Nguyen Hue",
+ * "giao toi dia chi 69 Hang Xanh", with their accents). The place counts when the customer said the address word or when it holds a number, so a
+ * remark such as "giao hang nhanh nhe" is no address.
  */
 export const addressInWords = (text: string): string | null => {
     for (const line of messagesOf(text.normalize("NFC"))) {
-        const found = DELIVER_TO.exec(line)
-        const place = (found?.[2] ?? "").replace(TRAILING_MARKS, "").slice(0, ADDRESS_MAX)
-        if (place !== "" && (found?.[1] !== undefined || HAS_DIGIT.test(place))) return place
+        const found = deliveryPlaceOf(line)
+        const place = withoutTrailingMarks(found?.place ?? "").slice(0, ADDRESS_MAX)
+        if (found !== null && place !== "" && (found.named || HAS_DIGIT.test(place))) return place
     }
     return null
 }

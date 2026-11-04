@@ -61,97 +61,101 @@ export interface GoogleWizardBaseProps {
     }
 }
 
+type GoogleWizardView = GoogleWizardBaseProps["props"]
+type GoogleWizardCommands = GoogleWizardBaseProps["on"]
+
+/** The footer of the wizard: Connect and Close before Google answered, Done after. */
+const renderFooter = (view: GoogleWizardView, on: GoogleWizardCommands, isLoading: boolean) =>
+    view.index === 0 ? (
+        <>
+            <Button intent="commit" isPending={view.isPending} onPress={on.connect} isLoading={isLoading}>
+                {view.text.connect}
+            </Button>
+            <Button intent="neutral" isDisabled={view.isPending} onPress={() => on.close(false)} isLoading={isLoading}>
+                {view.text.close}
+            </Button>
+        </>
+    ) : (
+        <Button intent="commit" onPress={() => on.close(true)} isLoading={isLoading}>
+            {view.text.done}
+        </Button>
+    )
+
+/** The body of the wizard: what NIVO is allowed before Google answered, the affirmation after. */
+const renderConsent = (view: GoogleWizardView, isLoading: boolean) =>
+    view.index === 0 ? (
+        <WizardConsentCopy
+            title={view.text.allowTitle}
+            lines={[view.text.allowOnlyFiles, view.text.allowNoOthers, view.text.allowRevoke]}
+            refusal={view.refusal}
+            failTitle={view.text.failTitle}
+        />
+    ) : (
+        <Alert tone="affirmative" title={`${view.text.doneTitle}. ${view.text.doneBody}`} isLoading={isLoading} />
+    )
+
+/** The field that names the ledger sheet and the button that saves it. */
+const renderSheetForm = (view: GoogleWizardView, on: GoogleWizardCommands, isLoading: boolean) => (
+    <Grid kind="form" columns={1}>
+        <Input
+            id="ledger-sheet"
+            name="ledgerSheet"
+            label={view.ledger.text.sheetLabel}
+            description={view.ledger.text.sheetHint}
+            isDisabled={view.isPending}
+            value={view.ledger.sheet}
+            onValueChange={on.sheet}
+            isLoading={isLoading}
+        />
+        <Cluster gap="inline">
+            <Button
+                intent="alternative"
+                isPending={view.isPending}
+                isDisabled={view.ledger.sheet.trim() === ""}
+                onPress={on.saveSheet}
+                isLoading={isLoading}
+            >
+                {view.ledger.text.save}
+            </Button>
+        </Cluster>
+    </Grid>
+)
+
+/** The ledger section: where the ledger stands, the access to ask for, and the sheet to name. */
+const renderLedger = (view: GoogleWizardView, on: GoogleWizardCommands, isLoading: boolean) => (
+    <Section title={view.ledger.text.title} headingLevel={4}>
+        <Text size="sm">{view.ledger.text.body}</Text>
+        <Text size="sm" tone="muted">
+            {view.ledger.status}
+        </Text>
+        {view.ledger.note === null ? null : <Alert tone="affirmative" title={view.ledger.note} isLoading={isLoading} />}
+        {view.ledger.mustAllow ? (
+            <Cluster gap="inline">
+                <Button intent="neutral" isPending={view.isPending} onPress={on.allowSheets} isLoading={isLoading}>
+                    {view.ledger.text.allow}
+                </Button>
+            </Cluster>
+        ) : null}
+        {view.ledger.canName ? renderSheetForm(view, on, isLoading) : null}
+    </Section>
+)
+
 /** Draws Google in the shared wizard frame: what NIVO is allowed, then Connect, then Done. */
 const renderGoogleWizard = (props: GoogleWizardBaseProps, isLoading: boolean) => {
     const view = props.props
-    const text = view.text
-    const footer =
-        view.index === 0 ? (
-            <>
-                <Button intent="commit" isPending={view.isPending} onPress={props.on.connect} isLoading={isLoading}>
-                    {text.connect}
-                </Button>
-                <Button
-                    intent="neutral"
-                    isDisabled={view.isPending}
-                    onPress={() => props.on.close(false)}
-                    isLoading={isLoading}
-                >
-                    {text.close}
-                </Button>
-            </>
-        ) : (
-            <Button intent="commit" onPress={() => props.on.close(true)} isLoading={isLoading}>
-                {text.done}
-            </Button>
-        )
     return (
         <WizardFrame
             title={view.title}
             stepLabel={view.stepLabel}
             steps={view.steps}
             index={view.index}
-            footer={footer}
+            footer={renderFooter(view, props.on, isLoading)}
         >
-            {view.index === 0 ? (
-                <WizardConsentCopy
-                    title={text.allowTitle}
-                    lines={[text.allowOnlyFiles, text.allowNoOthers, text.allowRevoke]}
-                    refusal={view.refusal}
-                    failTitle={text.failTitle}
-                />
-            ) : (
-                <Alert tone="affirmative" title={`${text.doneTitle}. ${text.doneBody}`} isLoading={isLoading} />
-            )}
+            {renderConsent(view, isLoading)}
             {view.consentNeeded === null ? null : (
                 <Alert tone="informative" title={view.consentNeeded} isLoading={isLoading} />
             )}
-            <Section title={view.ledger.text.title} headingLevel={4}>
-                <Text size="sm">{view.ledger.text.body}</Text>
-                <Text size="sm" tone="muted">
-                    {view.ledger.status}
-                </Text>
-                {view.ledger.note === null ? null : (
-                    <Alert tone="affirmative" title={view.ledger.note} isLoading={isLoading} />
-                )}
-                {view.ledger.mustAllow ? (
-                    <Cluster gap="inline">
-                        <Button
-                            intent="neutral"
-                            isPending={view.isPending}
-                            onPress={props.on.allowSheets}
-                            isLoading={isLoading}
-                        >
-                            {view.ledger.text.allow}
-                        </Button>
-                    </Cluster>
-                ) : null}
-                {view.ledger.canName ? (
-                    <Grid kind="form" columns={1}>
-                        <Input
-                            id="ledger-sheet"
-                            name="ledgerSheet"
-                            label={view.ledger.text.sheetLabel}
-                            description={view.ledger.text.sheetHint}
-                            isDisabled={view.isPending}
-                            value={view.ledger.sheet}
-                            onValueChange={props.on.sheet}
-                            isLoading={isLoading}
-                        />
-                        <Cluster gap="inline">
-                            <Button
-                                intent="commit"
-                                isPending={view.isPending}
-                                isDisabled={view.ledger.sheet.trim() === ""}
-                                onPress={props.on.saveSheet}
-                                isLoading={isLoading}
-                            >
-                                {view.ledger.text.save}
-                            </Button>
-                        </Cluster>
-                    </Grid>
-                ) : null}
-            </Section>
+            {renderLedger(view, props.on, isLoading)}
             {view.error === null ? null : <Alert tone="negative" title={view.error} isLoading={isLoading} />}
         </WizardFrame>
     )

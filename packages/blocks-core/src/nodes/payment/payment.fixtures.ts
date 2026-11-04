@@ -107,7 +107,7 @@ export const CLAIM_MOMO: ClaimRow = {
     conversationId: "conversation-dinh",
     amountVnd: 2000,
     names: [],
-    body: "[ảnh biên lai MoMo] Em đã chuyển 2.000đ",
+    body: sampleOf("sampleAnhBienLaiMoMoEmDaChuyen"),
     claimedAt: "2026-11-03T22:55:00.000Z",
     status: "open",
 }
@@ -242,7 +242,7 @@ export const CLAIM_OF_MOMO: Claim = {
     status: "open",
 }
 
-/** The evidence for the 2,000 transfer when the owner's claim speaks for it: the claim holds for Định's order, the amount does not. */
+/** The evidence for the 2,000 transfer when the owner's claim speaks for it: the claim holds for the order of the sample customer, the amount does not. */
 export const EVIDENCED_FOR_MOMO_CLAIM: ReadonlyArray<Evidenced> = scoreCandidates(
     ARRIVAL_MOMO,
     [CANDIDATE_DINH],

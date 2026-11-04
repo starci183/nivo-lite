@@ -16,6 +16,7 @@ export interface ChannelSendPayload {
 
 /** The customer of a conversation: found, or created from what the chat knows. */
 export interface LeadEnsurePayload {
+    /** The conversation whose customer is wanted. */
     readonly conversationId: string
     /** The name the customer gave, when known. */
     readonly name?: string | undefined
@@ -155,8 +156,8 @@ const orderRecordPayload: z.ZodType<OrderRecordPayload> = z.object({
 
 const leadEnsurePayload: z.ZodType<LeadEnsurePayload> = z.object({
     conversationId: id,
-    name: z.string().min(1).optional(),
-    phone: z.string().min(1).optional(),
+    name: z.string().min(1).max(MAX_LINE).optional(),
+    phone: z.string().min(1).max(MAX_LINE).optional(),
     channel: id,
 })
 

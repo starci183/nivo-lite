@@ -46,6 +46,50 @@ type LedgerState = "none" | "granted" | "ready" | "lost"
 const ledgerStateOf = (value: string): LedgerState =>
     value === "granted" || value === "ready" || value === "lost" ? value : "none"
 
+type GoogleTranslate = ReturnType<typeof useTranslations<"googleWizard">>
+type WizardTranslate = ReturnType<typeof useTranslations<"connectionWizard">>
+
+/** The note under the ledger: the sheet was just saved, the access was just given, or nothing to say. */
+const ledgerNoteKeyOf = (saved: boolean, accessGiven: boolean): "ledgerSaved" | "ledgerAccessOk" | null => {
+    if (saved) return "ledgerSaved"
+    return accessGiven ? "ledgerAccessOk" : null
+}
+
+/** The sentence that says where the ledger stands, naming the Google account when one is connected. */
+const ledgerStatusOf = (t: GoogleTranslate, state: LedgerState, email: string): string => {
+    const status: Record<LedgerState, string> = {
+        none: t("ledgerNone"),
+        granted: t("ledgerGranted", { email }),
+        ready: t("ledgerReady", { email }),
+        lost: t("ledgerLost"),
+    }
+    return status[state]
+}
+
+/** The words of the ledger section. */
+const ledgerTextOf = (t: GoogleTranslate) => ({
+    title: t("ledgerTitle"),
+    body: t("ledgerBody"),
+    allow: t("ledgerAllow"),
+    sheetLabel: t("ledgerSheetLabel"),
+    sheetHint: t("ledgerSheetHint"),
+    save: t("ledgerSave"),
+})
+
+/** The words of the consent, the buttons and the landing. */
+const wizardTextOf = (t: GoogleTranslate, tw: WizardTranslate) => ({
+    allowTitle: t("allowTitle"),
+    allowOnlyFiles: t("allowOnlyFiles"),
+    allowNoOthers: t("allowNoOthers"),
+    allowRevoke: t("allowRevoke"),
+    connect: t("connect"),
+    close: tw("close"),
+    done: tw("done"),
+    failTitle: t("failTitle"),
+    doneTitle: t("doneTitle"),
+    doneBody: t("doneBody", { email: t("doneNoEmail") }),
+})
+
 /** What the board hands the Google wizard. */
 interface GoogleWizardProps {
     /** The actual workspace reads shared with this selected wizard. */
@@ -91,14 +135,8 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
         })
     const ledger = read.data?.ledger
     const ledgerState = ledgerStateOf(ledger?.state ?? "none")
-    const email = ledger?.email ?? ""
-    const ledgerStatus = {
-        none: t("ledgerNone"),
-        granted: t("ledgerGranted", { email }),
-        ready: t("ledgerReady", { email }),
-        lost: t("ledgerLost"),
-    } satisfies Record<LedgerState, string>
-    const ledgerNote = saved ? t("ledgerSaved") : sheets === "ok" ? t("ledgerAccessOk") : null
+    const noteKey = ledgerNoteKeyOf(saved, sheets === "ok")
+    const ledgerNote = noteKey === null ? null : t(noteKey)
     const failure = result === "error" || sheets === "error" ? t(googleFailureMessage(reason)) : null
     const steps = [t("stepConnect"), t("stepDone")]
     const index = result === "ok" ? 1 : 0
@@ -116,33 +154,15 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
                 isPending,
                 consentNeeded: read.data?.consentNeeded === true ? t("consentNeeded") : null,
                 ledger: {
-                    status: ledgerStatus[ledgerState],
+                    status: ledgerStatusOf(t, ledgerState, ledger?.email ?? ""),
                     mustAllow: ledgerState === "none" || ledgerState === "lost",
                     canName: ledgerState === "granted" || ledgerState === "ready",
                     sheet: sheet === "" ? (ledger?.sheetUrl ?? "") : sheet,
                     note: ledgerNote,
                     sheetUrl: ledger?.sheetUrl ?? "",
-                    text: {
-                        title: t("ledgerTitle"),
-                        body: t("ledgerBody"),
-                        allow: t("ledgerAllow"),
-                        sheetLabel: t("ledgerSheetLabel"),
-                        sheetHint: t("ledgerSheetHint"),
-                        save: t("ledgerSave"),
-                    },
+                    text: ledgerTextOf(t),
                 },
-                text: {
-                    allowTitle: t("allowTitle"),
-                    allowOnlyFiles: t("allowOnlyFiles"),
-                    allowNoOthers: t("allowNoOthers"),
-                    allowRevoke: t("allowRevoke"),
-                    connect: t("connect"),
-                    close: tw("close"),
-                    done: tw("done"),
-                    failTitle: t("failTitle"),
-                    doneTitle: t("doneTitle"),
-                    doneBody: t("doneBody", { email: t("doneNoEmail") }),
-                },
+                text: wizardTextOf(t, tw),
             }}
             on={{
                 connect: () => ask(undefined),
