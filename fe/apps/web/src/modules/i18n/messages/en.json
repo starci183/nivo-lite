@@ -4402,6 +4402,8 @@
     "goalsEmpty": "No goals yet.",
     "goalNewLabel": "New goal",
     "goalNewPlaceholder": "What should this agent work toward?",
+    "formOpen": "Add",
+    "formCancel": "Cancel",
     "goalAdd": "Add goal",
     "goalMarkDone": "Mark done",
     "goal_paused": "Paused",

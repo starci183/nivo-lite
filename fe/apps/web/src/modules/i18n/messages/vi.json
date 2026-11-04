@@ -4403,6 +4403,8 @@
     "goalNewLabel": "Mục tiêu mới",
     "goalNewPlaceholder": "Trợ lý này nên hướng tới điều gì?",
     "goalAdd": "Thêm mục tiêu",
+    "formOpen": "Thêm",
+    "formCancel": "Huỷ",
     "goalMarkDone": "Đánh dấu xong",
     "goal_paused": "Tạm dừng",
     "goal_done": "Đã xong",

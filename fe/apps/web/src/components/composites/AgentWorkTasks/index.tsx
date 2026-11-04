@@ -1,4 +1,3 @@
-import { Badge } from "@starci/grammar/common"
 import { AgentWorkRowActions } from "@/components/branches/AgentWorkRowActions"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
 import type { AgentWorkTaskView } from "@/modules/types"
@@ -27,7 +26,6 @@ export const AgentWorkTasks = (props: AgentWorkTasksProps) => (
             id: task.id,
             title: task.title,
             facts: [task.detail, task.waitLabel],
-            badges: task.statusLabel === "" ? undefined : <Badge tone="accent">{task.statusLabel}</Badge>,
             actions: (
                 <AgentWorkRowActions
                     menuLabel={props.words.moreLabel}
