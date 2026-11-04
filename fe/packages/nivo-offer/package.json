@@ -11,9 +11,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "prepare": "npm run build",
-    "lint": "starci app lint --workspace .",
-    "typecheck": "tsc --noEmit --pretty false"
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@types/node": "22.20.4",

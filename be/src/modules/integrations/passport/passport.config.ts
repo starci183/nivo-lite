@@ -1,4 +1,4 @@
-import type { EnvSource } from "@modules/platform/config"
+import { EnvSource } from "@modules/platform/config"
 import type { PassportOptions } from "./passport.options"
 
 /** The issuer live sessions were signed under, used when `AUTH_JWT_ISSUER` names none. */
@@ -11,6 +11,17 @@ const BCRYPT_COST = 10
 const LOGIN_ATTEMPTS = 10
 const RESET_ATTEMPTS = 5
 const ATTEMPT_WINDOW_MS = 900_000
+
+/**
+ * The domains the refresh cookie may take from the request host (`AUTH_COOKIE_DOMAINS`, comma-separated bare domains), each read as
+ * `optionalDomain` reads one; an empty list when the key is not declared.
+ */
+const readCookieDomains = (env: EnvSource): ReadonlyArray<string> =>
+    (env.optional("AUTH_COOKIE_DOMAINS") ?? "")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry !== "")
+        .map((entry) => new EnvSource({ AUTH_COOKIE_DOMAINS: entry }).optionalDomain("AUTH_COOKIE_DOMAINS") ?? entry)
 
 /** The name of the refresh cookie live sessions already carry. */
 export const REFRESH_COOKIE_NAME = "nivo_refresh"
@@ -50,7 +61,7 @@ export const parsePassportConfig = (env: EnvSource): PassportOptions => ({
     cookie: {
         name: REFRESH_COOKIE_NAME,
         domain: env.optional("AUTH_COOKIE_DOMAIN"),
-        domains: env.domains("AUTH_COOKIE_DOMAINS"),
+        domains: readCookieDomains(env),
         path: REFRESH_COOKIE_PATH,
         legacyPaths: REFRESH_COOKIE_LEGACY_PATHS,
         sameSite: "lax",
