@@ -348,7 +348,6 @@ ignore:
   - "be/src/modules/integrations/*/index.ts"
   - "be/src/modules/integrations/*/messages/**"
   - "be/src/modules/integrations/keycloak/keycloak.registration.ts"
-  - "be/src/modules/integrations/passport/passport.registration.ts"
   - "be/src/modules/platform/*/index.ts"
   - "be/src/modules/platform/*/messages/**"
   - "be/src/modules/platform/*/persistence/**"
