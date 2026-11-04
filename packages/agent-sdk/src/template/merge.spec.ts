@@ -1,6 +1,6 @@
 import type { GraphDocument } from "./graph.types"
-import { amountIs, branchOf } from "../testing"
-import { draftOf, leakyGraph, packageOf, withExtraBranch } from "../testing"
+import { amountIs, branchOf } from "../tests/fixtures"
+import { draftOf, leakyGraph, packageOf, withExtraBranch } from "../tests/fixtures"
 import { applyUnits, updateUnits } from "./merge"
 import { instantiate } from "./parameters"
 

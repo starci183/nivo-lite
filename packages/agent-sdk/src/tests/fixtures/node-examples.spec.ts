@@ -1,9 +1,9 @@
 import { z } from "zod"
-import { defineEffect } from "../node/effect"
-import { defineNode } from "../node/node"
-import type { NodeDefinition } from "../node/node.types"
+import { defineEffect } from "../../node/effect"
+import { defineNode } from "../../node/node"
+import type { NodeDefinition } from "../../node/node.types"
 import { nodeExampleMismatches, nodeListMismatches } from "./node-examples"
-import { trusted } from "../schema/trusted"
+import { trusted } from "../../schema/trusted"
 
 const send = defineEffect({
     id: "channel.send",

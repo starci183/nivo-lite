@@ -1,4 +1,4 @@
-import { PARAMETERS, draftOf, leakyGraph, packageOf } from "../testing"
+import { PARAMETERS, draftOf, leakyGraph, packageOf } from "../tests/fixtures"
 import { instantiate, resolveValues } from "./parameters"
 
 const pkg = () => packageOf(leakyGraph(), draftOf())

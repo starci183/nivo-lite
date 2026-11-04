@@ -1,7 +1,7 @@
-import type { EffectDefinition, ToolDefinition } from "../node/effect.types"
-import { runNode } from "../node/host"
-import type { NodeDefinition, NodeExample, NodeExampleEffect, TurnRef } from "../node/node.types"
-import { canonicalJson } from "../template/canonical"
+import type { EffectDefinition, ToolDefinition } from "../../node/effect.types"
+import { runNode } from "../../node/host"
+import type { NodeDefinition, NodeExample, NodeExampleEffect, TurnRef } from "../../node/node.types"
+import { canonicalJson } from "../../template/canonical"
 import type { FakeExecuted } from "./node-ports"
 import { scriptedNodePorts } from "./node-ports"
 

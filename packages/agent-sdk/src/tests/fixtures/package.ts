@@ -1,7 +1,7 @@
-import { SdkDefinitionError } from "../block/definition-error"
-import { previewPackage } from "../template/packager"
-import type { AgentTemplatePackage, PackageDraft, TemplateParameter } from "../template/format.types"
-import type { GraphDocument } from "../template/graph.types"
+import { SdkDefinitionError } from "../../block/definition-error"
+import { previewPackage } from "../../template/packager"
+import type { AgentTemplatePackage, PackageDraft, TemplateParameter } from "../../template/format.types"
+import type { GraphDocument } from "../../template/graph.types"
 import { AMOUNT_FACT, OWNER_BRANCHES, amountIs, approverOf, branchOf, graphOf } from "./graph"
 
 /** The ids of the creator's own workspace, which must not appear anywhere in a package. */

@@ -6,10 +6,10 @@ import type {
     ReadVariables,
     SlotValues,
     BlockSlots,
-} from "../block/block.types"
-import type { DataSlot, SlotLabels } from "../slot/slot.types"
-import type { HostAction, HostRead, WorkbenchHost } from "../host/host.types"
-import { trusted } from "../schema/trusted"
+} from "../../block/block.types"
+import type { DataSlot, SlotLabels } from "../../slot/slot.types"
+import type { HostAction, HostRead, WorkbenchHost } from "../../host/host.types"
+import { trusted } from "../../schema/trusted"
 
 /** The slots of each data status a block test draws with. */
 export interface SlotStatuses {

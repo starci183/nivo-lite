@@ -1,4 +1,4 @@
-import { settledHostRead } from "../../testing/fakes"
+import { settledHostRead } from "../../tests/fixtures/fakes"
 import { foldRead } from "./host-slot"
 
 describe("foldRead", () => {

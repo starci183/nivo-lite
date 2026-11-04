@@ -312,7 +312,7 @@ Follow it for one module per agent; the Loyalty commits on `feat/agent-sdk-workb
 1. **Slot** `repo.shared-packages`: `packages/<pkg>/` at the app root, side-neutral, `tier: package`, required `package.json`,
    `src/index.ts`, `tsconfig.json`, `tests: unit-beside`. Today `packages/` matches no slot (`HFS_SLOT_UNDECLARED` for every file).
 2. **Lint by subpath**: `packages/*/src/workbench/**` under the FE canon and the grammar lint (with the package tier: Grammar imports only,
-   no `className`, no CSS, no app import); `packages/*/src/{module,template,manifest,node,testing}/**` and `packages/*/src/workbench/contract/**`
+   no `className`, no CSS, no app import); `packages/*/src/{module,template,manifest,node,tests}/**` and `packages/*/src/workbench/contract/**`
    under the BE canon plus a React-import ban. Today neither app ESLint config reaches `packages/` (files outside the base path are ignored),
    so the package code is not lint-checked by the gate.
 3. **FE-PACKAGES-2 rewrite** (owner ruling 1): a workbench package draws only with Grammar components and SDK blocks; it holds no class,

@@ -1,6 +1,6 @@
-import type { NodeHostPorts } from "../node/host.types"
-import type { EffectPayload, NodeStore, SubjectRef } from "../node/node.types"
-import { SdkError } from "../sdk-error"
+import type { NodeHostPorts } from "../../node/host.types"
+import type { EffectPayload, NodeStore, SubjectRef } from "../../node/node.types"
+import { SdkError } from "../../sdk-error"
 
 /** What a node test tunes. */
 export interface FakeNodePortsOptions {
