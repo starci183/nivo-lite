@@ -1,7 +1,6 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { AUTOMATION_ROUTES } from "@/modules/routes"
 import { AutomationsPageBase } from "./component"
 
 /** The document title of the page. */
@@ -20,11 +19,6 @@ interface AutomationsPageProps {
  * The Automations page: ready-made jobs the owner switches on. The heading and the board are connected client blocks that
  * read the back end through SWR; staff see the friendly 403 the board draws when the back end refuses.
  */
-export const AutomationsPage = async (props: AutomationsPageProps): Promise<ReactElement> => {
-    const t = await getTranslations("automations")
-    return (
-        <AutomationsPageBase
-            props={{ focus: props.focus, advancedLabel: t("advanced"), advancedHref: AUTOMATION_ROUTES.developers }}
-        />
-    )
-}
+export const AutomationsPage = (props: AutomationsPageProps): ReactElement => (
+    <AutomationsPageBase props={{ focus: props.focus }} />
+)

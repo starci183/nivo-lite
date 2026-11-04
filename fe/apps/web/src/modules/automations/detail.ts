@@ -202,6 +202,8 @@ export const automationDetailOf = (input: DetailInput, ctx: DetailContext): Deta
             description: automationText(card.def.description, ctx.locale),
             closeLabel: t("detailClose"),
             dismissLabel: t("dismiss"),
+            isHidden: card.dismissed,
+            restoreLabel: t("restore"),
             ...(input.isAwaiting ? { awaitingText: t("needsMessage") } : {}),
             ...(input.errorText === undefined ? {} : { errorText: input.errorText }),
             isBusy: input.isBusy,

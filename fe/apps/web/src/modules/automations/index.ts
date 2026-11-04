@@ -2,6 +2,7 @@ export { automationBoardOf } from "./board"
 export {
     automationFiltersFor,
     automationScopeOf,
+    hiddenAutomations,
     automationStatusOf,
     matchesAutomationFilter,
     startsAutomationConnection,

@@ -126,6 +126,9 @@ export interface DetailView {
         readonly description: string
         readonly closeLabel: string
         readonly dismissLabel: string
+        /** The owner hid this automation: its menu restores it instead of hiding it. */
+        readonly isHidden: boolean
+        readonly restoreLabel: string
         readonly awaitingText?: string
         readonly errorText?: string
         readonly isBusy: boolean
@@ -156,7 +159,7 @@ export interface DetailView {
 export interface AutomationsBoardView {
     readonly filters: {
         readonly label: string
-        readonly items: ReadonlyArray<{ readonly id: string; readonly label: string }>
+        readonly items: ReadonlyArray<{ readonly id: string; readonly label: string; readonly count?: number }>
         readonly selectedId: string
     }
     readonly errorAlert?: { readonly title: string; readonly dismissLabel: string }

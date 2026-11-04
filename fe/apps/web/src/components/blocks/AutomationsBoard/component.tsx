@@ -1,6 +1,8 @@
-import { Alert, Button, EmptyNotice, Grid, Section, Stack } from "@starci/grammar/common"
+import { Alert, Button, EmptyNotice, Section, Stack } from "@starci/grammar/common"
 import { AutomationAccountPicker } from "@/components/composites/AutomationAccountPicker"
 import { AutomationCard } from "@/components/frames/AutomationCard"
+import { AutomationsPanesDrawing } from "./panes"
+import type { AutomationsPanesView } from "./panes"
 import { AutomationDetailFrame } from "@/components/frames/AutomationDetailFrame"
 import { AutomationFilters } from "@/components/composites/AutomationFilters"
 import { AutomationGate } from "@/components/composites/AutomationGate"
@@ -30,8 +32,11 @@ export interface AutomationsBoardBaseProps {
         /** "page": filters and a grid with the detail beside it. "module": one module's cards as a compact list, detail below. */
         readonly layout: "page" | "module"
         readonly labels: AutomationsBoardLabels
+        /** The words and the search text of the page layout's panes. */
+        readonly panes: AutomationsPanesView
     }
     readonly on: {
+        readonly search: (value: string) => void
         readonly retry: () => void
         readonly select: (key: string) => void
         readonly toggle: (key: string, next: boolean) => void
@@ -125,16 +130,16 @@ const renderAutomationsBoardView = (
                 <>
                     {collection}
                     {detail}
+                    <AutomationHiddenList
+                        title={view.hidden.title}
+                        restoreLabel={view.hidden.restoreLabel}
+                        items={view.hidden.items}
+                        onRestore={on.restore}
+                    />
                 </>
             ) : (
-                <Grid kind="main-rail" primary={collection} rail={detail} railWidth="wide" />
+                <AutomationsPanesDrawing view={view} isLoading={isLoading} panes={props.props.panes} on={on} />
             )}
-            <AutomationHiddenList
-                title={view.hidden.title}
-                restoreLabel={view.hidden.restoreLabel}
-                items={view.hidden.items}
-                onRestore={on.restore}
-            />
         </>
     )
 }

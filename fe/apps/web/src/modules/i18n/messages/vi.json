@@ -864,7 +864,13 @@
     "seeAll": "Xem tất cả",
     "moduleEmpty": "Chưa có tự động hoá nào hợp với agent này.",
     "loading": "Đang tải...",
-    "loadFailed": "Chưa tải được tự động hoá."
+    "loadFailed": "Chưa tải được tự động hoá.",
+    "searchLabel": "Tìm tự động hoá",
+    "searchPlaceholder": "Tìm tự động hoá",
+    "pickTitle": "Chọn một tự động hoá",
+    "pickBody": "Bật nó và chỉnh lời nhắn ở đây.",
+    "advancedShort": "Nâng cao",
+    "filterHidden": "Đã ẩn"
   },
   "avatarEditor": {
     "label": "Ảnh đại diện",

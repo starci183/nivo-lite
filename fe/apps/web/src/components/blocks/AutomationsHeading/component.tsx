@@ -1,4 +1,4 @@
-import { Link, Page } from "@starci/grammar/common"
+import { Button, Link, Page, Pane, PaneGrid } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 /** Props for {@link AutomationsHeadingBase}. */
@@ -15,6 +15,8 @@ export interface AutomationsHeadingBaseProps {
         readonly leadLink: string
         readonly leadHref: string
         readonly leadAfter: string
+        readonly advancedLabel: string
+        readonly advancedHref: string
         /** True while the workspace name is unresolved: the header is drawn as its measured placeholder. */
         readonly isLoading: boolean
     }
@@ -25,6 +27,7 @@ export const AutomationsHeadingBase = (props: AutomationsHeadingBaseProps) => {
     const p = props.props
     return (
         <Page
+            chrome="panes"
             measure="product"
             isLoading={p.isLoading}
             header={{
@@ -38,9 +41,18 @@ export const AutomationsHeadingBase = (props: AutomationsHeadingBaseProps) => {
                         {p.leadAfter}
                     </>
                 ),
+                actions: (
+                    <Button intent="neutral" href={p.advancedHref}>
+                        {p.advancedLabel}
+                    </Button>
+                ),
             }}
         >
-            {props.children}
+            <PaneGrid label={p.title} areas={["body"]}>
+                <Pane area="body" inset="flush">
+                    {props.children}
+                </Pane>
+            </PaneGrid>
         </Page>
     )
 }

@@ -864,7 +864,13 @@
     "seeAll": "See all",
     "moduleEmpty": "No automation fits this agent yet.",
     "loading": "Loading...",
-    "loadFailed": "Could not load automations."
+    "loadFailed": "Could not load automations.",
+    "searchLabel": "Search automations",
+    "searchPlaceholder": "Search automations",
+    "pickTitle": "Choose an automation",
+    "pickBody": "Switch it on and edit its message here.",
+    "advancedShort": "Advanced",
+    "filterHidden": "Hidden"
   },
   "avatarEditor": {
     "label": "Profile picture",
