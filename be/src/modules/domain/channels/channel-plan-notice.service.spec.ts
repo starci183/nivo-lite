@@ -24,13 +24,13 @@ const build = async () => {
 }
 
 describe("ChannelPlanNoticeService", () => {
-    it("keeps one owner work item per connection, named after the connection, whose event id is the connection", async () => {
+    it("keeps one open owner work item per outage of a connection, named after the connection, in the series of the connection", async () => {
         const { service, connections, inboundEvents } = await build()
         connections.find.mockResolvedValue({ name: "OA Hoa Tươi" } as never)
 
         await service.planBlocked(TARGET)
 
-        expect(inboundEvents.keepForOwner).toHaveBeenCalledWith(expect.anything(), {
+        expect(inboundEvents.keepOutageForOwner).toHaveBeenCalledWith(expect.anything(), {
             workspaceId: "ws-1",
             channel: "zalo",
             sender: "OA Hoa Tươi",
@@ -47,10 +47,20 @@ describe("ChannelPlanNoticeService", () => {
         await service.planBlocked(TARGET)
         await service.planBlocked({ ...TARGET, connectionId: null })
 
-        expect(inboundEvents.keepForOwner).toHaveBeenCalledTimes(1)
-        expect(inboundEvents.keepForOwner).toHaveBeenCalledWith(
+        expect(inboundEvents.keepOutageForOwner).toHaveBeenCalledTimes(1)
+        expect(inboundEvents.keepOutageForOwner).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({ sender: "zalo" }),
         )
+    })
+
+    it("closes the open item of the outage of the connection once a reply reaches a customer there, and does nothing without a connection", async () => {
+        const { service, inboundEvents } = await build()
+
+        await service.recovered(TARGET)
+        await service.recovered({ ...TARGET, connectionId: null })
+
+        expect(inboundEvents.closeOutage).toHaveBeenCalledTimes(1)
+        expect(inboundEvents.closeOutage).toHaveBeenCalledWith("ws-1", "zalo", "channel-plan:c-1")
     })
 })

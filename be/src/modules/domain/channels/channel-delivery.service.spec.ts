@@ -318,6 +318,22 @@ describe("ChannelDeliveryService", () => {
             expect(planNotice.planBlocked).toHaveBeenCalledTimes(1)
         })
 
+        it("closes the plan notice of the connection when a reply is delivered on it, and not when it failed or the chat has no connection", async () => {
+            const { service, zaloDelivery, planNotice } = await build(zaloTarget())
+            zaloDelivery.send.mockResolvedValueOnce({ delivered: true, failure: null, outcome: "acknowledged" })
+            zaloDelivery.send.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
+
+            await service.deliver(request)
+            expect(planNotice.recovered).toHaveBeenCalledWith(zaloTarget())
+
+            await service.deliver(request)
+            expect(planNotice.recovered).toHaveBeenCalledTimes(1)
+
+            const website = await build(target({ channel: "website", connectionId: null }))
+            await website.service.deliver(request)
+            expect(website.planNotice.recovered).not.toHaveBeenCalled()
+        })
+
         it("lets the caller retry when another worker is renewing the token", async () => {
             const { service, zaloDelivery, messages } = await build(zaloTarget())
             const busy = new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy })

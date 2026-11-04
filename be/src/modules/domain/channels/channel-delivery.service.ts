@@ -92,6 +92,7 @@ export class ChannelDeliveryService {
         }
         await this.messages.markDelivery(request.messageId, result.delivered, deliveryErrorOf(result))
         if (result.failure === "channel_plan") await this.planNotice.planBlocked(target.value)
+        if (result.delivered && target.value.connectionId !== null) await this.planNotice.recovered(target.value)
         return result
     }
 
