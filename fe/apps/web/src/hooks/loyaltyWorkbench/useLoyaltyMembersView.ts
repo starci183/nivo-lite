@@ -1,195 +1,33 @@
 import type { LoyaltyPanelInput } from "@/hooks/loyalty"
 
-import { EMPTY_LOYALTY_BOARD, daysSince, findTier, tierTone, useLoyaltyPanelBoard } from "@/hooks/loyalty"
+import { daysSince, useLoyaltyPanelBoard } from "@/hooks/loyalty"
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useFormatter, useTranslations } from "next-intl"
 import { useEffect } from "react"
-import {
-    MEMBER_SORTS,
-    groupPhone,
-    lastVisitOf,
-    useMemberDetailView,
-    useMemberList,
-    type MemberSortKey,
-} from "@/hooks/loyaltyMembers"
+import { lastVisitOf, useMemberDetailView, useMemberList } from "@/hooks/loyaltyMembers"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import type { BadgeTone } from "@starci/grammar/common"
+import { LOYALTY_MEMBER_DETAIL_ID, buildLoyaltyMembersView } from "./loyaltyWorkbench.shared"
 
-const DETAIL_ID = "loyalty-member-detail"
+/** The member list section as the builder draws it, and the detail pane as its hook draws it. */
+type MembersBuilt = ReturnType<typeof buildLoyaltyMembersView>
+type MemberDetail = ReturnType<typeof useMemberDetailView>
 
 /** The view `useLoyaltyMembersView` returns. */
 export interface LoyaltyMembersViewShape {
     props: {
-        slot: DataSlot<{
-            rows: {
-                tier?: {
-                    name: string
-                    tone: BadgeTone
-                }
-                id: string
-                label: string
-                description: string
-            }[]
-        }>
-        copy: {
-            detailId: "loyalty-member-detail"
-            detailEmpty: {
-                readonly title: string
-                readonly body: string
-            }
-            showMoreLabel?: string
-            selectedId: string | null
-            empty?: {
-                title: string
-                body: string
-            }
-            title: string
-            countLabel: string
-            search: {
-                readonly label: string
-                readonly placeholder: string
-                readonly value: string
-            }
-            tier: {
-                readonly label: string
-                readonly value: string
-                readonly options: readonly [
-                    {
-                        readonly id: "all"
-                        readonly label: string
-                    },
-                    ...{
-                        id: string
-                        label: string
-                    }[],
-                ]
-            }
-            sort: {
-                readonly label: string
-                readonly value: MemberSortKey
-                readonly options: {
-                    id: MemberSortKey
-                    label: string
-                }[]
-            }
-        }
+        slot: DataSlot<{ rows: MembersBuilt["rows"] }>
+        copy: Omit<MembersBuilt, "rows">
         labels: SlotLabels
-        detail: {
-            slot: DataSlot<{
-                identity: {
-                    asOf: string
-                    expiringLine?: string
-                    points: string
-                    contact: string
-                    spentLine: string
-                    joinedLine: string
-                    nextTierLine: string
-                    tier?: {
-                        name: string
-                        tone: BadgeTone
-                    }
-                    name: string
-                }
-                rewardRows: {
-                    note?: string
-                    blocked?: string
-                    id: string
-                    name: string
-                    cost: string
-                }[]
-                ledgerRows: {
-                    evidence?: string
-                    ref?: string
-                    dateTime: string
-                    timeLabel: string
-                    amount?: string
-                    id: string
-                    kind: string
-                    tone: BadgeTone
-                    points: string
-                }[]
-            }>
-            labels: SlotLabels
-            copy: {
-                adjustTitle: string
-                adjustBody: string
-                adjust: {
-                    isPending: boolean
-                    note?: string
-                    canSubmit: boolean
-                    pointsLabel: string
-                    pointsHint: string
-                    pointsPlaceholder: string
-                    reasonLabel: string
-                    submitLabel: string
-                    pointsError?: string
-                    label: string
-                    memberId: string
-                    points: string
-                    reason: string
-                }
-                rewards: {
-                    title: string
-                    emptyText: string
-                    redeemLabel: string
-                    busyId: string | null
-                }
-                ledger: {
-                    title: string
-                    emptyText: string
-                }
-                readOnly?: {
-                    items: {
-                        id: string
-                        term: string
-                        description: string
-                    }[]
-                    note: string
-                }
-                edit?: {
-                    noteMax: number
-                    saveLabel: string
-                    isPending: boolean
-                    nameLabel: string
-                    birthdayLabel: string
-                    birthdayPlaceholder: string
-                    birthdayHint: string
-                    noteLabel: string
-                    birthdayError?: string
-                    nameError?: string
-                    label: string
-                    memberId: string
-                    name: string
-                    birthday: string
-                    note: string
-                }
-                closeLabel: string
-                editTitle: string
-            }
-        }
+        detail: MemberDetail["props"]
     }
     on: {
-        search: (value: string) => void
-        setTier: (value: string | null) => void
-        setSort: (value: string | null) => void
+        search: ReturnType<typeof useMemberList>["setQuery"]
+        setTier: ReturnType<typeof useMemberList>["setTier"]
+        setSort: ReturnType<typeof useMemberList>["setSort"]
         select: (id: string | null) => void
         showMore: () => void
         retry: () => void
-        detail: {
-            redeem: (rewardId: string) => void
-            retry: () => void
-            edit: {
-                onName: (text: string) => void
-                onBirthday: (text: string) => void
-                onNote: (text: string) => void
-                onSubmit: () => void
-            }
-            adjust: {
-                onPoints: (text: string) => void
-                onReason: (text: string) => void
-                onSubmit: () => void
-            }
-        }
+        detail: MemberDetail["on"]
     }
 }
 
@@ -204,7 +42,7 @@ export const useLoyaltyMembersView = (input: LoyaltyPanelInput): LoyaltyMembersV
     const { selected } = list
     useEffect(() => {
         if (input.isActive && selected !== null)
-            document.getElementById(DETAIL_ID)?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+            document.getElementById(LOYALTY_MEMBER_DETAIL_ID)?.scrollIntoView({ block: "nearest", behavior: "smooth" })
     }, [selected, input.isActive])
     const money = (value: number) =>
         format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
@@ -236,61 +74,3 @@ export const useLoyaltyMembersView = (input: LoyaltyPanelInput): LoyaltyMembersV
         },
     }
 }
-
-/** Inputs needed to build the LoyaltyMembersContent section. */
-interface BuildLoyaltyMembersViewContext {
-    readonly t: ReturnType<typeof useTranslations<"loyalty">>
-    readonly list: ReturnType<typeof useMemberList>
-    readonly board: typeof EMPTY_LOYALTY_BOARD
-    readonly format: ReturnType<typeof useFormatter>
-    readonly visit: (iso: string | null | undefined) => string
-    readonly money: (value: number) => string
-}
-/** Builds the LoyaltyMembersContent section from the current view. */
-const buildLoyaltyMembersView = ({ t, list, board, format, visit, money }: BuildLoyaltyMembersViewContext) =>
-    ({
-        title: t("membersTitle"),
-        countLabel: t("membersCount", { n: list.rows.length }),
-        search: { label: t("searchLabel"), placeholder: t("searchPlaceholder"), value: list.query },
-        tier: {
-            label: t("filterTier"),
-            value: list.tier,
-            options: [
-                { id: "all", label: t("filterAllTiers") },
-                ...board.config.tiers.map((tier) => ({ id: tier.key, label: tier.name })),
-            ],
-        },
-        sort: {
-            label: t("sortLabel"),
-            value: list.sort,
-            options: MEMBER_SORTS.map((key) => ({ id: key, label: t(`sort_${key}`) })),
-        },
-        rows: list.shown.map((member) => {
-            const tier = findTier(board.config, member.tierKey ?? null)
-            return {
-                id: member.id,
-                label: member.name,
-                description: [
-                    groupPhone(member.phone) || t("noPhone"),
-                    t("points", { n: format.number(member.points) }),
-                    visit(member.lastVisitAt),
-                    t("spentTotal", { value: money(member.lifetimeSpendVnd) }),
-                ].join(" · "),
-                ...(tier === null
-                    ? {}
-                    : { tier: { name: tier.name, tone: tierTone(board.config, member.tierKey ?? null) } }),
-            }
-        }),
-        ...(list.rows.length === 0
-            ? {
-                  empty: {
-                      title: board.members.length === 0 ? t("emptyMembersTitle") : t("noMatch"),
-                      body: board.members.length === 0 ? t("emptyMembersBodyStaff") : t("noMatchBody"),
-                  },
-              }
-            : {}),
-        selectedId: list.selected,
-        ...(list.remaining > 0 ? { showMoreLabel: t("showMore", { n: list.remaining }) } : {}),
-        detailId: DETAIL_ID,
-        detailEmpty: { title: t("detailEmptyTitle"), body: t("detailEmptyBody") },
-    }) as const
