@@ -9,6 +9,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { DeliveryRequest, DeliveryResult, OptionalZnsRenewal } from "./channels.contracts"
+import { deliveryFailureFieldsOf } from "./delivery-failure-fields.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { sepayQrUrlOf } from "./qr-image.policy"
@@ -152,10 +153,13 @@ export class ZaloDeliveryService {
     /** Logs a Zalo failure and names it for the workbench; a busy token refresh is thrown back so the caller retries. */
     private failed(target: ConversationTarget, cause: unknown): ZaloFailure {
         if (cause instanceof ChannelsError && cause.code === ChannelsErrorCode.ZaloRefreshBusy) throw cause
+        const failure = zaloFailureOf(cause)
         this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, {
             conversationId: target.id,
             channel: "zalo",
+            failure,
+            ...deliveryFailureFieldsOf(cause),
         })
-        return zaloFailureOf(cause)
+        return failure
     }
 }
