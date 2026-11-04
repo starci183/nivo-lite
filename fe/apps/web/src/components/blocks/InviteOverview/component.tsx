@@ -66,7 +66,7 @@ const Actions = (props: InviteOverviewBaseProps) => {
     if (props.shape === "signedOut") {
         return (
             <>
-                <Text size="sm" tone="muted">
+                <Text size="sm" tone="muted" isLoading={props.props.isLoading}>
                     {view.signedOutHint}
                 </Text>
                 <SignLink
@@ -105,7 +105,7 @@ const Actions = (props: InviteOverviewBaseProps) => {
     }
     return (
         <>
-            <Text size="sm" tone="muted">
+            <Text size="sm" tone="muted" isLoading={props.props.isLoading}>
                 {view.signedInAs}
             </Text>
             <Button
