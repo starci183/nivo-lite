@@ -113,7 +113,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     ...mcpKnowledgeModules(options),
     ProviderRegistryModule.register({ isGlobal: true }),
     SepayModule.register({ isGlobal: true, ...options.sepay }),
-    SepayProviderModule.register({}),
+    SepayProviderModule.register({ isGlobal: true }),
     McpCallLogModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,

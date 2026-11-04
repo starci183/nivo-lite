@@ -12,8 +12,7 @@ import { burstFor, burstSourceOf, CONVERSATION_SCOPE_PREFIX, scopeKeyOf } from "
 import type { AgentWorkOptions } from "./agent-work.options"
 import type { AgentBurstPolicy } from "./agent-work.port"
 import { AgentWakeEntity } from "./persistence/entities"
-import type { AgentWake } from "./agent-work.contracts"
-import type { OptionalWakeId } from "./agent-work-source.contracts"
+import type { AgentWake, OptionalWakeId } from "./agent-work.contracts"
 
 /** The id of the row an insert returned, or null when it wrote none. */
 const idOf = (raw: unknown): OptionalWakeId => {

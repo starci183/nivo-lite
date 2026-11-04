@@ -1,4 +1,4 @@
-import type { AgentWakeInbound } from "@modules/domain/agent-work"
+import type { AgentWakeInbound } from "@modules/domain/agent-wake-rules"
 import type { InboundAdapter, InboundChain, InboundEvent } from "./agent-inbound.contracts"
 
 /** The most bytes of payload the door keeps in a wake. */

@@ -1,29 +1,12 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { z } from "zod"
-import { defineDataKind, defineEffect, defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { echo, emptyPing as ping, record } from "@tests/fixtures/builders/graph-node-probe.builder"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
 import { GRAPH_NODES_OPTIONS } from "./graph-nodes.decorators"
 import type { NodeDataPort, NodeEffectExecutor, NodeInstall } from "./graph-nodes.contracts"
-
-const record = defineDataKind({ kind: "record", title: { key: "r" }, fields: z.object({ id: z.string() }) })
-const ping = defineEffect({ id: "core.ping", title: { key: "p" }, payload: z.object({}), rights: [] })
-const echo = defineNode({
-    id: "core.echo",
-    role: "execute",
-    title: { key: "e" },
-    params: z.object({}),
-    input: z.object({}),
-    output: z.object({}),
-    rights: [],
-    effects: ["core.ping", "core.ghost"],
-    run: () => Promise.resolve({}),
-    examples: [{ name: "e", params: {}, input: {}, output: {}, effects: [] }],
-}) as unknown as NodeDefinition
 
 const INSTALL: NodeInstall = { nodes: [echo], effects: [ping], tools: [], dataKinds: [record] }
 
@@ -41,6 +24,16 @@ const build = async () => {
 
 const port: NodeDataPort = { kind: "record", read: () => Promise.resolve([]) }
 const executor: NodeEffectExecutor = { effect: "core.ping", execute: () => Promise.resolve({ kind: "r", id: "1" }) }
+
+/** What `run` throws, read as `unknown`; the matcher then judges its fields. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (error) {
+        return error
+    }
+    return undefined
+}
 
 describe("GraphNodeRegistryService", () => {
     it("warns of a problem of the install, and names what no module serves once the app started", async () => {
@@ -85,20 +78,14 @@ describe("GraphNodeRegistryService", () => {
         registry.addDataPort(port)
         registry.addExecutor(executor)
 
-        expect(() => registry.addDataPort(port)).toThrow(
-            expect.objectContaining({ code: GraphNodesErrorCode.PortDuplicate }),
-        )
-        expect(() => registry.addExecutor(executor)).toThrow(
-            expect.objectContaining({ code: GraphNodesErrorCode.PortDuplicate }),
-        )
-        expect(() => registry.nodeOf("core.ghost")).toThrow(
-            expect.objectContaining({ code: GraphNodesErrorCode.NodeUnknown }),
-        )
-        expect(() => registry.portOf("ghost")).toThrow(
-            expect.objectContaining({ code: GraphNodesErrorCode.PortMissing }),
-        )
-        expect(() => registry.executorOf("core.ghost")).toThrow(
-            expect.objectContaining({ code: GraphNodesErrorCode.ExecutorMissing }),
-        )
+        expect(thrownBy(() => registry.addDataPort(port))).toMatchObject({ code: GraphNodesErrorCode.PortDuplicate })
+        expect(thrownBy(() => registry.addExecutor(executor))).toMatchObject({
+            code: GraphNodesErrorCode.PortDuplicate,
+        })
+        expect(thrownBy(() => registry.nodeOf("core.ghost"))).toMatchObject({ code: GraphNodesErrorCode.NodeUnknown })
+        expect(thrownBy(() => registry.portOf("ghost"))).toMatchObject({ code: GraphNodesErrorCode.PortMissing })
+        expect(thrownBy(() => registry.executorOf("core.ghost"))).toMatchObject({
+            code: GraphNodesErrorCode.ExecutorMissing,
+        })
     })
 })

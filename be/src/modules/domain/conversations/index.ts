@@ -16,4 +16,3 @@ export type {
     TurnVerdict,
 } from "./conversations.contracts"
 export type { MessageIntake } from "./conversations.contracts"
-export { customerWakeContextOf } from "./customer-wake.policy"

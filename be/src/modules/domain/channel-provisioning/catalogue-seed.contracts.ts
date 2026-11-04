@@ -12,6 +12,3 @@ export interface CatalogueItem {
     /** The selling price of one unit, in VND. */
     readonly sellPriceVnd: number
 }
-
-/** What a catalogue seed ended as for one item. */
-export type CatalogueOutcome = "created" | "updated" | "kept"

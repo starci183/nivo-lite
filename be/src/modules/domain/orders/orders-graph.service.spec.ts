@@ -1,12 +1,14 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeDataPort, NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
+import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { LeadReadService } from "@modules/domain/leads"
 import { orderOf } from "@tests/fixtures/builders/confirm-order-performer.builder"
 import { OrdersErrorCode } from "./errors/orders.error"
 import { OrdersGraphService } from "./orders-graph.service"
 import { OrderConfirmationService } from "./order-confirmation.service"
+import type { SalesOrderListRow, SalesOrderRow } from "./orders.contracts"
 import { OrdersService } from "./orders.service"
 
 const TURN: NodeTurn = {
@@ -19,7 +21,7 @@ const TURN: NodeTurn = {
 }
 const CALL = { key: "k", dedupeKey: null }
 
-const build = async (withRegistry = true) => {
+const build = async () => {
     const orders = mock<OrdersService>()
     const leads = mock<LeadReadService>()
     const confirmation = mock<OrderConfirmationService>()
@@ -30,21 +32,38 @@ const build = async (withRegistry = true) => {
             { provide: OrdersService, useValue: orders },
             { provide: LeadReadService, useValue: leads },
             { provide: OrderConfirmationService, useValue: confirmation },
-            ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
+            { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
-    const service = moduleRef.get(OrdersGraphService)
-    service.onModuleInit()
-    const port = registry.addDataPort.mock.calls[0]?.[0] as NodeDataPort
-    const executors = new Map(
-        registry.addExecutor.mock.calls.map(([executor]) => [executor.effect, executor as NodeEffectExecutor]),
-    )
+    moduleRef.get(OrdersGraphService).onModuleInit()
+    const port = registry.addDataPort.mock.calls[0]?.[0]
+    assert(port !== undefined)
+    const executors = new Map(registry.addExecutor.mock.calls.map(([executor]) => [executor.effect, executor]))
     return { orders, leads, confirmation, registry, port, executors }
 }
 
+const buildWithoutRegistry = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            OrdersGraphService,
+            { provide: OrdersService, useValue: mock<OrdersService>() },
+            { provide: LeadReadService, useValue: mock<LeadReadService>() },
+            { provide: OrderConfirmationService, useValue: mock<OrderConfirmationService>() },
+        ],
+    }).compile()
+    return moduleRef.get(OrdersGraphService)
+}
+
+/** An order of the workspace listing: the order with the customer it names. */
+const listedOf = (overrides: Partial<SalesOrderRow> = {}): SalesOrderListRow => ({
+    ...orderOf(overrides),
+    contact_name: null,
+    company: null,
+})
+
 const FIELDS = ["id", "orderNo", "leadId", "items", "note", "amountVnd", "status", "confirmedAt", "createdAt"]
 
-describe("OrdersGraphService", () => {
+const registerReads = () => {
     it("registers the order port and the two executors", async () => {
         const { registry, port, executors } = await build()
 
@@ -54,9 +73,9 @@ describe("OrdersGraphService", () => {
     })
 
     it("serves nothing when the app hosts no graph nodes", async () => {
-        const { registry } = await build(false)
+        const service = await buildWithoutRegistry()
 
-        expect(registry.addDataPort).not.toHaveBeenCalled()
+        expect(() => service.onModuleInit()).not.toThrow()
     })
 
     it("reads the order named by the turn subject, with its items as lines", async () => {
@@ -87,8 +106,8 @@ describe("OrdersGraphService", () => {
     it("reads the orders of the customer the turn is about, filtered by where", async () => {
         const { orders, port } = await build()
         orders.listForLead.mockResolvedValue([
-            { ...orderOf({ id: "a", status: "draft" }), contact_name: null } as never,
-            orderOf({ id: "b", status: "confirmed" }) as never,
+            orderOf({ id: "a", status: "draft" }),
+            orderOf({ id: "b", status: "confirmed" }),
         ])
 
         const rows = await port.read(
@@ -114,12 +133,14 @@ describe("OrdersGraphService", () => {
 
     it("reads the workspace orders for a workspace scope, and only that workspace", async () => {
         const { orders, port } = await build()
-        orders.list.mockResolvedValue([orderOf() as never])
+        orders.list.mockResolvedValue([listedOf()])
 
         await expect(port.read(TURN, { fields: ["orderNo"] }, "workspace")).resolves.toEqual([{ orderNo: "SO-1" }])
         expect(orders.list).toHaveBeenCalledWith("ws-1", 500)
     })
+}
 
+const registerRecords = () => {
     it("records a draft order for a customer of the workspace, with the items in its text and the note in its own column", async () => {
         const { orders, leads, executors } = await build()
         orders.draft.mockResolvedValue(orderOf({ id: "new-1" }))
@@ -173,7 +194,9 @@ describe("OrdersGraphService", () => {
         ).rejects.toThrow("not found")
         expect(orders.draft).not.toHaveBeenCalled()
     })
+}
 
+const registerConfirms = () => {
     it("confirms a draft order with its own amount and items", async () => {
         const { orders, confirmation, executors } = await build()
         orders.find.mockResolvedValue(orderOf({ status: "draft" }))
@@ -210,4 +233,10 @@ describe("OrdersGraphService", () => {
             code: OrdersErrorCode.NotFound,
         })
     })
+}
+
+describe("OrdersGraphService", () => {
+    registerReads()
+    registerRecords()
+    registerConfirms()
 })

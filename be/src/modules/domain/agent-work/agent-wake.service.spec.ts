@@ -1,6 +1,6 @@
 import { AGENT_BURST_POLICY, AGENT_WORK_OPTIONS } from "./agent-work.decorators"
 import type { AgentWorkOptions } from "./agent-work.options"
-import type { AgentBurstPolicy } from "./agent-work.port"
+import type { AgentBurstPolicy, OptionalBurstSetting } from "./agent-work.port"
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { agentWakeOf as wake } from "@tests/fixtures/builders/agent-work.builder"
@@ -14,7 +14,10 @@ import { AgentWakeService } from "./agent-wake.service"
 
 const inserted = (...ids: Array<string>): QueryBuilderAnswers => ({ execute: { raw: ids.map((id) => ({ id })) } })
 
-const build = async (answer: QueryBuilderAnswers, options?: AgentWorkOptions, bursts?: AgentBurstPolicy) => {
+/** The service with the app root's options and a burst policy that answers `asked` for every source. */
+const build = async (answer: QueryBuilderAnswers, options?: AgentWorkOptions, asked: OptionalBurstSetting = null) => {
+    const settings = { debounceMs: options?.debounceMs, debounceMaxMs: options?.debounceMaxMs }
+    const bursts = mock<AgentBurstPolicy>({ burstOf: jest.fn().mockResolvedValue(asked) })
     const queue = mock<AgentTurnQueue>({ enqueueDrain: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>()
     const tx = mockEntityManager()
@@ -24,11 +27,11 @@ const build = async (answer: QueryBuilderAnswers, options?: AgentWorkOptions, bu
             AgentWakeService,
             { provide: AGENT_TURN_QUEUE_PRODUCER, useValue: queue },
             { provide: LOGGER, useValue: logger },
-            ...(options === undefined ? [] : [{ provide: AGENT_WORK_OPTIONS, useValue: options }]),
-            ...(bursts === undefined ? [] : [{ provide: AGENT_BURST_POLICY, useValue: bursts }]),
+            { provide: AGENT_WORK_OPTIONS, useValue: settings },
+            { provide: AGENT_BURST_POLICY, useValue: bursts },
         ],
     }).compile()
-    return { service: container.get(AgentWakeService), queue, logger, tx, fake }
+    return { service: container.get(AgentWakeService), queue, logger, tx, fake, bursts }
 }
 
 describe("AgentWakeService.wake", () => {
@@ -116,15 +119,13 @@ describe("AgentWakeService burst from the flow", () => {
         context: { conversationId: "conv-1", messageId: "msg-3" },
         actorMemberId: null,
     })
-    const policy = (asked: { windowMs: number; maxWaitMs: number | null } | null) => {
-        const bursts = mock<AgentBurstPolicy>()
-        bursts.burstOf.mockResolvedValue(asked)
-        return bursts
-    }
 
     it("resolves the burst of a conversation wake once, from the flow, keeps it on the wake and waits the flow's window", async () => {
-        const bursts = policy({ windowMs: 6000, maxWaitMs: 20_000 })
-        const { service, queue, tx, fake } = await build(inserted("wake-1"), { debounceMs: 1000 }, bursts)
+        const { service, queue, tx, fake, bursts } = await build(
+            inserted("wake-1"),
+            { debounceMs: 1000 },
+            { windowMs: 6000, maxWaitMs: 20_000 },
+        )
 
         await service.wake(tx, customer)
 
@@ -138,10 +139,10 @@ describe("AgentWakeService burst from the flow", () => {
         const open = await build(
             inserted("wake-1"),
             { debounceMs: 1000, debounceMaxMs: 9000 },
-            policy({ windowMs: 4000, maxWaitMs: null }),
+            { windowMs: 4000, maxWaitMs: null },
         )
-        const off = await build(inserted("wake-1"), { debounceMs: 1000 }, policy({ windowMs: 0, maxWaitMs: null }))
-        const silent = await build(inserted("wake-1"), { debounceMs: 1000 }, policy(null))
+        const off = await build(inserted("wake-1"), { debounceMs: 1000 }, { windowMs: 0, maxWaitMs: null })
+        const silent = await build(inserted("wake-1"), { debounceMs: 1000 }, null)
 
         await open.service.wake(open.tx, customer)
         await off.service.wake(off.tx, customer)
@@ -153,8 +154,10 @@ describe("AgentWakeService burst from the flow", () => {
     })
 
     it("asks the flow nothing for a wake that is not locked to a conversation", async () => {
-        const bursts = policy({ windowMs: 6000, maxWaitMs: null })
-        const { service, tx, fake } = await build(inserted("wake-1"), undefined, bursts)
+        const { service, tx, fake, bursts } = await build(inserted("wake-1"), undefined, {
+            windowMs: 6000,
+            maxWaitMs: null,
+        })
 
         await service.wake(tx, wake())
 

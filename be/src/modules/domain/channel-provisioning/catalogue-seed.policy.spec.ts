@@ -1,14 +1,15 @@
+import { Test } from "@nestjs/testing"
+import { readCatalogueItems } from "./catalogue-seed.policy"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
 import { CATALOGUE_SEED_SCHEMA } from "./catalogue-seed.contracts"
-import { readCatalogueItems } from "./catalogue-seed.policy"
 
 const refused = (field: string) =>
     new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
 
 const item = (overrides: Record<string, unknown> = {}) => ({
     sku: "CHAU-MINI",
-    name: "Chậu hoa mini",
-    unit: "chậu",
+    name: "Mini pot",
+    unit: "pot",
     sellPriceVnd: 5000,
     ...overrides,
 })
@@ -20,9 +21,24 @@ const document = (items: unknown, overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 })
 
+const SUBJECT = Symbol("catalogue-seed.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { readCatalogueItems } }],
+    }).compile()
+    return moduleRef.get<typeof import("./catalogue-seed.policy")>(SUBJECT)
+}
+
 describe("readCatalogueItems", () => {
+    let policy: typeof import("./catalogue-seed.policy")
+
+    beforeAll(async () => {
+        policy = await build()
+    })
+
     it("reads the items of every document, in order", () => {
-        const items = readCatalogueItems(
+        const items = policy.readCatalogueItems(
             envelope(
                 document([item(), item({ sku: "BO-HONG-20", sellPriceVnd: 0 })]),
                 document([item({ sku: "KE-1" })]),
@@ -34,7 +50,7 @@ describe("readCatalogueItems", () => {
             ["BO-HONG-20", 0],
             ["KE-1", 5000],
         ])
-        expect(items[0]).toEqual({ sku: "CHAU-MINI", name: "Chậu hoa mini", unit: "chậu", sellPriceVnd: 5000 })
+        expect(items[0]).toEqual({ sku: "CHAU-MINI", name: "Mini pot", unit: "pot", sellPriceVnd: 5000 })
     })
 
     it.each([
@@ -52,6 +68,6 @@ describe("readCatalogueItems", () => {
         ["a unit that is missing", envelope(document([item({ unit: undefined })])), "item.unit"],
         ["a sku given twice", envelope(document([item(), item({ name: "Other" })])), "item.sku"],
     ])("refuses %s", (_name, text, field) => {
-        expect(() => readCatalogueItems(text)).toThrow(refused(field))
+        expect(() => policy.readCatalogueItems(text)).toThrow(refused(field))
     })
 })

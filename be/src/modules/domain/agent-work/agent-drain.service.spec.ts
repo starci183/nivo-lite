@@ -29,6 +29,11 @@ const PLAN: AgentTurnPlan = {
 
 const USAGE: AgentTurnUsage = { model: "p/m", promptTokens: 4, completionTokens: 2, cost: 0.1, durationMs: 800 }
 
+const WAKE_REF = { agentId: "agent-1", wakeId: "wake-1" }
+
+/** What the drain hands `finish`: the ending it names, with no error code and no usage unless it says so. */
+const finished = <Fields extends object>(fields: Fields) => ({ errorCode: null, usage: null, ...fields })
+
 const DONE = { status: "done" as const, reason: null, outcome: { sent: true } }
 
 interface Options {
@@ -93,13 +98,10 @@ describe("AgentDrainService.drain, a wake its agent's graph runs", () => {
         expect(flow.run).toHaveBeenCalledWith(turn(), expect.any(AbortSignal))
         expect(handler.prepare).not.toHaveBeenCalled()
         expect(executor.run).not.toHaveBeenCalled()
-        expect(turns.finish).toHaveBeenCalledWith(turn(), {
-            status: "done",
-            reason: null,
-            outcome: { ran: "graph" },
-            errorCode: null,
-            usage: null,
-        })
+        expect(turns.finish).toHaveBeenCalledWith(
+            turn(),
+            finished({ status: "done", reason: null, outcome: { ran: "graph" } }),
+        )
     })
 
     it("leaves a wake the flow does not take to the handler of its source", async () => {
@@ -134,13 +136,10 @@ describe("AgentDrainService.drain, a turn that runs", () => {
         )
         expect(turns.propose).toHaveBeenCalledWith(turn(), { reply: "hi" })
         expect(handler.settle).toHaveBeenCalledWith(turn(), { reply: "hi" }, expect.any(AbortSignal))
-        expect(turns.finish).toHaveBeenCalledWith(turn(), {
-            status: "done",
-            reason: null,
-            outcome: { sent: true },
-            errorCode: null,
-            usage: USAGE,
-        })
+        expect(turns.finish).toHaveBeenCalledWith(
+            turn(),
+            finished({ status: "done", reason: null, outcome: { sent: true }, usage: USAGE }),
+        )
         const order = [turns.bind, executor.run, turns.propose, handler.settle, turns.finish].map(
             (fn) => fn.mock.invocationCallOrder[0],
         )
@@ -171,13 +170,10 @@ describe("AgentDrainService.drain, a turn that runs", () => {
         await service.drain(PAYLOAD)
 
         expect(executor.run).not.toHaveBeenCalled()
-        expect(turns.finish).toHaveBeenCalledWith(turn(), {
-            status: "skipped",
-            reason: "no_work",
-            outcome: null,
-            errorCode: null,
-            usage: null,
-        })
+        expect(turns.finish).toHaveBeenCalledWith(
+            turn(),
+            finished({ status: "skipped", reason: "no_work", outcome: null }),
+        )
     })
 })
 
@@ -249,13 +245,10 @@ describe("AgentDrainService.drain, a turn that cannot be settled", () => {
 
         expect(handler.holdOver).toHaveBeenCalledWith(turn(), "quota")
         expect(turns.propose).not.toHaveBeenCalled()
-        expect(turns.finish).toHaveBeenCalledWith(turn(), {
-            status: "done",
-            reason: "holding_line",
-            outcome: null,
-            errorCode: null,
-            usage: null,
-        })
+        expect(turns.finish).toHaveBeenCalledWith(
+            turn(),
+            finished({ status: "done", reason: "holding_line", outcome: null }),
+        )
     })
 
     it("stops before settling when the lease moved on while the model ran", async () => {
@@ -264,7 +257,7 @@ describe("AgentDrainService.drain, a turn that cannot be settled", () => {
 
         await service.drain(PAYLOAD)
 
-        expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFenced, { agentId: "agent-1", wakeId: "wake-1" })
+        expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFenced, WAKE_REF)
         expect(handler.settle).not.toHaveBeenCalled()
         expect(turns.finish).not.toHaveBeenCalled()
     })
@@ -289,17 +282,11 @@ describe("AgentDrainService.drain, a turn that fails or leaves more to do", () =
 
         await service.drain(PAYLOAD)
 
-        expect(logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, cause, {
-            agentId: "agent-1",
-            wakeId: "wake-1",
-        })
-        expect(turns.finish).toHaveBeenCalledWith(turn(), {
-            status: "failed",
-            reason: "error",
-            outcome: null,
-            errorCode: AgentWorkErrorCode.AgentNotFound,
-            usage: null,
-        })
+        expect(logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, cause, WAKE_REF)
+        expect(turns.finish).toHaveBeenCalledWith(
+            turn(),
+            finished({ status: "failed", reason: "error", outcome: null, errorCode: AgentWorkErrorCode.AgentNotFound }),
+        )
     })
 
     it("fails the wake with a generic code for any other error, and retries a tag silently while attempts remain", async () => {
@@ -327,13 +314,10 @@ describe("AgentDrainService.drain, a runtime that is down", () => {
 
         expect(handler.holdOver).toHaveBeenCalledWith(turn(), "error")
         expect(turns.propose).not.toHaveBeenCalled()
-        expect(turns.finish).toHaveBeenCalledWith(turn(), {
-            status: "done",
-            reason: "holding_line",
-            outcome: null,
-            errorCode: "AGENT_WORK_UNEXPECTED",
-            usage: null,
-        })
+        expect(turns.finish).toHaveBeenCalledWith(
+            turn(),
+            finished({ status: "done", reason: "holding_line", outcome: null, errorCode: "AGENT_WORK_UNEXPECTED" }),
+        )
     })
 
     it.each(["tag", "internal", "schedule"] as const)(
@@ -346,10 +330,7 @@ describe("AgentDrainService.drain, a runtime that is down", () => {
 
             await service.drain(PAYLOAD)
 
-            expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.WakeDead, {
-                agentId: "agent-1",
-                wakeId: "wake-1",
-            })
+            expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.WakeDead, WAKE_REF)
             expect(handler.holdOver).toHaveBeenCalledWith(last, "error")
             expect(turns.finish).toHaveBeenCalledWith(
                 last,
@@ -366,10 +347,7 @@ describe("AgentDrainService.drain, a runtime that is down", () => {
 
         await service.drain(PAYLOAD)
 
-        expect(logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, cause, {
-            agentId: "agent-1",
-            wakeId: "wake-1",
-        })
+        expect(logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFailed, cause, WAKE_REF)
         expect(turns.finish).toHaveBeenCalledWith(turn(), expect.objectContaining({ status: "failed" }))
     })
 
@@ -403,7 +381,7 @@ describe("AgentDrainService.drain, a turn that leaves more to do", () => {
 
         await service.drain(PAYLOAD)
 
-        expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFenced, { agentId: "agent-1", wakeId: "wake-1" })
+        expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFenced, WAKE_REF)
         expect(queue.enqueueNextDrain).not.toHaveBeenCalled()
     })
 })
@@ -476,10 +454,7 @@ describe("AgentDrainService.drain, the heartbeat", () => {
         const done = fixture.service.drain(PAYLOAD)
         await jest.advanceTimersByTimeAsync(60_000)
 
-        expect(fixture.logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.HeartbeatFailed, cause, {
-            agentId: "agent-1",
-            wakeId: "wake-1",
-        })
+        expect(fixture.logger.error).toHaveBeenCalledWith(AgentWorkLogEvent.HeartbeatFailed, cause, WAKE_REF)
         expect(fixture.turns.touch).toHaveBeenCalledTimes(2)
         expect(seen.signal?.aborted).toBe(false)
         release()
@@ -508,10 +483,7 @@ describe("AgentDrainService.drain, the heartbeat budget", () => {
 
         expect(fixture.turns.touch).toHaveBeenCalledTimes(20)
         expect(seen.signal?.aborted).toBe(true)
-        expect(fixture.logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnOverran, {
-            agentId: "agent-1",
-            wakeId: "wake-1",
-        })
+        expect(fixture.logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnOverran, WAKE_REF)
         release()
         await done
     })

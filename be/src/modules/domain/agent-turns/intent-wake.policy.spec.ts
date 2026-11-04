@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
-import { encodeInbound } from "@modules/domain/agent-work"
-import type { AgentWakeInbound } from "@modules/domain/agent-work"
+import { encodeInbound } from "@modules/domain/agent-wake-rules"
+import type { AgentWakeInbound } from "@modules/domain/agent-wake-rules"
 import { wakeRowSchema } from "./intent-step.schema"
 import { internalWakeOf, splitWakeOf, tagFileRefOf, wakeRefOf, wakeRowOf, wakeScopeOf } from "./intent-wake.policy"
 

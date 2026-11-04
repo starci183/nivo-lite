@@ -1,7 +1,8 @@
-import { randomUUID } from "node:crypto"
 import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectIds } from "@modules/platform/ids"
+import type { Ids } from "@modules/platform/ids"
 import { AgentSpeakerQueueService } from "./agent-speaker-queue.service"
 import type { QueuedTag } from "./agent-speaker-queue.contracts"
 import { AgentWakeService } from "./agent-wake.service"
@@ -33,6 +34,7 @@ export class AgentTagService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly wakes: AgentWakeService,
         private readonly queue: AgentSpeakerQueueService,
+        @InjectIds() private readonly ids: Ids,
         @Optional() @InjectAgentTagRights() private readonly rights: AgentTagRights | null = null,
         @Optional() @InjectAgentTagVisibility() private readonly visibility: AgentTagVisibilityPort | null = null,
     ) {}
@@ -81,7 +83,7 @@ export class AgentTagService {
             workspaceId: request.workspaceId,
             agentId: request.toAgentId,
             source: "tag",
-            eventKey: request.eventKey ?? `tag:${randomUUID()}`,
+            eventKey: request.eventKey ?? `tag:${this.ids.next()}`,
             context: tagContextOf(request, payload),
             actorMemberId: "personId" in request ? request.personId : null,
         })
@@ -95,7 +97,7 @@ export class AgentTagService {
         if (this.visibility === null || !isAgentHandOff(request)) return false
         const holder = await this.visibility.holderOf(request.workspaceId, request.conversationId)
         if (holder === null || holder === request.fromAgentId || holder === request.toAgentId) return false
-        await this.queue.keep({ ...request, eventKey: request.eventKey ?? `tag:${randomUUID()}` }, tx)
+        await this.queue.keep({ ...request, eventKey: request.eventKey ?? `tag:${this.ids.next()}` }, tx)
         return true
     }
 

@@ -1,10 +1,11 @@
-import { randomUUID } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
 import type { StorageAssetsPort } from "@modules/integrations/object-storage"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectRemoteFiles } from "@modules/integrations/remote-files"
+import type { RemoteFiles } from "@modules/integrations/remote-files"
+import { InjectIds } from "@modules/platform/ids"
+import type { Ids } from "@modules/platform/ids"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { isPrivateAddress } from "@modules/platform/primitives"
@@ -17,7 +18,7 @@ import {
     sniffChatFile,
     sniffUnsupportedImage,
 } from "./chat-file.policy"
-import type { ChatFileScope, DownloadedChatFile, InboundFileSource } from "./chat-files.contracts"
+import type { ChatFileScope, DownloadedChatFile, InboundDownload, InboundFileSource } from "./chat-files.contracts"
 import {
     InjectChatFilesAssets,
     InjectChatFilesImportRoot,
@@ -36,8 +37,8 @@ import {
     isRedirectStatus,
     redirectTargetOf,
 } from "./inbound-file.policy"
-import type { InboundFileReader } from "./inbound-file.reader"
-import type { HostResolver } from "./inbound-file.resolver"
+import type { InboundFileReader } from "./inbound-file.client"
+import type { HostResolver } from "./host-resolver.client"
 import { AgentMessageAttachmentEntity } from "./persistence/entities"
 
 /** What a read of one file found, for the log line of a file that is left out: never the address, only its host and how the answer looked. */
@@ -79,12 +80,13 @@ const NO_ANSWER: ReadTrace = {
  */
 export class InboundFilesService {
     constructor(
-        @InjectHttpClient() private readonly http: HttpClient,
+        @InjectRemoteFiles() private readonly files: RemoteFiles,
         @InjectChatFilesAssets() private readonly assets: StorageAssetsPort,
         @InjectChatFilesImportRoot() private readonly importRoot: string,
         @InjectChatFilesReader() private readonly reader: InboundFileReader,
         @InjectChatFilesResolver() private readonly resolver: HostResolver,
         @InjectLogger() private readonly logger: Logger,
+        @InjectIds() private readonly ids: Ids,
         private readonly entitlements: EntitlementsService,
     ) {}
 
@@ -97,8 +99,8 @@ export class InboundFilesService {
         source: InboundFileSource,
         imported: boolean,
         ref: string,
-        index = 0,
-    ): Promise<DownloadedChatFile | null> {
+        index: number = 0,
+    ): Promise<InboundDownload> {
         const full = await this.read(source.url, source.localPath, imported)
         const trace =
             full.bytes === null && source.thumbnailUrl !== ""
@@ -135,7 +137,7 @@ export class InboundFilesService {
             () => false,
         )
         if (!room) return this.skipKept("plan", file)
-        const path = chatFilePathOf(scope, randomUUID(), file.contentType)
+        const path = chatFilePathOf(scope, this.ids.next(), file.contentType)
         const written = await this.assets.upload(CHAT_FILE_BUCKET, path, Buffer.from(file.bytes), file.contentType)
         if (written.error !== null) return this.skipKept("store", file)
         await manager.insert(AgentMessageAttachmentEntity, {
@@ -168,38 +170,36 @@ export class InboundFilesService {
         if (pin === undefined || addresses.some((address) => isPrivateAddress(address.address))) {
             return { ...before, reason: "blocked", host, hops }
         }
-        const answer = await this.http
-            .request({
-                method: "GET",
+        const answer = await this.files
+            .read({
                 url,
                 headers: INBOUND_FILE_HEADERS,
-                read: "bytes",
                 redirect: "manual",
                 pin,
+                maxBytes: CHAT_FILE_MAX_BYTES,
                 timeoutMs: INBOUND_FILE_TIMEOUT_MS,
+                accepts: isAcceptedDeclaredType,
             })
-            .catch(() => null)
+            .catch(() => {
+                this.logger.warn(ChatFilesLogEvent.InboundSkipped, { reason: "request_failed", host, hops })
+                return null
+            })
         if (answer === null) return { ...before, reason: "unreadable", host, hops, status: 0 }
-        const contentType = answer.headers?.["content-type"] ?? ""
-        const length = Buffer.isBuffer(answer.body) ? answer.body.length : 0
         const trace: ReadTrace = {
             bytes: null,
             reason: "unreadable",
             host,
             status: answer.status,
-            contentType,
-            length,
+            contentType: answer.contentType,
+            length: answer.length,
             hops,
         }
         if (isRedirectStatus(answer.status)) {
-            const next = redirectTargetOf(answer.headers?.location, url)
+            const next = redirectTargetOf(answer.location, url)
             if (next === null || hops >= INBOUND_FILE_MAX_REDIRECTS) return trace
             return this.fetch(next, hops + 1, trace)
         }
-        const usable = answer.status === 200 && Buffer.isBuffer(answer.body) && isAcceptedDeclaredType(contentType)
-        return usable && length > 0 && length <= CHAT_FILE_MAX_BYTES
-            ? { ...trace, bytes: answer.body as Buffer }
-            : trace
+        return answer.status === 200 && answer.bytes !== null ? { ...trace, bytes: answer.bytes } : trace
     }
 
     private skip(reason: string, source: InboundFileSource, trace: ReadTrace): null {

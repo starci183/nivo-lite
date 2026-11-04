@@ -395,6 +395,10 @@
           "reason": "claims outbox rows to relay into BullMQ"
         },
         {
+          "name": "public.job_relay_claim_with_delay",
+          "reason": "claims outbox rows to relay into BullMQ, delayed jobs included"
+        },
+        {
           "name": "public.job_relay_sent",
           "reason": "marks relayed outbox rows sent"
         },
@@ -405,6 +409,10 @@
         {
           "name": "public.job_reconcile",
           "reason": "reconciles job rows with the queue"
+        },
+        {
+          "name": "public.job_reconcile_with_delay",
+          "reason": "reconciles job rows with the queue, delayed jobs included"
         },
         {
           "name": "public.job_start",
@@ -713,6 +721,14 @@
         {
           "name": "public.http_rate_limit_cleanup",
           "reason": "the world's rate-limit proof: the expired-window sweep"
+        },
+        {
+          "name": "public.connection_poll_enroll",
+          "reason": "puts every connection of some providers into the poll schedule: an INSERT ... SELECT from connections, which an entity cannot express"
+        },
+        {
+          "name": "public.connection_poll_mark_hot",
+          "reason": "puts a connection into the poll schedule hot, or makes its row hot: an upsert that starts from connections, which an entity cannot express"
         }
       ]
     },

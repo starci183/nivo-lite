@@ -5,6 +5,7 @@ import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import { AgentTagService } from "@modules/domain/agent-work"
 import type { StepDecision, StepSpec, StepView } from "@modules/domain/agent-runs"
+import type { NodeEffectExecutor } from "@modules/domain/graph-nodes"
 import {
     GraphNodeHostService,
     GraphNodeRegistryService,
@@ -14,6 +15,7 @@ import {
 import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -42,24 +44,23 @@ const FLOW: GraphSpec = {
 const TRIGGER = { text: "hi", conversationId: "c-1", subject: { kind: "order", id: "o-1" }, locale: "en" }
 
 const stepOf = (nodeKey: string, overrides: Partial<StepView> = {}): StepView =>
-    ({
-        runId: "run-1",
-        workspaceId: "ws-1",
-        agentId: "agent-1",
+    stepViewOf({
         stepKey: nodeKey,
         nodeKey,
         kind: "graph_node",
         input: { versionId: "version-1", nodeKey, trigger: TRIGGER },
         earlier: { check: { output: { branch: "yes", id: "o-9" } } },
-        result: null,
         ...overrides,
-    }) as unknown as StepView
+    })
 
 const NOW = Date.parse("2026-11-04T10:00:00.000Z")
 const DAY_MS = 86_400_000
 const FINGERPRINT = "f".repeat(64)
 
-const raise = { effect: "work-item.raise", execute: jest.fn().mockResolvedValue({ kind: "work-item", id: "w-1" }) }
+const raise = mock<NodeEffectExecutor>({
+    effect: "work-item.raise",
+    execute: jest.fn().mockResolvedValue({ kind: "work-item", id: "w-1" }),
+})
 
 const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FLOW }) => {
     const handlers = mock<AgentRunHandlersService>()
@@ -164,7 +165,9 @@ describe("AgentGraphNodeStepService", () => {
             next: [],
         })
     })
+})
 
+describe("AgentGraphNodeStepService refusals", () => {
     it("fails a row that is not a node step, a node the version does not hold, and a node that refused", async () => {
         const { steps, host } = await build()
         await expect(steps.run(stepOf("keep", { input: {} }))).resolves.toEqual({
@@ -191,7 +194,16 @@ describe("AgentGraphNodeStepService", () => {
         await steps.compensate(stepOf("keep", { result: { output: {}, effects: done } }))
 
         expect(host.undo).toHaveBeenCalledWith({
-            turn: expect.objectContaining({ turnId: "run-1", workspaceId: "ws-1" }),
+            turn: {
+                turnId: "run-1",
+                workspaceId: "ws-1",
+                agentId: "agent-1",
+                subject: { kind: "order", id: "o-1" },
+                conversationId: "c-1",
+                locale: "en",
+                origin: "system",
+                memberId: null,
+            },
             done,
             key: "run-1:keep",
         })

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentOwnershipService } from "@modules/domain/agents"
+import type { OfficeAuthorityPort, ResolvedOfficeAuthority } from "@modules/domain/member-grants"
 import { Secret } from "@modules/platform/config"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -14,10 +15,8 @@ import type {
     OfficeInput,
     OfficePersonKey,
     OfficeReport,
-    ResolvedOfficeAuthority,
 } from "./office-seed.contracts"
 import { InjectSeedOfficeAuthority } from "./office-seed.decorators"
-import type { OfficeAuthorityPort } from "./office-seed.port"
 import { readOfficeInput } from "./office-seed.policy"
 import { HAKUEN_OFFICE_AUTHORITY } from "./profiles/hakuen-office.authority.templates"
 import { HAKUEN_OFFICE } from "./profiles/hakuen-office.templates"

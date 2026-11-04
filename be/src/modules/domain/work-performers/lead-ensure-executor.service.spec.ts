@@ -1,15 +1,22 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
-import { AgentConversationReadService, AgentConversationsService } from "@modules/domain/agent-conversations"
+import {
+    AgentConversationReadService,
+    AgentConversationsErrorCode,
+    AgentConversationsService,
+} from "@modules/domain/agent-conversations"
+import type { TurnConversation } from "@modules/domain/agent-conversations"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
+import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { LeadCapturedEvent } from "@modules/events/api"
 import type { BaseEvent } from "@modules/platform/event-bus"
+import { ok, refused } from "@modules/platform/primitives"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { EVENT_BUS } from "@modules/platform/event-bus"
 import { leadOf } from "@tests/fixtures/builders/confirm-order-performer.builder"
+import { conversation } from "@tests/fixtures/builders/chat-turn-harness.builder"
 import { WorkPerformersErrorCode } from "./errors/work-performers.error"
 import { LeadEnsureExecutorService } from "./lead-ensure-executor.service"
 import { PerformerKitService } from "./performer-kit.service"
@@ -25,21 +32,13 @@ const TURN: NodeTurn = {
 const CALL = { key: "k", dedupeKey: "lead:conv-1" }
 const PAYLOAD = { conversationId: "conv-1", channel: "zalo" }
 
-const conversationOf = (overrides: Record<string, unknown> = {}) =>
-    ({
-        kind: "ok",
-        value: {
-            id: "conv-1",
-            workspaceId: "ws-1",
-            leadId: null,
-            visitorName: "Khach",
-            channel: "zalo",
-            externalId: "zalo-user-1",
-            ...overrides,
-        },
-    }) as never
+/** The placeholder name every anonymous Zalo sender shares ("Khach Zalo", with its Vietnamese accent). */
+const GUEST = "Kh\u00e1ch Zalo"
 
-const build = async (withRegistry = true) => {
+const conversationOf = (overrides: Partial<TurnConversation> = {}) =>
+    ok(conversation({ channel: "zalo", externalId: "zalo-user-1", visitorName: "Khach", ...overrides }))
+
+const build = async () => {
     const kit = mock<PerformerKitService>()
     kit.text.mockImplementation((_ctx, key) => key)
     const conversations = mock<AgentConversationsService>()
@@ -63,36 +62,50 @@ const build = async (withRegistry = true) => {
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: EVENT_BUS, useValue: bus },
-            ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
+            { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
     moduleRef.get(LeadEnsureExecutorService).onModuleInit()
-    return {
-        conversations,
-        contacts,
-        leads,
-        responsibilities,
-        bus,
-        tx,
-        registry,
-        executor: registry.addExecutor.mock.calls[0]?.[0] as NodeEffectExecutor,
-    }
+    const [executor] = registry.addExecutor.mock.calls.map(([registered]) => registered)
+    return { conversations, contacts, leads, responsibilities, bus, tx, registry, executor }
+}
+
+const buildWithoutRegistry = async () => {
+    const kit = mock<PerformerKitService>()
+    const conversations = mock<AgentConversationsService>()
+    const contacts = mock<AgentConversationReadService>()
+    const leads = mock<LeadRecordsService>()
+    const responsibilities = mock<ResponsibilityJournalService>()
+    const bus = recordingEventBus<BaseEvent>()
+    const tx = fakeTransaction(mockEntityManager())
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            LeadEnsureExecutorService,
+            { provide: PerformerKitService, useValue: kit },
+            { provide: AgentConversationsService, useValue: conversations },
+            { provide: AgentConversationReadService, useValue: contacts },
+            { provide: LeadRecordsService, useValue: leads },
+            { provide: ResponsibilityJournalService, useValue: responsibilities },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: EVENT_BUS, useValue: bus },
+        ],
+    }).compile()
+    expect(() => moduleRef.get(LeadEnsureExecutorService).onModuleInit()).not.toThrow()
 }
 
 describe("LeadEnsureExecutorService", () => {
     it("registers the lead.ensure executor, and nothing when the app hosts no graph nodes", async () => {
         const { executor } = await build()
-        const { registry } = await build(false)
 
-        expect(executor.effect).toBe("lead.ensure")
-        expect(registry.addExecutor).not.toHaveBeenCalled()
+        expect(executor?.effect).toBe("lead.ensure")
+        await buildWithoutRegistry()
     })
 
     it("answers the lead the conversation already has, and changes nothing", async () => {
         const { conversations, leads, executor } = await build()
         conversations.turnOf.mockResolvedValue(conversationOf({ leadId: "lead-9" }))
 
-        await expect(executor.execute(TURN, PAYLOAD, CALL)).resolves.toEqual({ kind: "sales-lead", id: "lead-9" })
+        await expect(executor?.execute(TURN, PAYLOAD, CALL)).resolves.toEqual({ kind: "sales-lead", id: "lead-9" })
 
         expect(leads.match).not.toHaveBeenCalled()
         expect(leads.capture).not.toHaveBeenCalled()
@@ -102,7 +115,7 @@ describe("LeadEnsureExecutorService", () => {
     it("creates a lead for a new customer, publishes lead_captured with it, ties the conversation and sets the follow-up", async () => {
         const { conversations, leads, responsibilities, bus, tx, executor } = await build()
 
-        const subject = await executor.execute(TURN, { ...PAYLOAD, name: "Lan", phone: "0901234567" }, CALL)
+        const subject = await executor?.execute(TURN, { ...PAYLOAD, name: "Lan", phone: "0901234567" }, CALL)
 
         expect(subject).toEqual({ kind: "sales-lead", id: "lead-new" })
         expect(leads.capture.mock.calls[0]?.[0]).toMatchObject({
@@ -120,15 +133,17 @@ describe("LeadEnsureExecutorService", () => {
             "lead-new",
         )
     })
+})
 
+describe("LeadEnsureExecutorService names and matches", () => {
     it("names a customer with no name by the conversation, and then by the words for not shared", async () => {
         const { conversations, leads, executor } = await build()
         conversations.turnOf
             .mockResolvedValueOnce(conversationOf())
             .mockResolvedValueOnce(conversationOf({ visitorName: null }))
 
-        await executor.execute(TURN, PAYLOAD, CALL)
-        await executor.execute(TURN, PAYLOAD, CALL)
+        await executor?.execute(TURN, PAYLOAD, CALL)
+        await executor?.execute(TURN, PAYLOAD, CALL)
 
         expect(leads.capture.mock.calls.map(([lead]) => lead.contactName)).toEqual(["Khach", "notShared"])
     })
@@ -137,7 +152,7 @@ describe("LeadEnsureExecutorService", () => {
         const { conversations, leads, executor } = await build()
         leads.match.mockResolvedValue(leadOf({ id: "lead-old", phone: null }))
 
-        await expect(executor.execute(TURN, { ...PAYLOAD, phone: "0901234567" }, CALL)).resolves.toEqual({
+        await expect(executor?.execute(TURN, { ...PAYLOAD, phone: "0901234567" }, CALL)).resolves.toEqual({
             kind: "sales-lead",
             id: "lead-old",
         })
@@ -146,7 +161,7 @@ describe("LeadEnsureExecutorService", () => {
         expect(leads.fillContact).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             leadId: "lead-old",
-            phone: expect.any(String),
+            phone: "84901234567",
             email: null,
         })
         expect(conversations.attachLead).toHaveBeenCalledWith("ws-1", "conv-1", "lead-old")
@@ -158,17 +173,22 @@ describe("LeadEnsureExecutorService", () => {
             .mockResolvedValueOnce(leadOf({ phone: "84900000000" }))
             .mockResolvedValueOnce(leadOf({ phone: null }))
 
-        await executor.execute(TURN, { ...PAYLOAD, phone: "0901234567" }, CALL)
-        await executor.execute(TURN, PAYLOAD, CALL)
+        await executor?.execute(TURN, { ...PAYLOAD, phone: "0901234567" }, CALL)
+        await executor?.execute(TURN, PAYLOAD, CALL)
 
         expect(leads.fillContact).not.toHaveBeenCalled()
     })
+})
 
+describe("LeadEnsureExecutorService matching", () => {
     it("ties a new conversation of a known channel contact to that contact's lead, matching nothing else", async () => {
         const { contacts, leads, conversations, executor } = await build()
         contacts.leadOfContact.mockResolvedValue("lead-contact")
 
-        await expect(executor.execute(TURN, PAYLOAD, CALL)).resolves.toEqual({ kind: "sales-lead", id: "lead-contact" })
+        await expect(executor?.execute(TURN, PAYLOAD, CALL)).resolves.toEqual({
+            kind: "sales-lead",
+            id: "lead-contact",
+        })
 
         expect(contacts.leadOfContact).toHaveBeenCalledWith("ws-1", "zalo", "zalo-user-1")
         expect(leads.match).not.toHaveBeenCalled()
@@ -179,13 +199,11 @@ describe("LeadEnsureExecutorService", () => {
     it("never matches on the guest placeholder: two anonymous senders on the same channel get a lead each", async () => {
         const { conversations, leads, executor } = await build()
         conversations.turnOf
-            .mockResolvedValueOnce(conversationOf({ visitorName: "Khách Zalo", externalId: "zalo-user-1" }))
-            .mockResolvedValueOnce(
-                conversationOf({ id: "conv-2", visitorName: "Khách Zalo", externalId: "zalo-user-2" }),
-            )
+            .mockResolvedValueOnce(conversationOf({ visitorName: GUEST, externalId: "zalo-user-1" }))
+            .mockResolvedValueOnce(conversationOf({ id: "conv-2", visitorName: GUEST, externalId: "zalo-user-2" }))
 
-        await executor.execute(TURN, PAYLOAD, CALL)
-        await executor.execute(TURN, { ...PAYLOAD, conversationId: "conv-2" }, CALL)
+        await executor?.execute(TURN, PAYLOAD, CALL)
+        await executor?.execute(TURN, { ...PAYLOAD, conversationId: "conv-2" }, CALL)
 
         expect(leads.match.mock.calls.map(([match]) => match.name)).toEqual([null, null])
         expect(leads.capture).toHaveBeenCalledTimes(2)
@@ -195,20 +213,20 @@ describe("LeadEnsureExecutorService", () => {
         const { conversations, contacts, leads, executor } = await build()
         conversations.turnOf.mockResolvedValue(conversationOf({ externalId: null }))
 
-        await executor.execute(TURN, { ...PAYLOAD, name: "Lan" }, CALL)
+        await executor?.execute(TURN, { ...PAYLOAD, name: "Lan" }, CALL)
 
         expect(contacts.leadOfContact).not.toHaveBeenCalled()
         expect(leads.match).toHaveBeenCalledWith(expect.objectContaining({ name: "Lan", channel: "channel.zalo" }))
     })
 
     it.each([
-        ["gone", { kind: "refused" }],
+        ["gone", refused(AgentConversationsErrorCode.NotFound)],
         ["another workspace's", conversationOf({ workspaceId: "ws-2" })],
     ])("refuses a conversation that is %s", async (_name, answer) => {
         const { conversations, leads, executor } = await build()
-        conversations.turnOf.mockResolvedValue(answer as never)
+        conversations.turnOf.mockResolvedValue(answer)
 
-        await expect(executor.execute(TURN, PAYLOAD, CALL)).rejects.toMatchObject({
+        await expect(executor?.execute(TURN, PAYLOAD, CALL)).rejects.toMatchObject({
             code: WorkPerformersErrorCode.ConversationUnavailable,
         })
         expect(leads.capture).not.toHaveBeenCalled()

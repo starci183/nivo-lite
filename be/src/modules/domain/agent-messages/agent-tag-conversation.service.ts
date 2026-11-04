@@ -1,8 +1,9 @@
-import { Inject, Injectable, Optional } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ConversationHandoverService } from "@modules/domain/agent-conversations"
+import type { ConversationHandoverService } from "@modules/domain/agent-conversations"
 import type { AgentTagNotice, AgentTagVisibilityPort, OptionalSpeaker } from "@modules/domain/agent-work"
-import { AgentDirectoryService } from "@modules/domain/agents"
+import type { AgentDirectoryService } from "@modules/domain/agents"
+import { InjectTagAgentDirectory, InjectConversationHandover } from "./agent-messages.decorators"
 import { AgentMessagesService } from "./agent-messages.service"
 
 @Injectable()
@@ -14,10 +15,8 @@ import { AgentMessagesService } from "./agent-messages.service"
 export class AgentTagConversationService implements AgentTagVisibilityPort {
     constructor(
         private readonly messages: AgentMessagesService,
-        @Optional()
-        @Inject(ConversationHandoverService)
-        private readonly handover: ConversationHandoverService | null = null,
-        @Optional() @Inject(AgentDirectoryService) private readonly directory: AgentDirectoryService | null = null,
+        @Optional() @InjectConversationHandover() private readonly handover: ConversationHandoverService | null = null,
+        @Optional() @InjectTagAgentDirectory() private readonly directory: AgentDirectoryService | null = null,
     ) {}
 
     /** Writes the tag line between the messages of the conversation; the customer never sees it. */

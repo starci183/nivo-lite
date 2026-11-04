@@ -2,12 +2,12 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./provider-registry.module-definition"
 import {
-    BankFeedPollerRegistry,
-    BankTransactionsRegistry,
-    FeedWebhookRegistry,
-    LedgerRegistry,
-    MessageInboxPollerRegistry,
-    PaymentInstructionRegistry,
+    BankFeedPollerRegistryService,
+    BankTransactionsRegistryService,
+    FeedWebhookRegistryService,
+    LedgerRegistryService,
+    MessageInboxPollerRegistryService,
+    PaymentInstructionRegistryService,
 } from "./provider-registries.service"
 
 @Module({})
@@ -17,12 +17,12 @@ export class ProviderRegistryModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
         const registries = [
-            BankFeedPollerRegistry,
-            PaymentInstructionRegistry,
-            BankTransactionsRegistry,
-            FeedWebhookRegistry,
-            LedgerRegistry,
-            MessageInboxPollerRegistry,
+            BankFeedPollerRegistryService,
+            PaymentInstructionRegistryService,
+            BankTransactionsRegistryService,
+            FeedWebhookRegistryService,
+            LedgerRegistryService,
+            MessageInboxPollerRegistryService,
         ]
         return { ...base, providers: [...(base.providers ?? []), ...registries], exports: registries }
     }

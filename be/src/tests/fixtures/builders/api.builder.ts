@@ -122,6 +122,7 @@ const options = {
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
     chatFilesImportRoot: "wiring/imports",
     connectionPoll: { schedule: WIRING_POLL_SCHEDULE, redis: undefined },
+    redis: { connectTimeoutMs: 1000 },
     zaloProvider: { replyWindowMs: 7 * DAY_MS, staleAfterMs: DAY_MS },
     agentWork: { debounceMs: 0 },
     zalo: {

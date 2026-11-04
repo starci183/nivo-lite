@@ -1,12 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { wakeSources } from "./agent-wake-source.policy"
-import { contextOf, parseBegin, parseDue, parseFinish, parsePropose } from "./agent-work-results.policy"
+import { storedWakeContextOf, parseBegin, parseDue, parseFinish, parsePropose } from "./agent-work-results.policy"
 
 const SUBJECT = Symbol("agent-work-results.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { contextOf, parseBegin, parseDue, parseFinish, parsePropose } }],
+        providers: [
+            { provide: SUBJECT, useValue: { storedWakeContextOf, parseBegin, parseDue, parseFinish, parsePropose } },
+        ],
     }).compile()
     return moduleRef.get<typeof import("./agent-work-results.policy")>(SUBJECT)
 }
@@ -105,26 +107,28 @@ describe("parseBegin", () => {
     })
 })
 
-describe("contextOf", () => {
+describe("storedWakeContextOf", () => {
     it("keeps only the keys the contract names, each of its own kind", async () => {
-        const { contextOf } = await buildSubject()
-        expect(contextOf({ messageId: 7, room: "sales", locale: "de", lookupName: "yes", other: "x" })).toEqual({
+        const { storedWakeContextOf } = await buildSubject()
+        expect(
+            storedWakeContextOf({ messageId: 7, room: "sales", locale: "de", lookupName: "yes", other: "x" }),
+        ).toEqual({
             room: "sales",
         })
     })
 
     it("reads anything that is not an object as an empty context", async () => {
-        const { contextOf } = await buildSubject()
-        expect(contextOf(null)).toEqual({})
-        expect(contextOf("text")).toEqual({})
+        const { storedWakeContextOf } = await buildSubject()
+        expect(storedWakeContextOf(null)).toEqual({})
+        expect(storedWakeContextOf("text")).toEqual({})
     })
 })
 
-describe("contextOf for a tag and a burst", () => {
+describe("storedWakeContextOf for a tag and a burst", () => {
     it("keeps what the tag door and the burst window wrote: the words, the data, the tagger, the lead and the merged messages", async () => {
-        const { contextOf } = await buildSubject()
+        const { storedWakeContextOf } = await buildSubject()
         const written = {
-            text: "Khách đặt 1 chậu",
+            text: "Customer orders 1 pot",
             tagContext: '{"items":[]}',
             subject: "order:o-1",
             tagSource: "bank_feed",
@@ -136,14 +140,16 @@ describe("contextOf for a tag and a burst", () => {
             mergedMessageIds: "m-2,m-3,m-4",
             locale: "vi",
         }
-        expect(contextOf(written)).toEqual(written)
+        expect(storedWakeContextOf(written)).toEqual(written)
     })
 })
 
-describe("contextOf for an inbound wake", () => {
+describe("storedWakeContextOf for an inbound wake", () => {
     it("keeps the event text and the pinned intent, which are text like any other key", async () => {
-        const { contextOf } = await buildSubject()
-        expect(contextOf({ inbound: '{"eventType":"x"}', intent: "confirm_order", inbound2: "dropped" })).toEqual({
+        const { storedWakeContextOf } = await buildSubject()
+        expect(
+            storedWakeContextOf({ inbound: '{"eventType":"x"}', intent: "confirm_order", inbound2: "dropped" }),
+        ).toEqual({
             inbound: '{"eventType":"x"}',
             intent: "confirm_order",
         })

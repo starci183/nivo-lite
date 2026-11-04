@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule, OnModuleInit } from "@nestjs/common"
-import { LedgerRegistry } from "@modules/domain/provider-registry"
+import { LedgerRegistryService } from "@modules/domain/provider-registry"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsService } from "./google-connections.service"
 import { GoogleLedgerService } from "./google-ledger.service"
@@ -18,7 +18,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./google-connections.modu
  */
 export class GoogleConnectionsModule extends ConfigurableModuleClass implements OnModuleInit {
     constructor(
-        private readonly ledgers: LedgerRegistry,
+        private readonly ledgers: LedgerRegistryService,
         private readonly ledger: GoogleLedgerService,
     ) {
         super()

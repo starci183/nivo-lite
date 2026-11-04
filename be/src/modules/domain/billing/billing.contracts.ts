@@ -1,4 +1,3 @@
-import type { BankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import type { BankAccountOptions } from "./billing.options"
 import type { JsonObject } from "./webhook-body.policy"
@@ -305,4 +304,4 @@ export type FeedCreditAnswer =
     | { readonly status: "refused"; readonly code: "test_environment" }
 
 /** The workspace providers admitted by the bank-feed receipt job. */
-export type BankFeedProvider = BankFeedDeliveryRecorded["provider"]
+export type BankFeedProvider = "casso" | "payos" | "sepay-feed"

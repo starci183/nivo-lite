@@ -7,8 +7,10 @@ import type { ConnectionRecord } from "@modules/domain/connections"
 import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import type { ZaloChatMessage, ZaloClient } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
+import { refused } from "@modules/platform/primitives"
 import { ZALO_PROVIDER_OPTIONS } from "./zalo-provider.decorators"
-import { ZaloInboxPoller } from "./zalo-inbox-poller.service"
+import type { ZaloProviderOptions } from "./zalo-provider.options"
+import { ZaloInboxPollerService } from "./zalo-inbox-poller.service"
 import { ZALO_PLAN_LACKS_READING_NOTICE } from "./messages/zalo-provider.messages"
 import { ZALO_POLL_PAGE_SIZE } from "./zalo-poll.policy"
 
@@ -16,14 +18,14 @@ const NOW = "2026-11-04T10:00:00.000Z"
 const HOUR = 3_600_000
 const at = (hoursAgo: number): number => Date.parse(NOW) - hoursAgo * HOUR
 
-const connection = {
+const connection = mock<ConnectionRecord>({
     id: "c-1",
     workspaceId: "ws-1",
     provider: "zalo_oa",
     meta: {},
     status: "connected",
     environment: "live",
-} as ConnectionRecord
+})
 
 const chat = (over: Partial<ZaloChatMessage>): ZaloChatMessage => ({
     messageId: "m-1",
@@ -31,14 +33,14 @@ const chat = (over: Partial<ZaloChatMessage>): ZaloChatMessage => ({
     userName: "Bui Nguyen Dinh",
     fromUser: true,
     kind: "text",
-    text: "Tôi cần tư vấn",
+    text: "I need advice",
     sentAt: at(1),
     ...over,
 })
 
 const window = { from: new Date(at(24 * 7)), to: undefined, limit: 200 }
 
-const build = async (options = {}) => {
+const build = async (options: ZaloProviderOptions = {}) => {
     const zalo = mock<ZaloClient>()
     const credentials = mock<ZaloCredentialsService>()
     credentials.load.mockResolvedValue({
@@ -56,19 +58,19 @@ const build = async (options = {}) => {
     limiter.pass.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
-            ZaloInboxPoller,
+            ZaloInboxPollerService,
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: PollLimiterService, useValue: limiter },
             { provide: ZALO, useValue: zalo },
-            { provide: ZALO_PROVIDER_OPTIONS, useValue: options },
+            { provide: ZALO_PROVIDER_OPTIONS, useValue: { ...options } },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZaloInboxService, useValue: inbox },
         ],
     }).compile()
-    return { poller: moduleRef.get(ZaloInboxPoller), zalo, credentials, inbox, limiter }
+    return { poller: moduleRef.get(ZaloInboxPollerService), zalo, credentials, inbox, limiter }
 }
 
-describe("ZaloInboxPoller fetch", () => {
+describe("ZaloInboxPollerService fetch", () => {
     it("reads the conversations that moved and answers the customer texts as one page with the newest and oldest instant", async () => {
         const { poller, zalo } = await build()
         zalo.recentChats.mockResolvedValue([
@@ -108,7 +110,9 @@ describe("ZaloInboxPoller fetch", () => {
         })
         expect(zalo.conversation).not.toHaveBeenCalled()
     })
+})
 
+describe("ZaloInboxPollerService fetch paging", () => {
     it("pages a full list on, keeps only rows between the window ends and stops once a row is older than the window", async () => {
         const { poller, zalo } = await build()
         const full = Array.from({ length: ZALO_POLL_PAGE_SIZE }, (_row, index) =>
@@ -141,7 +145,7 @@ describe("ZaloInboxPoller fetch", () => {
 
     it("leaves out a connection whose credential is unusable or holds no access token", async () => {
         const { poller, credentials, zalo } = await build()
-        credentials.load.mockResolvedValueOnce({ kind: "refused", code: "x" as never })
+        credentials.load.mockResolvedValueOnce(refused(ChannelsErrorCode.ConnectionNotFound))
         await expect(poller.fetch(connection, window)).resolves.toEqual({ kind: "skipped", reason: "not_ready" })
 
         credentials.load.mockResolvedValueOnce({
@@ -153,7 +157,7 @@ describe("ZaloInboxPoller fetch", () => {
     })
 })
 
-describe("ZaloInboxPoller store", () => {
+describe("ZaloInboxPollerService store", () => {
     it("hands a fresh message to the inbox for the connection and the customer name", async () => {
         const { poller, inbox } = await build()
 
@@ -161,7 +165,7 @@ describe("ZaloInboxPoller store", () => {
 
         expect(inbox.acceptPolledMessage).toHaveBeenCalledWith(
             "c-1",
-            { messageId: "m-1", userId: "user-1", text: "Tôi cần tư vấn", sentAt: at(1) },
+            { messageId: "m-1", userId: "user-1", text: "I need advice", sentAt: at(1) },
             { workspaceId: "ws-1", sender: "Bui Nguyen Dinh", stale: false },
         )
     })
@@ -186,7 +190,7 @@ describe("ZaloInboxPoller store", () => {
     })
 })
 
-describe("ZaloInboxPoller limits and the limiter", () => {
+describe("ZaloInboxPollerService limits and the limiter", () => {
     it("declares what one OA may call", async () => {
         const { poller } = await build()
 
@@ -206,7 +210,7 @@ describe("ZaloInboxPoller limits and the limiter", () => {
     })
 })
 
-describe("ZaloInboxPoller classify", () => {
+describe("ZaloInboxPollerService classify", () => {
     it.each([
         [
             "a refused access token",

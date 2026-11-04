@@ -10,6 +10,7 @@ import { BillingModule } from "@modules/domain/billing"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { ChatFilesModule } from "@modules/domain/chat-files"
+import { RemoteFilesModule } from "@modules/integrations/remote-files"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
@@ -130,6 +131,7 @@ export const AGENT_TAG_MODULES: Array<DynamicModule> = [
         bankAccount: { account: "", bank: "", holder: "" },
     }),
     AiUsageEventsModule.register({ isGlobal: true }),
+    RemoteFilesModule.register({ isGlobal: true }),
     ChatFilesModule.register({
         isGlobal: true,
         storage: STORAGE_OBJECTS,

@@ -1,11 +1,13 @@
+import assert from "node:assert"
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { mock } from "@starci/jest-preset"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeDataPort, NodeTurn } from "@modules/domain/graph-nodes"
+import type { NodeTurn } from "@modules/domain/graph-nodes"
 import type { LeadRecordRow } from "./lead-records.contracts"
 import { LeadRecordsService } from "./lead-records.service"
-import { CONVERSATION_LEAD, LeadsGraphService } from "./leads-graph.service"
+import { LEAD_CONVERSATIONS } from "./leads.decorators"
+import type { LeadConversationDirectory } from "./leads.port"
+import { LeadsGraphService } from "./leads-graph.service"
 
 const TURN: NodeTurn = {
     turnId: "turn-1",
@@ -29,21 +31,38 @@ const LEAD: LeadRecordRow = {
     email: null,
 }
 
-const build = async (withRegistry = true, conversations: ReadonlyArray<{ lead_id: string | null }> = []) => {
-    const em = mockEntityManager({ query: [CONVERSATION_LEAD, conversations] })
+const build = async (leadOfConversation: string | null = null) => {
+    const conversations = mock<LeadConversationDirectory>()
+    conversations.leadIdOf.mockResolvedValue(leadOfConversation)
     const records = mock<LeadRecordsService>()
     const registry = mock<GraphNodeRegistryService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             LeadsGraphService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: LEAD_CONVERSATIONS, useValue: conversations },
             { provide: LeadRecordsService, useValue: records },
-            ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
+            { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
     moduleRef.get(LeadsGraphService).onModuleInit()
     const resolver = registry.addSubjectResolver.mock.calls[0]?.[0]
-    return { em, records, registry, resolver, port: registry.addDataPort.mock.calls[0]?.[0] as NodeDataPort }
+    const port = registry.addDataPort.mock.calls[0]?.[0]
+    assert(port !== undefined, "the service registers its data port")
+    return { conversations, records, registry, resolver, port }
+}
+
+/** The service in an app that hosts no graph nodes: the registry is not provided. */
+const buildWithoutRegistry = async () => {
+    const registry = mock<GraphNodeRegistryService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            LeadsGraphService,
+            { provide: LEAD_CONVERSATIONS, useValue: mock<LeadConversationDirectory>() },
+            { provide: LeadRecordsService, useValue: mock<LeadRecordsService>() },
+        ],
+    }).compile()
+    moduleRef.get(LeadsGraphService).onModuleInit()
+    return { registry }
 }
 
 const FIELDS = ["id", "contactName", "company", "channel", "need", "stage", "phone", "email", "contextSummary"]
@@ -51,7 +70,7 @@ const FIELDS = ["id", "contactName", "company", "channel", "need", "stage", "pho
 describe("LeadsGraphService", () => {
     it("registers the sales-lead port, and nothing when the app hosts no graph nodes", async () => {
         const { port } = await build()
-        const { registry } = await build(false)
+        const { registry } = await buildWithoutRegistry()
 
         expect(port.kind).toBe("sales-lead")
         expect(registry.addDataPort).not.toHaveBeenCalled()
@@ -107,21 +126,19 @@ describe("LeadsGraphService", () => {
     })
 
     it("tells the host the lead of the conversation a turn serves, from the turn workspace only", async () => {
-        const { em, resolver } = await build(true, [{ lead_id: "lead-9" }])
+        const { conversations, resolver } = await build("lead-9")
 
         await expect(resolver?.subjectOf({ ...TURN, conversationId: "conv-1" })).resolves.toEqual({
             kind: "sales-lead",
             id: "lead-9",
         })
-        expect(em.query).toHaveBeenCalledWith(CONVERSATION_LEAD, ["ws-1", "conv-1"])
+        expect(conversations.leadIdOf).toHaveBeenCalledWith("ws-1", "conv-1")
     })
 
     it("tells the host no subject for a turn without a conversation, an unknown one, or one no customer reached", async () => {
-        const none = await build(true, [])
-        const unreached = await build(true, [{ lead_id: null }])
+        const none = await build()
 
         await expect(none.resolver?.subjectOf(TURN)).resolves.toBeNull()
         await expect(none.resolver?.subjectOf({ ...TURN, conversationId: "gone" })).resolves.toBeNull()
-        await expect(unreached.resolver?.subjectOf({ ...TURN, conversationId: "conv-2" })).resolves.toBeNull()
     })
 })

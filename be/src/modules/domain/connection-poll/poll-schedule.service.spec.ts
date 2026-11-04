@@ -2,15 +2,24 @@ import { Test } from "@nestjs/testing"
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import {
+    POLL_DUE_AT,
+    POLL_HOT_UNTIL,
+    busyPollScheduleEntityOf,
+    pollScheduleEntityOf,
+    secondPollScheduleEntityOf,
+} from "@tests/fixtures/builders/connection-poll.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { CONNECTION_POLL_OPTIONS } from "./connection-poll.decorators"
 import { ConnectionPollScheduleEntity } from "./persistence/entities"
-import { ENROLL_SQL, MARK_HOT_SQL, PollScheduleService } from "./poll-schedule.service"
+import { PollScheduleService } from "./poll-schedule.service"
 import { DEFAULT_POLL_SCHEDULE } from "./poll-schedule.policy"
 import type { PollPlan } from "./poll-schedule.policy"
 
-const DUE = new Date("2026-11-04T09:59:00.000Z")
+const DUE = POLL_DUE_AT
+const ENROLL = 'SELECT * FROM "public"."connection_poll_enroll"($1, $2)'
+const MARK_HOT = 'SELECT * FROM "public"."connection_poll_mark_hot"($1, $2, $3, $4)'
 
 const build = async (em = mockEntityManager()) => {
     const moduleRef = await Test.createTestingModule({
@@ -22,27 +31,6 @@ const build = async (em = mockEntityManager()) => {
     }).compile()
     return moduleRef.get(PollScheduleService)
 }
-
-const entityOf = (over: Partial<ConnectionPollScheduleEntity> = {}): ConnectionPollScheduleEntity =>
-    Object.assign(new ConnectionPollScheduleEntity(), {
-        connectionId: "c-1",
-        workspaceId: "ws-1",
-        provider: "sepay",
-        nextPollAt: DUE,
-        intervalMs: 1_800_000,
-        failures: 0,
-        breakerState: "closed",
-        breakerOpenedAt: null,
-        needsReauth: false,
-        hotUntil: null,
-        hotReason: null,
-        unavailableReason: null,
-        lastSuccessAt: null,
-        lastWebhookAt: null,
-        backfillTo: null,
-        backfillNewest: null,
-        ...over,
-    })
 
 const planOf = (over: Partial<PollPlan> = {}): PollPlan => ({
     nextPollAt: Date.parse("2026-11-04T10:30:00.000Z"),
@@ -61,25 +49,19 @@ const planOf = (over: Partial<PollPlan> = {}): PollPlan => ({
 
 describe("PollScheduleService enroll", () => {
     it("gives every connection of the providers a row, spread over the healthy interval", async () => {
-        const em = mockEntityManager({ query: [ENROLL_SQL, []] })
+        const em = mockEntityManager({ query: [ENROLL, []] })
         const service = await build(em)
 
         await service.enroll(["sepay", "zalo_oa"])
 
-        expect(em.query).toHaveBeenCalledWith(expect.stringContaining("ON CONFLICT (connection_id) DO NOTHING"), [
-            ["sepay", "zalo_oa"],
-            DEFAULT_POLL_SCHEDULE.healthyIntervalMs,
-        ])
-        expect(String(em.query.mock.calls[0]?.[0])).toContain("random()")
+        expect(em.query).toHaveBeenCalledWith(ENROLL, [["sepay", "zalo_oa"], DEFAULT_POLL_SCHEDULE.healthyIntervalMs])
     })
 })
 
 describe("PollScheduleService claimDue", () => {
     it("claims the due connections under a skip-locked read, oldest first, and holds them for the lease", async () => {
         const tx = fakeTransaction(mockEntityManager({ update: [ConnectionPollScheduleEntity, { affected: 2 }] }))
-        const [fake] = queueQueryBuilders(tx.em, [
-            { getMany: [entityOf(), entityOf({ connectionId: "c-2", workspaceId: "ws-2" })] },
-        ])
+        const [fake] = queueQueryBuilders(tx.em, [{ getMany: [pollScheduleEntityOf(), secondPollScheduleEntityOf()] }])
         const service = await build(tx.em)
 
         const claimed = await service.claimDue(["sepay"], 20)
@@ -110,23 +92,10 @@ describe("PollScheduleService claimDue", () => {
 
     it("reads every column of the row for the planner", async () => {
         const tx = fakeTransaction(mockEntityManager({ update: [ConnectionPollScheduleEntity, { affected: 1 }] }))
-        const hot = new Date("2026-11-04T10:05:00.000Z")
+        const hot = POLL_HOT_UNTIL
         queueQueryBuilders(tx.em, [
             {
-                getMany: [
-                    entityOf({
-                        breakerState: "open",
-                        breakerOpenedAt: DUE,
-                        failures: 5,
-                        needsReauth: false,
-                        hotUntil: hot,
-                        unavailableReason: "plan",
-                        lastSuccessAt: DUE,
-                        lastWebhookAt: DUE,
-                        backfillTo: DUE,
-                        backfillNewest: hot,
-                    }),
-                ],
+                getMany: [busyPollScheduleEntityOf()],
             },
         ])
         const service = await build(tx.em)
@@ -205,22 +174,21 @@ describe("PollScheduleService settle and defer", () => {
 
 describe("PollScheduleService signals", () => {
     it("makes a connection hot for the given time and brings its next poll forward", async () => {
-        const em = mockEntityManager({ query: [MARK_HOT_SQL, []] })
+        const em = mockEntityManager({ query: [MARK_HOT, []] })
         const service = await build(em)
 
         await service.markHot("c-1", "order_awaiting_payment", 120_000)
 
-        expect(em.query).toHaveBeenCalledWith(expect.stringContaining("LEAST(connection_poll_schedule.next_poll_at"), [
+        expect(em.query).toHaveBeenCalledWith(MARK_HOT, [
             "c-1",
             DEFAULT_POLL_SCHEDULE.hotIntervalMs,
             120_000,
             "order_awaiting_payment",
         ])
-        expect(String(em.query.mock.calls[0]?.[0])).toContain("WHEN connection_poll_schedule.needs_reauth THEN")
     })
 
     it("stays hot for the configured time when the caller names none", async () => {
-        const em = mockEntityManager({ query: [MARK_HOT_SQL, []] })
+        const em = mockEntityManager({ query: [MARK_HOT, []] })
         const service = await build(em)
 
         await service.markHot("c-1", "payment_claim_open")
@@ -236,7 +204,7 @@ describe("PollScheduleService signals", () => {
     it("clears the breaker and the owner request of a connection that became ready, then makes it hot", async () => {
         const em = mockEntityManager({
             update: [ConnectionPollScheduleEntity, { affected: 1 }],
-            query: [MARK_HOT_SQL, []],
+            query: [MARK_HOT, []],
         })
         const service = await build(em)
 

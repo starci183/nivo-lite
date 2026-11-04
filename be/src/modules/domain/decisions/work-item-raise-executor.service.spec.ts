@@ -1,13 +1,15 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { itemOf } from "@tests/fixtures/builders/lead-flow-kit.builder"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { WORK_RAISED } from "./work-engine.decorators"
-import type { WorkRaisedHook } from "./work-engine.port"
+import type { InstallationRecord } from "@modules/domain/module-installations"
+import { WORK_RAISED } from "@modules/domain/work-items"
+import type { WorkRaisedHook } from "@modules/domain/work-items"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkItemRaiseExecutorService } from "./work-item-raise-executor.service"
-import type { WorkItem } from "./decisions.contracts"
 
 const TURN: NodeTurn = {
     turnId: "turn-1",
@@ -18,34 +20,62 @@ const TURN: NodeTurn = {
     locale: "vi",
 }
 
-const build = async (options: { registry?: boolean; hook?: boolean; installed?: boolean } = {}) => {
-    const { registry: withRegistry = true, hook: withHook = true } = options
+/** The executor the service registered. */
+const registeredBy = (registry: GraphNodeRegistryService): NodeEffectExecutor => {
+    const executor = jest.mocked(registry.addExecutor).mock.calls[0]?.[0]
+    assert(executor !== undefined, "no executor was registered")
+    return executor
+}
+
+const build = async (options: { hook?: boolean; installed?: boolean } = {}) => {
     const engine = mock<WorkEngineService>()
-    engine.runWork.mockResolvedValue({ id: "item-1" } as WorkItem)
+    engine.runWork.mockResolvedValue(itemOf({ id: "item-1" }))
+    const installations = mock<InstallationRecordsService>()
+    installations.ofAgent.mockResolvedValue(
+        options.installed === false ? null : mock<InstallationRecord>({ moduleKey: "sales" }),
+    )
     const registry = mock<GraphNodeRegistryService>()
     const hook = mock<WorkRaisedHook>()
-    const installations = mock<InstallationRecordsService>()
-    installations.ofAgent.mockResolvedValue(options.installed === false ? null : ({ moduleKey: "sales" } as never))
-    const moduleRef = await Test.createTestingModule({
+    const withoutHook = await Test.createTestingModule({
         providers: [
             WorkItemRaiseExecutorService,
             { provide: WorkEngineService, useValue: engine },
             { provide: InstallationRecordsService, useValue: installations },
-            ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
-            ...(withHook ? [{ provide: WORK_RAISED, useValue: hook }] : []),
+            { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
+    const withHook = await Test.createTestingModule({
+        providers: [
+            WorkItemRaiseExecutorService,
+            { provide: WorkEngineService, useValue: engine },
+            { provide: InstallationRecordsService, useValue: installations },
+            { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: WORK_RAISED, useValue: hook },
+        ],
+    }).compile()
+    const moduleRef = options.hook === false ? withoutHook : withHook
     moduleRef.get(WorkItemRaiseExecutorService).onModuleInit()
-    return { engine, registry, hook, executor: registry.addExecutor.mock.calls[0]?.[0] as NodeEffectExecutor }
+    return { engine, registry, hook, executor: registeredBy(registry) }
+}
+
+const buildWithoutRegistry = async (): Promise<WorkItemRaiseExecutorService> => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            WorkItemRaiseExecutorService,
+            { provide: WorkEngineService, useValue: mock<WorkEngineService>() },
+            { provide: InstallationRecordsService, useValue: mock<InstallationRecordsService>() },
+        ],
+    }).compile()
+    return moduleRef.get(WorkItemRaiseExecutorService)
 }
 
 describe("WorkItemRaiseExecutorService", () => {
     it("registers the work-item.raise executor, and nothing when the app hosts no graph nodes", async () => {
         const { executor } = await build()
-        const { registry } = await build({ registry: false })
+        const bare = await buildWithoutRegistry()
 
         expect(executor.effect).toBe("work-item.raise")
-        expect(registry.addExecutor).not.toHaveBeenCalled()
+        expect(() => bare.onModuleInit()).not.toThrow()
     })
 
     it("opens an item that waits for the owner, about the order, once per business key", async () => {
@@ -107,7 +137,9 @@ describe("WorkItemRaiseExecutorService", () => {
         expect(first?.seed?.amount_vnd).toBeNull()
         expect(second).toMatchObject({ subject_type: "conversation", subject_id: "conv-1", lead_id: null })
     })
+})
 
+describe("WorkItemRaiseExecutorService claims", () => {
     it("tells the claim hook which item answers the claim", async () => {
         const { hook, executor } = await build()
 

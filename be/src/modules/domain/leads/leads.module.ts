@@ -11,7 +11,7 @@ import { LeadReadService } from "./lead-read.service"
 import { LeadAutomationReadService } from "./lead-automation-read.service"
 import { LeadGenWorkbenchService } from "./leadgen-workbench.service"
 import { LeadGenCommentService } from "./leadgen-comment.service"
-import { LEADGEN_COMMENT_DECISIONS } from "./leads.decorators"
+import { LEAD_CONVERSATIONS, LEADGEN_COMMENT_DECISIONS } from "./leads.decorators"
 
 @Module({})
 /** The journey of a lead over the primary PostgreSQL connection. */
@@ -31,6 +31,7 @@ export class LeadsModule extends ConfigurableModuleClass {
                 LeadDeskService,
                 { provide: RESPONSIBILITY_LEAD_DESK, useExisting: LeadDeskService },
                 { provide: OFFICE_ROOMS_LEADS, useExisting: LeadReadService },
+                { provide: LEAD_CONVERSATIONS, useExisting: options.ports.conversations },
                 { provide: LEADGEN_COMMENT_DECISIONS, useExisting: options.ports.decisions },
                 LeadGenWorkbenchService,
                 LeadGenCommentService,

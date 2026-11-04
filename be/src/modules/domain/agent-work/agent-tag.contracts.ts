@@ -3,6 +3,14 @@ import type { AgentLocale } from "./agent-work.contracts"
 /** How a hand-off shows to the people in the conversation. */
 export type AgentTagVisibility = "chat" | "redirect"
 
+/** The plain data a tag hands to its target's graph: a JSON object of any shape the tagger chooses. */
+export interface AgentTagPayload {
+    readonly [key: string]: unknown
+}
+
+/** The payload of a tag kept as JSON text: undefined when the tag has none, null when it is larger than a wake keeps. */
+export type AgentTagPayloadText = string | null | undefined
+
 /** What a tag is about, whoever tags: the words, and the record or conversation it concerns. */
 export interface AgentTagBody {
     /** The workspace of both agents. */
@@ -22,7 +30,7 @@ export interface AgentTagBody {
     /** The language the target answers in; vi when absent. */
     readonly locale?: AgentLocale | undefined
     /** Plain data for the target's graph (objects and arrays allowed): it becomes trigger.context there. Kept as JSON text, at most 8000 characters. */
-    readonly context?: Readonly<Record<string, unknown>> | undefined
+    readonly context?: AgentTagPayload | undefined
     /**
      * How the hand-off shows: `chat` posts a visible tag line in the conversation so people see it (the default); `redirect` posts nothing and
      * moves the conversation to the target silently. Both write the same wake, so the run records the same origin.
@@ -50,7 +58,7 @@ export interface AgentTaggedBySource extends AgentTagBody {
     readonly source: string
 }
 
-/** A request to tag an agent. */
+/** The one shape every door hands to `tagAgent`, so the service tells who tagged by which field is present and not by the door. */
 export type AgentTagRequest = AgentTaggedByAgent | AgentTaggedByPerson | AgentTaggedBySource
 
 /** What a tag came to. */

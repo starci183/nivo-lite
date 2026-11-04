@@ -10,7 +10,8 @@ import type {
 } from "@modules/domain/intent-contracts"
 import type { SubjectType } from "@modules/domain/work-items"
 import type { RunUsage } from "@modules/integrations/openclaw"
-import type { AgentTurnAttachment, AgentTurnView, AgentWakeInbound, AgentWakeSource } from "@modules/domain/agent-work"
+import type { AgentTurnAttachment, AgentTurnView, AgentWakeSource } from "@modules/domain/agent-work"
+import type { AgentWakeInbound } from "@modules/domain/agent-wake-rules"
 import type { Locale } from "@modules/platform/i18n"
 
 /** One turn to run on the runtime. */

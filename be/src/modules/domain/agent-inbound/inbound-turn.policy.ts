@@ -1,4 +1,5 @@
-import type { AgentHandlerEnding, AgentWakeInbound } from "@modules/domain/agent-work"
+import type { AgentHandlerEnding } from "@modules/domain/agent-work"
+import type { AgentWakeInbound } from "@modules/domain/agent-wake-rules"
 import { isIntentTrigger } from "@modules/domain/intent-contracts"
 import type {
     InboundTrust,

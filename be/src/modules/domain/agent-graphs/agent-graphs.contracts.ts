@@ -230,8 +230,17 @@ export interface GraphDocument {
     readonly flow?: GraphSpec | undefined
 }
 
+/** The trigger scope a node graph's nodes read as `trigger.*`: the wake's flat context and the members derived from it. */
+export interface FlowTriggerScope {
+    /** One member by name. */
+    readonly [member: string]: unknown
+}
+
 /** A graph as its row stores it: the node graph kept as plain JSON, which every read parses back with the document schema. */
-export type StoredGraphDocument = Omit<GraphDocument, "flow"> & { readonly flow?: object | undefined }
+export interface StoredGraphDocument extends Omit<GraphDocument, "flow"> {
+    /** The node graph as plain JSON, not yet parsed with the spec schema; absent when the graph holds none. */
+    readonly flow?: object | undefined
+}
 
 /** The facts a graph may use, by key. */
 export type FactRegistry = Readonly<Record<string, FactSpec>>

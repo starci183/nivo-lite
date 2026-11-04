@@ -36,9 +36,7 @@ import { CustomerOutcomesService } from "./customer-outcomes.service"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
 import { TurnPurchasesService } from "./turn-purchases.service"
-
 import type { WorkItem } from "@modules/domain/decisions"
-
 import { findingsOf } from "./reply-reading.policy"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -62,25 +60,9 @@ const build = async () => {
     const staff = mock<StaffEscalationService>()
     const logger = mock<Logger>()
     const catalog = mock<MessageCatalog>(catalogData)
-    const doubles = {
-        engine,
-        bus,
-        inbound,
-        invoices,
-        purchases,
-        gaps,
-        modules,
-        conversations,
-        evidence,
-        items,
-        bindings,
-        rules,
-        hiring,
-        staff,
-        directory,
-        logger,
-        catalog,
-    }
+    const core = { engine, bus, inbound, invoices, purchases, gaps, directory }
+    const peers = { modules, conversations, evidence, items, bindings, rules, hiring, staff, logger, catalog }
+    const doubles = { ...core, ...peers }
     arrangeCustomerOutcomes(doubles)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -258,9 +240,7 @@ describe("CustomerOutcomesService", () => {
         )
         expect(gaps.note).toHaveBeenCalledWith(
             expect.objectContaining({
-                signals: objectLike({
-                    knowledgeGap: { question: "Open Sunday?", topic: "Hours | Sunday" },
-                }),
+                signals: objectLike({ knowledgeGap: { question: "Open Sunday?", topic: "Hours | Sunday" } }),
             }),
         )
     })
@@ -381,7 +361,9 @@ describe("CustomerOutcomesService", () => {
         })
         expect(unknown.invoices.latestOfLead).not.toHaveBeenCalled()
     })
+})
 
+describe("CustomerOutcomesService handoff to Sales", () => {
     it("lets the tag right of the chat agent hand the lead to Sales, and holds it to the owner's rule without one", async () => {
         const granted = await build()
         const agentId = turnOf().conversation.agent.id
@@ -416,12 +398,7 @@ describe("CustomerOutcomesService", () => {
 
         const asking = await build()
         asking.bus.sendCommandItem.mockResolvedValue(
-            customerWorkItemOf({
-                id: "w3",
-                status: "waiting_decision",
-                lead_id: null,
-                reason: null,
-            }),
+            customerWorkItemOf({ id: "w3", status: "waiting_decision", lead_id: null, reason: null }),
         )
         const verdict = await asking.outcomes.settle(
             turnOf(),

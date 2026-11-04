@@ -4,6 +4,7 @@ import { NodeRunError, RightsDeniedError } from "@nivo-lite/agent-sdk/node"
 import { AgentTagService } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
+import { agentInstallationOf } from "@tests/fixtures/builders/agents.builder"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
 import { AGENTS_INSTALLATIONS } from "./agents.decorators"
 import type { InstallationDirectory } from "./agents.port"
@@ -23,9 +24,7 @@ const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
     const tags = mock<AgentTagService>({ tagAgent: jest.fn().mockResolvedValue({ tagged: true, wakeId: "wake-9" }) })
     const installations = mock<InstallationDirectory>()
-    installations.firstOfModule.mockResolvedValue({ agentId: "sales-1" } as Awaited<
-        ReturnType<InstallationDirectory["firstOfModule"]>
-    >)
+    installations.firstOfModule.mockResolvedValue(agentInstallationOf({ agentId: "sales-1" }))
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentTagEffectService,
@@ -49,7 +48,7 @@ describe("AgentTagEffectService", () => {
         const { executor, tags, installations } = await build()
         const payload = {
             toModuleKey: "sales",
-            text: "Đặt 2 chậu",
+            text: "Order 2 pots",
             subject: { kind: "order", id: "o-1" },
             leadId: "l-1",
             channel: "zalo",
@@ -64,7 +63,7 @@ describe("AgentTagEffectService", () => {
             fromAgentId: "chatbot-1",
             workspaceId: "ws-1",
             toAgentId: "sales-1",
-            text: "Đặt 2 chậu",
+            text: "Order 2 pots",
             conversationId: "c-1",
             locale: "vi",
             eventKey: "dedupe:agent-tag:run-1:sales",

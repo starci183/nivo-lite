@@ -1,7 +1,7 @@
 import type { InjectionToken, Type } from "@nestjs/common"
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 import type { Secret } from "@modules/platform/config"
-import type { OfficeAuthorityPort } from "./office-seed.port"
+import type { OfficeAuthorityPort } from "@modules/domain/member-grants"
 import type { SeedAgentRecords, SeedConnectors, SeedSources, SeedToolGrants } from "./workspace-seed.port"
 
 /** One user the Auth administrator returns. */

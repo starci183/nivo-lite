@@ -48,16 +48,12 @@ const brokerJob = (job: Partial<BullmqJob> = {}): MockOf<BullmqJob> =>
 
 const handlerOf = (): MockOf<QueueHandler> => mock<QueueHandler>({ queue: "knowledge", job: "knowledge.index" })
 
-interface GateControls {
-    resolve: () => void
-}
-
 const gate = () => {
-    const state: GateControls = { resolve: () => undefined }
+    let resolve = (): void => undefined
     const promise = new Promise<void>((yes) => {
-        state.resolve = yes
+        resolve = yes
     })
-    return { promise, resolve: () => state.resolve() }
+    return { promise, resolve: () => resolve() }
 }
 
 const build = async (answers: { options?: Partial<QueueOptions>; clientReady?: Promise<Diagnostics> } = {}) => {
@@ -102,17 +98,8 @@ const build = async (answers: { options?: Partial<QueueOptions>; clientReady?: P
             { provide: BullmqQueueDeliveryClient, useValue: delivery },
         ],
     }).compile()
-    return {
-        client: moduleRef.get(BullmqQueueTransportClient),
-        factory,
-        worker,
-        queues,
-        adds,
-        held,
-        logger,
-        delivery,
-        diagnostics,
-    }
+    const client = moduleRef.get(BullmqQueueTransportClient)
+    return { client, factory, worker, queues, adds, held, logger, delivery, diagnostics }
 }
 
 afterEach(() => {
@@ -151,7 +138,9 @@ describe("add", () => {
         expect(adds[0]?.options).toMatchObject({ jobId: "row-1", delay: 3000 })
         expect(adds[1]?.options).not.toHaveProperty("delay")
     })
+})
 
+describe("add connection", () => {
     it("opens the queue on the Redis of the options, with the prefix and no per-request retries", async () => {
         const { client, factory } = await build()
 
@@ -201,9 +190,7 @@ describe("add", () => {
 
         expect(diagnostics.info).toHaveBeenCalledTimes(2)
     })
-})
 
-describe("add connection", () => {
     it("passes a configured credential only to the driver", async () => {
         const credential = mock<Secret>({ reveal: jest.fn(() => "unit-fixture") })
         const { client, factory } = await build({ options: { redisPassword: credential } })

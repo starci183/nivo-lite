@@ -12,7 +12,7 @@ export { AgentWakeRetentionService } from "./agent-wake-retention.service"
 export { AgentWakeService } from "./agent-wake.service"
 export { AgentTagService } from "./agent-tag.service"
 export { parseAgentWorkConfig } from "./agent-work.config"
-export { tagContextOf, tagPayloadOf, tagPayloadTextOf } from "./agent-tag.policy"
+export { tagPayloadOf } from "./agent-tag.policy"
 export { AgentWorkHandlersService } from "./agent-work-handlers.service"
 export { AgentWorkReadService } from "./agent-work-read.service"
 export { AgentWorkSettingsService } from "./agent-work-settings.service"
@@ -24,10 +24,7 @@ export {
     AGENT_WAKE_INTERRUPTIONS,
 } from "./agent-work.decorators"
 export { AgentWorkAccessService } from "./agent-work-access.service"
-export { decodeInbound, encodeInbound } from "./agent-work-inbound.policy"
-export { WAKE_SOURCE_KEY, wakeSources } from "./agent-wake-source.policy"
-export { wakeInboundSchema } from "./agent-work-inbound.schema"
-export { backgroundCapSpent, breakerOpen, isBackground } from "./agent-work.policy"
+export { wakeSources } from "./agent-wake-source.policy"
 export type {
     AgentGoalRecord,
     AgentGoalStatus,
@@ -50,7 +47,6 @@ export type {
     AgentWorkView,
     WorkspaceAgentWorkView,
 } from "./agent-work.contracts"
-export type { AgentWakeInbound, AgentWakeTraits } from "./agent-work-source.contracts"
 export type {
     AgentHandlerEnding,
     AgentTurnExecutor,
@@ -65,4 +61,3 @@ export type {
 export type { AgentBegin } from "./agent-work-turns.contracts"
 export type { AgentTagNotice } from "./agent-tag.contracts"
 export type { AgentBurstPolicy, AgentBurstSetting, AgentTagVisibilityPort, OptionalSpeaker } from "./agent-work.port"
-export { contextOf as storedWakeContextOf } from "./agent-work-results.policy"

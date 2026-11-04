@@ -181,3 +181,6 @@ export interface LedgerPort {
     /** Adds the void entry of a transaction and answers the reference; undefined when the workspace has nothing connected for it. */
     void(workspaceId: string, transactionId: string): Promise<OptionalLedgerRef>
 }
+
+/** The port a provider registered, or undefined when none registered under that key. */
+export type OptionalProviderPort<Port> = Port | undefined

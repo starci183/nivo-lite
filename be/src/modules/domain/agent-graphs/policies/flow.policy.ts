@@ -11,7 +11,8 @@ const canonicalText = (value: unknown): string => {
     const entries = Object.entries(value)
         .filter(([, member]) => member !== undefined)
         .sort(([left], [right]) => (left < right ? -1 : 1))
-    return `{${entries.map(([key, member]) => `${JSON.stringify(key)}:${canonicalText(member)}`).join(",")}}`
+    const members = entries.map(([key, member]) => JSON.stringify(key) + ":" + canonicalText(member))
+    return "{" + members.join(",") + "}"
 }
 
 /** True when a graph already runs this flow, whatever the order of the keys of either. */

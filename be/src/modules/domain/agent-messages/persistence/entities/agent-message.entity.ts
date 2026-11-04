@@ -1,15 +1,22 @@
-import { UuidAbstractEntity } from "@modules/platform/database"
-import { Column, Entity } from "typeorm"
+import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
 
 @Entity({ schema: "public", name: "agent_messages" })
 /** One message of a conversation between a customer and an agent: what a person wrote, what the agent answered, or a workbench line. */
-export class AgentMessageEntity extends UuidAbstractEntity {
+export class AgentMessageEntity {
+    /** The message id. */
+    @PrimaryGeneratedColumn("uuid", { name: "id" })
+    id!: string
+
     /**
      * When the message was said: the database sets it (`DEFAULT now()`), unless the insert names the time an imported, polled or
-     * webhook message carried. Open to insert on this entity alone, so no other table takes a time from its caller; no update changes it.
+     * webhook message carried. The application may name it on insert, so this entity maps it itself; no update changes it.
      */
-    @Column({ name: "created_at", type: "timestamptz", insert: true, update: false })
-    declare createdAt: Date
+    @Column({ name: "created_at", type: "timestamptz", insert: true })
+    createdAt!: Date
+
+    /** When the row last changed; the database trigger sets it. */
+    @Column({ name: "updated_at", type: "timestamptz" })
+    updatedAt!: Date
 
     /** The workspace. */
     @Column({ name: "workspace_id", type: "uuid" })

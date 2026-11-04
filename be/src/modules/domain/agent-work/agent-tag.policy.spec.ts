@@ -1,7 +1,19 @@
+import { Test } from "@nestjs/testing"
 import { TAG_CONTEXT_MAX, TAG_TEXT_MAX, tagContextOf, tagPayloadOf, tagPayloadTextOf } from "./agent-tag.policy"
 
+const SUBJECT = Symbol("agent-tag.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { tagContextOf, tagPayloadOf, tagPayloadTextOf } }],
+    }).compile()
+    return moduleRef.get<typeof import("./agent-tag.policy")>(SUBJECT)
+}
+
 describe("tagContextOf", () => {
-    it("keeps the words, the subject and the conversation, and who or what tagged", () => {
+    it("keeps the words, the subject and the conversation, and who or what tagged", async () => {
+        const { tagContextOf } = await build()
+
         expect(
             tagContextOf({
                 workspaceId: "w",
@@ -23,7 +35,9 @@ describe("tagContextOf", () => {
         })
     })
 
-    it("clips the words and the labels", () => {
+    it("clips the words and the labels", async () => {
+        const { tagContextOf } = await build()
+
         const context = tagContextOf({
             workspaceId: "w",
             toAgentId: "a",
@@ -39,7 +53,9 @@ describe("tagContextOf", () => {
 })
 
 describe("tag context names", () => {
-    it("writes the names the graph trigger reads: channel, customer, language and the agent behind the tag", () => {
+    it("writes the names the graph trigger reads: channel, customer, language and the agent behind the tag", async () => {
+        const { tagContextOf } = await build()
+
         expect(
             tagContextOf({
                 workspaceId: "w",
@@ -57,7 +73,9 @@ describe("tag context names", () => {
 describe("tag payload", () => {
     const base = { workspaceId: "w", toAgentId: "a", text: "hi", source: "feed" }
 
-    it("keeps objects and arrays as JSON text and reads them back", () => {
+    it("keeps objects and arrays as JSON text and reads them back", async () => {
+        const { tagContextOf, tagPayloadOf, tagPayloadTextOf } = await build()
+
         const text = tagPayloadTextOf({ ...base, context: { items: [{ sku: "x", qty: 2 }], address: "12 Le Loi" } })
 
         expect(text).toBe('{"items":[{"sku":"x","qty":2}],"address":"12 Le Loi"}')
@@ -67,10 +85,18 @@ describe("tag payload", () => {
         })
     })
 
-    it("has none when none was given, refuses one larger than a wake keeps, and reads a non-object as none", () => {
+    it("has none when none was given, refuses one larger than a wake keeps, and reads a non-object as none", async () => {
+        const { tagPayloadOf, tagPayloadTextOf } = await build()
+
         expect(tagPayloadTextOf(base)).toBeUndefined()
         expect(tagPayloadTextOf({ ...base, context: { blob: "x".repeat(TAG_CONTEXT_MAX) } })).toBeNull()
         expect(tagPayloadOf({})).toEqual({})
         expect(tagPayloadOf({ tagContext: "[1,2]" })).toEqual({})
+    })
+
+    it("reads stored text that does not parse as none", async () => {
+        const { tagPayloadOf } = await build()
+
+        expect(tagPayloadOf({ tagContext: "{not json" })).toEqual({})
     })
 })

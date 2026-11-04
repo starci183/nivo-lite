@@ -43,13 +43,18 @@ export const turnConversationOf = (turn: NodeTurn, wanted: unknown): string | nu
 export { RECIPIENT_NOT_LINKED, recipientLinked } from "@modules/domain/channels"
 
 /** A Zalo user id is a string of digits; an import writes a placeholder sender in its place. */
-const ZALO_USER_ID = /^[0-9]+$/u
+const ZALO_USER_ID = /^\d+$/u
+
+/** The customer a conversation reaches: the channel and the id the channel knows them by. */
+export interface RecipientTarget {
+    /** The channel of the conversation. */
+    readonly channel: string
+    /** The customer's id on that channel, or null when it holds none. */
+    readonly externalId: string | null
+}
 
 /** True when a Zalo conversation names a customer that is no Zalo user (an imported conversation's placeholder sender), so nothing can reach them. */
-export const placeholderRecipient = (target: {
-    readonly channel: string
-    readonly externalId: string | null
-}): boolean =>
+export const placeholderRecipient = (target: RecipientTarget): boolean =>
     target.channel === "zalo" &&
     target.externalId !== null &&
     !ZALO_USER_ID.test(target.externalId.split(":", 1).join(""))

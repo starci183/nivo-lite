@@ -1,4 +1,5 @@
-import { PollSourceRegistry } from "./poll-source-registry.service"
+import { Test } from "@nestjs/testing"
+import { PollSourceRegistryService } from "./poll-source-registry.service"
 import type { PollSourceDirectory, ScheduledPollSource } from "./poll-schedule.contracts"
 
 const sourceOf = (provider: string): ScheduledPollSource => ({
@@ -13,17 +14,22 @@ const directoryOf = (...providers: Array<string>): PollSourceDirectory => ({
     sourceOf: (provider) => (providers.includes(provider) ? sourceOf(provider) : undefined),
 })
 
-describe("PollSourceRegistry", () => {
-    it("lists the providers of every capability once", () => {
-        const registry = new PollSourceRegistry()
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({ providers: [PollSourceRegistryService] }).compile()
+    return moduleRef.get(PollSourceRegistryService)
+}
+
+describe("PollSourceRegistryService", () => {
+    it("lists the providers of every capability once", async () => {
+        const registry = await build()
         registry.add(directoryOf("sepay", "casso"))
         registry.add(directoryOf("zalo_oa", "sepay"))
 
         expect(registry.providers()).toEqual(["sepay", "casso", "zalo_oa"])
     })
 
-    it("finds the source of a provider in whichever capability has it", () => {
-        const registry = new PollSourceRegistry()
+    it("finds the source of a provider in whichever capability has it", async () => {
+        const registry = await build()
         registry.add(directoryOf("sepay"))
         registry.add(directoryOf("zalo_oa"))
 
@@ -31,8 +37,8 @@ describe("PollSourceRegistry", () => {
         expect(registry.sourceOf("telegram")).toBeUndefined()
     })
 
-    it("knows nothing before a capability adds its directory", () => {
-        const registry = new PollSourceRegistry()
+    it("knows nothing before a capability adds its directory", async () => {
+        const registry = await build()
 
         expect(registry.providers()).toEqual([])
         expect(registry.sourceOf("sepay")).toBeUndefined()

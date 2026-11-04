@@ -1,8 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { z } from "zod"
-import { defineNode, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
+import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -36,25 +35,12 @@ const VERSION = {
 }
 const INSTALLATION = { id: "inst-1", moduleKey: "accounting" }
 
-const echo = defineNode({
-    id: "core.echo",
-    role: "output",
-    title: { key: "e" },
-    params: z.object({}),
-    input: z.object({}),
-    output: z.object({}),
-    rights: [],
-    effects: [],
-    run: () => Promise.resolve({}),
-    examples: [{ name: "e", params: {}, input: {}, output: {}, effects: [] }],
-}) as unknown as NodeDefinition
-
 const FLOW: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "accounting",
     trigger: { kind: "tag", sources: ["agent"] },
     grant: { rights: [], tools: [], effects: [] },
-    nodes: [{ key: "echo", kind: "output", step: "core.echo" }],
+    nodes: [{ key: "echo", kind: "execute", step: "intent.classify" }],
 }
 
 const build = async (state: OptionalGraphState, options: { context?: GraphContext; installation?: boolean } = {}) => {
@@ -79,9 +65,14 @@ const build = async (state: OptionalGraphState, options: { context?: GraphContex
             {
                 provide: GraphNodeRegistryService,
                 useValue: mock<GraphNodeRegistryService>({
-                    installed: jest
-                        .fn()
-                        .mockReturnValue(nodeIndexOf({ nodes: [echo], effects: [], tools: [], dataKinds: [] })),
+                    installed: jest.fn().mockReturnValue(
+                        nodeIndexOf({
+                            nodes: coreNodes,
+                            effects: coreEffects,
+                            tools: coreTools,
+                            dataKinds: coreDataKinds,
+                        }),
+                    ),
                 }),
             },
         ],

@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
-import { PollScheduleService, PollSourceRegistry } from "@modules/domain/connection-poll"
+import { builder, mock } from "@starci/jest-preset"
+import { PollScheduleService, PollSourceRegistryService } from "@modules/domain/connection-poll"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import { LOGGER } from "@modules/platform/logging"
@@ -8,11 +8,24 @@ import type { Logger } from "@modules/platform/logging"
 import { OrdersLogEvent } from "./orders.log-events"
 import { PaymentDemandService } from "./payment-demand.service"
 
-const connection = (id: string): ConnectionStatusFacts => ({ id }) as ConnectionStatusFacts
+const statusOf = builder<ConnectionStatusFacts>({
+    id: "c1",
+    provider: "bank-a",
+    name: "Bank feed",
+    status: "connected",
+    createdAt: new Date("2026-11-04T00:00:00.000Z"),
+    botUsername: null,
+    accountMasked: null,
+    lastError: null,
+    oaId: null,
+    email: null,
+})
+
+const connection = (id: string): ConnectionStatusFacts => statusOf({ id })
 
 const build = async () => {
     const logger = mock<Logger>()
-    const sources = mock<PollSourceRegistry>()
+    const sources = mock<PollSourceRegistryService>()
     sources.providers.mockReturnValue(["bank-a", "bank-b"])
     const schedule = mock<PollScheduleService>()
     const bindings = mock<ConnectionBindingsReadService>()
@@ -23,7 +36,7 @@ const build = async () => {
         providers: [
             PaymentDemandService,
             { provide: LOGGER, useValue: logger },
-            { provide: PollSourceRegistry, useValue: sources },
+            { provide: PollSourceRegistryService, useValue: sources },
             { provide: PollScheduleService, useValue: schedule },
             { provide: ConnectionBindingsReadService, useValue: bindings },
         ],

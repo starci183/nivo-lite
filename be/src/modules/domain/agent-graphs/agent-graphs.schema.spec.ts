@@ -1,4 +1,6 @@
+import { graphSpecJsonSchema, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import { graphVocabulary } from "@modules/domain/intent-contracts"
+import committed from "./agent-graph-spec.schema.json"
 import { conditionSchema as condition, graphDocumentSchema as graph } from "./agent-graphs.schema"
 
 const node = (key: string) => ({
@@ -128,5 +130,26 @@ describe("agent-graphs.schema the contracts of a graph", () => {
         graphVocabulary.add({ providers: ["ghn"] })
 
         expect(graph.safeParse({ nodes: [withProvider], rights: [] }).success).toBe(true)
+    })
+})
+
+/** The graph shapes the seed ships, each of which the node graph schema of a document must take. */
+const SEEDED = ["sales", "chatbot", "accounting"].map((moduleKey) => ({
+    schema: "nivo/agent-graph@1",
+    moduleKey,
+    trigger: { kind: "tag", sources: ["channel", "agent"], burst: { agent: { window: "0s" } } },
+    grant: { rights: [], tools: [], effects: [] },
+    nodes: [{ key: "end", kind: "output", step: "stop" }],
+}))
+
+describe("agent-graph-spec.schema.json", () => {
+    it("is exactly the JSON Schema the SDK generates from graphSpecSchema, so the seed and the parser never disagree", () => {
+        // Regenerate after a change of graphSpecSchema: write `graphSpecJsonSchema()` of @nivo-lite/agent-sdk/graph to this file.
+        expect(committed).toEqual(graphSpecJsonSchema())
+    })
+
+    it("describes the seeded graphs, which the zod schema parses", () => {
+        for (const spec of SEEDED) expect(graphSpecSchema.safeParse(spec).success).toBe(true)
+        expect(committed).toMatchObject({ additionalProperties: false, title: "NIVO agent graph spec" })
     })
 })

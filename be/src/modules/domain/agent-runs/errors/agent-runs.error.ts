@@ -15,6 +15,8 @@ export enum AgentRunsErrorCode {
     StepFailed = "AGENT_RUNS_STEP_FAILED",
     /** An advance job names no run: nothing a retry could change. */
     JobPayloadInvalid = "AGENT_RUNS_JOB_PAYLOAD_INVALID",
+    /** A step is held by its backoff: the job asks to run again after `params.seconds`, which is no failure. */
+    StepDeferred = "AGENT_RUNS_STEP_DEFERRED",
 }
 
 /** How each agent-runs code travels. */
@@ -25,6 +27,7 @@ export const AGENT_RUNS_ERROR_KINDS: Record<AgentRunsErrorCode, ErrorKind> = {
     [AgentRunsErrorCode.RunNotFound]: "not-found",
     [AgentRunsErrorCode.StepFailed]: "internal",
     [AgentRunsErrorCode.JobPayloadInvalid]: "internal",
+    [AgentRunsErrorCode.StepDeferred]: "internal",
 }
 
 /** The one error class of the agent-runs capability. */

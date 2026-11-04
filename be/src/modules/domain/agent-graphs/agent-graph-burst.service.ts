@@ -2,6 +2,9 @@ import { Injectable } from "@nestjs/common"
 import { burstOf } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpecTrigger } from "@nivo-lite/agent-sdk/graph"
 import type { AgentBurstPolicy, AgentBurstSetting } from "@modules/domain/agent-work"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
+import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import { AgentGraphsService } from "./agent-graphs.service"
 
 /** What is kept of an agent's live version: its id, and the trigger of its flow (null when it has none or the version cannot be read). */
@@ -19,7 +22,10 @@ interface LiveTrigger {
 export class AgentGraphBurstService implements AgentBurstPolicy {
     private readonly live = new Map<string, LiveTrigger>()
 
-    constructor(private readonly graphs: AgentGraphsService) {}
+    constructor(
+        private readonly graphs: AgentGraphsService,
+        @InjectLogger() private readonly logger: Logger,
+    ) {}
 
     /** The setting of the live flow of the agent for a kind of tag, or null when it has no flow or the flow asks nothing of it. */
     async burstOf(workspaceId: string, agentId: string, source: string): Promise<AgentBurstSetting | null> {
@@ -33,7 +39,10 @@ export class AgentGraphBurstService implements AgentBurstPolicy {
         if (versionId === null) return null
         const kept = this.live.get(agentId)
         if (kept?.versionId === versionId) return kept.trigger
-        const document = await this.graphs.documentOf(workspaceId, agentId, versionId).catch(() => null)
+        const document = await this.graphs.documentOf(workspaceId, agentId, versionId).catch((cause: unknown) => {
+            this.logger.error(AgentGraphsLogEvent.BurstFlowUnreadable, cause, { agentId, versionId })
+            return null
+        })
         const trigger = document?.flow?.trigger ?? null
         this.live.set(agentId, { versionId, trigger })
         return trigger

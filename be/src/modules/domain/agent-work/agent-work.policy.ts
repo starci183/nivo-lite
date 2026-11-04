@@ -1,15 +1,9 @@
 import { wakeSources } from "./agent-wake-source.policy"
 import { wakeOriginOf } from "./wake-origin.policy"
 import type { WakeOrigin, WakeOriginInput } from "./wake-origin.policy"
-import type { AgentBurstSetting } from "./agent-work.port"
+import type { AgentBurstSetting, AgentBurstWindow } from "./agent-work.port"
 import type { AgentWorkOptions } from "./agent-work.options"
-import type {
-    AgentWakeContext,
-    AgentWakeSource,
-    AgentWakeStatus,
-    BackgroundCount,
-    OptionalDate,
-} from "./agent-work.contracts"
+import type { AgentWakeContext, AgentWakeSource, AgentWakeStatus } from "./agent-work.contracts"
 
 /** The runtime session key of an agent's turn: the thread key and the agent, so agents that share a runtime agent never share a session. */
 export const sessionKeyOf = (threadKey: string, agentId: string): string => `${threadKey}:${agentId}`
@@ -84,23 +78,12 @@ export const boundedWakeAt = (requested: Date, now: Date): Date => {
     return new Date(Math.min(Math.max(requested.getTime(), earliest), latest))
 }
 
-/** True for a wake that is background work: nobody waits for its answer, so it counts against the day's cap. */
-export const isBackground = (source: AgentWakeSource): boolean => wakeSources.lookup(source)?.background === true
-
 /** Whether a wake held by a switch runs again when work is switched back on: a source that restores, written less than a day ago. */
 export const restoresHeldWake = (source: AgentWakeSource, createdAt: Date, now: Date): boolean =>
     wakeSources.lookup(source)?.restoresHeld === true && now.getTime() - createdAt.getTime() < RESTORE_WINDOW_MS
 
 /** True when the sender of a wake of this source waits for an answer, so a runtime that is down gets the holding line at once. */
 export const awaitsAnswer = (source: AgentWakeSource): boolean => wakeSources.lookup(source)?.awaitsAnswer === true
-
-/** Whether the background cap of the day is spent; a count of another day is not. */
-export const backgroundCapSpent = (state: BackgroundCount, cap: number, today: string): boolean =>
-    state.backgroundDay === today && state.backgroundTurns >= cap
-
-/** Whether the breaker is open at this moment. */
-export const breakerOpen = (breakerUntil: OptionalDate, now: Date): boolean =>
-    breakerUntil !== null && breakerUntil.getTime() > now.getTime()
 
 /** Where a wake stands in the words of a job's state: waiting (pending or held by a switch), running, done (answered or skipped) or failed (dead). */
 export const wakeProgressOf = (status: AgentWakeStatus): "queued" | "running" | "done" | "failed" => {
@@ -135,10 +118,7 @@ export const debounceMaxMsOf = (named: number | undefined, windowMs: number): nu
 export const burstSourceOf = (wake: WakeOriginInput): string => BURST_SOURCES[wakeOriginOf(wake)]
 
 /** The window and the longest wait a wake takes: what its flow asked, else the app's defaults; the wait is never shorter than the window. */
-export const burstFor = (
-    asked: AgentBurstSetting | null,
-    options: AgentWorkOptions | null,
-): { readonly windowMs: number; readonly maxWaitMs: number } => {
+export const burstFor = (asked: AgentBurstSetting | null, options: AgentWorkOptions | null): AgentBurstWindow => {
     const windowMs = asked?.windowMs ?? debounceMsOf(options?.debounceMs)
     return { windowMs, maxWaitMs: debounceMaxMsOf(asked?.maxWaitMs ?? options?.debounceMaxMs, windowMs) }
 }

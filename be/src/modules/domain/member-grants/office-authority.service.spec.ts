@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { MemberGrantsService } from "./member-grants.service"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { ResolvedOfficeAuthority } from "@modules/domain/workspace-seed"
+import type { ResolvedOfficeAuthority } from "./office-authority.contracts"
 import { OfficeAuthorityService } from "./office-authority.service"
 
 const AUTHORITY: ResolvedOfficeAuthority = {

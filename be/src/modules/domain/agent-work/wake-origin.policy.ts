@@ -3,6 +3,9 @@ import type { AgentWakeContext } from "./agent-work.contracts"
 /** Where a wake came from, as the run trace names it: the road into the graph, whatever its trigger. */
 export type WakeOrigin = "channel" | "person" | "agent" | "event" | "schedule"
 
+/** The origin of a wake, or null when the wake is gone. */
+export type OptionalWakeOrigin = WakeOrigin | null
+
 /** The parts of a wake that say where it came from. */
 export interface WakeOriginInput {
     /** The wake source. */

@@ -28,7 +28,6 @@ import {
 } from "@tests/fixtures/builders/module-install-service.builder"
 
 const build = async () => {
-    const tx = fakeTransaction(mockEntityManager())
     const installations = mock<InstallationRecordsService>()
     installations.list.mockResolvedValue([])
     const members = mock<WorkspaceMembersService>()
@@ -43,14 +42,14 @@ const build = async () => {
     const facts = mock<InstallationFactsService>()
     const recordOwners = mock<RecordInstallationService>()
     const readiness = mock<ModuleReadinessService>()
-    const tagGrants = mock<ModuleTagGrantsService>()
-    tagGrants.grantFor.mockResolvedValue(undefined)
     readiness.needsOf.mockResolvedValue([])
     readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, ...VIEWED }))
+    const tagGrants = mock<ModuleTagGrantsService>()
+    tagGrants.grantFor.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleInstallService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: fakeTransaction(mockEntityManager()).em },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: ModulesService, useValue: catalog },
@@ -67,7 +66,6 @@ const build = async () => {
     }).compile()
     const service = moduleRef.get(ModuleInstallService)
     return {
-        tx,
         service,
         installations,
         members,
@@ -96,14 +94,12 @@ describe("ModuleInstallService > install", () => {
     ] as const)("refuses %s", async (_case, module, patch, code) => {
         const { service, catalog } = await build()
         catalog.find.mockResolvedValue(module)
-
         await expect(service.install("u1", requestOf(patch))).rejects.toMatchObject({ code })
     })
 
     it("answers the installation the type already has, and still seeds its rules and its sync", async () => {
         const { service, installations, rules, sync } = await build()
         installations.firstOfModule.mockResolvedValue(recordOf())
-
         await expect(service.install("u1", requestOf())).resolves.toEqual({
             installationId: "inst-1",
             agentId: "agent-1",
@@ -117,18 +113,14 @@ describe("ModuleInstallService > install", () => {
     it("grants the tag rights of the module to the agent it installed, on the install door", async () => {
         const { service, installations, tagGrants } = await build()
         installations.firstOfModule.mockResolvedValue(recordOf())
-
         await service.install("u1", requestOf())
-
         expect(tagGrants.grantFor).toHaveBeenCalledWith("ws-1", "chatbot", "agent-1")
     })
 
     it("grants nothing while the installation has no agent", async () => {
         const { service, installations, tagGrants } = await build()
         installations.firstOfModule.mockResolvedValue(recordOf({ agentId: null }))
-
         await service.install("u1", requestOf())
-
         expect(tagGrants.grantFor).not.toHaveBeenCalled()
     })
 
@@ -139,7 +131,6 @@ describe("ModuleInstallService > install", () => {
         installations.boundAgentIds.mockResolvedValue(["agent-1"])
         agents.list.mockResolvedValue([agentOf(), agentOf({ id: "agent-2" })])
         installations.insert.mockResolvedValue("inst-2")
-
         await expect(service.install("u1", requestOf())).resolves.toEqual({
             installationId: "inst-2",
             agentId: "agent-2",
@@ -169,7 +160,6 @@ describe("ModuleInstallService > install, named instances", () => {
         agents.list.mockResolvedValue([agentOf()])
         agents.create.mockResolvedValue(agentOf({ id: "agent-9" }))
         installations.insert.mockResolvedValue("inst-9")
-
         await expect(service.install("u1", requestOf({ newInstance: true, name: "  Night   desk " }))).resolves.toEqual(
             { installationId: "inst-9", agentId: "agent-9", created: true },
         )
@@ -189,7 +179,6 @@ describe("ModuleInstallService > install, named instances", () => {
     it("refuses an instance name the type already uses", async () => {
         const { service, installations } = await build()
         installations.instanceNames.mockResolvedValue([{ id: "inst-1", name: "Night desk" }])
-
         await expect(service.install("u1", requestOf({ newInstance: true, name: "night DESK" }))).rejects.toMatchObject(
             { code: ModulesErrorCode.InstanceNameTaken },
         )
@@ -202,7 +191,6 @@ describe("ModuleInstallService > install, named instances", () => {
         installations.boundAgentIds.mockResolvedValue([])
         agents.list.mockResolvedValue([agentOf()])
         installations.insert.mockResolvedValue(null)
-
         await expect(service.install("u1", requestOf())).resolves.toEqual({
             installationId: "inst-3",
             agentId: "agent-1",
@@ -216,19 +204,17 @@ describe("ModuleInstallService > install, named instances", () => {
         agents.list.mockResolvedValue([])
         agents.create.mockResolvedValue(agentOf({ id: "agent-9" }))
         installations.insert.mockResolvedValue(null)
-
         await expect(service.install("u1", requestOf({ newInstance: true }))).rejects.toMatchObject({
             code: ModulesErrorCode.InstanceNameTaken,
         })
     })
 })
 
-describe("ModuleInstallService > rename", () => {
+describe("ModuleInstallService > rename and setLive", () => {
     it("refuses a name a sibling instance holds", async () => {
         const { service, installations } = await build()
         installations.find.mockResolvedValue(recordOf())
         installations.instanceNames.mockResolvedValue([{ id: "inst-2", name: "Night desk" }])
-
         await expect(service.rename("u1", "ws-1", "inst-1", "NIGHT desk")).rejects.toMatchObject({
             code: ModulesErrorCode.InstanceNameTaken,
         })
@@ -239,7 +225,6 @@ describe("ModuleInstallService > rename", () => {
         installations.find.mockResolvedValueOnce(recordOf()).mockResolvedValueOnce(recordOf({ name: "Lobby" }))
         installations.instanceNames.mockResolvedValue([])
         installations.rename.mockResolvedValue("done")
-
         await expect(service.rename("u1", "ws-1", "inst-1", " Lobby ")).resolves.toEqual({
             ...recordOf({ name: "Lobby" }),
             ...VIEWED,
@@ -252,14 +237,11 @@ describe("ModuleInstallService > rename", () => {
         installations.find.mockResolvedValue(recordOf())
         installations.instanceNames.mockResolvedValue([])
         installations.rename.mockResolvedValue("missing")
-
         await expect(service.rename("u1", "ws-1", "inst-1", "Lobby")).rejects.toMatchObject({
             code: ModulesErrorCode.InstallationNotFound,
         })
     })
-})
 
-describe("ModuleInstallService > setLive", () => {
     it.each([
         [{ activeContextVersionId: null }, ModulesErrorCode.NeedsVersion],
         [{ status: "removed" }, ModulesErrorCode.InstallationRemoved],
@@ -273,7 +255,6 @@ describe("ModuleInstallService > setLive", () => {
         const { service, installations, agents } = await build()
         installations.find.mockResolvedValueOnce(recordOf()).mockResolvedValueOnce(recordOf({ liveEnabled: true }))
         installations.setLive.mockResolvedValue("done")
-
         await expect(service.setLive("u1", "ws-1", "inst-1", true)).resolves.toEqual({
             ...recordOf({ liveEnabled: true }),
             ...VIEWED,
@@ -292,10 +273,9 @@ describe("ModuleInstallService > setLive", () => {
     })
 })
 
-describe("ModuleInstallService > renameAgent", () => {
+describe("ModuleInstallService > renameAgent and saveSetting", () => {
     it("refuses a name shorter than the limit", async () => {
         const { service } = await build()
-
         await expect(service.renameAgent("u1", "ws-1", "inst-1", " A ")).rejects.toMatchObject({
             code: ModulesErrorCode.AgentNameInvalid,
             params: { min: 2, max: 40 },
@@ -305,7 +285,6 @@ describe("ModuleInstallService > renameAgent", () => {
     it("refuses an installation without an agent", async () => {
         const { service, installations } = await build()
         installations.find.mockResolvedValue(recordOf({ agentId: null }))
-
         await expect(service.renameAgent("u1", "ws-1", "inst-1", "Mai")).rejects.toMatchObject({
             code: ModulesErrorCode.AgentMissing,
         })
@@ -314,7 +293,6 @@ describe("ModuleInstallService > renameAgent", () => {
     it("renames the agent and asks for a sync without forcing it", async () => {
         const { service, installations, identity, sync } = await build()
         installations.find.mockResolvedValue(recordOf())
-
         await expect(service.renameAgent("u1", "ws-1", "inst-1", " Mai ")).resolves.toEqual({
             ...recordOf(),
             ...VIEWED,
@@ -326,9 +304,7 @@ describe("ModuleInstallService > renameAgent", () => {
             force: false,
         })
     })
-})
 
-describe("ModuleInstallService > saveSetting", () => {
     it("refuses a setting out of its range", async () => {
         const { service } = await build()
 

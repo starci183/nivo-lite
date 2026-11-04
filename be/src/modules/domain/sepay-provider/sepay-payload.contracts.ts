@@ -1,3 +1,18 @@
+/** The key of a webhook sender or the key configured for it; undefined when there is none. */
+export type OptionalApiKey = string | undefined
+
+/** The raw bytes of a delivery body, when the transport kept them. */
+export type OptionalRawBody = Buffer | undefined
+
+/** The intake a delivery runs, which the connection page traces around. */
+export type IntakeRun = () => Promise<void>
+
+/** What a delivery reads to: its fields, or undefined when it has no safe integer id. */
+export type OptionalSepayPayload = SepayPayload | undefined
+
+/** The amount of a transfer in VND; null when the payer types it. */
+export type OptionalAmountVnd = number | null
+
 /** The SePay webhook body reduced to the fields NIVO reads (names exactly as in https://docs.sepay.vn); only `id` is required. */
 export interface SepayPayload {
     /** The SePay transaction id: the idempotency key. */

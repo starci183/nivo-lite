@@ -76,12 +76,3 @@ export interface WorkItemClosedHook {
     /** The item closed approved or rejected. A throw is logged and the decision stands: whoever waits recovers from the item itself. */
     closed(workspaceId: string, workItemId: string, outcome: ClosedOutcome, by: string): Promise<void>
 }
-
-/**
- * Told when a graph node raised a work item for a claim of the customer's word, so the capability that owns claims can settle or
- * escalate the claim by that item; the app root binds it, and with none bound a claim id changes nothing beyond the item.
- */
-export interface WorkRaisedHook {
-    /** The work item was raised for the claim. A throw fails the raise, so the node can run again. */
-    raised(workspaceId: string, claimId: string, workItemId: string): Promise<void>
-}

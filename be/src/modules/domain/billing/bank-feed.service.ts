@@ -4,13 +4,12 @@ import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { BANK_FEED_DELIVERY_QUEUE } from "@modules/queues/bank-feed-delivery"
 import type { BankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { FeedWebhookRegistry } from "@modules/domain/provider-registry"
+import { FeedWebhookRegistryService } from "@modules/domain/provider-registry"
 import type { FeedWebhookPort } from "@modules/domain/provider-registry"
 import { InboundEventsService } from "@modules/domain/inbound-events"
-import { TransactionsService } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -20,7 +19,6 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { createHash } from "node:crypto"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import { AgentTagService } from "@modules/domain/agent-work"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -34,8 +32,7 @@ import type {
     ProvenConnection,
 } from "./billing.contracts"
 import { cassoCredits, isCassoError } from "./casso.policy"
-import { InjectBankFeedFlow } from "./billing.decorators"
-import type { BankFeedFlow } from "./billing.decorators"
+import { BankFeedFlowService } from "./bank-feed-flow.service"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import { PaymentProofService } from "./payment-proof.service"
 import { payosBodyOf, readPayosDelivery } from "./payos.policy"
@@ -44,9 +41,6 @@ import { ConnectionBindingsReadService } from "@modules/domain/connections"
 
 /** The locale of the lines billing writes into the shared records: the workspace owners read them in Vietnamese. */
 const RECORD_LOCALE = "vi"
-
-/** What a tag of the bound agent says started it: the bank feed. */
-const BANK_FEED_TAG_SOURCE = "bank_feed"
 
 /** Who may enter money by hand. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
@@ -87,14 +81,12 @@ export class BankFeedService {
         @InjectEventBus() private readonly bus: EventBus,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
-        private readonly transactions: TransactionsService,
         private readonly bankFeedInbox: BankFeedReceiptService,
-        private readonly webhooks: FeedWebhookRegistry,
+        private readonly webhooks: FeedWebhookRegistryService,
         @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly bindings: AgentBindingsService,
         private readonly connections: ConnectionBindingsReadService,
-        private readonly tags: AgentTagService,
-        @Optional() @InjectBankFeedFlow() private readonly flow: BankFeedFlow | null = null,
+        private readonly flows: BankFeedFlowService,
     ) {}
 
     /**
@@ -288,8 +280,8 @@ export class BankFeedService {
         if (state?.environment === "test") return { status: "refused", code: "test_environment" }
         const [agent] = await this.bindings.agentsFor(connection.connectionId, "bank_feed", { modules: ["accounting"] })
         if (agent === undefined) return { status: "unbound" }
-        if (credit.direction === "debit") return this.debit(tx, connection, credit)
-        const flowOwns = await this.flowOwns(connection.workspaceId, agent.id)
+        if (credit.direction === "debit") return this.flows.debit(tx, connection, credit)
+        const flowOwns = await this.flows.owns(connection.workspaceId, agent.id)
         const booking = {
             workspaceId: connection.workspaceId,
             amount: credit.amount,
@@ -300,76 +292,8 @@ export class BankFeedService {
         }
         const booked = await this.book(tx, booking, !flowOwns)
         if (booked === null) return { status: "duplicate" }
-        if (flowOwns) await this.tagFlow(tx, connection, agent.id, credit, booked)
+        if (flowOwns) await this.flows.tag(tx, connection, agent.id, credit, booked)
         return { status: "booked" }
-    }
-
-    /** Whether the bound agent's live version has a flow: then the flow alone owns the credit, and the booking path holds nothing. */
-    private async flowOwns(workspaceId: string, agentId: string): Promise<boolean> {
-        return this.flow !== null && (await this.flow.hasLiveFlow(workspaceId, agentId))
-    }
-
-    /**
-     * A new credit of an agent whose live version has a flow reaches that agent: the transaction is recorded and the agent is tagged with
-     * it, once per transaction (the wake is keyed by the connection and the provider transaction id). Exactly one path takes a credit:
-     * the flow's, or with no flow the booking path alone, as before.
-     */
-    private async tagFlow(
-        tx: EntityManager,
-        connection: ProvenConnection,
-        agentId: string,
-        credit: IncomingCredit,
-        inboundEventId: string,
-    ): Promise<void> {
-        const amountVnd = Math.round(credit.amount)
-        const transaction = await this.transactions.open(
-            {
-                workspaceId: connection.workspaceId,
-                inboundEventId,
-                amountVnd,
-                reference: credit.content === "" ? null : credit.content,
-                payer: null,
-            },
-            tx,
-        )
-        await this.tags.tagAgent(
-            {
-                source: BANK_FEED_TAG_SOURCE,
-                workspaceId: connection.workspaceId,
-                toAgentId: agentId,
-                text: this.catalog.get(
-                    "billing.bankFeedTag",
-                    { amount: amountVnd, content: credit.content },
-                    RECORD_LOCALE,
-                ),
-                subject: `bank-transaction:${transaction.id}`,
-                eventKey: `bank-feed:${connection.connectionId}:${credit.eventId}`,
-            },
-            tx,
-        )
-    }
-
-    /**
-     * Records money that left the account as a debit transaction: never an inbound payment event and never a reconcile job, so a
-     * supplier payment is not matched against the workspace's invoices. The receipt claim already made it once per delivery.
-     */
-    private async debit(
-        tx: EntityManager,
-        connection: ProvenConnection,
-        credit: IncomingCredit,
-    ): Promise<FeedCreditAnswer> {
-        await this.transactions.open(
-            {
-                workspaceId: connection.workspaceId,
-                inboundEventId: null,
-                amountVnd: Math.round(credit.amount),
-                reference: credit.content === "" ? null : credit.content,
-                payer: null,
-                direction: "debit",
-            },
-            tx,
-        )
-        return { status: "debited" }
     }
 
     /** Records the credit and publishes `bank_credit_booked` in the same transaction; answers the id of the inbound event, or null when the same credit had already been recorded. */

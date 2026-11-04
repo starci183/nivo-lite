@@ -1,11 +1,11 @@
 export { ProviderRegistryModule } from "./provider-registry.module"
 export {
-    BankFeedPollerRegistry,
-    BankTransactionsRegistry,
-    FeedWebhookRegistry,
-    LedgerRegistry,
-    MessageInboxPollerRegistry,
-    PaymentInstructionRegistry,
+    BankFeedPollerRegistryService,
+    BankTransactionsRegistryService,
+    FeedWebhookRegistryService,
+    LedgerRegistryService,
+    MessageInboxPollerRegistryService,
+    PaymentInstructionRegistryService,
 } from "./provider-registries.service"
 export type {
     BankFeedPoller,

@@ -5,7 +5,7 @@ import { CatalogueSeedService } from "@modules/domain/channel-provisioning"
 /** What `seed-catalogue` is asked to do, as the command line parsed it. */
 export interface SeedCatalogueCommand {
     /** The name of the workspace whose catalogue is seeded. */
-    readonly workspace?: string
+    readonly workspace: string
 }
 
 @Command({
@@ -20,11 +20,15 @@ export class SeedCatalogueCli extends CommandRunner {
 
     /** Hands the whole of stdin and the workspace name to the seed, which prints what it did and never a value. */
     async run(_params: Array<string>, options: SeedCatalogueCommand): Promise<void> {
-        await this.seed.run(await text(process.stdin), options.workspace ?? "")
+        await this.seed.run(await text(process.stdin), options.workspace)
     }
 
-    /** The workspace name. */
-    @Option({ flags: "-w, --workspace <name>", description: "The name of the workspace whose catalogue is seeded" })
+    /** The workspace name; none given is the empty name, which the seed refuses. */
+    @Option({
+        flags: "-w, --workspace <name>",
+        description: "The name of the workspace whose catalogue is seeded",
+        defaultValue: "",
+    })
     parseWorkspace(value: string): string {
         return value
     }

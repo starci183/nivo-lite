@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { OwnersService } from "@modules/domain/owners"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
+import { eachInOrder } from "@modules/platform/primitives"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 import { readSeedDocuments } from "./management-seed.policy"
@@ -24,16 +25,16 @@ export class TestAccountsSeedService {
 
     /** Applies every document of the stack seed envelope read from `text`; a document that is refused stops the run. */
     async run(text: string): Promise<void> {
-        for (const document of readSeedDocuments(text)) {
-            for (const workspace of readTestAccountsSeed(document).workspaces) await this.apply(workspace)
-        }
+        await eachInOrder(readSeedDocuments(text), (document) =>
+            eachInOrder(readTestAccountsSeed(document).workspaces, (workspace) => this.apply(workspace)),
+        )
     }
 
     private async apply({ name, owner, others }: TestWorkspace): Promise<void> {
         const ownerId = await this.account(owner)
         const { id } = await this.workspaces.ensureNamed(ownerId, name)
         this.options.print(`test workspace ${id}`)
-        for (const seat of others) {
+        await eachInOrder(others, async (seat) => {
             const userId = await this.account(seat)
             await this.members.ensure(ownerId, {
                 workspaceId: id,
@@ -43,7 +44,7 @@ export class TestAccountsSeedService {
                 displayName: seat.name,
             })
             this.options.print(`${seat.role} seat ready in ${id}`)
-        }
+        })
     }
 
     /** The account of a seat, with the sealed password set on it. */

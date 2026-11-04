@@ -1,7 +1,5 @@
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { burstOf, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentDrainService } from "../../../modules/domain/agent-work/agent-drain.service"
@@ -24,6 +22,7 @@ import {
     wakesOfFact,
 } from "../../world/agent-work-database.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
+import { ageWake, flowBurstOf, stampBurst } from "../../world/agent-work-burst.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
 
@@ -55,12 +54,30 @@ const wakeOf = (eventKey: string, over: Partial<AgentWake> = {}): AgentWake =>
 const customerWake = (eventKey: string, conversationId: string): AgentWake =>
     wakeOf(eventKey, { source: "customer", context: { conversationId } })
 
+const messageWake = (eventKey: string, conversationId: string): AgentWake =>
+    wakeOf(eventKey, { source: "customer", context: { conversationId, messageId: `${world.prefix}:${eventKey}` } })
+
 const post = (wake: AgentWake) => em().transaction((tx) => world.resolve(AgentWakeService).wake(tx, wake))
 
 const drain = (scopeKey = "agent") =>
     world.resolve(AgentDrainService).drain({ workspaceId: WS, agentId: AGENT, scopeKey })
 
 const rowOf = (wake: AgentWake) => wakeOfFact(em(), wake.agentId, wake.source, wake.eventKey)
+
+const older = async (wake: AgentWake, ms: number): Promise<void> => ageWake(em(), (await rowOf(wake)).id, ms)
+
+const begin = async (conversationId: string): Promise<Record<string, unknown>> => {
+    const [row] = await callDbFunction<{ agent_turn_begin: Record<string, unknown> }>(em(), "public.agent_turn_begin", [
+        AGENT,
+        `conversation:${conversationId}`,
+        "burst-worker",
+        90,
+        0,
+        0,
+    ])
+    assert(row !== undefined)
+    return row.agent_turn_begin
+}
 
 const wakeJobKey = (wake: AgentWake) => `agent-turn:${wake.agentId}:${wake.source}:${wake.eventKey}`
 
@@ -298,39 +315,12 @@ describe("agent-work/kill-switch: held, never dropped", () => {
 
 describe("agent-work/burst: a sliding window per conversation", () => {
     // The window and the longest wait are the ones the chatbot flow asks for its channel; the wakes carry them, as the wake door resolves them.
-    const asked = burstOf(graphSpecSchema.parse(JSON.parse(readFileSync(CHATBOT_FLOW, "utf8"))).trigger, "channel")
-    assert(asked !== null && asked.maxWaitMs !== null)
+    const asked = flowBurstOf(CHATBOT_FLOW)
     const WINDOW_MS = asked.windowMs
     const MAX_MS = asked.maxWaitMs
     const resolved = async (...wakes: ReadonlyArray<AgentWake>): Promise<void> => {
-        await eachInOrder(wakes, async (wake) => {
-            const { id } = await rowOf(wake)
-            await em().query("UPDATE public.agent_wakes SET burst_window_ms = $2, burst_max_ms = $3 WHERE id = $1", [
-                id,
-                WINDOW_MS,
-                MAX_MS,
-            ])
-        })
+        await eachInOrder(wakes, async (wake) => stampBurst(em(), (await rowOf(wake)).id, asked))
     }
-    const messageWake = (eventKey: string, conversationId: string): AgentWake =>
-        wakeOf(eventKey, { source: "customer", context: { conversationId, messageId: `${world.prefix}:${eventKey}` } })
-    const begin = async (conversationId: string): Promise<Record<string, unknown>> => {
-        const [row] = await callDbFunction<{ agent_turn_begin: Record<string, unknown> }>(
-            em(),
-            "public.agent_turn_begin",
-            [AGENT, `conversation:${conversationId}`, "burst-worker", 90, 0, 0],
-        )
-        assert(row !== undefined)
-        return row.agent_turn_begin
-    }
-    const older = async (wake: AgentWake, ms: number): Promise<void> => {
-        const { id } = await rowOf(wake)
-        await em().query(
-            "UPDATE public.agent_wakes SET created_at = created_at - make_interval(secs => $2::numeric / 1000) WHERE id = $1",
-            [id, ms],
-        )
-    }
-
     it("agent-work/burst-text-then-image: a text and an image four seconds apart are one turn that reads both", async () => {
         const text = messageWake("burst-text", "conv-burst")
         const image = messageWake("burst-image", "conv-burst")

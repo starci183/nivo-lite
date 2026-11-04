@@ -1,11 +1,15 @@
 import type { AgentWakeSource, AgentWorkState } from "@modules/domain/agent-work"
-import { backgroundCapSpent, breakerOpen, isBackground } from "@modules/domain/agent-work"
+import { backgroundCapSpent, breakerOpen } from "@modules/domain/agent-wake-rules"
+import { wakeSources } from "@modules/domain/agent-work"
 import type {
     AgentTurnBlock,
     OptionalReadiness,
     OptionalRunningInstallation,
     OptionalStopReason,
 } from "./agent-turns.contracts"
+
+/** Whether nobody waits on a wake of this source (an internal event, a schedule). */
+export const isBackground = (source: AgentWakeSource): boolean => wakeSources.lookup(source)?.background === true
 
 /** The usage kind a customer turn on the core road is metered under, the same as on the legacy road. */
 const CUSTOMER_KIND = "chat_reply"

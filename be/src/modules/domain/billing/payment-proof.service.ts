@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FeedWebhookRegistry } from "@modules/domain/provider-registry"
+import { FeedWebhookRegistryService } from "@modules/domain/provider-registry"
 import { isValidApiKey } from "@modules/domain/sepay-provider"
 import { InjectBillingOptions } from "./billing.decorators"
 import type { BillingOptions } from "./billing.options"
@@ -31,7 +31,7 @@ export class PaymentProofService {
     constructor(
         @InjectBillingOptions() private readonly options: BillingOptions,
         private readonly secrets: PaymentSecretsService,
-        private readonly webhooks: FeedWebhookRegistry,
+        private readonly webhooks: FeedWebhookRegistryService,
     ) {}
 
     /** NIVO's own billing feed from SePay: `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>`. */

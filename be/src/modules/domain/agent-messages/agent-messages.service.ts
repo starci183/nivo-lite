@@ -20,6 +20,7 @@ import type {
     StoredReplyBody,
     TranscriptLine,
     MessageStamp,
+    LatestMessageAt,
 } from "./agent-messages.contracts"
 import type { ConversationMessage, ConversationMessagesQuery } from "./conversation-messages.contracts"
 import { AgentMessagesError, AgentMessagesErrorCode } from "./errors/agent-messages.error"
@@ -304,6 +305,7 @@ export class AgentMessagesService {
             select: { id: true, body: true, createdAt: true },
             where: { conversationId, id: In([...ids]), role: "user" },
             order: { createdAt: "ASC", id: "ASC" },
+            take: ids.length,
         })
         return rows.map((row) => ({ id: row.id, body: row.body, at: row.createdAt }))
     }
@@ -423,7 +425,7 @@ export class AgentMessagesService {
     }
 
     /** When the latest message of a conversation was written, or null when it has none. */
-    async latestAt(conversationId: string): Promise<Date | null> {
+    async latestAt(conversationId: string): Promise<LatestMessageAt> {
         const row = await this.entityManager.findOne(AgentMessageEntity, {
             select: { createdAt: true },
             where: { conversationId },

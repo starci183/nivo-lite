@@ -4,6 +4,7 @@ import type { EffectCall, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import type { EffectAct } from "./graph-nodes.contracts"
 import { GraphNodesLogEvent } from "./graph-nodes.log-events"
 import { GraphNodeEffectEntity } from "./persistence/entities"
 
@@ -23,12 +24,7 @@ export class GraphNodeEffectsService {
     ) {}
 
     /** Runs the act once per key in the workspace and answers the subject the first run touched. */
-    async once(
-        workspaceId: string,
-        effect: string,
-        call: EffectCall,
-        act: () => Promise<SubjectRef>,
-    ): Promise<SubjectRef> {
+    async once(workspaceId: string, effect: string, call: EffectCall, act: EffectAct): Promise<SubjectRef> {
         const ledgerKey = ledgerKeyOf(call)
         const before = await this.entityManager.findOneBy(GraphNodeEffectEntity, { workspaceId, ledgerKey })
         if (before !== null) {

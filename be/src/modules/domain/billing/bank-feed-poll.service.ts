@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionPollLogEvent, ConnectionPollRun, emptyPollSummary } from "@modules/domain/connection-poll"
+import { ConnectionPollLogEvent, ConnectionPollRunService, emptyPollSummary } from "@modules/domain/connection-poll"
 import type { ConnectionPoller, PollSummary } from "@modules/domain/connection-poll"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord, HealthCandidate } from "@modules/domain/connections"
-import { BankFeedPollerRegistry } from "@modules/domain/provider-registry"
+import { BankFeedPollerRegistryService } from "@modules/domain/provider-registry"
 import type { BankFeedPoller, PolledCredit } from "@modules/domain/provider-registry"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -12,7 +12,7 @@ import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectTimer } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
-import type { BankFeedPollPayload } from "@modules/queues/bank-feed-poll"
+import { isBankFeedPollPayload } from "@modules/queues/bank-feed-poll"
 import { BankFeedService } from "./bank-feed.service"
 
 /** How many connections one page of the connection scan reads. */
@@ -24,17 +24,17 @@ const SCAN_PAGE = 200
  * poller. One connection's failure never stops the run; calls are sequential with a pause between them.
  */
 export class BankFeedPollService {
-    private readonly run: ConnectionPollRun
+    private readonly run: ConnectionPollRunService
 
     constructor(
         @InjectClock() clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         @InjectTimer() timer: Timer,
         private readonly connections: ConnectionsService,
-        private readonly pollers: BankFeedPollerRegistry,
+        private readonly pollers: BankFeedPollerRegistryService,
         private readonly feed: BankFeedService,
     ) {
-        this.run = new ConnectionPollRun({ clock, logger, timer, connections })
+        this.run = new ConnectionPollRunService({ clock, logger, timer, connections })
     }
 
     /** True when connections of the provider can be read back. */
@@ -42,8 +42,12 @@ export class BankFeedPollService {
         return this.pollers.has(provider)
     }
 
-    /** Runs the reconcile a queued job asks for: one connection when the payload names it, else every connection of a polled provider. */
-    reconcileFromJob(payload: BankFeedPollPayload): Promise<PollSummary> {
+    /**
+     * Runs the reconcile a queued job asks for: one connection when the payload names it, else every connection of a polled provider.
+     * A payload that is not a poll payload polls nothing.
+     */
+    reconcileFromJob(payload: unknown): Promise<PollSummary> {
+        if (!isBankFeedPollPayload(payload)) return Promise.resolve(emptyPollSummary())
         return payload.connectionId === undefined || payload.workspaceId === undefined
             ? this.reconcileAll()
             : this.reconcileOne(payload.workspaceId, payload.connectionId)

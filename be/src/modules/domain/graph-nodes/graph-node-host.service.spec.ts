@@ -1,8 +1,17 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { z } from "zod"
-import { defineEffect, defineNode, defineTool, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { MockOf } from "@starci/jest-preset"
+import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
+import {
+    look,
+    lost,
+    ping,
+    probe,
+    READ,
+    swallow,
+    unping,
+    WRITE,
+} from "@tests/fixtures/builders/graph-node-probe.builder"
 import { CLOCK } from "@modules/platform/clock"
 import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
@@ -18,105 +27,6 @@ import type {
     NodeSubjectResolver,
     NodeToolDoor,
 } from "./graph-nodes.contracts"
-
-const READ = { kind: "record", access: "read", scope: "turn", fields: ["id"] } as const
-const WRITE = { kind: "record", access: "write", scope: "turn", fields: ["id"] } as const
-
-const unping = defineEffect({
-    id: "core.unping",
-    title: { key: "u" },
-    payload: z.object({ id: z.string() }),
-    rights: [],
-})
-const ping = defineEffect({
-    id: "core.ping",
-    title: { key: "p" },
-    payload: z.object({ n: z.number() }),
-    rights: [],
-    compensation: "core.unping",
-})
-const lost = defineEffect({ ...ping, id: "core.lost", compensation: "core.gone" })
-const look = defineTool({
-    id: "core.look",
-    title: { key: "l" },
-    args: z.object({}),
-    result: z.object({ seen: z.boolean() }),
-    mutates: false,
-    rights: [],
-})
-
-/** A node that touches every port once and answers what came back. */
-const probe = defineNode({
-    id: "core.probe",
-    role: "execute",
-    title: { key: "t" },
-    params: z.object({}),
-    input: z.object({ write: z.boolean() }),
-    output: z.object({
-        rows: z.number(),
-        ref: z.string(),
-        text: z.string(),
-        n: z.number(),
-        seen: z.boolean(),
-        at: z.number(),
-    }),
-    rights: [READ, WRITE],
-    effects: ["core.ping"],
-    tools: ["core.look"],
-    run: async (input, context) => {
-        const rows = await context.data.read("record", { fields: ["id"] })
-        const ref = input.write
-            ? await context.data.write("record", { id: "r" })
-            : await context.effect("core.ping", { n: 1 })
-        const text = await context.model.text({ purpose: "say", instructions: "", input: null })
-        const json = await context.model.json(z.object({ n: z.number() }), {
-            purpose: "count",
-            instructions: "",
-            input: null,
-        })
-        const tool = await context.tools.call<{ seen: boolean }>("core.look", {})
-        return {
-            rows: rows.length,
-            ref: ref.id,
-            text,
-            n: json.n,
-            seen: tool.seen,
-            at: context.now().getTime() > 0 ? 1 : 0,
-        }
-    },
-    examples: [
-        {
-            name: "e",
-            params: {},
-            input: { write: false },
-            output: { rows: 0, ref: "", text: "", n: 0, seen: true, at: 1 },
-            effects: [],
-        },
-    ],
-}) as unknown as NodeDefinition
-
-/** A node that catches every failure of its tool and answers a fallback, the way a node files a connect item or takes a skip branch. */
-const swallow = defineNode({
-    id: "core.swallow",
-    role: "execute",
-    title: { key: "s" },
-    params: z.object({}),
-    input: z.object({}),
-    output: z.object({ fell: z.boolean() }),
-    rights: [],
-    effects: ["core.ping"],
-    tools: ["core.look"],
-    run: async (_input, context) => {
-        try {
-            await context.tools.call("core.look", {})
-            return { fell: false }
-        } catch {
-            await context.effect("core.ping", { n: 1 })
-            return { fell: true }
-        }
-    },
-    examples: [{ name: "s", params: {}, input: {}, output: { fell: false }, effects: [], tools: [{ seen: true }] }],
-}) as unknown as NodeDefinition
 
 /** The refusal of a door for a call that waits for a person. */
 const askOf = (): GraphNodesError =>
@@ -134,10 +44,12 @@ const INPUT: NodeRunInput = {
     key: "run-1:node",
 }
 
+const READING: NodeDataPort = { kind: "record", read: () => Promise.resolve([]) }
+
 const build = async (
-    door: NodeToolDoor | null,
-    port: NodeDataPort,
+    port: NodeDataPort = READING,
     resolvers: ReadonlyArray<NodeSubjectResolver> = [],
+    doorBound: boolean = true,
 ) => {
     const registry = mock<GraphNodeRegistryService>()
     registry.installed.mockReturnValue(
@@ -156,27 +68,54 @@ const build = async (
     ai.nodeJson.mockResolvedValue({ n: 2 })
     const tokens = mock<GraphNodeRunTokensService>()
     tokens.mint.mockReturnValue("token-1")
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            GraphNodeHostService,
-            { provide: GraphNodeRunTokensService, useValue: tokens },
-            { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:00:00.000Z") },
-            { provide: GraphNodeRegistryService, useValue: registry },
-            { provide: GraphNodeEffectsService, useValue: effects },
-            { provide: GRAPH_NODE_MODEL, useValue: ai },
-            ...(door === null ? [] : [{ provide: GRAPH_NODE_TOOL_DOOR, useValue: door }]),
-        ],
-    }).compile()
-    return { host: moduleRef.get(GraphNodeHostService), executor, effects, ai, tokens, registry }
+    const tools = mock<NodeToolDoor>()
+    tools.call.mockResolvedValue({ seen: true })
+    const clock = new FakeClock("2026-11-04T10:00:00.000Z")
+    const moduleRef = doorBound
+        ? await Test.createTestingModule({
+              providers: [
+                  GraphNodeHostService,
+                  { provide: GraphNodeRunTokensService, useValue: tokens },
+                  { provide: CLOCK, useValue: clock },
+                  { provide: GraphNodeRegistryService, useValue: registry },
+                  { provide: GraphNodeEffectsService, useValue: effects },
+                  { provide: GRAPH_NODE_MODEL, useValue: ai },
+                  { provide: GRAPH_NODE_TOOL_DOOR, useValue: tools },
+              ],
+          }).compile()
+        : await Test.createTestingModule({
+              providers: [
+                  GraphNodeHostService,
+                  { provide: GraphNodeRunTokensService, useValue: tokens },
+                  { provide: CLOCK, useValue: clock },
+                  { provide: GraphNodeRegistryService, useValue: registry },
+                  { provide: GraphNodeEffectsService, useValue: effects },
+                  { provide: GRAPH_NODE_MODEL, useValue: ai },
+              ],
+          }).compile()
+    return { host: moduleRef.get(GraphNodeHostService), tools, registry, executor, effects, ai, tokens }
 }
 
-const door = (): NodeToolDoor => ({ call: jest.fn().mockResolvedValue({ seen: true }) })
+/** A port that answers no rows and records its reads. */
+const emptyPort = (): NodeDataPort => {
+    const port = mock<NodeDataPort>({ kind: "record" })
+    port.read.mockResolvedValue([])
+    return port
+}
+
+/** Makes the swallowing node the one the registry serves. */
+const serveSwallow = (registry: MockOf<GraphNodeRegistryService>): void => {
+    registry.nodeOf.mockReturnValue(swallow)
+    registry.installed.mockReturnValue(
+        nodeIndexOf({ nodes: [probe, swallow], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),
+    )
+}
 
 describe("GraphNodeHostService", () => {
     it("runs a node through the registered port, the ledgered executor, the model and the tool door", async () => {
-        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([{ id: "1" }]) }
-        const tools = door()
-        const { host, executor, effects, ai } = await build(tools, port)
+        const port = mock<NodeDataPort>({ kind: "record" })
+        port.read.mockResolvedValue([{ id: "1" }])
+        const { host, tools, executor, effects, ai } = await build(port)
 
         await expect(host.run(INPUT)).resolves.toEqual({
             output: { rows: 1, ref: "e-1", text: "hi", n: 2, seen: true, at: 1 },
@@ -204,49 +143,37 @@ describe("GraphNodeHostService", () => {
     })
 
     it("stops the node at a call that waits for a person, even when the node catches its tool's failures", async () => {
-        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([]) }
-        const tools = door()
+        const { host, tools, registry, executor } = await build()
         const ask = askOf()
-        jest.mocked(tools.call).mockRejectedValue(ask)
-        const { host, registry, executor } = await build(tools, port)
-        registry.nodeOf.mockReturnValue(swallow)
-        registry.installed.mockReturnValue(
-            nodeIndexOf({ nodes: [probe, swallow], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),
-        )
+        tools.call.mockRejectedValue(ask)
+        serveSwallow(registry)
 
         await expect(host.run({ ...INPUT, nodeId: "core.swallow", input: {} })).rejects.toBe(ask)
         expect(executor.execute).not.toHaveBeenCalled()
     })
 
     it("lets a node handle any other failure of its tool", async () => {
-        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([]) }
-        const tools = door()
-        jest.mocked(tools.call).mockRejectedValue(new GraphNodesError({ code: GraphNodesErrorCode.ToolNotConnected }))
-        const { host, registry } = await build(tools, port)
-        registry.nodeOf.mockReturnValue(swallow)
-        registry.installed.mockReturnValue(
-            nodeIndexOf({ nodes: [probe, swallow], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),
-        )
+        const { host, tools, registry } = await build()
+        tools.call.mockRejectedValue(new GraphNodesError({ code: GraphNodesErrorCode.ToolNotConnected }))
+        serveSwallow(registry)
 
         await expect(host.run({ ...INPUT, nodeId: "core.swallow", input: {} })).resolves.toMatchObject({
             output: { fell: true },
         })
     })
+})
 
+describe("GraphNodeHostService tool door and ports", () => {
     it("answers the ask, not the node's own error, when a node throws after its call was refused for a person", async () => {
-        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([]) }
-        const tools = door()
+        const { host, tools } = await build()
         const ask = askOf()
-        jest.mocked(tools.call).mockRejectedValue(ask)
-        const { host } = await build(tools, port)
+        tools.call.mockRejectedValue(ask)
 
         await expect(host.run(INPUT)).rejects.toBe(ask)
     })
 
     it("hands the tool door the run token and the approval the step carries", async () => {
-        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([]) }
-        const tools = door()
-        const { host, tokens } = await build(tools, port)
+        const { host, tools, tokens } = await build()
         const approval = { by: "member-1", fingerprint: "f-1" }
 
         await host.run({ ...INPUT, approval })
@@ -256,52 +183,59 @@ describe("GraphNodeHostService", () => {
     })
 
     it("writes through a port that writes, and refuses a kind whose port does not", async () => {
-        const write = jest.fn().mockResolvedValue({ kind: "record", id: "w-1" })
-        const writing = await build(door(), { kind: "record", read: () => Promise.resolve([]), write })
+        const port = mock<NodeDataPort>({ kind: "record" })
+        port.read.mockResolvedValue([])
+        port.write = jest.fn().mockResolvedValue({ kind: "record", id: "w-1" })
+        const writing = await build(port)
         await expect(writing.host.run({ ...INPUT, input: { write: true } })).resolves.toMatchObject({
             output: { ref: "w-1" },
         })
-        expect(write).toHaveBeenCalledWith(INPUT.turn, { id: "r" })
+        expect(port.write).toHaveBeenCalledWith(INPUT.turn, { id: "r" })
 
-        const readOnly = await build(door(), { kind: "record", read: () => Promise.resolve([]) })
+        const readOnly = await build(READING)
         await expect(readOnly.host.run({ ...INPUT, input: { write: true } })).rejects.toMatchObject({
             code: GraphNodesErrorCode.PortMissing,
         })
     })
 
     it("refuses a tool call while no NIVO MCP door is bound", async () => {
-        const { host } = await build(null, { kind: "record", read: () => Promise.resolve([]) })
+        const { host } = await build(READING, [], false)
         await expect(host.run(INPUT)).rejects.toMatchObject({ code: GraphNodesErrorCode.ToolDoorMissing })
     })
 })
 
 describe("GraphNodeHostService subjects and undo", () => {
-    const port: NodeDataPort = { kind: "record", read: () => Promise.resolve([]) }
-
     it("gives a turn with no subject the first subject a resolver knows, and keeps a subject the trigger named", async () => {
-        const none: NodeSubjectResolver = { subjectOf: jest.fn().mockResolvedValue(null) }
-        const lead: NodeSubjectResolver = { subjectOf: jest.fn().mockResolvedValue({ kind: "sales-lead", id: "l-1" }) }
-        const read = jest.fn().mockResolvedValue([])
-        const { host } = await build(door(), { ...port, read }, [none, lead])
+        const none = mock<NodeSubjectResolver>()
+        none.subjectOf.mockResolvedValue(null)
+        const lead = mock<NodeSubjectResolver>()
+        lead.subjectOf.mockResolvedValue({ kind: "sales-lead", id: "l-1" })
+        const port = emptyPort()
+        const { host } = await build(port, [none, lead])
 
         await host.run(INPUT)
-        expect(read.mock.calls[0]?.[0].subject).toEqual({ kind: "sales-lead", id: "l-1" })
+        expect(port.read).toHaveBeenNthCalledWith(
+            1,
+            { ...INPUT.turn, subject: { kind: "sales-lead", id: "l-1" } },
+            { fields: ["id"] },
+            "turn",
+        )
 
         const named = { ...INPUT.turn, subject: { kind: "order", id: "o-1" } }
         await host.run({ ...INPUT, turn: named })
-        expect(read.mock.calls[1]?.[0].subject).toEqual({ kind: "order", id: "o-1" })
+        expect(port.read).toHaveBeenNthCalledWith(2, named, { fields: ["id"] }, "turn")
         expect(none.subjectOf).toHaveBeenCalledTimes(1)
     })
 
     it("runs a turn on no subject when no resolver knows one", async () => {
-        const read = jest.fn().mockResolvedValue([])
-        const { host } = await build(door(), { ...port, read }, [{ subjectOf: () => Promise.resolve(null) }])
+        const port = emptyPort()
+        const { host } = await build(port, [{ subjectOf: () => Promise.resolve(null) }])
         await host.run(INPUT)
-        expect(read.mock.calls[0]?.[0].subject).toBeNull()
+        expect(port.read).toHaveBeenCalledWith(INPUT.turn, { fields: ["id"] }, "turn")
     })
 
     it("undoes each effect with a compensation, last first, keyed by its place, and skips one with none", async () => {
-        const { host, executor, effects } = await build(door(), port)
+        const { host, executor, effects } = await build()
         const done = [
             { id: "core.ping", subject: { kind: "record", id: "a" } },
             { id: "core.other", subject: { kind: "record", id: "b" } },

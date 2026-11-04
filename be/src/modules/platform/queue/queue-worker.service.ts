@@ -1,6 +1,7 @@
-import { Inject, Injectable, Optional } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common"
-import { CqrsReadinessService } from "@modules/platform/cqrs"
+import { InjectCqrsReadiness } from "@modules/platform/cqrs"
+import type { CqrsReadinessService } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -27,7 +28,7 @@ export class QueueWorkerService implements QueueWorkerRegistry, OnApplicationBoo
         @InjectQueueOptions() private readonly options: QueueOptions,
         @InjectQueueTransport() private readonly transport: QueueTransport,
         @InjectLogger() private readonly logger: Logger,
-        @Optional() @Inject(CqrsReadinessService) private readonly cqrs: CqrsReadinessService | null = null,
+        @Optional() @InjectCqrsReadiness() private readonly cqrs: CqrsReadinessService | null = null,
     ) {}
 
     /** Registers the handler under the queue and job it names; a second handler for the same queue and job is a wiring bug. */

@@ -7,8 +7,8 @@ import type { WorkContext } from "@modules/domain/decisions"
 import { parseMetaSecret } from "@modules/domain/meta-connections"
 import { InjectMetaClient } from "@modules/integrations/meta"
 import type { MetaClient } from "@modules/integrations/meta"
-import { InjectZalo, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
-import type { ZaloArticle, ZaloClient } from "@modules/integrations/zalo"
+import { InjectZaloArticles, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
+import type { ZaloArticle, ZaloArticleClient } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
@@ -64,7 +64,7 @@ export class ContentScheduleService {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         @InjectMetaClient() private readonly meta: MetaClient,
-        @InjectZalo() private readonly zalo: ZaloClient,
+        @InjectZaloArticles() private readonly zaloArticles: ZaloArticleClient,
         private readonly connections: ConnectionsService,
         private readonly zaloCredentials: ZaloCredentialsService,
         private readonly items: ContentItemsService,
@@ -136,7 +136,7 @@ export class ContentScheduleService {
             const cover = post.imageUrls[0]
             if (cover === undefined) throw refusal("zalo_cover_missing")
             const token = await this.zaloCredentials.accessToken(await this.connectionOf(workspaceId, "zalo_oa"))
-            return this.zalo.createArticle(token, articleOf(post, cover))
+            return this.zaloArticles.create(token, articleOf(post, cover))
         }
         throw refusal(`${channel}_unsupported`)
     }
@@ -167,7 +167,7 @@ export class ContentScheduleService {
                 { title: post.title, text: post.texts.zalo ?? "", imageUrls: [cover], publishAt: now },
                 cover,
             )
-            const id = await this.zalo.publishArticle(token, post.ref, article)
+            const id = await this.zaloArticles.publish(token, post.ref, article)
             await this.approvals.markPublished(
                 post.workspaceId,
                 post.id,

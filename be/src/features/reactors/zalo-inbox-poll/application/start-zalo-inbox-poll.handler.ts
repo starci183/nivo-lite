@@ -7,7 +7,7 @@ import { StartZaloInboxPollCommand } from "./start-zalo-inbox-poll.command"
 
 @CommandHandler(StartZaloInboxPollCommand)
 /** Hands the delivered connection_ready event to the Zalo inbox, which enqueues the one-connection poll when the provider can be read back. */
-export class StartZaloInboxPollHandler extends ICQRSHandler<StartZaloInboxPollCommand, void> {
+export class StartZaloInboxPollHandler extends ICQRSHandler<StartZaloInboxPollCommand, boolean> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly trigger: ZaloInboxPollTriggerService,
@@ -15,7 +15,7 @@ export class StartZaloInboxPollHandler extends ICQRSHandler<StartZaloInboxPollCo
         super(logger)
     }
 
-    protected override async process(command: StartZaloInboxPollCommand): Promise<void> {
-        await this.trigger.enqueueFirstPoll(command.params.request.delivery.event.payload)
+    protected override async process(command: StartZaloInboxPollCommand): Promise<boolean> {
+        return this.trigger.enqueueFirstPoll(command.params.request.delivery.event.payload)
     }
 }

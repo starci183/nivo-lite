@@ -202,7 +202,9 @@ describe("WorkIntakeService", () => {
             undefined,
         )
     })
+})
 
+describe("WorkIntakeService in a supplied transaction", () => {
     it("inserts the exact durable execution choices through the supplied transaction", async () => {
         const { service, insert, modules } = await build()
         const manager = mockEntityManager()

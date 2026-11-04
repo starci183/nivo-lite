@@ -8,8 +8,8 @@ import type { DueChannelPost, ScheduleView } from "@modules/domain/content-items
 import type { WorkContext } from "@modules/domain/decisions"
 import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient } from "@modules/integrations/meta"
-import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
-import type { ZaloClient } from "@modules/integrations/zalo"
+import { ZALO_ARTICLES, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
+import type { ZaloArticleClient } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -31,7 +31,7 @@ const AT = "2026-10-24T02:00:00.000Z"
 
 const build = async (item: ScheduleView | null = ITEM) => {
     const meta = mock<MetaClient>()
-    const zalo = mock<ZaloClient>()
+    const zalo = mock<ZaloArticleClient>()
     const connections = mock<ConnectionsService>()
     const credentials = mock<ZaloCredentialsService>()
     const items = mock<ContentItemsService>()
@@ -48,14 +48,14 @@ const build = async (item: ScheduleView | null = ITEM) => {
     credentials.accessToken.mockResolvedValue("zalo-token")
     images.urlsOf.mockResolvedValue(["https://s/1.png"])
     meta.schedulePagePost.mockResolvedValue({ postId: "PAGE_1", photoIds: ["ph"], scheduledPublishTime: 1 })
-    zalo.createArticle.mockResolvedValue("article-token")
+    zalo.create.mockResolvedValue("article-token")
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContentScheduleService,
             { provide: CLOCK, useValue: new FakeClock("2026-10-20T07:00:00.000Z") },
             { provide: LOGGER, useValue: logger },
             { provide: META_CLIENT, useValue: meta },
-            { provide: ZALO, useValue: zalo },
+            { provide: ZALO_ARTICLES, useValue: zalo },
             { provide: ConnectionsService, useValue: connections },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ContentItemsService, useValue: items },
@@ -82,7 +82,7 @@ describe("ContentScheduleService", () => {
             { pageId: "PAGE", pageToken: "ptok" },
             { message: "Caption\n\n#HAKUEN", imageUrls: ["https://s/1.png"], publishAt: new Date(AT) },
         )
-        expect(zalo.createArticle).toHaveBeenCalledWith(
+        expect(zalo.create).toHaveBeenCalledWith(
             "zalo-token",
             expect.objectContaining({
                 coverUrl: "https://s/1.png",
@@ -141,9 +141,9 @@ describe("ContentScheduleService (continued)", () => {
             expect.objectContaining({ failed: [{ channel: "facebook", reason: "meta_credential_missing" }] }),
         )
         const down = await build({ ...ITEM, channels: ["zalo"] })
-        down.zalo.createArticle.mockRejectedValueOnce(new Error("Zalo down"))
+        down.zalo.create.mockRejectedValueOnce(new Error("Zalo down"))
         await down.service.schedule(CTX, REQUEST)
-        down.zalo.createArticle.mockRejectedValueOnce("odd")
+        down.zalo.create.mockRejectedValueOnce("odd")
         await down.service.schedule(CTX, REQUEST)
         expect(down.cards.emit).toHaveBeenCalledWith(
             expect.anything(),
@@ -175,14 +175,14 @@ describe("ContentScheduleService / publishDue", () => {
     it("shows each due Zalo article and records the channel as published by AI Marketing", async () => {
         const { service, zalo, items, approvals, credentials } = await build()
         items.dueOnChannel.mockResolvedValue([DUE, { ...DUE, id: "c-2", texts: {} }])
-        zalo.publishArticle.mockResolvedValue("art-1")
+        zalo.publish.mockResolvedValue("art-1")
 
         await expect(service.publishDue()).resolves.toBe(2)
-        expect(zalo.publishArticle.mock.calls[1]?.[2]).toMatchObject({ description: "", paragraphs: [""] })
+        expect(zalo.publish.mock.calls[1]?.[2]).toMatchObject({ description: "", paragraphs: [""] })
 
         expect(items.dueOnChannel).toHaveBeenCalledWith("zalo", NOW, 50)
         expect(credentials.accessToken).toHaveBeenCalledWith("conn-1")
-        expect(zalo.publishArticle).toHaveBeenCalledWith(
+        expect(zalo.publish).toHaveBeenCalledWith(
             "zalo-token",
             "article-token",
             expect.objectContaining({
@@ -203,7 +203,7 @@ describe("ContentScheduleService / publishDue", () => {
     it("leaves the post due when Zalo cannot be reached", async () => {
         const { service, zalo, items, approvals, cards, logger } = await build()
         items.dueOnChannel.mockResolvedValue([DUE])
-        zalo.publishArticle.mockRejectedValue(new ZaloError({ code: ZaloErrorCode.Unavailable }))
+        zalo.publish.mockRejectedValue(new ZaloError({ code: ZaloErrorCode.Unavailable }))
 
         await expect(service.publishDue()).resolves.toBe(0)
 

@@ -6,7 +6,7 @@ import type { ConnectionActor, ConnectionRecord, Environment } from "@modules/do
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { bankNameOf } from "./bank-name.policy"
+import { bankDisplayNameOf } from "./bank-name.policy"
 import type { SepayKeyReveal } from "./channel-connections.contracts"
 import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
 import type {
@@ -287,7 +287,7 @@ export class SepayConnectionService {
             environment: connection.environment,
             lastError: connection.lastError,
             bankCode: connection.meta.bank_code ?? "",
-            bank: bankNameOf(connection.meta.bank_code ?? ""),
+            bank: bankDisplayNameOf(connection.meta.bank_code ?? ""),
             accountMasked: connection.meta.account_masked ?? "",
             hasFullAccount: (connection.meta.account_number ?? "") !== "",
             holder: connection.meta.account_holder ?? "",

@@ -38,6 +38,7 @@ import {
 } from "@modules/domain/openclaw-agent-sync"
 import { AiTasksModule } from "@modules/domain/ai-tasks"
 import { OPENCLAW_ERROR_KINDS, OPENCLAW_MESSAGES, OpenclawModule } from "@modules/integrations/openclaw"
+import { REMOTE_FILES_ERROR_KINDS, REMOTE_FILES_MESSAGES, RemoteFilesModule } from "@modules/integrations/remote-files"
 import { AGENT_TOOLS_PORTS, DECISIONS_PORTS } from "../api.options"
 import type { ApiOptions } from "../api.options"
 import type { ErrorKind } from "@modules/platform/errors"
@@ -45,6 +46,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** The agents area of the API, in registration order. */
 export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
     OpenclawModule.register({ isGlobal: true, ...options.openclaw }),
+    RemoteFilesModule.register({ isGlobal: true }),
     AiTasksModule.register({
         isGlobal: true,
         ...options.aiTasks,
@@ -96,6 +98,7 @@ export const agentsErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>
     AI_GENERATIONS_ERROR_KINDS,
     OPENCLAW_AGENT_SYNC_ERROR_KINDS,
     OPENCLAW_ERROR_KINDS,
+    REMOTE_FILES_ERROR_KINDS,
     MODULES_ERROR_KINDS,
     AGENT_PROFILE_ERROR_KINDS,
 ]
@@ -110,6 +113,7 @@ export const agentsMessages: ReadonlyArray<MessageBundle> = [
     AI_USAGE_EVENTS_MESSAGES,
     OPENCLAW_AGENT_SYNC_MESSAGES,
     OPENCLAW_MESSAGES,
+    REMOTE_FILES_MESSAGES,
     MODULES_MESSAGES,
     AGENT_PROFILE_MESSAGES,
 ]

@@ -1,10 +1,12 @@
+import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionRecord, ConnectionStatusFacts } from "@modules/domain/connections"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
-import { BankTransactionsRegistry } from "@modules/domain/provider-registry"
+import { BankTransactionsRegistryService } from "@modules/domain/provider-registry"
 import type { BankTransaction } from "@modules/domain/provider-registry"
 import { BANK_MANIFEST, BankNativeService } from "./bank-native.service"
+import type { NativeView } from "./native-view.policy"
 import { NativeViewService } from "./native-view.service"
 
 const CALLER = { agentId: "agent-1", conversationId: null }
@@ -46,19 +48,29 @@ const record = (environment: ConnectionRecord["environment"]): ConnectionRecord 
     createdAt: "2026-11-03T00:00:00.000Z",
 })
 
-const build = () => {
+const VIEW: NativeView = {
+    workspaceId: "ws-1",
+    module: "accounting",
+    audience: "internal",
+    installationId: null,
+    searchable: true,
+}
+
+const build = async () => {
     const views = mock<NativeViewService>()
-    views.internalOf.mockResolvedValue(undefined as never)
+    views.internalOf.mockResolvedValue(VIEW)
     const bindings = mock<ConnectionBindingsReadService>()
-    const providers = new BankTransactionsRegistry()
     const transactions = jest.fn().mockResolvedValue([TRANSACTION])
-    providers.register({ provider: "sepay", transactions })
-    return {
-        service: new BankNativeService(views, bindings, providers),
-        views,
-        bindings,
-        transactions,
-    }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            BankNativeService,
+            BankTransactionsRegistryService,
+            { provide: NativeViewService, useValue: views },
+            { provide: ConnectionBindingsReadService, useValue: bindings },
+        ],
+    }).compile()
+    moduleRef.get(BankTransactionsRegistryService).register({ provider: "sepay", transactions })
+    return { service: moduleRef.get(BankNativeService), views, bindings, transactions }
 }
 
 describe("BankNativeService", () => {
@@ -68,7 +80,7 @@ describe("BankNativeService", () => {
     })
 
     it("lists the transactions of the live feed through the provider that registered, with the window the caller named", async () => {
-        const { service, views, bindings, transactions } = build()
+        const { service, views, bindings, transactions } = await build()
         bindings.ofProvider.mockResolvedValue([feed("connected")])
         bindings.recordOf.mockResolvedValue(record("live"))
 
@@ -89,7 +101,7 @@ describe("BankNativeService", () => {
     })
 
     it("passes no window when the caller names none and defaults the limit", async () => {
-        const { service, bindings, transactions } = build()
+        const { service, bindings, transactions } = await build()
         bindings.ofProvider.mockResolvedValue([feed("connected")])
         bindings.recordOf.mockResolvedValue(record("live"))
 
@@ -102,7 +114,7 @@ describe("BankNativeService", () => {
         ["no feed", []],
         ["only a disconnected feed", [feed("disconnected")]],
     ])("is not connected with %s", async (_name, feeds) => {
-        const { service, bindings } = build()
+        const { service, bindings } = await build()
         bindings.ofProvider.mockResolvedValue(feeds)
 
         await expect(service.invoke("ws-1", "transactions", {}, CALLER)).rejects.toMatchObject({
@@ -112,7 +124,7 @@ describe("BankNativeService", () => {
     })
 
     it("is not connected when the feed runs in test, vanished or cannot be read yet", async () => {
-        const { service, bindings, transactions } = build()
+        const { service, bindings, transactions } = await build()
         bindings.ofProvider.mockResolvedValue([feed("connected")])
         const cases: Array<ConnectionRecord | null> = [record("test"), null]
 
@@ -130,7 +142,7 @@ describe("BankNativeService", () => {
     })
 
     it("refuses arguments outside the schema and tools it does not have", async () => {
-        const { service } = build()
+        const { service } = await build()
 
         await expect(service.invoke("ws-1", "transactions", { limit: 0 }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,

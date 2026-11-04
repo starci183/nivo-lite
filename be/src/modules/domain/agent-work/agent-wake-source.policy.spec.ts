@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
-import { WAKE_SOURCE_KEY, WakeSourcesPolicy, wakeSources } from "./agent-wake-source.policy"
+import { WakeSourcesPolicy, wakeSources } from "./agent-wake-source.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
-import type { AgentWakeTraits } from "./agent-work-source.contracts"
+import type { AgentWakeTraits } from "@modules/domain/agent-wake-rules"
 
 const SUBJECT = Symbol("agent-wake-source.policy")
 
@@ -124,9 +124,7 @@ describe("WakeSourcesPolicy lookups", () => {
         expect(codeOf(() => table.of("nobody"))).toBe(AgentWorkErrorCode.SourceUnknown)
     })
 
-    it("shares one process table whose key shape is the one the database checks", () => {
+    it("shares one process table", () => {
         expect(wakeSources.lookup("customer")?.priority).toBe(10)
-        expect(WAKE_SOURCE_KEY.test("generic_webhook")).toBe(true)
-        expect(WAKE_SOURCE_KEY.test("Generic")).toBe(false)
     })
 })

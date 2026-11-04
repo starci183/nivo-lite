@@ -1,7 +1,8 @@
-import { Inject, Injectable, Optional } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { BeforeApplicationShutdown, OnApplicationBootstrap } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { CqrsReadinessService } from "@modules/platform/cqrs"
+import { InjectCqrsReadiness } from "@modules/platform/cqrs"
+import type { CqrsReadinessService } from "@modules/platform/cqrs"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -63,7 +64,7 @@ export class EventConsumerService implements EventConsumerRegistry, OnApplicatio
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectEventBusOptions() private readonly options: EventBusOptions,
         @InjectLogger() private readonly logger: Logger,
-        @Optional() @Inject(CqrsReadinessService) private readonly cqrs: CqrsReadinessService | null = null,
+        @Optional() @InjectCqrsReadiness() private readonly cqrs?: CqrsReadinessService,
     ) {}
 
     /** Adds one static subscription; the registry is filled by the reactors' own modules before bootstrap. */
@@ -84,7 +85,7 @@ export class EventConsumerService implements EventConsumerRegistry, OnApplicatio
             this.logger.info(EventBusLogEvent.ConsumersDisabled, { subscriptions: this.subscriptions.length })
             return
         }
-        const ready = this.cqrs === null || this.cqrs.isReady() ? Promise.resolve() : this.cqrs.whenReady()
+        const ready = this.cqrs === undefined || this.cqrs.isReady() ? Promise.resolve() : this.cqrs.whenReady()
         this.loops = ready.then(() => Promise.all(this.subscriptions.map((subscription) => this.run(subscription))))
     }
 

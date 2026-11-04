@@ -71,22 +71,9 @@ export class ChannelDeliveryService {
         if (target.kind !== "ok") return NOT_DELIVERED
         const message = await this.messages.find(request.messageId, request.conversationId)
         if (message.kind !== "ok") return NOT_DELIVERED
-        if (target.value.channel !== "website") {
-            const claim = await this.messages.claimDelivery(request.messageId, request.conversationId)
-            if (claim === "acknowledged") return DELIVERED
-            if (claim === "ambiguous") return UNKNOWN
-            if (claim === "missing") return NOT_DELIVERED
-        }
-        let result: DeliveryReceipt
-        try {
-            result = await this.send(target.value, { ...request, text: message.value.body })
-        } catch (cause) {
-            if (cause instanceof ChannelsError && cause.code === ChannelsErrorCode.ZaloRefreshBusy) {
-                await this.messages.markDelivery(request.messageId, false, "delivery_rejected")
-                throw cause
-            }
-            result = this.failed(target.value, cause)
-        }
+        const settled = await this.settledClaim(target.value, request)
+        if (settled !== undefined) return settled
+        const result = await this.attempt(target.value, { ...request, text: message.value.body })
         if (result.outcome === "rejected" && !recipientLinked(target.value)) {
             return this.keptUndelivered(target.value, request.messageId)
         }
@@ -133,6 +120,30 @@ export class ChannelDeliveryService {
         const token = await this.secrets.botToken(request.workspaceId, request.connectionId)
         if (token.kind !== "ok") throw new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound })
         await this.telegram.sendMessage(token.value, request.recipientId, request.text)
+    }
+
+    /** The receipt of a message whose delivery is already decided, or undefined when this call may send it; a website conversation is read in the page and claims nothing. */
+    private async settledClaim(
+        target: ConversationTarget,
+        request: DeliveryRequest,
+    ): Promise<DeliveryReceipt | undefined> {
+        if (target.channel === "website") return undefined
+        const claim = await this.messages.claimDelivery(request.messageId, request.conversationId)
+        if (claim === "acknowledged") return DELIVERED
+        if (claim === "ambiguous") return UNKNOWN
+        return claim === "missing" ? NOT_DELIVERED : undefined
+    }
+
+    /** Sends the reply; a failure becomes a receipt, except a busy Zalo refresh, which marks the message rejected and is rethrown for the caller to retry. */
+    private async attempt(target: ConversationTarget, request: DeliveryRequest): Promise<DeliveryReceipt> {
+        try {
+            return await this.send(target, request)
+        } catch (cause) {
+            if (!(cause instanceof ChannelsError && cause.code === ChannelsErrorCode.ZaloRefreshBusy))
+                return this.failed(target, cause)
+            await this.messages.markDelivery(request.messageId, false, "delivery_rejected")
+            throw cause
+        }
     }
 
     private async send(target: ConversationTarget, request: DeliveryRequest): Promise<DeliveryReceipt> {

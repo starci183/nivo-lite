@@ -1,3 +1,6 @@
+/** The pause, in seconds, a failure asks the queue for, or undefined when it asks for none. */
+export type DeferSeconds = number | undefined
+
 /** The authoritative outbox state of a workspace job exposed through the backend status function. */
 export interface QueueJobStatus {
     /** The stable queue outbox id. */

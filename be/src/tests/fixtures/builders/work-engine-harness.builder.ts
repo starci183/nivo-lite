@@ -1,10 +1,16 @@
-import type { WorkEngineService, WorkPerformer } from "@modules/domain/decisions"
+import type { WorkEngineService, WorkPerformer, WorkSpec } from "@modules/domain/decisions"
 import { mock } from "@starci/jest-preset"
 import type { fakeTransaction, MockOf } from "@starci/jest-preset"
 import {
     itemOf,
     performedOf,
     arrangeEngineDoubles,
+    autoFinishArgsOf,
+    autoPlan,
+    autoResult,
+    blankPatch,
+    ctx,
+    quote,
     durablePreparation,
     ruleOf,
 } from "@tests/fixtures/builders/work-engine.builder"
@@ -47,6 +53,23 @@ type EngineDoublesOfResultShape = EngineHarnessDoubles & {
     ruleFor: EngineHarnessDoubles["rules"]["ruleFor"]
     error: EngineHarnessDoubles["logger"]["error"]
 }
+
+/**
+ * The calls a claimed queued item makes when it runs the whole automatic path (prepared, saved, gated, performed, logged and chained), each
+ * as the double that must have been called and the arguments it was called with; `done` matches the finished item.
+ */
+export const claimedRunCalls = (
+    built: Pick<EngineDoublesOfResultShape, "performer" | "items" | "access" | "recorder" | "chain">,
+    done: unknown,
+): ReadonlyArray<readonly [unknown, ReadonlyArray<unknown>]> => [
+    [built.performer?.prepare, [ctx, itemOf()]],
+    [built.items.savePrepared, ["item-1", blankPatch]],
+    [built.access.accessOf, [ctx, itemOf(), quote]],
+    [built.performer?.perform, [ctx, itemOf(), quote, autoPlan.by]],
+    [built.items.markDone, ["item-1", { ...autoResult, proposal: quote }]],
+    [built.recorder.finished, autoFinishArgsOf(itemOf(), done, quote)],
+    [built.chain.continueChain, [ctx, done]],
+]
 
 /** Arranges the constructor doubles without constructing the unit subject. */
 export const engineDoublesOf = (
@@ -116,4 +139,14 @@ export const decisionFailureOptions = (
     const performer =
         method === "perform" ? performerOf({ perform: calls.perform }) : performerOf({ onReject: calls.onReject })
     return { performer, rule: decision === "approved" ? ruleOf({ mode: "ask" }) : ruleOf() }
+}
+
+/** The options and the spec of a run of an action nobody listed and nobody gave a rule, which becomes a generic owner decision. */
+export const genericOwnerRunOf = (): readonly [WorkEngineFixtureOptions, Partial<WorkSpec>] => {
+    const items = mock<Pick<EngineDependencies[5], "claim">>()
+    items.claim.mockResolvedValue(itemOf({ action: "connect_sepay" }))
+    return [
+        { rule: null, action: null, items: { claim: items.claim } },
+        { action: "connect_sepay", preset: true, forceAsk: "branch_ask" },
+    ]
 }

@@ -1,14 +1,22 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
 import { CLOCK } from "@modules/platform/clock"
+import {
+    POLL_MINUTE_MS,
+    POLL_NOW,
+    POLL_NOW_MS,
+    pollConnectionRecordOf,
+    pollScheduleRowOf,
+    readPollPageOf,
+} from "@tests/fixtures/builders/connection-poll.builder"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import { CONNECTION_POLL_OPTIONS, POLL_RANDOM } from "./connection-poll.decorators"
-import type { ConnectionPoller, PollFailure, PollPage } from "./connection-poll.contracts"
+import type { PollRandom } from "./connection-poll.decorators"
+import type { ConnectionPoller, PollFailure } from "./connection-poll.contracts"
 import { ConnectionPollLogEvent } from "./connection-poll.log-events"
 import { POLL_CURSOR_KEY } from "./connection-poll.policy"
 import { ConnectionPollError, ConnectionPollErrorCode } from "./errors/connection-poll.error"
@@ -19,55 +27,16 @@ import { PollScheduleService } from "./poll-schedule.service"
 import { DEFAULT_POLL_SCHEDULE } from "./poll-schedule.policy"
 import type { PollScheduleRow, PollSourceDirectory, ScheduledPollSource } from "./poll-schedule.contracts"
 import { PollSchedulerService } from "./poll-scheduler.service"
-import { PollSourceRegistry } from "./poll-source-registry.service"
+import { PollSourceRegistryService } from "./poll-source-registry.service"
 
-const NOW = "2026-11-04T10:00:00.000Z"
-const NOW_MS = Date.parse(NOW)
-const MIN = 60_000
+const NOW = POLL_NOW
+const NOW_MS = POLL_NOW_MS
+const MIN = POLL_MINUTE_MS
 const limits = { ratePerSecond: 2, burst: 2, concurrency: 1 }
 
-const rowOf = (over: Partial<PollScheduleRow> = {}): PollScheduleRow => ({
-    connectionId: "c-1",
-    workspaceId: "ws-1",
-    provider: "sepay",
-    intervalMs: 30 * MIN,
-    failures: 0,
-    breakerState: "closed",
-    breakerOpenedAt: null,
-    needsReauth: false,
-    hotUntil: null,
-    lastSuccessAt: null,
-    lastWebhookAt: new Date(NOW_MS - MIN),
-    unavailableReason: null,
-    backfillTo: null,
-    backfillNewest: null,
-    ...over,
-})
-
 const dueOf = (over: Partial<PollScheduleRow> = {}, lagMs = 2000): DueConnection => ({
-    row: rowOf(over),
+    row: pollScheduleRowOf(over),
     dueAt: new Date(NOW_MS - lagMs),
-})
-
-const recordOf = (over: Partial<ConnectionRecord> = {}): ConnectionRecord =>
-    ({
-        id: "c-1",
-        workspaceId: "ws-1",
-        provider: "sepay",
-        name: "SePay",
-        meta: { [POLL_CURSOR_KEY]: "2026-11-04T09:00:00.000Z" },
-        status: "connected",
-        environment: "live",
-        ...over,
-    }) as ConnectionRecord
-
-const page = (fetched: number, over: Partial<Extract<PollPage<string>, { kind: "page" }>> = {}): PollPage<string> => ({
-    kind: "page",
-    items: ["a", "b"],
-    fetched,
-    oldestAt: new Date(NOW_MS - 10 * MIN),
-    newestAt: new Date(NOW_MS - MIN),
-    ...over,
 })
 
 const build = async (
@@ -78,7 +47,7 @@ const build = async (
     }),
 ) => {
     const poller = mock<ConnectionPoller<unknown>>()
-    poller.fetch.mockResolvedValue(page(2))
+    poller.fetch.mockResolvedValue(readPollPageOf(2))
     poller.store.mockResolvedValue(true)
     const source: ScheduledPollSource = {
         provider: "sepay",
@@ -86,11 +55,15 @@ const build = async (
         poller,
         classify: jest.fn().mockReturnValue(classified),
     }
-    const sources = new PollSourceRegistry()
-    sources.add(directoryOf(source))
+    const directory = directoryOf(source)
+    const random = mock<PollRandom>()
+    random.next.mockReturnValue(0.5)
+    const sources = mock<PollSourceRegistryService>()
+    sources.providers.mockImplementation(() => directory.providers())
+    sources.sourceOf.mockImplementation((provider) => directory.sourceOf(provider))
     const connections = mock<ConnectionsService>()
-    connections.find.mockResolvedValue(recordOf())
-    connections.get.mockResolvedValue(recordOf())
+    connections.find.mockResolvedValue(pollConnectionRecordOf())
+    connections.get.mockResolvedValue(pollConnectionRecordOf())
     connections.patch.mockResolvedValue(undefined)
     const schedule = mock<PollScheduleService>()
     schedule.claimDue.mockResolvedValue([])
@@ -110,11 +83,11 @@ const build = async (
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: TIMER, useValue: timer },
-            { provide: POLL_RANDOM, useValue: () => 0.5 },
+            { provide: POLL_RANDOM, useValue: random },
             { provide: CONNECTION_POLL_OPTIONS, useValue: { schedule: DEFAULT_POLL_SCHEDULE, redis: undefined } },
             { provide: ConnectionsService, useValue: connections },
             { provide: PollScheduleService, useValue: schedule },
-            { provide: PollSourceRegistry, useValue: sources },
+            { provide: PollSourceRegistryService, useValue: sources },
             { provide: PollLimiterService, useValue: limiter },
             { provide: PollOwnerNoticeService, useValue: notice },
         ],
@@ -182,7 +155,7 @@ describe("PollSchedulerService tick picking", () => {
 describe("PollSchedulerService connections that cannot be polled", () => {
     it.each([
         ["a connection that is gone", null],
-        ["a disconnected connection", recordOf({ status: "disconnected" })],
+        ["a disconnected connection", pollConnectionRecordOf({ status: "disconnected" })],
     ])("plans %s again at the healthy interval without polling it", async (_name, found) => {
         const { scheduler, schedule, connections, poller } = await build()
         schedule.claimDue.mockResolvedValue([dueOf()])
@@ -276,8 +249,8 @@ const olderPages = (poller: ReturnType<typeof mock<ConnectionPoller<unknown>>>, 
         served += 1
         return Promise.resolve(
             served > full
-                ? page(0, { items: [], oldestAt: undefined, newestAt: undefined })
-                : page(200, { oldestAt: new Date(NOW_MS - served * 10 * MIN) }),
+                ? readPollPageOf(0, { items: [], oldestAt: undefined, newestAt: undefined })
+                : readPollPageOf(200, { oldestAt: new Date(NOW_MS - served * 10 * MIN) }),
         )
     })
 }
@@ -285,7 +258,7 @@ const olderPages = (poller: ReturnType<typeof mock<ConnectionPoller<unknown>>>, 
 describe("PollSchedulerService backfill in chunks", () => {
     it("reads a first connect in a chunk of pages and carries where it stopped", async () => {
         const { scheduler, schedule, connections, poller } = await build()
-        connections.find.mockResolvedValue(recordOf({ meta: {} }))
+        connections.find.mockResolvedValue(pollConnectionRecordOf({ meta: {} }))
         schedule.claimDue.mockResolvedValue([dueOf()])
         olderPages(poller)
 
@@ -305,7 +278,7 @@ describe("PollSchedulerService backfill in chunks", () => {
 
     it("resumes at the page end the last chunk stopped at", async () => {
         const { scheduler, schedule, connections, poller } = await build()
-        connections.find.mockResolvedValue(recordOf({ meta: {} }))
+        connections.find.mockResolvedValue(pollConnectionRecordOf({ meta: {} }))
         schedule.claimDue.mockResolvedValue([
             dueOf({ backfillTo: new Date(NOW_MS - 30 * MIN), backfillNewest: new Date(NOW_MS - MIN) }),
         ])
@@ -316,9 +289,9 @@ describe("PollSchedulerService backfill in chunks", () => {
             expect.anything(),
             expect.objectContaining({ to: new Date(NOW_MS - 30 * MIN) }),
         )
-        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c-1", {
-            meta: expect.objectContaining({ [POLL_CURSOR_KEY]: new Date(NOW_MS - MIN).toISOString() }),
-        })
+        const [workspaceId, connectionId, patch] = connections.patch.mock.calls[0] ?? []
+        expect([workspaceId, connectionId]).toEqual(["ws-1", "c-1"])
+        expect(patch?.meta?.[POLL_CURSOR_KEY]).toBe(new Date(NOW_MS - MIN).toISOString())
         expect(schedule.settle).toHaveBeenCalledWith(
             "c-1",
             expect.objectContaining({ backfillTo: null, backfillNewest: null }),
@@ -327,9 +300,9 @@ describe("PollSchedulerService backfill in chunks", () => {
 
     it("resumes without a newest instant when the earlier chunks read none", async () => {
         const { scheduler, schedule, connections, poller } = await build()
-        connections.find.mockResolvedValue(recordOf({ meta: {} }))
+        connections.find.mockResolvedValue(pollConnectionRecordOf({ meta: {} }))
         schedule.claimDue.mockResolvedValue([dueOf({ backfillTo: new Date(NOW_MS - 30 * MIN) })])
-        poller.fetch.mockResolvedValue(page(0, { items: [], oldestAt: undefined, newestAt: undefined }))
+        poller.fetch.mockResolvedValue(readPollPageOf(0, { items: [], oldestAt: undefined, newestAt: undefined }))
 
         await scheduler.tick()
 
@@ -409,6 +382,16 @@ describe("PollSchedulerService failures", () => {
 
         expect(notice.needsReauth).not.toHaveBeenCalled()
     })
+})
+
+describe("PollSchedulerService failures of the provider's side", () => {
+    const failing = async (failure: PollFailure, row: Partial<PollScheduleRow> = {}) => {
+        const built = await build(failure)
+        built.schedule.claimDue.mockResolvedValue([dueOf(row)])
+        built.poller.fetch.mockRejectedValue(new Error("provider failed"))
+        const tallies = await built.scheduler.tick()
+        return { ...built, tallies }
+    }
 
     it("is no failure when the provider's plan lacks the capability: the breaker stays closed and the owner is told once, in the provider's words", async () => {
         const { schedule, tallies, notice, logger } = await failing({

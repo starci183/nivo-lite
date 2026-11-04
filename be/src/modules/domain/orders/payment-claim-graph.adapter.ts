@@ -2,6 +2,7 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectCall, EffectPayload, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import type { RightScope } from "@nivo-lite/agent-sdk/rights"
+import { whenPresent } from "@modules/events/api"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeDataPort, NodeEffectExecutor, NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
 import { OrderPaymentClaimsService } from "./order-payment-claims.service"
@@ -13,16 +14,22 @@ const READ_LIMIT = 200
 
 const textOf = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined)
 
-/** The equalities of a query the claims table can answer: id, lead, conversation and status. */
-const whereOf = (query: NodeQuery): PaymentClaimWhere => {
+const CLAIM_STATUSES: ReadonlyArray<PaymentClaimStatus> = ["open", "settled", "escalated", "withdrawn"]
+
+const claimStatusOf = (value: string | undefined): PaymentClaimStatus | undefined =>
+    CLAIM_STATUSES.find((status) => status === value)
+
+/** The equalities of a query the claims table can answer: id, lead, conversation and status; null when the status named is none a claim has. */
+const whereOf = (query: NodeQuery): PaymentClaimWhere | null => {
     const { id, leadId, conversationId, status } = query.where ?? {}
-    const known = {
-        id: textOf(id),
-        leadId: textOf(leadId),
-        conversationId: textOf(conversationId),
-        status: textOf(status),
+    const statusText = textOf(status)
+    if (statusText !== undefined && claimStatusOf(statusText) === undefined) return null
+    return {
+        ...whenPresent("id", textOf(id)),
+        ...whenPresent("leadId", textOf(leadId)),
+        ...whenPresent("conversationId", textOf(conversationId)),
+        ...whenPresent("status", claimStatusOf(statusText)),
     }
-    return Object.fromEntries(Object.entries(known).filter(([, value]) => value !== undefined)) as PaymentClaimWhere
 }
 
 /** A claim as the `payment-claim` data kind yields it. */
@@ -68,9 +75,10 @@ export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecuto
     async read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<ReadonlyArray<NodeRow>> {
         if (scope === "turn" && turn.conversationId === null) return []
         const where = whereOf(query)
+        if (where === null) return []
         const scoped =
             scope === "turn" && turn.conversationId !== null ? { ...where, conversationId: turn.conversationId } : where
-        const rows = await this.claims.query(turn.workspaceId, scoped, query.limit ?? READ_LIMIT)
+        const rows = await this.claims.matching(turn.workspaceId, scoped, query.limit ?? READ_LIMIT)
         return rows.map((claim) => cut(viewOf(claim), query.fields))
     }
 

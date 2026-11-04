@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { bankNameOf } from "./bank-name.policy"
+import { bankDisplayNameOf } from "./bank-name.policy"
 import {
     ConnectionsError,
     ConnectionsErrorCode,
@@ -402,7 +402,7 @@ export class ChannelConnectionsService {
             webhookUrl: this.connections.webhookUrl(connection.provider, connection.id),
             apiKey,
             bankCode: connection.meta.bank_code ?? "",
-            bank: bankNameOf(connection.meta.bank_code ?? ""),
+            bank: bankDisplayNameOf(connection.meta.bank_code ?? ""),
             account: connection.meta.account_masked ?? "",
             holder: connection.meta.account_holder ?? "",
             credentialsSaved,

@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { CqrsReadinessService } from "@modules/platform/cqrs"
+import { CQRS_READINESS } from "@modules/platform/cqrs"
+import type { CqrsReadinessService } from "@modules/platform/cqrs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -106,21 +107,50 @@ class RecordingConsumer implements EventConsumer<ReceiptRecordedEvent> {
 
 const logger = mock<Logger>()
 
-const build = async (
-    primary: ReturnType<typeof mockEntityManager>,
-    options: EventBusOptions = {},
-    cqrs: CqrsReadinessService | null = null,
-) => {
+const build = async (primary: ReturnType<typeof mockEntityManager>, options: EventBusOptions = {}) => {
     const module = await Test.createTestingModule({
         providers: [
             EventConsumerService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: primary },
             { provide: EVENT_BUS_OPTIONS, useValue: builder<EventBusOptions>({})(options) },
             { provide: LOGGER, useValue: logger },
-            ...(cqrs === null ? [] : [{ provide: CqrsReadinessService, useValue: cqrs }]),
         ],
     }).compile()
     return module.get(EventConsumerService)
+}
+
+/** What the readiness of the CQRS handlers answers in a spec. */
+interface Readiness {
+    /** The answer of `isReady`. */
+    readonly isReady: boolean
+    /** What `whenReady` settles with; settled at once when absent. */
+    readonly opens?: Promise<void>
+}
+
+/** The consumer of an app that runs CQRS: its readiness answers `isReady`, and `whenReady` settles with `opens`. */
+const buildGated = async (
+    primary: ReturnType<typeof mockEntityManager>,
+    options: EventBusOptions,
+    readiness: Readiness,
+) => {
+    const waits: Array<string> = []
+    const cqrs = mock<CqrsReadinessService>({
+        isReady: () => readiness.isReady,
+        whenReady: () => {
+            waits.push("whenReady")
+            return readiness.opens ?? Promise.resolve()
+        },
+    })
+    const module = await Test.createTestingModule({
+        providers: [
+            EventConsumerService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: primary },
+            { provide: EVENT_BUS_OPTIONS, useValue: builder<EventBusOptions>({})(options) },
+            { provide: LOGGER, useValue: logger },
+            { provide: CQRS_READINESS, useValue: cqrs },
+        ],
+    }).compile()
+    return { subject: module.get(EventConsumerService), waits }
 }
 
 describe("EventConsumerService delivery", () => {
@@ -359,8 +389,11 @@ describe("EventConsumerService loops", () => {
         const ready = new Promise<void>((resolve) => {
             open = resolve
         })
-        const cqrs = mock<CqrsReadinessService>({ isReady: jest.fn().mockReturnValue(false), whenReady: () => ready })
-        const subject = await build(primary, { consumersEnabled: true, idleMs: 60_000 }, cqrs)
+        const { subject } = await buildGated(
+            primary,
+            { consumersEnabled: true, idleMs: 60_000 },
+            { isReady: false, opens: ready },
+        )
         subject.subscribe(QUEUE, new RecordingConsumer())
 
         subject.onApplicationBootstrap()
@@ -375,17 +408,22 @@ describe("EventConsumerService loops", () => {
 
     it("reads at once when the handlers are already registered", async () => {
         const primary = mockEntityManager({ query: [READ, []] })
-        const cqrs = mock<CqrsReadinessService>({ isReady: jest.fn().mockReturnValue(true) })
-        const subject = await build(primary, { consumersEnabled: true, idleMs: 60_000 }, cqrs)
+        const { subject, waits } = await buildGated(
+            primary,
+            { consumersEnabled: true, idleMs: 60_000 },
+            { isReady: true },
+        )
         subject.subscribe(QUEUE, new RecordingConsumer())
 
         subject.onApplicationBootstrap()
         await new Promise((resolve) => setImmediate(resolve))
         await subject.beforeApplicationShutdown()
-        expect(cqrs.whenReady).not.toHaveBeenCalled()
+        expect(waits).toEqual([])
         expect(primary.query).toHaveBeenCalledWith(READ, [QUEUE, 30, 10])
     })
+})
 
+describe("EventConsumerService loop failures", () => {
     it("logs a failed read and keeps looping until shutdown", async () => {
         const failure = new Error("database down")
         const primary = mockEntityManager({ query: [READ, []] })

@@ -84,9 +84,7 @@ describe("SepayClient listTransactions", () => {
         const [only] = await client.listTransactions(TOKEN, QUERY)
 
         expect(only).toMatchObject({ id: "7", amountIn: 0, amountOut: 120, code: "DH1", bank: null })
-        expect(http.request).toHaveBeenCalledWith(
-            expect.objectContaining({ url: expect.not.stringContaining("transaction_date_max") }),
-        )
+        expect(http.request.mock.calls[0]?.[0].url).not.toContain("transaction_date_max")
     })
 
     it("reads an unreadable amount as no money", async () => {
@@ -100,7 +98,9 @@ describe("SepayClient listTransactions", () => {
 
         expect(only).toMatchObject({ amountIn: 0, amountOut: 0, content: "" })
     })
+})
 
+describe("SepayClient listTransactions rows it refuses", () => {
     it.each([
         ["a row that is not an object", "text"],
         ["a row without an id", row({ id: null })],
@@ -128,7 +128,9 @@ describe("SepayClient listTransactions", () => {
 
         await expect(client.listTransactions(TOKEN, QUERY)).rejects.toMatchObject({ code })
     })
+})
 
+describe("SepayClient listTransactions answers that are no rows", () => {
     it.each([
         ["3", 3],
         ["2.2", 3],

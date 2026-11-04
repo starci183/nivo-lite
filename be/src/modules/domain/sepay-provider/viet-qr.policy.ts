@@ -1,4 +1,5 @@
 import type { InstructionAccount } from "@modules/domain/provider-registry"
+import type { OptionalAmountVnd } from "./sepay-payload.contracts"
 
 const SEPAY_QR_IMAGE = "https://qr.sepay.vn/img"
 
@@ -6,7 +7,7 @@ const SEPAY_QR_IMAGE = "https://qr.sepay.vn/img"
  * SePay's VietQR image for one transfer into `account`: https://qr.sepay.vn/img?acc=...&bank=...&amount=...&des=...&template=compact.
  * A null amount leaves `amount` out so the payer types it. Platform billing draws its own QR through this same builder.
  */
-export const vietQrUrl = (account: InstructionAccount, amountVnd: number | null, content: string): string => {
+export const vietQrUrl = (account: InstructionAccount, amountVnd: OptionalAmountVnd, content: string): string => {
     const query = new URLSearchParams({ acc: account.accountNumber, bank: account.bankCode })
     if (amountVnd !== null) query.set("amount", String(amountVnd))
     query.set("des", content)

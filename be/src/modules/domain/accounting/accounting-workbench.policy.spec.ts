@@ -7,13 +7,12 @@ import {
     PAYABLE_PROFILE as PROFILE,
     paidPayableRow,
     payableRow,
-} from "../../../tests/fixtures/builders/supplier-payables.builder"
+} from "@tests/fixtures/builders/supplier-payables.builder"
 import type { AccountingBook, BookOrder } from "./accounting-book.contracts"
 import type { TaxProfile } from "./accounting-desk.contracts"
 import { buildAccountingWorkbench } from "./accounting-workbench.policy"
 
 const SUBJECT = Symbol("accounting-workbench.policy")
-
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [{ provide: SUBJECT, useValue: { buildAccountingWorkbench } }],

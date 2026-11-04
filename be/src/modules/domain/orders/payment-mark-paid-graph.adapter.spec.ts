@@ -1,14 +1,8 @@
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
-import { TransactionsService } from "@modules/domain/transactions"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { orderOf } from "@tests/fixtures/builders/reconcile-payment-performer.builder"
-import { OrdersErrorCode } from "./errors/orders.error"
-import { OrderPaymentClaimsService } from "./order-payment-claims.service"
-import { OrdersService } from "./orders.service"
-import type { PaymentClaimRow } from "./orders.contracts"
+import { OrderPaymentSettlementService } from "./order-payment-settlement.service"
 import { PaymentMarkPaidGraphAdapter } from "./payment-mark-paid-graph.adapter"
 
 const turn: NodeTurn = {
@@ -23,41 +17,20 @@ const turn: NodeTurn = {
 const payload = {
     orderId: "order-dinh",
     transactionId: "tx-95958515",
-    evidence: ["Tên, số tiền và lời báo của khách khớp"],
+    evidence: ["Name, amount and the customer message match"],
 }
-
-const claim = (id: string): PaymentClaimRow => ({
-    id,
-    workspaceId: "ws-1",
-    leadId: "lead-dinh",
-    conversationId: "conversation-dinh",
-    amountVnd: 5000,
-    names: [],
-    body: "5k",
-    claimedAt: new Date("2026-11-04T00:54:00.000Z"),
-    status: "open",
-})
 
 const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
-    const orders = mock<OrdersService>()
-    orders.find.mockResolvedValue(orderOf({ id: "order-dinh", lead_id: "lead-dinh" }))
-    orders.settle.mockResolvedValue(true)
-    const transactions = mock<TransactionsService>()
-    const claims = mock<OrderPaymentClaimsService>()
-    claims.query.mockResolvedValue([claim("claim-dinh")])
-    const tx = fakeTransaction(mockEntityManager())
+    const settlement = mock<OrderPaymentSettlementService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             PaymentMarkPaidGraphAdapter,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: GraphNodeRegistryService, useValue: registry },
-            { provide: OrdersService, useValue: orders },
-            { provide: TransactionsService, useValue: transactions },
-            { provide: OrderPaymentClaimsService, useValue: claims },
+            { provide: OrderPaymentSettlementService, useValue: settlement },
         ],
     }).compile()
-    return { adapter: moduleRef.get(PaymentMarkPaidGraphAdapter), registry, orders, transactions, claims, tx }
+    return { adapter: moduleRef.get(PaymentMarkPaidGraphAdapter), registry, settlement }
 }
 
 describe("PaymentMarkPaidGraphAdapter", () => {
@@ -68,35 +41,18 @@ describe("PaymentMarkPaidGraphAdapter", () => {
         expect(adapter.effect).toBe("payment.mark-paid")
     })
 
-    it("marks the order paid, links the transaction and settles his claim in one transaction", async () => {
-        const { adapter, orders, transactions, claims, tx } = await build()
+    it("marks the order paid with the transaction and answers the order", async () => {
+        const { adapter, settlement } = await build()
 
         await expect(adapter.execute(turn, payload)).resolves.toEqual({ kind: "order", id: "order-dinh" })
 
-        expect(orders.settle).toHaveBeenCalledWith("ws-1", "order-dinh", expect.anything())
-        expect(transactions.matchOrder).toHaveBeenCalledWith("ws-1", "tx-95958515", "order-dinh", expect.anything())
-        expect(claims.query).toHaveBeenCalledWith("ws-1", { leadId: "lead-dinh", status: "open" }, 100)
-        expect(claims.settle).toHaveBeenCalledWith("ws-1", ["claim-dinh"], "tx-95958515", expect.anything())
-        expect(tx.commits).toBe(1)
+        expect(settlement.markPaid).toHaveBeenCalledWith("ws-1", "order-dinh", "tx-95958515")
     })
 
-    it("settles no claim for an order with no customer", async () => {
-        const { adapter, orders, claims } = await build()
-        orders.find.mockResolvedValue(null)
+    it("lets the refusal of an order that no longer waits for money through", async () => {
+        const { adapter, settlement } = await build()
+        settlement.markPaid.mockRejectedValue(new Error("not awaiting payment"))
 
-        await adapter.execute(turn, payload)
-
-        expect(claims.query).not.toHaveBeenCalled()
-        expect(claims.settle).toHaveBeenCalledWith("ws-1", [], "tx-95958515", expect.anything())
-    })
-
-    it("refuses an order that no longer waits for money and changes nothing", async () => {
-        const { adapter, orders, transactions, tx } = await build()
-        orders.settle.mockResolvedValue(false)
-
-        await expect(adapter.execute(turn, payload)).rejects.toMatchObject({ code: OrdersErrorCode.NotAwaitingPayment })
-
-        expect(transactions.matchOrder).not.toHaveBeenCalled()
-        expect(tx.rollbacks).toBe(1)
+        await expect(adapter.execute(turn, payload)).rejects.toThrow("not awaiting payment")
     })
 })

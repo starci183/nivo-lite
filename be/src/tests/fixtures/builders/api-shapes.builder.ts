@@ -27,6 +27,8 @@ export type BuildWiringProofResultOptionsConnectionPollShape = {
     schedule: BuildWiringProofResultOptionsConnectionPollScheduleShape
     redis: undefined
 }
+/** The build wiring proof result options redis record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsRedisShape = { connectTimeoutMs: number }
 /** The build wiring proof result options agent work record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsAgentWorkShape = { debounceMs: number }
 /** The build wiring proof result options zalo provider record the builders hand out and the specs expect. */
@@ -304,6 +306,7 @@ export type BuildWiringProofResultOptionsShape = {
     billing: BuildWiringProofResultOptionsBillingShape
     chatFilesImportRoot: string
     connectionPoll: BuildWiringProofResultOptionsConnectionPollShape
+    redis: BuildWiringProofResultOptionsRedisShape
     openclaw: BuildWiringProofResultOptionsOpenclawShape
     agentTurns: BuildWiringProofResultOptionsAgentTurnsShape
     aiTasks: BuildWiringProofResultOptionsAiTasksShape

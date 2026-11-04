@@ -130,8 +130,19 @@ export interface AgentBurstSetting {
     readonly maxWaitMs: number | null
 }
 
+/** The setting of a flow's burst, or null when the agent has no flow or the flow asks nothing. */
+export type OptionalBurstSetting = AgentBurstSetting | null
+
+/** The burst a wake takes in the end: the flow's ask where it made one, else the app's defaults. */
+export interface AgentBurstWindow {
+    /** The quiet time after the last tag before the run starts, in milliseconds. */
+    readonly windowMs: number
+    /** The longest the burst may keep the run waiting, in milliseconds; never shorter than the window. */
+    readonly maxWaitMs: number
+}
+
 /** The one question the wake door asks the graphs: what the live flow of an agent asks of a kind of tag (`channel`, `agent`, `system-event`...). */
 export interface AgentBurstPolicy {
     /** The setting of the live flow for the source, or null when the agent has no flow or the flow asks nothing. */
-    burstOf(workspaceId: string, agentId: string, source: string): Promise<AgentBurstSetting | null>
+    burstOf(workspaceId: string, agentId: string, source: string): Promise<OptionalBurstSetting>
 }

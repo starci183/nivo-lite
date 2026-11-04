@@ -44,7 +44,9 @@ const CONTEXT_TEXT_KEY_SET: Readonly<Record<Exclude<ContextTextKey, "locale">, t
     inbound: true,
 }
 
-const CONTEXT_TEXT_KEYS = Object.keys(CONTEXT_TEXT_KEY_SET) as ReadonlyArray<Exclude<ContextTextKey, "locale">>
+const isContextTextKey = (key: string): key is Exclude<ContextTextKey, "locale"> => key in CONTEXT_TEXT_KEY_SET
+
+const CONTEXT_TEXT_KEYS = Object.keys(CONTEXT_TEXT_KEY_SET).filter(isContextTextKey)
 
 const sourceOf = (value: unknown): AgentWakeSource | null =>
     typeof value === "string" && wakeSources.lookup(value) !== undefined ? value : null
@@ -66,7 +68,7 @@ const idOrNull = (value: unknown): string | null | undefined => {
 }
 
 /** Reads a stored wake context: only the keys the contract names, each of its own kind; anything else is dropped. */
-export const contextOf = (value: unknown): AgentWakeContext => {
+export const storedWakeContextOf = (value: unknown): AgentWakeContext => {
     if (!isRecord(value)) return {}
     const texts = CONTEXT_TEXT_KEYS.flatMap((key) => {
         const text = value[key]
@@ -105,7 +107,7 @@ const wakeOf = (agentId: string, scopeKey: string, answer: Record<string, unknow
         wakeId,
         source,
         eventKey,
-        context: contextOf(context),
+        context: storedWakeContextOf(context),
         actorMemberId: actor,
         attempts,
         maxAttempts,

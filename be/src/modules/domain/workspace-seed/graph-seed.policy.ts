@@ -2,6 +2,7 @@ import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import type { Access, Purpose } from "@modules/domain/agent-connections"
 import type { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { parseJsonText } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 
 const invalid = (): never => {
@@ -18,12 +19,8 @@ const documentOf = (entry: unknown): unknown => (isRecord(entry) && "document" i
  * document that is not a graph spec, or a module with two graphs, is refused; nothing of a document is named in the refusal.
  */
 export const readGraphSpecs = (text: string): ReadonlyArray<GraphSpec> => {
-    let envelope: unknown
-    try {
-        envelope = JSON.parse(text)
-    } catch {
-        return invalid()
-    }
+    const read = parseJsonText(text)
+    const envelope = read.ok ? read.value : invalid()
     if (!isRecord(envelope) || !Array.isArray(envelope.documents)) return invalid()
     const specs = envelope.documents.map((entry: unknown) => {
         const parsed = graphSpecSchema.safeParse(documentOf(entry))

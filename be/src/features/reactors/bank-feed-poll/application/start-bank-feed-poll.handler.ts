@@ -7,7 +7,7 @@ import { StartBankFeedPollCommand } from "./start-bank-feed-poll.command"
 
 @CommandHandler(StartBankFeedPollCommand)
 /** Hands the delivered connection_ready event to billing, which enqueues the one-connection poll when the provider can be read back. */
-export class StartBankFeedPollHandler extends ICQRSHandler<StartBankFeedPollCommand, void> {
+export class StartBankFeedPollHandler extends ICQRSHandler<StartBankFeedPollCommand, boolean> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly trigger: BankFeedPollTriggerService,
@@ -15,7 +15,7 @@ export class StartBankFeedPollHandler extends ICQRSHandler<StartBankFeedPollComm
         super(logger)
     }
 
-    protected override async process(command: StartBankFeedPollCommand): Promise<void> {
-        await this.trigger.enqueueFirstPoll(command.params.request.delivery.event.payload)
+    protected override async process(command: StartBankFeedPollCommand): Promise<boolean> {
+        return this.trigger.enqueueFirstPoll(command.params.request.delivery.event.payload)
     }
 }

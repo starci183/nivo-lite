@@ -1,12 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import type { ConnectionReadyPayload } from "@modules/events/api"
-import { PollScheduleService } from "@modules/domain/connection-poll"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { FirstPollEnqueueService } from "@modules/domain/connection-poll"
 import { RECONCILE_ZALO_INBOX_JOB, ZALO_INBOX_POLL_QUEUE } from "@modules/queues/zalo-inbox-poll"
-import type { ZaloInboxPollPayload } from "@modules/queues/zalo-inbox-poll"
 import { ZaloInboxPollService } from "./zalo-poll.service"
 
 @Injectable()
@@ -16,23 +11,14 @@ import { ZaloInboxPollService } from "./zalo-poll.service"
  */
 export class ZaloInboxPollTriggerService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectQueueOutbox() private readonly outbox: QueueOutbox,
         private readonly poll: ZaloInboxPollService,
-        private readonly schedule: PollScheduleService,
+        private readonly firstPolls: FirstPollEnqueueService,
     ) {}
 
     /** Enqueues the one-connection reconcile job; the delivery's dedupe key is the job's, so a redelivery is one job. Answers whether it enqueued. */
     async enqueueFirstPoll(ready: ConnectionReadyPayload): Promise<boolean> {
         if (!this.poll.polls(ready.provider)) return false
-        const payload: ZaloInboxPollPayload = { connectionId: ready.connectionId, workspaceId: ready.workspaceId }
-        await this.entityManager.transaction((tx) =>
-            this.outbox.write(tx, ZALO_INBOX_POLL_QUEUE, payload, {
-                job: RECONCILE_ZALO_INBOX_JOB,
-                dedupeKey: `${ZALO_INBOX_POLL_QUEUE}:ready:${ready.dedupeKey}`,
-            }),
-        )
-        await this.schedule.markReady(ready.connectionId)
+        await this.firstPolls.enqueue({ queue: ZALO_INBOX_POLL_QUEUE, job: RECONCILE_ZALO_INBOX_JOB, ready })
         return true
     }
 }

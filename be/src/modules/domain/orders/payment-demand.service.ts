@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
-import { PollScheduleService, PollSourceRegistry } from "@modules/domain/connection-poll"
+import { PollScheduleService, PollSourceRegistryService } from "@modules/domain/connection-poll"
 import type { PollHotReason } from "@modules/domain/connection-poll"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -25,7 +25,7 @@ const CONNECTIONS_LIMIT = 20
 export class PaymentDemandService {
     constructor(
         @InjectLogger() private readonly logger: Logger,
-        private readonly sources: PollSourceRegistry,
+        private readonly sources: PollSourceRegistryService,
         private readonly schedule: PollScheduleService,
         private readonly bindings: ConnectionBindingsReadService,
     ) {}

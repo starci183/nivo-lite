@@ -3,6 +3,10 @@ import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder
 import { Test } from "@nestjs/testing"
 import { IsNull, Not } from "typeorm"
 import {
+    TURN_AGENT,
+    chat,
+    chatInput,
+    conversationOf,
     heldWebsiteChat,
     insertedChatRow,
     insertedRefRow,
@@ -34,36 +38,6 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     }).compile()
     return { service: moduleRef.get(AgentConversationsService), em, agents }
 }
-
-/** The agent that speaks in the turn conversation. */
-const TURN_AGENT = {
-    id: "agent-1",
-    name: "Chatbot",
-    handle: "chatbot",
-    role: "Customer chat",
-    module: "chatbot",
-    instructions: "Be kind",
-    knowledge: "Tea",
-    approvalRule: "ask",
-    greeting: "Hi",
-}
-
-const chat = {
-    id: "chat-1",
-    kind: "customer",
-    channel: "website",
-    visitorName: "Minh",
-    leadId: "lead-1",
-    handledBy: "Lan",
-    createdAt: "2026-10-13T02:00:00.000Z",
-}
-
-const chatInput = (kind: "customer" | "test", visitorName: string | null) => ({
-    workspaceId: "ws-1",
-    agentId: "agent-1",
-    kind,
-    visitorName,
-})
 
 const REFUSED = { kind: "refused", code: AgentConversationsErrorCode.NotFound }
 
@@ -498,8 +472,8 @@ describe("AgentConversationsService installationIdOf", () => {
 
 describe("AgentConversationsService nodeRows", () => {
     it("answers the customer conversations of the workspace, narrowed by the filter, newest first", async () => {
-        const rows = [{ id: "c1", leadId: "l1", channel: "zalo", handledBy: null, workspaceId: "ws-1" }]
-        const em = mockEntityManager({ find: [AgentConversationEntity, rows as never] })
+        const rows = [conversationOf({ id: "c1", leadId: "l1", channel: "zalo", handledBy: null })]
+        const em = mockEntityManager({ find: [AgentConversationEntity, rows] })
         const { service } = await build(em)
 
         await expect(service.nodeRows("ws-1", { id: "c1", leadId: "l1", channel: "zalo" }, 3)).resolves.toEqual([

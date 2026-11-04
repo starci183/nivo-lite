@@ -22,7 +22,7 @@ import { valueHashOf } from "./policies/conflict.policy"
 import type { OptionalGraphState } from "./agent-graphs.service"
 import type { GraphDocument } from "./agent-graphs.contracts"
 import { wakeSources } from "@modules/domain/agent-work"
-import type { AgentWakeTraits } from "@modules/domain/agent-work"
+import type { AgentWakeTraits } from "@modules/domain/agent-wake-rules"
 import { GENERIC_WEBHOOK } from "@modules/domain/agent-inbound"
 
 const APPLIER = {

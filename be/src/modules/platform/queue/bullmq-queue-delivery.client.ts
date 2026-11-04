@@ -8,7 +8,7 @@ import { InjectErrorReporter } from "@modules/platform/errors"
 import type { ErrorReporter } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { QueueError, QueueErrorCode } from "./errors/queue.error"
+import { QueueErrorCode } from "./errors/queue.error"
 import type { QueueDelivery, QueueHandler } from "./queue.contracts"
 import { InjectQueueOptions } from "./queue.decorators"
 import { QueueLogEvent } from "./queue.log-events"
@@ -16,6 +16,7 @@ import type { QueueOptions } from "./queue.options"
 import {
     TOUCHES_PER_TIMEOUT,
     deferMsOf,
+    deferSecondsOf,
     deliveryOf,
     isExhausted,
     isUnrecoverable,
@@ -188,10 +189,11 @@ export class BullmqQueueDeliveryClient {
             await callDbFunction(this.entityManager, "public.job_handback", [delivery.id, runToken])
             return this.defer(job, token, deferMsOf(delivery.id), redis)
         }
-        if (cause instanceof QueueError && cause.code === QueueErrorCode.DeferredUntil) {
-            this.logger.info(QueueLogEvent.Deferred, { ...fields, seconds: Number(cause.params.seconds) })
+        const deferSeconds = deferSecondsOf(cause)
+        if (deferSeconds !== undefined) {
+            this.logger.info(QueueLogEvent.Deferred, { ...fields, seconds: deferSeconds })
             await callDbFunction(this.entityManager, "public.job_handback", [delivery.id, runToken])
-            return this.defer(job, token, Number(cause.params.seconds) * 1000, redis)
+            return this.defer(job, token, deferSeconds * 1000, redis)
         }
         if (isUnrecoverable(cause) || isExhausted(delivery.attempt)) {
             this.logger.error(QueueLogEvent.DeadLettered, cause, fields)

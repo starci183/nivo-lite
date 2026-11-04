@@ -5,27 +5,18 @@ import type { RightScope } from "@nivo-lite/agent-sdk/rights"
 import { GraphNodeRegistryService, rowsAnswering } from "@modules/domain/graph-nodes"
 import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
 import { LeadReadService } from "@modules/domain/leads"
-import { z } from "zod"
 import { OrdersError, OrdersErrorCode } from "./errors/orders.error"
 import type { SalesOrderRow } from "./orders.contracts"
 import { OrderConfirmationService } from "./order-confirmation.service"
 import { OrdersService } from "./orders.service"
 import { itemLinesOf, itemsTextOf } from "./order-items.policy"
+import { confirmPayloadSchema, recordPayloadSchema } from "./orders-graph.schema"
 
 /** The most orders one workspace read looks through. */
 const WORKSPACE_LIMIT = 500
 
 /** Who the node says confirmed the order. */
 const CONFIRMED_BY = "NIVO"
-
-const recordPayload = z.object({
-    leadId: z.string().min(1),
-    items: z.array(z.object({ name: z.string(), qty: z.number() })).min(1),
-    amountVnd: z.number().nullable(),
-    note: z.string().optional(),
-})
-
-const confirmPayload = z.object({ orderId: z.string().min(1) })
 
 /** The order as the `order` data kind names its fields. */
 const rowOf = (order: SalesOrderRow): NodeRow => ({
@@ -77,7 +68,7 @@ export class OrdersGraphService implements OnModuleInit {
     }
 
     private async record(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
-        const given = recordPayload.parse(payload)
+        const given = recordPayloadSchema.parse(payload)
         await this.leads.require(turn.workspaceId, given.leadId)
         const order = await this.orders.draft({
             workspaceId: turn.workspaceId,
@@ -92,7 +83,7 @@ export class OrdersGraphService implements OnModuleInit {
     }
 
     private async confirm(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
-        const { orderId } = confirmPayload.parse(payload)
+        const { orderId } = confirmPayloadSchema.parse(payload)
         const order = await this.orders.find(turn.workspaceId, orderId)
         if (order === null) throw new OrdersError({ code: OrdersErrorCode.NotFound, params: { id: orderId } })
         if (order.status === "draft") {

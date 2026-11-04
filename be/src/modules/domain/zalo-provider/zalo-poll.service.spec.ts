@@ -8,29 +8,22 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
-import { ZaloInboxPoller } from "./zalo-inbox-poller.service"
+import { ZaloInboxPollerService } from "./zalo-inbox-poller.service"
 import { ZaloInboxPollService } from "./zalo-poll.service"
 
 const NOW = "2026-11-04T10:00:00.000Z"
 
 const recordOf = (id: string, status: ConnectionRecord["status"] = "connected"): ConnectionRecord =>
-    ({
-        id,
-        workspaceId: "ws-1",
-        provider: "zalo_oa",
-        meta: {},
-        status,
-        environment: "live",
-    }) as ConnectionRecord
+    mock<ConnectionRecord>({ id, workspaceId: "ws-1", provider: "zalo_oa", meta: {}, status, environment: "live" })
 
 const candidate = (id: string, provider: string): HealthCandidate =>
-    ({ id, workspaceId: "ws-1", provider }) as HealthCandidate
+    mock<HealthCandidate>({ id, workspaceId: "ws-1", provider })
 
 const build = async () => {
     const connections = mock<ConnectionsService>()
     connections.get.mockResolvedValue(recordOf("zalo-1"))
     connections.patch.mockResolvedValue(undefined)
-    const poller = Object.assign(mock<ZaloInboxPoller>(), { provider: "zalo_oa" as const })
+    const poller = mock<ZaloInboxPollerService>({ provider: "zalo_oa" })
     poller.fetch.mockResolvedValue({ kind: "skipped", reason: "no_token" })
     const logger = mock<Logger>()
     const timer = mock<Timer>()
@@ -41,7 +34,7 @@ const build = async () => {
             { provide: LOGGER, useValue: logger },
             { provide: TIMER, useValue: timer },
             { provide: ConnectionsService, useValue: connections },
-            { provide: ZaloInboxPoller, useValue: poller },
+            { provide: ZaloInboxPollerService, useValue: poller },
         ],
     }).compile()
     return { service: moduleRef.get(ZaloInboxPollService), connections, poller, logger }

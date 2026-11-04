@@ -30,6 +30,9 @@ const described: ErrorDescription = {
     params: { id: "calendar-1" },
 }
 
+/** What graphql-js says of a selection on a type with no subfields. */
+const MALFORMED_SELECTION = ["Field", '"setMcpToolGrant"', "must not select subfields of", '"Boolean!"'].join(" ")
+
 describe("formatGraphqlError", () => {
     it("keeps the original error's code, kind and params, and the formatted location", async () => {
         const subject = await build()
@@ -54,9 +57,7 @@ describe("formatGraphqlError", () => {
         const errors = mock<ErrorsService>()
         const invalid: ErrorDescription = { code: "ERRORS_OPERATION_INVALID", kind: "invalid", status: 400, params: {} }
         errors.describeInvalidOperation.mockReturnValue(invalid)
-        const validation = new GraphQLError(
-            'Field "setMcpToolGrant" must not have a selection since type "Boolean!" has no subfields.',
-        )
+        const validation = new GraphQLError(MALFORMED_SELECTION)
         const wrapped = new GraphQLError(validation.message, { originalError: validation })
 
         expect(subject.formatGraphqlError(errors, formatted, wrapped).extensions).toEqual({

@@ -1,4 +1,4 @@
-import type { AgentWakeTraits } from "@modules/domain/agent-work"
+import type { AgentWakeTraits } from "@modules/domain/agent-wake-rules"
 import type { InboundTrust } from "@modules/domain/intent-contracts"
 import type { InboundActor, InboundAdapter } from "./agent-inbound.contracts"
 

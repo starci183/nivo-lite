@@ -10,8 +10,8 @@ import {
 } from "./chat-files.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-files.module-definition"
 import { ChatFilesService } from "./chat-files.service"
-import { NodeInboundFileReader } from "./inbound-file.reader"
-import { NodeHostResolver } from "./inbound-file.resolver"
+import { InboundFileReaderClient } from "./inbound-file.client"
+import { HostResolverClient } from "./host-resolver.client"
 import { InboundFilesService } from "./inbound-files.service"
 
 @Module({})
@@ -27,8 +27,8 @@ export class ChatFilesModule extends ConfigurableModuleClass {
                 { provide: CHAT_FILES_STORAGE, useExisting: options.storage },
                 { provide: CHAT_FILES_ASSETS, useExisting: options.assets },
                 { provide: CHAT_FILES_IMPORT_ROOT, useValue: options.importRoot },
-                { provide: CHAT_FILES_READER, useClass: NodeInboundFileReader },
-                { provide: CHAT_FILES_RESOLVER, useClass: NodeHostResolver },
+                { provide: CHAT_FILES_READER, useClass: InboundFileReaderClient },
+                { provide: CHAT_FILES_RESOLVER, useClass: HostResolverClient },
                 ChatFilesService,
                 ChatFileReadsService,
                 InboundFilesService,

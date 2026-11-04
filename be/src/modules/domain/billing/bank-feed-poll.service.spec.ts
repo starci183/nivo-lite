@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { ConnectionPollLogEvent } from "@modules/domain/connection-poll"
-import { BankFeedPollerRegistry } from "@modules/domain/provider-registry"
+import { ConnectionPollLogEvent, emptyPollSummary } from "@modules/domain/connection-poll"
+import { BankFeedPollerRegistryService } from "@modules/domain/provider-registry"
 import type { BankFeedPoller } from "@modules/domain/provider-registry"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord, HealthCandidate } from "@modules/domain/connections"
@@ -51,8 +51,6 @@ const build = async () => {
     connections.patch.mockResolvedValue(undefined)
     const sepay = Object.assign(mock<BankFeedPoller>(), { provider: "sepay", inboxProvider: "sepay-feed" as const })
     sepay.fetch.mockResolvedValue({ kind: "skipped", reason: "no_token" })
-    const pollers = new BankFeedPollerRegistry()
-    pollers.register(sepay)
     const feed = mock<BankFeedService>()
     const logger = mock<Logger>()
     const timer = mock<Timer>()
@@ -63,10 +61,11 @@ const build = async () => {
             { provide: LOGGER, useValue: logger },
             { provide: TIMER, useValue: timer },
             { provide: ConnectionsService, useValue: connections },
-            { provide: BankFeedPollerRegistry, useValue: pollers },
+            BankFeedPollerRegistryService,
             { provide: BankFeedService, useValue: feed },
         ],
     }).compile()
+    moduleRef.get(BankFeedPollerRegistryService).register(sepay)
     return { service: moduleRef.get(BankFeedPollService), connections, sepay, logger, feed }
 }
 
@@ -132,6 +131,15 @@ describe("BankFeedPollService reconcileFromJob", () => {
 
         expect(connections.find).toHaveBeenCalledWith("ws-1", "sepay-1")
         expect(sepay.fetch).toHaveBeenCalledTimes(1)
+    })
+
+    it("polls nothing for a payload that is not a poll payload", async () => {
+        const { service, connections } = await build()
+
+        await expect(service.reconcileFromJob("not a payload")).resolves.toEqual(emptyPollSummary())
+
+        expect(connections.healthBatch).not.toHaveBeenCalled()
+        expect(connections.find).not.toHaveBeenCalled()
     })
 
     it.each([

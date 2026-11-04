@@ -1,7 +1,10 @@
 import { Injectable } from "@nestjs/common"
+import type { OnModuleInit } from "@nestjs/common"
 import { SepayConnectionService } from "@modules/domain/channel-connections"
+import { FeedWebhookRegistryService } from "@modules/domain/provider-registry"
 import type { FeedWebhookPort, FeedWebhookReading } from "@modules/domain/provider-registry"
 import { isSepayPing, presentedApiKey, readSepayPayload } from "./sepay-webhook.policy"
+import type { IntakeRun, OptionalApiKey, OptionalRawBody } from "./sepay-payload.contracts"
 import type { SepayBody } from "./sepay-webhook.policy"
 
 @Injectable()
@@ -10,19 +13,27 @@ import type { SepayBody } from "./sepay-webhook.policy"
  * acknowledge and ignore (the SePay test ping, a transfer that moves no money) or an invalid delivery. Its event id is the one the polled
  * transactions use, so a delivery and a poll of the same transaction are one inbox row.
  */
-export class SepayFeedWebhookService implements FeedWebhookPort {
+export class SepayFeedWebhookService implements FeedWebhookPort, OnModuleInit {
     readonly provider = "sepay"
     readonly inboxProvider = "sepay-feed"
 
-    constructor(private readonly page: SepayConnectionService) {}
+    constructor(
+        private readonly page: SepayConnectionService,
+        private readonly webhooks: FeedWebhookRegistryService,
+    ) {}
+
+    /** Hands the webhook to its registry, once, in the app that receives it. */
+    onModuleInit(): void {
+        this.webhooks.register(this)
+    }
 
     /** The key presented as `Authorization: Apikey <key>`, or undefined. */
-    keyOf(authorization: string | undefined): string | undefined {
+    keyOf(authorization: OptionalApiKey): OptionalApiKey {
         return presentedApiKey(authorization)
     }
 
     /** Remembers the delivery on the SePay connection page, around the intake. */
-    traceIntake(connection: string, rawBody: Buffer | undefined, intake: () => Promise<void>): Promise<void> {
+    traceIntake(connection: string, rawBody: OptionalRawBody, intake: IntakeRun): Promise<void> {
         return this.page.traceIntake(connection, rawBody, intake)
     }
 

@@ -1,5 +1,6 @@
 import { EnvSource, Secret } from "@modules/platform/config"
 import { parseConnectionPollConfig } from "@modules/domain/connection-poll"
+import { parseRedisConfig } from "@modules/integrations/redis"
 import { parseZaloProviderConfig } from "@modules/domain/zalo-provider"
 import type { DynamicModule } from "@nestjs/common"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
@@ -104,10 +105,11 @@ const storageProof = {
 /** The poll, import and burst settings of the api, at their defaults with no provider behind them. */
 const pollOptions = (): Pick<
     ApiOptions,
-    "chatFilesImportRoot" | "connectionPoll" | "sepay" | "zaloProvider" | "agentWork"
+    "chatFilesImportRoot" | "connectionPoll" | "redis" | "sepay" | "zaloProvider" | "agentWork"
 > => ({
     chatFilesImportRoot: "world-proof/imports",
     connectionPoll: parseConnectionPollConfig(new EnvSource({})),
+    redis: parseRedisConfig(new EnvSource({})),
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
     zaloProvider: parseZaloProviderConfig(new EnvSource({})),
     agentWork: { debounceMs: 0 },

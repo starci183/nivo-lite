@@ -7,7 +7,21 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { POLL_NEEDS_PERMISSION_REASON, POLL_NEEDS_REAUTH_REASON } from "./messages/connection-poll.messages"
 import { PollOwnerNoticeService } from "./poll-owner-notice.service"
 
-const record = { id: "c-1", workspaceId: "ws-1", provider: "sepay", name: "SePay VCB" } as ConnectionRecord
+const record: ConnectionRecord = {
+    id: "c-1",
+    workspaceId: "ws-1",
+    provider: "sepay",
+    name: "SePay VCB",
+    meta: {},
+    status: "connected",
+    lastError: null,
+    environment: "live",
+    isDefault: false,
+    lastEventAt: null,
+    firstEvent: null,
+    createdBy: null,
+    createdAt: "2026-11-03T00:00:00.000Z",
+}
 
 describe("PollOwnerNoticeService needsReauth", () => {
     it("marks the connection failing with the reason and keeps one owner work item per outage", async () => {

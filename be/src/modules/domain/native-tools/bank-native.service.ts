@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { BankTransactionsRegistry } from "@modules/domain/provider-registry"
+import { BankTransactionsRegistryService } from "@modules/domain/provider-registry"
 import type { BankTransactionsPort } from "@modules/domain/provider-registry"
 import { BANK_TRANSACTIONS_INPUT_SCHEMA, BANK_TRANSACTIONS_SCHEMA } from "./payment-native.schema"
 import type { BankTransactionsArgs } from "./payment-native.schema"
@@ -44,7 +44,7 @@ export class BankNativeService implements NativeAdapter {
     constructor(
         private readonly views: NativeViewService,
         private readonly bindings: ConnectionBindingsReadService,
-        private readonly providers: BankTransactionsRegistry,
+        private readonly providers: BankTransactionsRegistryService,
     ) {}
 
     /** Runs `transactions`; any other tool is unknown. */

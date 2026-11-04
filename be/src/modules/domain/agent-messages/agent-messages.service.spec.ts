@@ -13,10 +13,23 @@ import { Test } from "@nestjs/testing"
 import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { ChatActivityService } from "@modules/domain/chat-activity"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import {
+    CHAT_THREAD_FIND,
+    COUNTED_CONVERSATIONS,
+    CUSTOMER_LINES_WHERE,
+    LIST_NEWEST_FIRST,
+    LIST_OLDEST_SINCE,
+    MESSAGES_PER_DAY,
+    NODE_ROWS,
+    PER_CONVERSATION_COUNTS,
+    RANGE_CLAUSES,
+    TRANSCRIPT_FIND,
+    lineFindOptions,
+    nodeMessages,
+    unansweredWhere,
+} from "@tests/fixtures/builders/agent-messages-service.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { AgentMessagesService } from "./agent-messages.service"
-
-import { In, MoreThan, MoreThanOrEqual, Not } from "typeorm"
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const activity = mock<ChatActivityService>()
@@ -31,6 +44,8 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     }).compile()
     return { service: moduleRef.get(AgentMessagesService), em, activity, conversations }
 }
+
+const onRow = (row: AgentMessageEntity | null) => build(mockEntityManager({ findOne: [AgentMessageEntity, row] }))
 
 import { AgentMessagesErrorCode } from "./errors/agent-messages.error"
 import { AgentMessageEntity } from "./persistence/entities"
@@ -47,47 +62,28 @@ import {
 } from "@tests/fixtures/builders/agent-messages.builder"
 
 describe("AgentMessagesService listForConversations", () => {
-    it("does not query when no conversations were selected", async () => {
-        const { service, em } = await build()
-
-        await expect(service.listForConversations("ws-1", [], { limit: 20 })).resolves.toEqual([])
-
-        expect(em.find).not.toHaveBeenCalled()
-    })
-
-    it("scopes the conversation list and supplies optional filters and ordering", async () => {
-        const rows = AGENT_LIST_ROWS
+    it("reads nothing for no conversation, else scopes the list and supplies optional filters and ordering", async () => {
         const em = mockEntityManager({ find: [AgentMessageEntity, [messageOf()]] })
         const { service } = await build(em)
 
-        await expect(service.listForConversations("ws-1", ["conv-1", "conv-2"], { limit: 20 })).resolves.toEqual(rows)
+        await expect(service.listForConversations("ws-1", [], { limit: 20 })).resolves.toEqual([])
+        expect(em.find).not.toHaveBeenCalled()
+        await expect(service.listForConversations("ws-1", ["conv-1", "conv-2"], { limit: 20 })).resolves.toEqual(
+            AGENT_LIST_ROWS,
+        )
         await expect(
             service.listForConversations("ws-1", ["conv-1"], {
                 since: "2026-10-12T10:00:00.000Z",
                 oldestFirst: true,
                 limit: 5,
             }),
-        ).resolves.toEqual(rows)
+        ).resolves.toEqual(AGENT_LIST_ROWS)
 
-        expect(em.find).toHaveBeenNthCalledWith(1, AgentMessageEntity, {
-            select: { conversationId: true, role: true, body: true, createdAt: true },
-            where: { workspaceId: "ws-1", conversationId: In(["conv-1", "conv-2"]) },
-            order: { createdAt: "DESC", id: "ASC" },
-            take: 20,
-        })
-        expect(em.find).toHaveBeenNthCalledWith(2, AgentMessageEntity, {
-            select: { conversationId: true, role: true, body: true, createdAt: true },
-            where: {
-                workspaceId: "ws-1",
-                conversationId: In(["conv-1"]),
-                createdAt: MoreThanOrEqual(new Date("2026-10-12T10:00:00.000Z")),
-            },
-            order: { createdAt: "ASC", id: "ASC" },
-            take: 5,
-        })
+        expect(em.find).toHaveBeenNthCalledWith(1, AgentMessageEntity, LIST_NEWEST_FIRST)
+        expect(em.find).toHaveBeenNthCalledWith(2, AgentMessageEntity, LIST_OLDEST_SINCE)
     })
 })
-describe("AgentMessagesService listChat", () => {
+describe("AgentMessagesService listChat, transcript and the lines of a conversation", () => {
     it("maps customer and system roles directly and other speakers to the agent", async () => {
         const em = mockEntityManager({
             find: [
@@ -98,34 +94,27 @@ describe("AgentMessagesService listChat", () => {
         const { service } = await build(em)
 
         await expect(service.listChat("ws-1", "conv-1")).resolves.toEqual(LIST_CHAT_ROWS)
-        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
-            select: { id: true, role: true, body: true, createdAt: true },
-            where: { workspaceId: "ws-1", conversationId: "conv-1" },
-            order: { createdAt: "ASC", id: "ASC" },
-            take: 300,
-        })
+        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, CHAT_THREAD_FIND)
     })
 })
 describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
-    it("leaves automated human-labelled replies without an account identity", async () => {
-        const { service, activity } = await build()
-        const { em: inside, fakes } = withStatements(mockEntityManager(), stored("human-1"))
-
-        await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", inside)).resolves.toBe("human-1")
-
-        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, inside]])
-        expect(fakes[0]?.callsOf("values")).toEqual([[{ ...humanValues, authorUserId: null }]])
-        expect(fakes[0]?.callsOf("orIgnore")).toEqual([[]])
-    })
-
-    it("writes a person's reply through the caller's transaction", async () => {
+    it("leaves automated replies without an account identity and writes a person's reply through the caller's transaction", async () => {
         const { service, em, activity } = await build()
-        const { em: inside, fakes } = withStatements(mockEntityManager(), stored("human-1"))
+        const automated = withStatements(mockEntityManager(), stored("human-1"))
+        const person = withStatements(mockEntityManager(), stored("human-1"))
 
-        await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", inside, "user-1")).resolves.toBe("human-1")
+        await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", automated.em)).resolves.toBe("human-1")
+        await expect(service.storeHuman("ws-1", "conv-1", "Welcome", "Mai", person.em, "user-1")).resolves.toBe(
+            "human-1",
+        )
 
-        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", "user-1", inside]])
-        expect(fakes[0]?.callsOf("values")).toEqual([[{ ...humanValues, authorUserId: "user-1" }]])
+        expect(activity.message.mock.calls).toEqual([
+            ["ws-1", "conversation:conv-1", null, automated.em],
+            ["ws-1", "conversation:conv-1", "user-1", person.em],
+        ])
+        expect(automated.fakes[0]?.callsOf("values")).toEqual([[{ ...humanValues, authorUserId: null }]])
+        expect(automated.fakes[0]?.callsOf("orIgnore")).toEqual([[]])
+        expect(person.fakes[0]?.callsOf("values")).toEqual([[{ ...humanValues, authorUserId: "user-1" }]])
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
@@ -155,13 +144,11 @@ describe("AgentMessagesService storeHuman and storeHumanMessage", () => {
         })
         expect(fakes[0]?.callsOf("values")).toEqual([[{ ...humanValues, authorUserId: null }]])
     })
-})
-describe("AgentMessagesService storeAgentMessage", () => {
+
     it("stores an unsolicited agent message and requires the insert's id", async () => {
         const stub = withStatements(mockEntityManager(), stored("agent-1"))
         const ok = await build(stub.em)
-        const none = withStatements(mockEntityManager(), stored())
-        const missing = await build(none.em)
+        const missing = await build(withStatements(mockEntityManager(), stored()).em)
 
         await expect(ok.service.storeAgentMessage("ws-1", "conv-1", "Welcome")).resolves.toBe("agent-1")
         await expect(missing.service.storeAgentMessage("ws-1", "conv-1", "Welcome")).rejects.toMatchObject({
@@ -175,6 +162,8 @@ describe("AgentMessagesService storeAgentMessage", () => {
     })
 })
 describe("AgentMessagesService storeCustomer and storeGreeting", () => {
+    const row = { workspaceId: "ws-1", conversationId: "conv-1" }
+
     it("store through the given transaction and answer the message id", async () => {
         const { service, activity } = await build()
         const { em: inside, fakes } = withStatements(mockEntityManager(), stored("m-1"), stored("m-1"), stored("g-1"))
@@ -182,15 +171,13 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
         await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside)).resolves.toBe("m-1")
         await expect(service.storeCustomer("ws-1", "conv-1", "Test", inside, "user-1")).resolves.toBe("m-1")
         await expect(service.storeGreeting("ws-1", "conv-1", "Welcome", inside)).resolves.toBe("g-1")
-        expect(fakes[0]?.callsOf("values")).toEqual([
-            [{ workspaceId: "ws-1", conversationId: "conv-1", role: "user", body: "Hello", authorUserId: null }],
+
+        expect(fakes.map((fake) => fake.callsOf("values"))).toEqual([
+            [[{ ...row, role: "user", body: "Hello", authorUserId: null }]],
+            [[{ ...row, role: "user", body: "Test", authorUserId: "user-1" }]],
+            [[{ ...row, role: "agent", body: "Welcome" }]],
         ])
-        expect(fakes[1]?.callsOf("values")).toEqual([
-            [{ workspaceId: "ws-1", conversationId: "conv-1", role: "user", body: "Test", authorUserId: "user-1" }],
-        ])
-        expect(fakes[2]?.callsOf("values")).toEqual([
-            [{ workspaceId: "ws-1", conversationId: "conv-1", role: "agent", body: "Welcome" }],
-        ])
+        expect(inside.query).not.toHaveBeenCalled()
         expect(activity.message.mock.calls).toEqual([
             ["ws-1", "conversation:conv-1", null, inside],
             ["ws-1", "conversation:conv-1", "user-1", inside],
@@ -207,10 +194,8 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
             service.storeCustomer("ws-1", "conv-1", "Hello", inside, "user-1", { at, tieMicros: 417 }),
         ).resolves.toBe("m-1")
 
-        const values = evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])
-        expect(values).toEqual({
-            workspaceId: "ws-1",
-            conversationId: "conv-1",
+        expect(evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])).toEqual({
+            ...row,
             role: "user",
             body: "Hello",
             authorUserId: "user-1",
@@ -222,32 +207,17 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
         expect(activity.message).toHaveBeenCalledWith("ws-1", "conversation:conv-1", "user-1", inside)
     })
 
-    it("fails loudly when the stamped insert answers no row", async () => {
-        const { service } = await build()
-        const { em: inside } = withStatements(mockEntityManager(), stored())
+    it.each([{ stamp: { at: new Date("2026-11-04T00:50:00.000Z"), tieMicros: 1 } }, { stamp: undefined }])(
+        "fails loudly when the insert answers no row (stamp: $stamp)",
+        async ({ stamp }) => {
+            const { service } = await build()
+            const { em: inside } = withStatements(mockEntityManager(), stored())
 
-        await expect(
-            service.storeCustomer("ws-1", "conv-1", "Hello", inside, null, { at: new Date(), tieMicros: 1 }),
-        ).rejects.toMatchObject({ code: AgentMessagesErrorCode.NotStored })
-    })
-
-    it("leaves the time of arrival alone when the channel gave none", async () => {
-        const { service } = await build()
-        const { em: inside } = withStatements(mockEntityManager(), stored("m-1"))
-
-        await service.storeCustomer("ws-1", "conv-1", "Hello", inside)
-
-        expect(inside.query).not.toHaveBeenCalled()
-    })
-
-    it("fail loudly when the insert answers no row", async () => {
-        const { service } = await build()
-        const { em: inside } = withStatements(mockEntityManager(), stored())
-
-        await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside)).rejects.toMatchObject({
-            code: AgentMessagesErrorCode.NotStored,
-        })
-    })
+            await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside, null, stamp)).rejects.toMatchObject({
+                code: AgentMessagesErrorCode.NotStored,
+            })
+        },
+    )
 })
 describe("AgentMessagesService storeReply", () => {
     it("stores a new reply and answers it as not yet sent", async () => {
@@ -266,45 +236,25 @@ describe("AgentMessagesService storeReply", () => {
         expect(stub.fakes[0]?.callsOf("orIgnore")).toEqual([[]])
     })
 
-    it("answers the reply a previous attempt stored, with whether it already reached the customer", async () => {
-        const pendingStub = withStatements(
-            mockEntityManager({ findOne: [AgentMessageEntity, failedEarlierReply()] }),
-            stored(),
-        )
-        const sentStub = withStatements(
-            mockEntityManager({ findOne: [AgentMessageEntity, sentEarlierReply()] }),
-            stored(),
-        )
-        const pending = await build(pendingStub.em)
-        const sent = await build(sentStub.em)
+    it.each([
+        { name: "not yet", earlier: failedEarlierReply(), sent: false },
+        { name: "already", earlier: sentEarlierReply(), sent: true },
+    ])("answers the reply a previous attempt stored, $name reached the customer", async ({ earlier, sent }) => {
+        const stub = withStatements(mockEntityManager({ findOne: [AgentMessageEntity, earlier] }), stored())
+        const { service, activity, em } = await build(stub.em)
 
-        await expect(pending.service.storeReply("ws-1", "conv-1", "New", "msg-1")).resolves.toEqual({
+        await expect(service.storeReply("ws-1", "conv-1", "New", "msg-1")).resolves.toEqual({
             id: "r-0",
             body: "Old",
-            sent: false,
+            sent,
         })
-        expect(pending.activity.message).not.toHaveBeenCalled()
-        await expect(sent.service.storeReply("ws-1", "conv-1", "New", "msg-1")).resolves.toEqual({
-            id: "r-0",
-            body: "Old",
-            sent: true,
-        })
-        expect(pendingStub.em.findOne).toHaveBeenCalledWith(AgentMessageEntity, {
+        expect(activity.message).not.toHaveBeenCalled()
+        expect(em.findOne).toHaveBeenCalledWith(AgentMessageEntity, {
             select: { id: true, body: true, deliveryStatus: true },
             where: { conversationId: "conv-1", inReplyTo: "msg-1", role: "agent" },
         })
     })
 
-    it("fails loudly when the reply can be neither inserted nor found", async () => {
-        const { em } = withStatements(mockEntityManager({ findOne: [AgentMessageEntity, null] }), stored())
-        const { service } = await build(em)
-
-        await expect(service.storeReply("ws-1", "conv-1", "x", "msg-1")).rejects.toMatchObject({
-            code: AgentMessagesErrorCode.NotStored,
-        })
-    })
-})
-describe("AgentMessagesService storeReply without returned rows", () => {
     it("reads an insert that answered no row list as not stored and answers the earlier reply", async () => {
         const { em } = withStatements(mockEntityManager({ findOne: [AgentMessageEntity, sentEarlierReply()] }), {
             execute: { raw: undefined },
@@ -317,8 +267,17 @@ describe("AgentMessagesService storeReply without returned rows", () => {
             sent: true,
         })
     })
+
+    it("fails loudly when the reply can be neither inserted nor found", async () => {
+        const { em } = withStatements(mockEntityManager({ findOne: [AgentMessageEntity, null] }), stored())
+        const { service } = await build(em)
+
+        await expect(service.storeReply("ws-1", "conv-1", "x", "msg-1")).rejects.toMatchObject({
+            code: AgentMessagesErrorCode.NotStored,
+        })
+    })
 })
-describe("AgentMessagesService storedReply", () => {
+describe("AgentMessagesService reads of one message", () => {
     it("finds the reply to a message, or the one stored under a work item", async () => {
         const em = mockEntityManager()
         em.findOne.mockResolvedValueOnce({ body: "Reply" }).mockResolvedValueOnce(null)
@@ -329,9 +288,7 @@ describe("AgentMessagesService storedReply", () => {
         expect(em.findOne.mock.calls[0]?.[1]).toMatchObject({ where: { conversationId: "conv-1", inReplyTo: "msg-1" } })
         expect(em.findOne.mock.calls[1]?.[1]).toMatchObject({ where: { id: "item-1", conversationId: "conv-1" } })
     })
-})
 
-describe("AgentMessagesService replyExists", () => {
     it("tells whether a reply to the customer message is already stored", async () => {
         const stored1 = await build(mockEntityManager({ exists: [AgentMessageEntity, true] }))
         const none = await build(mockEntityManager({ exists: [AgentMessageEntity, false] }))
@@ -342,42 +299,11 @@ describe("AgentMessagesService replyExists", () => {
             where: { conversationId: "conv-1", inReplyTo: "msg-1", role: "agent" },
         })
     })
-})
-describe("AgentMessagesService storeLine", () => {
-    it("writes a system line", async () => {
-        const em = mockEntityManager({ insert: [AgentMessageEntity, {}] })
-        const { service, activity } = await build(em)
 
-        await service.storeLine("ws-1", "conv-1", "Lead handed over")
-
-        expect(em.insert).toHaveBeenCalledWith(AgentMessageEntity, {
-            workspaceId: "ws-1",
-            conversationId: "conv-1",
-            role: "system",
-            body: "Lead handed over",
-        })
-        expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, em]])
-    })
-
-    it("uses the supplied transaction to write a system line", async () => {
-        const { service, em } = await build()
-        const inside = mockEntityManager({ insert: [AgentMessageEntity, {}] })
-
-        await service.storeLine("ws-1", "conv-1", "Lead handed over", inside)
-
-        expect(inside.insert).toHaveBeenCalledWith(AgentMessageEntity, {
-            workspaceId: "ws-1",
-            conversationId: "conv-1",
-            role: "system",
-            body: "Lead handed over",
-        })
-        expect(em.insert).not.toHaveBeenCalled()
-    })
-})
-describe("AgentMessagesService find", () => {
-    it("answers a stored message, or a refusal when it is not there", async () => {
-        const found = await build(mockEntityManager({ findOne: [AgentMessageEntity, messageOf()] }))
-        const missing = await build(mockEntityManager({ findOne: [AgentMessageEntity, null] }))
+    it("answers a stored message, or a refusal when it is not there, reading a row without a role as an empty role", async () => {
+        const found = await onRow(messageOf())
+        const missing = await onRow(null)
+        const roleless = await onRow(Object.assign(deliveredMessage(), { role: undefined }))
 
         await expect(found.service.find("msg-1", "conv-1")).resolves.toEqual({
             kind: "ok",
@@ -387,80 +313,79 @@ describe("AgentMessagesService find", () => {
             kind: "refused",
             code: AgentMessagesErrorCode.NotFound,
         })
-    })
-
-    it("reads a row without a role as an empty role", async () => {
-        const row = deliveredMessage()
-        const { service } = await build(
-            mockEntityManager({ findOne: [AgentMessageEntity, Object.assign(row, { role: undefined })] }),
-        )
-
-        await expect(service.find("msg-1", "conv-1")).resolves.toMatchObject({
+        await expect(roleless.service.find("msg-1", "conv-1")).resolves.toMatchObject({
             value: { role: "", deliveryStatus: "sent" },
         })
     })
+
+    it("answers when the customer last wrote, or a refusal when they never did", async () => {
+        const wrote = await onRow(messageOf())
+        const silent = await onRow(null)
+
+        await expect(wrote.service.lastCustomerAt("conv-1")).resolves.toEqual({
+            kind: "ok",
+            value: new Date("2026-10-12T10:00:00.000Z"),
+        })
+        await expect(silent.service.lastCustomerAt("conv-1")).resolves.toMatchObject({ kind: "refused" })
+    })
 })
-describe("AgentMessagesService transcript", () => {
+describe("AgentMessagesService storeLine", () => {
+    const line = { workspaceId: "ws-1", conversationId: "conv-1", role: "system", body: "Lead handed over" }
+
+    it("writes a system line through the primary manager, or through the supplied transaction", async () => {
+        const primary = mockEntityManager({ insert: [AgentMessageEntity, {}] })
+        const inside = mockEntityManager({ insert: [AgentMessageEntity, {}] })
+        const { service, activity, em } = await build(primary)
+
+        await service.storeLine("ws-1", "conv-1", "Lead handed over")
+        await service.storeLine("ws-1", "conv-1", "Lead handed over", inside)
+
+        expect(em.insert).toHaveBeenCalledTimes(1)
+        expect(em.insert).toHaveBeenCalledWith(AgentMessageEntity, line)
+        expect(inside.insert).toHaveBeenCalledWith(AgentMessageEntity, line)
+        expect(activity.message.mock.calls).toEqual([
+            ["ws-1", "conversation:conv-1", null, em],
+            ["ws-1", "conversation:conv-1", null, inside],
+        ])
+    })
+
     it("answers the lines oldest first, reading anything but the customer as the agent", async () => {
         const recent = [customerPriceQuestion(), agentWelcomeReply()]
         const em = mockEntityManager({ find: [AgentMessageEntity, recent] })
         const { service } = await build(em)
 
         await expect(service.transcript("conv-1")).resolves.toEqual(TRANSCRIPT_LINES)
-        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
-            select: { role: true, body: true, createdAt: true },
-            where: { conversationId: "conv-1", role: Not("system") },
-            order: { createdAt: "DESC", id: "DESC" },
-            take: 40,
-        })
+        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, TRANSCRIPT_FIND)
     })
-})
-describe("AgentMessagesService customerLinesOf", () => {
+
     it("answers the customer's messages among the ids in the order they were said, and reads nothing for no id", async () => {
         const at = new Date("2026-11-04T01:00:00.000Z")
         const em = mockEntityManager({
-            find: [
-                AgentMessageEntity,
-                [Object.assign(new AgentMessageEntity(), { id: "m-1", body: "Chào", createdAt: at })],
-            ],
+            find: [AgentMessageEntity, [messageOf({ id: "m-1", body: "Hi", createdAt: at })]],
         })
         const { service } = await build(em)
 
         await expect(service.customerLinesOf("conv-1", ["m-1", "m-2"])).resolves.toEqual([
-            { id: "m-1", body: "Chào", at },
+            { id: "m-1", body: "Hi", at },
         ])
-        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
-            select: { id: true, body: true, createdAt: true },
-            where: { conversationId: "conv-1", id: In(["m-1", "m-2"]), role: "user" },
-            order: { createdAt: "ASC", id: "ASC" },
-        })
+        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, lineFindOptions(CUSTOMER_LINES_WHERE, 2))
         await expect(service.customerLinesOf("conv-1", [])).resolves.toEqual([])
         expect(em.find).toHaveBeenCalledTimes(1)
     })
-})
 
-describe("AgentMessagesService unansweredLinesOf", () => {
     it("answers the customer's messages said after the agent's last reply, in the order said", async () => {
         const replied = new Date("2026-11-04T01:00:00.000Z")
         const later = new Date("2026-11-04T01:00:03.000Z")
         const em = mockEntityManager({
-            findOne: [AgentMessageEntity, Object.assign(new AgentMessageEntity(), { createdAt: replied })],
-            find: [
-                AgentMessageEntity,
-                [Object.assign(new AgentMessageEntity(), { id: "m-2", body: "Còn hàng?", createdAt: later })],
-            ],
+            findOne: [AgentMessageEntity, messageOf({ createdAt: replied })],
+            find: [AgentMessageEntity, [messageOf({ id: "m-2", body: "In stock?", createdAt: later })]],
         })
         const { service } = await build(em)
 
         await expect(service.unansweredLinesOf("conv-1", 30)).resolves.toEqual([
-            { id: "m-2", body: "Còn hàng?", at: later },
+            { id: "m-2", body: "In stock?", at: later },
         ])
-        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
-            select: { id: true, body: true, createdAt: true },
-            where: { conversationId: "conv-1", role: "user", createdAt: MoreThan(replied) },
-            order: { createdAt: "ASC", id: "ASC" },
-            take: 30,
-        })
+        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, lineFindOptions(unansweredWhere(replied), 30))
     })
 
     it("answers every customer message of a conversation the agent never replied in", async () => {
@@ -476,81 +401,36 @@ describe("AgentMessagesService unansweredLinesOf", () => {
     })
 })
 
-describe("AgentMessagesService lastCustomerAt", () => {
-    it("answers when the customer last wrote, or a refusal when they never did", async () => {
-        const wrote = await build(mockEntityManager({ findOne: [AgentMessageEntity, messageOf()] }))
-        const silent = await build(mockEntityManager({ findOne: [AgentMessageEntity, null] }))
-
-        await expect(wrote.service.lastCustomerAt("conv-1")).resolves.toEqual({
-            kind: "ok",
-            value: new Date("2026-10-12T10:00:00.000Z"),
-        })
-        await expect(silent.service.lastCustomerAt("conv-1")).resolves.toMatchObject({ kind: "refused" })
-    })
-})
 describe("AgentMessagesService markDelivery", () => {
-    it("writes sent, or failed with the reason (a generic one when none is given)", async () => {
+    it.each([
+        { delivered: true, error: undefined, written: { deliveryStatus: "sent", deliveryError: null } },
+        { delivered: false, error: "late", written: { deliveryStatus: "failed", deliveryError: "late" } },
+        { delivered: false, error: undefined, written: { deliveryStatus: "failed", deliveryError: "delivery_failed" } },
+    ])("writes $written (a generic reason when none is given)", async ({ delivered, error, written }) => {
         const em = mockEntityManager({ update: [AgentMessageEntity, { affected: 1 }] })
         const { service } = await build(em)
 
-        await service.markDelivery("msg-1", true)
-        await service.markDelivery("msg-1", false, "zalo_window_expired")
-        await service.markDelivery("msg-1", false)
+        await service.markDelivery("msg-1", delivered, error)
 
-        expect(em.update).toHaveBeenNthCalledWith(
-            1,
-            AgentMessageEntity,
-            { id: "msg-1" },
-            { deliveryStatus: "sent", deliveryError: null },
-        )
-        expect(em.update).toHaveBeenNthCalledWith(
-            2,
-            AgentMessageEntity,
-            { id: "msg-1" },
-            { deliveryStatus: "failed", deliveryError: "zalo_window_expired" },
-        )
-        expect(em.update).toHaveBeenNthCalledWith(
-            3,
-            AgentMessageEntity,
-            { id: "msg-1" },
-            { deliveryStatus: "failed", deliveryError: "delivery_failed" },
-        )
+        expect(em.update).toHaveBeenCalledWith(AgentMessageEntity, { id: "msg-1" }, written)
     })
 })
 
 describe("AgentMessagesService customerMessagesPerDay", () => {
     it("sums the customer messages of the counted conversations per Vietnam day and channel", async () => {
-        const perConversation = [
-            { conversationId: "c1", day: "2026-10-12", messages: 3 },
-            { conversationId: "c2", day: "2026-10-12", messages: 1 },
-            { conversationId: "c3", day: "2026-10-12", messages: 2 },
-            { conversationId: "c9", day: "2026-10-12", messages: 7 },
-        ]
-        const { em, fakes } = withStatements(mockEntityManager(), { getRawMany: perConversation })
+        const { em, fakes } = withStatements(mockEntityManager(), { getRawMany: PER_CONVERSATION_COUNTS })
         const { service, conversations } = await build(em)
-        conversations.customerChannelsAmong.mockResolvedValue([
-            { id: "c1", channel: "facebook" },
-            { id: "c2", channel: "facebook" },
-            { id: "c3", channel: "zalo" },
-        ])
+        conversations.customerChannelsAmong.mockResolvedValue([...COUNTED_CONVERSATIONS])
 
-        await expect(service.customerMessagesPerDay("ws-1", "2026-10-05", "2026-10-19")).resolves.toEqual([
-            { channel: "facebook", day: "2026-10-12", messages: 4 },
-            { channel: "zalo", day: "2026-10-12", messages: 2 },
-        ])
+        await expect(service.customerMessagesPerDay("ws-1", "2026-10-05", "2026-10-19")).resolves.toEqual(
+            MESSAGES_PER_DAY,
+        )
         expect(conversations.customerChannelsAmong).toHaveBeenCalledWith(
             "ws-1",
             ["c1", "c2", "c3", "c9"],
             ["facebook", "zalo"],
         )
-        expect(fakes[0]?.callsOf("andWhere")).toContainEqual([
-            "m.createdAt >= (:from::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')",
-            { from: "2026-10-05" },
-        ])
-        expect(fakes[0]?.callsOf("andWhere")).toContainEqual([
-            "m.createdAt < (:to::date::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')",
-            { to: "2026-10-19" },
-        ])
+        expect(fakes[0]?.callsOf("andWhere")).toEqual(expect.arrayContaining(RANGE_CLAUSES))
         expect(fakes[0]?.callsOf("limit")).toEqual([[5000]])
     })
 })
@@ -566,19 +446,13 @@ describe("AgentMessagesService claimDelivery", () => {
         ])
         expect(fakes[0]?.callsOf("where")[0]).toEqual([
             "id = :messageId AND conversation_id = :conversationId",
-            {
-                messageId: "msg-1",
-                conversationId: "conv-1",
-            },
+            { messageId: "msg-1", conversationId: "conv-1" },
         ])
     })
 
     it.each([
         { row: messageOf({ deliveryStatus: "sent" }), expected: "acknowledged" },
-        {
-            row: messageOf({ deliveryStatus: "failed", deliveryError: "delivery_outcome_unknown" }),
-            expected: "ambiguous",
-        },
+        { row: messageOf({ deliveryStatus: "failed", deliveryError: "zalo_error" }), expected: "ambiguous" },
         { row: null, expected: "missing" },
     ])("does not grant another send for $expected", async ({ row, expected }) => {
         const em = mockEntityManager({ findOne: [AgentMessageEntity, row] })
@@ -594,8 +468,10 @@ describe("AgentMessagesService storeFinalReply", () => {
         const { service, activity, em } = await build(stub.em)
         await expect(service.storeFinalReply("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("item-1")
         await expect(service.storeFinalReply("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("item-1")
-        expect(stub.fakes[0]?.callsOf("values")).toEqual([[FINAL_REPLY_VALUES]])
-        expect(stub.fakes[1]?.callsOf("values")).toEqual([[FINAL_REPLY_VALUES]])
+        expect(stub.fakes.map((fake) => fake.callsOf("values"))).toEqual([
+            [[FINAL_REPLY_VALUES]],
+            [[FINAL_REPLY_VALUES]],
+        ])
         expect(stub.fakes[0]?.callsOf("orIgnore")).toEqual([[]])
         expect(activity.message.mock.calls).toEqual([["ws-1", "conversation:conv-1", null, em]])
     })
@@ -603,35 +479,10 @@ describe("AgentMessagesService storeFinalReply", () => {
 
 describe("AgentMessagesService node reads", () => {
     it("answers the newest messages of a conversation as rows, the author kind falling back to the role", async () => {
-        const em = mockEntityManager({
-            find: [
-                AgentMessageEntity,
-                [
-                    {
-                        id: "m2",
-                        conversationId: "c1",
-                        role: "agent",
-                        authorKind: "bot",
-                        body: "b",
-                        createdAt: new Date(2000),
-                    },
-                    {
-                        id: "m1",
-                        conversationId: "c1",
-                        role: "user",
-                        authorKind: null,
-                        body: "a",
-                        createdAt: new Date(1000),
-                    },
-                ] as never,
-            ],
-        })
+        const em = mockEntityManager({ find: [AgentMessageEntity, nodeMessages()] })
         const { service } = await build(em)
 
-        await expect(service.nodeRows("ws-1", "c1", 5)).resolves.toEqual([
-            { id: "m2", conversationId: "c1", authorKind: "bot", body: "b", createdAt: "1970-01-01T00:00:02.000Z" },
-            { id: "m1", conversationId: "c1", authorKind: "user", body: "a", createdAt: "1970-01-01T00:00:01.000Z" },
-        ])
+        await expect(service.nodeRows("ws-1", "c1", 5)).resolves.toEqual(NODE_ROWS)
         expect(em.find).toHaveBeenCalledWith(
             AgentMessageEntity,
             expect.objectContaining({ where: { workspaceId: "ws-1", conversationId: "c1" }, take: 5 }),
@@ -639,12 +490,10 @@ describe("AgentMessagesService node reads", () => {
     })
 
     it("answers when the latest message was written, or null when there is none", async () => {
-        const wrote = await build(
-            mockEntityManager({ findOne: [AgentMessageEntity, { createdAt: new Date(3000) } as never] }),
-        )
-        const silent = await build(mockEntityManager({ findOne: [AgentMessageEntity, null] }))
+        const wrote = await onRow(messageOf({ createdAt: new Date(3000) }))
+        const silent = await onRow(null)
 
-        await expect(wrote.service.latestAt("c1")).resolves.toEqual(new Date(3000))
-        await expect(silent.service.latestAt("c1")).resolves.toBeNull()
+        await expect(wrote.service.latestAt("conv-1")).resolves.toEqual(new Date(3000))
+        await expect(silent.service.latestAt("conv-1")).resolves.toBeNull()
     })
 })

@@ -1,8 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService, ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
@@ -24,21 +25,32 @@ const TURN: NodeTurn = {
     locale: "vi",
 }
 
-const conversation = (overrides: Partial<TurnConversation> = {}): TurnConversation =>
-    ({
-        id: "c1",
-        workspaceId: "ws-1",
-        channel: "telegram",
-        externalId: "555",
-        connectionId: "k1",
-        leadId: null,
-        handledBy: null,
-        visitorName: null,
-        installationId: null,
-        agent: { id: "a-1" },
-        speaksAs: null,
-        ...overrides,
-    }) as TurnConversation
+const AGENT: TurnConversation["agent"] = {
+    id: "a-1",
+    name: "Chatbot",
+    handle: "chatbot",
+    role: "Customer chat",
+    module: "chatbot",
+    instructions: "Be kind",
+    knowledge: "Tea",
+    approvalRule: "ask",
+    greeting: "Hi",
+}
+
+const conversation = (overrides: Partial<TurnConversation> = {}): TurnConversation => ({
+    id: "c1",
+    workspaceId: "ws-1",
+    channel: "telegram",
+    externalId: "555",
+    connectionId: "k1",
+    leadId: null,
+    handledBy: null,
+    visitorName: null,
+    installationId: null,
+    agent: AGENT,
+    speaksAs: null,
+    ...overrides,
+})
 
 const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
@@ -63,10 +75,10 @@ const build = async () => {
     return { executor: moduleRef.get(ChannelSendExecutorService), registry, conversations, messages, delivery, logger }
 }
 
-const SEND = { conversationId: "c1", text: "Xin chào" }
+const SEND = { conversationId: "c1", text: "Hello" }
 const CALL = { key: "run:1", dedupeKey: null }
 
-describe("ChannelSendExecutorService", () => {
+describe("ChannelSendExecutorService storing", () => {
     it("registers itself with the graph-nodes registry", async () => {
         const { executor, registry } = await build()
         executor.onModuleInit()
@@ -83,13 +95,13 @@ describe("ChannelSendExecutorService", () => {
         expect(messages.storeFinalReply).toHaveBeenCalledWith(
             "ws-1",
             "c1",
-            "Xin chào\nMenu: https://x/menu",
+            "Hello\nMenu: https://x/menu",
             messageIdOf("run:1"),
         )
         expect(delivery.deliver).toHaveBeenCalledWith({
             conversationId: "c1",
             messageId: "m1",
-            text: "Xin chào\nMenu: https://x/menu",
+            text: "Hello\nMenu: https://x/menu",
         })
     })
 
@@ -105,7 +117,7 @@ describe("ChannelSendExecutorService", () => {
         await expect(executor.execute(TURN, { ...SEND, conversationId: "c2" }, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.WrongConversation,
         })
-        conversations.turnOf.mockResolvedValueOnce({ kind: "refused", code: "x" } as never)
+        conversations.turnOf.mockResolvedValueOnce({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.ConversationNotFound,
         })
@@ -124,14 +136,16 @@ describe("ChannelSendExecutorService", () => {
         })
         conversations.turnOf.mockResolvedValueOnce({
             kind: "ok",
-            value: conversation({ agent: { id: "a-2" } as TurnConversation["agent"] }),
+            value: conversation({ agent: { ...AGENT, id: "a-2" } }),
         })
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.NotSpeaking,
         })
         expect(messages.storeFinalReply).not.toHaveBeenCalled()
     })
+})
 
+describe("ChannelSendExecutorService Zalo window and delivery", () => {
     it("refuses on Zalo after the free window, before anything is stored, and sends inside it or when the customer never wrote", async () => {
         const { executor, conversations, messages, delivery } = await build()
         conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ channel: "zalo" }) })
@@ -150,7 +164,7 @@ describe("ChannelSendExecutorService", () => {
             value: new Date(NOW.getTime() - ZALO_FREE_WINDOW_MS + 1000),
         })
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
-        messages.lastCustomerAt.mockResolvedValueOnce({ kind: "refused", code: "x" } as never)
+        messages.lastCustomerAt.mockResolvedValueOnce({ kind: "refused", code: AgentMessagesErrorCode.NotFound })
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
         expect(delivery.deliver).toHaveBeenCalledTimes(2)
     })
@@ -174,7 +188,9 @@ describe("ChannelSendExecutorService", () => {
             id: "m1",
         })
     })
+})
 
+describe("ChannelSendExecutorService unreachable recipients", () => {
     it("keeps the message in the conversation, marked not sent, when the customer has no recipient yet, and raises no error", async () => {
         const { executor, conversations, messages, delivery, logger } = await build()
         conversations.turnOf.mockResolvedValueOnce({
@@ -244,7 +260,9 @@ describe("ChannelSendExecutorService", () => {
             code: ChatNodePortsErrorCode.DeliveryUnconfirmed,
         })
     })
+})
 
+describe("ChannelSendExecutorService placeholders and plans", () => {
     it("treats a Zalo conversation of a placeholder sender as unlinked up front, without pushing", async () => {
         const { executor, conversations, messages, delivery } = await build()
         conversations.turnOf.mockResolvedValue({

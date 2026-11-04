@@ -78,6 +78,9 @@ export interface DownloadedChatFile {
     readonly sourceUrl: string
 }
 
+/** What a download of one inbound file answers: the file read, or null when it was left out. */
+export type InboundDownload = DownloadedChatFile | null
+
 /** A file as a conversation shows it. */
 export interface ChatFileView {
     /** The attachment. */

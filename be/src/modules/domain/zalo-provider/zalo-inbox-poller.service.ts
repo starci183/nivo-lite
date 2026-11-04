@@ -20,7 +20,7 @@ import type { ZaloPollRules } from "./zalo-poll.policy"
 const PLAN_LACKS_FEATURE = -224
 
 /** What Zalo says in its own words when the app or the OA lacks a permission or a scope (the numeric codes of that refusal are not in a table we can read). */
-const MISSING_PERMISSION = /permission|scope|quy[ềe]n/iu
+const MISSING_PERMISSION = /permission|scope|quy[\u1ec1e]n/iu
 
 /** Reads one page of a chat list from an offset. */
 type ChatReader = (offset: number) => Promise<ReadonlyArray<ZaloChatMessage>>
@@ -32,7 +32,7 @@ type ChatReader = (offset: number) => Promise<ReadonlyArray<ZaloChatMessage>>
  * calls is bounded here, and every call takes a token of the connection's bucket), and stores each text message through the inbox under the
  * delivery id of the webhook.
  */
-export class ZaloInboxPoller implements MessageInboxPoller<ZaloChatMessage> {
+export class ZaloInboxPollerService implements MessageInboxPoller<ZaloChatMessage> {
     readonly provider = "zalo_oa"
     /**
      * Zalo publishes no rate for the OA open API: until it does, one OA gets two calls a second, a burst of four and two connections reading at once,

@@ -1,18 +1,18 @@
 import { Injectable } from "@nestjs/common"
 import type { OnApplicationBootstrap } from "@nestjs/common"
-import { PollSourceRegistry } from "@modules/domain/connection-poll"
+import { PollSourceRegistryService } from "@modules/domain/connection-poll"
 import type { PollSourceDirectory, ScheduledPollSource } from "@modules/domain/connection-poll"
-import { MessageInboxPollerRegistry } from "@modules/domain/provider-registry"
+import { MessageInboxPollerRegistryService } from "@modules/domain/provider-registry"
 
 @Injectable()
 /**
  * Offers the registered messaging providers to the poll scheduler: each provider's reader, its limits and its error classes. The provider already
  * stores into the inbox its webhook feeds, so nothing is bound here. It joins the scheduler once every provider module has registered.
  */
-export class MessageInboxPollSources implements PollSourceDirectory, OnApplicationBootstrap {
+export class MessageInboxPollSourcesService implements PollSourceDirectory, OnApplicationBootstrap {
     constructor(
-        private readonly registry: PollSourceRegistry,
-        private readonly pollers: MessageInboxPollerRegistry,
+        private readonly registry: PollSourceRegistryService,
+        private readonly pollers: MessageInboxPollerRegistryService,
     ) {}
 
     /** Adds this directory to the scheduler. */

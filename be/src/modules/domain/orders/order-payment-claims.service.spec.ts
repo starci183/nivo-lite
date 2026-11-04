@@ -14,7 +14,7 @@ const claim: NewPaymentClaim = {
     conversationId: "conv-1",
     amountVnd: 5000,
     names: ["BUI NGUYEN DINH"],
-    body: "Tôi đã chuyển khoản 5k, tên BUI NGUYEN DINH",
+    body: "I transferred 5k, name BUI NGUYEN DINH",
     dedupeKey: "zalo:1:order-claim",
 }
 
@@ -41,7 +41,7 @@ const build = async (em: MockEntityManager) => {
     return moduleRef.get(OrderPaymentClaimsService)
 }
 
-describe("OrderPaymentClaimsService", () => {
+const registerReads = () => {
     it("writes a claim and answers its id; the same message again answers the id already written", async () => {
         const em = mockEntityManager({ findOneOrFail: [PaymentClaimEntity, entityOf()] })
         const first = fakeQueryBuilder({ execute: { raw: [{ id: "claim-new" }] } })
@@ -63,7 +63,7 @@ describe("OrderPaymentClaimsService", () => {
         const em = mockEntityManager({ find: [PaymentClaimEntity, [entityOf()]] })
         const claims = await build(em)
 
-        await expect(claims.query("ws-1", { leadId: "lead-1", status: "open" }, 5000)).resolves.toHaveLength(1)
+        await expect(claims.matching("ws-1", { leadId: "lead-1", status: "open" }, 5000)).resolves.toHaveLength(1)
 
         expect(em.find).toHaveBeenCalledWith(PaymentClaimEntity, {
             where: { workspaceId: "ws-1", leadId: "lead-1", status: "open" },
@@ -95,7 +95,9 @@ describe("OrderPaymentClaimsService", () => {
             take: 100,
         })
     })
+}
 
+const registerWrites = () => {
     it("settles the open claims named, through the caller's transaction, and none when none are named", async () => {
         const own = mockEntityManager()
         const callers = mockEntityManager({ update: [PaymentClaimEntity, { affected: 1, raw: [], generatedMaps: [] }] })
@@ -173,4 +175,9 @@ describe("OrderPaymentClaimsService", () => {
             { status: "escalated" },
         )
     })
+}
+
+describe("OrderPaymentClaimsService", () => {
+    registerReads()
+    registerWrites()
 })

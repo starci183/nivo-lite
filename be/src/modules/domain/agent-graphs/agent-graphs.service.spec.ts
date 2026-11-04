@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import {
     OWNER_EXAMPLE,
@@ -13,6 +14,8 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphEntity, AgentGraphSourceEntity, AgentGraphVersionEntity } from "./persistence/entities"
+
+const { DocumentInvalid, DraftConflict, GraphNotFound, VersionNotFound } = AgentGraphsErrorCode
 
 const DOCUMENT = graphOf(OWNER_EXAMPLE)
 
@@ -28,6 +31,17 @@ const build = async (em = mockEntityManager()) => {
     }).compile()
     return moduleRef.get(AgentGraphsService)
 }
+
+/** The service over a graph (enforced unless named) whose live version is `version`. */
+const liveAt = (version: ReturnType<typeof versionRow>, graph = graphRow("enforced")) =>
+    build(
+        mockEntityManager({
+            findOne: [
+                [AgentGraphEntity, graph],
+                [AgentGraphVersionEntity, version],
+            ],
+        }),
+    )
 
 const codeOf = async (work: Promise<unknown>): Promise<unknown> => {
     try {
@@ -66,23 +80,9 @@ describe("AgentGraphsService reads", () => {
         expect(em.findOne).toHaveBeenCalledWith(AgentGraphEntity, { where: { installationId: "inst-1" } })
     })
 
-    it("answers nothing for an agent with no graph", async () => {
-        const service = await build(mockEntityManager({ findOne: [AgentGraphEntity, null] }))
-
-        await expect(service.stateOfInstallation("inst-1")).resolves.toBeNull()
-        await expect(service.stateOfAgent("ws-1", "agent-1")).resolves.toBeNull()
-    })
-
-    it("has no active graph before the first version, and none when the version cannot be read", async () => {
+    it("answers nothing for an agent with no graph, has no active graph before the first version, and none when it cannot be read", async () => {
         const fresh = await build(mockEntityManager({ findOne: [AgentGraphEntity, graphRow("shadow", null)] }))
-        const broken = await build(
-            mockEntityManager({
-                findOne: [
-                    [AgentGraphEntity, graphRow()],
-                    [AgentGraphVersionEntity, versionRow(2, UNREADABLE_DOCUMENT)],
-                ],
-            }),
-        )
+        const broken = await liveAt(versionRow(2, UNREADABLE_DOCUMENT), graphRow())
 
         await expect(fresh.stateOfAgent("ws-1", "agent-1")).resolves.toMatchObject({
             active: null,
@@ -90,6 +90,9 @@ describe("AgentGraphsService reads", () => {
         })
         await expect(fresh.stateOfAgent("ws-1", "agent-1")).resolves.toMatchObject({ activeKind: null })
         await expect(broken.stateOfAgent("ws-1", "agent-1")).resolves.toMatchObject({ active: null })
+        const none = await build(mockEntityManager({ findOne: [AgentGraphEntity, null] }))
+        await expect(none.stateOfInstallation("inst-1")).resolves.toBeNull()
+        await expect(none.stateOfAgent("ws-1", "agent-1")).resolves.toBeNull()
     })
 })
 
@@ -128,7 +131,6 @@ describe("AgentGraphsService reads (continued)", () => {
     it("answers the number of the newest version, and 0 before the first", async () => {
         const some = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(7)] }))
         const none = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, null] }))
-
         await expect(some.latestVersionOf("ws-1", "agent-1")).resolves.toBe(7)
         await expect(none.latestVersionOf("ws-1", "agent-1")).resolves.toBe(0)
     })
@@ -139,14 +141,9 @@ describe("AgentGraphsService reads (continued)", () => {
         const broken = await build(
             mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(2, UNREADABLE_DOCUMENT)] }),
         )
-
         await expect(found.documentOf("ws-1", "agent-1", "version-1")).resolves.toEqual(DOCUMENT)
-        expect(await codeOf(missing.documentOf("ws-1", "agent-1", "version-9"))).toBe(
-            AgentGraphsErrorCode.VersionNotFound,
-        )
-        expect(await codeOf(broken.documentOf("ws-1", "agent-1", "version-1"))).toBe(
-            AgentGraphsErrorCode.DocumentInvalid,
-        )
+        expect(await codeOf(missing.documentOf("ws-1", "agent-1", "version-9"))).toBe(VersionNotFound)
+        expect(await codeOf(broken.documentOf("ws-1", "agent-1", "version-1"))).toBe(DocumentInvalid)
     })
 })
 
@@ -222,23 +219,19 @@ describe("AgentGraphsService for a job that walks every agent", () => {
 })
 
 describe("AgentGraphsService.versionAt", () => {
-    it("opens one version with its number and its graph", async () => {
-        const service = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(4)] }))
-
-        await expect(service.versionAt("ws-1", "agent-1", "version-1")).resolves.toEqual({
-            version: 4,
-            document: DOCUMENT,
-        })
-    })
-
-    it("refuses a version that is not the agent or cannot be read", async () => {
+    it("opens one version with its number and its graph, and refuses one that is not the agent or cannot be read", async () => {
+        const found = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(4)] }))
         const missing = await build(mockEntityManager({ findOne: [AgentGraphVersionEntity, null] }))
         const broken = await build(
             mockEntityManager({ findOne: [AgentGraphVersionEntity, versionRow(2, UNREADABLE_DOCUMENT)] }),
         )
 
-        expect(await codeOf(missing.versionAt("ws-1", "agent-1", "v"))).toBe(AgentGraphsErrorCode.VersionNotFound)
-        expect(await codeOf(broken.versionAt("ws-1", "agent-1", "v"))).toBe(AgentGraphsErrorCode.DocumentInvalid)
+        await expect(found.versionAt("ws-1", "agent-1", "version-1")).resolves.toEqual({
+            version: 4,
+            document: DOCUMENT,
+        })
+        expect(await codeOf(missing.versionAt("ws-1", "agent-1", "v"))).toBe(VersionNotFound)
+        expect(await codeOf(broken.versionAt("ws-1", "agent-1", "v"))).toBe(DocumentInvalid)
     })
 })
 
@@ -259,19 +252,13 @@ describe("AgentGraphsService.saveDraft", () => {
         )
     })
 
-    it("refuses a save when someone saved after the draft was read", async () => {
-        const service = await build(mockEntityManager({ update: [AgentGraphEntity, { affected: 0 }] }))
-
-        expect(await codeOf(service.saveDraft("ws-1", "agent-1", 2, DOCUMENT))).toBe(AgentGraphsErrorCode.DraftConflict)
-    })
-
-    it("refuses a draft the product cannot read, before it touches the database", async () => {
+    it("refuses a save when someone saved after the draft was read, and a draft the product cannot read before it touches the database", async () => {
+        const stale = await build(mockEntityManager({ update: [AgentGraphEntity, { affected: 0 }] }))
         const em = mockEntityManager()
         const service = await build(em)
 
-        expect(await codeOf(service.saveDraft("ws-1", "agent-1", 3, UNREADABLE_DOCUMENT))).toBe(
-            AgentGraphsErrorCode.DocumentInvalid,
-        )
+        expect(await codeOf(stale.saveDraft("ws-1", "agent-1", 2, DOCUMENT))).toBe(DraftConflict)
+        expect(await codeOf(service.saveDraft("ws-1", "agent-1", 3, UNREADABLE_DOCUMENT))).toBe(DocumentInvalid)
         expect(em.update).not.toHaveBeenCalled()
     })
 })
@@ -294,22 +281,14 @@ describe("AgentGraphsService.setMode", () => {
         )
     })
 
-    it("refuses an agent with no graph", async () => {
-        const service = await build(mockEntityManager({ update: [AgentGraphEntity, { affected: 0 }] }))
-
-        expect(await codeOf(service.setMode("ws-1", "agent-1", "shadow", "member-1"))).toBe(
-            AgentGraphsErrorCode.GraphNotFound,
-        )
-    })
-
-    it("refuses when the graph was there at the update but cannot be read after", async () => {
-        const service = await build(
+    it("refuses an agent with no graph, and one whose graph cannot be read after the update", async () => {
+        const none = await build(mockEntityManager({ update: [AgentGraphEntity, { affected: 0 }] }))
+        const gone = await build(
             mockEntityManager({ update: [AgentGraphEntity, { affected: 1 }], findOne: [AgentGraphEntity, null] }),
         )
 
-        expect(await codeOf(service.setMode("ws-1", "agent-1", "shadow", "member-1"))).toBe(
-            AgentGraphsErrorCode.GraphNotFound,
-        )
+        expect(await codeOf(none.setMode("ws-1", "agent-1", "shadow", "member-1"))).toBe(GraphNotFound)
+        expect(await codeOf(gone.setMode("ws-1", "agent-1", "shadow", "member-1"))).toBe(GraphNotFound)
     })
 })
 
@@ -375,10 +354,8 @@ describe("AgentGraphsService.publish", () => {
         fakeTransaction(em)
         const service = await build(em)
 
-        expect(await codeOf(service.publish({ ...input, document: UNREADABLE_DOCUMENT }))).toBe(
-            AgentGraphsErrorCode.DocumentInvalid,
-        )
-        expect(await codeOf(service.publish(input))).toBe(AgentGraphsErrorCode.GraphNotFound)
+        expect(await codeOf(service.publish({ ...input, document: UNREADABLE_DOCUMENT }))).toBe(DocumentInvalid)
+        expect(await codeOf(service.publish(input))).toBe(GraphNotFound)
     })
 })
 
@@ -398,7 +375,7 @@ describe("AgentGraphsService.publish with a number", () => {
 
         await expect(service.publish({ ...input, version: 7 })).resolves.toMatchObject({ id: "version-7", version: 7 })
         expect(em.create).toHaveBeenCalledWith(AgentGraphVersionEntity, expect.objectContaining({ version: 7 }))
-        expect(await codeOf(service.publish({ ...input, version: 5 }))).toBe(AgentGraphsErrorCode.DraftConflict)
+        expect(await codeOf(service.publish({ ...input, version: 5 }))).toBe(DraftConflict)
     })
 })
 
@@ -482,54 +459,34 @@ describe("AgentGraphsService.ensure (continued)", () => {
         queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const service = await build(em)
 
-        expect(await codeOf(service.ensure("ws-1", "agent-1", "inst-1", DOCUMENT))).toBe(
-            AgentGraphsErrorCode.GraphNotFound,
-        )
+        expect(await codeOf(service.ensure("ws-1", "agent-1", "inst-1", DOCUMENT))).toBe(GraphNotFound)
     })
 })
 
 describe("AgentGraphsService.activeVersionIdOf", () => {
     it("answers the id of the version that decides, reading no document, and none for an agent with no graph or no version", async () => {
         const withVersion = await build(mockEntityManager({ findOne: [AgentGraphEntity, graphRow("enforced")] }))
-        const noVersion = await build(
-            mockEntityManager({ findOne: [AgentGraphEntity, { ...graphRow("enforced"), activeVersionId: null }] }),
-        )
+        const noVersion = await build(mockEntityManager({ findOne: [AgentGraphEntity, graphRow("enforced", null)] }))
         const noGraph = await build(mockEntityManager({ findOne: [AgentGraphEntity, null] }))
 
-        await expect(withVersion.activeVersionIdOf("ws-1", "agent-1")).resolves.toEqual(expect.any(String))
+        await expect(withVersion.activeVersionIdOf("ws-1", "agent-1")).resolves.toBe("version-1")
         await expect(noVersion.activeVersionIdOf("ws-1", "agent-1")).resolves.toBeNull()
         await expect(noGraph.activeVersionIdOf("ws-1", "agent-1")).resolves.toBeNull()
     })
 })
 
+const FLOW: GraphSpec = {
+    schema: "nivo/agent-graph@1",
+    moduleKey: "chatbot",
+    trigger: { kind: "tag", sources: ["channel"] },
+    grant: { rights: [], tools: [], effects: [] },
+    nodes: [{ key: "end", kind: "output", step: "stop" }],
+}
+
 describe("AgentGraphsService.hasLiveFlow", () => {
     it("is true when the live version carries a flow of nodes, false with none or with no graph", async () => {
-        const flow = {
-            ...DOCUMENT,
-            flow: {
-                schema: "nivo/agent-graph@1",
-                moduleKey: "chatbot",
-                trigger: { kind: "tag", sources: ["channel"] },
-                grant: { rights: [], tools: [], effects: [] },
-                nodes: [{ key: "end", kind: "output", step: "stop" }],
-            },
-        } as unknown as typeof DOCUMENT
-        const withFlow = await build(
-            mockEntityManager({
-                findOne: [
-                    [AgentGraphEntity, graphRow("enforced")],
-                    [AgentGraphVersionEntity, versionRow(2, flow)],
-                ],
-            }),
-        )
-        const rulesOnly = await build(
-            mockEntityManager({
-                findOne: [
-                    [AgentGraphEntity, graphRow("enforced")],
-                    [AgentGraphVersionEntity, versionRow()],
-                ],
-            }),
-        )
+        const withFlow = await liveAt(versionRow(2, { ...DOCUMENT, flow: FLOW }))
+        const rulesOnly = await liveAt(versionRow())
         const noGraph = await build(mockEntityManager({ findOne: [AgentGraphEntity, null] }))
 
         await expect(withFlow.hasLiveFlow("ws-1", "agent-1")).resolves.toBe(true)

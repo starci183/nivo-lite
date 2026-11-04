@@ -22,12 +22,12 @@ export class AgentTurnQueue {
         source: string,
         eventKey: string,
         tx: EntityManager,
-        delayMs = 0,
+        delayMs?: number,
     ): Promise<void> {
         return this.outbox.write(tx, AGENT_TURN_QUEUE, payload, {
             job: AgentTurnJob.Drain,
             dedupeKey: agentTurnWakeKey(payload.agentId, source, eventKey),
-            delayMs,
+            delayMs: delayMs ?? 0,
         })
     }
 

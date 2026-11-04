@@ -23,6 +23,6 @@ export type { QueueOptions } from "./queue.options"
 
 export type { QueueTimeout } from "./queue-timeout.port"
 export { InjectQueueTimeout, QUEUE_TIMEOUT } from "./queue.decorators"
-export { deliveryOf } from "./queue.policy"
+export { deferSecondsOf, deliveryOf } from "./queue.policy"
 export type { QueueHandler, QueueWriteOptions } from "./queue.contracts"
 export { classifyFailure } from "./queue-failure.policy"

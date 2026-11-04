@@ -8,15 +8,14 @@ import { AgentWorkReadService } from "./agent-work-read.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type {
-    AgentGoalDraft,
     AgentGoalRecord,
-    AgentTriggerDraft,
     AgentTriggerRecord,
     AgentWorkSettingsRecord,
     AgentWorkState,
     AgentWorkView,
     WorkspaceAgentWorkView,
 } from "./agent-work.contracts"
+import type { AgentGoalDraft, AgentTriggerDraft } from "./agent-work-drafts.contracts"
 
 @Injectable()
 /**

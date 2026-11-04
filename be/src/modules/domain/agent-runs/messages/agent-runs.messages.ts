@@ -10,6 +10,7 @@ export const AGENT_RUNS_MESSAGES: MessageBundle = {
         "errors.AGENT_RUNS_RUN_NOT_FOUND": "Lượt làm việc này chưa có tiến trình.",
         "errors.AGENT_RUNS_STEP_FAILED": "Bước làm việc chưa hoàn tất: {{code}}.",
         "errors.AGENT_RUNS_JOB_PAYLOAD_INVALID": "Việc cần chạy không nêu tiến trình nào.",
+        "errors.AGENT_RUNS_STEP_DEFERRED": "Bước làm việc đang chờ, sẽ chạy lại sau {{deferSeconds}} giây.",
     },
     en: {
         "errors.AGENT_RUNS_PLAN_CONFLICT": "This run is bound to a different plan. Review it before continuing.",
@@ -18,5 +19,6 @@ export const AGENT_RUNS_MESSAGES: MessageBundle = {
         "errors.AGENT_RUNS_RUN_NOT_FOUND": "That work turn has no run yet.",
         "errors.AGENT_RUNS_STEP_FAILED": "The work step did not finish: {{code}}.",
         "errors.AGENT_RUNS_JOB_PAYLOAD_INVALID": "The job names no run.",
+        "errors.AGENT_RUNS_STEP_DEFERRED": "The work step is waiting and runs again in {{deferSeconds}} seconds.",
     },
 }

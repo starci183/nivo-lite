@@ -1,8 +1,9 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
+import { itemOf } from "@tests/fixtures/builders/lead-flow-kit.builder"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
-import type { WorkItem } from "./decisions.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkItemWithdrawExecutorService } from "./work-item-withdraw-executor.service"
@@ -17,32 +18,49 @@ const TURN: NodeTurn = {
 }
 const CALL = { key: "k", dedupeKey: null }
 
-const build = async (withRegistry = true) => {
+/** The executor the service registered; fails when it registered none. */
+const registeredBy = (registry: GraphNodeRegistryService): NodeEffectExecutor => {
+    const executor = jest.mocked(registry.addExecutor).mock.calls[0]?.[0]
+    assert(executor !== undefined, "no executor was registered")
+    return executor
+}
+
+const build = async () => {
     const engine = mock<WorkEngineService>()
     const registry = mock<GraphNodeRegistryService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkItemWithdrawExecutorService,
             { provide: WorkEngineService, useValue: engine },
-            ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
+            { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
     moduleRef.get(WorkItemWithdrawExecutorService).onModuleInit()
-    return { engine, registry, executor: registry.addExecutor.mock.calls[0]?.[0] as NodeEffectExecutor }
+    return { engine, registry, executor: registeredBy(registry) }
+}
+
+const buildWithoutRegistry = async (): Promise<WorkItemWithdrawExecutorService> => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            WorkItemWithdrawExecutorService,
+            { provide: WorkEngineService, useValue: mock<WorkEngineService>() },
+        ],
+    }).compile()
+    return moduleRef.get(WorkItemWithdrawExecutorService)
 }
 
 describe("WorkItemWithdrawExecutorService", () => {
     it("registers the work-item.withdraw executor, and nothing when the app hosts no graph nodes", async () => {
         const { executor } = await build()
-        const { registry } = await build(false)
+        const bare = await buildWithoutRegistry()
 
         expect(executor.effect).toBe("work-item.withdraw")
-        expect(registry.addExecutor).not.toHaveBeenCalled()
+        expect(() => bare.onModuleInit()).not.toThrow()
     })
 
     it("closes the work item that still waits as rejected, in the turn workspace", async () => {
         const { engine, executor } = await build()
-        engine.resumeWork.mockResolvedValue({ id: "item-1" } as WorkItem)
+        engine.resumeWork.mockResolvedValue(itemOf({ id: "item-1" }))
 
         await expect(executor.execute(TURN, { id: "item-1" }, CALL)).resolves.toEqual({
             kind: "work-item",

@@ -5,14 +5,7 @@ import { isRecord } from "@modules/platform/primitives"
 import { ZaloError, ZaloErrorCode } from "./errors/zalo.error"
 import { InjectZaloOptions } from "./zalo.decorators"
 import { RENEWAL_GRANT_FIELD } from "./zalo.contracts"
-import type {
-    ZaloArticle,
-    ZaloArticleStats,
-    ZaloChatMessage,
-    ZaloTokens,
-    ZnsMessage,
-    ZnsReceipt,
-} from "./zalo.contracts"
+import type { ZaloChatMessage, ZaloData, ZaloMethod, ZaloTokens, ZnsMessage, ZnsReceipt } from "./zalo.contracts"
 import type { ZaloOptions } from "./zalo.options"
 import { zaloErrorCodeOf } from "./zalo-failure.policy"
 import { challengeOf } from "./zalo-oauth.policy"
@@ -27,9 +20,6 @@ const CS_PATH = "/v3.0/oa/message/cs"
 
 /** The ZNS template message path of the business host. */
 const ZNS_PATH = "/message/template"
-
-/** The most articles one list call reads (one Zalo page). */
-const ARTICLES_LIMIT = 50
 
 /** The most chats or messages one OA list call reads (one Zalo page). */
 const CHAT_PAGE_LIMIT = 10
@@ -75,34 +65,6 @@ const bodyTextOf = (body: unknown): string =>
         BODY_LOG_LIMIT,
     )
 
-const numberOf = (value: unknown): number => (typeof value === "number" && Number.isFinite(value) ? value : 0)
-
-/** The article fields Zalo takes on create and on update. */
-const articleBody = (article: ZaloArticle): Record<string, unknown> => ({
-    type: "normal",
-    title: article.title.slice(0, 150),
-    author: article.author.slice(0, 50),
-    cover: { cover_type: "photo", photo_url: article.coverUrl, status: "show" },
-    description: article.description.slice(0, 300),
-    body: article.paragraphs.map((content) => ({ type: "text", content })),
-    status: article.publish ? "show" : "hide",
-    comment: "show",
-})
-
-/** One row of the article list, or null when it has no id or no creation time. */
-const statsOf = (row: unknown): ZaloArticleStats | null => {
-    if (!isRecord(row) || typeof row.id !== "string" || row.id === "") return null
-    if (typeof row.create_date !== "number" || !Number.isFinite(row.create_date)) return null
-    return {
-        id: row.id,
-        title: typeof row.title === "string" ? row.title : "",
-        status: typeof row.status === "string" ? row.status : "",
-        createdAt: new Date(row.create_date).toISOString(),
-        views: numberOf(row.total_view),
-        shares: numberOf(row.total_share),
-    }
-}
-
 @Injectable()
 /** The one place that talks to Zalo. Nothing here reads the database or logs a secret. */
 export class ZaloClient {
@@ -143,7 +105,7 @@ export class ZaloClient {
 
     /** Sends a consultation (CS) text message to one user; a refusal is a ZaloError carrying Zalo's numeric error. */
     async sendCsText(accessToken: string, userId: string, text: string): Promise<void> {
-        await this.apiCall(accessToken, "POST", CS_PATH, {
+        await this.call(accessToken, "POST", CS_PATH, {
             recipient: { user_id: userId },
             message: { text },
         })
@@ -154,7 +116,7 @@ export class ZaloClient {
      * the public https url. The same window rules as a text apply.
      */
     async sendCsImage(accessToken: string, userId: string, imageUrl: string): Promise<void> {
-        await this.apiCall(accessToken, "POST", CS_PATH, {
+        await this.call(accessToken, "POST", CS_PATH, {
             recipient: { user_id: userId },
             message: {
                 attachment: {
@@ -170,7 +132,7 @@ export class ZaloClient {
      * the customer whether or not they wrote to the OA lately, and Zalo charges the OA for it. Answers Zalo's message id.
      */
     async sendZns(accessToken: string, message: ZnsMessage): Promise<ZnsReceipt> {
-        const data = await this.apiCall(
+        const data = await this.call(
             accessToken,
             "POST",
             ZNS_PATH,
@@ -187,63 +149,13 @@ export class ZaloClient {
 
     /** The customer's display name, or an empty text when Zalo does not say: the name only labels the conversation. */
     async userDisplayName(accessToken: string, userId: string): Promise<string> {
-        const data = await this.apiCall(
+        const data = await this.call(
             accessToken,
             "GET",
             `/v3.0/oa/user/detail?data=${encodeURIComponent(JSON.stringify({ user_id: userId }))}`,
         )
         const name = data.display_name ?? data.user_alias
         return typeof name === "string" ? name.trim() : ""
-    }
-
-    /**
-     * Creates an OA article (Zalo Article API v2.0): a cover photo, the description and the body paragraphs. `status: "hide"` keeps it
-     * unpublished until the scheduled moment. Answers the creation token Zalo gives to verify the article id later.
-     */
-    async createArticle(accessToken: string, article: ZaloArticle): Promise<string> {
-        const data = await this.apiCall(accessToken, "POST", "/v2.0/article/create", articleBody(article))
-        if (typeof data.token !== "string" || data.token === "") {
-            throw new ZaloError({
-                code: ZaloErrorCode.Rejected,
-                params: { path: "/v2.0/article/create", reason: "no token" },
-            })
-        }
-        return data.token
-    }
-
-    /**
-     * Publishes an article created hidden: the creation token is verified into the article id, then the article is updated with
-     * the same content and `status: "show"` (the Article API has no publish time, so the scheduler calls this when the post is due).
-     * Answers the article id.
-     */
-    async publishArticle(accessToken: string, articleToken: string, article: ZaloArticle): Promise<string> {
-        const verified = await this.apiCall(accessToken, "POST", "/v2.0/article/verify", { token: articleToken })
-        const id = verified.id
-        if (typeof id !== "string" || id === "") {
-            throw new ZaloError({
-                code: ZaloErrorCode.Rejected,
-                params: { path: "/v2.0/article/verify", reason: "no id" },
-            })
-        }
-        await this.apiCall(accessToken, "POST", "/v2.0/article/update", {
-            id,
-            ...articleBody({ ...article, publish: true }),
-        })
-        return id
-    }
-
-    /** The newest OA articles (at most fifty) with the views and shares Zalo counted for each. */
-    async articles(accessToken: string): Promise<ReadonlyArray<ZaloArticleStats>> {
-        const data = await this.apiCall(
-            accessToken,
-            "GET",
-            `/v2.0/article/getslice?offset=0&limit=${ARTICLES_LIMIT}&type=normal`,
-        )
-        const rows = Array.isArray(data.medias) ? data.medias : []
-        return rows.flatMap((row) => {
-            const stats = statsOf(row)
-            return stats === null ? [] : [stats]
-        })
     }
 
     /**
@@ -316,13 +228,14 @@ export class ZaloClient {
         }
     }
 
-    private async apiCall(
+    /** Calls an endpoint of the OA API with the access token and answers the `data` of a successful answer as an object; any failure is a ZaloError. */
+    async call(
         accessToken: string,
-        method: "GET" | "POST",
+        method: ZaloMethod,
         path: string,
         body?: unknown,
         base: string = this.options.apiBase,
-    ): Promise<Record<string, unknown>> {
+    ): Promise<ZaloData> {
         const data = await this.apiData(accessToken, method, path, body, base)
         return isRecord(data) ? data : {}
     }

@@ -6,6 +6,7 @@ import { ZaloWebhookGateService } from "@modules/domain/channels"
 import { ConversationsService } from "@modules/domain/conversations"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
+import { receiptBodyOf } from "@tests/fixtures/builders/zalo-inbox.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { LOGGER } from "@modules/platform/logging"
@@ -32,10 +33,11 @@ const stamped = (set: unknown): unknown => {
     return typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined
 }
 
-const pendingOf = (over: Partial<ZaloInboxEntity> = {}): ZaloInboxEntity =>
-    Object.assign(new ZaloInboxEntity(), { id: "receipt-1", provider: "zalo", payload }, over)
-
-const build = async (pending: ZaloInboxEntity | null = pendingOf(), claimed = true, keyed = true) => {
+const build = async (
+    pending: ZaloInboxEntity | null = receiptBodyOf(body.toString("utf8")),
+    claimed = true,
+    keyed = true,
+) => {
     const tx = fakeTransaction(
         mockEntityManager({
             findOne: [ZaloInboxEntity, pending],
@@ -117,7 +119,11 @@ describe("ZaloInboxService receipt delivery", () => {
     })
 
     it("closes the receipt of a connection that holds no OA secret key yet, publishing nothing", async () => {
-        const { service, outbox, tx, conversations, gate } = await build(pendingOf(), true, false)
+        const { service, outbox, tx, conversations, gate } = await build(
+            receiptBodyOf(body.toString("utf8")),
+            true,
+            false,
+        )
         await service.acceptZaloDelivery(body, "c-1")
         expect(gate.holdsProofKey).toHaveBeenCalledWith("c-1")
         expect(outbox.jobs).toEqual([])
@@ -177,22 +183,20 @@ describe("ZaloInboxService deferred effects", () => {
 
 describe("ZaloInboxService consumer recovery", () => {
     it("completes an ignored decoded message without a conversation effect, and logs that it was dropped", async () => {
-        const { service, conversations, tx, logger } = await build(
-            pendingOf({ payload: { connection: "c-1", rawBody: "{}" } }),
-        )
+        const { service, conversations, tx, logger } = await build(receiptBodyOf("{}"))
         await service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
         expect(tx.em.update).toHaveBeenCalledTimes(1)
         expect(logger.info).toHaveBeenCalledWith("zalo_inbox.event_ignored", {
             connectionId: "c-1",
             eventName: "unreadable",
-            reason: expect.any(String),
+            reason: "CONVERSATIONS_NOT_ANSWERED",
         })
     })
 
     it("names the event it ignored, an image for one, and logs nothing for the text it answers", async () => {
         const image = JSON.stringify({ event_name: "user_send_image", sender: { id: "u" }, message: { msg_id: "m" } })
-        const ignored = await build(pendingOf({ payload: { connection: "c-1", rawBody: image } }))
+        const ignored = await build(receiptBodyOf(image))
         await ignored.service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
         expect(ignored.logger.info).toHaveBeenCalledWith(
             "zalo_inbox.event_ignored",
@@ -239,12 +243,15 @@ describe("ZaloInboxService polled messages", () => {
             deliveryId: "c-1:m-1",
             payload: { connection: "c-1", source: "poll" },
         })
-        const stored: { readonly payload?: { readonly rawBody?: string } } = Object(inbox.receipts[0]?.row)
-        expect(JSON.parse(stored.payload?.rawBody ?? "{}")).toEqual({
-            event_name: "user_send_text",
-            timestamp: "1762192200000",
-            sender: { id: "user-1" },
-            message: { msg_id: "m-1", text: "Hello" },
+        expect(inbox.receipts[0]?.row).toMatchObject({
+            payload: {
+                rawBody: JSON.stringify({
+                    event_name: "user_send_text",
+                    timestamp: "1762192200000",
+                    sender: { id: "user-1" },
+                    message: { msg_id: "m-1", text: "Hello" },
+                }),
+            },
         })
         expect(write).toHaveBeenCalledWith(
             expect.anything(),
@@ -307,14 +314,7 @@ describe("ZaloInboxService pictures and files", () => {
             },
         }),
     )
-    const pictureOf = (source?: "poll" | "manual_import") =>
-        pendingOf({
-            payload: {
-                connection: "c-1",
-                rawBody: picture.toString("utf8"),
-                ...(source === undefined ? {} : { source }),
-            },
-        })
+    const pictureOf = (source?: "poll" | "manual_import") => receiptBodyOf(picture.toString("utf8"), source)
     const file = {
         bytes: new Uint8Array([1]),
         contentType: "image/png",
@@ -351,9 +351,7 @@ describe("ZaloInboxService pictures and files", () => {
                 message: { msg_id: "m-9", attachments: [{ type: "image", localPath: "receipts/a.jpg", payload: {} }] },
             }),
         )
-        const { service, conversations } = await build(
-            pendingOf({ payload: { connection: "c-1", rawBody: imported.toString("utf8"), source: "manual_import" } }),
-        )
+        const { service, conversations } = await build(receiptBodyOf(imported.toString("utf8"), "manual_import"))
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
 
@@ -363,9 +361,24 @@ describe("ZaloInboxService pictures and files", () => {
             "m-9",
         )
     })
+})
+
+describe("ZaloInboxService unreadable pictures", () => {
+    const picture = Buffer.from(
+        JSON.stringify({
+            app_id: "app-1",
+            event_name: "user_send_image",
+            sender: { id: "user-1" },
+            message: {
+                msg_id: "m-9",
+                text: "Em chuyen khoan roi",
+                attachments: [{ type: "image", payload: { url: "https://cdn.test/a.jpg" } }],
+            },
+        }),
+    )
 
     it("still delivers the message when the pictures cannot be read", async () => {
-        const { service, conversations } = await build(pictureOf())
+        const { service, conversations } = await build(receiptBodyOf(picture.toString("utf8")))
         conversations.readFiles.mockRejectedValue(new Error("storage down"))
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
@@ -389,9 +402,7 @@ describe("ZaloInboxService pictures and files", () => {
                 message: { msg_id: "m-9", attachments: [{ kind: "x" }] },
             }),
         )
-        const { service, logger } = await build(
-            pendingOf({ payload: { connection: "c-1", rawBody: unreadable.toString("utf8") } }),
-        )
+        const { service, logger } = await build(receiptBodyOf(unreadable.toString("utf8")))
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
@@ -403,7 +414,7 @@ describe("ZaloInboxService pictures and files", () => {
     })
 
     it("does not log a shape for an event that is not a picture or a file", async () => {
-        const { service, logger } = await build(pendingOf({ payload: { connection: "c-1", rawBody: "{}" } }))
+        const { service, logger } = await build(receiptBodyOf("{}"))
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
 
