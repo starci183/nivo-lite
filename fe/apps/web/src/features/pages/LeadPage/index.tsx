@@ -1,8 +1,7 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { LEADS_ROUTES } from "@/modules/routes"
-import { LeadPageBase } from "./component"
+import { LeadPanes } from "@/components/blocks/LeadPanes"
 
 interface LeadPageProps {
     readonly leadId: string
@@ -10,22 +9,10 @@ interface LeadPageProps {
 
 /** The lead page's localized document title. */
 export const leadPageMetadata = async (): Promise<Metadata> => ({
-    title: (await getTranslations("leads"))("detailEyebrow"),
+    title: (await getTranslations("leads"))("detailTitle"),
 })
 
-/** A server shell: the trail is resolved here, the connected head slots and panels share the lead's SWR query. */
-export const LeadPage = async (props: LeadPageProps): Promise<ReactElement> => {
-    const t = await getTranslations("leads")
-    return (
-        <LeadPageBase
-            props={{
-                leadId: props.leadId,
-                crumbLabel: t("crumbLabel"),
-                crumbs: [
-                    { id: "home", label: t("crumbHome"), href: LEADS_ROUTES.dashboard },
-                    { id: "leads", label: t("title"), href: LEADS_ROUTES.leads },
-                ],
-            }}
-        />
-    )
-}
+/** The lead route: the panes block is its root and draws the one `Page` of the list beside the open lead. */
+export const LeadPage = (props: LeadPageProps): ReactElement => (
+    <LeadPanes leadId={props.leadId} query="" isFormOpen={false} />
+)

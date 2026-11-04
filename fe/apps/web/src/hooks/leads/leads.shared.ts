@@ -18,6 +18,11 @@ export const HUMAN_OWNER = "human"
 /** The stages in journey order, as the tabs and the stage choice list them. */
 export const STAGE_ORDER: ReadonlyArray<LeadStageId> = ["new", "qualified", "proposal", "won", "lost"]
 
+const STAGE_IDS: ReadonlySet<string> = new Set(STAGE_ORDER)
+
+/** Whether a value is one of the stages. */
+export const isStage = (value: string): value is LeadStageId => STAGE_IDS.has(value)
+
 /** The badge tone of each stage. */
 export const STAGE_TONES: Readonly<Record<LeadStageId, BadgeTone>> = {
     new: "neutral",
@@ -166,4 +171,27 @@ export const flowViewMapper = (
             ],
         }
     }
+}
+
+type ChannelKey =
+    "channelZalo" | "channelWebsiteChat" | "channelWebsiteForm" | "channelPhone" | "channelEmail" | "channelReferral"
+
+const CHANNEL_KEYS: Readonly<Record<string, ChannelKey>> = {
+    zalo: "channelZalo",
+    "website chat": "channelWebsiteChat",
+    website_chat: "channelWebsiteChat",
+    "website form": "channelWebsiteForm",
+    website_form: "channelWebsiteForm",
+    phone: "channelPhone",
+    email: "channelEmail",
+    referral: "channelReferral",
+}
+
+/** The reader-language name of a lead channel as stored (a key like `website_chat` or a name typed in the form); an unknown one is shown as it was written. */
+export const channelLabelOf = (channel: string, t: ReturnType<typeof useTranslations<"leads">>): string => {
+    const normalized = channel.trim().toLowerCase().normalize("NFC")
+    const key =
+        CHANNEL_KEYS[normalized] ??
+        Object.values(CHANNEL_KEYS).find((candidate) => t(candidate).toLowerCase().normalize("NFC") === normalized)
+    return key === undefined ? channel : t(key)
 }

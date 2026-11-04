@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
         return [
             { source: "/m", destination: "/agents", permanent: true },
             { source: "/m/:path*", destination: "/agents/:path*", permanent: true },
+            // Plan, payments and renewal live on the one console billing page.
+            { source: "/workspaces/:id/billing", destination: "/billing", permanent: false },
         ]
     },
     // The runtime stage of the Dockerfile ships the standalone output.
