@@ -30,6 +30,8 @@ export interface JobClaims {
     renew(write: RenewWrite): Promise<void>
     /** Completes the job; throws `JobFencedOut` when the token is stale. */
     complete(write: GuardedWrite): Promise<void>
+    /** Gives a deferred job back, claimable again with no failure written; throws `JobFencedOut` when the token is stale. */
+    release(write: GuardedWrite): Promise<void>
     /** Fails the job so the queue can retry it; throws `JobFencedOut` when the token is stale. */
     fail(write: FailWrite): Promise<void>
     /** Holds the live job fence across domain effects so a replacement claim cannot overtake them. */

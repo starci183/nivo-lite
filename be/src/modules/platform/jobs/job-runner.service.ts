@@ -14,6 +14,10 @@ import type { FencedProcessor } from "./fenced.processor"
 
 const isFencedOut = (cause: unknown): boolean => cause instanceof JobsError && cause.code === JobsErrorCode.FencedOut
 
+/** Whether a handler asked for its job to run later (a typed hand-back), which is no failure. */
+const isDeferral = (cause: unknown): cause is QueueError =>
+    cause instanceof QueueError && cause.code === QueueErrorCode.DeferredUntil
+
 @Injectable()
 /**
  * The runner of fenced jobs: it subscribes each registered processor to its queue and, for every delivery, claims the job (bumping the
@@ -72,11 +76,23 @@ export class JobRunnerService implements JobProcessorRegistry {
                 this.logger.warn(JobsLogEvent.FencedOut, { jobId: job.jobId })
                 return
             }
-            await this.recordFailure(job, cause)
+            if (isDeferral(cause)) await this.release(job, cause)
+            else await this.recordFailure(job, cause)
             throw cause
         } finally {
             hold.stop()
         }
+    }
+
+    /** A handler that asked to run later failed nothing: the job is given back, logged at info, and the queue defers it. */
+    private async release(job: ClaimedJob, cause: QueueError): Promise<void> {
+        this.logger.info(JobsLogEvent.Deferred, { jobId: job.jobId, seconds: Number(cause.params.seconds) })
+        await this.claims
+            .release({ jobId: job.jobId, expectedFencingToken: job.fencingToken })
+            .catch((error_: unknown) => {
+                if (isFencedOut(error_)) this.logger.warn(JobsLogEvent.FencedOut, { jobId: job.jobId })
+                else this.logger.error(JobsLogEvent.FailureNotRecorded, error_, { jobId: job.jobId })
+            })
     }
 
     private async recordFailure(job: ClaimedJob, cause: unknown): Promise<void> {

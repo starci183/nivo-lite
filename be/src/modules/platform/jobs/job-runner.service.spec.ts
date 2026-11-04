@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { QUEUE_WORKER_REGISTRY, QueueErrorCode } from "@modules/platform/queue"
+import { QUEUE_WORKER_REGISTRY, QueueError, QueueErrorCode } from "@modules/platform/queue"
 import type { QueueDelivery, QueueWorkerRegistry } from "@modules/platform/queue"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { FencedProcessor } from "./fenced.processor"
@@ -29,6 +29,7 @@ const fenced = (): JobsError => new JobsError({ code: JobsErrorCode.FencedOut, p
 const build = async () => {
     const claims = mock<JobClaims>()
     claims.fail.mockResolvedValue(undefined)
+    claims.release.mockResolvedValue(undefined)
     claims.retryAfterSeconds.mockResolvedValue(null)
     const queues = mock<QueueWorkerRegistry>()
     const logger = mock<Logger>()
@@ -202,6 +203,27 @@ describe("JobRunnerService", () => {
 
             expect(claims.fail).toHaveBeenCalledWith({ jobId: "j-1", expectedFencingToken: 2, reason: "provider down" })
             expect(logger.error).toHaveBeenCalledWith(JobsLogEvent.DeliveryFailed, failure, { jobId: "j-1" })
+        })
+
+        it("gives back a job whose handler asked to run later, logged at info and recorded as no failure", async () => {
+            const { runner, claims, logger, processor } = await build()
+            claims.claim.mockResolvedValue(job)
+            const later = new QueueError({ code: QueueErrorCode.DeferredUntil, params: { seconds: 5 } })
+            processor.process.mockRejectedValue(later)
+
+            await expect(runner.run(processor, delivery)).rejects.toBe(later)
+
+            expect(claims.release).toHaveBeenCalledWith({ jobId: "j-1", expectedFencingToken: 2 })
+            expect(claims.fail).not.toHaveBeenCalled()
+            expect(logger.info).toHaveBeenCalledWith(JobsLogEvent.Deferred, { jobId: "j-1", seconds: 5 })
+            expect(logger.error).not.toHaveBeenCalled()
+
+            const storeDown = new Error("store down")
+            claims.release.mockRejectedValueOnce(fenced()).mockRejectedValueOnce(storeDown)
+            await expect(runner.run(processor, delivery)).rejects.toBe(later)
+            expect(logger.warn).toHaveBeenCalledWith(JobsLogEvent.FencedOut, { jobId: "j-1" })
+            await expect(runner.run(processor, delivery)).rejects.toBe(later)
+            expect(logger.error).toHaveBeenCalledWith(JobsLogEvent.FailureNotRecorded, storeDown, { jobId: "j-1" })
         })
 
         it("records a thrown value that is not an Error by its text", async () => {

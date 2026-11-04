@@ -2,6 +2,8 @@
 export enum JobsLogEvent {
     /** A write of a stale worker was refused: a newer worker owns the job and this one stopped with no further effect. */
     FencedOut = "jobs.fenced-out",
+    /** A handler asked for its job to run again later; the job was given back with no failure, and the queue defers it. */
+    Deferred = "jobs.delivery.deferred",
     /** A delivery failed and the job was marked failed for the queue to retry. */
     DeliveryFailed = "jobs.delivery.failed",
     /** A failed delivery could not even be recorded as failed; the lease will expire and the job will be claimed again. */

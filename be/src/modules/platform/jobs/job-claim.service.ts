@@ -141,6 +141,14 @@ export class JobClaimService implements JobClaims {
         return this.guarded({ status: "done", leaseExpiresAt: null }, write)
     }
 
+    /**
+     * Gives a deferred job back under the token the caller holds: claimable again with no failure written, because nothing failed;
+     * the queue runs it again after the pause its handler asked for.
+     */
+    release(write: GuardedWrite): Promise<void> {
+        return this.guarded({ status: "failed", error: null, leaseExpiresAt: null }, write)
+    }
+
     /** Marks the job failed under the token the caller holds, so the queue can retry it. */
     fail(write: FailWrite): Promise<void> {
         return this.guarded({ status: "failed", error: write.reason, leaseExpiresAt: null }, write)

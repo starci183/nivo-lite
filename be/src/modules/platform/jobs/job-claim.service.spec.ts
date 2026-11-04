@@ -188,6 +188,7 @@ describe("JobClaimService", () => {
             await claims.complete({ jobId: "j-1", expectedFencingToken: 3 })
             await claims.fail({ jobId: "j-1", expectedFencingToken: 3, reason: "boom" })
             await claims.renew({ jobId: "j-1", expectedFencingToken: 3, leaseMs: 60_000 })
+            await claims.release({ jobId: "j-1", expectedFencingToken: 3 })
 
             expect(manager.update).toHaveBeenNthCalledWith(1, JobEntity, held, {
                 currentStep: "send",
@@ -203,6 +204,11 @@ describe("JobClaimService", () => {
             })
             expect(manager.update).toHaveBeenNthCalledWith(4, JobEntity, held, {
                 leaseExpiresAt: new Date("2026-02-03T04:06:06.000Z"),
+            })
+            expect(manager.update).toHaveBeenNthCalledWith(5, JobEntity, held, {
+                status: "failed",
+                error: null,
+                leaseExpiresAt: null,
             })
         })
 
