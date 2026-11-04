@@ -289,6 +289,18 @@ describe("ChannelDeliveryService", () => {
             expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", true, undefined)
         })
 
+        it.each(["zalo_recipient", "zalo_unfollowed", "zalo_window_expired", "zalo_error"] as const)(
+            "stores the classified Zalo failure %s on the message, not a generic refusal",
+            async (failure) => {
+                const { service, zaloDelivery, messages } = await build(zaloTarget())
+                zaloDelivery.send.mockResolvedValue({ delivered: false, failure, outcome: "rejected" })
+
+                await service.deliver(request)
+
+                expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", false, failure)
+            },
+        )
+
         it("lets the caller retry when another worker is renewing the token", async () => {
             const { service, zaloDelivery, messages } = await build(zaloTarget())
             const busy = new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy })

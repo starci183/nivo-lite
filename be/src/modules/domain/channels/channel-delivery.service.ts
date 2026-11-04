@@ -11,6 +11,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectChannelSenderRegistry } from "./channels.decorators"
 import type { ChannelSenderRegistry, DeliveryRequest, DeliveryReceipt, PersonMessage } from "./channels.contracts"
+import { deliveryFailureFieldsOf } from "./delivery-failure-fields.policy"
 import { RECIPIENT_NOT_LINKED, recipientLinked } from "./delivery-recipient.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
@@ -25,7 +26,7 @@ const UNKNOWN: DeliveryReceipt = { delivered: false, failure: null, outcome: "am
 const deliveryErrorOf = (receipt: DeliveryReceipt): string | undefined => {
     if (receipt.delivered) return undefined
     if (receipt.outcome === "ambiguous") return DELIVERY_OUTCOME_UNKNOWN
-    return receipt.failure === null || receipt.failure === "zalo_error" ? "delivery_rejected" : receipt.failure
+    return receipt.failure ?? "delivery_rejected"
 }
 
 /** Archived conversations carry `<chat id>:<timestamp>`; the customer's id on the channel is the part before the colon. */
@@ -171,6 +172,7 @@ export class ChannelDeliveryService {
         this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, {
             conversationId: target.id,
             channel: target.channel,
+            ...deliveryFailureFieldsOf(cause),
         })
         return cause instanceof TelegramError && cause.code === TelegramErrorCode.Rejected ? NOT_DELIVERED : UNKNOWN
     }

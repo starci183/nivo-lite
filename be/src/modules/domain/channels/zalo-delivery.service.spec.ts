@@ -273,6 +273,11 @@ describe("ZaloDeliveryService", () => {
             expect(logger.error).toHaveBeenCalledWith("channels.delivery.failed", expect.anything(), {
                 conversationId: "conv-1",
                 channel: "zalo",
+                failure,
+                errorCode: "ZALO_REJECTED",
+                path: "/message/template",
+                reason: "no",
+                zaloCode,
             })
         })
 
@@ -383,6 +388,11 @@ describe("ZaloDeliveryService", () => {
             expect(logger.error).toHaveBeenCalledWith("channels.delivery.failed", expect.anything(), {
                 conversationId: "conv-1",
                 channel: "zalo",
+                failure: "zalo_night_hours",
+                errorCode: "ZALO_REJECTED",
+                path: "/v3.0/oa/message/cs",
+                reason: "no",
+                zaloCode: -234,
             })
         })
 
