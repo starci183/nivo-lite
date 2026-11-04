@@ -7,7 +7,12 @@ import {
 } from "@tests/fixtures/builders/workspace-seed.builder"
 import { mock } from "@starci/jest-preset"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { MODULE_CATALOG, ModuleReadinessService, SetupChatService } from "@modules/domain/modules"
+import {
+    MODULE_CATALOG,
+    ModuleReadinessService,
+    ModuleTagGrantsService,
+    SetupChatService,
+} from "@modules/domain/modules"
 import { WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { HAKUEN_PROFILE } from "./profiles/hakuen-profile.templates"
 import { ProfileActivationService } from "./profile-activation.service"
@@ -48,15 +53,18 @@ const build = async () => {
     setup.openDraft.mockResolvedValue(draftOf())
     const readiness = mock<ModuleReadinessService>()
     readiness.settle.mockResolvedValue("ready")
+    const tagGrants = mock<ModuleTagGrantsService>()
+    tagGrants.grantFor.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ProfileActivationService,
             { provide: InstallationRecordsService, useValue: installations },
             { provide: SetupChatService, useValue: setup },
             { provide: ModuleReadinessService, useValue: readiness },
+            { provide: ModuleTagGrantsService, useValue: tagGrants },
         ],
     }).compile()
-    return { service: moduleRef.get(ProfileActivationService), installations, setup, readiness }
+    return { service: moduleRef.get(ProfileActivationService), installations, setup, readiness, tagGrants }
 }
 
 describe("ProfileActivationService", () => {
@@ -85,6 +93,19 @@ describe("ProfileActivationService", () => {
                 [WS, "a1"],
                 [WS, "a1"],
             ])
+        })
+
+        it("grants the tag rights of the module to a newly installed agent, and to none already installed", async () => {
+            const fresh = await build()
+            fresh.installations.ofAgent.mockResolvedValueOnce(null).mockResolvedValueOnce(installationOf())
+            const held = await build()
+            held.installations.ofAgent.mockResolvedValue(installationOf())
+
+            await fresh.service.install(WS, "a1", AGENT)
+            await held.service.install(WS, "a1", AGENT)
+
+            expect(fresh.tagGrants.grantFor).toHaveBeenCalledWith(WS, "chatbot", "a1")
+            expect(held.tagGrants.grantFor).not.toHaveBeenCalled()
         })
 
         it("fails the run when the new installation cannot be read back", async () => {

@@ -14,6 +14,7 @@ import { InstallationChangesService } from "./installation-changes.service"
 import { InstallationDirectoryService } from "./installation-directory.service"
 import { InstallationFactsService } from "./installation-facts.service"
 import { ModuleInstallService } from "./module-install.service"
+import { ModuleTagGrantsService } from "./module-tag-grants.service"
 import { ModuleReadinessService } from "./module-readiness.service"
 import { RECORD_INSTALLATION_SOURCES } from "./modules.decorators"
 import type { RecordInstallationSource } from "./modules.port"
@@ -46,6 +47,7 @@ export class ModulesModule extends ConfigurableModuleClass {
             ModuleReadinessService,
             InstallationDirectoryService,
             InstallationChangesService,
+            ModuleTagGrantsService,
             SetupChatService,
             SetupCardsService,
             SetupBranchCardsService,

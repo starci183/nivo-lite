@@ -10,10 +10,10 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ACCOUNTING_MODULE } from "./accounting.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
-import { SALES_MODULE } from "./sales.contracts"
 import { ModulesErrorCode } from "./errors/modules.error"
 import { ModuleInstallService } from "./module-install.service"
 import { ModuleReadinessService } from "./module-readiness.service"
+import { ModuleTagGrantsService } from "./module-tag-grants.service"
 import { ModulesService } from "./modules.service"
 import { RecordInstallationService } from "./record-installation.service"
 import {
@@ -43,6 +43,8 @@ const build = async () => {
     const facts = mock<InstallationFactsService>()
     const recordOwners = mock<RecordInstallationService>()
     const readiness = mock<ModuleReadinessService>()
+    const tagGrants = mock<ModuleTagGrantsService>()
+    tagGrants.grantFor.mockResolvedValue(undefined)
     readiness.needsOf.mockResolvedValue([])
     readiness.withNeeds.mockImplementation((record) => Promise.resolve({ ...record, ...VIEWED }))
     const moduleRef = await Test.createTestingModule({
@@ -60,6 +62,7 @@ const build = async () => {
             { provide: InstallationFactsService, useValue: facts },
             { provide: RecordInstallationService, useValue: recordOwners },
             { provide: ModuleReadinessService, useValue: readiness },
+            { provide: ModuleTagGrantsService, useValue: tagGrants },
         ],
     }).compile()
     const service = moduleRef.get(ModuleInstallService)
@@ -75,6 +78,7 @@ const build = async () => {
         events,
         sync,
         readiness,
+        tagGrants,
         facts,
         recordOwners,
     }
@@ -110,48 +114,22 @@ describe("ModuleInstallService > install", () => {
         expect(sync.announceNow).toHaveBeenCalledWith({ workspaceId: "ws-1", installationId: "inst-1", force: true })
     })
 
-    it("grants the tag rights Chatbot and Sales need when Chatbot joins a workspace that has Sales", async () => {
-        const { service, installations, agents, catalog } = await build()
+    it("grants the tag rights of the module to the agent it installed, on the install door", async () => {
+        const { service, installations, tagGrants } = await build()
         installations.firstOfModule.mockResolvedValue(recordOf())
-        installations.list.mockResolvedValue([
-            recordOf(),
-            recordOf({ id: "inst-sales", moduleKey: "sales", agentId: "agent-sales" }),
-        ])
-        catalog.find.mockImplementation((key) => Promise.resolve(key === "sales" ? SALES_MODULE : CHATBOT_MODULE))
 
         await service.install("u1", requestOf())
 
-        expect(agents.grantTags).toHaveBeenCalledWith("ws-1", [{ from: "agent-1", to: "agent-sales" }])
+        expect(tagGrants.grantFor).toHaveBeenCalledWith("ws-1", "chatbot", "agent-1")
     })
 
-    it("grants the tag right in the other direction when Sales joins a workspace that has Chatbot", async () => {
-        const { service, installations, agents, catalog } = await build()
-        installations.firstOfModule.mockResolvedValue(recordOf({ moduleKey: "sales", agentId: "agent-sales" }))
-        installations.list.mockResolvedValue([
-            recordOf(),
-            recordOf({ id: "inst-sales", moduleKey: "sales", agentId: "agent-sales" }),
-        ])
-        catalog.find.mockImplementation((key) => Promise.resolve(key === "sales" ? SALES_MODULE : CHATBOT_MODULE))
-
-        await service.install("u1", requestOf({ moduleKey: "sales" }))
-
-        expect(agents.grantTags).toHaveBeenCalledWith("ws-1", [{ from: "agent-1", to: "agent-sales" }])
-    })
-
-    it("skips installations without an agent and modules that list no tags", async () => {
-        const { service, installations, agents, catalog } = await build()
-        installations.firstOfModule.mockResolvedValue(recordOf())
-        installations.list.mockResolvedValue([
-            recordOf({ id: "inst-empty", agentId: null }),
-            recordOf({ id: "inst-acc", moduleKey: "accounting", agentId: "agent-acc" }),
-        ])
-        catalog.find.mockImplementation((key) =>
-            Promise.resolve(key === "accounting" ? ACCOUNTING_MODULE : CHATBOT_MODULE),
-        )
+    it("grants nothing while the installation has no agent", async () => {
+        const { service, installations, tagGrants } = await build()
+        installations.firstOfModule.mockResolvedValue(recordOf({ agentId: null }))
 
         await service.install("u1", requestOf())
 
-        expect(agents.grantTags).toHaveBeenCalledWith("ws-1", [{ from: "agent-1", to: "agent-acc" }])
+        expect(tagGrants.grantFor).not.toHaveBeenCalled()
     })
 
     it("installs the first instance on an agent no installation drives yet", async () => {
