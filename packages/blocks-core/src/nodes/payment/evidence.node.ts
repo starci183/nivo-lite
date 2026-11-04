@@ -134,7 +134,8 @@ const candidatesOf = async (
 ): Promise<ReadonlyArray<Candidate>> => {
     const orders = (await openOrders(context)).filter(
         (order) =>
-            (leadId === null || order.leadId === leadId) && atOf(order.confirmedAt ?? order.createdAt) >= arrival.at - windowMs,
+            (leadId === null || order.leadId === leadId) &&
+            atOf(order.confirmedAt ?? order.createdAt) >= arrival.at - windowMs,
     )
     return Promise.all(orders.map(async (order) => candidateOf(order, await nameOf(context, order.leadId))))
 }
@@ -158,7 +159,11 @@ const evidenceOf = (
 }
 
 /** The evidence for a transaction that arrived: every open order inside the window, and what customers said about paying. */
-const fromTransaction = async (context: NodeContext, transactionId: string, windowMs: number): Promise<EvidenceOutput> => {
+const fromTransaction = async (
+    context: NodeContext,
+    transactionId: string,
+    windowMs: number,
+): Promise<EvidenceOutput> => {
     const [transaction] = await context.data.read<TransactionRow>("bank-transaction", {
         where: { id: transactionId },
         fields: READ_TRANSACTIONS.fields,
@@ -166,7 +171,13 @@ const fromTransaction = async (context: NodeContext, transactionId: string, wind
     })
     if (transaction === undefined) return NONE
     const arrival = arrivalOf(transaction)
-    return evidenceOf(arrival, await candidatesOf(context, arrival, windowMs, null), await openClaims(context), null, windowMs)
+    return evidenceOf(
+        arrival,
+        await candidatesOf(context, arrival, windowMs, null),
+        await openClaims(context),
+        null,
+        windowMs,
+    )
 }
 
 /** The lead of a claim: its own, or the one of its conversation. */
@@ -297,7 +308,13 @@ export const paymentEvidenceNode: NodeDefinition<
             name: "a claim whose money is not in the feed yet has no arrival and no candidates: it waits",
             params: { windowHours: WINDOW_HOURS },
             input: { transactionId: null, claimId: CLAIM_DINH.id },
-            output: { arrival: null, evidenced: [], claims: [CLAIM_OF_DINH], transactionId: null, claimId: CLAIM_DINH.id },
+            output: {
+                arrival: null,
+                evidenced: [],
+                claims: [CLAIM_OF_DINH],
+                transactionId: null,
+                claimId: CLAIM_DINH.id,
+            },
             effects: [],
             store: { ...STORE_REAL_CASE, "bank-transaction": [] },
         },

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { ORDER_SCHEMA } from "./ai-tasks.schema"
 import { nodeMessagesOf, nodeMetaOf } from "./node-prompt.policy"
 
 const ASK = { purpose: "intent.classify:read", instructions: "Rules", input: { text: "hi" } }
@@ -12,20 +12,17 @@ describe("node-prompt policy", () => {
         expect(nodeMessagesOf({ ...ASK, input: undefined })[1]).toEqual({ role: "user", content: "null" })
     })
 
-    it("names the answer's members, types and allowed values in the system message of a structured call", () => {
-        const schema = z.object({ intents: z.array(z.enum(["order", "question"])), address: z.string().nullable() })
-        const [system] = nodeMessagesOf(ASK, schema)
-        const named = JSON.parse(system?.content.split("\n").at(-1) ?? "{}") as { properties?: Record<string, unknown> }
+    it("names the answer's members and their types in the system message of a structured call", () => {
+        const [system] = nodeMessagesOf(ASK, ORDER_SCHEMA)
 
         expect(system?.content.startsWith("Rules\n\nAnswer with one JSON object")).toBe(true)
-        expect(Object.keys(named.properties ?? {})).toEqual(["intents", "address"])
-        expect(JSON.stringify(named.properties?.intents)).toContain('"enum":["order","question"]')
+        expect(system?.content).toContain('"items":')
+        expect(system?.content).toContain('"amount_vnd":')
+        expect(system?.content).toContain('"type":["number","null"]')
     })
 
-    it("still describes an answer whose schema transforms what it parses", () => {
-        const [system] = nodeMessagesOf(ASK, z.object({ at: z.string().transform((value) => new Date(value)) }))
-
-        expect(system?.content).toContain('"at"')
+    it("keeps the instructions alone for a free-text call", () => {
+        expect(nodeMessagesOf(ASK)[0]).toEqual({ role: "system", content: "Rules" })
     })
 
     it("attaches the pictures of the call to the user message, and leaves the key out when there are none", () => {

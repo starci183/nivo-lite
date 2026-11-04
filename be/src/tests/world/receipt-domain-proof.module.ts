@@ -27,7 +27,7 @@ import { Secret } from "@modules/platform/config"
 import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
-import { QUIET_CUSTOMER_INTAKE, QUIET_INBOUND_FILES, QUIET_INSTALLATIONS } from "./quiet-peers"
+import { QUIET_CUSTOMER_INTAKE, QUIET_INBOUND_FILES, QUIET_INSTALLATIONS } from "./quiet-peers.options"
 import { ZaloDeliveryQueue } from "../../modules/queues/zalo-delivery/zalo-delivery.queue"
 
 const tokenKey = new Secret(Buffer.alloc(32, 7).toString("base64"))

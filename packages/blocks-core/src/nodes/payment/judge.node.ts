@@ -161,8 +161,18 @@ export const paymentJudgeNode: NodeDefinition<
             name: "the owner's 2,000 MoMo claim matches transfer 95937289 by amount but no order is for 2,000: ambiguous, the owner decides",
             params: {},
             input: { arrival: ARRIVAL_MOMO, evidenced: [...EVIDENCED_FOR_MOMO_CLAIM], claims: [CLAIM_OF_MOMO] },
-            model: [{ verdict: "ambiguous", candidate_id: null, reasons: ["Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ"] }],
-            output: { branch: "ambiguous", candidateIds: ["order-dinh"], reasons: ["Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ"] },
+            model: [
+                {
+                    verdict: "ambiguous",
+                    candidate_id: null,
+                    reasons: ["Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ"],
+                },
+            ],
+            output: {
+                branch: "ambiguous",
+                candidateIds: ["order-dinh"],
+                reasons: ["Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ"],
+            },
             effects: [],
         },
         {

@@ -3,7 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { LeadReadService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { WorkThreadsService } from "@modules/domain/work-threads"
-import { QUIET_PAYMENT_DEMAND } from "./quiet-peers"
+import { QUIET_PAYMENT_DEMAND } from "./quiet-peers.options"
 
 @Module({
     providers: [LeadReadService, OrdersService, QUIET_PAYMENT_DEMAND, WorkThreadsService],

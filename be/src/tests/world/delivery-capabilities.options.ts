@@ -1,26 +1,19 @@
 import { Module } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import type { DynamicModule } from "@nestjs/common"
 import { Secret } from "@modules/platform/config"
-import { CLOCK } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { EVENT_BUS } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
 import { I18nModule } from "@modules/platform/i18n"
 import { JobsModule } from "@modules/platform/jobs"
 import { HttpSecurityModule } from "@modules/platform/http-security"
 import { refused } from "@modules/platform/primitives"
-import { ZaloModule, ZALO } from "@modules/integrations/zalo"
-import type { ZaloClient } from "@modules/integrations/zalo"
+import { ZaloModule } from "@modules/integrations/zalo"
 import { MetaModule } from "@modules/integrations/meta"
-import { ConnectionSecretReadsService, ConnectionsModule, ConnectionsService } from "@modules/domain/connections"
-import { ConnectionSecretsModule, ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { ConnectionsModule } from "@modules/domain/connections"
+import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConversationsService, CONVERSATIONS_MESSAGES } from "@modules/domain/conversations"
 import { CustomerHearingService } from "../../modules/domain/conversations/customer-hearing.service"
 import { ZaloCredentialsService } from "@modules/domain/channels"
+import { CHANNELS_OPTIONS } from "../../modules/domain/channels/channels.decorators"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { AGENTS_INSTALLATIONS, AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
@@ -42,7 +35,12 @@ import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { MetaInboxModule } from "@modules/domain/meta-inbox"
 import { ChatTurnModule } from "@modules/queues/chat-turn"
-import { QUIET_AGENT_TAGS, QUIET_CUSTOMER_INTAKE, QUIET_INBOUND_FILES, QUIET_INSTALLATIONS } from "./quiet-peers"
+import {
+    QUIET_AGENT_TAGS,
+    QUIET_CUSTOMER_INTAKE,
+    QUIET_INBOUND_FILES,
+    QUIET_INSTALLATIONS,
+} from "./quiet-peers.options"
 import { AgentTagService } from "../../modules/domain/agent-work/agent-tag.service"
 import { DEFAULT_POLL_SCHEDULE } from "../../modules/domain/connection-poll/poll-schedule.policy"
 import { worldIds } from "./lite-world.service"
@@ -81,40 +79,8 @@ class DeliveryPeersModule {
                 QUIET_CUSTOMER_INTAKE,
                 QUIET_INSTALLATIONS,
                 QUIET_INBOUND_FILES,
-                {
-                    provide: ZaloCredentialsService,
-                    useFactory: (
-                        clock: Clock,
-                        zalo: ZaloClient,
-                        logger: Logger,
-                        secrets: ConnectionSecretsService,
-                        connections: ConnectionsService,
-                        secretReads: ConnectionSecretReadsService,
-                        entityManager: EntityManager,
-                        bus: EventBus,
-                    ) =>
-                        new ZaloCredentialsService(
-                            clock,
-                            { siteUrl: "http://localhost" },
-                            zalo,
-                            logger,
-                            secrets,
-                            connections,
-                            secretReads,
-                            entityManager,
-                            bus,
-                        ),
-                    inject: [
-                        CLOCK,
-                        ZALO,
-                        LOGGER,
-                        ConnectionSecretsService,
-                        ConnectionsService,
-                        ConnectionSecretReadsService,
-                        PRIMARY_ENTITY_MANAGER,
-                        EVENT_BUS,
-                    ],
-                },
+                { provide: CHANNELS_OPTIONS, useFactory: () => ({ siteUrl: "http://localhost" }) },
+                ZaloCredentialsService,
             ],
             exports: [ConversationsService, DeferredMetaEvents, ProofAccounts, AgentTagService, AGENTS_INSTALLATIONS],
         }

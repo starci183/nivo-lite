@@ -1,6 +1,6 @@
 import { EnvSource, Secret } from "@modules/platform/config"
-import { DEFAULT_POLL_SCHEDULE } from "../../modules/domain/connection-poll/poll-schedule.policy"
-import { ZALO_POLL_DEFAULTS } from "../../modules/domain/zalo-provider/zalo-poll.policy"
+import { parseConnectionPollConfig } from "@modules/domain/connection-poll"
+import { parseZaloProviderConfig } from "@modules/domain/zalo-provider"
 import type { DynamicModule } from "@nestjs/common"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
 import { HttpError, HttpErrorCode } from "@modules/platform/http"
@@ -101,6 +101,18 @@ const storageProof = {
     timeoutMs: 1000,
 }
 
+/** The poll, import and burst settings of the api, at their defaults with no provider behind them. */
+const pollOptions = (): Pick<
+    ApiOptions,
+    "chatFilesImportRoot" | "connectionPoll" | "sepay" | "zaloProvider" | "agentWork"
+> => ({
+    chatFilesImportRoot: "world-proof/imports",
+    connectionPoll: parseConnectionPollConfig(new EnvSource({})),
+    sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
+    zaloProvider: parseZaloProviderConfig(new EnvSource({})),
+    agentWork: { debounceMs: 0 },
+})
+
 /**
  * The api as it runs, over the local PostgreSQL database the world points at (the global setup names it), with every provider set to
  * an address nothing answers: a proof of the api goes through its real composition and never reaches a provider.
@@ -131,11 +143,7 @@ const localApiOptions = (): ApiOptions => ({
         sepayApiKey: undefined,
         bankAccount: { account: "proof", bank: "proof", holder: "Proof" },
     },
-    chatFilesImportRoot: "world-proof/imports",
-    connectionPoll: { schedule: DEFAULT_POLL_SCHEDULE, redis: undefined },
-    sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
-    zaloProvider: ZALO_POLL_DEFAULTS,
-    agentWork: { debounceMs: 0 },
+    ...pollOptions(),
     ...providerOptions(),
     realtime: { hub: "memory" as const },
     queue: {

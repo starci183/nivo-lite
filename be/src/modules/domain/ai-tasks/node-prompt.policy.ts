@@ -1,4 +1,3 @@
-import { z } from "zod"
 import type { CallMeta, ChatMessage, NodeAsk } from "./ai-tasks.contracts"
 import type { TaskSchema } from "./ai-tasks.schema"
 
@@ -7,7 +6,7 @@ import type { TaskSchema } from "./ai-tasks.schema"
  * names, types and enum values. JSON mode alone tells the model only "an object", so without it the model guesses the member names.
  */
 const answerSchemaOf = (schema: TaskSchema): string =>
-    JSON.stringify(z.toJSONSchema(schema, { io: "input", unrepresentable: "any" }))
+    JSON.stringify(schema.toJSONSchema({ io: "input", unrepresentable: "any" }))
 
 /** The system message of a node's call: its instructions, followed by the JSON Schema its answer must match when it asks for JSON. */
 const instructionsOf = (ask: NodeAsk, schema: TaskSchema | null): string =>

@@ -17,7 +17,7 @@ import { InvoicesModule } from "@modules/domain/invoices"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { IdsModule } from "@modules/platform/ids"
 import { AgentRunSweepService } from "../../modules/domain/agent-runs/agent-run-sweep.service"
-import { QUIET_RUN_SWEEP } from "./quiet-peers"
+import { QUIET_RUN_SWEEP } from "./quiet-peers.options"
 import { OFFICE_CHAIN_MODULES } from "./office-chain-capabilities.options"
 import { KnowledgeReadModule } from "./agent-road-knowledge-read.module"
 import { redisQueueModules } from "./redis-capabilities.options"
@@ -83,14 +83,16 @@ class RoadWorkModule {
         return {
             module: RoadWorkModule,
             global: true,
-            providers: [RoadWork, RoadWorkRegistration, { provide: AGENT_TURN_EXECUTOR, useExisting: RoadWork }],
-            exports: [RoadWork, AGENT_TURN_EXECUTOR],
+            providers: [
+                RoadWork,
+                RoadWorkRegistration,
+                QUIET_RUN_SWEEP,
+                { provide: AGENT_TURN_EXECUTOR, useExisting: RoadWork },
+            ],
+            exports: [RoadWork, AGENT_TURN_EXECUTOR, AgentRunSweepService],
         }
     }
 }
-
-@Module({ providers: [QUIET_RUN_SWEEP], exports: [AgentRunSweepService] })
-class QuietRunsModule {}
 
 /** The clock of the agents as the api composes it, over a private Redis under `prefix`: the office, the work store, the schedules and a handler that asks the probes first. */
 export const agentRoadModules = (prefix: string): Array<DynamicModule> => [
@@ -101,7 +103,6 @@ export const agentRoadModules = (prefix: string): Array<DynamicModule> => [
     ModuleInstallationsModule.register({ isGlobal: true }),
     KnowledgeReadModule.register(),
     AgentWorkModule.register({ isGlobal: true, debounceMs: 0 }),
-    { module: QuietRunsModule, global: true },
     AgentSchedulesModule.register({ isGlobal: true }),
     RoadWorkModule.register(),
 ]

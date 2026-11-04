@@ -34,7 +34,7 @@ import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { I18nModule } from "@modules/platform/i18n"
 import type { LiteWorld } from "./lite-world.service"
-import { QUIET_PAYMENT_DEMAND } from "./quiet-peers"
+import { QUIET_PAYMENT_DEMAND } from "./quiet-peers.options"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
 
 /** The token of the Auth account directory of the office chain proofs. */

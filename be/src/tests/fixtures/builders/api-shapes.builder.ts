@@ -1,9 +1,32 @@
 import type { InjectionToken } from "@nestjs/common"
 import type { Secret } from "@modules/platform/config"
-import type { ConnectionPollOptions } from "../../../modules/domain/connection-poll/poll-schedule.contracts"
 
 /** The build wiring proof result overrides record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOverridesShape = { token: InjectionToken; value: unknown }
+/** The build wiring proof result options connection poll schedule record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsConnectionPollScheduleShape = {
+    healthyIntervalMs: number
+    silentIntervalMs: number
+    hotIntervalMs: number
+    webhookSilentAfterMs: number
+    hotTtlMs: number
+    jitterRatio: number
+    backoffBaseMs: number
+    backoffCapMs: number
+    breakerThreshold: number
+    breakerCooldownMs: number
+    breakerCooldownCapMs: number
+    unavailableRecheckMs: number
+    batchSize: number
+    leaseMs: number
+    maxInlineWaitMs: number
+    backfillChunkPages: number
+}
+/** The build wiring proof result options connection poll record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsConnectionPollShape = {
+    schedule: BuildWiringProofResultOptionsConnectionPollScheduleShape
+    redis: undefined
+}
 /** The build wiring proof result options agent work record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsAgentWorkShape = { debounceMs: number }
 /** The build wiring proof result options zalo provider record the builders hand out and the specs expect. */
@@ -280,7 +303,7 @@ export type BuildWiringProofResultOptionsShape = {
     workspaceInvites: BuildWiringProofResultOptionsWorkspaceInvitesShape
     billing: BuildWiringProofResultOptionsBillingShape
     chatFilesImportRoot: string
-    connectionPoll: ConnectionPollOptions
+    connectionPoll: BuildWiringProofResultOptionsConnectionPollShape
     openclaw: BuildWiringProofResultOptionsOpenclawShape
     agentTurns: BuildWiringProofResultOptionsAgentTurnsShape
     aiTasks: BuildWiringProofResultOptionsAiTasksShape

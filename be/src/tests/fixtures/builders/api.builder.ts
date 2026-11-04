@@ -6,8 +6,29 @@ import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueModule } from "@modules/platform/queue"
 import { IdentityModule } from "@modules/domain/identity"
-import { DEFAULT_POLL_SCHEDULE } from "../../../modules/domain/connection-poll/poll-schedule.policy"
-import { ZALO_POLL_DEFAULTS } from "../../../modules/domain/zalo-provider/zalo-poll.policy"
+
+/** One day, in milliseconds. */
+const DAY_MS = 86_400_000
+
+/** The poll scheduler's tunables for the wiring proof: plain values, since the proof never polls. */
+const WIRING_POLL_SCHEDULE = {
+    healthyIntervalMs: 1_800_000,
+    silentIntervalMs: 300_000,
+    hotIntervalMs: 90_000,
+    webhookSilentAfterMs: 21_600_000,
+    hotTtlMs: 1_800_000,
+    jitterRatio: 0.2,
+    backoffBaseMs: 30_000,
+    backoffCapMs: 1_800_000,
+    breakerThreshold: 5,
+    breakerCooldownMs: 600_000,
+    breakerCooldownCapMs: 21_600_000,
+    unavailableRecheckMs: DAY_MS,
+    batchSize: 50,
+    leaseMs: 600_000,
+    maxInlineWaitMs: 5_000,
+    backfillChunkPages: 2,
+}
 
 const PRIMARY_DATA_SOURCE = "primaryDataSource"
 const wiringIds = fakeIds()
@@ -100,8 +121,8 @@ const options = {
     telegram: { apiBase: "https://telegram.invalid", timeoutMs: 1000 },
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
     chatFilesImportRoot: "wiring/imports",
-    connectionPoll: { schedule: DEFAULT_POLL_SCHEDULE, redis: undefined },
-    zaloProvider: ZALO_POLL_DEFAULTS,
+    connectionPoll: { schedule: WIRING_POLL_SCHEDULE, redis: undefined },
+    zaloProvider: { replyWindowMs: 7 * DAY_MS, staleAfterMs: DAY_MS },
     agentWork: { debounceMs: 0 },
     zalo: {
         oauthBase: "https://zalo.invalid",

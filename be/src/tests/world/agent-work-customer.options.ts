@@ -12,7 +12,7 @@ import { ChatTurnModule } from "@modules/queues/chat-turn"
 import { AgentWorkSettingsEntity } from "../../modules/domain/agent-work/persistence/entities"
 import { CustomerIntakeService } from "../../modules/domain/conversations/customer-intake.service"
 import { AgentEventWakesService } from "../../modules/domain/agent-schedules/agent-event-wakes.service"
-import { QUIET_INSTALLATIONS, QUIET_RUNS } from "./quiet-peers"
+import { QUIET_INSTALLATIONS, QUIET_RUNS } from "./quiet-peers.options"
 import { agentRoadModules } from "./agent-road-capabilities.options"
 
 @Module({})
