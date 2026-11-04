@@ -36,7 +36,12 @@ describe("burstOf", () => {
     const trigger: GraphSpecTrigger = {
         kind: "tag",
         sources: ["channel", "agent", "schedule"],
-        burst: { channel: { window: "6s", maxWait: "20s" }, agent: { window: "0s" }, schedule: { window: "soon" } },
+        burst: {
+            channel: { window: "6s", maxWait: "20s" },
+            agent: { window: "0s" },
+            schedule: { window: "soon" },
+            "chats-group": { window: "61s" },
+        },
     }
 
     it("answers the setting of a source in milliseconds, the longest wait left open when the flow names none", () => {
@@ -47,6 +52,13 @@ describe("burstOf", () => {
     it("answers nothing for a source the flow does not set, or sets unsoundly", () => {
         expect(burstOf(trigger, "system-event")).toBeNull()
         expect(burstOf(trigger, "schedule")).toBeNull()
+        expect(burstOf(trigger, "chats-group")).toBeNull()
+        expect(
+            burstOf(
+                { kind: "tag", sources: ["channel"], burst: { channel: { window: "6s", maxWait: "5s" } } },
+                "channel",
+            ),
+        ).toBeNull()
         expect(burstOf({ kind: "tag", sources: ["channel"] }, "channel")).toBeNull()
     })
 })

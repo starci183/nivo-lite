@@ -10,6 +10,7 @@ import {
     isRefusedLedger,
     LEDGER_HEADER,
     ledgerConnectionOf,
+    ledgerKeeperOf,
     ledgerRowOf,
     spreadsheetIdOf,
     voidRowOf,
@@ -24,6 +25,7 @@ interface Subject {
     readonly grantsSheets: typeof grantsSheets
     readonly isRefusedLedger: typeof isRefusedLedger
     readonly ledgerConnectionOf: typeof ledgerConnectionOf
+    readonly ledgerKeeperOf: typeof ledgerKeeperOf
     readonly ledgerRowOf: typeof ledgerRowOf
     readonly spreadsheetIdOf: typeof spreadsheetIdOf
     readonly voidRowOf: typeof voidRowOf
@@ -45,6 +47,7 @@ const build = async (): Promise<Subject> => {
                     grantsSheets,
                     isRefusedLedger,
                     ledgerConnectionOf,
+                    ledgerKeeperOf,
                     ledgerRowOf,
                     spreadsheetIdOf,
                     voidRowOf,
@@ -154,6 +157,18 @@ describe("ledgerConnectionOf and grantRowOf", () => {
         expect(subject.ledgerConnectionOf([record({ id: "plain" }), noSheet, keeper, granted({ id: "c" })])?.id).toBe(
             "b",
         )
+    })
+
+    it("hands the keeper with the sheet it was told, and none when no connection was told one", async () => {
+        const subject = await build()
+        const keeper = granted({ id: "b" })
+
+        expect(subject.ledgerKeeperOf([record({ id: "plain" }), keeper, granted({ id: "c" })])).toEqual({
+            row: keeper,
+            sheetId: SHEET,
+        })
+        expect(subject.ledgerKeeperOf([record({ id: "a", meta: { sheets: "granted" } })])).toBeUndefined()
+        expect(subject.ledgerKeeperOf([])).toBeUndefined()
     })
 
     it.each([
