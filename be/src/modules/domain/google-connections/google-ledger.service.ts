@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
-import { LedgerConnectionRefusedError } from "@modules/domain/provider-registry"
-import type { LedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
+import { ProviderRegistryError, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
+import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
 import { GoogleError, InjectGoogleClient } from "@modules/integrations/google"
 import type { GoogleClient, SheetCell } from "@modules/integrations/google"
 import { InjectClock } from "@modules/platform/clock"
@@ -20,6 +20,14 @@ import {
 
 const PROVIDER = "google"
 
+/** The refusal of a ledger connection only the owner can cure, carrying what Google answered, when it answered. */
+const refusedLedger = (cause?: unknown): ProviderRegistryError =>
+    new ProviderRegistryError({
+        code: ProviderRegistryErrorCode.LedgerConnectionRefused,
+        params: { provider: PROVIDER },
+        ...(cause === undefined ? {} : { cause }),
+    })
+
 const isUnauthorized = (error: unknown): boolean => error instanceof GoogleError && error.params.status === 401
 
 @Injectable()
@@ -27,11 +35,12 @@ const isUnauthorized = (error: unknown): boolean => error instanceof GoogleError
  * The business ledger of a workspace as a Google spreadsheet it chose: a copy that only grows. Every entry is one appended row on the
  * first tab (the header row first, once); a void is one more row naming the transaction; no cell is changed, removed or read back. The
  * database stays the truth. The workspace is ready when one of its Google connections gave the spreadsheets access and was told the
- * sheet. A sheet Google refuses, a withdrawn access or a lost grant is `LedgerConnectionRefusedError`: only the owner can cure it.
+ * sheet. A sheet Google refuses, a withdrawn access or a lost grant is the refused ledger connection: only the owner can cure it.
  * Any other failure (timeout, 429, 5xx) is thrown as it is and the run tries again.
  */
 export class GoogleLedgerService implements LedgerPort {
-    readonly provider = PROVIDER
+    /** The provider this port writes the ledger through. */
+    readonly provider: string = PROVIDER
 
     constructor(
         private readonly connections: ConnectionsService,
@@ -46,7 +55,7 @@ export class GoogleLedgerService implements LedgerPort {
     }
 
     /** Appends the row of one entry. */
-    append(workspaceId: string, entry: LedgerEntry): Promise<string | undefined> {
+    append(workspaceId: string, entry: BusinessLedgerEntry): Promise<string | undefined> {
         return this.write(workspaceId, ledgerRowOf(entry))
     }
 
@@ -58,7 +67,7 @@ export class GoogleLedgerService implements LedgerPort {
     private async write(workspaceId: string, line: ReadonlyArray<SheetCell>): Promise<string | undefined> {
         const row = await this.rowOf(workspaceId)
         if (row === undefined) return undefined
-        if (!this.google.isConfigured()) throw new LedgerConnectionRefusedError(PROVIDER)
+        if (!this.google.isConfigured()) throw refusedLedger()
         const sheetId = row.meta.ledgerSheet ?? ""
         const headed = row.meta.ledgerHeader === HEADER_WRITTEN
         const rows = headed ? [line] : [LEDGER_HEADER, line]
@@ -71,7 +80,7 @@ export class GoogleLedgerService implements LedgerPort {
             }
             return range === "" ? sheetId : range
         } catch (cause) {
-            if (isRefusedLedger(cause)) throw new LedgerConnectionRefusedError(PROVIDER)
+            if (isRefusedLedger(cause)) throw refusedLedger(cause)
             throw cause
         }
     }

@@ -1,5 +1,5 @@
 import type { ConnectionRecord } from "@modules/domain/connections"
-import type { LedgerEntry } from "@modules/domain/provider-registry"
+import type { BusinessLedgerEntry } from "@modules/domain/provider-registry"
 import { GoogleError } from "@modules/integrations/google"
 import type { SheetCell } from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "../errors/google-connections.error"
@@ -44,7 +44,7 @@ export const spreadsheetIdOf = (text: string): string => {
 }
 
 /** The row of a ledger entry: the values as they are, in the order of the header. */
-export const ledgerRowOf = (entry: LedgerEntry): ReadonlyArray<SheetCell> => [
+export const ledgerRowOf = (entry: BusinessLedgerEntry): ReadonlyArray<SheetCell> => [
     entry.date,
     entry.orderNo,
     entry.customer,

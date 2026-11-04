@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
+import { parseJsonText } from "@modules/platform/primitives"
 import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
@@ -95,6 +96,35 @@ const build = async (held: Held = {}) => {
 const createdWith = (connections: jest.Mocked<ConnectionsService>, id: string) =>
     connections.create.mock.calls.map(([input]) => input).find((input) => input.id === id)
 
+const HELD_ROWS = [
+    recordOf(IDS.telegram, "telegram"),
+    recordOf(IDS.zaloOa, "zalo_oa"),
+    recordOf(IDS.sepay, "sepay", { note: "kept" }),
+    recordOf(IDS.payos, "payos"),
+]
+/** A workspace that holds the four connections and their credentials. */
+const held: Held = {
+    rows: HELD_ROWS,
+    secrets: {
+        [IDS.telegram]: TOKEN,
+        [IDS.zaloOa]: JSON.stringify({ appId: "1234567", appSecret: "app-secret-1", oaSecret: "oa-secret-1" }),
+        [IDS.sepay]: SEPAY_KEY,
+        [IDS.payos]: JSON.stringify({ clientId: "client", apiKey: "payos-key-1", checksumKey: "checksum-1" }),
+    },
+}
+
+const WITH_GOOGLE: ChannelSeed = {
+    ...BARE,
+    google: { id: IDS.google, clientId: "client-id.apps.test", clientSecret: "client-secret-1" },
+}
+const CLIENT = JSON.stringify({ oauth_client_id: "client-id.apps.test", oauth_client_secret: "client-secret-1" })
+
+/** The value a sealed JSON credential reads back as; undefined when it is no JSON. */
+const jsonOf = (text: string | undefined): unknown => {
+    const read = parseJsonText(text ?? "")
+    return read.ok ? read.value : undefined
+}
+
 describe("ChannelSeedService > a workspace without the connections", () => {
     it("creates the four under their fixed ids, pending, with every credential sealed", async () => {
         const { service, connections } = await build()
@@ -111,7 +141,7 @@ describe("ChannelSeedService > a workspace without the connections", () => {
             expect(input).toMatchObject({ workspaceId: "ws-1", createdBy: "owner-1", status: "pending" })
         }
         expect(createdWith(connections, IDS.telegram)?.secret.plain).toBe(TOKEN)
-        expect(JSON.parse(createdWith(connections, IDS.payos)?.secret.plain ?? "")).toEqual({
+        expect(jsonOf(createdWith(connections, IDS.payos)?.secret.plain)).toEqual({
             clientId: "client",
             apiKey: "payos-key-1",
             checksumKey: "checksum-1",
@@ -142,7 +172,9 @@ describe("ChannelSeedService > a workspace without the connections", () => {
         expect(apiTokens.write).toHaveBeenCalledTimes(1)
         expect(apiTokens.write).toHaveBeenCalledWith(IDS.sepay, SEPAY_API_TOKEN)
     })
+})
 
+describe("ChannelSeedService > a workspace without the connections, the SePay feed", () => {
     it("announces the feed as ready once the API token is stored, so the first poll runs at once", async () => {
         const { service, publish, tx } = await build()
 
@@ -150,12 +182,13 @@ describe("ChannelSeedService > a workspace without the connections", () => {
 
         expect(publish).toHaveBeenCalledTimes(1)
         const [event] = publish.mock.calls[0] ?? []
-        expect(event?.payload).toEqual({
-            workspaceId: "ws-1",
-            connectionId: IDS.sepay,
-            provider: "sepay",
-            dedupeKey: expect.any(String),
-        })
+        expect(Object.keys(event?.payload ?? {}).sort()).toEqual([
+            "connectionId",
+            "dedupeKey",
+            "provider",
+            "workspaceId",
+        ])
+        expect(event?.payload).toMatchObject({ workspaceId: "ws-1", connectionId: IDS.sepay, provider: "sepay" })
         expect(event?.payload.dedupeKey).toMatch(new RegExp(`^${IDS.sepay}:api_token:[0-9a-f]{16}$`, "u"))
         expect(JSON.stringify(event)).not.toContain(SEPAY_API_TOKEN)
         expect(tx.commits).toBe(1)
@@ -181,7 +214,9 @@ describe("ChannelSeedService > a workspace without the connections", () => {
         expect(secret?.plain).toMatch(/^nivo_[0-9a-f]{64}$/u)
         expect(secret?.webhookSecret).toBe(hashOf(secret?.plain ?? ""))
     })
+})
 
+describe("ChannelSeedService > a workspace without the connections, the placeholders", () => {
     it("leaves the Zalo OA secret out, and says so, when its value is a PENDING- placeholder", async () => {
         const { service, connections } = await build()
 
@@ -193,7 +228,7 @@ describe("ChannelSeedService > a workspace without the connections", () => {
         const created = createdWith(connections, IDS.zaloOa)
         expect(zalo).toMatchObject({ credentials: "missing" })
         expect(created?.meta).toEqual({ app_id: "1234567", oa_secret_saved: "false" })
-        expect(JSON.parse(created?.secret.plain ?? "")).toEqual({
+        expect(jsonOf(created?.secret.plain)).toEqual({
             appId: "1234567",
             appSecret: "app-secret-1",
             oaSecret: "",
@@ -231,22 +266,6 @@ describe("ChannelSeedService > a workspace without the connections", () => {
 })
 
 describe("ChannelSeedService > a workspace that has them", () => {
-    const rows = [
-        recordOf(IDS.telegram, "telegram"),
-        recordOf(IDS.zaloOa, "zalo_oa"),
-        recordOf(IDS.sepay, "sepay", { note: "kept" }),
-        recordOf(IDS.payos, "payos"),
-    ]
-    const held: Held = {
-        rows,
-        secrets: {
-            [IDS.telegram]: TOKEN,
-            [IDS.zaloOa]: JSON.stringify({ appId: "1234567", appSecret: "app-secret-1", oaSecret: "oa-secret-1" }),
-            [IDS.sepay]: SEPAY_KEY,
-            [IDS.payos]: JSON.stringify({ clientId: "client", apiKey: "payos-key-1", checksumKey: "checksum-1" }),
-        },
-    }
-
     it("creates nothing and rewrites nothing when the credentials are the same", async () => {
         const { service, connections } = await build(held)
 
@@ -284,12 +303,13 @@ describe("ChannelSeedService > a workspace that has them", () => {
             IDS.payos,
             JSON.stringify({ clientId: "client", apiKey: "payos-key-2", checksumKey: "checksum-1" }),
         )
-        expect(connections.patch).toHaveBeenCalledWith("ws-1", IDS.sepay, {
-            meta: expect.objectContaining({ note: "kept", bank_code: "VCB" }),
-        })
+        const [, , sepayPatch] = connections.patch.mock.calls.find(([, id]) => id === IDS.sepay) ?? []
+        expect(sepayPatch?.meta).toMatchObject({ note: "kept", bank_code: "VCB" })
         expect(connections.create).not.toHaveBeenCalled()
     })
+})
 
+describe("ChannelSeedService > a workspace that has them, the issued values", () => {
     it("keeps the tokens Zalo issued when the app values are written again", async () => {
         const issued = JSON.stringify({
             appId: "1234567",
@@ -305,7 +325,7 @@ describe("ChannelSeedService > a workspace that has them", () => {
         expect(connections.writeSecret).toHaveBeenCalledTimes(1)
         const [id, written] = connections.writeSecret.mock.calls[0] ?? []
         expect(id).toBe(IDS.zaloOa)
-        expect(JSON.parse(written ?? "")).toEqual({
+        expect(jsonOf(written)).toEqual({
             appId: "1234567",
             appSecret: "app-secret-1",
             oaSecret: "oa-secret-1",
@@ -344,12 +364,6 @@ describe("ChannelSeedService > a seed that is malformed", () => {
 })
 
 describe("ChannelSeedService > the Google connection", () => {
-    const WITH_GOOGLE: ChannelSeed = {
-        ...BARE,
-        google: { id: IDS.google, clientId: "client-id.apps.test", clientSecret: "client-secret-1" },
-    }
-    const CLIENT = JSON.stringify({ oauth_client_id: "client-id.apps.test", oauth_client_secret: "client-secret-1" })
-
     it("seeds none when the OAuth client is not given, and fails nothing", async () => {
         const { service, connections } = await build()
 
@@ -398,7 +412,9 @@ describe("ChannelSeedService > the Google connection", () => {
         expect(connections.writeSecret).not.toHaveBeenCalled()
         expect(connections.patch).not.toHaveBeenCalled()
     })
+})
 
+describe("ChannelSeedService > the Google connection, a new client", () => {
     it("takes a new OAuth client into the connection that still waits for consent", async () => {
         const waiting = {
             ...recordOf(IDS.google, "google", { oauth_client_id: "old", consent: "needed" }),

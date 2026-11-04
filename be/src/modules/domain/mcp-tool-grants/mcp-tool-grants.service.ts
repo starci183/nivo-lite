@@ -17,6 +17,9 @@ const GRANT_LIMIT = 500
 /** The key of an agent within its workspace. */
 const agentKey = (workspaceId: string, agentId: string): string => `${workspaceId}\u0000${agentId}`
 
+/** The key of one grant: its agent and its tool (an agent belongs to one workspace). */
+const grantKey = (agentId: string, tool: string): string => `${agentId}\u0000${tool}`
+
 /** The conflict target of a grant: one row per agent and tool. */
 const GRANT_KEY: Array<keyof McpToolGrantEntity> = ["agentId", "tool"]
 
@@ -141,16 +144,17 @@ export class McpToolGrantsService {
     async insertMissing(rows: ReadonlyArray<McpToolGrantRecord>): Promise<number> {
         const owned = await this.ownedAgentKeys(rows)
         const wanted = rows.filter((record) => owned.has(agentKey(record.workspaceId, record.agentId)))
-        const held = await Promise.all(
-            wanted.map((record) =>
-                this.entityManager.existsBy(McpToolGrantEntity, {
-                    workspaceId: record.workspaceId,
-                    agentId: record.agentId,
-                    tool: record.tool,
-                }),
-            ),
-        )
-        const missing = wanted.filter((_record, index) => !held[index])
+        if (wanted.length === 0) return 0
+        const existing = await this.entityManager.find(McpToolGrantEntity, {
+            select: { agentId: true, tool: true },
+            where: {
+                agentId: In([...new Set(wanted.map((record) => record.agentId))]),
+                tool: In([...new Set(wanted.map((record) => record.tool))]),
+            },
+            take: GRANT_LIMIT,
+        })
+        const held = new Set(existing.map((grant) => grantKey(grant.agentId, grant.tool)))
+        const missing = wanted.filter((record) => !held.has(grantKey(record.agentId, record.tool)))
         if (missing.length === 0) return 0
         await this.entityManager.insert(
             McpToolGrantEntity,

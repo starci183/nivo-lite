@@ -19,6 +19,12 @@ import {
 const OWNER = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
 
+/** Where a held grant stands: lost when its connection failed, granted until a sheet is named, ready after. */
+const ledgerStateOf = (lost: boolean, sheetId: string): LedgerGrant["state"] => {
+    if (lost) return "lost"
+    return sheetId === "" ? "granted" : "ready"
+}
+
 const NONE: LedgerGrant = { state: "none", email: "", sheetId: "", sheetUrl: "" }
 
 @Injectable()
@@ -47,9 +53,8 @@ export class SheetsGrantService {
         const row = ledgerConnectionOf(rows) ?? rows.find((held) => held.meta.sheets === SHEETS_GRANTED)
         if (row === undefined) return NONE
         const sheetId = row.meta.ledgerSheet ?? ""
-        const lost = row.status === "error"
         return {
-            state: lost ? "lost" : sheetId === "" ? "granted" : "ready",
+            state: ledgerStateOf(row.status === "error", sheetId),
             email: row.meta.email ?? "",
             sheetId,
             sheetUrl: sheetId === "" ? "" : sheetUrlOf(sheetId),

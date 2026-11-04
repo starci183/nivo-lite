@@ -1,13 +1,16 @@
 import { z } from "zod"
 import type { GatewayJson } from "@modules/domain/mcp-gateway"
-import type { LedgerEntry } from "@modules/domain/provider-registry"
+import type { BusinessLedgerEntry } from "@modules/domain/provider-registry"
 
 /** The bounded arguments of `ledger.append`: one entry in the domain's words. */
-export const LEDGER_APPEND_SCHEMA: z.ZodType<{ readonly entry: LedgerEntry }> = z
+export const LEDGER_APPEND_SCHEMA: z.ZodType<{ readonly entry: BusinessLedgerEntry }> = z
     .object({
         entry: z
             .object({
-                date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
+                date: z
+                    .string()
+                    .length(10)
+                    .regex(/^\d{4}-\d{2}-\d{2}$/u),
                 orderNo: z.string().max(64),
                 customer: z.string().max(200),
                 amountVnd: z.number().min(0).max(1_000_000_000_000),

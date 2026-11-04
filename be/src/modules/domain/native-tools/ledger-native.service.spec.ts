@@ -1,13 +1,15 @@
 import { mock } from "@starci/jest-preset"
+import { Test } from "@nestjs/testing"
 import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
-import { LedgerConnectionRefusedError, LedgerRegistry } from "@modules/domain/provider-registry"
-import type { LedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
+import { LedgerRegistry, ProviderRegistryError, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
+import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
 import { LEDGER_MANIFEST, LedgerNativeService } from "./ledger-native.service"
 import { NativeViewService } from "./native-view.service"
+import type { NativeView } from "./native-view.policy"
 
 const CALLER = { agentId: "agent-1", conversationId: null }
-const ENTRY: LedgerEntry = {
+const ENTRY: BusinessLedgerEntry = {
     date: "2026-11-04",
     orderNo: "DH-7",
     customer: "Dinh",
@@ -24,10 +26,9 @@ const portOf = (ready: boolean): jest.Mocked<LedgerPort> => ({
     void: jest.fn().mockResolvedValue("Sheet1!A3:G3"),
 })
 
-/** A ledger of graph-node effects that runs the act the first time a key is seen and answers the first subject afterwards. */
-const effectsLedger = () => {
+/** Makes the effects double a ledger that runs the act the first time a key is seen and answers the first subject afterwards. */
+const actOnce = (effects: jest.Mocked<GraphNodeEffectsService>): void => {
     const seen = new Map<string, { kind: string; id: string }>()
-    const effects = mock<GraphNodeEffectsService>()
     effects.once.mockImplementation(async (_workspaceId, _effect, call, act) => {
         const before = seen.get(call.key)
         if (before !== undefined) return before
@@ -35,16 +36,49 @@ const effectsLedger = () => {
         seen.set(call.key, subject)
         return subject
     })
-    return effects
 }
 
-const build = (port: LedgerPort | null = portOf(true)) => {
+/** Arranges the view to let an internal caller in and the registry to hold `port` (none when null). */
+const arrange = (
+    views: jest.Mocked<NativeViewService>,
+    providers: jest.Mocked<LedgerRegistry>,
+    port: LedgerPort | null,
+): void => {
+    views.internalOf.mockResolvedValue(mock<NativeView>())
+    providers.all.mockReturnValue(port === null ? [] : [port])
+}
+
+/** The ledger tools over the port, with the ledger of effects. */
+const build = async (port: LedgerPort | null = portOf(true)) => {
     const views = mock<NativeViewService>()
-    views.internalOf.mockResolvedValue(undefined as never)
-    const providers = new LedgerRegistry()
-    if (port !== null) providers.register(port)
-    const effects = effectsLedger()
-    return { service: new LedgerNativeService(views, providers, effects), views, effects, port }
+    const providers = mock<LedgerRegistry>()
+    const effects = mock<GraphNodeEffectsService>()
+    arrange(views, providers, port)
+    actOnce(effects)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            LedgerNativeService,
+            { provide: NativeViewService, useValue: views },
+            { provide: LedgerRegistry, useValue: providers },
+            { provide: GraphNodeEffectsService, useValue: effects },
+        ],
+    }).compile()
+    return { service: moduleRef.get(LedgerNativeService), views, effects, port }
+}
+
+/** The ledger tools over the port in an app without the ledger of effects: every call writes. */
+const buildBare = async (port: LedgerPort) => {
+    const views = mock<NativeViewService>()
+    const providers = mock<LedgerRegistry>()
+    arrange(views, providers, port)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            LedgerNativeService,
+            { provide: NativeViewService, useValue: views },
+            { provide: LedgerRegistry, useValue: providers },
+        ],
+    }).compile()
+    return { service: moduleRef.get(LedgerNativeService), port }
 }
 
 describe("LedgerNativeService > the manifest", () => {
@@ -59,9 +93,9 @@ describe("LedgerNativeService > the manifest", () => {
 
 describe("LedgerNativeService > status", () => {
     it("says whether a provider is ready in the workspace", async () => {
-        const ready = build(portOf(true))
-        const idle = build(portOf(false))
-        const none = build(null)
+        const ready = await build(portOf(true))
+        const idle = await build(portOf(false))
+        const none = await build(null)
 
         await expect(ready.service.invoke("ws-1", "status", {}, CALLER)).resolves.toEqual({ connected: true })
         await expect(idle.service.invoke("ws-1", "status", {}, CALLER)).resolves.toEqual({ connected: false })
@@ -72,7 +106,7 @@ describe("LedgerNativeService > status", () => {
 
 describe("LedgerNativeService > append and void", () => {
     it("appends the entry through the ready provider and answers its reference", async () => {
-        const { service, port } = build()
+        const { service, port } = await build()
 
         await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).resolves.toEqual({
             ref: "Sheet1!A2:G2",
@@ -81,7 +115,7 @@ describe("LedgerNativeService > append and void", () => {
     })
 
     it("writes a transaction once: a replay, another run or a retry adds no second entry", async () => {
-        const { service, port } = build()
+        const { service, port } = await build()
 
         const first = await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
         const again = await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
@@ -91,7 +125,7 @@ describe("LedgerNativeService > append and void", () => {
     })
 
     it("takes a transaction back with one void, once", async () => {
-        const { service, port, effects } = build()
+        const { service, port, effects } = await build()
 
         await expect(service.invoke("ws-1", "void", { transactionId: ENTRY.transactionId }, CALLER)).resolves.toEqual({
             ref: "Sheet1!A3:G3",
@@ -109,7 +143,7 @@ describe("LedgerNativeService > append and void", () => {
     })
 
     it("keeps the entry and its void apart, so a void is written after the entry", async () => {
-        const { service, port } = build()
+        const { service, port } = await build()
 
         await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
         await service.invoke("ws-1", "append", { entry: { ...ENTRY, status: "void" } }, CALLER)
@@ -118,7 +152,7 @@ describe("LedgerNativeService > append and void", () => {
     })
 
     it.each(["append", "void"] as const)("is not connected for %s when no provider is ready", async (tool) => {
-        const { service, port } = build(portOf(false))
+        const { service, port } = await build(portOf(false))
         const args = tool === "append" ? { entry: ENTRY } : { transactionId: ENTRY.transactionId }
 
         await expect(service.invoke("ws-1", tool, args, CALLER)).rejects.toMatchObject({
@@ -127,11 +161,13 @@ describe("LedgerNativeService > append and void", () => {
         })
         expect(port?.append).not.toHaveBeenCalled()
     })
+})
 
+describe("LedgerNativeService > a provider that cannot write", () => {
     it("is not connected when the provider has nothing to write to after all", async () => {
         const port = portOf(true)
         port.append.mockResolvedValue(undefined)
-        const { service } = build(port)
+        const { service } = await build(port)
 
         await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
             params: { reason: "not_connected" },
@@ -140,8 +176,13 @@ describe("LedgerNativeService > append and void", () => {
 
     it("answers connection_refused when the provider refused the connection itself, and tries nothing again", async () => {
         const port = portOf(true)
-        port.append.mockRejectedValue(new LedgerConnectionRefusedError("google"))
-        const { service } = build(port)
+        port.append.mockRejectedValue(
+            new ProviderRegistryError({
+                code: ProviderRegistryErrorCode.LedgerConnectionRefused,
+                params: { provider: "google" },
+            }),
+        )
+        const { service } = await build(port)
 
         await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
@@ -153,7 +194,7 @@ describe("LedgerNativeService > append and void", () => {
         const port = portOf(true)
         const timeout = new Error("timeout")
         port.append.mockRejectedValue(timeout)
-        const { service } = build(port)
+        const { service } = await build(port)
 
         await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).rejects.toBe(timeout)
     })
@@ -161,7 +202,7 @@ describe("LedgerNativeService > append and void", () => {
 
 describe("LedgerNativeService > refusals", () => {
     it("refuses arguments outside the schema and tools it does not have", async () => {
-        const { service, port } = build()
+        const { service, port } = await build()
 
         await expect(
             service.invoke("ws-1", "append", { entry: { ...ENTRY, date: "04/11/2026" } }, CALLER),
@@ -176,12 +217,8 @@ describe("LedgerNativeService > refusals", () => {
     })
 
     it("runs without the ledger of effects, writing every call", async () => {
-        const views = mock<NativeViewService>()
-        views.internalOf.mockResolvedValue(undefined as never)
-        const providers = new LedgerRegistry()
         const port = portOf(true)
-        providers.register(port)
-        const service = new LedgerNativeService(views, providers)
+        const { service } = await buildBare(port)
 
         await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
 

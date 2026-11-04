@@ -202,7 +202,7 @@ export class GoogleClient {
             headers: this.bearer(token),
         })
         const rows: ReadonlyArray<unknown> = Array.isArray(body.values) ? body.values : []
-        return rows.map((row) => (Array.isArray(row) ? row.map((cell) => String(cell)) : []))
+        return rows.map((row) => (Array.isArray(row) ? row.map(String) : []))
     }
 
     private async findRow(

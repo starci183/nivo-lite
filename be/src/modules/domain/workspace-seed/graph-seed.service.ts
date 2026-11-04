@@ -23,6 +23,13 @@ import { InjectSeedAgents, InjectSeedToolGrants, InjectWorkspaceSeedOptions } fr
 import type { WorkspaceSeedOptions } from "./workspace-seed.options"
 import type { SeedAgentRecords, SeedToolGrants } from "./workspace-seed.port"
 
+/** The workspace a seed run writes into, its owner and the nodes the graphs may use. */
+interface SeedSeat {
+    readonly workspaceId: string
+    readonly ownerId: string
+    readonly installed: NodeIndex
+}
+
 /** The language the agents and installations seeded here are named in, as the profile seed names them. */
 const SEED_LOCALE = "vi"
 /** The most workspaces looked through for the named one. */
@@ -71,36 +78,40 @@ export class GraphSeedService {
         const installed = this.installedNodes()
         const workspaceId = await this.workspaceOf(workspaceName)
         const ownerId = await this.ownerOf(workspaceId)
-        for (const spec of specs) {
-            const module = await this.modules.find(spec.moduleKey)
-            const { installation, agentId } = await this.seatOf(workspaceId, module)
-            // Before the fast path: an agent seeded by an earlier run, or before tag rights existed, gets them on any rerun.
-            await this.tagGrants.grantFor(workspaceId, module.key, agentId)
-            await this.grantTools(workspaceId, agentId, spec)
-            if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
-                this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
-                continue
-            }
-            await this.rules.seedDefaults(workspaceId, module.key, defaultRulesOf(module))
-            const statuses = await this.activation.activate({ workspaceId, ownerId }, [
-                {
-                    handle: module.agent.handle,
-                    installation,
-                    answers: module.gates.map((gate) => ({ gate: gate.key, evidence: gate.hint_vi })),
-                },
-            ])
-            const published = await this.flows.publish({
-                workspaceId,
-                agentId,
-                installationId: installation.id,
-                flow: spec,
-                installed,
-            })
-            const bound = await this.bindConnections(workspaceId, ownerId, module.key, agentId)
-            this.options.print(
-                `${module.key} agent ${agentId} ${statuses[module.agent.handle] ?? "unknown"}, graph ${published}, ${bound} connections assigned`,
-            )
+        await eachInOrder(specs, (spec) => this.seedGraph({ workspaceId, ownerId, installed }, spec))
+    }
+
+    /** Seeds one graph into its module's agent: the rights first, then the rules, the activation and the published graph. */
+    private async seedGraph(seat: SeedSeat, spec: GraphSpec): Promise<void> {
+        const { workspaceId, ownerId, installed } = seat
+        const module = await this.modules.find(spec.moduleKey)
+        const { installation, agentId } = await this.seatOf(workspaceId, module)
+        // Before the fast path: an agent seeded by an earlier run, or before tag rights existed, gets them on any rerun.
+        await this.tagGrants.grantFor(workspaceId, module.key, agentId)
+        await this.grantTools(workspaceId, agentId, spec)
+        if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
+            this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
+            return
         }
+        await this.rules.seedDefaults(workspaceId, module.key, defaultRulesOf(module))
+        const statuses = await this.activation.activate({ workspaceId, ownerId }, [
+            {
+                handle: module.agent.handle,
+                installation,
+                answers: module.gates.map((gate) => ({ gate: gate.key, evidence: gate.hint_vi })),
+            },
+        ])
+        const published = await this.flows.publish({
+            workspaceId,
+            agentId,
+            installationId: installation.id,
+            flow: spec,
+            installed,
+        })
+        const bound = await this.bindConnections(workspaceId, ownerId, module.key, agentId)
+        this.options.print(
+            `${module.key} agent ${agentId} ${statuses[module.agent.handle] ?? "unknown"}, graph ${published}, ${bound} connections assigned`,
+        )
     }
 
     /**

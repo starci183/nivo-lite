@@ -4,6 +4,8 @@ import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import type { LedgerRef } from "../../vocabulary"
 import type { NodeSchema } from "../node-schema.types"
+import { MAX_ID, MAX_LINE } from "../../bounds"
+import { bilingualOf, messageOf } from "../../messages/catalog"
 import { LEAD_DINH, ORDER_DINH, STORE_REAL_CASE, TRANSACTION_DINH } from "../payment/payment.fixtures"
 import { READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "../payment/payment.rights"
 import type { LeadRow, OrderRow, TransactionRow } from "../payment/payment.schemas"
@@ -31,19 +33,19 @@ interface LedgerAppendParams {
 const APPEND_TOOL = "ledger.append" as const
 const VOID_TOOL = "ledger.void" as const
 
-const params: NodeSchema<LedgerAppendParams> = z.object({ reconnectTitle: z.string().min(1) })
+const params: NodeSchema<LedgerAppendParams> = z.object({ reconnectTitle: z.string().min(1).max(MAX_LINE) })
 const input: NodeSchema<LedgerAppendInput> = z.object({
-    transactionId: z.string().min(1),
-    orderId: z.string().nullable(),
+    transactionId: z.string().min(1).max(MAX_ID),
+    orderId: z.string().max(MAX_ID).nullable(),
     result: z.enum(["paid", "already-paid", "raised", "voided"]),
 })
 const output: NodeSchema<LedgerAppendOutput> = z.object({
     status: z.enum(["recorded", "voided", "skipped"]),
-    ref: z.string().nullable(),
+    ref: z.string().max(MAX_LINE).nullable(),
 })
 
 const SKIPPED: LedgerAppendOutput = { status: "skipped", ref: null }
-const SETTINGS: LedgerAppendParams = { reconnectTitle: "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán" }
+const SETTINGS: LedgerAppendParams = { reconnectTitle: messageOf("vi", "accountingLedgerReconnectTitle") }
 
 /** The agent grant the examples run under: the node own rights and its tools. */
 const GRANT: RightsGrant = { rights: [READ_TRANSACTIONS, READ_ORDERS, READ_LEADS], tools: [APPEND_TOOL, VOID_TOOL] }
@@ -63,7 +65,7 @@ export const accountingLedgerAppendNode: NodeDefinition<
 > = defineNode({
     id: "accounting.ledger-append",
     role: "output",
-    title: { vi: "Ghi sổ kế toán", en: "Write to the ledger" },
+    title: bilingualOf("nodeAccountingLedgerAppendTitle"),
     params,
     input,
     output,
@@ -117,20 +119,20 @@ export const accountingLedgerAppendNode: NodeDefinition<
     },
     examples: [
         {
-            name: "writes the 5,000 transaction that paid Định's order as one entry",
+            name: "writes the 5,000 transaction that paid Dinh's order as one entry",
             params: SETTINGS,
             input: { transactionId: TRANSACTION_DINH.id, orderId: ORDER_DINH.id, result: "paid" },
-            output: { status: "recorded", ref: "Sổ!A2:G2" },
+            output: { status: "recorded", ref: "Ledger!A2:G2" },
             effects: [],
             store: STORE_REAL_CASE,
             grant: GRANT,
-            tools: [{ ref: "Sổ!A2:G2" }],
+            tools: [{ ref: "Ledger!A2:G2" }],
         },
         {
             name: "names the payer on the transfer when the customer has no lead row",
             params: SETTINGS,
             input: { transactionId: "tx-named", orderId: "order-2", result: "already-paid" },
-            output: { status: "recorded", ref: "Sổ!A3:G3" },
+            output: { status: "recorded", ref: "Ledger!A3:G3" },
             effects: [],
             store: {
                 ...STORE_REAL_CASE,
@@ -147,16 +149,16 @@ export const accountingLedgerAppendNode: NodeDefinition<
                 "sales-lead": [LEAD_DINH],
             },
             grant: GRANT,
-            tools: [{ ref: "Sổ!A3:G3" }],
+            tools: [{ ref: "Ledger!A3:G3" }],
         },
         {
             name: "takes an entry back by asking for a void entry, which adds one and changes nothing written",
             params: SETTINGS,
             input: { transactionId: TRANSACTION_DINH.id, orderId: null, result: "voided" },
-            output: { status: "voided", ref: "Sổ!A4:G4" },
+            output: { status: "voided", ref: "Ledger!A4:G4" },
             effects: [],
             grant: GRANT,
-            tools: [{ ref: "Sổ!A4:G4" }],
+            tools: [{ ref: "Ledger!A4:G4" }],
         },
         {
             name: "writes nothing for a settlement that was only raised to the owner",

@@ -1,35 +1,38 @@
-import type { NodeContext } from "@nivo-lite/agent-sdk/node"
+import { runNode } from "@nivo-lite/agent-sdk/node"
+import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
+import { coreEffects } from "../../vocabulary/effects"
+import { coreTools } from "../../vocabulary/tools"
 import { accountingLedgerAppendNode } from "./ledger-append.node"
 import { LEAD_DINH, ORDER_DINH, TRANSACTION_DINH } from "../payment/payment.fixtures"
+import { READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "../payment/payment.rights"
 
 // The worked examples run in the root conformance spec; these cover what an example cannot say: a tool that fails.
 
-describe("accounting.ledger-append", () => {
-    const run = async (failure: unknown) => {
-        const raised: Array<[string, Record<string, unknown>, unknown]> = []
-        const rows: Record<string, ReadonlyArray<unknown>> = {
-            "bank-transaction": [TRANSACTION_DINH],
-            order: [ORDER_DINH],
-            "sales-lead": [LEAD_DINH],
-        }
-        const context = {
+/** Runs the node on Dinh's payment with a ledger tool that fails with `failure`; answers what came out and the effects raised. */
+const run = async (failure: Error) => {
+    const fake = fakeNodePorts({
+        store: { "bank-transaction": [TRANSACTION_DINH], order: [ORDER_DINH], "sales-lead": [LEAD_DINH] },
+    })
+    const outcome = await runNode(
+        {
+            node: accountingLedgerAppendNode,
             params: { reconnectTitle: "reconnect" },
-            data: { read: (kind: string) => Promise.resolve(rows[kind] ?? []) },
-            tools: { call: () => Promise.reject(failure) },
-            effect: (kind: string, payload: Record<string, unknown>, options: unknown) => {
-                raised.push([kind, payload, options])
-                return Promise.resolve({ kind, id: "x" })
-            },
-        } as unknown as NodeContext
-        const outcome = await accountingLedgerAppendNode
-            .run({ transactionId: TRANSACTION_DINH.id, orderId: ORDER_DINH.id, result: "paid" }, context as never)
-            .then(
-                () => "ran",
-                (error: unknown) => error,
-            )
-        return { outcome, raised }
-    }
+            input: { transactionId: TRANSACTION_DINH.id, orderId: ORDER_DINH.id, result: "paid" },
+            turn: EXAMPLE_TURN,
+            grant: { rights: [READ_TRANSACTIONS, READ_ORDERS, READ_LEADS], tools: ["ledger.append", "ledger.void"] },
+            effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
+            tools: new Map(coreTools.map((tool) => [tool.id, tool])),
+            key: "k",
+        },
+        { ...fake.ports, callTool: () => Promise.reject(failure) },
+    ).then(
+        () => "ran",
+        (error: unknown) => error,
+    )
+    return { outcome, raised: fake.executed }
+}
 
+describe("accounting.ledger-append", () => {
     it("asks the owner once to reconnect when the provider refuses the connection, and lets the failure go on", async () => {
         const refusal = Object.assign(new Error("refused"), { code: "GRAPH_NODES_TOOL_CONNECTION_REFUSED" })
 
@@ -37,11 +40,15 @@ describe("accounting.ledger-append", () => {
 
         expect(outcome).toBe(refusal)
         expect(raised).toEqual([
-            [
-                "work-item.raise",
-                { action: "connect_ledger", title: "reconnect", payload: { transactionId: TRANSACTION_DINH.id } },
-                { dedupeKey: "ledger-reconnect" },
-            ],
+            expect.objectContaining({
+                id: "work-item.raise",
+                payload: {
+                    action: "connect_ledger",
+                    title: "reconnect",
+                    payload: { transactionId: TRANSACTION_DINH.id },
+                },
+                dedupeKey: "ledger-reconnect",
+            }),
         ])
     })
 

@@ -72,5 +72,8 @@
   "paymentRequestQr": "Or scan the QR code: {{url}}",
   "paymentRequestOutro": "Once you have transferred, just message us here.",
   "paymentRequestCurrency": "VND",
-  "paymentRequestNoAccount": "Order {{order}} has no payment request: no SePay connection with a full account number"
+  "paymentRequestNoAccount": "Order {{order}} has no payment request: no SePay connection with a full account number",
+  "nodeAccountingLedgerAppendTitle": "Write to the ledger",
+  "nodeAccountingLedgerReadyTitle": "Is there a ledger to write to",
+  "accountingLedgerReconnectTitle": "Connect Google again (with Sheets access) to keep the ledger"
 }

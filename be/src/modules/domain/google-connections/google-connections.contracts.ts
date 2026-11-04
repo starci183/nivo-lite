@@ -86,6 +86,15 @@ export interface GoogleSetup {
     readonly consentNeeded: boolean
 }
 
+/** Whether Google can be used on this deployment, with where the ledger of the workspace stands. */
+export interface GoogleSetupWithLedger extends GoogleSetup {
+    /** Where the ledger kept in a Google spreadsheet stands. */
+    readonly ledger: LedgerGrant
+}
+
+/** The consent a start asks for: the Google connection itself, or the spreadsheets access of the ledger. */
+export type ConsentPurpose = "sheets" | undefined
+
 /** What a consent start signs into its state. */
 export interface ConsentRequest {
     /** The person starting it, in their workspace. */

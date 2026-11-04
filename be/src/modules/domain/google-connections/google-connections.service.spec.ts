@@ -234,7 +234,9 @@ describe("GoogleConnectionsService / complete", () => {
         await expect(service.complete(callback({ error, code }))).resolves.toEqual(location("error", reason))
         expect(google.exchangeCode).not.toHaveBeenCalled()
     })
+})
 
+describe("GoogleConnectionsService / complete for an account it knows", () => {
     it("updates the same account and seals the newly issued tokens", async () => {
         const { service, connections, google } = await build()
         connections.listByProvider.mockResolvedValue([

@@ -98,7 +98,10 @@ export interface LedgerStatusResult {
 }
 
 const ledgerEntry: z.ZodType<LedgerEntry> = z.object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
+    date: z
+        .string()
+        .length(10)
+        .regex(/^\d{4}-\d{2}-\d{2}$/u),
     orderNo: z.string().max(MAX_ID),
     customer: z.string().max(MAX_LINE),
     amountVnd: z.number().nonnegative(),

@@ -385,10 +385,10 @@ describe("GoogleClient ledger values", () => {
 
     it("reads a range as text rows and reads no values as no rows", async () => {
         const { client, http } = await build()
-        http.request.mockResolvedValueOnce(answer({ values: [["Ngày", 2], "x"] }))
+        http.request.mockResolvedValueOnce(answer({ values: [["Date", 2], "x"] }))
         http.request.mockResolvedValueOnce(answer({}))
 
-        await expect(client.readValues("tok", "s", "A1:G1")).resolves.toEqual([["Ngày", "2"], []])
+        await expect(client.readValues("tok", "s", "A1:G1")).resolves.toEqual([["Date", "2"], []])
         await expect(client.readValues("tok", "s", "A1:G1")).resolves.toEqual([])
 
         expect(http.request).toHaveBeenCalledWith(

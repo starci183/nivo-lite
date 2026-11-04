@@ -3,6 +3,7 @@ import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import type { LedgerStatusResult } from "../../vocabulary"
 import type { NodeSchema } from "../node-schema.types"
+import { bilingualOf } from "../../messages/catalog"
 import { isRecordable } from "./ledger.policy"
 import type { LedgerResult } from "./ledger.policy"
 
@@ -22,13 +23,19 @@ const params: z.ZodObject<Record<string, never>> = z.object({})
 const input: NodeSchema<LedgerReadyInput> = z.object({ result: z.enum(["paid", "already-paid", "raised", "voided"]) })
 const output: NodeSchema<LedgerReadyOutput> = z.object({ branch: z.enum(["record", "skip"]) })
 
+/** What the provider said about the ledger: connected or not, and the failure when it could not answer. */
+interface LedgerProbe {
+    readonly connected: boolean
+    readonly cause?: unknown
+}
+
 /** Whether the workspace has a ledger; a provider that cannot answer is no ledger, because this step must never fail a run. */
 const connected = async (ask: () => Promise<LedgerStatusResult>): Promise<boolean> => {
-    try {
-        return (await ask()).connected
-    } catch {
-        return false
-    }
+    const probe = await ask().then(
+        (status): LedgerProbe => ({ connected: status.connected }),
+        (cause: unknown): LedgerProbe => ({ connected: false, cause }),
+    )
+    return probe.connected
 }
 
 /**
@@ -43,7 +50,7 @@ export const accountingLedgerReadyNode: NodeDefinition<
 > = defineNode({
     id: "accounting.ledger-ready",
     role: "condition",
-    title: { vi: "Có sổ kế toán để ghi không", en: "Is there a ledger to write to" },
+    title: bilingualOf("nodeAccountingLedgerReadyTitle"),
     params,
     input,
     output,

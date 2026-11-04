@@ -22,6 +22,8 @@ import type {
     GoogleCallbackInput,
     GoogleCallbackResult,
     GoogleSetup,
+    GoogleSetupWithLedger,
+    ConsentPurpose,
 } from "./google-connections.contracts"
 import { GoogleConnectionsLogEvent } from "./google-connections.log-events"
 import { GoogleTokensService } from "./google-tokens.service"
@@ -80,6 +82,17 @@ export class GoogleConnectionsService {
     async authorize(actor: ConnectionActor, returnTo: string): Promise<ConsentStart> {
         await this.connections.authorize(actor, OWNER)
         return this.tokens.consent({ actor, returnTo, scope: GOOGLE_SCOPE })
+    }
+
+    /** Starts the consent the purpose names (owner): the spreadsheets access of the ledger, or the Google connection itself. */
+    consentFor(actor: ConnectionActor, returnTo: string, purpose: ConsentPurpose): Promise<ConsentStart> {
+        return purpose === "sheets" ? this.sheets.authorize(actor, returnTo) : this.authorize(actor, returnTo)
+    }
+
+    /** Whether Google can be used on this deployment and where the ledger of the workspace stands (owner or manager). */
+    async stateWithLedger(actor: ConnectionActor): Promise<GoogleSetupWithLedger> {
+        const [setup, ledger] = await Promise.all([this.state(actor), this.sheets.grant(actor)])
+        return { ...setup, ledger }
     }
 
     /** Whether Google can be used on this deployment (owner or manager). */

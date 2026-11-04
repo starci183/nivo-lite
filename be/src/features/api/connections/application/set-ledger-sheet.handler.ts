@@ -4,11 +4,11 @@ import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { SetLedgerSheetCommand } from "./set-ledger-sheet.command"
-import type { SetLedgerSheetResult } from "./set-ledger-sheet.contracts"
+import type { GoogleLedgerResult } from "./get-google-state.contracts"
 
 @CommandHandler(SetLedgerSheetCommand)
 /** Names the ledger spreadsheet through the SheetsGrantService; only the owner may. */
-export class SetLedgerSheetHandler extends ICQRSHandler<SetLedgerSheetCommand, SetLedgerSheetResult> {
+export class SetLedgerSheetHandler extends ICQRSHandler<SetLedgerSheetCommand, GoogleLedgerResult> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly sheets: SheetsGrantService,
@@ -16,11 +16,10 @@ export class SetLedgerSheetHandler extends ICQRSHandler<SetLedgerSheetCommand, S
         super(logger)
     }
 
-    protected override process(command: SetLedgerSheetCommand): Promise<SetLedgerSheetResult> {
-        const { request, principal } = command.params
+    protected override process(command: SetLedgerSheetCommand): Promise<GoogleLedgerResult> {
         return this.sheets.setLedgerSheet(
-            { principalId: principal.id, workspaceId: request.workspaceId },
-            request.sheet,
+            { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
+            command.params.request.sheet,
         )
     }
 }

@@ -22,7 +22,11 @@ import {
     CONNECTION_POLL_MESSAGES,
     ConnectionPollModule,
 } from "@modules/domain/connection-poll"
-import { ProviderRegistryModule } from "@modules/domain/provider-registry"
+import {
+    PROVIDER_REGISTRY_ERROR_KINDS,
+    PROVIDER_REGISTRY_MESSAGES,
+    ProviderRegistryModule,
+} from "@modules/domain/provider-registry"
 import { SepayProviderModule } from "@modules/domain/sepay-provider"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { BillingGraphqlModule } from "@features/api/billing"
@@ -36,7 +40,7 @@ export const billingModules = (options: ApiOptions): Array<DynamicModule> => [
     ProviderRegistryModule.register({ isGlobal: true }),
     ConnectionPollModule.register({ isGlobal: true, ...options.connectionPoll }),
     BankFeedInboxModule.register({ isGlobal: true }),
-    SepayProviderModule.register({ feedWebhook: true }),
+    SepayProviderModule.register({ isGlobal: true, feedWebhook: true }),
     BillingModule.register({ isGlobal: true, ...options.billing }),
     BillingGraphqlModule.register({}),
     SepayTransactionsModule.register({ isGlobal: true }),
@@ -57,6 +61,7 @@ export const billingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>
     CREDITS_ERROR_KINDS,
     PAYMENT_ORDERS_ERROR_KINDS,
     CONNECTION_POLL_ERROR_KINDS,
+    PROVIDER_REGISTRY_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
@@ -66,4 +71,5 @@ export const billingMessages: ReadonlyArray<MessageBundle> = [
     CREDITS_MESSAGES,
     PAYMENT_ORDERS_MESSAGES,
     CONNECTION_POLL_MESSAGES,
+    PROVIDER_REGISTRY_MESSAGES,
 ]

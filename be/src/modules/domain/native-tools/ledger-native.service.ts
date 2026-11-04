@@ -1,7 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { LedgerConnectionRefusedError, LedgerRegistry } from "@modules/domain/provider-registry"
+import { LedgerRegistry, ProviderRegistryError, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
 import type { LedgerPort } from "@modules/domain/provider-registry"
 import {
     LEDGER_APPEND_INPUT_SCHEMA,
@@ -114,17 +114,21 @@ export class LedgerNativeService implements NativeAdapter {
         try {
             return await work()
         } catch (cause) {
-            if (cause instanceof LedgerConnectionRefusedError && cause.provider === provider) {
-                throw nativeRefusal("connection_refused")
+            if (
+                cause instanceof ProviderRegistryError &&
+                cause.code === ProviderRegistryErrorCode.LedgerConnectionRefused &&
+                cause.params.provider === provider
+            ) {
+                throw nativeRefusal("connection_refused", cause)
             }
             throw cause
         }
     }
 
+    /** The first registered provider that is ready in the workspace; every provider is asked at once. */
     private async readyPort(workspaceId: string): Promise<LedgerPort | undefined> {
-        for (const port of this.providers.all()) {
-            if (await port.ready(workspaceId)) return port
-        }
-        return undefined
+        const ports = this.providers.all()
+        const ready = await Promise.all(ports.map((port) => port.ready(workspaceId)))
+        return ports.find((_port, index) => ready[index] === true)
     }
 }

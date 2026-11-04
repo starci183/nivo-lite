@@ -9,7 +9,7 @@ import {
 import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
 import { ModuleTagGrantsService, ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { WorkspacesService } from "@modules/domain/workspaces"
@@ -17,7 +17,9 @@ import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-s
 import { GraphSeedService } from "./graph-seed.service"
 import { ProfileActivationService } from "./profile-activation.service"
 import { SEED_AGENTS, SEED_TOOL_GRANTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
+import type { ProfileStatuses } from "./workspace-profile.contracts"
 import type { SeedAgentRecords, SeedToolGrants } from "./workspace-seed.port"
+import { installationRecordOf } from "@tests/fixtures/builders/module-install.builder"
 
 const NODES: NodeInstall = { nodes: [], effects: [], tools: [], dataKinds: [] }
 const SPEC = {
@@ -28,24 +30,42 @@ const SPEC = {
     nodes: [{ key: "end", kind: "output", step: "stop" }],
 }
 const TEXT = `${JSON.stringify({ documents: [{ path: "data/graphs/sales.json", document: SPEC }] })}\n`
-const MODULE = {
-    key: "sales",
-    name: { vi: "Bán hàng", en: "Sales" },
-    defaultOperatingMode: "assist",
-    gates: [
-        { key: "identity", hint_vi: "Tên và nghề của shop" },
-        { key: "products", hint_vi: "Sản phẩm bán" },
-    ],
-    authorityActions: [{ action: "create_order", mode: "ask", limitVnd: 5_000_000, requiredFields: ["total"] }],
-    agent: {
-        label: { vi: "Agent Bán hàng", en: "Sales agent" },
-        handle: "sales",
-        role: { vi: "Chốt đơn", en: "Closes orders" },
-        instructions: { vi: "Trả lời khách", en: "Answer customers" },
-    },
-} as unknown as ModuleDefinition
+/** A gate whose hint is the evidence the seed answers it with. */
+const gateOf = (key: string, hint: string): ModuleDefinition["gates"][number] => ({
+    key,
+    label_vi: key,
+    label_en: key,
+    hint_vi: hint,
+    hint_en: hint,
+})
+
+/** The test module under `key`: two gates, one governed action and its agent under the same handle. */
+const moduleOf = (key: string): ModuleDefinition =>
+    Object.assign(mock<ModuleDefinition>(), {
+        key,
+        name: { vi: "Ban hang", en: "Sales" },
+        defaultOperatingMode: "assist",
+        gates: [gateOf("identity", "Shop name and trade"), gateOf("products", "Products sold")],
+        authorityActions: [
+            {
+                action: "create_order",
+                label: { vi: "Create order", en: "Create order" },
+                mode: "ask",
+                limitVnd: 5_000_000,
+                requiredFields: ["total"],
+                amountLimit: true,
+            },
+        ],
+        agent: {
+            label: { vi: "Agent Ban hang", en: "Sales agent" },
+            handle: key,
+            role: { vi: "Chot don", en: "Closes orders" },
+            instructions: { vi: "Tra loi khach", en: "Answer customers" },
+        },
+    })
+const MODULE = moduleOf("sales")
 const record = (over: Partial<InstallationRecord> = {}): InstallationRecord =>
-    ({ id: "inst-1", workspaceId: "ws-1", moduleKey: "sales", agentId: "agent-1", ...over }) as InstallationRecord
+    installationRecordOf({ moduleKey: "sales", status: "ready", ...over })
 
 interface Scenario {
     readonly workspaces?: ReadonlyArray<{ id: string; name: string }>
@@ -54,7 +74,7 @@ interface Scenario {
     readonly nodes?: NodeInstall | undefined
     readonly owner?: string | null
     readonly holds?: boolean
-    readonly status?: string
+    readonly status?: InstallationStatus
 }
 
 const build = async (scenario: Scenario = {}) => {
@@ -71,7 +91,8 @@ const build = async (scenario: Scenario = {}) => {
     agents.ensureByHandle.mockResolvedValue("agent-1")
     const rules = mock<AuthorityRulesService>()
     const activation = mock<ProfileActivationService>()
-    activation.activate.mockResolvedValue({ sales: scenario.status ?? "live" } as never)
+    const statuses: ProfileStatuses = { sales: scenario.status ?? "live" }
+    activation.activate.mockResolvedValue(statuses)
     const flows = mock<AgentGraphFlowService>()
     flows.publish.mockResolvedValue("created")
     const bindings = mock<AgentBindingsService>()
@@ -194,19 +215,16 @@ describe("GraphSeedService > run", () => {
                 handle: "sales",
                 installation: record(),
                 answers: [
-                    { gate: "identity", evidence: "Tên và nghề của shop" },
-                    { gate: "products", evidence: "Sản phẩm bán" },
+                    { gate: "identity", evidence: "Shop name and trade" },
+                    { gate: "products", evidence: "Products sold" },
                 ],
             },
         ])
 
-        expect(flows.publish).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-            installationId: "inst-1",
-            flow: SPEC,
-            installed: expect.objectContaining({ nodes: expect.any(Map) }),
-        })
+        expect(flows.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ workspaceId: "ws-1", agentId: "agent-1", installationId: "inst-1", flow: SPEC }),
+        )
+        expect(flows.publish.mock.calls[0]?.[0].installed.nodes).toBeInstanceOf(Map)
         expect(agents.ensureByHandle).not.toHaveBeenCalled()
         expect(installations.insert).not.toHaveBeenCalled()
         expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph created, 0 connections assigned"]])
@@ -240,7 +258,9 @@ describe("GraphSeedService > run", () => {
         expect(waiting.flows.publish).toHaveBeenCalledTimes(1)
         expect(waiting.flows.holds).not.toHaveBeenCalled()
     })
+})
 
+describe("GraphSeedService > run on a workspace without the module", () => {
     it("installs the module first when the workspace has none: its agent under the handle of the module, then the installation", async () => {
         const { service, agents, installations, flows } = await build({ held: [null, record()] })
 
@@ -249,15 +269,15 @@ describe("GraphSeedService > run", () => {
         expect(agents.ensureByHandle).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             module: "sales",
-            name: "Agent Bán hàng",
+            name: "Agent Ban hang",
             handle: "sales",
-            role: "Chốt đơn",
-            instructions: "Trả lời khách",
+            role: "Chot don",
+            instructions: "Tra loi khach",
         })
         expect(installations.insert).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             moduleKey: "sales",
-            name: "Bán hàng",
+            name: "Ban hang",
             agentId: "agent-1",
             operatingMode: "assist",
         })
@@ -298,7 +318,9 @@ describe("GraphSeedService > run", () => {
         )
         expect(silent.print).toHaveBeenCalledWith("sales agent agent-1 unknown, graph created, 0 connections assigned")
     })
+})
 
+describe("GraphSeedService > run refusals", () => {
     it("refuses a workspace that has no owner, before anything is installed", async () => {
         const { service, installations } = await build({ owner: null })
 
@@ -344,12 +366,9 @@ describe("GraphSeedService > connection assignment", () => {
 
     const asModule = async (key: string, scenario: Scenario = {}) => {
         const built = await build({ held: [record({ moduleKey: key })], ...scenario })
-        built.modules.find.mockResolvedValue({
-            ...MODULE,
-            key,
-            agent: { ...MODULE.agent, handle: key },
-        } as ModuleDefinition)
-        built.activation.activate.mockResolvedValue({ [key]: "live" } as never)
+        built.modules.find.mockResolvedValue(moduleOf(key))
+        const statuses: ProfileStatuses = { [key]: "live" }
+        built.activation.activate.mockResolvedValue(statuses)
         const text = `${JSON.stringify({ documents: [{ path: `data/graphs/${key}.json`, document: { ...SPEC, moduleKey: key } }] })}
 `
         return { ...built, text }

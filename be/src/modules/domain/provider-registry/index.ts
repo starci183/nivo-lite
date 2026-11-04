@@ -15,12 +15,16 @@ export type {
     FeedWebhookPort,
     FeedWebhookReading,
     InstructionAccount,
-    LedgerEntry,
-    LedgerEntryStatus,
+    BusinessLedgerEntry,
     LedgerPort,
     MessageInboxPoller,
     PaymentInstructionPort,
     PaymentInstructionRequest,
     PolledCredit,
 } from "./provider-ports.contracts"
-export { LedgerConnectionRefusedError } from "./ledger-connection-refused.error"
+export {
+    PROVIDER_REGISTRY_ERROR_KINDS,
+    ProviderRegistryError,
+    ProviderRegistryErrorCode,
+} from "./errors/provider-registry.error"
+export { PROVIDER_REGISTRY_MESSAGES } from "./messages/provider-registry.messages"

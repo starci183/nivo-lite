@@ -1,14 +1,12 @@
 import { dayOf, entryOf, isConnectionRefused, isRecordable } from "./ledger.policy"
+import type { LedgerResult } from "./ledger.policy"
+import { sampleOf } from "../../messages/catalog"
 import { ORDER_DINH, TRANSACTION_DINH, TRANSACTION_NAMED } from "../payment/payment.fixtures"
 
 describe("ledger policy", () => {
     it("counts a paid or already-paid settlement as something to record, and nothing else", () => {
-        expect(["paid", "already-paid", "raised", "voided"].map((result) => isRecordable(result as never))).toEqual([
-            true,
-            true,
-            false,
-            false,
-        ])
+        const results: ReadonlyArray<LedgerResult> = ["paid", "already-paid", "raised", "voided"]
+        expect(results.map((result) => isRecordable(result))).toEqual([true, true, false, false])
     })
 
     it("dates a payment by the shop's calendar day, seven hours ahead of UTC", () => {
@@ -17,10 +15,10 @@ describe("ledger policy", () => {
     })
 
     it("names the customer by the lead, else the payer, else nobody", () => {
-        expect(entryOf(TRANSACTION_DINH, ORDER_DINH, "Bùi Nguyên Định")).toEqual({
+        expect(entryOf(TRANSACTION_DINH, ORDER_DINH, sampleOf("sampleBuiNguyenDinh"))).toEqual({
             date: "2026-11-04",
             orderNo: "SO-0001",
-            customer: "Bùi Nguyên Định",
+            customer: sampleOf("sampleBuiNguyenDinh"),
             amountVnd: 5000,
             transactionId: "tx-95958515",
             status: "paid",

@@ -1,6 +1,7 @@
 import { FakeClock, mock } from "@starci/jest-preset"
+import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
-import { SHEETS_PURPOSE, SHEETS_SCOPE } from "@modules/integrations/google"
+import { GOOGLE_CLIENT, SHEETS_PURPOSE, SHEETS_SCOPE } from "@modules/integrations/google"
 import type { GoogleClient } from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import { GoogleTokensService } from "./google-tokens.service"
@@ -11,7 +12,7 @@ import { actor, EXPIRES, NOW, record, stored, tokens } from "@tests/fixtures/bui
 const SHEET = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
 const LINK = `https://docs.google.com/spreadsheets/d/${SHEET}/edit#gid=0`
 
-const build = () => {
+const build = async () => {
     const connections = mock<ConnectionsService>()
     connections.authorize.mockResolvedValue({ role: "owner", displayName: "Lan" })
     connections.listByProvider.mockResolvedValue([record()])
@@ -28,12 +29,20 @@ const build = () => {
     google.accountEmail.mockResolvedValue("shop@example.test")
     const store = mock<GoogleTokensService>()
     runRealGoogleTokens(store, connections, google, new FakeClock(NOW))
-    return { service: new SheetsGrantService(connections, google, store), connections, google }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            SheetsGrantService,
+            { provide: ConnectionsService, useValue: connections },
+            { provide: GOOGLE_CLIENT, useValue: google },
+            { provide: GoogleTokensService, useValue: store },
+        ],
+    }).compile()
+    return { service: moduleRef.get(SheetsGrantService), connections, google }
 }
 
 describe("SheetsGrantService > authorize", () => {
     it("asks the owner for the spreadsheets scope, with the ledger purpose in the signed state", async () => {
-        const { service, connections, google } = build()
+        const { service, connections, google } = await build()
 
         await expect(service.authorize(actor, "/connections")).resolves.toEqual({
             url: "https://google.test/auth?state=signed-state",
@@ -49,7 +58,7 @@ describe("SheetsGrantService > authorize", () => {
     })
 
     it("refuses a deployment without Google", async () => {
-        const { service, google } = build()
+        const { service, google } = await build()
         google.isConfigured.mockReturnValue(false)
 
         await expect(service.authorize(actor, "/connections")).rejects.toEqual(
@@ -60,7 +69,7 @@ describe("SheetsGrantService > authorize", () => {
 
 describe("SheetsGrantService > complete", () => {
     it("marks the connection of the account that consented as having given the spreadsheets access, keeping the rest of its facts", async () => {
-        const { service, connections } = build()
+        const { service, connections } = await build()
         connections.listByProvider.mockResolvedValue([
             record({ meta: { email: "shop@example.test", sheet_id: "orders" } }),
         ])
@@ -80,7 +89,7 @@ describe("SheetsGrantService > complete", () => {
     })
 
     it("fills the connection the seed made while it waited for the first consent", async () => {
-        const { service, connections } = build()
+        const { service, connections } = await build()
         connections.listByProvider.mockResolvedValue([
             record({ id: "seeded", status: "pending", meta: { oauth_client_id: "client-1", consent: "needed" } }),
         ])
@@ -97,7 +106,7 @@ describe("SheetsGrantService > complete", () => {
     })
 
     it("creates the connection of a new account with the access given", async () => {
-        const { service, connections } = build()
+        const { service, connections } = await build()
         connections.listByProvider.mockResolvedValue([])
 
         await service.complete("ws-1", "owner-1", "consent-code")
@@ -112,7 +121,7 @@ describe("SheetsGrantService > complete", () => {
     })
 
     it("refuses a consent where the owner unticked the spreadsheets access, writing nothing", async () => {
-        const { service, connections, google } = build()
+        const { service, connections, google } = await build()
         google.exchangeCode.mockResolvedValue({
             ...tokens,
             scope: "openid email https://www.googleapis.com/auth/drive.file",
@@ -126,7 +135,7 @@ describe("SheetsGrantService > complete", () => {
     })
 
     it("refuses a consent that gives no refresh token when none is kept", async () => {
-        const { service, connections, google } = build()
+        const { service, connections, google } = await build()
         connections.listByProvider.mockResolvedValue([])
         google.exchangeCode.mockResolvedValue({ ...tokens, renewalToken: null })
 
@@ -141,7 +150,7 @@ describe("SheetsGrantService > setLedgerSheet", () => {
         record({ meta: { email: "shop@example.test", sheets: "granted" }, ...overrides })
 
     it("names the sheet from its link on the connection that gave the access, and answers where the ledger stands", async () => {
-        const { service, connections } = build()
+        const { service, connections } = await build()
         connections.listByProvider
             .mockResolvedValueOnce([withAccess()])
             .mockResolvedValueOnce([
@@ -161,7 +170,7 @@ describe("SheetsGrantService > setLedgerSheet", () => {
     })
 
     it("forgets the header mark of the old sheet when the sheet changes, and leaves the same sheet alone", async () => {
-        const { service, connections } = build()
+        const { service, connections } = await build()
         const held = withAccess({
             meta: {
                 email: "shop@example.test",
@@ -186,7 +195,7 @@ describe("SheetsGrantService > setLedgerSheet", () => {
     })
 
     it("refuses text that is no sheet link or id, and a workspace that gave no spreadsheets access", async () => {
-        const { service, connections } = build()
+        const { service, connections } = await build()
 
         await expect(service.setLedgerSheet(actor, "https://evil.test/x")).rejects.toEqual(
             new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.SheetInvalid }),
@@ -225,7 +234,7 @@ describe("SheetsGrantService > grant", () => {
             },
         ],
     ])("reads %s", async (_name, rows, expected) => {
-        const { service, connections } = build()
+        const { service, connections } = await build()
         connections.listByProvider.mockResolvedValue(rows)
 
         await expect(service.grant(actor)).resolves.toEqual(expected)

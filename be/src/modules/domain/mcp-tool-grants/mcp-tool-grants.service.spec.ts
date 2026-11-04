@@ -244,8 +244,10 @@ describe("McpToolGrantsService.upsert", () => {
 
 describe("McpToolGrantsService.insertMissing", () => {
     it("creates only the grants that do not exist and never touches an existing one", async () => {
-        const em = mockEntityManager({ existsBy: [McpToolGrantEntity, false], insert: [McpToolGrantEntity, {}] })
-        em.existsBy.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+        const em = mockEntityManager({
+            find: [McpToolGrantEntity, [entityOf({ tool: "ledger.append" })]],
+            insert: [McpToolGrantEntity, {}],
+        })
         const grants = await build(em)
 
         await expect(
@@ -256,11 +258,11 @@ describe("McpToolGrantsService.insertMissing", () => {
             expect.objectContaining({ tool: "ledger.void", mode: "auto", updatedBy: null }),
         ])
         expect(em.upsert).not.toHaveBeenCalled()
+        expect(em.find).toHaveBeenCalledTimes(1)
     })
 
     it("writes nothing when every grant exists or the agent is not of the workspace", async () => {
-        const em = mockEntityManager({ existsBy: [McpToolGrantEntity, false] })
-        em.existsBy.mockResolvedValue(true)
+        const em = mockEntityManager({ find: [McpToolGrantEntity, [entityOf({ tool: "hakuen.booking.confirm" })]] })
         const grants = await build(em)
 
         await expect(grants.insertMissing([recordOf()])).resolves.toBe(0)

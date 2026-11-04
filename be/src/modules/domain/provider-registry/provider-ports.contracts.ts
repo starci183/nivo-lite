@@ -31,6 +31,30 @@ export type FeedWebhookReading =
     | { readonly kind: "ignored" }
     | { readonly kind: "invalid" }
 
+/** A text that may be absent, such as a header a sender did not present. */
+export type OptionalText = string | undefined
+
+/** One parsed delivery body, as the provider sent it. */
+export interface DeliveryBody {
+    /** A field of the body, whatever the provider sent under it. */
+    readonly [field: string]: unknown
+}
+
+/** The raw bytes of a delivery, when the transport kept them. */
+export type RawDeliveryBody = Buffer | undefined
+
+/** The intake the host runs for one proven delivery. */
+export type DeliveryIntake = () => Promise<void>
+
+/** The port of a provider, or undefined when that provider never registered. */
+export type OptionalPort<Port> = Port | undefined
+
+/** The transactions of a connection, or undefined when the connection cannot be read yet. */
+export type OptionalBankTransactions = ReadonlyArray<BankTransaction> | undefined
+
+/** The provider's reference to a ledger entry, or undefined when the workspace has nothing connected for it. */
+export type OptionalLedgerRef = string | undefined
+
 /** A bank provider whose webhook feeds a workspace bank feed: how its key is presented and what a delivery means. */
 export interface FeedWebhookPort {
     /** The provider key of the connections it feeds. */
@@ -38,11 +62,11 @@ export interface FeedWebhookPort {
     /** The provider identity the inbox stores its rows under. */
     readonly inboxProvider: BankFeedDeliveryRecorded["provider"]
     /** The key a sender presented in the `Authorization` header, or undefined when none was. */
-    keyOf(authorization: string | undefined): string | undefined
+    keyOf(authorization: OptionalText): OptionalText
     /** Reads one parsed delivery body. */
-    read(body: Readonly<Record<string, unknown>>): FeedWebhookReading
+    read(body: DeliveryBody): FeedWebhookReading
     /** Remembers a delivery whose key was proven, around the intake the host runs for it (the connection page of the provider). */
-    traceIntake(connection: string, rawBody: Buffer | undefined, intake: () => Promise<void>): Promise<void>
+    traceIntake(connection: string, rawBody: RawDeliveryBody, intake: DeliveryIntake): Promise<void>
     /** Remembers a delivery whose key was refused. */
     traceRefusal(connection: string): Promise<void>
 }
@@ -104,10 +128,7 @@ export interface BankTransactionsPort {
     /** The provider key of the connections it reads. */
     readonly provider: string
     /** The transactions of one connection, newest first; undefined when the connection cannot be read yet (no API token or account). */
-    transactions(
-        connection: ConnectionRecord,
-        query: BankTransactionsQuery,
-    ): Promise<ReadonlyArray<BankTransaction> | undefined>
+    transactions(connection: ConnectionRecord, query: BankTransactionsQuery): Promise<OptionalBankTransactions>
 }
 
 /** A messaging provider whose customer messages can be read back from its inbox to catch what the webhook never delivered. */
@@ -128,7 +149,7 @@ export interface MessageInboxPoller<Item = unknown> {
 export type LedgerEntryStatus = "paid" | "void"
 
 /** One line of the business ledger in the domain's words; the provider decides where it goes and how it is laid out. */
-export interface LedgerEntry {
+export interface BusinessLedgerEntry {
     /** The day the money was received, `YYYY-MM-DD`. */
     readonly date: string
     /** The order the payment is for. */
@@ -148,7 +169,7 @@ export interface LedgerEntry {
 /**
  * A provider that keeps the business ledger of a workspace (a Google sheet today; Excel or an accounting tool later). It only ever adds:
  * an entry is never changed or removed, and nothing it holds is read back into a decision. A failure of the provider itself (a timeout, a
- * 5xx, a 429) is thrown as it is and tried again; a refused connection is `LedgerConnectionRefusedError`.
+ * 5xx, a 429) is thrown as it is and tried again; a refused connection is `PROVIDER_REGISTRY_LEDGER_CONNECTION_REFUSED`.
  */
 export interface LedgerPort {
     /** The provider key of the connections it writes through. */
@@ -156,7 +177,7 @@ export interface LedgerPort {
     /** True when the workspace connected this provider and told it where to write. */
     ready(workspaceId: string): Promise<boolean>
     /** Adds one entry and answers the provider's reference to it; undefined when the workspace has nothing connected for it. */
-    append(workspaceId: string, entry: LedgerEntry): Promise<string | undefined>
+    append(workspaceId: string, entry: BusinessLedgerEntry): Promise<OptionalLedgerRef>
     /** Adds the void entry of a transaction and answers the reference; undefined when the workspace has nothing connected for it. */
-    void(workspaceId: string, transactionId: string): Promise<string | undefined>
+    void(workspaceId: string, transactionId: string): Promise<OptionalLedgerRef>
 }
