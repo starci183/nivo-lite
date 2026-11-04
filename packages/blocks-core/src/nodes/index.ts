@@ -4,6 +4,7 @@ import { raiseWorkItemNode } from "./core/raise-work-item.node"
 import { coreReplyNode } from "./core/reply.node"
 import { intentClassifyNode } from "./intent/classify.node"
 import { intentHasNode } from "./intent/has.node"
+import { leadEnsureNode } from "./lead/ensure.node"
 import { knowledgeAnswerNode } from "./knowledge/answer.node"
 import { orderAskMissingNode } from "./order/ask-missing.node"
 import { orderCompleteNode } from "./order/complete.node"
@@ -20,6 +21,7 @@ export {
     intentClassifyNode,
     intentHasNode,
     knowledgeAnswerNode,
+    leadEnsureNode,
     orderAskMissingNode,
     orderCompleteNode,
     orderConfirmNode,
@@ -39,6 +41,7 @@ export const coreNodes: ReadonlyArray<NodeDefinition> = [
     intentClassifyNode,
     intentHasNode,
     knowledgeAnswerNode,
+    leadEnsureNode,
     coreHandoffNode,
     coreReplyNode,
     paymentClaimAckNode,

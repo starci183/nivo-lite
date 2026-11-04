@@ -17,6 +17,8 @@ export enum WorkPerformersErrorCode {
     ApprovalInvalid = "WORK_PERFORMERS_APPROVAL_INVALID",
     /** The connector refused or did not answer the approved call. */
     ConnectorRefused = "WORK_PERFORMERS_CONNECTOR_REFUSED",
+    /** The conversation is gone or belongs to another workspace. */
+    ConversationUnavailable = "WORK_PERFORMERS_CONVERSATION_UNAVAILABLE",
 }
 
 /** How each work-performers code travels. */
@@ -28,6 +30,7 @@ export const WORK_PERFORMERS_ERROR_KINDS: Record<WorkPerformersErrorCode, ErrorK
     [WorkPerformersErrorCode.ReminderEmpty]: "invalid",
     [WorkPerformersErrorCode.ApprovalInvalid]: "invalid",
     [WorkPerformersErrorCode.ConnectorRefused]: "unavailable",
+    [WorkPerformersErrorCode.ConversationUnavailable]: "not-found",
 }
 
 /** The one error class of the work-performers capability. */

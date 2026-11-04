@@ -17,6 +17,7 @@ export {
     bankTransactionKind,
     catalogueItemKind,
     channelSendEffect,
+    leadEnsureEffect,
     conversationKind,
     coreDataKinds,
     coreEffects,
@@ -40,6 +41,7 @@ export {
 export type {
     AgentTagPayload,
     ChannelSendPayload,
+    LeadEnsurePayload,
     OrderConfirmPayload,
     OrderLine,
     OrderRecordPayload,

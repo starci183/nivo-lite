@@ -115,6 +115,7 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "errors.WORK_PERFORMERS_REMINDER_EMPTY": "Không có nội dung nhắc.",
         "errors.WORK_PERFORMERS_APPROVAL_INVALID": "Yêu cầu duyệt không có lệnh kết nối để thực hiện.",
         "errors.WORK_PERFORMERS_CONNECTOR_REFUSED": "Kết nối chưa thực hiện {{tool}} ({{code}}).",
+        "errors.WORK_PERFORMERS_CONVERSATION_UNAVAILABLE": "Không tìm thấy cuộc trò chuyện của khách.",
         "performers.chatBooking.askService": "Bạn muốn đặt dịch vụ nào ạ? Bên mình có: {{services}}.",
         "performers.chatBooking.askDate": "Bạn muốn đặt {{service}} vào ngày nào ạ?",
         "performers.chatBooking.noTimes":
@@ -260,6 +261,7 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "errors.WORK_PERFORMERS_REMINDER_EMPTY": "The reminder has no text.",
         "errors.WORK_PERFORMERS_APPROVAL_INVALID": "The approval carries no connector call to perform.",
         "errors.WORK_PERFORMERS_CONNECTOR_REFUSED": "The connector did not perform {{tool}} ({{code}}).",
+        "errors.WORK_PERFORMERS_CONVERSATION_UNAVAILABLE": "The conversation of the customer was not found.",
         "performers.chatBooking.askService": "Which service would you like to book? We offer: {{services}}.",
         "performers.chatBooking.askDate": "Which day would you like {{service}}?",
         "performers.chatBooking.noTimes":
