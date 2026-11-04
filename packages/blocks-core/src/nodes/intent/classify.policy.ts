@@ -1,3 +1,5 @@
+import { wordListOf } from "../../messages/catalog"
+import type { WordKey } from "../../messages/catalog"
 import type {
     AttachmentSlot,
     ClassifyInput,
@@ -18,10 +20,15 @@ const QUANTITY_MAX = 10_000
 const THOUSAND = 1000
 const MILLION = 1_000_000
 
-/** "5k", "1,5tr", "2 triệu", "500 nghìn": a number and a unit word. */
-const WITH_UNIT = /^\d+(?:[.,]\d+)?\s*(?:k|nghìn|ngàn|nghin|ngan|tr|triệu|trieu)$/u
-const CURRENCY_TAIL = /(?:vnđ|vnd|đ)\s*$/u
-const MILLION_UNIT = /(?:tr|triệu|trieu)$/u
+const alternation = (key: WordKey): string => wordListOf(key).join("|")
+
+/** A number and a unit word: thousands (`5k`) or millions (`1,5tr`), written with or without accents. */
+const WITH_UNIT = new RegExp(
+    String.raw`^\d+(?:[.,]\d+)?\s*(?:${alternation("unitThousand")}|${alternation("unitMillion")})$`,
+    "u",
+)
+const CURRENCY_TAIL = new RegExp(String.raw`(?:${alternation("currencyTail")})\s*$`, "u")
+const MILLION_UNIT = new RegExp(String.raw`(?:${alternation("unitMillion")})$`, "u")
 
 /** The pending messages of a batch: one per non-blank line. */
 export const messagesOf = (text: string): ReadonlyArray<string> => text.split("\n").filter((line) => line.trim() !== "")
@@ -31,7 +38,7 @@ const textOrNull = (value: string | null | undefined, max: number): string | nul
     return text === "" ? null : text
 }
 
-/** An amount of VND from what the customer wrote ("5k", "5.000đ", "1,5tr", 5000); null when it is no positive amount. */
+/** An amount of VND from what the customer wrote (thousands as `5k`, a dotted `5.000`, millions as `1,5tr`, a plain 5000); null when it is no positive amount. */
 export const vndOf = (value: number | string | null | undefined): number | null => {
     if (typeof value === "number") return Number.isFinite(value) && value >= 1 ? Math.round(value) : null
     const text = (value ?? "").toLowerCase().replace(CURRENCY_TAIL, "").trim()

@@ -1,9 +1,5 @@
-import {
-    itemsTextOf,
-    noAccountTitleOf,
-    paymentMessageOf,
-    transferContentOf,
-} from "./payment-request.policy"
+import { itemsTextOf, noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
+import { sampleOf } from "../../messages/catalog"
 
 const instruction = {
     provider: "sepay",
@@ -21,7 +17,12 @@ describe("payment request policy", () => {
     })
 
     it("lists the items in a few words", () => {
-        expect(itemsTextOf([{ name: "tea", qty: 2 }, { name: "cake", qty: 1 }])).toBe("2 x tea, 1 x cake")
+        expect(
+            itemsTextOf([
+                { name: "tea", qty: 2 },
+                { name: "cake", qty: 1 },
+            ]),
+        ).toBe("2 x tea, 1 x cake")
     })
 
     it("writes the amount, the content, the holder and the link in the language asked", () => {
@@ -30,10 +31,10 @@ describe("payment request policy", () => {
         const vi = paymentMessageOf(instruction, order, "DH1", "vi")
         const en = paymentMessageOf({ ...instruction, bankName: "MB Bank" }, order, "DH1", "en")
 
-        expect(vi).toContain("1 x tea · 1.500.000 đ")
-        expect(vi).toContain("Ngân hàng: MBBank")
-        expect(vi).toContain("Chủ tài khoản: NGUYEN VAN A")
-        expect(vi).toContain("Hoặc quét mã QR: https://qr.example/x")
+        expect(vi).toContain(sampleOf("sample1XTea1500000"))
+        expect(vi).toContain(sampleOf("sampleNganHangMbbank"))
+        expect(vi).toContain(sampleOf("sampleChuTaiKhoanNguyenVanA"))
+        expect(vi).toContain(sampleOf("sampleHoacQuetMaQrHttpsQr"))
         expect(en).toContain("1 x tea · 1,500,000 VND")
         expect(en).toContain("Bank: MB Bank")
         expect(en).toContain("Transfer content (type exactly): DH1")

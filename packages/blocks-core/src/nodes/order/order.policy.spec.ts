@@ -1,26 +1,37 @@
-import { askTextOf, gapsOf, mergedItems, nameKey, needsOwner, pricedFrom, recordedItemsOf, resolvedItems, totalOf } from "./order.policy"
+import {
+    askTextOf,
+    gapsOf,
+    mergedItems,
+    nameKey,
+    needsOwner,
+    pricedFrom,
+    recordedItemsOf,
+    resolvedItems,
+    totalOf,
+} from "./order.policy"
+import { sampleOf } from "../../messages/catalog"
 
-const tea = { name: "Trà sen", quantity: 2, priceVnd: 120_000 }
+const tea = { name: sampleOf("sampleTraSen"), quantity: 2, priceVnd: 120_000 }
 const row = (name: string, priceVnd: number | null, active = true) => ({ id: `id-${name}`, name, priceVnd, active })
 
 describe("order policy", () => {
     it("compares names without accents, case or extra spaces", () => {
-        expect(nameKey("  Đường  TRÀ Sen ")).toBe("duong tra sen")
-        expect(nameKey("Đ")).toBe("d")
+        expect(nameKey(sampleOf("sampleDuongTraSen"))).toBe("duong tra sen")
+        expect(nameKey(sampleOf("sampleD"))).toBe("d")
     })
 
     it("merges equal names, adds quantities, keeps the first known price and drops blank names", () => {
         expect(
             mergedItems([
-                { name: " trà  sen ", quantity: 1, priceVnd: null },
+                { name: sampleOf("sampleTraSen2"), quantity: 1, priceVnd: null },
                 { name: "Tra sen", quantity: 2, priceVnd: 100 },
                 { name: "tra SEN", quantity: 1, priceVnd: 9 },
                 { name: "  ", quantity: 1, priceVnd: 5 },
-                { name: "Bánh", quantity: 1, priceVnd: 7 },
+                { name: sampleOf("sampleBanh"), quantity: 1, priceVnd: 7 },
             ]),
         ).toEqual([
-            { name: "trà sen", quantity: 4, priceVnd: 100 },
-            { name: "Bánh", quantity: 1, priceVnd: 7 },
+            { name: sampleOf("sampleTraSen3"), quantity: 4, priceVnd: 100 },
+            { name: sampleOf("sampleBanh"), quantity: 1, priceVnd: 7 },
         ])
     })
 
@@ -31,30 +42,41 @@ describe("order policy", () => {
     })
 
     it("prices from the active catalogue and names the items it lacks, has retired or has not priced", () => {
-        const catalogue = [row("Trà sen", 130_000), row("Bánh", null), row("Chè", 5, false)]
+        const catalogue = [
+            row(sampleOf("sampleTraSen"), 130_000),
+            row(sampleOf("sampleBanh"), null),
+            row(sampleOf("sampleChe"), 5, false),
+        ]
 
         expect(
             pricedFrom(
                 [
                     tea,
                     { name: "banh", quantity: 1, priceVnd: 1 },
-                    { name: "Rượu", quantity: 1, priceVnd: 1 },
-                    { name: "Chè", quantity: 1, priceVnd: 1 },
+                    { name: sampleOf("sampleRuou"), quantity: 1, priceVnd: 1 },
+                    { name: sampleOf("sampleChe"), quantity: 1, priceVnd: 1 },
                 ],
                 catalogue,
             ),
         ).toEqual({
-            items: [{ name: "Trà sen", quantity: 2, priceVnd: 130_000, catalogueItemId: "id-Trà sen" }],
+            items: [
+                {
+                    name: sampleOf("sampleTraSen"),
+                    quantity: 2,
+                    priceVnd: 130_000,
+                    catalogueItemId: sampleOf("sampleIdTraSen"),
+                },
+            ],
             gaps: [
                 { reason: "no_price", item: "banh" },
-                { reason: "not_in_catalogue", item: "Rượu" },
-                { reason: "not_in_catalogue", item: "Chè" },
+                { reason: "not_in_catalogue", item: sampleOf("sampleRuou") },
+                { reason: "not_in_catalogue", item: sampleOf("sampleChe") },
             ],
         })
     })
 
     it("finds no gap in a priced order with an address", () => {
-        expect(gapsOf([tea], "12 Lê Lợi", [row("Trà sen", 1)]).gaps).toEqual([])
+        expect(gapsOf([tea], sampleOf("sample12LeLoi"), [row(sampleOf("sampleTraSen"), 1)]).gaps).toEqual([])
     })
 
     it("asks for the items and for the address", () => {
@@ -73,14 +95,21 @@ describe("order policy", () => {
     it("resolves an item to the catalogue and keeps the price asked when the catalogue has none", () => {
         const items = [
             { name: "tra sen", quantity: 1, priceVnd: null },
-            { name: "Bánh", quantity: 1, priceVnd: 9 },
-            { name: "Rượu", quantity: 1, priceVnd: 3 },
+            { name: sampleOf("sampleBanh"), quantity: 1, priceVnd: 9 },
+            { name: sampleOf("sampleRuou"), quantity: 1, priceVnd: 3 },
         ]
 
-        expect(resolvedItems(items, [row("Trà sen", 130_000), row("Bánh", null)])).toEqual([
-            { name: "Trà sen", quantity: 1, priceVnd: 130_000, catalogueItemId: "id-Trà sen" },
-            { name: "Bánh", quantity: 1, priceVnd: 9, catalogueItemId: "id-Bánh" },
-            { name: "Rượu", quantity: 1, priceVnd: 3 },
+        expect(
+            resolvedItems(items, [row(sampleOf("sampleTraSen"), 130_000), row(sampleOf("sampleBanh"), null)]),
+        ).toEqual([
+            {
+                name: sampleOf("sampleTraSen"),
+                quantity: 1,
+                priceVnd: 130_000,
+                catalogueItemId: sampleOf("sampleIdTraSen"),
+            },
+            { name: sampleOf("sampleBanh"), quantity: 1, priceVnd: 9, catalogueItemId: sampleOf("sampleIdBanh") },
+            { name: sampleOf("sampleRuou"), quantity: 1, priceVnd: 3 },
         ])
     })
 
@@ -90,15 +119,18 @@ describe("order policy", () => {
                 { name: "A", quantity: 2, priceVnd: 5, catalogueItemId: "c1" },
                 { name: "B", quantity: 1, priceVnd: null },
             ]),
-        ).toEqual([{ name: "A", qty: 2, unitPriceVnd: 5, catalogueItemId: "c1" }, { name: "B", qty: 1 }])
+        ).toEqual([
+            { name: "A", qty: 2, unitPriceVnd: 5, catalogueItemId: "c1" },
+            { name: "B", qty: 1 },
+        ])
     })
 
     it("asks for what is missing in the language asked, without a promise", () => {
         const text = askTextOf(
             [
                 { reason: "no_items", item: null },
-                { reason: "not_in_catalogue", item: "Rượu" },
-                { reason: "no_price", item: "Bánh" },
+                { reason: "not_in_catalogue", item: sampleOf("sampleRuou") },
+                { reason: "no_price", item: sampleOf("sampleBanh") },
                 { reason: "no_address", item: null },
             ],
             "en",
@@ -107,10 +139,10 @@ describe("order policy", () => {
         expect(text.split("\n")).toEqual([
             "To note down the order, we need a little more:",
             "Which items would you like, and how many?",
-            "We do not have “Rượu”; could you pick another item?",
-            "We have no price for “Bánh”.",
+            sampleOf("sampleWeDoNotHaveRuouCould"),
+            sampleOf("sampleWeHaveNoPriceForBanh"),
             "Could you give us the delivery address?",
         ])
-        expect(askTextOf([{ reason: "no_address", item: null }], "vi")).toContain("địa chỉ")
+        expect(askTextOf([{ reason: "no_address", item: null }], "vi")).toContain(sampleOf("sampleDiaChi"))
     })
 })

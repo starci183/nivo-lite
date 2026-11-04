@@ -1,4 +1,5 @@
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
+import type { RecordRef } from "../node-schema.types"
 
 /** The per-graph settings of the hand-off. */
 export interface HandoffParams {
@@ -13,7 +14,9 @@ export type HandoffVisibility = "chat" | "redirect"
 
 /** The params as a graph spec writes them: the visibility may be left out. */
 export interface HandoffParamsIn {
+    /** The key of the agent to tag. */
     readonly toModuleKey: string
+    /** How the hand-off shows; `chat` when left out. */
     readonly visibility?: HandoffVisibility | undefined
 }
 
@@ -36,5 +39,5 @@ export interface HandoffOutput {
     /** The key of the agent tagged. */
     readonly toModuleKey: string
     /** The tag the host recorded. */
-    readonly tag: { readonly kind: string; readonly id: string }
+    readonly tag: RecordRef
 }

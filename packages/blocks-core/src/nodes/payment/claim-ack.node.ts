@@ -4,6 +4,8 @@ import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
 import { claimAckOf } from "./claim-ack.policy"
 import type { ClaimAckInput, ClaimAckOutput, ClaimAckParams } from "./claim-ack.types"
+import { MAX_BODY, MAX_ID } from "../../bounds"
+import { bilingualOf, sampleOf } from "../../messages/catalog"
 
 const ID_MAX = 100
 const BODY_MAX = 4000
@@ -28,8 +30,8 @@ const input: NodeSchema<ClaimAckInput> = z.object({
 })
 
 const output: NodeSchema<ClaimAckOutput> = z.object({
-    reply: z.string(),
-    claim: z.object({ kind: z.string(), id: z.string() }),
+    reply: z.string().max(MAX_BODY),
+    claim: z.object({ kind: z.string().max(MAX_ID), id: z.string().max(MAX_ID) }),
 })
 
 /**
@@ -43,7 +45,7 @@ export const paymentClaimAckNode: NodeDefinition<
 > = defineNode({
     id: "payment.claim-ack",
     role: "output",
-    title: { vi: "Ghi nhận và phản hồi khách báo đã chuyển khoản", en: "Record and acknowledge a payment claim" },
+    title: bilingualOf("nodePaymentClaimAckTitle"),
     params,
     input,
     output,
@@ -77,12 +79,12 @@ export const paymentClaimAckNode: NodeDefinition<
             input: {
                 conversationId: "c1",
                 leadId: "l1",
-                body: "Tôi đã chuyển khoản 5k, tên BUI NGUYEN DINH",
+                body: sampleOf("sampleToiDaChuyenKhoan5kTen"),
                 amountVnd: 5000,
                 payerName: "BUI NGUYEN DINH",
             },
             output: {
-                reply: "Em đang kiểm tra giao dịch 5.000đ của bạn ạ.",
+                reply: sampleOf("sampleEmDangKiemTraGiaoDich"),
                 claim: { kind: "payment-claim.record", id: "payment-claim.record-1" },
             },
             effects: [
@@ -93,12 +95,12 @@ export const paymentClaimAckNode: NodeDefinition<
                         conversationId: "c1",
                         amountVnd: 5000,
                         names: ["BUI NGUYEN DINH"],
-                        body: "Tôi đã chuyển khoản 5k, tên BUI NGUYEN DINH",
+                        body: sampleOf("sampleToiDaChuyenKhoan5kTen"),
                     },
                 },
                 {
                     kind: "channel.send",
-                    payload: { conversationId: "c1", text: "Em đang kiểm tra giao dịch 5.000đ của bạn ạ." },
+                    payload: { conversationId: "c1", text: sampleOf("sampleEmDangKiemTraGiaoDich") },
                 },
             ],
         },

@@ -6,6 +6,8 @@ import type { CatalogueRow } from "./order.policy"
 import { addressSchema, orderGapSchema, orderItemsSchema } from "./order.schema"
 import type { NodeSchema } from "../node-schema.types"
 import type { OrderGap, OrderItem } from "./order.schema"
+import { MAX_ENTRIES } from "../../bounds"
+import { bilingualOf, sampleOf } from "../../messages/catalog"
 
 /** The order to check. */
 export interface OrderCompleteInput {
@@ -36,7 +38,7 @@ const input: NodeSchema<OrderCompleteInput> = z.object({ items: orderItemsSchema
 
 const output: NodeSchema<OrderCompleteOutput> = z.object({
     branch: z.enum(["complete", "missing"]),
-    missing: z.array(orderGapSchema),
+    missing: z.array(orderGapSchema).max(MAX_ENTRIES),
     items: orderItemsSchema,
     amountVnd: z.number().nullable(),
 })
@@ -45,11 +47,13 @@ const output: NodeSchema<OrderCompleteOutput> = z.object({
 export const orderCompleteNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "order.complete",
     role: "condition",
-    title: { vi: "Đơn đã đủ thông tin?", en: "Is the order complete?" },
+    title: bilingualOf("nodeOrderCompleteTitle"),
     params,
     input,
     output,
-    rights: [{ kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] }],
+    rights: [
+        { kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] },
+    ],
     effects: [],
     run: async (given, context) => {
         const catalogue = await context.data.read<CatalogueRow>("catalogue-item", {
@@ -69,33 +73,35 @@ export const orderCompleteNode: NodeDefinition<typeof input, typeof output, type
         {
             name: "is complete when the catalogue prices every item and there is an address",
             params: {},
-            input: { items: [{ name: "tra sen", quantity: 2, priceVnd: null }], address: "12 Lê Lợi, Huế" },
+            input: { items: [{ name: "tra sen", quantity: 2, priceVnd: null }], address: sampleOf("sample12LeLoiHue") },
             output: {
                 branch: "complete",
                 missing: [],
-                items: [{ name: "Trà sen", quantity: 2, priceVnd: 120_000, catalogueItemId: "c1" }],
+                items: [{ name: sampleOf("sampleTraSen"), quantity: 2, priceVnd: 120_000, catalogueItemId: "c1" }],
                 amountVnd: 240_000,
             },
             effects: [],
-            store: { "catalogue-item": [{ id: "c1", name: "Trà sen", priceVnd: 120_000, active: true }] },
+            store: {
+                "catalogue-item": [{ id: "c1", name: sampleOf("sampleTraSen"), priceVnd: 120_000, active: true }],
+            },
         },
         {
             name: "lists every gap: an item the shop lacks, an unpriced one, a retired one and the address",
             params: {},
             input: {
                 items: [
-                    { name: "Rượu", quantity: 1, priceVnd: 50_000 },
-                    { name: "Bánh", quantity: 1, priceVnd: null },
-                    { name: "Chè", quantity: 1, priceVnd: null },
+                    { name: sampleOf("sampleRuou"), quantity: 1, priceVnd: 50_000 },
+                    { name: sampleOf("sampleBanh"), quantity: 1, priceVnd: null },
+                    { name: sampleOf("sampleChe"), quantity: 1, priceVnd: null },
                 ],
                 address: " ",
             },
             output: {
                 branch: "missing",
                 missing: [
-                    { reason: "not_in_catalogue", item: "Rượu" },
-                    { reason: "no_price", item: "Bánh" },
-                    { reason: "not_in_catalogue", item: "Chè" },
+                    { reason: "not_in_catalogue", item: sampleOf("sampleRuou") },
+                    { reason: "no_price", item: sampleOf("sampleBanh") },
+                    { reason: "not_in_catalogue", item: sampleOf("sampleChe") },
                     { reason: "no_address", item: null },
                 ],
                 items: [],
@@ -104,15 +110,15 @@ export const orderCompleteNode: NodeDefinition<typeof input, typeof output, type
             effects: [],
             store: {
                 "catalogue-item": [
-                    { id: "c2", name: "Bánh", priceVnd: null, active: true },
-                    { id: "c3", name: "Chè", priceVnd: 20_000, active: false },
+                    { id: "c2", name: sampleOf("sampleBanh"), priceVnd: null, active: true },
+                    { id: "c3", name: sampleOf("sampleChe"), priceVnd: 20_000, active: false },
                 ],
             },
         },
         {
             name: "asks for the items when there are none",
             params: {},
-            input: { items: [], address: "12 Lê Lợi, Huế" },
+            input: { items: [], address: sampleOf("sample12LeLoiHue") },
             output: { branch: "missing", missing: [{ reason: "no_items", item: null }], items: [], amountVnd: null },
             effects: [],
         },

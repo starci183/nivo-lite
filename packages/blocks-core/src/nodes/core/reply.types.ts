@@ -1,3 +1,5 @@
+import type { RecordRef } from "../node-schema.types"
+
 /** What the customer is told. */
 export interface ReplyInput {
     /** The conversation to answer in. */
@@ -9,5 +11,5 @@ export interface ReplyInput {
 /** The message that was sent. */
 export interface ReplyOutput {
     /** The message the host recorded. */
-    readonly message: { readonly kind: string; readonly id: string }
+    readonly message: RecordRef
 }

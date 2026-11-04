@@ -3,6 +3,8 @@ import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
+import { MAX_ID } from "../../bounds"
+import { bilingualOf } from "../../messages/catalog"
 
 /** The order to confirm. */
 export interface OrderConfirmInput {
@@ -21,22 +23,26 @@ const EXAMPLE_GRANT: RightsGrant = { rights: [{ kind: "order", access: "write", 
 
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
-const input: NodeSchema<OrderConfirmInput> = z.object({ orderId: z.string().min(1) })
+const input: NodeSchema<OrderConfirmInput> = z.object({ orderId: z.string().max(MAX_ID).min(1) })
 
-const output: NodeSchema<OrderConfirmOutput> = z.object({ orderId: z.string() })
+const output: NodeSchema<OrderConfirmOutput> = z.object({ orderId: z.string().max(MAX_ID) })
 
 /** `order.confirm`: confirms the recorded order, once per order across runs (dedupe key `order-confirm:<orderId>`). */
 export const orderConfirmNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "order.confirm",
     role: "output",
-    title: { vi: "Xác nhận đơn hàng", en: "Confirm the order" },
+    title: bilingualOf("nodeOrderConfirmTitle"),
     params,
     input,
     output,
     rights: [],
     effects: ["order.confirm"],
     run: async (given, context) => {
-        await context.effect("order.confirm", { orderId: given.orderId }, { dedupeKey: `order-confirm:${given.orderId}` })
+        await context.effect(
+            "order.confirm",
+            { orderId: given.orderId },
+            { dedupeKey: `order-confirm:${given.orderId}` },
+        )
         return { orderId: given.orderId }
     },
     examples: [

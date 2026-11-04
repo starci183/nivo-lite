@@ -21,6 +21,7 @@ import {
 import { READ_CLAIMS, READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "./payment.rights"
 import { AWAITING_PAYMENT, arrivalSchema, atOf, claimSchema, evidencedSchema } from "./payment.schemas"
 import type { ClaimRow, LeadRow, OrderRow, PricedOrder, TransactionRow } from "./payment.schemas"
+import { MAX_ENTRIES, MAX_ID } from "../../bounds"
 
 const HOUR_MS = 3_600_000
 const READ_LIMIT = 200
@@ -43,11 +44,11 @@ interface EvidenceParams {
 }
 
 const params: z.ZodType<EvidenceParams> = z.object({ windowHours: z.number().positive().default(72) })
-const input: z.ZodType<EvidenceInput, EvidenceInput> = z.object({ transactionId: z.string() })
+const input: z.ZodType<EvidenceInput, EvidenceInput> = z.object({ transactionId: z.string().max(MAX_ID) })
 const output: z.ZodType<EvidenceOutput, EvidenceOutput> = z.object({
     arrival: arrivalSchema.nullable(),
-    evidenced: z.array(evidencedSchema),
-    claims: z.array(claimSchema),
+    evidenced: z.array(evidencedSchema).max(MAX_ENTRIES),
+    claims: z.array(claimSchema).max(MAX_ENTRIES),
 })
 
 const TRANSACTION_FIELDS = READ_TRANSACTIONS.fields
@@ -146,7 +147,7 @@ export const paymentEvidenceNode: NodeDefinition<
     },
     examples: [
         {
-            name: "the 5,000 transfer at 01:06, twelve minutes after Định's claim: amount, name, claim and recency hold",
+            name: "the 5,000 transfer at 01:06, twelve minutes after Dinh's claim: amount, name, claim and recency hold",
             params: { windowHours: WINDOW_HOURS },
             input: { transactionId: TRANSACTION_DINH.id },
             output: { arrival: ARRIVAL_DINH, evidenced: [...EVIDENCED_FOR_DINH], claims: [CLAIM_OF_DINH] },
@@ -154,7 +155,7 @@ export const paymentEvidenceNode: NodeDefinition<
             store: STORE_REAL_CASE,
         },
         {
-            name: "the unrelated 2,000 MoMo transfer of the evening before: nothing holds for Định's order",
+            name: "the unrelated 2,000 MoMo transfer of the evening before: nothing holds for Dinh's order",
             params: { windowHours: WINDOW_HOURS },
             input: { transactionId: TRANSACTION_MOMO.id },
             output: { arrival: ARRIVAL_MOMO, evidenced: [...EVIDENCED_FOR_MOMO], claims: [CLAIM_OF_DINH] },

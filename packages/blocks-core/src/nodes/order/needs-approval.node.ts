@@ -3,6 +3,7 @@ import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { needsOwner } from "./order.policy"
 import type { NodeSchema } from "../node-schema.types"
+import { bilingualOf } from "../../messages/catalog"
 
 /** The default threshold: an order of 5,000,000 VND or more waits for the owner. */
 export const DEFAULT_THRESHOLD_VND = 5_000_000
@@ -37,7 +38,7 @@ const output: NodeSchema<NeedsApprovalOutput> = z.object({ branch: z.enum(["appr
 export const orderNeedsApprovalNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "order.needs-approval",
     role: "condition",
-    title: { vi: "Cần chủ duyệt?", en: "Does the owner decide?" },
+    title: bilingualOf("nodeOrderNeedsApprovalTitle"),
     params,
     input,
     output,

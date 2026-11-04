@@ -1,23 +1,25 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
 import { STOP_STEP, graphSpecProblems, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
+import accounting from "../../../.starcistacks/dev/seeds/data/graphs/accounting.json"
+import chatbot from "../../../.starcistacks/dev/seeds/data/graphs/chatbot.json"
+import sales from "../../../.starcistacks/dev/seeds/data/graphs/sales.json"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "./index"
 
-const GRAPHS_DIR = join(__dirname, "../../../.starcistacks/dev/seeds/data/graphs")
+const SEEDS: Readonly<Record<string, unknown>> = { chatbot, sales, accounting }
 const MODULE_KEYS: ReadonlyArray<string> = ["chatbot", "sales", "accounting"]
 
 const index = nodeIndexOf({ nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds })
 
-const loaded = (moduleKey: string): GraphSpec =>
-    graphSpecSchema.parse(JSON.parse(readFileSync(join(GRAPHS_DIR, `${moduleKey}.json`), "utf8")))
+const loaded = (moduleKey: string): GraphSpec => graphSpecSchema.parse(SEEDS[moduleKey])
 
 const stepsOf = (spec: GraphSpec): ReadonlyArray<string> => spec.nodes.map((node) => node.step)
 
 describe("agent graph specs of flow F", () => {
     it("names only installed nodes (the built-in `stop` apart)", () => {
-        const missing = [...new Set(MODULE_KEYS.flatMap((key) => stepsOf(loaded(key))))].filter((step) => step !== STOP_STEP && !index.nodes.has(step))
+        const missing = [...new Set(MODULE_KEYS.flatMap((key) => stepsOf(loaded(key))))].filter(
+            (step) => step !== STOP_STEP && !index.nodes.has(step),
+        )
 
         expect(missing).toEqual([])
     })
@@ -44,7 +46,12 @@ describe("agent graph specs of flow F", () => {
         }
 
         expect(graphSpecProblems(broken, index).map((problem) => problem.code)).toEqual(
-            expect.arrayContaining(["NODE_ROUTE_MISSING", "NODE_RIGHTS_UNGRANTED", "GRAPH_GRANT_EXCESS", "GRAPH_TOOLS_MISMATCH"]),
+            expect.arrayContaining([
+                "NODE_ROUTE_MISSING",
+                "NODE_RIGHTS_UNGRANTED",
+                "GRAPH_GRANT_EXCESS",
+                "GRAPH_TOOLS_MISMATCH",
+            ]),
         )
     })
 })

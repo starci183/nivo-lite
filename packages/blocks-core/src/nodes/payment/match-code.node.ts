@@ -11,6 +11,7 @@ import {
 } from "./payment.fixtures"
 import { evidencedSchema } from "./payment.schemas"
 import type { Named } from "./payment.schemas"
+import { MAX_BODY, MAX_ENTRIES, MAX_ID } from "../../bounds"
 
 /** The candidates with the evidence gathered for the transaction. */
 interface MatchCodeInput {
@@ -25,11 +26,13 @@ interface MatchCodeOutput extends Named {
 /** The node takes no settings. */
 type NoParams = Record<string, never>
 
-const input: z.ZodType<MatchCodeInput, MatchCodeInput> = z.object({ evidenced: z.array(evidencedSchema) })
+const input: z.ZodType<MatchCodeInput, MatchCodeInput> = z.object({
+    evidenced: z.array(evidencedSchema).max(MAX_ENTRIES),
+})
 const output: z.ZodType<MatchCodeOutput, MatchCodeOutput> = z.object({
     branch: z.enum(["matched", "mismatch", "no-code"]),
-    candidateIds: z.array(z.string()),
-    reasons: z.array(z.string()),
+    candidateIds: z.array(z.string().max(MAX_ID)).max(MAX_ENTRIES),
+    reasons: z.array(z.string().max(MAX_BODY)).max(MAX_ENTRIES),
 })
 
 /**
@@ -61,7 +64,7 @@ export const paymentMatchCodeNode: NodeDefinition<
     },
     examples: [
         {
-            name: "Định's 5,000 transfer has no order code in its content: no-code, the judge decides",
+            name: "Dinh's 5,000 transfer has no order code in its content: no-code, the judge decides",
             params: {},
             input: { evidenced: [...EVIDENCED_FOR_DINH] },
             output: { branch: "no-code", candidateIds: [], reasons: [] },

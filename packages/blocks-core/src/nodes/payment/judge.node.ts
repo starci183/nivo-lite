@@ -8,9 +8,12 @@ import {
 } from "@nivo-lite/agent-sdk/reconcile"
 import type { Arrival, Claim, Evidenced, Outcome } from "@nivo-lite/agent-sdk/reconcile"
 import { z } from "zod"
+import { failureKindOf } from "../core/failure.policy"
 import { ARRIVAL_DINH, ARRIVAL_MOMO, CLAIM_OF_DINH, EVIDENCED_FOR_DINH, EVIDENCED_FOR_MOMO } from "./payment.fixtures"
 import { arrivalSchema, claimSchema, evidencedSchema, judgementAnswerSchema } from "./payment.schemas"
 import type { Named } from "./payment.schemas"
+import { MAX_BODY, MAX_ENTRIES, MAX_ID } from "../../bounds"
+import { sampleOf } from "../../messages/catalog"
 
 /** What the judge reads: the transfer, the candidates with their evidence, and the open claims. */
 interface JudgeInput {
@@ -29,13 +32,13 @@ type NoParams = Record<string, never>
 
 const input: z.ZodType<JudgeInput, JudgeInput> = z.object({
     arrival: arrivalSchema,
-    evidenced: z.array(evidencedSchema),
-    claims: z.array(claimSchema),
+    evidenced: z.array(evidencedSchema).max(MAX_ENTRIES),
+    claims: z.array(claimSchema).max(MAX_ENTRIES),
 })
 const output: z.ZodType<JudgeOutput, JudgeOutput> = z.object({
     branch: z.enum(["match", "ambiguous", "no_match"]),
-    candidateIds: z.array(z.string()),
-    reasons: z.array(z.string()),
+    candidateIds: z.array(z.string().max(MAX_ID)).max(MAX_ENTRIES),
+    reasons: z.array(z.string().max(MAX_BODY)).max(MAX_ENTRIES),
 })
 
 const INSTRUCTIONS = [
@@ -46,6 +49,9 @@ const INSTRUCTIONS = [
     "Answer ambiguous when two or more orders fit, or when the evidence is thin or contradicts itself. Answer no_match when the transfer plainly belongs to none of them.",
     "Never guess: a wrong match marks an order paid. Names are compared without diacritics or case. Write the reasons in the language of the shop (Vietnamese).",
 ].join("\n")
+
+/** The reason a failed model call leaves behind for the person who decides: the kind of the failure, never its text. */
+const failureOf = (error: unknown): string => `judge_failed:${failureKindOf(error)}`
 
 const iso = (at: number): string => new Date(at).toISOString()
 
@@ -74,8 +80,9 @@ const briefOf = (given: JudgeInput, signalled: ReadonlyArray<Evidenced>): unknow
     })),
 })
 
-const outputOf = (outcome: Outcome): JudgeOutput => {
-    const { effect, reasons } = outcome
+const outputOf = (outcome: Outcome, failure: string | null = null): JudgeOutput => {
+    const { effect } = outcome
+    const reasons = failure === null ? outcome.reasons : [...outcome.reasons, failure]
     if (effect.kind === "apply") return { branch: "match", candidateIds: [effect.candidateId], reasons }
     if (effect.kind === "ask") return { branch: "ambiguous", candidateIds: effect.candidateIds, reasons }
     return { branch: "no_match", candidateIds: [], reasons }
@@ -116,26 +123,26 @@ export const paymentJudgeNode: NodeDefinition<
                     reasons: answer.reasons,
                 }),
             )
-        } catch {
-            return outputOf(outcomeWithoutJudge(given.evidenced))
+        } catch (error) {
+            return outputOf(outcomeWithoutJudge(given.evidenced), failureOf(error))
         }
     },
     examples: [
         {
-            name: "the claim at 00:54 came before the money at 01:06: the model matches Định's order",
+            name: "the claim at 00:54 came before the money at 01:06: the model matches Dinh's order",
             params: {},
             input: { arrival: ARRIVAL_DINH, evidenced: [...EVIDENCED_FOR_DINH], claims: [CLAIM_OF_DINH] },
             model: [
                 {
                     verdict: "match",
                     candidate_id: "order-dinh",
-                    reasons: ["Tên, số tiền và lời báo của khách khớp đơn SO-0001"],
+                    reasons: [sampleOf("sampleTenSoTienVaLoiBao")],
                 },
             ],
             output: {
                 branch: "match",
                 candidateIds: ["order-dinh"],
-                reasons: ["Tên, số tiền và lời báo của khách khớp đơn SO-0001"],
+                reasons: [sampleOf("sampleTenSoTienVaLoiBao")],
             },
             effects: [],
         },
@@ -150,16 +157,20 @@ export const paymentJudgeNode: NodeDefinition<
             name: "the model says the transfer is another person's: no_match",
             params: {},
             input: { arrival: ARRIVAL_DINH, evidenced: [...EVIDENCED_FOR_DINH], claims: [] },
-            model: [{ verdict: "no_match", candidate_id: null, reasons: ["Người chuyển là người khác"] }],
-            output: { branch: "no_match", candidateIds: [], reasons: ["Người chuyển là người khác"] },
+            model: [{ verdict: "no_match", candidate_id: null, reasons: [sampleOf("sampleNguoiChuyenLaNguoiKhac")] }],
+            output: { branch: "no_match", candidateIds: [], reasons: [sampleOf("sampleNguoiChuyenLaNguoiKhac")] },
             effects: [],
         },
         {
             name: "the model finds the case ambiguous: the owner decides",
             params: {},
             input: { arrival: ARRIVAL_DINH, evidenced: [...EVIDENCED_FOR_DINH], claims: [CLAIM_OF_DINH] },
-            model: [{ verdict: "ambiguous", candidate_id: null, reasons: ["Hai đơn cùng số tiền"] }],
-            output: { branch: "ambiguous", candidateIds: ["order-dinh"], reasons: ["Hai đơn cùng số tiền"] },
+            model: [{ verdict: "ambiguous", candidate_id: null, reasons: [sampleOf("sampleHaiDonCungSoTien")] }],
+            output: {
+                branch: "ambiguous",
+                candidateIds: ["order-dinh"],
+                reasons: [sampleOf("sampleHaiDonCungSoTien")],
+            },
             effects: [],
         },
         {
@@ -167,7 +178,11 @@ export const paymentJudgeNode: NodeDefinition<
             params: {},
             input: { arrival: ARRIVAL_DINH, evidenced: [...EVIDENCED_FOR_DINH], claims: [CLAIM_OF_DINH] },
             model: [{ verdict: "probably" }],
-            output: { branch: "ambiguous", candidateIds: ["order-dinh"], reasons: ["judge_unavailable"] },
+            output: {
+                branch: "ambiguous",
+                candidateIds: ["order-dinh"],
+                reasons: ["judge_unavailable", "judge_failed:ZodError"],
+            },
             effects: [],
         },
     ],

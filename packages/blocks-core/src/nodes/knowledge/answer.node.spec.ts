@@ -4,13 +4,15 @@ import { knowledgeAnswerNode } from "./answer.node"
 import { publicDocumentsOf } from "./answer.policy"
 import { guardClaims, plainOf } from "./claims.policy"
 import { amountsIn, hasInventedFigure } from "./figures.policy"
+import { sampleOf } from "../../messages/catalog"
 
 const [priced] = knowledgeAnswerNode.examples
+const NO_CLAIMS: Array<string> = []
 const KEPT_GAP = (question: string, locale: "vi" | "en" = "vi") => ({
-    reply: locale === "vi" ? "Em chưa có thông tin về nội dung này ạ." : "I do not have information on this yet.",
+    reply: locale === "vi" ? sampleOf("sampleEmChuaCoThongTinVe") : "I do not have information on this yet.",
     grounded: false,
     rewritten: false,
-    removedClaims: [] as Array<string>,
+    removedClaims: NO_CLAIMS,
     knowledgeGap: question,
 })
 
@@ -31,7 +33,7 @@ describe("knowledge.answer", () => {
             mismatchesOf({
                 store: { "knowledge-document": [{ id: "d2", title: "t", body: "b", visibility: "internal" }] },
                 model: [],
-                output: KEPT_GAP("Chậu hoa giá bao nhiêu?"),
+                output: KEPT_GAP(sampleOf("sampleChauHoaGiaBaoNhieu")),
             }),
         ).resolves.toEqual([])
     })
@@ -41,25 +43,25 @@ describe("knowledge.answer", () => {
             mismatchesOf({
                 params: { locale: "en", claims: null },
                 model: ["NO_ANSWER"],
-                output: KEPT_GAP("Chậu hoa giá bao nhiêu?", "en"),
+                output: KEPT_GAP(sampleOf("sampleChauHoaGiaBaoNhieu"), "en"),
             }),
         ).resolves.toEqual([])
     })
 
     it("is a gap when the model answers nothing, or names a price the documents do not write", async () => {
-        for (const text of ["   ", "Chậu hoa giá 99.000 đồng ạ."])
-            await expect(mismatchesOf({ model: [text], output: KEPT_GAP("Chậu hoa giá bao nhiêu?") })).resolves.toEqual(
-                [],
-            )
+        for (const text of ["   ", sampleOf("sampleChauHoaGia99000Dong")])
+            await expect(
+                mismatchesOf({ model: [text], output: KEPT_GAP(sampleOf("sampleChauHoaGiaBaoNhieu")) }),
+            ).resolves.toEqual([])
     })
 
     it("lets a claim through when the turn recorded its effect", async () => {
         await expect(
             mismatchesOf({
-                input: { question: "Đơn của mình?", recordedEffects: ["order.record"] },
-                model: ["Em đã ghi nhận đơn của bạn ạ."],
+                input: { question: sampleOf("sampleDonCuaMinh"), recordedEffects: ["order.record"] },
+                model: [sampleOf("sampleEmDaGhiNhanDonCua")],
                 output: {
-                    reply: "Em đã ghi nhận đơn của bạn ạ.",
+                    reply: sampleOf("sampleEmDaGhiNhanDonCua"),
                     grounded: true,
                     rewritten: false,
                     removedClaims: [],
@@ -72,9 +74,9 @@ describe("knowledge.answer", () => {
     it("answers neutrally when every sentence claimed an action the turn did not do", async () => {
         await expect(
             mismatchesOf({
-                model: ["Em đã nhận được tiền của bạn. Thanh toán thành công."],
+                model: [sampleOf("sampleEmDaNhanDuocTienCua")],
                 output: {
-                    reply: "Em đã nhận được tin nhắn của bạn ạ.",
+                    reply: sampleOf("sampleEmDaNhanDuocTinNhan"),
                     grounded: true,
                     rewritten: true,
                     removedClaims: ["payment-received"],
@@ -116,8 +118,8 @@ describe("publicDocumentsOf", () => {
 
 describe("claims.policy", () => {
     it("matches a phrase without accents or case", () => {
-        expect(plainOf("  Đã   Ghi nhận ĐƠN ")).toBe("da ghi nhan don")
-        const rules = [{ id: "r", requires: "x.y", phrases: { vi: ["đã ghi nhận đơn"], en: [] } }]
+        expect(plainOf(sampleOf("sampleDaGhiNhanDon"))).toBe("da ghi nhan don")
+        const rules = [{ id: "r", requires: "x.y", phrases: { vi: [sampleOf("sampleDaGhiNhanDon2")], en: [] } }]
         expect(guardClaims("Em DA GHI NHAN DON roi.\nCam on ban.", rules, [], "vi")).toEqual({
             kept: ["Cam on ban."],
             removed: ["r"],
@@ -127,14 +129,14 @@ describe("claims.policy", () => {
 
 describe("figures.policy", () => {
     it("reads amounts in every written form", () => {
-        expect(
-            [...amountsIn("5 triệu, 1,5tr, 500k, 200 nghìn, 5.000.000 đồng, 12345, 20 chậu")].sort((a, b) => a - b),
-        ).toEqual([200_000, 500_000, 1_500_000, 5_000_000, 12_345].sort((a, b) => a - b))
+        expect([...amountsIn(sampleOf("sample5Trieu15tr500k200"))].sort((a, b) => a - b)).toEqual(
+            [200_000, 500_000, 1_500_000, 5_000_000, 12_345].sort((a, b) => a - b),
+        )
     })
 
     it("flags a discount percentage the documents do not write, and accepts one they do", () => {
-        expect(hasInventedFigure("Giảm 10% cho bạn", "Giảm 10% cho đơn đầu")).toBe(false)
-        expect(hasInventedFigure("Giảm 15% cho bạn", "Giảm 10% cho đơn đầu")).toBe(true)
-        expect(hasInventedFigure("Tỷ lệ hài lòng 99%", "Không có số")).toBe(false)
+        expect(hasInventedFigure(sampleOf("sampleGiam10ChoBan"), sampleOf("sampleGiam10ChoDonDau"))).toBe(false)
+        expect(hasInventedFigure(sampleOf("sampleGiam15ChoBan"), sampleOf("sampleGiam10ChoDonDau"))).toBe(true)
+        expect(hasInventedFigure(sampleOf("sampleTyLeHaiLong99"), sampleOf("sampleKhongCoSo"))).toBe(false)
     })
 })

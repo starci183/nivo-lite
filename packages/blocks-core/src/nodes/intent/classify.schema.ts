@@ -12,6 +12,7 @@ import type {
     TriggerFile,
     TriggerMessage,
 } from "./classify.types"
+import { MAX_LINE } from "../../bounds"
 
 const TEXT_MAX = 8000
 const NAME_MAX = 200
@@ -93,15 +94,18 @@ export const modelReplySchema: NodeSchema<ModelReply, unknown> = z.object({
     order: z
         .object({
             items: z
-                .array(z.object({ name: z.string(), quantity: z.number().nullish() }))
+                .array(z.object({ name: z.string().max(MAX_LINE), quantity: z.number().nullish() }))
                 .max(ITEMS_MAX)
                 .default([]),
-            address: z.string().nullish(),
-            customer: z.string().nullish(),
+            address: z.string().max(MAX_LINE).nullish(),
+            customer: z.string().max(MAX_LINE).nullish(),
         })
         .nullish(),
     payment_claim: z
-        .object({ amount_vnd: z.union([z.number(), z.string()]).nullish(), payer_name: z.string().nullish() })
+        .object({
+            amount_vnd: z.union([z.number(), z.string().max(MAX_LINE)]).nullish(),
+            payer_name: z.string().max(MAX_LINE).nullish(),
+        })
         .nullish(),
     images: z
         .array(imageKindSchema)

@@ -6,6 +6,7 @@ import { CLASSIFY_INSTRUCTIONS } from "./classify.messages"
 import { IMAGES_SHOWN_MAX, classificationOf, imagesOf, messagesOf } from "./classify.policy"
 import { classifyInputSchema, classifyOutputSchema, modelReplySchema } from "./classify.schema"
 import type { ClassifyInput, ClassifyOutput } from "./classify.types"
+import { bilingualOf, sampleOf } from "../../messages/catalog"
 
 /** A picture a customer sent, as the trigger of a channel wake carries it. */
 const IMAGE = { name: "anh.jpg", contentType: "image/jpeg", url: "https://files.example/anh.jpg?sig=x" } as const
@@ -22,7 +23,7 @@ export const intentClassifyNode: NodeDefinition<
 > = defineNode({
     id: "intent.classify",
     role: "execute",
-    title: { vi: "Phân loại ý định", en: "Classify the intent" },
+    title: bilingualOf("nodeIntentClassifyTitle"),
     params,
     input: classifyInputSchema,
     output: classifyOutputSchema,
@@ -44,25 +45,29 @@ export const intentClassifyNode: NodeDefinition<
             params: {},
             input: {
                 text: [
-                    "Alo, đặt giùm Định 1 chậu hoa, giao tới địa chỉ 69 Hàng Xanh",
-                    "Tôi cần tư vấn",
-                    "Tôi đã chuyển khoản 5k, tên BUI NGUYEN DINH",
+                    sampleOf("sampleAloDatGiumDinh1Chau"),
+                    sampleOf("sampleToiCanTuVan"),
+                    sampleOf("sampleToiDaChuyenKhoan5kTen"),
                 ].join("\n"),
                 messages: null,
             },
             model: [
                 {
                     intents: ["order", "question", "payment_claim"],
-                    order: { items: [{ name: "chậu hoa", quantity: 1 }], address: "69 Hàng Xanh", customer: "Định" },
+                    order: {
+                        items: [{ name: sampleOf("sampleChauHoa"), quantity: 1 }],
+                        address: sampleOf("sample69HangXanh"),
+                        customer: sampleOf("sampleDinh"),
+                    },
                     payment_claim: { amount_vnd: "5k", payer_name: "BUI NGUYEN DINH" },
                 },
             ],
             output: {
                 intents: ["order", "question", "payment_claim"],
                 order: {
-                    items: [{ name: "chậu hoa", quantity: 1, priceVnd: null }],
-                    address: "69 Hàng Xanh",
-                    customer: "Định",
+                    items: [{ name: sampleOf("sampleChauHoa"), quantity: 1, priceVnd: null }],
+                    address: sampleOf("sample69HangXanh"),
+                    customer: sampleOf("sampleDinh"),
                 },
                 paymentClaim: { amountVnd: 5000, payerName: "BUI NGUYEN DINH" },
                 attachment: null,
@@ -72,13 +77,18 @@ export const intentClassifyNode: NodeDefinition<
         {
             name: "an order that names no one and gives no quantity is still an order, its missing fields null",
             params: {},
-            input: { text: "Cho mình đặt chậu hoa, giao 69 Hàng Xanh", messages: null },
-            model: [{ intents: ["order"], order: { items: [{ name: "chậu hoa" }], address: "69 Hàng Xanh" } }],
+            input: { text: sampleOf("sampleChoMinhDatChauHoaGiao"), messages: null },
+            model: [
+                {
+                    intents: ["order"],
+                    order: { items: [{ name: sampleOf("sampleChauHoa") }], address: sampleOf("sample69HangXanh") },
+                },
+            ],
             output: {
                 intents: ["order"],
                 order: {
-                    items: [{ name: "chậu hoa", quantity: 1, priceVnd: null }],
-                    address: "69 Hàng Xanh",
+                    items: [{ name: sampleOf("sampleChauHoa"), quantity: 1, priceVnd: null }],
+                    address: sampleOf("sample69HangXanh"),
                     customer: null,
                 },
                 paymentClaim: null,
@@ -89,18 +99,21 @@ export const intentClassifyNode: NodeDefinition<
         {
             name: "the words after giao are the delivery address, whatever the order says before them",
             params: {},
-            input: { text: "Cho mình đặt 1 giỏ hoa nhỏ, giao 25 Nguyễn Huệ", messages: null },
+            input: { text: sampleOf("sampleChoMinhDat1GioHoa"), messages: null },
             model: [
                 {
                     intents: ["order"],
-                    order: { items: [{ name: "giỏ hoa nhỏ", quantity: 1 }], address: "25 Nguyễn Huệ" },
+                    order: {
+                        items: [{ name: sampleOf("sampleGioHoaNho"), quantity: 1 }],
+                        address: sampleOf("sample25NguyenHue"),
+                    },
                 },
             ],
             output: {
                 intents: ["order"],
                 order: {
-                    items: [{ name: "giỏ hoa nhỏ", quantity: 1, priceVnd: null }],
-                    address: "25 Nguyễn Huệ",
+                    items: [{ name: sampleOf("sampleGioHoaNho"), quantity: 1, priceVnd: null }],
+                    address: sampleOf("sample25NguyenHue"),
                     customer: null,
                 },
                 paymentClaim: null,
@@ -111,11 +124,20 @@ export const intentClassifyNode: NodeDefinition<
         {
             name: "an order with no address and no name is an order with both null",
             params: {},
-            input: { text: "Đặt 2 chậu hoa", messages: null },
-            model: [{ intents: ["order"], order: { items: [{ name: "chậu hoa", quantity: 2 }], address: null } }],
+            input: { text: sampleOf("sampleDat2ChauHoa"), messages: null },
+            model: [
+                {
+                    intents: ["order"],
+                    order: { items: [{ name: sampleOf("sampleChauHoa"), quantity: 2 }], address: null },
+                },
+            ],
             output: {
                 intents: ["order"],
-                order: { items: [{ name: "chậu hoa", quantity: 2, priceVnd: null }], address: null, customer: null },
+                order: {
+                    items: [{ name: sampleOf("sampleChauHoa"), quantity: 2, priceVnd: null }],
+                    address: null,
+                    customer: null,
+                },
                 paymentClaim: null,
                 attachment: null,
             },
@@ -124,7 +146,7 @@ export const intentClassifyNode: NodeDefinition<
         {
             name: "a greeting is other",
             params: {},
-            input: { text: "Chào shop", messages: null },
+            input: { text: sampleOf("sampleChaoShop"), messages: null },
             model: [{ intents: ["other"], order: null, payment_claim: null }],
             output: { intents: ["other"], order: null, paymentClaim: null, attachment: null },
             effects: [],
@@ -132,7 +154,7 @@ export const intentClassifyNode: NodeDefinition<
         {
             name: "a slot the model forgot to list still raises its intent",
             params: {},
-            input: { text: "Chuyển khoản rồi nha, 1,5tr", messages: null },
+            input: { text: sampleOf("sampleChuyenKhoanRoiNha15tr"), messages: null },
             model: [{ intents: [], order: null, payment_claim: { amount_vnd: "1,5tr", payer_name: null } }],
             output: {
                 intents: ["payment_claim"],
@@ -145,7 +167,7 @@ export const intentClassifyNode: NodeDefinition<
         {
             name: "a picture alone that is a transfer receipt is a payment claim with what the receipt shows",
             params: {},
-            input: { text: "[ảnh]", messages: [{ text: "[ảnh]", attachments: [IMAGE] }] },
+            input: { text: sampleOf("sampleAnh"), messages: [{ text: sampleOf("sampleAnh"), attachments: [IMAGE] }] },
             model: [
                 {
                     intents: ["other"],
@@ -164,7 +186,7 @@ export const intentClassifyNode: NodeDefinition<
         {
             name: "a picture alone that is no receipt is an attachment, never other",
             params: {},
-            input: { text: "[ảnh]", messages: [{ text: "[ảnh]", attachments: [IMAGE] }] },
+            input: { text: sampleOf("sampleAnh"), messages: [{ text: sampleOf("sampleAnh"), attachments: [IMAGE] }] },
             model: [{ intents: ["other"], images: ["other"] }],
             output: {
                 intents: ["attachment"],
@@ -177,7 +199,7 @@ export const intentClassifyNode: NodeDefinition<
         {
             name: "a picture the model cannot understand, or gave no kind for, is an attachment that was not understood",
             params: {},
-            input: { text: "[ảnh]", messages: [{ text: "[ảnh]", attachments: [IMAGE] }] },
+            input: { text: sampleOf("sampleAnh"), messages: [{ text: sampleOf("sampleAnh"), attachments: [IMAGE] }] },
             model: [{ intents: ["other"] }],
             output: {
                 intents: ["attachment"],

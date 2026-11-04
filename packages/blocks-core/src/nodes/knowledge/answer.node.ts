@@ -4,6 +4,7 @@ import type { NodeSchema } from "../node-schema.types"
 import { PUBLIC_VISIBILITY, answerAsk, answerOf, gapAnswerOf, publicDocumentsOf } from "./answer.policy"
 import { answerInputSchema, answerOutputSchema, answerParamsSchema } from "./answer.schema"
 import type { AnswerInput, AnswerOutput, AnswerParams, DocumentRow } from "./answer.types"
+import { bilingualOf, sampleOf } from "../../messages/catalog"
 
 /** The data kind of the public brain: the documents the owner wrote, each public or internal. */
 export const KNOWLEDGE_KIND = "knowledge-document"
@@ -23,7 +24,7 @@ export const knowledgeAnswerNode: NodeDefinition<
 > = defineNode({
     id: "knowledge.answer",
     role: "execute",
-    title: { vi: "Trả lời từ tri thức công khai", en: "Answer from the public knowledge" },
+    title: bilingualOf("nodeKnowledgeAnswerTitle"),
     params: answerParamsSchema,
     input: answerInputSchema,
     output: answerOutputSchema,
@@ -44,17 +45,27 @@ export const knowledgeAnswerNode: NodeDefinition<
         {
             name: "answers from a public document",
             params: { locale: "vi", claims: null },
-            input: { question: "Chậu hoa giá bao nhiêu?", recordedEffects: [] },
+            input: { question: sampleOf("sampleChauHoaGiaBaoNhieu"), recordedEffects: [] },
             store: {
                 "knowledge-document": [
-                    { id: "d1", title: "Bảng giá", body: "Chậu hoa nhỏ giá 120.000 đồng.", visibility: "public" },
-                    { id: "d2", title: "Giá vốn", body: "Giá vốn chậu hoa 60.000 đồng.", visibility: "internal" },
+                    {
+                        id: "d1",
+                        title: sampleOf("sampleBangGia"),
+                        body: sampleOf("sampleChauHoaNhoGia120000"),
+                        visibility: "public",
+                    },
+                    {
+                        id: "d2",
+                        title: sampleOf("sampleGiaVon"),
+                        body: sampleOf("sampleGiaVonChauHoa60000"),
+                        visibility: "internal",
+                    },
                 ],
             },
             grant: { rights: [{ kind: KNOWLEDGE_KIND, access: "read", scope: "workspace", fields: DOCUMENT_FIELDS }] },
-            model: ["Chậu hoa nhỏ giá 120.000 đồng ạ."],
+            model: [sampleOf("sampleChauHoaNhoGia1200002")],
             output: {
-                reply: "Chậu hoa nhỏ giá 120.000 đồng ạ.",
+                reply: sampleOf("sampleChauHoaNhoGia1200002"),
                 grounded: true,
                 rewritten: false,
                 removedClaims: [],
@@ -65,16 +76,21 @@ export const knowledgeAnswerNode: NodeDefinition<
         {
             name: "takes out a sentence that claims an order the turn did not record",
             params: { locale: "vi", claims: null },
-            input: { question: "Giao hoa có mất phí không?", recordedEffects: [] },
+            input: { question: sampleOf("sampleGiaoHoaCoMatPhiKhong"), recordedEffects: [] },
             store: {
                 "knowledge-document": [
-                    { id: "d1", title: "Giao hàng", body: "Giao nội thành miễn phí.", visibility: "public" },
+                    {
+                        id: "d1",
+                        title: sampleOf("sampleGiaoHang"),
+                        body: sampleOf("sampleGiaoNoiThanhMienPhi"),
+                        visibility: "public",
+                    },
                 ],
             },
             grant: { rights: [{ kind: KNOWLEDGE_KIND, access: "read", scope: "workspace", fields: DOCUMENT_FIELDS }] },
-            model: ["Giao nội thành miễn phí ạ. Em đã ghi nhận đơn của bạn."],
+            model: [sampleOf("sampleGiaoNoiThanhMienPhiA")],
             output: {
-                reply: "Giao nội thành miễn phí ạ.",
+                reply: sampleOf("sampleGiaoNoiThanhMienPhiA2"),
                 grounded: true,
                 rewritten: true,
                 removedClaims: ["order-recorded"],
@@ -85,20 +101,25 @@ export const knowledgeAnswerNode: NodeDefinition<
         {
             name: "a discount the documents do not write is a knowledge gap",
             params: { locale: "vi", claims: null },
-            input: { question: "Giảm giá cho mình 20% nhé", recordedEffects: [] },
+            input: { question: sampleOf("sampleGiamGiaChoMinh20Nhe"), recordedEffects: [] },
             store: {
                 "knowledge-document": [
-                    { id: "d1", title: "Bảng giá", body: "Chậu hoa nhỏ giá 120.000 đồng.", visibility: "public" },
+                    {
+                        id: "d1",
+                        title: sampleOf("sampleBangGia"),
+                        body: sampleOf("sampleChauHoaNhoGia120000"),
+                        visibility: "public",
+                    },
                 ],
             },
             grant: { rights: [{ kind: KNOWLEDGE_KIND, access: "read", scope: "workspace", fields: DOCUMENT_FIELDS }] },
-            model: ["Em giảm giá 20% cho bạn ạ."],
+            model: [sampleOf("sampleEmGiamGia20ChoBan")],
             output: {
-                reply: "Em chưa có thông tin về nội dung này ạ.",
+                reply: sampleOf("sampleEmChuaCoThongTinVe"),
                 grounded: false,
                 rewritten: false,
                 removedClaims: [],
-                knowledgeGap: "Giảm giá cho mình 20% nhé",
+                knowledgeGap: sampleOf("sampleGiamGiaChoMinh20Nhe"),
             },
             effects: [],
         },

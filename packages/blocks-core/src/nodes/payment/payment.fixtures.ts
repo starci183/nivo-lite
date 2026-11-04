@@ -2,6 +2,7 @@ import type { NodeStore } from "@nivo-lite/agent-sdk/node"
 import { scoreCandidates } from "@nivo-lite/agent-sdk/reconcile"
 import type { Arrival, Candidate, Claim, Evidenced } from "@nivo-lite/agent-sdk/reconcile"
 import type { ClaimRow, ConversationRow, LeadRow, OrderRow, TransactionRow } from "./payment.schemas"
+import { sampleOf } from "../../messages/catalog"
 
 const HOUR_MS = 3_600_000
 
@@ -31,7 +32,7 @@ export const TRANSACTION_MOMO: TransactionRow = {
     status: "unmatched",
 }
 
-/** Định's order: one flower pot, 5,000, delivered to 69 Hàng Xanh, confirmed at 00:40 and waiting for money. */
+/** Dinh's order: one flower pot, 5,000, delivered to 69 Hang Xanh, confirmed at 00:40 and waiting for money. */
 export const ORDER_DINH: OrderRow = {
     id: "order-dinh",
     orderNo: "SO-0001",
@@ -44,7 +45,7 @@ export const ORDER_DINH: OrderRow = {
 }
 
 /** The customer. */
-export const LEAD_DINH: LeadRow = { id: "lead-dinh", contactName: "Bùi Nguyên Định" }
+export const LEAD_DINH: LeadRow = { id: "lead-dinh", contactName: sampleOf("sampleBuiNguyenDinh") }
 
 /** His Zalo conversation. */
 export const CONVERSATION_DINH: ConversationRow = {
@@ -94,7 +95,7 @@ export const CLAIM_DINH: ClaimRow = {
     conversationId: "conversation-dinh",
     amountVnd: 5000,
     names: ["BUI NGUYEN DINH"],
-    body: "Tôi đã chuyển khoản 5k, tên BUI NGUYEN DINH",
+    body: sampleOf("sampleToiDaChuyenKhoan5kTen"),
     claimedAt: "2026-11-04T00:54:00.000Z",
     status: "open",
 }
@@ -142,10 +143,10 @@ export const ARRIVAL_MOMO: Arrival = {
     at: Date.parse("2026-11-03T22:51:00.000Z"),
 }
 
-/** Định's order as a candidate. */
+/** Dinh's order as a candidate. */
 export const CANDIDATE_DINH: Candidate = {
     id: ORDER_DINH.id,
-    label: "SO-0001 · Bùi Nguyên Định",
+    label: sampleOf("sampleSo0001BuiNguyenDinh"),
     amountDue: 5000,
     partyName: LEAD_DINH.contactName,
     partyKey: LEAD_DINH.id,
