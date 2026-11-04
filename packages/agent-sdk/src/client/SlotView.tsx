@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { EmptyNotice } from "@starci/grammar/common"
+import type { IconSource } from "@starci/grammar/common"
 import type { DataSlot, SlotLabels } from "../slot/slot.types"
 
 /** Props for SlotView. */
@@ -20,6 +21,10 @@ export type SlotViewProps<T> = {
     readonly empty?: "notice" | "collapse"
     /** Resolved supporting copy for the empty notice. */
     readonly emptyDescription?: string
+    /** The glyph above the empty notice. */
+    readonly emptyIconSource?: IconSource
+    /** The one action of the empty notice: it invites the next step (add the first one, connect, clear the filter). */
+    readonly emptyAction?: { readonly label: string; readonly onAction: () => void }
     readonly onRetry?: () => void
     /** The ready tree, drawn once with the placeholder while the first read loads (`render(placeholder, true)`). */
     readonly render: (data: T, isLoading: boolean) => ReactNode
@@ -49,6 +54,7 @@ const errorNotice = (
     retry: (() => void) | undefined,
 ) => (
     <EmptyNotice
+        isError
         message={message}
         {...(description === undefined ? {} : { description })}
         actionLabel={retryLabel}
@@ -73,6 +79,10 @@ export const SlotView = <T,>(props: SlotViewProps<T>): ReactNode => {
             <EmptyNotice
                 message={labels.empty}
                 {...(props.emptyDescription === undefined ? {} : { description: props.emptyDescription })}
+                {...(props.emptyIconSource === undefined ? {} : { iconSource: props.emptyIconSource })}
+                {...(props.emptyAction === undefined
+                    ? {}
+                    : { actionLabel: props.emptyAction.label, onAction: props.emptyAction.onAction })}
             />
         )
     }

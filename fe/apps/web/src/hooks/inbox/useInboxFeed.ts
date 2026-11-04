@@ -5,7 +5,7 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
-import type { DataSlot } from "@/modules/types"
+import type { DataSlot, InboxRowView } from "@/modules/types"
 
 /** The tone each input status wears; a status that is not listed is neutral. */
 const STATUS_TONES = {
@@ -28,33 +28,9 @@ const READABLE_REFERENCE_KINDS: ReadonlySet<string> = new Set(["payment", "order
 
 /** The view `useInboxFeed` returns. */
 export interface InboxFeedView {
-    slot: DataSlot<
-        {
-            id: string
-            source: string
-            kind: string
-            ago: string
-            status: {
-                label: string
-                tone: "success" | "neutral" | "danger" | "warning"
-            }
-            body: string
-            meta: {
-                key: string
-                text: string
-                strong: boolean
-            }[]
-            duplicates: string | null
-            lead: {
-                href: string
-                label: string
-            } | null
-            office: {
-                href: "/chat"
-                label: string
-            } | null
-        }[]
-    >
+    slot: DataSlot<InboxRowView[]>
+    /** The first read has no data yet: the panes draw their skeletons. */
+    isWaiting: boolean
     refresh: () => undefined
 }
 
@@ -67,51 +43,74 @@ export const useInboxFeed = (): InboxFeedView => {
     const { activeWorkspaceId } = useActiveWorkspace()
     const swrRead = useQueryInboundEventsSwr(activeWorkspaceId)
     const { mutate } = swrRead
+    const minutesSince = (iso: string): number =>
+        Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000))
     const ago = (iso: string): string => {
-        const minutes = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000))
+        const minutes = minutesSince(iso)
         if (minutes < 1) return t("justNow")
         if (minutes < 60) return t("minutesAgo", { n: minutes })
         if (minutes < 60 * 24) return t("hoursAgo", { n: Math.floor(minutes / 60) })
         return t("daysAgo", { n: Math.floor(minutes / 1440) })
     }
-    const rowOf = (event: NonNullable<typeof swrRead.data>[number]) => {
-        const meta = [
-            { key: "from", text: t("fromLine", { name: event.senderName ?? t("unnamed") }), strong: false },
-            ...(event.senderContact == null ? [] : [{ key: "contact", text: event.senderContact, strong: false }]),
-            ...(event.amountVnd == null
+    const agoShort = (iso: string): string => {
+        const minutes = minutesSince(iso)
+        if (minutes < 1) return t("justNow")
+        if (minutes < 60) return t("minutesShort", { n: minutes })
+        if (minutes < 60 * 24) return t("hoursShort", { n: Math.floor(minutes / 60) })
+        return t("daysShort", { n: Math.floor(minutes / 1440) })
+    }
+    const rowOf = (event: NonNullable<typeof swrRead.data>[number]): InboxRowView => {
+        const sender = event.senderName ?? t("unnamed")
+        const amount =
+            event.amountVnd == null
+                ? null
+                : format.number(event.amountVnd, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
+        const reference =
+            event.externalRef == null || !READABLE_REFERENCE_KINDS.has(event.kind) ? null : event.externalRef
+        const source = g(`channel_${event.channel}`)
+        const kind = g(`kind_${event.kind}`)
+        const details = [
+            { key: "from", term: t("termFrom"), text: sender },
+            ...(event.senderContact == null
                 ? []
-                : [
-                      {
-                          key: "amount",
-                          text: t("amountLine", {
-                              amount: format.number(event.amountVnd, {
-                                  style: "currency",
-                                  currency: "VND",
-                                  maximumFractionDigits: 0,
-                              }),
-                          }),
-                          strong: true,
-                      },
-                  ]),
-            ...(event.externalRef == null || !READABLE_REFERENCE_KINDS.has(event.kind)
-                ? []
-                : [{ key: "ref", text: t("refLine", { ref: event.externalRef }), strong: false }]),
+                : [{ key: "contact", term: t("termContact"), text: event.senderContact }]),
+            { key: "channel", term: t("termChannel"), text: source },
+            { key: "kind", term: t("termKind"), text: kind },
+            {
+                key: "received",
+                term: t("termReceived"),
+                text: format.dateTime(new Date(event.createdAt), { dateStyle: "short", timeStyle: "short" }),
+            },
+            ...(amount === null ? [] : [{ key: "amount", term: t("termAmount"), text: amount }]),
+            ...(reference === null ? [] : [{ key: "ref", term: t("termRef"), text: reference }]),
         ]
+        const line =
+            event.body === ""
+                ? [kind, amount, reference === null ? null : t("refLine", { ref: reference })]
+                : [source, kind, t("quoted", { text: event.body })]
         return {
             id: event.id,
-            source: g(`channel_${event.channel}`),
-            kind: g(`kind_${event.kind}`),
+            title: t("detailTitle", { kind, name: sender }),
+            sender,
+            source,
+            kind,
+            channelKey: event.channel,
+            kindKey: event.kind,
             ago: ago(event.createdAt),
+            agoShort: agoShort(event.createdAt),
             status: { label: g(`inbound_${event.status}`), tone: toneOf(event.status) },
             body: event.body,
-            meta,
-            duplicates: event.duplicateCount > 0 ? t("duplicates", { n: event.duplicateCount }) : null,
+            line: line.filter((part) => part !== null).join(" · "),
+            details,
+            duplicates: event.duplicateCount,
             lead: event.leadId == null ? null : { href: leadHref(event.leadId), label: t("openLead") },
             office: event.status === "needs_decision" ? { href: CONSOLE_ROUTES.chat, label: t("openOffice") } : null,
         }
     }
+    const slot = mapSlot(slotOfSwr(swrRead), (events) => events.map(rowOf))
     return {
-        slot: mapSlot(slotOfSwr(swrRead), (events) => events.map(rowOf)),
+        slot,
+        isWaiting: "isLoading" in slot,
         refresh: () => void mutate(),
     }
 }
