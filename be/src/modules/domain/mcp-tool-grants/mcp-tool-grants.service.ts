@@ -134,6 +134,39 @@ export class McpToolGrantsService {
         return written.length
     }
 
+    /**
+     * Creates the grants that do not exist yet and leaves every existing row as it is, whatever its mode (an owner's change in the console
+     * stays). A record whose agent is not of its workspace is skipped. Answers how many grants were created.
+     */
+    async insertMissing(rows: ReadonlyArray<McpToolGrantRecord>): Promise<number> {
+        const owned = await this.ownedAgentKeys(rows)
+        const wanted = rows.filter((record) => owned.has(agentKey(record.workspaceId, record.agentId)))
+        const held = await Promise.all(
+            wanted.map((record) =>
+                this.entityManager.existsBy(McpToolGrantEntity, {
+                    workspaceId: record.workspaceId,
+                    agentId: record.agentId,
+                    tool: record.tool,
+                }),
+            ),
+        )
+        const missing = wanted.filter((_record, index) => !held[index])
+        if (missing.length === 0) return 0
+        await this.entityManager.insert(
+            McpToolGrantEntity,
+            missing.map((record) => ({
+                workspaceId: record.workspaceId,
+                agentId: record.agentId,
+                tool: record.tool,
+                mode: record.mode,
+                limitVnd: record.limitVnd,
+                constraints: [...record.constraints],
+                updatedBy: null,
+            })),
+        )
+        return missing.length
+    }
+
     /** The workspace and agent of each record whose agent belongs to the record's own workspace, as `agentKey`s. */
     private async ownedAgentKeys(records: ReadonlyArray<McpToolGrantRecord>): Promise<ReadonlySet<string>> {
         const byWorkspace = new Map<string, Set<string>>()

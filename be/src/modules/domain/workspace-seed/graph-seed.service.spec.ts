@@ -79,7 +79,7 @@ const build = async (scenario: Scenario = {}) => {
     tagGrants.grantFor.mockResolvedValue(undefined)
     flows.holds.mockResolvedValue(scenario.holds ?? false)
     const toolGrants = mock<SeedToolGrants>()
-    toolGrants.upsert.mockResolvedValue(0)
+    toolGrants.insertMissing.mockResolvedValue(0)
     const print = jest.fn<void, [string]>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -120,17 +120,17 @@ const failure = (code: WorkspaceSeedErrorCode) => new WorkspaceSeedError({ code 
 const LEDGER_SPEC = {
     ...SPEC,
     moduleKey: "accounting",
-    grant: { rights: [], tools: ["ledger.append", "ledger.void"], effects: [] },
+    grant: { rights: [], tools: ["ledger.append", "ledger.void", "ledger.status", "payment.instruction"], effects: [] },
 }
 const LEDGER_TEXT = `${JSON.stringify({ documents: [{ path: "data/graphs/accounting.json", document: LEDGER_SPEC }] })}\n`
 
 describe("GraphSeedService > tool grants", () => {
-    it("gives the agent an auto grant of each tool its graph declares", async () => {
+    it("gives the agent an auto grant of the ledger tools its graph declares, and of no other tool, only when missing", async () => {
         const { service, toolGrants } = await build()
 
         await service.run(LEDGER_TEXT, "NIVO")
 
-        expect(toolGrants.upsert).toHaveBeenCalledWith(
+        expect(toolGrants.insertMissing).toHaveBeenCalledWith(
             ["ledger.append", "ledger.void"].map((tool) => ({
                 workspaceId: "ws-1",
                 agentId: "agent-1",
@@ -148,7 +148,7 @@ describe("GraphSeedService > tool grants", () => {
         await service.run(LEDGER_TEXT, "NIVO")
 
         expect(activation.activate).not.toHaveBeenCalled()
-        expect(toolGrants.upsert).toHaveBeenCalledTimes(1)
+        expect(toolGrants.insertMissing).toHaveBeenCalledTimes(1)
     })
 })
 

@@ -241,3 +241,30 @@ describe("McpToolGrantsService.upsert", () => {
         expect(grants.doubles.agents.cardsOf).not.toHaveBeenCalled()
     })
 })
+
+describe("McpToolGrantsService.insertMissing", () => {
+    it("creates only the grants that do not exist and never touches an existing one", async () => {
+        const em = mockEntityManager({ existsBy: [McpToolGrantEntity, false], insert: [McpToolGrantEntity, {}] })
+        em.existsBy.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+        const grants = await build(em)
+
+        await expect(
+            grants.insertMissing([recordOf({ tool: "ledger.append" }), recordOf({ tool: "ledger.void" })]),
+        ).resolves.toBe(1)
+        expect(em.insert).toHaveBeenCalledTimes(1)
+        expect(em.insert).toHaveBeenCalledWith(McpToolGrantEntity, [
+            expect.objectContaining({ tool: "ledger.void", mode: "auto", updatedBy: null }),
+        ])
+        expect(em.upsert).not.toHaveBeenCalled()
+    })
+
+    it("writes nothing when every grant exists or the agent is not of the workspace", async () => {
+        const em = mockEntityManager({ existsBy: [McpToolGrantEntity, false] })
+        em.existsBy.mockResolvedValue(true)
+        const grants = await build(em)
+
+        await expect(grants.insertMissing([recordOf()])).resolves.toBe(0)
+        await expect(grants.insertMissing([recordOf({ workspaceId: "ws-other" })])).resolves.toBe(0)
+        expect(em.insert).not.toHaveBeenCalled()
+    })
+})

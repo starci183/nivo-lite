@@ -28,6 +28,9 @@ const SEED_LOCALE = "vi"
 /** The most workspaces looked through for the named one. */
 const WORKSPACE_SCAN_LIMIT = 1000
 
+/** The tools of the ledger copy the seed grants `auto` to the agent whose graph declares them; no other tool is granted by the seed. */
+const LEDGER_SEED_TOOLS: ReadonlySet<string> = new Set(["ledger.append", "ledger.void"])
+
 /** The installation that runs a module's graph, with the agent it drives. */
 interface Seat {
     readonly installation: InstallationRecord
@@ -97,20 +100,14 @@ export class GraphSeedService {
     }
 
     /**
-     * Gives the agent the gateway grant of each tool its graph declares, in mode `auto`. The graph is the spec the owner published, and a
-     * tool it names is one of its nodes calls: a side-effect tool with no grant would ask a person on every run. An upsert: a rerun of the seed restates `auto`,
-     * so a mode the owner changed in the console for a tool the graph declares is set back by the next seed run.
+     * Gives the agent an `auto` gateway grant for the ledger tools its graph declares, when it has none: the ledger copy is written by
+     * the graph without a person. Every other tool the graph declares keeps its behaviour, and a grant that exists (a mode the owner set
+     * in the console) is never touched, so a rerun of the seed changes nothing.
      */
     private async grantTools(workspaceId: string, agentId: string, spec: GraphSpec): Promise<void> {
-        await this.toolGrants.upsert(
-            spec.grant.tools.map((tool) => ({
-                workspaceId,
-                agentId,
-                tool,
-                mode: "auto",
-                limitVnd: null,
-                constraints: [],
-            })),
+        const tools = spec.grant.tools.filter((tool) => LEDGER_SEED_TOOLS.has(tool))
+        await this.toolGrants.insertMissing(
+            tools.map((tool) => ({ workspaceId, agentId, tool, mode: "auto", limitVnd: null, constraints: [] })),
         )
     }
 
