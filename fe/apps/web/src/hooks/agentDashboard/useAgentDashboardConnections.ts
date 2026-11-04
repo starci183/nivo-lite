@@ -14,6 +14,7 @@ const CONNECTION_TONE: Readonly<Record<ConnectionState, BadgeTone>> = {
 
 /** The view `useAgentDashboardConnections` returns. */
 export interface AgentDashboardConnectionsView {
+    summary: string
     manageLabel: string
     manageHref: "/connections"
     rows: {
@@ -33,6 +34,7 @@ export const useAgentDashboardConnections = (dashboard: AgentDashboardView): Age
     const t = useTranslations("agentDashboard")
     const tc = useTranslations("connections")
     return {
+        summary: t("connSummary", { n: dashboard.connections.items.filter((c) => c.status === "connected").length }),
         manageLabel: t("connManage"),
         manageHref: AUTOMATION_ROUTES.connections,
         rows: dashboard.connections.items.map((connection) => {

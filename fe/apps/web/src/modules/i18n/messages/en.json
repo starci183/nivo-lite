@@ -276,9 +276,9 @@
     "tabsLabel": "Workbench areas",
     "ribbonAria": "Key figures",
     "regionFailed": "This section could not be loaded",
-    "waitingTitle": "Waiting for you in this agent",
+    "waitingTitle": "Needs your approval",
     "waitingEmpty": "Nothing is waiting for you",
-    "waitingEmptyBody": "When the agent needs a decision, it appears here.",
+    "waitingEmptyBody": "When the agent needs a decision from you, it shows up here.",
     "waitingOpen": "Decide",
     "waitingMore": "{n} more waiting",
     "doneTitle": "Done on its own, 7 days",
@@ -315,7 +315,10 @@
     "gapAsked": "Asked {n} times",
     "gapsEmpty": "No open gaps",
     "gapsEmptyBody": "Questions the agent could not answer are listed here.",
-    "gapsOpen": "Fill the gaps"
+    "gapsOpen": "Fill the gaps",
+    "connSummary": "{n} connected",
+    "knowSummaryPublic": "Public · {n} documents",
+    "knowSummaryInternal": "Public and internal · {n} documents"
   },
   "agentGraph": {
     "title": "Work map",
@@ -7101,13 +7104,13 @@
     "salesDecisionInvalid": "Fill in the required decision fields.",
     "salesAmountInvalid": "Enter a valid amount.",
     "tab_conversation": "Conversation",
-    "waitingApprove": "Approve proposal",
+    "waitingApprove": "Approve",
     "waitingReject": "Reject",
     "waitingEdit": "Edit",
     "waitingUnknownCustomer": "Unknown customer",
     "waitingMore": "{n} more in Decisions",
     "waitingReason": "Sales has prepared this and needs your approval before it goes ahead.",
-    "waitingSeeWhy": "See why",
+    "waitingSeeWhy": "Why",
     "waitingMoreMenu": "More actions"
   },
   "hiring": {
@@ -8305,7 +8308,9 @@
     "whyTime": "Time used",
     "openOnMap": "Open on the map",
     "whyMissingTitle": "No recorded path",
-    "whyMissingBody": "This item was decided before the action graph recorded paths, or the graph is not published yet."
+    "whyMissingBody": "This item was decided before the action graph recorded paths, or the graph is not published yet.",
+    "gridLabel": "Workbench",
+    "backToDesk": "Back to the workbench"
   },
   "publicBrain": {
     "loadFailed": "The public documents could not be read.",

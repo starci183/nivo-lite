@@ -1,6 +1,7 @@
 import type { ContractImportDialogEvents } from "./contract-import"
 import type { DecisionRowActions } from "./sales"
 import type { ChatbotInboxActions } from "./chatbot-inbox-actions"
+import type { WorkbenchAsideActions } from "./panes"
 /** Lets a person retry or stop an attention item. */
 export interface SalesAttentionActions {
     readonly retry: (key: string, workItemId: string) => void
@@ -58,6 +59,7 @@ export interface SalesContractsActions {
 }
 /** The real interactions between the connected Sales owner and its pure Base. */
 export interface SalesWorkbenchActions {
+    readonly aside: WorkbenchAsideActions
     readonly selectTab: (id: string) => void
     readonly closeWhy: () => void
     readonly retryDashboard: () => void

@@ -276,9 +276,9 @@
     "tabsLabel": "Khu làm việc",
     "ribbonAria": "Chỉ số chính",
     "regionFailed": "Không tải được mục này",
-    "waitingTitle": "Chờ bạn ở agent này",
+    "waitingTitle": "Cần bạn duyệt",
     "waitingEmpty": "Không có gì đang chờ bạn",
-    "waitingEmptyBody": "Khi tác nhân cần bạn quyết định, việc đó hiện ở đây.",
+    "waitingEmptyBody": "Khi agent cần bạn quyết định, việc đó hiện ở đây.",
     "waitingOpen": "Quyết định",
     "waitingMore": "Còn {n} việc đang chờ",
     "doneTitle": "Đã tự làm 7 ngày",
@@ -315,7 +315,10 @@
     "gapAsked": "Được hỏi {n} lần",
     "gapsEmpty": "Không có lỗ hổng nào đang mở",
     "gapsEmptyBody": "Câu hỏi tác nhân chưa trả lời được sẽ hiện ở đây.",
-    "gapsOpen": "Bổ sung tri thức"
+    "gapsOpen": "Bổ sung tri thức",
+    "connSummary": "{n} đã kết nối",
+    "knowSummaryPublic": "Công khai · {n} tài liệu",
+    "knowSummaryInternal": "Công khai và nội bộ · {n} tài liệu"
   },
   "agentGraph": {
     "title": "Bản đồ công việc",
@@ -7101,13 +7104,13 @@
     "salesDecisionInvalid": "Điền các trường bắt buộc cho quyết định.",
     "salesAmountInvalid": "Nhập số tiền hợp lệ.",
     "tab_conversation": "Hội thoại",
-    "waitingApprove": "Duyệt đề xuất",
+    "waitingApprove": "Duyệt",
     "waitingReject": "Từ chối",
     "waitingEdit": "Sửa",
     "waitingUnknownCustomer": "Khách chưa rõ tên",
     "waitingMore": "Còn {n} trong Quyết định",
     "waitingReason": "Sales đã soạn xong, cần bạn duyệt trước khi thực hiện.",
-    "waitingSeeWhy": "Xem lý do",
+    "waitingSeeWhy": "Vì sao",
     "waitingMoreMenu": "Thêm thao tác"
   },
   "hiring": {
@@ -8305,7 +8308,9 @@
     "whyTime": "Thời gian đã dùng",
     "openOnMap": "Mở trên sơ đồ",
     "whyMissingTitle": "Chưa có đường đi được ghi lại",
-    "whyMissingBody": "Việc này được quyết định trước khi sơ đồ hành động ghi lại đường đi, hoặc sơ đồ chưa được xuất bản."
+    "whyMissingBody": "Việc này được quyết định trước khi sơ đồ hành động ghi lại đường đi, hoặc sơ đồ chưa được xuất bản.",
+    "gridLabel": "Bàn làm việc",
+    "backToDesk": "Quay lại bàn làm việc"
   },
   "publicBrain": {
     "loadFailed": "Không đọc được tài liệu công khai.",
