@@ -33,6 +33,11 @@ ci:
     - {name: STARCI_DEPLOY_PAUSED, scope: environment, environment: production, ownerValue: true, purpose: Owner-controlled production automatic-deploy brake}
 # Application image digests are illustrative all-zero placeholders (the canon lite skeleton form <repo>/<app>:<x.y.z>@sha256:0...0),
 # never a completed release: the deploy workflow binds each build's immutable digest per release (release.json).
+# Branch profiles (PROJECT-LINT-2, ruling branch-profile-dev): on the product branch dev, lint, Sonar and Codecov report and never block;
+# hfs, types, wiring, db, secrets, format and the tests block on every branch, and main is never declared (it always runs the full gate).
+branches:
+  dev: { gates: { lint: report, sonar: report, codecov: report } }
+
 components:
   nivo-api:
     role: service
