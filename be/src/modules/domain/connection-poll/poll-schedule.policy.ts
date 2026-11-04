@@ -246,7 +246,9 @@ export const interleavedByWorkspace = <Row extends { readonly workspaceId: strin
         queues.set(row.workspaceId, [...(queues.get(row.workspaceId) ?? []), row])
     })
     const turns = Math.max(0, ...[...queues.values()].map((queue) => queue.length))
-    return Array.from({ length: turns }, (_turn, index) => [...queues.values()].flatMap((queue) => queue[index] ?? [])).flat()
+    return Array.from({ length: turns }, (_turn, index) =>
+        [...queues.values()].flatMap((queue) => queue[index] ?? []),
+    ).flat()
 }
 
 /** Why the provider refused the credential, when the failure is a refusal; undefined for any other failure and for a refusal that does not say. */

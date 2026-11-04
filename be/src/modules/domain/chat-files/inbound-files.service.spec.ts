@@ -31,7 +31,11 @@ const THUMB = "https://photo-stal-34.zdn.vn/jpg/aaaa/thumb"
 const remote = { url: LIVE, thumbnailUrl: "", localPath: "", name: "" }
 const local = { url: "", thumbnailUrl: "", localPath: "receipts/b.png", name: "b.png" }
 
-const answer = (status: number, body: Buffer | string | undefined, headers: Record<string, string> = {}): HttpResponse => ({
+const answer = (
+    status: number,
+    body: Buffer | string | undefined,
+    headers: Record<string, string> = {},
+): HttpResponse => ({
     status,
     headers,
     body,
@@ -141,7 +145,10 @@ describe("InboundFilesService redirects", () => {
 
         await service.download(remote, false, "m-1")
 
-        expect(http.request).toHaveBeenNthCalledWith(2, expect.objectContaining({ url: "https://photo-stal-34.zdn.vn/jpg/final" }))
+        expect(http.request).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({ url: "https://photo-stal-34.zdn.vn/jpg/final" }),
+        )
     })
 
     it.each([
@@ -155,7 +162,10 @@ describe("InboundFilesService redirects", () => {
         await expect(service.download(remote, false, "m-1")).resolves.toBeNull()
 
         expect(http.request).toHaveBeenCalledTimes(1)
-        expect(logger.warn).toHaveBeenCalledWith(ChatFilesLogEvent.InboundSkipped, expect.objectContaining({ reason: "blocked", hops: 1 }))
+        expect(logger.warn).toHaveBeenCalledWith(
+            ChatFilesLogEvent.InboundSkipped,
+            expect.objectContaining({ reason: "blocked", hops: 1 }),
+        )
     })
 
     it("stops at a redirect to a name that resolves to a private address", async () => {
@@ -220,33 +230,55 @@ describe("InboundFilesService a file that is left out", () => {
 
     it.each([
         ["a failed request", () => Promise.reject(new Error("timeout")), 0, "", 0],
-        ["a not-found answer", () => Promise.resolve(answer(404, "", { "content-type": "text/html" })), 404, "text/html", 0],
-        ["a body that is not bytes", () => Promise.resolve(answer(200, "text", { "content-type": "image/png" })), 200, "image/png", 0],
-        ["a page", () => Promise.resolve(answer(200, PNG, { "content-type": "text/html" })), 200, "text/html", PNG.length],
+        [
+            "a not-found answer",
+            () => Promise.resolve(answer(404, "", { "content-type": "text/html" })),
+            404,
+            "text/html",
+            0,
+        ],
+        [
+            "a body that is not bytes",
+            () => Promise.resolve(answer(200, "text", { "content-type": "image/png" })),
+            200,
+            "image/png",
+            0,
+        ],
+        [
+            "a page",
+            () => Promise.resolve(answer(200, PNG, { "content-type": "text/html" })),
+            200,
+            "text/html",
+            PNG.length,
+        ],
         ["an empty body", () => Promise.resolve(answer(200, Buffer.alloc(0), {})), 200, "", 0],
         [
             "a body over the limit",
-            () => Promise.resolve(answer(200, Buffer.alloc(10 * 1024 * 1024 + 1, 0x89), { "content-type": "image/png" })),
+            () =>
+                Promise.resolve(answer(200, Buffer.alloc(10 * 1024 * 1024 + 1, 0x89), { "content-type": "image/png" })),
             200,
             "image/png",
             10 * 1024 * 1024 + 1,
         ],
-    ])("logs the status, the content type and the length when it meets %s", async (_name, reply, status, contentType, length) => {
-        const { service, http, logger } = await build()
-        http.request.mockImplementation(reply)
+    ])(
+        "logs the status, the content type and the length when it meets %s",
+        async (_name, reply, status, contentType, length) => {
+            const { service, http, logger } = await build()
+            http.request.mockImplementation(reply)
 
-        await expect(service.download(remote, false, "m-1")).resolves.toBeNull()
+            await expect(service.download(remote, false, "m-1")).resolves.toBeNull()
 
-        expect(logger.warn).toHaveBeenCalledWith(ChatFilesLogEvent.InboundSkipped, {
-            reason: "unreadable",
-            host: "photo-stal-34.zdn.vn",
-            status,
-            contentType,
-            length,
-            hops: 0,
-            local: false,
-        })
-    })
+            expect(logger.warn).toHaveBeenCalledWith(ChatFilesLogEvent.InboundSkipped, {
+                reason: "unreadable",
+                host: "photo-stal-34.zdn.vn",
+                status,
+                contentType,
+                length,
+                hops: 0,
+                local: false,
+            })
+        },
+    )
 
     it("never logs the address, only its host", async () => {
         const { service, http, logger } = await build()
@@ -279,7 +311,10 @@ describe("InboundFilesService a file that is left out", () => {
 
         await expect(service.download(remote, false, "m-1")).resolves.toBeNull()
 
-        expect(logger.warn).toHaveBeenCalledWith(ChatFilesLogEvent.InboundSkipped, expect.objectContaining({ reason: "unrecognized" }))
+        expect(logger.warn).toHaveBeenCalledWith(
+            ChatFilesLogEvent.InboundSkipped,
+            expect.objectContaining({ reason: "unrecognized" }),
+        )
     })
 })
 
@@ -344,7 +379,11 @@ describe("InboundFilesService keep", () => {
 
     it("writes the file to the private store of the conversation and records it on the message with where it came from", async () => {
         const { service, assets, entitlements } = await build()
-        const tx = fakeTransaction(mockEntityManager({ insert: [AgentMessageAttachmentEntity, { identifiers: [], generatedMaps: [], raw: [] }] }))
+        const tx = fakeTransaction(
+            mockEntityManager({
+                insert: [AgentMessageAttachmentEntity, { identifiers: [], generatedMaps: [], raw: [] }],
+            }),
+        )
 
         await expect(service.keep(scope, file, "zalo:m-1", "msg-1", tx.em)).resolves.toBe(true)
 
@@ -390,6 +429,9 @@ describe("InboundFilesService keep", () => {
         await expect(service.keep(scope, file, "zalo:m-1", "msg-1", tx.em)).resolves.toBe(false)
 
         expect(tx.em.insert).not.toHaveBeenCalled()
-        expect(logger.warn).toHaveBeenCalledWith(ChatFilesLogEvent.InboundSkipped, expect.objectContaining({ reason: "store" }))
+        expect(logger.warn).toHaveBeenCalledWith(
+            ChatFilesLogEvent.InboundSkipped,
+            expect.objectContaining({ reason: "store" }),
+        )
     })
 })

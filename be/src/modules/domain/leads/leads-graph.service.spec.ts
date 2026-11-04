@@ -61,7 +61,11 @@ describe("LeadsGraphService", () => {
         const { records, port } = await build()
         records.find.mockResolvedValue(LEAD)
 
-        const rows = await port.read({ ...TURN, subject: { kind: "sales-lead", id: "lead-1" } }, { fields: FIELDS }, "turn")
+        const rows = await port.read(
+            { ...TURN, subject: { kind: "sales-lead", id: "lead-1" } },
+            { fields: FIELDS },
+            "turn",
+        )
 
         expect(records.find).toHaveBeenCalledWith("ws-1", "lead-1")
         expect(rows).toEqual([

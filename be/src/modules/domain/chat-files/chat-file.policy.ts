@@ -72,7 +72,18 @@ const FTYP_MARK: ReadonlyArray<number> = [0x66, 0x74, 0x79, 0x70]
 const FTYP_OFFSET = 4
 const BRAND_OFFSET = 8
 const BRAND_LENGTH = 4
-const MODERN_IMAGE_BRANDS: ReadonlyArray<string> = ["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1", "avif", "avis"]
+const MODERN_IMAGE_BRANDS: ReadonlyArray<string> = [
+    "heic",
+    "heix",
+    "hevc",
+    "hevx",
+    "heim",
+    "heis",
+    "mif1",
+    "msf1",
+    "avif",
+    "avis",
+]
 
 /** A picture format the bytes prove that the store does not accept (GIF, HEIC, HEIF, AVIF), or null for anything else. */
 export const sniffUnsupportedImage = (bytes: Uint8Array): string | null => {

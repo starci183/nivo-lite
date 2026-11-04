@@ -125,13 +125,19 @@ describe("chatFileExtensionOf", () => {
     it("names the extension of an accepted type and nothing for any other", async () => {
         const policy = await build()
 
-        expect(["image/jpeg", "image/png", "image/webp", "application/pdf"].map(policy.chatFileExtensionOf)).toEqual(["jpg", "png", "webp", "pdf"])
+        expect(["image/jpeg", "image/png", "image/webp", "application/pdf"].map(policy.chatFileExtensionOf)).toEqual([
+            "jpg",
+            "png",
+            "webp",
+            "pdf",
+        ])
         expect(policy.chatFileExtensionOf("image/gif")).toBe("")
     })
 })
 
 describe("sniffUnsupportedImage", () => {
-    const ftyp = (brand: string): Uint8Array => Uint8Array.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, ...Buffer.from(brand), 0, 0])
+    const ftyp = (brand: string): Uint8Array =>
+        Uint8Array.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, ...Buffer.from(brand), 0, 0])
 
     it.each(["heic", "heix", "mif1", "avif", "avis"])("knows an ISO media picture of brand %s", async (brand) => {
         expect((await build()).sniffUnsupportedImage(ftyp(brand))).toBe("image/heif")

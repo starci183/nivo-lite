@@ -18,7 +18,13 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
 import { CustomerIntakeService } from "./customer-intake.service"
-import type { FrontAgent, InboundAttachment, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
+import type {
+    FrontAgent,
+    InboundAttachment,
+    MetaInbound,
+    TelegramInbound,
+    ZaloInbound,
+} from "./conversations.contracts"
 
 const LOCALE = "vi"
 
@@ -211,7 +217,8 @@ export class ConversationsService {
     /** Stores the customer's message at the time the channel says it was sent (never in the future), or at the time it arrived when the channel gave none. */
     private storeCustomer(hearing: Hearing, conversationId: string, manager: EntityManager): Promise<string> {
         const { workspaceId, text, sentAt, channelEventId } = hearing
-        if (sentAt === undefined || sentAt === null) return this.messages.storeCustomer(workspaceId, conversationId, text, manager)
+        if (sentAt === undefined || sentAt === null)
+            return this.messages.storeCustomer(workspaceId, conversationId, text, manager)
         const stamp = messageStampOf(sentAt, this.clock.now().getTime(), channelEventId)
         return this.messages.storeCustomer(workspaceId, conversationId, text, manager, null, stamp)
     }
@@ -220,7 +227,11 @@ export class ConversationsService {
     private wordsOf(inbound: ZaloInbound): string {
         const first = inbound.attachments[0]
         if (first === undefined) return inbound.text
-        const label = this.catalog.get(first.kind === "image" ? "conversations.imageLabel" : "conversations.fileLabel", {}, LOCALE)
+        const label = this.catalog.get(
+            first.kind === "image" ? "conversations.imageLabel" : "conversations.fileLabel",
+            {},
+            LOCALE,
+        )
         return `${label} ${inbound.text}`.trim()
     }
 

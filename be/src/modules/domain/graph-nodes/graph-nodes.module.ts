@@ -20,7 +20,10 @@ export class GraphNodesModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                { provide: GRAPH_NODES_OPTIONS, useValue: { install: options.install, model: options.model, tools: options.tools } },
+                {
+                    provide: GRAPH_NODES_OPTIONS,
+                    useValue: { install: options.install, model: options.model, tools: options.tools },
+                },
                 { provide: GRAPH_NODE_MODEL, useExisting: options.model },
                 GraphNodeRegistryService,
                 GraphNodeEffectsService,

@@ -109,7 +109,9 @@ describe("TransactionsService", () => {
     describe("matchOrder", () => {
         it("links the payment to the sales order it paid, in the caller's transaction", async () => {
             const own = mockEntityManager()
-            const callers = mockEntityManager({ update: [TransactionEntity, { affected: 1, raw: [], generatedMaps: [] }] })
+            const callers = mockEntityManager({
+                update: [TransactionEntity, { affected: 1, raw: [], generatedMaps: [] }],
+            })
             const transactions = await build(own)
 
             await transactions.matchOrder("ws-1", "tx-1", "order-1", callers)
@@ -125,7 +127,10 @@ describe("TransactionsService", () => {
             const em = mockEntityManager({ update: [TransactionEntity, { affected: 1, raw: [], generatedMaps: [] }] })
             const transactions = await build(em)
             await transactions.matchOrder("ws-1", "tx-1", "order-1")
-            expect(em.update).toHaveBeenCalledWith(TransactionEntity, PAYMENT_KEY, { status: "matched", orderId: "order-1" })
+            expect(em.update).toHaveBeenCalledWith(TransactionEntity, PAYMENT_KEY, {
+                status: "matched",
+                orderId: "order-1",
+            })
         })
     })
 

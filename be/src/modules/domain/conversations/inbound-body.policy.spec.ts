@@ -7,7 +7,9 @@ const SUBJECT = Symbol("inbound-body.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { readJsonObject, textField, numberField, listField, epochMillisField } }],
+        providers: [
+            { provide: SUBJECT, useValue: { readJsonObject, textField, numberField, listField, epochMillisField } },
+        ],
     }).compile()
     return moduleRef.get<typeof import("./inbound-body.policy")>(SUBJECT)
 }

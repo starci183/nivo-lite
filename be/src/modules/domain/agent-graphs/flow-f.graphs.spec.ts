@@ -38,7 +38,9 @@ import type { FlowWake } from "./policies/graph-flow.policy"
 /** The flow F graphs as the seed ships them. */
 const graphOf = (name: string): GraphSpec =>
     graphSpecSchema.parse(
-        JSON.parse(readFileSync(join(__dirname, `../../../../../.starcistacks/dev/seeds/data/graphs/${name}.json`), "utf8")),
+        JSON.parse(
+            readFileSync(join(__dirname, `../../../../../.starcistacks/dev/seeds/data/graphs/${name}.json`), "utf8"),
+        ),
     )
 
 /** One effect the fake world ran: its id, payload and the subject it answered. */
@@ -66,7 +68,8 @@ const worldOf = (store: Record<string, Array<NodeRow>>, failOn: string | null = 
             rows.push({ id: subject.id, orderNo: "DH001", status: "draft", ...payload })
         }
         if (effect === "order.confirm") {
-            for (const row of store.order ?? []) if (row.id === payload.orderId) Object.assign(row, { status: "confirmed" })
+            for (const row of store.order ?? [])
+                if (row.id === payload.orderId) Object.assign(row, { status: "confirmed" })
         }
         ran.push({ effect, payload, subject })
         return Promise.resolve(subject)
@@ -75,7 +78,9 @@ const worldOf = (store: Record<string, Array<NodeRow>>, failOn: string | null = 
         const where = Object.entries(query.where ?? {})
         const rows = (store[kind] ?? []).filter((row) => where.every(([name, value]) => row[name] === value))
         return Promise.resolve(
-            rows.slice(0, query.limit).map((row) => Object.fromEntries(query.fields.map((field) => [field, row[field]]))),
+            rows
+                .slice(0, query.limit)
+                .map((row) => Object.fromEntries(query.fields.map((field) => [field, row[field]]))),
         )
     }
     /** The conversation the customer wrote in, as the store answers a channel wake: the words, the times and the files. */
@@ -84,7 +89,12 @@ const worldOf = (store: Record<string, Array<NodeRow>>, failOn: string | null = 
             Promise.resolve(
                 (store.messages ?? [])
                     .filter((row) => ids.includes(String(row.id)))
-                    .map((row) => ({ id: String(row.id), text: String(row.body), at: String(row.at), attachments: [] })),
+                    .map((row) => ({
+                        id: String(row.id),
+                        text: String(row.body),
+                        at: String(row.at),
+                        attachments: [],
+                    })),
             ),
         conversationOf: () => Promise.resolve({ leadId: "lead-1", channel: "zalo" }),
     }
@@ -98,7 +108,9 @@ const build = async (world: ReturnType<typeof worldOf>, graph: GraphSpec, model:
         nodeJson: jest.fn((_scope, ask: NodeAsk) => Promise.resolve(model[ask.purpose]?.shift() as never)),
     })
     const effects = mock<GraphNodeEffectsService>({
-        once: jest.fn((_workspace: string, _effect: string, _call: EffectCall, act: () => Promise<SubjectRef>) => act()),
+        once: jest.fn((_workspace: string, _effect: string, _call: EffectCall, act: () => Promise<SubjectRef>) =>
+            act(),
+        ),
     })
     const door: NodeToolDoor = {
         call: () =>
@@ -119,7 +131,9 @@ const build = async (world: ReturnType<typeof worldOf>, graph: GraphSpec, model:
             AgentGraphNodeStepService,
             {
                 provide: GRAPH_NODES_OPTIONS,
-                useValue: { install: { nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds } },
+                useValue: {
+                    install: { nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds },
+                },
             },
             { provide: LOGGER, useValue: logger },
             { provide: GraphNodeEffectsService, useValue: effects },
@@ -168,17 +182,34 @@ interface Drive {
  */
 const drive = async (built: Awaited<ReturnType<typeof build>>, graph: GraphSpec, wake: FlowWake): Promise<Drive> => {
     const stored = storedWakeContextOf(JSON.parse(JSON.stringify(wake.context)))
-    const turn = { ...wake, context: stored, workspaceId: "ws-1", agentId: "agent-1", wakeId: "wake-1" } as AgentTurnView
+    const turn = {
+        ...wake,
+        context: stored,
+        workspaceId: "ws-1",
+        agentId: "agent-1",
+        wakeId: "wake-1",
+    } as AgentTurnView
     const trigger = await built.flows.triggerOf(turn)
     const first = graph.nodes[0]
     if (first === undefined) throw new Error("empty graph")
-    const pending: Array<StepSpec> = [built.flows.stepOf(first, { versionId: "version-1", nodeKey: first.key, trigger })]
+    const pending: Array<StepSpec> = [
+        built.flows.stepOf(first, { versionId: "version-1", nodeKey: first.key, trigger }),
+    ]
     const done: Array<StepView> = []
     const earlier: Record<string, StepJson> = {}
     let failed: string | null = null
     for (let spec = pending.shift(); spec !== undefined && failed === null; spec = pending.shift()) {
-        const view = { ...spec, runId: "run-1", workspaceId: "ws-1", agentId: "agent-1", earlier: { ...earlier }, result: null } as StepView
-        const answer = await built.steps.run(view).catch((cause: unknown) => ({ kind: "failed" as const, code: String(cause) }))
+        const view = {
+            ...spec,
+            runId: "run-1",
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            earlier: { ...earlier },
+            result: null,
+        } as StepView
+        const answer = await built.steps
+            .run(view)
+            .catch((cause: unknown) => ({ kind: "failed" as const, code: String(cause) }))
         if (answer.kind !== "done") failed = spec.stepKey
         else {
             earlier[spec.stepKey] = answer.result
@@ -187,9 +218,15 @@ const drive = async (built: Awaited<ReturnType<typeof build>>, graph: GraphSpec,
         }
     }
     const pivoted = done.some((step) => step.effect.kind === "pivot")
-    const undoable = failed === null || pivoted ? [] : done.filter((step) => step.effect.kind === "compensable").reverse()
+    const undoable =
+        failed === null || pivoted ? [] : done.filter((step) => step.effect.kind === "compensable").reverse()
     for (const step of undoable) await built.steps.compensate(step)
-    return { path: done.map((step) => step.stepKey), outputs: earlier, failed, undone: undoable.map((step) => step.stepKey) }
+    return {
+        path: done.map((step) => step.stepKey),
+        outputs: earlier,
+        failed,
+        undone: undoable.map((step) => step.stepKey),
+    }
 }
 
 const CATALOGUE = [{ id: "c1", name: "Chậu hoa", priceVnd: 150_000, active: true }]
@@ -213,8 +250,14 @@ const SALES_WAKE: FlowWake = {
 
 describe("flow F graphs on fake ports", () => {
     it("pass the installed nodes with the saga rule on", () => {
-        const installed = nodeIndexOf({ nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds })
-        for (const name of ["sales", "chatbot", "accounting"]) expect(graphSpecProblems(graphOf(name), installed)).toEqual([])
+        const installed = nodeIndexOf({
+            nodes: coreNodes,
+            effects: coreEffects,
+            tools: coreTools,
+            dataKinds: coreDataKinds,
+        })
+        for (const name of ["sales", "chatbot", "accounting"])
+            expect(graphSpecProblems(graphOf(name), installed)).toEqual([])
     })
 
     it("Sales records the order, confirms it under the threshold and asks for the payment", async () => {
@@ -269,12 +312,25 @@ describe("flow F graphs on fake ports", () => {
         const wake: FlowWake = {
             source: "customer",
             actorMemberId: null,
-            context: customerWakeContextOf({ conversationId: "conv-1", messageId: "msg-1", channelEventId: "zalo:1", lookupName: false }),
+            context: customerWakeContextOf({
+                conversationId: "conv-1",
+                messageId: "msg-1",
+                channelEventId: "zalo:1",
+                lookupName: false,
+            }),
         }
         const run = await drive(await build(world, graph, model), graph, wake)
 
         expect(run.failed).toBeNull()
-        expect(run.path).toEqual(["classify", "has-attachment", "has-question", "has-order", "handoff-sales", "has-claim", "end"])
+        expect(run.path).toEqual([
+            "classify",
+            "has-attachment",
+            "has-question",
+            "has-order",
+            "handoff-sales",
+            "has-claim",
+            "end",
+        ])
         expect(world.ran.map((entry) => entry.effect)).toEqual(["agent.tag"])
         expect(world.ran[0]?.payload).toMatchObject({
             toModuleKey: "sales",
@@ -304,7 +360,9 @@ describe("flow F graphs on fake ports", () => {
             actorMemberId: null,
             context: { text: "credit", tagSource: "sepay", subject: "bank-transaction:t-1" },
         }
-        const model = { "payment.judge:payment-judge": [{ verdict: "no_match", candidateId: null, reasons: ["nothing"] }] }
+        const model = {
+            "payment.judge:payment-judge": [{ verdict: "no_match", candidateId: null, reasons: ["nothing"] }],
+        }
         const run = await drive(await build(world, graph, model), graph, wake)
 
         expect(run.failed).toBeNull()

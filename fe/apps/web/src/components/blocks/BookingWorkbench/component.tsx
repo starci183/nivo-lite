@@ -19,7 +19,10 @@ import { BookingPolicyForm } from "@/components/composites/BookingPolicyForm"
 import { BookingPublicPageForm } from "@/components/composites/BookingPublicPageForm"
 import { BookingWaitlist } from "@/components/composites/BookingWaitlist"
 /** The five real booking panels and the recorded-explanation arrangement. */
-export const BOOKING_WORKBENCH_SHAPES: readonly [...typeof BOOKING_TABS, "explanation"] = [...BOOKING_TABS, "explanation"]
+export const BOOKING_WORKBENCH_SHAPES: readonly [...typeof BOOKING_TABS, "explanation"] = [
+    ...BOOKING_TABS,
+    "explanation",
+]
 type BookingWorkbenchShape = (typeof BOOKING_WORKBENCH_SHAPES)[number]
 /** Plain booking models and commands; only this module Base renders their canonical read status. */
 export interface BookingWorkbenchBaseProps {

@@ -95,7 +95,10 @@ export class ConfirmOrderPerformerService implements WorkPerformer {
                 customer: textOf(proposal.fields.customer),
             },
             async (order, tx) => {
-                summary = this.kit.text(ctx, "orderConfirmed", { no: order.order_no, amount: this.kit.money(ctx, amount) })
+                summary = this.kit.text(ctx, "orderConfirmed", {
+                    no: order.order_no,
+                    amount: this.kit.money(ctx, amount),
+                })
                 await this.evidence.log(
                     ctx,
                     {

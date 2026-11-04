@@ -79,7 +79,9 @@ const build = async (state: OptionalGraphState, options: { context?: GraphContex
             {
                 provide: GraphNodeRegistryService,
                 useValue: mock<GraphNodeRegistryService>({
-                    installed: jest.fn().mockReturnValue(nodeIndexOf({ nodes: [echo], effects: [], tools: [], dataKinds: [] })),
+                    installed: jest
+                        .fn()
+                        .mockReturnValue(nodeIndexOf({ nodes: [echo], effects: [], tools: [], dataKinds: [] })),
                 }),
             },
         ],
@@ -303,12 +305,12 @@ describe("AgentGraphPublishService, a node graph", () => {
         const { service, graphs } = await build(stateOf())
         const ghost = { ...FLOW, nodes: [{ key: "x", kind: "output" as const, step: "core.ghost" }] }
 
-        expect(await codeOf(service.publishLearned("ws-1", "agent-1", { ...stateOf().draft, flow: ghost }, OWNER))).toBe(
-            AgentGraphsErrorCode.PublishRefused,
-        )
-        expect(await codeOf(service.publishLearned("ws-1", "agent-1", { ...stateOf().draft, flow: FLOW }, MANAGER))).toBe(
-            AgentGraphsErrorCode.WidensNeedsOwner,
-        )
+        expect(
+            await codeOf(service.publishLearned("ws-1", "agent-1", { ...stateOf().draft, flow: ghost }, OWNER)),
+        ).toBe(AgentGraphsErrorCode.PublishRefused)
+        expect(
+            await codeOf(service.publishLearned("ws-1", "agent-1", { ...stateOf().draft, flow: FLOW }, MANAGER)),
+        ).toBe(AgentGraphsErrorCode.WidensNeedsOwner)
         expect(graphs.publish).not.toHaveBeenCalled()
     })
 })

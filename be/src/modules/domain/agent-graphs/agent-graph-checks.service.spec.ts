@@ -375,9 +375,7 @@ describe("AgentGraphChecksService.check on an enforced graph that ends the work"
 
 describe("AgentGraphChecksService.check when the agent runs a flow and holds none of the old nodes", () => {
     it("runs, as the old walk has nothing to judge, and records nothing", async () => {
-        const { service, decisions, reader } = await build(
-            stateOf({ mode: "enforced", active: FLOW_ONLY_GRAPH }),
-        )
+        const { service, decisions, reader } = await build(stateOf({ mode: "enforced", active: FLOW_ONLY_GRAPH }))
 
         await expect(service.check(REQUEST)).resolves.toMatchObject({ outcome: "run" })
         expect(decisions.record).not.toHaveBeenCalled()

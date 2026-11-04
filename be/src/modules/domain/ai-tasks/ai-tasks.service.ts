@@ -380,7 +380,8 @@ Current rules: ${currentRules}`,
             kind: scope.kind ?? meta.kind,
             module: scope.module ?? meta.module,
         }
-        if (!this.ai.available()) return { text: await this.generator.generate(this.withoutImages(request, scope)), parsed: null }
+        if (!this.ai.available())
+            return { text: await this.generator.generate(this.withoutImages(request, scope)), parsed: null }
         return this.metered(scope, request, options)
     }
 
@@ -393,7 +394,10 @@ Current rules: ${currentRules}`,
         if (count === 0) return request
         this.logger.warn(AiTasksLogEvent.ImagesUnsupported, { workspaceId: request.workspaceId, images: count })
         const messages = request.messages.map(({ images: _images, ...message }) => message)
-        return { ...request, messages: [...messages, { role: "system", content: this.phrase("imagesUnsupported", scope.locale) }] }
+        return {
+            ...request,
+            messages: [...messages, { role: "system", content: this.phrase("imagesUnsupported", scope.locale) }],
+        }
     }
 
     /** One prompt on the AI endpoint: refused when the workspace is over its allowance, metered once it answered. */

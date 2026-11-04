@@ -1,13 +1,23 @@
 import { InboundFilesService } from "./inbound-files.service"
 import { ChatFileReadsService } from "./chat-file-reads.service"
-import { CHAT_FILES_ASSETS, CHAT_FILES_IMPORT_ROOT, CHAT_FILES_READER, CHAT_FILES_RESOLVER, CHAT_FILES_STORAGE } from "./chat-files.decorators"
+import {
+    CHAT_FILES_ASSETS,
+    CHAT_FILES_IMPORT_ROOT,
+    CHAT_FILES_READER,
+    CHAT_FILES_RESOLVER,
+    CHAT_FILES_STORAGE,
+} from "./chat-files.decorators"
 import { ChatFilesModule } from "./chat-files.module"
 import { ChatFilesService } from "./chat-files.service"
 import { NodeInboundFileReader } from "./inbound-file.reader"
 import { NodeHostResolver } from "./inbound-file.resolver"
 
 describe("ChatFilesModule", () => {
-    const registered = ChatFilesModule.register({ storage: "OBJECTS", assets: "ASSETS", importRoot: "/work/.starciwork" })
+    const registered = ChatFilesModule.register({
+        storage: "OBJECTS",
+        assets: "ASSETS",
+        importRoot: "/work/.starciwork",
+    })
 
     it("binds the stores the app root names, the import folder and the reader of local files", () => {
         expect(registered.providers).toEqual(

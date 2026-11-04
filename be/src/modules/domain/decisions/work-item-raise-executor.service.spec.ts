@@ -87,11 +87,23 @@ describe("WorkItemRaiseExecutorService", () => {
     it("keys the item by the call when the node gave no business key, and by the customer or the conversation when no order is named", async () => {
         const { engine, executor } = await build()
 
-        await executor.execute(TURN, { action: "connect_sepay", title: "Connect", payload: { leadId: "lead-1" } }, { key: "run:2", dedupeKey: null })
-        await executor.execute(TURN, { action: "connect_sepay", title: "Connect", payload: {} }, { key: "run:3", dedupeKey: null })
+        await executor.execute(
+            TURN,
+            { action: "connect_sepay", title: "Connect", payload: { leadId: "lead-1" } },
+            { key: "run:2", dedupeKey: null },
+        )
+        await executor.execute(
+            TURN,
+            { action: "connect_sepay", title: "Connect", payload: {} },
+            { key: "run:3", dedupeKey: null },
+        )
 
         const [first, second] = engine.runWork.mock.calls.map(([, spec]) => spec)
-        expect(first).toMatchObject({ subject_type: "lead", subject_id: "lead-1", dedupeKey: "graph-node:work-item.raise:run:2" })
+        expect(first).toMatchObject({
+            subject_type: "lead",
+            subject_id: "lead-1",
+            dedupeKey: "graph-node:work-item.raise:run:2",
+        })
         expect(first?.seed?.amount_vnd).toBeNull()
         expect(second).toMatchObject({ subject_type: "conversation", subject_id: "conv-1", lead_id: null })
     })
@@ -112,7 +124,11 @@ describe("WorkItemRaiseExecutorService", () => {
         const { engine, executor } = await build({ hook: false })
 
         await expect(
-            executor.execute(TURN, { action: "x_action", title: "T", payload: {}, claimId: "claim-1" }, { key: "k", dedupeKey: null }),
+            executor.execute(
+                TURN,
+                { action: "x_action", title: "T", payload: {}, claimId: "claim-1" },
+                { key: "k", dedupeKey: null },
+            ),
         ).resolves.toEqual({ kind: "work-item", id: "item-1" })
         expect(engine.runWork).toHaveBeenCalledTimes(1)
     })
@@ -122,7 +138,11 @@ describe("WorkItemRaiseExecutorService for an agent with no installation", () =>
     it("names no department, so only a listed action can be raised", async () => {
         const { engine, executor } = await build({ installed: false })
 
-        await executor.execute(TURN, { action: "review_agent_run", title: "Review", payload: {} }, { key: "k", dedupeKey: null })
+        await executor.execute(
+            TURN,
+            { action: "review_agent_run", title: "Review", payload: {} },
+            { key: "k", dedupeKey: null },
+        )
 
         expect(engine.runWork.mock.calls[0]?.[1]).not.toHaveProperty("department")
     })

@@ -125,7 +125,11 @@ export class PollScheduleService {
      * Makes the connection hot: it is polled at the hot interval until the time to live runs out, and its next poll is brought forward. Other modules
      * call this when a connection has demand (an order awaiting payment, an open payment claim). A connection that is not in the schedule yet joins it.
      */
-    async markHot(connectionId: string, reason: PollHotReason, ttlMs: number = this.options.schedule.hotTtlMs): Promise<void> {
+    async markHot(
+        connectionId: string,
+        reason: PollHotReason,
+        ttlMs: number = this.options.schedule.hotTtlMs,
+    ): Promise<void> {
         await this.entityManager.query(MARK_HOT_SQL, [connectionId, this.options.schedule.hotIntervalMs, ttlMs, reason])
     }
 
@@ -144,6 +148,10 @@ export class PollScheduleService {
 
     /** The webhook of the provider delivered for this connection: it is healthy, so the interval may be long. */
     async recordWebhook(connectionId: string): Promise<void> {
-        await this.entityManager.update(ConnectionPollScheduleEntity, { connectionId }, { lastWebhookAt: () => "now()" })
+        await this.entityManager.update(
+            ConnectionPollScheduleEntity,
+            { connectionId },
+            { lastWebhookAt: () => "now()" },
+        )
     }
 }

@@ -543,7 +543,13 @@ describe("BankFeedService tags the bound agent of a new credit", () => {
         const manager = harness.feedInbox.lock.mock.calls[0]?.[0]
         expect(harness.graphs.hasLiveFlow).toHaveBeenCalledWith("ws-1", "agent-1")
         expect(harness.transactions.open).toHaveBeenCalledWith(
-            { workspaceId: "ws-1", inboundEventId: "event-1", amountVnd: 5000, reference: "BUI NGUYEN DINH", payer: null },
+            {
+                workspaceId: "ws-1",
+                inboundEventId: "event-1",
+                amountVnd: 5000,
+                reference: "BUI NGUYEN DINH",
+                payer: null,
+            },
             manager,
         )
         expect(harness.tags.tagAgent).toHaveBeenCalledWith(
@@ -563,11 +569,17 @@ describe("BankFeedService tags the bound agent of a new credit", () => {
     it("stores no reference for an empty content", async () => {
         const harness = await arrange()
         harness.graphs.hasLiveFlow.mockResolvedValue(true)
-        harness.feedInbox.lock.mockResolvedValue({ ...receipt, payload: { connection: "c-1", credits: [{ ...credit, content: "" }] } })
+        harness.feedInbox.lock.mockResolvedValue({
+            ...receipt,
+            payload: { connection: "c-1", credits: [{ ...credit, content: "" }] },
+        })
 
         await consume(harness)
 
-        expect(harness.transactions.open).toHaveBeenCalledWith(expect.objectContaining({ reference: null }), expect.anything())
+        expect(harness.transactions.open).toHaveBeenCalledWith(
+            expect.objectContaining({ reference: null }),
+            expect.anything(),
+        )
     })
 
     it("keeps today's path for an agent with no flow: booked, no transaction and no tag", async () => {

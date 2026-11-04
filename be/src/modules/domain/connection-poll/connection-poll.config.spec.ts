@@ -7,7 +7,9 @@ describe("parseConnectionPollConfig", () => {
         const { schedule } = parseConnectionPollConfig(new EnvSource({ QUEUE_ENABLED: "false" }))
 
         expect(schedule).toEqual(DEFAULT_POLL_SCHEDULE)
-        expect([schedule.healthyIntervalMs, schedule.silentIntervalMs, schedule.hotIntervalMs]).toEqual([1_800_000, 300_000, 90_000])
+        expect([schedule.healthyIntervalMs, schedule.silentIntervalMs, schedule.hotIntervalMs]).toEqual([
+            1_800_000, 300_000, 90_000,
+        ])
     })
 
     it("reads every interval, threshold and cap from the environment", () => {

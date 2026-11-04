@@ -27,7 +27,13 @@ const FLOW: GraphSpec = {
     trigger: { kind: "tag", sources: ["channel"] },
     grant: { rights: [], tools: [], effects: [] },
     nodes: [
-        { key: "a", kind: "execute", step: "x", input: { text: { $ref: "trigger.text" }, list: [1, null, "b"] }, next: "b" },
+        {
+            key: "a",
+            kind: "execute",
+            step: "x",
+            input: { text: { $ref: "trigger.text" }, list: [1, null, "b"] },
+            next: "b",
+        },
         { key: "b", kind: "output", step: "stop" },
     ],
 }
@@ -43,7 +49,14 @@ describe("sameFlow", () => {
         const subject = await build()
         const reordered = {
             nodes: [
-                { next: "b", step: "x", kind: "execute", key: "a", params: undefined, input: { list: [1, null, "b"], text: { $ref: "trigger.text" } } },
+                {
+                    next: "b",
+                    step: "x",
+                    kind: "execute",
+                    key: "a",
+                    params: undefined,
+                    input: { list: [1, null, "b"], text: { $ref: "trigger.text" } },
+                },
                 { step: "stop", kind: "output", key: "b" },
             ],
             grant: { effects: [], tools: [], rights: [] },
@@ -63,7 +76,13 @@ describe("sameFlow", () => {
         expect(subject.sameFlow({ ...FLOW, nodes: [first as GraphSpec["nodes"][number]] }, FLOW)).toBe(false)
         expect(
             subject.sameFlow(
-                { ...FLOW, nodes: [{ ...(first as GraphSpec["nodes"][number]), input: { list: [1, null, "c"] } }, second as GraphSpec["nodes"][number]] },
+                {
+                    ...FLOW,
+                    nodes: [
+                        { ...(first as GraphSpec["nodes"][number]), input: { list: [1, null, "c"] } },
+                        second as GraphSpec["nodes"][number],
+                    ],
+                },
                 FLOW,
             ),
         ).toBe(false)
@@ -81,7 +100,16 @@ describe("flowChanged and requireSoundFlow", () => {
     })
 
     it("passes a flow the installed nodes take and refuses one they do not, naming each problem", () => {
-        expect(() => requireSoundFlow({ ...FLOW, nodes: [{ key: "end", kind: "output", step: "stop" }], grant: { rights: [], tools: [], effects: [] } }, index)).not.toThrow()
+        expect(() =>
+            requireSoundFlow(
+                {
+                    ...FLOW,
+                    nodes: [{ key: "end", kind: "output", step: "stop" }],
+                    grant: { rights: [], tools: [], effects: [] },
+                },
+                index,
+            ),
+        ).not.toThrow()
         expect(() => requireSoundFlow(FLOW, index)).toThrow(
             expect.objectContaining({ code: AgentGraphsErrorCode.PublishRefused }),
         )

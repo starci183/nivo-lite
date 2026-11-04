@@ -43,7 +43,11 @@ const build = async (options = {}) => {
     const credentials = mock<ZaloCredentialsService>()
     credentials.load.mockResolvedValue({
         kind: "ok",
-        value: { secret: { appId: "a", appSecret: "s", oaSecret: "o", accessToken: "t" }, expiresAt: null, workspaceId: "ws-1" },
+        value: {
+            secret: { appId: "a", appSecret: "s", oaSecret: "o", accessToken: "t" },
+            expiresAt: null,
+            workspaceId: "ws-1",
+        },
     })
     credentials.accessToken.mockResolvedValue("token")
     const inbox = mock<ZaloInboxService>()
@@ -110,7 +114,9 @@ describe("ZaloInboxPoller fetch", () => {
         const full = Array.from({ length: ZALO_POLL_PAGE_SIZE }, (_row, index) =>
             chat({ messageId: `n-${index}`, userId: `u-${index}`, sentAt: at(1 + index / 100) }),
         )
-        zalo.recentChats.mockResolvedValueOnce(full).mockResolvedValueOnce([chat({ userId: "old", sentAt: at(24 * 9) })])
+        zalo.recentChats
+            .mockResolvedValueOnce(full)
+            .mockResolvedValueOnce([chat({ userId: "old", sentAt: at(24 * 9) })])
         zalo.conversation.mockResolvedValue([])
 
         await poller.fetch(connection, { ...window, to: new Date(at(0.5)) })
@@ -122,7 +128,9 @@ describe("ZaloInboxPoller fetch", () => {
     it("stops at the page limit", async () => {
         const { poller, zalo } = await build()
         zalo.recentChats.mockResolvedValue(
-            Array.from({ length: ZALO_POLL_PAGE_SIZE }, (_row, index) => chat({ userId: "same", sentAt: at(1 + index / 100) })),
+            Array.from({ length: ZALO_POLL_PAGE_SIZE }, (_row, index) =>
+                chat({ userId: "same", sentAt: at(1 + index / 100) }),
+            ),
         )
         zalo.conversation.mockResolvedValue([])
 
@@ -163,11 +171,11 @@ describe("ZaloInboxPoller store", () => {
 
         await poller.store(connection, chat({ userName: "", sentAt: at(2) }))
 
-        expect(inbox.acceptPolledMessage).toHaveBeenCalledWith(
-            "c-1",
-            expect.anything(),
-            { workspaceId: "ws-1", sender: "user-1", stale: true },
-        )
+        expect(inbox.acceptPolledMessage).toHaveBeenCalledWith("c-1", expect.anything(), {
+            workspaceId: "ws-1",
+            sender: "user-1",
+            stale: true,
+        })
     })
 
     it("answers false for a message the inbox already has", async () => {
@@ -200,7 +208,11 @@ describe("ZaloInboxPoller limits and the limiter", () => {
 
 describe("ZaloInboxPoller classify", () => {
     it.each([
-        ["a refused access token", new ZaloError({ code: ZaloErrorCode.TokenRejected }), { kind: "auth_failed", reason: "credential" }],
+        [
+            "a refused access token",
+            new ZaloError({ code: ZaloErrorCode.TokenRejected }),
+            { kind: "auth_failed", reason: "credential" },
+        ],
         [
             "an OA tier package that lacks the feature",
             new ZaloError({
@@ -209,7 +221,11 @@ describe("ZaloInboxPoller classify", () => {
             }),
             { kind: "unavailable", reason: "plan", notice: ZALO_PLAN_LACKS_READING_NOTICE },
         ],
-        ["an app or OA without the permission", new ZaloError({ code: ZaloErrorCode.NotPermitted }), { kind: "auth_failed", reason: "permission" }],
+        [
+            "an app or OA without the permission",
+            new ZaloError({ code: ZaloErrorCode.NotPermitted }),
+            { kind: "auth_failed", reason: "permission" },
+        ],
         [
             "a refusal that says in words the permission is missing",
             new ZaloError({ code: ZaloErrorCode.Rejected, params: { reason: "Application does not have permission" } }),
@@ -233,7 +249,11 @@ describe("ZaloInboxPoller classify", () => {
             new ChannelsError({ code: ChannelsErrorCode.SecretUnreadable }),
             { kind: "auth_failed", reason: "credential" },
         ],
-        ["a token refresh in progress", new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy }), { kind: "transient" }],
+        [
+            "a token refresh in progress",
+            new ChannelsError({ code: ChannelsErrorCode.ZaloRefreshBusy }),
+            { kind: "transient" },
+        ],
         ["a missing connection", new ChannelsError({ code: ChannelsErrorCode.ConnectionNotFound }), { kind: "fatal" }],
         ["anything else", new Error("boom"), { kind: "fatal" }],
     ])("maps %s", async (_name, error, expected) => {

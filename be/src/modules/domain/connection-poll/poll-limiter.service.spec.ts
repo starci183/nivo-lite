@@ -38,7 +38,13 @@ describe("PollLimiterService enter", () => {
         const slot = await service.enter("sepay", "c-1", limits)
         await slot?.release()
 
-        expect(store.enter).toHaveBeenCalledWith("sepay", "c-1", 1, DEFAULT_POLL_SCHEDULE.leaseMs, Date.parse("2026-11-04T10:00:00.000Z"))
+        expect(store.enter).toHaveBeenCalledWith(
+            "sepay",
+            "c-1",
+            1,
+            DEFAULT_POLL_SCHEDULE.leaseMs,
+            Date.parse("2026-11-04T10:00:00.000Z"),
+        )
         expect(store.leave).toHaveBeenCalledWith("sepay", "c-1")
     })
 
@@ -63,7 +69,9 @@ describe("PollLimiterService pass", () => {
 
     it("waits for a token that comes within the inline wait and then goes on", async () => {
         const { service, store, timer } = await build()
-        store.take.mockResolvedValueOnce({ allowed: false, waitMs: 400 }).mockResolvedValueOnce({ allowed: true, waitMs: 0 })
+        store.take
+            .mockResolvedValueOnce({ allowed: false, waitMs: 400 })
+            .mockResolvedValueOnce({ allowed: true, waitMs: 0 })
 
         await service.pass("sepay", "c-1", limits)
 

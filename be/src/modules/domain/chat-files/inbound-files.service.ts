@@ -58,7 +58,15 @@ interface ReadTrace {
     readonly hops: number
 }
 
-const NO_ANSWER: ReadTrace = { bytes: null, reason: "unreadable", host: "", status: 0, contentType: "", length: 0, hops: 0 }
+const NO_ANSWER: ReadTrace = {
+    bytes: null,
+    reason: "unreadable",
+    host: "",
+    status: 0,
+    contentType: "",
+    length: 0,
+    hops: 0,
+}
 
 @Injectable()
 /**
@@ -85,9 +93,17 @@ export class InboundFilesService {
      * type. A file with no name is named after the message and its real type. `imported` is true only for a manual import, the one source that may
      * name a local file. The preview is tried when the full file cannot be read.
      */
-    async download(source: InboundFileSource, imported: boolean, ref: string, index = 0): Promise<DownloadedChatFile | null> {
+    async download(
+        source: InboundFileSource,
+        imported: boolean,
+        ref: string,
+        index = 0,
+    ): Promise<DownloadedChatFile | null> {
         const full = await this.read(source.url, source.localPath, imported)
-        const trace = full.bytes === null && source.thumbnailUrl !== "" ? await this.read(source.thumbnailUrl, "", imported) : full
+        const trace =
+            full.bytes === null && source.thumbnailUrl !== ""
+                ? await this.read(source.thumbnailUrl, "", imported)
+                : full
         if (trace.bytes === null) return this.skip(trace.reason, source, trace)
         const contentType = sniffChatFile(trace.bytes)
         if (contentType === null) {
@@ -166,14 +182,24 @@ export class InboundFilesService {
         if (answer === null) return { ...before, reason: "unreadable", host, hops, status: 0 }
         const contentType = answer.headers?.["content-type"] ?? ""
         const length = Buffer.isBuffer(answer.body) ? answer.body.length : 0
-        const trace: ReadTrace = { bytes: null, reason: "unreadable", host, status: answer.status, contentType, length, hops }
+        const trace: ReadTrace = {
+            bytes: null,
+            reason: "unreadable",
+            host,
+            status: answer.status,
+            contentType,
+            length,
+            hops,
+        }
         if (isRedirectStatus(answer.status)) {
             const next = redirectTargetOf(answer.headers?.location, url)
             if (next === null || hops >= INBOUND_FILE_MAX_REDIRECTS) return trace
             return this.fetch(next, hops + 1, trace)
         }
         const usable = answer.status === 200 && Buffer.isBuffer(answer.body) && isAcceptedDeclaredType(contentType)
-        return usable && length > 0 && length <= CHAT_FILE_MAX_BYTES ? { ...trace, bytes: answer.body as Buffer } : trace
+        return usable && length > 0 && length <= CHAT_FILE_MAX_BYTES
+            ? { ...trace, bytes: answer.body as Buffer }
+            : trace
     }
 
     private skip(reason: string, source: InboundFileSource, trace: ReadTrace): null {

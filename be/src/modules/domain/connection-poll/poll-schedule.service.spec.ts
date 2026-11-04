@@ -77,7 +77,9 @@ describe("PollScheduleService enroll", () => {
 describe("PollScheduleService claimDue", () => {
     it("claims the due connections under a skip-locked read, oldest first, and holds them for the lease", async () => {
         const tx = fakeTransaction(mockEntityManager({ update: [ConnectionPollScheduleEntity, { affected: 2 }] }))
-        const [fake] = queueQueryBuilders(tx.em, [{ getMany: [entityOf(), entityOf({ connectionId: "c-2", workspaceId: "ws-2" })] }])
+        const [fake] = queueQueryBuilders(tx.em, [
+            { getMany: [entityOf(), entityOf({ connectionId: "c-2", workspaceId: "ws-2" })] },
+        ])
         const service = await build(tx.em)
 
         const claimed = await service.claimDue(["sepay"], 20)
@@ -155,7 +157,10 @@ describe("PollScheduleService settle and defer", () => {
         const em = mockEntityManager({ update: [ConnectionPollScheduleEntity, { affected: 1 }] })
         const service = await build(em)
 
-        await service.settle("c-1", planOf({ backfillTo: DUE.getTime(), backfillNewest: DUE.getTime(), breakerOpenedAt: DUE.getTime() }))
+        await service.settle(
+            "c-1",
+            planOf({ backfillTo: DUE.getTime(), backfillNewest: DUE.getTime(), breakerOpenedAt: DUE.getTime() }),
+        )
 
         const [, criteria, set] = em.update.mock.calls[0] ?? []
         expect(criteria).toEqual({ connectionId: "c-1" })
@@ -190,7 +195,11 @@ describe("PollScheduleService settle and defer", () => {
 
         await service.defer("c-1", DUE)
 
-        expect(em.update).toHaveBeenCalledWith(ConnectionPollScheduleEntity, { connectionId: "c-1" }, { nextPollAt: DUE })
+        expect(em.update).toHaveBeenCalledWith(
+            ConnectionPollScheduleEntity,
+            { connectionId: "c-1" },
+            { nextPollAt: DUE },
+        )
     })
 })
 
@@ -216,11 +225,19 @@ describe("PollScheduleService signals", () => {
 
         await service.markHot("c-1", "payment_claim_open")
 
-        expect(em.query.mock.calls[0]?.[1]).toEqual(["c-1", DEFAULT_POLL_SCHEDULE.hotIntervalMs, DEFAULT_POLL_SCHEDULE.hotTtlMs, "payment_claim_open"])
+        expect(em.query.mock.calls[0]?.[1]).toEqual([
+            "c-1",
+            DEFAULT_POLL_SCHEDULE.hotIntervalMs,
+            DEFAULT_POLL_SCHEDULE.hotTtlMs,
+            "payment_claim_open",
+        ])
     })
 
     it("clears the breaker and the owner request of a connection that became ready, then makes it hot", async () => {
-        const em = mockEntityManager({ update: [ConnectionPollScheduleEntity, { affected: 1 }], query: [MARK_HOT_SQL, []] })
+        const em = mockEntityManager({
+            update: [ConnectionPollScheduleEntity, { affected: 1 }],
+            query: [MARK_HOT_SQL, []],
+        })
         const service = await build(em)
 
         await service.markReady("c-1")
@@ -230,7 +247,12 @@ describe("PollScheduleService signals", () => {
             { connectionId: "c-1" },
             { failures: 0, breakerState: "closed", breakerOpenedAt: null, needsReauth: false, unavailableReason: null },
         )
-        expect(em.query.mock.calls[0]?.[1]).toEqual(["c-1", DEFAULT_POLL_SCHEDULE.hotIntervalMs, DEFAULT_POLL_SCHEDULE.hotTtlMs, "connection_ready"])
+        expect(em.query.mock.calls[0]?.[1]).toEqual([
+            "c-1",
+            DEFAULT_POLL_SCHEDULE.hotIntervalMs,
+            DEFAULT_POLL_SCHEDULE.hotTtlMs,
+            "connection_ready",
+        ])
     })
 
     it("stamps the delivery of the webhook", async () => {

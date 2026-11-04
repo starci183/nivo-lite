@@ -132,12 +132,27 @@ export class AgentGraphSeedService {
         const problems = graphSpecProblems(flow, this.nodes.installed())
         if (problems.length === 0) return
         for (const problem of problems) {
-            this.logger.warn(AgentGraphsLogEvent.FlowUnsound, { workspaceId, agentId, code: problem.code, at: problem.at })
+            this.logger.warn(AgentGraphsLogEvent.FlowUnsound, {
+                workspaceId,
+                agentId,
+                code: problem.code,
+                at: problem.at,
+            })
         }
         const raise = this.nodes.optionalExecutorOf(RAISE_EFFECT)
         if (raise === undefined) return
-        const listed = problems.map((problem) => `${problem.code} ${problem.at}`).sort().join(", ")
-        const turn = { turnId: `flow-check:${agentId}`, workspaceId, agentId, subject: null, conversationId: null, locale }
+        const listed = problems
+            .map((problem) => `${problem.code} ${problem.at}`)
+            .sort()
+            .join(", ")
+        const turn = {
+            turnId: `flow-check:${agentId}`,
+            workspaceId,
+            agentId,
+            subject: null,
+            conversationId: null,
+            locale,
+        }
         const payload = {
             action: FLOW_REVIEW_ACTION,
             title: this.catalog.get("agentGraphs.flowUnsound.title", {}, locale),

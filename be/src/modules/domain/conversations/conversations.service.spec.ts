@@ -154,9 +154,9 @@ const registerZaloRouting = () => {
         const manager = mockEntityManager()
         const { service, intake, connections } = await build({ existing: known() }, [FRONT_AGENT])
 
-        await expect(
-            service.acceptZalo(CONNECTION, zaloMessage({ text: "x".repeat(300) }), manager),
-        ).resolves.toBe(true)
+        await expect(service.acceptZalo(CONNECTION, zaloMessage({ text: "x".repeat(300) }), manager)).resolves.toBe(
+            true,
+        )
         expect(connections.markReceived).toHaveBeenCalledWith(
             CONNECTION,
             expect.objectContaining({ content: "Minh", text: "x".repeat(160) }),
@@ -209,9 +209,9 @@ const registerZaloInbox = () => {
         const goneManager = mockEntityManager({})
         const gone = await build({ connection: false })
 
-        await expect(
-            other.service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), otherManager),
-        ).resolves.toBe(false)
+        await expect(other.service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), otherManager)).resolves.toBe(
+            false,
+        )
         await expect(gone.service.acceptZalo(CONNECTION, zaloMessage(), goneManager)).resolves.toBe(false)
         expect(other.connections.markReceived).not.toHaveBeenCalled()
         expect(gone.connections.markReceived).not.toHaveBeenCalled()
@@ -518,7 +518,12 @@ const registerZaloAttachments = () => {
 
         await expect(service.acceptZalo(CONNECTION, picture, manager, [receipt])).resolves.toBe(true)
 
-        expect(messages.storeCustomer).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.imageLabel> Em chuyen khoan roi", manager)
+        expect(messages.storeCustomer).toHaveBeenCalledWith(
+            "ws-1",
+            "conv-1",
+            "<conversations.imageLabel> Em chuyen khoan roi",
+            manager,
+        )
         expect(inboundFiles.keep).toHaveBeenCalledWith(
             { workspaceId: "ws-1", conversationId: "conv-1" },
             receipt,
@@ -526,19 +531,37 @@ const registerZaloAttachments = () => {
             "msg-1",
             manager,
         )
-        expect(intake.answer).toHaveBeenCalledWith(expect.objectContaining({ channelEventId: "zalo:m-1", messageId: "msg-1" }), manager)
+        expect(intake.answer).toHaveBeenCalledWith(
+            expect.objectContaining({ channelEventId: "zalo:m-1", messageId: "msg-1" }),
+            manager,
+        )
     })
 
     it("labels a picture that came without a caption by the label alone, and a file by its own label", async () => {
         const manager = mockEntityManager()
         const { service, messages } = await build({}, [FRONT_AGENT])
-        const file = zaloMessage({ text: "", attachments: [{ kind: "file", url: "https://cdn.test/f.pdf", thumbnailUrl: "", name: "", localPath: "" }] })
+        const file = zaloMessage({
+            text: "",
+            attachments: [{ kind: "file", url: "https://cdn.test/f.pdf", thumbnailUrl: "", name: "", localPath: "" }],
+        })
 
         await service.acceptZalo(CONNECTION, { ...picture, text: "" }, manager, [])
         await service.acceptZalo(CONNECTION, file, manager, [])
 
-        expect(messages.storeCustomer).toHaveBeenNthCalledWith(1, "ws-1", "conv-1", "<conversations.imageLabel>", manager)
-        expect(messages.storeCustomer).toHaveBeenNthCalledWith(2, "ws-1", "conv-1", "<conversations.fileLabel>", manager)
+        expect(messages.storeCustomer).toHaveBeenNthCalledWith(
+            1,
+            "ws-1",
+            "conv-1",
+            "<conversations.imageLabel>",
+            manager,
+        )
+        expect(messages.storeCustomer).toHaveBeenNthCalledWith(
+            2,
+            "ws-1",
+            "conv-1",
+            "<conversations.fileLabel>",
+            manager,
+        )
     })
 
     it("still reaches the turn when no file could be read", async () => {
@@ -557,7 +580,10 @@ const registerZaloAttachments = () => {
 
         await expect(service.acceptZalo(CONNECTION, picture, manager, [receipt])).resolves.toBe(false)
 
-        expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, expect.objectContaining({ body: "<conversations.imageLabel> Em chuyen khoan roi" }))
+        expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(
+            manager,
+            expect.objectContaining({ body: "<conversations.imageLabel> Em chuyen khoan roi" }),
+        )
         expect(inboundFiles.keep).not.toHaveBeenCalled()
     })
 
@@ -575,8 +601,20 @@ const registerZaloAttachments = () => {
         )
 
         expect(read).toEqual([receipt])
-        expect(inboundFiles.download).toHaveBeenNthCalledWith(1, expect.objectContaining({ url: "https://cdn.test/a.png" }), true, "m-9", 0)
-        expect(inboundFiles.download).toHaveBeenNthCalledWith(2, expect.objectContaining({ url: "https://cdn.test/b.png" }), true, "m-9", 1)
+        expect(inboundFiles.download).toHaveBeenNthCalledWith(
+            1,
+            expect.objectContaining({ url: "https://cdn.test/a.png" }),
+            true,
+            "m-9",
+            0,
+        )
+        expect(inboundFiles.download).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({ url: "https://cdn.test/b.png" }),
+            true,
+            "m-9",
+            1,
+        )
     })
 }
 

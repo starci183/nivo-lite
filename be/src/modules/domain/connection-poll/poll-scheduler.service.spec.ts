@@ -119,12 +119,24 @@ const build = async (
             { provide: PollOwnerNoticeService, useValue: notice },
         ],
     }).compile()
-    return { scheduler: moduleRef.get(PollSchedulerService), poller, source, connections, schedule, limiter, notice, logger }
+    return {
+        scheduler: moduleRef.get(PollSchedulerService),
+        poller,
+        source,
+        connections,
+        schedule,
+        limiter,
+        notice,
+        logger,
+    }
 }
 
 describe("PollSchedulerService tick picking", () => {
     it("does nothing when no provider can be polled", async () => {
-        const { scheduler, schedule } = await build({ kind: "fatal" }, () => ({ providers: () => [], sourceOf: () => undefined }))
+        const { scheduler, schedule } = await build({ kind: "fatal" }, () => ({
+            providers: () => [],
+            sourceOf: () => undefined,
+        }))
 
         await expect(scheduler.tick()).resolves.toEqual(new Map())
 
@@ -160,7 +172,10 @@ describe("PollSchedulerService tick picking", () => {
         const tallies = await scheduler.tick()
 
         expect(tallies.get("sepay")).toMatchObject({ polled: 2, found: 4, missedByWebhook: 4, maxLagMs: 9000 })
-        expect(logger.info).toHaveBeenCalledWith(ConnectionPollLogEvent.Metrics, expect.objectContaining({ provider: "sepay", polled: 2, maxLagMs: 9000 }))
+        expect(logger.info).toHaveBeenCalledWith(
+            ConnectionPollLogEvent.Metrics,
+            expect.objectContaining({ provider: "sepay", polled: 2, maxLagMs: 9000 }),
+        )
     })
 })
 
@@ -241,11 +256,16 @@ describe("PollSchedulerService a poll that read", () => {
 
     it("lets an open breaker's due poll through as its probe and closes it on success", async () => {
         const { scheduler, schedule } = await build()
-        schedule.claimDue.mockResolvedValue([dueOf({ breakerState: "open", failures: 5, breakerOpenedAt: new Date(NOW_MS - 20 * MIN) })])
+        schedule.claimDue.mockResolvedValue([
+            dueOf({ breakerState: "open", failures: 5, breakerOpenedAt: new Date(NOW_MS - 20 * MIN) }),
+        ])
 
         await scheduler.tick()
 
-        expect(schedule.settle).toHaveBeenCalledWith("c-1", expect.objectContaining({ breakerState: "closed", failures: 0 }))
+        expect(schedule.settle).toHaveBeenCalledWith(
+            "c-1",
+            expect.objectContaining({ breakerState: "closed", failures: 0 }),
+        )
     })
 })
 
@@ -292,13 +312,17 @@ describe("PollSchedulerService backfill in chunks", () => {
 
         await scheduler.tick()
 
-        expect(poller.fetch).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ to: new Date(NOW_MS - 30 * MIN) }))
-        expect(connections.patch).toHaveBeenCalledWith(
-            "ws-1",
-            "c-1",
-            { meta: expect.objectContaining({ [POLL_CURSOR_KEY]: new Date(NOW_MS - MIN).toISOString() }) },
+        expect(poller.fetch).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ to: new Date(NOW_MS - 30 * MIN) }),
         )
-        expect(schedule.settle).toHaveBeenCalledWith("c-1", expect.objectContaining({ backfillTo: null, backfillNewest: null }))
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c-1", {
+            meta: expect.objectContaining({ [POLL_CURSOR_KEY]: new Date(NOW_MS - MIN).toISOString() }),
+        })
+        expect(schedule.settle).toHaveBeenCalledWith(
+            "c-1",
+            expect.objectContaining({ backfillTo: null, backfillNewest: null }),
+        )
     })
 
     it("resumes without a newest instant when the earlier chunks read none", async () => {
@@ -348,7 +372,10 @@ describe("PollSchedulerService failures", () => {
         const { schedule, tallies, logger } = await failing({ kind: "transient" }, { failures: 4 })
 
         expect(tallies.get("sepay")?.transient).toBe(1)
-        expect(schedule.settle).toHaveBeenCalledWith("c-1", expect.objectContaining({ breakerState: "open", failures: 5 }))
+        expect(schedule.settle).toHaveBeenCalledWith(
+            "c-1",
+            expect.objectContaining({ breakerState: "open", failures: 5 }),
+        )
         expect(logger.warn).toHaveBeenCalledWith(
             ConnectionPollLogEvent.BreakerOpened,
             expect.objectContaining({ connectionId: "c-1", kind: "transient" }),
@@ -359,10 +386,16 @@ describe("PollSchedulerService failures", () => {
         const { schedule, tallies, notice, logger } = await failing({ kind: "auth_failed" })
 
         expect(tallies.get("sepay")?.authFailed).toBe(1)
-        expect(schedule.settle).toHaveBeenCalledWith("c-1", expect.objectContaining({ needsReauth: true, breakerState: "open" }))
+        expect(schedule.settle).toHaveBeenCalledWith(
+            "c-1",
+            expect.objectContaining({ needsReauth: true, breakerState: "open" }),
+        )
         expect(notice.needsReauth).toHaveBeenCalledTimes(1)
         expect(notice.needsReauth).toHaveBeenCalledWith(expect.objectContaining({ id: "c-1" }), NOW_MS, undefined)
-        expect(logger.warn).toHaveBeenCalledWith(ConnectionPollLogEvent.NeedsReauth, expect.objectContaining({ connectionId: "c-1" }))
+        expect(logger.warn).toHaveBeenCalledWith(
+            ConnectionPollLogEvent.NeedsReauth,
+            expect.objectContaining({ connectionId: "c-1" }),
+        )
     })
 
     it("tells the owner when the credential lacks the permission the poll needs", async () => {
@@ -378,7 +411,11 @@ describe("PollSchedulerService failures", () => {
     })
 
     it("is no failure when the provider's plan lacks the capability: the breaker stays closed and the owner is told once, in the provider's words", async () => {
-        const { schedule, tallies, notice, logger } = await failing({ kind: "unavailable", reason: "plan", notice: "upgrade the plan" })
+        const { schedule, tallies, notice, logger } = await failing({
+            kind: "unavailable",
+            reason: "plan",
+            notice: "upgrade the plan",
+        })
 
         expect(tallies.get("sepay")?.unavailable).toBe(1)
         expect(schedule.settle).toHaveBeenCalledWith(
@@ -391,7 +428,11 @@ describe("PollSchedulerService failures", () => {
             }),
         )
         expect(notice.unavailable).toHaveBeenCalledTimes(1)
-        expect(notice.unavailable).toHaveBeenCalledWith(expect.objectContaining({ id: "c-1" }), "upgrade the plan", NOW_MS)
+        expect(notice.unavailable).toHaveBeenCalledWith(
+            expect.objectContaining({ id: "c-1" }),
+            "upgrade the plan",
+            NOW_MS,
+        )
         expect(notice.needsReauth).not.toHaveBeenCalled()
         expect(logger.warn).toHaveBeenCalledWith(
             ConnectionPollLogEvent.Unavailable,
@@ -401,7 +442,10 @@ describe("PollSchedulerService failures", () => {
     })
 
     it("tells the owner nothing more while the capability stays unavailable", async () => {
-        const { notice } = await failing({ kind: "unavailable", reason: "plan", notice: "upgrade the plan" }, { unavailableReason: "plan" })
+        const { notice } = await failing(
+            { kind: "unavailable", reason: "plan", notice: "upgrade the plan" },
+            { unavailableReason: "plan" },
+        )
 
         expect(notice.unavailable).not.toHaveBeenCalled()
     })
@@ -410,7 +454,10 @@ describe("PollSchedulerService failures", () => {
         const { schedule, tallies, notice } = await failing({ kind: "fatal" })
 
         expect(tallies.get("sepay")?.fatal).toBe(1)
-        expect(schedule.settle).toHaveBeenCalledWith("c-1", expect.objectContaining({ breakerState: "open", needsReauth: false }))
+        expect(schedule.settle).toHaveBeenCalledWith(
+            "c-1",
+            expect.objectContaining({ breakerState: "open", needsReauth: false }),
+        )
         expect(notice.needsReauth).not.toHaveBeenCalled()
     })
 })
@@ -429,7 +476,10 @@ describe("PollSchedulerService a poll that waited for the rate limit", () => {
         expect(schedule.defer).toHaveBeenCalledWith("c-1", new Date(NOW_MS + 12_000))
         expect(schedule.settle).not.toHaveBeenCalled()
         expect(source.classify).not.toHaveBeenCalled()
-        expect(logger.info).toHaveBeenCalledWith(ConnectionPollLogEvent.Deferred, expect.objectContaining({ connectionId: "c-1" }))
+        expect(logger.info).toHaveBeenCalledWith(
+            ConnectionPollLogEvent.Deferred,
+            expect.objectContaining({ connectionId: "c-1" }),
+        )
     })
 
     it("falls back to a short wait when the error names none that can be read", async () => {

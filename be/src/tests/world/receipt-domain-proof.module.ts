@@ -45,7 +45,10 @@ const billingOptions = (): BillingOptions => ({
         ZaloCredentialsService,
         ZaloWebhookGateService,
         ConversationsService,
-        { provide: InboundFilesService, useValue: { download: () => Promise.resolve(null), keep: () => Promise.resolve(false) } },
+        {
+            provide: InboundFilesService,
+            useValue: { download: () => Promise.resolve(null), keep: () => Promise.resolve(false) },
+        },
         InboundEventsService,
         PaymentSecretsService,
         PaymentProofService,

@@ -10,7 +10,8 @@ export interface SeedAgentGraphsCommand {
 
 @Command({
     name: "seed-agent-graphs",
-    description: "Seed the agent graphs of the documents of the stack seed step, read from stdin, into a named workspace",
+    description:
+        "Seed the agent graphs of the documents of the stack seed step, read from stdin, into a named workspace",
 })
 /** `cli seed-agent-graphs --workspace <name>`: the data seed command of the stack; its documents arrive on stdin, never in argv or the environment. */
 export class SeedAgentGraphsCli extends CommandRunner {

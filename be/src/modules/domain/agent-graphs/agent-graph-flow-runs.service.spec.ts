@@ -53,7 +53,10 @@ const TURN = {
 } as unknown as AgentTurnView
 
 const stateWith = (flow: GraphSpec | undefined, versionId: string | null = "version-1"): GraphState =>
-    ({ activeVersionId: versionId, active: { nodes: [], rights: [], ...(flow === undefined ? {} : { flow }) } }) as unknown as GraphState
+    ({
+        activeVersionId: versionId,
+        active: { nodes: [], rights: [], ...(flow === undefined ? {} : { flow }) },
+    }) as unknown as GraphState
 
 const build = async (state: GraphState | null, messages: FlowTriggerMessages | null = null) => {
     const graphs = mock<AgentGraphsService>({ stateOfAgent: jest.fn().mockResolvedValue(state) })
@@ -63,7 +66,9 @@ const build = async (state: GraphState | null, messages: FlowTriggerMessages | n
     })
     const handlers = mock<AgentWorkHandlersService>()
     const nodes = mock<GraphNodeRegistryService>({
-        installed: jest.fn().mockReturnValue(nodeIndexOf({ nodes: [keep], effects: [record, undo], tools: [], dataKinds: [] })),
+        installed: jest
+            .fn()
+            .mockReturnValue(nodeIndexOf({ nodes: [keep], effects: [record, undo], tools: [], dataKinds: [] })),
     })
     const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
@@ -137,7 +142,13 @@ describe("AgentGraphFlowRunsService.triggerOf", () => {
     const CHANNEL = {
         ...TURN,
         source: "customer",
-        context: { conversationId: "c-1", messageId: "m-2", channelEventId: "e-2", lookupName: false, mergedMessageIds: "m-1,m-3" },
+        context: {
+            conversationId: "c-1",
+            messageId: "m-2",
+            channelEventId: "e-2",
+            lookupName: false,
+            mergedMessageIds: "m-1,m-3",
+        },
     } as unknown as AgentTurnView
     const said = [
         { id: "m-1", text: "Chào shop", at: "2026-11-04T01:00:00.000Z", attachments: [] },
@@ -174,9 +185,17 @@ describe("AgentGraphFlowRunsService.triggerOf", () => {
             conversationOf: jest.fn().mockResolvedValue(null),
         })
         const { flows } = await build(stateWith(FLOW), messages)
-        const single = { ...CHANNEL, context: { conversationId: "c-1", messageId: "m-2", channelEventId: "e-2" } } as unknown as AgentTurnView
+        const single = {
+            ...CHANNEL,
+            context: { conversationId: "c-1", messageId: "m-2", channelEventId: "e-2" },
+        } as unknown as AgentTurnView
 
-        await expect(flows.triggerOf(single)).resolves.toMatchObject({ text: "", messageIds: [], leadId: null, channel: null })
+        await expect(flows.triggerOf(single)).resolves.toMatchObject({
+            text: "",
+            messageIds: [],
+            leadId: null,
+            channel: null,
+        })
         expect(messages.messagesOf).toHaveBeenCalledWith("ws-1", "c-1", ["m-2"])
         await expect(flows.triggerOf(TURN)).resolves.toMatchObject({ text: "order" })
         expect(messages.messagesOf).toHaveBeenCalledTimes(1)

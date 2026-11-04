@@ -1,6 +1,13 @@
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 import type { z } from "zod"
-import type { EffectCall, EffectPayload, NodeModelRequest, NodeQuery, SubjectRef, TurnRef } from "@nivo-lite/agent-sdk/node"
+import type {
+    EffectCall,
+    EffectPayload,
+    NodeModelRequest,
+    NodeQuery,
+    SubjectRef,
+    TurnRef,
+} from "@nivo-lite/agent-sdk/node"
 import type { RightScope, RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import type { Locale } from "@modules/platform/i18n"
 
@@ -68,7 +75,11 @@ export interface NodeModelDoor {
     /** A free-text answer. */
     nodeText(scope: NodeModelScope, ask: NodeModelRequest): Promise<string>
     /** A structured answer the schema asks for. */
-    nodeJson(scope: NodeModelScope, ask: NodeModelRequest, schema: z.ZodType): Promise<Readonly<Record<string, unknown>>>
+    nodeJson(
+        scope: NodeModelScope,
+        ask: NodeModelRequest,
+        schema: z.ZodType,
+    ): Promise<Readonly<Record<string, unknown>>>
 }
 
 /** The door every node tool call goes through: the NIVO MCP, resolved to the provider the workspace connected. */

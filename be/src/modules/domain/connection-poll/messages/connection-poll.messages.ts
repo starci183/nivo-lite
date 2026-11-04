@@ -11,10 +11,10 @@ export const POLL_NEEDS_PERMISSION_REASON =
 /** Display text of the connection-poll codes, Vietnamese and English. */
 export const CONNECTION_POLL_MESSAGES: MessageBundle = {
     vi: {
-        "errors.CONNECTION_POLL_DEFERRED":
-            "Nhà cung cấp đang giới hạn tần suất đọc. Sẽ thử lại sau ít phút.",
+        "errors.CONNECTION_POLL_DEFERRED": "Nhà cung cấp đang giới hạn tần suất đọc. Sẽ thử lại sau ít phút.",
     },
     en: {
-        "errors.CONNECTION_POLL_DEFERRED": "The provider is limiting how often it can be read. It will be tried again shortly.",
+        "errors.CONNECTION_POLL_DEFERRED":
+            "The provider is limiting how often it can be read. It will be tried again shortly.",
     },
 }

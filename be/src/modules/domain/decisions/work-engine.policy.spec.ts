@@ -290,11 +290,15 @@ describe("genericOwnerRule", () => {
         const rule = genericOwnerRule("connect_sepay")
 
         expect(rule).toMatchObject({ action: "connect_sepay", mode: "ask", limit_vnd: null, required_fields: [] })
-        expect(evaluateGate({ action: "connect_sepay", rule, maxMode: null, proposal, humanApproved: false })).toMatchObject({
+        expect(
+            evaluateGate({ action: "connect_sepay", rule, maxMode: null, proposal, humanApproved: false }),
+        ).toMatchObject({
             verdict: "ask",
             reason: "over_authority",
         })
-        expect(evaluateGate({ action: "connect_sepay", rule, maxMode: null, proposal, humanApproved: true })).toMatchObject({
+        expect(
+            evaluateGate({ action: "connect_sepay", rule, maxMode: null, proposal, humanApproved: true }),
+        ).toMatchObject({
             verdict: "auto",
         })
     })

@@ -20,7 +20,12 @@ import type {
 const READ = { kind: "record", access: "read", scope: "turn", fields: ["id"] } as const
 const WRITE = { kind: "record", access: "write", scope: "turn", fields: ["id"] } as const
 
-const unping = defineEffect({ id: "core.unping", title: { key: "u" }, payload: z.object({ id: z.string() }), rights: [] })
+const unping = defineEffect({
+    id: "core.unping",
+    title: { key: "u" },
+    payload: z.object({ id: z.string() }),
+    rights: [],
+})
 const ping = defineEffect({
     id: "core.ping",
     title: { key: "p" },
@@ -97,7 +102,11 @@ const INPUT: NodeRunInput = {
     key: "run-1:node",
 }
 
-const build = async (door: NodeToolDoor | null, port: NodeDataPort, resolvers: ReadonlyArray<NodeSubjectResolver> = []) => {
+const build = async (
+    door: NodeToolDoor | null,
+    port: NodeDataPort,
+    resolvers: ReadonlyArray<NodeSubjectResolver> = [],
+) => {
     const registry = mock<GraphNodeRegistryService>()
     registry.installed.mockReturnValue(
         nodeIndexOf({ nodes: [probe], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),

@@ -15,7 +15,15 @@ describe("RedisPollLimiterStore take", () => {
 
         await expect(store.take("sepay:c-1", limits, NOW)).resolves.toEqual({ allowed: true, waitMs: 0 })
 
-        expect(redis.eval).toHaveBeenCalledWith(expect.stringContaining("HMGET"), 1, "nivo:poll:bucket:sepay:c-1", 2, 4, NOW, 3_600_000)
+        expect(redis.eval).toHaveBeenCalledWith(
+            expect.stringContaining("HMGET"),
+            1,
+            "nivo:poll:bucket:sepay:c-1",
+            2,
+            4,
+            NOW,
+            3_600_000,
+        )
     })
 
     it("answers the wait the script names when the bucket is empty", async () => {
@@ -41,7 +49,15 @@ describe("RedisPollLimiterStore slots", () => {
 
         await expect(store.enter("sepay", "c-1", 2, 60_000, NOW)).resolves.toBe(true)
 
-        expect(redis.eval).toHaveBeenCalledWith(expect.stringContaining("ZCARD"), 1, "nivo:poll:slots:sepay", NOW, 2, 60_000, "c-1")
+        expect(redis.eval).toHaveBeenCalledWith(
+            expect.stringContaining("ZCARD"),
+            1,
+            "nivo:poll:slots:sepay",
+            NOW,
+            2,
+            60_000,
+            "c-1",
+        )
     })
 
     it("reads 0 as full", async () => {

@@ -1,7 +1,13 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ChatFileReadsService } from "./chat-file-reads.service"
-import { CHAT_FILES_ASSETS, CHAT_FILES_IMPORT_ROOT, CHAT_FILES_READER, CHAT_FILES_RESOLVER, CHAT_FILES_STORAGE } from "./chat-files.decorators"
+import {
+    CHAT_FILES_ASSETS,
+    CHAT_FILES_IMPORT_ROOT,
+    CHAT_FILES_READER,
+    CHAT_FILES_RESOLVER,
+    CHAT_FILES_STORAGE,
+} from "./chat-files.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-files.module-definition"
 import { ChatFilesService } from "./chat-files.service"
 import { NodeInboundFileReader } from "./inbound-file.reader"

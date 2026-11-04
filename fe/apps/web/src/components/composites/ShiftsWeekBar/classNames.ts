@@ -4,7 +4,14 @@ import { cn } from "@heroui/react"
 export const PANEL_CLASS_NAME: string | undefined = cn("flex", "min-w-0", "flex-col", "gap-3")
 
 /** Navigation on one side, the schedule actions on the other, wrapping on phones (GAP-3 case-3). */
-export const BAR_CLASS_NAME: string | undefined = cn("flex", "min-w-0", "flex-wrap", "items-center", "justify-between", "gap-3")
+export const BAR_CLASS_NAME: string | undefined = cn(
+    "flex",
+    "min-w-0",
+    "flex-wrap",
+    "items-center",
+    "justify-between",
+    "gap-3",
+)
 
 /** A wrapping row of controls (GAP-3 case-3). */
 export const NAV_CLASS_NAME: string | undefined = cn("flex", "min-w-0", "flex-wrap", "items-center", "gap-3")

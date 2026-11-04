@@ -209,7 +209,10 @@ export class AgentsService {
     }
 
     /** Grants the tag rights named, in one workspace (see AgentOwnershipService). */
-    grantTags(workspaceId: string, grants: ReadonlyArray<{ readonly from: string; readonly to: string }>): Promise<void> {
+    grantTags(
+        workspaceId: string,
+        grants: ReadonlyArray<{ readonly from: string; readonly to: string }>,
+    ): Promise<void> {
         return this.ownership.grantTags(workspaceId, grants)
     }
 

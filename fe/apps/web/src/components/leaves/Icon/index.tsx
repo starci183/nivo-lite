@@ -213,7 +213,6 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     info: cuts(Outline.InformationCircleIcon, Solid.InformationCircleIcon),
 }
 
-
 /** Resolve an app-owned semantic icon name to the glyph cut Grammar's Icon asks for in a given usage. */
 export const nivoIconSource = (name: IconName, usage: IconUsage = "chip"): GlyphComponent => ICON_SOURCES[name][usage]
 

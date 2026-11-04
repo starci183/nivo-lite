@@ -16,7 +16,14 @@ import { cursorOf } from "./connection-poll.policy"
 import { ConnectionPollError, ConnectionPollErrorCode } from "./errors/connection-poll.error"
 import { PollLimiterService } from "./poll-limiter.service"
 import { PollOwnerNoticeService } from "./poll-owner-notice.service"
-import { authReasonOf, interleavedByWorkspace, jittered, planAfterFailure, planAfterRead, probeOf } from "./poll-schedule.policy"
+import {
+    authReasonOf,
+    interleavedByWorkspace,
+    jittered,
+    planAfterFailure,
+    planAfterRead,
+    probeOf,
+} from "./poll-schedule.policy"
 import type { PollFailure } from "./connection-poll.contracts"
 import type { PollPlan } from "./poll-schedule.policy"
 import { PollScheduleService } from "./poll-schedule.service"
@@ -173,7 +180,10 @@ export class PollSchedulerService {
         if (outcome.cause instanceof ConnectionPollError && outcome.cause.code === ConnectionPollErrorCode.Deferred) {
             tally.deferred += 1
             const waitMs: unknown = outcome.cause.params.waitMs
-            this.logger.info(ConnectionPollLogEvent.Deferred, { connectionId: row.connectionId, provider: row.provider })
+            this.logger.info(ConnectionPollLogEvent.Deferred, {
+                connectionId: row.connectionId,
+                provider: row.provider,
+            })
             await this.defer(row.connectionId, typeof waitMs === "number" ? waitMs : BUSY_RETRY_MS)
             return
         }
@@ -190,7 +200,11 @@ export class PollSchedulerService {
 
     private async report(record: ConnectionRecord, failure: PollFailure, plan: PollPlan, now: number): Promise<void> {
         if (plan.breakerState === "open") {
-            this.logger.warn(ConnectionPollLogEvent.BreakerOpened, { connectionId: record.id, provider: record.provider, kind: failure.kind })
+            this.logger.warn(ConnectionPollLogEvent.BreakerOpened, {
+                connectionId: record.id,
+                provider: record.provider,
+                kind: failure.kind,
+            })
         }
         if (!plan.raiseOwnerNotice) return
         if (failure.kind === "unavailable") {

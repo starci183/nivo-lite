@@ -3,7 +3,11 @@ export { ConnectionPollLogEvent } from "./connection-poll.log-events"
 export { POLL_CURSOR_KEY } from "./connection-poll.policy"
 export { parseConnectionPollConfig } from "./connection-poll.config"
 export { ConnectionPollModule } from "./connection-poll.module"
-export { CONNECTION_POLL_ERROR_KINDS, ConnectionPollError, ConnectionPollErrorCode } from "./errors/connection-poll.error"
+export {
+    CONNECTION_POLL_ERROR_KINDS,
+    ConnectionPollError,
+    ConnectionPollErrorCode,
+} from "./errors/connection-poll.error"
 export { CONNECTION_POLL_MESSAGES } from "./messages/connection-poll.messages"
 export { connectionPollEntities } from "./persistence/entities"
 export { PollLimiterService } from "./poll-limiter.service"

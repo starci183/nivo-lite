@@ -167,7 +167,13 @@ describe("planAfterRead", () => {
     })
 
     it("goes on with an unfinished backfill at the hot interval and carries where it stopped", () => {
-        const partial = { kind: "partial", fetched: 400, recorded: 400, resumeTo: new Date(NOW - 5 * MIN), newest: new Date(NOW) } as const
+        const partial = {
+            kind: "partial",
+            fetched: 400,
+            recorded: 400,
+            resumeTo: new Date(NOW - 5 * MIN),
+            newest: new Date(NOW),
+        } as const
 
         const plan = planAfterRead(rowOf(), partial, NOW, options, MID)
 
@@ -181,7 +187,13 @@ describe("planAfterRead", () => {
     })
 
     it("carries no newest instant when the unfinished chunk read none", () => {
-        const partial = { kind: "partial", fetched: 0, recorded: 0, resumeTo: new Date(NOW), newest: undefined } as const
+        const partial = {
+            kind: "partial",
+            fetched: 0,
+            recorded: 0,
+            resumeTo: new Date(NOW),
+            newest: undefined,
+        } as const
 
         expect(planAfterRead(rowOf(), partial, NOW, options, MID).backfillNewest).toBeNull()
     })
@@ -215,14 +227,26 @@ describe("planAfterFailure rate limited", () => {
     })
 
     it("closes a half-open breaker whose probe was only told to slow down", () => {
-        const plan = planAfterFailure(rowOf({ breakerState: "half_open", breakerOpenedAt: new Date(NOW) }), limited(0), NOW, options, MID)
+        const plan = planAfterFailure(
+            rowOf({ breakerState: "half_open", breakerOpenedAt: new Date(NOW) }),
+            limited(0),
+            NOW,
+            options,
+            MID,
+        )
 
         expect(plan).toMatchObject({ breakerState: "closed", breakerOpenedAt: null })
     })
 
     it("keeps an open breaker's time when it is told to slow down", () => {
         const opened = new Date(NOW - MIN)
-        const plan = planAfterFailure(rowOf({ breakerState: "open", breakerOpenedAt: opened }), limited(0), NOW, options, MID)
+        const plan = planAfterFailure(
+            rowOf({ breakerState: "open", breakerOpenedAt: opened }),
+            limited(0),
+            NOW,
+            options,
+            MID,
+        )
 
         expect(plan).toMatchObject({ breakerState: "open", breakerOpenedAt: opened.getTime() })
     })
@@ -257,7 +281,12 @@ describe("planAfterFailure transient", () => {
     })
 
     it("keeps an unfinished backfill and an earlier opening time", () => {
-        const row = rowOf({ failures: 1, backfillTo: new Date(NOW - MIN), backfillNewest: new Date(NOW), breakerOpenedAt: new Date(NOW - 5) })
+        const row = rowOf({
+            failures: 1,
+            backfillTo: new Date(NOW - MIN),
+            backfillNewest: new Date(NOW),
+            breakerOpenedAt: new Date(NOW - 5),
+        })
 
         const plan = planAfterFailure(row, transient, NOW, options, MID)
 
@@ -343,7 +372,9 @@ describe("planAfterFailure unavailable", () => {
 
     it("asks for the owner notice once, when the capability first becomes unavailable", () => {
         expect(planAfterFailure(rowOf(), planLacks, NOW, options, MID).raiseOwnerNotice).toBe(true)
-        expect(planAfterFailure(rowOf({ unavailableReason: "plan" }), planLacks, NOW, options, MID).raiseOwnerNotice).toBe(false)
+        expect(
+            planAfterFailure(rowOf({ unavailableReason: "plan" }), planLacks, NOW, options, MID).raiseOwnerNotice,
+        ).toBe(false)
     })
 
     it("spreads the recheck by jitter and keeps an unfinished backfill", () => {
@@ -358,9 +389,14 @@ describe("planAfterFailure unavailable", () => {
     it("is cleared by a poll that reads again, and kept through any other failure", () => {
         const flagged = rowOf({ unavailableReason: "plan" })
 
-        expect(planAfterRead(flagged, { kind: "done", fetched: 0, recorded: 0 }, NOW, options, MID).unavailableReason).toBeNull()
+        expect(
+            planAfterRead(flagged, { kind: "done", fetched: 0, recorded: 0 }, NOW, options, MID).unavailableReason,
+        ).toBeNull()
         expect(planAfterFailure(flagged, { kind: "transient" }, NOW, options, MID).unavailableReason).toBe("plan")
-        expect(planAfterFailure(flagged, { kind: "rate_limited", retryAfterSeconds: 0 }, NOW, options, MID).unavailableReason).toBe("plan")
+        expect(
+            planAfterFailure(flagged, { kind: "rate_limited", retryAfterSeconds: 0 }, NOW, options, MID)
+                .unavailableReason,
+        ).toBe("plan")
         expect(planAfterFailure(flagged, { kind: "fatal" }, NOW, options, MID).unavailableReason).toBe("plan")
     })
 })

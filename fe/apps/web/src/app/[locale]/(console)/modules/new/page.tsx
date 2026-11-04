@@ -6,6 +6,8 @@ export { newModuleRedirectMetadata as generateMetadata } from "@/features/pages/
 type PageProps = { readonly searchParams: Promise<{ module?: string }> }
 
 /** The old "add a module" url: forwards to the agent type under /agents. */
-const Page = async ({ searchParams }: PageProps): Promise<ReactElement> => <NewModuleRedirectPage module={(await searchParams).module} />
+const Page = async ({ searchParams }: PageProps): Promise<ReactElement> => (
+    <NewModuleRedirectPage module={(await searchParams).module} />
+)
 
 export default Page

@@ -31,7 +31,10 @@ export class NodeImagesService {
         const read = await Promise.all(urls.map((url) => this.dataUrlOf(url)))
         const images = read.filter((image): image is string => image !== null)
         if (images.length < urls.length) {
-            this.logger.warn(AiTasksLogEvent.ImagesDropped, { dropped: urls.length - images.length, sent: images.length })
+            this.logger.warn(AiTasksLogEvent.ImagesDropped, {
+                dropped: urls.length - images.length,
+                sent: images.length,
+            })
         }
         return { images, dropped: urls.length - images.length }
     }

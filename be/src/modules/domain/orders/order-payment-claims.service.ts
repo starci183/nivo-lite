@@ -92,7 +92,11 @@ export class OrderPaymentClaimsService {
 
     /** Takes back an open claim a failed run recorded; a claim already settled, escalated or withdrawn stays as it is, so taking it back twice is once. */
     async withdraw(workspaceId: string, claimId: string): Promise<void> {
-        await this.entityManager.update(PaymentClaimEntity, { workspaceId, id: claimId, status: "open" }, { status: "withdrawn" })
+        await this.entityManager.update(
+            PaymentClaimEntity,
+            { workspaceId, id: claimId, status: "open" },
+            { status: "withdrawn" },
+        )
     }
 
     /** Hands an open claim to a person; false when it was no longer open, so a claim is escalated once. */

@@ -63,7 +63,11 @@ describe("storage policy / uploadContentTypeOf", () => {
         expect(subject.uploadContentTypeOf(admitted, "notes.md", "application/octet-stream")).toBe("text/markdown")
     })
 
-    it.each([["a.exe", ""], ["noextension", ""], ["a.constructor", ""]])("refuses %p with type %p", async (name, given) => {
+    it.each([
+        ["a.exe", ""],
+        ["noextension", ""],
+        ["a.constructor", ""],
+    ])("refuses %p with type %p", async (name, given) => {
         const subject = await build()
 
         expect(subject.uploadContentTypeOf(admitted, name, given)).toBeNull()

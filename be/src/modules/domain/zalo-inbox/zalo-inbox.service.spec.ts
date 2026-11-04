@@ -300,12 +300,27 @@ describe("ZaloInboxService pictures and files", () => {
             app_id: "app-1",
             event_name: "user_send_image",
             sender: { id: "user-1" },
-            message: { msg_id: "m-9", text: "Em chuyen khoan roi", attachments: [{ type: "image", payload: { url: "https://cdn.test/a.jpg" } }] },
+            message: {
+                msg_id: "m-9",
+                text: "Em chuyen khoan roi",
+                attachments: [{ type: "image", payload: { url: "https://cdn.test/a.jpg" } }],
+            },
         }),
     )
     const pictureOf = (source?: "poll" | "manual_import") =>
-        pendingOf({ payload: { connection: "c-1", rawBody: picture.toString("utf8"), ...(source === undefined ? {} : { source }) } })
-    const file = { bytes: new Uint8Array([1]), contentType: "image/png", name: "a.png", sourceUrl: "https://cdn.test/a.jpg" }
+        pendingOf({
+            payload: {
+                connection: "c-1",
+                rawBody: picture.toString("utf8"),
+                ...(source === undefined ? {} : { source }),
+            },
+        })
+    const file = {
+        bytes: new Uint8Array([1]),
+        contentType: "image/png",
+        name: "a.png",
+        sourceUrl: "https://cdn.test/a.jpg",
+    }
 
     it("reads the pictures before the transaction and hands them to the conversation with the message", async () => {
         const { service, conversations, tx } = await build(pictureOf())
@@ -342,7 +357,11 @@ describe("ZaloInboxService pictures and files", () => {
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
 
-        expect(conversations.readFiles).toHaveBeenCalledWith([expect.objectContaining({ localPath: "receipts/a.jpg" })], true, "m-9")
+        expect(conversations.readFiles).toHaveBeenCalledWith(
+            [expect.objectContaining({ localPath: "receipts/a.jpg" })],
+            true,
+            "m-9",
+        )
     })
 
     it("still delivers the message when the pictures cannot be read", async () => {
@@ -364,9 +383,15 @@ describe("ZaloInboxService pictures and files", () => {
 
     it("logs the field names of a picture event it cannot read, once, and nothing about a text event", async () => {
         const unreadable = Buffer.from(
-            JSON.stringify({ event_name: "user_send_image", sender: { id: "user-1" }, message: { msg_id: "m-9", attachments: [{ kind: "x" }] } }),
+            JSON.stringify({
+                event_name: "user_send_image",
+                sender: { id: "user-1" },
+                message: { msg_id: "m-9", attachments: [{ kind: "x" }] },
+            }),
         )
-        const { service, logger } = await build(pendingOf({ payload: { connection: "c-1", rawBody: unreadable.toString("utf8") } }))
+        const { service, logger } = await build(
+            pendingOf({ payload: { connection: "c-1", rawBody: unreadable.toString("utf8") } }),
+        )
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
@@ -385,4 +410,3 @@ describe("ZaloInboxService pictures and files", () => {
         expect(logger.warn).not.toHaveBeenCalled()
     })
 })
-

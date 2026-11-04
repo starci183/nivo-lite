@@ -21,4 +21,5 @@ export const InjectGraphNodeToolDoor = (): TypedParameterDecorator<NodeToolDoor>
 export const GRAPH_NODE_MODEL: unique symbol = Symbol("domain.graph-nodes.model")
 
 /** Injects the model door. Parameter type: NodeModelDoor. */
-export const InjectGraphNodeModel = (): TypedParameterDecorator<NodeModelDoor> => injector<NodeModelDoor>(GRAPH_NODE_MODEL)
+export const InjectGraphNodeModel = (): TypedParameterDecorator<NodeModelDoor> =>
+    injector<NodeModelDoor>(GRAPH_NODE_MODEL)

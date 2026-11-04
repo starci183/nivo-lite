@@ -83,7 +83,12 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
     async triggerOf(turn: AgentTurnView): Promise<StepJson> {
         const scope = triggerScopeOf(turn)
         const { conversationId, messageId, mergedMessageIds } = turn.context
-        if (scope.text !== undefined || conversationId === undefined || messageId === undefined || this.messages === null) {
+        if (
+            scope.text !== undefined ||
+            conversationId === undefined ||
+            messageId === undefined ||
+            this.messages === null
+        ) {
             return scope
         }
         const ids = [messageId, ...(mergedMessageIds === undefined ? [] : mergedMessageIds.split(","))]

@@ -201,24 +201,21 @@ describe("HiringPublicService", () => {
             ["jpg", "image/jpeg"],
             ["jpeg", "image/jpeg"],
             ["png", "image/png"],
-        ])(
-            "creates an upload path for an allowed %s extension",
-            async (extension, contentType) => {
-                const { service, data, storage } = await build()
-                const path = `ws-1/job-1/token-1/alice-resume.${extension.toLowerCase()}`
+        ])("creates an upload path for an allowed %s extension", async (extension, contentType) => {
+            const { service, data, storage } = await build()
+            const path = `ws-1/job-1/token-1/alice-resume.${extension.toLowerCase()}`
 
-                await expect(
-                    service.createCvUpload({ ...request, fileName: `Alice Resume.${extension}`, contentType }),
-                ).resolves.toEqual({
-                    path,
-                    token: "upload-1",
-                    contentType,
-                })
+            await expect(
+                service.createCvUpload({ ...request, fileName: `Alice Resume.${extension}`, contentType }),
+            ).resolves.toEqual({
+                path,
+                token: "upload-1",
+                contentType,
+            })
 
-                expect(data.newToken.mock.calls).toEqual([[]])
-                expect(storage.signedUpload.mock.calls).toEqual([[path, contentType]])
-            },
-        )
+            expect(data.newToken.mock.calls).toEqual([[]])
+            expect(storage.signedUpload.mock.calls).toEqual([[path, contentType]])
+        })
 
         it("signs the type of the extension when the browser reports none or one the CV does not admit", async () => {
             const { service, storage } = await build()
@@ -250,7 +247,11 @@ describe("HiringPublicService", () => {
             const { service } = await build()
 
             await expect(
-                service.createCvUpload({ ...request, fileName: `${"a".repeat(50)}.pdf`, contentType: "application/pdf" }),
+                service.createCvUpload({
+                    ...request,
+                    fileName: `${"a".repeat(50)}.pdf`,
+                    contentType: "application/pdf",
+                }),
             ).resolves.toEqual({
                 path: `ws-1/job-1/token-1/${"a".repeat(40)}.pdf`,
                 token: "upload-1",
@@ -434,7 +435,9 @@ describe("anonymous posting admission before effects", () => {
         { closesAt: "2026-10-12T00:00:00.000Z", code: HiringErrorCode.JobExpired },
     ])("refuses both submission doors before any effect (%p)", async ({ code, ...overrides }) => {
         const { service, storage, candidates, data } = await build(jobOf(overrides))
-        await expect(service.createCvUpload({ ...request, fileName: "resume.pdf", contentType: "" })).rejects.toMatchObject({
+        await expect(
+            service.createCvUpload({ ...request, fileName: "resume.pdf", contentType: "" }),
+        ).rejects.toMatchObject({
             code,
         })
         await expect(service.apply({ ...application, website: "bot" })).rejects.toMatchObject({ code })

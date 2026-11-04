@@ -65,7 +65,9 @@ describe("AgentGraphFlowService > publish", () => {
         const live = graphOf(OWNER_EXAMPLE)
         const lost = await build(stateOf({ active: live, activeKind: "seed" }))
         await expect(lost.service.publish(INPUT)).resolves.toBe("replaced")
-        expect(lost.graphs.publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "spec", document: { ...live, flow: FLOW } }))
+        expect(lost.graphs.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ kind: "spec", document: { ...live, flow: FLOW } }),
+        )
 
         const withFlow: GraphDocument = { ...live, flow: FLOW }
         const seeded = await build(stateOf({ active: withFlow, activeKind: "seed" }))

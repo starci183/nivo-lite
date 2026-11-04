@@ -20,7 +20,14 @@ const FLOW: GraphSpec = {
     grant: { rights: [], tools: ["order.look"], effects: [] },
     nodes: [
         { key: "check", kind: "condition", step: "order.check", routes: { yes: "keep" } },
-        { key: "keep", kind: "output", step: "order.keep", params: { n: 1 }, input: { id: { $ref: "check.id" }, t: { $ref: "trigger.text" } }, next: "end" },
+        {
+            key: "keep",
+            kind: "output",
+            step: "order.keep",
+            params: { n: 1 },
+            input: { id: { $ref: "check.id" }, t: { $ref: "trigger.text" } },
+            next: "end",
+        },
         { key: "end", kind: "output", step: "stop" },
     ],
 }
@@ -49,15 +56,13 @@ const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FL
     const host = mock<GraphNodeHostService>()
     const nodes = mock<GraphNodeRegistryService>({ optionalExecutorOf: jest.fn().mockReturnValue(raise) })
     const flows = mock<AgentGraphFlowRunsService>({
-        stepOf: jest.fn(
-            (node: GraphSpecNode, input: GraphNodeStepInput): StepSpec => ({
-                stepKey: node.key,
-                nodeKey: node.key,
-                kind: "graph_node",
-                effect: { kind: "read" },
-                input: { ...input },
-            }),
-        ),
+        stepOf: jest.fn((node: GraphSpecNode, input: GraphNodeStepInput): StepSpec => ({
+            stepKey: node.key,
+            nodeKey: node.key,
+            kind: "graph_node",
+            effect: { kind: "read" },
+            input: { ...input },
+        })),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -83,12 +88,23 @@ describe("AgentGraphNodeStepService", () => {
 
     it("runs the node under the graph's grant with its input resolved, keeps its output and writes the route's next step", async () => {
         const { steps, host } = await build()
-        host.run.mockResolvedValue({ output: { done: true }, effects: [{ id: "order.record", subject: { kind: "order", id: "o-2" } }] })
+        host.run.mockResolvedValue({
+            output: { done: true },
+            effects: [{ id: "order.record", subject: { kind: "order", id: "o-2" } }],
+        })
 
         await expect(steps.run(stepOf("keep"))).resolves.toEqual({
             kind: "done",
-            result: { output: { done: true }, effects: [{ id: "order.record", subject: { kind: "order", id: "o-2" } }] },
-            next: [expect.objectContaining({ stepKey: "end", input: { versionId: "version-1", nodeKey: "end", trigger: TRIGGER } })],
+            result: {
+                output: { done: true },
+                effects: [{ id: "order.record", subject: { kind: "order", id: "o-2" } }],
+            },
+            next: [
+                expect.objectContaining({
+                    stepKey: "end",
+                    input: { versionId: "version-1", nodeKey: "end", trigger: TRIGGER },
+                }),
+            ],
         })
         expect(host.run).toHaveBeenCalledWith({
             nodeId: "order.keep",
@@ -109,20 +125,35 @@ describe("AgentGraphNodeStepService", () => {
 
     it("routes a condition on its branch and ends the run on a branch without a route or at stop", async () => {
         const { steps, host } = await build()
-        host.run.mockResolvedValueOnce({ output: { branch: "yes" }, effects: [] }).mockResolvedValueOnce({ output: { branch: "no" }, effects: [] })
+        host.run
+            .mockResolvedValueOnce({ output: { branch: "yes" }, effects: [] })
+            .mockResolvedValueOnce({ output: { branch: "no" }, effects: [] })
 
-        await expect(steps.run(stepOf("check", { earlier: {} }))).resolves.toMatchObject({ next: [{ stepKey: "keep" }] })
+        await expect(steps.run(stepOf("check", { earlier: {} }))).resolves.toMatchObject({
+            next: [{ stepKey: "keep" }],
+        })
         const bare = { ...TRIGGER, subject: "a label", conversationId: undefined }
         await expect(
             steps.run(stepOf("check", { input: { versionId: "version-1", nodeKey: "check", trigger: bare } })),
         ).resolves.toMatchObject({ next: [] })
-        expect(host.run.mock.calls[1]?.[0]).toMatchObject({ params: {}, input: {}, turn: { subject: null, conversationId: null } })
-        await expect(steps.run(stepOf("end"))).resolves.toEqual({ kind: "done", result: { output: null, effects: [] }, next: [] })
+        expect(host.run.mock.calls[1]?.[0]).toMatchObject({
+            params: {},
+            input: {},
+            turn: { subject: null, conversationId: null },
+        })
+        await expect(steps.run(stepOf("end"))).resolves.toEqual({
+            kind: "done",
+            result: { output: null, effects: [] },
+            next: [],
+        })
     })
 
     it("fails a row that is not a node step, a node the version does not hold, and a node that refused", async () => {
         const { steps, host } = await build()
-        await expect(steps.run(stepOf("keep", { input: {} }))).resolves.toEqual({ kind: "failed", code: "invalid_step_input" })
+        await expect(steps.run(stepOf("keep", { input: {} }))).resolves.toEqual({
+            kind: "failed",
+            code: "invalid_step_input",
+        })
         await expect(steps.run(stepOf("ghost"))).resolves.toEqual({ kind: "failed", code: "graph_node_missing" })
         host.run.mockRejectedValueOnce(new NodeRunError("PARAMS_INVALID", "order.keep"))
         await expect(steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "PARAMS_INVALID" })

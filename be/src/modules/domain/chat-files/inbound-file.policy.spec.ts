@@ -32,12 +32,17 @@ describe("isFetchableFileUrl", () => {
 })
 
 describe("isAcceptedDeclaredType", () => {
-    it.each(["image/jpeg", "IMAGE/PNG; charset=binary", "application/pdf", "application/octet-stream", "binary/octet-stream", "", undefined])(
-        "lets %s through to the check of the bytes",
-        (declared) => {
-            expect(isAcceptedDeclaredType(declared)).toBe(true)
-        },
-    )
+    it.each([
+        "image/jpeg",
+        "IMAGE/PNG; charset=binary",
+        "application/pdf",
+        "application/octet-stream",
+        "binary/octet-stream",
+        "",
+        undefined,
+    ])("lets %s through to the check of the bytes", (declared) => {
+        expect(isAcceptedDeclaredType(declared)).toBe(true)
+    })
 
     it.each(["text/html", "application/json", "video/mp4"])("refuses %s", (declared) => {
         expect(isAcceptedDeclaredType(declared)).toBe(false)
@@ -52,9 +57,12 @@ describe("importPathOf", () => {
         expect(importPathOf(root, resolve(root, "a.jpg"))).toBe(resolve(root, "a.jpg"))
     })
 
-    it.each(["../secret.txt", "receipts/../../secret.txt", resolve("elsewhere", "a.jpg"), "", "."])("refuses %s, which leaves or is the folder", (path) => {
-        expect(importPathOf(root, path)).toBeNull()
-    })
+    it.each(["../secret.txt", "receipts/../../secret.txt", resolve("elsewhere", "a.jpg"), "", "."])(
+        "refuses %s, which leaves or is the folder",
+        (path) => {
+            expect(importPathOf(root, path)).toBeNull()
+        },
+    )
 
     it("does not take a sibling folder whose name starts like the import folder", () => {
         expect(importPathOf(root, `..${sep}.starciwork-other${sep}a.jpg`)).toBeNull()
@@ -70,7 +78,9 @@ describe("isRedirectStatus", () => {
 
 describe("redirectTargetOf", () => {
     it("resolves an absolute and a relative location against the address that answered", () => {
-        expect(redirectTargetOf("https://cdn.example.test/b.jpg", "https://photo.example.test/a")).toBe("https://cdn.example.test/b.jpg")
+        expect(redirectTargetOf("https://cdn.example.test/b.jpg", "https://photo.example.test/a")).toBe(
+            "https://cdn.example.test/b.jpg",
+        )
         expect(redirectTargetOf("/b.jpg", "https://photo.example.test/a")).toBe("https://photo.example.test/b.jpg")
     })
 

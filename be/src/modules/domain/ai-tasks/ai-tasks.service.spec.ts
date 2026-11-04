@@ -269,7 +269,9 @@ describe("AiTasksService", () => {
             const ask = { purpose: "order.record:extract", instructions: "Read the order", input: { text: "2 combo" } }
 
             await expect(client.nodeText(scope, ask)).resolves.toBe("Hello")
-            await expect(client.nodeJson(scope, { ...ask, input: undefined }, z.object({ n: z.number() }))).resolves.toEqual({
+            await expect(
+                client.nodeJson(scope, { ...ask, input: undefined }, z.object({ n: z.number() })),
+            ).resolves.toEqual({
                 n: 2,
             })
             expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
@@ -297,7 +299,12 @@ describe("AiTasksService", () => {
             const { client, generator, logger } = await build()
             generator.generate.mockResolvedValue("ok")
 
-            await client.nodeText(scope, { purpose: "intent.classify:x", instructions: "i", input: {}, images: ["u1", "u2"] })
+            await client.nodeText(scope, {
+                purpose: "intent.classify:x",
+                instructions: "i",
+                input: {},
+                images: ["u1", "u2"],
+            })
 
             const sent = generator.generate.mock.calls[0]?.[0]
             expect(sent?.messages.some((message) => message.images !== undefined)).toBe(false)

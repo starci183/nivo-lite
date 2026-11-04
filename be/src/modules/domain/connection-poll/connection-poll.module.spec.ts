@@ -11,8 +11,13 @@ import { RedisPollLimiterStore } from "./redis-poll-limiter.store"
 const schedule = DEFAULT_POLL_SCHEDULE
 
 /** The provider registered under a token, or undefined. */
-const providerOf = (registered: ReturnType<typeof ConnectionPollModule.register>, token: symbol): Provider | undefined =>
-    registered.providers?.find((provider) => typeof provider === "object" && "provide" in provider && provider.provide === token)
+const providerOf = (
+    registered: ReturnType<typeof ConnectionPollModule.register>,
+    token: symbol,
+): Provider | undefined =>
+    registered.providers?.find(
+        (provider) => typeof provider === "object" && "provide" in provider && provider.provide === token,
+    )
 
 describe("ConnectionPollModule", () => {
     it("exports what other modules call: the schedule, the scheduler, the source registry and the limiter", () => {

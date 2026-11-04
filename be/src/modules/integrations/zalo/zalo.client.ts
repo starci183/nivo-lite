@@ -250,7 +250,11 @@ export class ZaloClient {
      * The OA's recent chats (Open API v2.0 `listrecentchat`): the newest message of each conversation, newest first, `count` at most ten per
      * call from `offset`. A row the answer cannot read is left out.
      */
-    async recentChats(accessToken: string, offset: number, count: number = CHAT_PAGE_LIMIT): Promise<ReadonlyArray<ZaloChatMessage>> {
+    async recentChats(
+        accessToken: string,
+        offset: number,
+        count: number = CHAT_PAGE_LIMIT,
+    ): Promise<ReadonlyArray<ZaloChatMessage>> {
         return this.chatRows(accessToken, "/v2.0/oa/listrecentchat", { offset, count })
     }
 
