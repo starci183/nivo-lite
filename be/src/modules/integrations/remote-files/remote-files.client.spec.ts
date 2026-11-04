@@ -5,6 +5,11 @@ import type { HttpClient, HttpResponse } from "@modules/platform/http"
 import { RemoteFilesError, RemoteFilesErrorCode } from "./errors/remote-files.error"
 import { RemoteFilesClient } from "./remote-files.client"
 import type { RemoteFileRequest } from "./remote-files.contracts"
+import { REMOTE_FILES_OPTIONS } from "./remote-files.decorators"
+import type { RemoteFilesOptions } from "./remote-files.options"
+
+/** Limits above every request of these cases, so only the cases about the limits meet them. */
+const ROOMY: RemoteFilesOptions = { maxBytes: 1000, timeoutMs: 60_000, maxRedirects: 3 }
 
 const request = (overrides: Partial<RemoteFileRequest> = {}): RemoteFileRequest => ({
     url: "https://files.test/a",
@@ -20,10 +25,17 @@ const answer = (body: Buffer, type: string | undefined, status = 200): HttpRespo
     body,
 })
 
-const build = async () => {
+const build = async (limits: RemoteFilesOptions = ROOMY) => {
     const http = mock<HttpClient>()
     const moduleRef = await Test.createTestingModule({
-        providers: [RemoteFilesClient, { provide: HTTP_CLIENT, useValue: http }],
+        providers: [
+            RemoteFilesClient,
+            { provide: HTTP_CLIENT, useValue: http },
+            {
+                provide: REMOTE_FILES_OPTIONS,
+                useValue: { maxBytes: limits.maxBytes, timeoutMs: limits.timeoutMs, maxRedirects: limits.maxRedirects },
+            },
+        ],
     }).compile()
     return { client: moduleRef.get(RemoteFilesClient), http }
 }
@@ -89,5 +101,14 @@ describe("RemoteFilesClient", () => {
 
         expect(failure).toBeInstanceOf(RemoteFilesError)
         expect(failure).toMatchObject({ code: RemoteFilesErrorCode.RequestFailed })
+    })
+
+    it("lowers a caller's size limit and deadline to the configured limits, and names the redirects a caller may follow", async () => {
+        const { client, http } = await build({ maxBytes: 2, timeoutMs: 500, maxRedirects: 5 })
+        http.request.mockResolvedValue(answer(Buffer.from([1, 2, 3]), "image/png"))
+
+        await expect(client.read(request())).resolves.toMatchObject({ length: 3, bytes: null })
+        expect(http.request).toHaveBeenCalledWith(expect.objectContaining({ timeoutMs: 500 }))
+        expect(client.maxRedirects).toBe(5)
     })
 })

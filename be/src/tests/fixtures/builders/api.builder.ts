@@ -123,6 +123,7 @@ const options = {
     chatFilesImportRoot: "wiring/imports",
     connectionPoll: { schedule: WIRING_POLL_SCHEDULE, redis: undefined },
     redis: { connectTimeoutMs: 1000 },
+    remoteFiles: { maxBytes: 10 * 1024 * 1024, timeoutMs: 1000, maxRedirects: 3 },
     zaloProvider: { replyWindowMs: 7 * DAY_MS, staleAfterMs: DAY_MS },
     agentWork: { debounceMs: 0 },
     zalo: {

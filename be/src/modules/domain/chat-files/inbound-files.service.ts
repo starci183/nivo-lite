@@ -28,7 +28,6 @@ import {
 import { ChatFilesLogEvent } from "./chat-files.log-events"
 import {
     INBOUND_FILE_HEADERS,
-    INBOUND_FILE_MAX_REDIRECTS,
     INBOUND_FILE_TIMEOUT_MS,
     importPathOf,
     inboundFileNameOf,
@@ -72,7 +71,7 @@ const NO_ANSWER: ReadTrace = {
 @Injectable()
 /**
  * The files a channel brings in with a customer message. The bytes are read before the message is stored (a download is not done inside a database
- * transaction): from an https address, following at most three redirects with every hop checked again (https, a named host, and an address that is not
+ * transaction): from an https address, following at most the redirects the remote files limits allow (three by default) with every hop checked again (https, a named host, and an address that is not
  * private) and asking as a browser asks for a picture, or, for a manual import only, from a file inside the import folder. The type comes from the
  * bytes, never from the address or the name; only an accepted type within the size limit is kept. A file that is left out is logged with the status, the
  * content type and the length of the answer, and the message still reaches its turn. A kept file is written to the private store of the conversation and
@@ -196,7 +195,7 @@ export class InboundFilesService {
         }
         if (isRedirectStatus(answer.status)) {
             const next = redirectTargetOf(answer.location, url)
-            if (next === null || hops >= INBOUND_FILE_MAX_REDIRECTS) return trace
+            if (next === null || hops >= this.files.maxRedirects) return trace
             return this.fetch(next, hops + 1, trace)
         }
         return answer.status === 200 && answer.bytes !== null ? { ...trace, bytes: answer.bytes } : trace

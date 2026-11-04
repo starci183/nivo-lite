@@ -30,6 +30,7 @@ import { parseAiGatewayConfig } from "@modules/integrations/ai-gateway"
 import { parseAiConfig } from "@modules/integrations/ai"
 import { parseN8nConfig } from "@modules/integrations/n8n"
 import { parseRedisConfig } from "@modules/integrations/redis"
+import { parseRemoteFilesConfig } from "@modules/integrations/remote-files"
 import { parseAiTasksConfig } from "@modules/domain/ai-tasks"
 import { parseAgentRunsConfig } from "@modules/domain/agent-runs"
 import { parseAgentTurnsConfig } from "@modules/domain/agent-turns"
@@ -77,6 +78,8 @@ export interface ApiOptions {
     readonly connectionPoll: ReturnType<typeof parseConnectionPollConfig>
     /** The Redis connections the capabilities that keep state in Redis open. */
     readonly redis: ReturnType<typeof parseRedisConfig>
+    /** The limits every read of a remote file is held to: size, deadline and redirects. */
+    readonly remoteFiles: ReturnType<typeof parseRemoteFilesConfig>
     /** The OpenClaw gateway and the agent workspaces. */
     readonly openclaw: ReturnType<typeof parseOpenclawConfig>
     /** The running build and how often a parked run is run again. */
@@ -160,6 +163,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     chatFilesImportRoot: parseChatFilesImportRoot(env),
     connectionPoll: parseConnectionPollConfig(env),
     redis: parseRedisConfig(env),
+    remoteFiles: parseRemoteFilesConfig(env),
     openclaw: parseOpenclawConfig(env),
     agentRuns: parseAgentRunsConfig(env),
     agentTurns: parseAgentTurnsConfig(env),

@@ -46,7 +46,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** The agents area of the API, in registration order. */
 export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
     OpenclawModule.register({ isGlobal: true, ...options.openclaw }),
-    RemoteFilesModule.register({ isGlobal: true }),
+    RemoteFilesModule.register({ isGlobal: true, ...options.remoteFiles }),
     AiTasksModule.register({
         isGlobal: true,
         ...options.aiTasks,

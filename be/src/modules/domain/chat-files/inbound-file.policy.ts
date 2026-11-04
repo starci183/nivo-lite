@@ -1,9 +1,6 @@
 import { isIP } from "node:net"
 import { resolve, sep } from "node:path"
 
-/** How many redirects a download follows; every hop is checked like the first address. */
-export const INBOUND_FILE_MAX_REDIRECTS = 3
-
 /** The request headers of a download: what a browser fetching a picture sends, which the CDNs of the channels expect. */
 export const INBOUND_FILE_HEADERS: Readonly<Record<string, string>> = {
     accept: "image/*,application/pdf;q=0.9,*/*;q=0.5",

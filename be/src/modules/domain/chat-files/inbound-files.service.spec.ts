@@ -62,7 +62,7 @@ const answerOf = (request: RemoteFileRequest, response: HttpResponse): RemoteFil
 const build = async () => {
     const http = mock<HttpClient>()
     http.request.mockResolvedValue(answer(200, PNG, { "content-type": "image/png" }))
-    const files = mock<RemoteFiles>()
+    const files = mock<RemoteFiles>({ maxRedirects: 3 })
     files.read.mockImplementation(async (request) =>
         answerOf(
             request,
