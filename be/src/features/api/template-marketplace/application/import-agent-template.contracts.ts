@@ -1,4 +1,4 @@
-import type { ParameterValues } from "@nivo-lite/agent-sdk/template"
+import type { Locale } from "@modules/platform/i18n"
 
 /** What the ImportAgentTemplate operation takes. */
 export interface ImportAgentTemplateRequest {
@@ -8,8 +8,10 @@ export interface ImportAgentTemplateRequest {
     readonly templateKey: string
     /** The version. */
     readonly version: number
-    /** The values. */
-    readonly values: ParameterValues
-    /** The name. */
-    readonly name: string | null
+    /** The values of the parameters, by key. */
+    readonly values: object
+    /** The name, when the buyer gave one. */
+    readonly name?: string | undefined
+    /** The language of the request. */
+    readonly locale: Locale
 }

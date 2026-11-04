@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { graphDocumentSchema } from "@modules/domain/agent-graphs"
+import { graphDocumentSchema, graphRightSchema } from "@modules/domain/agent-graphs"
 import { MAX_PARAMETERS, TEMPLATE_FORMAT, TEMPLATE_KEY_PATTERN } from "./agent-templates.contracts"
 import type { AgentTemplatePackage } from "./agent-templates.contracts"
 
@@ -9,7 +9,10 @@ const parameterValueSchema = z.union([z.string().max(2000), z.number(), z.boolea
 
 const parameterSchema = z
     .object({
-        key: z.string().regex(/^[a-z][a-zA-Z0-9_]{0,39}$/),
+        key: z
+            .string()
+            .max(40)
+            .regex(/^[a-z]\w{0,39}$/),
         kind: z.enum(["number", "text", "toggle", "textarea"]),
         label: textSchema,
         hint: textSchema.nullable(),
@@ -40,15 +43,6 @@ const bindingSchema = z.discriminatedUnion("target", [
         .strict(),
 ])
 
-const rightSchema = z
-    .object({
-        kind: z.enum(["brain", "customers", "documents", "payments", "channels", "invoices"]),
-        scope: z.enum(["conversation", "workspace"]),
-        hide: z.array(z.string().max(60)).max(40),
-        mask: z.array(z.string().max(60)).max(40),
-    })
-    .strict()
-
 const likenessSchema = z
     .object({
         personName: z.string().min(1).max(120),
@@ -64,7 +58,7 @@ const likenessSchema = z
 export const agentTemplatePackageSchema: z.ZodType<AgentTemplatePackage> = z
     .object({
         format: z.literal(TEMPLATE_FORMAT),
-        key: z.string().regex(TEMPLATE_KEY_PATTERN),
+        key: z.string().max(60).regex(TEMPLATE_KEY_PATTERN),
         version: z.number().int().min(1),
         publisher: z.object({ creatorId: z.string().min(1).max(60), displayName: z.string().min(1).max(120) }).strict(),
         baseModule: z.string().min(1).max(60),
@@ -82,7 +76,7 @@ export const agentTemplatePackageSchema: z.ZodType<AgentTemplatePackage> = z
         graph: graphDocumentSchema,
         parameters: z.array(parameterSchema).max(MAX_PARAMETERS),
         bindings: z.array(bindingSchema).max(MAX_PARAMETERS * 3),
-        proposedRights: z.array(rightSchema).max(10),
+        proposedRights: z.array(graphRightSchema).max(10),
         requiredProviders: z.array(z.string().max(40)).max(20),
         requiredAuthorityActions: z.array(z.string().max(100)).max(40),
         starterKnowledge: z

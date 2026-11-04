@@ -65,7 +65,7 @@ const RUN_KEY = /^[^:]+:[^:]+:\d+$/u
 export const isRunKey = (text: string): text is RunKey => RUN_KEY.test(text)
 
 /** What a claim answers: the claimed job, or null when the job is done or another worker holds a live claim. */
-export type ClaimResult = ClaimedJob | null
+export type JobClaimResult = ClaimedJob | null
 
 /** A confirmed completed job needs no retry; every other refused claim has a positive delay in seconds. */
 export type ClaimRetryDelay = number | null

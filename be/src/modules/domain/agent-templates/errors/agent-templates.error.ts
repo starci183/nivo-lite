@@ -3,8 +3,6 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the agent-templates capability. */
 export enum AgentTemplatesErrorCode {
-    /** No template has this key. */
-    TemplateNotFound = "AGENT_TEMPLATES_TEMPLATE_NOT_FOUND",
     /** The template has no such version. */
     VersionNotFound = "AGENT_TEMPLATES_VERSION_NOT_FOUND",
     /** Another account already owns this template key. */
@@ -21,13 +19,10 @@ export enum AgentTemplatesErrorCode {
     ForeignTemplate = "AGENT_TEMPLATES_FOREIGN_TEMPLATE",
     /** The version to package does not belong to the agent. */
     GraphVersionNotFound = "AGENT_TEMPLATES_GRAPH_VERSION_NOT_FOUND",
-    /** The installation was not made from a template. */
-    NotATemplateInstall = "AGENT_TEMPLATES_NOT_A_TEMPLATE_INSTALL",
 }
 
 /** How each agent-templates code travels. */
 export const AGENT_TEMPLATES_ERROR_KINDS: Record<AgentTemplatesErrorCode, ErrorKind> = {
-    [AgentTemplatesErrorCode.TemplateNotFound]: "not-found",
     [AgentTemplatesErrorCode.VersionNotFound]: "not-found",
     [AgentTemplatesErrorCode.KeyTaken]: "conflict",
     [AgentTemplatesErrorCode.NotYours]: "forbidden",
@@ -36,7 +31,6 @@ export const AGENT_TEMPLATES_ERROR_KINDS: Record<AgentTemplatesErrorCode, ErrorK
     [AgentTemplatesErrorCode.BaseAgentExists]: "conflict",
     [AgentTemplatesErrorCode.ForeignTemplate]: "forbidden",
     [AgentTemplatesErrorCode.GraphVersionNotFound]: "not-found",
-    [AgentTemplatesErrorCode.NotATemplateInstall]: "not-found",
 }
 
 /** The one error class of the agent-templates capability. */

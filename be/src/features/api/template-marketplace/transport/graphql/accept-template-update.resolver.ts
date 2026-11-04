@@ -12,7 +12,7 @@ import { toAcceptTemplateUpdateRequest, toAcceptTemplateUpdateType } from "./acc
 @Resolver()
 /** GraphQL door of acceptTemplateUpdate. */
 export class AcceptTemplateUpdateResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Takes the named branches of a newer version into the agent, keeping every edit of the buyer on the others. */
     @Mutation(() => UpdateOfferType, { name: "acceptTemplateUpdate", nullable: true })
@@ -21,7 +21,7 @@ export class AcceptTemplateUpdateResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: AcceptTemplateUpdateInput,
     ): Promise<UpdateOfferType | null> {
-        const result = await this.bus.execute(
+        const result = await this.commandBus.execute(
             new AcceptTemplateUpdateCommand({ request: toAcceptTemplateUpdateRequest(workspaceId, input), principal }),
         )
         return toAcceptTemplateUpdateType(result)

@@ -41,23 +41,39 @@ export const MODULE_OPS_PORTS: ModuleOpsPorts = {
     textGenerator: ModuleTextGeneratorService,
 }
 
+/** The delivery of booking notices through the customer's existing conversation and channel, by port name. */
+interface BookingPorts {
+    /** The notifier port. */
+    readonly notifier: typeof BookingNotifierService
+}
+
 /** The delivery of booking notices through the customer's existing conversation and channel. */
-export const BOOKING_PORTS: {
-    notifier: typeof BookingNotifierService
-} = { notifier: BookingNotifierService }
+export const BOOKING_PORTS: BookingPorts = { notifier: BookingNotifierService }
+
+/** The ports the agent-tools capability reaches the rest of the app through, by port name. */
+interface AgentToolsPorts {
+    /** The knowledgeSearch port. */
+    readonly knowledgeSearch: typeof KnowledgeSearchToolService
+    /** The leadWriter port. */
+    readonly leadWriter: typeof LeadWriterService
+    /** The bookingTools port. */
+    readonly bookingTools: typeof BookingToolsService
+    /** The approvalRequester port. */
+    readonly approvalRequester: typeof ApprovalRequesterService
+    /** The handoffTool port. */
+    readonly handoffTool: typeof HandoffToolService
+    /** The conversationLeads port. */
+    readonly conversationLeads: typeof ConversationLeadsService
+    /** The gatewayTools port. */
+    readonly gatewayTools: typeof TurnGatewayToolsService
+    /** The agentHandoff port. */
+    readonly agentHandoff: typeof TurnHandoffService
+    /** The toolTokens port. */
+    readonly toolTokens: typeof ToolTokenService
+}
 
 /** The ports the agent-tools capability reaches the rest of the app through. */
-export const AGENT_TOOLS_PORTS: {
-    knowledgeSearch: typeof KnowledgeSearchToolService
-    leadWriter: typeof LeadWriterService
-    bookingTools: typeof BookingToolsService
-    approvalRequester: typeof ApprovalRequesterService
-    handoffTool: typeof HandoffToolService
-    conversationLeads: typeof ConversationLeadsService
-    gatewayTools: typeof TurnGatewayToolsService
-    agentHandoff: typeof TurnHandoffService
-    toolTokens: typeof ToolTokenService
-} = {
+export const AGENT_TOOLS_PORTS: AgentToolsPorts = {
     knowledgeSearch: KnowledgeSearchToolService,
     leadWriter: LeadWriterService,
     bookingTools: BookingToolsService,
@@ -69,19 +85,32 @@ export const AGENT_TOOLS_PORTS: {
     toolTokens: ToolTokenService,
 }
 
+/** The ports the decisions capability reaches the rest of the app through, by port name. */
+interface DecisionsPorts {
+    /** The agentDirectory port. */
+    readonly agentDirectory: typeof AgentsService
+    /** The inboundEventStatus port. */
+    readonly inboundEventStatus: typeof InboundStatusService
+    /** The leadDirectory port. */
+    readonly leadDirectory: typeof LeadReadService
+    /** The workItemLeads port. */
+    readonly workItemLeads: typeof LeadReadService
+    /** The leadGenFlow port. */
+    readonly leadGenFlow: typeof LeadFlowChainService
+    /** The moduleCatalog port. */
+    readonly moduleCatalog: typeof ModulesService
+    /** The outboundAccessGate port. */
+    readonly outboundAccessGate: typeof OutboundAccessService
+    /** The threadWorkHistory port. */
+    readonly threadWorkHistory: typeof ThreadWorkLinksReadService
+    /** The workChainsHistory port. */
+    readonly workChainsHistory: typeof WorkChainsHistoryReadService
+    /** The workThreadsHistory port. */
+    readonly workThreadsHistory: typeof WorkThreadsLeadsReadService
+}
+
 /** The ports the decisions capability reaches the rest of the app through. */
-export const DECISIONS_PORTS: {
-    agentDirectory: typeof AgentsService
-    inboundEventStatus: typeof InboundStatusService
-    leadDirectory: typeof LeadReadService
-    workItemLeads: typeof LeadReadService
-    leadGenFlow: typeof LeadFlowChainService
-    moduleCatalog: typeof ModulesService
-    outboundAccessGate: typeof OutboundAccessService
-    threadWorkHistory: typeof ThreadWorkLinksReadService
-    workChainsHistory: typeof WorkChainsHistoryReadService
-    workThreadsHistory: typeof WorkThreadsLeadsReadService
-} = {
+export const DECISIONS_PORTS: DecisionsPorts = {
     agentDirectory: AgentsService,
     inboundEventStatus: InboundStatusService,
     leadDirectory: LeadReadService,

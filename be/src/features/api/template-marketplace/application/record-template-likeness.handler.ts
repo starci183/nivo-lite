@@ -17,8 +17,6 @@ export class RecordTemplateLikenessHandler extends ICQRSHandler<RecordTemplateLi
     }
 
     protected override process(command: RecordTemplateLikenessCommand): Promise<LikenessGrantView> {
-        const p = command.params.principal.id
-        const r = command.params.request
-        return this.svc.record(p, r)
+        return this.svc.record(command.params.principal.id, command.params.request)
     }
 }

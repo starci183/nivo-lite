@@ -7,27 +7,13 @@ import type { Principal } from "@modules/platform/cqrs"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { CREATOR } from "@tests/fixtures/builders/agent-template.builder"
+import { likenessGrantRow } from "@tests/fixtures/builders/template-likeness.builder"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateLikenessService } from "./template-likeness.service"
 import { TemplateLikenessGrantEntity } from "./persistence/entities"
 
 const NOW = new Date("2026-11-03T02:00:00.000Z")
 const ADMIN: Principal = { id: "admin-1", email: "admin@nivo.vn", role: "authenticated" }
-
-const grantRow = (over: Partial<TemplateLikenessGrantEntity> = {}): TemplateLikenessGrantEntity =>
-    Object.assign(new TemplateLikenessGrantEntity(), {
-        id: "grant-1",
-        templateKey: "spa-booking-by-linh",
-        personName: "Ngoc Trinh",
-        allowedUses: ["name", "voice_style"],
-        disclosure: "Tro ly AI cua Ngoc Trinh",
-        grantedBy: CREATOR.accountId,
-        verifiedBy: null,
-        verifiedAt: null,
-        expiresAt: null,
-        revokedAt: null,
-        ...over,
-    })
 
 const build = async (em: MockEntityManager = mockEntityManager(), owner: string = CREATOR.accountId) => {
     const versions = mock<AgentTemplateVersionsService>({
@@ -63,7 +49,7 @@ describe("TemplateLikenessService", () => {
         const { service, em } = await build(
             mockEntityManager({
                 insert: [TemplateLikenessGrantEntity, { identifiers: [{ id: "grant-1" }] }],
-                findOneOrFail: [TemplateLikenessGrantEntity, grantRow()],
+                findOneOrFail: [TemplateLikenessGrantEntity, likenessGrantRow()],
             }),
         )
 
@@ -72,7 +58,6 @@ describe("TemplateLikenessService", () => {
             personName: " Ngoc Trinh ",
             allowedUses: ["name", "voice_style"],
             disclosure: " Tro ly AI cua Ngoc Trinh ",
-            expiresAt: null,
         })
 
         expect(em.insert).toHaveBeenCalledWith(
@@ -95,9 +80,33 @@ describe("TemplateLikenessService", () => {
         })
     })
 
+    it("records the end of the consent as a date when the creator gives one", async () => {
+        const { service, em } = await build(
+            mockEntityManager({
+                insert: [TemplateLikenessGrantEntity, { identifiers: [{ id: "grant-1" }] }],
+                findOneOrFail: [TemplateLikenessGrantEntity, likenessGrantRow()],
+            }),
+        )
+
+        await service.record(CREATOR.accountId, {
+            templateKey: "spa-booking-by-linh",
+            personName: "Ngoc Trinh",
+            allowedUses: ["name"],
+            disclosure: "AI",
+            expiresAt: "2027-01-01T00:00:00.000Z",
+        })
+
+        expect(em.insert).toHaveBeenCalledWith(
+            TemplateLikenessGrantEntity,
+            expect.objectContaining({ expiresAt: new Date("2027-01-01T00:00:00.000Z") }),
+        )
+    })
+})
+
+describe("TemplateLikenessService refusals and reads", () => {
     it("refuses to record, list or revoke for a template of another account", async () => {
         const { service, em } = await build(
-            mockEntityManager({ findOne: [TemplateLikenessGrantEntity, grantRow()] }),
+            mockEntityManager({ findOne: [TemplateLikenessGrantEntity, likenessGrantRow()] }),
             "someone-else",
         )
 
@@ -108,7 +117,6 @@ describe("TemplateLikenessService", () => {
                     personName: "x",
                     allowedUses: ["name"],
                     disclosure: "AI",
-                    expiresAt: null,
                 }),
             ),
         ).toBe(TemplateMarketplaceErrorCode.NotYours)
@@ -118,14 +126,13 @@ describe("TemplateLikenessService", () => {
         expect(await codeOf(service.revoke(CREATOR.accountId, "grant-1"))).toBe(TemplateMarketplaceErrorCode.NotYours)
         expect(em.update).not.toHaveBeenCalled()
     })
-
     it("lists the records of a template of the caller, with their end date and whether they were taken back", async () => {
         const { service } = await build(
             mockEntityManager({
                 find: [
                     TemplateLikenessGrantEntity,
                     [
-                        grantRow({
+                        likenessGrantRow({
                             expiresAt: new Date("2027-01-01T00:00:00.000Z"),
                             revokedAt: NOW,
                             verifiedBy: "admin-1",
@@ -143,9 +150,9 @@ describe("TemplateLikenessService", () => {
     it("takes a consent back at the time of the clock, and says so when it does not exist", async () => {
         const { service, em } = await build(
             mockEntityManager({
-                findOne: [TemplateLikenessGrantEntity, grantRow()],
+                findOne: [TemplateLikenessGrantEntity, likenessGrantRow()],
                 update: [TemplateLikenessGrantEntity, { affected: 1 }],
-                findOneOrFail: [TemplateLikenessGrantEntity, grantRow({ revokedAt: NOW })],
+                findOneOrFail: [TemplateLikenessGrantEntity, likenessGrantRow({ revokedAt: NOW })],
             }),
         )
         const none = await build(mockEntityManager({ findOne: [TemplateLikenessGrantEntity, null] }))
@@ -156,13 +163,15 @@ describe("TemplateLikenessService", () => {
             TemplateMarketplaceErrorCode.GrantNotFound,
         )
     })
+})
 
+describe("TemplateLikenessService verification and cover", () => {
     it("lets a platform reviewer verify the identity of the person, and says so when the record does not exist", async () => {
         const { service, em } = await build(
             mockEntityManager({
-                findOne: [TemplateLikenessGrantEntity, grantRow()],
+                findOne: [TemplateLikenessGrantEntity, likenessGrantRow()],
                 update: [TemplateLikenessGrantEntity, { affected: 1 }],
-                findOneOrFail: [TemplateLikenessGrantEntity, grantRow({ verifiedBy: "admin-1" })],
+                findOneOrFail: [TemplateLikenessGrantEntity, likenessGrantRow({ verifiedBy: "admin-1" })],
             }),
         )
         const none = await build(mockEntityManager({ findOne: [TemplateLikenessGrantEntity, null] }))
@@ -178,12 +187,12 @@ describe("TemplateLikenessService", () => {
 
     it("covers a persona only with a verified, valid consent of that person; a neutral persona needs none", async () => {
         const verified = await build(
-            mockEntityManager({ find: [TemplateLikenessGrantEntity, [grantRow({ verifiedBy: "admin-1" })]] }),
+            mockEntityManager({ find: [TemplateLikenessGrantEntity, [likenessGrantRow({ verifiedBy: "admin-1" })]] }),
         )
-        const unverified = await build(mockEntityManager({ find: [TemplateLikenessGrantEntity, [grantRow()]] }))
+        const unverified = await build(mockEntityManager({ find: [TemplateLikenessGrantEntity, [likenessGrantRow()]] }))
         const taken = await build(
             mockEntityManager({
-                find: [TemplateLikenessGrantEntity, [grantRow({ verifiedBy: "admin-1", revokedAt: NOW })]],
+                find: [TemplateLikenessGrantEntity, [likenessGrantRow({ verifiedBy: "admin-1", revokedAt: NOW })]],
             }),
         )
 

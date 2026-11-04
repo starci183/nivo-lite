@@ -1,19 +1,15 @@
 import { Test } from "@nestjs/testing"
 import * as sdk from "@nivo-lite/agent-sdk/template"
 import type { GraphDocument as SdkGraph } from "@nivo-lite/agent-sdk/template"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { AgentGraphPublishService, AgentGraphsService, graphDocumentSchema } from "@modules/domain/agent-graphs"
 import type { GraphDocument } from "@modules/domain/agent-graphs"
-import {
-    AgentTemplateVersionsService,
-    TemplateInstallEntity,
-    TemplateLicenseEntity,
-} from "@modules/domain/agent-templates"
+import { AgentTemplateVersionsService, TemplateRecordsService } from "@modules/domain/agent-templates"
+import type { TemplateInstallView, TemplateLicenseView } from "@modules/domain/agent-templates"
 import { instantiate } from "@nivo-lite/agent-sdk/template"
 import type { StoredVersion } from "@modules/domain/agent-templates"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { amountIs, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import {
     CREATOR,
@@ -22,7 +18,7 @@ import {
     packageOf,
     withExtraBranch,
 } from "@tests/fixtures/builders/agent-template.builder"
-import { INSTALL_VALUES, installRow, licenseRow } from "@tests/fixtures/builders/template-rows.builder"
+import { INSTALL_VALUES } from "@tests/fixtures/builders/template-rows.builder"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"
 import { TemplateUpdatesService } from "./template-updates.service"
@@ -63,6 +59,24 @@ const storedOf = (pkg: typeof v1, breaking = false): StoredVersion => ({
     firstParty: false,
 })
 
+const installRow = (over: Partial<TemplateInstallView> = {}): TemplateInstallView => ({
+    installationId: "inst-1",
+    workspaceId: "ws-buyer",
+    templateKey: "spa-booking-by-linh",
+    version: 1,
+    parameterValues: VALUES,
+    licenseId: "license-1",
+    ...over,
+})
+
+const licenseRow = (over: Partial<TemplateLicenseView> = {}): TemplateLicenseView => ({
+    id: "license-1",
+    kind: "free",
+    installationId: null,
+    status: "active",
+    ...over,
+})
+
 const memberOf = builder<WorkspaceMember>({
     userId: BUYER,
     workspaceId: "ws-buyer",
@@ -91,13 +105,13 @@ const editedSmall = (graph: GraphDocument): GraphDocument => ({
 })
 
 interface Options {
-    readonly install?: TemplateInstallEntity | null
-    readonly license?: TemplateLicenseEntity | null
+    readonly install?: TemplateInstallView | null
+    readonly license?: TemplateLicenseView | null
     readonly current?: GraphDocument | null
     readonly latestApproved?: number
     readonly latestPrivate?: number
     readonly breaking?: boolean
-    readonly installs?: ReadonlyArray<TemplateInstallEntity>
+    readonly installs?: ReadonlyArray<TemplateInstallView>
     readonly agentless?: boolean
     readonly vanishing?: boolean
 }
@@ -107,16 +121,13 @@ const build = async (options: Options = {}) => {
         options.current === undefined
             ? editedSmall(graphDocumentSchema.parse(instantiate(v1, VALUES)))
             : options.current
-    const em = mockEntityManager({
-        find: [
-            TemplateInstallEntity,
-            options.installs ?? (options.install === null ? [] : [options.install ?? installRow()]),
-        ],
-        findOne: [
-            [TemplateInstallEntity, options.install === undefined ? installRow() : options.install],
-            [TemplateLicenseEntity, options.license === undefined ? licenseRow() : options.license],
-        ],
-        update: [TemplateInstallEntity, { affected: 1 }],
+    const records = mock<TemplateRecordsService>({
+        installsOf: jest
+            .fn()
+            .mockResolvedValue(options.installs ?? (options.install === null ? [] : [options.install ?? installRow()])),
+        installOf: jest.fn().mockResolvedValue(options.install === undefined ? installRow() : options.install),
+        licenseById: jest.fn().mockResolvedValue(options.license === undefined ? licenseRow() : options.license),
+        moveInstall: jest.fn().mockResolvedValue(undefined),
     })
     const versions = mock<AgentTemplateVersionsService>({
         latestNumber: jest.fn().mockResolvedValue(options.latestPrivate ?? 2),
@@ -150,7 +161,7 @@ const build = async (options: Options = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             TemplateUpdatesService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: TemplateRecordsService, useValue: records },
             { provide: AgentTemplateVersionsService, useValue: versions },
             { provide: TemplateListingsService, useValue: listings },
             { provide: AgentGraphsService, useValue: graphs },
@@ -158,7 +169,7 @@ const build = async (options: Options = {}) => {
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(TemplateUpdatesService), em, publish, members, listings, versions }
+    return { service: moduleRef.get(TemplateUpdatesService), records, publish, members, listings, versions }
 }
 
 const codeOf = async (work: Promise<unknown>): Promise<unknown> => {
@@ -290,12 +301,12 @@ describe("TemplateUpdatesService.accept", () => {
         await part.service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"])
         await all.service.accept(BUYER, "ws-buyer", "inst-1", ids)
 
-        expect(part.em.update).not.toHaveBeenCalled()
-        expect(all.em.update).toHaveBeenCalledWith(
-            TemplateInstallEntity,
-            { installationId: "inst-1" },
-            { version: 2, parameterValues: VALUES },
-        )
+        expect(part.records.moveInstall).not.toHaveBeenCalled()
+        expect(all.records.moveInstall).toHaveBeenCalledWith({
+            installationId: "inst-1",
+            version: 2,
+            parameterValues: VALUES,
+        })
     })
 })
 
@@ -330,13 +341,13 @@ describe("TemplateUpdatesService.accept refusals", () => {
     })
 
     it("lets the publish checks refuse the result: an update never goes round the ceiling of the buyer", async () => {
-        const { service, publish, em } = await build()
+        const { service, publish, records } = await build()
         publish.publishTemplate.mockRejectedValueOnce(new Error("above the ceiling"))
 
         await expect(service.accept(BUYER, "ws-buyer", "inst-1", ["branch:decide:tiny"])).rejects.toThrow(
             "above the ceiling",
         )
-        expect(em.update).not.toHaveBeenCalled()
+        expect(records.moveInstall).not.toHaveBeenCalled()
     })
 
     it("asks for an owner or a manager, whoever the members check refuses publishes nothing", async () => {

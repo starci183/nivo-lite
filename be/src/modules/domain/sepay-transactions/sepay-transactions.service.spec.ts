@@ -43,11 +43,7 @@ const COMPLETED = "completed" as const
 
 type Stub = readonly [string, unknown] | typeof PENDING | typeof UPDATE_SEPAY_RESULT | typeof COMPLETED
 
-const build = async (
-    stubs: ReadonlyArray<Stub>,
-    patch: Record<string, unknown> = {},
-    fulfilment: PaidOrderFulfilment | null = null,
-) => {
+const build = async (stubs: ReadonlyArray<Stub>, patch: Record<string, unknown> = {}) => {
     const settles = stubs.flatMap((stub) =>
         typeof stub === "string" || stub[0] !== SETTLE_PAYMENT_ORDER ? [] : [stub],
     )
@@ -86,11 +82,16 @@ const build = async (
             { provide: INBOX, useValue: inbox },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: PaymentOrdersService, useValue: orders },
-            ...(fulfilment === null ? [] : [{ provide: PAID_ORDER_FULFILMENT, useValue: fulfilment }]),
+            { provide: PAID_ORDER_FULFILMENT, useValue: fulfilment },
         ],
     }).compile()
     return { settlement: moduleRef.get(SepayTransactionsService), tx, proof, inbox, outbox, claims, orders }
 }
+
+const settledCodes: Array<string> = []
+const fulfilment = mock<PaidOrderFulfilment>({
+    fulfil: jest.fn((_manager: unknown, code: string) => Promise.resolve(void settledCodes.push(code))),
+})
 
 describe("SepayTransactionsService review", () => {
     describe("review", () => {
@@ -188,108 +189,93 @@ describe("SepayTransactionsService verification", () => {
     })
 })
 
-describe("SepayTransactionsService", () => {
-    describe("processRecordedDelivery", () => {
-        it("hands a settled order to the fulfilment in the transaction of the settlement, and only when it was paid", async () => {
-            const fulfilment = { fulfil: jest.fn().mockResolvedValue(undefined) }
-            const paid = await build(
-                [PENDING, [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "paid" }]], UPDATE_SEPAY_RESULT, COMPLETED],
-                {},
-                fulfilment,
-            )
-            const underpaid = await build(
-                [
-                    PENDING,
-                    [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "underpaid" }]],
-                    UPDATE_SEPAY_RESULT,
-                    COMPLETED,
-                ],
-                {},
-                fulfilment,
-            )
+describe("SepayTransactionsService settlement", () => {
+    it("hands the code of a paid order to the fulfilment, and of an underpaid one to nobody", async () => {
+        const underpaid = await build([PENDING, [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "underpaid" }]]])
+        const paid = await build([PENDING, [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "paid" }]]])
 
-            await paid.settlement.processRecordedDelivery({ deliveryId: "9001" })
-            expect(fulfilment.fulfil).toHaveBeenCalledTimes(1)
-            await underpaid.settlement.processRecordedDelivery({ deliveryId: "9001" })
+        await underpaid.settlement.processRecordedDelivery({ deliveryId: "9001" })
+        expect(settledCodes).toEqual([])
+        await paid.settlement.processRecordedDelivery({ deliveryId: "9001" })
 
-            expect(fulfilment.fulfil).toHaveBeenCalledTimes(1)
-            expect(fulfilment.fulfil).toHaveBeenCalledWith(expect.anything(), expect.any(String))
+        expect(settledCodes).toEqual(["NIVO8F3K2"])
+    })
+
+    it("proves and records the delivery, then settles and completes its queued receipt", async () => {
+        const { settlement, tx, proof, inbox, outbox } = await build([
+            PENDING,
+            [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "paid" }]],
+            UPDATE_SEPAY_RESULT,
+            COMPLETED,
+        ])
+
+        await settlement.acceptSepayDelivery(credit())
+        await settlement.processRecordedDelivery({ deliveryId: "9001" })
+        expect(proof.verifyBillingKey).toHaveBeenCalledWith(AUTHORIZATION)
+        expect(tx.commits).toBe(2)
+        expect(inbox.claims).toEqual([{ source: "sepay", eventId: "9001" }])
+        expect(outbox.jobs).toEqual([{ queue: SEPAY_DELIVERY_QUEUE, payload: { deliveryId: "9001" } }])
+        expect(outbox.allInTransaction).toBe(true)
+        expect(tx.em.query).toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, ["NIVO8F3K2", 990000, 9001])
+        expect(tx.em.update).toHaveBeenCalledWith(
+            SepayTransactionEntity,
+            { sepayId: 9001 },
+            { status: "paid", transferAmount: 990000, content: "nivo 8f3k2 chuyen tien" },
+        )
+        const completion = tx.em.update.mock.calls.find(([, where]) => Reflect.get(Object(where), "id") === "row-1")
+        expect(evaluatedValues(completion?.[2])).toEqual({ processedAt: "now()" })
+    })
+})
+
+describe("SepayTransactionsService intake", () => {
+    it("touches nothing when the delivery is refused at the door", async () => {
+        const { settlement, tx, proof } = await build([])
+        proof.verifyBillingKey.mockImplementation(() => {
+            parseJsonObject(undefined)
         })
 
-        it("proves and records the delivery, then settles and completes its queued receipt", async () => {
-            const { settlement, tx, proof, inbox, outbox } = await build([
+        await expect(settlement.acceptSepayDelivery(credit())).rejects.toMatchObject({
+            code: "BILLING_WEBHOOK_INVALID",
+        })
+
+        expect(tx.outcomes).toEqual([])
+        expect(tx.em.query).not.toHaveBeenCalled()
+    })
+
+    it("acknowledges a repeated transaction id without queueing or settling the order a second time", async () => {
+        const { settlement, tx, inbox, outbox } = await build([])
+        inbox.seen("sepay", "9001")
+
+        await settlement.acceptSepayDelivery(credit())
+
+        expect(tx.commits).toBe(1)
+        expect(inbox.claims).toEqual([{ source: "sepay", eventId: "9001" }])
+        expect(outbox.jobs).toEqual([])
+        expect(tx.em.query).not.toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, expect.anything())
+        expect(tx.em.update).not.toHaveBeenCalled()
+    })
+
+    it("tries the next code in the transfer when the first names no order", async () => {
+        const { settlement, tx } = await build(
+            [
                 PENDING,
-                [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "paid" }]],
+                [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "unmatched" }]],
+                [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "underpaid" }]],
                 UPDATE_SEPAY_RESULT,
                 COMPLETED,
-            ])
+            ],
+            { code: "NIVO23456" },
+        )
 
-            await settlement.acceptSepayDelivery(credit())
-            await settlement.processRecordedDelivery({ deliveryId: "9001" })
-            expect(proof.verifyBillingKey).toHaveBeenCalledWith(AUTHORIZATION)
-            expect(tx.commits).toBe(2)
-            expect(inbox.claims).toEqual([{ source: "sepay", eventId: "9001" }])
-            expect(outbox.jobs).toEqual([{ queue: SEPAY_DELIVERY_QUEUE, payload: { deliveryId: "9001" } }])
-            expect(outbox.allInTransaction).toBe(true)
-            expect(tx.em.query).toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, ["NIVO8F3K2", 990000, 9001])
-            expect(tx.em.update).toHaveBeenCalledWith(
-                SepayTransactionEntity,
-                { sepayId: 9001 },
-                { status: "paid", transferAmount: 990000, content: "nivo 8f3k2 chuyen tien" },
-            )
-            const completion = tx.em.update.mock.calls.find(([, where]) => Reflect.get(Object(where), "id") === "row-1")
-            expect(evaluatedValues(completion?.[2])).toEqual({ processedAt: "now()" })
-        })
+        await settlement.processRecordedDelivery({ deliveryId: "9001" })
 
-        it("touches nothing when the delivery is refused at the door", async () => {
-            const { settlement, tx, proof } = await build([])
-            proof.verifyBillingKey.mockImplementation(() => {
-                parseJsonObject(undefined)
-            })
-
-            await expect(settlement.acceptSepayDelivery(credit())).rejects.toMatchObject({
-                code: "BILLING_WEBHOOK_INVALID",
-            })
-
-            expect(tx.outcomes).toEqual([])
-            expect(tx.em.query).not.toHaveBeenCalled()
-        })
-
-        it("acknowledges a repeated transaction id without queueing or settling the order a second time", async () => {
-            const { settlement, tx, inbox, outbox } = await build([])
-            inbox.seen("sepay", "9001")
-
-            await settlement.acceptSepayDelivery(credit())
-
-            expect(tx.commits).toBe(1)
-            expect(inbox.claims).toEqual([{ source: "sepay", eventId: "9001" }])
-            expect(outbox.jobs).toEqual([])
-            expect(tx.em.query).not.toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, expect.anything())
-            expect(tx.em.update).not.toHaveBeenCalled()
-        })
-
-        it("tries the next code in the transfer when the first names no order", async () => {
-            const { settlement, tx } = await build(
-                [
-                    PENDING,
-                    [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "unmatched" }]],
-                    [SETTLE_PAYMENT_ORDER, [{ settle_payment_order: "underpaid" }]],
-                    UPDATE_SEPAY_RESULT,
-                    COMPLETED,
-                ],
-                { code: "NIVO23456" },
-            )
-
-            await settlement.processRecordedDelivery({ deliveryId: "9001" })
-
-            expect(tx.em.query).toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, ["NIVO23456", 990000, 9001])
-            expect(tx.em.query).toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, ["NIVO8F3K2", 990000, 9001])
-            expect(tx.em.update).toHaveBeenCalledWith(
-                SepayTransactionEntity,
-                { sepayId: 9001 },
-                { status: "underpaid", transferAmount: 990000, content: "nivo 8f3k2 chuyen tien" },
-            )
-        })
+        expect(tx.em.query).toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, ["NIVO23456", 990000, 9001])
+        expect(tx.em.query).toHaveBeenCalledWith(SETTLE_PAYMENT_ORDER, ["NIVO8F3K2", 990000, 9001])
+        expect(tx.em.update).toHaveBeenCalledWith(
+            SepayTransactionEntity,
+            { sepayId: 9001 },
+            { status: "underpaid", transferAmount: 990000, content: "nivo 8f3k2 chuyen tien" },
+        )
     })
 })
 

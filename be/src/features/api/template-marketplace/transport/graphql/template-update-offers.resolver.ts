@@ -11,7 +11,7 @@ import { toTemplateUpdateOffersRequest, toTemplateUpdateOffersType } from "./tem
 @Resolver()
 /** GraphQL door of templateUpdateOffers. */
 export class TemplateUpdateOffersResolver {
-    constructor(@InjectQueryBus() private readonly bus: QueryBus) {}
+    constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Lists the newer versions of templates offered to the agents of this workspace, branch by branch. */
     @Query(() => [UpdateOfferType], { name: "templateUpdateOffers" })
@@ -19,7 +19,7 @@ export class TemplateUpdateOffersResolver {
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
     ): Promise<Array<UpdateOfferType>> {
-        const result = await this.bus.execute(
+        const result = await this.queryBus.execute(
             new TemplateUpdateOffersQuery({ request: toTemplateUpdateOffersRequest(workspaceId), principal }),
         )
         return toTemplateUpdateOffersType(result)

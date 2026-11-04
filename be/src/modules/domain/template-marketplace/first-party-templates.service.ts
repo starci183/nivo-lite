@@ -7,16 +7,17 @@ import {
     AgentTemplatesError,
     AgentTemplatesErrorCode,
     AgentTemplateVersionsService,
-    TemplateInstallEntity,
-    TemplateLicenseEntity,
+    TemplateRecordsService,
 } from "@modules/domain/agent-templates"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
 import { ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { AdminAccessService } from "@modules/domain/platform-admin"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { Principal } from "@modules/platform/cqrs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { hashOfPackage, previewPackage, TEMPLATE_KEY_PATTERN } from "@nivo-lite/agent-sdk/template"
@@ -81,10 +82,16 @@ const defaultRuleOf = (action: ModuleDefinition["authorityActions"][number]): Se
     timeout_minutes: 240,
 })
 
+/** The settings a built-in module offers its buyer and where each lands in the graph. */
+interface DerivedParameters {
+    /** The settings. */
+    readonly parameters: ReadonlyArray<TemplateParameter>
+    /** Where they land. */
+    readonly bindings: ReadonlyArray<ParameterBinding>
+}
+
 /** The settings a built-in module offers its buyer: the wait of every approver its seed names, with today's wait as the default. */
-const parametersOf = (
-    graph: GraphDocument,
-): { readonly parameters: ReadonlyArray<TemplateParameter>; readonly bindings: ReadonlyArray<ParameterBinding> } => {
+const parametersOf = (graph: GraphDocument): DerivedParameters => {
     const waits = graph.nodes
         .flatMap((node) => (node.decide?.branches ?? []).map((branch) => ({ node: node.key, branch })))
         .flatMap(({ node, branch }) =>
@@ -125,6 +132,7 @@ export class FirstPartyTemplatesService {
         private readonly modules: ModulesService,
         private readonly automation: AutomationTemplatesService,
         private readonly versions: AgentTemplateVersionsService,
+        private readonly records: TemplateRecordsService,
         private readonly listings: TemplateListingsService,
         private readonly installations: InstallationRecordsService,
         private readonly access: AdminAccessService,
@@ -139,7 +147,7 @@ export class FirstPartyTemplatesService {
         const packaged: Array<string> = []
         const unchanged: Array<string> = []
         const refused: Array<string> = []
-        for (const module of catalog.modules) {
+        await eachInOrder(catalog.modules, async (module) => {
             const key = firstPartyKeyOf(module.key)
             const graph = baseGraphOf(
                 module,
@@ -152,12 +160,12 @@ export class FirstPartyTemplatesService {
             const stored = latest > 0 ? await this.versions.find(key, latest) : null
             if (same !== null && stored?.hash === same.hash) {
                 unchanged.push(key)
-                continue
+                return
             }
             const made = previewPackage(graph, this.draftOf(module, graph, latest + 1))
             if (made.package === null) {
                 refused.push(key)
-                continue
+                return
             }
             await this.versions.save({
                 package: made.package,
@@ -179,7 +187,7 @@ export class FirstPartyTemplatesService {
                 submittedBy: null,
             })
             packaged.push(key)
-        }
+        })
         return { packaged, unchanged, refused, adopted: await this.adoptMissing() }
     }
 
@@ -247,41 +255,34 @@ export class FirstPartyTemplatesService {
     }
 
     /** Records each installation of a built-in module that has no provenance as an install of version 1 of its first-party package; its graph is not touched. */
-    private async adoptMissing(): Promise<number> {
-        let adopted = 0
-        let after = "00000000-0000-0000-0000-000000000000"
-        for (;;) {
-            const page = await this.installations.page(after, PAGE)
-            if (page.length === 0) return adopted
-            for (const installation of page) {
-                after = installation.id
-                const key = firstPartyKeyOf(installation.moduleKey)
-                const known = await this.entityManager.findOne(TemplateInstallEntity, {
-                    where: { installationId: installation.id },
-                })
-                if (known !== null || (await this.versions.find(key, 1)) === null) continue
-                const license = await this.entityManager.insert(TemplateLicenseEntity, {
-                    workspaceId: installation.workspaceId,
-                    templateKey: key,
-                    kind: "free",
-                    listingId: null,
-                    orderId: null,
-                    installationId: installation.id,
-                    status: "active",
-                })
-                await this.entityManager.insert(TemplateInstallEntity, {
-                    installationId: installation.id,
-                    workspaceId: installation.workspaceId,
-                    templateKey: key,
-                    version: 1,
-                    parameterValues: {},
-                    licenseId:
-                        license.identifiers[0]?.["id"] === undefined ? null : String(license.identifiers[0]["id"]),
-                    installedBy: null,
-                })
-                adopted += 1
-            }
-        }
+    private adoptMissing(): Promise<number> {
+        return this.adoptAfter("00000000-0000-0000-0000-000000000000", 0)
+    }
+
+    private async adoptAfter(after: string, adopted: number): Promise<number> {
+        const page = await this.installations.page(after, PAGE)
+        const last = page.at(-1)
+        if (last === undefined) return adopted
+        return this.adoptAfter(last.id, adopted + (await this.adoptPage(page)))
+    }
+
+    /** Records the installations of one page that no install row names yet and whose first-party package exists. */
+    private async adoptPage(page: ReadonlyArray<InstallationRecord>): Promise<number> {
+        const knownIds = await this.records.installedAmong(page.map((installation) => installation.id))
+        const keys = [...new Set(page.map((installation) => firstPartyKeyOf(installation.moduleKey)))]
+        const existing = await Promise.all(
+            keys.map(async (key) => ((await this.versions.find(key, 1)) === null ? [] : [key])),
+        )
+        const packaged = new Set(existing.flat())
+        const missing = page.filter(
+            (installation) => !knownIds.has(installation.id) && packaged.has(firstPartyKeyOf(installation.moduleKey)),
+        )
+        await eachInOrder(missing, (installation) => this.adopt(installation))
+        return missing.length
+    }
+
+    private adopt(installation: InstallationRecord): Promise<void> {
+        return this.records.adopt(installation, firstPartyKeyOf(installation.moduleKey))
     }
 
     private draftOf(module: ModuleDefinition, graph: GraphDocument, version: number): PackageDraft {

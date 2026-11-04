@@ -2,7 +2,6 @@ import type { AcceptTemplateUpdateRequest } from "../../application/accept-templ
 import type { UpdateOffer } from "@nivo-lite/agent-sdk/template"
 import type { AcceptTemplateUpdateInput } from "./dto/accept-template-update.input"
 import type { UpdateOfferType } from "./dto/update-offer.type"
-import { toUpdateOfferType } from "./template-marketplace.records.mapper"
 
 /** Maps the GraphQL arguments of acceptTemplateUpdate to the request. */
 export const toAcceptTemplateUpdateRequest = (
@@ -11,5 +10,4 @@ export const toAcceptTemplateUpdateRequest = (
 ): AcceptTemplateUpdateRequest => ({ workspaceId, installationId: input.installationId, unitIds: input.unitIds })
 
 /** Maps the answer to the GraphQL type. */
-export const toAcceptTemplateUpdateType = (result: UpdateOffer | null): UpdateOfferType | null =>
-    result === null ? null : toUpdateOfferType(result)
+export const toAcceptTemplateUpdateType = (result: UpdateOffer | null): UpdateOfferType | null => result

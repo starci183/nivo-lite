@@ -8,7 +8,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./mail.module-definition"
 import type { MailOptions } from "./mail.options"
 import { MailOutboxService } from "./mail-outbox.service"
 import { MailRelayService } from "./mail-relay.service"
-import { SuppressingMailer } from "./suppressing-mailer.service"
+import { SuppressingMailerService } from "./suppressing-mailer.service"
 
 @Module({})
 /**
@@ -30,8 +30,12 @@ export class MailModule extends ConfigurableModuleClass {
                 {
                     provide: MAILER,
                     inject: [MAIL_SETTINGS, MAIL_OUTBOX, LOGGER],
-                    useFactory: (mail: MailOptions, outbox: MailOutboxService, logger: Logger): SuppressingMailer =>
-                        new SuppressingMailer(packageMailerFactory(mail), mail.suppress, outbox, logger),
+                    useFactory: (
+                        mail: MailOptions,
+                        outbox: MailOutboxService,
+                        logger: Logger,
+                    ): SuppressingMailerService =>
+                        new SuppressingMailerService(packageMailerFactory.create(mail), mail.suppress, outbox, logger),
                 },
                 { provide: MAIL_RELAY, useClass: MailRelayService },
             ],

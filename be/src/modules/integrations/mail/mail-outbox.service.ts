@@ -6,6 +6,7 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
+import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import { InjectMailSettings } from "./mail.decorators"
 import type { MailOptions } from "./mail.options"
 import { outboxEntryOf, parseOutboxEntry, selectEntries } from "./mail-outbox.policy"
@@ -42,14 +43,26 @@ export class MailOutboxService {
     async entries(query: OutboxQuery): Promise<ReadonlyArray<OutboxEntry>> {
         const dir = this.settings.outboxDir
         if (dir === null) return []
-        const names = (await readdir(dir).catch(() => [])).filter((name) => name.endsWith(EXTENSION))
-        const documents = await Promise.all(
-            names.map(async (name) => parseOutboxEntry(JSON.parse(await readFile(join(dir, name), "utf8")) as unknown)),
-        )
+        const names = (await this.namesIn(dir)).filter((name) => name.endsWith(EXTENSION))
+        const documents = await Promise.all(names.map((name) => this.entryIn(join(dir, name))))
         return selectEntries(
             documents.filter((entry): entry is OutboxEntry => entry !== undefined),
             query,
         )
+    }
+
+    private async namesIn(dir: string): Promise<ReadonlyArray<string>> {
+        try {
+            return await readdir(dir)
+        } catch (cause) {
+            if (isRecord(cause) && cause.code === "ENOENT") return []
+            throw cause
+        }
+    }
+
+    private async entryIn(path: string): Promise<OutboxEntry | undefined> {
+        const read = parseJsonText(await readFile(path, "utf8"))
+        return read.ok ? parseOutboxEntry(read.value) : undefined
     }
 
     /** Writes the asked messages to the stream: one line per message (time, recipient, subject) and one per link. */

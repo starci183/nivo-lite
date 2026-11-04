@@ -35,6 +35,7 @@ export class PackageAgentTemplateInput {
     /** The key of the template. */
     @Field(() => String)
     @Matches(/^[a-z][a-z0-9-]{2,59}$/)
+    @MaxLength(60)
     key!: string
 
     /** The name on the card. */

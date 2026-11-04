@@ -10,12 +10,12 @@ import { toMyCreatorLedgerType } from "./my-creator-ledger.mapper"
 @Resolver()
 /** GraphQL door of myCreatorLedger. */
 export class MyCreatorLedgerResolver {
-    constructor(@InjectQueryBus() private readonly bus: QueryBus) {}
+    constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** The ledger of what each sale owes the caller as a creator. Payouts are made by hand. */
     @Query(() => CreatorLedgerType, { name: "myCreatorLedger" })
     async myCreatorLedger(@CurrentPrincipal() principal: Principal): Promise<CreatorLedgerType> {
-        const result = await this.bus.execute(new MyCreatorLedgerQuery({ request: {}, principal }))
+        const result = await this.queryBus.execute(new MyCreatorLedgerQuery({ request: {}, principal }))
         return toMyCreatorLedgerType(result)
     }
 }

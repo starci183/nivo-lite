@@ -12,7 +12,7 @@ import { toPreviewAgentTemplateRequest, toPreviewAgentTemplateType } from "./pre
 @Resolver()
 /** GraphQL door of agentTemplatePreview. */
 export class PreviewAgentTemplateResolver {
-    constructor(@InjectQueryBus() private readonly bus: QueryBus) {}
+    constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Shows what packaging a version of an agent would keep and leave out, writing nothing. */
     @Query(() => PackagePreviewType, { name: "agentTemplatePreview" })
@@ -21,7 +21,7 @@ export class PreviewAgentTemplateResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: PackageAgentTemplateInput,
     ): Promise<PackagePreviewType> {
-        const result = await this.bus.execute(
+        const result = await this.queryBus.execute(
             new PreviewAgentTemplateQuery({ request: toPreviewAgentTemplateRequest(workspaceId, input), principal }),
         )
         return toPreviewAgentTemplateType(result)

@@ -10,14 +10,16 @@ import { MAIL_SETTINGS } from "./mail.decorators"
 import type { MailOptions } from "./mail.options"
 import { MailOutboxService } from "./mail-outbox.service"
 
-let folder: string
+const made: Array<string> = []
 
-beforeEach(async () => {
-    folder = await mkdtemp(join(tmpdir(), "mail-outbox-"))
-})
+const workFolder = async (): Promise<string> => {
+    const folder = await mkdtemp(join(tmpdir(), "mail-outbox-"))
+    made.push(folder)
+    return folder
+}
 
 afterEach(async () => {
-    await rm(folder, { recursive: true, force: true })
+    await Promise.all(made.splice(0).map((folder) => rm(folder, { recursive: true, force: true })))
 })
 
 const build = async (outboxDir: string | null, at = "2026-11-04T01:00:00.000Z") => {
@@ -45,6 +47,7 @@ const sink = () => {
 
 describe("MailOutboxService", () => {
     it("keeps a held message as a file, creating the folder, and reads it back", async () => {
+        const folder = await workFolder()
         const nested = join(folder, "deep", "outbox")
         const service = await build(nested)
 
@@ -69,6 +72,7 @@ describe("MailOutboxService", () => {
         await expect(service.entries({})).resolves.toEqual([])
     })
     it("finds nothing in a folder that does not exist yet, and skips files that are no entry", async () => {
+        const folder = await workFolder()
         await expect((await build(join(folder, "none"))).entries({})).resolves.toEqual([])
 
         const service = await build(folder)
@@ -76,7 +80,17 @@ describe("MailOutboxService", () => {
         await writeFile(join(folder, "bad.json"), JSON.stringify({ at: 1 }))
         await expect(service.entries({})).resolves.toEqual([])
     })
+    it("skips a file that is no JSON, and refuses to read a folder that cannot be read", async () => {
+        const folder = await workFolder()
+        const service = await build(folder)
+        await writeFile(join(folder, "broken.json"), "{not json")
+        const blocked = await build(join(folder, "broken.json"))
+
+        await expect(service.entries({})).resolves.toEqual([])
+        await expect(blocked.entries({})).rejects.toMatchObject({ code: "ENOTDIR" })
+    })
     it("reports the asked messages with their links, or says there is none", async () => {
+        const folder = await workFolder()
         const service = await build(folder)
         await service.record("ada@x.test", "Confirm", "Open https://app.test/c?t=1")
         const found = sink()

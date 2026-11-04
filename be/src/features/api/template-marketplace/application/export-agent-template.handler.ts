@@ -16,8 +16,10 @@ export class ExportAgentTemplateHandler extends ICQRSHandler<ExportAgentTemplate
     }
 
     protected override process(query: ExportAgentTemplateQuery): Promise<string> {
-        const p = query.params.principal.id
-        const r = query.params.request
-        return this.svc.exportFile(p, r.templateKey, r.version)
+        return this.svc.exportFile(
+            query.params.principal.id,
+            query.params.request.templateKey,
+            query.params.request.version,
+        )
     }
 }

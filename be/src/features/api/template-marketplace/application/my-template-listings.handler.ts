@@ -17,7 +17,6 @@ export class MyTemplateListingsHandler extends ICQRSHandler<MyTemplateListingsQu
     }
 
     protected override process(query: MyTemplateListingsQuery): Promise<ReadonlyArray<ListingView>> {
-        const p = query.params.principal.id
-        return this.svc.mine(p)
+        return this.svc.mine(query.params.principal.id)
     }
 }

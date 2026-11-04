@@ -8,45 +8,17 @@ import { AgentTemplatesError, AgentTemplatesErrorCode } from "./errors/agent-tem
 import { AgentTemplateVersionsService } from "./agent-template-versions.service"
 import type {
     PackageDraft,
+    PackageInput,
     PackagePreview,
-    ParameterBinding,
-    RequiredPlugin,
+    PackagePreviewView,
+    PackageRequest,
     StarterKnowledge,
-    TemplateListingText,
-    TemplateParameter,
-    TemplatePersona,
     TemplateVersionView,
     TemplateView,
 } from "./agent-templates.contracts"
+import { packageRequestOf } from "./policies/package-input.policy"
+import { previewViewOf } from "./policies/package-view.policy"
 import { canonicalJson, previewPackage } from "@nivo-lite/agent-sdk/template"
-
-/** What the creator gives to package one version of an agent. */
-export interface PackageRequest {
-    /** The workspace of the creator. */
-    readonly workspaceId: string
-    /** The agent. */
-    readonly agentId: string
-    /** The frozen graph version to package. */
-    readonly graphVersionId: string
-    /** The key of the template. */
-    readonly key: string
-    /** The card. */
-    readonly listing: TemplateListingText
-    /** The settings of the buyer. */
-    readonly parameters: ReadonlyArray<TemplateParameter>
-    /** Where they land. */
-    readonly bindings: ReadonlyArray<ParameterBinding>
-    /** The published public documents to start the buyer with. */
-    readonly starterDocumentIds: ReadonlyArray<string>
-    /** The voice and the person. */
-    readonly persona: TemplatePersona
-    /** The plug-ins the graph needs. */
-    readonly requiresPlugins: ReadonlyArray<RequiredPlugin>
-    /** What changed. */
-    readonly changelog: string
-    /** True when the buyer must read it before taking it. */
-    readonly breaking: boolean
-}
 
 /** The template sources of a graph that name a key other than the one being packaged. */
 const foreignKeysOf = (graph: GraphDocument, own: string): ReadonlyArray<string> => [
@@ -74,6 +46,16 @@ export class AgentTemplatesService {
         private readonly versions: AgentTemplateVersionsService,
     ) {}
 
+    /** What packaging a version the creator typed in the editor would keep and leave out, writing nothing, as the editor reads it. */
+    async previewDraft(userId: string, workspaceId: string, input: PackageInput): Promise<PackagePreviewView> {
+        return previewViewOf(await this.preview(userId, packageRequestOf(workspaceId, input)))
+    }
+
+    /** Packages a version the creator typed in the editor and saves it for good. */
+    packageDraft(userId: string, workspaceId: string, input: PackageInput): Promise<TemplateVersionView> {
+        return this.packageVersion(userId, packageRequestOf(workspaceId, input))
+    }
+
     /** What packaging a version would keep and leave out, writing nothing. */
     async preview(userId: string, request: PackageRequest): Promise<PackagePreview> {
         const prepared = await this.prepare(userId, request)
@@ -84,11 +66,12 @@ export class AgentTemplatesService {
     async packageVersion(userId: string, request: PackageRequest): Promise<TemplateVersionView> {
         const prepared = await this.prepare(userId, request)
         const foreign = foreignKeysOf(prepared.graph, request.key)
-        for (const key of foreign) {
-            const owner = await this.versions.templateOf(key)
-            if (owner?.creatorAccountId !== userId && owner?.firstParty !== true) {
-                throw new AgentTemplatesError({ code: AgentTemplatesErrorCode.ForeignTemplate, params: { key } })
-            }
+        const owners = await Promise.all(foreign.map((key) => this.versions.templateOf(key)))
+        const refused = foreign.find(
+            (_key, index) => owners[index]?.creatorAccountId !== userId && owners[index]?.firstParty !== true,
+        )
+        if (refused !== undefined) {
+            throw new AgentTemplatesError({ code: AgentTemplatesErrorCode.ForeignTemplate, params: { key: refused } })
         }
         const preview = previewPackage(prepared.graph, prepared.draft)
         if (preview.package === null) {

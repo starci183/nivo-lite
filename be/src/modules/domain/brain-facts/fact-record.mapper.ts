@@ -5,7 +5,7 @@ import type {
     FactSource,
     FactStatus,
     Instant,
-    ProposalKind,
+    FactProposalKind,
     Scope,
 } from "./brain-facts.contracts"
 
@@ -50,7 +50,7 @@ export interface StoredFact {
     /** The fact it disagrees with. */
     readonly conflictWith: string | null
     /** The proposal kind; null reads as a set. */
-    readonly proposalKind: ProposalKind | null
+    readonly proposalKind: FactProposalKind | null
     /** The evidence; null reads as none. */
     readonly evidence: ReadonlyArray<Evidence> | null
     /** Who proposed it. */

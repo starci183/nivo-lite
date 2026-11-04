@@ -259,7 +259,9 @@ describe("PaymentOrdersService", () => {
             await expect(orders.findOpenAgentTemplate(query)).resolves.toBeNull()
         })
     })
+})
 
+describe("PaymentOrdersService lookups", () => {
     describe("findByCode", () => {
         it("reads an order by its code in capitals, in the given transaction when there is one, and answers none for an unknown code", async () => {
             const em = mockEntityManager({ findOne: [PaymentOrderEntity, ROW] })

@@ -15,11 +15,17 @@ export interface OutboxEntry {
 }
 
 const LINK = /https?:\/\/[^\s<>"]+/gu
-const TRAILING = /[.,;:)\]]+$/u
+const TRAILING = new Set([".", ",", ";", ":", ")", "]"])
+
+const withoutTrailingPunctuation = (link: string): string => {
+    let end = link.length
+    while (end > 0 && TRAILING.has(link.charAt(end - 1))) end -= 1
+    return link.slice(0, end)
+}
 
 /** The web links of a text, in order, without the punctuation that ends a sentence. */
 export const linksOf = (text: string): ReadonlyArray<string> =>
-    (text.match(LINK) ?? []).map((link) => link.replace(TRAILING, ""))
+    (text.match(LINK) ?? []).map((link) => withoutTrailingPunctuation(link))
 
 /** The entry of a held message. */
 export const outboxEntryOf = (at: Date, to: string, subject: string, text: string): OutboxEntry => ({

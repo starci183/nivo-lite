@@ -5,7 +5,7 @@ import type {
     Evidence,
     FactSource,
     FactStatus,
-    ProposalKind,
+    FactProposalKind,
     Scope,
 } from "../../brain-facts.contracts"
 
@@ -114,5 +114,5 @@ export class BrainFactEntity extends UuidAbstractEntity {
 
     /** Whether the proposal sets a value or retires one. */
     @Column({ name: "proposal_kind", type: "text", default: () => "'set'::text" })
-    proposalKind!: ProposalKind
+    proposalKind!: FactProposalKind
 }

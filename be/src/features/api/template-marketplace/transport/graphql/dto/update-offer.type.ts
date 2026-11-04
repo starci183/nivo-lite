@@ -30,5 +30,5 @@ export class UpdateOfferType {
 
     /** The branches and nodes that change. */
     @Field(() => [UpdateUnitType])
-    units!: Array<UpdateUnitType>
+    units!: ReadonlyArray<UpdateUnitType>
 }

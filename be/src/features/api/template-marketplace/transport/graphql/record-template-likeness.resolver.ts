@@ -11,7 +11,7 @@ import { toRecordTemplateLikenessRequest, toRecordTemplateLikenessType } from ".
 @Resolver()
 /** GraphQL door of recordTemplateLikeness. */
 export class RecordTemplateLikenessResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Records the consent of a real person to the persona of a template of the caller. */
     @Mutation(() => LikenessGrantType, { name: "recordTemplateLikeness" })
@@ -19,7 +19,7 @@ export class RecordTemplateLikenessResolver {
         @CurrentPrincipal() principal: Principal,
         @Args("input") input: RecordTemplateLikenessInput,
     ): Promise<LikenessGrantType> {
-        const result = await this.bus.execute(
+        const result = await this.commandBus.execute(
             new RecordTemplateLikenessCommand({ request: toRecordTemplateLikenessRequest(input), principal }),
         )
         return toRecordTemplateLikenessType(result)
