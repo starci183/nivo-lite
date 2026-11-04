@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
 
@@ -40,3 +41,29 @@ export const turnConversationOf = (turn: NodeTurn, wanted: unknown): string | nu
         : null
 
 export { RECIPIENT_NOT_LINKED, recipientLinked } from "@modules/domain/channels"
+
+/** A Zalo user id is a string of digits; an import writes a placeholder sender in its place. */
+const ZALO_USER_ID = /^[0-9]+$/u
+
+/** True when a Zalo conversation names a customer that is no Zalo user (an imported conversation's placeholder sender), so nothing can reach them. */
+export const placeholderRecipient = (target: {
+    readonly channel: string
+    readonly externalId: string | null
+}): boolean =>
+    target.channel === "zalo" &&
+    target.externalId !== null &&
+    !ZALO_USER_ID.test(target.externalId.split(":", 1).join(""))
+
+/** The Zalo refusals that say the recipient cannot be reached at all: the user is unknown or invalid, or does not follow the OA. */
+const UNREACHABLE_FAILURES: ReadonlySet<string> = new Set(["zalo_recipient", "zalo_unfollowed"])
+
+/** True when the channel refused a message because of who it was for, not because of the window, the quota or its own state. */
+export const recipientRefused = (failure: string | null): boolean =>
+    failure !== null && UNREACHABLE_FAILURES.has(failure)
+
+/** The id of the stored message of one send: the same on every attempt of the same effect call, so a retry finds the message and never stores a second. */
+export const messageIdOf = (key: string): string => {
+    const hex = createHash("sha1").update(`channel.send:${key}`).digest("hex")
+    const variant = ((Number.parseInt(hex.slice(16, 18), 16) & 0x3f) | 0x80).toString(16)
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(18, 20)}-${hex.slice(20, 32)}`
+}
