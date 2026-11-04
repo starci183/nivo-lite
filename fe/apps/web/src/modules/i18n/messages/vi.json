@@ -1587,6 +1587,8 @@
     "continue": "Tiếp tục",
     "zaloReauthorize": "Kết nối lại",
     "googleReconnect": "Kết nối lại",
+    "googleConnect": "Kết nối Google",
+    "googleLedger": "Sổ cái trên Google Sheets",
     "envBadgeTest": "Thử nghiệm",
     "smtpTestOk": "Đã gửi tới {to}. Hãy mở hộp thư đó để xác nhận thư đã đến (xem cả mục Spam).",
     "smtpPasswordChanged": "Đã đổi mật khẩu. Hãy gửi email thử để xác nhận hoạt động.",

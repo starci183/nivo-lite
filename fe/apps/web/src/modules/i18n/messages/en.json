@@ -1587,6 +1587,8 @@
     "continue": "Continue",
     "zaloReauthorize": "Connect again",
     "googleReconnect": "Reconnect",
+    "googleConnect": "Connect Google",
+    "googleLedger": "Ledger in Google Sheets",
     "envBadgeTest": "Test",
     "smtpTestOk": "Sent to {to}. Open that mailbox to confirm it arrived (check Spam too).",
     "smtpPasswordChanged": "Password changed. Send a test email to confirm it works.",

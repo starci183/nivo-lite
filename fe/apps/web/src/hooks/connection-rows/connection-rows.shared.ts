@@ -15,7 +15,7 @@ export type RowConfirm = "disconnect" | "remove" | null
 const MONEY: ReadonlySet<string> = new Set(["sepay", "payos", "casso"])
 const BANK_LOGO: ReadonlySet<string> = new Set(["sepay", "casso"])
 const NO_AGENTS: ReadonlySet<string> = new Set(["webhook", "google", "google_drive", "smtp"])
-const RESUMABLE_KINDS: ReadonlySet<string> = new Set(["money", "zalo", "meta", "data", "drive"])
+const RESUMABLE_KINDS: ReadonlySet<string> = new Set(["money", "zalo", "meta", "data", "drive", "google"])
 
 /** Bank feeds (SePay, payOS, Casso): money arriving for the Accounting agent. */
 export const isBankFeed = (provider: Provider): boolean => MONEY.has(provider)
@@ -86,13 +86,16 @@ export const primaryOf = (c: Connection, canManage: boolean, busy: RowBusy, t: R
             isPending: busy === "google",
         }
     }
-    if (settled && (c.provider === "telegram" || reconnects)) {
+    if (canManage && settled && c.provider === "google") {
+        return { id: "continue", label: t("googleLedger"), intent: "neutral", isPending: false }
+    }
+    if ((settled || c.status === "pending") && (c.provider === "telegram" || reconnects)) {
         return { id: "check", label: t("check"), intent: "neutral", isPending: busy === "check" }
     }
     if (canManage && settled && isDataConnector(c.provider) && c.provider !== "csv_import") {
         return { id: "sync", label: t("syncNow"), intent: "neutral", isPending: busy === "sync" }
     }
-    if (settled && c.provider === "webhook") {
+    if ((settled || c.status === "pending") && c.provider === "webhook") {
         return { id: "sendTest", label: t("webhookSendTest"), intent: "neutral", isPending: busy === "test" }
     }
     return null
@@ -169,6 +172,10 @@ const reconnectLabelOf = (provider: Provider, t: RowTranslate): string => {
     return provider === "google_drive" ? t("driveReconnect") : t("metaReconnect")
 }
 
+/** The label of a pending row's way back into its wizard: Google names the consent it still needs, the others continue. */
+const continueLabelOf = (provider: Provider, t: RowTranslate): string =>
+    provider === "google" ? t("googleConnect") : t("continue")
+
 /** Offers continuation or reauthorization when an editable provider can resume its wizard. */
 const reopenPrimaryOf = (c: Connection, canManage: boolean, t: RowTranslate): RowPrimary | null => {
     const broken = c.status === "error"
@@ -177,7 +184,7 @@ const reopenPrimaryOf = (c: Connection, canManage: boolean, t: RowTranslate): Ro
     if (!canManage || !canReopen(c.provider) || !reopens) return null
     return {
         id: "continue",
-        label: broken ? reconnectLabelOf(c.provider, t) : t("continue"),
+        label: broken ? reconnectLabelOf(c.provider, t) : continueLabelOf(c.provider, t),
         intent: "alternative",
         isPending: false,
     }
