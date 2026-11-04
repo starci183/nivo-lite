@@ -16,8 +16,8 @@ import { WorkspacesService } from "@modules/domain/workspaces"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { GraphSeedService } from "./graph-seed.service"
 import { ProfileActivationService } from "./profile-activation.service"
-import { SEED_AGENTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
-import type { SeedAgentRecords } from "./workspace-seed.port"
+import { SEED_AGENTS, SEED_TOOL_GRANTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
+import type { SeedAgentRecords, SeedToolGrants } from "./workspace-seed.port"
 
 const NODES: NodeInstall = { nodes: [], effects: [], tools: [], dataKinds: [] }
 const SPEC = {
@@ -78,6 +78,8 @@ const build = async (scenario: Scenario = {}) => {
     const tagGrants = mock<ModuleTagGrantsService>()
     tagGrants.grantFor.mockResolvedValue(undefined)
     flows.holds.mockResolvedValue(scenario.holds ?? false)
+    const toolGrants = mock<SeedToolGrants>()
+    toolGrants.insertMissing.mockResolvedValue(0)
     const print = jest.fn<void, [string]>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -95,6 +97,7 @@ const build = async (scenario: Scenario = {}) => {
             { provide: AgentGraphFlowService, useValue: flows },
             { provide: AgentBindingsService, useValue: bindings },
             { provide: ModuleTagGrantsService, useValue: tagGrants },
+            { provide: SEED_TOOL_GRANTS, useValue: toolGrants },
         ],
     }).compile()
     return {
@@ -108,10 +111,46 @@ const build = async (scenario: Scenario = {}) => {
         bindings,
         modules,
         tagGrants,
+        toolGrants,
     }
 }
 
 const failure = (code: WorkspaceSeedErrorCode) => new WorkspaceSeedError({ code })
+
+const LEDGER_SPEC = {
+    ...SPEC,
+    moduleKey: "accounting",
+    grant: { rights: [], tools: ["ledger.append", "ledger.void", "ledger.status", "payment.instruction"], effects: [] },
+}
+const LEDGER_TEXT = `${JSON.stringify({ documents: [{ path: "data/graphs/accounting.json", document: LEDGER_SPEC }] })}\n`
+
+describe("GraphSeedService > tool grants", () => {
+    it("gives the agent an auto grant of the ledger tools its graph declares, and of no other tool, only when missing", async () => {
+        const { service, toolGrants } = await build()
+
+        await service.run(LEDGER_TEXT, "NIVO")
+
+        expect(toolGrants.insertMissing).toHaveBeenCalledWith(
+            ["ledger.append", "ledger.void"].map((tool) => ({
+                workspaceId: "ws-1",
+                agentId: "agent-1",
+                tool,
+                mode: "auto",
+                limitVnd: null,
+                constraints: [],
+            })),
+        )
+    })
+
+    it("grants them on a rerun too, when the module is live and already runs the flow", async () => {
+        const { service, toolGrants, activation } = await build({ held: [record({ status: "live" })], holds: true })
+
+        await service.run(LEDGER_TEXT, "NIVO")
+
+        expect(activation.activate).not.toHaveBeenCalled()
+        expect(toolGrants.insertMissing).toHaveBeenCalledTimes(1)
+    })
+})
 
 describe("GraphSeedService > tag rights", () => {
     it("grants the tag rights of the module to the agent it seats, as the install door does", async () => {

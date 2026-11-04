@@ -1,5 +1,13 @@
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
-import { bankFactsOf, filled, invalidSeed, issuedOf, payosKeysOf, sepayKeyOf } from "./channel-seed.policy"
+import {
+    bankFactsOf,
+    filled,
+    googleClientOf,
+    invalidSeed,
+    issuedOf,
+    payosKeysOf,
+    sepayKeyOf,
+} from "./channel-seed.policy"
 
 const ID = "44c471c0-1a75-42e2-ac4b-09dded78c263"
 const KEY = ["nivo", "ab12".repeat(16)].join("_")
@@ -82,4 +90,27 @@ describe("payosKeysOf", () => {
         expect(() => payosKeysOf({ id: ID, clientId: "c", checksumKey: "k" })).toThrow(refused("payos"))
         expect(() => payosKeysOf({ id: ID, apiKey: "a", checksumKey: "k" })).toThrow(refused("payos"))
     })
+})
+
+describe("googleClientOf", () => {
+    it("reads the OAuth client when both values are given", () => {
+        expect(googleClientOf({ id: ID, clientId: " id.apps.test ", clientSecret: "secret-1" })).toEqual({
+            clientId: "id.apps.test",
+            clientSecret: "secret-1",
+        })
+    })
+
+    it.each([[undefined], [{ id: ID }], [{ id: ID, clientId: " ", clientSecret: "" }]])(
+        "reads %j as no client, so no connection is seeded",
+        (seed) => {
+            expect(googleClientOf(seed)).toBeUndefined()
+        },
+    )
+
+    it.each([[{ id: ID, clientId: "id.apps.test" }], [{ id: ID, clientSecret: "secret-1" }]])(
+        "refuses a part of the client %j by the name of the field",
+        (seed) => {
+            expect(() => googleClientOf(seed)).toThrow(refused("google"))
+        },
+    )
 })

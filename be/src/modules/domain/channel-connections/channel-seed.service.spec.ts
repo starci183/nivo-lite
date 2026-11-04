@@ -16,6 +16,7 @@ const IDS = {
     payos: "103ceb10-102c-4904-9ce4-d9c1b03ddcef",
     zaloOa: "ff2e59dc-5ed2-4327-8a73-ca3526bc3b6f",
     telegram: "72f2699d-7f93-45e1-964a-8a2228137985",
+    google: "3cdf964f-f19f-4dde-80ff-c655deb2bd8a",
 }
 const TOKEN = ["123456789", "AAEabcdefghijklmnopqrstuvwxyz012345"].join(":")
 const SEPAY_KEY = ["nivo", "ab12".repeat(16)].join("_")
@@ -339,5 +340,91 @@ describe("ChannelSeedService > a seed that is malformed", () => {
 
         await expect(service.ensure(ACTOR, seed)).rejects.toEqual(refused(field))
         expect(connections.create).toHaveBeenCalledTimes(written)
+    })
+})
+
+describe("ChannelSeedService > the Google connection", () => {
+    const WITH_GOOGLE: ChannelSeed = {
+        ...BARE,
+        google: { id: IDS.google, clientId: "client-id.apps.test", clientSecret: "client-secret-1" },
+    }
+    const CLIENT = JSON.stringify({ oauth_client_id: "client-id.apps.test", oauth_client_secret: "client-secret-1" })
+
+    it("seeds none when the OAuth client is not given, and fails nothing", async () => {
+        const { service, connections } = await build()
+
+        const seeded = await service.ensure(ACTOR, BARE)
+        await service.ensure(ACTOR, { ...BARE, google: { id: IDS.google } })
+
+        expect(seeded.map((one) => one.provider)).not.toContain("google")
+        expect(createdWith(connections, IDS.google)).toBeUndefined()
+    })
+
+    it("creates it pending with no token, and says the owner has not consented yet", async () => {
+        const { service, connections } = await build()
+
+        const seeded = await service.ensure(ACTOR, WITH_GOOGLE)
+
+        expect(seeded.at(-1)).toEqual({
+            provider: "google",
+            id: IDS.google,
+            action: "created",
+            credentials: "saved",
+            consent: "needed",
+        })
+        const made = createdWith(connections, IDS.google)
+        expect(made).toMatchObject({
+            provider: "google",
+            status: "pending",
+            meta: { oauth_client_id: "client-id.apps.test", consent: "needed" },
+        })
+        expect(made?.secret.plain).toBe(CLIENT)
+        expect(made?.secret.plain).not.toContain("access_token")
+        expect(made?.secret.plain).not.toContain("renewal_token")
+    })
+
+    it("keeps a connection the owner consented to untouched, token and all", async () => {
+        const { service, connections } = await build({
+            rows: [
+                recordOf(IDS.google, "google", { email: "owner@nivo.test", oauth_client_id: "client-id.apps.test" }),
+            ],
+            secrets: { [IDS.google]: JSON.stringify({ access_token: "a", renewal_token: "r", expires_at: 1 }) },
+        })
+
+        const seeded = await service.ensure(ACTOR, WITH_GOOGLE)
+
+        expect(seeded.at(-1)).toMatchObject({ provider: "google", action: "kept", consent: "given" })
+        expect(createdWith(connections, IDS.google)).toBeUndefined()
+        expect(connections.writeSecret).not.toHaveBeenCalled()
+        expect(connections.patch).not.toHaveBeenCalled()
+    })
+
+    it("takes a new OAuth client into the connection that still waits for consent", async () => {
+        const waiting = {
+            ...recordOf(IDS.google, "google", { oauth_client_id: "old", consent: "needed" }),
+            status: "pending" as const,
+        }
+        const { service, connections } = await build({
+            rows: [waiting],
+            secrets: { [IDS.google]: JSON.stringify({ oauth_client_id: "old", oauth_client_secret: "old-secret" }) },
+        })
+
+        const seeded = await service.ensure(ACTOR, WITH_GOOGLE)
+
+        expect(seeded.at(-1)).toMatchObject({ action: "kept", consent: "needed" })
+        expect(connections.writeSecret).toHaveBeenCalledWith(IDS.google, CLIENT)
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", IDS.google, {
+            meta: { oauth_client_id: "client-id.apps.test", consent: "needed" },
+        })
+    })
+
+    it("refuses a half client by the name of the field", async () => {
+        const { service } = await build()
+
+        await expect(
+            service.ensure(ACTOR, { ...BARE, google: { id: IDS.google, clientId: "client-id.apps.test" } }),
+        ).rejects.toEqual(
+            new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field: "google" } }),
+        )
     })
 })

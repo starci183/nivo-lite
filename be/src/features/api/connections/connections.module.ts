@@ -32,6 +32,7 @@ import { StartSmtpConnectionHandler } from "./application/start-smtp-connection.
 import { SendSmtpTestHandler } from "./application/send-smtp-test.handler"
 import { ChangeSmtpPasswordHandler } from "./application/change-smtp-password.handler"
 import { SetDefaultSmtpHandler } from "./application/set-default-smtp.handler"
+import { SetLedgerSheetHandler } from "./application/set-ledger-sheet.handler"
 import { WantConnectorHandler } from "./application/want-connector.handler"
 import { ConfigurableModuleClass } from "./connections.module-definition"
 
@@ -70,6 +71,7 @@ import { ConfigurableModuleClass } from "./connections.module-definition"
         SendSmtpTestHandler,
         ChangeSmtpPasswordHandler,
         SetDefaultSmtpHandler,
+        SetLedgerSheetHandler,
         WantConnectorHandler,
     ],
 })

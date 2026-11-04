@@ -15,6 +15,8 @@ export enum GraphNodesErrorCode {
     ToolDoorMissing = "GRAPH_NODES_TOOL_DOOR_MISSING",
     /** A node called a capability tool the workspace has no connected provider for: the node turns it into a connect work item. */
     ToolNotConnected = "GRAPH_NODES_TOOL_NOT_CONNECTED",
+    /** The provider refused the workspace's connection itself (a scope never given, a 403): only the owner can cure it, so it is not retried. */
+    ToolConnectionRefused = "GRAPH_NODES_TOOL_CONNECTION_REFUSED",
     /** The NIVO MCP door refused or failed a node tool call (the reason rides in the params). */
     ToolFailed = "GRAPH_NODES_TOOL_FAILED",
 }
@@ -27,6 +29,7 @@ export const GRAPH_NODES_ERROR_KINDS: Record<GraphNodesErrorCode, ErrorKind> = {
     [GraphNodesErrorCode.ExecutorMissing]: "internal",
     [GraphNodesErrorCode.ToolDoorMissing]: "internal",
     [GraphNodesErrorCode.ToolNotConnected]: "not-found",
+    [GraphNodesErrorCode.ToolConnectionRefused]: "forbidden",
     [GraphNodesErrorCode.ToolFailed]: "unavailable",
 }
 

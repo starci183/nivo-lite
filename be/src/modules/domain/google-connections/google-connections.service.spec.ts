@@ -1,13 +1,21 @@
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
-import { DRIVE_PURPOSE, GOOGLE_CLIENT, GOOGLE_SCOPE, GoogleError, GoogleErrorCode } from "@modules/integrations/google"
+import {
+    DRIVE_PURPOSE,
+    GOOGLE_CLIENT,
+    GOOGLE_SCOPE,
+    GoogleError,
+    GoogleErrorCode,
+    SHEETS_PURPOSE,
+} from "@modules/integrations/google"
 import type { GoogleClient } from "@modules/integrations/google"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsService } from "./google-connections.service"
 import { GoogleTokensService } from "./google-tokens.service"
+import { SheetsGrantService } from "./sheets-grant.service"
 import { runRealGoogleTokens } from "@tests/fixtures/builders/google-tokens.builder"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 
@@ -45,6 +53,8 @@ const build = async () => {
     google.refreshAccessToken.mockResolvedValue(tokens)
     const drive = mock<DriveGrantService>()
     drive.complete.mockResolvedValue(undefined)
+    const sheets = mock<SheetsGrantService>()
+    sheets.complete.mockResolvedValue(undefined)
     const tokenStore = mock<GoogleTokensService>()
     runRealGoogleTokens(tokenStore, connections, google, new FakeClock(NOW))
     const moduleRef = await Test.createTestingModule({
@@ -55,9 +65,10 @@ const build = async () => {
             { provide: LOGGER, useValue: mock<Logger>() },
             { provide: GoogleTokensService, useValue: tokenStore },
             { provide: DriveGrantService, useValue: drive },
+            { provide: SheetsGrantService, useValue: sheets },
         ],
     }).compile()
-    return { service: moduleRef.get(GoogleConnectionsService), connections, google, drive }
+    return { service: moduleRef.get(GoogleConnectionsService), connections, google, drive, sheets }
 }
 
 describe("GoogleConnectionsService / authorize, state and accounts", () => {
@@ -102,10 +113,10 @@ describe("GoogleConnectionsService / authorize, state and accounts", () => {
         connections.listByProvider.mockResolvedValue([record(), record({ id: "c2", meta: {}, status: "error" })])
 
         expect(service.isConfigured()).toBe(false)
-        await expect(service.state(actor)).resolves.toEqual({ configured: false })
+        await expect(service.state(actor)).resolves.toEqual({ configured: false, consentNeeded: false })
         await expect(service.accounts(actor)).resolves.toEqual([
-            { id: "c1", email: "shop@example.test", status: "connected" },
-            { id: "c2", email: "", status: "error" },
+            { id: "c1", email: "shop@example.test", status: "connected", consentNeeded: false },
+            { id: "c2", email: "", status: "error", consentNeeded: false },
         ])
         expect(connections.authorize.mock.calls).toEqual([
             [actor, ["owner", "manager"]],
@@ -117,7 +128,66 @@ describe("GoogleConnectionsService / authorize, state and accounts", () => {
     })
 })
 
+describe("GoogleConnectionsService / the connection the seed made", () => {
+    const seeded = record({
+        id: "seeded",
+        status: "pending",
+        name: "Google",
+        meta: { oauth_client_id: "client-1", consent: "needed" },
+    })
+
+    it("says the workspace still waits for the owner to consent, and which account row it is", async () => {
+        const { service, connections } = await build()
+        connections.listByProvider.mockResolvedValue([seeded])
+
+        await expect(service.state(actor)).resolves.toEqual({ configured: true, consentNeeded: true })
+        await expect(service.accounts(actor)).resolves.toEqual([
+            { id: "seeded", email: "", status: "pending", consentNeeded: true },
+        ])
+    })
+
+    it("fills that row with the first consent, keeps its client id and marks the consent given", async () => {
+        const { service, connections } = await build()
+        connections.listByProvider.mockResolvedValue([seeded])
+        connections.readSecret.mockResolvedValue({
+            plain: JSON.stringify({ oauth_client_id: "client-1", oauth_client_secret: "never-a-token" }),
+            webhookSecret: "hook-1",
+        })
+
+        await expect(service.complete(callback())).resolves.toEqual(location("ok"))
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "seeded", {
+            name: "Google - shop@example.test",
+            status: "connected",
+            lastError: null,
+            meta: { oauth_client_id: "client-1", email: "shop@example.test", consent: "given" },
+        })
+        expect(connections.writeSecret).toHaveBeenCalledWith("seeded", JSON.stringify(issued))
+        expect(connections.create).not.toHaveBeenCalled()
+    })
+})
+
 describe("GoogleConnectionsService / complete", () => {
+    it("hands a ledger consent to the Sheets grant and answers sheets=ok", async () => {
+        const { service, google, drive, sheets } = await build()
+        google.verify.mockReturnValueOnce({ ...state, p: SHEETS_PURPOSE })
+
+        await expect(service.complete(callback())).resolves.toEqual(location("ok", undefined, "sheets"))
+        expect(sheets.complete).toHaveBeenCalledWith("ws-1", "owner-1", "consent-code")
+        expect(drive.complete).not.toHaveBeenCalled()
+        expect(google.exchangeCode).not.toHaveBeenCalled()
+    })
+
+    it("answers sheets=error without recording a failure on the connection when the ledger consent is refused", async () => {
+        const { service, google, connections } = await build()
+        google.verify.mockReturnValueOnce({ ...state, p: SHEETS_PURPOSE })
+
+        await expect(service.complete(callback({ error: "access_denied", code: undefined }))).resolves.toEqual(
+            location("error", "denied", "sheets"),
+        )
+        expect(connections.patch).not.toHaveBeenCalled()
+        expect(connections.create).not.toHaveBeenCalled()
+    })
+
     it("returns a state failure when verification returns null or throws", async () => {
         const { service, connections, google } = await build()
         google.verify.mockReturnValueOnce(null).mockImplementationOnce(() => {

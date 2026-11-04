@@ -123,3 +123,40 @@ export interface MessageInboxPoller<Item = unknown> {
     /** Classifies a failure of `fetch` so the scheduler can back off, stop on a bad credential, retry or give up. */
     classify(error: unknown): PollFailure
 }
+
+/** How a ledger entry stands: the payment it records was received, or the entry takes an earlier one back. */
+export type LedgerEntryStatus = "paid" | "void"
+
+/** One line of the business ledger in the domain's words; the provider decides where it goes and how it is laid out. */
+export interface LedgerEntry {
+    /** The day the money was received, `YYYY-MM-DD`. */
+    readonly date: string
+    /** The order the payment is for. */
+    readonly orderNo: string
+    /** The customer. */
+    readonly customer: string
+    /** The amount in VND. */
+    readonly amountVnd: number
+    /** The bank transaction that paid: the one key of an entry. */
+    readonly transactionId: string
+    /** Received or taken back. */
+    readonly status: LedgerEntryStatus
+    /** A free note. */
+    readonly note: string
+}
+
+/**
+ * A provider that keeps the business ledger of a workspace (a Google sheet today; Excel or an accounting tool later). It only ever adds:
+ * an entry is never changed or removed, and nothing it holds is read back into a decision. A failure of the provider itself (a timeout, a
+ * 5xx, a 429) is thrown as it is and tried again; a refused connection is `LedgerConnectionRefusedError`.
+ */
+export interface LedgerPort {
+    /** The provider key of the connections it writes through. */
+    readonly provider: string
+    /** True when the workspace connected this provider and told it where to write. */
+    ready(workspaceId: string): Promise<boolean>
+    /** Adds one entry and answers the provider's reference to it; undefined when the workspace has nothing connected for it. */
+    append(workspaceId: string, entry: LedgerEntry): Promise<string | undefined>
+    /** Adds the void entry of a transaction and answers the reference; undefined when the workspace has nothing connected for it. */
+    void(workspaceId: string, transactionId: string): Promise<string | undefined>
+}

@@ -46,7 +46,20 @@ export interface SeedPayos {
     readonly checksumKey?: string | undefined
 }
 
-/** The four connections of a seeded workspace. */
+/**
+ * The Google OAuth client of a seeded workspace. Both values or none: with none no Google connection is seeded. Google issues the
+ * tokens only to the owner who consents, so the seeded connection waits for that consent and never holds a token before it.
+ */
+export interface SeedGoogle {
+    /** The id the connection keeps in every environment. */
+    readonly id: string
+    /** The OAuth client id. */
+    readonly clientId?: string | undefined
+    /** The OAuth client secret. */
+    readonly clientSecret?: string | undefined
+}
+
+/** The connections of a seeded workspace. */
 export interface ChannelSeed {
     /** The Telegram bot. */
     readonly telegram: SeedTelegram
@@ -56,16 +69,20 @@ export interface ChannelSeed {
     readonly sepay: SeedSepay
     /** The payOS feed. */
     readonly payos: SeedPayos
+    /** The Google account connection; absent or without its OAuth client, none is seeded. */
+    readonly google?: SeedGoogle | undefined
 }
 
 /** What one seeded connection ended as; never a value. */
 export interface SeededConnection {
     /** The provider. */
-    readonly provider: "telegram" | "zalo_oa" | "sepay" | "payos"
+    readonly provider: "telegram" | "zalo_oa" | "sepay" | "payos" | "google"
     /** The connection id. */
     readonly id: string
     /** Whether the row was made now or already existed. */
     readonly action: "created" | "kept"
     /** Whether the connection holds its credentials or still misses them. */
     readonly credentials: "saved" | "missing"
+    /** For a Google connection only: `needed` until the owner has consented once, `given` after. */
+    readonly consent?: "needed" | "given"
 }

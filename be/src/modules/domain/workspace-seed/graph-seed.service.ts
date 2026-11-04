@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
 import {
@@ -18,14 +19,17 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { CONNECTION_BINDINGS, readGraphSpecs } from "./graph-seed.policy"
 import { ProfileActivationService } from "./profile-activation.service"
-import { InjectSeedAgents, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
+import { InjectSeedAgents, InjectSeedToolGrants, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
 import type { WorkspaceSeedOptions } from "./workspace-seed.options"
-import type { SeedAgentRecords } from "./workspace-seed.port"
+import type { SeedAgentRecords, SeedToolGrants } from "./workspace-seed.port"
 
 /** The language the agents and installations seeded here are named in, as the profile seed names them. */
 const SEED_LOCALE = "vi"
 /** The most workspaces looked through for the named one. */
 const WORKSPACE_SCAN_LIMIT = 1000
+
+/** The tools of the ledger copy the seed grants `auto` to the agent whose graph declares them; no other tool is granted by the seed. */
+const LEDGER_SEED_TOOLS: ReadonlySet<string> = new Set(["ledger.append", "ledger.void"])
 
 /** The installation that runs a module's graph, with the agent it drives. */
 interface Seat {
@@ -54,6 +58,7 @@ export class GraphSeedService {
         private readonly flows: AgentGraphFlowService,
         private readonly bindings: AgentBindingsService,
         private readonly tagGrants: ModuleTagGrantsService,
+        @InjectSeedToolGrants() private readonly toolGrants: SeedToolGrants,
     ) {}
 
     /** Seeds every graph of the envelope read from `text` into the workspace named `workspaceName`; a refused graph stops the run. */
@@ -67,6 +72,7 @@ export class GraphSeedService {
             const { installation, agentId } = await this.seatOf(workspaceId, module)
             // Before the fast path: an agent seeded by an earlier run, or before tag rights existed, gets them on any rerun.
             await this.tagGrants.grantFor(workspaceId, module.key, agentId)
+            await this.grantTools(workspaceId, agentId, spec)
             if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
                 this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
                 continue
@@ -91,6 +97,18 @@ export class GraphSeedService {
                 `${module.key} agent ${agentId} ${statuses[module.agent.handle] ?? "unknown"}, graph ${published}, ${bound} connections assigned`,
             )
         }
+    }
+
+    /**
+     * Gives the agent an `auto` gateway grant for the ledger tools its graph declares, when it has none: the ledger copy is written by
+     * the graph without a person. Every other tool the graph declares keeps its behaviour, and a grant that exists (a mode the owner set
+     * in the console) is never touched, so a rerun of the seed changes nothing.
+     */
+    private async grantTools(workspaceId: string, agentId: string, spec: GraphSpec): Promise<void> {
+        const tools = spec.grant.tools.filter((tool) => LEDGER_SEED_TOOLS.has(tool))
+        await this.toolGrants.insertMissing(
+            tools.map((tool) => ({ workspaceId, agentId, tool, mode: "auto", limitVnd: null, constraints: [] })),
+        )
     }
 
     /**

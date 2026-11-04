@@ -1,4 +1,6 @@
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { accountingLedgerAppendNode } from "./accounting/ledger-append.node"
+import { accountingLedgerReadyNode } from "./accounting/ledger-ready.node"
 import { coreHandoffNode } from "./core/handoff.node"
 import { raiseWorkItemNode } from "./core/raise-work-item.node"
 import { coreReplyNode } from "./core/reply.node"
@@ -35,4 +37,6 @@ export const coreNodes: ReadonlyArray<NodeDefinition> = [
     raiseWorkItemNode,
     paymentRequestNode,
     ...paymentNodes,
+    accountingLedgerReadyNode,
+    accountingLedgerAppendNode,
 ]

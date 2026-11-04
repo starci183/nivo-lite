@@ -5,6 +5,7 @@ import {
     BankFeedPollerRegistry,
     BankTransactionsRegistry,
     FeedWebhookRegistry,
+    LedgerRegistry,
     MessageInboxPollerRegistry,
     PaymentInstructionRegistry,
 } from "./provider-registries.service"
@@ -20,6 +21,7 @@ export class ProviderRegistryModule extends ConfigurableModuleClass {
             PaymentInstructionRegistry,
             BankTransactionsRegistry,
             FeedWebhookRegistry,
+            LedgerRegistry,
             MessageInboxPollerRegistry,
         ]
         return { ...base, providers: [...(base.providers ?? []), ...registries], exports: registries }

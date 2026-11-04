@@ -9,6 +9,8 @@ export const GRAPH_NODES_MESSAGES: MessageBundle = {
         "errors.GRAPH_NODES_EXECUTOR_MISSING": "Chưa có nơi thực hiện việc {{effect}}.",
         "errors.GRAPH_NODES_TOOL_DOOR_MISSING": "Chưa kết nối cổng công cụ NIVO để gọi {{tool}}.",
         "errors.GRAPH_NODES_TOOL_NOT_CONNECTED": "Workspace chưa kết nối nhà cung cấp cho {{tool}}.",
+        "errors.GRAPH_NODES_TOOL_CONNECTION_REFUSED":
+            "Nhà cung cấp từ chối kết nối của workspace cho {{tool}}; chủ workspace cần kết nối lại.",
         "errors.GRAPH_NODES_TOOL_FAILED": "Công cụ {{tool}} không chạy được: {{reason}}.",
     },
     en: {
@@ -18,6 +20,8 @@ export const GRAPH_NODES_MESSAGES: MessageBundle = {
         "errors.GRAPH_NODES_EXECUTOR_MISSING": "Nothing performs {{effect}} yet.",
         "errors.GRAPH_NODES_TOOL_DOOR_MISSING": "The NIVO tool door is not connected, so {{tool}} cannot be called.",
         "errors.GRAPH_NODES_TOOL_NOT_CONNECTED": "The workspace has no connected provider for {{tool}}.",
+        "errors.GRAPH_NODES_TOOL_CONNECTION_REFUSED":
+            "The provider refused the workspace's connection for {{tool}}; the owner has to connect it again.",
         "errors.GRAPH_NODES_TOOL_FAILED": "The tool {{tool}} could not run: {{reason}}.",
     },
 }

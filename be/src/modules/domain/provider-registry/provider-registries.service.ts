@@ -4,6 +4,7 @@ import type {
     BankFeedPoller,
     BankTransactionsPort,
     FeedWebhookPort,
+    LedgerPort,
     MessageInboxPoller,
     PaymentInstructionPort,
 } from "./provider-ports.contracts"
@@ -27,3 +28,7 @@ export class FeedWebhookRegistry extends ProviderRegistry<FeedWebhookPort> {}
 @Injectable()
 /** The messaging providers whose inbox can be read back to catch the customer messages the webhook never delivered. */
 export class MessageInboxPollerRegistry extends ProviderRegistry<MessageInboxPoller> {}
+
+@Injectable()
+/** The providers that keep the business ledger of a workspace. */
+export class LedgerRegistry extends ProviderRegistry<LedgerPort> {}

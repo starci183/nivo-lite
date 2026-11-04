@@ -7,6 +7,7 @@ import {
     GOOGLE_SCOPE,
     InjectGoogleClient,
     isConsentFailure,
+    SHEETS_PURPOSE,
     safeReturnTo,
     withResult,
 } from "@modules/integrations/google"
@@ -25,6 +26,8 @@ import type {
 import { GoogleConnectionsLogEvent } from "./google-connections.log-events"
 import { GoogleTokensService } from "./google-tokens.service"
 import { CONSENT_PREFIX, consentFailureOf, deniedReason, storeFailureReason } from "./policies/consent-reason.policy"
+import { consentRowOf, consentedMeta } from "./policies/ledger-sheet.policy"
+import { SheetsGrantService } from "./sheets-grant.service"
 
 const OWNER = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
@@ -33,17 +36,30 @@ interface ConsentOutcome {
     readonly returnTo: string
     readonly result: "ok" | "error"
     readonly reason?: string
-    readonly drive: boolean
+    readonly key: "google" | "drive" | "sheets"
+}
+
+/** The grant a signed state asks for: the Sheets connection has no purpose. */
+const keyOf = (purpose: string | undefined): ConsentOutcome["key"] => {
+    if (purpose === DRIVE_PURPOSE) return "drive"
+    return purpose === SHEETS_PURPOSE ? "sheets" : "google"
 }
 
 const isLive = (connection: ConnectionRecord): boolean => connection.status !== "disconnected"
+
+/** True for the connection the seed made: it holds no token until the owner consents once. */
+const waitsForConsent = (connection: ConnectionRecord): boolean =>
+    connection.status === "pending" && connection.meta.consent === "needed"
 
 @Injectable()
 /**
  * The Google connections of a workspace: the consent and the stored tokens (kept sealed, refreshed shortly before they expire).
  * A workspace may connect several Google accounts; the same account re-consenting updates its connection.
  * last_error carries the reason: "consent:<code>" when Google refused the consent, "invalid_grant" when the refresh token was revoked.
- * The same callback finishes the Drive read grant (purpose drive_read in the signed state), which the DriveGrantService stores.
+ * The same callback finishes the Drive read grant (purpose drive_read in the signed state), which the DriveGrantService stores, and the
+ * ledger grant (purpose sheets_ledger), which the SheetsGrantService stores.
+ * A connection the workspace seed made waits for the owner first consent (meta.consent "needed", status pending, no token) and is the
+ * row that consent fills.
  */
 export class GoogleConnectionsService {
     constructor(
@@ -52,6 +68,7 @@ export class GoogleConnectionsService {
         @InjectLogger() private readonly logger: Logger,
         private readonly tokens: GoogleTokensService,
         private readonly drive: DriveGrantService,
+        private readonly sheets: SheetsGrantService,
     ) {}
 
     /** True when Google can be used on this deployment. */
@@ -68,7 +85,8 @@ export class GoogleConnectionsService {
     /** Whether Google can be used on this deployment (owner or manager). */
     async state(actor: ConnectionActor): Promise<GoogleSetup> {
         await this.connections.authorize(actor, MANAGER)
-        return { configured: this.google.isConfigured() }
+        const rows = await this.connections.listByProvider(actor.workspaceId, "google", { includeDisconnected: false })
+        return { configured: this.google.isConfigured(), consentNeeded: rows.some(waitsForConsent) }
     }
 
     /** The live Google accounts of the workspace, for an automation account picker (owner or manager). */
@@ -80,7 +98,12 @@ export class GoogleConnectionsService {
     /** The live Google accounts of a workspace, oldest first, for a caller that already checked the person. */
     async accountsOf(workspaceId: string): Promise<ReadonlyArray<GoogleConnectionAccount>> {
         const rows = await this.connections.listByProvider(workspaceId, "google", { includeDisconnected: false })
-        return rows.map((row) => ({ id: row.id, email: row.meta.email ?? "", status: row.status }))
+        return rows.map((row) => ({
+            id: row.id,
+            email: row.meta.email ?? "",
+            status: row.status,
+            consentNeeded: waitsForConsent(row),
+        }))
     }
 
     /**
@@ -89,19 +112,19 @@ export class GoogleConnectionsService {
      */
     async complete(input: GoogleCallbackInput): Promise<GoogleCallbackResult> {
         const outcome = await this.finish(input)
-        const path = withResult(outcome.returnTo, outcome.result, outcome.reason, outcome.drive ? "drive" : "google")
+        const path = withResult(outcome.returnTo, outcome.result, outcome.reason, outcome.key)
         return { location: `${this.connections.siteBase()}${path}` }
     }
 
     private async finish(input: GoogleCallbackInput): Promise<ConsentOutcome> {
         const state = this.safeVerify(input.state)
-        if (state === null) return { returnTo: "/connections", result: "error", reason: "state", drive: false }
+        if (state === null) return { returnTo: "/connections", result: "error", reason: "state", key: "google" }
         const returnTo = safeReturnTo(state.r)
-        const drive = state.p === DRIVE_PURPOSE
+        const key = keyOf(state.p)
         const back = (result: "ok" | "error", reason?: string): ConsentOutcome => ({
             returnTo,
             result,
-            drive,
+            key,
             ...(reason === undefined ? {} : { reason }),
         })
         if (!this.google.isConfigured()) return back("error", "unavailable")
@@ -113,20 +136,26 @@ export class GoogleConnectionsService {
             return back("error", "forbidden")
         }
         if (input.error) {
-            if (!drive) await this.tryRecordFailure(state, input.error)
+            if (key === "google") await this.tryRecordFailure(state, input.error)
             return back("error", deniedReason(input.error))
         }
         if (!input.code) return back("error", "failed")
         try {
-            if (drive) await this.drive.complete(state.w, state.u, input.code)
-            else await this.connect(state.w, state.u, input.code)
+            await this.store(key, state, input.code)
             return back("ok")
         } catch (cause) {
-            this.logger.error(GoogleConnectionsLogEvent.ConsentFailed, cause, { workspaceId: state.w, drive })
+            this.logger.error(GoogleConnectionsLogEvent.ConsentFailed, cause, { workspaceId: state.w, grant: key })
             const consent = consentFailureOf(cause)
-            if (consent !== "" && !drive) await this.tryRecordFailure(state, consent)
+            if (consent !== "" && key === "google") await this.tryRecordFailure(state, consent)
             return back("error", storeFailureReason(cause))
         }
+    }
+
+    /** Hands the consent code to the grant the state asked for. */
+    private async store(key: ConsentOutcome["key"], state: OAuthState, code: string): Promise<void> {
+        if (key === "drive") await this.drive.complete(state.w, state.u, code)
+        else if (key === "sheets") await this.sheets.complete(state.w, state.u, code)
+        else await this.connect(state.w, state.u, code)
     }
 
     /** Exchanges a consent code and stores the Sheets connection of the account. */
@@ -134,7 +163,7 @@ export class GoogleConnectionsService {
         const tokens = await this.google.exchangeCode(code)
         const email = await this.google.accountEmail(tokens)
         const rows = await this.connections.listByProvider(workspaceId, "google", { includeDisconnected: false })
-        const row = this.consentRowOf(rows, email)
+        const row = consentRowOf(rows, email)
         const refresh = await this.tokens.keptRefresh(row, tokens.renewalToken)
         if (!refresh) throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Missing })
         await this.tokens.save({
@@ -143,19 +172,9 @@ export class GoogleConnectionsService {
             row,
             provider: "google",
             name: email === null ? "Google" : `Google - ${email}`,
-            meta: { ...row?.meta, email: email ?? row?.meta.email ?? "" },
+            meta: consentedMeta(row?.meta, email ?? row?.meta.email ?? ""),
             tokens: { access_token: tokens.accessToken, renewal_token: refresh, expires_at: tokens.expiresAt },
         })
-    }
-
-    /**
-     * The connection a consent updates: the same Google account (same email) re-consenting updates its connection, another account
-     * becomes another connection, and a row left by a refused consent is reused for the first account.
-     */
-    private consentRowOf(rows: ReadonlyArray<ConnectionRecord>, email: string | null): ConnectionRecord | null {
-        const sameAccount = email === null ? undefined : rows.find((row) => row.meta.email === email)
-        if (sameAccount) return sameAccount
-        return rows.find((row) => row.status === "error" && (row.lastError ?? "").startsWith(CONSENT_PREFIX)) ?? null
     }
 
     private safeVerify(value: string | undefined): OAuthState | null {

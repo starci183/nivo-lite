@@ -15,6 +15,13 @@ const ACTOR = { principalId: "owner-1", workspaceId: "ws-1" }
 const SEEDED: ReadonlyArray<SeededConnection> = [
     { provider: "telegram", id: MANAGEMENT_CONNECTION_IDS.telegram, action: "created", credentials: "saved" },
     { provider: "sepay", id: MANAGEMENT_CONNECTION_IDS.sepay, action: "kept", credentials: "missing" },
+    {
+        provider: "google",
+        id: MANAGEMENT_CONNECTION_IDS.google,
+        action: "created",
+        credentials: "saved",
+        consent: "needed",
+    },
 ]
 const SMTP_VALUES = {
     WORKSPACE_OWNER_EMAIL: "owner@nivo.test",
@@ -99,6 +106,7 @@ describe("ManagementSeedService > a production document", () => {
             "management workspace ws-1",
             `telegram connection ${MANAGEMENT_CONNECTION_IDS.telegram} created, credentials saved`,
             `sepay connection ${MANAGEMENT_CONNECTION_IDS.sepay} kept, credentials missing`,
+            `google connection ${MANAGEMENT_CONNECTION_IDS.google} created, credentials saved, owner consent needed`,
             "smtp connection smtp-2 created, pending its test email",
         ])
         expect(print.mock.calls.flat().join("\n")).not.toContain("mail-pass-1")

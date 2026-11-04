@@ -109,7 +109,11 @@
         ]
       }
     ],
-    "tools": [],
+    "tools": [
+      "ledger.append",
+      "ledger.void",
+      "ledger.status"
+    ],
     "effects": [
       "payment.mark-paid",
       "channel.send",
@@ -189,7 +193,8 @@
         "reasons": {
           "$ref": "match-code.reasons"
         }
-      }
+      },
+      "next": "ledger-ready-code"
     },
     {
       "key": "settle-ask",
@@ -258,7 +263,8 @@
         "reasons": {
           "$ref": "judge.reasons"
         }
-      }
+      },
+      "next": "ledger-ready-judged"
     },
     {
       "key": "raise-ambiguous",
@@ -294,6 +300,72 @@
           "$ref": "evidence.claimId"
         },
         "timedOut": false
+      }
+    },
+    {
+      "key": "ledger-ready-code",
+      "kind": "condition",
+      "step": "accounting.ledger-ready",
+      "input": {
+        "result": {
+          "$ref": "settle-code.result"
+        }
+      },
+      "routes": {
+        "record": "ledger-code",
+        "skip": "end"
+      }
+    },
+    {
+      "key": "ledger-code",
+      "kind": "output",
+      "step": "accounting.ledger-append",
+      "params": {
+        "reconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán"
+      },
+      "input": {
+        "transactionId": {
+          "$ref": "evidence.transactionId"
+        },
+        "orderId": {
+          "$ref": "settle-code.orderId"
+        },
+        "result": {
+          "$ref": "settle-code.result"
+        }
+      }
+    },
+    {
+      "key": "ledger-ready-judged",
+      "kind": "condition",
+      "step": "accounting.ledger-ready",
+      "input": {
+        "result": {
+          "$ref": "settle-judged.result"
+        }
+      },
+      "routes": {
+        "record": "ledger-judged",
+        "skip": "end"
+      }
+    },
+    {
+      "key": "ledger-judged",
+      "kind": "output",
+      "step": "accounting.ledger-append",
+      "params": {
+        "reconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán"
+      },
+      "input": {
+        "transactionId": {
+          "$ref": "evidence.transactionId"
+        },
+        "orderId": {
+          "$ref": "settle-judged.orderId"
+        },
+        "result": {
+          "$ref": "settle-judged.result"
+        }
       }
     },
     {

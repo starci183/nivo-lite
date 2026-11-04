@@ -77,6 +77,11 @@ export const readManagementSeed = (document: unknown): ManagementSeed => {
                 apiKey: values.WORKSPACE_PAYOS_API_KEY,
                 checksumKey: values.WORKSPACE_PAYOS_CHECKSUM_KEY,
             },
+            google: {
+                id: MANAGEMENT_CONNECTION_IDS.google,
+                clientId: values.WORKSPACE_GOOGLE_OAUTH_CLIENT_ID,
+                clientSecret: values.WORKSPACE_GOOGLE_OAUTH_CLIENT_SECRET,
+            },
         },
     }
 }

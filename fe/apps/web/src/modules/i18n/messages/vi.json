@@ -2545,7 +2545,21 @@
     "failUnavailable": "NIVO chưa bật tích hợp Google. Bạn vui lòng thử lại sau.",
     "failState": "Liên kết kết nối đã hết hạn. Hãy bấm Kết nối Google lại.",
     "failGeneric": "Có lỗi khi kết nối. Hãy bấm Kết nối Google lại.",
-    "failNoRefresh": "Google chưa cấp quyền lâu dài. Hãy bấm Kết nối Google lại và đồng ý mọi quyền."
+    "failNoRefresh": "Google chưa cấp quyền lâu dài. Hãy bấm Kết nối Google lại và đồng ý mọi quyền.",
+    "failScope": "Bạn chưa tick quyền Google Sheets. Hãy bấm Cho phép Google Sheets lại và tick quyền đó.",
+    "consentNeeded": "NIVO đã chuẩn bị Google cho workspace này. Hãy bấm Kết nối Google một lần để đồng ý; trước đó NIVO không ghi gì lên Google.",
+    "ledgerTitle": "Sổ cái trên Google Sheets",
+    "ledgerBody": "Mỗi khoản thanh toán đã chốt, NIVO thêm một dòng vào bảng tính bạn chọn. Bảng tính chỉ là bản sao: chỉ thêm dòng, NIVO không đọc hay sửa những gì đã có trong đó.",
+    "ledgerNone": "NIVO chưa được phép ghi vào Google Sheets của bạn.",
+    "ledgerGranted": "Quyền do {email} cấp. Hãy chọn bảng tính bên dưới.",
+    "ledgerReady": "Đang ghi vào bảng tính bằng quyền của {email}.",
+    "ledgerLost": "Google đã thu hồi quyền. Hãy cho phép Google Sheets lại.",
+    "ledgerAllow": "Cho phép Google Sheets",
+    "ledgerSheetLabel": "Bảng tính sổ cái (liên kết hoặc mã)",
+    "ledgerSheetHint": "NIVO ghi bằng tài khoản Google đã cấp quyền, nên hãy dùng bảng tính mà tài khoản đó sửa được. Nên dùng bảng tính trống: NIVO ghi dòng tiêu đề trước.",
+    "ledgerSave": "Dùng bảng tính này",
+    "ledgerSaved": "Đã lưu bảng tính sổ cái.",
+    "ledgerAccessOk": "Đã cấp quyền Google Sheets. Hãy chọn bảng tính bên dưới."
   },
   "governance": {
     "dept_chatbot": "Chatbot AI",

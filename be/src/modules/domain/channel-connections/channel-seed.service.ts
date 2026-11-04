@@ -9,13 +9,22 @@ import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
 import type {
     ChannelSeed,
+    SeedGoogle,
     SeedPayos,
     SeededConnection,
     SeedSepay,
     SeedTelegram,
     SeedZaloOa,
 } from "./channel-seed.contracts"
-import { bankFactsOf, filled, invalidSeed, issuedOf, payosKeysOf, sepayKeyOf } from "./channel-seed.policy"
+import {
+    bankFactsOf,
+    filled,
+    googleClientOf,
+    invalidSeed,
+    issuedOf,
+    payosKeysOf,
+    sepayKeyOf,
+} from "./channel-seed.policy"
 import { isTelegramToken, isZaloAppId, sepayFeedSecret } from "./money-provider.policy"
 import { parseZaloSecret } from "./zalo-secret.policy"
 
@@ -72,14 +81,46 @@ export class ChannelSeedService {
         @InjectEventBus() private readonly bus: EventBus,
     ) {}
 
-    /** Ensures the four connections of the workspace of `actor`; answers what each ended as, never a value. */
+    /** Ensures the connections of the workspace of `actor`; answers what each ended as, never a value. */
     async ensure(actor: ConnectionActor, seed: ChannelSeed): Promise<ReadonlyArray<SeededConnection>> {
-        return [
+        const seeded = [
             await this.telegram(actor, seed.telegram),
             await this.zaloOa(actor, seed.zaloOa),
             await this.sepay(actor, seed.sepay),
             await this.payos(actor, seed.payos),
         ]
+        const google = await this.google(actor, seed.google)
+        return google === undefined ? seeded : [...seeded, google]
+    }
+
+    /**
+     * The Google connection, only when the OAuth client is given. It is made pending with `consent: needed` in its public facts and
+     * no token: Google issues the tokens to the owner's consent alone. A connection that already consented keeps its tokens.
+     */
+    private async google(actor: ConnectionActor, seed: SeedGoogle | undefined): Promise<SeededConnection | undefined> {
+        const client = googleClientOf(seed)
+        if (seed === undefined || client === undefined) return undefined
+        const plain = JSON.stringify({ oauth_client_id: client.clientId, oauth_client_secret: client.clientSecret })
+        const found = await this.connections.find(actor.workspaceId, seed.id)
+        if (found === null) {
+            await this.create(actor, {
+                id: seed.id,
+                provider: "google",
+                name: "Google",
+                meta: { oauth_client_id: client.clientId, consent: "needed" },
+                plain,
+                webhookSecret: randomSecret(),
+            })
+        } else if (found.status === "pending") {
+            if ((await this.storedOf(seed.id)) !== plain) await this.connections.writeSecret(seed.id, plain)
+            if (found.meta.oauth_client_id !== client.clientId) {
+                await this.connections.patch(actor.workspaceId, seed.id, {
+                    meta: { ...found.meta, oauth_client_id: client.clientId, consent: "needed" },
+                })
+            }
+        }
+        const consent = found?.status === "connected" ? "given" : "needed"
+        return { ...outcomeOf("google", seed.id, found, true), consent }
     }
 
     private async telegram(actor: ConnectionActor, seed: SeedTelegram): Promise<SeededConnection> {

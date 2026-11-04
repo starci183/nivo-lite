@@ -79,6 +79,8 @@ export interface SeedToolGrant {
 export interface SeedToolGrants {
     /** Inserts or updates every grant (key: agent and tool); answers the count written. */
     upsert(grants: ReadonlyArray<SeedToolGrant>): Promise<number>
+    /** Creates the grants that are missing and leaves every existing one as it is; answers the count created. */
+    insertMissing(grants: ReadonlyArray<SeedToolGrant>): Promise<number>
 }
 
 /** Who writes as the workspace owner in the gateway console. */
