@@ -83,6 +83,12 @@ export const runRowOf: (overrides?: Partial<AgentRunEntity>) => AgentRunEntity =
     errorCode: null,
     deadLetteredAt: null,
     finishedAt: null,
+    parkedBuild: null,
+    resumeAttempts: 0,
+    resumeNotBefore: null,
+    resumedAt: null,
+    resumedBy: null,
+    resumeReason: null,
     createdAt: WHEN,
     updatedAt: WHEN,
 })
