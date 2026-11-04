@@ -72,7 +72,7 @@ const FTYP_MARK: ReadonlyArray<number> = [0x66, 0x74, 0x79, 0x70]
 const FTYP_OFFSET = 4
 const BRAND_OFFSET = 8
 const BRAND_LENGTH = 4
-const MODERN_IMAGE_BRANDS: ReadonlyArray<string> = [
+const MODERN_IMAGE_BRANDS: ReadonlySet<string> = new Set([
     "heic",
     "heix",
     "hevc",
@@ -83,14 +83,14 @@ const MODERN_IMAGE_BRANDS: ReadonlyArray<string> = [
     "msf1",
     "avif",
     "avis",
-]
+])
 
 /** A picture format the bytes prove that the store does not accept (GIF, HEIC, HEIF, AVIF), or null for anything else. */
 export const sniffUnsupportedImage = (bytes: Uint8Array): string | null => {
     if (GIF_SIGNATURES.some((signature) => startsWith(bytes, signature))) return "image/gif"
     if (!startsWith(bytes, FTYP_MARK, FTYP_OFFSET)) return null
     const brand = String.fromCharCode(...bytes.slice(BRAND_OFFSET, BRAND_OFFSET + BRAND_LENGTH))
-    return MODERN_IMAGE_BRANDS.includes(brand) ? "image/heif" : null
+    return MODERN_IMAGE_BRANDS.has(brand) ? "image/heif" : null
 }
 
 /** The files of one message among those of a thread. */
