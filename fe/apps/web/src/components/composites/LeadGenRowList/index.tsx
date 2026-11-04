@@ -55,6 +55,7 @@ const leadGenItemOf = (row: LeadGenRow, isLoading: boolean): ListRowData => {
         id: row.id,
         title: row.title,
         description: row.description,
+        leading: { avatar: { name: row.title, seed: row.id } },
         ...(row.href === null ? {} : { href: row.href }),
         ...(badges === undefined ? {} : { badges }),
         detail:
