@@ -1,6 +1,6 @@
 export { canonicalJson, hashOfPackage } from "./canonical"
 export { leavesOf, withLeafValue } from "./condition"
-export { TEMPLATE_FORMAT, TEMPLATE_KEY_PATTERN, MAX_PARAMETERS } from "./format.types"
+export { TEMPLATE_FORMAT, TEMPLATE_KEY_PATTERN, MAX_PARAMETERS } from "./format"
 export type {
     AgentTemplatePackage,
     InstalledTemplate,

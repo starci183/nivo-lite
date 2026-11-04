@@ -65,20 +65,6 @@ export class EnvSource {
         return value
     }
 
-    /**
-     * The declared comma-separated bare domains (each as `optionalDomain` admits it), lower-cased, in order; an empty list when the key is
-     * not declared. Any entry that is not a bare domain is a boot failure.
-     */
-    domains(key: string): ReadonlyArray<string> {
-        const entries = (this.optional(key) ?? "")
-            .split(",")
-            .map((entry) => entry.trim().toLowerCase())
-            .filter((entry) => entry !== "")
-        if (entries.some((entry) => !BARE_DOMAIN_PATTERN.test(entry)))
-            throw new ConfigError({ code: ConfigErrorCode.KeyInvalid, params: { key } })
-        return entries
-    }
-
     /** A required string. */
     string(key: string): string {
         const value = this.values[key]

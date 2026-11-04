@@ -1,6 +1,6 @@
 import { hashOfPackage } from "./canonical"
 import { leavesOf } from "./condition"
-import { TEMPLATE_FORMAT } from "./format.types"
+import { TEMPLATE_FORMAT } from "./format"
 import type {
     AgentTemplatePackage,
     PackageDraft,
