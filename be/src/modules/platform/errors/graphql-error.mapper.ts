@@ -3,11 +3,16 @@ import type { GraphQLFormattedError } from "graphql"
 import type { ErrorDescription, FailureSite } from "./errors.contracts"
 import type { ErrorsService } from "./errors.service"
 
+/**
+ * The error a GraphQL error stands for: its original error, followed through the wrappers the server adds (Apollo wraps a validation
+ * failure of graphql-js in a GraphQLError of its own), so a malformed operation stays a GraphQLError with no original error.
+ */
+const innermostOf = (error: unknown): unknown =>
+    error instanceof GraphQLError && error.originalError !== undefined ? innermostOf(error.originalError) : error
+
 const describeGraphqlFailure = (errors: ErrorsService, error: unknown, site: FailureSite): ErrorDescription => {
-    if (error instanceof GraphQLError) {
-        return error.originalError ? errors.describe(error.originalError, site) : errors.describeInvalidOperation()
-    }
-    return errors.describe(error, site)
+    const inner = innermostOf(error)
+    return inner instanceof GraphQLError ? errors.describeInvalidOperation() : errors.describe(inner, site)
 }
 
 /**

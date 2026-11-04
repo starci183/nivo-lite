@@ -48,6 +48,25 @@ describe("formatGraphqlError", () => {
         })
         expect(errors.describe).toHaveBeenCalledWith(original, expect.objectContaining({ scope: "graphql" }))
     })
+    it("describes a malformed operation the server wrapped in a GraphQL error of its own, not an internal failure", async () => {
+        const subject = await build()
+
+        const errors = mock<ErrorsService>()
+        const invalid: ErrorDescription = { code: "ERRORS_OPERATION_INVALID", kind: "invalid", status: 400, params: {} }
+        errors.describeInvalidOperation.mockReturnValue(invalid)
+        const validation = new GraphQLError(
+            'Field "setMcpToolGrant" must not have a selection since type "Boolean!" has no subfields.',
+        )
+        const wrapped = new GraphQLError(validation.message, { originalError: validation })
+
+        expect(subject.formatGraphqlError(errors, formatted, wrapped).extensions).toEqual({
+            code: "ERRORS_OPERATION_INVALID",
+            kind: "invalid",
+            params: {},
+        })
+        expect(errors.describe).not.toHaveBeenCalled()
+    })
+
     it("describes a malformed operation when the GraphQL error has no original error", async () => {
         const subject = await build()
 
