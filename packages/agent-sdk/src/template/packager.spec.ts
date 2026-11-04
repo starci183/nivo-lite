@@ -143,7 +143,7 @@ describe("previewPackage: the last scan", () => {
 
     it("scans the starter knowledge and the persona too", () => {
         const draft = draftOf({
-            starterKnowledge: [{ title: "Liên hệ", body: "Gọi anh Nam qua nam@shop.vn" }],
+            starterKnowledge: [{ title: "Lien he", body: "Goi anh Nam qua nam@shop.vn" }],
         })
 
         expect(previewPackage(leakyGraph(), draft).package).toBeNull()

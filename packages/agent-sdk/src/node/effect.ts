@@ -21,7 +21,9 @@ export const defineEffect = <P extends z.ZodType>(config: EffectConfig<P>): Effe
 }
 
 /** Defines a NIVO MCP tool a node may call. Throws `SdkDefinitionError` (`ID_MALFORMED`) at module load. */
-export const defineTool = <A extends z.ZodType, R extends z.ZodType>(config: ToolConfig<A, R>): ToolDefinition<A, R> => {
+export const defineTool = <A extends z.ZodType, R extends z.ZodType>(
+    config: ToolConfig<A, R>,
+): ToolDefinition<A, R> => {
     assertNamespaced(config.id)
     return { ...config, entry: "tool" }
 }

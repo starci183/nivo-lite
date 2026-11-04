@@ -46,7 +46,7 @@ export const resolveValues = (parameters: ReadonlyArray<TemplateParameter>, give
 }
 
 const fill = (text: string, values: ParameterValues, max: number): string => {
-    const filled = text.replace(/\{\{([a-z][a-zA-Z0-9_]*)\}\}/g, (whole, key: string) => {
+    const filled = text.replace(/\{\{([a-z]\w*)\}\}/g, (whole, key: string) => {
         const value = values[key]
         return value === undefined ? whole : String(value)
     })
@@ -75,14 +75,15 @@ const branchWith = (
             ? withLeafValue(when, binding.termIndex, value)
             : when
     }, branch.when)
-    const wait = bound
-        .flatMap((binding) => (binding.target === "branch_timeout" ? [numbers(binding)] : []))
-        .find((value) => value !== null)
+    const [wait] = bound.flatMap((binding) => {
+        const value = numbers(binding)
+        return binding.target === "branch_timeout" && value !== null ? [value] : []
+    })
     return {
         ...branch,
         when: valued,
         approver:
-            branch.approver === null || wait === undefined || wait === null
+            branch.approver === null || wait === undefined
                 ? branch.approver
                 : { ...branch.approver, timeoutMinutes: Math.max(1, Math.round(wait)) },
     }

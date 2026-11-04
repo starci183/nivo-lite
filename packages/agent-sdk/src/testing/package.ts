@@ -1,3 +1,4 @@
+import { SdkDefinitionError } from "../block/definition-error"
 import { previewPackage } from "../template/packager"
 import type { AgentTemplatePackage, PackageDraft, TemplateParameter } from "../template/format.types"
 import type { GraphDocument } from "../template/graph.types"
@@ -138,7 +139,7 @@ export const packageOf = (
     draft: PackageDraft = draftOf(),
 ): AgentTemplatePackage => {
     const preview = previewPackage(graph, draft)
-    if (preview.package === null) throw new Error(`the builder graph is refused: ${preview.problems.join("; ")}`)
+    if (preview.package === null) throw new SdkDefinitionError("PACKAGE_REFUSED", preview.problems.join("; "))
     return preview.package
 }
 

@@ -1,26 +1,33 @@
 import { z } from "zod"
+import { ident } from "../schema/bounded.schema"
+import { entriesAtMost } from "../schema/entries"
+import { jsonValue } from "../schema/json-value.schema"
 import { specText } from "../schema/spec-text.schema"
 import type { SpecDocument, SpecNode, SpecView } from "./spec.types"
 
-const variable = z.union([z.string(), z.number(), z.boolean(), z.null()])
+const variable = z.union([ident, z.number(), z.boolean(), z.null()])
 const binding = z.union([
     z
-        .object({ read: z.string(), path: z.string().optional(), variables: z.record(z.string(), variable).optional() })
+        .object({
+            read: ident,
+            path: ident.optional(),
+            variables: z.record(ident, variable).refine(entriesAtMost(50)).optional(),
+        })
         .strict(),
-    z.object({ action: z.string() }).strict(),
+    z.object({ action: ident }).strict(),
 ])
 
 /** The zod schema of a node, children included. */
 export const specNodeSchema: z.ZodType<SpecNode> = z.lazy(() =>
     z
         .object({
-            id: z.string().min(1),
-            block: z.templateLiteral([z.string(), ".", z.string()]),
-            props: z.record(z.string(), z.json()).optional(),
-            bind: z.record(z.string(), binding).optional(),
-            children: z.array(specNodeSchema).optional(),
+            id: ident.min(1),
+            block: z.templateLiteral([ident, ".", ident]),
+            props: z.record(ident, jsonValue).refine(entriesAtMost(200)).optional(),
+            bind: z.record(ident, binding).refine(entriesAtMost(50)).optional(),
+            children: z.array(specNodeSchema).max(200).optional(),
             when: z
-                .object({ permission: z.string().min(1) })
+                .object({ permission: ident.min(1) })
                 .strict()
                 .optional(),
             forbidden: z.enum(["notice", "hide"]).optional(),
@@ -30,11 +37,11 @@ export const specNodeSchema: z.ZodType<SpecNode> = z.lazy(() =>
 
 const viewSchema: z.ZodType<SpecView> = z
     .object({
-        id: z.string().min(1),
+        id: ident.min(1),
         label: specText,
         root: specNodeSchema,
         hidden: z.boolean().optional(),
-        openBy: z.string().min(1).optional(),
+        openBy: ident.min(1).optional(),
     })
     .strict()
 
@@ -42,9 +49,9 @@ const viewSchema: z.ZodType<SpecView> = z
 export const specDocumentSchema: z.ZodType<SpecDocument> = z
     .object({
         schema: z.literal("nivo/workbench-spec@2"),
-        module: z.string().min(1),
-        head: z.array(specNodeSchema).optional(),
-        foot: z.array(specNodeSchema).optional(),
-        views: z.array(viewSchema),
+        module: ident.min(1),
+        head: z.array(specNodeSchema).max(50).optional(),
+        foot: z.array(specNodeSchema).max(50).optional(),
+        views: z.array(viewSchema).max(50),
     })
     .strict()

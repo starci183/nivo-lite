@@ -32,7 +32,7 @@ export interface FakeReadHandle extends ReadHandle {
 }
 
 /** A read handle for a block test: the given slot, counting retries and recording variable changes. */
-export const fakeReadHandle = (slot: DataSlot<unknown>, variables: ReadVariables = {}): FakeReadHandle => {
+export const recordingReadHandle = (slot: DataSlot<unknown>, variables: ReadVariables = {}): FakeReadHandle => {
     let retries = 0
     const sets: Array<ReadVariables> = []
     return {
@@ -56,7 +56,7 @@ export interface FakeActionHandle extends ActionHandle {
 }
 
 /** An action handle for a block test: allowed unless told otherwise, answering every run with `outcome`. */
-export const fakeActionHandle = (
+export const recordingActionHandle = (
     options: { readonly outcome?: ActionOutcome; readonly isAllowed?: boolean; readonly label?: string } = {},
 ): FakeActionHandle => {
     const runs: Array<Parameters<ActionHandle["run"]>[0]> = []
@@ -73,7 +73,7 @@ export const fakeActionHandle = (
 }
 
 /** The slot values of a block test, from read and action handles by slot name. */
-export const fakeSlots = <S extends BlockSlots>(
+export const slotValuesOf = <S extends BlockSlots>(
     handles: Readonly<Record<keyof S, ReadHandle | ActionHandle>>,
 ): SlotValues<S> => handles as SlotValues<S>
 
@@ -84,7 +84,7 @@ export interface FakeBlockHost extends BlockHost {
 }
 
 /** Builds a fake block host; every port may be overridden. */
-export const fakeBlockHost = (overrides: Partial<BlockHost> = {}): FakeBlockHost => {
+export const recordingBlockHost = (overrides: Partial<BlockHost> = {}): FakeBlockHost => {
     const notices: Array<string> = []
     const reports: Array<string> = []
     const query = new Map<string, string>()
@@ -113,7 +113,7 @@ export const fakeBlockHost = (overrides: Partial<BlockHost> = {}): FakeBlockHost
 }
 
 /** A host read in a settled state. */
-export const fakeHostRead = (status: HostRead["status"], data: unknown = undefined): HostRead => ({
+export const settledHostRead = (status: HostRead["status"], data: unknown = undefined): HostRead => ({
     status,
     data,
     isValidating: false,
@@ -138,10 +138,10 @@ export interface FakeWorkbenchHost extends WorkbenchHost {
 }
 
 /** Builds a fake workbench host: reads, actions and permissions from the options, words from the key. */
-export const fakeWorkbenchHost = (options: FakeWorkbenchOptions = {}): FakeWorkbenchHost => ({
-    block: fakeBlockHost(options.block),
+export const scriptedWorkbenchHost = (options: FakeWorkbenchOptions = {}): FakeWorkbenchHost => ({
+    block: recordingBlockHost(options.block),
     useRead: (operation, variables) =>
-        variables === null ? fakeHostRead("loading") : (options.reads?.[operation] ?? fakeHostRead("loading")),
+        variables === null ? settledHostRead("loading") : (options.reads?.[operation] ?? settledHostRead("loading")),
     useAction: (operation): HostAction => ({
         run: () => Promise.resolve(options.actions?.[operation] ?? { ok: true }),
         isRunning: false,

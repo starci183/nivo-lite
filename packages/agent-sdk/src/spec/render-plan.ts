@@ -1,3 +1,4 @@
+import { SdkDefinitionError } from "../block/definition-error"
 import type { BlockDefinition } from "../block/block.types"
 import type { SpecText } from "../schema/schema.types"
 import type { SpecBindings } from "./spec"
@@ -63,7 +64,7 @@ const splitBindings = (node: SpecNode): SplitBindings => {
 /** One valid node as a plan node; the spec was validated, so its block exists and its props parse. */
 export const planNode = (index: ReadonlyMap<string, BlockDefinition>, node: SpecNode): PlanNode => {
     const block = index.get(node.block)
-    if (block === undefined) throw new RangeError(`plan of an unvalidated spec: ${node.block}`)
+    if (block === undefined) throw new SdkDefinitionError("PLAN_BLOCK_UNKNOWN", node.block)
     return {
         id: node.id,
         block,

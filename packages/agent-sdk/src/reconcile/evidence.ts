@@ -1,4 +1,12 @@
-import type { Arrival, Candidate, Claim, EvidenceItem, EvidenceKey, EvidenceOptions, Evidenced } from "./reconcile.types"
+import type {
+    Arrival,
+    Candidate,
+    Claim,
+    EvidenceItem,
+    EvidenceKey,
+    EvidenceOptions,
+    Evidenced,
+} from "./reconcile.types"
 import { mentionsCode, mentionsName } from "./text-match"
 
 /** What each kind of evidence adds to a candidate's score when it holds. */
@@ -16,7 +24,11 @@ const item = (key: EvidenceKey, met: boolean, detail: string): EvidenceItem => (
 
 const codeOf = (arrival: Arrival, candidate: Candidate): EvidenceItem => {
     const named = candidate.codes.find((code) => mentionsCode(arrival.text, code))
-    return item("code", named !== undefined, named === undefined ? "no code of the candidate in the text" : `names ${named}`)
+    return item(
+        "code",
+        named !== undefined,
+        named === undefined ? "no code of the candidate in the text" : `names ${named}`,
+    )
 }
 
 const amountOf = (arrival: Arrival, candidate: Candidate): EvidenceItem =>
@@ -25,20 +37,24 @@ const amountOf = (arrival: Arrival, candidate: Candidate): EvidenceItem =>
 const nameOf = (arrival: Arrival, candidate: Candidate): EvidenceItem => {
     const party = candidate.partyName
     const met = [arrival.text, ...arrival.names].some((words) => mentionsName(words, party))
-    return item("name", met, party === null ? "the candidate has no party name" : `"${party}" in the text or the counter name`)
+    return item(
+        "name",
+        met,
+        party === null ? "the candidate has no party name" : `"${party}" in the text or the counter name`,
+    )
 }
 
 const recencyOf = (arrival: Arrival, candidate: Candidate, options: EvidenceOptions): EvidenceItem => {
     const age = arrival.at - candidate.openedAt
-    return item("recency", age >= 0 && age <= options.windowMs, `opened ${Math.round(age / HOUR_MS)} h before the arrival`)
+    return item(
+        "recency",
+        age >= 0 && age <= options.windowMs,
+        `opened ${Math.round(age / HOUR_MS)} h before the arrival`,
+    )
 }
 
 /** The open claims that speak for a candidate: the same party, and an amount that is the arrival's or none at all. */
-export const claimsFor = (
-    arrival: Arrival,
-    candidate: Candidate,
-    claims: ReadonlyArray<Claim>,
-): ReadonlyArray<Claim> =>
+export const claimsFor = (arrival: Arrival, candidate: Candidate, claims: ReadonlyArray<Claim>): ReadonlyArray<Claim> =>
     claims.filter(
         (claim) =>
             claim.status === "open" &&
@@ -49,7 +65,11 @@ export const claimsFor = (
 
 const claimOf = (arrival: Arrival, candidate: Candidate, claims: ReadonlyArray<Claim>): EvidenceItem => {
     const [first] = claimsFor(arrival, candidate, claims)
-    return item("claim", first !== undefined, first === undefined ? "no open claim of the party" : `the party said: ${first.text}`)
+    return item(
+        "claim",
+        first !== undefined,
+        first === undefined ? "no open claim of the party" : `the party said: ${first.text}`,
+    )
 }
 
 /** Every kind of evidence one candidate shows for the arrival, and the score of the ones that hold. */

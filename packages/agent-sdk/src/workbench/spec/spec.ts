@@ -11,15 +11,13 @@ import type {
     WorkbenchSpecValue,
     WorkbenchStoredSpec,
 } from "./spec.types"
+import { isRecord } from "../../schema/is-record"
 
 /** The deepest a block tree may nest: a screen deeper than this is a composition mistake, and it bounds the walk. */
 export const SPEC_MAX_DEPTH: number = 8
 
 /** The variable a read writes for the installation of the route. */
 const INSTALLATION_VARIABLE = "$installationId"
-
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-    typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** Whether a value is a spec text: a key, or both product languages. */
 export const isSpecText = (value: unknown): value is WorkbenchSpecText =>

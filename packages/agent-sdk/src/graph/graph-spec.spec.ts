@@ -2,7 +2,7 @@ import { z } from "zod"
 import { defineEffect, defineNode, defineTool, nodeIndexOf } from "../node"
 import type { NodeDefinition } from "../node"
 import type { DataRight } from "../rights/rights.types"
-import { edgesOf, graphSpecProblems, nextKeyOf } from "./graph-spec"
+import { edgesOf, graphSpecJsonSchema, graphSpecProblems, nextKeyOf } from "./graph-spec"
 import { graphSpecSchema } from "./graph-spec.schema"
 import type { GraphSpec } from "./graph-spec.types"
 
@@ -149,7 +149,7 @@ describe("graphSpecProblems", () => {
         const undo = defineEffect({
             id: "order.void",
             title: { key: "v" },
-            payload: z.object({ id: z.string() }),
+            payload: z.object({ id: z.string().max(200) }),
             rights: [],
         })
         const record = defineEffect({ ...undo, id: "order.record", compensation: "order.void" })
@@ -231,5 +231,11 @@ describe("graph spec burst", () => {
             { code: "GRAPH_BURST_INVALID", at: "burst.channel" },
             { code: "GRAPH_BURST_INVALID", at: "burst.schedule" },
         ])
+    })
+})
+
+describe("graphSpecJsonSchema", () => {
+    it("is the JSON Schema of the zod schema, titled and closed to unknown members", () => {
+        expect(graphSpecJsonSchema()).toMatchObject({ additionalProperties: false, title: "NIVO agent graph spec" })
     })
 })

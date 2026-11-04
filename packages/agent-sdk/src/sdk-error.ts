@@ -3,8 +3,8 @@ export class SdkError extends Error {
     /** The code. */
     readonly code: string
 
-    constructor(code: string, message: string) {
-        super(message)
+    constructor(code: string, message: string, cause?: unknown) {
+        super(message, cause === undefined ? undefined : { cause })
         this.name = "SdkError"
         this.code = code
     }

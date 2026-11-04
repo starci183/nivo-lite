@@ -6,7 +6,7 @@ import { defineRenderer } from "./define-renderer"
 const BLOCK = defineBlock({
     id: "test.label",
     title: { key: "t" },
-    props: z.object({ label: z.string().default("none") }),
+    props: z.object({ label: z.string().max(200).default("none") }),
     slots: { rows: { kind: "read", shape: "list", required: false } },
     children: false,
 })

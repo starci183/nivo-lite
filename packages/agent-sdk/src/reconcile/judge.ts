@@ -71,7 +71,11 @@ export const outcomeOfJudgement = (candidates: ReadonlyArray<Evidenced>, judgeme
     const named = candidates.find((one) => one.candidate.id === judgement.candidateId)
     if (judgement.verdict === "match" && named !== undefined) {
         if (holds(named, "amount")) {
-            return outcomeOf(candidates, { stage: "judge", effect: { kind: "apply", candidateId: named.candidate.id }, reasons })
+            return outcomeOf(candidates, {
+                stage: "judge",
+                effect: { kind: "apply", candidateId: named.candidate.id },
+                reasons,
+            })
         }
         return outcomeOf(candidates, {
             stage: "judge",

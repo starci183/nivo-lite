@@ -22,8 +22,8 @@ export const assertNamespaced = (id: string): void => {
 const jsonOf = (schema: PropsSchema, code: DefinitionErrorCode, id: Namespaced): JsonSchema => {
     try {
         return z.toJSONSchema(schema)
-    } catch {
-        throw new SdkDefinitionError(code, id)
+    } catch (error) {
+        throw new SdkDefinitionError(code, id, error)
     }
 }
 

@@ -2,6 +2,7 @@ import type { BlockDefinition } from "../block/block.types"
 import type { SpecBindings } from "../spec/spec"
 import { specProblems } from "../spec/spec"
 import type { ModuleDocument, ModuleProblem } from "./module-document.types"
+import { isRecord } from "../schema/is-record"
 
 /** The module key rule of the catalogue. */
 const MODULE_KEY = /^[a-z][a-z0-9_]{1,23}$/
@@ -11,9 +12,6 @@ export const MODULE_CHANGELOG_MAX = 600
 
 /** The intent that runs a gateway call and belongs to no authority action. */
 const GATEWAY_INTENT = "gateway_call"
-
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-    typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** Whether an object is a bilingual text: exactly the two product languages as strings. */
 const isBilingual = (

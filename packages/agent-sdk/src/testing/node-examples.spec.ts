@@ -7,7 +7,7 @@ import { nodeExampleMismatches, nodeListMismatches } from "./node-examples"
 const send = defineEffect({
     id: "channel.send",
     title: { key: "s" },
-    payload: z.object({ text: z.string() }),
+    payload: z.object({ text: z.string().max(200) }),
     rights: [],
 })
 
@@ -15,8 +15,8 @@ const greet = defineNode({
     id: "core.greet",
     role: "output",
     title: { key: "g" },
-    params: z.object({ greeting: z.string() }),
-    input: z.object({ name: z.string() }),
+    params: z.object({ greeting: z.string().max(200) }),
+    input: z.object({ name: z.string().max(200) }),
     output: z.object({ sent: z.boolean() }),
     rights: [],
     effects: ["channel.send"],
@@ -69,13 +69,13 @@ describe("node examples", () => {
             "effect 0: expected channel.send",
         ])
         await expect(nodeExampleMismatches(greet, greets, [])).resolves.toEqual(["threw EFFECT_UNKNOWN: channel.send"])
-        await expect(nodeListMismatches([greet], [])).resolves.toMatchObject({ "core.greet / greets": expect.any(Array) })
+        await expect(nodeListMismatches([greet], [])).resolves.toMatchObject({
+            "core.greet / greets": expect.any(Array),
+        })
     })
 
     it("names a thrown value that is no error", async () => {
         const throws = { ...greet, run: () => Promise.reject("raw") } as unknown as NodeDefinition
-        await expect(nodeExampleMismatches(throws, { ...greets, model: [] }, [send])).resolves.toEqual([
-            "threw raw",
-        ])
+        await expect(nodeExampleMismatches(throws, { ...greets, model: [] }, [send])).resolves.toEqual(["threw raw"])
     })
 })

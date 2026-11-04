@@ -86,7 +86,9 @@ const toolProblems = (node: NodeDefinition, tools: ReadonlyMap<string, ToolDefin
     (node.tools ?? []).flatMap((name): ReadonlyArray<NodeProblem> => {
         const tool = tools.get(name)
         if (tool === undefined) return [{ code: "NODE_TOOL_UNKNOWN", at: `${node.id}:${name}` }]
-        return tool.mutates && node.role === "condition" ? [{ code: "NODE_CONDITION_MUTATES", at: `${node.id}:${name}` }] : []
+        return tool.mutates && node.role === "condition"
+            ? [{ code: "NODE_CONDITION_MUTATES", at: `${node.id}:${name}` }]
+            : []
     })
 
 /**
@@ -122,7 +124,10 @@ export const nodeListProblems = (install: NodeInstall): ReadonlyArray<NodeProble
         ...install.effects.flatMap((effect) => rightProblems(effect.rights, index.dataKinds, effect.id)),
         ...install.effects
             .filter((effect) => effect.compensation !== undefined && !index.effects.has(effect.compensation))
-            .map((effect): NodeProblem => ({ code: "EFFECT_COMPENSATION_UNKNOWN", at: `${effect.id}:${effect.compensation}` })),
+            .map((effect): NodeProblem => ({
+                code: "EFFECT_COMPENSATION_UNKNOWN",
+                at: `${effect.id}:${effect.compensation}`,
+            })),
         ...install.tools.flatMap((tool) => rightProblems(tool.rights, index.dataKinds, tool.id)),
     ]
 }
@@ -130,7 +135,7 @@ export const nodeListProblems = (install: NodeInstall): ReadonlyArray<NodeProble
 /** The branches a condition answers when its `branch` is an enum, or null when it may be any text. */
 export const branchesOf = (node: NodeDefinition): ReadonlyArray<string> | null => {
     const output = node.output
-    const branch = output instanceof z.ZodObject ? output.shape[BRANCH_FIELD] : undefined
+    const branch: unknown = output instanceof z.ZodObject ? Reflect.get(output.shape, BRANCH_FIELD) : undefined
     return branch instanceof z.ZodEnum ? branch.options.map(String) : null
 }
 
@@ -170,7 +175,9 @@ export const graphNodeProblems = (
     if (node === undefined) return [{ code: "NODE_UNKNOWN", at: ref.key }]
     return [
         ...(node.role === ref.kind ? [] : [{ code: "NODE_ROLE_MISMATCH", at: ref.key } as const]),
-        ...(node.params.safeParse(ref.params ?? {}).success ? [] : [{ code: "NODE_PARAMS_INVALID", at: ref.key } as const]),
+        ...(node.params.safeParse(ref.params ?? {}).success
+            ? []
+            : [{ code: "NODE_PARAMS_INVALID", at: ref.key } as const]),
         ...routeProblems(node, ref),
         ...(granted(node, index, grant) ? [] : [{ code: "NODE_RIGHTS_UNGRANTED", at: ref.key } as const]),
     ]

@@ -37,7 +37,10 @@ export interface ToolConfig<A extends z.ZodType, R extends z.ZodType> {
 }
 
 /** A tool definition. */
-export interface ToolDefinition<A extends z.ZodType = z.ZodType, R extends z.ZodType = z.ZodType> extends ToolConfig<A, R> {
+export interface ToolDefinition<A extends z.ZodType = z.ZodType, R extends z.ZodType = z.ZodType> extends ToolConfig<
+    A,
+    R
+> {
     readonly entry: "tool"
 }
 

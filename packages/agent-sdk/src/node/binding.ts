@@ -33,7 +33,7 @@ export const isInputRef = (binding: NodeInputBinding): binding is NodeInputRef =
 const at = (value: unknown, path: ReadonlyArray<string>): unknown =>
     path.reduce<unknown>(
         (current, name) =>
-            typeof current === "object" && current !== null ? (current as Record<string, unknown>)[name] : undefined,
+            typeof current === "object" && current !== null ? Reflect.get(current, name) : undefined,
         value,
     )
 
@@ -68,8 +68,5 @@ const resolved = (binding: NodeInputBinding, scope: NodeInputScope): unknown => 
 }
 
 /** The input a node receives: every reference, at any depth, read from the scope; a missing value is null. */
-export const resolveInput = (
-    bindings: NodeInputBindings,
-    scope: NodeInputScope,
-): Readonly<Record<string, unknown>> =>
+export const resolveInput = (bindings: NodeInputBindings, scope: NodeInputScope): Readonly<Record<string, unknown>> =>
     Object.fromEntries(Object.entries(bindings).map(([field, binding]) => [field, resolved(binding, scope)]))

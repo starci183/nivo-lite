@@ -5,13 +5,28 @@ import type { NodeDefinition } from "./node.types"
 import { nodeIndexOf, nodeListProblems } from "./problems"
 import { nodeSagaOf } from "./saga"
 
-const voidOrder = defineEffect({ id: "order.void", title: { key: "v" }, payload: z.object({ id: z.string() }), rights: [] })
+const voidOrder = defineEffect({
+    id: "order.void",
+    title: { key: "v" },
+    payload: z.object({ id: z.string().max(200) }),
+    rights: [],
+})
 const record = defineEffect({ ...voidOrder, id: "order.record", compensation: "order.void" })
 const send = defineEffect({ ...voidOrder, id: "channel.send" })
-const look = defineTool({ id: "order.look", title: { key: "l" }, args: z.object({}), result: z.object({}), mutates: false, rights: [] })
+const look = defineTool({
+    id: "order.look",
+    title: { key: "l" },
+    args: z.object({}),
+    result: z.object({}),
+    mutates: false,
+    rights: [],
+})
 const charge = defineTool({ ...look, id: "order.charge", mutates: true })
 
-const nodeOf = (effects: ReadonlyArray<"order.record" | "channel.send" | "order.ghost">, tools: ReadonlyArray<"order.look" | "order.charge" | "order.gone"> = []): NodeDefinition =>
+const nodeOf = (
+    effects: ReadonlyArray<"order.record" | "channel.send" | "order.ghost">,
+    tools: ReadonlyArray<"order.look" | "order.charge" | "order.gone"> = [],
+): NodeDefinition =>
     defineNode({
         id: "order.step",
         role: "output",

@@ -2,7 +2,7 @@ import { z } from "zod"
 import { SdkDefinitionError } from "../block/definition-error"
 import type { DataRight } from "../rights/rights.types"
 import { EXAMPLE_TURN, nodeExampleMismatches } from "../testing/node-examples"
-import { fakeNodePorts } from "../testing/node-ports"
+import { scriptedNodePorts } from "../testing/node-ports"
 import { defineDataKind, defineTool } from "./effect"
 import { runNode } from "./host"
 import type { NodeRunRequest } from "./host.types"
@@ -17,8 +17,8 @@ const READ: DataRight = { kind: "order", access: "read", scope: "turn", fields: 
 const instruction = defineTool({
     id: "payment.instruction",
     title: { key: "i" },
-    args: z.object({ orderNo: z.string() }),
-    result: z.object({ qrUrl: z.string() }),
+    args: z.object({ orderNo: z.string().max(200) }),
+    result: z.object({ qrUrl: z.string().max(200) }),
     mutates: false,
     rights: [READ],
 })
@@ -31,13 +31,12 @@ const caller = defineNode({
     role: "execute",
     title: { key: "c" },
     params: z.object({}),
-    input: z.object({ tool: z.string(), orderNo: z.unknown() }),
-    output: z.object({ qrUrl: z.string() }),
+    input: z.object({ tool: z.string().max(200), orderNo: z.unknown() }),
+    output: z.object({ qrUrl: z.string().max(200) }),
     rights: [],
     effects: [],
     tools: ["payment.instruction", "payment.charge", "payment.ghost"],
-    run: (input, context) =>
-        context.tools.call<{ qrUrl: string }>(input.tool as "a.b", { orderNo: input.orderNo }),
+    run: (input, context) => context.tools.call<{ qrUrl: string }>(input.tool as "a.b", { orderNo: input.orderNo }),
     examples: [
         {
             name: "asks",
@@ -78,16 +77,18 @@ describe("defineTool", () => {
 
 describe("runNode tools", () => {
     it("calls a declared, installed, granted tool with parsed args and a keyed call", async () => {
-        const fake = fakeNodePorts({ tools: [{ qrUrl: "q" }] })
+        const fake = scriptedNodePorts({ tools: [{ qrUrl: "q" }] })
         await expect(runNode(requestOf("payment.instruction"), fake.ports)).resolves.toEqual({
             output: { qrUrl: "q" },
             effects: [],
         })
-        expect(fake.toolCalls).toEqual([{ id: "payment.instruction", args: { orderNo: "A1" }, key: "run-1:step:tool:0" }])
+        expect(fake.toolCalls).toEqual([
+            { id: "payment.instruction", args: { orderNo: "A1" }, key: "run-1:step:tool:0" },
+        ])
     })
 
     it("refuses an undeclared, uninstalled or ungranted tool", async () => {
-        const { ports } = fakeNodePorts({ tools: [{ qrUrl: "q" }] })
+        const { ports } = scriptedNodePorts({ tools: [{ qrUrl: "q" }] })
         await expect(runNode(requestOf("payment.other"), ports)).rejects.toThrow(ToolUndeclaredError)
         const toolless = { ...caller, tools: undefined } as unknown as NodeDefinition
         await expect(runNode(requestOf("payment.instruction", { node: toolless }), ports)).rejects.toThrow(
@@ -106,16 +107,19 @@ describe("runNode tools", () => {
 
     it("refuses bad args, a bad answer, an unscripted call, and a mutating tool from a condition", async () => {
         await expect(
-            runNode(requestOf("payment.instruction", { input: { tool: "payment.instruction", orderNo: 1 } }), fakeNodePorts().ports),
+            runNode(
+                requestOf("payment.instruction", { input: { tool: "payment.instruction", orderNo: 1 } }),
+                scriptedNodePorts().ports,
+            ),
         ).rejects.toThrow("TOOL_ARGS_INVALID")
-        await expect(runNode(requestOf("payment.charge"), fakeNodePorts({ tools: [{}] }).ports)).rejects.toThrow(
+        await expect(runNode(requestOf("payment.charge"), scriptedNodePorts({ tools: [{}] }).ports)).rejects.toThrow(
             "TOOL_RESULT_INVALID",
         )
-        await expect(runNode(requestOf("payment.charge"), fakeNodePorts().ports)).rejects.toThrow("TOOL_UNSCRIPTED")
+        await expect(runNode(requestOf("payment.charge"), scriptedNodePorts().ports)).rejects.toThrow("TOOL_UNSCRIPTED")
         const condition = { ...caller, role: "condition" } as NodeDefinition
-        await expect(runNode(requestOf("payment.charge", { node: condition }), fakeNodePorts().ports)).rejects.toThrow(
-            "TOOL_MUTATES",
-        )
+        await expect(
+            runNode(requestOf("payment.charge", { node: condition }), scriptedNodePorts().ports),
+        ).rejects.toThrow("TOOL_MUTATES")
     })
 
     it("runs an example with scripted tool results, granting the node's own tools by default", async () => {
@@ -128,12 +132,17 @@ describe("runNode tools", () => {
 })
 
 describe("tool problems", () => {
-    const order = defineDataKind({ kind: "order", title: { key: "o" }, fields: z.object({ id: z.string() }) })
+    const order = defineDataKind({ kind: "order", title: { key: "o" }, fields: z.object({ id: z.string().max(200) }) })
     const condition = { ...caller, id: "payment.check", role: "condition" } as NodeDefinition
 
     it("names an unknown tool, a mutating tool in a condition, a duplicate and a tool right over an unknown kind", () => {
         expect(
-            nodeListProblems({ nodes: [caller, condition], effects: [], tools: [instruction, charge, charge], dataKinds: [] }),
+            nodeListProblems({
+                nodes: [caller, condition],
+                effects: [],
+                tools: [instruction, charge, charge],
+                dataKinds: [],
+            }),
         ).toEqual([
             { code: "TOOL_DUPLICATE", at: "payment.charge" },
             { code: "NODE_TOOL_UNKNOWN", at: "payment.caller:payment.ghost" },

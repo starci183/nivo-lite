@@ -53,7 +53,7 @@ describe("renderPlan", () => {
     })
 
     it("refuses to plan a node whose block is missing, which only an unvalidated spec reaches", () => {
-        expect(() => planNode(new Map(), { id: "x", block: "test.nope" })).toThrow("unvalidated")
+        expect(() => planNode(new Map(), { id: "x", block: "test.nope" })).toThrow("PLAN_BLOCK_UNKNOWN: test.nope")
     })
 })
 

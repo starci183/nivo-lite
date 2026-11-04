@@ -1,8 +1,15 @@
 import { burstIsSound } from "./graph-burst"
+import { graphSpecJsonDocument } from "./graph-spec.schema"
 import { BRANCH_FIELD, graphNodeProblems, inputSourcesOf, nodeSagaOf, TRIGGER_SOURCE } from "../node"
 import type { NodeDefinition, NodeIndex } from "../node"
 import type { DataRight } from "../rights/rights.types"
 import type { GraphSpec, GraphSpecNode, GraphSpecProblem } from "./graph-spec.types"
+
+/**
+ * The JSON Schema of a graph spec, generated from `graphSpecSchema`: what a seed step that validates spec files by JSON Schema reads, so
+ * the file and the zod schema can never say different things.
+ */
+export const graphSpecJsonSchema = (): Readonly<Record<string, unknown>> => graphSpecJsonDocument
 
 /** The built-in step that ends a run and does nothing: the only step of a spec that is not an installed node. */
 export const STOP_STEP = "stop"
@@ -20,7 +27,7 @@ export const edgesOf = (node: GraphSpecNode): ReadonlyArray<string> => [
 export const nextKeyOf = (node: GraphSpecNode, output: unknown): string | null => {
     if (node.routes === undefined) return node.next ?? null
     const branch =
-        typeof output === "object" && output !== null ? (output as Record<string, unknown>)[BRANCH_FIELD] : undefined
+        typeof output === "object" && output !== null ? Reflect.get(output, BRANCH_FIELD) : undefined
     return typeof branch === "string" ? (node.routes[branch] ?? null) : null
 }
 
@@ -100,8 +107,7 @@ const burstProblems = (spec: GraphSpec): ReadonlyArray<GraphSpecProblem> =>
     Object.entries(spec.trigger.burst ?? {})
         .filter(
             ([source, burst]) =>
-                !spec.trigger.sources.some((listed) => listed === source) ||
-                (burst !== undefined && !burstIsSound(burst)),
+                !new Set<string>(spec.trigger.sources).has(source) || (burst !== undefined && !burstIsSound(burst)),
         )
         .map(([at]): GraphSpecProblem => ({ code: "GRAPH_BURST_INVALID", at: `burst.${at}` }))
 

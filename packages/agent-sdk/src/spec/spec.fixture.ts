@@ -14,8 +14,14 @@ export const STACK = defineBlock({
 /** A leaf block with a required list slot of `order` data, an optional action slot and nested props. */
 export const LIST = defineBlock({
     id: "test.list",
-    title: { vi: "Danh sách", en: "List" },
-    props: z.object({ label: z.string(), filters: z.array(z.object({ value: z.string() })).optional() }),
+    title: { vi: "Danh sach", en: "List" },
+    props: z.object({
+        label: z.string().max(200),
+        filters: z
+            .array(z.object({ value: z.string().max(200) }))
+            .max(100)
+            .optional(),
+    }),
     slots: {
         rows: { kind: "read", shape: "list", required: true, dataKind: "order" },
         open: { kind: "action", required: false },
@@ -38,7 +44,7 @@ export const ORDERS = defineRead({
     shape: "list",
     fields: ["id"],
     paths: { stats: "record", "stats.rows": "list" },
-    variables: z.object({ q: z.string().optional() }),
+    variables: z.object({ q: z.string().max(200).optional() }),
     operation: "orders",
     permission: "sales.read",
 })
@@ -76,6 +82,6 @@ export const listNode = (id: string, extra: Partial<SpecNode> = {}): SpecNode =>
 export const docOf = (root: SpecNode, extra: Partial<SpecDocument> = {}): SpecDocument => ({
     schema: "nivo/workbench-spec@2",
     module: "sales",
-    views: [{ id: "main", label: { vi: "Chính", en: "Main" }, root }],
+    views: [{ id: "main", label: { vi: "Chinh", en: "Main" }, root }],
     ...extra,
 })

@@ -72,7 +72,7 @@ const scriptOf = (answers: ReadonlyArray<unknown> | undefined, code: Unscripted)
  * Ports for `runNode` in a test: reads from the store (scope is the host's business, so every row of the kind is in reach), writes and
  * effects recorded and answered with a made-up subject, the model answering from the script. The runner still enforces every right.
  */
-export const fakeNodePorts = (options: FakeNodePortsOptions = {}): FakeNodePorts => {
+export const scriptedNodePorts = (options: FakeNodePortsOptions = {}): FakeNodePorts => {
     const executed: Array<FakeExecuted> = []
     const writes: Array<FakeWrite> = []
     const toolCalls: Array<FakeToolCall> = []
@@ -85,7 +85,7 @@ export const fakeNodePorts = (options: FakeNodePortsOptions = {}): FakeNodePorts
         ports: {
             read: (kind, query) => {
                 const rows = (options.store?.[kind] ?? []).filter((row) => matches(row, query.where ?? {}))
-                return Promise.resolve(rows.slice(0, query.limit).map((row) => pick(row, query.fields)))
+                return Promise.resolve(rows.slice(0, query.limit ?? rows.length).map((row) => pick(row, query.fields)))
             },
             write: (kind, record): Promise<SubjectRef> => {
                 writes.push({ kind, record })
@@ -98,7 +98,9 @@ export const fakeNodePorts = (options: FakeNodePortsOptions = {}): FakeNodePorts
             model: {
                 text: () => {
                     const answer = next()
-                    return typeof answer === "string" ? Promise.resolve(answer) : Promise.reject(unscripted("MODEL_UNSCRIPTED"))
+                    return typeof answer === "string"
+                        ? Promise.resolve(answer)
+                        : Promise.reject(unscripted("MODEL_UNSCRIPTED"))
                 },
                 json: (schema) => Promise.resolve(schema.parse(next())),
             },
