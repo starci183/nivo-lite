@@ -1,4 +1,4 @@
-import type { NodeLocale } from "../node-schema.types"
+import type { NodeLocale, RecordRef } from "../node-schema.types"
 
 /** The per-graph settings of the acknowledgement. */
 export interface ClaimAckParams {
@@ -25,7 +25,7 @@ export interface ClaimAckOutput {
     /** The neutral reply that was sent. */
     readonly reply: string
     /** The recorded claim. */
-    readonly claim: { readonly kind: string; readonly id: string }
+    readonly claim: RecordRef
 }
 
 /** The words of the acknowledgement in one language. */

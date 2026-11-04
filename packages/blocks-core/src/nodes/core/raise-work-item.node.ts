@@ -2,6 +2,8 @@ import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
+import { MAX_ENTRIES, MAX_ID, MAX_LINE } from "../../bounds"
+import { bilingualOf } from "../../messages/catalog"
 
 /** What the graph sets: the action the owner decides and the title they see. */
 export interface RaiseWorkItemParams {
@@ -28,23 +30,28 @@ export interface RaiseWorkItemOutput {
 }
 
 const params: NodeSchema<RaiseWorkItemParams> = z.object({
-    action: z.string().regex(/^[a-z][a-z0-9_]{2,40}$/),
+    action: z
+        .string()
+        .max(MAX_ID)
+        .regex(/^[a-z][a-z0-9_]{2,40}$/),
     title: z.string().min(1).max(200),
 })
 
 const input: NodeSchema<RaiseWorkItemInput> = z.object({
-    payload: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
+    payload: z
+        .record(z.string().max(MAX_LINE), z.union([z.string().max(MAX_LINE), z.number(), z.boolean(), z.null()]))
+        .refine((entries) => Object.keys(entries).length <= MAX_ENTRIES),
     amountVnd: z.number().min(0).nullable(),
-    claimId: z.string().min(1).nullable(),
+    claimId: z.string().max(MAX_ID).min(1).nullable(),
 })
 
-const output: NodeSchema<RaiseWorkItemOutput> = z.object({ workItemId: z.string() })
+const output: NodeSchema<RaiseWorkItemOutput> = z.object({ workItemId: z.string().max(MAX_ID) })
 
 /** `core.raise-work-item`: raises a work item for the owner to decide, with the action and the title the graph spec sets. */
 export const raiseWorkItemNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "core.raise-work-item",
     role: "output",
-    title: { vi: "Giao việc cho chủ", en: "Raise a work item for the owner" },
+    title: bilingualOf("nodeCoreRaiseWorkItemTitle"),
     params,
     input,
     output,

@@ -1,10 +1,12 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
 import { tagPayloadOf } from "./handoff.policy"
 import type { HandoffInput, HandoffOutput, HandoffParams, HandoffParamsIn } from "./handoff.types"
+import { MAX_ID } from "../../bounds"
+import { boundedJson } from "../../json.schema"
+import { bilingualOf, sampleOf } from "../../messages/catalog"
 
 const TARGET_MAX = 120
 const TEXT_MAX = 2000
@@ -12,7 +14,7 @@ const CONTEXT_KEYS_MAX = 40
 const CONTEXT_JSON_MAX = 8000
 
 /** Plain data only: strings, numbers, booleans, null, arrays and objects of them. */
-const contextValue: NodeSchema<JsonValue> = z.json()
+const contextValue = boundedJson
 
 const params: NodeSchema<HandoffParams, HandoffParamsIn> = z.object({
     toModuleKey: z.string().min(1).max(TARGET_MAX),
@@ -34,8 +36,8 @@ const input: NodeSchema<HandoffInput> = z.object({
 })
 
 const output: NodeSchema<HandoffOutput> = z.object({
-    toModuleKey: z.string(),
-    tag: z.object({ kind: z.string(), id: z.string() }),
+    toModuleKey: z.string().max(MAX_ID),
+    tag: z.object({ kind: z.string().max(MAX_ID), id: z.string().max(MAX_ID) }),
 })
 
 /** `core.handoff`: tags another agent of the workspace with a note and the context of the turn. The agent to tag is a param of the graph. */
@@ -46,7 +48,7 @@ export const coreHandoffNode: NodeDefinition<
 > = defineNode({
     id: "core.handoff",
     role: "output",
-    title: { vi: "Chuyển cho agent khác", en: "Hand off to another agent" },
+    title: bilingualOf("nodeCoreHandoffTitle"),
     params,
     input,
     output,
@@ -63,13 +65,16 @@ export const coreHandoffNode: NodeDefinition<
             name: "tags the target agent with the note and the context",
             params: { toModuleKey: "sales" },
             input: {
-                text: "Khách muốn đặt 1 chậu hoa",
+                text: sampleOf("sampleKhachMuonDat1ChauHoa"),
                 leadId: "l1",
                 channel: "zalo",
                 conversationId: "c1",
                 context: {
                     intent: "order",
-                    order: { items: [{ name: "chậu hoa", quantity: 1 }], address: "69 Hàng Xanh" },
+                    order: {
+                        items: [{ name: sampleOf("sampleChauHoa"), quantity: 1 }],
+                        address: sampleOf("sample69HangXanh"),
+                    },
                 },
             },
             output: { toModuleKey: "sales", tag: { kind: "agent.tag", id: "agent.tag-1" } },
@@ -79,10 +84,13 @@ export const coreHandoffNode: NodeDefinition<
                     payload: {
                         toModuleKey: "sales",
                         visibility: "chat",
-                        text: "Khách muốn đặt 1 chậu hoa",
+                        text: sampleOf("sampleKhachMuonDat1ChauHoa"),
                         context: {
                             intent: "order",
-                            order: { items: [{ name: "chậu hoa", quantity: 1 }], address: "69 Hàng Xanh" },
+                            order: {
+                                items: [{ name: sampleOf("sampleChauHoa"), quantity: 1 }],
+                                address: sampleOf("sample69HangXanh"),
+                            },
                         },
                         leadId: "l1",
                         channel: "zalo",
@@ -95,7 +103,7 @@ export const coreHandoffNode: NodeDefinition<
             name: "a redirect is a silent direct hand-off with the note alone",
             params: { toModuleKey: "care", visibility: "redirect" },
             input: {
-                text: "Khách cần hỗ trợ sau mua",
+                text: sampleOf("sampleKhachCanHoTroSauMua"),
                 leadId: null,
                 channel: null,
                 conversationId: null,
@@ -108,7 +116,7 @@ export const coreHandoffNode: NodeDefinition<
                     payload: {
                         toModuleKey: "care",
                         visibility: "redirect",
-                        text: "Khách cần hỗ trợ sau mua",
+                        text: sampleOf("sampleKhachCanHoTroSauMua"),
                     },
                 },
             ],

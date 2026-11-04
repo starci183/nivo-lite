@@ -1,5 +1,7 @@
+import { linesOf, messageOf } from "../../messages/catalog"
+import type { MessageKey } from "../../messages/catalog"
 import type { NodeLocale } from "../node-schema.types"
-import type { AnswerWords, ClaimRule } from "./answer.types"
+import type { AnswerWords, ClaimPhrases, ClaimRule } from "./answer.types"
 
 /** What the model answers with when the documents do not answer the question. */
 export const NO_ANSWER = "NO_ANSWER"
@@ -15,54 +17,16 @@ export const ANSWER_INSTRUCTIONS: string = [
 
 /** The neutral lines by language. */
 export const ANSWER_WORDS: Readonly<Record<NodeLocale, AnswerWords>> = {
-    vi: {
-        gap: "Em chưa có thông tin về nội dung này ạ.",
-        neutral: "Em đã nhận được tin nhắn của bạn ạ.",
-    },
-    en: {
-        gap: "I do not have information on this yet.",
-        neutral: "We have received your message.",
-    },
+    vi: { gap: messageOf("vi", "answerGap"), neutral: messageOf("vi", "answerNeutral") },
+    en: { gap: messageOf("en", "answerGap"), neutral: messageOf("en", "answerNeutral") },
 }
+
+const phrasesOf = (key: MessageKey): ClaimPhrases => ({ vi: linesOf("vi", key), en: linesOf("en", key) })
 
 /** The claims a reply may make only when the turn did what it says. */
 export const DEFAULT_CLAIMS: ReadonlyArray<ClaimRule> = [
-    {
-        id: "order-recorded",
-        requires: "order.record",
-        phrases: {
-            vi: ["đã ghi nhận đơn", "đã đặt đơn", "đã tạo đơn", "đã gửi duyệt", "đơn đã được ghi nhận"],
-            en: ["order is recorded", "order has been placed", "order has been recorded", "sent for approval"],
-        },
-    },
-    {
-        id: "order-confirmed",
-        requires: "order.confirm",
-        phrases: {
-            vi: ["đã xác nhận đơn", "đơn đã được xác nhận", "đơn hàng đã xác nhận"],
-            en: ["order is confirmed", "order has been confirmed", "we confirmed your order"],
-        },
-    },
-    {
-        id: "payment-received",
-        requires: "payment.mark-paid",
-        phrases: {
-            vi: [
-                "đã nhận được tiền",
-                "đã nhận tiền",
-                "thanh toán thành công",
-                "đã xác nhận thanh toán",
-                "đã nhận được thanh toán",
-            ],
-            en: ["payment received", "payment confirmed", "we received your payment", "payment was successful"],
-        },
-    },
-    {
-        id: "handed-off",
-        requires: "agent.tag",
-        phrases: {
-            vi: ["đã chuyển cho", "đã chuyển bạn sang", "đã chuyển cuộc trò chuyện"],
-            en: ["i have passed you to", "i have handed you over", "has been handed over"],
-        },
-    },
+    { id: "order-recorded", requires: "order.record", phrases: phrasesOf("claimOrderRecorded") },
+    { id: "order-confirmed", requires: "order.confirm", phrases: phrasesOf("claimOrderConfirmed") },
+    { id: "payment-received", requires: "payment.mark-paid", phrases: phrasesOf("claimPaymentReceived") },
+    { id: "handed-off", requires: "agent.tag", phrases: phrasesOf("claimHandedOff") },
 ]

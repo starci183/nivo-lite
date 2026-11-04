@@ -7,6 +7,8 @@ import { orderGapSchema } from "./order.schema"
 import type { NodeSchema } from "../node-schema.types"
 import type { OrderGap } from "./order.schema"
 import type { AskLocale } from "./ask-missing.messages"
+import { MAX_BODY, MAX_ENTRIES, MAX_ID } from "../../bounds"
+import { bilingualOf, messageOf, sampleOf } from "../../messages/catalog"
 
 /** What to ask, and where. */
 export interface AskMissingInput {
@@ -32,18 +34,18 @@ const EXAMPLE_GRANT: RightsGrant = { rights: [{ kind: "message", access: "write"
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
 const input: NodeSchema<AskMissingInput> = z.object({
-    conversationId: z.string().min(1),
-    missing: z.array(orderGapSchema),
+    conversationId: z.string().max(MAX_ID).min(1),
+    missing: z.array(orderGapSchema).max(MAX_ENTRIES),
     locale: z.enum(["vi", "en"]),
 })
 
-const output: NodeSchema<AskMissingOutput> = z.object({ asked: z.boolean(), text: z.string().nullable() })
+const output: NodeSchema<AskMissingOutput> = z.object({ asked: z.boolean(), text: z.string().max(MAX_BODY).nullable() })
 
 /** `order.ask-missing`: asks the customer for what the order lacks, on the channel of the conversation. It asks and promises nothing. */
 export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "order.ask-missing",
     role: "output",
-    title: { vi: "Hỏi thông tin còn thiếu", en: "Ask for what is missing" },
+    title: bilingualOf("nodeOrderAskMissingTitle"),
     params,
     input,
     output,
@@ -62,7 +64,7 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
             input: { conversationId: "conv-1", missing: [{ reason: "no_address", item: null }], locale: "vi" },
             output: {
                 asked: true,
-                text: "Để ghi nhận đơn, shop cần thêm thông tin:\nBạn cho shop xin địa chỉ nhận hàng nhé?",
+                text: `${messageOf("vi", "askIntro")}\n${messageOf("vi", "askNoAddress")}`,
             },
             grant: EXAMPLE_GRANT,
             effects: [
@@ -70,7 +72,7 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
                     kind: "channel.send",
                     payload: {
                         conversationId: "conv-1",
-                        text: "Để ghi nhận đơn, shop cần thêm thông tin:\nBạn cho shop xin địa chỉ nhận hàng nhé?",
+                        text: `${messageOf("vi", "askIntro")}\n${messageOf("vi", "askNoAddress")}`,
                     },
                 },
             ],
@@ -80,12 +82,12 @@ export const orderAskMissingNode: NodeDefinition<typeof input, typeof output, ty
             params: {},
             input: {
                 conversationId: "conv-1",
-                missing: [{ reason: "not_in_catalogue", item: "Rượu" }],
+                missing: [{ reason: "not_in_catalogue", item: sampleOf("sampleRuou") }],
                 locale: "en",
             },
             output: {
                 asked: true,
-                text: "To note down the order, we need a little more:\nWe do not have “Rượu”; could you pick another item?",
+                text: `${messageOf("en", "askIntro")}\n${messageOf("en", "askNotInCatalogue").replace("{{item}}", sampleOf("sampleRuou"))}`,
             },
             grant: EXAMPLE_GRANT,
             effects: ["channel.send"],

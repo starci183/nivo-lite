@@ -2,7 +2,8 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import type { TextSchema, RequiredRead, OptionalAction } from "./schema-types"
+import { MAX_ID } from "../bounds"
+import type { TextSchema, RowsSlots } from "./schema-types"
 
 const props: z.ZodObject<{
     label: TextSchema
@@ -14,12 +15,12 @@ const props: z.ZodObject<{
 }> = z.object({
     label: specText,
     empty: specText,
-    idPath: z.string(),
-    titlePath: z.string(),
-    descriptionPath: z.string().optional(),
-    badgePath: z.string().optional(),
+    idPath: z.string().max(MAX_ID),
+    titlePath: z.string().max(MAX_ID),
+    descriptionPath: z.string().max(MAX_ID).optional(),
+    badgePath: z.string().max(MAX_ID).optional(),
 })
-const slots: { readonly rows: RequiredRead<"list">; readonly open: OptionalAction } = {
+const slots: RowsSlots = {
     rows: { kind: "read", shape: "list", required: true },
     open: { kind: "action", required: false },
 }

@@ -14,6 +14,8 @@ import {
 import { READ_CONVERSATIONS, READ_ORDERS, READ_TRANSACTIONS } from "./payment.rights"
 import { AWAITING_PAYMENT, atOf } from "./payment.schemas"
 import type { ConversationRow, OrderRow, SettleMode, TransactionRow } from "./payment.schemas"
+import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../../bounds"
+import { sampleOf } from "../../messages/catalog"
 
 /** What to settle: the transaction, whether the match is taken (`apply`) or a person decides (`ask`), the orders named and the reasons. */
 interface SettleInput {
@@ -37,17 +39,20 @@ interface SettleParams {
     readonly reviewTitle: string
 }
 
-const params: z.ZodType<SettleParams> = z.object({ confirmationText: z.string().min(1), reviewTitle: z.string().min(1) })
+const params: z.ZodType<SettleParams> = z.object({
+    confirmationText: z.string().max(MAX_BODY).min(1),
+    reviewTitle: z.string().max(MAX_LINE).min(1),
+})
 const input: z.ZodType<SettleInput, SettleInput> = z.object({
-    transactionId: z.string(),
+    transactionId: z.string().max(MAX_ID),
     mode: z.enum(["apply", "ask"]),
-    candidateIds: z.array(z.string()),
-    reasons: z.array(z.string()),
-    claimId: z.string().nullable(),
+    candidateIds: z.array(z.string().max(MAX_ID)).max(MAX_ENTRIES),
+    reasons: z.array(z.string().max(MAX_BODY)).max(MAX_ENTRIES),
+    claimId: z.string().max(MAX_ID).nullable(),
 })
 const output: z.ZodType<SettleOutput, SettleOutput> = z.object({
     result: z.enum(["paid", "already-paid", "raised"]),
-    orderId: z.string().nullable(),
+    orderId: z.string().max(MAX_ID).nullable(),
 })
 
 const AMOUNT = new Intl.NumberFormat("vi-VN")
@@ -90,11 +95,22 @@ const raise = async (
     return { result: "raised", orderId: null }
 }
 
-const SETTINGS = { confirmationText: "Shop đã nhận {amount} đ cho đơn {orderNo}. Cảm ơn bạn!", reviewTitle: "Kiểm tra khoản tiền" }
-const REASONS = ["Tên, số tiền và lời báo của khách khớp"]
+const SETTINGS = {
+    confirmationText: sampleOf("sampleShopDaNhanAmountDCho"),
+    reviewTitle: sampleOf("sampleKiemTraKhoanTien"),
+}
+const REASONS = [sampleOf("sampleTenSoTienVaLoiBao2")]
 
 /** The agent's grant in the examples: the node's own rights, and what the effects it runs need (the host checks the grant for them). */
-const GRANT = { rights: [...paymentMarkPaidEffect.rights, ...channelSendEffect.rights, READ_TRANSACTIONS, READ_ORDERS, READ_CONVERSATIONS] }
+const GRANT = {
+    rights: [
+        ...paymentMarkPaidEffect.rights,
+        ...channelSendEffect.rights,
+        READ_TRANSACTIONS,
+        READ_ORDERS,
+        READ_CONVERSATIONS,
+    ],
+}
 
 /**
  * The end of a reconciliation. `apply` marks the one named order paid with the transaction (`payment.mark-paid`) and tells the customer on
@@ -123,7 +139,12 @@ export const paymentSettleNode: NodeDefinition<
             limit: 1,
         })
         const [orderId] = given.candidateIds
-        if (given.mode === "ask" || transaction === undefined || orderId === undefined || given.candidateIds.length !== 1) {
+        if (
+            given.mode === "ask" ||
+            transaction === undefined ||
+            orderId === undefined ||
+            given.candidateIds.length !== 1
+        ) {
             return raise(context, given, settings, transaction?.amountVnd ?? null, given.reasons)
         }
         if (transaction.orderId === orderId) return { result: "already-paid", orderId }
@@ -132,7 +153,8 @@ export const paymentSettleNode: NodeDefinition<
             fields: READ_ORDERS.fields,
             limit: 1,
         })
-        const open = order !== undefined && AWAITING_PAYMENT.includes(order.status) && order.amountVnd === transaction.amountVnd
+        const open =
+            order !== undefined && AWAITING_PAYMENT.includes(order.status) && order.amountVnd === transaction.amountVnd
         if (order === undefined || !open || transaction.orderId !== null) {
             return raise(context, given, settings, transaction.amountVnd, [...given.reasons, "order_not_open"])
         }
@@ -145,7 +167,10 @@ export const paymentSettleNode: NodeDefinition<
         if (conversation !== undefined) {
             await context.effect(
                 "channel.send",
-                { conversationId: conversation.id, text: filled(settings.confirmationText, order.orderNo, transaction.amountVnd) },
+                {
+                    conversationId: conversation.id,
+                    text: filled(settings.confirmationText, order.orderNo, transaction.amountVnd),
+                },
                 { dedupeKey: `payment-confirmation:${order.id}` },
             )
         }
@@ -153,9 +178,15 @@ export const paymentSettleNode: NodeDefinition<
     },
     examples: [
         {
-            name: "the judge matched Định's order: it is marked paid with the 5,000 transaction and he is told on Zalo, in his latest conversation",
+            name: "the judge matched Dinh's order: it is marked paid with the 5,000 transaction and he is told on Zalo, in his latest conversation",
             params: SETTINGS,
-            input: { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: [ORDER_DINH.id], reasons: REASONS, claimId: null },
+            input: {
+                transactionId: TRANSACTION_DINH.id,
+                mode: "apply",
+                candidateIds: [ORDER_DINH.id],
+                reasons: REASONS,
+                claimId: null,
+            },
             output: { result: "paid", orderId: ORDER_DINH.id },
             effects: [
                 {
@@ -164,7 +195,7 @@ export const paymentSettleNode: NodeDefinition<
                 },
                 {
                     kind: "channel.send",
-                    payload: { conversationId: CONVERSATION_DINH.id, text: "Shop đã nhận 5.000 đ cho đơn SO-0001. Cảm ơn bạn!" },
+                    payload: { conversationId: CONVERSATION_DINH.id, text: sampleOf("sampleShopDaNhan5000D") },
                 },
             ],
             store: STORE_REAL_CASE,
@@ -173,10 +204,23 @@ export const paymentSettleNode: NodeDefinition<
         {
             name: "a customer who never wrote is marked paid and told nothing",
             params: SETTINGS,
-            input: { transactionId: TRANSACTION_NAMED.id, mode: "apply", candidateIds: ["order-2"], reasons: ["khớp"], claimId: null },
+            input: {
+                transactionId: TRANSACTION_NAMED.id,
+                mode: "apply",
+                candidateIds: ["order-2"],
+                reasons: [sampleOf("sampleKhop")],
+                claimId: null,
+            },
             output: { result: "paid", orderId: "order-2" },
             effects: [
-                { kind: "payment.mark-paid", payload: { orderId: "order-2", transactionId: TRANSACTION_NAMED.id, evidence: ["khớp"] } },
+                {
+                    kind: "payment.mark-paid",
+                    payload: {
+                        orderId: "order-2",
+                        transactionId: TRANSACTION_NAMED.id,
+                        evidence: [sampleOf("sampleKhop")],
+                    },
+                },
             ],
             store: STORE_EXTENDED,
             grant: GRANT,
@@ -184,7 +228,13 @@ export const paymentSettleNode: NodeDefinition<
         {
             name: "a transaction that already paid the order changes nothing",
             params: SETTINGS,
-            input: { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: [ORDER_DINH.id], reasons: [], claimId: null },
+            input: {
+                transactionId: TRANSACTION_DINH.id,
+                mode: "apply",
+                candidateIds: [ORDER_DINH.id],
+                reasons: [],
+                claimId: null,
+            },
             output: { result: "already-paid", orderId: ORDER_DINH.id },
             effects: [],
             store: {
@@ -200,7 +250,7 @@ export const paymentSettleNode: NodeDefinition<
                 transactionId: TRANSACTION_DINH.id,
                 mode: "ask",
                 candidateIds: [ORDER_DINH.id, "order-2"],
-                reasons: ["Hai đơn cùng số tiền"],
+                reasons: [sampleOf("sampleHaiDonCungSoTien")],
                 claimId: "claim-dinh",
             },
             output: { result: "raised", orderId: null },
@@ -214,7 +264,7 @@ export const paymentSettleNode: NodeDefinition<
                             target: "order",
                             transactionId: TRANSACTION_DINH.id,
                             candidateIds: [ORDER_DINH.id, "order-2"],
-                            reasons: ["Hai đơn cùng số tiền"],
+                            reasons: [sampleOf("sampleHaiDonCungSoTien")],
                         },
                         amountVnd: 5000,
                         claimId: "claim-dinh",
@@ -227,7 +277,13 @@ export const paymentSettleNode: NodeDefinition<
         {
             name: "a transaction that is not found raises a work item with no amount",
             params: SETTINGS,
-            input: { transactionId: "missing", mode: "apply", candidateIds: [ORDER_DINH.id], reasons: [], claimId: null },
+            input: {
+                transactionId: "missing",
+                mode: "apply",
+                candidateIds: [ORDER_DINH.id],
+                reasons: [],
+                claimId: null,
+            },
             output: { result: "raised", orderId: null },
             effects: [
                 {
@@ -235,7 +291,12 @@ export const paymentSettleNode: NodeDefinition<
                     payload: {
                         action: "reconcile_payment",
                         title: SETTINGS.reviewTitle,
-                        payload: { target: "order", transactionId: "missing", candidateIds: [ORDER_DINH.id], reasons: [] },
+                        payload: {
+                            target: "order",
+                            transactionId: "missing",
+                            candidateIds: [ORDER_DINH.id],
+                            reasons: [],
+                        },
                     },
                 },
             ],
@@ -245,7 +306,13 @@ export const paymentSettleNode: NodeDefinition<
         {
             name: "an order that is no longer open is not paid twice",
             params: SETTINGS,
-            input: { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: [ORDER_DINH.id], reasons: ["khớp"], claimId: null },
+            input: {
+                transactionId: TRANSACTION_DINH.id,
+                mode: "apply",
+                candidateIds: [ORDER_DINH.id],
+                reasons: [sampleOf("sampleKhop")],
+                claimId: null,
+            },
             output: { result: "raised", orderId: null },
             effects: ["work-item.raise"],
             store: { ...STORE_REAL_CASE, order: [{ ...ORDER_DINH, status: "paid" }] },
@@ -254,7 +321,13 @@ export const paymentSettleNode: NodeDefinition<
         {
             name: "an order with another amount than the transaction is not marked paid",
             params: SETTINGS,
-            input: { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: ["order-2"], reasons: ["khớp"], claimId: null },
+            input: {
+                transactionId: TRANSACTION_DINH.id,
+                mode: "apply",
+                candidateIds: ["order-2"],
+                reasons: [sampleOf("sampleKhop")],
+                claimId: null,
+            },
             output: { result: "raised", orderId: null },
             effects: ["work-item.raise"],
             store: STORE_EXTENDED,
@@ -263,7 +336,13 @@ export const paymentSettleNode: NodeDefinition<
         {
             name: "a named order that does not exist is not marked paid",
             params: SETTINGS,
-            input: { transactionId: TRANSACTION_DINH.id, mode: "apply", candidateIds: ["ghost"], reasons: ["khớp"], claimId: null },
+            input: {
+                transactionId: TRANSACTION_DINH.id,
+                mode: "apply",
+                candidateIds: ["ghost"],
+                reasons: [sampleOf("sampleKhop")],
+                claimId: null,
+            },
             output: { result: "raised", orderId: null },
             effects: ["work-item.raise"],
             store: STORE_REAL_CASE,
@@ -272,7 +351,13 @@ export const paymentSettleNode: NodeDefinition<
         {
             name: "a transaction that already paid another order pays no second one",
             params: SETTINGS,
-            input: { transactionId: TRANSACTION_LINKED.id, mode: "apply", candidateIds: [ORDER_DINH.id], reasons: ["khớp"], claimId: null },
+            input: {
+                transactionId: TRANSACTION_LINKED.id,
+                mode: "apply",
+                candidateIds: [ORDER_DINH.id],
+                reasons: [sampleOf("sampleKhop")],
+                claimId: null,
+            },
             output: { result: "raised", orderId: null },
             effects: ["work-item.raise"],
             store: STORE_EXTENDED,

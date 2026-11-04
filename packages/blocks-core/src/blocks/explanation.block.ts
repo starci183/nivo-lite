@@ -2,7 +2,7 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import type { TextSchema, RequiredRead, RequiredAction } from "./schema-types"
+import type { TextSchema, ExplanationSlots } from "./schema-types"
 
 const props: z.ZodObject<{
     label: TextSchema
@@ -35,12 +35,7 @@ const props: z.ZodObject<{
     missingTitle: specText,
     missingBody: specText,
 })
-const slots: {
-    readonly why: RequiredRead<"record">
-    readonly waiting: RequiredRead<"record">
-    readonly done: RequiredRead<"record">
-    readonly close: RequiredAction
-} = {
+const slots: ExplanationSlots = {
     why: { kind: "read", shape: "record", required: true },
     waiting: { kind: "read", shape: "record", required: true },
     done: { kind: "read", shape: "record", required: true },

@@ -49,7 +49,9 @@ export interface TriggerMessage {
 
 /** The pending customer messages: their words one per line, and each message with its files when the trigger carries them. */
 export interface ClassifyInput {
+    /** What the customer said, one message per line. */
     readonly text: string
+    /** Each message with its files, or null when the trigger carries only the words. */
     readonly messages: ReadonlyArray<TriggerMessage> | null
 }
 
@@ -78,8 +80,11 @@ export type ImageKind = "payment_receipt" | "other" | "unreadable"
 
 /** The order as the model writes it, before it is cleaned; what the customer did not say may be absent or null. */
 export interface ModelOrder {
+    /** The items the customer named. */
     readonly items: ReadonlyArray<{ readonly name: string; readonly quantity?: number | null | undefined }>
+    /** The delivery address, when the customer gave one. */
     readonly address?: string | null | undefined
+    /** The name of who orders, when the customer gave one. */
     readonly customer?: string | null | undefined
     /** Whatever else the model wrote in the slot, an address under another name included. */
     readonly [member: string]: unknown
@@ -87,14 +92,20 @@ export interface ModelOrder {
 
 /** The payment claim as the model writes it, before it is cleaned. */
 export interface ModelClaim {
+    /** The amount the customer says was sent. */
     readonly amount_vnd?: number | string | null | undefined
+    /** The name the customer says the transfer carries. */
     readonly payer_name?: string | null | undefined
 }
 
 /** The reply the model gives, before it is cleaned; the pictures are answered one kind each, in the order they were shown. */
 export interface ModelReply {
+    /** The intents the model found. */
     readonly intents: ReadonlyArray<Intent>
+    /** The order the model read, when the batch holds one. */
     readonly order?: ModelOrder | null | undefined
+    /** The payment claim the model read, when the batch holds one. */
     readonly payment_claim?: ModelClaim | null | undefined
+    /** What the model says each picture is, in the order they were shown. */
     readonly images: ReadonlyArray<ImageKind>
 }

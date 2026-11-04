@@ -1,3 +1,4 @@
+import { wordOf } from "../../messages/catalog"
 import type { NodeLocale } from "../node-schema.types"
 import type { ClaimRule } from "./answer.types"
 
@@ -6,7 +7,13 @@ const SENTENCE_END = /(?<=[.!?\n])\s+/u
 
 /** The text lower case, without accents or doubled blanks, so a phrase matches however it is typed. */
 export const plainOf = (text: string): string =>
-    text.toLowerCase().normalize("NFD").replaceAll(/\p{M}/gu, "").replaceAll("đ", "d").replaceAll(/\s+/gu, " ").trim()
+    text
+        .toLowerCase()
+        .normalize("NFD")
+        .replaceAll(/\p{M}/gu, "")
+        .replaceAll(wordOf("letterD"), "d")
+        .replaceAll(/\s+/gu, " ")
+        .trim()
 
 /** The reply cut by the claims the turn did not back. */
 export interface ClaimsGuarded {

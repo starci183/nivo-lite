@@ -1,5 +1,13 @@
 import type { NodeLocale } from "../node-schema.types"
 
+/** The phrases of a claim in each language. */
+export interface ClaimPhrases {
+    /** The Vietnamese phrases. */
+    readonly vi: ReadonlyArray<string>
+    /** The English phrases. */
+    readonly en: ReadonlyArray<string>
+}
+
 /** A claim a reply may make only when an effect of the required kind was recorded in the turn. */
 export interface ClaimRule {
     /** A short name for the claim. */
@@ -7,7 +15,7 @@ export interface ClaimRule {
     /** The effect kind that must have been recorded for the reply to claim it. */
     readonly requires: string
     /** The phrases that make the claim, by language; accents and case do not matter. */
-    readonly phrases: { readonly vi: ReadonlyArray<string>; readonly en: ReadonlyArray<string> }
+    readonly phrases: ClaimPhrases
 }
 
 /** The per-graph settings of the answer. */
@@ -42,9 +50,13 @@ export interface AnswerOutput {
 
 /** A row of the knowledge kind as the read yields it. */
 export interface DocumentRow {
+    /** The id of the row. */
     readonly id: string
+    /** The title of the document. */
     readonly title: string
+    /** The text of the row. */
     readonly body: string
+    /** How the hand-off shows; `chat` when left out. */
     readonly visibility: string
 }
 

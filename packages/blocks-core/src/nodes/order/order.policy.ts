@@ -1,3 +1,4 @@
+import { wordOf } from "../../messages/catalog"
 import { ASK_WORDS } from "./ask-missing.messages"
 import type { AskLocale } from "./ask-missing.messages"
 import type { MissingReason, OrderGap, OrderItem } from "./order.schema"
@@ -14,13 +15,13 @@ export interface CatalogueRow {
     readonly priceVnd: number | null
 }
 
-/** The comparable form of a name: without accents, case or extra spaces, so "Trà  Sen" meets "tra sen". */
+/** The comparable form of a name: without accents, case or extra spaces, so a name typed with accents meets the same name typed without. */
 export const nameKey = (name: string): string =>
     name
         .normalize("NFD")
         .replace(/\p{M}/gu, "")
-        .replaceAll("đ", "d")
-        .replaceAll("Đ", "D")
+        .replaceAll(wordOf("letterD"), "d")
+        .replaceAll(wordOf("letterDCapital"), "D")
         .toLowerCase()
         .replace(/\s+/g, " ")
         .trim()
@@ -116,7 +117,12 @@ export const resolvedItems = (
         const row = known.get(nameKey(item.name))
         return row === undefined
             ? item
-            : { name: row.name, quantity: item.quantity, priceVnd: row.priceVnd ?? item.priceVnd, catalogueItemId: row.id }
+            : {
+                  name: row.name,
+                  quantity: item.quantity,
+                  priceVnd: row.priceVnd ?? item.priceVnd,
+                  catalogueItemId: row.id,
+              }
     })
 }
 

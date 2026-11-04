@@ -3,6 +3,7 @@ import { EXAMPLE_TURN, fakeNodePorts, nodeExampleMismatches } from "@nivo-lite/a
 import { coreEffects } from "../../vocabulary/effects"
 import { coreHandoffNode } from "./handoff.node"
 import { tagPayloadOf } from "./handoff.policy"
+import { sampleOf } from "../../messages/catalog"
 
 const [example] = coreHandoffNode.examples
 const SALES = { toModuleKey: "sales", visibility: "chat" as const }
@@ -66,7 +67,10 @@ describe("core.handoff", () => {
 
 describe("tagPayloadOf", () => {
     it("keeps the note as text and sends the context, nested order included, in the context field", () => {
-        const context = { intents: ["order"], order: { items: [{ name: "chậu hoa", quantity: 1 }], address: null } }
+        const context = {
+            intents: ["order"],
+            order: { items: [{ name: sampleOf("sampleChauHoa"), quantity: 1 }], address: null },
+        }
         expect(tagPayloadOf(SALES, { ...BARE, context }, null)).toEqual({
             toModuleKey: "sales",
             visibility: "chat",

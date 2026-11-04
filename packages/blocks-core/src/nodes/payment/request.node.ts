@@ -4,9 +4,12 @@ import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import type { PaymentInstruction } from "../../vocabulary"
 import type { OrderLine } from "./payment-request.policy"
+import { failureKindOf } from "../core/failure.policy"
 import { noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
 import type { RequestLocale } from "./payment-request.messages"
 import type { NodeSchema } from "../node-schema.types"
+import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
+import { bilingualOf } from "../../messages/catalog"
 
 /** The confirmed order to be paid, and where to tell the customer. */
 export interface PaymentRequestInput {
@@ -44,7 +47,12 @@ const SENDING_GRANT: RightsGrant = {
     rights: [
         { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
         { kind: "message", access: "write", scope: "turn", fields: ["body"] },
-        { kind: "payment-account", access: "read", scope: "workspace", fields: ["bankName", "bankCode", "accountNumber", "accountHolder"] },
+        {
+            kind: "payment-account",
+            access: "read",
+            scope: "workspace",
+            fields: ["bankName", "bankCode", "accountNumber", "accountHolder"],
+        },
     ],
     tools: [INSTRUCTION_TOOL],
 }
@@ -52,28 +60,30 @@ const SENDING_GRANT: RightsGrant = {
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
 const input: NodeSchema<PaymentRequestInput> = z.object({
-    orderId: z.string().min(1),
-    conversationId: z.string().min(1),
+    orderId: z.string().max(MAX_ID).min(1),
+    conversationId: z.string().max(MAX_ID).min(1),
     locale: z.enum(["vi", "en"]),
 })
 
 const output: NodeSchema<PaymentRequestOutput> = z.object({
     status: z.enum(["sent", "no_account", "not_payable"]),
-    content: z.string().nullable(),
-    qrUrl: z.string().nullable(),
+    content: z.string().max(MAX_LINE).nullable(),
+    qrUrl: z.string().max(MAX_BODY).nullable(),
 })
 
 const NOT_SENT: Omit<PaymentRequestOutput, "status"> = { content: null, qrUrl: null }
 
-/** What the provider tool answered, or null when it failed or no provider is connected. */
+/** What the provider tool came to: the instruction, or the kind of the failure when it threw (no provider connected, a refusal, a bad answer). */
+type InstructionAnswer = { readonly instruction: PaymentInstruction } | { readonly failure: string }
+
 const instructionOf = async (
     tools: NodeContext["tools"],
     args: Readonly<Record<string, unknown>>,
-): Promise<PaymentInstruction | null> => {
+): Promise<InstructionAnswer> => {
     try {
-        return await tools.call<PaymentInstruction>(INSTRUCTION_TOOL, args)
-    } catch {
-        return null
+        return { instruction: await tools.call<PaymentInstruction>(INSTRUCTION_TOOL, args) }
+    } catch (error) {
+        return { failure: failureKindOf(error) }
     }
 }
 
@@ -86,11 +96,13 @@ const instructionOf = async (
 export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "payment.request",
     role: "output",
-    title: { vi: "Gửi yêu cầu thanh toán", en: "Send the payment request" },
+    title: bilingualOf("nodePaymentRequestTitle"),
     params,
     input,
     output,
-    rights: [{ kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] }],
+    rights: [
+        { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
+    ],
     effects: ["channel.send", "work-item.raise"],
     tools: [INSTRUCTION_TOOL],
     run: async (given, context) => {
@@ -100,19 +112,24 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             limit: 1,
         })
         const amountVnd = order?.amountVnd ?? 0
-        if (order === undefined || order.status !== "confirmed" || amountVnd <= 0) {
+        if (order?.status !== "confirmed" || amountVnd <= 0) {
             return { status: "not_payable", ...NOT_SENT }
         }
         const content = transferContentOf(order.orderNo)
-        const instruction = await instructionOf(context.tools, { orderNo: order.orderNo, amountVnd, transferContent: content })
-        if (instruction === null) {
+        const answer = await instructionOf(context.tools, {
+            orderNo: order.orderNo,
+            amountVnd,
+            transferContent: content,
+        })
+        if ("failure" in answer) {
             await context.effect("work-item.raise", {
                 action: "connect_sepay",
                 title: noAccountTitleOf(order.orderNo, given.locale),
-                payload: { orderId: given.orderId },
+                payload: { orderId: given.orderId, failure: answer.failure },
             })
             return { status: "no_account", ...NOT_SENT }
         }
+        const { instruction } = answer
         const text = paymentMessageOf(instruction, { amountVnd, lines: order.items }, content, given.locale)
         await context.effect(
             "channel.send",

@@ -1,4 +1,5 @@
 import { nodeExampleMismatches } from "@nivo-lite/agent-sdk/testing"
+import { wordListOf } from "../../messages/catalog"
 import { coreEffects } from "../../vocabulary/effects"
 import { paymentClaimAckNode } from "./claim-ack.node"
 import { claimAckOf } from "./claim-ack.policy"
@@ -23,7 +24,9 @@ describe("payment.claim-ack", () => {
 describe("claimAckOf", () => {
     it.each(["vi", "en"] as const)("never says the money arrived (%s)", (locale) => {
         for (const reply of [claimAckOf(5000, locale), claimAckOf(null, locale)])
-            expect(reply).not.toMatch(/nhận được|đã nhận|thành công|received|confirmed|successful/iu)
+            expect(reply).not.toMatch(
+                new RegExp([...wordListOf("moneyArrivedWords"), "received", "confirmed", "successful"].join("|"), "iu"),
+            )
     })
 
     it("names the amount when the customer gave one", () => {

@@ -1,5 +1,13 @@
-import type { NodeContext } from "@nivo-lite/agent-sdk/node"
-import { coreNodes, orderConfirmNode, orderNeedsApprovalNode, paymentRequestNode, raiseWorkItemNode } from "./index"
+import { runNode } from "@nivo-lite/agent-sdk/node"
+import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
+import type { FakeNodePortsOptions } from "@nivo-lite/agent-sdk/testing"
+import { coreEffects, coreTools } from "../vocabulary"
+import { coreNodes } from "./core-nodes"
+import { raiseWorkItemNode } from "./core/raise-work-item.node"
+import { orderConfirmNode } from "./order/confirm.node"
+import { orderNeedsApprovalNode } from "./order/needs-approval.node"
+import { paymentRequestNode } from "./payment/request.node"
 
 // The worked examples of every node run in the root conformance spec; these cover what an example cannot say.
 
@@ -20,19 +28,45 @@ describe("order.needs-approval", () => {
     })
 })
 
+/** Runs one node as the host does, over fake ports: rights, declarations and payloads are enforced by the runner. */
+const runOver = (
+    node: NodeDefinition,
+    input: unknown,
+    options: FakeNodePortsOptions,
+    override: (ports: ReturnType<typeof fakeNodePorts>["ports"]) => ReturnType<typeof fakeNodePorts>["ports"] = (
+        ports,
+    ) => ports,
+) => {
+    const fake = fakeNodePorts(options)
+    return runNode(
+        {
+            node,
+            params: {},
+            input,
+            turn: EXAMPLE_TURN,
+            grant: {
+                rights: [
+                    ...node.rights,
+                    ...coreEffects.flatMap((effect) => effect.rights),
+                    ...coreTools.flatMap((tool) => tool.rights),
+                ],
+                tools: coreTools.map((tool) => tool.id),
+            },
+            effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
+            tools: new Map(coreTools.map((tool) => [tool.id, tool])),
+            key: `${node.id}:spec`,
+        },
+        override(fake.ports),
+    ).then((run) => ({ ...run, executed: fake.executed, toolCalls: fake.toolCalls }))
+}
+
 describe("order.confirm", () => {
     it("confirms once per order across runs: the dedupe key is the order", async () => {
-        const calls: Array<[string, unknown, unknown]> = []
-        const context = {
-            effect: (kind: string, payload: unknown, options: unknown) => {
-                calls.push([kind, payload, options])
-                return Promise.resolve({ kind, id: "x" })
-            },
-        } as unknown as NodeContext
+        const { executed } = await runOver(orderConfirmNode, { orderId: "o1" }, {})
 
-        await orderConfirmNode.run({ orderId: "o1" }, context as never)
-
-        expect(calls).toEqual([["order.confirm", { orderId: "o1" }, { dedupeKey: "order-confirm:o1" }]])
+        expect(executed.map((one) => [one.id, one.payload, one.dedupeKey])).toEqual([
+            ["order.confirm", { orderId: "o1" }, "order-confirm:o1"],
+        ])
     })
 })
 
@@ -53,29 +87,12 @@ describe("payment.request", () => {
         qrUrl: "https://qr.example/x",
         provider: "sepay",
     }
+    const input = { orderId: "o1", conversationId: "conv-1", locale: "en" }
 
-    const run = async (answer: () => Promise<unknown>) => {
-        const effectsRun: Array<[string, Record<string, unknown>, unknown]> = []
-        const toolCalls: Array<[string, unknown]> = []
-        const context = {
-            data: { read: () => Promise.resolve([order]) },
-            effect: (kind: string, payload: Record<string, unknown>, options: unknown) => {
-                effectsRun.push([kind, payload, options])
-                return Promise.resolve({ kind, id: "x" })
-            },
-            tools: {
-                call: (name: string, args: unknown) => {
-                    toolCalls.push([name, args])
-                    return answer()
-                },
-            },
-        }
-        const output = await paymentRequestNode.run(
-            { orderId: "o1", conversationId: "conv-1", locale: "en" },
-            context as never,
+    const run = (tools: ReadonlyArray<unknown>, failure: Error | null = null) =>
+        runOver(paymentRequestNode, input, { store: { order: [order] }, tools }, (ports) =>
+            failure === null ? ports : { ...ports, callTool: () => Promise.reject(failure) },
         )
-        return { output, effectsRun, toolCalls }
-    }
 
     it("declares the tool it calls and reads the order only: the rights of its effect and tool are the grant", () => {
         expect(paymentRequestNode.tools).toEqual(["payment.instruction"])
@@ -83,23 +100,29 @@ describe("payment.request", () => {
     })
 
     it("asks the tool with the order number, the amount and the transfer content, then sends once per order", async () => {
-        const { output, effectsRun, toolCalls } = await run(() => Promise.resolve(instruction))
+        const { output, executed, toolCalls } = await run([instruction])
 
-        expect(toolCalls).toEqual([
-            ["payment.instruction", { orderNo: "DH-20261105-0001", amountVnd: 300_000, transferContent: "DH202611050001" }],
+        expect(toolCalls.map((call) => [call.id, call.args])).toEqual([
+            [
+                "payment.instruction",
+                { orderNo: "DH-20261105-0001", amountVnd: 300_000, transferContent: "DH202611050001" },
+            ],
         ])
         expect(output).toEqual({ status: "sent", content: "DH202611050001", qrUrl: "https://qr.example/x" })
-        expect(effectsRun).toHaveLength(1)
-        expect(effectsRun[0]?.[0]).toBe("channel.send")
-        expect(effectsRun[0]?.[1].text).toContain("Bank: MBBank")
-        expect(effectsRun[0]?.[2]).toEqual({ dedupeKey: "payment-request:o1" })
+        expect(executed).toHaveLength(1)
+        expect(executed[0]?.id).toBe("channel.send")
+        expect(String(executed[0]?.payload.text)).toContain("Bank: MBBank")
+        expect(executed[0]?.dedupeKey).toBe("payment-request:o1")
     })
 
-    it("raises a connect_sepay work item and sends nothing when the tool fails", async () => {
-        const { output, effectsRun } = await run(() => Promise.reject(new Error("no provider connected")))
+    it("raises a connect_sepay work item and sends nothing when the tool fails, naming the kind of the failure", async () => {
+        const { output, executed } = await run([], new Error("no provider connected"))
 
         expect(output).toEqual({ status: "no_account", content: null, qrUrl: null })
-        expect(effectsRun.map(([kind]) => kind)).toEqual(["work-item.raise"])
-        expect(effectsRun[0]?.[1]).toMatchObject({ action: "connect_sepay", payload: { orderId: "o1" } })
+        expect(executed.map((one) => one.id)).toEqual(["work-item.raise"])
+        expect(executed[0]?.payload).toMatchObject({
+            action: "connect_sepay",
+            payload: { orderId: "o1", failure: "Error" },
+        })
     })
 })

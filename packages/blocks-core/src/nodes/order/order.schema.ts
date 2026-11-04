@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
+import { MAX_ID, MAX_LINE } from "../../bounds"
 
 /** One line of an order as the intent or the catalogue gives it. */
 export interface OrderItem {
@@ -29,7 +30,7 @@ export const orderItemSchema: NodeSchema<OrderItem> = z.object({
     name: z.string().min(1).max(200),
     quantity: z.number().int().min(1).max(10_000),
     priceVnd: z.number().min(0).nullable(),
-    catalogueItemId: z.string().optional(),
+    catalogueItemId: z.string().max(MAX_ID).optional(),
 })
 
 /** The items of an order: at most a hundred lines. */
@@ -41,5 +42,5 @@ export const addressSchema: NodeSchema<string | null> = z.string().max(500).null
 /** One gap of an incomplete order. */
 export const orderGapSchema: NodeSchema<OrderGap> = z.object({
     reason: z.enum(["no_items", "not_in_catalogue", "no_price", "no_address"]),
-    item: z.string().nullable(),
+    item: z.string().max(MAX_LINE).nullable(),
 })

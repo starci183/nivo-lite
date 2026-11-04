@@ -7,6 +7,8 @@ import type { CatalogueRow } from "./order.policy"
 import { addressSchema, orderItemsSchema } from "./order.schema"
 import type { NodeSchema } from "../node-schema.types"
 import type { OrderItem } from "./order.schema"
+import { MAX_ID } from "../../bounds"
+import { bilingualOf, sampleOf } from "../../messages/catalog"
 
 /** What the intent of the conversation gave: who orders, the items, the address and a note. */
 export interface OrderRecordInput {
@@ -34,19 +36,24 @@ export interface OrderRecordOutput {
 const CATALOGUE_LIMIT = 500
 
 /** The agent grant the examples run under: the node own rights and the rights of the effect it runs. */
-const EXAMPLE_GRANT: RightsGrant = { rights: [{ kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] }, { kind: "order", access: "write", scope: "turn", fields: ["leadId", "items", "amountVnd"] }] }
+const EXAMPLE_GRANT: RightsGrant = {
+    rights: [
+        { kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] },
+        { kind: "order", access: "write", scope: "turn", fields: ["leadId", "items", "amountVnd"] },
+    ],
+}
 
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
 const input: NodeSchema<OrderRecordInput> = z.object({
-    leadId: z.string().min(1),
+    leadId: z.string().max(MAX_ID).min(1),
     items: orderItemsSchema,
     address: addressSchema,
     note: z.string().max(500).nullable(),
 })
 
 const output: NodeSchema<OrderRecordOutput> = z.object({
-    orderId: z.string(),
+    orderId: z.string().max(MAX_ID),
     items: orderItemsSchema,
     amountVnd: z.number().nullable(),
 })
@@ -55,11 +62,13 @@ const output: NodeSchema<OrderRecordOutput> = z.object({
 export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "order.record",
     role: "output",
-    title: { vi: "Ghi đơn hàng", en: "Record the order" },
+    title: bilingualOf("nodeOrderRecordTitle"),
     params,
     input,
     output,
-    rights: [{ kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] }],
+    rights: [
+        { kind: "catalogue-item", access: "read", scope: "workspace", fields: ["id", "name", "priceVnd", "active"] },
+    ],
     effects: ["order.record"],
     run: async (given, context) => {
         const catalogue = await context.data.read<CatalogueRow>("catalogue-item", {
@@ -84,15 +93,15 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
             input: {
                 leadId: "lead-1",
                 items: [
-                    { name: "Trà sen", quantity: 1, priceVnd: null },
-                    { name: "trà  sen", quantity: 2, priceVnd: null },
+                    { name: sampleOf("sampleTraSen"), quantity: 1, priceVnd: null },
+                    { name: sampleOf("sampleTraSen4"), quantity: 2, priceVnd: null },
                 ],
-                address: "12 Lê Lợi, Huế",
-                note: "gọi trước",
+                address: sampleOf("sample12LeLoiHue"),
+                note: sampleOf("sampleGoiTruoc"),
             },
             output: {
                 orderId: "order.record-1",
-                items: [{ name: "Trà sen", quantity: 3, priceVnd: 120_000, catalogueItemId: "c1" }],
+                items: [{ name: sampleOf("sampleTraSen"), quantity: 3, priceVnd: 120_000, catalogueItemId: "c1" }],
                 amountVnd: 360_000,
             },
             grant: EXAMPLE_GRANT,
@@ -101,24 +110,37 @@ export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof
                     kind: "order.record",
                     payload: {
                         leadId: "lead-1",
-                        items: [{ name: "Trà sen", qty: 3, unitPriceVnd: 120_000, catalogueItemId: "c1" }],
+                        items: [
+                            { name: sampleOf("sampleTraSen"), qty: 3, unitPriceVnd: 120_000, catalogueItemId: "c1" },
+                        ],
                         amountVnd: 360_000,
-                        note: "gọi trước · 12 Lê Lợi, Huế",
+                        note: sampleOf("sampleGoiTruoc12LeLoiHue"),
                     },
                 },
             ],
-            store: { "catalogue-item": [{ id: "c1", name: "Trà sen", priceVnd: 120_000, active: true }] },
+            store: {
+                "catalogue-item": [{ id: "c1", name: sampleOf("sampleTraSen"), priceVnd: 120_000, active: true }],
+            },
         },
         {
             name: "records an item the catalogue lacks, unpriced, without a total or a note",
             params: {},
-            input: { leadId: "lead-1", items: [{ name: "Bánh", quantity: 2, priceVnd: null }], address: null, note: null },
-            output: { orderId: "order.record-1", items: [{ name: "Bánh", quantity: 2, priceVnd: null }], amountVnd: null },
+            input: {
+                leadId: "lead-1",
+                items: [{ name: sampleOf("sampleBanh"), quantity: 2, priceVnd: null }],
+                address: null,
+                note: null,
+            },
+            output: {
+                orderId: "order.record-1",
+                items: [{ name: sampleOf("sampleBanh"), quantity: 2, priceVnd: null }],
+                amountVnd: null,
+            },
             grant: EXAMPLE_GRANT,
             effects: [
                 {
                     kind: "order.record",
-                    payload: { leadId: "lead-1", items: [{ name: "Bánh", qty: 2 }], amountVnd: null },
+                    payload: { leadId: "lead-1", items: [{ name: sampleOf("sampleBanh"), qty: 2 }], amountVnd: null },
                 },
             ],
         },

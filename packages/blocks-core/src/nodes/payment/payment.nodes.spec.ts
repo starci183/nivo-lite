@@ -3,6 +3,10 @@ import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
 import type { FakeNodePortsOptions } from "@nivo-lite/agent-sdk/testing"
 import { runNode } from "@nivo-lite/agent-sdk/node"
 import { coreEffects, coreNodes, paymentNodes } from "../.."
+import { paymentEvidenceNode } from "./evidence.node"
+import { paymentJudgeNode } from "./judge.node"
+import { paymentMatchCodeNode } from "./match-code.node"
+import { paymentSettleNode } from "./settle.node"
 import {
     ARRIVAL_DINH,
     CLAIM_DINH,
@@ -12,8 +16,12 @@ import {
     TRANSACTION_DINH,
     TRANSACTION_MOMO,
 } from "./payment.fixtures"
+import { sampleOf } from "../../messages/catalog"
 
-const SETTLE_PARAMS = { confirmationText: "Đã nhận {amount} đ cho {orderNo}", reviewTitle: "Kiểm tra" }
+const SETTLE_PARAMS = {
+    confirmationText: sampleOf("sampleDaNhanAmountDChoOrderno"),
+    reviewTitle: sampleOf("sampleKiemTra"),
+}
 
 /** Runs one node as the host does, over fake ports: rights, declarations and payloads are enforced by the runner. */
 const run = (node: NodeDefinition, params: unknown, input: unknown, options: FakeNodePortsOptions) => {
@@ -38,12 +46,6 @@ const run = (node: NodeDefinition, params: unknown, input: unknown, options: Fak
     ).then((result) => ({ ...result, executed: fake.executed }))
 }
 
-const byId = (id: string): NodeDefinition => {
-    const found = paymentNodes.find((node) => node.id === id)
-    if (found === undefined) throw new Error(`no node ${id}`)
-    return found
-}
-
 describe("the payment nodes", () => {
     it("are listed among the core nodes with distinct kebab-case ids", () => {
         const ids = coreNodes.map((node) => node.id)
@@ -60,8 +62,8 @@ describe("the payment nodes", () => {
     })
 
     it("keep conditions pure: the code rule and the judge run no effect", () => {
-        expect(byId("payment.match-code").effects).toEqual([])
-        expect(byId("payment.judge").effects).toEqual([])
+        expect(paymentMatchCodeNode.effects).toEqual([])
+        expect(paymentJudgeNode.effects).toEqual([])
     })
 })
 
@@ -71,7 +73,7 @@ describe("a claim of a customer with no lead yet", () => {
         const store = { ...STORE_REAL_CASE, "payment-claim": [claim] }
 
         const evidence = await run(
-            byId("payment.evidence"),
+            paymentEvidenceNode,
             { windowHours: 72 },
             { transactionId: TRANSACTION_DINH.id, claimId: null },
             { store },
@@ -87,7 +89,7 @@ describe("a claim of a customer with no lead yet", () => {
         const store = { ...STORE_REAL_CASE, "payment-claim": [claim] }
 
         const evidence = await run(
-            byId("payment.evidence"),
+            paymentEvidenceNode,
             { windowHours: 72 },
             { transactionId: TRANSACTION_DINH.id, claimId: null },
             { store },
@@ -98,9 +100,9 @@ describe("a claim of a customer with no lead yet", () => {
 })
 
 describe("the real case end to end", () => {
-    it("matches the 5,000 transfer to Định's order when his claim came first, and leaves the 2,000 MoMo unmatched", async () => {
+    it("matches the 5,000 transfer to Dinh's order when his claim came first, and leaves the 2,000 MoMo unmatched", async () => {
         const evidence = await run(
-            byId("payment.evidence"),
+            paymentEvidenceNode,
             { windowHours: 72 },
             { transactionId: TRANSACTION_DINH.id, claimId: null },
             { store: STORE_REAL_CASE },
@@ -108,25 +110,25 @@ describe("the real case end to end", () => {
         expect(evidence.output).toMatchObject({ arrival: ARRIVAL_DINH, claims: [CLAIM_OF_DINH] })
         expect(evidence.output).toMatchObject({ evidenced: [...EVIDENCED_FOR_DINH] })
 
-        const code = await run(byId("payment.match-code"), {}, { evidenced: EVIDENCED_FOR_DINH }, {})
+        const code = await run(paymentMatchCodeNode, {}, { evidenced: EVIDENCED_FOR_DINH }, {})
         expect(code.output).toMatchObject({ branch: "no-code" })
 
         const judged = await run(
-            byId("payment.judge"),
+            paymentJudgeNode,
             {},
             { arrival: ARRIVAL_DINH, evidenced: EVIDENCED_FOR_DINH, claims: [CLAIM_OF_DINH] },
-            { model: [{ verdict: "match", candidate_id: "order-dinh", reasons: ["khớp"] }] },
+            { model: [{ verdict: "match", candidate_id: "order-dinh", reasons: [sampleOf("sampleKhop")] }] },
         )
         expect(judged.output).toMatchObject({ branch: "match", candidateIds: ["order-dinh"] })
 
         const settled = await run(
-            byId("payment.settle"),
+            paymentSettleNode,
             SETTLE_PARAMS,
             {
                 transactionId: TRANSACTION_DINH.id,
                 mode: "apply",
                 candidateIds: ["order-dinh"],
-                reasons: ["khớp"],
+                reasons: [sampleOf("sampleKhop")],
                 claimId: null,
             },
             { store: STORE_REAL_CASE },
@@ -138,12 +140,12 @@ describe("the real case end to end", () => {
         ])
 
         const momo = await run(
-            byId("payment.evidence"),
+            paymentEvidenceNode,
             { windowHours: 72 },
             { transactionId: TRANSACTION_MOMO.id, claimId: null },
             { store: STORE_REAL_CASE },
         )
-        const left = await run(byId("payment.judge"), {}, momo.output, {})
+        const left = await run(paymentJudgeNode, {}, momo.output, {})
         expect(left.output).toMatchObject({ branch: "no_match", candidateIds: [] })
     })
 
@@ -152,7 +154,7 @@ describe("the real case end to end", () => {
         await expect(
             runNode(
                 {
-                    node: byId("payment.evidence"),
+                    node: paymentEvidenceNode,
                     params: { windowHours: 72 },
                     input: { transactionId: TRANSACTION_DINH.id, claimId: null },
                     turn: EXAMPLE_TURN,
@@ -169,7 +171,7 @@ describe("the real case end to end", () => {
 
 describe("the evidence node's input", () => {
     it("takes a transaction or a claim, never both and never neither", () => {
-        const input = byId("payment.evidence").input
+        const input = paymentEvidenceNode.input
 
         expect(input.safeParse({ transactionId: "tx-1", claimId: null }).success).toBe(true)
         expect(input.safeParse({ transactionId: null, claimId: "claim-1" }).success).toBe(true)

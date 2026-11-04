@@ -5,6 +5,8 @@ import { channelSendEffect } from "../../vocabulary"
 import { CLAIM_DINH, STORE_REAL_CASE } from "./payment.fixtures"
 import { READ_CLAIMS } from "./payment.rights"
 import type { ClaimRow } from "./payment.schemas"
+import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
+import { sampleOf } from "../../messages/catalog"
 
 /** Which claim (null when no claim is open: there is nothing to answer or wait for), and whether the wait for the money has run out. */
 interface ClaimWaitInput {
@@ -27,10 +29,13 @@ interface ClaimWaitParams {
 
 const params: z.ZodType<ClaimWaitParams> = z.object({
     timeoutMinutes: z.number().int().positive().default(30),
-    neutralText: z.string().min(1),
-    overdueTitle: z.string().min(1),
+    neutralText: z.string().max(MAX_BODY).min(1),
+    overdueTitle: z.string().max(MAX_LINE).min(1),
 })
-const input: z.ZodType<ClaimWaitInput, ClaimWaitInput> = z.object({ claimId: z.string().nullable(), timedOut: z.boolean() })
+const input: z.ZodType<ClaimWaitInput, ClaimWaitInput> = z.object({
+    claimId: z.string().max(MAX_ID).nullable(),
+    timedOut: z.boolean(),
+})
 const output: z.ZodType<ClaimWaitOutput, ClaimWaitOutput> = z.object({
     state: z.enum(["waiting", "escalated", "closed"]),
     resumeAfterMinutes: z.number().nullable(),
@@ -66,7 +71,7 @@ export const paymentClaimWaitNode: NodeDefinition<
             fields: READ_CLAIMS.fields,
             limit: 1,
         })
-        if (claim === undefined || claim.status !== "open") return { state: "closed", resumeAfterMinutes: null }
+        if (claim?.status !== "open") return { state: "closed", resumeAfterMinutes: null }
         if (given.timedOut) {
             await context.effect(
                 "work-item.raise",
@@ -92,11 +97,11 @@ export const paymentClaimWaitNode: NodeDefinition<
     },
     examples: [
         {
-            name: "Định's claim at 00:54 with no money yet: a neutral reply on Zalo, then wait 30 minutes",
+            name: "Dinh's claim at 00:54 with no money yet: a neutral reply on Zalo, then wait 30 minutes",
             params: {
                 timeoutMinutes: 30,
-                neutralText: "Shop chưa nhận được khoản chuyển khoản, đang theo dõi.",
-                overdueTitle: "Khách báo đã chuyển khoản nhưng chưa thấy tiền",
+                neutralText: sampleOf("sampleShopChuaNhanDuocKhoanChuyen"),
+                overdueTitle: sampleOf("sampleKhachBaoDaChuyenKhoanNhung"),
             },
             input: { claimId: CLAIM_DINH.id, timedOut: false },
             output: { state: "waiting", resumeAfterMinutes: 30 },
@@ -105,7 +110,7 @@ export const paymentClaimWaitNode: NodeDefinition<
                     kind: "channel.send",
                     payload: {
                         conversationId: "conversation-dinh",
-                        text: "Shop chưa nhận được khoản chuyển khoản, đang theo dõi.",
+                        text: sampleOf("sampleShopChuaNhanDuocKhoanChuyen"),
                     },
                 },
             ],
@@ -116,8 +121,8 @@ export const paymentClaimWaitNode: NodeDefinition<
             name: "the wait ran out and no money came: the owner gets a work item",
             params: {
                 timeoutMinutes: 30,
-                neutralText: "Shop chưa nhận được khoản chuyển khoản, đang theo dõi.",
-                overdueTitle: "Khách báo đã chuyển khoản nhưng chưa thấy tiền",
+                neutralText: sampleOf("sampleShopChuaNhanDuocKhoanChuyen"),
+                overdueTitle: sampleOf("sampleKhachBaoDaChuyenKhoanNhung"),
             },
             input: { claimId: CLAIM_DINH.id, timedOut: true },
             output: { state: "escalated", resumeAfterMinutes: null },
@@ -126,8 +131,13 @@ export const paymentClaimWaitNode: NodeDefinition<
                     kind: "work-item.raise",
                     payload: {
                         action: "reconcile_payment",
-                        title: "Khách báo đã chuyển khoản nhưng chưa thấy tiền",
-                        payload: { target: "order", claimId: CLAIM_DINH.id, leadId: "lead-dinh", body: CLAIM_DINH.body },
+                        title: sampleOf("sampleKhachBaoDaChuyenKhoanNhung"),
+                        payload: {
+                            target: "order",
+                            claimId: CLAIM_DINH.id,
+                            leadId: "lead-dinh",
+                            body: CLAIM_DINH.body,
+                        },
                         amountVnd: 5000,
                         claimId: "claim-dinh",
                     },
@@ -147,7 +157,12 @@ export const paymentClaimWaitNode: NodeDefinition<
                     payload: {
                         action: "reconcile_payment",
                         title: "y",
-                        payload: { target: "order", claimId: CLAIM_DINH.id, leadId: "lead-dinh", body: CLAIM_DINH.body },
+                        payload: {
+                            target: "order",
+                            claimId: CLAIM_DINH.id,
+                            leadId: "lead-dinh",
+                            body: CLAIM_DINH.body,
+                        },
                         claimId: CLAIM_DINH.id,
                     },
                 },

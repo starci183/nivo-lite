@@ -4,6 +4,7 @@ import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
 import { intentSchema } from "./classify.schema"
 import type { Intent } from "./classify.types"
+import { bilingualOf } from "../../messages/catalog"
 
 /** The per-graph settings: the intent to look for. */
 interface HasParams {
@@ -35,7 +36,7 @@ export const intentHasNode: NodeDefinition<
 > = defineNode({
     id: "intent.has",
     role: "condition",
-    title: { vi: "Có ý định này không", en: "Has this intent" },
+    title: bilingualOf("nodeIntentHasTitle"),
     params,
     input,
     output,

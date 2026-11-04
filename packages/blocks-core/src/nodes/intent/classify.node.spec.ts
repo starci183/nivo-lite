@@ -6,6 +6,7 @@ import { CLASSIFY_INSTRUCTIONS } from "./classify.messages"
 import { intentClassifyNode } from "./classify.node"
 import { modelReplySchema } from "./classify.schema"
 import { addressInWords, classificationOf, imagesOf, messagesOf, vndOf } from "./classify.policy"
+import { sampleOf } from "../../messages/catalog"
 
 describe("intent.classify", () => {
     it.each(intentClassifyNode.examples.map((each) => [each.name, each] as const))(
@@ -19,13 +20,13 @@ describe("intent.classify", () => {
 describe("the instructions of the classification", () => {
     it("tell the model that the words after a delivery word are the address", () => {
         expect(CLASSIFY_INSTRUCTIONS).toContain("giao")
-        expect(CLASSIFY_INSTRUCTIONS).toContain("25 Nguyễn Huệ")
+        expect(CLASSIFY_INSTRUCTIONS).toContain(sampleOf("sample25NguyenHue"))
     })
 })
 
 describe("messagesOf", () => {
     it("is one message per non-blank line", () => {
-        expect(messagesOf("một\n\n  \nhai")).toEqual(["một", "hai"])
+        expect(messagesOf(`${sampleOf("sampleMot")}\n\n  \nhai`)).toEqual([sampleOf("sampleMot"), "hai"])
     })
 })
 
@@ -36,11 +37,11 @@ describe("vndOf", () => {
         [Number.NaN, null],
         ["5k", 5000],
         ["1,5tr", 1_500_000],
-        ["2 triệu", 2_000_000],
-        ["500 nghìn", 500_000],
-        ["5.000đ", 5000],
+        [sampleOf("sample2Trieu"), 2_000_000],
+        [sampleOf("sample500Nghin"), 500_000],
+        [sampleOf("sample5000d"), 5000],
         ["120000 VND", 120_000],
-        ["năm nghìn", null],
+        [sampleOf("sampleNamNghin"), null],
         ["", null],
         [null, null],
     ])("reads %p as %p", (written, amount) => {
@@ -66,8 +67,8 @@ describe("classificationOf", () => {
                     items: [
                         { name: " hoa ", quantity: 0 },
                         { name: "  ", quantity: 3 },
-                        { name: "chậu", quantity: null },
-                        { name: "đèn", quantity: 99_999 },
+                        { name: sampleOf("sampleChau"), quantity: null },
+                        { name: sampleOf("sampleDen"), quantity: 99_999 },
                     ],
                     address: "   ",
                     customer: " Lan ",
@@ -82,8 +83,8 @@ describe("classificationOf", () => {
             order: {
                 items: [
                     { name: "hoa", quantity: 1, priceVnd: null },
-                    { name: "chậu", quantity: 1, priceVnd: null },
-                    { name: "đèn", quantity: 10_000, priceVnd: null },
+                    { name: sampleOf("sampleChau"), quantity: 1, priceVnd: null },
+                    { name: sampleOf("sampleDen"), quantity: 10_000, priceVnd: null },
                 ],
                 address: null,
                 customer: "Lan",
@@ -236,7 +237,7 @@ describe("what intent.classify shows the model", () => {
             {
                 node: intentClassifyNode,
                 params: {},
-                input: { text: "[ảnh]", messages },
+                input: { text: sampleOf("sampleAnh"), messages },
                 turn: EXAMPLE_TURN,
                 grant: { rights: [] },
                 effects: new Map(),
@@ -259,9 +260,9 @@ describe("what intent.classify shows the model", () => {
 
     it("gives the pictures as addresses, at most four, and the words without them", async () => {
         const many = Array.from({ length: 6 }, (_, index) => ({ ...IMG, url: `https://files/${index}.jpg` }))
-        const ask = await askOf([{ text: "[ảnh]", attachments: [...many, PDF] }])
+        const ask = await askOf([{ text: sampleOf("sampleAnh"), attachments: [...many, PDF] }])
         expect(ask?.images).toEqual(many.slice(0, 4).map((file) => file.url))
-        expect(ask?.input).toEqual({ messages: ["[ảnh]"] })
+        expect(ask?.input).toEqual({ messages: [sampleOf("sampleAnh")] })
     })
 
     it("gives no picture when the burst has none", async () => {

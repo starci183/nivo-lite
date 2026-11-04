@@ -10,6 +10,14 @@ export interface OrderLine {
     readonly qty: number
 }
 
+/** An order that is asked to be paid: its amount and its lines. */
+export interface PayableLines {
+    /** The amount due in VND. */
+    readonly amountVnd: number
+    /** The lines of the order. */
+    readonly lines: ReadonlyArray<OrderLine>
+}
+
 /** The transfer content of an order number: letters and digits only, upper case (`DH-20261105-0001` becomes `DH202611050001`). */
 export const transferContentOf = (orderNo: string): string => orderNo.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
 
@@ -23,7 +31,7 @@ const fill = (template: string, values: Readonly<Record<string, string>>): strin
 /** The message that asks the customer to pay: the amount, the items, the account, the transfer content and the QR link. */
 export const paymentMessageOf = (
     instruction: PaymentInstruction,
-    order: { readonly amountVnd: number; readonly lines: ReadonlyArray<OrderLine> },
+    order: PayableLines,
     content: string,
     locale: RequestLocale,
 ): string => {
