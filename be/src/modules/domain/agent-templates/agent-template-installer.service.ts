@@ -114,7 +114,7 @@ export class AgentTemplateInstallerService {
         }
     }
 
-    private async recordInstall(
+    private recordInstall(
         userId: string,
         request: InstallTemplateRequest,
         installationId: string,

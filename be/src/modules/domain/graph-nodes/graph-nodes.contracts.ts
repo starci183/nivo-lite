@@ -1,8 +1,8 @@
-import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 import type { z } from "zod"
 import type {
     EffectCall,
     EffectPayload,
+    NodeInstall,
     NodeModelRequest,
     NodeQuery,
     SubjectRef,

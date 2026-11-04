@@ -14,6 +14,7 @@ export class ReviewTemplateListingInput {
     /** `approve` or `reject`. */
     @Field(() => String)
     @IsIn(["approve", "reject"])
+    @MaxLength(40)
     decision!: string
 
     /** What the reviewer writes. */

@@ -45,5 +45,6 @@ export class RecordTemplateLikenessInput {
     @NullAsAbsent()
     @IsOptional()
     @IsDateString()
+    @MaxLength(40)
     expiresAt?: string
 }

@@ -14,6 +14,7 @@ export class ParameterBindingInput {
     /** `branch_value` or `branch_timeout`. */
     @Field(() => String)
     @IsIn(["branch_value", "branch_timeout"])
+    @MaxLength(40)
     target!: string
 
     /** The node. */

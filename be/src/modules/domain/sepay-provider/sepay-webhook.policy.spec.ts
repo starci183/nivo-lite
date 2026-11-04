@@ -42,7 +42,7 @@ describe("sepay webhook policy > isSepayPing", () => {
         [{}],
         [{ transferType: "in", transferAmount: 0 }],
         [{ id: "x", transferType: "refund", transferAmount: 5 }],
-    ])("reads %j as a ping", async (body) => {
+    ])("reads %j as a ping", (body) => {
         expect(isSepayPing(body)).toBe(true)
     })
 
@@ -50,7 +50,7 @@ describe("sepay webhook policy > isSepayPing", () => {
         [{ id: 7 }],
         [{ id: "7", transferType: "in", transferAmount: 10 }],
         [{ transferType: "in", transferAmount: "990000" }],
-    ])("reads %j as a delivery", async (body) => {
+    ])("reads %j as a delivery", (body) => {
         expect(isSepayPing(body)).toBe(false)
     })
 })
