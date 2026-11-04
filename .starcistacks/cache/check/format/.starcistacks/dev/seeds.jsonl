@@ -1,0 +1,4 @@
+{"findings":[],"hash":"e4103e2a4c6d4d5008a123517ac6a37c7bc43335ad41805187213765baaca8bd","path":".starcistacks/dev/seeds/data/nivo-workspace.json","step":"prettier"}
+{"findings":[],"hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","path":".starcistacks/dev/seeds/files/.gitkeep","step":"prettier"}
+{"findings":[],"hash":"e4686a945b90649770036f124d6eb1567afe3b110e6eb087d563ac5259827634","path":".starcistacks/dev/seeds/seeds.yaml","step":"prettier"}
+{"findings":[],"hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","path":".starcistacks/dev/seeds/sql/.gitkeep","step":"prettier"}

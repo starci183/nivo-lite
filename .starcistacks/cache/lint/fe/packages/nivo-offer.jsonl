@@ -1,0 +1,2 @@
+{"data":{"cross":"53e270b5886d5f4b9c723b69b72eeeb7a4a4fdb2635d1ca5b0c51a1ee55faebe","ends":[]},"findings":[],"hash":"866a20579e9239a8aece920b480bd297b97842d228231740cb9b7d102240d498","path":"packages/nivo-offer/src/index.ts","step":"eslint"}
+{"data":{"api":"dae16e1ead5489fa3c5972636b923a4a78a4b47ad015886a4f6bea34ffba42fb","globals":false,"imports":[],"open":false,"packages":[],"refs":[]},"findings":[],"hash":"866a20579e9239a8aece920b480bd297b97842d228231740cb9b7d102240d498","path":"packages/nivo-offer/src/index.ts","step":"imports"}
