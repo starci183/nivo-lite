@@ -6,7 +6,7 @@ import { defineRenderer } from "./define-renderer"
 const BLOCK = defineBlock({
     id: "test.label",
     title: { key: "t" },
-    props: z.object({ label: z.string().default("none") }),
+    props: z.object({ label: z.string().max(200).default("none") }),
     slots: { rows: { kind: "read", shape: "list", required: false } },
     children: false,
 })
@@ -20,7 +20,9 @@ describe("defineRenderer", () => {
         })
         expect(renderer.id).toBe("test.label")
         expect(renderer.block).toBe(BLOCK)
-        renderer.Component({ props: {}, slots: { rows: UNBOUND_READ }, children: null, nodeId: "n1" })
+        expect(
+            renderer.Component({ props: {}, slots: { rows: UNBOUND_READ }, children: null, nodeId: "n1" }),
+        ).toBeNull()
         expect(seen).toEqual(["none", "n1", UNBOUND_READ])
     })
 })

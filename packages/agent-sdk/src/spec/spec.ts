@@ -7,7 +7,9 @@ export const SPEC_MAX_DEPTH: number = 8
 
 /** What a spec may bind, when the caller knows it. A kind left out is not judged: its bindings are not looked up. */
 export interface SpecBindings {
+    /** The reads the spec may bind; left out, read bindings are not judged. */
     readonly reads?: ReadonlyArray<ReadDefinition>
+    /** The actions the spec may bind; left out, action bindings are not judged. */
     readonly actions?: ReadonlyArray<ActionDefinition>
     /** The permissions the module declares; a `when.permission` outside them is refused. */
     readonly permissions?: ReadonlyArray<string>

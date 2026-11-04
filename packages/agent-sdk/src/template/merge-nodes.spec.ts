@@ -1,7 +1,8 @@
 import type { GraphDocument } from "./graph.types"
 import { instantiate } from "./parameters"
-import { draftOf, leakyGraph, packageOf, withExtraBranch } from "../testing"
+import { draftOf, leakyGraph, packageOf, withExtraBranch } from "../tests/fixtures"
 import { applyUnits, updateUnits } from "./merge"
+import { present } from "../schema/present"
 
 const VALUES = { autoLimit: 5_000_000, waitMinutes: 240, shop: "Spa Hoa" }
 const v1 = (): GraphDocument => instantiate(packageOf(), VALUES)
@@ -44,7 +45,7 @@ const restyle = (graph: GraphDocument, key: string): GraphDocument =>
     )
 const grown = (graph: GraphDocument): GraphDocument => ({
     ...graph,
-    nodes: [...graph.nodes, { ...graph.nodes[graph.nodes.length - 1]!, key: "extra", next: [] }],
+    nodes: [...graph.nodes, { ...present(graph.nodes[graph.nodes.length - 1]), key: "extra", next: [] }],
 })
 const branchKeys = (graph: GraphDocument): ReadonlyArray<string> =>
     graph.nodes.find((node) => node.key === "decide")?.decide?.branches.map((branch) => branch.key) ?? []

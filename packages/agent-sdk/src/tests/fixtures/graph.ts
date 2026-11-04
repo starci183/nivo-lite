@@ -1,4 +1,4 @@
-import type { BranchApprover, Condition, GraphBranch, GraphDocument, GraphNode } from "../template/graph.types"
+import type { BranchApprover, Condition, GraphBranch, GraphDocument, GraphNode } from "../../template/graph.types"
 
 /** The fact the graphs of the specs decide on. */
 export const AMOUNT_FACT: string = "supplier_payment.amount_vnd"

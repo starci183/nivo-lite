@@ -25,6 +25,7 @@ export const REASON = {
 
 /** An outcome the code rule gives: the match is applied, or a person is asked; the rule never leaves an arrival. */
 export type CodeOutcome = Omit<Outcome, "effect"> & {
+    /** The decision of the code rule: the match is applied, or a person is asked. */
     readonly effect: Extract<Effect, { readonly kind: "apply" | "ask" }>
 }
 
@@ -71,7 +72,11 @@ export const outcomeOfJudgement = (candidates: ReadonlyArray<Evidenced>, judgeme
     const named = candidates.find((one) => one.candidate.id === judgement.candidateId)
     if (judgement.verdict === "match" && named !== undefined) {
         if (holds(named, "amount")) {
-            return outcomeOf(candidates, { stage: "judge", effect: { kind: "apply", candidateId: named.candidate.id }, reasons })
+            return outcomeOf(candidates, {
+                stage: "judge",
+                effect: { kind: "apply", candidateId: named.candidate.id },
+                reasons,
+            })
         }
         return outcomeOf(candidates, {
             stage: "judge",

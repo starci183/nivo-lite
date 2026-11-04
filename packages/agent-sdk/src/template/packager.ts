@@ -9,6 +9,7 @@ import type {
     ParameterBinding,
 } from "./format.types"
 import type {
+    ApproverGroup,
     BranchApprover,
     Condition,
     DecidePoint,
@@ -19,9 +20,16 @@ import type {
 } from "./graph.types"
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-const EMAIL = /[^\s@"]+@[^\s@"]+\.[a-z]{2,}/i
-const SECRET =
-    /(sk-[A-Za-z0-9_-]{16,}|Bearer\s+[A-Za-z0-9._-]{16,}|-----BEGIN [A-Z ]*KEY|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|api[_-]?key\s*[:=]\s*\S{8,}|password\s*[:=]\s*\S+)/i
+/** An email address; each part is bounded, so a long run of text without an `@` costs a fixed amount per position. */
+const EMAIL = /[^\s@"]{1,64}@(?:[a-z0-9-]{1,63}\.){1,8}[a-z]{2,24}/i
+const SECRETS: ReadonlyArray<RegExp> = [
+    /sk-[\w-]{16,}/,
+    /Bearer\s+[\w.-]{16,}/i,
+    /-----BEGIN [A-Z ]*KEY/i,
+    /eyJ[\w-]{10,}\.[\w-]{10,}/,
+    /api[_-]?key\s*[:=]\s*\S{8,}/i,
+    /password\s*[:=]\s*\S+/i,
+]
 
 /** A counter of what was left out while the graph was rebuilt. */
 interface Tally {
@@ -30,9 +38,7 @@ interface Tally {
     people: number
 }
 
-const emptyGroup = (
-    roles: ReadonlyArray<"owner" | "manager" | "staff">,
-): { roles: typeof roles; rooms: []; members: [] } => ({
+const emptyGroup = (roles: ApproverGroup["roles"]): ApproverGroup => ({
     roles,
     rooms: [],
     members: [],
@@ -152,7 +158,7 @@ export const leakProblems = (body: unknown, forbidden: ReadonlyArray<string>): R
         const lower = text.toLowerCase()
         if (UUID.test(text)) return [`${path}: an id`]
         if (EMAIL.test(text)) return [`${path}: an email address`]
-        if (SECRET.test(text)) return [`${path}: a secret`]
+        if (SECRETS.some((secret) => secret.test(text))) return [`${path}: a secret`]
         return forbidden.some((id) => id !== "" && lower.includes(id.toLowerCase()))
             ? [`${path}: an id of the creator`]
             : []

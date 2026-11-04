@@ -3,6 +3,7 @@ export const TRIGGER_SOURCE = "trigger"
 
 /** A reference to a value: `trigger.<path>` or `<nodeKey>.<path>`; the bare source is the whole value, a number steps into a list. */
 export interface NodeInputRef {
+    /** The reference path, `trigger.<path>` or `<nodeKey>.<path>`. */
     readonly $ref: string
 }
 
@@ -21,7 +22,9 @@ export type NodeInputBindings = Readonly<Record<string, NodeInputBinding>>
 
 /** What references resolve against: the trigger and the outputs of the nodes done before, by node key. */
 export interface NodeInputScope {
+    /** What woke the run; the value that `trigger.<path>` references read from. */
     readonly trigger: unknown
+    /** The outputs of the nodes already done, by node key. */
     readonly steps: Readonly<Record<string, unknown>>
 }
 
@@ -32,8 +35,7 @@ export const isInputRef = (binding: NodeInputBinding): binding is NodeInputRef =
 /** The member at a dotted path, or undefined when any step is missing. */
 const at = (value: unknown, path: ReadonlyArray<string>): unknown =>
     path.reduce<unknown>(
-        (current, name) =>
-            typeof current === "object" && current !== null ? (current as Record<string, unknown>)[name] : undefined,
+        (current, name) => (typeof current === "object" && current !== null ? Reflect.get(current, name) : undefined),
         value,
     )
 
@@ -68,8 +70,5 @@ const resolved = (binding: NodeInputBinding, scope: NodeInputScope): unknown => 
 }
 
 /** The input a node receives: every reference, at any depth, read from the scope; a missing value is null. */
-export const resolveInput = (
-    bindings: NodeInputBindings,
-    scope: NodeInputScope,
-): Readonly<Record<string, unknown>> =>
+export const resolveInput = (bindings: NodeInputBindings, scope: NodeInputScope): Readonly<Record<string, unknown>> =>
     Object.fromEntries(Object.entries(bindings).map(([field, binding]) => [field, resolved(binding, scope)]))

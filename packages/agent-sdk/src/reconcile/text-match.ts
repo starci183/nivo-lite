@@ -1,11 +1,14 @@
 const DIGIT = /\d/u
 
-/** A text without diacritics or case, with every run of other characters as one space: "BÙI Nguyên-Định" and "bui nguyen dinh" fold alike. */
+/**
+ * A text without diacritics or case, with every run of other characters as one space, so a name written with its accents and the same
+ * name typed without them fold alike. The stroked d (U+0111) has no decomposition, so it is folded by its code point.
+ */
 export const foldText = (text: string): string =>
     text
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "")
-        .replace(/đ/giu, "d")
+        .replace(/\u0111/giu, "d")
         .toLowerCase()
         .replace(/[^a-z0-9]+/gu, " ")
         .trim()

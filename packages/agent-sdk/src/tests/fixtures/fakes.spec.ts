@@ -1,10 +1,10 @@
 import {
-    fakeActionHandle,
-    fakeBlockHost,
-    fakeHostRead,
-    fakeReadHandle,
-    fakeSlots,
-    fakeWorkbenchHost,
+    recordingActionHandle,
+    recordingBlockHost,
+    settledHostRead,
+    recordingReadHandle,
+    slotValuesOf,
+    scriptedWorkbenchHost,
     slotOf,
 } from "./fakes"
 
@@ -18,9 +18,9 @@ describe("slotOf", () => {
     })
 })
 
-describe("fakeReadHandle and fakeActionHandle", () => {
+describe("recordingReadHandle and recordingActionHandle", () => {
     it("count retries and record variables", () => {
-        const handle = fakeReadHandle(slotOf.ready(1), { q: "a" })
+        const handle = recordingReadHandle(slotOf.ready(1), { q: "a" })
         handle.retry()
         handle.setVariables({ q: "b" })
         expect(handle.retries()).toBe(1)
@@ -30,11 +30,11 @@ describe("fakeReadHandle and fakeActionHandle", () => {
     })
 
     it("record runs and answer with the given outcome", async () => {
-        const handle = fakeActionHandle()
+        const handle = recordingActionHandle()
         await expect(handle.run({ id: "1" })).resolves.toEqual({ ok: true })
         expect(handle.runs()).toEqual([{ id: "1" }])
         expect(handle).toMatchObject({ isAllowed: true, isRunning: false, label: "" })
-        const refused = fakeActionHandle({
+        const refused = recordingActionHandle({
             outcome: { ok: false, reason: "failed", message: { key: "k" } },
             isAllowed: false,
             label: "Open",
@@ -43,18 +43,18 @@ describe("fakeReadHandle and fakeActionHandle", () => {
         expect(refused).toMatchObject({ isAllowed: false, label: "Open" })
     })
 
-    it("fakeSlots hands the handles back as slot values", () => {
-        const handle = fakeReadHandle(slotOf.empty)
-        expect(fakeSlots({ rows: handle }).rows).toBe(handle)
+    it("slotValuesOf hands the handles back as slot values", () => {
+        const handle = recordingReadHandle(slotOf.empty)
+        expect(slotValuesOf({ rows: handle }).rows).toBe(handle)
     })
 })
 
-describe("fakeBlockHost", () => {
+describe("recordingBlockHost", () => {
     it("words keys as themselves and owner text in the locale, and keeps query values, notices and reports", () => {
-        const host = fakeBlockHost()
+        const host = recordingBlockHost()
         expect(host.text("ns")({ key: "k" })).toBe("k")
         expect(host.text("ns")({ vi: "a", en: "b" })).toBe("b")
-        expect(fakeBlockHost({ locale: () => "vi" }).text("ns")({ vi: "a", en: "b" })).toBe("a")
+        expect(recordingBlockHost({ locale: () => "vi" }).text("ns")({ vi: "a", en: "b" })).toBe("a")
         expect(host.navigation.href("/x")).toBe("/x")
         host.navigation.setQueryValue("tab", "a")
         expect(host.navigation.queryValue("tab")).toBe("a")
@@ -67,10 +67,10 @@ describe("fakeBlockHost", () => {
     })
 })
 
-describe("fakeWorkbenchHost", () => {
+describe("scriptedWorkbenchHost", () => {
     it("serves the reads, actions and permissions it is given", async () => {
-        const host = fakeWorkbenchHost({
-            reads: { orders: fakeHostRead("ready", [1]) },
+        const host = scriptedWorkbenchHost({
+            reads: { orders: settledHostRead("ready", [1]) },
             actions: { open: { ok: false, reason: "forbidden", message: { key: "k" } } },
             permissions: ["p"],
         })
@@ -83,10 +83,10 @@ describe("fakeWorkbenchHost", () => {
         expect(host.useCan("p")).toBe(true)
         expect(host.useCan("q")).toBe(false)
         expect(host.useSlotLabels()("nothing")).toMatchObject({ empty: "nothing" })
-        const bare = fakeWorkbenchHost()
+        const bare = scriptedWorkbenchHost()
         expect(bare.useCan("any")).toBe(true)
         expect(bare.useRead("orders", {}).status).toBe("loading")
         await expect(bare.useAction("open").run({ id: "1" })).resolves.toEqual({ ok: true })
-        expect(fakeHostRead("loading").reload()).toBeUndefined()
+        expect(settledHostRead("loading").reload()).toBeUndefined()
     })
 })

@@ -8,17 +8,24 @@ export type DefinitionErrorCode =
     | "NODE_CONDITION_BRANCH"
     | "NODE_CONDITION_EFFECTS"
     | "DATA_KIND_MALFORMED"
+    | "MODULE_LIST_INVALID"
+    | "WORKBENCH_INVALID"
+    | "WORKBENCH_KEY_DUPLICATE"
+    | "PLAN_BLOCK_UNKNOWN"
+    | "PACKAGE_REFUSED"
 
 /**
  * Thrown at module load by `defineBlock`, `defineRead`, `defineAction`, `defineNode`, `defineEffect` and `defineDataKind`, so a bad
  * definition fails its own package.
  */
 export class SdkDefinitionError extends SdkError {
+    /** The reason the definition was refused; stable, so a caller can branch on it. */
     declare readonly code: DefinitionErrorCode
+    /** Where the fault is: the id, prop path or key the code is about. */
     readonly at: string
 
-    constructor(code: DefinitionErrorCode, at: string) {
-        super(code, `${code}: ${at}`)
+    constructor(code: DefinitionErrorCode, at: string, cause?: unknown) {
+        super(code, `${code}: ${at}`, cause)
         this.name = "SdkDefinitionError"
         this.at = at
     }

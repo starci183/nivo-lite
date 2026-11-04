@@ -18,6 +18,7 @@ import {
     settleClaim,
 } from "./index"
 import type { Arrival, Candidate, Claim, EffectHandlers, Judge, Judgement } from "./index"
+import VIETNAMESE from "./vietnamese.fixture.json"
 
 const HOUR = 3_600_000
 const OPTIONS = { windowMs: 24 * HOUR }
@@ -35,7 +36,7 @@ const candidate = (over: Partial<Candidate> = {}): Candidate => ({
     id: "c1",
     label: "order one",
     amountDue: 5000,
-    partyName: "Bùi Nguyên Định",
+    partyName: VIETNAMESE.partyName,
     partyKey: "lead-1",
     codes: ["ORD-2026-0001"],
     openedAt: 99 * HOUR,
@@ -47,7 +48,7 @@ const claim = (over: Partial<Claim> = {}): Claim => ({
     partyKey: "lead-1",
     amount: 5000,
     names: ["BUI NGUYEN DINH"],
-    text: "Tôi đã chuyển khoản 5k, tên BUI NGUYEN DINH",
+    text: VIETNAMESE.claimText,
     at: 99.5 * HOUR,
     status: "open",
     ...over,
@@ -57,12 +58,12 @@ const judgeOf = (answer: Judgement | null): jest.MockedFunction<Judge> => jest.f
 
 describe("text matching", () => {
     it("folds diacritics, case and separators alike", () => {
-        expect(foldText("BÙI Nguyên-Định đ")).toBe("bui nguyen dinh d")
+        expect(foldText(VIETNAMESE.foldInput)).toBe("bui nguyen dinh d")
     })
 
     it("names a party as whole words only", () => {
-        expect(mentionsName("BUI NGUYEN DINH test", "Bùi Nguyên Định")).toBe(true)
-        expect(mentionsName("ADINHB", "Định")).toBe(false)
+        expect(mentionsName("BUI NGUYEN DINH test", VIETNAMESE.partyName)).toBe(true)
+        expect(mentionsName("ADINHB", VIETNAMESE.shortName)).toBe(false)
         expect(mentionsName("anything", "a")).toBe(false)
         expect(mentionsName("anything", null)).toBe(false)
     })
@@ -120,7 +121,11 @@ describe("claim ledger", () => {
     const now = 100 * HOUR
 
     it("keeps open claims, by party, oldest first", () => {
-        const claims = [claim({ id: "late", at: 3 }), claim({ id: "early", at: 1 }), claim({ id: "done", status: "settled" })]
+        const claims = [
+            claim({ id: "late", at: 3 }),
+            claim({ id: "early", at: 1 }),
+            claim({ id: "done", status: "settled" }),
+        ]
         expect(openClaims(claims).map((one) => one.id)).toEqual(["late", "early"])
         expect(openClaimsOf(claims, "lead-1").map((one) => one.id)).toEqual(["early", "late"])
         expect(openClaimsOf(claims, "lead-2")).toEqual([])
@@ -243,9 +248,9 @@ describe("judgeAndEffect", () => {
         }
         const outcome = await judgeAndEffect(arrival({ text: "ORD-2026-0001" }), [candidate()], [], never, OPTIONS)
         await expect(runEffect(outcome, handlers)).resolves.toBe("apply c1")
-        await expect(runEffect({ ...outcome, effect: { kind: "ask", candidateIds: ["a", "b"] } }, handlers)).resolves.toBe(
-            "ask a,b",
-        )
+        await expect(
+            runEffect({ ...outcome, effect: { kind: "ask", candidateIds: ["a", "b"] } }, handlers),
+        ).resolves.toBe("ask a,b")
         await expect(runEffect({ ...outcome, effect: { kind: "leave" } }, handlers)).resolves.toBe("leave")
     })
 })

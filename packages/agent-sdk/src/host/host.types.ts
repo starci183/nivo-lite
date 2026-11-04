@@ -3,8 +3,11 @@ import type { SlotLabels } from "../slot/slot.types"
 
 /** The state of one read as the host's transport reports it. */
 export interface HostRead {
+    /** Where the read stands: loading, ready, failed, or refused for lack of a permission. */
     readonly status: "loading" | "ready" | "error" | "forbidden"
+    /** The read's answer; meaningful only when `status` is `ready`. */
     readonly data: unknown
+    /** True while a ready read is being refreshed in the background. */
     readonly isValidating: boolean
     /** Reads this read again. */
     readonly reload: () => void
@@ -14,7 +17,9 @@ export interface HostRead {
 
 /** One action of the host: run it, and whether one is running. */
 export interface HostAction {
+    /** Runs the action with the given input and settles to its outcome. */
     readonly run: (input: ActionInput) => Promise<ActionOutcome>
+    /** True while a run of this action is in flight. */
     readonly isRunning: boolean
 }
 
@@ -23,6 +28,7 @@ export interface HostAction {
  * implements it over its transport, router and translations; `./testing` has a fake.
  */
 export interface WorkbenchHost {
+    /** The ports a block reaches: navigation, messages and the like. */
     readonly block: BlockHost
     /** A hook: one read by operation name; null variables do not fetch. */
     readonly useRead: (operation: string, variables: ReadVariables | null) => HostRead

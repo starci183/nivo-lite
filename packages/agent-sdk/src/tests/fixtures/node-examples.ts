@@ -1,9 +1,9 @@
-import type { EffectDefinition, ToolDefinition } from "../node/effect.types"
-import { runNode } from "../node/host"
-import type { NodeDefinition, NodeExample, NodeExampleEffect, TurnRef } from "../node/node.types"
-import { canonicalJson } from "../template/canonical"
+import type { EffectDefinition, ToolDefinition } from "../../node/effect.types"
+import { runNode } from "../../node/host"
+import type { NodeDefinition, NodeExample, NodeExampleEffect, TurnRef } from "../../node/node.types"
+import { canonicalJson } from "../../template/canonical"
 import type { FakeExecuted } from "./node-ports"
-import { fakeNodePorts } from "./node-ports"
+import { scriptedNodePorts } from "./node-ports"
 
 /** The turn every example runs in. */
 export const EXAMPLE_TURN: TurnRef = { turnId: "turn-1", workspaceId: "workspace-1", agentId: "agent-1", subject: null }
@@ -23,10 +23,11 @@ const effectMismatches = (
     ran: ReadonlyArray<FakeExecuted>,
 ): ReadonlyArray<string> => {
     if (expected.length !== ran.length) return [`effects: expected ${expected.length}, ran ${ran.length}`]
-    return ran.flatMap((done, index) => {
-        const entry = expected[index] as NodeExampleEffect
-        return effectMatches(entry, done) ? [] : [`effect ${index}: expected ${kindOf(entry)}`]
-    })
+    return ran.flatMap((done, index) =>
+        expected
+            .slice(index, index + 1)
+            .flatMap((entry) => (effectMatches(entry, done) ? [] : [`effect ${index}: expected ${kindOf(entry)}`])),
+    )
 }
 
 /**
@@ -39,7 +40,7 @@ export const nodeExampleMismatches = async (
     effects: ReadonlyArray<EffectDefinition>,
     tools: ReadonlyArray<ToolDefinition> = [],
 ): Promise<ReadonlyArray<string>> => {
-    const fake = fakeNodePorts({ store: example.store, model: example.model, tools: example.tools })
+    const fake = scriptedNodePorts({ store: example.store, model: example.model, tools: example.tools })
     try {
         const run = await runNode(
             {
@@ -71,7 +72,10 @@ export const nodeListMismatches = async (
         nodes.flatMap((node) =>
             node.examples.map(
                 async (example) =>
-                    [`${node.id} / ${example.name}`, await nodeExampleMismatches(node, example, effects, tools)] as const,
+                    [
+                        `${node.id} / ${example.name}`,
+                        await nodeExampleMismatches(node, example, effects, tools),
+                    ] as const,
             ),
         ),
     )

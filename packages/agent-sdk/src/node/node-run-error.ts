@@ -15,7 +15,9 @@ export type NodeRunErrorCode =
 
 /** Thrown by the node host: a stable code and the node or effect it is about. */
 export class NodeRunError extends SdkError {
+    /** The reason the run was refused or stopped; stable, so a caller can branch on it. */
     declare readonly code: NodeRunErrorCode
+    /** The node or effect the code is about. */
     readonly at: string
 
     constructor(code: NodeRunErrorCode, at: string) {

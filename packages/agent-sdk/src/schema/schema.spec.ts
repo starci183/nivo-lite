@@ -1,3 +1,5 @@
+import { entriesAtMost } from "./entries"
+import { present } from "./present"
 import { isNamespaced, namespaceOf, wordsOf } from "./namespaced"
 import { specText } from "./spec-text.schema"
 
@@ -28,5 +30,20 @@ describe("specText", () => {
         expect(specText.safeParse({ vi: "a", en: "b" }).success).toBe(true)
         expect(specText.safeParse({ vi: "a" }).success).toBe(false)
         expect(specText.safeParse({ key: "" }).success).toBe(false)
+    })
+})
+
+describe("entriesAtMost", () => {
+    it("holds a record up to its limit and refuses one past it", () => {
+        const atMostTwo = entriesAtMost(2)
+        expect(atMostTwo({ a: 1, b: 2 })).toBe(true)
+        expect(atMostTwo({ a: 1, b: 2, c: 3 })).toBe(false)
+    })
+})
+
+describe("present", () => {
+    it("hands a value back, and refuses an absent one with a code", () => {
+        expect(present(0)).toBe(0)
+        expect(() => present(undefined)).toThrow("ABSENT")
     })
 })

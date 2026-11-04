@@ -4,27 +4,45 @@ import { defineNode } from "./node"
 import type { NodeDefinition } from "./node.types"
 import { nodeIndexOf, nodeListProblems } from "./problems"
 import { nodeSagaOf } from "./saga"
+import { trusted } from "../schema/trusted"
 
-const voidOrder = defineEffect({ id: "order.void", title: { key: "v" }, payload: z.object({ id: z.string() }), rights: [] })
+const voidOrder = defineEffect({
+    id: "order.void",
+    title: { key: "v" },
+    payload: z.object({ id: z.string().max(200) }),
+    rights: [],
+})
 const record = defineEffect({ ...voidOrder, id: "order.record", compensation: "order.void" })
 const send = defineEffect({ ...voidOrder, id: "channel.send" })
-const look = defineTool({ id: "order.look", title: { key: "l" }, args: z.object({}), result: z.object({}), mutates: false, rights: [] })
+const look = defineTool({
+    id: "order.look",
+    title: { key: "l" },
+    args: z.object({}),
+    result: z.object({}),
+    mutates: false,
+    rights: [],
+})
 const charge = defineTool({ ...look, id: "order.charge", mutates: true })
 
-const nodeOf = (effects: ReadonlyArray<"order.record" | "channel.send" | "order.ghost">, tools: ReadonlyArray<"order.look" | "order.charge" | "order.gone"> = []): NodeDefinition =>
-    defineNode({
-        id: "order.step",
-        role: "output",
-        title: { key: "s" },
-        params: z.object({}),
-        input: z.object({}),
-        output: z.object({}),
-        rights: [],
-        effects,
-        tools,
-        run: () => Promise.resolve({}),
-        examples: [{ name: "e", params: {}, input: {}, output: {}, effects: [] }],
-    }) as unknown as NodeDefinition
+const nodeOf = (
+    effects: ReadonlyArray<"order.record" | "channel.send" | "order.ghost">,
+    tools: ReadonlyArray<"order.look" | "order.charge" | "order.gone"> = [],
+): NodeDefinition =>
+    trusted<NodeDefinition>(
+        defineNode({
+            id: "order.step",
+            role: "output",
+            title: { key: "s" },
+            params: z.object({}),
+            input: z.object({}),
+            output: z.object({}),
+            rights: [],
+            effects,
+            tools,
+            run: () => Promise.resolve({}),
+            examples: [{ name: "e", params: {}, input: {}, output: {}, effects: [] }],
+        }),
+    )
 
 const index = nodeIndexOf({ nodes: [], effects: [voidOrder, record, send], tools: [look, charge], dataKinds: [] })
 
@@ -44,7 +62,7 @@ describe("nodeSagaOf", () => {
 
 describe("effect compensation", () => {
     it("refuses a malformed compensation id, and names one nobody installed", () => {
-        expect(() => defineEffect({ ...voidOrder, compensation: "Bad" as "a.b" })).toThrow("ID_MALFORMED")
+        expect(() => defineEffect({ ...voidOrder, compensation: trusted<"a.b">("Bad") })).toThrow("ID_MALFORMED")
         expect(nodeListProblems({ nodes: [], effects: [record], tools: [], dataKinds: [] })).toEqual([
             { code: "EFFECT_COMPENSATION_UNKNOWN", at: "order.record:order.void" },
         ])

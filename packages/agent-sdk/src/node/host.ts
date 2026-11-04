@@ -1,12 +1,22 @@
-import type { z } from "zod"
+import type { z } from "../schema/zod.schema"
 import { rightsGaps } from "../rights/rights"
 import type { DataAccess, DataRight, RightScope, RightsGrant } from "../rights/rights.types"
+import { isRecord } from "../schema/is-record"
 import type { Namespaced } from "../schema/schema.types"
 import type { NodeHostPorts, NodeRun, NodeRunEffect, NodeRunRequest } from "./host.types"
 import { NodeRunError } from "./node-run-error"
-import type { EffectOptions, EffectPayload, NodeContext, NodeTools, NodeQuery, NodeModelRequest, SubjectRef } from "./node.types"
+import type {
+    EffectOptions,
+    EffectPayload,
+    NodeContext,
+    NodeTools,
+    NodeQuery,
+    NodeModelRequest,
+    SubjectRef,
+} from "./node.types"
 import { RightsDeniedError } from "./rights-denied-error"
 import { ToolUndeclaredError } from "./tool-undeclared-error"
+import { trusted } from "../schema/trusted"
 
 /** Whether a grant covers one right. */
 const covers = (grant: RightsGrant, right: DataRight): boolean => rightsGaps(grant, [right]).length === 0
@@ -39,10 +49,27 @@ const scopeOf = (
 }
 
 /** Parses a value with a node schema, or refuses with the code. */
-const parsed = <S extends z.ZodType>(schema: S, value: unknown, code: NodeRunError["code"], at: string): z.output<S> => {
+const parsed = <S extends z.ZodType>(
+    schema: S,
+    value: unknown,
+    code: NodeRunError["code"],
+    at: string,
+): z.output<S> => {
     const result = schema.safeParse(value)
     if (!result.success) throw new NodeRunError(code, at)
     return result.data
+}
+
+/** Parses a payload or an argument list with a node schema, or refuses with the code when the schema yields anything but a record. */
+const parsedRecord = (
+    schema: z.ZodType,
+    value: unknown,
+    code: NodeRunError["code"],
+    at: string,
+): Readonly<Record<string, unknown>> => {
+    const result = parsed(schema, value, code, at)
+    if (!isRecord(result)) throw new NodeRunError(code, at)
+    return result
 }
 
 /**
@@ -60,10 +87,12 @@ const toolsOf = (request: NodeRunRequest, ports: NodeHostPorts): NodeTools => {
             if (tool.mutates && node.role === "condition") throw new NodeRunError("TOOL_MUTATES", name)
             const named = (request.grant.tools ?? []).includes(name)
             if (!named || rightsGaps(request.grant, tool.rights).length > 0) throw new RightsDeniedError(name)
-            const checked = parsed(tool.args, args, "TOOL_ARGS_INVALID", name) as Readonly<Record<string, unknown>>
+            const checked = parsedRecord(tool.args, args, "TOOL_ARGS_INVALID", name)
             const key = `${request.key}:tool:${calls}`
             calls += 1
-            return parsed(tool.result, await ports.callTool(tool, checked, key), "TOOL_RESULT_INVALID", name) as R
+            return trusted<R>(
+                parsed(tool.result, await ports.callTool(tool, checked, key), "TOOL_RESULT_INVALID", name),
+            )
         },
     }
 }
@@ -76,14 +105,17 @@ const contextOf = (
     done: Array<NodeRunEffect>,
 ): NodeContext => {
     const { node } = request
-    const purpose = (model: NodeModelRequest): NodeModelRequest => ({ ...model, purpose: `${node.id}:${model.purpose}` })
+    const purpose = (model: NodeModelRequest): NodeModelRequest => ({
+        ...model,
+        purpose: `${node.id}:${model.purpose}`,
+    })
     return {
         turn: request.turn,
         params,
         data: {
             read: async <T>(kind: string, query: NodeQuery): Promise<ReadonlyArray<T>> => {
                 const scope = scopeOf(request, kind, "read", query.fields)
-                return (await ports.read(kind, query, scope)) as ReadonlyArray<T>
+                return trusted<ReadonlyArray<T>>(await ports.read(kind, query, scope))
             },
             write: (kind, record) => {
                 scopeOf(request, kind, "write", Object.keys(record))
@@ -94,7 +126,7 @@ const contextOf = (
             if (!node.effects.includes(kind)) throw new NodeRunError("EFFECT_UNDECLARED", kind)
             const effect = request.effects.get(kind)
             if (effect === undefined) throw new NodeRunError("EFFECT_UNKNOWN", kind)
-            const checked = parsed(effect.payload, payload, "EFFECT_PAYLOAD_INVALID", kind) as EffectPayload
+            const checked = parsedRecord(effect.payload, payload, "EFFECT_PAYLOAD_INVALID", kind)
             if (rightsGaps(request.grant, effect.rights).length > 0) throw new RightsDeniedError(kind)
             const call = { key: `${request.key}:${done.length}`, dedupeKey: options.dedupeKey ?? null }
             const subject = await ports.execute(effect, checked, call)

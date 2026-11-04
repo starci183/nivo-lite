@@ -1,4 +1,4 @@
-import { OWNER_BRANCHES, approverOf, branchOf, draftOf, graphOf, nodeOf, packageOf } from "../testing"
+import { OWNER_BRANCHES, approverOf, branchOf, draftOf, graphOf, nodeOf, packageOf } from "../tests/fixtures"
 import { applyUnits, updateUnits } from "./merge"
 import { previewPackage, suggestionsOf } from "./packager"
 import { instantiate, resolveValues } from "./parameters"

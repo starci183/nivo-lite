@@ -1,4 +1,4 @@
-import type { z } from "zod"
+import type { z } from "./zod.schema"
 
 /** A registry id: `<namespace>.<name>`, both parts kebab-case ASCII (`core.figures`, `thay.revenue`). */
 export type Namespaced = `${string}.${string}`

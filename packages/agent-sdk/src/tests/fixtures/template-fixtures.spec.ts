@@ -11,6 +11,6 @@ describe("the testing kit", () => {
     it("refuses to build a package from a graph the packager refuses", () => {
         const refused = { ...graphOf(), nodes: graphOf().nodes.map((node) => ({ ...node, does: "mail boss@shop.vn" })) }
 
-        expect(() => packageOf(refused)).toThrow("the builder graph is refused")
+        expect(() => packageOf(refused)).toThrow("PACKAGE_REFUSED")
     })
 })

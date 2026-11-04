@@ -1,3 +1,4 @@
+import { SdkDefinitionError } from "../../block/definition-error"
 import { SDK_SPEC_BLOCKS } from "../spec/blocks"
 import { specRegistryOf } from "../spec/spec"
 import type { WorkbenchSpecRegistry } from "../spec/spec.types"
@@ -33,7 +34,7 @@ export const workbenchProblems = (module: WorkbenchDeclaration | WorkbenchModule
 /** A workbench as the module declares it, refused at import when it has a problem: a wiring bug stops the build, never a page. */
 export const defineWorkbench = (module: WorkbenchModule): WorkbenchModule => {
     const [problem] = workbenchProblems(module)
-    if (problem !== undefined) throw new Error(`${problem.code}: ${problem.at}`)
+    if (problem !== undefined) throw new SdkDefinitionError("WORKBENCH_INVALID", `${problem.code}: ${problem.at}`)
     return module
 }
 
@@ -43,7 +44,7 @@ export const workbenchRegistryOf = (
 ): Readonly<Record<string, WorkbenchModule>> => {
     const registry: Record<string, WorkbenchModule> = {}
     for (const module of modules) {
-        if (registry[module.key] !== undefined) throw new Error(`WORKBENCH_KEY_DUPLICATE: ${module.key}`)
+        if (registry[module.key] !== undefined) throw new SdkDefinitionError("WORKBENCH_KEY_DUPLICATE", module.key)
         registry[module.key] = module
     }
     return registry

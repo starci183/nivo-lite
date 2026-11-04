@@ -1,10 +1,8 @@
 import type { ReadVariables } from "../block/block.types"
+import { isRecord } from "../schema/is-record"
 
 /** The variable a read writes for the installation of the route. */
 export const INSTALLATION_VARIABLE = "$installationId"
-
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-    typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** The value at a dotted path of a value; undefined when a step is missing. The empty or absent path is the value itself. */
 export const valueAt = (value: unknown, path: string | undefined): unknown => {

@@ -36,6 +36,30 @@ const branchId = (nodeKey: string, key: string): string => `branch:${nodeKey}:${
 const kindOfChange = (base: string, current: string): "upgrade" | "conflict" =>
     base === current ? "upgrade" : "conflict"
 
+/** What the version offers for one branch against the buyer's copy, or null when it offers nothing to apply. */
+const branchChangeOf = (
+    before: GraphBranch | undefined,
+    now: GraphBranch | undefined,
+    branch: GraphBranch,
+): UpdateUnit["change"] | null => {
+    const offered = branchSignature(branch)
+    if (now !== undefined && branchSignature(now) === offered) return null
+    if (before === undefined) return now === undefined ? "added" : "conflict"
+    if (branchSignature(before) === offered) return null
+    return now === undefined ? "conflict" : kindOfChange(branchSignature(before), branchSignature(now))
+}
+
+/** What the version offers for one node against the buyer's copy, or null when it offers nothing to apply. */
+const nodeChangeOf = (
+    base: GraphNode,
+    current: GraphNode | undefined,
+    node: GraphNode,
+): UpdateUnit["change"] | null => {
+    const offered = nodeSignature(node)
+    if (nodeSignature(base) === offered || current === undefined || nodeSignature(current) === offered) return null
+    return kindOfChange(nodeSignature(base), nodeSignature(current))
+}
+
 const branchUnits = (
     base: GraphNode | undefined,
     current: GraphNode | undefined,
@@ -47,17 +71,8 @@ const branchUnits = (
         const unit = (change: UpdateUnit["change"]): ReadonlyArray<UpdateUnit> => [
             { id: branchId(next.key, branch.key), nodeKey: next.key, branchKey: branch.key, change },
         ]
-        if (before === undefined)
-            return now === undefined
-                ? unit("added")
-                : branchSignature(now) === branchSignature(branch)
-                  ? []
-                  : unit("conflict")
-        if (branchSignature(before) === branchSignature(branch)) return []
-        if (now === undefined) return unit("conflict")
-        return branchSignature(now) === branchSignature(branch)
-            ? []
-            : unit(kindOfChange(branchSignature(before), branchSignature(now)))
+        const change = branchChangeOf(before, now, branch)
+        return change === null ? [] : unit(change)
     })
     const nextKeys = new Set((next.decide?.branches ?? []).map((branch) => branch.key))
     const dropped = (base?.decide?.branches ?? [])
@@ -85,19 +100,9 @@ export const updateUnits = (input: MergeInput): ReadonlyArray<UpdateUnit> => {
                 ? [{ id: nodeId(node.key), nodeKey: node.key, branchKey: null, change: "added" }]
                 : []
         }
+        const change = nodeChangeOf(base, current, node)
         const own: ReadonlyArray<UpdateUnit> =
-            nodeSignature(base) === nodeSignature(node) || current === undefined
-                ? []
-                : nodeSignature(current) === nodeSignature(node)
-                  ? []
-                  : [
-                        {
-                            id: nodeId(node.key),
-                            nodeKey: node.key,
-                            branchKey: null,
-                            change: kindOfChange(nodeSignature(base), nodeSignature(current)),
-                        },
-                    ]
+            change === null ? [] : [{ id: nodeId(node.key), nodeKey: node.key, branchKey: null, change }]
         return [...own, ...branchUnits(base, current, node)]
     })
     const nextKeys = new Set(input.next.nodes.map((node) => node.key))
