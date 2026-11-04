@@ -17,6 +17,10 @@ export enum GraphNodesErrorCode {
     ToolNotConnected = "GRAPH_NODES_TOOL_NOT_CONNECTED",
     /** The provider refused the workspace's connection itself (a scope never given, a 403): only the owner can cure it, so it is not retried. */
     ToolConnectionRefused = "GRAPH_NODES_TOOL_CONNECTION_REFUSED",
+    /** A tool call needs a person's approval first: the step waits for it (the tool and the call's fingerprint ride in the params). */
+    ToolApprovalRequired = "GRAPH_NODES_TOOL_APPROVAL_REQUIRED",
+    /** A tool call came without a valid run token: nothing the host minted stands behind it. */
+    ToolTokenInvalid = "GRAPH_NODES_TOOL_TOKEN_INVALID",
     /** The NIVO MCP door refused or failed a node tool call (the reason rides in the params). */
     ToolFailed = "GRAPH_NODES_TOOL_FAILED",
 }
@@ -30,6 +34,8 @@ export const GRAPH_NODES_ERROR_KINDS: Record<GraphNodesErrorCode, ErrorKind> = {
     [GraphNodesErrorCode.ToolDoorMissing]: "internal",
     [GraphNodesErrorCode.ToolNotConnected]: "not-found",
     [GraphNodesErrorCode.ToolConnectionRefused]: "forbidden",
+    [GraphNodesErrorCode.ToolApprovalRequired]: "forbidden",
+    [GraphNodesErrorCode.ToolTokenInvalid]: "forbidden",
     [GraphNodesErrorCode.ToolFailed]: "unavailable",
 }
 

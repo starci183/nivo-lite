@@ -1,17 +1,9 @@
-import type { z } from "zod"
-import type {
-    EffectCall,
-    EffectPayload,
-    NodeInstall,
-    NodeModelRequest,
-    NodeQuery,
-    SubjectRef,
-    TurnRef,
-} from "@nivo-lite/agent-sdk/node"
+import type { EffectCall, NodeModel, NodeModelRequest, NodeQuery, SubjectRef, TurnRef } from "@nivo-lite/agent-sdk/node"
 import type { RightScope, RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import type { Locale } from "@modules/platform/i18n"
+import type { NodeToolApproval, NodeToolCall, RunOrigin } from "./node-run-token.contracts"
 
-export type { NodeInstall }
+export type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 
 /** The turn a node runs in, as the host's ports read it: the SDK turn, the conversation it serves and the language it writes in. */
 export interface NodeTurn extends TurnRef {
@@ -19,10 +11,35 @@ export interface NodeTurn extends TurnRef {
     readonly conversationId: string | null
     /** The language of the turn. */
     readonly locale: Locale
+    /** Who the run acts for; a run that does not say is the system's. */
+    readonly origin?: RunOrigin
+    /** The member behind the turn, when a person is. */
+    readonly memberId?: string | null
 }
 
 /** A row a data port answers: only the fields asked. */
-export type NodeRow = Readonly<Record<string, unknown>>
+export interface NodeRow {
+    /** One field by name. */
+    readonly [field: string]: unknown
+}
+
+/** The rows a data port answers. */
+export type NodeRows = ReadonlyArray<NodeRow>
+
+/** The payload of one effect, parsed by the effect's own schema before its executor runs. */
+export interface NodeEffectPayload {
+    /** One member by name. */
+    readonly [member: string]: unknown
+}
+
+/** A structured model answer, before the node's schema parses it. */
+export interface NodeJsonAnswer {
+    /** One member by name. */
+    readonly [member: string]: unknown
+}
+
+/** The schema a node's structured model call is parsed with. */
+export type NodeJsonSchema = Parameters<NodeModel["json"]>[0]
 
 /**
  * The port of one data kind, which the module that owns the records registers. The host has already checked the rights; a `turn` read
@@ -32,7 +49,7 @@ export interface NodeDataPort {
     /** The data kind it serves. */
     readonly kind: string
     /** Reads the rows of the query, cut to its fields. */
-    read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<ReadonlyArray<NodeRow>>
+    read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<NodeRows>
     /** Writes one record; a kind without it refuses every write. */
     write?(turn: NodeTurn, record: NodeRow): Promise<SubjectRef>
 }
@@ -42,7 +59,7 @@ export interface NodeEffectExecutor {
     /** The effect id it runs. */
     readonly effect: string
     /** Acts and answers the subject it touched. */
-    execute(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef>
+    execute(turn: NodeTurn, payload: NodeEffectPayload, call: EffectCall): Promise<SubjectRef>
 }
 
 /**
@@ -66,7 +83,9 @@ export interface NodeUndoInput {
 
 /** Who and what language a node's model call is for. */
 export interface NodeModelScope {
+    /** The workspace whose allowance the call is metered against. */
     readonly workspaceId: string
+    /** The language the answer is written in. */
     readonly locale: Locale
 }
 
@@ -75,17 +94,13 @@ export interface NodeModelDoor {
     /** A free-text answer. */
     nodeText(scope: NodeModelScope, ask: NodeModelRequest): Promise<string>
     /** A structured answer the schema asks for. */
-    nodeJson(
-        scope: NodeModelScope,
-        ask: NodeModelRequest,
-        schema: z.ZodType,
-    ): Promise<Readonly<Record<string, unknown>>>
+    nodeJson(scope: NodeModelScope, ask: NodeModelRequest, schema: NodeJsonSchema): Promise<NodeJsonAnswer>
 }
 
 /** The door every node tool call goes through: the NIVO MCP, resolved to the provider the workspace connected. */
 export interface NodeToolDoor {
-    /** Calls one tool for the turn under the call's replay key. */
-    call(turn: NodeTurn, tool: string, args: Readonly<Record<string, unknown>>, key: string): Promise<unknown>
+    /** Calls one tool for the run its token names, under the call's replay key. */
+    call(call: NodeToolCall): Promise<unknown>
 }
 
 /** One run of an installed node. */
@@ -102,4 +117,6 @@ export interface NodeRunInput {
     readonly grant: RightsGrant
     /** The run step's idempotency key. */
     readonly key: string
+    /** A person's approval of a tool call the node makes, carried into the run of the node it was asked for. */
+    readonly approval?: NodeToolApproval
 }

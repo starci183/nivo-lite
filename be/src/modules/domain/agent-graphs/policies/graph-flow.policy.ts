@@ -16,17 +16,38 @@ const DEFAULT_LOCALE: Locale = "vi"
 
 /** A wake as the flow reads it: its source, the context its door wrote and the member behind it. */
 export interface FlowWake {
+    /** Where the wake came from, as its door named it. */
     readonly source: string
+    /** The context its door wrote. */
     readonly context: AgentWakeContext
+    /** The member behind the wake, when a person is. */
     readonly actorMemberId: string | null
 }
 
 /** What a graph node step carries: all it needs to run from its row alone. */
 export interface GraphNodeStepInput {
+    /** The published graph version the run was opened on. */
     readonly versionId: string
+    /** The node of that version the step runs. */
     readonly nodeKey: string
+    /** The trigger scope the node reads as trigger.*. */
     readonly trigger: StepJson
+    /** The person's approval of a tool call this node asked for, when the step runs the node again after it. */
+    readonly approval?: GraphNodeApproval | undefined
 }
+
+/** An approval a node step carries: the step that asked (its key is the run's replay key), who approved, and what they saw. */
+export interface GraphNodeApproval {
+    /** The key of the step that asked; the node runs again under it, so its effects and calls stay the ones of that step. */
+    readonly stepKey: string
+    /** The member who approved. */
+    readonly by: string
+    /** The fingerprint of the tool call they approved. */
+    readonly fingerprint: string
+}
+
+/** The mark of a step that runs a node again after a person approved its tool call: `<node step key>~approved-<fingerprint>`. */
+export const APPROVED_STEP_MARK = "~approved-"
 
 /**
  * Where a wake came from, in the words of a graph's tag trigger: a clock slot is a schedule, an internal event or a system tag a system
@@ -85,5 +106,12 @@ export const graphNodeStepOf = (node: GraphSpecNode, input: GraphNodeStepInput, 
 })
 
 /** The outputs of the nodes done before, by node key, from the results their steps stored. */
-export const outputsOf = (earlier: Readonly<Record<string, StepJson>>): Readonly<Record<string, unknown>> =>
-    Object.fromEntries(Object.entries(earlier).map(([key, result]) => [key, result.output]))
+export const outputsOf = (earlier: Readonly<Record<string, StepJson>>): Readonly<Record<string, unknown>> => {
+    const approvedLast = Object.entries(earlier).sort(
+        ([left], [right]) => Number(left.includes(APPROVED_STEP_MARK)) - Number(right.includes(APPROVED_STEP_MARK)),
+    )
+    return Object.fromEntries(approvedLast.map(([key, result]) => [nodeStepKeyOf(key), result.output]))
+}
+
+/** The step key of the node a step ran: the key itself, or the node's key for a step that ran it again after an approval. */
+export const nodeStepKeyOf = (stepKey: string): string => stepKey.split(APPROVED_STEP_MARK, 1).join("")

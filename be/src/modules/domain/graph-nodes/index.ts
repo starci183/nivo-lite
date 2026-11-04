@@ -6,6 +6,9 @@ export { GraphNodesModule } from "./graph-nodes.module"
 export { GraphNodeHostService } from "./graph-node-host.service"
 export { GraphNodeEffectsService, ledgerKeyOf } from "./graph-node-effects.service"
 export { GraphNodeRegistryService } from "./graph-node-registry.service"
+export { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
+export { toolFingerprintOf } from "./node-run-token.policy"
+export type { NodeRunClaims, NodeToolApproval, NodeToolCall } from "./node-run-token.contracts"
 export type {
     NodeDataPort,
     NodeEffectExecutor,

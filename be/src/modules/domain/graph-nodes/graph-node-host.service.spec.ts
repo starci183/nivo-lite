@@ -1,12 +1,14 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { z } from "zod"
 import { defineEffect, defineNode, defineTool, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { CLOCK } from "@modules/platform/clock"
 import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeHostService } from "./graph-node-host.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
+import { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
 import { GRAPH_NODE_MODEL, GRAPH_NODE_TOOL_DOOR } from "./graph-nodes.decorators"
 import type {
     NodeDataPort,
@@ -122,16 +124,20 @@ const build = async (
     const ai = mock<NodeModelDoor>()
     ai.nodeText.mockResolvedValue("hi")
     ai.nodeJson.mockResolvedValue({ n: 2 })
+    const tokens = mock<GraphNodeRunTokensService>()
+    tokens.mint.mockReturnValue("token-1")
     const moduleRef = await Test.createTestingModule({
         providers: [
             GraphNodeHostService,
+            { provide: GraphNodeRunTokensService, useValue: tokens },
+            { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:00:00.000Z") },
             { provide: GraphNodeRegistryService, useValue: registry },
             { provide: GraphNodeEffectsService, useValue: effects },
             { provide: GRAPH_NODE_MODEL, useValue: ai },
             ...(door === null ? [] : [{ provide: GRAPH_NODE_TOOL_DOOR, useValue: door }]),
         ],
     }).compile()
-    return { host: moduleRef.get(GraphNodeHostService), executor, effects, ai }
+    return { host: moduleRef.get(GraphNodeHostService), executor, effects, ai, tokens }
 }
 
 const door = (): NodeToolDoor => ({ call: jest.fn().mockResolvedValue({ seen: true }) })
@@ -158,7 +164,25 @@ describe("GraphNodeHostService", () => {
             { workspaceId: "ws-1", locale: "vi" },
             { purpose: "core.probe:say", instructions: "", input: null },
         )
-        expect(tools.call).toHaveBeenCalledWith(INPUT.turn, "core.look", {}, "run-1:node:tool:0")
+        expect(tools.call).toHaveBeenCalledWith({
+            token: "token-1",
+            tool: "core.look",
+            args: {},
+            key: "run-1:node:tool:0",
+            approval: null,
+        })
+    })
+
+    it("hands the tool door the run token and the approval the step carries", async () => {
+        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([]) }
+        const tools = door()
+        const { host, tokens } = await build(tools, port)
+        const approval = { by: "member-1", fingerprint: "f-1" }
+
+        await host.run({ ...INPUT, approval })
+
+        expect(tokens.mint).toHaveBeenCalledWith(INPUT.turn)
+        expect(tools.call).toHaveBeenCalledWith(expect.objectContaining({ token: "token-1", approval }))
     })
 
     it("writes through a port that writes, and refuses a kind whose port does not", async () => {

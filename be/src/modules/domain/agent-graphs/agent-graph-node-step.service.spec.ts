@@ -1,10 +1,16 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { NodeRunError } from "@nivo-lite/agent-sdk/node"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
-import type { StepSpec, StepView } from "@modules/domain/agent-runs"
-import { GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import type { StepDecision, StepSpec, StepView } from "@modules/domain/agent-runs"
+import {
+    GraphNodeHostService,
+    GraphNodeRegistryService,
+    GraphNodesError,
+    GraphNodesErrorCode,
+} from "@modules/domain/graph-nodes"
+import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
@@ -48,6 +54,10 @@ const stepOf = (nodeKey: string, overrides: Partial<StepView> = {}): StepView =>
         ...overrides,
     }) as unknown as StepView
 
+const NOW = Date.parse("2026-11-04T10:00:00.000Z")
+const DAY_MS = 86_400_000
+const FINGERPRINT = "f".repeat(64)
+
 const raise = { effect: "work-item.raise", execute: jest.fn().mockResolvedValue({ kind: "work-item", id: "w-1" }) }
 
 const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FLOW }) => {
@@ -73,6 +83,7 @@ const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FL
             { provide: AgentGraphFlowRunsService, useValue: flows },
             { provide: GraphNodeRegistryService, useValue: nodes },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
         ],
     }).compile()
     return { steps: moduleRef.get(AgentGraphNodeStepService), handlers, host, nodes }
@@ -117,6 +128,8 @@ describe("AgentGraphNodeStepService", () => {
                 subject: { kind: "order", id: "o-1" },
                 conversationId: "c-1",
                 locale: "en",
+                origin: "system",
+                memberId: null,
             },
             grant: { rights: [], tools: ["order.look"] },
             key: "run-1:keep",
@@ -209,5 +222,150 @@ describe("AgentGraphNodeStepService dead letters", () => {
         nodes.optionalExecutorOf.mockReturnValue(undefined)
         await steps.deadLetter(stepOf("keep"), "x")
         expect(raise.execute).toHaveBeenCalledTimes(1)
+    })
+})
+
+/** The refusal a door answers for a tool call that waits for a person. */
+const approvalRequired = (): GraphNodesError =>
+    new GraphNodesError({
+        code: GraphNodesErrorCode.ToolApprovalRequired,
+        params: { tool: "ledger.append", fingerprint: FINGERPRINT, reason: "ask_mode" },
+    })
+
+/** The verdict of the owner on the approval item, as the run engine hands it over. */
+const decided = (approved: boolean, by: string | null): StepDecision => ({
+    approved,
+    by,
+    data: { fields: { tool: "ledger.append", fingerprint: FINGERPRINT }, draft: null },
+})
+
+describe("AgentGraphNodeStepService approvals", () => {
+    beforeEach(() => raise.execute.mockClear())
+
+    it("asks the owner once for a tool call the grant asks about and waits for the answer until the deadline", async () => {
+        const { steps, host } = await build()
+        host.run.mockRejectedValue(approvalRequired())
+        const key = `tool-approval:run-1:keep:${FINGERPRINT}`
+
+        await expect(steps.run(stepOf("keep"))).resolves.toEqual({
+            kind: "wait",
+            workItemId: "w-1",
+            deadlineAt: new Date(NOW + DAY_MS),
+        })
+        await steps.run(stepOf("keep"))
+
+        const payload = {
+            action: "approve_tool_call",
+            title: "[agentGraphs.toolApproval.title]",
+            payload: {
+                runId: "run-1",
+                nodeKey: "keep",
+                tool: "ledger.append",
+                fingerprint: FINGERPRINT,
+                reason: "ask_mode",
+                conversationId: "c-1",
+            },
+        }
+        expect(raise.execute).toHaveBeenNthCalledWith(1, expect.objectContaining({ turnId: "run-1" }), payload, {
+            key,
+            dedupeKey: key,
+        })
+        expect(raise.execute).toHaveBeenNthCalledWith(2, expect.objectContaining({ turnId: "run-1" }), payload, {
+            key,
+            dedupeKey: key,
+        })
+    })
+
+    it("approve: runs the node again in a step of its own under the asking step's key, with the approval of that exact call", async () => {
+        const { steps } = await build()
+
+        const answer = steps.onDecided(stepOf("keep", { effect: { kind: "pivot" } }), decided(true, "member-1"))
+
+        const approval = { stepKey: "keep", by: "member-1", fingerprint: FINGERPRINT }
+        expect(answer).toEqual({
+            kind: "done",
+            result: { output: null, effects: [], approval },
+            next: [
+                {
+                    stepKey: `keep~approved-${FINGERPRINT.slice(0, 16)}`,
+                    nodeKey: "keep",
+                    kind: "graph_node",
+                    effect: { kind: "pivot" },
+                    input: { versionId: "version-1", nodeKey: "keep", trigger: TRIGGER, approval },
+                },
+            ],
+        })
+    })
+})
+
+describe("AgentGraphNodeStepService runs after an approval", () => {
+    it("the run after an approval hands the host the approval under the asking step's key, so no effect runs twice", async () => {
+        const { steps, host } = await build()
+        host.run.mockResolvedValue({ output: { done: true }, effects: [] })
+        const approval = { stepKey: "keep", by: "member-1", fingerprint: FINGERPRINT }
+        const step = stepOf("keep", {
+            stepKey: `keep~approved-${FINGERPRINT.slice(0, 16)}`,
+            input: { versionId: "version-1", nodeKey: "keep", trigger: TRIGGER, approval },
+        })
+
+        await expect(steps.run(step)).resolves.toMatchObject({ kind: "done", next: [{ stepKey: "end" }] })
+        expect(host.run).toHaveBeenCalledWith(
+            expect.objectContaining({ key: "run-1:keep", approval: { by: "member-1", fingerprint: FINGERPRINT } }),
+        )
+    })
+
+    it("args changed: a run after an approval whose call changed asks again, once more under the asking step", async () => {
+        const { steps, host } = await build()
+        host.run.mockRejectedValue(approvalRequired())
+        const approval = { stepKey: "keep", by: "member-1", fingerprint: "e".repeat(64) }
+        const step = stepOf("keep", {
+            stepKey: "keep~approved-eeeeeeeeeeeeeeee",
+            input: { versionId: "version-1", nodeKey: "keep", trigger: TRIGGER, approval },
+        })
+
+        const key = `tool-approval:run-1:keep:${FINGERPRINT}`
+        await expect(steps.run(step)).resolves.toMatchObject({ kind: "wait", workItemId: "w-1" })
+        expect(raise.execute).toHaveBeenCalledWith(expect.anything(), expect.anything(), { key, dedupeKey: key })
+    })
+})
+
+describe("AgentGraphNodeStepService approval verdicts", () => {
+    it("refuse and expire: the step ends with why, and the node does not run again", async () => {
+        const { steps } = await build()
+
+        expect(steps.onDecided(stepOf("keep"), decided(false, "member-1"))).toEqual({
+            kind: "done",
+            result: { output: null, effects: [], failed: "owner_refused" },
+            next: [],
+        })
+        expect(steps.onDecided(stepOf("keep"), decided(false, "timeout"))).toEqual({
+            kind: "done",
+            result: { output: null, effects: [], failed: "approval_expired" },
+            next: [],
+        })
+        expect(steps.onDecided(stepOf("keep"), decided(true, null))).toMatchObject({
+            result: { failed: "owner_refused" },
+        })
+    })
+
+    it("double approve: the same verdict gives the same single next step, so the engine's one wait admits one run", async () => {
+        const { steps } = await build()
+
+        const first = steps.onDecided(stepOf("keep"), decided(true, "member-1"))
+        const second = steps.onDecided(stepOf("keep"), decided(true, "member-1"))
+
+        expect(second).toEqual(first)
+        expect(first.kind === "done" ? first.next : []).toHaveLength(1)
+    })
+
+    it("ends a verdict it cannot read, and fails the step where no module raises work", async () => {
+        const { steps, host, nodes } = await build()
+
+        expect(steps.onDecided(stepOf("keep"), { approved: true, by: "member-1" })).toMatchObject({
+            result: { failed: "approval_unreadable" },
+        })
+        host.run.mockRejectedValue(approvalRequired())
+        nodes.optionalExecutorOf.mockReturnValue(undefined)
+        await expect(steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "approval_unavailable" })
     })
 })

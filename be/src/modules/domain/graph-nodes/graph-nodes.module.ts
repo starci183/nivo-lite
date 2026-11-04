@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeHostService } from "./graph-node-host.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
+import { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
 import { GRAPH_NODE_MODEL, GRAPH_NODES_OPTIONS, GRAPH_NODE_TOOL_DOOR } from "./graph-nodes.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./graph-nodes.module-definition"
 
@@ -28,9 +29,10 @@ export class GraphNodesModule extends ConfigurableModuleClass {
                 GraphNodeRegistryService,
                 GraphNodeEffectsService,
                 GraphNodeHostService,
+                GraphNodeRunTokensService,
                 { provide: GRAPH_NODE_TOOL_DOOR, useClass: options.tools },
             ],
-            exports: [GraphNodeRegistryService, GraphNodeHostService],
+            exports: [GraphNodeRegistryService, GraphNodeHostService, GraphNodeRunTokensService],
         }
     }
 }

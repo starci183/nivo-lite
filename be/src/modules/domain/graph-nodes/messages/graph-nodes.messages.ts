@@ -11,6 +11,8 @@ export const GRAPH_NODES_MESSAGES: MessageBundle = {
         "errors.GRAPH_NODES_TOOL_NOT_CONNECTED": "Workspace chưa kết nối nhà cung cấp cho {{tool}}.",
         "errors.GRAPH_NODES_TOOL_CONNECTION_REFUSED":
             "Nhà cung cấp từ chối kết nối của workspace cho {{tool}}; chủ workspace cần kết nối lại.",
+        "errors.GRAPH_NODES_TOOL_APPROVAL_REQUIRED": "Công cụ {{tool}} cần chủ workspace duyệt trước khi chạy.",
+        "errors.GRAPH_NODES_TOOL_TOKEN_INVALID": "Lệnh gọi {{tool}} không có thẻ phiên chạy hợp lệ.",
         "errors.GRAPH_NODES_TOOL_FAILED": "Công cụ {{tool}} không chạy được: {{reason}}.",
     },
     en: {
@@ -22,6 +24,8 @@ export const GRAPH_NODES_MESSAGES: MessageBundle = {
         "errors.GRAPH_NODES_TOOL_NOT_CONNECTED": "The workspace has no connected provider for {{tool}}.",
         "errors.GRAPH_NODES_TOOL_CONNECTION_REFUSED":
             "The provider refused the workspace's connection for {{tool}}; the owner has to connect it again.",
+        "errors.GRAPH_NODES_TOOL_APPROVAL_REQUIRED": "The tool {{tool}} needs the owner's approval before it runs.",
+        "errors.GRAPH_NODES_TOOL_TOKEN_INVALID": "The call of {{tool}} carries no valid run token.",
         "errors.GRAPH_NODES_TOOL_FAILED": "The tool {{tool}} could not run: {{reason}}.",
     },
 }

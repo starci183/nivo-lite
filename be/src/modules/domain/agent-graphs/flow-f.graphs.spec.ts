@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { graphSpecProblems, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
@@ -23,6 +23,7 @@ import {
     GraphNodeRegistryService,
 } from "@modules/domain/graph-nodes"
 import type { NodeModelDoor, NodeRow, NodeToolDoor, NodeTurn } from "@modules/domain/graph-nodes"
+import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
@@ -140,6 +141,7 @@ const build = async (world: ReturnType<typeof worldOf>, graph: GraphSpec, model:
             { provide: GraphNodeEffectsService, useValue: effects },
             { provide: GRAPH_NODE_MODEL, useValue: ai },
             { provide: GRAPH_NODE_TOOL_DOOR, useValue: door },
+            { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:00:00.000Z") },
             {
                 provide: AgentGraphsService,
                 useValue: mock<AgentGraphsService>({
