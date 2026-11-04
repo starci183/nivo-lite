@@ -6,11 +6,15 @@ import { createCliFailureHandlers, createJsonLogger, LoggingLogEvent } from "@mo
 import { AppModule } from "./app.module"
 import { readCliEnv } from "./cli.env"
 
-/** The command line of the back end: reads the environment once and runs the command its arguments name (`cli migrate run`). */
+/**
+ * The command line of the back end: reads the environment once and runs the command its arguments name (`cli migrate run`). A module
+ * graph that cannot be built (a provider no module gives) throws instead of aborting the process, so the failure below logs it.
+ */
 async function bootstrap(): Promise<void> {
     const logger = createJsonLogger(new SystemClockService())
     await CommandFactory.run(AppModule.register(readCliEnv(EnvSource.fromProcess())), {
-        logger: false,
+        logger: ["error", "warn"],
+        abortOnError: false,
         ...createCliFailureHandlers(logger),
     })
 }
