@@ -1,5 +1,7 @@
 import { shiftDate } from "@/modules/i18n"
-import type { PublicBookingAnswer } from "@/modules/types"
+import type { useTranslations } from "next-intl"
+import type { PublicBookingAnswer, PublicBookingPageData } from "@/modules/types"
+import type { PublicBookingFields } from "./usePublicBooking"
 
 /** How many days ahead the visitor can pick. */
 const DAYS_AHEAD = 14
@@ -53,3 +55,107 @@ export const timesOf = <T>(data: { readonly times: T[] } | undefined, error: unk
     if (data !== undefined) return data.times
     return error === undefined ? null : []
 }
+
+/** What a send still lacks: the service first, then the time. */
+export const lackOf = (fields: PublicBookingFields): "" | "service" | "time" => {
+    if (fields.serviceId === "") return "service"
+    return fields.start === "" ? "time" : ""
+}
+
+/** How the page words a chosen day, a time and a price. */
+interface SummaryWords {
+    readonly at: string
+    readonly day: (date: string) => string
+    readonly clock: (iso: string) => string
+    readonly money: (value: number) => string
+}
+
+/** What the visitor chose in one line: the service, the day and time, the price; empty until a time is chosen. */
+export const summaryOf = (
+    page: PublicBookingPageData | null | undefined,
+    fields: PublicBookingFields,
+    words: SummaryWords,
+): string => {
+    const chosen = (page?.services ?? []).find((service) => service.id === fields.serviceId)
+    if (chosen === undefined || fields.start === "") return ""
+    return [
+        chosen.name,
+        `${words.day(fields.date)} ${words.at} ${words.clock(fields.start)}`,
+        chosen.priceVnd === null || chosen.priceVnd === 0 ? "" : words.money(chosen.priceVnd),
+    ]
+        .filter((part) => part !== "")
+        .join(" · ")
+}
+
+/** The words of the public form, resolved. */
+interface PublicBookingCopy {
+    readonly step1: string
+    readonly step2: string
+    readonly step3: string
+    readonly finding: string
+    readonly noTimes: string
+    readonly pickTime: string
+    readonly name: string
+    readonly phone: string
+    readonly email: string
+    readonly party: string
+    readonly note: string
+    readonly notePlaceholder: string
+    readonly website: string
+    readonly submit: string
+    readonly footnote: string
+    readonly again: string
+    readonly alternatives: string
+    readonly previousMonth: string
+    readonly nextMonth: string
+}
+
+/** One service the form offers. */
+interface PublicBookingServiceChoice {
+    readonly value: string
+    readonly label: string
+    readonly description: string
+}
+
+/** Resolves the labels for this form. */
+export const publicBookingLabels = (t: ReturnType<typeof useTranslations<"workbenchBooking">>): PublicBookingCopy => {
+    return {
+        step1: t("publicStep1"),
+        step2: t("publicStep2"),
+        step3: t("publicStep3"),
+        finding: t("publicFinding"),
+        noTimes: t("publicNoTimes"),
+        pickTime: t("publicPickTime"),
+        name: t("publicName"),
+        phone: t("publicPhone"),
+        email: t("publicEmail"),
+        party: t("publicParty"),
+        note: t("publicNote"),
+        notePlaceholder: t("publicNotePlaceholder"),
+        website: t("publicWebsite"),
+        submit: t("publicSubmit"),
+        footnote: t("publicFootnote"),
+        again: t("publicAgain"),
+        alternatives: t("publicAlternatives"),
+        previousMonth: t("publicPreviousMonth"),
+        nextMonth: t("publicNextMonth"),
+    }
+}
+
+/** Resolves service descriptions and formatted prices for the pure form. */
+export const serviceOptionsOf = (
+    page: PublicBookingPageData | null | undefined,
+    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
+    money: (value: number) => string,
+): PublicBookingServiceChoice[] =>
+    (page?.services ?? []).map((service) => ({
+        value: service.id,
+        label: service.name,
+        description: [
+            t("publicServiceLine", { minutes: service.durationMin }),
+            service.priceVnd === null || service.priceVnd === 0 ? "" : money(service.priceVnd),
+            service.description,
+        ]
+            .filter((part) => part !== "")
+            .join(" \u00b7 "),
+    }))

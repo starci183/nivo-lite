@@ -6172,11 +6172,15 @@
     "publicEmail": "Email (không bắt buộc)",
     "publicParty": "Số người",
     "publicNote": "Ghi chú (không bắt buộc)",
+    "publicNotePlaceholder": "Thêm ghi chú",
     "publicWebsite": "Website",
     "publicSubmit": "Đặt lịch hẹn",
     "publicFootnote": "Bạn không cần tạo tài khoản. Cửa hàng sẽ nhắn xác nhận qua số điện thoại hoặc email bạn để lại.",
     "publicDoneConfirmed": "Đã xác nhận lịch hẹn",
     "publicDoneSent": "Đã gửi yêu cầu",
+    "publicAt": "lúc",
+    "publicPreviousMonth": "Tháng trước",
+    "publicNextMonth": "Tháng sau",
     "publicAgain": "Đặt thêm một lịch khác",
     "publicAlternatives": "Các giờ gần nhất còn trống",
     "publicBusy": "Bạn thao tác hơi nhanh, thử lại sau ít phút nhé.",
@@ -8456,5 +8460,15 @@
     "needs": "Cần: {providers} - quy tắc cho: {actions}",
     "installed": "Đã cài ở chế độ chạy thử. Bật lên khi bạn sẵn sàng.",
     "orderTitle": "Chuyển {amount} đ với nội dung {code}"
+  },
+  "publicPages": {
+    "brandFallback": "NIVO",
+    "foot": "Vận hành bởi NIVO.",
+    "bookingIntro": "Đặt lịch hẹn trong một phút: chọn dịch vụ, chọn giờ, để lại số điện thoại.",
+    "bookingNotFoundTitle": "Không tìm thấy trang đặt lịch này.",
+    "bookingNotFoundBody": "Hãy kiểm tra lại đường link cửa hàng gửi bạn.",
+    "bookingFailedBody": "Bạn thử tải lại trang.",
+    "bookingNeedTime": "Bạn chưa chọn giờ.",
+    "bookingNeedService": "Bạn chưa chọn dịch vụ."
   }
 }

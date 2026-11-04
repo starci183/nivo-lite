@@ -1,7 +1,8 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { pageDays, resultKey } from "./publicBooking.shared"
+import { useState } from "react"
+import { lackOf, pageDays, publicBookingLabels, resultKey, serviceOptionsOf, summaryOf } from "./publicBooking.shared"
 import { usePublicBooking } from "./usePublicBooking"
 import { wallClockText, wallDate, wallMinutes } from "@/modules/i18n"
 import type { PublicBookingPageData } from "@/modules/types"
@@ -61,8 +62,15 @@ type UsePublicBookingFormResult = {
             footnote: string
             again: string
             alternatives: string
+            notePlaceholder: string
+            previousMonth: string
+            nextMonth: string
         }
         isBusy: boolean
+        /** What the visitor chose, in one line: the service, the day and time, the price. Empty until a time is chosen. */
+        summary: string
+        /** What a send without a choice asks for; empty when nothing is missing. */
+        need: string
     }
     on: {
         change: (patch: Partial<PublicBookingFields>) => void
@@ -75,8 +83,10 @@ type UsePublicBookingFormResult = {
 /** The connected public booking form: free times follow the service and the day through the `publicBookingTimes` query, and a send goes through `requestPublicBooking`. */
 export const usePublicBookingForm = (page: PublicBookingPageData | null | undefined): UsePublicBookingFormResult => {
     const t = useTranslations("workbenchBooking")
+    const pub = useTranslations("publicPages")
     const format = useFormatter()
     const booking = usePublicBooking(page)
+    const [missing, setMissing] = useState<"" | "service" | "time">("")
     const { today } = booking
     const zone = page?.timezone ?? "UTC"
     const money = (value: number) =>
@@ -105,6 +115,18 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
         date: wallDate(Date.parse(iso), zone),
     }))
     const succeeded = answer?.ok === true
+    const summary = summaryOf(page, booking.fields, {
+        at: t("publicAt"),
+        day: dayText,
+        clock,
+        money,
+    })
+    const submit = (): void => {
+        const lacking = lackOf(booking.fields)
+        setMissing(lacking)
+        if (lacking === "") booking.submit()
+    }
+    const needText = missing === "" ? "" : pub(missing === "service" ? "bookingNeedService" : "bookingNeedTime")
     return {
         props: {
             formLabel: t("publicFormLabel"),
@@ -115,6 +137,8 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
             times: booking.times === null ? null : booking.times.map((iso) => ({ value: iso, label: clock(iso) })),
             labels: publicBookingLabels(t),
             isBusy: booking.isBusy,
+            summary,
+            need: lackOf(booking.fields) === "" ? "" : needText,
             ...(succeeded
                 ? {
                       done: {
@@ -128,49 +152,9 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
         },
         on: {
             change: booking.change,
-            submit: booking.submit,
+            submit,
             again: booking.again,
             pickAlternative: booking.pick,
         },
     }
 }
-
-/** Resolves the labels for this form. */
-const publicBookingLabels = (t: ReturnType<typeof useTranslations<"workbenchBooking">>) => {
-    return {
-        step1: t("publicStep1"),
-        step2: t("publicStep2"),
-        step3: t("publicStep3"),
-        finding: t("publicFinding"),
-        noTimes: t("publicNoTimes"),
-        pickTime: t("publicPickTime"),
-        name: t("publicName"),
-        phone: t("publicPhone"),
-        email: t("publicEmail"),
-        party: t("publicParty"),
-        note: t("publicNote"),
-        website: t("publicWebsite"),
-        submit: t("publicSubmit"),
-        footnote: t("publicFootnote"),
-        again: t("publicAgain"),
-        alternatives: t("publicAlternatives"),
-    }
-}
-
-/** Resolves service descriptions and formatted prices for the pure form. */
-const serviceOptionsOf = (
-    page: PublicBookingPageData | null | undefined,
-    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-    money: (value: number) => string,
-) =>
-    (page?.services ?? []).map((service) => ({
-        value: service.id,
-        label: service.name,
-        description: [
-            t("publicServiceLine", { minutes: service.durationMin }),
-            service.priceVnd === null || service.priceVnd === 0 ? "" : money(service.priceVnd),
-            service.description,
-        ]
-            .filter((part) => part !== "")
-            .join(" \u00b7 "),
-    }))

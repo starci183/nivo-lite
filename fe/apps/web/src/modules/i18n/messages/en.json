@@ -6172,11 +6172,15 @@
     "publicEmail": "Email (optional)",
     "publicParty": "Number of people",
     "publicNote": "Note (optional)",
+    "publicNotePlaceholder": "Add a note",
     "publicWebsite": "Website",
     "publicSubmit": "Book appointment",
     "publicFootnote": "You do not need an account. The shop will confirm by the phone number or email you leave.",
     "publicDoneConfirmed": "Appointment confirmed",
     "publicDoneSent": "Request sent",
+    "publicAt": "at",
+    "publicPreviousMonth": "Previous month",
+    "publicNextMonth": "Next month",
     "publicAgain": "Book another appointment",
     "publicAlternatives": "Nearest free times",
     "publicBusy": "You are going a little fast, please try again in a few minutes.",
@@ -8456,5 +8460,15 @@
     "needs": "Needs: {providers} - rules for: {actions}",
     "installed": "Installed in shadow mode. Turn it on when you are ready.",
     "orderTitle": "Transfer {amount} VND with the content {code}"
+  },
+  "publicPages": {
+    "brandFallback": "NIVO",
+    "foot": "Powered by NIVO.",
+    "bookingIntro": "Book in a minute: choose a service, choose a time, leave your phone number.",
+    "bookingNotFoundTitle": "This booking page was not found.",
+    "bookingNotFoundBody": "Check the link the shop sent you.",
+    "bookingFailedBody": "Try reloading the page.",
+    "bookingNeedTime": "You have not chosen a time yet.",
+    "bookingNeedService": "You have not chosen a service yet."
   }
 }

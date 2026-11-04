@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useEffect } from "react"
 import { useQueryPublicBookingPageSwr } from "@/hooks/swr"
 import { isNotFoundFailure } from "@/modules/failure"
-import type { PublicBookingPageData } from "@/modules/types"
+import type { DataSlot, PublicBookingPageData } from "@/modules/types"
 
 /** Normalizes optional wire prices for the public form and its booking hook. */
 const pageOf = (data: PublicBookingPageData): PublicBookingPageData => ({
@@ -15,6 +15,10 @@ const pageOf = (data: PublicBookingPageData): PublicBookingPageData => ({
 type UsePublicBookingPageResult = {
     data: PublicBookingPageData | null | undefined
     failed: boolean
+    /** The read as a slot: loading, the shop, nothing (no such page) or failed. */
+    slot: DataSlot<PublicBookingPageData>
+    /** Reads the page again after a failure. */
+    retry: () => void
 }
 
 /** Loads a shop anonymously and follows the existing client document-title convention. */
@@ -31,8 +35,16 @@ export const usePublicBookingPage = (slug: string): UsePublicBookingPageResult =
             if (document.title === title) document.title = previousTitle
         }
     }, [title])
+    const failed = !missing && query.data === undefined && query.error !== undefined
+    const slotOf = (): DataSlot<PublicBookingPageData> => {
+        if (missing) return { isEmpty: true }
+        if (failed) return { isError: true }
+        return data === undefined ? { isLoading: true } : { items: data }
+    }
     return {
         data: missing ? null : data,
-        failed: !missing && query.data === undefined && query.error !== undefined,
+        failed,
+        slot: slotOf(),
+        retry: () => void query.mutate(),
     }
 }
