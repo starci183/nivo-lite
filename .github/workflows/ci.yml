@@ -2,6 +2,9 @@
 name: ci
 
 # CI judges pull requests, main, release candidates and release tags, and a green release tag deploys.
+#   profile branch  a push to a branch the declaration gives a branch profile (.starcistacks/application-stacks.yaml branches): the checks, with each gate
+#                 the profile lowers in its mode (lint reports through the app check and keeps the lint ratchet blocking; a reported sonar or codecov runs
+#                 and uploads, never judged); a pull request into main always runs the full gate
 #   pull_request  the checks and the image builds of a change to main, with no secret and no environment (a Dependabot or fork run has none anyway);
 #                 and no run of this workflow executes a pull request's code with a token that can write
 #   main          judged only when no release tag points at the pushed commit (the release push sends main and its tag together; the tag run is the release run)
@@ -9,7 +12,9 @@ name: ci
 #   tag v*        the release run: plan, checks and images in parallel, the verdict, then the deploy of every environment with deploy.auto
 on:
   push:
-    branches: ["main", "release/candidate-*"]
+    branches:
+      - "main"
+      - "release/candidate-*"
     tags: ["v*"]
   pull_request:
     branches: ["main"]
@@ -51,6 +56,8 @@ jobs:
       images: ${{ steps.plan.outputs.images }}
       push: ${{ steps.plan.outputs.push }}
       full: ${{ steps.plan.outputs.full }}
+      sonar: ${{ steps.plan.outputs.sonar }}
+      codecov: ${{ steps.plan.outputs.codecov }}
       release: ${{ steps.plan.outputs.release }}
       ci_run: ${{ steps.plan.outputs.ci_run }}
     steps:
@@ -66,7 +73,7 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
         run: |
           set -euo pipefail
-          checks=true images=true push=false full=false release=false ci_run="$GITHUB_RUN_ID" note="checks and image builds"
+          checks=true images=true push=false full=false release=false ci_run="$GITHUB_RUN_ID" note="checks and image builds" sonar=blocking codecov=blocking
           if [[ "$EVENT" == push ]]; then
             full=true push=true
             if [[ "$REF_TYPE" == tag ]]; then
@@ -82,7 +89,7 @@ jobs:
               images=false push=false full=false note="main without a release tag: checks only"
             fi
           fi
-          { echo "checks=$checks"; echo "images=$images"; echo "push=$push"; echo "full=$full"; echo "release=$release"; echo "ci_run=$ci_run"; } >> "$GITHUB_OUTPUT"
+          { echo "checks=$checks"; echo "images=$images"; echo "push=$push"; echo "full=$full"; echo "release=$release"; echo "ci_run=$ci_run"; echo "sonar=$sonar"; echo "codecov=$codecov"; } >> "$GITHUB_OUTPUT"
           echo "plan: $note" >> "$GITHUB_STEP_SUMMARY"
 
   fast:
@@ -198,7 +205,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -235,7 +242,7 @@ jobs:
       # A shard (STARCI_COVERAGE_SHARD=1, the jest preset) measures only the files its specs load, without the per-file threshold, and writes istanbul
       # JSON; the coverage job merges the shards by source location and proves 100 per file on the merged report. The shard count never exceeds what the unit specs fill.
       - name: unit
-        run: npm test -- --ci --forceExit --cacheDirectory .jest-cache --shard=${{ matrix.shard }}/6
+        run: npm test -- --ci --forceExit --cacheDirectory .jest-cache --shard=${{ matrix.shard }}/11
         env:
           STARCI_COVERAGE_SHARD: "1"
       - name: Jest cache save
@@ -300,7 +307,7 @@ jobs:
           path: be/coverage/lcov.info
       - name: coverage upload
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
-        if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
+        if: ${{ !cancelled() && (needs.plan.outputs.full == 'true' || needs.plan.outputs.codecov == 'report') }}
         with:
           use_oidc: true
           files: be/coverage/lcov.info
@@ -367,7 +374,7 @@ jobs:
 
   sonar:
     needs: [plan, lint, coverage]
-    if: ${{ needs.plan.outputs.full == 'true' }}
+    if: ${{ needs.plan.outputs.full == 'true' || needs.plan.outputs.sonar == 'report' }}
     timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
@@ -399,23 +406,23 @@ jobs:
       - run: npm ci --ignore-scripts
         if: steps.deps.outputs.cache-hit != 'true'
       - name: Sonar token
-        if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
+        if: ${{ !cancelled() && (needs.plan.outputs.full == 'true' || needs.plan.outputs.sonar == 'report') }}
         run: |
           if [ -z "$SONAR_TOKEN" ]; then echo "::error::SONAR_TOKEN is not set: Sonar is required, so a missing token fails this job (secret SONAR_TOKEN)"; exit 1; fi
           if [ -z "$SONAR_HOST_URL" ]; then echo "::error::SONAR_HOST_URL is not set: the declared analysis endpoint is required"; exit 1; fi
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
+        if: ${{ !cancelled() && (needs.plan.outputs.full == 'true' || needs.plan.outputs.sonar == 'report') }}
         with:
           name: coverage-lcov
           path: be/coverage
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
+        if: ${{ !cancelled() && (needs.plan.outputs.full == 'true' || needs.plan.outputs.sonar == 'report') }}
         with:
           pattern: sonar-lint-*
           path: reports
           merge-multiple: true
       - name: merge Sonar lint reports
-        if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
+        if: ${{ !cancelled() && (needs.plan.outputs.full == 'true' || needs.plan.outputs.sonar == 'report') }}
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -427,7 +434,7 @@ jobs:
           fs.writeFileSync('reports/lint.sonar.json', JSON.stringify({ rules, issues }, null, 2) + '\n');
           NODE
       - uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7.2.1
-        if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
+        if: ${{ !cancelled() && (needs.plan.outputs.full == 'true' || needs.plan.outputs.sonar == 'report') }}
       - uses: SonarSource/sonarqube-quality-gate-action@7a5fffe8e523c40e0c740b6bc2712ab503e52efa # v1.2.1
         if: ${{ !cancelled() && needs.plan.outputs.full == 'true' }}
         timeout-minutes: 10
@@ -457,6 +464,7 @@ jobs:
           CHECKS: ${{ needs.plan.outputs.checks }}
           IMAGES: ${{ needs.plan.outputs.images }}
           FULL: ${{ needs.plan.outputs.full }}
+          SONAR: ${{ needs.plan.outputs.sonar }}
         run: |
           set -euo pipefail
           fail=0
@@ -471,7 +479,7 @@ jobs:
           if [[ "$CHECKS" == true ]]; then want=success; else want=idle; fi
           for job in fast lint test coverage build; do expect "$job" "$want"; done
           if [[ "$IMAGES" == true ]]; then expect images success; else expect images idle; fi
-          if [[ "$FULL" == true && "$CHECKS" == true ]]; then expect sonar success; else expect sonar idle; fi
+          if [[ "$CHECKS" == true && ( "$FULL" == true || "$SONAR" == report ) ]]; then expect sonar success; else expect sonar idle; fi
           exit "$fail"
 
   deploy-production:
