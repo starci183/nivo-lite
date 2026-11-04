@@ -1,0 +1,3 @@
+{"findings":[],"hash":"efc3aabbcf2be040d3ea1e800434e126606ac932bab14e744718254c9600834e","path":"packages/modules/package.json","step":"prettier"}
+{"findings":[],"hash":"3250037811f2ebf7f5d410242e642f05e9308c08c7cf73b6561c4d0d29daeed3","path":"packages/modules/tsconfig.build.json","step":"prettier"}
+{"findings":[],"hash":"2139c45d2b7235304eacdd7e9f8b32c2282e95601f0d496d7110b16109ede7d0","path":"packages/modules/tsconfig.json","step":"prettier"}

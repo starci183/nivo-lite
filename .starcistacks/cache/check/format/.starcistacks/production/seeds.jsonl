@@ -1,0 +1,4 @@
+{"findings":[],"hash":"7affd388b5cdef50e5384ae968df26434c25c641caf14f43ab46b4897e254b5b","path":".starcistacks/production/seeds/data/nivo-workspace.json","step":"prettier"}
+{"findings":[],"hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","path":".starcistacks/production/seeds/files/.gitkeep","step":"prettier"}
+{"findings":[],"hash":"b53a8d499d3d708343096cf9a44a4b1c9eeeb62ad076ea28380045b07316dd69","path":".starcistacks/production/seeds/seeds.yaml","step":"prettier"}
+{"findings":[],"hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","path":".starcistacks/production/seeds/sql/.gitkeep","step":"prettier"}

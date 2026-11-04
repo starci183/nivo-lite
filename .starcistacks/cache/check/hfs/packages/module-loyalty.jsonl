@@ -1,14 +1,13 @@
-{"data":{},"findings":[],"hash":"900678e2e05d6c4b8f5edd1c6fc77a5911fc831e431531f032bd0ed3850d3bd4","path":"packages/module-loyalty/package.json","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/module-loyalty/package.json gives a folder a package.json of its own, which makes it a service root outside be/apps/<service>/; a back-end service is a Nest app at be/apps/<service>/ (own Dockerfile there) sharing the be/src libraries and the one package.json, never a folder of its own.","path":"packages/module-loyalty/package.json","rule":"HFS_SERVICE_PLACEMENT"}],"hash":"d62efd16c7046bb26a042cabc3403ff07970d4963511d3290620222667fb5331","path":"packages/module-loyalty/package.json","step":"hfs"}
+{"data":{},"findings":[],"hash":"d471ffe634389803d57535573de3dadb5b856b2f04140c05e9cdbbd3b6bd1160","path":"packages/module-loyalty/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e3b16173da7ddd98ec54f9fd30de50ad289dcf622e1e3cd9719fdb0806c6604d","path":"packages/module-loyalty/src/index.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e5b6222b9b45b1d5cfd7377c7066b7c44a9ff342e6d474dc5a36ce65efdc8d88","path":"packages/module-loyalty/src/manifest/declaration.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"771891351a138ff84ca68b7e993b5c323d5cdf396529b3c91cb06522e6181d9e","path":"packages/module-loyalty/src/manifest/declaration.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"cedc150cc5133e5bdcd547308831a010b7193c54731b73d48631760c9c8d08c6","path":"packages/module-loyalty/src/manifest/index.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"43d79c209674452b9e5a6335f812cc165793558de70622a1ee6312d133d7c9f1","path":"packages/module-loyalty/src/module-key.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"818ad91de0eac613acfbab25105ef01d0d53b472590accc5057f96af89b6e9a5","path":"packages/module-loyalty/src/module-key.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"87bc0caa66fe78a84e0767507229be850506200000c897aff662c41d47f89033","path":"packages/module-loyalty/src/template/copy.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9400e2396e6d2ae4a99bcf1e0575bf82d482115d943de5dca73e60e847cd4937","path":"packages/module-loyalty/src/template/copy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"4818d50bcff8192b37a87007fdd893d480bb72ab8250d37e483d3b567cf83454","path":"packages/module-loyalty/src/template/index.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"06677ab44a355e2bf27ac6da4161ed401149f371562c23bbec1f3d9aa0865379","path":"packages/module-loyalty/src/template/loyalty.template.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"c2fda8887665654ac9667b80930b0f7007d17c1d158708ab7a64e0bd70259f0b","path":"packages/module-loyalty/src/template/loyalty.template.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"87b7395cd55c424e5127ffcb3f743b9d5a131f7580a106cf6e52ad0f78be86ac","path":"packages/module-loyalty/src/template/loyalty.template.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"cceac570ac4a89bcd5cc833c5e22faaf46f0e4dd7a4c839c3f0e5b67411e897e","path":"packages/module-loyalty/src/template/messages/en.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"75679e2f4784ba30acf6b3c55238a6f049c356ead2b12a8b8cd150eb237daf7b","path":"packages/module-loyalty/src/template/messages/vi.json","step":"file-rules"}
