@@ -1,7 +1,6 @@
 import { WorkDecisionTimeoutService } from "./work-decision-timeout.service"
 import { AgentRunItemVerdictsService } from "./agent-run-item-verdicts.service"
 import { AGENT_RUN_ITEM_VERDICTS } from "@modules/domain/agent-runs"
-import { FLOW_ALERTS } from "@modules/platform/jobs"
 import { AgentRunParkedAlertsService } from "./agent-run-parked-alerts.service"
 import { GraphWorkDecisionService } from "./graph-work-decision.service"
 import { Module } from "@nestjs/common"
@@ -84,7 +83,6 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: INBOX, useClass: InboxService },
                 { provide: AGENT_RUN_ITEM_VERDICTS, useExisting: AgentRunItemVerdictsService },
-                { provide: FLOW_ALERTS, useExisting: AgentRunParkedAlertsService },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
                 { provide: AGENT_DIRECTORY, useExisting: options.ports.agentDirectory },
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },
@@ -129,7 +127,6 @@ export class DecisionsModule extends ConfigurableModuleClass {
             ],
             exports: [
                 AGENT_RUN_ITEM_VERDICTS,
-                FLOW_ALERTS,
                 GraphWorkDecisionService,
                 ...owners,
                 DecisionsQueueModule,

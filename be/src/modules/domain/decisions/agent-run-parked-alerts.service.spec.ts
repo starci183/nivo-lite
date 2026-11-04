@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
-import { AgentRunsService } from "@modules/domain/agent-runs"
+import { AgentRunAlertsService, AgentRunsService } from "@modules/domain/agent-runs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -28,19 +28,31 @@ const build = async (options: { run?: ReturnType<typeof runViewOf> | null; insta
     const installations = mock<InstallationRecordsService>({
         ofAgent: jest.fn().mockResolvedValue(options.installed === false ? null : { moduleKey: "sales" }),
     })
+    const alerts = mock<AgentRunAlertsService>()
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, _params, locale) => `${key}|${String(locale)}`)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRunParkedAlertsService,
             { provide: AgentRunsService, useValue: runs },
+            { provide: AgentRunAlertsService, useValue: alerts },
             { provide: WorkEngineService, useValue: engine },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: MESSAGE_CATALOG, useValue: catalog },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentRunParkedAlertsService), engine }
+    return { service: moduleRef.get(AgentRunParkedAlertsService), engine, alerts }
 }
+
+describe("AgentRunParkedAlertsService registration", () => {
+    it("registers with the run engine's alerts when the module starts, so the run engine never holds it in a constructor", async () => {
+        const { service, alerts } = await build()
+
+        service.onModuleInit()
+
+        expect(alerts.add).toHaveBeenCalledWith(service)
+    })
+})
 
 describe("AgentRunParkedAlertsService.raise", () => {
     it("opens the one review item of a parked run, under the key a graph node files its own review of the run under", async () => {

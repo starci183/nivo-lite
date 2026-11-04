@@ -1,8 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { InjectFlowAlerts } from "@modules/platform/jobs"
-import type { FlowAlerts } from "@modules/platform/jobs"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { AgentRunAlertsService } from "./agent-run-alerts.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { InjectAgentRunsOptions } from "./agent-runs.decorators"
@@ -27,14 +26,14 @@ interface Voice {
  * Tells a person that a run stopped, once. The failed step's handler says it (the trigger intact for the person, the honest holding line to
  * the customer); a step whose kind cannot is replaced by the first step of the run that can. The run is marked told only after the handler
  * returned, so a throw leaves it for the sweep to tell again: a stopped run is never silent. A run that is parked for a fix also raises its one
- * owner item through the flow alerts, before the mark, so the item and the mark are never apart.
+ * owner item through the alerts registered with the run engine, before the mark, so the item and the mark are never apart.
  */
 export class AgentRunDeadLetterService {
     constructor(
         @InjectLogger() private readonly logger: Logger,
         private readonly store: AgentRunStoreService,
         private readonly handlers: AgentRunHandlersService,
-        @Optional() @InjectFlowAlerts() private readonly alerts: FlowAlerts | null = null,
+        private readonly alerts: AgentRunAlertsService,
         @Optional() @InjectAgentRunsOptions() private readonly options: AgentRunsOptions | null = null,
     ) {}
 
@@ -62,7 +61,7 @@ export class AgentRunDeadLetterService {
 
     /** Raises the one owner item of a parked run; false when it could not, so the run stays untold and the sweep tries again. */
     private async noticed(run: RunView, step: StepView | undefined, code: string): Promise<boolean> {
-        if (this.alerts === null || run.status !== "dead" || step === undefined) return true
+        if (run.status !== "dead" || step === undefined) return true
         try {
             await this.alerts.raise({
                 kind: "flow-parked",

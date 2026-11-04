@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { AgentRunsService } from "@modules/domain/agent-runs"
+import type { OnModuleInit } from "@nestjs/common"
+import { AgentRunAlertsService, AgentRunsService } from "@modules/domain/agent-runs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { FlowAlerts, ParkedFlowAlert } from "@modules/platform/jobs"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -21,15 +22,23 @@ const textOf = (value: unknown): string | null => (typeof value === "string" && 
 /**
  * Tells the owner a run stopped for a fix, once: one work item that a person reviews, and approving it runs the run again from its failed
  * step. It is filed under the same business key as the review a graph node raises for the same run, so the owner sees one item per run
- * whichever of the two came first.
+ * whichever of the two came first. It registers with the run engine's alerts when the module starts, so the run engine never holds it in a
+ * constructor: the work engine it raises through reaches the run engine (a closed item resumes a wait), and a constructor dependency the
+ * other way is a provider cycle that hangs the boot without a report.
  */
-export class AgentRunParkedAlertsService implements FlowAlerts {
+export class AgentRunParkedAlertsService implements FlowAlerts, OnModuleInit {
     constructor(
         private readonly runs: AgentRunsService,
+        private readonly alerts: AgentRunAlertsService,
         private readonly engine: WorkEngineService,
         private readonly installations: InstallationRecordsService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
     ) {}
+
+    /** Registers with the run engine's alerts once the app has started. */
+    onModuleInit(): void {
+        this.alerts.add(this)
+    }
 
     /** Opens the review item of a parked run; an alert of another kind of flow, or of a run that is gone, raises nothing. */
     async raise(alert: ParkedFlowAlert): Promise<void> {

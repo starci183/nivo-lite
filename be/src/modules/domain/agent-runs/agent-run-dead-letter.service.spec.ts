@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runViewOf, stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
-import { FLOW_ALERTS } from "@modules/platform/jobs"
-import type { FlowAlerts, ParkedFlowAlert } from "@modules/platform/jobs"
+import type { ParkedFlowAlert } from "@modules/platform/jobs"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
+import { AgentRunAlertsService } from "./agent-run-alerts.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AGENT_RUNS_OPTIONS } from "./agent-runs.decorators"
@@ -59,12 +59,14 @@ const build = async (handlers: ReadonlyArray<AgentStepHandler>, record: Tally, o
     const registry = mock<AgentRunHandlersService>({
         of: jest.fn((kind: string) => handlers.find((handler) => handler.kind === kind)),
     })
+    const quiet = mock<AgentRunAlertsService>({ raise: jest.fn().mockResolvedValue(undefined) })
     const container = await Test.createTestingModule({
         providers: [
             AgentRunDeadLetterService,
             { provide: LOGGER, useValue: logger },
             { provide: AgentRunStoreService, useValue: store },
             { provide: AgentRunHandlersService, useValue: registry },
+            { provide: AgentRunAlertsService, useValue: quiet },
         ],
     }).compile()
     return { service: container.get(AgentRunDeadLetterService), logger }
@@ -191,7 +193,7 @@ const buildAlerting = async (over: AlertScene) => {
         }),
     })
     const registry = mock<AgentRunHandlersService>({ of: jest.fn() })
-    const alerts = mock<FlowAlerts>({
+    const alerts = mock<AgentRunAlertsService>({
         raise: jest.fn((alert: ParkedFlowAlert) => {
             if (over.fails === true) return Promise.reject(new Error("down"))
             raised.alerts.push(alert)
@@ -204,7 +206,7 @@ const buildAlerting = async (over: AlertScene) => {
             { provide: LOGGER, useValue: logger },
             { provide: AgentRunStoreService, useValue: store },
             { provide: AgentRunHandlersService, useValue: registry },
-            { provide: FLOW_ALERTS, useValue: alerts },
+            { provide: AgentRunAlertsService, useValue: alerts },
             { provide: AGENT_RUNS_OPTIONS, useValue: { buildId: "b2" } },
         ],
     }).compile()
@@ -221,7 +223,7 @@ const buildUnnamed = async () => {
         spoken: jest.fn().mockResolvedValue(true),
     })
     const registry = mock<AgentRunHandlersService>({ of: jest.fn() })
-    const alerts = mock<FlowAlerts>({
+    const alerts = mock<AgentRunAlertsService>({
         raise: jest.fn((alert: ParkedFlowAlert) => {
             if (false) return Promise.reject(new Error("down"))
             raised.alerts.push(alert)
@@ -234,7 +236,7 @@ const buildUnnamed = async () => {
             { provide: LOGGER, useValue: logger },
             { provide: AgentRunStoreService, useValue: store },
             { provide: AgentRunHandlersService, useValue: registry },
-            { provide: FLOW_ALERTS, useValue: alerts },
+            { provide: AgentRunAlertsService, useValue: alerts },
             { provide: AGENT_RUNS_OPTIONS, useValue: {} },
         ],
     }).compile()

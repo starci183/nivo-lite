@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
 import { AgentStepQueueModule } from "@modules/queues/agent-step"
+import { AgentRunAlertsService } from "./agent-run-alerts.service"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunItemClosedService } from "./agent-run-item-closed.service"
@@ -51,6 +52,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentStepLedgerService,
                 AgentRunHandlersService,
                 AgentRunInflightService,
+                AgentRunAlertsService,
                 AgentRunDeadLetterService,
                 AgentRunCompensationService,
                 AgentRunStepsService,
@@ -67,6 +69,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AGENT_WAKE_INTERRUPTIONS,
                 AgentStepQueueModule,
                 AgentRunsService,
+                AgentRunAlertsService,
                 AgentRunResumeService,
                 AgentRunOwnerResumeService,
                 AgentRunHandlersService,
