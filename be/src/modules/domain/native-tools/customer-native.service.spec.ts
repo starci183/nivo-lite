@@ -19,6 +19,7 @@ const LEAD: LeadView = {
     need: "50 tea boxes",
     stage: "qualified",
     context_summary: null,
+    phone: null,
     installation_id: null,
     created_at: "2026-10-12T00:00:00.000Z",
 }

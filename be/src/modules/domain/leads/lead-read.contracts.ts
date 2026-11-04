@@ -14,6 +14,8 @@ export interface LeadView {
     readonly stage: string
     /** The context brief, or null. */
     readonly context_summary: string | null
+    /** The stored phone of the contact, or null. */
+    readonly phone: string | null
     /** The agent installation that captured it, when known. */
     readonly installation_id: string | null
     /** The creation time, ISO text. */

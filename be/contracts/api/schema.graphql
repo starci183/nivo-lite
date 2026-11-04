@@ -4473,6 +4473,7 @@ type LeadBoardType {
   need: String!
   nextAction: String
   ownerName: String
+  phone: String
   stage: String!
 }
 
@@ -4752,6 +4753,7 @@ type LeadRecordType {
   id: ID!
   installationId: ID
   need: String!
+  phone: String
   stage: String!
 }
 
@@ -5363,6 +5365,7 @@ type MemberListingType {
   avatarUrl: String
   displayName: String!
   email: String!
+  joinedAt: String!
   lastSignInAt: String
   role: String!
   staffId: ID
