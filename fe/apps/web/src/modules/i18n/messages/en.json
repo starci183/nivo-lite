@@ -4553,6 +4553,7 @@
     "instancesDescription": "Each {type} has its own name, channels, knowledge and setup. Authority rules are shared by every {type}.",
     "instancesListLabel": "Your {type} agents",
     "instanceAdd": "Add a new {type}",
+    "instanceSingleNote": "There is only one {type} per workspace.",
     "instanceAddTitle": "New {type}",
     "instanceAddDescription": "Name it so your team can tell it apart, for example after the branch, brand or Fanpage it serves.",
     "instanceNameLabel": "Name",

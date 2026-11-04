@@ -4553,6 +4553,7 @@
     "instancesDescription": "Mỗi {type} có tên, kênh, kiến thức và thiết lập riêng. Quyền ở trang Giao quyền áp dụng chung cho mọi {type}.",
     "instancesListLabel": "Các {type} của bạn",
     "instanceAdd": "Thêm {type} mới",
+    "instanceSingleNote": "{type} chỉ có một bản trong mỗi workspace.",
     "instanceAddTitle": "Thêm {type} mới",
     "instanceAddDescription": "Đặt tên để cả nhóm phân biệt được, ví dụ theo chi nhánh, thương hiệu hoặc Fanpage mà nó phục vụ.",
     "instanceNameLabel": "Tên",
