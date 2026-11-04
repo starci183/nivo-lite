@@ -2,9 +2,11 @@
 
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OrderTemplateListingData } from "@/modules/api/graphql"
-import { mutateOrderTemplateListing } from "@/modules/api/graphql/mutations/mutation-order-template-listing"
-import type { MutateOrderTemplateListingRequest } from "@/modules/api/graphql/mutations/mutation-order-template-listing"
+import type { OrderTemplateListingMutation } from "@/modules/api"
+import {
+    mutateOrderTemplateListing,
+    type MutateOrderTemplateListingRequest,
+} from "@/modules/api/graphql/mutations/mutation-order-template-listing"
 
 /** The SWR key of the `orderTemplateListing` mutation. */
 export const MUTATE_ORDER_TEMPLATE_LISTING_SWR_KEY = "MUTATE_ORDER_TEMPLATE_LISTING_SWR"
@@ -16,7 +18,7 @@ interface TriggerArg {
 
 /** The back end `orderTemplateListing` mutation. */
 export const useMutateOrderTemplateListingSwr = (): SWRMutationResponse<
-    OrderTemplateListingData,
+    OrderTemplateListingMutation["orderTemplateListing"],
     Error,
     string,
     MutateOrderTemplateListingRequest

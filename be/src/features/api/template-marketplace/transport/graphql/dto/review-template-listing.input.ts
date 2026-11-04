@@ -1,6 +1,5 @@
 import { Field, ID, InputType, Int } from "@nestjs/graphql"
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator"
-import { NullAsAbsent } from "@modules/platform/graphql"
 
 @InputType()
 /** The decision of a platform reviewer. */
@@ -14,8 +13,8 @@ export class ReviewTemplateListingInput {
     /** `approve` or `reject`. */
     @Field(() => String)
     @IsIn(["approve", "reject"])
-    @MaxLength(40)
-    decision!: string
+    @MaxLength(10)
+    decision!: "approve" | "reject"
 
     /** What the reviewer writes. */
     @Field(() => String)
@@ -25,10 +24,9 @@ export class ReviewTemplateListingInput {
 
     /** The percent that is the creator, when it is not the default. */
     @Field(() => Int, { nullable: true })
-    @NullAsAbsent()
     @IsOptional()
     @IsInt()
     @Min(0)
     @Max(100)
-    revenueSharePct?: number
+    revenueSharePct!: number | null
 }

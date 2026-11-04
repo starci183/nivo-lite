@@ -1,4 +1,4 @@
-import { z } from "../schema/zod.schema"
+import { z } from "zod"
 import { isNamespaced } from "../schema/namespaced"
 import type { JsonSchema, Namespaced, PropsSchema } from "../schema/schema.types"
 import type {
@@ -23,7 +23,7 @@ const jsonOf = (schema: PropsSchema, code: DefinitionErrorCode, id: Namespaced):
     try {
         return z.toJSONSchema(schema)
     } catch (error) {
-        throw new SdkDefinitionError(code, id, error)
+        throw new SdkDefinitionError(code, id, { cause: error })
     }
 }
 

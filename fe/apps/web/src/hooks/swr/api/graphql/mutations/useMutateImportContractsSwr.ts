@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateImportContracts } from "@/modules/api/graphql/mutations/mutation-import-contracts"
-import type { MutateImportContractsRequest } from "@/modules/api/graphql/mutations/mutation-import-contracts"
+import {
+    mutateImportContracts,
+    type MutateImportContractsRequest,
+} from "@/modules/api/graphql/mutations/mutation-import-contracts"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ImportContractsMutation } from "@/modules/api"
 
 /** What the importContracts mutation is triggered with. */
 interface ImportContractsArg {
@@ -16,7 +18,7 @@ export const MUTATE_IMPORT_CONTRACTS_SWR_KEY = "MUTATE_IMPORT_CONTRACTS_SWR"
 
 /** SWR mutation for {@link mutateImportContracts}: `trigger(request)` answers how many were saved and which rows were skipped. */
 export const useMutateImportContractsSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateImportContracts>["importContracts"],
+    ImportContractsMutation["importContracts"],
     Error,
     typeof MUTATE_IMPORT_CONTRACTS_SWR_KEY,
     ImportContractsArg["arg"]

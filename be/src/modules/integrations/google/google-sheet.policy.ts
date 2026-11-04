@@ -9,6 +9,13 @@ import type {
     SheetsApi,
     SheetPaymentContext,
 } from "./google.contracts"
+import type {
+    SheetBodyCell,
+    SheetColumnSize,
+    SheetCreateBody,
+    SheetFormatBody,
+    SheetTextCell,
+} from "./google-sheet-body.contracts"
 
 /** The money column format: thousands separators and the dong sign. */
 export const MONEY_PATTERN = '#,##0" ₫"'
@@ -62,98 +69,19 @@ export const sheetVnd = (amount: number): string => `${new Intl.NumberFormat("vi
 /** The code a row of a won deal carries before any order number exists. */
 export const leadKey = (leadId: string): string => `KH-${leadId.replaceAll("-", "").slice(0, 8)}`
 
-const textCell = (value: string, bold = false) => ({
+const textCell = (value: string, bold = false): SheetTextCell => ({
     userEnteredValue: { stringValue: value },
     ...(bold ? { userEnteredFormat: { textFormat: { bold: true } } } : {}),
 })
 
-const valueCell = (value: SheetCell) =>
+const valueCell = (value: SheetCell): SheetBodyCell =>
     typeof value === "number" ? { userEnteredValue: { numberValue: value } } : textCell(value)
 
-const columnSizes = (pixels: ReadonlyArray<number>) => pixels.map((pixelSize) => ({ pixelSize }))
+const columnSizes = (pixels: ReadonlyArray<number>): Array<SheetColumnSize> =>
+    pixels.map((pixelSize) => ({ pixelSize }))
 
 /** The body of spreadsheets.create: two tabs, bold frozen header rows, column widths and the sample row. */
-export const buildCreateBody = (
-    title: string,
-    now: Date,
-): {
-    properties: {
-        title: string
-        locale: string
-        timeZone: string
-    }
-    sheets: Array<
-        | {
-              properties: {
-                  sheetId: number
-                  title: string
-                  index: number
-                  gridProperties: {
-                      frozenRowCount: number
-                      rowCount: number
-                      columnCount: 9
-                  }
-              }
-              data: Array<{
-                  startRow: number
-                  startColumn: number
-                  columnMetadata: Array<{
-                      pixelSize: number
-                  }>
-                  rowData: Array<{
-                      values: Array<
-                          | {
-                                userEnteredFormat?: {
-                                    textFormat: {
-                                        bold: boolean
-                                    }
-                                }
-                                userEnteredValue: {
-                                    stringValue: string
-                                }
-                            }
-                          | {
-                                userEnteredValue: {
-                                    numberValue: number
-                                }
-                            }
-                      >
-                  }>
-              }>
-          }
-        | {
-              properties: {
-                  sheetId: number
-                  title: string
-                  index: number
-                  gridProperties: {
-                      frozenRowCount: number
-                      rowCount: number
-                      columnCount: 7
-                  }
-              }
-              data: Array<{
-                  startRow: number
-                  startColumn: number
-                  columnMetadata: Array<{
-                      pixelSize: number
-                  }>
-                  rowData: Array<{
-                      values: Array<{
-                          userEnteredFormat?: {
-                              textFormat: {
-                                  bold: boolean
-                              }
-                          }
-                          userEnteredValue: {
-                              stringValue: string
-                          }
-                      }>
-                  }>
-              }>
-          }
-    >
-} => {
+export const buildCreateBody = (title: string, now: Date): SheetCreateBody => {
     const sample: ReadonlyArray<SheetCell> = [
         formatVnTime(now.toISOString(), now),
         "MAU-001",
@@ -211,28 +139,7 @@ export const buildCreateBody = (
  * The follow-up batchUpdate: the money column (E) shows thousands separators and the dong sign for every row below the
  * header.
  */
-export const buildFormatBody = (): {
-    requests: Array<{
-        repeatCell: {
-            range: {
-                sheetId: number
-                startRowIndex: number
-                startColumnIndex: number
-                endColumnIndex: number
-            }
-            cell: {
-                userEnteredFormat: {
-                    numberFormat: {
-                        type: string
-                        pattern: string
-                    }
-                    horizontalAlignment: string
-                }
-            }
-            fields: string
-        }
-    }>
-} => ({
+export const buildFormatBody = (): SheetFormatBody => ({
     requests: [
         {
             repeatCell: {

@@ -19,6 +19,9 @@ export interface Publisher {
     readonly role: WorkspaceRole
 }
 
+/** The version of the context the change was made against, or null when it was made against none. */
+export type OptionalBasisVersionId = string | null
+
 const EMPTY: GraphDocument = { nodes: [], rights: [] }
 
 @Injectable()
@@ -47,7 +50,7 @@ export class AgentGraphPublishService {
         by: Publisher,
         note: string,
         kind: GraphChangeKind = "edit",
-        contextVersionId: string | null = null,
+        contextVersionId: OptionalBasisVersionId = null,
         versionNumber?: number,
     ): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)

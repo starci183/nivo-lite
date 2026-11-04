@@ -8,7 +8,8 @@ import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
 import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import type { AgentOption, SlotLabels } from "@/modules/types"
-import { MAX_CHATS, useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
+import { MAX_CHATS } from "@/hooks/telegram-chats"
+import { useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
 
 /** What the board hands the personal Telegram wizard. */
 interface TelegramUserWizardProps {

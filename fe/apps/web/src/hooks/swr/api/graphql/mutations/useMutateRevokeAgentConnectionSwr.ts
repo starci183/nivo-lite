@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRevokeAgentConnection } from "@/modules/api/graphql/mutations/mutation-revoke-agent-connection"
-import type { MutateRevokeAgentConnectionRequest } from "@/modules/api/graphql/mutations/mutation-revoke-agent-connection"
+import {
+    mutateRevokeAgentConnection,
+    type MutateRevokeAgentConnectionRequest,
+} from "@/modules/api/graphql/mutations/mutation-revoke-agent-connection"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RevokeAgentConnectionMutation } from "@/modules/api"
 
 /** What the RevokeAgentConnection mutation is triggered with. */
 interface RevokeAgentConnectionArg {
@@ -16,7 +18,7 @@ export const MUTATE_REVOKE_AGENT_CONNECTION_SWR_KEY = "MUTATE_REVOKE_AGENT_CONNE
 
 /** SWR mutation for {@link mutateRevokeAgentConnection}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateRevokeAgentConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRevokeAgentConnection>["revokeAgentConnection"],
+    RevokeAgentConnectionMutation["revokeAgentConnection"],
     Error,
     typeof MUTATE_REVOKE_AGENT_CONNECTION_SWR_KEY,
     RevokeAgentConnectionArg["arg"]

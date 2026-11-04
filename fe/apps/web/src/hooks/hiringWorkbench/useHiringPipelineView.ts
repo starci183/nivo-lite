@@ -1,58 +1,13 @@
 "use client"
 import { useTranslations } from "next-intl"
-import { MOVE_STAGES, scoreTone, hiringRejectCopyOf, useHiringFormat, useHiringSay } from "@/hooks/hiring"
+import { hiringRejectCopyOf, useHiringFormat, useHiringSay } from "@/hooks/hiring"
 import { ALL_JOBS, useHiringPipeline, useHiringReject } from "@/hooks/hiringPipeline"
-import type { PipelineLane } from "@/hooks/hiringPipeline"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import type { CandidateView } from "@/hooks/hiringWire"
-import type { HiringViewInput } from "./hiringWorkbench.shared"
+import { pipelineCardOf, pipelineLaneOf, type HiringViewInput } from "./hiringWorkbench.shared"
 import type { BadgeTone } from "@starci/grammar/common"
 import type { Dispatch, SetStateAction } from "react"
 
-/** The resolved heading and cards in one stage. */
-const laneOf = (
-    lane: PipelineLane,
-    t: ReturnType<typeof useTranslations<"hiring">>,
-    cardOf: (candidate: CandidateView) => ReturnType<typeof candidateCardOf>,
-) => ({
-    stage: lane.stage,
-    label: t(`stage_${lane.stage}`),
-    count: String(lane.candidates.length),
-    cards: lane.candidates.map(cardOf),
-})
-
-/** Locale and current job context used to resolve one candidate's display facts. */
-interface PipelineCardContext {
-    readonly jobId: string
-    readonly titles: ReadonlyMap<string, string>
-    readonly t: ReturnType<typeof useTranslations<"hiring">>
-    readonly format: ReturnType<typeof useHiringFormat>
-    readonly nowIso: string
-}
-
-/** Resolves the original score, source/date metadata, suggestion and allowed move options of one candidate. */
-const candidateCardOf = (candidate: CandidateView, context: PipelineCardContext) => {
-    const { jobId, titles, t, format, nowIso } = context
-    return {
-        id: candidate.id,
-        name: candidate.name,
-        scoreLabel: candidate.score === null ? t("pipeNotScored") : t("pipeScore", { score: candidate.score }),
-        scoreTone: scoreTone(candidate.scoreLabel),
-        meta: [
-            jobId === ALL_JOBS ? titles.get(candidate.jobId) : undefined,
-            format.label("source", candidate.source),
-            format.ago(candidate.createdAt, nowIso),
-        ]
-            .filter((part) => part !== undefined && part !== "")
-            .join(" · "),
-        suggestion:
-            candidate.scoreLabel === null ? null : t("pipeSuggestion", { label: t(`score_${candidate.scoreLabel}`) }),
-        moveOptions: MOVE_STAGES.filter((stage) => stage !== candidate.stage).map((stage) => ({
-            id: stage,
-            label: t(`stage_${stage}`),
-        })),
-    }
-}
 /** The view `useHiringPipelineView` returns. */
 export interface HiringPipelineViewShape {
     props: {
@@ -152,7 +107,7 @@ export const useHiringPipelineView = (input: HiringViewInput): HiringPipelineVie
         pipeline.closeReject()
     }
     const cardContext = { jobId, titles, t, format, nowIso: data.nowIso }
-    const cardOf = (candidate: CandidateView) => candidateCardOf(candidate, cardContext)
+    const cardOf = (candidate: CandidateView) => pipelineCardOf(candidate, cardContext)
 
     const props = {
         copy: {
@@ -173,7 +128,7 @@ export const useHiringPipelineView = (input: HiringViewInput): HiringPipelineVie
             { id: ALL_JOBS, label: t("pipeAllJobs") },
             ...data.jobs.map((job) => ({ id: job.id, label: job.title })),
         ],
-        lanes: pipeline.lanes.map((lane) => laneOf(lane, t, cardOf)),
+        lanes: pipeline.lanes.map((lane) => pipelineLaneOf(lane, t, cardOf)),
         hasNoCandidates: data.candidates.length === 0,
         withdrawnNote: pipeline.withdrawn > 0 ? t("pipeWithdrawn", { n: pipeline.withdrawn }) : null,
         dragId: pipeline.dragId,

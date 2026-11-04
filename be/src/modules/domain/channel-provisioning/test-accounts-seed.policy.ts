@@ -1,5 +1,5 @@
 import { isMailAddress } from "@modules/domain/email-messages"
-import { invalid, textOf, valuesOf } from "./management-seed.policy"
+import { invalid, sealedValuesOf, textOf } from "./management-seed.policy"
 import type { Values } from "./management-seed.policy"
 import { TEST_ACCOUNTS_SEED_SCHEMA } from "./test-accounts-seed.contracts"
 import type { TestAccountsSeed, TestSeat, TestWorkspace } from "./test-accounts-seed.contracts"
@@ -34,7 +34,7 @@ const workspaceOf = (raw: unknown, values: Values): TestWorkspace => {
 /** Reads one test-accounts document: every workspace has one owner, listed first, and no address is used twice. */
 export const readTestAccountsSeed = (document: unknown): TestAccountsSeed => {
     if (!isRecord(document) || document.schema !== TEST_ACCOUNTS_SEED_SCHEMA) return invalid("schema")
-    const values = valuesOf(document.values)
+    const values = sealedValuesOf(document.values)
     const workspaces = listOf(document.workspaces, "workspaces").map((workspace) => workspaceOf(workspace, values))
     const emails = workspaces.flatMap((workspace) => [workspace.owner, ...workspace.others]).map((seat) => seat.email)
     return new Set(emails).size === emails.length ? { workspaces } : invalid("seat.email")

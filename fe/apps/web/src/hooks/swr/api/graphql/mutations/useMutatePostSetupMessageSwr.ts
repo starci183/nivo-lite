@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutatePostSetupMessage } from "@/modules/api/graphql/mutations/mutation-post-setup-message"
-import type { MutatePostSetupMessageRequest } from "@/modules/api/graphql/mutations/mutation-post-setup-message"
+import {
+    mutatePostSetupMessage,
+    type MutatePostSetupMessageRequest,
+} from "@/modules/api/graphql/mutations/mutation-post-setup-message"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { PostSetupMessageMutation } from "@/modules/api"
 
 /** What the PostSetupMessage mutation is triggered with. */
 interface PostSetupMessageArg {
@@ -16,7 +18,7 @@ export const MUTATE_POST_SETUP_MESSAGE_SWR_KEY = "MUTATE_POST_SETUP_MESSAGE_SWR"
 
 /** SWR mutation for {@link mutatePostSetupMessage}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutatePostSetupMessageSwr = (): SWRMutationResponse<
-    OperationData<typeof mutatePostSetupMessage>["postSetupMessage"],
+    PostSetupMessageMutation["postSetupMessage"],
     Error,
     typeof MUTATE_POST_SETUP_MESSAGE_SWR_KEY,
     PostSetupMessageArg["arg"]

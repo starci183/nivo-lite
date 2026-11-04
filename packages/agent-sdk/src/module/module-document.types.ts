@@ -13,86 +13,86 @@ import type {
     ModuleTemplateTrigger,
 } from "./module.types"
 
-/** The only document format this reader accepts, written into every module file. */
+/** The only version of the document format a module file or row may declare; another id is refused. */
 export type ModuleDocumentSchemaId = "nivo/module@1"
 
 /** The catalogue entry of a module: what the catalogue shows before it is installed. */
 export interface ModuleManifest {
-    /** Position of the module in the catalogue list, lowest first. */
+    /** The place of the module in the catalogue, lowest first. */
     readonly order: number
-    /** The full name, in each language. */
+    /** The full module name. */
     readonly name: Bilingual
-    /** A short name for tight places such as tabs. */
+    /** The short department name. */
     readonly shortName: Bilingual
-    /** One or two sentences on what the module does. */
+    /** The catalogue description. */
     readonly description: Bilingual
-    /** Bullet points that sell the module, in each language. */
+    /** The selling points shown under the description. */
     readonly points: BilingualList
-    /** Plain statement of what the agent of the module is for. */
+    /** One English line that tells the setup prompt what the module is for. */
     readonly purpose: string
-    /** Key of the catalogue icon. */
+    /** The name of the icon of the design system. */
     readonly icon: string
-    /** Single-character mark shown beside the name. */
+    /** The svg path of the module glyph. */
     readonly glyph: string
-    /** Key of the mascot picture. */
+    /** The path of the module mascot image. */
     readonly mascot: string
-    /** Catalogue group the module is listed under. */
+    /** The key of the category the module belongs to. */
     readonly category: string
-    /** Whether the module is stable or still early. */
+    /** Whether the module is stable or in early access. */
     readonly status: "stable" | "early"
-    /** Who the module is for. */
+    /** Who the module's agent talks to. */
     readonly audience: ModuleAudience
-    /** True when every workspace has the module without installing it. */
+    /** The module comes with every workspace without being added. */
     readonly includedWithWorkspace: boolean
-    /** False hides the module from the catalogue. */
+    /** The module can be added from the catalogue. */
     readonly available: boolean
-    /** Name of the knowledge folder the install creates. */
+    /** The folder of the base knowledge the module starts with. */
     readonly knowledgeFolder: string
-    /** Key of an extra settings panel, or null when there is none. */
+    /** The key of the module's extra settings, when it has any. */
     readonly settingsExtras: string | null
-    /** What a workspace must have before it can install the module. */
+    /** What a workspace should have for the module to work well; it never blocks installing. */
     readonly requires: ModuleTemplateRequirements
-    /** The providers a workspace connects for the module to work. */
+    /** The connection providers the module's agent can use. */
     readonly connectionProviders: ReadonlyArray<string>
-    /** Whether a new install starts assisting or running on its own. */
+    /** How a new installation starts running. */
     readonly defaultOperatingMode: "assist" | "autopilot"
-    /** True when a workspace may install the module more than once. */
+    /** A workspace may install several agents of this type. */
     readonly multiInstance: boolean
 }
 
 /** One thing a module must know before it may act. */
 export interface ModuleDocumentGate {
-    /** Stable key the gate is stored under. */
+    /** The stable gate key. */
     readonly key: string
-    /** What the gate asks, in each language. */
+    /** The gate title. */
     readonly label: Bilingual
-    /** Help text under the question. */
+    /** The hint under the gate. */
     readonly hint: Bilingual
-    /** Where the answer is written once given; absent when it is only checked. */
+    /** What the setup chat writes from the answer, when anything. */
     readonly writes?: ReadonlyArray<ModuleGateWrite> | undefined
 }
 
 /** One action the authority matrix governs. */
 export interface ModuleDocumentAction {
-    /** Stable key of the action. */
+    /** The stable action key, unique across every module. */
     readonly action: string
-    /** What the owner reads for the action, in each language. */
+    /** The action title. */
     readonly label: Bilingual
-    /** How the agent may act by default. */
+    /** The default authority mode. */
     readonly mode: ModuleAuthorityMode
-    /** Largest amount in VND the agent may commit alone, or null for no limit. */
+    /** The default amount limit in VND, which the owner can change; null when the action has none. */
     readonly limitVnd: number | null
-    /** Fields that must be known before the action runs. */
+    /** The fields a request for this action must carry. */
     readonly requiredFields: ReadonlyArray<string>
-    /** True when the action is bounded by an amount limit. */
+    /** Whether an amount limit is meaningful for the action. */
     readonly amountLimit: boolean
-    /** Graph facts the action reads; absent when none. */
+    /** The facts a decide point on this action reads from real records, the first being its amount. */
     readonly graphFacts?: ReadonlyArray<string> | undefined
-    /** The loosest mode an owner may pick, or null for no ceiling. */
+    /** The loosest mode the action can ever take; null leaves it unrestricted. */
     readonly maxMode: "ask" | "never" | null
-    /** An explanation shown beside the action. */
+    /** A note shown with the action. */
     readonly note: Bilingual
-    /** Keys of the actions that usually follow. */
+    /** The actions this one chains to. */
     readonly next: ReadonlyArray<string>
 }
 
@@ -100,13 +100,13 @@ export interface ModuleDocumentAction {
 export interface ModuleAgentTemplate {
     /** The agent the install creates. */
     readonly agent: ModuleTemplateAgent
-    /** The questions the owner answers before the agent acts. */
+    /** What the module must know before it may act. */
     readonly gates: ReadonlyArray<ModuleDocumentGate>
     /** The actions the authority matrix governs. */
     readonly authorityActions: ReadonlyArray<ModuleDocumentAction>
-    /** The commands the agent accepts. */
+    /** The commands other agents may ask the module to run. */
     readonly accepts: ReadonlyArray<ModuleTemplateCommand>
-    /** What starts a turn of the agent. */
+    /** The clock triggers seeded for the agent. */
     readonly triggers: ReadonlyArray<ModuleTemplateTrigger>
     /** The grant an agent of this type is seeded with: default deny, never a wildcard field. */
     readonly rights: ReadonlyArray<DataRight>
@@ -114,11 +114,11 @@ export interface ModuleAgentTemplate {
 
 /** A limit a prompt carries. */
 export interface LimitSpec {
-    /** The limit as the prompt states it. */
+    /** The words of the limit the prompt states. */
     readonly text: SpecText
-    /** The member the limit applies to; absent when it applies to every turn. */
+    /** The member of the reading that must hold for the limit to apply; absent applies it always. */
     readonly member?: string | undefined
-    /** The trust levels the limit applies to; absent for all. */
+    /** The kinds of speaker the limit applies to; absent applies it to every kind. */
     readonly trusts?: ReadonlyArray<"outsider" | "member" | "manager" | "system"> | undefined
 }
 
@@ -152,37 +152,37 @@ export type MemberSpec =
 
 /** A yes/no question the model answers on every turn. */
 export interface SignalSpec {
-    /** Stable key of the signal in the model reading. */
+    /** The stable key the answer is read under. */
     readonly key: string
-    /** The yes/no question put to the model. */
+    /** The question put to the model. */
     readonly question: SpecText
-    /** Intent and member that must be present for the question to be asked; absent when always asked. */
-    readonly requires?: { readonly intent: string; readonly member: string } | undefined
+    /** The intent and member that must hold before the question is asked; absent asks it every turn. */
+    readonly requires?: SignalGuard | undefined
 }
 
-/** The wording that counts as making a claim, per language. */
-export interface ClaimPhrases {
-    /** The Vietnamese wordings. */
-    readonly vi: ReadonlyArray<string>
-    /** The English wordings. */
-    readonly en: ReadonlyArray<string>
+/** The intent and member a signal waits for before its question is asked. */
+interface SignalGuard {
+    /** The intent the turn must have. */
+    readonly intent: string
+    /** The member of the reading that must be filled. */
+    readonly member: string
 }
 
 /** A claim a reply may make only when an effect of the required kind was recorded in the turn. */
 export interface ClaimSpec {
-    /** The effect kind that must have been recorded this turn for the claim to be allowed. */
+    /** The kind of effect that must have been recorded in the turn for the claim to stand. */
     readonly requires: Namespaced
-    /** The wording, per language, that counts as making the claim. */
-    readonly phrases: ClaimPhrases
-    /** The sentence that replaces the claim when it is not backed; absent for a default. */
+    /** The phrases of a reply that make the claim, by language. */
+    readonly phrases: BilingualList
+    /** The line that replaces a reply whose claim has no recorded effect; absent leaves the reply as it is. */
     readonly line?: SpecText | undefined
 }
 
 /** A catalogue fact a condition looks for. */
 export interface FactRef {
-    /** The type of subject the fact is about. */
+    /** The kind of subject the fact is about. */
     readonly subjectType: string
-    /** The label of the attribute that must be present. */
+    /** The label of the attribute the fact states. */
     readonly attributeLabel: string
 }
 
@@ -199,66 +199,66 @@ export type OutcomeSpec = "act" | "reask_then_person" | "person" | "decline" | {
 
 /** Ordered rules; the first whose `when` holds decides. */
 export interface OutcomeRulesSpec {
-    /** Rules tried in order; the first whose condition holds decides. */
+    /** The rules in the order they are tried, each a condition and what the engine does when it holds. */
     readonly rules: ReadonlyArray<{ readonly when: OutcomeCondition; readonly then: OutcomeSpec }>
-    /** The outcome when no rule holds. */
+    /** What the engine does when no rule holds. */
     readonly otherwise: OutcomeSpec
 }
 
 /** The authoring form of one intent frame. */
 export interface IntentSpec {
-    /** Stable key of the intent. */
+    /** The stable intent key. */
     readonly intent: string
-    /** Phrases or keys that select this intent. */
+    /** The phrases that point a message at the intent. */
     readonly triggers: ReadonlyArray<string>
-    /** True when the intent replies to the person. */
+    /** Whether the intent answers the person in the turn it is read. */
     readonly answers: boolean
-    /** True when the intent takes a turn of its own. */
+    /** Whether the intent takes the whole turn, leaving no room for another. */
     readonly ownTurn: boolean
-    /** What the model is asked to do under this intent. */
+    /** The task the model is given for the intent. */
     readonly task: SpecText
-    /** Keys of the limits that apply. */
+    /** The keys of the limits the prompt states, from the document's `limits`. */
     readonly limits: ReadonlyArray<string>
-    /** The namespaced kind the intent produces. */
+    /** The kind of result the intent hands on. */
     readonly result: Namespaced
-    /** Members this intent fills in. */
+    /** The members of the reading the intent fills. */
     readonly owns: ReadonlyArray<string>
-    /** Members that must be known, with the question to ask when missing. */
+    /** The members that must be filled, each with the words that ask the person for it. */
     readonly required: ReadonlyArray<{ readonly member: string; readonly ask: SpecText }>
-    /** Checks to run, with their parameters. */
+    /** The registered checks run over the reading before the intent acts, each with its literal parameters. */
     readonly checks: ReadonlyArray<{
         readonly id: Namespaced
         readonly params?: Readonly<Record<string, string | number | boolean>> | undefined
     }>
-    /** Keys of the claims the intent may make. */
+    /** The keys of the claims a reply to the intent may make, from the document's `claims`. */
     readonly claims: ReadonlyArray<string>
-    /** Key of the outcome rules that decide the turn, or null. */
+    /** The key of the outcome rules that decide the turn, from the document's `outcomes`; null leaves it to the engine. */
     readonly outcome: string | null
-    /** Namespaced policy that gates the intent, or null. */
+    /** The registered policy that judges the intent; null uses none. */
     readonly policy: Namespaced | null
 }
 
 /** Per-intent frames, members, signals, effects, claims and turn outcomes. */
 export interface ModuleContracts {
-    /** Limits by key. */
+    /** The limits a prompt can carry, by key. */
     readonly limits: Readonly<Record<string, LimitSpec>>
-    /** Member shapes by key. */
+    /** The shape of each member of the reading, by name. */
     readonly members: Readonly<Record<string, MemberSpec>>
-    /** Yes/no questions asked each turn. */
+    /** The yes/no questions the model answers on every turn. */
     readonly signals: ReadonlyArray<SignalSpec>
-    /** The effect kinds the module may run. */
+    /** The kinds of effect a turn can record. */
     readonly effects: ReadonlyArray<Namespaced>
-    /** Claims by key. */
+    /** The claims a reply may make, by key. */
     readonly claims: Readonly<Record<string, ClaimSpec>>
-    /** Outcome rules by key. */
+    /** The outcome rules that decide a turn, by key. */
     readonly outcomes: Readonly<Record<string, OutcomeRulesSpec>>
-    /** The intents of the module. */
+    /** The frame of each intent the module reads. */
     readonly intents: ReadonlyArray<IntentSpec>
 }
 
 /** One module version as a file and as a stored row: data only, never code. */
 export interface ModuleDocument {
-    /** Identifies the document format, so a reader can refuse other versions. */
+    /** The format of the document; another id is refused. */
     readonly schema: ModuleDocumentSchemaId
     /** `/^[a-z][a-z0-9_]{1,23}$/`. */
     readonly key: string
@@ -268,11 +268,11 @@ export interface ModuleDocument {
     readonly changelog: string
     /** True: the owner must read the version before taking it. */
     readonly breaking: boolean
-    /** What the catalogue shows before install. */
+    /** The catalogue entry of the module. */
     readonly manifest: ModuleManifest
     /** What an install seeds. */
     readonly template: ModuleAgentTemplate
-    /** How the module reads and answers turns. */
+    /** The frames, members, signals, effects, claims and outcomes of the module's turns. */
     readonly contracts: ModuleContracts
     /** Default specs by route; `main` is required. */
     readonly workbenches: Readonly<Record<string, SpecDocument>>
@@ -295,7 +295,7 @@ export type ModuleProblemCode =
 export interface ModuleProblem {
     /** Which rule the document broke. */
     readonly code: ModuleProblemCode
-    /** Path inside the document where it broke. */
+    /** Where in the document: a field path, a key or a workbench route. */
     readonly at: string
     /** For `MODULE_SPEC_PROBLEM`: the code of the spec problem. */
     readonly detail?: string | undefined

@@ -3,7 +3,7 @@ import type { Mailer } from "@starci/mail"
 import type { Logger } from "@modules/platform/logging"
 import { MailLogEvent } from "./mail.log-events"
 import type { MailOutboxService } from "./mail-outbox.service"
-import { SuppressingMailer } from "./suppressing-mailer.service"
+import { SuppressingMailerService } from "./suppressing-mailer.service"
 
 const message = { subject: "Confirm", text: "Open https://app.test/c?t=1", html: "<p>x</p>" }
 
@@ -13,11 +13,11 @@ const build = () => {
     const outbox = mock<MailOutboxService>()
     outbox.record.mockResolvedValue()
     const logger = mock<Logger>()
-    const mailer = new SuppressingMailer(inner, ["*.example.test"], outbox, logger)
+    const mailer = new SuppressingMailerService(inner, ["*.example.test"], outbox, logger)
     return { mailer, inner, outbox, logger }
 }
 
-describe("SuppressingMailer", () => {
+describe("SuppressingMailerService", () => {
     it("holds back a message to a suppressed recipient, logs it masked, keeps it and answers success", async () => {
         const { mailer, inner, outbox, logger } = build()
 

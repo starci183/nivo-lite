@@ -2,13 +2,18 @@
 
 import useSWRInfinite from "swr/infinite"
 import type { SWRInfiniteKeyLoader } from "swr/infinite"
-import { connectionPageKey, connectionPageView, connectionReadParameters } from "@/hooks/connectionPages"
-import type { ConnectionPage } from "@/hooks/connectionPages"
+import {
+    connectionPageKey,
+    connectionPageView,
+    connectionReadParameters,
+    type ConnectionPage,
+} from "@/hooks/connectionPages"
 import { noData } from "@/hooks/workspaceread"
-import { GraphQLHeadersKey } from "@/modules/api"
-import type { DossierFindingsQuery } from "@/modules/api"
-import { queryDossierFindings } from "@/modules/api/graphql/queries/query-dossier-findings"
-import type { QueryDossierFindingsRequest } from "@/modules/api/graphql/queries/query-dossier-findings"
+import { GraphQLHeadersKey, type DossierFindingsQuery } from "@/modules/api"
+import {
+    queryDossierFindings,
+    type QueryDossierFindingsRequest,
+} from "@/modules/api/graphql/queries/query-dossier-findings"
 
 /** The dossier findings connection cache; every loaded page of every filter leads with it. */
 export const QUERY_DOSSIER_FINDINGS_SWR_KEY = "QUERY_DOSSIER_FINDINGS_SWR"

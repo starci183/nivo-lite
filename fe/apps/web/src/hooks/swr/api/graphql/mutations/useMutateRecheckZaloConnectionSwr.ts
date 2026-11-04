@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateRecheckZaloConnection } from "@/modules/api/graphql/mutations/mutation-recheck-zalo-connection"
-import type { mutateRecheckZaloConnection as MutateRecheckZaloConnectionOperation } from "@/modules/api/graphql/mutations/mutation-recheck-zalo-connection"
+import {
+    mutateRecheckZaloConnection,
+    type mutateRecheckZaloConnection as MutateRecheckZaloConnectionOperation,
+} from "@/modules/api/graphql/mutations/mutation-recheck-zalo-connection"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RecheckZaloConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the recheckZaloConnection mutation. */
 export const MUTATE_RECHECK_ZALO_CONNECTION_SWR_KEY = "MUTATE_RECHECK_ZALO_CONNECTION_SWR_KEY"
 
 /** SWR mutation for {@link mutateRecheckZaloConnection}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateRecheckZaloConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRecheckZaloConnection>["recheckZaloConnection"],
+    RecheckZaloConnectionMutation["recheckZaloConnection"],
     Error,
     typeof MUTATE_RECHECK_ZALO_CONNECTION_SWR_KEY,
     TriggerArg["arg"]

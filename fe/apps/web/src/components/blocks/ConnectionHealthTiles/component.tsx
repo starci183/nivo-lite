@@ -1,36 +1,18 @@
-import { PaneSection } from "@starci/grammar/common"
-import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ConnectionFactsPane } from "@/components/frames/ConnectionFactsPane"
-import type { ConnectionFactView, DataSlot, SlotLabels } from "@/modules/types"
-
-/** Fake rows of the same shape: the skeleton reuses the ready tree. */
-const FACTS_PLACEHOLDER: ReadonlyArray<ConnectionFactView> = [
-    { id: "one", label: "-", value: "-", meta: "-" },
-    { id: "two", label: "-", value: "-", meta: "-" },
-    { id: "three", label: "-", value: "-", meta: "-" },
-]
+import type { ConnectionFactsPaneProps } from "@/components/frames/ConnectionFactsPane"
 
 /** Copy and slot of the health tiles of a provider page. */
 export interface ConnectionHealthTilesBaseProps {
-    readonly props: {
-        readonly label: string
-        readonly facts: DataSlot<ReadonlyArray<ConnectionFactView>>
-        readonly slotLabels: SlotLabels
-    }
+    readonly props: Omit<ConnectionFactsPaneProps, "onRetry">
     readonly on: { readonly retry: () => void }
 }
 
 /** Draws the three health tiles of a provider page (DISCIPLINE-2: figure, label, meta line) as a band of the page's main pane. */
 export const ConnectionHealthTilesBase = (props: ConnectionHealthTilesBaseProps) => (
-    <PaneSection>
-        <SlotView
-            slot={props.props.facts}
-            placeholder={FACTS_PLACEHOLDER}
-            labels={props.props.slotLabels}
-            onRetry={props.on.retry}
-            render={(facts, isLoading) => (
-                <ConnectionFactsPane label={props.props.label} facts={facts} isLoading={isLoading} />
-            )}
-        />
-    </PaneSection>
+    <ConnectionFactsPane
+        label={props.props.label}
+        facts={props.props.facts}
+        slotLabels={props.props.slotLabels}
+        onRetry={props.on.retry}
+    />
 )

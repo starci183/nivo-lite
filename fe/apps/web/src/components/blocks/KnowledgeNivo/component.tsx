@@ -1,32 +1,23 @@
-import { KNOWLEDGE_ROWS_PLACEHOLDER, KnowledgeRowList } from "@/components/composites/KnowledgeRows"
-import type { KnowledgeRowView, DataSlot, SlotLabels } from "@/modules/types"
-import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { KnowledgeRowsSlot } from "@/components/frames/KnowledgeRowsSlot"
+import type { KnowledgeRowsSlotProps } from "@/components/frames/KnowledgeRowsSlot"
 
 /** The rows and the copy of their status the connected base knowledge supplies. */
 export interface KnowledgeNivoBaseProps {
     readonly props: {
         readonly label: string
-        readonly slot: DataSlot<ReadonlyArray<KnowledgeRowView>>
-        readonly slotLabels: SlotLabels
+        readonly slot: KnowledgeRowsSlotProps["slot"]
+        readonly slotLabels: KnowledgeRowsSlotProps["slotLabels"]
     }
     readonly on: { readonly retry: () => void }
 }
 
 /** Draws the base knowledge of NIVO: one row per item with its module, kind, version and text. */
 export const KnowledgeNivoBase = (props: KnowledgeNivoBaseProps) => (
-    <SlotView
+    <KnowledgeRowsSlot
+        label={props.props.label}
         slot={props.props.slot}
-        placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
-        labels={props.props.slotLabels}
+        slotLabels={props.props.slotLabels}
+        isPending={false}
         onRetry={props.on.retry}
-        render={(rows, isSkeleton) => (
-            <KnowledgeRowList
-                label={props.props.label}
-                emptyTitle={props.props.slotLabels.empty}
-                rows={rows}
-                isPending={false}
-                isLoading={isSkeleton}
-            />
-        )}
     />
 )

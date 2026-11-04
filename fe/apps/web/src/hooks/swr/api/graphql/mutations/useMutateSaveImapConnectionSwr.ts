@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSaveImapConnection } from "@/modules/api/graphql/mutations/mutation-save-imap-connection"
-import type { MutateSaveImapConnectionRequest } from "@/modules/api/graphql/mutations/mutation-save-imap-connection"
+import {
+    mutateSaveImapConnection,
+    type MutateSaveImapConnectionRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-imap-connection"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveImapConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the saveImapConnection mutation. */
 export const MUTATE_SAVE_IMAP_CONNECTION_SWR_KEY = "MUTATE_SAVE_IMAP_CONNECTION_SWR"
 
 /** SWR mutation for {@link mutateSaveImapConnection}: `trigger(input)` answers the connection id and rejects with the back end failure. */
 export const useMutateSaveImapConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveImapConnection>["saveImapConnection"],
+    SaveImapConnectionMutation["saveImapConnection"],
     Error,
     typeof MUTATE_SAVE_IMAP_CONNECTION_SWR_KEY,
     TriggerArg["arg"]

@@ -3,6 +3,7 @@ import { z } from "zod"
 import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { MAX_LIMITS, MAX_LIMIT_LENGTH, MAX_TASK_LENGTH } from "./agent-graphs-contract.contracts"
 import { MAX_CONDITION_TERMS, MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "./agent-graphs.contracts"
+import type { DataRight } from "@modules/domain/mcp-gateway"
 import type { Condition, GraphDocument, GraphNodeKind, GraphNodeStep, ToolUse } from "./agent-graphs.contracts"
 
 const factValueSchema = z.union([z.string().max(200), z.number(), z.boolean()])
@@ -148,7 +149,8 @@ const nodeSchema = z
     })
     .strict()
 
-const rightSchema = z
+/** A data right of a graph: what it opens, to whom it reaches and what it hides or masks. */
+export const graphRightSchema: z.ZodType<DataRight> = z
     .object({
         kind: z.enum(["brain", "customers", "documents", "payments", "channels", "invoices"]),
         scope: z.enum(["conversation", "workspace"]),
@@ -278,7 +280,7 @@ export const intentBusinessSchema: z.ZodObject<
 export const graphDocumentSchema: z.ZodType<GraphDocument> = z
     .object({
         nodes: z.array(nodeSchema).max(MAX_GRAPH_NODES * 2),
-        rights: z.array(rightSchema).max(10),
+        rights: z.array(graphRightSchema).max(10),
         contracts: z.array(intentBusinessSchema).max(MAX_GRAPH_NODES).optional(),
         flow: graphSpecSchema.optional(),
     })

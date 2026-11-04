@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentTemplateVersionsService, TemplateLicenseEntity } from "@modules/domain/agent-templates"
+import { AgentTemplateVersionsService, TemplateRecordsService } from "@modules/domain/agent-templates"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import type { PaidOrderFulfilment } from "@modules/domain/sepay-transactions"
 import { CreatorLedgerEntryEntity, TemplateListingEntity } from "./persistence/entities"
@@ -16,6 +16,7 @@ export class TemplatePaymentsService implements PaidOrderFulfilment {
     constructor(
         private readonly orders: PaymentOrdersService,
         private readonly versions: AgentTemplateVersionsService,
+        private readonly records: TemplateRecordsService,
     ) {}
 
     /** Fulfils the order with this code if it buys a listing; any other order is left alone. */
@@ -27,16 +28,12 @@ export class TemplatePaymentsService implements PaidOrderFulfilment {
         if (listing === null) return
         const template = await this.versions.templateOf(listing.templateKey)
         if (template === null) return
-        const already = await manager.findOne(TemplateLicenseEntity, { where: { orderId: order.id } })
-        if (already !== null) return
-        await manager.insert(TemplateLicenseEntity, {
+        if (await this.records.hasLicenseForOrder(manager, order.id)) return
+        await this.records.grantPaid(manager, {
             workspaceId: order.workspaceId,
             templateKey: listing.templateKey,
-            kind: "paid",
             listingId: listing.id,
             orderId: order.id,
-            installationId: null,
-            status: "active",
         })
         const split = splitOf(order.amountVnd, listing.revenueSharePct)
         const base = {

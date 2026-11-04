@@ -1,11 +1,6 @@
 import { type BookingWorkbenchDataView, type BookingWorkbenchActions, BOOKING_TABS } from "@/modules/types"
 import type { ReactNode, ReactElement } from "react"
-import { Grid, Stack, Tabs } from "@starci/grammar/common"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
+import { Stack } from "@starci/grammar/common"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -18,6 +13,7 @@ import { BookingExceptions } from "@/components/frames/BookingExceptions"
 import { BookingPolicyForm } from "@/components/composites/BookingPolicyForm"
 import { BookingPublicPageForm } from "@/components/composites/BookingPublicPageForm"
 import { BookingWaitlist } from "@/components/composites/BookingWaitlist"
+import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 /** The five real booking panels and the recorded-explanation arrangement. */
 export const BOOKING_WORKBENCH_SHAPES: readonly [...typeof BOOKING_TABS, "explanation"] = [
     ...BOOKING_TABS,
@@ -30,7 +26,6 @@ export interface BookingWorkbenchBaseProps {
     readonly props: BookingWorkbenchDataView
     readonly on: BookingWorkbenchActions
 }
-const panelId = (id: string): string => `agent-dashboard-panel-${id}`
 const DeskPanel = (props: Omit<BookingWorkbenchBaseProps, "shape">) => (
     <SlotView
         {...props.props.desk}
@@ -103,67 +98,12 @@ const ModulePanel = (props: BookingWorkbenchBaseProps) => {
             return null
     }
 }
-const DashboardCards = (props: Omit<BookingWorkbenchBaseProps, "shape">) => {
-    const regions = props.props.regions
-    return (
-        <Grid kind="cards" columns={3}>
-            <SlotView
-                {...regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(view, isLoading) => (
-                    <DoneRegion label={regions.done.label} view={view} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.connections}
-                onRetry={props.on.retryDashboard}
-                render={(view, isLoading) => (
-                    <ConnectionsRegion label={regions.connections.label} view={view} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.knowledge}
-                onRetry={props.on.retryDashboard}
-                render={(view, isLoading) => (
-                    <KnowledgeRegion label={regions.knowledge.label} view={view} isLoading={isLoading} />
-                )}
-            />
-        </Grid>
-    )
-}
 const Overview = (props: BookingWorkbenchBaseProps) => {
     const view = props.props
     return (
-        <Stack gap="region">
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(waiting, isLoading) => (
-                    <WaitingRegion label={view.regions.waiting.label} view={waiting} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...view.ribbon}
-                forbidden="notice"
-                onRetry={props.on.retryRibbon}
-                render={(items, isLoading) => (
-                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
-                )}
-            />
-            <Tabs
-                label={view.tabsLabel}
-                selectedKey={view.selectedTab}
-                inset="none"
-                labelVisibility="always"
-                items={view.tabs}
-                panelId={panelId}
-                onSelect={props.on.selectTab}
-            />
-            <div role="tabpanel" id={panelId(view.selectedTab)}>
-                <ModulePanel {...props} />
-            </div>
-            <DashboardCards props={props.props} on={props.on} />
-        </Stack>
+        <WorkbenchOverview view={view} ribbon={view.ribbon} on={props.on} forbidden="notice">
+            <ModulePanel {...props} />
+        </WorkbenchOverview>
     )
 }
 const Explanation = (props: Omit<BookingWorkbenchBaseProps, "shape">) => {

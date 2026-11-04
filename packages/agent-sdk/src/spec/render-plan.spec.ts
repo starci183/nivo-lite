@@ -1,8 +1,8 @@
+import { blockIndex } from "./spec"
 import { BLOCKS, docOf, listNode } from "./spec.fixture"
 import type { PlanView } from "./render-plan"
 import { planNode, renderPlan, viewOf } from "./render-plan"
 import type { SpecNode } from "./spec.types"
-import { present } from "../schema/present"
 
 const root: SpecNode = {
     id: "root",
@@ -54,13 +54,18 @@ describe("renderPlan", () => {
     })
 
     it("refuses to plan a node whose block is missing, which only an unvalidated spec reaches", () => {
-        expect(() => planNode(new Map(), { id: "x", block: "test.nope" })).toThrow("PLAN_BLOCK_UNKNOWN: test.nope")
+        expect(() => planNode(new Map(), { id: "x", block: "test.nope" })).toThrow("PLAN_SPEC_UNVALIDATED: test.nope")
     })
 })
 
 describe("viewOf", () => {
-    const planned = renderPlan(docOf(root), BLOCKS)
-    const base = present(planned.ok ? planned.views[0] : undefined)
+    const base: PlanView = {
+        id: "base",
+        label: { key: "base" },
+        hidden: false,
+        openBy: null,
+        root: planNode(blockIndex(BLOCKS), root),
+    }
     const view = (id: string, extra: Partial<PlanView> = {}): PlanView => ({ ...base, id, ...extra })
     const none = (): string | null => null
 

@@ -3,8 +3,10 @@
 import { useSWRConfig } from "swr"
 import useSWRSubscription from "swr/subscription"
 import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
-import { streamKnowledgeProgress } from "@/modules/api/sse/knowledge/stream-knowledge-progress"
-import type { KnowledgeProgressPush } from "@/modules/api/sse/knowledge/stream-knowledge-progress"
+import {
+    streamKnowledgeProgress,
+    type KnowledgeProgressPush,
+} from "@/modules/api/sse/knowledge/stream-knowledge-progress"
 import { QUERY_BRAIN_SWR_KEY } from "../../graphql/queries/useQueryBrainSwr"
 import { QUERY_BRAIN_TODO_SWR_KEY } from "../../graphql/queries/useQueryBrainTodoSwr"
 import { QUERY_KNOWLEDGE_SOURCES_SWR_KEY } from "../../graphql/queries/useQueryKnowledgeSourcesSwr"

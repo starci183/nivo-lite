@@ -43,7 +43,7 @@ const placeholderDossierRows = (key: string): ReadonlyArray<DossierRowView> =>
     }))
 
 /** One category of dossiers as the card draws it. */
-export interface DossierCategoryView {
+interface DossierCategoryView {
     readonly id: string
     readonly label: string
     readonly meta: string

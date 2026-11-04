@@ -3,8 +3,8 @@
 import { useCallback, useMemo, useState } from "react"
 import { useQueryListTelegramChatsSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
-import { chatKindOf, MAX_CHATS } from "./telegram-user-wizard.shared"
-import type { ChatChoice, PickedChat, SinceDays, TelegramInitial } from "./telegram-user-wizard.shared"
+import { chatKindOf, MAX_CHATS } from "@/hooks/telegram-chats"
+import type { ChatChoice, PickedChat, SinceDays, TelegramInitial } from "@/hooks/telegram-chats"
 import type { SetStateAction, Dispatch } from "react"
 
 /** Fresh chats on every visit; a failure is shown with a retry, not retried by itself. */

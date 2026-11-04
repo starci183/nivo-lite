@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateInstallModule } from "@/modules/api/graphql/mutations/mutation-install-module"
-import type { MutateInstallModuleRequest } from "@/modules/api/graphql/mutations/mutation-install-module"
+import {
+    mutateInstallModule,
+    type MutateInstallModuleRequest,
+} from "@/modules/api/graphql/mutations/mutation-install-module"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { InstallModuleMutation } from "@/modules/api"
 
 /** What the InstallModule mutation is triggered with. */
 interface InstallModuleArg {
@@ -16,7 +18,7 @@ export const MUTATE_INSTALL_MODULE_SWR_KEY = "MUTATE_INSTALL_MODULE_SWR"
 
 /** SWR mutation for {@link mutateInstallModule}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateInstallModuleSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateInstallModule>["installModule"],
+    InstallModuleMutation["installModule"],
     Error,
     typeof MUTATE_INSTALL_MODULE_SWR_KEY,
     InstallModuleArg["arg"]

@@ -2,9 +2,11 @@
 
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { ImportAgentTemplateData } from "@/modules/api/graphql"
-import { mutateImportAgentTemplate } from "@/modules/api/graphql/mutations/mutation-import-agent-template"
-import type { MutateImportAgentTemplateRequest } from "@/modules/api/graphql/mutations/mutation-import-agent-template"
+import type { ImportAgentTemplateMutation } from "@/modules/api"
+import {
+    mutateImportAgentTemplate,
+    type MutateImportAgentTemplateRequest,
+} from "@/modules/api/graphql/mutations/mutation-import-agent-template"
 
 /** The SWR key of the `importAgentTemplate` mutation. */
 export const MUTATE_IMPORT_AGENT_TEMPLATE_SWR_KEY = "MUTATE_IMPORT_AGENT_TEMPLATE_SWR"
@@ -16,7 +18,7 @@ interface TriggerArg {
 
 /** The back end `importAgentTemplate` mutation. */
 export const useMutateImportAgentTemplateSwr = (): SWRMutationResponse<
-    ImportAgentTemplateData,
+    ImportAgentTemplateMutation["importAgentTemplate"],
     Error,
     string,
     MutateImportAgentTemplateRequest

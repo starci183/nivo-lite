@@ -36,46 +36,44 @@ const branchId = (nodeKey: string, key: string): string => `branch:${nodeKey}:${
 const kindOfChange = (base: string, current: string): "upgrade" | "conflict" =>
     base === current ? "upgrade" : "conflict"
 
-/** What the version offers for one branch against the buyer's copy, or null when it offers nothing to apply. */
-const branchChangeOf = (
+/** What the offered version means for one branch of the buyer's copy, or null when the copy already matches what is offered. */
+const branchChange = (
     before: GraphBranch | undefined,
     now: GraphBranch | undefined,
     branch: GraphBranch,
 ): UpdateUnit["change"] | null => {
     const offered = branchSignature(branch)
+    if (before !== undefined && branchSignature(before) === offered) return null
     if (now !== undefined && branchSignature(now) === offered) return null
-    if (before === undefined) return now === undefined ? "added" : "conflict"
-    if (branchSignature(before) === offered) return null
-    return now === undefined ? "conflict" : kindOfChange(branchSignature(before), branchSignature(now))
+    if (now === undefined) return before === undefined ? "added" : "conflict"
+    return before === undefined ? "conflict" : kindOfChange(branchSignature(before), branchSignature(now))
 }
 
-/** What the version offers for one node against the buyer's copy, or null when it offers nothing to apply. */
-const nodeChangeOf = (
-    base: GraphNode,
-    current: GraphNode | undefined,
-    node: GraphNode,
-): UpdateUnit["change"] | null => {
+/** The unit for a node the buyer's copy holds, when the offered version changes it and the buyer has not already made that change. */
+const ownUnit = (base: GraphNode, current: GraphNode | undefined, node: GraphNode): ReadonlyArray<UpdateUnit> => {
+    if (current === undefined) return []
     const offered = nodeSignature(node)
-    if (nodeSignature(base) === offered || current === undefined || nodeSignature(current) === offered) return null
-    return kindOfChange(nodeSignature(base), nodeSignature(current))
+    if (nodeSignature(base) === offered || nodeSignature(current) === offered) return []
+    return [
+        {
+            id: nodeId(node.key),
+            nodeKey: node.key,
+            branchKey: null,
+            change: kindOfChange(nodeSignature(base), nodeSignature(current)),
+        },
+    ]
 }
 
-const branchUnits = (
-    base: GraphNode | undefined,
-    current: GraphNode | undefined,
-    next: GraphNode,
-): ReadonlyArray<UpdateUnit> => {
+const branchUnits = (base: GraphNode, current: GraphNode | undefined, next: GraphNode): ReadonlyArray<UpdateUnit> => {
     const offered = (next.decide?.branches ?? []).flatMap((branch): ReadonlyArray<UpdateUnit> => {
         const before = branchOf(base, branch.key)
         const now = branchOf(current, branch.key)
-        const unit = (change: UpdateUnit["change"]): ReadonlyArray<UpdateUnit> => [
-            { id: branchId(next.key, branch.key), nodeKey: next.key, branchKey: branch.key, change },
-        ]
-        const change = branchChangeOf(before, now, branch)
-        return change === null ? [] : unit(change)
+        const change = branchChange(before, now, branch)
+        if (change === null) return []
+        return [{ id: branchId(next.key, branch.key), nodeKey: next.key, branchKey: branch.key, change }]
     })
     const nextKeys = new Set((next.decide?.branches ?? []).map((branch) => branch.key))
-    const dropped = (base?.decide?.branches ?? [])
+    const dropped = (base.decide?.branches ?? [])
         .filter((branch) => !nextKeys.has(branch.key) && branchOf(current, branch.key) !== undefined)
         .map((branch): UpdateUnit => ({
             id: branchId(next.key, branch.key),
@@ -100,10 +98,7 @@ export const updateUnits = (input: MergeInput): ReadonlyArray<UpdateUnit> => {
                 ? [{ id: nodeId(node.key), nodeKey: node.key, branchKey: null, change: "added" }]
                 : []
         }
-        const change = nodeChangeOf(base, current, node)
-        const own: ReadonlyArray<UpdateUnit> =
-            change === null ? [] : [{ id: nodeId(node.key), nodeKey: node.key, branchKey: null, change }]
-        return [...own, ...branchUnits(base, current, node)]
+        return [...ownUnit(base, current, node), ...branchUnits(base, current, node)]
     })
     const nextKeys = new Set(input.next.nodes.map((node) => node.key))
     const removed = input.base.nodes

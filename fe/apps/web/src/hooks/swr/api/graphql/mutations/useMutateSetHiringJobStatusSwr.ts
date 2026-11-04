@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSetHiringJobStatus } from "@/modules/api/graphql/mutations/mutation-set-hiring-job-status"
-import type { MutateSetHiringJobStatusRequest } from "@/modules/api/graphql/mutations/mutation-set-hiring-job-status"
+import {
+    mutateSetHiringJobStatus,
+    type MutateSetHiringJobStatusRequest,
+} from "@/modules/api/graphql/mutations/mutation-set-hiring-job-status"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetHiringJobStatusMutation } from "@/modules/api"
 
 /** What the setHiringJobStatus mutation is triggered with. */
 interface SetHiringJobStatusArg {
@@ -16,7 +18,7 @@ export const MUTATE_SET_HIRING_JOB_STATUS_SWR_KEY = "MUTATE_SET_HIRING_JOB_STATU
 
 /** SWR mutation for {@link mutateSetHiringJobStatus}: `trigger(request)` answers `setHiringJobStatus` and rejects with the back end failure. */
 export const useMutateSetHiringJobStatusSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetHiringJobStatus>["setHiringJobStatus"],
+    SetHiringJobStatusMutation["setHiringJobStatus"],
     Error,
     typeof MUTATE_SET_HIRING_JOB_STATUS_SWR_KEY,
     SetHiringJobStatusArg["arg"]

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSetKnowledgeSuggestionState } from "@/modules/api/graphql/mutations/mutation-set-knowledge-suggestion-state"
-import type { MutateSetKnowledgeSuggestionStateRequest } from "@/modules/api/graphql/mutations/mutation-set-knowledge-suggestion-state"
+import {
+    mutateSetKnowledgeSuggestionState,
+    type MutateSetKnowledgeSuggestionStateRequest,
+} from "@/modules/api/graphql/mutations/mutation-set-knowledge-suggestion-state"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetKnowledgeSuggestionStateMutation } from "@/modules/api"
 
 /** What the SetKnowledgeSuggestionState mutation is triggered with. */
 interface SetKnowledgeSuggestionStateArg {
@@ -16,7 +18,7 @@ export const MUTATE_SET_KNOWLEDGE_SUGGESTION_STATE_SWR_KEY = "MUTATE_SET_KNOWLED
 
 /** SWR mutation for {@link mutateSetKnowledgeSuggestionState}: Decides a suggestion: sets it aside or brings it back. `trigger(input)` rejects with the back end failure. */
 export const useMutateSetKnowledgeSuggestionStateSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetKnowledgeSuggestionState>["setKnowledgeSuggestionState"],
+    SetKnowledgeSuggestionStateMutation["setKnowledgeSuggestionState"],
     Error,
     typeof MUTATE_SET_KNOWLEDGE_SUGGESTION_STATE_SWR_KEY,
     SetKnowledgeSuggestionStateArg["arg"]

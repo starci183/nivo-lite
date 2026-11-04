@@ -1,19 +1,19 @@
 "use client"
 
 import type { VideoEditorActions } from "@/modules/types"
+/** Handlers the script step form calls. */
 export type VideoScriptFormActions = VideoEditorActions["script"]
 import { useEffect, useState } from "react"
-import { useTranslations, useFormatter } from "next-intl"
-import { useVideoActions, useVideoScript, useVideoFailure } from "@/hooks/video"
+import { useVideoActions, useVideoScript, useVideoFailure, type VideoJobRead } from "@/hooks/video"
 import { useVideoScriptForm } from "@/hooks/rhf"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { editorHref, newScene } from "@/modules/video"
 import type { ScriptScene, EditorStep } from "@/modules/video"
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { videoOwnerOf, videoScriptFieldsOf, swapped } from "./videoWorkbench.shared"
+import { videoOwnerOf, swapped } from "./videoWorkbench.shared"
+import { useVideoScriptFields } from "./useVideoScriptFields"
 import type { VideoViewInput } from "./videoWorkbench.shared"
-import type { VideoJobRead } from "@/hooks/video/useVideoJob"
 const sceneChangesOf = (form: ReturnType<typeof useVideoScriptForm>, scenes: ReadonlyArray<ScriptScene>) => {
     const change = (next: ReadonlyArray<ScriptScene>) => {
         form.setValue(
@@ -90,9 +90,7 @@ type UseVideoScriptStepViewResult = {
 
 /** Real script editing and durable job request retain their selected-project lifetime. */
 export const useVideoScriptStepView = (input: VideoViewInput): UseVideoScriptStepViewResult => {
-    const t = useTranslations("video"),
-        format = useFormatter(),
-        failure = useVideoFailure(),
+    const failure = useVideoFailure(),
         owner = videoOwnerOf(input, "script"),
         lifetime = useFeatureLifetime(owner.isActive, owner.scope),
         actions = useVideoActions(owner),
@@ -161,7 +159,7 @@ export const useVideoScriptStepView = (input: VideoViewInput): UseVideoScriptSte
         },
     }
     return {
-        ...videoScriptFieldsOf({ input, form, job, error, pending: actions.isPending, t, format, failure }),
+        ...useVideoScriptFields({ input, form, job, error, pending: actions.isPending }),
         on,
         statusRead: job.read,
         isStatusEnabled: job.isStatusEnabled,

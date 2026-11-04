@@ -1,13 +1,14 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { queryAgentGraphVersions } from "@/modules/api/graphql/queries/query-agent-graph-versions"
-import type { QueryAgentGraphVersionsRequest } from "@/modules/api/graphql/queries/query-agent-graph-versions"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import {
+    queryAgentGraphVersions,
+    type QueryAgentGraphVersionsRequest,
+} from "@/modules/api/graphql/queries/query-agent-graph-versions"
+import type { AgentGraphVersionsQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryAgentGraphVersionsSwr}. */
 export const QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY = "QUERY_AGENT_GRAPH_VERSIONS_SWR"
@@ -16,7 +17,7 @@ export const QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY = "QUERY_AGENT_GRAPH_VERSIONS_SW
 export const useQueryAgentGraphVersionsSwr = (
     request: QueryAgentGraphVersionsRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryAgentGraphVersions>["listAgentGraphVersions"]> =>
+): ReadResponse<AgentGraphVersionsQuery["listAgentGraphVersions"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_AGENT_GRAPH_VERSIONS_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryAgentGraphVersionsRequest>) =>

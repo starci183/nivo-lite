@@ -28,53 +28,37 @@ export interface BookingSettingsCommandsView {
           }
         | undefined
     >
-    removeException: (
-        arg: {} & {
-            id: string | number
-        },
-    ) => Promise<
+    removeException: (arg: { id: string | number }) => Promise<
         | {
               id: string
           }
         | undefined
     >
-    savePolicy: (
-        arg: {} & {
-            address: string
-            autoConfirm: boolean
-            cancelWindowHours: number
-            depositPct: number
-            handoffOrder: boolean
-            lateCancelFeePct: number
-            maxAdvanceDays: number
-            minLeadMin: number
-            noShowFeeVnd: number
-            slotStepMin: number
-            timezone: string
-        },
-    ) => Promise<
+    savePolicy: (arg: {
+        address: string
+        autoConfirm: boolean
+        cancelWindowHours: number
+        depositPct: number
+        handoffOrder: boolean
+        lateCancelFeePct: number
+        maxAdvanceDays: number
+        minLeadMin: number
+        noShowFeeVnd: number
+        slotStepMin: number
+        timezone: string
+    }) => Promise<
         | {
               workspaceId: string
           }
         | undefined
     >
-    savePublicPage: (
-        arg: {} & {
-            enabled: boolean
-            note: string
-            slug: string
-        },
-    ) => Promise<
+    savePublicPage: (arg: { enabled: boolean; note: string; slug: string }) => Promise<
         | {
               workspaceId: string
           }
         | undefined
     >
-    removeWaitlistEntry: (
-        arg: {} & {
-            id: string | number
-        },
-    ) => Promise<
+    removeWaitlistEntry: (arg: { id: string | number }) => Promise<
         | {
               id: string
           }

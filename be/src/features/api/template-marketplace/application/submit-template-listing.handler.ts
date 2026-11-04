@@ -17,8 +17,6 @@ export class SubmitTemplateListingHandler extends ICQRSHandler<SubmitTemplateLis
     }
 
     protected override process(command: SubmitTemplateListingCommand): Promise<ListingView> {
-        const p = command.params.principal.id
-        const r = command.params.request
-        return this.svc.submit(p, r)
+        return this.svc.submit(command.params.principal.id, command.params.request)
     }
 }

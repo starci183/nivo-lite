@@ -1,21 +1,21 @@
 "use client"
 
 import useSWR from "swr"
+import { answeredData } from "@/hooks/workspaceread"
 import type { SWRResponse } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
-import type { MyAgentTemplatesData } from "@/modules/api/graphql"
+import type { MyAgentTemplatesQuery } from "@/modules/api"
 import { queryMyAgentTemplates } from "@/modules/api/graphql/queries/query-my-agent-templates"
 
 /** The SWR key of {@link useQueryMyAgentTemplatesSwr}. */
 export const QUERY_MY_AGENT_TEMPLATES_SWR_KEY = "QUERY_MY_AGENT_TEMPLATES_SWR"
 
 /** The back end `myAgentTemplates` query. */
-export const useQueryMyAgentTemplatesSwr = (enabled = true): SWRResponse<MyAgentTemplatesData, Error> =>
+export const useQueryMyAgentTemplatesSwr = (
+    enabled = true,
+): SWRResponse<MyAgentTemplatesQuery["myAgentTemplates"], Error> =>
     useSWR(
         useWorkspaceKey(QUERY_MY_AGENT_TEMPLATES_SWR_KEY, [], enabled),
-        async ({ signal }: { signal?: AbortSignal } = {}) => {
-            const result = await queryMyAgentTemplates({ signal })
-            if (!result.data) throw new Error("myAgentTemplates answered no data")
-            return result.data.myAgentTemplates
-        },
+        async ({ signal }: { signal?: AbortSignal } = {}) =>
+            answeredData(await queryMyAgentTemplates({ signal }), "myAgentTemplates").myAgentTemplates,
     )

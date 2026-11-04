@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDecideShiftsAvailability } from "@/modules/api/graphql/mutations/mutation-decide-shifts-availability"
-import type { MutateDecideShiftsAvailabilityRequest } from "@/modules/api/graphql/mutations/mutation-decide-shifts-availability"
+import {
+    mutateDecideShiftsAvailability,
+    type MutateDecideShiftsAvailabilityRequest,
+} from "@/modules/api/graphql/mutations/mutation-decide-shifts-availability"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DecideShiftsAvailabilityMutation } from "@/modules/api"
 
 /** What the decideShiftsAvailability mutation is triggered with. */
 interface DecideShiftsAvailabilityArg {
@@ -16,7 +18,7 @@ export const MUTATE_DECIDE_SHIFTS_AVAILABILITY_SWR_KEY = "MUTATE_DECIDE_SHIFTS_A
 
 /** SWR mutation for {@link mutateDecideShiftsAvailability}: `trigger(request)` answers `decideShiftsAvailability` and rejects with the back end failure. */
 export const useMutateDecideShiftsAvailabilitySwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDecideShiftsAvailability>["decideShiftsAvailability"],
+    DecideShiftsAvailabilityMutation["decideShiftsAvailability"],
     Error,
     typeof MUTATE_DECIDE_SHIFTS_AVAILABILITY_SWR_KEY,
     DecideShiftsAvailabilityArg["arg"]

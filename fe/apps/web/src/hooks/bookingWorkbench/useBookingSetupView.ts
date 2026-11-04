@@ -1,174 +1,23 @@
 "use client"
 import type { useBookingBoard } from "@/hooks/bookingBoard"
 import { useBookingServicesView } from "./useBookingServicesView"
-import { useBookingResourcesView } from "./useBookingResourcesView"
-import { useBookingExceptionsView } from "./useBookingExceptionsView"
-import { useBookingPolicyFormView } from "./useBookingPolicyFormView"
-import { useBookingPublicPageFormView } from "./useBookingPublicPageFormView"
-import type { ServiceFields, ExceptionFields } from "@/modules/booking-desk"
+import type { ExceptionFields, ServiceFields } from "@/modules/booking-desk"
 import type { ResourceFields } from "@/modules/types"
+import type { BookingServicesProps } from "@/hooks/bookingServicesView"
+import type { BookingResourcesProps } from "@/hooks/bookingResourcesView"
+import { useBookingResourcesView } from "./useBookingResourcesView"
+import { useBookingExceptionsView, type BookingExceptionsView } from "./useBookingExceptionsView"
+import { useBookingPolicyFormView, type BookingPolicyFormView } from "./useBookingPolicyFormView"
+import { useBookingPublicPageFormView, type BookingPublicPageFormView } from "./useBookingPublicPageFormView"
+
 /** The view `useBookingSetupView` returns. */
 export interface BookingSetupView {
     readonly props: {
-        readonly services: {
-            readonly isPending: boolean
-            readonly removing?: {
-                title: string
-                description: string
-                confirmLabel: string
-                cancelLabel: string
-            }
-            readonly form?: {
-                heading: string
-                fields: ServiceFields
-                nameLabel: string
-                durationLabel: string
-                bufferLabel: string
-                priceLabel: string
-                pricePlaceholder: string
-                kindLabel: string
-                kindPlaceholder: string
-                followupLabel: string
-                followupPlaceholder: string
-                descriptionLabel: string
-                activeLabel: string
-                saveLabel: string
-                cancelLabel: string
-            }
-            readonly title: string
-            readonly hint: string
-            readonly list: {
-                readonly label: string
-                readonly emptyText: string
-                readonly editLabel: string
-                readonly removeLabel: string
-                readonly rows: {
-                    id: string
-                    title: string
-                    detail: string
-                }[]
-            }
-            readonly addLabel: string
-        }
-        readonly resources: {
-            readonly isPending: boolean
-            readonly notice?: {
-                tone: "negative" | "affirmative"
-                text: string
-            }
-            readonly removing?: {
-                title: string
-                description: string
-                confirmLabel: string
-                cancelLabel: string
-            }
-            readonly form?: {
-                heading: string
-                fields: ResourceFields
-                nameLabel: string
-                kindLabel: string
-                capacityLabel: string
-                activeLabel: string
-                staffLabel: string
-                staffOptions: {
-                    id: string
-                    label: string
-                }[]
-                hoursHeading: string
-                hoursHint: string
-                hours: {
-                    day: 3 | 2 | 1 | 4 | 5 | 6 | 7
-                    label: string
-                    value: string
-                }[]
-                hoursPlaceholder: string
-                saveLabel: string
-                saveHoursLabel: string
-                cancelLabel: string
-                canSaveHours: boolean
-            }
-            readonly title: string
-            readonly hint: string
-            readonly list: {
-                readonly label: string
-                readonly emptyText: string
-                readonly editLabel: string
-                readonly removeLabel: string
-                readonly rows: {
-                    id: string
-                    title: string
-                    detail: string
-                }[]
-            }
-            readonly addLabel: string
-        }
-        readonly exceptions: {
-            title: string
-            hint: string
-            rows: {
-                id: string
-                title: string
-                detail: string
-            }[]
-            removeLabel: string
-            fields: ExceptionFields
-            appliesLabel: string
-            applies: {
-                id: string
-                label: string
-            }[]
-            dateLabel: string
-            noteLabel: string
-            notePlaceholder: string
-            closedLabel: string
-            startLabel: string
-            endLabel: string
-            addLabel: string
-            isPending: boolean
-        }
-        readonly policy: {
-            readonly title: string
-            readonly hint: string
-            readonly rules: {
-                id:
-                    | "cancelWindowHours"
-                    | "depositPct"
-                    | "lateCancelFeePct"
-                    | "maxAdvanceDays"
-                    | "minLeadMin"
-                    | "noShowFeeVnd"
-                    | "slotStepMin"
-                label: string
-                value: number
-            }[]
-            readonly addressLabel: string
-            readonly address: string
-            readonly autoConfirmLabel: string
-            readonly autoConfirm: boolean
-            readonly handoffLabel: string
-            readonly handoff: boolean
-            readonly saveLabel: string
-            readonly isPending: boolean
-        }
-        readonly publicPage: {
-            readonly saveLabel: string
-            readonly isPending: boolean
-            readonly link?: {
-                label: string
-                href: string
-                hint: string
-            }
-            readonly title: string
-            readonly hint: string
-            readonly enabledLabel: string
-            readonly enabled: boolean
-            readonly slugLabel: string
-            readonly slug: string
-            readonly slugPlaceholder: string
-            readonly noteLabel: string
-            readonly note: string
-            readonly notePlaceholder: string
-        }
+        readonly services: BookingServicesProps
+        readonly resources: BookingResourcesProps
+        readonly exceptions: BookingExceptionsView["props"]
+        readonly policy: BookingPolicyFormView["props"]
+        readonly publicPage: BookingPublicPageFormView["props"]
     }
     readonly on: {
         readonly services: {

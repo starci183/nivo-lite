@@ -5,6 +5,7 @@ import type { ConnectionActor } from "@modules/domain/connections"
 import { SmtpWizardService } from "@modules/domain/email-messages"
 import { OwnersService } from "@modules/domain/owners"
 import { WorkspacesService } from "@modules/domain/workspaces"
+import { eachInOrder } from "@modules/platform/primitives"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 import type { ManagementSeed, ManagementSmtp } from "./management-seed.contracts"
@@ -33,7 +34,7 @@ export class ManagementSeedService {
 
     /** Applies every document of the stack seed envelope read from `text`; a document that is refused stops the run. */
     async run(text: string): Promise<void> {
-        for (const document of readSeedDocuments(text)) await this.apply(readManagementSeed(document))
+        await eachInOrder(readSeedDocuments(text), (document) => this.apply(readManagementSeed(document)))
     }
 
     private async apply(seed: ManagementSeed): Promise<void> {

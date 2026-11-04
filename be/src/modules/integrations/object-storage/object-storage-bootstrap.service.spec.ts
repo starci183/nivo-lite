@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { OBJECT_STORAGE } from "@starci/object-storage"
-import { createMemoryObjectStorage } from "@starci/object-storage/testing"
+import type { ObjectStorage } from "@starci/object-storage"
 import { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -21,7 +21,7 @@ const options: ObjectStorageOptions = {
 
 describe("StorageBootstrapService", () => {
     it("creates every bucket of the environment, the pictures public and the rest private", async () => {
-        const storage = createMemoryObjectStorage()
+        const storage = mock<ObjectStorage>()
         const moduleRef = await Test.createTestingModule({
             providers: [
                 StorageBootstrapService,
@@ -33,13 +33,12 @@ describe("StorageBootstrapService", () => {
 
         await moduleRef.get(StorageBootstrapService).bootstrap()
 
-        expect([...storage.store.buckets.keys()]).toEqual([
-            "nivo-avatars-public",
-            "nivo-media",
-            "nivo-videos",
-            "nivo-hiring",
-            "nivo-knowledge-uploads",
+        expect(storage.ensureBucket.mock.calls).toEqual([
+            ["nivo-avatars-public", { publicRead: true }],
+            ["nivo-media", { publicRead: false }],
+            ["nivo-videos", { publicRead: false }],
+            ["nivo-hiring", { publicRead: false }],
+            ["nivo-knowledge-uploads", { publicRead: false }],
         ])
-        expect([...storage.store.publicBuckets]).toEqual(["nivo-avatars-public"])
     })
 })

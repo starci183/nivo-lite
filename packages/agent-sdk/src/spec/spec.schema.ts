@@ -1,33 +1,54 @@
 import { z } from "zod"
-import { keyText } from "../schema/bounded.schema"
-import { entriesAtMost } from "../schema/entries"
-import { jsonValue } from "../schema/json-value.schema"
+import { KEY_MAX, LIST_MAX, NODES_MAX, RECORD_MAX, TEXT_MAX, VIEWS_MAX } from "../schema/bounds"
+import { isNamespaced } from "../schema/namespaced"
+import type { JsonValue } from "../schema/schema.types"
 import { specText } from "../schema/spec-text.schema"
 import type { SpecDocument, SpecNode, SpecView } from "./spec.types"
 
-const variable = z.union([keyText, z.number(), z.boolean(), z.null()])
+const variable = z.union([z.string().max(TEXT_MAX), z.number(), z.boolean(), z.null()])
 const binding = z.union([
     z
         .object({
-            read: keyText,
-            path: keyText.optional(),
-            variables: z.record(keyText, variable).refine(entriesAtMost(50)).optional(),
+            read: z.string().max(KEY_MAX),
+            path: z.string().max(KEY_MAX).optional(),
+            variables: z
+                .record(z.string().max(KEY_MAX), variable)
+                .refine((entries) => Object.keys(entries).length <= RECORD_MAX)
+                .optional(),
         })
         .strict(),
-    z.object({ action: keyText }).strict(),
+    z.object({ action: z.string().max(KEY_MAX) }).strict(),
 ])
+
+/** A JSON value of bounded text, lists and objects: what a stored spec carries as the literal props of a block. */
+const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
+    z.union([
+        z.string().max(TEXT_MAX),
+        z.number(),
+        z.boolean(),
+        z.null(),
+        z.array(jsonValue).max(LIST_MAX),
+        z.record(z.string().max(KEY_MAX), jsonValue).refine((entries) => Object.keys(entries).length <= RECORD_MAX),
+    ]),
+)
 
 /** The zod schema of a node, children included. */
 export const specNodeSchema: z.ZodType<SpecNode> = z.lazy(() =>
     z
         .object({
-            id: keyText.min(1),
-            block: z.templateLiteral([keyText, ".", keyText]),
-            props: z.record(keyText, jsonValue).refine(entriesAtMost(200)).optional(),
-            bind: z.record(keyText, binding).refine(entriesAtMost(50)).optional(),
-            children: z.array(specNodeSchema).max(200).optional(),
+            id: z.string().min(1).max(KEY_MAX),
+            block: z.string().max(KEY_MAX).refine(isNamespaced),
+            props: z
+                .record(z.string().max(KEY_MAX), jsonValue)
+                .refine((entries) => Object.keys(entries).length <= RECORD_MAX)
+                .optional(),
+            bind: z
+                .record(z.string().max(KEY_MAX), binding)
+                .refine((entries) => Object.keys(entries).length <= RECORD_MAX)
+                .optional(),
+            children: z.array(specNodeSchema).max(NODES_MAX).optional(),
             when: z
-                .object({ permission: keyText.min(1) })
+                .object({ permission: z.string().min(1).max(KEY_MAX) })
                 .strict()
                 .optional(),
             forbidden: z.enum(["notice", "hide"]).optional(),
@@ -37,11 +58,11 @@ export const specNodeSchema: z.ZodType<SpecNode> = z.lazy(() =>
 
 const viewSchema: z.ZodType<SpecView> = z
     .object({
-        id: keyText.min(1),
+        id: z.string().min(1).max(KEY_MAX),
         label: specText,
         root: specNodeSchema,
         hidden: z.boolean().optional(),
-        openBy: keyText.min(1).optional(),
+        openBy: z.string().min(1).max(KEY_MAX).optional(),
     })
     .strict()
 
@@ -49,9 +70,9 @@ const viewSchema: z.ZodType<SpecView> = z
 export const specDocumentSchema: z.ZodType<SpecDocument> = z
     .object({
         schema: z.literal("nivo/workbench-spec@2"),
-        module: keyText.min(1),
-        head: z.array(specNodeSchema).max(50).optional(),
-        foot: z.array(specNodeSchema).max(50).optional(),
-        views: z.array(viewSchema).max(50),
+        module: z.string().min(1).max(KEY_MAX),
+        head: z.array(specNodeSchema).max(NODES_MAX).optional(),
+        foot: z.array(specNodeSchema).max(NODES_MAX).optional(),
+        views: z.array(viewSchema).max(VIEWS_MAX),
     })
     .strict()

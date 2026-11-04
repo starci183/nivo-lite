@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateAskGuide } from "@/modules/api/graphql/mutations/mutation-ask-guide"
-import type { mutateAskGuide as MutateAskGuideOperation } from "@/modules/api/graphql/mutations/mutation-ask-guide"
+import {
+    mutateAskGuide,
+    type mutateAskGuide as MutateAskGuideOperation,
+} from "@/modules/api/graphql/mutations/mutation-ask-guide"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { AskGuideMutation } from "@/modules/api"
 
 /** The SWR key of the askGuide mutation. */
 const MUTATE_ASK_GUIDE_SWR_KEY = "MUTATE_ASK_GUIDE_SWR"
 
 /** SWR mutation for {@link mutateAskGuide}: `trigger(input)` answers the queued text and rejects with the back end failure. */
 export const useMutateAskGuideSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateAskGuide>["askGuide"],
+    AskGuideMutation["askGuide"],
     Error,
     typeof MUTATE_ASK_GUIDE_SWR_KEY,
     TriggerArg["arg"]

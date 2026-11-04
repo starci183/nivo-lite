@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDecideSetupCard } from "@/modules/api/graphql/mutations/mutation-decide-setup-card"
-import type { MutateDecideSetupCardRequest } from "@/modules/api/graphql/mutations/mutation-decide-setup-card"
+import {
+    mutateDecideSetupCard,
+    type MutateDecideSetupCardRequest,
+} from "@/modules/api/graphql/mutations/mutation-decide-setup-card"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DecideSetupCardMutation } from "@/modules/api"
 
 /** What the DecideSetupCard mutation is triggered with. */
 interface DecideSetupCardArg {
@@ -16,7 +18,7 @@ export const MUTATE_DECIDE_SETUP_CARD_SWR_KEY = "MUTATE_DECIDE_SETUP_CARD_SWR"
 
 /** SWR mutation for {@link mutateDecideSetupCard}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateDecideSetupCardSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDecideSetupCard>["decideSetupCard"],
+    DecideSetupCardMutation["decideSetupCard"],
     Error,
     typeof MUTATE_DECIDE_SETUP_CARD_SWR_KEY,
     DecideSetupCardArg["arg"]

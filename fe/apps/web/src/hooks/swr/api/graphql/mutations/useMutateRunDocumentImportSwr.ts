@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateRunDocumentImport } from "@/modules/api/graphql/mutations/mutation-run-document-import"
-import type { mutateRunDocumentImport as MutateRunDocumentImportOperation } from "@/modules/api/graphql/mutations/mutation-run-document-import"
+import {
+    mutateRunDocumentImport,
+    type mutateRunDocumentImport as MutateRunDocumentImportOperation,
+} from "@/modules/api/graphql/mutations/mutation-run-document-import"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RunDocumentImportMutation } from "@/modules/api"
 
 /** The SWR key of the runDocumentImport mutation. */
 export const MUTATE_RUN_DOCUMENT_IMPORT_SWR_KEY = "MUTATE_RUN_DOCUMENT_IMPORT_SWR"
 
 /** SWR mutation for {@link mutateRunDocumentImport}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateRunDocumentImportSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRunDocumentImport>["runDocumentImport"],
+    RunDocumentImportMutation["runDocumentImport"],
     Error,
     typeof MUTATE_RUN_DOCUMENT_IMPORT_SWR_KEY,
     TriggerArg["arg"]

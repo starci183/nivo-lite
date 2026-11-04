@@ -17,16 +17,6 @@ export class ImportAgentTemplateHandler extends ICQRSHandler<ImportAgentTemplate
     }
 
     protected override process(command: ImportAgentTemplateCommand): Promise<InstalledTemplate> {
-        const p = command.params.principal.id
-        const r = command.params.request
-        return this.svc.install(p, {
-            workspaceId: r.workspaceId,
-            key: r.templateKey,
-            version: r.version,
-            values: r.values,
-            name: r.name,
-            locale: "vi",
-            access: { kind: "private" },
-        })
+        return this.svc.importOwn(command.params.principal.id, command.params.request)
     }
 }

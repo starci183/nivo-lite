@@ -1,17 +1,16 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { AgentGraphPublishService, AgentGraphsService, graphDocumentSchema } from "@modules/domain/agent-graphs"
-import {
-    AgentTemplateVersionsService,
-    TemplateInstallEntity,
-    TemplateLicenseEntity,
-} from "@modules/domain/agent-templates"
+import { AgentTemplateVersionsService, TemplateRecordsService } from "@modules/domain/agent-templates"
+import type { TemplateInstallView } from "@modules/domain/agent-templates"
 import { applyUnits, instantiate, resolveValues, updateUnits } from "@nivo-lite/agent-sdk/template"
 import type { UpdateOffer } from "@nivo-lite/agent-sdk/template"
+import type { OptionalUpdateOffer } from "./template-marketplace.contracts"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"
+
+/** The offer for one installation, or null when it is up to date. */
+export type OfferOrNone = UpdateOffer | null
 
 /** The most installations a workspace lists offers for. */
 const LIST_MAX = 100
@@ -25,7 +24,7 @@ const LIST_MAX = 100
  */
 export class TemplateUpdatesService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly records: TemplateRecordsService,
         private readonly versions: AgentTemplateVersionsService,
         private readonly listings: TemplateListingsService,
         private readonly graphs: AgentGraphsService,
@@ -36,16 +35,13 @@ export class TemplateUpdatesService {
     /** The offers for every installation of the workspace that has a newer version; any member may read. */
     async offers(userId: string, workspaceId: string): Promise<ReadonlyArray<UpdateOffer>> {
         await this.members.require(userId, workspaceId)
-        const installs = await this.entityManager.find(TemplateInstallEntity, {
-            where: { workspaceId },
-            take: LIST_MAX,
-        })
+        const installs = await this.records.installsOf(workspaceId, LIST_MAX)
         const offers = await Promise.all(installs.map((install) => this.offerOf(install)))
         return offers.flatMap((offer) => (offer === null ? [] : [offer]))
     }
 
     /** The offer for one installation, or null when it is up to date. */
-    async offer(userId: string, workspaceId: string, installationId: string): Promise<UpdateOffer | null> {
+    async offer(userId: string, workspaceId: string, installationId: string): Promise<OptionalUpdateOffer> {
         await this.members.require(userId, workspaceId)
         return this.offerOf(await this.requireInstall(workspaceId, installationId))
     }
@@ -59,7 +55,7 @@ export class TemplateUpdatesService {
         workspaceId: string,
         installationId: string,
         unitIds: ReadonlyArray<string>,
-    ): Promise<UpdateOffer | null> {
+    ): Promise<OptionalUpdateOffer> {
         const member = await this.members.require(userId, workspaceId, ["owner", "manager"])
         const install = await this.requireInstall(workspaceId, installationId)
         const merged = await this.mergeOf(install)
@@ -78,16 +74,16 @@ export class TemplateUpdatesService {
         const by = { memberId: await this.members.idOf(userId, workspaceId), role: member.role }
         await this.publish.publishTemplate(workspaceId, merged.agentId, document.data, by)
         if (merged.units.every((unit) => unitIds.includes(unit.id))) {
-            await this.entityManager.update(
-                TemplateInstallEntity,
-                { installationId },
-                { version: merged.offered, parameterValues: merged.values },
-            )
+            await this.records.moveInstall({
+                installationId,
+                version: merged.offered,
+                parameterValues: merged.values,
+            })
         }
         return this.offerOf(await this.requireInstall(workspaceId, installationId))
     }
 
-    private async offerOf(install: TemplateInstallEntity): Promise<UpdateOffer | null> {
+    private async offerOf(install: TemplateInstallView): Promise<OptionalUpdateOffer> {
         const merged = await this.mergeOf(install)
         if (merged === null) return null
         const stored = await this.versions.require(install.templateKey, merged.offered)
@@ -103,12 +99,9 @@ export class TemplateUpdatesService {
     }
 
     /** The newest version this install may take, the three graphs and the units between them; null when there is nothing to offer. */
-    private async mergeOf(install: TemplateInstallEntity) {
-        const license =
-            install.licenseId === null
-                ? null
-                : await this.entityManager.findOne(TemplateLicenseEntity, { where: { id: install.licenseId } })
-        if (license === null || license.status !== "active") return null
+    private async mergeOf(install: TemplateInstallView) {
+        const license = install.licenseId === null ? null : await this.records.licenseById(install.licenseId)
+        if (license?.status !== "active") return null
         const offered =
             license.kind === "private"
                 ? await this.versions.latestNumber(install.templateKey)
@@ -131,13 +124,13 @@ export class TemplateUpdatesService {
         return units.length === 0 ? null : { agentId: installation, offered, next, units, values }
     }
 
-    private async agentOf(install: TemplateInstallEntity): Promise<string | null> {
+    private async agentOf(install: TemplateInstallView): Promise<string | null> {
         const state = await this.graphs.stateOfInstallation(install.installationId)
         return state?.agentId ?? null
     }
 
-    private async requireInstall(workspaceId: string, installationId: string): Promise<TemplateInstallEntity> {
-        const row = await this.entityManager.findOne(TemplateInstallEntity, { where: { workspaceId, installationId } })
+    private async requireInstall(workspaceId: string, installationId: string): Promise<TemplateInstallView> {
+        const row = await this.records.installOf(workspaceId, installationId)
         if (row === null) throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.NotATemplateInstall })
         return row
     }

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutatePostThreadMessage } from "@/modules/api/graphql/mutations/mutation-post-thread-message"
-import type { MutatePostThreadMessageRequest } from "@/modules/api/graphql/mutations/mutation-post-thread-message"
+import {
+    mutatePostThreadMessage,
+    type MutatePostThreadMessageRequest,
+} from "@/modules/api/graphql/mutations/mutation-post-thread-message"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { PostThreadMessageMutation } from "@/modules/api"
 
 /** What the PostThreadMessage mutation is triggered with. */
 interface PostThreadMessageArg {
@@ -16,7 +18,7 @@ export const MUTATE_POST_THREAD_MESSAGE_SWR_KEY = "MUTATE_POST_THREAD_MESSAGE_SW
 
 /** SWR mutation for {@link mutatePostThreadMessage}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutatePostThreadMessageSwr = (): SWRMutationResponse<
-    OperationData<typeof mutatePostThreadMessage>["postThreadMessage"],
+    PostThreadMessageMutation["postThreadMessage"],
     Error,
     typeof MUTATE_POST_THREAD_MESSAGE_SWR_KEY,
     PostThreadMessageArg["arg"]

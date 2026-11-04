@@ -13,6 +13,7 @@ export type { FactPreset } from "./preset"
 export { DOSSIER_STATUS_TONE, categoriesOf, folderKeyOf, sizeLabelOf, statusCountsOf } from "./dossiers"
 export type { CategoryView, DossierView, NumberFormatter } from "./dossiers"
 export { DIALOG_OF_ACTION, NO_ASSIGNEE } from "./finding-row"
+export type { DossierFindingsPane } from "./dossier-findings-pane"
 export type {
     DialogKind,
     EvidenceItemView,

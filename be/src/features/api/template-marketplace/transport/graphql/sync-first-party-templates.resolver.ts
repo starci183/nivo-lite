@@ -10,12 +10,12 @@ import { toSyncFirstPartyTemplatesType } from "./sync-first-party-templates.mapp
 @Resolver()
 /** GraphQL door of syncFirstPartyTemplates. */
 export class SyncFirstPartyTemplatesResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** A platform admin packages the built-in modules of the catalogue as first-party templates and records the agents that already run. */
     @Mutation(() => FirstPartySyncReportType, { name: "syncFirstPartyTemplates" })
     async syncFirstPartyTemplates(@CurrentPrincipal() principal: Principal): Promise<FirstPartySyncReportType> {
-        const result = await this.bus.execute(new SyncFirstPartyTemplatesCommand({ request: {}, principal }))
+        const result = await this.commandBus.execute(new SyncFirstPartyTemplatesCommand({ request: {}, principal }))
         return toSyncFirstPartyTemplatesType(result)
     }
 }

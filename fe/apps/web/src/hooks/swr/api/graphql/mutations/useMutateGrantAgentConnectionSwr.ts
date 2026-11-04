@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateGrantAgentConnection } from "@/modules/api/graphql/mutations/mutation-grant-agent-connection"
-import type { MutateGrantAgentConnectionRequest } from "@/modules/api/graphql/mutations/mutation-grant-agent-connection"
+import {
+    mutateGrantAgentConnection,
+    type MutateGrantAgentConnectionRequest,
+} from "@/modules/api/graphql/mutations/mutation-grant-agent-connection"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { GrantAgentConnectionMutation } from "@/modules/api"
 
 /** What the GrantAgentConnection mutation is triggered with. */
 interface GrantAgentConnectionArg {
@@ -16,7 +18,7 @@ export const MUTATE_GRANT_AGENT_CONNECTION_SWR_KEY = "MUTATE_GRANT_AGENT_CONNECT
 
 /** SWR mutation for {@link mutateGrantAgentConnection}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateGrantAgentConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateGrantAgentConnection>["grantAgentConnection"],
+    GrantAgentConnectionMutation["grantAgentConnection"],
     Error,
     typeof MUTATE_GRANT_AGENT_CONNECTION_SWR_KEY,
     GrantAgentConnectionArg["arg"]

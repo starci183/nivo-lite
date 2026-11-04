@@ -583,6 +583,10 @@ environments:
             # The burst window of a conversation (agent-work): quiet for 6s before the agent answers, never more than 20s of waiting.
             AGENT_BURST_WINDOW: "6s"
             AGENT_BURST_MAX_WAIT: "20s"
+            # The parked agent runs (agent-runs): the build a run was parked under, and how often and how many times one is tried again.
+            APP_BUILD_ID: dev
+            AGENT_RUNS_PARK_SWEEP_MINUTES: "30"
+            AGENT_RUNS_PARK_MAX_RESUMES: "5"
             SMTP_ALLOW_PRIVATE_HOSTS: "true"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
@@ -846,13 +850,6 @@ environments:
         where: secrets/test-accounts
         recipientPolicy: SOPS/age, one member per provider (test-accounts.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys DEMO_EMAIL, DEMO_PASSWORD, DEMO_STAFF_PASSWORD, READY_OWNER_EMAIL, READY_OWNER_PASSWORD, READY_STAFF_EMAIL, READY_STAFF_PASSWORD.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
-      - name: seeds-test-accounts
-        runtimeName: nivo-custody-seeds-test-accounts-v1
-        version: 1
-        where: secrets/seeds-test-accounts
-        keys: [TEST_OWNER_EMAIL, TEST_OWNER_PASSWORD]
-        recipientPolicy: SOPS/age, one member (seeds-test-accounts.enc.yaml) for the ONE production test account (owner decision), the address and password of the owner seat the seed test-accounts creates; sealed to the production server key and the owner key per .sops.yaml. Granted to no service, the operator CLI reads it at seed time. Not sealed yet, the owner seals the values himself.
-        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the operator CLI receives the values at seed time, never an argument or a log.
       - name: seeds-nivo-workspace
         runtimeName: nivo-custody-seeds-nivo-workspace-v1
         version: 1
@@ -1074,6 +1071,9 @@ environments:
             OPENCLAW_GATEWAY_URL: "ws://nivo-openclaw:18790"
             OPENCLAW_CONFIG_DIR: /openclaw-state
             OPENCLAW_GATEWAY_STATE_DIR: /home/node/.openclaw
+            # How often a parked agent run is tried again, and how many times (agent-runs); APP_BUILD_ID is set per release (KEYS.md).
+            AGENT_RUNS_PARK_SWEEP_MINUTES: "30"
+            AGENT_RUNS_PARK_MAX_RESUMES: "5"
           settings:
             N8N_ALLOWED_HOSTS: {key: N8N_ALLOWED_HOSTS, default: nivo-n8n}
             JOBS_ALERT_FAILED_MAX: {key: JOBS_FAILED_ALERT, default: "20"}

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveReplyTimeout } from "@/modules/api/graphql/mutations/mutation-save-reply-timeout"
-import type { MutateSaveReplyTimeoutRequest } from "@/modules/api/graphql/mutations/mutation-save-reply-timeout"
+import {
+    mutateSaveReplyTimeout,
+    type MutateSaveReplyTimeoutRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-reply-timeout"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveReplyTimeoutMutation } from "@/modules/api"
 
 /** What the SaveReplyTimeout mutation is triggered with. */
 interface SaveReplyTimeoutArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_REPLY_TIMEOUT_SWR_KEY = "MUTATE_SAVE_REPLY_TIMEOUT_SWR"
 
 /** SWR mutation for {@link mutateSaveReplyTimeout}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateSaveReplyTimeoutSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveReplyTimeout>["saveReplyTimeout"],
+    SaveReplyTimeoutMutation["saveReplyTimeout"],
     Error,
     typeof MUTATE_SAVE_REPLY_TIMEOUT_SWR_KEY,
     SaveReplyTimeoutArg["arg"]

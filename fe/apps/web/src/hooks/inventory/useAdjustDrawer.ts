@@ -1,26 +1,14 @@
 "use client"
 
-import { adjustmentCopyOf, type InventoryPanelScope, num, type AdjustMode } from "./inventory.shared"
+import { adjustmentCopyOf, type InventoryPanelScope, num } from "./inventory.shared"
+import { adjustmentViewOf, type AdjustMode, type AdjustState } from "@/hooks/inventoryAdjustView"
 import { useAdjustmentPreview } from "./useAdjustmentPreview"
 import type { InventoryCommandSet } from "@/hooks/inventoryCommands"
 import type { ItemView, LocationView } from "@/modules/types"
 import { useTranslations } from "next-intl"
-import { useDrawer, type DrawerControl } from "./useDrawer"
-import { useInventoryFormat } from "./useInventoryFormat"
+import { useDrawer } from "./useDrawer"
 import { useInventoryRun } from "./useInventoryRun"
 import { useSay } from "./useSay"
-
-/** The quantity drawer while it is open: the item and what was typed. */
-export interface AdjustState {
-    readonly item: ItemView
-    readonly mode: AdjustMode
-    readonly value: string
-    readonly reason: string
-    readonly from: string
-    readonly to: string
-}
-
-const modeOf = (value: string): AdjustMode => (value === "delta" || value === "move" ? value : "set")
 
 /** The view `useAdjustDrawer` returns. */
 export interface AdjustDrawerView {
@@ -129,12 +117,12 @@ export const useAdjustDrawer = (
         )
     }
     const { format, effect } = useAdjustmentPreview(state, several)
-    return viewOf({
+    return adjustmentViewOf({
         drawer,
         defaultLocationId,
         state,
         effect,
-        say,
+        copyOf: (state) => adjustmentCopyOf(say, state),
         t,
         format,
         several,
@@ -144,103 +132,4 @@ export const useAdjustDrawer = (
         patch,
         submit,
     })
-}
-/** The resolved inputs for adjustment view input. */
-interface AdjustmentViewInput {
-    readonly drawer: DrawerControl<AdjustState>
-    readonly defaultLocationId: string | null
-    readonly state: AdjustState | null
-    readonly effect: {
-        current: number
-        target: number
-        delta: number
-        small: boolean
-        move: boolean
-        submitKey: string
-    } | null
-    readonly say: ReturnType<typeof useSay>
-    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
-    readonly format: ReturnType<typeof useInventoryFormat>
-    readonly several: boolean
-    readonly nameOf: (id: string) => string
-    readonly places: { id: string; label: string }[]
-    readonly run: ReturnType<typeof useInventoryRun>
-    readonly patch: (next: Partial<AdjustState>) => void
-    readonly submit: (open: AdjustState) => void
-}
-
-const viewOf = ({
-    drawer,
-    defaultLocationId,
-    state,
-    effect,
-    say,
-    t,
-    format,
-    several,
-    nameOf,
-    places,
-    run,
-    patch,
-    submit,
-}: AdjustmentViewInput) => {
-    const placeSummary =
-        state?.item.levels.map((level) => `${nameOf(level.locationId)} ${format.qty(level.qty)}`).join(" · ") ?? ""
-    const previewKey = effect?.small ? "adjustPreviewSmall" : "adjustPreviewBig"
-    return {
-        open: (item: ItemView) =>
-            drawer.open({ item, mode: "set", value: "", reason: "", from: defaultLocationId ?? "", to: "" }),
-        props:
-            state === null || effect === null
-                ? null
-                : {
-                      copy: adjustmentCopyOf(say, state),
-                      itemName: state.item.name,
-                      unit: state.item.unit,
-                      summary: t("adjustSummary", {
-                          total: format.qty(state.item.total),
-                          unit: state.item.unit,
-                          places: several ? ` · ${placeSummary}` : "",
-                      }),
-                      modes: [
-                          { value: "set", label: t("adjustSet") },
-                          { value: "delta", label: t("adjustDelta") },
-                          ...(several ? [{ value: "move", label: t("adjustMoveMode") }] : []),
-                      ],
-                      mode: state.mode,
-                      isMove: effect.move,
-                      showPlaces: several,
-                      places,
-                      targets: places.filter((place) => place.id !== state.from),
-                      from: state.from,
-                      to: state.to,
-                      value: state.value,
-                      reason: state.reason,
-                      preview:
-                          state.value.trim() !== "" && !effect.move
-                              ? t(previewKey, {
-                                    from: format.qty(effect.current),
-                                    to: format.qty(effect.target),
-                                    unit: state.item.unit,
-                                    value: format.money(Math.abs(effect.delta) * state.item.costVnd),
-                                })
-                              : null,
-                      submitLabel: t(effect.submitKey),
-                      canSubmit: state.value.trim() !== "" && !(effect.move && state.to === ""),
-                      isPending: run.isPending,
-                      error: run.error,
-                      notice: run.notice,
-                  },
-        on: {
-            mode: (next: string) => patch({ mode: modeOf(next) }),
-            from: (from: string) => patch({ from }),
-            to: (to: string) => patch({ to }),
-            value: (value: string) => patch({ value }),
-            reason: (reason: string) => patch({ reason }),
-            submit: () => {
-                if (state !== null) submit(state)
-            },
-            close: drawer.close,
-        },
-    }
 }

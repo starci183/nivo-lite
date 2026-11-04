@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCloseAgentTask } from "@/modules/api/graphql/mutations/mutation-close-agent-task"
-import type { MutateCloseAgentTaskRequest } from "@/modules/api/graphql/mutations/mutation-close-agent-task"
+import {
+    mutateCloseAgentTask,
+    type MutateCloseAgentTaskRequest,
+} from "@/modules/api/graphql/mutations/mutation-close-agent-task"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CloseAgentTaskMutation } from "@/modules/api"
 
 /** What the CloseAgentTask mutation is triggered with. */
 interface CloseAgentTaskArg {
@@ -16,7 +18,7 @@ export const MUTATE_CLOSE_AGENT_TASK_SWR_KEY = "MUTATE_CLOSE_AGENT_TASK_SWR"
 
 /** SWR mutation for {@link mutateCloseAgentTask}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateCloseAgentTaskSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCloseAgentTask>["closeAgentTask"],
+    CloseAgentTaskMutation["closeAgentTask"],
     Error,
     typeof MUTATE_CLOSE_AGENT_TASK_SWR_KEY,
     CloseAgentTaskArg["arg"]

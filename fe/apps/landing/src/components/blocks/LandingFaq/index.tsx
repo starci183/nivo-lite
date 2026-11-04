@@ -1,4 +1,6 @@
-import { getFormatter, getTranslations } from "next-intl/server"
+"use client"
+
+import { useFormatter, useTranslations } from "next-intl"
 import { FOUNDING_OFFER, LANDING_OFFER } from "@/hooks/landing"
 import { LandingFaqBase } from "./component"
 
@@ -7,11 +9,11 @@ import type { ReactElement } from "react"
 /** Values the answers quote, by the placeholder names the catalog uses. */
 type FaqValues = Record<string, string | number>
 
-/** The landing FAQ with its copy and quoted numbers resolved on the server. */
-export const LandingFaq = async (): Promise<ReactElement> => {
-    const t = await getTranslations("landingBottom")
+/** The landing FAQ with its copy and quoted numbers resolved here; its accordions open in the browser, so the block is a client block. */
+export const LandingFaq = (): ReactElement => {
+    const t = useTranslations("landingBottom")
 
-    const format = await getFormatter()
+    const format = useFormatter()
     const terms: FaqValues = {
         percent: FOUNDING_OFFER.percentOff,
         cap: FOUNDING_OFFER.cap,

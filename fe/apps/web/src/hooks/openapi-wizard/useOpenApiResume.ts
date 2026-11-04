@@ -5,10 +5,10 @@ import type { useOpenApiAuthForm } from "@/hooks/rhf"
 import { useQueryLoadOpenApiConnectionSwr, useQueryLoadOpenApiSpecSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
 import { readError } from "@/hooks/workspaceread"
-import { mergeOpenApiOps, openApiScheduleIdOf, parseOpenApiConfig, parseOpenApiOps } from "./openapi-wizard.shared"
+import { mergeOpenApiOps, openApiScheduleIdOf, parseOpenApiConfig, parseOpenApiOps } from "@/modules/openapi-spec"
 import type { useOpenApiPicks } from "./useOpenApiPicks"
 import type { useOpenApiSource } from "./useOpenApiSource"
-import type { OpenApiConfigView } from "./openapi-wizard.shared"
+import type { OpenApiConfigView } from "@/modules/openapi-spec"
 
 /** Reads once: an edited connection must not be overwritten by a revalidation while the owner types. */
 const ONCE = { revalidateOnFocus: false, revalidateIfStale: false } as const

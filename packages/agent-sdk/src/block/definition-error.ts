@@ -18,15 +18,4 @@ export type DefinitionErrorCode =
  * Thrown at module load by `defineBlock`, `defineRead`, `defineAction`, `defineNode`, `defineEffect` and `defineDataKind`, so a bad
  * definition fails its own package.
  */
-export class SdkDefinitionError extends SdkError {
-    /** The reason the definition was refused; stable, so a caller can branch on it. */
-    declare readonly code: DefinitionErrorCode
-    /** Where the fault is: the id, prop path or key the code is about. */
-    readonly at: string
-
-    constructor(code: DefinitionErrorCode, at: string, cause?: unknown) {
-        super(code, `${code}: ${at}`, cause)
-        this.name = "SdkDefinitionError"
-        this.at = at
-    }
-}
+export class SdkDefinitionError extends SdkError<DefinitionErrorCode> {}

@@ -17,8 +17,11 @@ export class AcceptTemplateUpdateHandler extends ICQRSHandler<AcceptTemplateUpda
     }
 
     protected override process(command: AcceptTemplateUpdateCommand): Promise<UpdateOffer | null> {
-        const p = command.params.principal.id
-        const r = command.params.request
-        return this.svc.accept(p, r.workspaceId, r.installationId, r.unitIds)
+        return this.svc.accept(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.installationId,
+            command.params.request.unitIds,
+        )
     }
 }

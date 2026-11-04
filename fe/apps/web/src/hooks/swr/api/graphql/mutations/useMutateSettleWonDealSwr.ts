@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSettleWonDeal } from "@/modules/api/graphql/mutations/mutation-settle-won-deal"
-import type { MutateSettleWonDealRequest } from "@/modules/api/graphql/mutations/mutation-settle-won-deal"
+import {
+    mutateSettleWonDeal,
+    type MutateSettleWonDealRequest,
+} from "@/modules/api/graphql/mutations/mutation-settle-won-deal"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SettleWonDealMutation } from "@/modules/api"
 
 /** What the settleWonDeal mutation is triggered with. */
 interface SettleWonDealArg {
@@ -16,7 +18,7 @@ export const MUTATE_SETTLE_WON_DEAL_SWR_KEY = "MUTATE_SETTLE_WON_DEAL_SWR"
 
 /** SWR mutation for {@link mutateSettleWonDeal}: `trigger(request)` answers the result and rejects with the back end failure. */
 export const useMutateSettleWonDealSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSettleWonDeal>["settleWonDeal"],
+    SettleWonDealMutation["settleWonDeal"],
     Error,
     typeof MUTATE_SETTLE_WON_DEAL_SWR_KEY,
     SettleWonDealArg["arg"]

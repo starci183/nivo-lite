@@ -7,9 +7,9 @@ import { toListingType } from "./template-marketplace.records.mapper"
 /** Maps the GraphQL arguments of reviewTemplateListing to the request. */
 export const toReviewTemplateListingRequest = (input: ReviewTemplateListingInput): ReviewTemplateListingRequest => ({
     listingId: input.listingId,
-    decision: input.decision === "approve" ? "approve" : "reject",
+    decision: input.decision,
     note: input.note,
-    revenueSharePct: input.revenueSharePct ?? null,
+    revenueSharePct: input.revenueSharePct,
 })
 
 /** Maps the answer to the GraphQL type. */

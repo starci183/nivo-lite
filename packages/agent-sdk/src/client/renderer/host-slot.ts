@@ -4,9 +4,9 @@ import type { HostRead } from "../../host/host.types"
 
 /** A read folded into a slot, and whether a bound path was missing in ready data (a contract defect). */
 export interface FoldedRead {
-    /** The slot the block draws for this read. */
+    /** The slot the block draws. */
     readonly slot: DataSlot<unknown>
-    /** True when the read is ready but a path the spec bound is missing in its data, a contract defect to report. */
+    /** Whether the bound path was missing in ready data, which the host reports as a contract defect. */
     readonly isDefect: boolean
 }
 

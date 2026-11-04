@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateCancelBooking } from "@/modules/api/graphql/mutations/mutation-cancel-booking"
 import type { MutateCancelBookingRequest } from "@/modules/api/graphql/mutations/types/cancel-booking"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CancelBookingMutation } from "@/modules/api"
 
 /** The SWR key of the `cancelBooking` mutation. */
 export const MUTATE_CANCEL_BOOKING_SWR_KEY = "MUTATE_CANCEL_BOOKING_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Cancels a booking. */
 export const useMutateCancelBookingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCancelBooking>["cancelBooking"],
+    CancelBookingMutation["cancelBooking"],
     Error,
     typeof MUTATE_CANCEL_BOOKING_SWR_KEY,
     TriggerArg["arg"]

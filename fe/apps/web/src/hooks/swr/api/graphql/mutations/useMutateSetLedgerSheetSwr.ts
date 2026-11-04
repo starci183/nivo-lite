@@ -5,14 +5,14 @@ import type { mutateSetLedgerSheet as MutateSetLedgerSheetOperation } from "@/mo
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetLedgerSheetMutation } from "@/modules/api"
 
 /** The SWR key of the setLedgerSheet mutation. */
 export const MUTATE_SET_LEDGER_SHEET_SWR_KEY = "MUTATE_SET_LEDGER_SHEET_SWR"
 
 /** SWR mutation for {@link mutateSetLedgerSheet}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSetLedgerSheetSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetLedgerSheet>["setLedgerSheet"],
+    SetLedgerSheetMutation["setLedgerSheet"],
     Error,
     typeof MUTATE_SET_LEDGER_SHEET_SWR_KEY,
     TriggerArg["arg"]

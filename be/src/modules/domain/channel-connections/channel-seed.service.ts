@@ -136,7 +136,7 @@ export class ChannelSeedService {
                 plain: token ?? EMPTY_CREDENTIAL,
                 webhookSecret: randomSecret(),
             })
-        } else if (token !== undefined && (await this.storedOf(seed.id)) !== token) {
+        } else if (token !== undefined && !safeEqual(token, (await this.storedOf(seed.id)) ?? "")) {
             await this.connections.writeSecret(seed.id, token)
         }
         return outcomeOf("telegram", seed.id, found, token !== undefined)

@@ -22,6 +22,7 @@ export type {
     GatewayCaller,
     GatewayCallResult,
     OptionalDescribedTool,
+    GatewayArgument,
     GatewayJson,
     GrantInput,
     GrantView,

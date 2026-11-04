@@ -1,21 +1,22 @@
 "use client"
 
-import { canRetry, linkProblemOf, pairsToText, typedLinks } from "@/modules/documents"
-import type { InstanceOption, QaLabels, QueueActions } from "@/modules/documents"
+import {
+    canRetry,
+    linkProblemOf,
+    pairsToText,
+    typedLinks,
+    type InstanceOption,
+    type QaLabels,
+    type QueueActions,
+} from "@/modules/documents"
 import { useState } from "react"
 import { useAddQueue } from "./useAddQueue"
 import { useBatchOptions } from "./useBatchOptions"
-import type { AddPreset } from "./useBatchOptions"
 import { useLinkRows } from "./useLinkRows"
 import { useNoteDraft } from "./useNoteDraft"
-import { useQueuedDocs, type QueuedDoc } from "./useQueuedDocs"
-import type { AddQueue } from "./useAddQueue"
-import type { LinkRows } from "./useLinkRows"
-import type { NoteDraft } from "./useNoteDraft"
-import type { BatchOptions } from "./useBatchOptions"
-
-/** What the drawer is adding: files and links, a written note, or a list of questions and answers. */
-export type AddMode = "files" | "write" | "faq"
+import { useQueuedDocs } from "./useQueuedDocs"
+import { createDocumentBatchRunner, createItemRetry, createNoteRunner } from "@/hooks/knowledgeAddRunners"
+import type { AddDocumentsView, AddMode, AddPreset } from "@/hooks/knowledgeAddTypes"
 
 /** What the drawer needs from the page and the outside. */
 export interface AddDocumentsInput {
@@ -32,27 +33,6 @@ export interface AddDocumentsInput {
 const modeOf = (key: string): AddMode => {
     if (key === "write") return "write"
     return key === "faq" ? "faq" : "files"
-}
-
-/** The view `useAddDocuments` returns. */
-export interface AddDocumentsView {
-    queue: AddQueue
-    linkRows: LinkRows
-    note: NoteDraft
-    options: BatchOptions
-    mode: AddMode
-    isBusy: boolean
-    failure: string | null
-    queuedCount: number
-    queuedDocs: readonly QueuedDoc[]
-    pendingCount: number
-    hasFailed: boolean
-    isDone: boolean
-    noteBody: string
-    pickMode: (key: string) => void
-    submit: () => undefined
-    retryItem: (id: string) => undefined
-    close: () => void
 }
 
 /** The state and commands of the Add documents drawer. */
@@ -135,78 +115,6 @@ export const useAddDocuments = (input: AddDocumentsInput): AddDocumentsView => {
         close,
     }
 }
-
-/** What the note runner reads from the drawer. */
-interface NoteRunnerInput {
-    readonly actions: QueueActions
-    readonly mode: AddMode
-    readonly note: ReturnType<typeof useNoteDraft>
-    readonly noteBody: string
-    readonly options: ReturnType<typeof useBatchOptions>
-}
-
-/** What the note runner tells the drawer: the note was refused, or it was queued as this document. */
-interface NoteRunnerEvents {
-    readonly fail: () => void
-    readonly record: (doc: QueuedDoc) => void
-}
-
-/** Builds the command that queues the written note or the questions; answers how many were queued. */
-const createNoteRunner = (input: NoteRunnerInput, on: NoteRunnerEvents) => async () => {
-    const title = input.note.title.trim()
-    const id = await input.actions.enqueue({
-        kind: input.mode === "faq" ? "faq" : "text",
-        title,
-        storagePath: null,
-        url: null,
-        meta: { ...input.options.meta(), content: input.noteBody },
-    })
-    if (id === null) {
-        on.fail()
-        return 0
-    }
-    input.note.reset()
-    on.record({ id, title })
-    return 1
-}
-
-/** How a send tells the drawer it has begun and how many documents it queued. */
-interface BatchTracker {
-    readonly begin: () => void
-    readonly end: (queued: number) => void
-}
-
-/** Builds the command that sends one failed item again. */
-const createItemRetry =
-    (
-        queue: ReturnType<typeof useAddQueue>,
-        options: ReturnType<typeof useBatchOptions>,
-        isBusy: boolean,
-        batch: BatchTracker,
-    ) =>
-    async (id: string) => {
-        const item = queue.items.find((one) => one.id === id)
-        if (isBusy || item === undefined || !canRetry(item)) return
-        batch.begin()
-        batch.end(await queue.sendAll([item], options.meta()))
-    }
-
-/** Builds the runBatch command from the current render state. */
-const createDocumentBatchRunner =
-    (
-        queue: ReturnType<typeof useAddQueue>,
-        linkRows: ReturnType<typeof useLinkRows>,
-        retryable: ReturnType<typeof useAddQueue>["items"],
-        options: ReturnType<typeof useBatchOptions>,
-    ) =>
-    async () => {
-        // Links still sitting in the inputs join the queue first.
-        const added = queue.addLinks(typedLinks(linkRows.links, queue.items))
-        if (added.length > 0) linkRows.clear()
-        const waiting = [...retryable, ...added.filter((item) => item.status === "waiting")]
-        const meta = options.meta()
-        return waiting.length === 0 ? 0 : queue.sendAll(waiting, meta)
-    }
 
 /** Whether every submitted document has completed and no draft remains. */
 const isDocumentBatchDone = (

@@ -12,7 +12,6 @@ import type { PasswordReset, SignInInput, SignInResult, SignUpResult } from "./a
 import type { GraphQLResponse } from "../types"
 
 export { confirmEmail, endSession } from "./actions"
-export type { PasswordReset, SignInInput, SignInResult, SignUpResult } from "./actions"
 
 type AuthActionsOfResult = {
     endSession: () => Promise<GraphQLResponse<true>>

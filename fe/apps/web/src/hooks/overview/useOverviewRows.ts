@@ -6,7 +6,7 @@ import { toRowModels } from "@/hooks/overviewRows"
 import { realResponsibilities } from "./overview.shared"
 import { useOverviewData } from "./useOverviewData"
 
-import type { ResponsibilityRowModel } from "../overviewRows/overviewRows.shared"
+import type { ResponsibilityRowModel } from "@/hooks/overviewRows"
 
 type UseOverviewRowsResult =
     | {

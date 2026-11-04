@@ -1,13 +1,11 @@
 "use client"
 
-import { readField, workspaceArgumentKey } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { readField, workspaceArgumentKey, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useAppSelector } from "@/redux"
-import { queryWorkThread } from "@/modules/api/graphql/queries/query-work-thread"
-import type { QueryWorkThreadRequest } from "@/modules/api/graphql/queries/query-work-thread"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import { queryWorkThread, type QueryWorkThreadRequest } from "@/modules/api/graphql/queries/query-work-thread"
+import type { WorkThreadQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryWorkThreadSwr}. */
 export const QUERY_WORK_THREAD_SWR_KEY = "QUERY_WORK_THREAD_SWR"
@@ -16,7 +14,7 @@ export const QUERY_WORK_THREAD_SWR_KEY = "QUERY_WORK_THREAD_SWR"
 export const useQueryWorkThreadSwr = (
     request: QueryWorkThreadRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryWorkThread>["workThread"]> => {
+): ReadResponse<WorkThreadQuery["workThread"]> => {
     const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
     return useSWR(
         workspaceArgumentKey(QUERY_WORK_THREAD_SWR_KEY, workspaceId, request ?? undefined),

@@ -83,7 +83,7 @@ export class IdentityEmailService {
         const address = normalizeEmail(email)
         await this.admit("signup", address)
         const user = await accountDoors.userByEmail(this.entityManager, address)
-        if (user === undefined || user.email_confirmed_at !== null || user.encrypted_password === null) return
+        if (user?.email_confirmed_at !== null || user.encrypted_password === null) return
         await this.sendConfirmation(user.id, address, language)
     }
 

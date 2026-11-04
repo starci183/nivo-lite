@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRequestShiftsPublish } from "@/modules/api/graphql/mutations/mutation-request-shifts-publish"
-import type { MutateRequestShiftsPublishRequest } from "@/modules/api/graphql/mutations/mutation-request-shifts-publish"
+import {
+    mutateRequestShiftsPublish,
+    type MutateRequestShiftsPublishRequest,
+} from "@/modules/api/graphql/mutations/mutation-request-shifts-publish"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestShiftsPublishMutation } from "@/modules/api"
 
 /** What the requestShiftsPublish mutation is triggered with. */
 interface RequestShiftsPublishArg {
@@ -16,7 +18,7 @@ export const MUTATE_REQUEST_SHIFTS_PUBLISH_SWR_KEY = "MUTATE_REQUEST_SHIFTS_PUBL
 
 /** SWR mutation for {@link mutateRequestShiftsPublish}: `trigger(request)` answers `requestShiftsPublish` and rejects with the back end failure. */
 export const useMutateRequestShiftsPublishSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestShiftsPublish>["requestShiftsPublish"],
+    RequestShiftsPublishMutation["requestShiftsPublish"],
     Error,
     typeof MUTATE_REQUEST_SHIFTS_PUBLISH_SWR_KEY,
     RequestShiftsPublishArg["arg"]

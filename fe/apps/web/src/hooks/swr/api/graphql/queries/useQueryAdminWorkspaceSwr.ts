@@ -1,9 +1,12 @@
 "use client"
 
 import useSWR from "swr"
-import { queryAdminWorkspace } from "@/modules/api/graphql/queries/query-admin-workspace"
-import type { QueryAdminWorkspaceRequest } from "@/modules/api/graphql/queries/query-admin-workspace"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import {
+    queryAdminWorkspace,
+    type QueryAdminWorkspaceRequest,
+} from "@/modules/api/graphql/queries/query-admin-workspace"
+import type { ReadResponse } from "@/hooks/workspaceread"
+import type { AdminWorkspaceQuery } from "@/modules/api"
 
 /** The SWR key of the adminWorkspace query; mutations that change it call `mutate` with a matcher on this key. */
 export const QUERY_ADMIN_WORKSPACE_SWR_KEY = "QUERY_ADMIN_WORKSPACE_SWR"
@@ -14,7 +17,7 @@ export const QUERY_ADMIN_WORKSPACE_SWR_KEY = "QUERY_ADMIN_WORKSPACE_SWR"
  */
 export const useQueryAdminWorkspaceSwr = (
     request: QueryAdminWorkspaceRequest,
-): ReadResponse<OperationData<typeof queryAdminWorkspace>["adminWorkspace"]> =>
+): ReadResponse<AdminWorkspaceQuery["adminWorkspace"]> =>
     useSWR(
         [QUERY_ADMIN_WORKSPACE_SWR_KEY, ...Object.values(request)],
         async () => {

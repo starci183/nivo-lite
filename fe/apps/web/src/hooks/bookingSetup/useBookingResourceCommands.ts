@@ -26,26 +26,20 @@ export interface BookingResourceCommandsView {
           }
         | undefined
     >
-    saveHours: (
-        arg: {} & {
-            resourceId: string | number
-            rows: ({} & {
-                end: string
-                start: string
-                weekday: number
-            })[]
-        },
-    ) => Promise<
+    saveHours: (arg: {
+        resourceId: string | number
+        rows: {
+            end: string
+            start: string
+            weekday: number
+        }[]
+    }) => Promise<
         | {
               id: string
           }
         | undefined
     >
-    removeResource: (
-        arg: {} & {
-            id: string | number
-        },
-    ) => Promise<
+    removeResource: (arg: { id: string | number }) => Promise<
         | {
               id: string
           }

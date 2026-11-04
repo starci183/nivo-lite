@@ -5,7 +5,6 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "lint": "starci app lint --workspace .",
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },
@@ -13,8 +12,9 @@
     "@heroicons/react": "2.2.0",
     "@heroui/react": "3.2.6",
     "@heroui/styles": "3.2.6",
+    "@nivo-lite/i18n": "*",
     "@nivo-lite/offer": "*",
-    "@starci/grammar": "0.21.19",
+    "@starci/grammar": "0.21.25",
     "@starci/next-i18n": "0.1.0",
     "@xyflow/react": "12.11.6",
     "next": "16.4.2",

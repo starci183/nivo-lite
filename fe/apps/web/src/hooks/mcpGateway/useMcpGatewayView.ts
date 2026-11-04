@@ -23,7 +23,6 @@ import { useMcpConnectorForms } from "./useMcpConnectorForms"
 import { grantKeyOf, useMcpGrantCommands } from "@/hooks/mcpGrants"
 import type { McpToolAgentsOf } from "@/hooks/mcpGrants"
 
-import type { McpRegisterField } from "./useMcpConnectorForms"
 import type { DataSlot } from "@/modules/types"
 
 /** How many audit lines the Connections page shows. */
@@ -93,69 +92,27 @@ const logRowsOf = (
         ],
     }))
 
+/** One card of the region: its words and its rows. */
+interface McpCardView<Row> {
+    label: string
+    emptyMessage: string
+    emptyDescription: string
+    rows: readonly Row[]
+}
+
 type UseMcpGatewayViewResult = {
     /** The region is drawn for a manager once the page is ready, and only then is anything read. */
     isShown: boolean
     label: string
-    slot: DataSlot<{
-        cards: (
-            | {
-                  label: string
-                  emptyMessage: string
-                  emptyDescription: string
-                  rows: readonly McpConnectorRowView[]
-              }
-            | {
-                  label: string
-                  emptyMessage: string
-                  emptyDescription: string
-                  rows: readonly McpToolRowView[]
-              }
-        )[]
-    }>
+    slot: DataSlot<{ cards: (McpCardView<McpConnectorRowView> | McpCardView<McpToolRowView>)[] }>
     labels: {
         error: string
         retry: string
         empty: string
         forbidden: string
     }
-    forms: {
-        register: {
-            values: Readonly<Record<McpRegisterField, string>>
-            isPending: boolean
-            text: {
-                title: string
-                hint: string
-                key: string
-                keyHint: string
-                name: string
-                url: string
-                urlHint: string
-                contractVersion: string
-                credential: string
-                credentialHint: string
-                submit: string
-            }
-        }
-        credential: {
-            value: string
-            isPending: boolean
-            text: {
-                title: string
-                hint: string
-                label: string
-                submit: string
-                cancel: string
-            }
-        } | null
-    }
-    on: {
-        registerField: (field: McpRegisterField) => (value: string) => void
-        register: () => undefined
-        credentialChange: (value: string) => void
-        credentialSubmit: () => undefined
-        credentialClose: () => void
-    }
+    forms: ReturnType<typeof useMcpConnectorForms>["view"]
+    on: ReturnType<typeof useMcpConnectorForms>["on"]
     onRetry: () => void
 }
 

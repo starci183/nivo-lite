@@ -229,11 +229,17 @@ type BuildWiringProofResultOptionsStorageShape = {
     timeoutMs: number
 }
 
+type BuildWiringProofMailSender = { name: string; address: string }
+
+type BuildWiringProofCookie = { name: string; domain: undefined }
+
+type BuildWiringProofBudget = { loginAttempts: number; resetAttempts: number; windowMs: number }
+
 type BuildWiringProofResultOptionsMailShape = {
     host: string
     port: number
     security: "none"
-    from: { name: string; address: string }
+    from: BuildWiringProofMailSender
     helloName: string
     webOrigin: string
     brandName: string
@@ -256,8 +262,8 @@ type BuildWiringProofResultOptionsPassportShape = {
     bcryptCost: number
     returnOrigin: string
     google: null
-    cookie: { name: string; domain: undefined }
-    budget: { loginAttempts: number; resetAttempts: number; windowMs: number }
+    cookie: BuildWiringProofCookie
+    budget: BuildWiringProofBudget
 }
 
 type BuildWiringProofResultOptionsConnectionsShape = {

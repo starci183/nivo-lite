@@ -173,10 +173,8 @@ services:
     image: ghcr.io/starci183/nivo-lite-openclaw@sha256:0000000000000000000000000000000000000000000000000000000000000000
     environment:
       # Where the nivo-bridge plugin posts a tool call: the api on the private `agents` network. OPENCLAW_BRIDGE_SECRET comes from /run/secrets
-      # (the runtime wrapper exports the STARCI_SECRETS it names besides the gateway token).
+      # (the image's STARCI_SECRETS names it for the runtime wrapper).
       OPENCLAW_BRIDGE_URL: http://nivo-api:8787/agent-tools
-      STARCI_SECRETS: "OPENCLAW_BRIDGE_SECRET STARCI_AI_KEY"
-      OPENCLAW_PROVIDER: nivo-ai
     volumes:
       - openclaw-data:/home/node/.openclaw
     networks: [agents]
@@ -368,6 +366,8 @@ configs:
 secrets:
   nivo: { external: true, name: nivo-custody-nivo-v1 }
   mail: { external: true, name: nivo-custody-mail-v1 }
+  telegram: { external: true, name: nivo-custody-telegram-v1 }
+  seeds-nivo-workspace: { external: true, name: nivo-custody-seeds-nivo-workspace-v1 }
   sepay: { external: true, name: nivo-custody-sepay-v1 }
   n8n: { external: true, name: nivo-custody-n8n-v1 }
   openclaw: { external: true, name: nivo-custody-openclaw-v1 }

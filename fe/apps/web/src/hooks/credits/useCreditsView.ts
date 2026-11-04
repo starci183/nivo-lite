@@ -2,8 +2,8 @@
 
 import { workspaceBillingPath } from "@/modules/routes"
 import type { CreditsData, CreditsOverviewView, PlanView } from "@/modules/types"
+import { creditsSummaryOf } from "@/modules/utils"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { creditsSummaryOf } from "./credits.shared"
 
 /** The view `useCreditsView` returns. */
 export interface CreditsView {

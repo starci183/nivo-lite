@@ -2,9 +2,11 @@
 
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { InstallTemplateListingData } from "@/modules/api/graphql"
-import { mutateInstallTemplateListing } from "@/modules/api/graphql/mutations/mutation-install-template-listing"
-import type { MutateInstallTemplateListingRequest } from "@/modules/api/graphql/mutations/mutation-install-template-listing"
+import type { InstallTemplateListingMutation } from "@/modules/api"
+import {
+    mutateInstallTemplateListing,
+    type MutateInstallTemplateListingRequest,
+} from "@/modules/api/graphql/mutations/mutation-install-template-listing"
 
 /** The SWR key of the `installTemplateListing` mutation. */
 export const MUTATE_INSTALL_TEMPLATE_LISTING_SWR_KEY = "MUTATE_INSTALL_TEMPLATE_LISTING_SWR"
@@ -16,7 +18,7 @@ interface TriggerArg {
 
 /** The back end `installTemplateListing` mutation. */
 export const useMutateInstallTemplateListingSwr = (): SWRMutationResponse<
-    InstallTemplateListingData,
+    InstallTemplateListingMutation["installTemplateListing"],
     Error,
     string,
     MutateInstallTemplateListingRequest

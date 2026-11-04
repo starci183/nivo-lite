@@ -19,6 +19,8 @@ const build = async () => {
 
 const base = { shopName: "Shop <A>", title: "Hello", footer: "Sent by Shop", lang: "en" }
 
+const BROKEN_TITLE = " Hello\r\nthere\n\nall "
+
 describe("mail-layout policy / renderEmail", () => {
     it("renders paragraphs and bullet lists in the shop colour and escapes everything", async () => {
         const subject = await build()
@@ -45,7 +47,7 @@ describe("mail-layout policy / renderEmail", () => {
         const mail = subject.renderEmail({
             ...base,
             shopName: "S".repeat(120),
-            title: " Hello\r\nthere\n\nall ",
+            title: BROKEN_TITLE,
             body: "x",
         })
 

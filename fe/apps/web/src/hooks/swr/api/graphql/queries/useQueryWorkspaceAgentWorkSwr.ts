@@ -4,7 +4,8 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryWorkspaceAgentWork } from "@/modules/api/graphql/queries/query-workspace-agent-work"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ReadResponse } from "@/hooks/workspaceread"
+import type { WorkspaceAgentWorkQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryWorkspaceAgentWorkSwr}. */
 export const QUERY_WORKSPACE_AGENT_WORK_SWR_KEY = "QUERY_WORKSPACE_AGENT_WORK_SWR"
@@ -12,7 +13,7 @@ export const QUERY_WORKSPACE_AGENT_WORK_SWR_KEY = "QUERY_WORKSPACE_AGENT_WORK_SW
 /** The back end `workspaceAgentWork` query of the active workspace. */
 export const useQueryWorkspaceAgentWorkSwr = (
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryWorkspaceAgentWork>["workspaceAgentWork"]> =>
+): ReadResponse<WorkspaceAgentWorkQuery["workspaceAgentWork"]> =>
     useSWR(
         useWorkspaceKey(QUERY_WORKSPACE_AGENT_WORK_SWR_KEY, []),
         async ({ signal }: { signal?: AbortSignal } = {}) => {

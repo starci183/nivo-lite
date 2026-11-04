@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from "react"
 import { SurfaceCard, Text } from "@starci/grammar/common"
 

@@ -1,11 +1,17 @@
-/** The base of every error the SDK throws: a stable code beside the message. */
-export class SdkError extends Error {
-    /** The code. */
-    readonly code: string
+/**
+ * The base of every refusal the SDK throws. A refusal carries a stable code and the id, key or word it is about, so a caller groups
+ * and maps it by code and never reads a sentence. The message is `<code>: <at>`.
+ */
+export class SdkError<C extends string = string> extends Error {
+    /** The stable code of the refusal. */
+    readonly code: C
+    /** The id, key or word the refusal is about. */
+    readonly at: string
 
-    constructor(code: string, message: string, cause?: unknown) {
-        super(message, cause === undefined ? undefined : { cause })
-        this.name = "SdkError"
+    constructor(code: C, at: string, options?: ErrorOptions) {
+        super(`${code}: ${at}`, options)
+        this.name = new.target.name
         this.code = code
+        this.at = at
     }
 }

@@ -17,8 +17,6 @@ export class InstallTemplateListingHandler extends ICQRSHandler<InstallTemplateL
     }
 
     protected override process(command: InstallTemplateListingCommand): Promise<InstalledTemplate> {
-        const p = command.params.principal.id
-        const r = command.params.request
-        return this.svc.install(p, r)
+        return this.svc.install(command.params.principal.id, command.params.request)
     }
 }

@@ -39,8 +39,9 @@ $$;
 CREATE TRIGGER workspaces_add_governance AFTER INSERT ON public.workspaces
     FOR EACH ROW EXECUTE FUNCTION public.workspaces_add_governance();
 
-REVOKE ALL ON FUNCTION public.ensure_workspace_governance(uuid) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.workspaces_add_governance() FROM PUBLIC;
+-- Only the trigger and this migration call them: no role executes them directly.
+REVOKE ALL ON FUNCTION public.ensure_workspace_governance(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.workspaces_add_governance() FROM PUBLIC, anon, authenticated;
 
 SELECT public.ensure_workspace_governance(w.id) FROM public.workspaces w
 WHERE NOT EXISTS (SELECT 1 FROM public.authority s WHERE s.workspace_id = w.id);

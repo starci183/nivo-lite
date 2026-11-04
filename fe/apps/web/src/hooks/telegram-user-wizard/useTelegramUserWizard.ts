@@ -1,27 +1,16 @@
 "use client"
 
-import { viewOf, BLANK_INITIAL } from "./telegram-user-wizard.shared"
+import { BLANK_INITIAL } from "@/hooks/telegram-chats"
+import { createTelegramUserWizardActions, viewOf, type ViewOfResult } from "./telegram-user-wizard.shared"
 import { useEffect, useReducer, useRef, useState, useTransition } from "react"
-import { useSetConnectionAgents, type AgentWish } from "@/hooks/connections"
+import { useSetConnectionAgents } from "@/hooks/connections"
 
 import { useTelegramUserForm } from "@/hooks/rhf"
 import { useTelegramUserBoot } from "./useTelegramUserBoot"
-import { useTelegramUserCommands, type TelegramUserCommands } from "./useTelegramUserCommands"
+import { useTelegramUserCommands } from "./useTelegramUserCommands"
 
 import { useTelegramUserLogin } from "./useTelegramUserLogin"
 import { useTelegramUserPicks } from "./useTelegramUserPicks"
-import type { Settled } from "../connection-wizard"
-
-import type {
-    TelegramInitial,
-    SinceDays,
-    SentVia,
-    PickedChat,
-    LoginStage,
-    ChatChoice,
-} from "./telegram-user-wizard.shared"
-import type { SetStateAction, Dispatch } from "react"
-import type { SlotRead } from "../slot"
 
 /** What the personal Telegram wizard needs from its drawer. */
 interface TelegramUserWizardInput {
@@ -47,74 +36,7 @@ const mergeStep = (state: TelegramUserStep, patch: Partial<TelegramUserStep>): T
 /** The text fields of the personal Telegram wizard. */
 export type TelegramUserField = "name" | "phone" | "code" | "password"
 
-type UseTelegramUserWizardResult = {
-    reads: readonly SlotRead<unknown>[]
-    bootData:
-        | {
-              readonly isConfigured: boolean
-          }
-        | undefined
-    bootError: string | null
-    index: number
-    login: {
-        stage: LoginStage
-        connId: string | null
-        sentVia: SentVia | null
-        setStage: Dispatch<SetStateAction<LoginStage>>
-        sendCode: () => void
-        confirmCode: () => void
-        confirmPassword: () => void
-        resend: () => void
-        cancel: () => void
-    }
-    picks: {
-        reads: readonly SlotRead<unknown>[]
-        loading: boolean
-        failed: boolean
-        failure: string | null
-        picked: readonly PickedChat[]
-        pickedIds: Set<string>
-        visible: readonly ChatChoice[]
-        full: boolean
-        query: string
-        sinceDays: SinceDays
-        every: string
-        change: (ids: ReadonlyArray<string>) => void
-        setQuery: Dispatch<SetStateAction<string>>
-        setSinceDays: Dispatch<SetStateAction<SinceDays>>
-        setEvery: Dispatch<SetStateAction<string>>
-        restore: (initial: TelegramInitial, resumeId: string | undefined) => void
-        load: Dispatch<SetStateAction<string | undefined>>
-        reload: () => void
-    }
-    agentIds: readonly string[]
-    error: string | null
-    isPending: boolean
-    values: {
-        name: string
-        consent: boolean
-        phone: string
-        code: string
-        password: string
-    }
-    valid: {
-        consent: boolean
-        phone: boolean
-        code: boolean
-        password: boolean
-    }
-    on: {
-        go: (to: number) => void
-        setAgentIds: Dispatch<SetStateAction<readonly string[]>>
-        save: () => void
-        finish: () => void
-        field: (name: TelegramUserField, value: string) => void
-        retry: () => void
-        close: () => void
-        consent: (on: boolean) => void
-        reloadChats: () => void
-    }
-}
+type UseTelegramUserWizardResult = ViewOfResult
 
 /**
  * The state machine of the personal Telegram wizard: it first reads whether the server is set up and where a resumed login stands,
@@ -182,7 +104,6 @@ export const useTelegramUserWizard = (input: TelegramUserWizardInput): UseTelegr
     })
 
     return viewOf({
-        step,
         boot,
         index,
         login,
@@ -199,62 +120,4 @@ export const useTelegramUserWizard = (input: TelegramUserWizardInput): UseTelegr
         onClose,
         setError,
     })
-}
-
-type TelegramUserWizardActionsInput = {
-    readonly startTransition: import("react").TransitionStartFunction
-    readonly login: ReturnType<typeof useTelegramUserLogin>
-    readonly commands: TelegramUserCommands
-    readonly picks: ReturnType<typeof useTelegramUserPicks>
-    readonly setError: import("react").Dispatch<import("react").SetStateAction<string | null>>
-    readonly editing: boolean
-    readonly onClose: (changed: boolean) => void
-    readonly go: (to: number) => void
-    readonly setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>
-    readonly agentIds: readonly string[]
-    readonly forms: ReturnType<typeof useTelegramUserForm>
-}
-
-const createTelegramUserWizardActions = ({
-    startTransition,
-    login,
-    commands,
-    picks,
-    setError,
-    editing,
-    onClose,
-    go,
-    setConnectionAgents,
-    agentIds,
-    forms,
-}: TelegramUserWizardActionsInput) => {
-    const save = () =>
-        startTransition(async () => {
-            if (login.connId === null) return
-            const answer = await commands.save({
-                connectionId: login.connId,
-                chats: picks.picked,
-                sinceDays: picks.sinceDays,
-                everyMinutes: Number(picks.every) || null,
-            })
-            if (answer.kind !== "ok") return setError(answer.message)
-            if (editing) return onClose(true)
-            go(4)
-        })
-
-    const finish = () =>
-        startTransition(async () => {
-            if (login.connId === null) return onClose(true)
-            const answer = await setConnectionAgents(login.connId, agentIds)
-            if (answer.kind !== "ok") return setError(answer.message)
-            onClose(true)
-        })
-
-    const field = (name: TelegramUserField, value: string) => {
-        if (name === "name") return forms.consent.setValue("name", value, { shouldValidate: true })
-        if (name === "phone") return forms.phone.setValue("phone", value, { shouldValidate: true })
-        if (name === "code") return forms.code.setValue("code", value, { shouldValidate: true })
-        forms.password.setValue("password", value, { shouldValidate: true })
-    }
-    return { save, finish, field }
 }

@@ -6,30 +6,20 @@ import * as StarciSolid from "@starci/heroicons/16/solid"
 import * as StarciOutline from "@starci/heroicons/24/outline"
 import { Icon as GrammarIcon } from "@starci/grammar/common"
 import type { IconUsage } from "@starci/grammar/common"
-import Image from "next/image"
 import type { SVGProps, ReactElement } from "react"
-import { GOOGLE_MARK } from "./classNames"
+import { GoogleMark } from "./component"
+import type { IconName } from "./component"
 
+export type { IconName } from "./component"
 /** Every source in this registry is callable (Heroicons are forward-ref callables; custom marks are functions). */
 type GlyphComponent = (props: SVGProps<SVGSVGElement>) => unknown
 
-/**
- * Google's mark: a static asset, because the provider's own colours may not be redrawn as source colours. It still keeps
- * Grammar's A11Y-2 contract: named by the caller's label when the mark carries meaning, hidden when it is decorative.
- */
-const GoogleMark = (props: SVGProps<SVGSVGElement>) => (
-    <Image
-        src="/brand/google-mark.svg"
-        alt={props["aria-label"] ?? ""}
-        width={24}
-        height={24}
-        className={GOOGLE_MARK}
-        aria-hidden={props["aria-hidden"]}
-    />
-)
-
 /** Native Heroicon drawings for the two product roles. */
-type GlyphCuts = { readonly heading: GlyphComponent; readonly leading: GlyphComponent; readonly chip: GlyphComponent }
+type GlyphCuts = {
+    readonly heading: GlyphComponent
+    readonly leading: GlyphComponent
+    readonly chip: GlyphComponent
+}
 
 /** Pair the normal and subject cuts without exposing either component to a caller. */
 const cuts = (outline: GlyphComponent, chip: GlyphComponent): GlyphCuts => ({
@@ -37,93 +27,6 @@ const cuts = (outline: GlyphComponent, chip: GlyphComponent): GlyphCuts => ({
     leading: outline,
     chip,
 })
-
-/** What an icon MEANS on these screens. The glyph that draws it is this file business. */
-export type IconName =
-    | "moduleAccounting"
-    | "moduleBooking"
-    | "moduleChatbot"
-    | "moduleContent"
-    | "moduleHiring"
-    | "moduleInventory"
-    | "moduleLeadGen"
-    | "moduleLoyalty"
-    | "moduleSales"
-    | "moduleShifts"
-    | "moduleVideo"
-    | "brand"
-    | "streak"
-    | "credit"
-    | "reward"
-    | "course"
-    | "email"
-    | "password"
-    | "revealPassword"
-    | "hidePassword"
-    | "code"
-    | "complete"
-    | "pending"
-    | "signIn"
-    | "signOut"
-    | "signUp"
-    | "close"
-    | "trash"
-    | "next"
-    | "brain"
-    | "back"
-    | "more"
-    | "trigger"
-    | "disclosure"
-    | "edit"
-    | "add"
-    | "retry"
-    | "send"
-    | "attach"
-    | "home"
-    | "explore"
-    | "community"
-    | "league"
-    | "review"
-    | "light"
-    | "dark"
-    | "locale"
-    | "search"
-    | "cart"
-    | "notification"
-    | "account"
-    | "profile"
-    | "saved"
-    | "blog"
-    | "talents"
-    | "jobs"
-    | "practice"
-    | "overview"
-    | "apps"
-    | "agentos"
-    | "servers"
-    | "domains"
-    | "wallet"
-    | "support"
-    | "sidebar"
-    | "copy"
-    | "copied"
-    | "reply"
-    | "mention"
-    | "openLead"
-    | "chat"
-    | "menu"
-    | "expand"
-    | "collapseRail"
-    | "google"
-    | "muted"
-    | "unmuted"
-    | "messageSending"
-    | "messageSent"
-    | "messageDelivered"
-    | "messageSeen"
-    | "failure"
-    | "warning"
-    | "info"
 
 /** The app answer to "which glyph means this": every semantic name resolves to the cuts Grammar's Icon may ask for. */
 const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {

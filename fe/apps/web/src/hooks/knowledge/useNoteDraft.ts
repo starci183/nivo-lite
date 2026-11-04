@@ -2,41 +2,15 @@
 
 import { useState } from "react"
 import { nextId } from "@/modules/documents"
-
-/** One question and its answer, with the identity that keeps its row when another is removed. */
-export interface FaqEntry {
-    readonly id: string
-    readonly q: string
-    readonly a: string
-}
-
-/** The note or list of questions as the person typed it. */
-interface Draft {
-    readonly title: string
-    readonly content: string
-    readonly pairs: ReadonlyArray<FaqEntry>
-    /** The person pressed add with something missing. */
-    readonly tried: boolean
-}
+import type { FaqEntry, NoteDraft, NoteDraftFields } from "@/hooks/knowledgeAddTypes"
 
 const blankPair = (): FaqEntry => ({ id: nextId(), q: "", a: "" })
 
-const freshDraft = (): Draft => ({ title: "", content: "", pairs: [blankPair()], tried: false })
-
-/** What the note draft gives the drawer. */
-export interface NoteDraft extends Draft {
-    readonly setTitle: (value: string) => void
-    readonly setContent: (value: string) => void
-    readonly setPair: (id: string, field: "q" | "a", value: string) => void
-    readonly addPair: () => void
-    readonly removePair: (id: string) => void
-    readonly setTried: (value: boolean) => void
-    readonly reset: () => void
-}
+const freshDraft = (): NoteDraftFields => ({ title: "", content: "", pairs: [blankPair()], tried: false })
 
 /** The written note and the list of questions with answers of the Add documents drawer. */
 export const useNoteDraft = (): NoteDraft => {
-    const [draft, setDraft] = useState<Draft>(freshDraft)
+    const [draft, setDraft] = useState<NoteDraftFields>(freshDraft)
     return {
         ...draft,
         setTitle: (title) => setDraft((now) => ({ ...now, title })),

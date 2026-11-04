@@ -7,26 +7,26 @@ import type {
     SlotValues,
     BlockSlots,
 } from "../../block/block.types"
+import type { SpecLocale, SpecText } from "../../schema/schema.types"
 import type { DataSlot, SlotLabels } from "../../slot/slot.types"
 import type { HostAction, HostRead, WorkbenchHost } from "../../host/host.types"
-import { trusted } from "../../schema/trusted"
 
-/** The slots of each data status a block test draws with. */
-export interface SlotStatuses {
-    /** A slot still loading its first answer. */
+/** The data-status slots a block test draws with. */
+interface SlotFixtures {
+    /** A read that is running. */
     readonly loading: DataSlot<never>
-    /** A slot the viewer may not see. */
+    /** A read the viewer may not see. */
     readonly forbidden: DataSlot<never>
-    /** A slot whose read failed. */
+    /** A read that failed. */
     readonly error: DataSlot<never>
-    /** A slot whose read settled with nothing. */
+    /** A read that settled with nothing to draw. */
     readonly empty: DataSlot<never>
-    /** A slot settled with the given items. */
+    /** A read that settled with the given items. */
     readonly ready: <T>(items: T) => DataSlot<T>
 }
 
 /** The data-status slots a block test draws with. */
-export const slotOf: SlotStatuses = {
+export const slotOf: SlotFixtures = {
     loading: { isLoading: true },
     forbidden: { isForbidden: true },
     error: { isError: true },
@@ -35,15 +35,15 @@ export const slotOf: SlotStatuses = {
 }
 
 /** A read handle over a slot, with the retry and variable setters recorded. */
-export interface FakeReadHandle extends ReadHandle {
+export interface SampleReadHandle extends ReadHandle {
     /** How many times the block asked to read again. */
     readonly retries: () => number
-    /** The variable sets the block asked for, in order. */
+    /** The variables the block asked to read with, in order. */
     readonly variableSets: () => ReadonlyArray<ReadVariables>
 }
 
 /** A read handle for a block test: the given slot, counting retries and recording variable changes. */
-export const recordingReadHandle = (slot: DataSlot<unknown>, variables: ReadVariables = {}): FakeReadHandle => {
+export const sampleReadHandle = (slot: DataSlot<unknown>, variables: ReadVariables = {}): SampleReadHandle => {
     let retries = 0
     const sets: Array<ReadVariables> = []
     return {
@@ -62,15 +62,15 @@ export const recordingReadHandle = (slot: DataSlot<unknown>, variables: ReadVari
 }
 
 /** An action handle for a block test, with the inputs it was run with recorded. */
-export interface FakeActionHandle extends ActionHandle {
-    /** The inputs each run was given, in order. */
+export interface SampleActionHandle extends ActionHandle {
+    /** The inputs the block ran the action with, in order. */
     readonly runs: () => ReadonlyArray<Parameters<ActionHandle["run"]>[0]>
 }
 
 /** An action handle for a block test: allowed unless told otherwise, answering every run with `outcome`. */
-export const recordingActionHandle = (
+export const sampleActionHandle = (
     options: { readonly outcome?: ActionOutcome; readonly isAllowed?: boolean; readonly label?: string } = {},
-): FakeActionHandle => {
+): SampleActionHandle => {
     const runs: Array<Parameters<ActionHandle["run"]>[0]> = []
     return {
         run: (input) => {
@@ -85,33 +85,36 @@ export const recordingActionHandle = (
 }
 
 /** The slot values of a block test, from read and action handles by slot name. */
-export const slotValuesOf = <S extends BlockSlots>(
+export function sampleSlots<S extends BlockSlots>(
     handles: Readonly<Record<keyof S, ReadHandle | ActionHandle>>,
-): SlotValues<S> => trusted<SlotValues<S>>(handles)
+): SlotValues<S>
+/** The handles as they come: the signature above types them by the slots of the block, which a double cannot check at run time. */
+export function sampleSlots(
+    handles: Readonly<Record<string, ReadHandle | ActionHandle>>,
+): Readonly<Record<string, ReadHandle | ActionHandle>> {
+    return handles
+}
 
 /** A block host for a block test: keys come back as themselves, owner words in the locale, notifications and reports recorded. */
-export interface FakeBlockHost extends BlockHost {
-    /** The notifications the block raised, in order. */
+export interface SampleBlockHost extends BlockHost {
+    /** The messages the block notified, in order. */
     readonly notices: () => ReadonlyArray<string>
-    /** The reports the block made, in order. */
+    /** The contract defects the block reported, as `<code> @ <at>`, in order. */
     readonly reports: () => ReadonlyArray<string>
 }
 
-/** The locale of a fake block host that was given none. */
-const englishLocale = (): "vi" | "en" => "en"
+/** The language of a block host that is not told another. */
+const englishLocale = (): SpecLocale => "en"
 
-/** The status words of a fake workbench host: each is its own name, beside the empty sentence of the region. */
-const labelsOf = (empty: string): SlotLabels => ({ empty, forbidden: "forbidden", error: "error", retry: "retry" })
-
-/** Builds a fake block host; every port may be overridden. */
-export const recordingBlockHost = (overrides: Partial<BlockHost> = {}): FakeBlockHost => {
+/** Builds a sample block host; every port may be overridden. */
+export const sampleBlockHost = (overrides: Partial<BlockHost> = {}): SampleBlockHost => {
     const notices: Array<string> = []
     const reports: Array<string> = []
     const query = new Map<string, string>()
     const locale = overrides.locale ?? englishLocale
-    const wordsOf: ReturnType<BlockHost["text"]> = (text) => ("key" in text ? text.key : text[locale()])
+    const translate = (text: SpecText): string => ("key" in text ? text.key : text[locale()])
     return {
-        text: () => wordsOf,
+        text: () => translate,
         locale,
         navigation: {
             href: (path) => path,
@@ -134,7 +137,7 @@ export const recordingBlockHost = (overrides: Partial<BlockHost> = {}): FakeBloc
 }
 
 /** A host read in a settled state. */
-export const settledHostRead = (status: HostRead["status"], data: unknown = undefined): HostRead => ({
+export const sampleHostRead = (status: HostRead["status"], data: unknown = undefined): HostRead => ({
     status,
     data,
     isValidating: false,
@@ -142,33 +145,36 @@ export const settledHostRead = (status: HostRead["status"], data: unknown = unde
     page: null,
 })
 
-/** The ports of a fake workbench host that tests tune. */
-export interface FakeWorkbenchOptions {
+/** The ports of a sample workbench host that tests tune. */
+export interface SampleWorkbenchOptions {
     /** The read of each operation; loading when absent. */
     readonly reads?: Readonly<Record<string, HostRead>>
     /** The outcome of each action operation; ok when absent. */
     readonly actions?: Readonly<Record<string, ActionOutcome>>
     /** The permissions the viewer holds; all when absent. */
     readonly permissions?: ReadonlyArray<string>
-    /** Overrides for the block host ports of the fake. */
+    /** The ports of the block host to override. */
     readonly block?: Partial<BlockHost>
 }
 
 /** A workbench host for a renderer test. */
-export interface FakeWorkbenchHost extends WorkbenchHost {
-    /** The fake block host the workbench hands to blocks. */
-    readonly block: FakeBlockHost
+export interface SampleWorkbenchHost extends WorkbenchHost {
+    /** The block host, with its notices and reports readable. */
+    readonly block: SampleBlockHost
 }
 
-/** Builds a fake workbench host: reads, actions and permissions from the options, words from the key. */
-export const scriptedWorkbenchHost = (options: FakeWorkbenchOptions = {}): FakeWorkbenchHost => ({
-    block: recordingBlockHost(options.block),
+/** The words of the data-status recipe of a host read in a test: the empty sentence of one region, and each status named. */
+const slotLabelsOf = (empty: string): SlotLabels => ({ empty, forbidden: "forbidden", error: "error", retry: "retry" })
+
+/** Builds a sample workbench host: reads, actions and permissions from the options, words from the key. */
+export const sampleWorkbenchHost = (options: SampleWorkbenchOptions = {}): SampleWorkbenchHost => ({
+    block: sampleBlockHost(options.block),
     useRead: (operation, variables) =>
-        variables === null ? settledHostRead("loading") : (options.reads?.[operation] ?? settledHostRead("loading")),
+        variables === null ? sampleHostRead("loading") : (options.reads?.[operation] ?? sampleHostRead("loading")),
     useAction: (operation): HostAction => ({
         run: () => Promise.resolve(options.actions?.[operation] ?? { ok: true }),
         isRunning: false,
     }),
     useCan: (permission) => permission === null || (options.permissions?.includes(permission) ?? true),
-    useSlotLabels: () => labelsOf,
+    useSlotLabels: () => slotLabelsOf,
 })

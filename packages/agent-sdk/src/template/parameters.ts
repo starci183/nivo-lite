@@ -76,8 +76,8 @@ const branchWith = (
             : when
     }, branch.when)
     const [wait] = bound.flatMap((binding) => {
-        const value = numbers(binding)
-        return binding.target === "branch_timeout" && value !== null ? [value] : []
+        const value = binding.target === "branch_timeout" ? numbers(binding) : null
+        return value === null ? [] : [value]
     })
     return {
         ...branch,

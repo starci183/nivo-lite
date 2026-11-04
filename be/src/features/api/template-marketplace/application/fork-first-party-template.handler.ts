@@ -17,8 +17,6 @@ export class ForkFirstPartyTemplateHandler extends ICQRSHandler<ForkFirstPartyTe
     }
 
     protected override process(command: ForkFirstPartyTemplateCommand): Promise<TemplateVersionView> {
-        const p = command.params.principal.id
-        const r = command.params.request
-        return this.svc.fork(p, r)
+        return this.svc.fork(command.params.principal.id, command.params.request)
     }
 }

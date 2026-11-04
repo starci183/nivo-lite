@@ -17,6 +17,7 @@ interface VideoJobCallbacks<T> {
     readonly onSuccess: (answer: T) => void
     readonly onError: (failure: Error) => void
 }
+/** Read of one video job: the slot read plus a refetch trigger. */
 export interface VideoJobRead<T> extends SlotRead<T> {
     readonly mutate: () => Promise<unknown>
 }

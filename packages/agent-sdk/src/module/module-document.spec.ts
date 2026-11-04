@@ -1,9 +1,15 @@
 import { BLOCKS } from "../spec/spec.fixture"
+import type { SpecDocument } from "../spec/spec.types"
 import { moduleFixture } from "./module-document.fixture"
 import { moduleDocumentSchema } from "./module-document.schema"
 import { MODULE_CHANGELOG_MAX, moduleProblems } from "./module-problems"
 import type { ModuleDocument } from "./module-document.types"
-import { present } from "../schema/present"
+
+/** The document with every default workbench changed by `change`. */
+const withMains = (doc: ModuleDocument, change: (main: SpecDocument) => SpecDocument): ModuleDocument => ({
+    ...doc,
+    workbenches: Object.fromEntries(Object.entries(doc.workbenches).map(([route, main]) => [route, change(main)])),
+})
 
 const codesOf = (doc: ModuleDocument): ReadonlyArray<string> =>
     moduleProblems(doc, BLOCKS).map((problem) => problem.code)
@@ -61,33 +67,39 @@ describe("moduleProblems", () => {
 
     it("refuses a duplicate action, and a command or intent naming an action the module does not govern", () => {
         const doc = moduleFixture()
-        const action = present(doc.template.authorityActions[0])
-        const twice = { ...doc, template: { ...doc.template, authorityActions: [action, action] } }
+        const actions = doc.template.authorityActions
+        const twice = { ...doc, template: { ...doc.template, authorityActions: [...actions, ...actions.slice(0, 1)] } }
         expect(codesOf(twice)).toEqual(["MODULE_ACTION_DUPLICATE"])
         const command = {
             ...doc,
-            template: { ...doc.template, accepts: [{ ...present(doc.template.accepts[0]), action: "gone" }] },
+            template: {
+                ...doc.template,
+                accepts: doc.template.accepts.map((accept, index) =>
+                    index === 0 ? { ...accept, action: "gone" } : accept,
+                ),
+            },
         }
         expect(moduleProblems(command, BLOCKS)).toEqual([{ code: "MODULE_COMMAND_UNKNOWN_ACTION", at: "sales.order" }])
         const intent = {
             ...doc,
-            contracts: { ...doc.contracts, intents: [{ ...present(doc.contracts.intents[0]), intent: "gone" }] },
+            contracts: {
+                ...doc.contracts,
+                intents: doc.contracts.intents.map((item, index) => (index === 0 ? { ...item, intent: "gone" } : item)),
+            },
         }
         expect(moduleProblems(intent, BLOCKS)).toEqual([{ code: "MODULE_INTENT_UNKNOWN_ACTION", at: "sales.gone" }])
     })
 
     it("refuses a missing main workbench, a foreign spec and a spec that fails the installed blocks", () => {
         const doc = moduleFixture()
-        const main = present(doc.workbenches.main)
         expect(codesOf({ ...doc, workbenches: {} })).toEqual(["MODULE_WORKBENCH_MAIN_MISSING"])
-        expect(codesOf({ ...doc, workbenches: { main: { ...main, module: "chatbot" } } })).toEqual([
-            "MODULE_WORKBENCH_FOREIGN",
-        ])
-        const broken = {
+        const foreign = withMains(doc, (main) => ({ ...main, module: "chatbot" }))
+        expect(codesOf(foreign)).toEqual(["MODULE_WORKBENCH_FOREIGN"])
+        const broken = withMains(doc, (main) => ({
             ...main,
-            views: [{ ...present(main.views[0]), root: { id: "root", block: "test.nope" as const } }],
-        }
-        expect(moduleProblems({ ...doc, workbenches: { main: broken } }, BLOCKS)).toEqual([
+            views: main.views.map((view) => ({ ...view, root: { id: "root", block: "test.nope" as const } })),
+        }))
+        expect(moduleProblems(broken, BLOCKS)).toEqual([
             { code: "MODULE_SPEC_PROBLEM", at: "workbenches.main:main/root", detail: "SPEC_BLOCK_UNKNOWN" },
         ])
     })

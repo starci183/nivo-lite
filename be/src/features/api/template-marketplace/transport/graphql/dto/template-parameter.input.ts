@@ -10,15 +10,15 @@ export class TemplateParameterInput {
     /** The key. */
     @Field(() => String)
     @IsString()
-    @Matches(/^[a-z][a-zA-Z0-9_]{0,39}$/)
-    @MaxLength(60)
+    @Matches(/^[a-z]\w{0,39}$/)
+    @MaxLength(40)
     key!: string
 
     /** `number`, `text`, `toggle` or `textarea`. */
     @Field(() => String)
     @IsIn(["number", "text", "toggle", "textarea"])
-    @MaxLength(40)
-    kind!: string
+    @MaxLength(20)
+    kind!: "number" | "text" | "toggle" | "textarea"
 
     /** The label. */
     @Field(() => TemplateTextInput)

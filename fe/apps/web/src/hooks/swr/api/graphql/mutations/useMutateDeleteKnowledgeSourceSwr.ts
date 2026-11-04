@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDeleteKnowledgeSource } from "@/modules/api/graphql/mutations/mutation-delete-knowledge-source"
-import type { MutateDeleteKnowledgeSourceRequest } from "@/modules/api/graphql/mutations/mutation-delete-knowledge-source"
+import {
+    mutateDeleteKnowledgeSource,
+    type MutateDeleteKnowledgeSourceRequest,
+} from "@/modules/api/graphql/mutations/mutation-delete-knowledge-source"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DeleteKnowledgeSourceMutation } from "@/modules/api"
 
 /** What the DeleteKnowledgeSource mutation is triggered with. */
 interface DeleteKnowledgeSourceArg {
@@ -16,7 +18,7 @@ export const MUTATE_DELETE_KNOWLEDGE_SOURCE_SWR_KEY = "MUTATE_DELETE_KNOWLEDGE_S
 
 /** SWR mutation for {@link mutateDeleteKnowledgeSource}: Deletes a document of the workspace with its passages. `trigger(input)` rejects with the back end failure. */
 export const useMutateDeleteKnowledgeSourceSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDeleteKnowledgeSource>["deleteKnowledgeSource"],
+    DeleteKnowledgeSourceMutation["deleteKnowledgeSource"],
     Error,
     typeof MUTATE_DELETE_KNOWLEDGE_SOURCE_SWR_KEY,
     DeleteKnowledgeSourceArg["arg"]

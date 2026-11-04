@@ -1,9 +1,6 @@
 import { AlertDialog, Badge, Button, Disclosure, Meter, Text, Cluster } from "@starci/grammar/common"
-import {
-    KNOWLEDGE_ROWS_PLACEHOLDER,
-    KnowledgeRowList,
-    KnowledgeRowsSection,
-} from "@/components/composites/KnowledgeRows"
+import { KnowledgeRowsSection } from "@/components/composites/KnowledgeRows"
+import { KnowledgeRowsSlot } from "@/components/frames/KnowledgeRowsSlot"
 import type { KnowledgeListView, KnowledgeRowView, DataSlot, SlotLabels } from "@/modules/types"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 /** What the head of the document says: its status, who may read it and what the owner may do. */
@@ -144,20 +141,12 @@ export const KnowledgeSourcePanelBase = (props: KnowledgeSourcePanelBaseProps) =
                 before={<Head view={doc.head} isLoading={isLoading} on={props.on} />}
                 body={
                     <>
-                        <SlotView
+                        <KnowledgeRowsSlot
+                            label={props.props.passagesLabel}
                             slot={props.props.passages}
-                            placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
-                            labels={props.props.passagesLabels}
+                            slotLabels={props.props.passagesLabels}
+                            isPending={props.props.isPending}
                             onRetry={props.on.retry}
-                            render={(rows, isRowsSkeleton) => (
-                                <KnowledgeRowList
-                                    label={props.props.passagesLabel}
-                                    emptyTitle={props.props.passagesLabels.empty}
-                                    rows={rows}
-                                    isPending={props.props.isPending}
-                                    isLoading={isRowsSkeleton}
-                                />
-                            )}
                         />
                         <Disclosure
                             title={doc.head.contentTitle}

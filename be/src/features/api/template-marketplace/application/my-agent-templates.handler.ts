@@ -17,7 +17,6 @@ export class MyAgentTemplatesHandler extends ICQRSHandler<MyAgentTemplatesQuery,
     }
 
     protected override process(query: MyAgentTemplatesQuery): Promise<ReadonlyArray<TemplateView>> {
-        const p = query.params.principal.id
-        return this.svc.mine(p)
+        return this.svc.mine(query.params.principal.id)
     }
 }

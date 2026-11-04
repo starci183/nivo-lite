@@ -1,4 +1,5 @@
-import type { ChatbotConversationView, ChatbotInboxActions } from "@/modules/types"
+import type { ChatbotConversationView, ChatbotInboxActions, SlotPanelProps } from "@/modules/types"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ChatbotConversationList } from "@/components/composites/ChatbotConversationList"
 import { ChatbotInboxPanel } from "@/components/composites/ChatbotInboxPanel"
 import { ChatbotSidePanel } from "@/components/composites/ChatbotSidePanel"
@@ -52,5 +53,20 @@ export const ChatbotConversationBody = (props: ChatbotConversationBodyProps) => 
                 onDeclineAnswer={props.on.declineAnswer}
             />
         }
+    />
+)
+
+/** Supplies the conversation read and the actions, plus the reload that retries a failed read. */
+interface ChatbotInboxSlotProps {
+    readonly inbox: SlotPanelProps<ChatbotConversationView>
+    readonly on: ChatbotInboxActions & { readonly reload: () => void }
+}
+
+/** The conversation read of Sales, Chatbot and the standalone inbox: the slot's states around the one three-pane body. */
+export const ChatbotInboxSlot = (props: ChatbotInboxSlotProps) => (
+    <SlotView
+        {...props.inbox}
+        onRetry={props.on.reload}
+        render={(inbox, isLoading) => <ChatbotConversationBody {...inbox} isLoading={isLoading} on={props.on} />}
     />
 )

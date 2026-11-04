@@ -1,80 +1,15 @@
-import { useFormatter, useTranslations } from "next-intl"
-import { tierTone } from "@/hooks/loyalty"
+import { useTranslations } from "next-intl"
 import type { LoyaltyPanelActivation } from "@/hooks/loyalty"
 import { useQueryLoyaltyMemberSwr } from "@/hooks/swr"
 import type { LoyaltyBoardType } from "@/hooks/swr"
 import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { toast } from "@/modules/toast"
-import { groupPhone } from "./loyaltyMembers.shared"
+import { useMemberDetailAtoms } from "./useMemberDetailAtoms"
 import { useMemberActions } from "./useMemberActions"
 import { useMemberDetailForms } from "./useMemberDetailForms"
 import { useMemberDetailLists } from "./useMemberDetailLists"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
-
-const TIME_ZONE = "Asia/Ho_Chi_Minh"
-type MemberDetail = NonNullable<ReturnType<typeof useQueryLoyaltyMemberSwr>["data"]>
-
-interface MemberWords {
-    readonly board: LoyaltyBoardType
-    readonly forms: ReturnType<typeof useMemberDetailForms>
-    readonly lists: ReturnType<typeof useMemberDetailLists>
-    readonly t: ReturnType<typeof useTranslations<"loyalty">>
-    readonly format: ReturnType<typeof useFormatter>
-}
-
-/** Resolves member atoms; an unresolved record supplies copy and empty values, never a ready slot. */
-const memberViewOf = (data: MemberDetail | undefined, words: MemberWords) => {
-    const { board, forms, lists, t, format } = words
-    const member = data?.member
-    const money = (value: number) =>
-        format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
-    const points = (value: number) => t("points", { n: format.number(value) })
-    const date = (iso: string) =>
-        format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TIME_ZONE })
-    return {
-        name: member?.name ?? "",
-        closeLabel: t("close"),
-        ...(data === undefined || data.tierName === ""
-            ? {}
-            : { tier: { name: data.tierName, tone: tierTone(board.config, member?.tierKey ?? null) } }),
-        points: points(member?.points ?? 0),
-        contact:
-            [groupPhone(member?.phone), member?.email ?? ""].filter((part) => part !== "").join(" · ") || t("noPhone"),
-        spentLine: `${t("spentTotal", { value: money(member?.lifetimeSpendVnd ?? 0) })} · ${t("visitsCount", { n: member?.visits ?? 0 })}`,
-        joinedLine: member === undefined ? "" : t("joinedAt", { date: date(member.joinedAt) }),
-        nextTierLine:
-            data?.nextTier === undefined || data.nextTier === null
-                ? t("topTier")
-                : t("nextTier", { name: data.nextTier.tier.name, value: money(data.nextTier.missingVnd) }),
-        ...(data !== undefined && data.expiring.points > 0
-            ? {
-                  expiringLine: t("expiringSoon", {
-                      points: points(data.expiring.points),
-                      date: data.expiring.firstAt === null ? "" : date(data.expiring.firstAt),
-                  }),
-              }
-            : {}),
-        editTitle: t("editTitle"),
-        ...(forms.edit === undefined ? {} : { edit: forms.edit }),
-        ...(forms.readOnly === undefined ? {} : { readOnly: forms.readOnly }),
-        adjustTitle: t("adjustTitle"),
-        adjustBody: t("adjustBody"),
-        adjust: forms.adjust,
-        rewards: lists.rewards,
-        ledger: lists.ledger,
-        asOf: t("asOf", {
-            date: format.dateTime(new Date(board.nowIso), {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: TIME_ZONE,
-            }),
-        }),
-    }
-}
 
 /** The view `useMemberDetailView` returns. */
 export interface MemberDetailView {
@@ -196,7 +131,6 @@ export const useMemberDetailView = (
     activation: LoyaltyPanelActivation,
 ): MemberDetailView => {
     const t = useTranslations("loyalty")
-    const format = useFormatter()
     const slotLabels = useSlotLabels()
     const read = useQueryLoyaltyMemberSwr(
         activation.isActive && activation.isReady && customerId !== null ? { customerId } : null,
@@ -216,7 +150,7 @@ export const useMemberDetailView = (
         activation: selected,
     })
     const lists = useMemberDetailLists(read.data, actions)
-    const data = memberViewOf(read.data, { board, forms, lists, t, format })
+    const data = useMemberDetailAtoms(read.data, { board, forms, lists })
     const labels = slotLabels(t("detailEmptyTitle"))
     const { rewards, ledger, closeLabel, editTitle, edit, readOnly, adjustTitle, adjustBody, adjust, ...identity } =
         data

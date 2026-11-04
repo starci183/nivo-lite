@@ -1,10 +1,10 @@
 import {
-    recordingActionHandle,
-    recordingBlockHost,
-    settledHostRead,
-    recordingReadHandle,
-    slotValuesOf,
-    scriptedWorkbenchHost,
+    sampleActionHandle,
+    sampleBlockHost,
+    sampleHostRead,
+    sampleReadHandle,
+    sampleSlots,
+    sampleWorkbenchHost,
     slotOf,
 } from "./fakes"
 
@@ -18,9 +18,9 @@ describe("slotOf", () => {
     })
 })
 
-describe("recordingReadHandle and recordingActionHandle", () => {
+describe("sampleReadHandle and sampleActionHandle", () => {
     it("count retries and record variables", () => {
-        const handle = recordingReadHandle(slotOf.ready(1), { q: "a" })
+        const handle = sampleReadHandle(slotOf.ready(1), { q: "a" })
         handle.retry()
         handle.setVariables({ q: "b" })
         expect(handle.retries()).toBe(1)
@@ -30,11 +30,11 @@ describe("recordingReadHandle and recordingActionHandle", () => {
     })
 
     it("record runs and answer with the given outcome", async () => {
-        const handle = recordingActionHandle()
+        const handle = sampleActionHandle()
         await expect(handle.run({ id: "1" })).resolves.toEqual({ ok: true })
         expect(handle.runs()).toEqual([{ id: "1" }])
         expect(handle).toMatchObject({ isAllowed: true, isRunning: false, label: "" })
-        const refused = recordingActionHandle({
+        const refused = sampleActionHandle({
             outcome: { ok: false, reason: "failed", message: { key: "k" } },
             isAllowed: false,
             label: "Open",
@@ -43,18 +43,18 @@ describe("recordingReadHandle and recordingActionHandle", () => {
         expect(refused).toMatchObject({ isAllowed: false, label: "Open" })
     })
 
-    it("slotValuesOf hands the handles back as slot values", () => {
-        const handle = recordingReadHandle(slotOf.empty)
-        expect(slotValuesOf({ rows: handle }).rows).toBe(handle)
+    it("sampleSlots hands the handles back as slot values", () => {
+        const handle = sampleReadHandle(slotOf.empty)
+        expect(sampleSlots({ rows: handle }).rows).toBe(handle)
     })
 })
 
-describe("recordingBlockHost", () => {
+describe("sampleBlockHost", () => {
     it("words keys as themselves and owner text in the locale, and keeps query values, notices and reports", () => {
-        const host = recordingBlockHost()
+        const host = sampleBlockHost()
         expect(host.text("ns")({ key: "k" })).toBe("k")
         expect(host.text("ns")({ vi: "a", en: "b" })).toBe("b")
-        expect(recordingBlockHost({ locale: () => "vi" }).text("ns")({ vi: "a", en: "b" })).toBe("a")
+        expect(sampleBlockHost({ locale: () => "vi" }).text("ns")({ vi: "a", en: "b" })).toBe("a")
         expect(host.navigation.href("/x")).toBe("/x")
         host.navigation.setQueryValue("tab", "a")
         expect(host.navigation.queryValue("tab")).toBe("a")
@@ -67,10 +67,10 @@ describe("recordingBlockHost", () => {
     })
 })
 
-describe("scriptedWorkbenchHost", () => {
+describe("sampleWorkbenchHost", () => {
     it("serves the reads, actions and permissions it is given", async () => {
-        const host = scriptedWorkbenchHost({
-            reads: { orders: settledHostRead("ready", [1]) },
+        const host = sampleWorkbenchHost({
+            reads: { orders: sampleHostRead("ready", [1]) },
             actions: { open: { ok: false, reason: "forbidden", message: { key: "k" } } },
             permissions: ["p"],
         })
@@ -83,10 +83,10 @@ describe("scriptedWorkbenchHost", () => {
         expect(host.useCan("p")).toBe(true)
         expect(host.useCan("q")).toBe(false)
         expect(host.useSlotLabels()("nothing")).toMatchObject({ empty: "nothing" })
-        const bare = scriptedWorkbenchHost()
+        const bare = sampleWorkbenchHost()
         expect(bare.useCan("any")).toBe(true)
         expect(bare.useRead("orders", {}).status).toBe("loading")
         await expect(bare.useAction("open").run({ id: "1" })).resolves.toEqual({ ok: true })
-        expect(settledHostRead("loading").reload()).toBeUndefined()
+        expect(sampleHostRead("loading").reload()).toBeUndefined()
     })
 })

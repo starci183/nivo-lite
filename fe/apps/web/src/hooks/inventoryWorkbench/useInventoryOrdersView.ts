@@ -11,8 +11,9 @@ import {
     useInventoryDecisions,
     useInventoryFormat,
     useNewPoDrawer,
+    type NewPoDrawerView,
 } from "@/hooks/inventory"
-import { usePoDrawer } from "@/hooks/inventoryPo"
+import { usePoDrawer, type PoDrawerView } from "@/hooks/inventoryPo"
 import type { PoView, PoStatus } from "@/modules/types"
 import { useInventoryOrderCommands } from "@/hooks/inventoryCommands"
 
@@ -40,104 +41,8 @@ export interface InventoryOrdersView {
                 copyNote: string | null
             }[]
         }[]
-        readonly poDrawer: {
-            copy: {
-                readonly approveAndSend: string
-                readonly close: string
-                readonly poCancel: string
-                readonly poCopied: string
-                readonly poCopy: string
-                readonly poExpected: string
-                readonly poExpectedHint: string
-                readonly poInvoice: string
-                readonly poInvoiceHint: string
-                readonly poItems: string
-                readonly poMessageDrafted: string
-                readonly poMessageHint: string
-                readonly poQty: string
-                readonly poReceive: string
-                readonly poReceiveCost: string
-                readonly poReceiveHint: string
-                readonly poReceiveQty: string
-                readonly poRemind: string
-                readonly poSaveDraft: string
-                readonly poSendForApproval: string
-                readonly poSentEmail: string
-                readonly poSupplier: string
-                readonly poSupplierHint: string
-                readonly poUnitCost: string
-                readonly reject: string
-            }
-            title: string
-            description: string
-            mode: "read" | "edit" | "receive"
-            summary: string
-            supplierId: string
-            suppliers: {
-                id: string
-                label: string
-            }[]
-            expected: string
-            lines: {
-                id: string
-                name: string
-                hint: string
-                qty: string
-                cost: string
-            }[]
-            readLines: {
-                id: string
-                text: string
-            }[]
-            total: string
-            invoiceNo: string
-            messageTitle: string
-            message: string
-            messageEditable: boolean
-            sendNote: string | null
-            sentByEmail: boolean
-            canEdit: boolean
-            canApprove: boolean
-            canReceive: boolean
-            canCopy: boolean
-            canCancel: boolean
-            copied: boolean
-            isPending: boolean
-            error: string | null
-            notice: string | null
-        } | null
-        readonly newPoDrawer: {
-            copy: {
-                readonly newPoTitle: string
-                readonly newPoHint: string
-                readonly close: string
-                readonly poSupplier: string
-                readonly poSupplierHint: string
-                readonly newPoItemHint: string
-                readonly poQty: string
-                readonly poUnitCost: string
-                readonly newPoAddLine: string
-                readonly newPoCreate: string
-            }
-            supplierId: string
-            suppliers: {
-                id: string
-                label: string
-            }[]
-            items: {
-                id: string
-                label: string
-            }[]
-            lines: {
-                itemLabel: string
-                key: string
-                itemId: string
-                qty: string
-                cost: string
-            }[]
-            isPending: boolean
-            error: string | null
-        } | null
+        readonly poDrawer: PoDrawerView["props"]
+        readonly newPoDrawer: NewPoDrawerView["props"]
     }
     readonly on: {
         readonly onCreate: () => void

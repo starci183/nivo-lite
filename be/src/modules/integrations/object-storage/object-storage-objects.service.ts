@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError } from "@starci/object-storage"
+import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError as StoreFailure } from "@starci/object-storage"
 import type { ObjectStorage } from "@starci/object-storage"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder, ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
+import { ObjectStorageError } from "./errors/object-storage.error"
 import type { SignedObjectUrl, StorageFailureCode } from "./object-storage.contracts"
 import { InjectObjectStorage, InjectStorageOptions } from "./object-storage.decorators"
 import { StorageLogEvent } from "./object-storage.log-events"
@@ -21,10 +22,6 @@ import type {
 import { UPLOAD_URL_SECONDS, bucketNameOf, presignSecondsOf } from "./object-storage.policy"
 
 const SIGN_PARALLEL = 16
-
-/** The failure of an object that is not there. */
-const missing = (bucket: string): ObjectStorageError =>
-    new ObjectStorageError(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound, { context: { bucket } })
 
 @Injectable()
 /** Issues upload addresses and reads objects through the object storage port; the only door domains have to storage. */
@@ -48,20 +45,12 @@ export class StorageObjectsService implements StorageObjectsPort {
 
     /** The bytes and content type of the object at `path` of `bucket`. */
     download(bucket: string, path: string): Promise<StoredObjectOutcome> {
-        return this.guard(bucket, async () => {
-            const found = await this.storage.get(this.bucketOf(bucket), path)
-            if (found === null) throw missing(bucket)
-            return found
-        })
+        return this.present(bucket, () => this.storage.get(this.bucketOf(bucket), path))
     }
 
     /** The size in bytes of the object at `path` of `bucket`; the object is not read. */
     sizeOf(bucket: string, path: string): Promise<ObjectSizeOutcome> {
-        return this.guard(bucket, async () => {
-            const found = await this.storage.head(this.bucketOf(bucket), path)
-            if (found === null) throw missing(bucket)
-            return found.size
-        })
+        return this.present(bucket, async () => (await this.storage.head(this.bucketOf(bucket), path))?.size ?? null)
     }
 
     /** Lists files of one folder, newest first. */
@@ -115,12 +104,22 @@ export class StorageObjectsService implements StorageObjectsPort {
         return bucketNameOf(this.options.bucketPrefix, purpose)
     }
 
+    /** Runs one store call that answers null for an object that is not there: that is NOT_FOUND, like an invalid one. */
+    private async present<T>(bucket: string, run: () => Promise<T | null>): Promise<Outcome<T, StorageFailureCode>> {
+        const answer = await this.guard(bucket, run)
+        if (answer.kind === "refused") return answer
+        return answer.value === null ? refused(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound) : ok(answer.value)
+    }
+
     /** Runs one store call: an absent or invalid object is NOT_FOUND, every other failure is logged and UNAVAILABLE. */
     private async guard<T>(bucket: string, run: () => Promise<T>): Promise<Outcome<T, StorageFailureCode>> {
         try {
             return ok(await run())
         } catch (failure) {
-            if (failure instanceof ObjectStorageError && failure.kind !== "unavailable") {
+            if (
+                failure instanceof ObjectStorageError ||
+                (failure instanceof StoreFailure && failure.kind !== "unavailable")
+            ) {
                 return refused(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound)
             }
             this.logger.error(StorageLogEvent.Failed, failure, { bucket })

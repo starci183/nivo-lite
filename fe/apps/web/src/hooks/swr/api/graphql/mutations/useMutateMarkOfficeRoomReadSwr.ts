@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateMarkOfficeRoomRead } from "@/modules/api/graphql/mutations/mutation-mark-office-room-read"
-import type { MutateMarkOfficeRoomReadRequest } from "@/modules/api/graphql/mutations/mutation-mark-office-room-read"
+import {
+    mutateMarkOfficeRoomRead,
+    type MutateMarkOfficeRoomReadRequest,
+} from "@/modules/api/graphql/mutations/mutation-mark-office-room-read"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { MarkOfficeRoomReadMutation } from "@/modules/api"
 
 /** What the MarkOfficeRoomRead mutation is triggered with. */
 interface MarkOfficeRoomReadArg {
@@ -16,7 +18,7 @@ export const MUTATE_MARK_OFFICE_ROOM_READ_SWR_KEY = "MUTATE_MARK_OFFICE_ROOM_REA
 
 /** SWR mutation for {@link mutateMarkOfficeRoomRead}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateMarkOfficeRoomReadSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateMarkOfficeRoomRead>["markOfficeRoomRead"],
+    MarkOfficeRoomReadMutation["markOfficeRoomRead"],
     Error,
     typeof MUTATE_MARK_OFFICE_ROOM_READ_SWR_KEY,
     MarkOfficeRoomReadArg["arg"]

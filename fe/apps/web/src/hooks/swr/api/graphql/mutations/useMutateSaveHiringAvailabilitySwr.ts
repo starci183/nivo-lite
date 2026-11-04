@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveHiringAvailability } from "@/modules/api/graphql/mutations/mutation-save-hiring-availability"
-import type { MutateSaveHiringAvailabilityRequest } from "@/modules/api/graphql/mutations/mutation-save-hiring-availability"
+import {
+    mutateSaveHiringAvailability,
+    type MutateSaveHiringAvailabilityRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-hiring-availability"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveHiringAvailabilityMutation } from "@/modules/api"
 
 /** What the saveHiringAvailability mutation is triggered with. */
 interface SaveHiringAvailabilityArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_HIRING_AVAILABILITY_SWR_KEY = "MUTATE_SAVE_HIRING_AVAIL
 
 /** SWR mutation for {@link mutateSaveHiringAvailability}: `trigger(request)` answers `saveHiringAvailability` and rejects with the back end failure. */
 export const useMutateSaveHiringAvailabilitySwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveHiringAvailability>["saveHiringAvailability"],
+    SaveHiringAvailabilityMutation["saveHiringAvailability"],
     Error,
     typeof MUTATE_SAVE_HIRING_AVAILABILITY_SWR_KEY,
     SaveHiringAvailabilityArg["arg"]

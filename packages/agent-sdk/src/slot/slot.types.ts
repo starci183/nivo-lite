@@ -8,35 +8,35 @@ export type DataSlot<T> =
 
 /** Resolved copy of the data-status recipe for one slot. */
 export type SlotLabels = {
-    /** The sentence drawn for an empty slot. */
+    /** The notice of a read that settled with nothing to draw. */
     readonly empty: string
-    /** The sentence drawn when the viewer lacks the permission. */
+    /** The notice of a read the viewer may not see. */
     readonly forbidden: string
-    /** The sentence drawn when the read failed. */
+    /** The notice of a read that failed. */
     readonly error: string
-    /** The label of the control that reads again. */
+    /** The words on the control that reads again after a failure. */
     readonly retry: string
 }
 
 /** What a pure block takes to draw one slot: the slot, a same-shape placeholder for its skeleton and the words of its status. */
 export type SlotPanelProps<T> = {
-    /** The read as one exclusive status. */
+    /** The status of the read to draw. */
     readonly slot: DataSlot<T>
-    /** A value of the same shape as the data, drawn as a skeleton while the read loads. */
+    /** Data with the geometry of settled data, drawn as a skeleton while the read loads. */
     readonly placeholder: T
-    /** The words of the slot's empty, forbidden and error states. */
+    /** The words of every status except ready. */
     readonly labels: SlotLabels
 }
 
 /** A read folded into a region; errors remain unknown at the boundary. */
 export interface SlotRead<T> {
-    /** The settled data; undefined until the read has any. */
+    /** What the read yielded; undefined until it settles. */
     readonly data: T | undefined
-    /** The failure of the read, unknown until the host classifies it. */
+    /** The failure of the read; undefined when it did not fail. */
     readonly error: unknown
-    /** True while the first answer has not arrived. */
+    /** Whether the first run of the read is in flight. */
     readonly isLoading: boolean
-    /** True while a settled read is refreshing; the settled drawing stays. */
+    /** Whether the read runs again while its data shows. */
     readonly isValidating?: boolean
 }
 

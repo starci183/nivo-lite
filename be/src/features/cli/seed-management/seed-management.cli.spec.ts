@@ -10,9 +10,9 @@ describe("SeedManagementCli", () => {
     })
 
     it("hands the whole of stdin to the management seed once", async () => {
-        jest.spyOn(process, "stdin", "get").mockReturnValue(
-            Object.assign(Readable.from(['{"documents":', "[]}\n"]), { fd: 0 }) as unknown as typeof process.stdin,
-        )
+        const chunks = Readable.from(['{"documents":', "[]}\n"])
+        const stdin = mock<typeof process.stdin>({ [Symbol.asyncIterator]: () => chunks[Symbol.asyncIterator]() })
+        jest.spyOn(process, "stdin", "get").mockReturnValue(stdin)
         const seed = mock<ManagementSeedService>()
         seed.run.mockResolvedValue(undefined)
         const moduleRef = await Test.createTestingModule({

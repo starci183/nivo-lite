@@ -17,10 +17,10 @@ export const LIST: BlockDefinition = defineBlock({
     id: "test.list",
     title: { vi: "Danh sach", en: "List" },
     props: z.object({
-        label: z.string().max(200),
+        label: z.string().max(100),
         filters: z
-            .array(z.object({ value: z.string().max(200) }))
-            .max(100)
+            .array(z.object({ value: z.string().max(100) }))
+            .max(10)
             .optional(),
     }),
     slots: {
@@ -39,19 +39,19 @@ export const FREE: BlockDefinition = defineBlock({
     children: {},
 })
 
-/** A read of the `order` list the list block binds to. */
+/** A read of the orders, narrowed by a search term. */
 export const ORDERS: ReadDefinition = defineRead({
     id: "sales.orders",
     dataKind: "order",
     shape: "list",
     fields: ["id"],
     paths: { stats: "record", "stats.rows": "list" },
-    variables: z.object({ q: z.string().max(200).optional() }),
+    variables: z.object({ q: z.string().max(100).optional() }),
     operation: "orders",
     permission: "sales.read",
 })
 
-/** A read of the `person` list, a data kind the list block does not accept. */
+/** A read of the people, which takes no variables. */
 export const PEOPLE: ReadDefinition = defineRead({
     id: "sales.people",
     dataKind: "person",
@@ -63,7 +63,7 @@ export const PEOPLE: ReadDefinition = defineRead({
     permission: "sales.read",
 })
 
-/** An action the list block binds to its optional action slot. */
+/** An action that opens one record. */
 export const OPEN: ActionDefinition = defineAction({
     id: "sales.open",
     operation: "open",
@@ -71,7 +71,7 @@ export const OPEN: ActionDefinition = defineAction({
     label: { key: "open" },
 })
 
-/** The blocks the spec specs install. */
+/** The blocks of the spec specs. */
 export const BLOCKS: ReadonlyArray<BlockDefinition> = [STACK, LIST, FREE]
 
 /** A node of the list block bound to the orders read. */

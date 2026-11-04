@@ -3,8 +3,11 @@
 import { useSWRConfig } from "swr"
 import useSWRSubscription from "swr/subscription"
 import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
-import { streamOfficeActivity } from "@/modules/api/sse/office/stream-office-activity"
-import type { OfficeActivityKind, OfficeActivityPush } from "@/modules/api/sse/office/stream-office-activity"
+import {
+    streamOfficeActivity,
+    type OfficeActivityKind,
+    type OfficeActivityPush,
+} from "@/modules/api/sse/office/stream-office-activity"
 import { QUERY_CHAT_MARKER_STATE_SWR_KEY } from "../../graphql/queries/useQueryChatMarkerStateSwr"
 import { QUERY_OFFICE_CONVERSATION_UNREAD_SWR_KEY } from "../../graphql/queries/useQueryOfficeConversationUnreadSwr"
 import { QUERY_OFFICE_MESSAGES_SWR_KEY } from "../../graphql/queries/useQueryOfficeMessagesSwr"

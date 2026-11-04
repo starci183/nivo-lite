@@ -2,9 +2,11 @@
 
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { PackageAgentTemplateData } from "@/modules/api/graphql"
-import { mutatePackageAgentTemplate } from "@/modules/api/graphql/mutations/mutation-package-agent-template"
-import type { MutatePackageAgentTemplateRequest } from "@/modules/api/graphql/mutations/mutation-package-agent-template"
+import type { PackageAgentTemplateMutation } from "@/modules/api"
+import {
+    mutatePackageAgentTemplate,
+    type MutatePackageAgentTemplateRequest,
+} from "@/modules/api/graphql/mutations/mutation-package-agent-template"
 
 /** The SWR key of the `packageAgentTemplate` mutation. */
 export const MUTATE_PACKAGE_AGENT_TEMPLATE_SWR_KEY = "MUTATE_PACKAGE_AGENT_TEMPLATE_SWR"
@@ -16,7 +18,7 @@ interface TriggerArg {
 
 /** The back end `packageAgentTemplate` mutation. */
 export const useMutatePackageAgentTemplateSwr = (): SWRMutationResponse<
-    PackageAgentTemplateData,
+    PackageAgentTemplateMutation["packageAgentTemplate"],
     Error,
     string,
     MutatePackageAgentTemplateRequest

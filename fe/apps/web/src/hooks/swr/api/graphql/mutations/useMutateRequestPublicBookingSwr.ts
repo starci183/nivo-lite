@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateRequestPublicBooking } from "@/modules/api/graphql/mutations/mutation-request-public-booking"
 import type { MutateRequestPublicBookingRequest } from "@/modules/api/graphql/mutations/types/request-public-booking"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestPublicBookingMutation } from "@/modules/api"
 
 /** The SWR key of the `requestPublicBooking` mutation. */
 export const MUTATE_REQUEST_PUBLIC_BOOKING_SWR_KEY = "MUTATE_REQUEST_PUBLIC_BOOKING_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Sends one public booking request (idempotent on token; website is the bot trap). */
 export const useMutateRequestPublicBookingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestPublicBooking>["requestPublicBooking"],
+    RequestPublicBookingMutation["requestPublicBooking"],
     Error,
     typeof MUTATE_REQUEST_PUBLIC_BOOKING_SWR_KEY,
     TriggerArg["arg"]

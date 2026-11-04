@@ -1,5 +1,5 @@
 import type { useTranslations } from "next-intl"
-import type { LoyaltyConfigType } from "@/hooks/swr"
+import type { LoyaltyConfigType, useMutateSaveLoyaltyProgramSwr } from "@/hooks/swr"
 import type { CategoryValues, ProgramCopy, ProgramValues, TierValues } from "@/modules/types"
 
 /** The most earn rules for single categories a programme keeps. */
@@ -88,48 +88,8 @@ export const programValuesOf = (name: string, enabled: boolean, config: LoyaltyC
     batch: String(config.promo.batch),
 })
 
-/** What `programInputOf` returns. */
-export interface ProgramInputOfResult {
-    name: string
-    enabled: boolean
-    config: {
-        earn: {
-            perThousandVnd: number
-            perVisit: number
-            minOrderVnd: number
-            trigger: string
-            categories: {
-                match: string
-                perThousandVnd: number
-                label: string
-            }[]
-        }
-        tiers: {
-            key: string
-            name: string
-            minSpendVnd: number
-            multiplier: number
-            winbackDays: number
-            benefit: string
-        }[]
-        expiry: {
-            months: number
-            warnDays: number
-        }
-        birthday: {
-            enabled: boolean
-            points: number
-            rewardKey: string
-            note: string
-        }
-        promo: {
-            maxPerMonth: number
-            hourFrom: string
-            hourTo: string
-            batch: number
-        }
-    }
-}
+/** What `programInputOf` returns: the argument the save mutation takes. */
+export type ProgramInputOfResult = Parameters<ReturnType<typeof useMutateSaveLoyaltyProgramSwr>["trigger"]>[0]
 
 /** The `saveLoyaltyProgram` input for the form values: the first tier always starts at 0 and empty category rules are dropped. */
 export const programInputOf = (values: ProgramValues): ProgramInputOfResult => ({

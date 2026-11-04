@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateUpdatePublicDocument } from "@/modules/api/graphql/mutations/mutation-update-public-document"
-import type { MutateUpdatePublicDocumentRequest } from "@/modules/api/graphql/mutations/mutation-update-public-document"
+import {
+    mutateUpdatePublicDocument,
+    type MutateUpdatePublicDocumentRequest,
+} from "@/modules/api/graphql/mutations/mutation-update-public-document"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { UpdatePublicDocumentMutation } from "@/modules/api"
 
 /** What the UpdatePublicDocument mutation is triggered with. */
 interface UpdatePublicDocumentArg {
@@ -16,7 +18,7 @@ export const MUTATE_UPDATE_PUBLIC_DOCUMENT_SWR_KEY = "MUTATE_UPDATE_PUBLIC_DOCUM
 
 /** SWR mutation for {@link mutateUpdatePublicDocument}: Changes the title or the text of a public document. `trigger(input)` rejects with the back end failure. */
 export const useMutateUpdatePublicDocumentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateUpdatePublicDocument>["updatePublicDocument"],
+    UpdatePublicDocumentMutation["updatePublicDocument"],
     Error,
     typeof MUTATE_UPDATE_PUBLIC_DOCUMENT_SWR_KEY,
     UpdatePublicDocumentArg["arg"]

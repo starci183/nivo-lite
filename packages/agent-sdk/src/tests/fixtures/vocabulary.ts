@@ -1,7 +1,7 @@
 import { NodeVocabulary } from "../../node/vocabulary"
 
 /** A vocabulary with one extra provider and one extra kind of node registered, for a spec of anything that reads the registry. */
-export const extendedVocabulary = (): NodeVocabulary => {
+export const sampleVocabulary = (): NodeVocabulary => {
     const vocabulary = new NodeVocabulary()
     vocabulary.add({
         providers: ["fake-provider"],

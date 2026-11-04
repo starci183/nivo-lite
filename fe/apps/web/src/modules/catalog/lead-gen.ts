@@ -1,4 +1,5 @@
-import { LEAD_GEN_ACTIONS, LEAD_GEN_COMMANDS } from "./lead-gen-flow"
+import { LEAD_GEN_COMMANDS } from "./lead-gen-commands"
+import { LEAD_GEN_ACTIONS } from "./lead-gen-flow"
 import { LEAD_GEN_GATES } from "./lead-gen-gates"
 import type { ModuleDef } from "./catalog.types"
 

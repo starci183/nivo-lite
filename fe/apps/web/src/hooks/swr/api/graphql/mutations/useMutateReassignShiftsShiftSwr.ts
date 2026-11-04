@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateReassignShiftsShift } from "@/modules/api/graphql/mutations/mutation-reassign-shifts-shift"
-import type { MutateReassignShiftsShiftRequest } from "@/modules/api/graphql/mutations/mutation-reassign-shifts-shift"
+import {
+    mutateReassignShiftsShift,
+    type MutateReassignShiftsShiftRequest,
+} from "@/modules/api/graphql/mutations/mutation-reassign-shifts-shift"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ReassignShiftsShiftMutation } from "@/modules/api"
 
 /** What the reassignShiftsShift mutation is triggered with. */
 interface ReassignShiftsShiftArg {
@@ -16,7 +18,7 @@ export const MUTATE_REASSIGN_SHIFTS_SHIFT_SWR_KEY = "MUTATE_REASSIGN_SHIFTS_SHIF
 
 /** SWR mutation for {@link mutateReassignShiftsShift}: `trigger(request)` answers `reassignShiftsShift` and rejects with the back end failure. */
 export const useMutateReassignShiftsShiftSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateReassignShiftsShift>["reassignShiftsShift"],
+    ReassignShiftsShiftMutation["reassignShiftsShift"],
     Error,
     typeof MUTATE_REASSIGN_SHIFTS_SHIFT_SWR_KEY,
     ReassignShiftsShiftArg["arg"]

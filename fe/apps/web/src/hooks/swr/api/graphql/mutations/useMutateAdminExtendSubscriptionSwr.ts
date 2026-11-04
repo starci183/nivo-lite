@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateAdminExtendSubscription } from "@/modules/api/graphql/mutations/mutation-admin-extend-subscription"
-import type { MutateAdminExtendSubscriptionRequest } from "@/modules/api/graphql/mutations/mutation-admin-extend-subscription"
+import {
+    mutateAdminExtendSubscription,
+    type MutateAdminExtendSubscriptionRequest,
+} from "@/modules/api/graphql/mutations/mutation-admin-extend-subscription"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { AdminExtendSubscriptionMutation } from "@/modules/api"
 
 /** What the admin extend subscription mutation is triggered with. */
 interface AdminExtendSubscriptionArg {
@@ -16,7 +18,7 @@ export const MUTATE_ADMIN_EXTEND_SUBSCRIPTION_SWR_KEY = "MUTATE_ADMIN_EXTEND_SUB
 
 /** SWR mutation for {@link mutateAdminExtendSubscription}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateAdminExtendSubscriptionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateAdminExtendSubscription>["adminExtendSubscription"],
+    AdminExtendSubscriptionMutation["adminExtendSubscription"],
     Error,
     typeof MUTATE_ADMIN_EXTEND_SUBSCRIPTION_SWR_KEY,
     AdminExtendSubscriptionArg["arg"]

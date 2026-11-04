@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryLoadTelegramUserSetup } from "@/modules/api/graphql/queries/query-load-telegram-user-setup"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { LoadTelegramUserSetupQuery } from "@/modules/api"
 
 /** The SWR key of the loadTelegramUserSetup query. */
 export const QUERY_LOAD_TELEGRAM_USER_SETUP_SWR_KEY = "QUERY_LOAD_TELEGRAM_USER_SETUP_SWR"
@@ -13,7 +13,7 @@ export const QUERY_LOAD_TELEGRAM_USER_SETUP_SWR_KEY = "QUERY_LOAD_TELEGRAM_USER_
 export const useQueryLoadTelegramUserSetupSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryLoadTelegramUserSetup>["loadTelegramUserSetup"]> =>
+): ReadResponse<LoadTelegramUserSetupQuery["loadTelegramUserSetup"]> =>
     useSWR(
         argumentKey(QUERY_LOAD_TELEGRAM_USER_SETUP_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

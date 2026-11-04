@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateSaveBookingPublicPage } from "@/modules/api/graphql/mutations/mutation-save-booking-public-page"
 import type { MutateSaveBookingPublicPageRequest } from "@/modules/api/graphql/mutations/types/save-booking-public-page"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveBookingPublicPageMutation } from "@/modules/api"
 
 /** The SWR key of the `saveBookingPublicPage` mutation. */
 export const MUTATE_SAVE_BOOKING_PUBLIC_PAGE_SWR_KEY = "MUTATE_SAVE_BOOKING_PUBLIC_PAGE_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Publishes or edits the public booking page of the workspace. */
 export const useMutateSaveBookingPublicPageSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveBookingPublicPage>["saveBookingPublicPage"],
+    SaveBookingPublicPageMutation["saveBookingPublicPage"],
     Error,
     typeof MUTATE_SAVE_BOOKING_PUBLIC_PAGE_SWR_KEY,
     TriggerArg["arg"]

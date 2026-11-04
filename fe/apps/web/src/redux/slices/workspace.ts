@@ -19,8 +19,8 @@ const workspaceSlice = createSlice({
     },
 })
 
-/** Selects (or clears) the active workspace. */
 const dest = workspaceSlice.actions
+/** Selects (or clears) the active workspace. */
 export const setActiveWorkspaceId: ActionCreatorWithOptionalPayload<
     string | undefined,
     "workspace/setActiveWorkspaceId"

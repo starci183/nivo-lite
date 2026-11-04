@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateAdjustInventoryStock } from "@/modules/api/graphql/mutations/mutation-adjust-inventory-stock"
-import type { MutateAdjustInventoryStockRequest } from "@/modules/api/graphql/mutations/mutation-adjust-inventory-stock"
+import {
+    mutateAdjustInventoryStock,
+    type MutateAdjustInventoryStockRequest,
+} from "@/modules/api/graphql/mutations/mutation-adjust-inventory-stock"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { AdjustInventoryStockMutation } from "@/modules/api"
 
 /** What the adjustInventoryStock mutation is triggered with. */
 interface AdjustInventoryStockArg {
@@ -16,7 +18,7 @@ export const MUTATE_ADJUST_INVENTORY_STOCK_SWR_KEY = "MUTATE_ADJUST_INVENTORY_ST
 
 /** SWR mutation for {@link mutateAdjustInventoryStock}: `trigger(request)` answers `adjustInventoryStock` and rejects with the back end failure. */
 export const useMutateAdjustInventoryStockSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateAdjustInventoryStock>["adjustInventoryStock"],
+    AdjustInventoryStockMutation["adjustInventoryStock"],
     Error,
     typeof MUTATE_ADJUST_INVENTORY_STOCK_SWR_KEY,
     AdjustInventoryStockArg["arg"]

@@ -6300,7 +6300,7 @@ input ParameterBindingInput {
   branchKey: String! @inputBounds(maxLength: 60)
   nodeKey: String! @inputBounds(maxLength: 60)
   parameter: String! @inputBounds(maxLength: 40)
-  target: String! @inputBounds(maxLength: 40)
+  target: String! @inputBounds(maxLength: 20)
   termIndex: Int @inputBounds(min: 0, max: 30)
 }
 
@@ -7442,7 +7442,7 @@ input RevealSepayKeyInput {
 }
 
 input ReviewTemplateListingInput {
-  decision: String! @inputBounds(maxLength: 40)
+  decision: String! @inputBounds(maxLength: 10)
   listingId: ID! @inputBounds(maxLength: 36)
   note: String! @inputBounds(maxLength: 2000)
   revenueSharePct: Int @inputBounds(min: 0, max: 100)
@@ -9078,8 +9078,8 @@ type TemplateOrderType {
 input TemplateParameterInput {
   defaultValue: String! @inputBounds(maxLength: 2000)
   hint: TemplateTextInput
-  key: String! @inputBounds(maxLength: 60)
-  kind: String! @inputBounds(maxLength: 40)
+  key: String! @inputBounds(maxLength: 40)
+  kind: String! @inputBounds(maxLength: 20)
   label: TemplateTextInput!
   max: Float
   min: Float

@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSaveContentPillars } from "@/modules/api/graphql/mutations/mutation-save-content-pillars"
-import type { mutateSaveContentPillars as MutateSaveContentPillarsOperation } from "@/modules/api/graphql/mutations/mutation-save-content-pillars"
+import {
+    mutateSaveContentPillars,
+    type mutateSaveContentPillars as MutateSaveContentPillarsOperation,
+} from "@/modules/api/graphql/mutations/mutation-save-content-pillars"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveContentPillarsMutation } from "@/modules/api"
 
 /** The SWR key of the saveContentPillars mutation. */
 export const MUTATE_SAVE_CONTENT_PILLARS_SWR_KEY = "MUTATE_SAVE_CONTENT_PILLARS_SWR"
 
 /** SWR mutation for {@link mutateSaveContentPillars}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSaveContentPillarsSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveContentPillars>["saveContentPillars"],
+    SaveContentPillarsMutation["saveContentPillars"],
     Error,
     typeof MUTATE_SAVE_CONTENT_PILLARS_SWR_KEY,
     TriggerArg["arg"]

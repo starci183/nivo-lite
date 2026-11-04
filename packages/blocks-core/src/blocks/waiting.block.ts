@@ -2,10 +2,14 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import type { TextSchema, RegionSlots } from "./schema-types"
+import type { TextSchema, RequiredRead } from "./schema-types"
 
 const props: z.ZodObject<{ label: TextSchema }> = z.object({ label: specText })
-const slots: RegionSlots = { region: { kind: "read", shape: "record", required: true } }
+/** The slots of the waiting block. */
+type Slots = {
+    readonly region: RequiredRead<"record">
+}
+const slots: Slots = { region: { kind: "read", shape: "record", required: true } }
 
 /** The items that wait for a person, each linking to its subject; the card is not drawn while nothing waits. */
 export const waitingBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({

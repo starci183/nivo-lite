@@ -1,12 +1,16 @@
 "use client"
 
-import { readField, terminalJobOptions } from "@/hooks/workspaceread"
-import type { JobStatusCallbacks, WorkspaceReadKey } from "@/hooks/workspaceread"
+import {
+    readField,
+    terminalJobOptions,
+    type JobStatusCallbacks,
+    type ReadResponse,
+    type WorkspaceReadKey,
+} from "@/hooks/workspaceread"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import { queryVideoRenderStatus } from "@/modules/api/graphql/queries/query-video-render-status"
-import type { VideoRenderStatusType } from "@/modules/api"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { VideoRenderStatusType, VideoRenderStatusQuery } from "@/modules/api"
 
 /** The SWR key of the videoRenderStatus query. */
 export const QUERY_VIDEO_RENDER_STATUS_SWR_KEY = "QUERY_VIDEO_RENDER_STATUS_SWR"
@@ -18,7 +22,7 @@ type VideoRenderStatusCallbacks = JobStatusCallbacks<VideoRenderStatusType>
 export const useQueryVideoRenderStatusSwr = (
     id: string | undefined,
     callbacks: VideoRenderStatusCallbacks,
-): ReadResponse<OperationData<typeof queryVideoRenderStatus>["videoRenderStatus"]> =>
+): ReadResponse<VideoRenderStatusQuery["videoRenderStatus"]> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_RENDER_STATUS_SWR_KEY, id ? ([id] as const) : null),
         ([name, , id]: WorkspaceReadKey<string>) =>

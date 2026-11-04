@@ -1,0 +1,108 @@
+import Image from "next/image"
+import type { ReactElement, SVGProps } from "react"
+import { GOOGLE_MARK } from "./classNames"
+
+/** What an icon MEANS on these screens. The glyph that draws it is this file business. */
+export type IconName =
+    | "moduleAccounting"
+    | "moduleBooking"
+    | "moduleChatbot"
+    | "moduleContent"
+    | "moduleHiring"
+    | "moduleInventory"
+    | "moduleLeadGen"
+    | "moduleLoyalty"
+    | "moduleSales"
+    | "moduleShifts"
+    | "moduleVideo"
+    | "brand"
+    | "streak"
+    | "credit"
+    | "reward"
+    | "course"
+    | "email"
+    | "password"
+    | "revealPassword"
+    | "hidePassword"
+    | "code"
+    | "complete"
+    | "pending"
+    | "signIn"
+    | "signOut"
+    | "signUp"
+    | "close"
+    | "trash"
+    | "next"
+    | "brain"
+    | "back"
+    | "more"
+    | "trigger"
+    | "disclosure"
+    | "edit"
+    | "add"
+    | "retry"
+    | "send"
+    | "attach"
+    | "home"
+    | "explore"
+    | "community"
+    | "league"
+    | "review"
+    | "light"
+    | "dark"
+    | "locale"
+    | "search"
+    | "cart"
+    | "notification"
+    | "account"
+    | "profile"
+    | "saved"
+    | "blog"
+    | "talents"
+    | "jobs"
+    | "practice"
+    | "overview"
+    | "apps"
+    | "agentos"
+    | "servers"
+    | "domains"
+    | "wallet"
+    | "support"
+    | "sidebar"
+    | "copy"
+    | "copied"
+    | "reply"
+    | "mention"
+    | "openLead"
+    | "chat"
+    | "menu"
+    | "expand"
+    | "collapseRail"
+    | "google"
+    | "muted"
+    | "unmuted"
+    | "messageSending"
+    | "messageSent"
+    | "messageDelivered"
+    | "messageSeen"
+    | "failure"
+    | "warning"
+    | "info"
+
+/** What Google's mark takes: the SVG props a glyph source receives. */
+type GoogleMarkProps = SVGProps<SVGSVGElement>
+
+/**
+ * Google's mark: a static asset, because the provider's own colours may not be redrawn as source colours. It still keeps
+ * Grammar's A11Y-2 contract: named by the caller's label when the mark carries meaning, hidden when it is decorative.
+ */
+export const GoogleMark = (props: GoogleMarkProps): ReactElement => (
+    <Image
+        src="/brand/google-mark.svg"
+        alt={props["aria-label"] ?? ""}
+        width={24}
+        height={24}
+        className={GOOGLE_MARK}
+        aria-hidden={props["aria-hidden"]}
+    />
+)

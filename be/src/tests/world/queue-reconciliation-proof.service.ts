@@ -89,7 +89,7 @@ export const reconciliationProof = (world: LiteWorld) => ({
         return seedDueJobs(world.db.primary, key, queue, count)
     },
     claim: async (size: number): Promise<Array<ClaimedReconcileJob>> => {
-        const rows = await callDbFunction<ClaimedReconcileJob>(world.db.primary, "public.job_reconcile", [
+        const rows = await callDbFunction<ClaimedReconcileJob>(world.db.primary, "public.job_reconcile_with_delay", [
             5,
             5,
             size,

@@ -17,8 +17,10 @@ export class PackageAgentTemplateHandler extends ICQRSHandler<PackageAgentTempla
     }
 
     protected override process(command: PackageAgentTemplateCommand): Promise<TemplateVersionView> {
-        const p = command.params.principal.id
-        const r = command.params.request
-        return this.svc.packageVersion(p, r)
+        return this.svc.packageDraft(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.input,
+        )
     }
 }

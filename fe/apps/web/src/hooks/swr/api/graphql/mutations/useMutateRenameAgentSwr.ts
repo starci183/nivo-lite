@@ -1,10 +1,9 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRenameAgent } from "@/modules/api/graphql/mutations/mutation-rename-agent"
-import type { MutateRenameAgentRequest } from "@/modules/api/graphql/mutations/mutation-rename-agent"
+import { mutateRenameAgent, type MutateRenameAgentRequest } from "@/modules/api/graphql/mutations/mutation-rename-agent"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RenameAgentMutation } from "@/modules/api"
 
 /** What the RenameAgent mutation is triggered with. */
 interface RenameAgentArg {
@@ -16,7 +15,7 @@ export const MUTATE_RENAME_AGENT_SWR_KEY = "MUTATE_RENAME_AGENT_SWR"
 
 /** SWR mutation for {@link mutateRenameAgent}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateRenameAgentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRenameAgent>["renameAgent"],
+    RenameAgentMutation["renameAgent"],
     Error,
     typeof MUTATE_RENAME_AGENT_SWR_KEY,
     RenameAgentArg["arg"]

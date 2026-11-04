@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveShiftsCoverage } from "@/modules/api/graphql/mutations/mutation-save-shifts-coverage"
-import type { MutateSaveShiftsCoverageRequest } from "@/modules/api/graphql/mutations/mutation-save-shifts-coverage"
+import {
+    mutateSaveShiftsCoverage,
+    type MutateSaveShiftsCoverageRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-shifts-coverage"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveShiftsCoverageMutation } from "@/modules/api"
 
 /** What the saveShiftsCoverage mutation is triggered with. */
 interface SaveShiftsCoverageArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_SHIFTS_COVERAGE_SWR_KEY = "MUTATE_SAVE_SHIFTS_COVERAGE_
 
 /** SWR mutation for {@link mutateSaveShiftsCoverage}: `trigger(request)` answers `saveShiftsCoverage` and rejects with the back end failure. */
 export const useMutateSaveShiftsCoverageSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveShiftsCoverage>["saveShiftsCoverage"],
+    SaveShiftsCoverageMutation["saveShiftsCoverage"],
     Error,
     typeof MUTATE_SAVE_SHIFTS_COVERAGE_SWR_KEY,
     SaveShiftsCoverageArg["arg"]

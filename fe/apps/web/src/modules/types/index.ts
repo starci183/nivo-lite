@@ -314,7 +314,6 @@ export type {
     ProgramSwitchField,
     ProgramTextField,
     ProgramValues,
-    TierErrorView,
     TierTextField,
     TierValues,
 } from "@nivo-lite/module-loyalty/workbench"
@@ -440,9 +439,6 @@ export type { InventoryNewPoEditorData } from "./inventory-editors"
 export type { InventoryPoEditorData } from "./inventory-editors"
 export type { InventorySupplierEditorData } from "./inventory-editors"
 export type { InventoryRecipeEditorData } from "./inventory-editors"
-export type { LoyaltyViews } from "@nivo-lite/module-loyalty/workbench"
-export type { LoyaltyActions } from "@nivo-lite/module-loyalty/workbench"
-export type { LoyaltyWorkbenchData, LoyaltyWorkbenchOn } from "@nivo-lite/module-loyalty/workbench"
 export type { WorkbenchFigureData } from "./workbench-dashboard"
 export type { WorkbenchWaitingRegionView, WorkbenchDoneRegionView } from "./workbench-dashboard"
 export type { WorkbenchConnectionsRegionView, WorkbenchKnowledgeRegionView } from "./workbench-dashboard"
@@ -493,7 +489,6 @@ export type { VideoProductionViews, VideoProductionActions } from "./video-produ
 export type { VideoWorkbenchViews, VideoWorkbenchActions } from "./video-workbench"
 export { VIDEO_TABS, VIDEO_EDITOR_STEPS } from "./video-workbench"
 export { textFieldsOf, type TextFieldItem } from "./form-fields"
-export type { AccountingQuestionsActions } from "./accounting-question-card"
 export type { BookingServiceView } from "./booking"
 export type { BookingResourceView } from "./booking"
 export type { ContentAddPostFields } from "./content-model-workbench-forms"

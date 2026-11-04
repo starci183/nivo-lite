@@ -1,28 +1,14 @@
 "use client"
 import { useTranslations } from "next-intl"
 import { focusedCandidateId, stageTone, useHiringFormat } from "@/hooks/hiring"
-import {
-    candidateDetailsOf,
-    candidateCvOf,
-    candidateHistoryOf,
-    useHiringCandidate,
-    type InterviewValues,
-    type OfferValues,
-} from "@/hooks/hiringCandidate"
+import { candidateDetailsOf, candidateCvOf, candidateHistoryOf, useHiringCandidate } from "@/hooks/hiringCandidate"
 import { NO_CANDIDATE } from "@/hooks/hiringMap"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
-import { useHiringCandidateDialogsView } from "./useHiringCandidateDialogsView"
+import { useHiringCandidateDialogsView, type HiringCandidateDialogsView } from "./useHiringCandidateDialogsView"
 import type { BadgeTone } from "@starci/grammar/common"
-import type {
-    HiringWorkbenchCopy,
-    HiringCandidateDialog,
-    HiringRequestOutcome,
-    DataSlot,
-    SlotLabels,
-    FieldOf,
-} from "@/modules/types"
+import type { HiringWorkbenchCopy, HiringCandidateDialog, DataSlot, SlotLabels } from "@/modules/types"
 import type { Dispatch, SetStateAction } from "react"
 
 /** The view `useHiringCandidateView` returns. */
@@ -79,50 +65,7 @@ export interface HiringCandidateViewShape {
             canReject: boolean
         }
         dialog: HiringCandidateDialog | null
-        dialogs: {
-            interview: {
-                copy: HiringWorkbenchCopy
-                title: string
-                members: {
-                    id: string
-                    label: string
-                }[]
-                modes: {
-                    id: string
-                    label: string
-                }[]
-                values: InterviewValues
-                outcome: HiringRequestOutcome | null
-                canSend: boolean
-                isBusy: boolean
-                error: string | null
-            }
-            offer: {
-                copy: HiringWorkbenchCopy
-                title: string
-                values: OfferValues
-                outcome: HiringRequestOutcome | null
-                canSend: boolean
-                isBusy: boolean
-                error: string | null
-            }
-            reject: {
-                copy: {
-                    title: string
-                    closeLabel: string
-                    hint: string
-                    failed: string
-                    reasonLabel: string
-                    kept: string
-                    cancelLabel: string
-                    confirmLabel: string
-                }
-                reason: string
-                canConfirm: boolean
-                isBusy: boolean
-                error: string | null
-            }
-        }
+        dialogs: HiringCandidateDialogsView["props"]
         cv: {
             slot: DataSlot<{
                 hasCv: boolean
@@ -159,43 +102,9 @@ export interface HiringCandidateViewShape {
             close: () => void
             closeDialog: () => void
         }
-        dialogs: {
-            close: () => void
-            interview: {
-                text: (name: FieldOf<InterviewValues, string>, value: string) => void
-                number: (name: FieldOf<InterviewValues, number>, value: number) => void
-                send: () => void
-                close: () => void
-            }
-            offer: {
-                text: (name: FieldOf<OfferValues, string>, value: string) => void
-                send: () => void
-                close: () => void
-            }
-            reject: {
-                reason: Dispatch<SetStateAction<string>>
-                confirm: () => void
-                close: () => void
-            }
-        }
+        dialogs: HiringCandidateDialogsView["on"]
         toggleCv: () => void
-        retryDetail: () => Promise<
-            | {
-                  cv: {
-                      mime: string
-                      name: string
-                      url: string
-                  } | null
-                  events: Array<{
-                      actor: string
-                      createdAt: string
-                      id: string
-                      kind: string
-                      summary: string
-                  }>
-              }
-            | undefined
-        >
+        retryDetail: ReturnType<typeof useHiringCandidate>["retryDetail"]
     }
 }
 

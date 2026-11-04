@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateCompleteBooking } from "@/modules/api/graphql/mutations/mutation-complete-booking"
 import type { MutateCompleteBookingRequest } from "@/modules/api/graphql/mutations/types/complete-booking"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CompleteBookingMutation } from "@/modules/api"
 
 /** The SWR key of the `completeBooking` mutation. */
 export const MUTATE_COMPLETE_BOOKING_SWR_KEY = "MUTATE_COMPLETE_BOOKING_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Marks a booking done. */
 export const useMutateCompleteBookingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCompleteBooking>["completeBooking"],
+    CompleteBookingMutation["completeBooking"],
     Error,
     typeof MUTATE_COMPLETE_BOOKING_SWR_KEY,
     TriggerArg["arg"]

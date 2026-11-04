@@ -1,13 +1,11 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryContentAiStatus } from "@/modules/api/graphql/queries/query-content-ai-status"
-import type { ContentAiStatusType } from "@/modules/api"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ContentAiStatusType, ContentAiStatusQuery } from "@/modules/api"
 
 /** The SWR key of the contentAiStatus query. */
 export const QUERY_CONTENT_AI_STATUS_SWR_KEY = "QUERY_CONTENT_AI_STATUS_SWR"
@@ -19,7 +17,7 @@ type ContentAiStatusCallbacks = Pick<SWRConfiguration<ContentAiStatusType, Error
 export const useQueryContentAiStatusSwr = (
     id: string | undefined,
     callbacks: ContentAiStatusCallbacks,
-): ReadResponse<OperationData<typeof queryContentAiStatus>["contentAiStatus"]> =>
+): ReadResponse<ContentAiStatusQuery["contentAiStatus"]> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_CONTENT_AI_STATUS_SWR_KEY, id === undefined ? null : ([id] as const)),
         async ([, , ...input]: WorkspaceReadKey<string>) =>

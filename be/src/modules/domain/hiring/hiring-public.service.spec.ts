@@ -258,7 +258,11 @@ describe("HiringPublicService", () => {
                 contentType: "application/pdf",
             })
         })
+    })
+})
 
+describe("HiringPublicService", () => {
+    describe("createCvUpload refusals", () => {
         it.each(["resume", "resume.exe", "resume."])("rejects the unsupported file %s", async (fileName) => {
             const { service, data, storage } = await build()
 

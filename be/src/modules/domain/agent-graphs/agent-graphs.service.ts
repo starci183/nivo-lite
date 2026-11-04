@@ -92,6 +92,9 @@ export interface PublishInput {
 /** A graph, or null when the agent has none or it cannot be read. */
 export type OptionalGraphState = GraphState | null
 
+/** The approver of a branch, or null when the version names none. */
+export type OptionalBranchApprover = BranchApprover | null
+
 /** The hash of a graph; the same graph always has the same hash. */
 const hashOf = (document: GraphDocument): string => createHash("sha256").update(JSON.stringify(document)).digest("hex")
 
@@ -103,6 +106,9 @@ const viewOf = (row: AgentGraphVersionEntity): GraphVersionView => ({
     publishedAt: row.publishedAt.toISOString(),
     publishedBy: row.publishedBy,
 })
+
+/** The id of a published graph version, or null when there is none. */
+type OptionalVersionId = string | null
 
 @Injectable()
 /**
@@ -126,7 +132,7 @@ export class AgentGraphsService {
     }
 
     /** The id of the version that decides for the agent, or null when it has none; a light lookup that reads no document. */
-    async activeVersionIdOf(workspaceId: string, agentId: string): Promise<string | null> {
+    async activeVersionIdOf(workspaceId: string, agentId: string): Promise<OptionalVersionId> {
         const row = await this.entityManager.findOne(AgentGraphEntity, {
             select: { activeVersionId: true },
             where: { workspaceId, agentId },
@@ -247,7 +253,7 @@ export class AgentGraphsService {
     }
 
     /** The approver the branch of a decision named in the version that decided, or null when that version no longer names one. */
-    async approverOf(decision: DecisionView): Promise<BranchApprover | null> {
+    async approverOf(decision: DecisionView): Promise<OptionalBranchApprover> {
         const document = await this.documentOf(decision.workspaceId, decision.agentId, decision.versionId)
         return branchApproverOf(document, decision.action, decision.branchKey, decision.path)
     }

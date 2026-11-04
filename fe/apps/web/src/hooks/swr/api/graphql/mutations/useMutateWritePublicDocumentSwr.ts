@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateWritePublicDocument } from "@/modules/api/graphql/mutations/mutation-write-public-document"
-import type { MutateWritePublicDocumentRequest } from "@/modules/api/graphql/mutations/mutation-write-public-document"
+import {
+    mutateWritePublicDocument,
+    type MutateWritePublicDocumentRequest,
+} from "@/modules/api/graphql/mutations/mutation-write-public-document"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { WritePublicDocumentMutation } from "@/modules/api"
 
 /** What the WritePublicDocument mutation is triggered with. */
 interface WritePublicDocumentArg {
@@ -16,7 +18,7 @@ export const MUTATE_WRITE_PUBLIC_DOCUMENT_SWR_KEY = "MUTATE_WRITE_PUBLIC_DOCUMEN
 
 /** SWR mutation for {@link mutateWritePublicDocument}: The owner writes a public document by hand. `trigger(input)` rejects with the back end failure. */
 export const useMutateWritePublicDocumentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateWritePublicDocument>["writePublicDocument"],
+    WritePublicDocumentMutation["writePublicDocument"],
     Error,
     typeof MUTATE_WRITE_PUBLIC_DOCUMENT_SWR_KEY,
     WritePublicDocumentArg["arg"]

@@ -12,7 +12,7 @@ import type {
     AdvanceWrite,
     ClaimedJob,
     ClaimParams,
-    ClaimResult,
+    JobClaimResult,
     ClaimRetryDelay,
     FailWrite,
     RenewWrite,
@@ -75,7 +75,7 @@ export class JobClaimService implements JobClaims {
      * Claims the delivery; null when the job is done or another worker holds a claim that has not expired. A re-claim takes a job whose
      * delivery failed or whose lease lapsed; the store bumps the token in the same statement, so two workers can never hold the same one.
      */
-    async claim(params: ClaimParams): Promise<ClaimResult> {
+    async claim(params: ClaimParams): Promise<JobClaimResult> {
         const now = this.clock.now()
         const leaseExpiresAt = new Date(now.getTime() + params.leaseMs)
         const inserted = await this.writer()

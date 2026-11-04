@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateRevokeSession } from "@/modules/api/graphql/mutations/mutation-revoke-session"
-import type { mutateRevokeSession as MutateRevokeSessionOperation } from "@/modules/api/graphql/mutations/mutation-revoke-session"
+import {
+    mutateRevokeSession,
+    type mutateRevokeSession as MutateRevokeSessionOperation,
+} from "@/modules/api/graphql/mutations/mutation-revoke-session"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RevokeSessionMutation } from "@/modules/api"
 
 /** The SWR key of the revokeSession mutation. */
 export const MUTATE_REVOKE_SESSION_SWR_KEY = "MUTATE_REVOKE_SESSION_SWR"
 
 /** SWR mutation for {@link mutateRevokeSession}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateRevokeSessionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRevokeSession>["revokeSession"],
+    RevokeSessionMutation["revokeSession"],
     Error,
     typeof MUTATE_REVOKE_SESSION_SWR_KEY,
     TriggerArg["arg"]

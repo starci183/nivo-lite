@@ -1,4 +1,9 @@
-import type { SubmitListingRequest } from "@modules/domain/template-marketplace"
-
 /** What the SubmitTemplateListing operation takes. */
-export type SubmitTemplateListingRequest = SubmitListingRequest
+export interface SubmitTemplateListingRequest {
+    /** The template key. */
+    readonly key: string
+    /** The version to offer. */
+    readonly version: number
+    /** The price in VND; zero is free. */
+    readonly priceVnd: number
+}

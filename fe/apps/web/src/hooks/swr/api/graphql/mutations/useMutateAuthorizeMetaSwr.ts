@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateAuthorizeMeta } from "@/modules/api/graphql/mutations/mutation-authorize-meta"
-import type { mutateAuthorizeMeta as MutateAuthorizeMetaOperation } from "@/modules/api/graphql/mutations/mutation-authorize-meta"
+import {
+    mutateAuthorizeMeta,
+    type mutateAuthorizeMeta as MutateAuthorizeMetaOperation,
+} from "@/modules/api/graphql/mutations/mutation-authorize-meta"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { AuthorizeMetaMutation } from "@/modules/api"
 
 /** The SWR key of the authorizeMeta mutation. */
 export const MUTATE_AUTHORIZE_META_SWR_KEY = "MUTATE_AUTHORIZE_META_SWR"
 
 /** SWR mutation for {@link mutateAuthorizeMeta}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateAuthorizeMetaSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateAuthorizeMeta>["authorizeMeta"],
+    AuthorizeMetaMutation["authorizeMeta"],
     Error,
     typeof MUTATE_AUTHORIZE_META_SWR_KEY,
     TriggerArg["arg"]

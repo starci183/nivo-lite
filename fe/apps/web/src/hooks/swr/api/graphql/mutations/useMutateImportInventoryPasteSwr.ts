@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateImportInventoryPaste } from "@/modules/api/graphql/mutations/mutation-import-inventory-paste"
-import type { MutateImportInventoryPasteRequest } from "@/modules/api/graphql/mutations/mutation-import-inventory-paste"
+import {
+    mutateImportInventoryPaste,
+    type MutateImportInventoryPasteRequest,
+} from "@/modules/api/graphql/mutations/mutation-import-inventory-paste"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ImportInventoryPasteMutation } from "@/modules/api"
 
 /** What the importInventoryPaste mutation is triggered with. */
 interface ImportInventoryPasteArg {
@@ -16,7 +18,7 @@ export const MUTATE_IMPORT_INVENTORY_PASTE_SWR_KEY = "MUTATE_IMPORT_INVENTORY_PA
 
 /** SWR mutation for {@link mutateImportInventoryPaste}: `trigger(request)` answers `importInventoryPaste` and rejects with the back end failure. */
 export const useMutateImportInventoryPasteSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateImportInventoryPaste>["importInventoryPaste"],
+    ImportInventoryPasteMutation["importInventoryPaste"],
     Error,
     typeof MUTATE_IMPORT_INVENTORY_PASTE_SWR_KEY,
     ImportInventoryPasteArg["arg"]

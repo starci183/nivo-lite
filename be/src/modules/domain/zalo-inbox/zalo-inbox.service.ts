@@ -43,12 +43,13 @@ export class ZaloInboxService {
     private shapeLogged = false
 
     /** A redelivered message is acknowledged without being processed again; every event type has its own id, so a follow event is claimed once and never overwrites another. */
-    acceptZaloDelivery(rawBody: ZaloRawDelivery, connection: string): Promise<void> {
+    async acceptZaloDelivery(rawBody: ZaloRawDelivery, connection: string): Promise<void> {
+        // A connection that holds no OA secret key yet proved nothing: the call is acknowledged and closed, never read as an event.
+        const isProven = await this.gate.holdsProofKey(connection)
         return this.entityManager.transaction(async (manager) => {
             const receipt = await this.claim(manager, connection, rawBody, undefined)
             if (receipt === undefined) return
-            // A connection that holds no OA secret key yet proved nothing: the call is acknowledged and closed, never read as an event.
-            if (!(await this.gate.holdsProofKey(connection))) {
+            if (!isProven) {
                 await manager.update(
                     ZaloInboxEntity,
                     { id: receipt.id },
@@ -91,7 +92,13 @@ export class ZaloInboxService {
      * marked `failed` before the error goes back to the queue.
      */
     async processRecordedDelivery(message: ZaloDeliveryRecorded): Promise<void> {
-        const files = await this.filesOf(message).catch((): ReadonlyArray<DownloadedChatFile> => [])
+        const files = await this.filesOf(message).catch((cause: unknown): ReadonlyArray<DownloadedChatFile> => {
+            this.logger.warn(ZaloInboxLogEvent.FilesUnread, {
+                deliveryId: message.deliveryId,
+                error: cause instanceof Error ? cause.name : typeof cause,
+            })
+            return []
+        })
         await this.entityManager
             .transaction((manager) => this.process(manager, message, files))
             .catch(async (cause: unknown) => {

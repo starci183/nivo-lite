@@ -1,13 +1,11 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { querySetupState } from "@/modules/api/graphql/queries/query-setup-state"
-import type { QuerySetupStateRequest } from "@/modules/api/graphql/queries/query-setup-state"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import { querySetupState, type QuerySetupStateRequest } from "@/modules/api/graphql/queries/query-setup-state"
+import type { SetupStateQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQuerySetupStateSwr}. */
 export const QUERY_SETUP_STATE_SWR_KEY = "QUERY_SETUP_STATE_SWR"
@@ -16,7 +14,7 @@ export const QUERY_SETUP_STATE_SWR_KEY = "QUERY_SETUP_STATE_SWR"
 export const useQuerySetupStateSwr = (
     request: QuerySetupStateRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof querySetupState>["setupState"]> =>
+): ReadResponse<SetupStateQuery["setupState"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_SETUP_STATE_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QuerySetupStateRequest>) =>

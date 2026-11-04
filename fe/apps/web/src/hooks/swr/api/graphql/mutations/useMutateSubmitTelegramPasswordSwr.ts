@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSubmitTelegramPassword } from "@/modules/api/graphql/mutations/mutation-submit-telegram-password"
-import type { MutateSubmitTelegramPasswordRequest } from "@/modules/api/graphql/mutations/mutation-submit-telegram-password"
+import {
+    mutateSubmitTelegramPassword,
+    type MutateSubmitTelegramPasswordRequest,
+} from "@/modules/api/graphql/mutations/mutation-submit-telegram-password"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SubmitTelegramPasswordMutation } from "@/modules/api"
 
 /** What the submitTelegramPassword mutation is triggered with. */
 interface SubmitTelegramPasswordArg {
@@ -16,7 +18,7 @@ export const MUTATE_SUBMIT_TELEGRAM_PASSWORD_SWR_KEY = "MUTATE_SUBMIT_TELEGRAM_P
 
 /** SWR mutation for {@link mutateSubmitTelegramPassword}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSubmitTelegramPasswordSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSubmitTelegramPassword>["submitTelegramPassword"],
+    SubmitTelegramPasswordMutation["submitTelegramPassword"],
     Error,
     typeof MUTATE_SUBMIT_TELEGRAM_PASSWORD_SWR_KEY,
     SubmitTelegramPasswordArg["arg"]

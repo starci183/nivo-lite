@@ -2,13 +2,13 @@ import type { BadgeTone } from "@starci/grammar/common" with { "resolution-mode"
 
 /** A recorded dashboard item linking to its existing subject. */
 export interface DashboardRow {
-    /** The id the row is told apart by. */
+    /** The key the list draws the row under; unique within its region. */
     readonly id: string
-    /** The headline of the row. */
+    /** The headline of the item. */
     readonly title: string
-    /** The line of words under the headline. */
+    /** The line of detail under the headline. */
     readonly description: string
-    /** Where the row leads. */
+    /** Where choosing the row goes: the page of its subject. */
     readonly href: string
 }
 
@@ -16,11 +16,11 @@ export interface DashboardRow {
 export interface ItemsRegionView {
     /** The count badge; null when there is none. */
     readonly count: string | null
-    /** The rows to draw, in order. */
+    /** The items the region lists, already cut to the number it shows. */
     readonly rows: ReadonlyArray<DashboardRow>
     /** The link beside the rows, for instance "Open"; empty when the rows are not links. */
     readonly linkLabel: string
-    /** Where the link leads; empty when the rows are not links. */
+    /** Where the link beside the rows goes. */
     readonly linkHref: string
     /** "N more", null when every row is shown. */
     readonly more: string | null
@@ -28,71 +28,71 @@ export interface ItemsRegionView {
 
 /** One connection bound to an agent. */
 export interface ConnectionRow {
-    /** The id the row is told apart by. */
+    /** The key the list draws the connection under. */
     readonly id: string
-    /** The name of the subject. */
+    /** The name of the provider the agent acts through. */
     readonly name: string
-    /** The line of words under the headline. */
+    /** What the connection lets the agent do, in a line. */
     readonly description: string
-    /** The words of the connection state. */
+    /** The words of its state, for instance "Connected". */
     readonly statusLabel: string
-    /** The tone of the state mark. */
+    /** The colour family of the state badge. */
     readonly statusTone: BadgeTone
-    /** The words that say what the agent may do through the connection. */
+    /** The words of what the agent may do through it, for instance "Read only". */
     readonly accessLabel: string
 }
 
 /** What the connections region shows once read. */
 export interface ConnectionsRegionView {
-    /** The words of the link to manage the connections. */
+    /** The words of the link to the page where connections are managed. */
     readonly manageLabel: string
-    /** Where the manage link leads. */
+    /** Where the manage link goes. */
     readonly manageHref: string
-    /** The rows to draw, in order. */
+    /** The connections bound to the agent. */
     readonly rows: ReadonlyArray<ConnectionRow>
 }
 
 /** One open knowledge gap. */
 export interface KnowledgeGapRow {
-    /** The id the row is told apart by. */
+    /** The key the list draws the gap under. */
     readonly id: string
-    /** The headline of the row. */
+    /** The question the agent could not answer. */
     readonly title: string
-    /** The line of words under the headline. */
+    /** What the agent was asked when it met the gap. */
     readonly description: string
-    /** How often or when the question was asked. */
+    /** When or how often the gap was met, in words. */
     readonly asked: string
 }
 
 /** The open knowledge gaps of the agent. */
 export interface KnowledgeGapsView {
-    /** The words the reader sees. */
+    /** The heading of the gaps card. */
     readonly label: string
     /** The count badge; null when there is none. */
     readonly count: string | null
-    /** The words of the link that opens the whole list. */
+    /** The words of the link that opens the gaps page. */
     readonly openLabel: string
-    /** Where the open link leads. */
+    /** Where the open link goes. */
     readonly openHref: string
-    /** The rows to draw, in order. */
+    /** The gaps the card lists. */
     readonly rows: ReadonlyArray<KnowledgeGapRow>
 }
 
 /** What the knowledge region shows once read. */
 export interface KnowledgeRegionView {
-    /** The words of the link that opens the whole list. */
+    /** The words of the link that opens the knowledge page. */
     readonly openLabel: string
-    /** Where the open link leads. */
+    /** Where the open link goes. */
     readonly openHref: string
-    /** The closing line of the region. */
+    /** The line under the two parts, saying how the agent uses them. */
     readonly footer: string
-    /** The headline of the public knowledge card. */
+    /** The heading of the part customers' turns may read. */
     readonly publicTitle: string
-    /** The line under the public knowledge headline. */
+    /** What the public part holds, in a line. */
     readonly publicDescription: string
-    /** The headline of the internal knowledge card. */
+    /** The heading of the part only the business reads. */
     readonly internalTitle: string
-    /** The line under the internal knowledge headline. */
+    /** What the internal part holds, in a line. */
     readonly internalDescription: string
     /** Null shows no gaps card. */
     readonly gaps: KnowledgeGapsView | null
@@ -100,63 +100,63 @@ export interface KnowledgeRegionView {
 
 /** The trace line under a row: the branch that decided it, with a link to the why when one is recorded. */
 export interface TraceView {
-    /** The words of the trace. */
+    /** The branch that decided the row, in words. */
     readonly line: string
-    /** Where the why of the decision is shown; null when none is recorded. */
+    /** Where the why pane of the decision opens; null when none is recorded. */
     readonly whyHref: string | null
 }
 
 /** Atomic words and state of a row command. */
 export interface CommandView {
-    /** The id the row is told apart by. */
+    /** The command the host runs when the person chooses it. */
     readonly id: string
-    /** The words the reader sees. */
+    /** The words on the control. */
     readonly label: string
-    /** True while the command runs. */
+    /** Whether the command is running now, which the control shows. */
     readonly isPending?: boolean | undefined
-    /** True when the command cannot be run now. */
+    /** Whether the person may not choose it now. */
     readonly isDisabled?: boolean | undefined
-    /** Why the command cannot be run now. */
+    /** Why it is disabled, shown to the person who asks. */
     readonly disabledReason?: string | undefined
-    /** True when the command is drawn as a risk. */
+    /** Whether choosing it cannot be taken back, which the control shows in the danger tone. */
     readonly isDanger?: boolean | undefined
 }
 
 /** One state or age mark on a row. */
 export interface BadgeView {
-    /** The words the reader sees. */
+    /** The words on the badge. */
     readonly label: string
-    /** The tone of the mark. */
+    /** The colour family of the badge. */
     readonly tone: BadgeTone
 }
 
 /** One decision waiting for a person, as a row draws it. */
 export interface DecisionRowView {
-    /** The id the row is told apart by. */
+    /** The key the queue draws the decision under, and the record its commands act on. */
     readonly id: string
-    /** The headline of the row. */
+    /** The headline of the decision. */
     readonly title: string
-    /** The line of words under the headline. */
+    /** The line of detail under the headline. */
     readonly description: string
-    /** The state and age marks of the row. */
+    /** The state and age marks beside the headline. */
     readonly badges: ReadonlyArray<BadgeView>
-    /** Why the decision waits for a person; null when no reason is recorded. */
+    /** Why the agent stopped for a person; null when it gave none. */
     readonly reason: string | null
-    /** The amount at stake as written; null when there is none. */
+    /** The sum the decision is about, as words; null when it concerns none. */
     readonly amount: string | null
-    /** What the agent proposes to do. */
+    /** What the agent proposes to do if the person agrees. */
     readonly proposal: string
     /** The branch that decided the row; null when none is recorded. */
     readonly trace: TraceView | null
-    /** When the decision lapses; null when it does not. */
+    /** When the proposal lapses, as words; null when it does not. */
     readonly expiry: string | null
-    /** The command a person is most likely to run; null when there is none. */
+    /** The main command of the row; null when the viewer may run none. */
     readonly primary: CommandView | null
-    /** The command that edits the proposal; null when it cannot be edited. */
+    /** The command that changes the proposal before it is run; null when the viewer may not. */
     readonly edit: CommandView | null
-    /** The commands under the more menu. */
+    /** The other commands, shown in the row's menu. */
     readonly menu: ReadonlyArray<CommandView>
-    /** Who or what the row waits for; null when nothing. */
+    /** The person the decision waits for when it is not the viewer; null otherwise. */
     readonly waitingFor: string | null
 }
 
@@ -164,78 +164,78 @@ export interface DecisionRowView {
 export interface DecisionQueueView {
     /** The count badge; null when there is none. */
     readonly count: string | null
-    /** The link that opens the rows not shown; null when every row is shown. */
+    /** The link to the rest of the queue; null when every decision is shown. */
     readonly more: { readonly label: string; readonly href: string } | null
-    /** The rows to draw, in order. */
+    /** The decisions the queue lists. */
     readonly rows: ReadonlyArray<DecisionRowView>
 }
 
 /** One step of the path a run walked. */
 export interface PathStepView {
-    /** The id the row is told apart by. */
+    /** The key the path draws the step under. */
     readonly id: string
-    /** The headline of the row. */
+    /** The name of the step. */
     readonly title: string
-    /** The line of words under the headline. */
+    /** What the step did, in a line. */
     readonly description: string
-    /** True for the step the run is at. */
+    /** Whether the run stands at this step now. */
     readonly isCurrent: boolean
 }
 
 /** One fact the branch read. */
 export interface FactView {
-    /** The id the row is told apart by. */
+    /** The key the list draws the fact under. */
     readonly id: string
-    /** The name of the fact. */
+    /** The name of the fact, for instance "Amount". */
     readonly term: string
-    /** The value of the fact as written. */
+    /** The value the branch read, as words. */
     readonly value: string
 }
 
 /** One source a decision leaned on. */
 export interface SourceView {
-    /** The id the row is told apart by. */
+    /** The key the list draws the source under. */
     readonly id: string
-    /** The kind of the source. */
+    /** What kind of source it is, for instance "Policy". */
     readonly kind: string
-    /** The words of the source. */
+    /** The words of the source the decision cited. */
     readonly text: string
-    /** Who or what the source came from. */
+    /** Who wrote the source and when, in a line. */
     readonly byline: string
 }
 
 /** Who approves and how much of the time is used. */
 export interface ApproverView {
-    /** The name of the subject. */
+    /** The name of the person who approves. */
     readonly name: string
-    /** What the avatar of the approver is drawn from. */
+    /** The text the avatar of the person is drawn from, so one person keeps one colour. */
     readonly seed: string
-    /** The time limit as written. */
+    /** The limit the approver may decide up to, as words. */
     readonly limit: string
-    /** What happens when the limit passes. */
+    /** What happens when the approver does not answer in time, as words. */
     readonly onTimeout: string
     /** 0 to 100. */
     readonly usedPercent: number
-    /** The used share as written for a screen reader. */
+    /** The words of the time used, read by a screen reader. */
     readonly valueText: string
 }
 
 /** The why pane of one work item, every word resolved. */
 export interface WhyView {
-    /** The headline of the pane. */
+    /** The heading of the pane. */
     readonly heading: string
-    /** The branch the run took. */
+    /** The branch that decided the item. */
     readonly branch: string
-    /** Why the decision waits for a person; null when no reason is recorded. */
+    /** The reason the branch gave. */
     readonly reason: string
-    /** The steps the run walked, in order. */
+    /** The steps the run walked to the item. */
     readonly path: ReadonlyArray<PathStepView>
     /** The facts the branch read. */
     readonly facts: ReadonlyArray<FactView>
     /** The sources the decision leaned on. */
     readonly sources: ReadonlyArray<SourceView>
-    /** Who approves; null when no one does. */
+    /** Who approves; null when no approval is asked. */
     readonly approver: ApproverView | null
-    /** Where the run is shown on the map. */
+    /** Where the map of the whole work graph opens at this item. */
     readonly mapHref: string
 }

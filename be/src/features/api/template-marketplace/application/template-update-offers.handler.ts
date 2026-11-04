@@ -17,8 +17,6 @@ export class TemplateUpdateOffersHandler extends ICQRSHandler<TemplateUpdateOffe
     }
 
     protected override process(query: TemplateUpdateOffersQuery): Promise<ReadonlyArray<UpdateOffer>> {
-        const p = query.params.principal.id
-        const r = query.params.request
-        return this.svc.offers(p, r.workspaceId)
+        return this.svc.offers(query.params.principal.id, query.params.request.workspaceId)
     }
 }

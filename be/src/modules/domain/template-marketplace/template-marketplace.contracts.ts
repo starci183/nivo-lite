@@ -1,4 +1,5 @@
-import type { TemplateParameter, TemplateText, UpdateOffer, UpdateUnit } from "@nivo-lite/agent-sdk/template"
+import type { TemplateParameter, TemplateText, UpdateOffer } from "@nivo-lite/agent-sdk/template"
+import type { ParameterView } from "@modules/domain/agent-templates"
 
 /** The review state of a listing. */
 export type ListingStatus = "draft" | "submitted" | "approved" | "rejected"
@@ -124,4 +125,13 @@ export interface WorkspaceUpdateOffers {
     readonly offers: ReadonlyArray<UpdateOffer>
 }
 
-export type { UpdateOffer, UpdateUnit }
+/** The offer of a newer version, or null when the install is up to date. */
+export type OptionalUpdateOffer = UpdateOffer | null
+
+export type { UpdateOffer, UpdateUnit } from "@nivo-lite/agent-sdk/template"
+
+/** A listing card as the catalogue shows it: the settings the buyer fills in carry their defaults as text. */
+export interface ListingCardView extends Omit<ListingCard, "parameters"> {
+    /** The settings the buyer fills in. */
+    readonly parameters: ReadonlyArray<ParameterView>
+}

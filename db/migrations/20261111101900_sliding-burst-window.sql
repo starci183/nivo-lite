@@ -16,6 +16,7 @@ DECLARE
   v_fence bigint;
   v_ended jsonb := '[]'::jsonb;
   v_merged text;
+  v_context jsonb;
 BEGIN
   SELECT a.workspace_id INTO v_workspace FROM public.agents a WHERE a.id = p_agent;
   IF v_workspace IS NULL THEN
@@ -85,8 +86,8 @@ BEGIN
     )
     SELECT string_agg(m.message_id, ',' ORDER BY m.created_at) INTO v_merged FROM merged m WHERE m.message_id IS NOT NULL;
     IF v_merged IS NOT NULL THEN
-      v_wake.context := v_wake.context || jsonb_build_object('mergedMessageIds', v_merged);
-      UPDATE public.agent_wakes w SET context = v_wake.context WHERE w.id = v_wake.id;
+      UPDATE public.agent_wakes w SET context = w.context || jsonb_build_object('mergedMessageIds', v_merged)
+        WHERE w.id = v_wake.id RETURNING w.context INTO v_context;
     END IF;
   END IF;
   UPDATE public.agent_wakes w SET status = 'running', attempts = w.attempts + 1, started_at = COALESCE(w.started_at, now())
@@ -111,7 +112,7 @@ BEGIN
     'wakeId', v_wake.id,
     'source', v_wake.source,
     'eventKey', v_wake.event_key,
-    'context', v_wake.context,
+    'context', coalesce(v_context, v_wake.context),
     'actorMemberId', v_wake.actor_member_id,
     'attempts', v_wake.attempts + 1,
     'maxAttempts', v_wake.max_attempts,
@@ -126,6 +127,12 @@ GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, int
 
 -- The five-argument door: the longest wait is 20 seconds, or the window when that is longer.
 CREATE OR REPLACE FUNCTION public.agent_turn_begin(p_agent uuid, p_scope text, p_owner text, p_lease_s integer, p_window_ms integer) RETURNS jsonb
-    LANGUAGE sql SECURITY DEFINER
+    LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
-    AS $$ SELECT public.agent_turn_begin(p_agent, p_scope, p_owner, p_lease_s, p_window_ms, greatest(p_window_ms, 20000)) $$;
+    AS $$
+BEGIN
+  RETURN public.agent_turn_begin(p_agent, p_scope, p_owner, p_lease_s, p_window_ms, greatest(p_window_ms, 20000));
+END;
+$$;
+REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer) TO app_be;

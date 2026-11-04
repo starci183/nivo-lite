@@ -2,8 +2,6 @@ export { JOBS_ERROR_KINDS } from "./errors/jobs.error"
 export { parseJobsConfig } from "./jobs.config"
 export type { ClaimedJob } from "./jobs.contracts"
 export {
-    FLOW_ALERTS,
-    InjectFlowAlerts,
     InjectJobClaims,
     InjectJobProcessorRegistry,
     InjectJobFence,
@@ -23,4 +21,4 @@ export { JobRenewalService } from "./job-renewal.service"
 export { JobRunnerService } from "./job-runner.service"
 export { JobsLogEvent } from "./jobs.log-events"
 export { jobsEntities } from "./persistence/entities"
-export type { AdvanceWrite, ClaimResult } from "./jobs.contracts"
+export type { AdvanceWrite, JobClaimResult } from "./jobs.contracts"

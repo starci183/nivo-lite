@@ -20,7 +20,7 @@ export type {
     AgentGraphBrief,
 } from "./agent-graphs.port"
 export { AGENT_GRAPH_BRIEF, GRAPH_FLOW_TRIGGER_MESSAGES, InjectAgentGraphBrief } from "./agent-graphs.decorators"
-export { graphDocumentSchema } from "./agent-graphs.schema"
+export { graphDocumentSchema, graphRightSchema } from "./agent-graphs.schema"
 export { baseGraphOf } from "./policies/base-graph.policy"
 export type { SeedRule } from "./agent-graphs-seed.contracts"
 export { AgentGraphsService } from "./agent-graphs.service"

@@ -5,6 +5,7 @@ import {
     useMutateMarkOfficeConversationReadSwr,
     useQueryConnectionsSwr,
     useQueryOfficeConversationUnreadSwr,
+    useQueryChatMarkerStateSwr,
     useQueryOfficeRoomsSwr,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
@@ -21,196 +22,22 @@ import type {
 import { useOfficeMarkers } from "./useOfficeMarkers"
 import { useOfficeTyping } from "./useOfficeTyping"
 
-import type { OfficeRoomMemberKind } from "@/modules/api/graphql/__generated__/graphql"
-import type { SWRResponse, SWRConfiguration, BareFetcher } from "swr"
-import type { ChatMarkerStateAnswer } from "@/hooks/swr/api/graphql/queries/useQueryChatMarkerStateSwr"
-
 const unreadOf = (entries: ReadonlyArray<{ readonly id: string; readonly unread: number }> | undefined) =>
     new Map((entries ?? []).map((entry) => [entry.id, entry.unread]))
 
 const agentConversationsOf = (entries: ReadonlyArray<{ readonly id: string } & OfficeAgentConversation> | undefined) =>
     new Map((entries ?? []).map((entry) => [entry.id, { unread: entry.unread, last: entry.last }]))
 
+type RoomsRead = ReturnType<typeof useQueryOfficeRoomsSwr>
+type MarkersRead = ReturnType<typeof useQueryChatMarkerStateSwr>
+type UnreadRead = ReturnType<typeof useQueryOfficeConversationUnreadSwr>
+type ConnectionsRead = ReturnType<typeof useQueryConnectionsSwr>
+
 type UseOfficeRoomsResult = {
     rooms: readonly OfficeRoom[]
-    roomRead: SWRResponse<
-        | {
-              key: string | null
-              name: string
-              position: number
-              unread: number
-              unread_mention_bodies: Array<string>
-              last_body: string | null
-              last_author: string | null
-              last_author_user_id: string | null
-              last_at: string | null
-              agent_ids: Array<string>
-              home_agent_ids: Array<string>
-              user_ids: Array<string>
-              members: {
-                  count: number
-                  preview: Array<{
-                      id: string
-                      kind: OfficeRoomMemberKind
-                      module: string | null
-                      name: string
-                      avatarUrl: string | null
-                  }>
-              }
-              pins: Array<{
-                  id: string
-                  title: string
-                  href: string | null
-                  note: string
-              }>
-          }[]
-        | undefined,
-        unknown,
-        SWRConfiguration | undefined
-    >
-    markerRead: SWRResponse<
-        readonly ChatMarkerStateAnswer[],
-        unknown,
-        SWRConfiguration<readonly ChatMarkerStateAnswer[]> | undefined
-    >
-    listReads: (
-        | SWRResponse<
-              | {
-                    key: string | null
-                    name: string
-                    position: number
-                    unread: number
-                    unread_mention_bodies: Array<string>
-                    last_body: string | null
-                    last_author: string | null
-                    last_author_user_id: string | null
-                    last_at: string | null
-                    agent_ids: Array<string>
-                    home_agent_ids: Array<string>
-                    user_ids: Array<string>
-                    members: {
-                        count: number
-                        preview: Array<{
-                            id: string
-                            kind: OfficeRoomMemberKind
-                            module: string | null
-                            name: string
-                            avatarUrl: string | null
-                        }>
-                    }
-                    pins: Array<{
-                        id: string
-                        title: string
-                        href: string | null
-                        note: string
-                    }>
-                }[]
-              | undefined,
-              unknown,
-              SWRConfiguration | undefined
-          >
-        | SWRResponse<
-              readonly ChatMarkerStateAnswer[],
-              unknown,
-              SWRConfiguration<readonly ChatMarkerStateAnswer[]> | undefined
-          >
-        | SWRResponse<
-              | {
-                    agents: Array<{
-                        id: string
-                        unread: number
-                        last: {
-                            body: string
-                            at: string
-                            authorId: string | null
-                            author: string | null
-                        } | null
-                    }>
-                    leads: Array<{
-                        id: string
-                        unread: number
-                    }>
-                }
-              | undefined,
-              unknown,
-              SWRConfiguration | undefined
-          >
-        | SWRResponse<
-              {
-                  id: string
-                  workspaceId: string
-                  provider: string
-                  name: string
-                  meta: unknown
-                  status: string
-                  lastError: string | null
-                  environment: string
-                  isDefault: boolean
-                  lastEventAt: string | null
-                  agentIds: Array<string>
-                  firstEvent: {
-                      amount: number
-                      at: string
-                      content: string
-                  } | null
-                  grants: Array<{
-                      agentId: string
-                      access: string
-                  }>
-              }[],
-              unknown,
-              | SWRConfiguration<
-                    {
-                        id: string
-                        workspaceId: string
-                        provider: string
-                        name: string
-                        meta: unknown
-                        status: string
-                        lastError: string | null
-                        environment: string
-                        isDefault: boolean
-                        lastEventAt: string | null
-                        agentIds: Array<string>
-                        firstEvent: {
-                            amount: number
-                            at: string
-                            content: string
-                        } | null
-                        grants: Array<{
-                            agentId: string
-                            access: string
-                        }>
-                    }[],
-                    any,
-                    BareFetcher<
-                        {
-                            id: string
-                            workspaceId: string
-                            provider: string
-                            name: string
-                            meta: unknown
-                            status: string
-                            lastError: string | null
-                            environment: string
-                            isDefault: boolean
-                            lastEventAt: string | null
-                            agentIds: Array<string>
-                            firstEvent: {
-                                amount: number
-                                at: string
-                                content: string
-                            } | null
-                            grants: Array<{
-                                agentId: string
-                                access: string
-                            }>
-                        }[]
-                    >
-                >
-              | undefined
-          >
-    )[]
+    roomRead: RoomsRead
+    markerRead: MarkersRead
+    listReads: (RoomsRead | MarkersRead | UnreadRead | ConnectionsRead)[]
     reload: () => void
     isLoading: boolean
     error: unknown

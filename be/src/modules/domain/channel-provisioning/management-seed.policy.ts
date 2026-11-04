@@ -6,20 +6,23 @@ import type { ManagementSeed, ManagementSmtp } from "./management-seed.contracts
 const NAME_MAX = 120
 const PORT_MAX = 65_535
 
+/** The sealed values of a seed document, each a text, by name. */
 export type Values = Readonly<Record<string, string>>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === "object" && !Array.isArray(value)
 
-export const invalid = (field: string): never => {
-    throw new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
+/** Refuses a seed document by the field that is wrong; never answers. */
+export const invalid = (field: string, cause?: unknown): never => {
+    throw new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field }, cause })
 }
 
+/** The trimmed text of a seed field, or the refusal of that field when it is no bounded text. */
 export const textOf = (value: unknown, field: string): string =>
     typeof value === "string" && value.trim() !== "" && value.length <= NAME_MAX * 4 ? value.trim() : invalid(field)
 
 /** The sealed values of a document: every one a text, the names those of the workspace member. */
-export const valuesOf = (raw: unknown): Values => {
+export const sealedValuesOf = (raw: unknown): Values => {
     if (raw === undefined) return {}
     if (!isRecord(raw)) return invalid("values")
     return Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, textOf(value, key)]))
@@ -50,7 +53,7 @@ const ownerOf = (document: Record<string, unknown>, values: Values): string => {
 /** Reads one management-seed document; a malformed value is refused by the name of its field, never its content. */
 export const readManagementSeed = (document: unknown): ManagementSeed => {
     if (!isRecord(document) || document.schema !== MANAGEMENT_SEED_SCHEMA) return invalid("schema")
-    const values = valuesOf(document.values)
+    const values = sealedValuesOf(document.values)
     return {
         workspaceName: textOf(document.workspaceName, "workspaceName").slice(0, NAME_MAX),
         ownerEmail: ownerOf(document, values),
@@ -91,8 +94,8 @@ export const readSeedDocuments = (text: string): ReadonlyArray<unknown> => {
     let envelope: unknown
     try {
         envelope = JSON.parse(text)
-    } catch {
-        return invalid("input")
+    } catch (cause) {
+        return invalid("input", cause)
     }
     if (!isRecord(envelope) || !Array.isArray(envelope.documents)) return invalid("input")
     return envelope.documents.map((entry: unknown) =>

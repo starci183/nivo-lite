@@ -3,14 +3,14 @@
 import useSWRMutation from "swr/mutation"
 import { mutateApplyContentCadencePresets } from "@/modules/api/graphql/mutations/mutation-apply-content-cadence-presets"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ApplyContentCadencePresetsMutation } from "@/modules/api"
 
 /** The SWR key of the applyContentCadencePresets mutation. */
 export const MUTATE_APPLY_CONTENT_CADENCE_PRESETS_SWR_KEY = "MUTATE_APPLY_CONTENT_CADENCE_PRESETS_SWR"
 
 /** SWR mutation for {@link mutateApplyContentCadencePresets}: `trigger()` answers the payload and rejects with the back end failure. */
 export const useMutateApplyContentCadencePresetsSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateApplyContentCadencePresets>["applyContentCadencePresets"],
+    ApplyContentCadencePresetsMutation["applyContentCadencePresets"],
     Error,
     typeof MUTATE_APPLY_CONTENT_CADENCE_PRESETS_SWR_KEY,
     never

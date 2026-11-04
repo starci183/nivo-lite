@@ -1,13 +1,11 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { queryWorkItems } from "@/modules/api/graphql/queries/query-work-items"
-import type { QueryWorkItemsRequest } from "@/modules/api/graphql/queries/query-work-items"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import { queryWorkItems, type QueryWorkItemsRequest } from "@/modules/api/graphql/queries/query-work-items"
+import type { WorkItemsQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryWorkItemsSwr}. */
 export const QUERY_WORK_ITEMS_SWR_KEY = "QUERY_WORK_ITEMS_SWR"
@@ -16,7 +14,7 @@ export const QUERY_WORK_ITEMS_SWR_KEY = "QUERY_WORK_ITEMS_SWR"
 export const useQueryWorkItemsSwr = (
     request: QueryWorkItemsRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryWorkItems>["workItems"]> =>
+): ReadResponse<WorkItemsQuery["workItems"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_WORK_ITEMS_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryWorkItemsRequest>) =>

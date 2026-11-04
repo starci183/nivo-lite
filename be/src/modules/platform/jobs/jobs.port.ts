@@ -4,7 +4,7 @@ import type {
     AdvanceWrite,
     ClaimedJob,
     ClaimParams,
-    ClaimResult,
+    JobClaimResult,
     ClaimRetryDelay,
     FailWrite,
     RenewWrite,
@@ -21,7 +21,7 @@ export type JobFenceAction = (tx: EntityManager) => Promise<void>
 /** The one door to the job row; `platform/jobs` implements it and nothing else writes the table. */
 export interface JobClaims {
     /** Claims the delivery in one atomic statement and bumps the fencing token; null when the job is done or another worker holds a live claim. */
-    claim(params: ClaimParams): Promise<ClaimResult>
+    claim(params: ClaimParams): Promise<JobClaimResult>
     /** Null only for a confirmed completed job; otherwise the seconds before a refused delivery may try its claim again. */
     retryAfterSeconds(jobKey: string): Promise<ClaimRetryDelay>
     /** Records a finished step; throws `JobFencedOut` when the token is stale. */

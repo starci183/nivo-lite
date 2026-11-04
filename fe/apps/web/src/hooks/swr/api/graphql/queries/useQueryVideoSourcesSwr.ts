@@ -2,17 +2,16 @@
 
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
+import type { SWRResponse } from "swr"
 import { answeredData } from "@/hooks/workspaceread"
 import { queryVideoSources } from "@/modules/api/graphql/queries/query-video-sources"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { VideoSourcesQuery } from "@/modules/api"
 
 /** The SWR key of the videoSources query. */
 export const QUERY_VIDEO_SOURCES_SWR_KEY = "QUERY_VIDEO_SOURCES_SWR"
 
 /** The sources a video can draw from. */
-export const useQueryVideoSourcesSwr = (
-    isActive = true,
-): ReadResponse<OperationData<typeof queryVideoSources>["videoSources"]> =>
+export const useQueryVideoSourcesSwr = (isActive = true): SWRResponse<VideoSourcesQuery["videoSources"], Error> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_SOURCES_SWR_KEY, isActive ? ([] as const) : null),
         async () => answeredData(await queryVideoSources(), QUERY_VIDEO_SOURCES_SWR_KEY).videoSources,

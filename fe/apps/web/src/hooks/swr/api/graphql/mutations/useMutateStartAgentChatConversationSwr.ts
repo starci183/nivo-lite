@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateStartAgentChatConversation } from "@/modules/api/graphql/mutations/mutation-start-agent-chat-conversation"
-import type { MutateStartAgentChatConversationRequest } from "@/modules/api/graphql/mutations/mutation-start-agent-chat-conversation"
+import {
+    mutateStartAgentChatConversation,
+    type MutateStartAgentChatConversationRequest,
+} from "@/modules/api/graphql/mutations/mutation-start-agent-chat-conversation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { StartAgentChatConversationMutation } from "@/modules/api"
 
 /** What the StartAgentChatConversation mutation is triggered with. */
 interface StartAgentChatConversationArg {
@@ -18,7 +20,7 @@ export const MUTATE_START_AGENT_CHAT_CONVERSATION_SWR_KEY = "MUTATE_START_AGENT_
 export const useMutateStartAgentChatConversationSwr = (
     workspaceId: string,
 ): SWRMutationResponse<
-    OperationData<typeof mutateStartAgentChatConversation>["startAgentChatConversation"],
+    StartAgentChatConversationMutation["startAgentChatConversation"],
     Error,
     [string, string],
     StartAgentChatConversationArg["arg"]

@@ -3,7 +3,7 @@ import {
     JobRenewalService,
     JobRunnerService,
     JobsLogEvent,
-    type ClaimResult,
+    type JobClaimResult,
 } from "@modules/platform/jobs"
 import { FakeClock, mock, type MockOf } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -22,7 +22,7 @@ type JobsBuilderResultShape = {
     successorClaims: JobClaimService
     logger: MockOf<Logger>
     runner: JobRunnerService
-    claim: (worker: JobClaimService, workerId: string) => Promise<ClaimResult>
+    claim: (worker: JobClaimService, workerId: string) => Promise<JobClaimResult>
     delivery: QueueDelivery
     fencedOutEvent: JobsLogEvent
 }
@@ -55,7 +55,7 @@ export const jobsBuilder = (manager: EntityManager, key: string): JobsBuilderRes
         logger,
         new JobRenewalService(options, claims, idle, logger),
     )
-    const claim = (worker: JobClaimService, workerId: string): Promise<ClaimResult> =>
+    const claim = (worker: JobClaimService, workerId: string): Promise<JobClaimResult> =>
         worker.claim({
             kind: delivery.queue,
             jobKey: delivery.id,

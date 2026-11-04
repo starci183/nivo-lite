@@ -1,1 +1,1 @@
-export { coreBlocks } from "./core-renderers"
+export { coreBlocks } from "./core-blocks"

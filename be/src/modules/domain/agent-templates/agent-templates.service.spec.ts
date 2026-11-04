@@ -11,7 +11,7 @@ import { CREATOR, SECRET_IN_ENV, draftOf, leakyGraph, packageOf } from "@tests/f
 import { AgentTemplateVersionsService } from "./agent-template-versions.service"
 import type { StoredVersion } from "./agent-template-versions.service"
 import { AgentTemplatesService } from "./agent-templates.service"
-import type { PackageRequest } from "./agent-templates.service"
+import type { PackageInput, PackageRequest } from "./agent-templates.contracts"
 import { AgentTemplatesError, AgentTemplatesErrorCode } from "./errors/agent-templates.error"
 import { agentTemplatePackageSchema } from "./agent-template.schema"
 import { PARAMETERS } from "@tests/fixtures/builders/agent-template.builder"
@@ -107,7 +107,7 @@ const build = async (options: Options = {}) => {
                     : Object.assign(new AgentTemplateEntity(), options.existing),
             ),
         latestNumber: jest.fn().mockResolvedValue(0),
-        save: jest.fn().mockImplementation((input: { package: StoredVersion["package"] }) => {
+        save: jest.fn().mockImplementation((input: Parameters<AgentTemplateVersionsService["save"]>[0]) => {
             stored.set(input.package.key, {
                 key: input.package.key,
                 version: input.package.version,
@@ -139,6 +139,37 @@ const build = async (options: Options = {}) => {
         ],
     }).compile()
     return { service: moduleRef.get(AgentTemplatesService), versions, members, stored }
+}
+
+const jsonOf = (text: string): unknown => {
+    try {
+        return JSON.parse(text)
+    } catch (cause) {
+        return cause
+    }
+}
+
+const INPUT: PackageInput = {
+    agentId: CREATOR.agentId,
+    graphVersionId: CREATOR.versionId,
+    key: "spa-booking-by-linh",
+    name: draftOf().listing.name,
+    summary: draftOf().listing.summary,
+    category: draftOf().listing.category,
+    parameters: [
+        {
+            key: "shop",
+            kind: "text",
+            label: { vi: "Ten shop", en: "Shop name" },
+            required: true,
+            defaultValue: "Spa Linh",
+        },
+    ],
+    bindings: [],
+    starterDocumentIds: ["doc-1"],
+    soul: "Than thien, ngan gon.",
+    changelog: "First",
+    breaking: false,
 }
 
 const codeOf = async (work: Promise<unknown>): Promise<unknown> => {
@@ -256,7 +287,9 @@ describe("AgentTemplatesService.packageVersion", () => {
         )
         expect(foreign.versions.save).not.toHaveBeenCalled()
     })
+})
 
+describe("AgentTemplatesService.packageVersion template sources", () => {
     it("allows a graph whose branches come from a first-party package, so a derivative of a built-in can be packaged and listed", async () => {
         const base = leakyGraph()
         const graph = {
@@ -308,6 +341,30 @@ describe("AgentTemplatesService.packageVersion", () => {
     })
 })
 
+describe("AgentTemplatesService from the editor", () => {
+    it("shows the preview the way the editor reads it, the default of a setting as text", async () => {
+        const { service, versions } = await build()
+
+        const view = await service.previewDraft(CREATOR.accountId, CREATOR.workspaceId, INPUT)
+
+        expect(view.problems).toEqual([])
+        expect(view.package?.parameters).toEqual([
+            expect.objectContaining({ key: "shop", kind: "text", defaultValue: "Spa Linh", hint: null }),
+        ])
+        expect(versions.save).not.toHaveBeenCalled()
+    })
+
+    it("packages and saves what the creator typed in the editor for the workspace", async () => {
+        const { service, versions } = await build()
+
+        await service.packageDraft(CREATOR.accountId, CREATOR.workspaceId, INPUT)
+
+        const saved = versions.save.mock.calls[0]?.[0]
+        expect(saved).toMatchObject({ creatorAccountId: CREATOR.accountId, sourceWorkspaceId: CREATOR.workspaceId })
+        expect(saved?.package.parameters.map((parameter) => parameter.key)).toEqual(["shop"])
+    })
+})
+
 describe("AgentTemplatesService export and listing", () => {
     it("lists the templates of the caller", async () => {
         const { service, versions } = await build()
@@ -322,7 +379,7 @@ describe("AgentTemplatesService export and listing", () => {
 
         const file = await service.exportFile(CREATOR.accountId, "spa-booking-by-linh", 1)
 
-        const parsed = agentTemplatePackageSchema.parse(JSON.parse(file))
+        const parsed = agentTemplatePackageSchema.parse(jsonOf(file))
         expect(parsed).toEqual(packageOf(leakyGraph(), draftOf()))
         expect(await service.exportFile(CREATOR.accountId, "spa-booking-by-linh", 1)).toBe(file)
     })

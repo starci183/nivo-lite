@@ -1,13 +1,28 @@
 import { slotOfReads } from "@/hooks/slot"
-import type { useOfficeBoard, useOfficeRooms, useOfficeThread } from "@/hooks/office"
+import type {
+    OfficeBoard,
+    useOfficeBoard,
+    useOfficeRooms,
+    useOfficeSend,
+    useOfficeThread,
+    useOfficeWords,
+} from "@/hooks/office"
 import type { navigation } from "@/modules/i18n"
 import { agentChatHref, leadHref } from "@/modules/routes"
 import type { OfficeListView, DataSlot, OfficeText, OfficeThreadProps } from "@/modules/types"
-import { BASIS_MIN_CHARS, EMPTY_OFFICE_CARD_DRAFT, cardCopyOf, threadCopyOf } from "@/modules/office"
+import {
+    BASIS_MIN_CHARS,
+    EMPTY_OFFICE_CARD_DRAFT,
+    NIVO_AVATAR,
+    cardCopyOf,
+    roomApprovalsOf,
+    roomWorksOf,
+    threadCopyOf,
+} from "@/modules/office"
 import type { useOfficeCardDrafts } from "./useOfficeCardDrafts"
-import type { useOfficeMessenger } from "./useOfficeMessenger"
+import type { OfficeMessengerReading, useOfficeMessenger } from "./useOfficeMessenger"
 import type { useOfficePanels } from "./useOfficePanels"
-import type { OfficeMessage } from "@/modules/office"
+import type { OfficeMessage, OfficeRoom } from "@/modules/office"
 
 /** What the thread draws once its messages are in. */
 export type OfficeThreadBody = Omit<OfficeThreadProps["props"], "isLoading">
@@ -156,3 +171,28 @@ export const officeReadSlots = ({ board, hub, thread, list }: OfficeReadOwners):
         hub.refreshRooms()
     },
 })
+
+/** The board scoped to a room: the approvals of its agents and the exceptions of their departments. */
+export const scopedBoard = (full: OfficeBoard, current: OfficeRoom | null): OfficeBoard => ({
+    ...full,
+    pending: roomApprovalsOf(current, full.pending),
+    decided: roomApprovalsOf(current, full.decided),
+    exceptions: roomWorksOf(current, full.exceptions, full.agents),
+    decidedCards: roomWorksOf(current, full.decidedCards, full.agents),
+})
+
+/** Resolves the loading command's name and note from its actual target. */
+export const readingOf = (
+    reading: ReturnType<typeof useOfficeSend>["reading"],
+    words: ReturnType<typeof useOfficeWords>,
+): OfficeMessengerReading | null => {
+    if (reading === null) return null
+    const agent = words.moduleName(reading.module)
+    return {
+        avatar: NIVO_AVATAR,
+        ask: words.t("cmdAskReading", { handle: reading.handle }),
+        agent,
+        label: words.t("cmdCardLabel", { agent }),
+        gateNote: words.t("cmdGateNote", { agent }),
+    }
+}

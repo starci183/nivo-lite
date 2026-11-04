@@ -88,7 +88,7 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
 
     /** Claims and commits before calling Redis; each row is marked with its own lease token afterwards. */
     private async relay(): Promise<number> {
-        const rows = await callDbFunction<QueueRelayRow>(this.entityManager, "public.job_relay_claim", [
+        const rows = await callDbFunction<QueueRelayRow>(this.entityManager, "public.job_relay_claim_with_delay", [
             this.options.relayBatch,
             CLAIM_SECONDS,
         ])
@@ -116,7 +116,7 @@ export class QueueRelayService implements OnApplicationBootstrap, OnApplicationS
 
     /** Claims a fair due batch with SKIP LOCKED and isolates each row, including broker or settlement failures. */
     private async reconcile(): Promise<void> {
-        const rows = await callDbFunction<QueueReconcileRow>(this.entityManager, "public.job_reconcile", [
+        const rows = await callDbFunction<QueueReconcileRow>(this.entityManager, "public.job_reconcile_with_delay", [
             secondsOf(this.options.reconcileAfterMs),
             secondsOf(2 * this.options.visibilityTimeoutMs),
             this.options.relayBatch,

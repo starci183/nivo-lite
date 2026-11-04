@@ -2,8 +2,8 @@
 
 import type { OpenApiTestType, QueryTestOpenApiOperationRequest } from "@/hooks/swr"
 import { useMemo, useState } from "react"
-import { isOpenApiPullable } from "./openapi-wizard.shared"
-import type { OpenApiOp, OpenApiPullDef } from "./openapi-wizard.shared"
+import { isOpenApiPullable } from "@/modules/openapi-spec"
+import type { OpenApiOp, OpenApiPullDef } from "@/modules/openapi-spec"
 import type { OpenApiCommands } from "./useOpenApiCommands"
 import type { SetStateAction, Dispatch } from "react"
 

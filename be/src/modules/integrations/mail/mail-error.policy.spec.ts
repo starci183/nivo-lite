@@ -1,12 +1,24 @@
+import { Test } from "@nestjs/testing"
 import { MailError as PackageMailError } from "@starci/mail"
 import { MailError, MailErrorCode } from "./errors/mail.error"
 import { mailErrorOf } from "./mail-error.policy"
 
+const SUBJECT = Symbol("mail-error.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { mailErrorOf } }],
+    }).compile()
+    return moduleRef.get<{ mailErrorOf: typeof mailErrorOf }>(SUBJECT)
+}
+
 describe("mail-error policy / mailErrorOf", () => {
-    it("lets the integration's own error through as it is", () => {
+    it("lets the integration's own error through as it is", async () => {
+        const subject = await build()
+
         const own = new MailError({ code: MailErrorCode.Tls })
 
-        expect(mailErrorOf(own)).toBe(own)
+        expect(subject.mailErrorOf(own)).toBe(own)
     })
     it.each([
         ["MAIL_AUTH", MailErrorCode.Auth],
@@ -21,17 +33,21 @@ describe("mail-error policy / mailErrorOf", () => {
         ["MAIL_UNKNOWN", MailErrorCode.Unknown],
         ["MAIL_ADDRESS_INVALID", MailErrorCode.AddressInvalid],
         ["MAIL_MESSAGE_INVALID", MailErrorCode.MessageInvalid],
-    ] as const)("keeps the wire code %s and the server's words", (code, expected) => {
+    ] as const)("keeps the wire code %s and the server's words", async (code, expected) => {
+        const subject = await build()
+
         const cause = new PackageMailError(code, { detail: "535 refused" })
 
-        const mapped = mailErrorOf(cause)
+        const mapped = subject.mailErrorOf(cause)
 
         expect(mapped).toBeInstanceOf(MailError)
         expect(mapped).toMatchObject({ code: expected, params: { detail: "535 refused" }, cause })
     })
-    it("answers anything else as unknown", () => {
+    it("answers anything else as unknown", async () => {
+        const subject = await build()
+
         const cause = new Error("socket closed")
 
-        expect(mailErrorOf(cause)).toMatchObject({ code: MailErrorCode.Unknown, cause })
+        expect(subject.mailErrorOf(cause)).toMatchObject({ code: MailErrorCode.Unknown, cause })
     })
 })

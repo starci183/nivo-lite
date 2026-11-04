@@ -1,4 +1,5 @@
 import fsPromises from "node:fs/promises"
+import type { PathLike } from "node:fs"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
@@ -13,14 +14,26 @@ const OWN_ROWS = "INSERT INTO public.calendars (id, owner_id) VALUES ('calendar-
 /** The folders the runner reads and the text of the files in them. */
 type Folders = Readonly<Record<string, Readonly<Record<string, string>>>>
 
+/** The two fs calls the runner makes, in the overloads it uses. */
+interface FolderReader {
+    readdir: (path: PathLike) => Promise<Array<string>>
+}
+
+/** The text read the runner makes. */
+interface FileReader {
+    readFile: (path: PathLike, encoding: BufferEncoding) => Promise<string>
+}
+
+const pathOf = (path: PathLike): string => (typeof path === "string" ? path : path.toString())
+
 const build = async (entityManager: MockEntityManager, folders: Folders) => {
-    jest.spyOn(fsPromises, "readdir").mockImplementation((directory) => {
-        const files = folders[String(directory).replaceAll("\\", "/")]
+    jest.spyOn<FolderReader, "readdir">(fsPromises, "readdir").mockImplementation((directory) => {
+        const files = folders[pathOf(directory).replaceAll("\\", "/")]
         if (files === undefined) return Promise.reject(Object.assign(new Error("no such folder"), { code: "ENOENT" }))
-        return Promise.resolve(Object.keys(files) as never)
+        return Promise.resolve(Object.keys(files))
     })
-    jest.spyOn(fsPromises, "readFile").mockImplementation((file) => {
-        const path = String(file).replaceAll("\\", "/")
+    jest.spyOn<FileReader, "readFile">(fsPromises, "readFile").mockImplementation((file) => {
+        const path = pathOf(file).replaceAll("\\", "/")
         const text = Object.values(folders).flatMap((files) =>
             Object.entries(files).filter(([name]) => path.endsWith(`/${name}`)),
         )[0]?.[1]

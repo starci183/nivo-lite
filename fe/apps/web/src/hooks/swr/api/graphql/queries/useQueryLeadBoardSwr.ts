@@ -2,12 +2,16 @@
 
 import useSWRInfinite from "swr/infinite"
 import type { SWRInfiniteKeyLoader } from "swr/infinite"
-import { connectionPageKey, connectionPageView, connectionReadParameters } from "@/hooks/connectionPages"
-import type { ConnectionPage, ConnectionPageKey } from "@/hooks/connectionPages"
+import {
+    connectionPageKey,
+    connectionPageView,
+    connectionReadParameters,
+    type ConnectionPage,
+    type ConnectionPageKey,
+} from "@/hooks/connectionPages"
 import { noData } from "@/hooks/workspaceread"
 import { queryLeadBoard } from "@/modules/api/graphql/queries/query-lead-board"
-import { GraphQLHeadersKey } from "@/modules/api"
-import type { LeadBoardQuery } from "@/modules/api"
+import { GraphQLHeadersKey, type LeadBoardQuery } from "@/modules/api"
 
 /** Workspace-scoped cache identity for the leadBoard query. */
 export const QUERY_LEAD_BOARD_SWR_KEY = "QUERY_LEAD_BOARD_SWR"

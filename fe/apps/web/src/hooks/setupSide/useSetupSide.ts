@@ -1,22 +1,26 @@
 "use client"
 
-import type { SetupKnowledgeCounts } from "@/hooks/agentSetup"
 import { LOADING_SESSION, useSetupGates, useSetupKnowledge, useSetupState, useSetupVersions } from "@/hooks/agentSetup"
 import { setupProgressOf } from "@/modules/setup-view"
 import { slotOfReads } from "@/hooks/slot"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { useSetupRequirements } from "@/hooks/setupRequirements"
 import { MODULE_KEYS, isModuleKey } from "@/modules/catalog"
-import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
-import type { ContextVersion, SetupSession } from "@/modules/installations"
-import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
-import type { DataSlot, SetupSideKnowledge, SetupSideVersions, SetupSideView } from "@/modules/types"
+import type { ContextVersion } from "@/modules/installations"
+import type { DataSlot, SetupSideView } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { PLACEHOLDER_GATES, commandsOf, setupRequirementsNoticeOf, versionsViewOf } from "./setupSide.shared"
+import {
+    PLACEHOLDER_GATES,
+    commandsOf,
+    gateViewMapper,
+    knowledgeOf,
+    setupRequirementsNoticeOf,
+    versionsOf,
+    versionsViewOf,
+} from "./setupSide.shared"
 
 import type { Dispatch, SetStateAction } from "react"
 
-const GATE_TONE = { missing: "neutral", proposed: "warning", confirmed: "success" } as const
 const NO_VERSIONS: ReadonlyArray<ContextVersion> = []
 
 type UseSetupSideResult = {
@@ -140,67 +144,3 @@ const gatesLabelsOf = (t: ReturnType<typeof useTranslations<"moduleSetup">>) => 
     editSaveLabel: t("editSave"),
     editCancelLabel: t("editCancel"),
 })
-
-const knowledgeOf = (
-    t: ReturnType<typeof useTranslations<"moduleSetup">>,
-    counts: SetupKnowledgeCounts | null,
-    moduleKey: string,
-): SetupSideKnowledge => {
-    return {
-        title: t("k_cardTitle"),
-        businessLine: t("k_cardBusiness", { docs: counts?.documents ?? 0, facts: counts?.facts ?? 0 }),
-        publicLine: "",
-        emptyHint: counts !== null && counts.documents === 0 && counts.facts === 0 ? t("k_cardEmpty") : "",
-        knowledgeHref: brainTabHref("sources", { module: moduleKey }),
-        knowledgeLabel: t("k_cardLink"),
-        nivoHref: KNOWLEDGE_ROUTES.nivo,
-        nivoLabel: t("k_nivoLink"),
-    }
-}
-
-type GateViewMapperResult = (
-    gate: NonNullable<
-        NonNullable<ReturnType<typeof useModuleCatalog>["modules"][(typeof MODULE_KEYS)[number]]>["gates"]
-    >[number],
-) => SetupSideView["gates"]["gates"][number]
-
-const gateViewMapper = (
-    session: SetupSession,
-    locale: "vi" | "en",
-    t: ReturnType<typeof useTranslations<"moduleSetup">>,
-): GateViewMapperResult => {
-    return (gate) => {
-        const entry = gateEntry(session.gateEvidence, gate.key)
-        return {
-            key: gate.key,
-            label: gateLabel(gate, locale),
-            hint: gateHint(gate, locale),
-            status: entry.status,
-            statusLabel: t(`gate_${entry.status}`),
-            statusTone: GATE_TONE[entry.status],
-            evidence: entry.evidence,
-        }
-    }
-}
-
-const versionsOf = (
-    t: ReturnType<typeof useTranslations<"moduleSetup">>,
-    versions: readonly ContextVersion[],
-    format: ReturnType<typeof useFormatter>,
-    activeVersionId: string | null,
-): SetupSideVersions => {
-    return {
-        title: t("versionsTitle"),
-        emptyText: t("versionsEmpty"),
-        inUseLabel: t("inUse"),
-        versions: versions.map((version) => ({
-            id: version.id,
-            line: t("versionLine", { version: version.version }),
-            detail: `${t("versionBy", {
-                who: version.appliedBy,
-                when: format.dateTime(new Date(version.appliedAt), { dateStyle: "medium", timeStyle: "short" }),
-            })} · ${t("versionFacts", { count: version.snapshot.facts.length })}`,
-            isActive: version.id === activeVersionId,
-        })),
-    }
-}

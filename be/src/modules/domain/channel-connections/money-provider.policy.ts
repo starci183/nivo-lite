@@ -61,8 +61,16 @@ export const isAccountNumber = (value: string): boolean => ACCOUNT.test(value)
 /** True for a SePay API key (16 to 128 letters, digits, dashes or underscores). */
 export const isSepayKey = (value: string): boolean => SEPAY_KEY.test(value)
 
+/** The secret of a SePay feed: the sealed key and the hash its inbound webhook is verified against. */
+export interface SepayFeedSecret {
+    /** The API key itself, sealed for re-display. */
+    readonly plain: string
+    /** The hash of the API key that an inbound SePay webhook is verified against. */
+    readonly webhookSecret: string
+}
+
 /** The secret of a SePay feed for its API key: the key itself, sealed for re-display, and its hash, which an inbound webhook is verified against. */
-export const sepayFeedSecret = (apiKey: string): Readonly<Record<"plain" | "webhookSecret", string>> => ({
+export const sepayFeedSecret = (apiKey: string): SepayFeedSecret => ({
     plain: apiKey,
     webhookSecret: sha256(apiKey),
 })

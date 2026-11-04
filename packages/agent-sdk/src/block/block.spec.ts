@@ -17,7 +17,7 @@ describe("defineBlock", () => {
         const block = defineBlock({
             id: "core.figures",
             title: { key: "t" },
-            props: z.object({ label: z.string().max(200) }),
+            props: z.object({ label: z.string().max(100) }),
             slots: {},
             children: false,
         })

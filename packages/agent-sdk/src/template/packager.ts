@@ -1,6 +1,6 @@
 import { hashOfPackage } from "./canonical"
 import { leavesOf } from "./condition"
-import { TEMPLATE_FORMAT } from "./format.types"
+import { TEMPLATE_FORMAT } from "./format"
 import type {
     AgentTemplatePackage,
     PackageDraft,
@@ -20,13 +20,12 @@ import type {
 } from "./graph.types"
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-/** An email address; each part is bounded, so a long run of text without an `@` costs a fixed amount per position. */
-const EMAIL = /[^\s@"]{1,64}@(?:[a-z0-9-]{1,63}\.){1,8}[a-z]{2,24}/i
+const EMAIL = /[^\s@"]@(?:[^\s@".]+\.)+[a-z]{2,}/i
 const SECRETS: ReadonlyArray<RegExp> = [
-    /sk-[\w-]{16,}/,
-    /Bearer\s+[\w.-]{16,}/i,
-    /-----BEGIN [A-Z ]*KEY/i,
-    /eyJ[\w-]{10,}\.[\w-]{10,}/,
+    /sk-[a-z0-9_-]{16,}/i,
+    /Bearer\s+[a-z0-9._-]{16,}/i,
+    /-----BEGIN [a-z ]*KEY/i,
+    /eyJ[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}/i,
     /api[_-]?key\s*[:=]\s*\S{8,}/i,
     /password\s*[:=]\s*\S+/i,
 ]
@@ -122,8 +121,11 @@ const nodeOf = (node: GraphNode, draft: PackageDraft, tally: Tally): GraphNode =
     }
 }
 
-const contractsOf = (graph: GraphDocument, tally: Tally): GraphDocument["contracts"] =>
-    graph.contracts?.map((contract) => {
+const contractsOf = (
+    contracts: NonNullable<GraphDocument["contracts"]>,
+    tally: Tally,
+): NonNullable<GraphDocument["contracts"]> =>
+    contracts.map((contract) => {
         tally.privateSources +=
             contract.sources.length + contract.limits.reduce((sum, limit) => sum + limit.sources.length, 0)
         return {
@@ -233,7 +235,7 @@ export const previewPackage = (graph: GraphDocument, draft: PackageDraft): Packa
     const rebuilt: GraphDocument = {
         nodes: graph.nodes.map((node) => nodeOf(node, draft, tally)),
         rights: [],
-        ...(graph.contracts === undefined ? {} : { contracts: contractsOf(graph, tally) }),
+        ...(graph.contracts === undefined ? {} : { contracts: contractsOf(graph.contracts, tally) }),
     }
     const providers = [...new Set(rebuilt.nodes.flatMap((node) => node.uses.map((use) => use.provider)))].filter(
         (provider) => provider !== "brain",

@@ -1,10 +1,10 @@
 "use client"
 
-import { readRequiredField, workspaceArgumentKey } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { readRequiredField, workspaceArgumentKey, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
+import type { SWRResponse } from "swr"
 import { queryLeadFlow } from "@/modules/api/graphql/queries/query-lead-flow"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { LeadFlowQuery } from "@/modules/api"
 
 /** Workspace-scoped cache identity for the leadFlow query. */
 export const QUERY_LEAD_FLOW_SWR_KEY = "QUERY_LEAD_FLOW_SWR"
@@ -13,7 +13,7 @@ export const QUERY_LEAD_FLOW_SWR_KEY = "QUERY_LEAD_FLOW_SWR"
 export const useQueryLeadFlowSwr = (
     workspaceId: string | undefined,
     leadId: string | undefined,
-): ReadResponse<NonNullable<OperationData<typeof queryLeadFlow>["leadFlow"]>> =>
+): SWRResponse<NonNullable<LeadFlowQuery["leadFlow"]>, Error> =>
     useSWR(
         workspaceArgumentKey(QUERY_LEAD_FLOW_SWR_KEY, workspaceId, leadId),
         ([, , leadId]: WorkspaceReadKey<string>) => readRequiredField(queryLeadFlow, { leadId }, "leadFlow"),

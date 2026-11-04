@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateApplyShiftsImport } from "@/modules/api/graphql/mutations/mutation-apply-shifts-import"
-import type { MutateApplyShiftsImportRequest } from "@/modules/api/graphql/mutations/mutation-apply-shifts-import"
+import {
+    mutateApplyShiftsImport,
+    type MutateApplyShiftsImportRequest,
+} from "@/modules/api/graphql/mutations/mutation-apply-shifts-import"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ApplyShiftsImportMutation } from "@/modules/api"
 
 /** What the applyShiftsImport mutation is triggered with. */
 interface ApplyShiftsImportArg {
@@ -16,7 +18,7 @@ export const MUTATE_APPLY_SHIFTS_IMPORT_SWR_KEY = "MUTATE_APPLY_SHIFTS_IMPORT_SW
 
 /** SWR mutation for {@link mutateApplyShiftsImport}: `trigger(request)` answers `applyShiftsImport` and rejects with the back end failure. */
 export const useMutateApplyShiftsImportSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateApplyShiftsImport>["applyShiftsImport"],
+    ApplyShiftsImportMutation["applyShiftsImport"],
     Error,
     typeof MUTATE_APPLY_SHIFTS_IMPORT_SWR_KEY,
     ApplyShiftsImportArg["arg"]

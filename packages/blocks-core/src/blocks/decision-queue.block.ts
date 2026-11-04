@@ -2,7 +2,7 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import type { TextSchema, EnumSchema, QueueSlots } from "./schema-types"
+import type { TextSchema, EnumSchema, RequiredRead, OptionalAction } from "./schema-types"
 
 /** Where a queue stands: a card on a card page, or a section in a pane. */
 export const QUEUE_SURFACES = ["card", "section"] as const
@@ -22,7 +22,12 @@ const props: z.ZodObject<{
     seeWhy: specText,
     moreMenu: specText,
 })
-const slots: QueueSlots = {
+/** The slots of the decision queue block: the queue read and the command a row may run. */
+type Slots = {
+    readonly queue: RequiredRead<"record">
+    readonly command: OptionalAction
+}
+const slots: Slots = {
     queue: { kind: "read", shape: "record", required: true },
     command: { kind: "action", required: false },
 }

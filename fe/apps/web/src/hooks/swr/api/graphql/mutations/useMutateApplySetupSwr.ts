@@ -1,10 +1,9 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateApplySetup } from "@/modules/api/graphql/mutations/mutation-apply-setup"
-import type { MutateApplySetupRequest } from "@/modules/api/graphql/mutations/mutation-apply-setup"
+import { mutateApplySetup, type MutateApplySetupRequest } from "@/modules/api/graphql/mutations/mutation-apply-setup"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ApplySetupMutation } from "@/modules/api"
 
 /** What the ApplySetup mutation is triggered with. */
 interface ApplySetupArg {
@@ -16,7 +15,7 @@ export const MUTATE_APPLY_SETUP_SWR_KEY = "MUTATE_APPLY_SETUP_SWR"
 
 /** SWR mutation for {@link mutateApplySetup}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateApplySetupSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateApplySetup>["applySetup"],
+    ApplySetupMutation["applySetup"],
     Error,
     typeof MUTATE_APPLY_SETUP_SWR_KEY,
     ApplySetupArg["arg"]

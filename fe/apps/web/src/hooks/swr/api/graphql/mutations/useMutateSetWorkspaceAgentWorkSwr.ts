@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSetWorkspaceAgentWork } from "@/modules/api/graphql/mutations/mutation-set-workspace-agent-work"
-import type { MutateSetWorkspaceAgentWorkRequest } from "@/modules/api/graphql/mutations/mutation-set-workspace-agent-work"
+import {
+    mutateSetWorkspaceAgentWork,
+    type MutateSetWorkspaceAgentWorkRequest,
+} from "@/modules/api/graphql/mutations/mutation-set-workspace-agent-work"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetWorkspaceAgentWorkMutation } from "@/modules/api"
 
 /** What the SetWorkspaceAgentWork mutation is triggered with. */
 interface SetWorkspaceAgentWorkArg {
@@ -16,7 +18,7 @@ export const MUTATE_SET_WORKSPACE_AGENT_WORK_SWR_KEY = "MUTATE_SET_WORKSPACE_AGE
 
 /** SWR mutation for {@link mutateSetWorkspaceAgentWork}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateSetWorkspaceAgentWorkSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetWorkspaceAgentWork>["setWorkspaceAgentWork"],
+    SetWorkspaceAgentWorkMutation["setWorkspaceAgentWork"],
     Error,
     typeof MUTATE_SET_WORKSPACE_AGENT_WORK_SWR_KEY,
     SetWorkspaceAgentWorkArg["arg"]

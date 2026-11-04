@@ -6,7 +6,7 @@ export type SpecSchemaId = "nivo/workbench-spec@2"
 
 /** A binding of a read slot to a registered read, narrowed by a dotted path into its data. */
 export interface SpecReadBinding {
-    /** The id of the registered read to bind. */
+    /** The registry id of the read. */
     readonly read: string
     /** A dotted path into the read's data (`stats.members`); the data itself when absent. */
     readonly path?: string | undefined
@@ -16,7 +16,7 @@ export interface SpecReadBinding {
 
 /** A binding of an action slot to a registered action. */
 export interface SpecActionBinding {
-    /** The id of the registered action to bind. */
+    /** The registry id of the action. */
     readonly action: string
 }
 
@@ -25,7 +25,7 @@ export type SpecBinding = SpecReadBinding | SpecActionBinding
 
 /** What a viewer needs for a node to be drawn. */
 export interface SpecWhen {
-    /** The permission the viewer must hold for the node to be drawn. */
+    /** The member permission the viewer must hold. */
     readonly permission: string
 }
 
@@ -36,37 +36,37 @@ export type SpecForbidden = "notice" | "hide"
 export interface SpecNode {
     /** Unique within its view and the document's head and foot. */
     readonly id: string
-    /** The id of the block that draws this node. */
+    /** The registry id of the block the node draws. */
     readonly block: Namespaced
-    /** The block's literal props, checked against its schema. */
+    /** The literal props of the block; absent leaves every prop at its default. */
     readonly props?: Readonly<Record<string, JsonValue>> | undefined
-    /** The block's slots bound to reads or actions, by slot name. */
+    /** What each slot of the block is bound to, by slot name. */
     readonly bind?: Readonly<Record<string, SpecBinding>> | undefined
-    /** The nodes drawn inside this one; only a block that accepts children may have them. */
+    /** The child nodes, for a block that holds children. */
     readonly children?: ReadonlyArray<SpecNode> | undefined
-    /** The condition for drawing the node; absent means always. */
+    /** What the viewer needs for the node to be drawn; absent draws it for everyone. */
     readonly when?: SpecWhen | undefined
-    /** What to do when the node's read is forbidden: say so in place, or draw nothing. */
+    /** What the node does when a read of it is forbidden; absent says so in place. */
     readonly forbidden?: SpecForbidden | undefined
 }
 
 /** One tab of the workbench and the block tree it draws. */
 export interface SpecView {
-    /** The id of the view, unique in the document; the route selects it. */
+    /** The id of the view, which a deep link names; unique within the document. */
     readonly id: string
-    /** The words on the view's tab. */
+    /** The words on the tab of the view. */
     readonly label: SpecText
-    /** The block tree the view draws. */
+    /** The block tree of the view. */
     readonly root: SpecNode
     /** A hidden view draws no tab; it is selected when its `openBy` route query is present. */
     readonly hidden?: boolean | undefined
-    /** The route query that selects a hidden view. */
+    /** The route query key that selects the view when it is present. */
     readonly openBy?: string | undefined
 }
 
 /** A whole spec document, as one version of it is stored. */
 export interface SpecDocument {
-    /** The schema id of the document; a document under another id is refused. */
+    /** The format of the document; another id is refused. */
     readonly schema: SpecSchemaId
     /** The module whose workbench this spec draws. */
     readonly module: string
@@ -74,13 +74,13 @@ export interface SpecDocument {
     readonly head?: ReadonlyArray<SpecNode> | undefined
     /** Blocks drawn below the tabs on every view. */
     readonly foot?: ReadonlyArray<SpecNode> | undefined
-    /** The tabs of the workbench, each with its block tree. */
+    /** The tabs of the workbench and the block tree each draws. */
     readonly views: ReadonlyArray<SpecView>
 }
 
 /** A document as a database row yields it: any schema id, checked by `specProblems` before it is used as a spec. */
 export type StoredSpec = Omit<SpecDocument, "schema"> & {
-    /** The schema id exactly as stored, which may be one this SDK does not know. */
+    /** The schema id the row carries, whatever it is; `specProblems` refuses one that is not the current id. */
     readonly schema: string
 }
 
@@ -105,8 +105,8 @@ export type SpecProblemCode =
 
 /** Why a spec was refused, and where: `<view>/<node id>[.<prop path or slot>]`, `head/<id>` or `foot/<id>`. */
 export interface SpecProblem {
-    /** The reason the spec was refused; stable, so a caller can branch on it. */
+    /** Which rule the spec broke. */
     readonly code: SpecProblemCode
-    /** Where the fault is: `<view>/<node id>[.<prop path or slot>]`, `head/<id>` or `foot/<id>`. */
+    /** Where in the spec the rule was broken. */
     readonly at: string
 }

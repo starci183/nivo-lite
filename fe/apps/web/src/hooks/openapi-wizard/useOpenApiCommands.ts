@@ -13,7 +13,7 @@ import {
 } from "@/hooks/swr"
 
 import { useMemo } from "react"
-import { OPEN_API_AUTH_TYPES, parseOpenApiOps, type OpenApiOp } from "./openapi-wizard.shared"
+import { OPEN_API_AUTH_TYPES, parseOpenApiOps, type OpenApiOp } from "@/modules/openapi-spec"
 
 /** A spec read by the back end. */
 export interface OpenApiSpecView {

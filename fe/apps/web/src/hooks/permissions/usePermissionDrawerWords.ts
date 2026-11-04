@@ -17,62 +17,65 @@ interface WordsInput {
     readonly isOwner: boolean
 }
 
-type UsePermissionDrawerWordsResult = {
-    viewOf: (input: WordsInput) => {
-        title: string
-        copy: {
-            drawerDesc: string
-            close: string
-            agentsLabel: string
-            agentsHint: string
-            strategyLabel: string
-            unitLabel: string
-            autoMaxLabel: string
-            askMaxLabel: string
-            sliderLabel: string
-            bandsInvalid: string
-            groupLabel: string
-            rolesLabel: string
-            roomsLabel: string
-            roomsNone: string
-            membersLabel: string
-            membersHint: string
-            policyLabel: string
-            timeoutLabel: string
-            timeoutNote: string
-            grantsLabel: string
-            grantsNote: string
-            ownerAlways: string
-            save: string
-            cancel: string
-        }
-        legend: {
-            auto: string
-            ask: string
-            never: string
-        }
-        sliderMax: number
-        strategyOptions: {
-            id: string
-            label: string
-        }[]
-        roleOptions: {
-            id: ApproverRole
-            label: string
-        }[]
-        policyOptions: {
-            id: ApprovalPolicy
-            label: string
-        }[]
-        unitOptions: {
-            id: RuleUnit
-            label: string
-        }[]
-        timeoutOptions: {
-            id: string
-            label: string
-        }[]
+/** The words and lists the drawer draws. */
+export interface DrawerWordsView {
+    title: string
+    copy: {
+        drawerDesc: string
+        close: string
+        agentsLabel: string
+        agentsHint: string
+        strategyLabel: string
+        unitLabel: string
+        autoMaxLabel: string
+        askMaxLabel: string
+        sliderLabel: string
+        bandsInvalid: string
+        groupLabel: string
+        rolesLabel: string
+        roomsLabel: string
+        roomsNone: string
+        membersLabel: string
+        membersHint: string
+        policyLabel: string
+        timeoutLabel: string
+        timeoutNote: string
+        grantsLabel: string
+        grantsNote: string
+        ownerAlways: string
+        save: string
+        cancel: string
     }
+    legend: {
+        auto: string
+        ask: string
+        never: string
+    }
+    sliderMax: number
+    strategyOptions: {
+        id: string
+        label: string
+    }[]
+    roleOptions: {
+        id: ApproverRole
+        label: string
+    }[]
+    policyOptions: {
+        id: ApprovalPolicy
+        label: string
+    }[]
+    unitOptions: {
+        id: RuleUnit
+        label: string
+    }[]
+    timeoutOptions: {
+        id: string
+        label: string
+    }[]
+}
+
+type UsePermissionDrawerWordsResult = {
+    viewOf: (input: WordsInput) => DrawerWordsView
 }
 
 /** Every fixed word and list of the rule drawer, resolved against the rule being changed. */
@@ -112,63 +115,7 @@ export const usePermissionDrawerWords = (): UsePermissionDrawerWordsResult => {
         }
     }
 
-    const viewOf = (
-        input: WordsInput,
-    ): {
-        title: string
-        copy: {
-            drawerDesc: string
-            close: string
-            agentsLabel: string
-            agentsHint: string
-            strategyLabel: string
-            unitLabel: string
-            autoMaxLabel: string
-            askMaxLabel: string
-            sliderLabel: string
-            bandsInvalid: string
-            groupLabel: string
-            rolesLabel: string
-            roomsLabel: string
-            roomsNone: string
-            membersLabel: string
-            membersHint: string
-            policyLabel: string
-            timeoutLabel: string
-            timeoutNote: string
-            grantsLabel: string
-            grantsNote: string
-            ownerAlways: string
-            save: string
-            cancel: string
-        }
-        legend: {
-            auto: string
-            ask: string
-            never: string
-        }
-        sliderMax: number
-        strategyOptions: {
-            id: string
-            label: string
-        }[]
-        roleOptions: {
-            id: ApproverRole
-            label: string
-        }[]
-        policyOptions: {
-            id: ApprovalPolicy
-            label: string
-        }[]
-        unitOptions: {
-            id: RuleUnit
-            label: string
-        }[]
-        timeoutOptions: {
-            id: string
-            label: string
-        }[]
-    } => ({
+    const viewOf = (input: WordsInput): DrawerWordsView => ({
         title: actionWordOf(g, input.rule.action),
         copy: copyOf(input.rule, input.draft, input.isOwner),
         legend: legendOf(input.draft),

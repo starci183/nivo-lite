@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRetryKnowledgeSource } from "@/modules/api/graphql/mutations/mutation-retry-knowledge-source"
-import type { MutateRetryKnowledgeSourceRequest } from "@/modules/api/graphql/mutations/mutation-retry-knowledge-source"
+import {
+    mutateRetryKnowledgeSource,
+    type MutateRetryKnowledgeSourceRequest,
+} from "@/modules/api/graphql/mutations/mutation-retry-knowledge-source"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RetryKnowledgeSourceMutation } from "@/modules/api"
 
 /** What the RetryKnowledgeSource mutation is triggered with. */
 interface RetryKnowledgeSourceArg {
@@ -16,7 +18,7 @@ export const MUTATE_RETRY_KNOWLEDGE_SOURCE_SWR_KEY = "MUTATE_RETRY_KNOWLEDGE_SOU
 
 /** SWR mutation for {@link mutateRetryKnowledgeSource}: Sends a failed document back to the job queue. `trigger(input)` rejects with the back end failure. */
 export const useMutateRetryKnowledgeSourceSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRetryKnowledgeSource>["retryKnowledgeSource"],
+    RetryKnowledgeSourceMutation["retryKnowledgeSource"],
     Error,
     typeof MUTATE_RETRY_KNOWLEDGE_SOURCE_SWR_KEY,
     RetryKnowledgeSourceArg["arg"]

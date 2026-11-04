@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateApproveMcpConnector } from "@/modules/api/graphql/mutations/mutation-approve-mcp-connector"
-import type { MutateApproveMcpConnectorRequest } from "@/modules/api/graphql/mutations/mutation-approve-mcp-connector"
+import {
+    mutateApproveMcpConnector,
+    type MutateApproveMcpConnectorRequest,
+} from "@/modules/api/graphql/mutations/mutation-approve-mcp-connector"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ApproveMcpConnectorMutation } from "@/modules/api"
 
 /** What the ApproveMcpConnector mutation is triggered with. */
 interface ApproveMcpConnectorArg {
@@ -16,7 +18,7 @@ export const MUTATE_APPROVE_MCP_CONNECTOR_SWR_KEY = "MUTATE_APPROVE_MCP_CONNECTO
 
 /** SWR mutation for {@link mutateApproveMcpConnector}: `trigger({ key })` answers the approved tool count and rejects with the back end failure. */
 export const useMutateApproveMcpConnectorSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateApproveMcpConnector>["approveMcpConnector"],
+    ApproveMcpConnectorMutation["approveMcpConnector"],
     Error,
     typeof MUTATE_APPROVE_MCP_CONNECTOR_SWR_KEY,
     ApproveMcpConnectorArg["arg"]

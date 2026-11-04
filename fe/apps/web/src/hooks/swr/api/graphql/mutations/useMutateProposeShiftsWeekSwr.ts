@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateProposeShiftsWeek } from "@/modules/api/graphql/mutations/mutation-propose-shifts-week"
-import type { MutateProposeShiftsWeekRequest } from "@/modules/api/graphql/mutations/mutation-propose-shifts-week"
+import {
+    mutateProposeShiftsWeek,
+    type MutateProposeShiftsWeekRequest,
+} from "@/modules/api/graphql/mutations/mutation-propose-shifts-week"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ProposeShiftsWeekMutation } from "@/modules/api"
 
 /** What the proposeShiftsWeek mutation is triggered with. */
 interface ProposeShiftsWeekArg {
@@ -16,7 +18,7 @@ export const MUTATE_PROPOSE_SHIFTS_WEEK_SWR_KEY = "MUTATE_PROPOSE_SHIFTS_WEEK_SW
 
 /** SWR mutation for {@link mutateProposeShiftsWeek}: `trigger(request)` answers `proposeShiftsWeek` and rejects with the back end failure. */
 export const useMutateProposeShiftsWeekSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateProposeShiftsWeek>["proposeShiftsWeek"],
+    ProposeShiftsWeekMutation["proposeShiftsWeek"],
     Error,
     typeof MUTATE_PROPOSE_SHIFTS_WEEK_SWR_KEY,
     ProposeShiftsWeekArg["arg"]

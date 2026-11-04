@@ -1,17 +1,19 @@
 "use client"
 
-import { queryTestOpenApiOperation } from "@/modules/api/graphql/queries/query-test-open-api-operation"
-import type { QueryTestOpenApiOperationRequest } from "@/modules/api/graphql/queries/query-test-open-api-operation"
+import {
+    queryTestOpenApiOperation,
+    type QueryTestOpenApiOperationRequest,
+} from "@/modules/api/graphql/queries/query-test-open-api-operation"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { TestOpenApiOperationQuery } from "@/modules/api"
 
 /** The SWR key of the testOpenApiOperation query. */
 export const QUERY_TEST_OPEN_API_OPERATION_SWR_KEY = "QUERY_TEST_OPEN_API_OPERATION_SWR"
 
 /** Lazy SWR query for {@link queryTestOpenApiOperation}: `trigger(input)` answers the test result and rejects with the back end failure. */
 export const useQueryTestOpenApiOperationSwr = (): SWRMutationResponse<
-    OperationData<typeof queryTestOpenApiOperation>["testOpenApiOperation"],
+    TestOpenApiOperationQuery["testOpenApiOperation"],
     Error,
     typeof QUERY_TEST_OPEN_API_OPERATION_SWR_KEY,
     TriggerArg["arg"]

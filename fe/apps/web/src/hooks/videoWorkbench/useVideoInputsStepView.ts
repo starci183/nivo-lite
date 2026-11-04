@@ -2,6 +2,7 @@
 
 import type { VideoEditorActions, VideoEditorViews } from "@/modules/types"
 type VideoInputsFormFields = VideoEditorViews["inputs"]
+/** Handlers the inputs step form calls. */
 export type VideoInputsFormActions = VideoEditorActions["inputs"]
 import type { MediaItem, ProjectInputs } from "@/modules/video"
 import { useState } from "react"

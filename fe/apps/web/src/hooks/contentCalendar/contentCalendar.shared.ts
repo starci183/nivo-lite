@@ -59,3 +59,56 @@ export const calendarMonthView = (
     })
     return { monthItems, pillarNames, byDay, cells }
 }
+
+/** Who owns a calendar: the scope and the activation of the surface that shows it. */
+export interface ContentCalendarOwner {
+    readonly scope: string
+    readonly isActive: boolean
+    readonly isReady: boolean
+}
+
+/** One immutable calendar owner and its actual local selection/drag state. */
+export interface ContentCalendarState {
+    readonly scope: string
+    readonly isActive: boolean
+    readonly isReady: boolean
+    readonly epoch: number
+    readonly ym: { readonly y: number; readonly m: number }
+    readonly dragId: string | null
+    readonly overKey: string | null
+    readonly expandedKey: string | null
+}
+
+/** A commit receipt carries the immutable bundle's identity, never a second source of UI values. */
+export type ContentCalendarReceipt = Pick<ContentCalendarState, "scope" | "isActive" | "isReady" | "epoch">
+
+/** Fresh activation uses the incoming source's real month and the original empty drag/expansion defaults. */
+export const freshContentCalendar = (input: ContentCalendarOwner, now: Date, epoch: number): ContentCalendarState => {
+    const here = vietnamClock(now)
+    return {
+        scope: input.scope,
+        isActive: input.isActive,
+        isReady: input.isReady,
+        epoch,
+        ym: { y: here.y, m: here.m },
+        dragId: null,
+        overKey: null,
+        expandedKey: null,
+    }
+}
+
+/** Background data identity does not own a user's selected month. */
+export const sameContentCalendarOwner = (current: ContentCalendarState, input: ContentCalendarOwner): boolean =>
+    current.scope === input.scope && current.isActive === input.isActive && current.isReady === input.isReady
+
+/** Captured events can affect only the exact active, ready activation that produced them. */
+export const currentContentCalendarEpoch = (
+    current: ContentCalendarReceipt,
+    expected: ContentCalendarReceipt,
+): boolean =>
+    current.scope === expected.scope &&
+    current.epoch === expected.epoch &&
+    current.isActive === expected.isActive &&
+    current.isReady === expected.isReady &&
+    current.isActive &&
+    current.isReady

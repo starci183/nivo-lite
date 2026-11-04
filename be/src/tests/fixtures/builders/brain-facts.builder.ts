@@ -6,7 +6,7 @@ import type {
     Scope,
     FactStatus,
     FactSource,
-    ProposalKind,
+    FactProposalKind,
 } from "@modules/domain/brain-facts"
 import { builder } from "@starci/jest-preset"
 import { brainFactsEntities } from "@modules/domain/brain-facts"
@@ -62,7 +62,7 @@ type RowOfShape = {
     readonly decidedBy?: string | null
     readonly decidedAt?: Date | null
     readonly decisionNote?: string | null
-    readonly proposalKind?: ProposalKind
+    readonly proposalKind?: FactProposalKind
     readonly id?: string
     readonly createdAt?: Date
     readonly updatedAt?: Date
