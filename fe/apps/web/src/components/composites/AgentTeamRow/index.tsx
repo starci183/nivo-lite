@@ -9,7 +9,7 @@ interface AgentTeamRowProps {
 
 /** An installed agent as native row data, preserving the approved mascot, agent identity, status and setup progress. */
 export const AgentTeamRow = (props: AgentTeamRowProps) => {
-    return props.total === 0 ? undefined : (
+    return props.total === 0 || (props.confirmed === props.total && !props.isLoading) ? undefined : (
         <SetupMeter
             label={props.progressLabel}
             valueLabel={`${String(props.confirmed)}/${String(props.total)}`}

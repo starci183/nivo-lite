@@ -25,7 +25,7 @@ export const AgentsCatalogPageBase = (props: AgentsCatalogPageBaseProps) => (
             actions: <AgentCreateAction />,
         }}
     >
-        <AgentWorkWorkspaceSwitch />
         <AgentCatalog />
+        <AgentWorkWorkspaceSwitch />
     </Page>
 )

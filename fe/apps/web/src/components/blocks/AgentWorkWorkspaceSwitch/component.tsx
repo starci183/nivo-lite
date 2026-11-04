@@ -21,7 +21,7 @@ export interface AgentWorkWorkspaceSwitchBaseProps {
     readonly on: { readonly change: (on: boolean) => void; readonly retry: () => void }
 }
 
-/** Draws the kill switch of the whole workspace on the agents list, with the counts of what waits beside it. */
+/** Draws the kill switch of the whole workspace at the foot of the agents list: the switch, its name, and one muted line of what it does and what waits. */
 export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
         <SlotView
@@ -29,8 +29,8 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
             forbidden="hide"
             onRetry={props.on.retry}
             render={(view, isLoading) => (
-                <Stack gap="section">
-                    <Cluster gap="row">
+                <Stack gap="row">
+                    <Cluster gap="row" align="start">
                         <Switch
                             name="workspace-agent-work"
                             label={props.props.switchLabel}
@@ -40,14 +40,13 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
                             isDisabled={props.props.isDisabled || !view.canChange}
                             onSelectedChange={props.on.change}
                         />
-                        <Text isStrong>{props.props.switchLabel}</Text>
+                        <Stack gap="identity">
+                            <Text isStrong>{props.props.switchLabel}</Text>
+                            <Text size="sm" tone="muted" isLoading={isLoading}>
+                                {`${props.props.help} ${view.countsLabel}`}
+                            </Text>
+                        </Stack>
                     </Cluster>
-                    <Text size="sm" tone="muted" isLoading={isLoading}>
-                        {props.props.help}
-                    </Text>
-                    <Text size="sm" isLoading={isLoading}>
-                        {view.countsLabel}
-                    </Text>
                     {view.isOn ? null : <Alert title={props.props.offNotice} tone="negative" appearance="soft" />}
                     {view.canChange ? null : (
                         <Text size="sm" tone="muted">
