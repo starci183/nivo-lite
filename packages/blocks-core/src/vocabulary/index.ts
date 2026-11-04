@@ -34,5 +34,12 @@ export {
     workItemRaiseEffect,
     workItemWithdrawEffect,
 } from "./effects"
-export type { PaymentInstruction, PaymentInstructionArgs } from "./tools"
-export { coreTools, paymentInstructionTool } from "./tools"
+export type {
+    LedgerEntry,
+    LedgerRef,
+    LedgerStatus,
+    LedgerStatusResult,
+    PaymentInstruction,
+    PaymentInstructionArgs,
+} from "./tools"
+export { coreTools, ledgerAppendTool, ledgerStatusTool, ledgerVoidTool, paymentInstructionTool } from "./tools"

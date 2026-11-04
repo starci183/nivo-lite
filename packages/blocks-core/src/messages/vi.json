@@ -31,6 +31,9 @@
   "effectAgentTag": "Gắn thẻ trợ lý",
   "effectWorkItemRaise": "Tạo việc cần xử lý",
   "toolPaymentInstruction": "Hướng dẫn thanh toán",
+  "toolLedgerAppend": "Ghi sổ kế toán",
+  "toolLedgerVoid": "Hủy một dòng sổ kế toán",
+  "toolLedgerStatus": "Đã nối sổ kế toán chưa",
   "effectOrderVoid": "Hủy đơn hàng",
   "effectPaymentClaimWithdraw": "Rút báo chuyển khoản",
   "effectWorkItemWithdraw": "Rút việc cần xử lý"

@@ -31,6 +31,9 @@
   "effectAgentTag": "Tag an agent",
   "effectWorkItemRaise": "Raise a work item",
   "toolPaymentInstruction": "Payment instruction",
+  "toolLedgerAppend": "Append to the ledger",
+  "toolLedgerVoid": "Void a ledger entry",
+  "toolLedgerStatus": "Is a ledger connected",
   "effectOrderVoid": "Void an order",
   "effectPaymentClaimWithdraw": "Withdraw a payment claim",
   "effectWorkItemWithdraw": "Withdraw a work item"
