@@ -9,7 +9,7 @@ import type {
 import { BANNER_CLASS_NAME, HIDDEN_BANNER_CLASS_NAME } from "./classNames"
 
 /** The side pane's state and commands, which the connected owner resolves from the address. */
-interface AsideState {
+export interface AsideState {
     readonly view: WorkbenchAsideView
     readonly on: WorkbenchAsideActions
 }
@@ -24,6 +24,20 @@ const waitingCountOf = (regions: WorkbenchDashboardRegions): string | null => {
 const firstWaitingOf = (regions: WorkbenchDashboardRegions): string | undefined => {
     const slot = regions.waiting.slot
     return "items" in slot ? slot.items.rows[0]?.title : undefined
+}
+
+/** The arrangement and the words of a workbench that does not resolve the side pane's state yet: both panes from the wide width, no way to close either. */
+export const FIXED_ASIDE: AsideState = {
+    view: {
+        grid: {
+            areas: { base: ["head", "main"], medium: ["head", "main"], wide: ["head asideHead", "main aside"] },
+            columns: { base: ["fill"], medium: ["fill"], wide: ["fill", "standard"] },
+            rows: { base: ["auto", "fill"], medium: ["auto", "fill"], wide: ["auto", "fill"] },
+        },
+        isHidden: false,
+        copy: { grid: "-", close: "-", back: "-" },
+    },
+    on: { open: () => undefined, close: () => undefined },
 }
 
 /** What the band that opens the decisions reads. */

@@ -1,4 +1,4 @@
-import { Button, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { Button, EmptyNotice, Pane, PaneGrid, PaneSection, Stack } from "@starci/grammar/common"
 
 /** Copy and the way on for a module that has no workbench yet. */
 export interface AgentWorkbenchPageBaseProps {
@@ -12,10 +12,16 @@ export interface AgentWorkbenchPageBaseProps {
 
 /** Draws the state of a module without a workbench: it is still being built, and Setup is the way on. */
 export const AgentWorkbenchPageBase = (props: AgentWorkbenchPageBaseProps) => (
-    <SurfaceCard ariaLabel={props.props.title}>
-        <EmptyNotice message={props.props.title} description={props.props.body} />
-        <Button intent="neutral" href={props.props.setupHref}>
-            {props.props.setupLabel}
-        </Button>
-    </SurfaceCard>
+    <PaneGrid label={props.props.title} areas={["main"]}>
+        <Pane area="main">
+            <PaneSection align="center" grow>
+                <Stack gap="row">
+                    <EmptyNotice message={props.props.title} description={props.props.body} />
+                    <Button intent="neutral" href={props.props.setupHref}>
+                        {props.props.setupLabel}
+                    </Button>
+                </Stack>
+            </PaneSection>
+        </Pane>
+    </PaneGrid>
 )

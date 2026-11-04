@@ -52,7 +52,7 @@ export interface LoyaltyWorkbenchView {
 export const useLoyaltyWorkbenchView = (input: LoyaltyWorkbenchInput): LoyaltyWorkbenchView => {
     const { activeWorkspaceId } = useActiveWorkspace()
     const scope = JSON.stringify([activeWorkspaceId, input.installationId])
-    const { tabs, dashboard, isNormal } = useAgentWorkbenchShell({
+    const { tabs, dashboard, isNormal, frameOf } = useAgentWorkbenchShell({
         module: "loyalty",
         installationId: input.installationId,
         ids: LOYALTY_VIEW_IDS,
@@ -77,6 +77,7 @@ export const useLoyaltyWorkbenchView = (input: LoyaltyWorkbenchInput): LoyaltyWo
     return {
         shape: isNormal ? selectedShape : ("explanation" as const),
         props: {
+            aside: frameOf(input.tabs).aside,
             why: { ...dashboard.why, label: dashboard.why.paneLabel },
             regions: dashboard.regions,
             tabsLabel: dashboard.tabsLabel,

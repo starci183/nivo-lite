@@ -12,6 +12,7 @@ import { useBookingFiguresView, type BookingFiguresViewShape } from "./useBookin
 import { useBookingWaitlistView, type BookingWaitlistView } from "./useBookingWaitlistView"
 import { useBookingStatsView, type BookingStatsViewShape } from "./useBookingStatsView"
 import type { PlacementFields } from "@/hooks/bookingDesk"
+import type { WorkbenchAsideActions } from "@/modules/types"
 
 type BookingTab = (typeof BOOKING_TABS)[number]
 
@@ -42,6 +43,7 @@ export interface BookingWorkbenchProps extends AgentWorkbenchFrame<BookingTab> {
 
 /** The commands of the workbench: the tab and the retries, then those of the desk, the setup and the waitlist. */
 export interface BookingWorkbenchOn {
+    readonly aside: WorkbenchAsideActions
     readonly selectTab: (id: string) => void
     readonly closeWhy: () => void
     readonly retryDashboard: () => void
@@ -74,7 +76,7 @@ export interface BookingWorkbenchOn {
 
 /** The view `useBookingWorkbenchView` returns. */
 export interface BookingWorkbenchView {
-    readonly shape: "today" | "setup" | "explanation" | "calendar" | "waitlist" | "stats"
+    readonly shape: BookingTab
     readonly props: BookingWorkbenchProps
     readonly on: BookingWorkbenchOn
 }
@@ -88,7 +90,7 @@ export const useBookingWorkbenchView = (input: BookingWorkbenchViewInput): Booki
     const {
         tabs,
         dashboard: frame,
-        isNormal: overview,
+        asideOn,
         frameOf,
     } = useAgentWorkbenchShell({
         module: "booking",
@@ -96,17 +98,17 @@ export const useBookingWorkbenchView = (input: BookingWorkbenchViewInput): Booki
         ids: BOOKING_TABS,
         initialTab: input.initialTab,
     })
-    const board = useBookingBoard(overview)
-    const deskActive = overview && (tabs.selected === "calendar" || tabs.selected === "today")
-    const setupActive = overview && tabs.selected === "setup"
+    const board = useBookingBoard(true)
+    const deskActive = tabs.selected === "calendar" || tabs.selected === "today"
+    const setupActive = tabs.selected === "setup"
     const ribbon = useBookingFiguresView(board)
     const desk = useBookingDeskView({ mode: tabs.selected === "today" ? "today" : "week", isActive: deskActive, scope })
-    const waitlist = useBookingWaitlistView(overview && tabs.selected === "waitlist", scope, board)
+    const waitlist = useBookingWaitlistView(tabs.selected === "waitlist", scope, board)
     const stats = useBookingStatsView(board)
     const setup = useBookingSetupView(setupActive, scope, board)
     const panel = { waitlist: waitlist.props, stats: stats.props, setup: setup.props } as const
     return {
-        shape: overview ? tabs.selected : ("explanation" as const),
+        shape: tabs.selected,
         props: {
             ...frameOf(input.tabs),
             ribbon: ribbon.props,
@@ -118,6 +120,7 @@ export const useBookingWorkbenchView = (input: BookingWorkbenchViewInput): Booki
             },
         },
         on: {
+            aside: asideOn,
             selectTab: tabs.select,
             closeWhy: frame.closeWhy,
             retryDashboard: frame.reload,

@@ -2,6 +2,7 @@ import type { BadgeTone } from "@starci/grammar/common"
 import type { BookingAgendaRowView, ResourceFields } from "./booking"
 import type { WorkbenchDashboardRegions, WorkbenchExplanationView, WorkbenchFigureRegion } from "./workbench-dashboard"
 import type { SlotPanelProps } from "./slot"
+import type { WorkbenchAsideActions, WorkbenchAsideView } from "./panes"
 type BookingPlacementFields = {
     readonly serviceId: string
     readonly date: string
@@ -254,6 +255,7 @@ export interface BookingStatisticsData {
 }
 /** BookingWorkbenchDataView resolved data. */
 export interface BookingWorkbenchDataView {
+    readonly aside: WorkbenchAsideView
     readonly why: WorkbenchExplanationView
     readonly regions: WorkbenchDashboardRegions
     readonly tabsLabel: string
@@ -312,6 +314,7 @@ export interface BookingResourcesActions {
 }
 /** BookingWorkbenchActions resolved data. */
 export interface BookingWorkbenchActions {
+    readonly aside: WorkbenchAsideActions
     readonly selectTab: (key: string) => void
     readonly closeWhy: () => void
     readonly retryDashboard: () => void

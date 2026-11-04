@@ -1,28 +1,22 @@
 import type { ReactElement } from "react"
 import type { ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "@/modules/types"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWaitingList } from "@/components/composites/WorkbenchWaitingList"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ChatbotReplyEditor } from "@/components/branches/ChatbotReplyEditor"
 import { ChatbotCustomerRows } from "@/components/composites/ChatbotCustomerRows"
 import { ChatbotGapRows } from "@/components/composites/ChatbotGapRows"
-import { CHATBOT_WORKBENCH_TABS as CHATBOT_TABS } from "@/modules/types"
 import { ChatbotInboxSlot } from "@/components/frames/ChatbotConversationBody"
 import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
-/** The actual Chatbot list, conversation, gaps and explanation drawings. */
-export const CHATBOT_WORKBENCH_SHAPES: readonly [...typeof CHATBOT_TABS, "conversation", "explanation"] = [
-    ...CHATBOT_TABS,
-    "conversation",
-    "explanation",
-]
-type ChatbotWorkbenchShape = (typeof CHATBOT_WORKBENCH_SHAPES)[number]
+/** The two areas of the Chatbot workbench and the conversation of an opened customer. */
+type ChatbotWorkbenchShape = "customers" | "gaps" | "conversation"
 /** Supplies the selected drawing, resolved workbench data, and customer actions. */
 export interface ChatbotWorkbenchBaseProps {
     readonly shape: ChatbotWorkbenchShape
     readonly props: ChatbotWorkbenchViewData
     readonly on: ChatbotWorkbenchActions
 }
+/** What a part of the desk reads: the view and the commands. */
+type PanelProps = Pick<ChatbotWorkbenchBaseProps, "props" | "on">
 const ModulePanel = (props: ChatbotWorkbenchBaseProps) => {
     const view = props.props
     switch (props.shape) {
@@ -66,22 +60,20 @@ const ModulePanel = (props: ChatbotWorkbenchBaseProps) => {
                     )}
                 />
             )
-        case "explanation":
-            return null
     }
 }
-const WaitingCard = (props: Omit<ChatbotWorkbenchBaseProps, "shape">) => {
+const WaitingCard = (props: PanelProps) => {
     const view = props.props.waiting
     const edit = view.edit
     return (
         <SlotView
             {...view}
-            empty="collapse"
+            emptyDescription={view.list.emptyDescription}
             onRetry={props.on.waiting.retry}
             render={(rows, isLoading) => (
                 <WorkbenchWaitingList
                     {...view.list}
-                    surface="card"
+                    surface="pane"
                     isSkeleton={isLoading}
                     onCommand={props.on.waiting.command}
                     items={rows.map((row) => ({
@@ -105,64 +97,16 @@ const WaitingCard = (props: Omit<ChatbotWorkbenchBaseProps, "shape">) => {
         />
     )
 }
-const Overview = (props: ChatbotWorkbenchBaseProps) => (
+/** The Chatbot workbench: the tabs and the chosen area beside the decisions, or beside the explanation of one. */
+export const ChatbotWorkbenchBase = (props: ChatbotWorkbenchBaseProps): ReactElement => (
     <WorkbenchOverview
         view={props.props}
         ribbon={props.props.ribbon}
         on={{ ...props.on, retryRibbon: props.on.retry }}
+        aside={{ view: props.props.aside, on: props.on.aside }}
         waiting={<WaitingCard props={props.props} on={props.on} />}
+        decisions={{ slot: props.props.waiting.slot, onCommand: props.on.waiting.command }}
     >
         <ModulePanel {...props} />
     </WorkbenchOverview>
 )
-const Explanation = (props: Omit<ChatbotWorkbenchBaseProps, "shape">) => {
-    const view = props.props
-    const why = view.why
-    return (
-        <WorkbenchWhyFrame
-            label={why.paneLabel}
-            listLabel={why.listLabel}
-            openLabel={why.openLabel}
-            closeLabel={why.closeLabel}
-            view={why.view}
-            labels={why.labels}
-            onClose={props.on.closeWhy}
-        >
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(waiting, isLoading) => (
-                    <WorkbenchPaneRows
-                        label={view.regions.waiting.label}
-                        rows={waiting.rows}
-                        openLabel={waiting.openLabel}
-                        isLoading={isLoading}
-                    />
-                )}
-            />
-            <SlotView
-                {...view.regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <WorkbenchPaneRows
-                        label={view.regions.done.label}
-                        rows={done.rows}
-                        openLabel={null}
-                        isLoading={isLoading}
-                    />
-                )}
-            />
-        </WorkbenchWhyFrame>
-    )
-}
-/** The four real drawings of the Chatbot workbench. */
-export const ChatbotWorkbenchBase = (props: ChatbotWorkbenchBaseProps): ReactElement => {
-    switch (props.shape) {
-        case "customers":
-        case "gaps":
-        case "conversation":
-            return <Overview {...props} />
-        case "explanation":
-            return <Explanation props={props.props} on={props.on} />
-    }
-}

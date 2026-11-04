@@ -2,7 +2,6 @@ import type { ReactElement } from "react"
 import type { SalesWorkbenchViewData, SalesWorkbenchActions } from "@/modules/types"
 import { Button, Stack, Text } from "@starci/grammar/common"
 import { WorkbenchWaitingList } from "@/components/composites/WorkbenchWaitingList"
-import { WorkbenchWhyDecision } from "@/components/composites/WorkbenchWhyDecision"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { SalesContractsBody } from "@/components/frames/SalesContractsBody"
 import { SalesDecisionsBody } from "@/components/frames/SalesDecisionsBody"
@@ -152,7 +151,7 @@ const ModulePanel = (props: SalesWorkbenchBaseProps) => {
 const WaitingRows = (props: PanelProps) => (
     <SlotView
         {...props.props.waiting}
-        empty="collapse"
+        emptyDescription={props.props.waiting.list.emptyDescription}
         onRetry={props.on.waiting.retry}
         render={(rows, isLoading) => (
             <WorkbenchWaitingList
@@ -165,12 +164,6 @@ const WaitingRows = (props: PanelProps) => (
         )}
     />
 )
-/** The decision the explanation is about, with the same commands its row has. */
-const WhyDecision = (props: PanelProps) => {
-    const slot = props.props.waiting.slot
-    const row = "items" in slot ? slot.items.find((item) => item.id === props.props.why.workItemId) : undefined
-    return <WorkbenchWhyDecision row={row} onCommand={props.on.waiting.command} />
-}
 /** The Sales workbench: the tabs and the chosen tab's panel beside the decisions, or beside the explanation of one. */
 export const SalesWorkbenchBase = (props: SalesWorkbenchBaseProps): ReactElement => (
     <WorkbenchOverview
@@ -179,7 +172,7 @@ export const SalesWorkbenchBase = (props: SalesWorkbenchBaseProps): ReactElement
         on={{ ...props.on, retryRibbon: props.on.retry }}
         aside={{ view: props.props.aside, on: props.on.aside }}
         waiting={<WaitingRows props={props.props} on={props.on} />}
-        whyDecision={<WhyDecision props={props.props} on={props.on} />}
+        decisions={{ slot: props.props.waiting.slot, onCommand: props.on.waiting.command }}
     >
         <ModulePanel {...props} />
     </WorkbenchOverview>
