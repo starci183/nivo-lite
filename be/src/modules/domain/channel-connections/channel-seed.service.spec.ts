@@ -346,6 +346,53 @@ describe("ChannelSeedService > a workspace that has them, the issued values", ()
     })
 })
 
+describe("ChannelSeedService > a workspace whose rows hold no credential", () => {
+    const bare: Held = { rows: HELD_ROWS }
+
+    it("seals the Telegram token into a row that holds none", async () => {
+        const { service, connections } = await build(bare)
+
+        await service.ensure(ACTOR, { ...BARE, telegram: { id: IDS.telegram, token: TOKEN } })
+
+        expect(connections.writeSecret.mock.calls.filter(([id]) => id === IDS.telegram)).toEqual([
+            [IDS.telegram, TOKEN],
+        ])
+    })
+
+    it("seals the SePay key and its hash into a row that holds none", async () => {
+        const { service, connections } = await build(bare)
+
+        await service.ensure(ACTOR, { ...BARE, sepay: { id: IDS.sepay, apiKey: SEPAY_KEY } })
+
+        expect(connections.writeSecret.mock.calls.filter(([id]) => id === IDS.sepay)).toEqual([
+            [IDS.sepay, SEPAY_KEY, hashOf(SEPAY_KEY)],
+        ])
+    })
+
+    it("writes the Zalo values given beside empty ones into a row that holds no credential", async () => {
+        const { service, connections } = await build(bare)
+
+        await service.ensure(ACTOR, { ...BARE, zaloOa: { id: IDS.zaloOa, appId: "1234567" } })
+
+        const [id, written] = connections.writeSecret.mock.calls.find(([each]) => each === IDS.zaloOa) ?? []
+        expect(id).toBe(IDS.zaloOa)
+        expect(jsonOf(written)).toEqual({ appId: "1234567", appSecret: "", oaSecret: "" })
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", IDS.zaloOa, {
+            meta: { app_id: "1234567", oa_secret_saved: "false" },
+        })
+    })
+
+    it("keeps the values a Zalo row holds for the ones the seed leaves out", async () => {
+        const stored = JSON.stringify({ appId: "7654321", appSecret: "app-secret-9", oaSecret: "oa-secret-9" })
+        const { service, connections } = await build({ rows: HELD_ROWS, secrets: { [IDS.zaloOa]: stored } })
+
+        await service.ensure(ACTOR, { ...BARE, zaloOa: { id: IDS.zaloOa } })
+
+        expect(connections.writeSecret).not.toHaveBeenCalled()
+        expect(connections.patch).not.toHaveBeenCalled()
+    })
+})
+
 describe("ChannelSeedService > a seed that is malformed", () => {
     const refused = (field: string) =>
         new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })

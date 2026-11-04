@@ -164,6 +164,11 @@ describe("AgentRunsService.open and append", () => {
         expect(store.open).toHaveBeenCalledWith(em, input)
     })
 
+    it("answers the run the store holds for an id", async () => {
+        const { service } = await build([])
+        await expect(service.runOf("run-1")).resolves.toEqual(runViewOf())
+    })
+
     it("writes steps behind the last one with the workspace of the run", async () => {
         const { service, store, em } = await build([])
         const specs = [stepSpecOf()]

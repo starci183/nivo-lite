@@ -145,6 +145,39 @@ describe("SheetsGrantService > complete", () => {
     })
 })
 
+describe("SheetsGrantService > complete, an account Google did not name", () => {
+    it("names the connection of an account Google did not name after the email its waiting row holds", async () => {
+        const { service, connections, google } = await build()
+        google.accountEmail.mockResolvedValue(null)
+        connections.listByProvider.mockResolvedValue([
+            record({ status: "pending", meta: { email: "kept@example.test", consent: "needed" } }),
+        ])
+
+        await service.complete("ws-1", "owner-1", "consent-code")
+
+        expect(connections.patch).toHaveBeenCalledWith(
+            "ws-1",
+            "c1",
+            expect.objectContaining({
+                name: "Google - kept@example.test",
+                meta: { email: "kept@example.test", consent: "given", sheets: "granted" },
+            }),
+        )
+    })
+
+    it("creates the connection of an account nobody named as plain Google", async () => {
+        const { service, connections, google } = await build()
+        google.accountEmail.mockResolvedValue(null)
+        connections.listByProvider.mockResolvedValue([])
+
+        await service.complete("ws-1", "owner-1", "consent-code")
+
+        expect(connections.create).toHaveBeenCalledWith(
+            expect.objectContaining({ provider: "google", name: "Google", meta: { email: "", sheets: "granted" } }),
+        )
+    })
+})
+
 describe("SheetsGrantService > setLedgerSheet", () => {
     const withAccess = (overrides = {}) =>
         record({ meta: { email: "shop@example.test", sheets: "granted" }, ...overrides })
@@ -216,6 +249,16 @@ describe("SheetsGrantService > grant", () => {
             "the access without a sheet",
             [record({ meta: { email: "shop@example.test", sheets: "granted" } })],
             { state: "granted", email: "shop@example.test", sheetId: "", sheetUrl: "" },
+        ],
+        [
+            "the access of an account Google never named",
+            [record({ meta: { sheets: "granted", ledgerSheet: SHEET } })],
+            {
+                state: "ready",
+                email: "",
+                sheetId: SHEET,
+                sheetUrl: `https://docs.google.com/spreadsheets/d/${SHEET}/edit`,
+            },
         ],
         [
             "a lost grant",

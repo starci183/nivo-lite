@@ -4,9 +4,10 @@ import {
     liveBotConnectionOf,
     numericUsernameConnectionOf,
 } from "@tests/fixtures/builders/connections.builder"
-import { mockEntityManager } from "@starci/jest-preset"
+import { ROW } from "@tests/fixtures/builders/connections.builder"
+import { mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In } from "typeorm"
+import { In, Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ConnectionBindingsReadService } from "./connection-bindings-read.service"
 import { ConnectionEntity } from "./persistence/entities"
@@ -140,5 +141,67 @@ describe("ConnectionBindingsReadService > owner and state", () => {
 
         await expect(service.workspaceOf("c9", handed)).resolves.toBeNull()
         await expect(service.stateOf("c9", handed)).resolves.toBeNull()
+    })
+})
+
+describe("ConnectionBindingsReadService > recordOf", () => {
+    it("answers the connection of the workspace as its record, read by workspace and id", async () => {
+        const em = mockEntityManager()
+        const [query] = queueQueryBuilders(em, [{ getRawOne: ROW }])
+
+        await expect((await build(em)).recordOf("ws-1", "c1")).resolves.toEqual({
+            id: "c1",
+            workspaceId: "ws-1",
+            provider: "sepay",
+            name: "Bank",
+            meta: {},
+            status: "pending",
+            lastError: null,
+            environment: "live",
+            isDefault: false,
+            lastEventAt: null,
+            firstEvent: null,
+            createdBy: "user-1",
+            createdAt: "2026-10-01T00:00:00.000Z",
+        })
+        expect(query?.callsOf("where")).toEqual([
+            ["c.workspaceId = :workspaceId AND c.id = :id", { workspaceId: "ws-1", id: "c1" }],
+        ])
+        expect(query?.callsOf("limit")).toEqual([[1]])
+    })
+
+    it("answers null when the workspace holds no such connection", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ getRawOne: undefined }])
+
+        await expect((await build(em)).recordOf("ws-1", "c9")).resolves.toBeNull()
+    })
+})
+
+describe("ConnectionBindingsReadService > feedAccountsOf", () => {
+    it("lists the live feeds of a workspace under one provider, newest first, with the account each reported", async () => {
+        const feed = {
+            ...botConnectionOf({ id: "f1", provider: "sepay" }),
+            publicMeta: { account_number: " 0123456789 ", bank_code: "VCB", account_holder: "   " },
+        }
+        const em = mockEntityManager({ find: [ConnectionEntity, [feed]] })
+
+        await expect((await build(em)).feedAccountsOf("ws-1", "sepay", 3)).resolves.toEqual([
+            {
+                id: "f1",
+                provider: "sepay",
+                status: "connected",
+                createdAt: new Date("2026-10-01T00:00:00.000Z"),
+                accountNumber: "0123456789",
+                bankCode: "VCB",
+                accountHolder: null,
+            },
+        ])
+        expect(em.find).toHaveBeenCalledWith(ConnectionEntity, {
+            select: { id: true, provider: true, status: true, createdAt: true, publicMeta: true },
+            where: { workspaceId: "ws-1", provider: "sepay", status: Not("disconnected") },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: 3,
+        })
     })
 })

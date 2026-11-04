@@ -14,6 +14,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsService } from "./google-connections.service"
+import type { LedgerGrant } from "./google-connections.contracts"
 import { GoogleTokensService } from "./google-tokens.service"
 import { SheetsGrantService } from "./sheets-grant.service"
 import { runRealGoogleTokens } from "@tests/fixtures/builders/google-tokens.builder"
@@ -125,6 +126,44 @@ describe("GoogleConnectionsService / authorize, state and accounts", () => {
         expect(connections.listByProvider).toHaveBeenCalledWith("ws-1", "google", {
             includeDisconnected: false,
         })
+    })
+})
+
+describe("GoogleConnectionsService / consentFor and stateWithLedger", () => {
+    it("starts the spreadsheets consent for the sheets purpose and the Google consent for any other", async () => {
+        const { service, sheets, google } = await build()
+        sheets.authorize.mockResolvedValue({ url: "https://google.test/auth?sheets=1" })
+
+        await expect(service.consentFor(actor, "/connections", "sheets")).resolves.toEqual({
+            url: "https://google.test/auth?sheets=1",
+        })
+        expect(sheets.authorize).toHaveBeenCalledWith(actor, "/connections")
+        expect(google.sign).not.toHaveBeenCalled()
+
+        await expect(service.consentFor(actor, "/connections", undefined)).resolves.toEqual({
+            url: "https://google.test/auth?state=signed-state",
+        })
+        expect(sheets.authorize).toHaveBeenCalledTimes(1)
+        expect(google.authUrl).toHaveBeenCalledWith("signed-state", GOOGLE_SCOPE)
+    })
+
+    it("answers the setup together with where the ledger of the workspace stands", async () => {
+        const { service, sheets, connections } = await build()
+        const ledger: LedgerGrant = {
+            state: "ready",
+            email: "shop@example.test",
+            sheetId: "sheet-1",
+            sheetUrl: "https://sheet.test/1",
+        }
+        sheets.grant.mockResolvedValue(ledger)
+
+        await expect(service.stateWithLedger(actor)).resolves.toEqual({
+            configured: true,
+            consentNeeded: false,
+            ledger,
+        })
+        expect(sheets.grant).toHaveBeenCalledWith(actor)
+        expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner", "manager"])
     })
 })
 
