@@ -22,6 +22,8 @@ interface PermissionBoardRow {
     readonly description: string
     readonly modeLabel: string
     readonly modeTone: ModeTone
+    /** The department that groups the rule in the list, worded. */
+    readonly departmentLabel: string
     readonly rule: StoredRule
 }
 
@@ -91,6 +93,7 @@ export const usePermissionBoard = (): UsePermissionBoardResult => {
             description: line.filter((part) => part !== "").join(" · "),
             modeLabel: words.modeWords(shown),
             modeTone: TONES[modeKindOf(shown)],
+            departmentLabel: g(`dept_${department}`),
             rule: shown,
         }
     }

@@ -1,4 +1,4 @@
-import { Button, CheckboxGroup, Cluster, Drawer, SegmentedControl, Stack } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Cluster, SegmentedControl, Stack } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { PermissionBandsFields } from "@/components/branches/PermissionBandsFields"
 import type { PermissionBandsFieldsProps } from "@/components/branches/PermissionBandsFields"
@@ -12,7 +12,7 @@ interface ChoiceView {
     readonly label: string
 }
 
-/** What the drawer edits about one rule, as typed (a number field is NaN while empty). */
+/** What the form edits about one rule, as typed (a number field is NaN while empty). */
 interface DraftView {
     readonly strategy: string
     readonly unit: string
@@ -26,12 +26,10 @@ interface DraftView {
     readonly timeoutMinutes: number
 }
 
-/** Every word of the drawer, already resolved: its own and those of the three field groups. */
-type DrawerCopy = PermissionBandsFieldsProps["props"]["copy"] &
+/** Every word of the form, already resolved: its own and those of the three field groups. */
+type FormCopy = PermissionBandsFieldsProps["props"]["copy"] &
     PermissionGroupFieldsProps["props"]["copy"] &
     PermissionGrantsFieldsProps["props"]["copy"] & {
-        readonly drawerDesc: string
-        readonly close: string
         readonly agentsLabel: string
         readonly agentsHint: string
         readonly strategyLabel: string
@@ -39,8 +37,8 @@ type DrawerCopy = PermissionBandsFieldsProps["props"]["copy"] &
         readonly cancel: string
     }
 
-/** The words and state of the rule drawer. */
-export interface PermissionRuleDrawerProps {
+/** The words and state of the rule form. */
+export interface PermissionRuleFormProps {
     readonly shape: { readonly grants: ReactNode }
     readonly props: {
         /** The rule being changed, already worded: the action and the department. */
@@ -62,7 +60,7 @@ export interface PermissionRuleDrawerProps {
         readonly unitOptions: ReadonlyArray<ChoiceView>
         readonly timeoutOptions: ReadonlyArray<ChoiceView>
         readonly strategyOptions: ReadonlyArray<ChoiceView>
-        readonly copy: DrawerCopy
+        readonly copy: FormCopy
     }
     readonly on: PermissionBandsFieldsProps["on"] &
         PermissionGroupFieldsProps["on"] & {
@@ -77,8 +75,15 @@ export interface PermissionRuleDrawerProps {
 
 const optionsOf = (choices: ReadonlyArray<ChoiceView>) => choices.map((one) => ({ value: one.id, label: one.label }))
 
+/** What the asked fields draw: the form's props and the approval limits, drawn by the block. */
+interface AskedFieldsProps {
+    readonly props: PermissionRuleFormProps["props"]
+    readonly on: PermissionRuleFormProps["on"]
+    readonly grants: ReactNode
+}
+
 /** The approver group, how they decide and the approval limits: what a rule that asks a person needs. */
-const AskedFields = (props: PermissionRuleDrawerProps) => {
+const AskedFields = (props: AskedFieldsProps) => {
     const { props: p, on } = props
     const draft = p.draft
     return (
@@ -99,69 +104,72 @@ const AskedFields = (props: PermissionRuleDrawerProps) => {
                 }}
                 on={on}
             />
-            {props.shape.grants}
+            {props.grants}
         </>
     )
 }
 
-/** The form that sets how far one rule lets an agent go and who approves the rest. */
-export const PermissionRuleDrawer = (props: PermissionRuleDrawerProps) => {
+/** What the foot of the form needs. */
+interface FormFootProps {
+    readonly props: Pick<PermissionRuleFormProps["props"], "copy" | "isPending" | "canSave">
+    readonly on: Pick<PermissionRuleFormProps["on"], "close" | "save">
+}
+
+/** The commands at the foot of the form: leave it as it was, or save the rule. */
+const FormFoot = (props: FormFootProps) => (
+    <Cluster gap="inline" justify="end">
+        <Button intent="dismiss" isDisabled={props.props.isPending} onPress={props.on.close}>
+            {props.props.copy.cancel}
+        </Button>
+        <Button
+            intent="commit"
+            isPending={props.props.isPending}
+            isDisabled={!props.props.canSave}
+            onPress={props.on.save}
+        >
+            {props.props.copy.save}
+        </Button>
+    </Cluster>
+)
+
+/** The form that sets how far one rule lets an agent go and who approves the rest, with its save command at the foot. */
+export const PermissionRuleForm = (props: PermissionRuleFormProps) => {
     const { props: p, on } = props
     const draft = p.draft
     const asks = draft.strategy === "bands" || draft.strategy === "ask"
     return (
-        <Drawer
-            isOpen
-            onOpenChange={(open) => {
-                if (!open) on.close()
-            }}
-            title={p.title}
-            description={p.copy.drawerDesc}
-            closeLabel={p.copy.close}
-            placement="right"
-            footer={
-                <Cluster gap="inline">
-                    <Button intent="dismiss" isDisabled={p.isPending} onPress={on.close}>
-                        {p.copy.cancel}
-                    </Button>
-                    <Button intent="commit" isPending={p.isPending} isDisabled={!p.canSave} onPress={on.save}>
-                        {p.copy.save}
-                    </Button>
-                </Cluster>
-            }
-        >
-            <Stack gap="row">
-                <CheckboxGroup
-                    label={p.copy.agentsLabel}
-                    description={p.copy.agentsHint}
-                    options={optionsOf(p.agentOptions)}
-                    value={draft.agents}
-                    onValueChange={on.agents}
+        <Stack gap="section">
+            <CheckboxGroup
+                label={p.copy.agentsLabel}
+                description={p.copy.agentsHint}
+                options={optionsOf(p.agentOptions)}
+                value={draft.agents}
+                onValueChange={on.agents}
+            />
+            <SegmentedControl
+                label={p.copy.strategyLabel}
+                width="fill"
+                options={optionsOf(p.strategyOptions)}
+                value={draft.strategy}
+                onValueChange={on.strategy}
+            />
+            {draft.strategy === "bands" ? (
+                <PermissionBandsFields
+                    props={{
+                        unit: draft.unit,
+                        autoMax: draft.autoMax,
+                        askMax: draft.askMax,
+                        sliderMax: p.sliderMax,
+                        unitOptions: p.unitOptions,
+                        legend: p.legend,
+                        isInvalid: p.isBandsInvalid,
+                        copy: p.copy,
+                    }}
+                    on={on}
                 />
-                <SegmentedControl
-                    label={p.copy.strategyLabel}
-                    width="fill"
-                    options={optionsOf(p.strategyOptions)}
-                    value={draft.strategy}
-                    onValueChange={on.strategy}
-                />
-                {draft.strategy === "bands" ? (
-                    <PermissionBandsFields
-                        props={{
-                            unit: draft.unit,
-                            autoMax: draft.autoMax,
-                            askMax: draft.askMax,
-                            sliderMax: p.sliderMax,
-                            unitOptions: p.unitOptions,
-                            legend: p.legend,
-                            isInvalid: p.isBandsInvalid,
-                            copy: p.copy,
-                        }}
-                        on={on}
-                    />
-                ) : null}
-                {asks ? <AskedFields {...props} /> : null}
-            </Stack>
-        </Drawer>
+            ) : null}
+            {asks ? <AskedFields props={p} on={on} grants={props.shape.grants} /> : null}
+            <FormFoot props={p} on={on} />
+        </Stack>
     )
 }

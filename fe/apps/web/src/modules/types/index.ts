@@ -378,7 +378,7 @@ export type {
     ContentTransitionView,
 } from "./content-editor"
 export type { TypedDecisionValues } from "./sales-decision-typed"
-export type { InviteAction, InviteRowView, MemberRowView, TeamPageHeading } from "./team"
+export type { InviteAction, InviteRowView, TeamPanesBaseProps } from "./team"
 export type { ContractImportDialogEvents, ContractImportDialogView, ContractImportRowView } from "./contract-import"
 export type { AccountSignInView, SessionRowView } from "./account"
 export type {

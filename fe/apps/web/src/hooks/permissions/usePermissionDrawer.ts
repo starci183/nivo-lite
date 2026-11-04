@@ -61,6 +61,8 @@ type UsePermissionDrawerResult = {
     grantsLabels: SlotLabels
     retryGrants: () => undefined
     open: (rule: StoredRule) => void
+    /** The id (`department/action`) of the rule that is open, or null while none is. */
+    openedId: string | null
     props:
         | (DrawerWordsView & {
               grants: GrantRow[]
@@ -154,6 +156,7 @@ export const usePermissionDrawer = (options: DrawerOptions): UsePermissionDrawer
         grantsLabels: slotLabels(t("loadFailTitle")),
         retryGrants: (): undefined => void grantsRead.mutate(),
         open: (rule: StoredRule): void => setState({ rule, draft: draftOf(rule), grantEdits: {} }),
+        openedId: state === null ? null : `${state.rule.department}/${state.rule.action}`,
         props,
         on: {
             ...permissionEditsOf({ change, editGrant, members: state?.draft.members ?? [] }),

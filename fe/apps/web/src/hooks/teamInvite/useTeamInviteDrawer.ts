@@ -1,0 +1,54 @@
+"use client"
+
+import { useState } from "react"
+import { useInviteForm } from "@/hooks/rhf"
+import { NO_STAFF, useInviteCommands } from "@/hooks/team"
+import type { InviteSentView } from "@/hooks/team"
+
+/** The invite drawer's state and commands: open or closed, the form, the invitation just made and the copy mark. */
+export interface TeamInviteDrawerState {
+    readonly isOpen: boolean
+    readonly form: ReturnType<typeof useInviteForm>
+    readonly sent: InviteSentView | undefined
+    readonly isCopied: boolean
+    readonly isPending: boolean
+    readonly open: () => void
+    readonly close: () => void
+    readonly submit: () => void
+    readonly markCopied: () => void
+}
+
+/** Owns the invite drawer: sending an invitation shows its link once, closing the drawer clears the form for the next one. */
+export const useTeamInviteDrawer = (): TeamInviteDrawerState => {
+    const commands = useInviteCommands()
+    const form = useInviteForm()
+    const [isOpen, setOpen] = useState(false)
+    const [sent, setSent] = useState<InviteSentView>()
+    const [isCopied, setCopied] = useState(false)
+    const send = form.handleSubmit(async (values) => {
+        setCopied(false)
+        const result = await commands.create({
+            email: values.email,
+            role: values.role,
+            staffId: values.staffId === NO_STAFF ? null : values.staffId,
+        })
+        if (result === undefined) return
+        setSent(result)
+        form.reset({ ...form.getValues(), email: "", staffId: NO_STAFF })
+    })
+    return {
+        isOpen,
+        form,
+        sent,
+        isCopied,
+        isPending: commands.isPending,
+        open: () => setOpen(true),
+        close: () => {
+            setOpen(false)
+            setSent(undefined)
+            setCopied(false)
+        },
+        submit: () => void send(),
+        markCopied: () => setCopied(true),
+    }
+}
