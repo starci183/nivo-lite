@@ -559,7 +559,7 @@ describe("ZaloClient / what an error says", () => {
         const failure = await client.conversation("token", "user-1", 0).catch((cause: unknown) => cause)
 
         expect(failure).toMatchObject({
-            code: ZaloErrorCode.Rejected,
+            code: ZaloErrorCode.PlanRestricted,
             params: {
                 path: "/v2.0/oa/conversation",
                 reason: "Application does not have permission",
