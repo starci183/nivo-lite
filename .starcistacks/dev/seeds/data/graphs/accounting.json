@@ -272,7 +272,7 @@
       "step": "core.raise-work-item",
       "params": {
         "action": "reconcile_payment",
-        "title": "Match a bank credit to an order"
+        "title": "Đối chiếu khoản tiền vào với đơn hàng"
       },
       "input": {
         "payload": {

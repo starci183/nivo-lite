@@ -76,7 +76,7 @@
       "key": "raise-approval",
       "kind": "output",
       "step": "core.raise-work-item",
-      "params": { "action": "confirm_order", "title": "Confirm an order above the owner threshold" },
+      "params": { "action": "confirm_order", "title": "Xác nhận đơn vượt hạn mức của bạn" },
       "input": {
         "payload": { "orderId": { "$ref": "record.orderId" } },
         "amountVnd": { "$ref": "complete.amountVnd" },

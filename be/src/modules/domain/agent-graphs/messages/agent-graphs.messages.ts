@@ -16,7 +16,7 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.unit.million": "tr",
         "agentGraphs.flowUnsound.title": "Quy trình của trợ lý không còn khớp với các bước đã cài, cần sửa lại",
         "agentGraphs.runDead.title": "AI gặp lỗi xử lý tin – cần xem",
-        "agentGraphs.toolApproval.title": "AI cần anh/chị duyệt trước khi chạy {{tool}}",
+        "agentGraphs.toolApproval.title": "AI cần bạn duyệt trước khi chạy {{tool}}",
         "agentGraphs.op.lt": "dưới",
         "agentGraphs.op.lte": "tối đa",
         "agentGraphs.op.gt": "trên",
