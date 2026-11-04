@@ -8,6 +8,7 @@ import { AgentRunItemClosedService } from "./agent-run-item-closed.service"
 import { AGENT_WAKE_INTERRUPTIONS } from "@modules/domain/agent-work"
 import { AgentRunInflightService } from "./agent-run-inflight.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
+import { AgentRunOwnerResumeService } from "./agent-run-owner-resume.service"
 import { AgentRunParkStoreService } from "./agent-run-park-store.service"
 import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
@@ -46,6 +47,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunStoreService,
                 AgentRunParkStoreService,
                 AgentRunResumeService,
+                AgentRunOwnerResumeService,
                 AgentStepLedgerService,
                 AgentRunHandlersService,
                 AgentRunInflightService,
@@ -66,6 +68,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentStepQueueModule,
                 AgentRunsService,
                 AgentRunResumeService,
+                AgentRunOwnerResumeService,
                 AgentRunHandlersService,
                 AgentRunSweepService,
                 AgentRunTraceService,

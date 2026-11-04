@@ -13,6 +13,7 @@ import { WorkspacesGraphqlModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
 import { AgentChatGraphqlModule } from "@features/api/agentchat"
 import { AgentWorkGraphqlModule } from "@features/api/agent-work"
+import { AgentRunsGraphqlModule } from "@features/api/agent-runs"
 import { ChatMarkersGraphqlModule } from "@features/api/chatmarkers"
 import { ChattypingGraphqlModule } from "@features/api/chattyping"
 import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@modules/domain/agent-chat"
@@ -56,6 +57,7 @@ export const apiModules = (options: ApiOptions): Array<DynamicModule> => [
     InboxGraphqlModule.register({}),
     AgentChatGraphqlModule.register({}),
     AgentWorkGraphqlModule.register({}),
+    AgentRunsGraphqlModule.register({}),
     ChatMarkersGraphqlModule.register({}),
     ChattypingGraphqlModule.register({}),
     ChatFilesModule.register({

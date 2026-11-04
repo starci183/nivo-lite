@@ -222,6 +222,26 @@ export interface ResumeRequest {
     readonly reason: string
 }
 
+/** An owner's or manager's request to run a parked run again, as their door receives it. */
+export interface OwnerResumeRequest {
+    /** The Auth account asking. */
+    readonly principalId: string
+    /** The workspace the request is made in; the run must be one of its runs. */
+    readonly workspaceId: string
+    /** The run. */
+    readonly runId: string
+    /** Why, in a few words, kept on the run. */
+    readonly reason: string
+}
+
+/** What the owner's door answers: "resumed" with the step the run goes on from, or why it was not resumed with no step. */
+export interface OwnerResumeAnswer {
+    /** "resumed", or not_found, compensated, not_parked, no_failed_step, exhausted or outcome_unknown. */
+    readonly kind: ResumeResult["kind"]
+    /** The step the run goes on from, when it was resumed. */
+    readonly stepKey: string | null
+}
+
 /** What a resume did. */
 export type ResumeResult =
     | { readonly kind: "resumed"; readonly stepKey: string; readonly workspaceId: string }
