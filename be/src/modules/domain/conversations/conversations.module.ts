@@ -5,6 +5,7 @@ import { CHAT_TURN_EXTENSIONS, CHAT_TURN_OUTCOMES, CHAT_TURN_RUNTIME } from "./c
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./conversations.module-definition"
 import { ChatTurnExtensionsService } from "./chat-turn-extensions.service"
 import { ConversationsService } from "./conversations.service"
+import { CustomerHearingService } from "./customer-hearing.service"
 import { CustomerIntakeService } from "./customer-intake.service"
 import { ChatTurnService } from "./chat-turn.service"
 
@@ -26,6 +27,7 @@ export class ConversationsModule extends ConfigurableModuleClass {
                 ...plugged,
                 ChatTurnExtensionsService,
                 ConversationsService,
+                CustomerHearingService,
                 CustomerIntakeService,
                 ChatTurnService,
                 { provide: CHAT_TURN_EXTENSIONS, useExisting: ChatTurnExtensionsService },

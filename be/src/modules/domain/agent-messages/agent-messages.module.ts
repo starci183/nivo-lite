@@ -4,6 +4,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-messages.module-definition"
 import { OFFICE_ROOMS_TEST_CHATS } from "@modules/domain/office-rooms"
+import { AgentChannelRefsService } from "./agent-channel-refs.service"
 import { AgentMessageDeliveriesService } from "./agent-message-deliveries.service"
 import { AgentMessagesFeedReadService } from "./agent-messages-feed-read.service"
 import { AgentMessageCursorsService } from "./agent-message-cursors.service"
@@ -30,6 +31,7 @@ export class AgentMessagesModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 AgentMessagesService,
+                AgentChannelRefsService,
                 AgentMessagesReadService,
                 AgentMessagesAutomationReadService,
                 AgentMessageCursorsService,
@@ -42,6 +44,7 @@ export class AgentMessagesModule extends ConfigurableModuleClass {
             ],
             exports: [
                 AgentMessagesService,
+                AgentChannelRefsService,
                 AgentMessagesReadService,
                 AgentMessagesAutomationReadService,
                 AgentMessageCursorsService,

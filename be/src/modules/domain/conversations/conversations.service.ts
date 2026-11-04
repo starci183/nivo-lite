@@ -5,8 +5,6 @@ import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { InboundFilesService } from "@modules/domain/chat-files"
 import type { DownloadedChatFile } from "@modules/domain/chat-files"
-import type { ConversationRef } from "@modules/domain/agent-conversations"
-import { AgentMessagesService, messageStampOf } from "@modules/domain/agent-messages"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { IntakeConnection } from "@modules/domain/connections"
@@ -16,8 +14,8 @@ import type { Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { ChatTurnQueue } from "@modules/queues/chat-turn"
-import { CustomerIntakeService } from "./customer-intake.service"
+import { CustomerHearingService } from "./customer-hearing.service"
+import type { Meeting } from "./customer-hearing.contracts"
 import type {
     FrontAgent,
     InboundAttachment,
@@ -27,26 +25,6 @@ import type {
 } from "./conversations.contracts"
 
 const LOCALE = "vi"
-
-/** Where a customer was met, and who answers them. */
-interface Meeting {
-    readonly workspaceId: string
-    readonly connectionId: string
-    readonly channel: string
-    readonly customerId: string
-    readonly visitor: string
-    readonly agent: FrontAgent
-}
-
-/** A meeting with the words the customer wrote and the channel own id of that message. */
-interface Hearing extends Meeting {
-    readonly text: string
-    readonly channelEventId: string
-    /** The pictures and files that came with the message, already read. */
-    readonly files?: ReadonlyArray<DownloadedChatFile>
-    /** When the channel says the customer sent it, in epoch milliseconds; absent or null stores it at the time it arrived. */
-    readonly sentAt?: number | null
-}
 
 @Injectable()
 /**
@@ -58,16 +36,14 @@ export class ConversationsService {
     constructor(
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        private readonly chatTurns: ChatTurnQueue,
-        private readonly intake: CustomerIntakeService,
         private readonly connections: ConnectionsService,
         private readonly conversations: AgentConversationsService,
-        private readonly messages: AgentMessagesService,
         private readonly inboundEvents: InboundEventsService,
         private readonly zaloCredentials: ZaloCredentialsService,
         private readonly bindings: AgentBindingsService,
         private readonly agents: AgentDirectoryService,
         private readonly inboundFiles: InboundFilesService,
+        private readonly hearing: CustomerHearingService,
     ) {}
 
     /** One Telegram message: answered by the front-door agent of the connection, or only stored when none is bound. "/start" opens a new visit with the greeting. */
@@ -96,7 +72,7 @@ export class ConversationsService {
             agent,
         }
         if (!inbound.isStart) {
-            await this.hear({ ...meeting, text: inbound.text, channelEventId }, manager)
+            await this.hearing.hear({ ...meeting, text: inbound.text, channelEventId }, manager)
             return
         }
         await this.conversations.archive(
@@ -107,7 +83,7 @@ export class ConversationsService {
             `${inbound.chatId}:${this.clock.now().getTime()}`,
             manager,
         )
-        await this.greet(meeting, channelEventId, manager)
+        await this.hearing.greet(meeting, channelEventId, manager)
     }
 
     /**
@@ -145,7 +121,7 @@ export class ConversationsService {
             )
             return false
         }
-        await this.hear(
+        await this.hearing.hear(
             {
                 workspaceId,
                 connectionId,
@@ -199,7 +175,7 @@ export class ConversationsService {
             )
             return
         }
-        await this.hear(
+        await this.hearing.hear(
             {
                 workspaceId: connection.value.workspaceId,
                 connectionId,
@@ -214,15 +190,6 @@ export class ConversationsService {
         )
     }
 
-    /** Stores the customer's message at the time the channel says it was sent (never in the future), or at the time it arrived when the channel gave none. */
-    private storeCustomer(hearing: Hearing, conversationId: string, manager: EntityManager): Promise<string> {
-        const { workspaceId, text, sentAt, channelEventId } = hearing
-        if (sentAt === undefined || sentAt === null)
-            return this.messages.storeCustomer(workspaceId, conversationId, text, manager)
-        const stamp = messageStampOf(sentAt, this.clock.now().getTime(), channelEventId)
-        return this.messages.storeCustomer(workspaceId, conversationId, text, manager, null, stamp)
-    }
-
     /** What the customer wrote as the turn reads it: the text, or a label for the picture or file with its caption after it. */
     private wordsOf(inbound: ZaloInbound): string {
         const first = inbound.attachments[0]
@@ -233,76 +200,6 @@ export class ConversationsService {
             LOCALE,
         )
         return `${label} ${inbound.text}`.trim()
-    }
-
-    private async hear(hearing: Hearing, manager: EntityManager): Promise<void> {
-        const { conversation, created } = await this.meet(hearing, manager)
-        const messageId = await this.storeCustomer(hearing, conversation.id, manager)
-        const scope = { workspaceId: hearing.workspaceId, conversationId: conversation.id }
-        await eachInOrder(hearing.files ?? [], (file) =>
-            this.inboundFiles.keep(scope, file, hearing.channelEventId, messageId, manager).then(() => undefined),
-        )
-        // A person who took the conversation over answers it themselves: the message is stored and the AI stays quiet.
-        if (conversation.handledBy !== null) return
-        await this.intake.answer(
-            {
-                workspaceId: hearing.workspaceId,
-                agentId: conversation.agentId,
-                conversationId: conversation.id,
-                messageId,
-                channelEventId: hearing.channelEventId,
-                lookupName: created && hearing.channel === "zalo",
-            },
-            manager,
-        )
-    }
-
-    private async greet(meeting: Meeting, channelEventId: string, manager: EntityManager): Promise<void> {
-        const { conversation } = await this.meet(meeting, manager)
-        const greeting = meeting.agent.greeting.trim() || this.catalog.get("conversations.fallbackGreeting", {}, LOCALE)
-        const messageId = await this.messages.storeGreeting(meeting.workspaceId, conversation.id, greeting, manager)
-        await this.chatTurns.enqueueChatTurn(
-            {
-                kind: "deliver",
-                workspaceId: meeting.workspaceId,
-                conversationId: conversation.id,
-                messageId,
-                channelEventId,
-                lookupName: false,
-            },
-            manager,
-        )
-    }
-
-    /** The customer conversation on this connection: opened on the first message and followed to the current front door of the connection. */
-    private async meet(
-        meeting: Meeting,
-        manager: EntityManager,
-    ): Promise<{ readonly conversation: ConversationRef; readonly created: boolean }> {
-        const found = await this.conversations.find(
-            meeting.workspaceId,
-            meeting.channel,
-            meeting.connectionId,
-            meeting.customerId,
-            manager,
-        )
-        if (found.kind !== "ok") {
-            const opened = await this.conversations.open(
-                {
-                    workspaceId: meeting.workspaceId,
-                    agentId: meeting.agent.id,
-                    channel: meeting.channel,
-                    customerId: meeting.customerId,
-                    visitor: meeting.visitor,
-                    connectionId: meeting.connectionId,
-                },
-                manager,
-            )
-            return { conversation: opened, created: true }
-        }
-        if (found.value.agentId === meeting.agent.id) return { conversation: found.value, created: false }
-        await this.conversations.rebind(found.value.id, meeting.agent.id, manager)
-        return { conversation: { ...found.value, agentId: meeting.agent.id }, created: false }
     }
 
     private async keepUnrouted(
