@@ -64,7 +64,7 @@
     "typecheck": "tsc --noEmit --pretty false"
   },
   "peerDependencies": {
-    "@starci/grammar": "0.21.21",
+    "@starci/grammar": "0.21.22",
     "react": "19.2.3",
     "zod": "4.6.7"
   },

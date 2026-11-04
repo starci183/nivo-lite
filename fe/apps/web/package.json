@@ -20,7 +20,7 @@
     "@reduxjs/toolkit": "2.11.2",
     "@starci/auth": "0.4.0",
     "@starci/event-stream": "0.1.0",
-    "@starci/grammar": "0.21.21",
+    "@starci/grammar": "0.21.22",
     "@starci/heroicons": "0.3.5",
     "@starci/next-data": "0.1.0",
     "@starci/next-i18n": "0.1.0",
