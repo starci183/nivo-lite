@@ -1,5 +1,8 @@
 import {
     NODE_ROWS_MAX,
+    messageIdOf,
+    placeholderRecipient,
+    recipientRefused,
     recipientLinked,
     cutFields,
     limitOf,
@@ -55,9 +58,31 @@ describe("chat-node-ports policy", () => {
 
     it("needs a customer id and a connection to push to, except on the website chat", () => {
         expect(recipientLinked({ channel: "website", externalId: null, connectionId: null })).toBe(true)
-        expect(recipientLinked({ channel: "zalo", externalId: "u1", connectionId: "k1" })).toBe(true)
+        expect(recipientLinked({ channel: "zalo", externalId: "1234567890", connectionId: "k1" })).toBe(true)
         expect(recipientLinked({ channel: "zalo", externalId: null, connectionId: "k1" })).toBe(false)
         expect(recipientLinked({ channel: "zalo", externalId: "u1", connectionId: null })).toBe(false)
+    })
+
+    it("knows a placeholder Zalo sender by its id not being digits, archive suffix aside", () => {
+        expect(placeholderRecipient({ channel: "zalo", externalId: "1234567890123456789" })).toBe(false)
+        expect(placeholderRecipient({ channel: "zalo", externalId: "1234567890:1730000000" })).toBe(false)
+        expect(placeholderRecipient({ channel: "zalo", externalId: "import-dinh" })).toBe(true)
+        expect(placeholderRecipient({ channel: "zalo", externalId: ":1730" })).toBe(true)
+        expect(placeholderRecipient({ channel: "zalo", externalId: null })).toBe(false)
+        expect(placeholderRecipient({ channel: "telegram", externalId: "import-dinh" })).toBe(false)
+    })
+
+    it("names the Zalo refusals that mean the recipient cannot be reached", () => {
+        expect(recipientRefused("zalo_recipient")).toBe(true)
+        expect(recipientRefused("zalo_unfollowed")).toBe(true)
+        expect(recipientRefused("zalo_quota")).toBe(false)
+        expect(recipientRefused(null)).toBe(false)
+    })
+
+    it("derives one uuid per send key, the same every time", () => {
+        expect(messageIdOf("run:1")).toBe(messageIdOf("run:1"))
+        expect(messageIdOf("run:1")).not.toBe(messageIdOf("run:2"))
+        expect(messageIdOf("run:1")).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u)
     })
 
     it("admits a conversation id and a text, and refuses anything else", () => {

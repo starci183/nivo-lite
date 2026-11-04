@@ -87,6 +87,28 @@ export const intentClassifyNode: NodeDefinition<
             effects: [],
         },
         {
+            name: "the words after giao are the delivery address, whatever the order says before them",
+            params: {},
+            input: { text: "Cho mình đặt 1 giỏ hoa nhỏ, giao 25 Nguyễn Huệ", messages: null },
+            model: [
+                {
+                    intents: ["order"],
+                    order: { items: [{ name: "giỏ hoa nhỏ", quantity: 1 }], address: "25 Nguyễn Huệ" },
+                },
+            ],
+            output: {
+                intents: ["order"],
+                order: {
+                    items: [{ name: "giỏ hoa nhỏ", quantity: 1, priceVnd: null }],
+                    address: "25 Nguyễn Huệ",
+                    customer: null,
+                },
+                paymentClaim: null,
+                attachment: null,
+            },
+            effects: [],
+        },
+        {
             name: "an order with no address and no name is an order with both null",
             params: {},
             input: { text: "Đặt 2 chậu hoa", messages: null },

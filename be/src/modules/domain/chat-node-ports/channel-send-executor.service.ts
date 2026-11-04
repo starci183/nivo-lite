@@ -1,6 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
+import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import { AgentMessagesService } from "@modules/domain/agent-messages"
@@ -11,7 +11,14 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { RECIPIENT_NOT_LINKED, recipientLinked, textWithLinks } from "./chat-node-ports.policy"
+import {
+    RECIPIENT_NOT_LINKED,
+    messageIdOf,
+    placeholderRecipient,
+    recipientLinked,
+    recipientRefused,
+    textWithLinks,
+} from "./chat-node-ports.policy"
 import { channelSendSchema } from "./chat-node-ports.schema"
 import { ChatNodePortsLogEvent } from "./chat-node-ports.log-events"
 import { ChatNodePortsError, ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
@@ -43,8 +50,12 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         this.registry?.addExecutor(this)
     }
 
-    /** Stores and pushes the text; answers the stored message, and throws when a rule or the channel refused. */
-    async execute(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
+    /**
+     * Stores the text once per effect call (a retry of the same call finds the message and only pushes again) and pushes it; answers the
+     * stored message. A recipient the channel cannot reach keeps the message as not sent and succeeds, so the run goes on; any other
+     * refusal of a rule or of the channel throws, and the step is parked.
+     */
+    async execute(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef> {
         const parsed = channelSendSchema.safeParse(payload)
         if (!parsed.success) throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.InvalidPayload })
         const conversation = await this.conversationOf(turn, parsed.data.conversationId)
@@ -54,14 +65,22 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         if (conversation.agent.id !== turn.agentId) {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.NotSpeaking })
         }
-        const linked = recipientLinked(conversation)
+        const linked = recipientLinked(conversation) && !placeholderRecipient(conversation)
         if (linked && conversation.channel === "zalo" && (await this.windowClosed(conversation.id))) {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.ZaloWindowExpired })
         }
         const text = textWithLinks(parsed.data)
-        const messageId = await this.messages.storeAgentMessage(conversation.workspaceId, conversation.id, text)
+        const messageId = await this.messages.storeFinalReply(
+            conversation.workspaceId,
+            conversation.id,
+            text,
+            messageIdOf(call.dedupeKey ?? call.key),
+        )
         if (!linked) return this.keptUndelivered(conversation, messageId)
         const receipt = await this.delivery.deliver({ conversationId: conversation.id, messageId, text })
+        if (!receipt.delivered && receipt.outcome === "rejected" && recipientRefused(receipt.failure)) {
+            return this.keptUndelivered(conversation, messageId)
+        }
         if (!receipt.delivered) {
             const code =
                 receipt.outcome === "rejected"

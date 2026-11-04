@@ -2,6 +2,7 @@ import { runNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeModelRequest } from "@nivo-lite/agent-sdk/node"
 import { EXAMPLE_TURN, fakeNodePorts, nodeExampleMismatches } from "@nivo-lite/agent-sdk/testing"
 import { coreEffects } from "../../vocabulary/effects"
+import { CLASSIFY_INSTRUCTIONS } from "./classify.messages"
 import { intentClassifyNode } from "./classify.node"
 import { classificationOf, imagesOf, messagesOf, vndOf } from "./classify.policy"
 
@@ -12,6 +13,13 @@ describe("intent.classify", () => {
             await expect(nodeExampleMismatches(intentClassifyNode, each, coreEffects)).resolves.toEqual([])
         },
     )
+})
+
+describe("the instructions of the classification", () => {
+    it("tell the model that the words after a delivery word are the address", () => {
+        expect(CLASSIFY_INSTRUCTIONS).toContain("giao")
+        expect(CLASSIFY_INSTRUCTIONS).toContain("25 Nguyễn Huệ")
+    })
 })
 
 describe("messagesOf", () => {
