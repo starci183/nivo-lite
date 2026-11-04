@@ -8,6 +8,8 @@ import { AgentRunItemClosedService } from "./agent-run-item-closed.service"
 import { AGENT_WAKE_INTERRUPTIONS } from "@modules/domain/agent-work"
 import { AgentRunInflightService } from "./agent-run-inflight.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
+import { AgentRunParkStoreService } from "./agent-run-park-store.service"
+import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunSweepService } from "./agent-run-sweep.service"
@@ -15,6 +17,7 @@ import { AgentRunTraceService } from "./agent-run-trace.service"
 import { AgentStepJobService } from "./agent-step-job.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsService } from "./agent-runs.service"
+import { AGENT_RUNS_OPTIONS } from "./agent-runs.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-runs.module-definition"
 
 @Module({})
@@ -32,7 +35,17 @@ export class AgentRunsModule extends ConfigurableModuleClass {
             imports: [...(base.imports ?? []), AgentStepQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
+                {
+                    provide: AGENT_RUNS_OPTIONS,
+                    useValue: {
+                        buildId: options.buildId,
+                        parkSweepMinutes: options.parkSweepMinutes,
+                        parkMaxResumes: options.parkMaxResumes,
+                    },
+                },
                 AgentRunStoreService,
+                AgentRunParkStoreService,
+                AgentRunResumeService,
                 AgentStepLedgerService,
                 AgentRunHandlersService,
                 AgentRunInflightService,
@@ -52,6 +65,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AGENT_WAKE_INTERRUPTIONS,
                 AgentStepQueueModule,
                 AgentRunsService,
+                AgentRunResumeService,
                 AgentRunHandlersService,
                 AgentRunSweepService,
                 AgentRunTraceService,

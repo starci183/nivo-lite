@@ -4,9 +4,11 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isDomainError } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { classifyFailure } from "@modules/platform/queue"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
+import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsLogEvent } from "./agent-runs.log-events"
@@ -30,13 +32,14 @@ export class AgentRunStepsService {
         private readonly store: AgentRunStoreService,
         private readonly compensation: AgentRunCompensationService,
         private readonly deadLetter: AgentRunDeadLetterService,
+        private readonly resume: AgentRunResumeService,
     ) {}
 
     /** Runs the claimed step through its handler and commits what it answered, under the fence of the claim. */
     async execute(step: StepView, signal: AbortSignal): Promise<StepEnd> {
         const answer = await this.answerOf(step, signal)
         if (answer.kind === "retry" || answer.kind === "failed") {
-            return this.fail(step, answer.code, answer.kind === "retry", signal)
+            return this.fail(step, answer.code, answer.kind === "retry", signal, answer.kind === "failed")
         }
         const committed = await this.ledger.commit(
             step,
@@ -57,9 +60,16 @@ export class AgentRunStepsService {
 
     /**
      * Records a failed try and routes it. `retryable` says the handler asked for another try. The record and the route commit together; a
-     * fence that moved on changes nothing. After the commit a run that went back is undone, and one that went to a person is told.
+     * fence that moved on changes nothing. After the commit a run that went back is undone, and one that went to a person is told. `park` says
+     * no other try can cure it (an invalid input, a bug, a handler nobody registered): the run waits for a fix with its done steps kept.
      */
-    async fail(step: StepView, code: string, retryable: boolean, signal: AbortSignal): Promise<StepEnd> {
+    async fail(
+        step: StepView,
+        code: string,
+        retryable: boolean,
+        signal: AbortSignal,
+        park: boolean = false,
+    ): Promise<StepEnd> {
         const routed = await this.entityManager.transaction(async (tx) => {
             const steps = await this.store.routeStepsOf(tx, step.runId)
             const route = routeFailure({
@@ -68,6 +78,7 @@ export class AgentRunStepsService {
                 attempt: step.attempt,
                 maxAttempts: step.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
                 steps,
+                park,
             })
             if (route.kind === "retry") {
                 const retried = await this.ledger.commitIn(tx, step, { kind: "retry", code, afterMs: route.afterMs })
@@ -86,7 +97,11 @@ export class AgentRunStepsService {
             this.logger.warn(AgentRunsLogEvent.StepFailed, { runId: step.runId, stepKey: step.stepKey, code })
         }
         if (routed.kind === "compensate") await this.compensation.run(step.runId, signal)
-        if (routed.kind === "person") await this.deadLetter.tell(step.runId, step.stepKey, code)
+        if (routed.kind === "person") {
+            await this.resume.markParked(step.runId)
+            this.logger.warn(AgentRunsLogEvent.RunParked, { runId: step.runId, stepKey: step.stepKey, code })
+            await this.deadLetter.tell(step.runId, step.stepKey, code)
+        }
         return { kind: "failed", code }
     }
 
@@ -95,7 +110,7 @@ export class AgentRunStepsService {
         return { kind: "fenced" }
     }
 
-    /** What the handler answered; a throw is a try that failed and may be tried again, a kind nobody handles is a failure. */
+    /** What the handler answered; a throw of the network or a deadline is tried again, any other throw and a kind nobody handles park the run. */
     private async answerOf(step: StepView, signal: AbortSignal): Promise<StepAnswer> {
         const handler = this.handlers.of(step.kind)
         if (handler === undefined) {
@@ -109,7 +124,8 @@ export class AgentRunStepsService {
             return await handler.run(step, signal)
         } catch (cause) {
             this.logger.error(AgentRunsLogEvent.HandlerThrew, cause, { runId: step.runId, stepKey: step.stepKey })
-            return { kind: "retry", code: isDomainError(cause) ? cause.code : HANDLER_THREW }
+            const code = isDomainError(cause) ? cause.code : HANDLER_THREW
+            return { kind: classifyFailure(cause) === "transient" ? "retry" : "failed", code }
         }
     }
 }

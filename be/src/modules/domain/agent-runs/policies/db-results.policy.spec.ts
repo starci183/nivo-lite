@@ -6,6 +6,8 @@ import {
     parseCompensationCommit,
     parseDue,
     parseEffect,
+    parseParked,
+    parseResume,
     parseStep,
 } from "./db-results.policy"
 
@@ -23,6 +25,8 @@ const buildSubject = async () => {
                     parseCompensationCommit,
                     parseDue,
                     parseEffect,
+                    parseParked,
+                    parseResume,
                     parseStep,
                 },
             },
@@ -208,5 +212,39 @@ describe("parseDue", () => {
         expect(parseDue([null])).toBeNull()
         expect(parseDue([row({ due_at: 5 })])).toBeNull()
         expect(parseDue([])).toEqual([])
+    })
+})
+
+describe("parseResume", () => {
+    it("reads a resumed answer", async () => {
+        const subject = await buildSubject()
+
+        expect(
+            subject.parseResume({ result: "resumed", stepKey: "turn", workspaceId: "ws-1", errorCode: "boom", at: 7 }),
+        ).toEqual({ kind: "resumed", stepKey: "turn", workspaceId: "ws-1", errorCode: "boom", at: 7 })
+        expect(subject.parseResume({ result: "resumed", stepKey: "turn", workspaceId: "ws-1", at: 7 })).toMatchObject({
+            errorCode: null,
+        })
+    })
+
+    it("reads a refusal and refuses what it does not know", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.parseResume({ result: "compensated" })).toEqual({ kind: "compensated" })
+        expect(subject.parseResume({ result: "resumed", stepKey: 1 })).toBeNull()
+        expect(subject.parseResume({ result: "?" })).toBeNull()
+        expect(subject.parseResume("resumed")).toBeNull()
+    })
+})
+
+describe("parseParked", () => {
+    it("reads the parked rows and refuses a row it does not know", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.parseParked([{ parked_run: "r-1", parked_workspace: "w-1" }])).toEqual([
+            { runId: "r-1", workspaceId: "w-1" },
+        ])
+        expect(subject.parseParked([{ parked_run: "r-1" }])).toBeNull()
+        expect(subject.parseParked("x")).toBeNull()
     })
 })

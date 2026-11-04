@@ -80,3 +80,12 @@ export const filled = (spec: StepSpec): FilledSpec => ({
 
 /** A closed approval has no recorded principal, so execution waits for a person to reconcile its authority. */
 export const DECISION_ACTOR_UNKNOWN = "decision_actor_unknown"
+
+/** How long a run stays parked before the sweep runs it again, minutes, when the app says nothing. */
+export const PARK_SWEEP_MINUTES = 30
+
+/** The most times the machine resumes one parked run when the app says nothing. */
+export const PARK_MAX_RESUMES = 5
+
+/** The most parked runs one pass resumes. */
+export const PARK_PASS_LIMIT = 25

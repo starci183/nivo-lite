@@ -12,6 +12,7 @@ export const QUEUE_MESSAGES: MessageBundle = {
         "errors.QUEUE_RETRY_AFTER": "Tác vụ {{job}} sẽ chạy lại sau {{seconds}} giây: {{reason}}.",
         "errors.QUEUE_HANDLER_MISSING": "Không có bộ xử lý cho tác vụ {{job}} của hàng đợi {{queue}}.",
         "errors.QUEUE_HANDLER_DUPLICATED": "Tác vụ {{job}} của hàng đợi {{queue}} đã có bộ xử lý.",
+        "errors.QUEUE_FLOW_FAILURE": "Luồng xử lý dừng để chờ sửa ({{failureClass}}).",
     },
     en: {
         "errors.QUEUE_DEFERRED_UNTIL": "Job {{job}} waits {{seconds}} seconds for its processing claim.",
@@ -23,5 +24,6 @@ export const QUEUE_MESSAGES: MessageBundle = {
         "errors.QUEUE_RETRY_AFTER": "Job {{job}} runs again in {{seconds}} seconds: {{reason}}.",
         "errors.QUEUE_HANDLER_MISSING": "No handler for job {{job}} of queue {{queue}}.",
         "errors.QUEUE_HANDLER_DUPLICATED": "Job {{job}} of queue {{queue}} already has a handler.",
+        "errors.QUEUE_FLOW_FAILURE": "The flow stopped to wait for a fix ({{failureClass}}).",
     },
 }

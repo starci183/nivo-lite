@@ -5,8 +5,10 @@ export { AGENT_RUN_WAIT_TIMEOUT, AGENT_RUN_ITEM_VERDICTS } from "./agent-runs.de
 export { AgentRunsModule } from "./agent-runs.module"
 export { AgentRunsService } from "./agent-runs.service"
 export { AgentRunHandlersService } from "./agent-run-handlers.service"
+export { AgentRunResumeService } from "./agent-run-resume.service"
 export { AgentRunSweepService } from "./agent-run-sweep.service"
 export { AgentStepJobService } from "./agent-step-job.service"
+export { parseAgentRunsConfig } from "./agent-runs.config"
 export { TOOL_OUTCOME_UNKNOWN, DECISION_ACTOR_UNKNOWN } from "./policies/agent-runs.policy"
 export type {
     AgentStepHandler,
@@ -23,6 +25,7 @@ export type {
     AgentRunWaitTimeout,
     RunTimeoutClaim,
     RunStepView,
+    ResumeResult,
     RunView,
     WaitExpiry,
 } from "./agent-runs-engine.contracts"

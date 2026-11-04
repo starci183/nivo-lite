@@ -16,6 +16,7 @@ import { QuotePerformerService } from "./quote-performer.service"
 import { RedeemRewardPerformerService } from "./redeem-reward-performer.service"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
 import { ReplyCustomerPerformerService } from "./reply-customer-performer.service"
+import { ResumeRunPerformerService } from "./resume-run-performer.service"
 import { SendEmailPerformerService } from "./send-email-performer.service"
 import { WorkPerformersRegistrarService } from "./work-performers-registrar.service"
 
@@ -36,6 +37,7 @@ const build = async () => {
     const redeem = mock<RedeemRewardPerformerService>()
     const gatewayCall = mock<GatewayCallPerformerService>()
     const handOver = mock<HandOverConversationPerformerService>()
+    const resumeRun = mock<ResumeRunPerformerService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkPerformersRegistrarService,
@@ -55,6 +57,7 @@ const build = async () => {
             { provide: RedeemRewardPerformerService, useValue: redeem },
             { provide: GatewayCallPerformerService, useValue: gatewayCall },
             { provide: HandOverConversationPerformerService, useValue: handOver },
+            { provide: ResumeRunPerformerService, useValue: resumeRun },
         ],
     }).compile()
 
@@ -76,6 +79,7 @@ const build = async () => {
         redeem,
         gatewayCall,
         handOver,
+        resumeRun,
     }
 }
 
@@ -99,6 +103,7 @@ describe("WorkPerformersRegistrarService", () => {
             redeem,
             gatewayCall,
             handOver,
+            resumeRun,
         } = await build()
 
         const registered = new Map<string, WorkPerformer>()
@@ -127,9 +132,11 @@ describe("WorkPerformersRegistrarService", () => {
             "redeem_reward",
             "gateway_call",
             "hand_over_conversation",
+            "review_agent_run",
         ])
         expect(registered.get("gateway_call")).toBe(gatewayCall)
         expect(registered.get("hand_over_conversation")).toBe(handOver)
+        expect(registered.get("review_agent_run")).toBe(resumeRun)
         expect(registered.get("handoff_lead")).toBe(handoff)
         expect(registered.get("classify_lead")).toBe(classify)
         expect(registered.get("send_follow_up")).toBe(followUp)
@@ -146,7 +153,7 @@ describe("WorkPerformersRegistrarService", () => {
         expect(registered.get("reschedule")).toBe(booking)
         expect(registered.get("remind_booking")).toBe(remind)
         expect(registered.get("redeem_reward")).toBe(redeem)
-        expect(registry.add).toHaveBeenCalledTimes(18)
+        expect(registry.add).toHaveBeenCalledTimes(19)
         expect(registry.add).toHaveBeenCalledWith("cancel_booking", booking)
         expect(registry.add).toHaveBeenCalledWith("cancel_with_fee", booking)
         expect(registry.add).toHaveBeenCalledWith("confirm_booking", booking)

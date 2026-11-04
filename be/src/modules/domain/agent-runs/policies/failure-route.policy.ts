@@ -26,6 +26,8 @@ export interface FailureFacts {
     readonly maxAttempts: number
     /** Every step of the run. */
     readonly steps: ReadonlyArray<RouteStep>
+    /** The step cannot succeed as it stands (an input that is invalid, a code bug, a missing handler): it is parked for a fix, not undone. */
+    readonly park?: boolean
 }
 
 const doneAndPivot = (step: RouteStep): boolean => step.status === "done" && step.effect.kind === "pivot"
@@ -33,7 +35,8 @@ const doneAndPivot = (step: RouteStep): boolean => step.status === "done" && ste
 const doneAndCompensable = (step: RouteStep): boolean => step.status === "done" && step.effect.kind === "compensable"
 
 /**
- * Where a failure goes. A tool whose outcome is unknown goes to a person and is never called again. Otherwise the step is tried again
+ * Where a failure goes. A tool whose outcome is unknown goes to a person and is never called again. A failure that no other try can cure is
+ * parked for a person at once, with everything done kept, to run again from this step. Otherwise the step is tried again
  * after a bounded backoff while it has tries. Past its tries: when a pivot is done nothing is undone and a person decides (the pivot is
  * named); when none is, the done compensable steps are undone in reverse order, and with none to undo a person decides.
  */
@@ -46,6 +49,7 @@ export const routeFailure = (facts: FailureFacts): RunFailureRoute => {
         facts.code === DECISION_ACTOR_UNKNOWN
     )
         return { kind: "person", pivotKey }
+    if (facts.park === true) return { kind: "person", pivotKey }
     if (facts.retryable && facts.attempt < facts.maxAttempts) {
         return { kind: "retry", afterMs: backoffMs(facts.attempt) }
     }

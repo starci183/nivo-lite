@@ -44,4 +44,28 @@ export class AgentRunEntity extends UuidAbstractEntity {
     /** When the run ended, or null. */
     @Column({ name: "finished_at", type: "timestamptz", nullable: true })
     finishedAt!: Date | null
+
+    /** The build the run parked under, or null. */
+    @Column({ name: "parked_build", type: "text", nullable: true })
+    parkedBuild!: string | null
+
+    /** The times the machine resumed it on its own. */
+    @Column({ name: "resume_attempts", type: "smallint", default: 0 })
+    resumeAttempts!: number
+
+    /** The earliest the machine may resume it again, or null. */
+    @Column({ name: "resume_not_before", type: "timestamptz", nullable: true })
+    resumeNotBefore!: Date | null
+
+    /** When it was last resumed, or null. */
+    @Column({ name: "resumed_at", type: "timestamptz", nullable: true })
+    resumedAt!: Date | null
+
+    /** Who last resumed it: a member id, `build` or `sweep`; or null. */
+    @Column({ name: "resumed_by", type: "text", nullable: true })
+    resumedBy!: string | null
+
+    /** Why it was last resumed, or null. */
+    @Column({ name: "resume_reason", type: "text", nullable: true })
+    resumeReason!: string | null
 }

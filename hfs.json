@@ -107,6 +107,18 @@
           "reason": "finishes the step that waits on a work item, inside the transaction of the decision that answered it"
         },
         {
+          "name": "public.agent_run_park_mark",
+          "reason": "notes the build a run parked under, so a new build can tell which parked runs it may try again"
+        },
+        {
+          "name": "public.agent_run_resume",
+          "reason": "puts a parked run back on its failed step under a row lock, keeping every done step and its result, and records who resumed and why"
+        },
+        {
+          "name": "public.agent_run_parked",
+          "reason": "lists the parked runs a machine may try again, bounded by build, age, tries and the codes that stay with a person"
+        },
+        {
           "name": "public.agent_run_route",
           "reason": "moves a run to the status a policy chose, once, and marks the done steps to undo"
         },

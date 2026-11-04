@@ -104,3 +104,36 @@ describe("routeFailure unknown delivery", () => {
         })
     })
 })
+
+describe("routeFailure for a parked step", () => {
+    const parked = (over: Partial<FailureFacts>): FailureFacts => ({
+        code: "invalid_step_input",
+        retryable: false,
+        attempt: 1,
+        maxAttempts: 3,
+        steps: [door(1)],
+        park: true,
+        ...over,
+    })
+
+    it("gives a failure no other try can cure to a person at once and undoes nothing", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.routeFailure(parked({}))).toEqual({ kind: "person", pivotKey: null })
+    })
+
+    it("names the pivot that is done when it parks", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.routeFailure(parked({ steps: [door(1), pivot(2)] }))).toEqual({
+            kind: "person",
+            pivotKey: "pivot-2",
+        })
+    })
+
+    it("still undoes the done steps for a failure that is not parked and has no tries left", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.routeFailure(parked({ park: false }))).toEqual({ kind: "compensate", stepKeys: ["door-1"] })
+    })
+})

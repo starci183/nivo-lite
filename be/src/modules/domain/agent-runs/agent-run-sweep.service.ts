@@ -7,6 +7,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
+import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
@@ -42,7 +43,7 @@ interface TimeoutFailure {
  * The backstop under the saga, run inside the minute sweep of the agent work (one pass over what the database says is due, bounded, one
  * failing item never stopping the rest). A step whose claim ran out is resumed, retried or stopped visibly by the same claim a job takes;
  * a wait past its deadline gets the graph's timeout; a ready step no job picked up is driven; an undo is continued; a run that stopped and
- * was never told to a person is told. Nothing it finds is left silent.
+ * was never told to a person is told; a run parked for a fix is put back on its failed step once its pause has passed. Nothing it finds is left silent.
  */
 export class AgentRunSweepService {
     constructor(
@@ -57,6 +58,7 @@ export class AgentRunSweepService {
         private readonly deadLetter: AgentRunDeadLetterService,
         @InjectAgentRunWaitTimeout() private readonly timeouts: AgentRunWaitTimeout,
         @InjectAgentRunItemVerdicts() private readonly verdicts: AgentRunItemVerdicts,
+        private readonly resume: AgentRunResumeService,
     ) {}
 
     /** Runs one pass and answers what it did. */
@@ -74,6 +76,17 @@ export class AgentRunSweepService {
             compensating: count("compensating"),
             unspoken: count("unspoken"),
             recovered,
+            parked: await this.resumeParked(),
+        }
+    }
+
+    /** Puts the parked runs that waited long enough back on their failed step; a failing pass never stops the rest of the sweep. */
+    private async resumeParked(): Promise<number> {
+        try {
+            return (await this.resume.resumeParked(false)).resumed
+        } catch (cause) {
+            this.logger.error(AgentRunsLogEvent.SweepItemFailed, cause, { kind: "parked" })
+            return 0
         }
     }
 

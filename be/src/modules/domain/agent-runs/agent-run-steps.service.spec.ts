@@ -8,6 +8,7 @@ import type { Logger } from "@modules/platform/logging"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
+import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
@@ -50,6 +51,7 @@ const build = async (
     })
     const compensation = mock<AgentRunCompensationService>({ run: jest.fn().mockResolvedValue(undefined) })
     const deadLetter = mock<AgentRunDeadLetterService>({ tell: jest.fn().mockResolvedValue(undefined) })
+    const resume = mock<AgentRunResumeService>({ markParked: jest.fn().mockResolvedValue(undefined) })
     const container = await Test.createTestingModule({
         providers: [
             AgentRunStepsService,
@@ -65,9 +67,10 @@ const build = async (
             { provide: AgentRunStoreService, useValue: store },
             { provide: AgentRunCompensationService, useValue: compensation },
             { provide: AgentRunDeadLetterService, useValue: deadLetter },
+            { provide: AgentRunResumeService, useValue: resume },
         ],
     }).compile()
-    return { service: container.get(AgentRunStepsService), ledger, store, compensation, deadLetter, logger, tx }
+    return { service: container.get(AgentRunStepsService), ledger, store, compensation, deadLetter, resume, logger, tx }
 }
 
 describe("AgentRunStepsService.execute", () => {
@@ -127,8 +130,8 @@ describe("AgentRunStepsService.execute", () => {
 })
 
 describe("AgentRunStepsService.execute failures", () => {
-    it("treats a handler that throws as a try that failed and may be tried again", async () => {
-        const { service, ledger, logger } = await build(new Error("boom"))
+    it("tries a handler that throws a transient failure again after a backoff", async () => {
+        const { service, ledger, logger } = await build(Object.assign(new Error("reset"), { code: "ECONNRESET" }))
 
         await expect(service.execute(stepViewOf({ attempt: 1 }), SIGNAL)).resolves.toEqual({
             kind: "failed",
@@ -143,16 +146,47 @@ describe("AgentRunStepsService.execute failures", () => {
         })
     })
 
+    it("parks at once a handler that throws what no try can cure, and records the build", async () => {
+        const { service, ledger, store, deadLetter, resume } = await build(new Error("bug"), { steps: [doneDoor] })
+
+        await service.execute(stepViewOf({ attempt: 1 }), SIGNAL)
+
+        expect(ledger.commitIn).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+            kind: "failed",
+            code: "handler_threw",
+        })
+        expect(store.route).toHaveBeenCalledWith(expect.anything(), "run-1", {
+            from: "running",
+            to: "dead",
+            code: "handler_threw",
+            compensate: [],
+        })
+        expect(resume.markParked).toHaveBeenCalledWith("run-1")
+        expect(deadLetter.tell).toHaveBeenCalledWith("run-1", "turn", "handler_threw")
+    })
+
+    it("parks a step the handler answered failed instead of undoing the steps done before it", async () => {
+        const { service, compensation, store } = await build(
+            { kind: "failed", code: "invalid_step_input" },
+            { steps: [doneDoor] },
+        )
+
+        await service.execute(stepViewOf(), SIGNAL)
+
+        expect(store.route).toHaveBeenCalledWith(expect.anything(), "run-1", expect.objectContaining({ to: "dead" }))
+        expect(compensation.run).not.toHaveBeenCalled()
+    })
+
     it("keeps the code of a domain error a handler throws", async () => {
         class Coded extends DomainError<string> {}
-        const { service, ledger } = await build(new Coded({ code: "SLOW_CONNECTOR" }))
+        const { service, ledger } = await build(new Coded({ code: "SLOW_TIMEOUT" }))
 
         await service.execute(stepViewOf(), SIGNAL)
 
         expect(ledger.commitIn).toHaveBeenCalledWith(
             expect.anything(),
             expect.anything(),
-            expect.objectContaining({ code: "SLOW_CONNECTOR" }),
+            expect.objectContaining({ code: "SLOW_TIMEOUT" }),
         )
     })
 })

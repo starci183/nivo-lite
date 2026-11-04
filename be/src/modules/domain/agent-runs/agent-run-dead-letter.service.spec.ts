@@ -1,11 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runViewOf, stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { FLOW_ALERTS } from "@modules/platform/jobs"
+import type { FlowAlerts, ParkedFlowAlert } from "@modules/platform/jobs"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
+import { AGENT_RUNS_OPTIONS } from "./agent-runs.decorators"
 import { AgentRunsLogEvent } from "./agent-runs.log-events"
 import type { AgentStepHandler, StepView } from "./agent-runs.contracts"
 import type { RunView } from "./agent-runs-engine.contracts"
@@ -161,5 +164,130 @@ describe("AgentRunDeadLetterService.tell when there is nothing to do or nothing 
 
         expect(record.told).toEqual(["door:door:x"])
         expect(logger.info).not.toHaveBeenCalled()
+    })
+})
+
+/** What a scene with a flow alerts port recorded: the alerts raised, and the runs marked told. */
+interface Raised {
+    readonly alerts: Array<ParkedFlowAlert>
+    readonly marked: Array<string>
+}
+
+/** How the alerting scene is set. */
+interface AlertScene {
+    readonly run?: RunView
+    readonly fails?: boolean
+}
+
+const buildAlerting = async (over: AlertScene) => {
+    const raised: Raised = { alerts: [], marked: [] }
+    const logger = mock<Logger>()
+    const store = mock<AgentRunStoreService>({
+        runById: jest.fn().mockResolvedValue(over.run ?? runViewOf({ status: "dead" })),
+        viewsOf: jest.fn().mockResolvedValue(FAILED_RUN),
+        spoken: jest.fn((runId: string) => {
+            raised.marked.push(runId)
+            return Promise.resolve(true)
+        }),
+    })
+    const registry = mock<AgentRunHandlersService>({ of: jest.fn() })
+    const alerts = mock<FlowAlerts>({
+        raise: jest.fn((alert: ParkedFlowAlert) => {
+            if (over.fails === true) return Promise.reject(new Error("down"))
+            raised.alerts.push(alert)
+            return Promise.resolve()
+        }),
+    })
+    const container = await Test.createTestingModule({
+        providers: [
+            AgentRunDeadLetterService,
+            { provide: LOGGER, useValue: logger },
+            { provide: AgentRunStoreService, useValue: store },
+            { provide: AgentRunHandlersService, useValue: registry },
+            { provide: FLOW_ALERTS, useValue: alerts },
+            { provide: AGENT_RUNS_OPTIONS, useValue: { buildId: "b2" } },
+        ],
+    }).compile()
+    return { service: container.get(AgentRunDeadLetterService), raised, logger }
+}
+
+/** The same scene in an app that names no build. */
+const buildUnnamed = async () => {
+    const raised: Raised = { alerts: [], marked: [] }
+    const logger = mock<Logger>()
+    const store = mock<AgentRunStoreService>({
+        runById: jest.fn().mockResolvedValue(runViewOf({ status: "dead" })),
+        viewsOf: jest.fn().mockResolvedValue(FAILED_RUN),
+        spoken: jest.fn().mockResolvedValue(true),
+    })
+    const registry = mock<AgentRunHandlersService>({ of: jest.fn() })
+    const alerts = mock<FlowAlerts>({
+        raise: jest.fn((alert: ParkedFlowAlert) => {
+            if (false) return Promise.reject(new Error("down"))
+            raised.alerts.push(alert)
+            return Promise.resolve()
+        }),
+    })
+    const container = await Test.createTestingModule({
+        providers: [
+            AgentRunDeadLetterService,
+            { provide: LOGGER, useValue: logger },
+            { provide: AgentRunStoreService, useValue: store },
+            { provide: AgentRunHandlersService, useValue: registry },
+            { provide: FLOW_ALERTS, useValue: alerts },
+            { provide: AGENT_RUNS_OPTIONS, useValue: {} },
+        ],
+    }).compile()
+    return { service: container.get(AgentRunDeadLetterService), raised }
+}
+
+describe("AgentRunDeadLetterService owner alert", () => {
+    it("raises the one alert of a parked run, with the build and the resume action, then marks the run told", async () => {
+        const { service, raised } = await buildAlerting({})
+
+        await service.tell("run-1", "door", "invalid_step_input")
+
+        expect(raised.alerts).toEqual([
+            {
+                kind: "flow-parked",
+                jobId: "run-1",
+                flowKind: "agent-run",
+                failureClass: "code",
+                reason: "invalid_step_input",
+                correlationId: runViewOf({ status: "dead" }).wakeId,
+                build: "b2",
+                action: "resume",
+            },
+        ])
+        expect(raised.marked).toEqual(["run-1"])
+    })
+
+    it("names no build when the app names none", async () => {
+        const { service, raised } = await buildUnnamed()
+
+        await service.tell("run-1", "door", "x")
+
+        expect(raised.alerts.map((alert) => alert.build)).toEqual([""])
+    })
+
+    it("leaves the run untold when the alert cannot be raised, so the sweep raises it again", async () => {
+        const { service, raised, logger } = await buildAlerting({ fails: true })
+
+        await service.tell("run-1", "door", "x")
+
+        expect(raised.marked).toEqual([])
+        expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.DeadLetterFailed, expect.any(Error), {
+            runId: "run-1",
+            code: "x",
+        })
+    })
+
+    it("raises nothing for a run that did not park", async () => {
+        const { service, raised } = await buildAlerting({ run: runViewOf({ status: "compensated" }) })
+
+        await service.tell("run-1", "door", "x")
+
+        expect(raised.alerts).toEqual([])
+        expect(raised.marked).toEqual(["run-1"])
     })
 })

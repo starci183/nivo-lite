@@ -40,7 +40,7 @@ const installedNodes: NodeInstall = {
 /** The agent work area of the API: the store that lets an agent be woken by an event or a clock and run one turn at a time per scope, the durable run of each wake, and the clock that wakes it. */
 export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
     AgentWorkModule.register({ isGlobal: true, ...options.agentWork }),
-    AgentRunsModule.register({ isGlobal: true }),
+    AgentRunsModule.register({ isGlobal: true, ...options.agentRuns }),
     GraphNodesModule.register({
         isGlobal: true,
         install: installedNodes,

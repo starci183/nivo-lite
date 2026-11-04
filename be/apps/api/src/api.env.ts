@@ -30,6 +30,7 @@ import { parseAiGatewayConfig } from "@modules/integrations/ai-gateway"
 import { parseAiConfig } from "@modules/integrations/ai"
 import { parseN8nConfig } from "@modules/integrations/n8n"
 import { parseAiTasksConfig } from "@modules/domain/ai-tasks"
+import { parseAgentRunsConfig } from "@modules/domain/agent-runs"
 import { parseAgentTurnsConfig } from "@modules/domain/agent-turns"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
@@ -75,6 +76,8 @@ export interface ApiOptions {
     readonly connectionPoll: ReturnType<typeof parseConnectionPollConfig>
     /** The OpenClaw gateway and the agent workspaces. */
     readonly openclaw: ReturnType<typeof parseOpenclawConfig>
+    /** The running build and how often a parked run is run again. */
+    readonly agentRuns?: ReturnType<typeof parseAgentRunsConfig>
     /** The secret that signs the calls of the OpenClaw bridge plugin. */
     readonly agentTurns: ReturnType<typeof parseAgentTurnsConfig>
     /** The prompt library tunables and the AI endpoint it calls. */
@@ -154,6 +157,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     chatFilesImportRoot: parseChatFilesImportRoot(env),
     connectionPoll: parseConnectionPollConfig(env),
     openclaw: parseOpenclawConfig(env),
+    agentRuns: parseAgentRunsConfig(env),
     agentTurns: parseAgentTurnsConfig(env),
     aiTasks: parseAiTasksConfig(env, parseAiConfig(env)),
     connectionSecrets: parseConnectionSecretsConfig(env),

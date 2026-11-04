@@ -21,6 +21,8 @@ export enum QueueErrorCode {
     ShutdownDeadline = "QUEUE_SHUTDOWN_DEADLINE",
     /** The database answered no uuid for the identity of a job written with none. */
     IdentityUnavailable = "QUEUE_IDENTITY_UNAVAILABLE",
+    /** A flow stopped with a class that says whether another try can help: the input, the code or a setting. */
+    FlowFailure = "QUEUE_FLOW_FAILURE",
 }
 
 /** How each queue code travels. */
@@ -34,6 +36,7 @@ export const QUEUE_ERROR_KINDS: Record<QueueErrorCode, ErrorKind> = {
     [QueueErrorCode.RedisDeadline]: "internal",
     [QueueErrorCode.ShutdownDeadline]: "internal",
     [QueueErrorCode.IdentityUnavailable]: "internal",
+    [QueueErrorCode.FlowFailure]: "internal",
 }
 
 /** The one error class of the queue capability. */

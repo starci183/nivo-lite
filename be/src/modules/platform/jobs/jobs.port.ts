@@ -59,3 +59,29 @@ export interface JobTickScheduler {
     /** Registers a cron job named after the tick that calls `onTick` on the tick's schedule; a firing that throws goes to `onError`. */
     schedule(tick: JobTick, onTick: () => Promise<void>, onError: (cause: unknown) => void): void
 }
+
+/** Where a parked flow tells its owner. Nivo binds it to a work item with a "resume now" action; without a binding nothing is raised. */
+export interface FlowAlerts {
+    /** Raises the alert once per `jobId`; a second call for the same id changes nothing. */
+    raise(alert: ParkedFlowAlert): Promise<void>
+}
+
+/** What the owner is told when a flow parks: it stopped for a fix and runs again from where it stopped. */
+export interface ParkedFlowAlert {
+    /** The kind of alert. */
+    readonly kind: "flow-parked"
+    /** The job (or the run of a saga) that parked; the alert is raised once per id. */
+    readonly jobId: string
+    /** The kind of flow: the job name, or `agent-run` for the graph saga. */
+    readonly flowKind: string
+    /** Why it will not run on its own. */
+    readonly failureClass: "transient" | "input" | "code" | "config"
+    /** The reason in a few words: the failure code. */
+    readonly reason: string
+    /** Ties the alert to the message or wake that started the flow. */
+    readonly correlationId: string
+    /** The build it parked under. */
+    readonly build: string
+    /** What the owner may do about it. */
+    readonly action: "resume"
+}

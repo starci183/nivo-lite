@@ -5,6 +5,8 @@ import type {
     CommitResult,
     CompensationClaim,
     CompensationCommit,
+    ParkedRef,
+    ResumeAnswer,
     RunDue,
 } from "../agent-runs-engine.contracts"
 
@@ -161,5 +163,35 @@ export const parseDue = (rows: unknown): ReadonlyArray<RunDue> | null => {
         const item = dueOf(row)
         return item === null ? [] : [item]
     })
+    return found.length === rows.length ? found : null
+}
+
+const RESUME_REFUSALS = ["not_found", "compensated", "not_parked", "no_failed_step", "exhausted"] as const
+
+/** Reads the answer of `agent_run_resume`, or null. */
+export const parseResume = (value: unknown): ResumeAnswer | null => {
+    if (!isRecord(value)) return null
+    if (value.result === "resumed") {
+        if (typeof value.stepKey !== "string" || typeof value.workspaceId !== "string") return null
+        return {
+            kind: "resumed",
+            stepKey: value.stepKey,
+            workspaceId: value.workspaceId,
+            errorCode: typeof value.errorCode === "string" ? value.errorCode : null,
+            at: Number(value.at),
+        }
+    }
+    const refusal = RESUME_REFUSALS.find((candidate) => candidate === value.result)
+    return refusal === undefined ? null : { kind: refusal }
+}
+
+/** Reads the rows of `agent_run_parked`, or null when one is not a row the pass knows. */
+export const parseParked = (rows: unknown): ReadonlyArray<ParkedRef> | null => {
+    if (!Array.isArray(rows)) return null
+    const found = rows.flatMap((row) =>
+        isRecord(row) && typeof row.parked_run === "string" && typeof row.parked_workspace === "string"
+            ? [{ runId: row.parked_run, workspaceId: row.parked_workspace }]
+            : [],
+    )
     return found.length === rows.length ? found : null
 }

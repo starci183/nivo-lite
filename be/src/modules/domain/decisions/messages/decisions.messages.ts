@@ -4,6 +4,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const DECISIONS_MESSAGES: MessageBundle = {
     vi: {
         "errors.DECISIONS_WORK_BUSY": "Công việc đang được xử lý. Hãy thử lại sau.",
+        "decisions.runParked.title": "AI gặp lỗi xử lý tin – cần xem",
         "legacy.approvedEvent": "Đã duyệt bản nháp cho {{name}} qua {{channel}}.",
         "legacy.approvedMessage": "{{user}} đã duyệt bản nháp cho {{name}} qua {{channel}}.",
         "legacy.rejectedEvent": "Đã từ chối bản nháp — trả lại người phụ trách.",
@@ -79,6 +80,7 @@ export const DECISIONS_MESSAGES: MessageBundle = {
         "command.mirror.subject": "@{{to}} ← {{from}}: {{what}} cho {{subject}}",
     },
     en: {
+        "decisions.runParked.title": "The AI could not handle a message – please review",
         "errors.DECISIONS_WORK_BUSY": "This work is being processed. Try again later.",
         "legacy.approvedEvent": "Draft approved for {{name}} via {{channel}}.",
         "legacy.approvedMessage": "{{user}} approved the draft for {{name}} via {{channel}}.",

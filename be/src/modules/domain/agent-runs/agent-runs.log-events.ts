@@ -24,4 +24,10 @@ export enum AgentRunsLogEvent {
     ReleaseFailed = "agent_runs.release_failed",
     /** A wait past its deadline was handed to the graph's timeout. */
     WaitExpired = "agent_runs.wait_expired",
+    /** A parked run was put back on its failed step. */
+    RunResumed = "agent_runs.run_resumed",
+    /** A run parked on a step that waits for a fix. */
+    RunParked = "agent_runs.run_parked",
+    /** A pass over the parked runs failed on one run; the rest went on. */
+    ResumeFailed = "agent_runs.resume_failed",
 }

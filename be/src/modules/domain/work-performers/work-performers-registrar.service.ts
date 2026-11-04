@@ -13,6 +13,7 @@ import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
 import { FollowUpPerformerService } from "./follow-up-performer.service"
 import { HandoffLeadPerformerService } from "./handoff-lead-performer.service"
 import { IssueInvoicePerformerService } from "./issue-invoice-performer.service"
+import { ResumeRunPerformerService } from "./resume-run-performer.service"
 import { QuotePerformerService } from "./quote-performer.service"
 import { RedeemRewardPerformerService } from "./redeem-reward-performer.service"
 import { ReconcilePaymentPerformerService } from "./reconcile-payment-performer.service"
@@ -39,6 +40,7 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         private readonly redeem: RedeemRewardPerformerService,
         private readonly gatewayCall: GatewayCallPerformerService,
         private readonly handOver: HandOverConversationPerformerService,
+        private readonly resumeRun: ResumeRunPerformerService,
     ) {}
 
     /** Adds the performers to the registry: the sales chain, the booking actions, the reward redemption and the gateway calls. */
@@ -58,5 +60,6 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         this.registry.add("redeem_reward", this.redeem)
         this.registry.add("gateway_call", this.gatewayCall)
         this.registry.add(HANDOVER_ACTION, this.handOver)
+        this.registry.add("review_agent_run", this.resumeRun)
     }
 }
