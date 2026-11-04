@@ -9,6 +9,7 @@ import { BrainNativeService } from "./brain-native.service"
 import { CustomerNativeService } from "./customer-native.service"
 import { DossierNativeService } from "./dossier-native.service"
 import { DriveNativeService } from "./drive-native.service"
+import { LedgerNativeService } from "./ledger-native.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./native-tools.module-definition"
 import { NativeViewService } from "./native-view.service"
 import { PaymentNativeService } from "./payment-native.service"
@@ -30,6 +31,7 @@ export const NATIVE_TOOL_ADAPTERS: ReadonlyArray<Type<NativeAdapter>> = [
     SepayStatusNativeService,
     PaymentNativeService,
     BankNativeService,
+    LedgerNativeService,
 ]
 
 /** The native tools that read a customer's record: the apps that run the leads capability pass them to the gateway beside the others. */

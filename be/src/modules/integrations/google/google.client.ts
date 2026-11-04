@@ -39,6 +39,9 @@ const textOf = (value: unknown): string | undefined => (typeof value === "string
 
 const a1 = (tab: string, range: string): string => encodeURIComponent(`'${tab}'!${range}`)
 
+/** The columns a ledger fills, on the first tab of the sheet the owner named. */
+const LEDGER_RANGE = "A:G"
+
 const columnLetter = (width: number): string => String.fromCodePoint(64 + width)
 
 /** Reads a cell reference ending at an offset without retrying an unanchored pattern at every letter. */
@@ -166,6 +169,36 @@ export class GoogleClient {
     /** Applies one NIVO event to the shop's sheet with an access token; throws on any API failure so the caller retries. */
     applyEvent(token: string, config: SheetConfig, event: SheetEventIn): Promise<SheetEventResult> {
         return applySheetEvent(this.sheets(token), config, event, this.clock.now())
+    }
+
+    /**
+     * Appends rows after the last one of the first tab of a spreadsheet, as the values are (no formula is run), and answers the A1 range
+     * Google wrote them to. Never updates or removes a cell. Throws `GOOGLE_REFUSED` (with the HTTP status) when Google refuses.
+     */
+    async appendValues(
+        token: string,
+        spreadsheetId: string,
+        rows: ReadonlyArray<ReadonlyArray<SheetCell>>,
+    ): Promise<string> {
+        const body = await this.call({
+            method: "POST",
+            url: `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(LEDGER_RANGE)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+            headers: this.bearer(token),
+            body: { majorDimension: "ROWS", values: rows },
+        })
+        const updates = isJson(body.updates) ? body.updates : {}
+        return textOf(updates.updatedRange) ?? ""
+    }
+
+    /** The values of an A1 range of the first tab, as text rows (blank cells at the end of a row are not sent by Google). */
+    async readValues(token: string, spreadsheetId: string, range: string): Promise<ReadonlyArray<ReadonlyArray<string>>> {
+        const body = await this.call({
+            method: "GET",
+            url: `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}`,
+            headers: this.bearer(token),
+        })
+        const rows: ReadonlyArray<unknown> = Array.isArray(body.values) ? body.values : []
+        return rows.map((row) => (Array.isArray(row) ? row.map((cell) => String(cell)) : []))
     }
 
     private async findRow(

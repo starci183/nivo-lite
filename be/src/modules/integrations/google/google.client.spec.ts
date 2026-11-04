@@ -357,3 +357,52 @@ describe("GoogleClient sheet operations", () => {
         expect(result.evidence).toContain("An")
     })
 })
+
+describe("GoogleClient ledger values", () => {
+    it("appends rows to the first tab as raw values and answers the range Google wrote", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue(answer({ updates: { updatedRange: "Sheet1!A2:G2" } }))
+
+        await expect(client.appendValues("tok", "sheet 1", [["2026-11-04", 5000]])).resolves.toBe("Sheet1!A2:G2")
+
+        expect(http.request).toHaveBeenCalledWith(
+            objectLike({
+                method: "POST",
+                url: "https://sheets.googleapis.com/v4/spreadsheets/sheet%201/values/A%3AG:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+                headers: { authorization: "Bearer tok" },
+                body: { majorDimension: "ROWS", values: [["2026-11-04", 5000]] },
+                timeoutMs: 5000,
+            }),
+        )
+    })
+
+    it("answers an empty range when Google names none", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue(answer({}))
+
+        await expect(client.appendValues("tok", "s", [])).resolves.toBe("")
+    })
+
+    it("reads a range as text rows and reads no values as no rows", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce(answer({ values: [["Ngày", 2], "x"] }))
+        http.request.mockResolvedValueOnce(answer({}))
+
+        await expect(client.readValues("tok", "s", "A1:G1")).resolves.toEqual([["Ngày", "2"], []])
+        await expect(client.readValues("tok", "s", "A1:G1")).resolves.toEqual([])
+
+        expect(http.request).toHaveBeenCalledWith(
+            objectLike({ method: "GET", url: stringLike("/v4/spreadsheets/s/values/A1%3AG1") }),
+        )
+    })
+
+    it("reports Google's refusal with its status, so a 403 and a 503 can be told apart", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue(answer({ error: { status: "PERMISSION_DENIED" } }, 403))
+
+        await expect(client.appendValues("tok", "s", [])).rejects.toMatchObject({
+            code: GoogleErrorCode.Refused,
+            params: { status: 403, reason: "PERMISSION_DENIED" },
+        })
+    })
+})

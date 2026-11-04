@@ -2,6 +2,7 @@ import {
     BankFeedPollerRegistry,
     BankTransactionsRegistry,
     FeedWebhookRegistry,
+    LedgerRegistry,
     MessageInboxPollerRegistry,
     PaymentInstructionRegistry,
 } from "./provider-registries.service"
@@ -15,6 +16,7 @@ describe("ProviderRegistryModule", () => {
             PaymentInstructionRegistry,
             BankTransactionsRegistry,
             FeedWebhookRegistry,
+            LedgerRegistry,
             MessageInboxPollerRegistry,
         ]
 

@@ -7,8 +7,17 @@ export const GOOGLE_SCOPE = "https://www.googleapis.com/auth/drive.file openid e
 /** The scope of the Second Brain Drive read grant (a Google restricted scope), asked on top of the Sheets one. */
 export const DRIVE_READ_SCOPE = "https://www.googleapis.com/auth/drive.readonly openid email"
 
+/**
+ * The scope of the ledger grant: read and write the spreadsheets the owner names (a Google sensitive scope), asked on top of the Sheets
+ * connection so the owner consents once more to add it (incremental authorisation); the scopes already granted are kept.
+ */
+export const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets openid email"
+
 /** The purpose a signed state carries for the Drive read grant; the Sheets connection has none. */
 export const DRIVE_PURPOSE = "drive_read"
+
+/** The purpose a signed state carries for the ledger grant (the Sheets scope added to the Google connection). */
+export const SHEETS_PURPOSE = "sheets_ledger"
 
 /** How long a signed OAuth state stays valid, in milliseconds. */
 export const STATE_TTL_MS: number = 10 * 60 * 1000
@@ -23,7 +32,7 @@ export interface OAuthState {
     readonly r: string
     /** The expiry instant, epoch milliseconds. */
     readonly e: number
-    /** The purpose: absent for the Sheets connection, `drive_read` for the Drive read grant. */
+    /** The purpose: absent for the Sheets connection, `drive_read` for the Drive read grant, `sheets_ledger` for the ledger grant. */
     readonly p?: string
 }
 
@@ -128,8 +137,8 @@ export type ReceivedText = string | null | undefined
 /** How a consent ended, written into the return url for the console to show. */
 export type ConsentResult = "ok" | "error"
 
-/** The query key the result lands under: `google` for the Sheets connection, `drive` for the Drive read grant. */
-export type ConsentResultKey = "google" | "drive"
+/** The query key the result lands under: `google` for the Sheets connection, `drive` for the Drive read grant, `sheets` for the ledger grant. */
+export type ConsentResultKey = "google" | "drive" | "sheets"
 
 /** The Google consent url; null when Google is not configured on this deployment. */
 export type OptionalConsentUrl = string | null
