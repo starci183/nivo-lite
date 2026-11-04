@@ -72,12 +72,17 @@ export class GraphSeedService {
         @InjectSeedToolGrants() private readonly toolGrants: SeedToolGrants,
     ) {}
 
-    /** Seeds every graph of the envelope read from `text` into the workspace named `workspaceName`; a refused graph stops the run. */
+    /**
+     * Seeds every graph of the envelope read from `text` into the workspace named `workspaceName`; a refused graph stops the run. The module
+     * catalogue is mirrored first, so the authority actions the default rules name exist even on a database no catalogue step reached yet.
+     */
     async run(text: string, workspaceName: string): Promise<void> {
         const specs = readGraphSpecs(text)
         const installed = this.installedNodes()
         const workspaceId = await this.workspaceOf(workspaceName)
         const ownerId = await this.ownerOf(workspaceId)
+        // The default rules a graph seeds name authority actions by foreign key: on an empty database the catalogue is not mirrored yet.
+        await this.modules.sync()
         await eachInOrder(specs, (spec) => this.seedGraph({ workspaceId, ownerId, installed }, spec))
     }
 

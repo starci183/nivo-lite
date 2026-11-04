@@ -83,6 +83,7 @@ const build = async (scenario: Scenario = {}) => {
     workspaces.ownerIdOf.mockResolvedValue(scenario.owner === undefined ? "owner-1" : scenario.owner)
     const modules = mock<ModulesService>()
     modules.find.mockResolvedValue(MODULE)
+    modules.sync.mockResolvedValue({ modules: 1, actions: 1, staleModules: [], staleActions: [] })
     const installations = mock<InstallationRecordsService>()
     const held = [...(scenario.held ?? [record()])]
     installations.firstOfModule.mockImplementation(() => Promise.resolve(held.shift() ?? null))
@@ -202,6 +203,17 @@ describe("GraphSeedService > tag rights", () => {
 })
 
 describe("GraphSeedService > run", () => {
+    it("mirrors the module catalogue before it seeds a rule, so an empty database has the authority actions the rules name", async () => {
+        const { service, modules, rules } = await build()
+
+        await service.run(TEXT, "NIVO")
+
+        expect(modules.sync).toHaveBeenCalledTimes(1)
+        expect(modules.sync.mock.invocationCallOrder[0]).toBeLessThan(
+            rules.seedDefaults.mock.invocationCallOrder[0] ?? 0,
+        )
+    })
+
     it("publishes the flow to the agent of the module installed in the named workspace, and prints no value", async () => {
         const { service, agents, installations, rules, activation, flows, print } = await build()
 
