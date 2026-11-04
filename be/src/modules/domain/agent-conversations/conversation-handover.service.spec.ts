@@ -205,3 +205,64 @@ describe("ConversationHandoverService handBack", () => {
         expect(ownership.record).not.toHaveBeenCalled()
     })
 })
+
+/** The service over a conversation row the speaker reads find, or none. */
+const buildOver = async (row: AgentConversationEntity | null) => {
+    const tx = fakeTransaction(mockEntityManager({ findOne: [AgentConversationEntity, row] }))
+    const ownership = mock<ConversationOwnershipEventsService>({ record: jest.fn().mockResolvedValue(undefined) })
+    const installations = mock<InstallationDirectory>({ ofAgent: jest.fn().mockResolvedValue(null) })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            ConversationHandoverService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: AGENTS_INSTALLATIONS, useValue: installations },
+            { provide: INBOX, useValue: fakeInbox() },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: ConversationOwnershipEventsService, useValue: ownership },
+        ],
+    }).compile()
+    return { service: moduleRef.get(ConversationHandoverService), tx, ownership }
+}
+
+describe("ConversationHandoverService speaker", () => {
+    it("names the agent that speaks in the conversation, and nobody while a person holds it or when there is none", async () => {
+        const speaking = await buildOver(conversationOf({ agentId: SALES }))
+        const held = await buildOver(conversationOf({ agentId: SALES, handledBy: "Lan" }))
+        const none = await buildOver(null)
+
+        await expect(speaking.service.speakerOf("ws-1", "conv-1")).resolves.toBe(SALES)
+        await expect(held.service.speakerOf("ws-1", "conv-1")).resolves.toBeNull()
+        await expect(none.service.speakerOf("ws-1", "conv-1")).resolves.toBeNull()
+        expect(speaking.tx.em.findOne).toHaveBeenCalledWith(AgentConversationEntity, {
+            select: { id: true, agentId: true, handledBy: true },
+            where: { workspaceId: "ws-1", id: "conv-1", kind: "customer" },
+        })
+    })
+
+    it("hands the conversation back to the agent that opened the door once its speaker is done, with the record", async () => {
+        const { service, tx, ownership } = await buildOver(conversationOf({ agentId: SALES, frontAgentId: FRONT }))
+        queueQueryBuilders(tx.em, [{ execute: { raw: [{ id: "conv-1" }] } }])
+
+        await expect(service.returnToFront("ws-1", "conv-1", SALES)).resolves.toBe(true)
+
+        expect(tx.em.findOne).toHaveBeenCalledWith(AgentConversationEntity, {
+            select: { id: true, agentId: true, frontAgentId: true },
+            where: { workspaceId: "ws-1", id: "conv-1", agentId: SALES, handledBy: IsNull() },
+            lock: { mode: "pessimistic_write" },
+        })
+        expect(ownership.record).toHaveBeenCalledWith(
+            expect.objectContaining({ fromAgentId: SALES, toAgentId: FRONT, reason: "<handover.workDone>" }),
+        )
+    })
+
+    it("moves nothing when the agent does not speak in it, or it never left its front agent", async () => {
+        const gone = await buildOver(null)
+        const atFront = await buildOver(conversationOf({ agentId: FRONT, frontAgentId: FRONT }))
+        const neverMoved = await buildOver(conversationOf({ agentId: FRONT, frontAgentId: null }))
+
+        await expect(gone.service.returnToFront("ws-1", "conv-1", SALES)).resolves.toBe(false)
+        await expect(atFront.service.returnToFront("ws-1", "conv-1", FRONT)).resolves.toBe(false)
+        await expect(neverMoved.service.returnToFront("ws-1", "conv-1", FRONT)).resolves.toBe(false)
+        expect(gone.ownership.record).not.toHaveBeenCalled()
+    })
+})

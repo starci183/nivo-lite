@@ -76,4 +76,19 @@ describe("AgentTagConversationService", () => {
 
         await expect(service.redirect(NOTICE)).resolves.toBeUndefined()
     })
+
+    it("asks the handover who speaks and hands a done speaker's conversation back; knows no speaker unbound", async () => {
+        const { service, handover } = await build()
+        const unbound = await build(false)
+        handover.speakerOf.mockResolvedValue("sales")
+        handover.returnToFront.mockResolvedValue(true)
+
+        await expect(service.holderOf("ws-1", "c1")).resolves.toBe("sales")
+        await service.handBack("ws-1", "c1", "sales")
+        await expect(unbound.service.holderOf("ws-1", "c1")).resolves.toBeNull()
+        await expect(unbound.service.handBack("ws-1", "c1", "sales")).resolves.toBeUndefined()
+
+        expect(handover.speakerOf).toHaveBeenCalledWith("ws-1", "c1")
+        expect(handover.returnToFront).toHaveBeenCalledWith("ws-1", "c1", "sales")
+    })
 })

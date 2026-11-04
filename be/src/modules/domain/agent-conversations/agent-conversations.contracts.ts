@@ -251,3 +251,6 @@ export interface NodeConversationFilter {
 
 /** The id of a lead, or null when there is none. */
 export type OptionalLeadId = string | null
+
+/** The agent that speaks in a conversation, or null. */
+export type OptionalSpeakerId = string | null

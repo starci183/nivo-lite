@@ -56,7 +56,7 @@ export type AgentTagRequest = AgentTaggedByAgent | AgentTaggedByPerson | AgentTa
 /** What a tag came to. */
 export type AgentTagResult =
     | { readonly tagged: true; readonly wakeId: string }
-    | { readonly tagged: false; readonly reason: "not_allowed" | "duplicate" | "too_large" }
+    | { readonly tagged: false; readonly reason: "not_allowed" | "duplicate" | "too_large" | "queued" }
 
 /** What the visibility port is told about a hand-off that has a conversation. */
 export interface AgentTagNotice {

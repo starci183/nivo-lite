@@ -59,7 +59,8 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
             ...(tag.visibility === undefined ? {} : { visibility: tag.visibility }),
         })
         if (result.tagged) return { kind: WAKE, id: result.wakeId }
-        if (result.reason === "duplicate") return { kind: WAKE, id: eventKey }
+        // A hand-off that waits for the holder of its conversation is written as its wake later, under the same event key.
+        if (result.reason === "duplicate" || result.reason === "queued") return { kind: WAKE, id: eventKey }
         if (result.reason === "not_allowed") throw new RightsDeniedError(AGENT_TAG)
         throw new NodeRunError("EFFECT_PAYLOAD_INVALID", AGENT_TAG)
     }

@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { AgentSpeakerQueueService } from "./agent-speaker-queue.service"
 import { AgentTagService } from "./agent-tag.service"
 import { AgentWakeService } from "./agent-wake.service"
 import { AGENT_TAG_RIGHTS, AGENT_TAG_VISIBILITY } from "./agent-work.decorators"
@@ -12,15 +13,19 @@ const build = async (rights: AgentTagRights | null, visibility: AgentTagVisibili
     const tx = fakeTransaction(mockEntityManager())
     const wakes = mock<AgentWakeService>()
     wakes.write.mockResolvedValue("wake-1")
+    const queue = mock<AgentSpeakerQueueService>()
+    queue.keep.mockResolvedValue(undefined)
+    queue.takeNext.mockResolvedValue(null)
     const providers = [
         AgentTagService,
         { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
         { provide: AgentWakeService, useValue: wakes },
+        { provide: AgentSpeakerQueueService, useValue: queue },
         ...(rights === null ? [] : [{ provide: AGENT_TAG_RIGHTS, useValue: rights }]),
         ...(visibility === null ? [] : [{ provide: AGENT_TAG_VISIBILITY, useValue: visibility }]),
     ]
     const moduleRef = await Test.createTestingModule({ providers }).compile()
-    return { service: moduleRef.get(AgentTagService), wakes, tx }
+    return { service: moduleRef.get(AgentTagService), wakes, tx, queue }
 }
 
 describe("AgentTagService.tagAgent", () => {
@@ -121,6 +126,8 @@ describe("AgentTagService.tagAgent", () => {
             const visibility = mock<AgentTagVisibilityPort>()
             visibility.announce.mockResolvedValue(undefined)
             visibility.redirect.mockResolvedValue(undefined)
+            visibility.holderOf.mockResolvedValue(null)
+            visibility.handBack.mockResolvedValue(undefined)
             return visibility
         }
         const notice = {
@@ -131,7 +138,7 @@ describe("AgentTagService.tagAgent", () => {
             text: "Order for 5 baskets",
         }
 
-        it("posts a visible tag line in the conversation by default and when asked for chat", async () => {
+        it("hand over: posts a visible tag line by default and for chat, and passes the right to speak to the target", async () => {
             const visibility = port()
             const { service } = await build(rights(), visibility)
 
@@ -146,7 +153,8 @@ describe("AgentTagService.tagAgent", () => {
 
             expect(visibility.announce).toHaveBeenCalledTimes(2)
             expect(visibility.announce).toHaveBeenCalledWith(notice, expect.anything())
-            expect(visibility.redirect).not.toHaveBeenCalled()
+            expect(visibility.redirect).toHaveBeenCalledTimes(2)
+            expect(visibility.redirect).toHaveBeenCalledWith(notice)
         })
 
         it("moves the conversation and posts no line on a redirect, with the same wake as a chat tag", async () => {
@@ -187,6 +195,94 @@ describe("AgentTagService.tagAgent", () => {
             await service.tagAgent({ ...BASE, source: "bank-feed", conversationId: "c1" })
 
             expect(visibility.announce).toHaveBeenCalledWith({ ...notice, fromAgentId: null }, expect.anything())
+            expect(visibility.redirect).not.toHaveBeenCalled()
         })
+    })
+})
+
+describe("AgentTagService one speaker", () => {
+    const rights = () => mock<AgentTagRights>({ canTag: jest.fn().mockResolvedValue(true) })
+    const portHeldBy = (holder: string | null) => {
+        const visibility = mock<AgentTagVisibilityPort>()
+        visibility.announce.mockResolvedValue(undefined)
+        visibility.redirect.mockResolvedValue(undefined)
+        visibility.holderOf.mockResolvedValue(holder)
+        visibility.handBack.mockResolvedValue(undefined)
+        return visibility
+    }
+    const QUEUED = {
+        workspaceId: "ws-1",
+        fromAgentId: "chat",
+        toAgentId: "accounting",
+        text: "Claim of 5,000",
+        conversationId: "c1",
+        eventKey: "claim:1",
+    }
+
+    it("two handoffs in one run: the second waits while the first target holds the conversation, and wakes nobody yet", async () => {
+        const visibility = portHeldBy("sales")
+        const { service, wakes, queue } = await build(rights(), visibility)
+
+        await expect(service.tagAgent(QUEUED)).resolves.toEqual({ tagged: false, reason: "queued" })
+
+        expect(queue.keep).toHaveBeenCalledWith(QUEUED, expect.anything())
+        expect(wakes.write).not.toHaveBeenCalled()
+        expect(visibility.redirect).not.toHaveBeenCalled()
+        expect(visibility.announce).not.toHaveBeenCalled()
+    })
+
+    it("a hand-off from the holder or to it goes at once", async () => {
+        const fromHolder = await build(rights(), portHeldBy("chat"))
+        const toHolder = await build(rights(), portHeldBy("accounting"))
+
+        await expect(fromHolder.service.tagAgent(QUEUED)).resolves.toEqual({ tagged: true, wakeId: "wake-1" })
+        await expect(toHolder.service.tagAgent(QUEUED)).resolves.toEqual({ tagged: true, wakeId: "wake-1" })
+        expect(fromHolder.queue.keep).not.toHaveBeenCalled()
+    })
+
+    it("hand on: the holder's work done, the waiting hand-off gets its wake and the right to speak", async () => {
+        const visibility = portHeldBy("sales")
+        const { service, wakes, queue } = await build(rights(), visibility)
+        queue.takeNext.mockResolvedValue(QUEUED)
+
+        await service.release("ws-1", "c1", "sales")
+
+        expect(wakes.write).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ agentId: "accounting", eventKey: "claim:1" }),
+        )
+        const notice = {
+            workspaceId: "ws-1",
+            conversationId: "c1",
+            fromAgentId: "sales",
+            toAgentId: "accounting",
+            text: "Claim of 5,000",
+        }
+        expect(visibility.announce).toHaveBeenCalledWith(notice, expect.anything())
+        expect(visibility.redirect).toHaveBeenCalledWith(notice)
+        expect(visibility.handBack).not.toHaveBeenCalled()
+    })
+
+    it("hand back: the holder's work done and nobody waiting, the conversation goes back to the agent that opened the door", async () => {
+        const visibility = portHeldBy("sales")
+        const { service, wakes } = await build(rights(), visibility)
+
+        await service.release("ws-1", "c1", "sales")
+
+        expect(visibility.handBack).toHaveBeenCalledWith("ws-1", "c1", "sales")
+        expect(wakes.write).not.toHaveBeenCalled()
+    })
+
+    it("an agent that does not hold the conversation releases nothing, and nothing happens with no port bound", async () => {
+        const visibility = portHeldBy("sales")
+        const notHolder = await build(rights(), visibility)
+        const unbound = await build(rights())
+
+        await notHolder.service.release("ws-1", "c1", "chat")
+        await unbound.service.release("ws-1", "c1", "sales")
+
+        expect(notHolder.queue.takeNext).not.toHaveBeenCalled()
+        expect(unbound.queue.takeNext).not.toHaveBeenCalled()
+        expect(visibility.handBack).not.toHaveBeenCalled()
     })
 })

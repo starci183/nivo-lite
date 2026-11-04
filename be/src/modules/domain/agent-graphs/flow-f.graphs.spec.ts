@@ -329,11 +329,10 @@ describe("flow F graphs on fake ports", () => {
             "classify",
             "has-attachment",
             "has-question",
+            "has-claim",
             "has-order",
             "ensure-lead-order",
             "handoff-sales",
-            "has-claim",
-            "end",
         ])
         expect(world.ran.map((entry) => entry.effect)).toEqual(["lead.ensure", "agent.tag"])
         expect(world.ran[0]?.payload).toMatchObject({ conversationId: "conv-1" })

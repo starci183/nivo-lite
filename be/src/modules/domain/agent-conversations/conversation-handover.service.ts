@@ -12,7 +12,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectInbox } from "@modules/platform/inbox"
 import type { Inbox } from "@modules/platform/inbox"
-import type { HandedConversation, HandOverParams } from "./agent-conversations.contracts"
+import type { HandedConversation, HandOverParams, OptionalSpeakerId } from "./agent-conversations.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 const LOCALE = "vi"
@@ -38,6 +38,37 @@ export class ConversationHandoverService {
     /** Hands the conversation to the agent in one transaction; true when it moved. */
     handOver(params: HandOverParams): Promise<boolean> {
         return this.entityManager.transaction((manager) => this.move(manager, params))
+    }
+
+    /** The agent that speaks in the customer conversation, or null when a person holds it or the workspace has no such conversation. */
+    async speakerOf(workspaceId: string, conversationId: string): Promise<OptionalSpeakerId> {
+        const row = await this.entityManager.findOne(AgentConversationEntity, {
+            select: { id: true, agentId: true, handledBy: true },
+            where: { workspaceId, id: conversationId, kind: "customer" },
+        })
+        return row?.handledBy === null ? row.agentId : null
+    }
+
+    /**
+     * The agent that speaks in the conversation is done: the conversation goes back to the agent that opened the door, with its record.
+     * Nothing moves when that agent does not speak in it now, when a person holds it, or when it never left its front agent.
+     */
+    returnToFront(workspaceId: string, conversationId: string, fromAgentId: string): Promise<boolean> {
+        return this.entityManager.transaction(async (manager) => {
+            const row = await manager.findOne(AgentConversationEntity, {
+                select: { id: true, agentId: true, frontAgentId: true },
+                where: { workspaceId, id: conversationId, agentId: fromAgentId, handledBy: IsNull() },
+                lock: { mode: "pessimistic_write" },
+            })
+            if (row?.frontAgentId == null || row.frontAgentId === fromAgentId) return false
+            return this.move(manager, {
+                workspaceId,
+                conversationId,
+                fromAgentId,
+                toAgentId: row.frontAgentId,
+                reason: this.catalog.get("handover.workDone", {}, LOCALE),
+            })
+        })
     }
 
     /**

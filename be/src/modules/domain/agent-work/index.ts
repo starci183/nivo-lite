@@ -64,5 +64,5 @@ export type {
 } from "./agent-work.port"
 export type { AgentBegin } from "./agent-work-turns.contracts"
 export type { AgentTagNotice } from "./agent-tag.contracts"
-export type { AgentBurstPolicy, AgentBurstSetting, AgentTagVisibilityPort } from "./agent-work.port"
+export type { AgentBurstPolicy, AgentBurstSetting, AgentTagVisibilityPort, OptionalSpeaker } from "./agent-work.port"
 export { contextOf as storedWakeContextOf } from "./agent-work-results.policy"

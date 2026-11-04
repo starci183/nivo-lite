@@ -3,46 +3,126 @@
   "moduleKey": "chatbot",
   "trigger": {
     "kind": "tag",
-    "sources": ["channel", "chats-group", "agent", "system-event", "schedule"],
-    "burst": { "channel": { "window": "6s", "maxWait": "20s" } }
+    "sources": [
+      "channel",
+      "chats-group",
+      "agent",
+      "system-event",
+      "schedule"
+    ],
+    "burst": {
+      "channel": {
+        "window": "6s",
+        "maxWait": "20s"
+      }
+    }
   },
   "grant": {
     "rights": [
-      { "kind": "knowledge-document", "access": "read", "scope": "workspace", "fields": ["id", "title", "body", "visibility"] },
-      { "kind": "message", "access": "write", "scope": "turn", "fields": ["body"] },
-      { "kind": "payment-claim", "access": "write", "scope": "turn", "fields": ["leadId", "amountVnd", "names", "body"] },
-      { "kind": "sales-lead", "access": "write", "scope": "turn", "fields": ["contactName", "phone", "channel"] }
+      {
+        "kind": "knowledge-document",
+        "access": "read",
+        "scope": "workspace",
+        "fields": [
+          "id",
+          "title",
+          "body",
+          "visibility"
+        ]
+      },
+      {
+        "kind": "message",
+        "access": "write",
+        "scope": "turn",
+        "fields": [
+          "body"
+        ]
+      },
+      {
+        "kind": "payment-claim",
+        "access": "write",
+        "scope": "turn",
+        "fields": [
+          "leadId",
+          "amountVnd",
+          "names",
+          "body"
+        ]
+      },
+      {
+        "kind": "sales-lead",
+        "access": "write",
+        "scope": "turn",
+        "fields": [
+          "contactName",
+          "phone",
+          "channel"
+        ]
+      }
     ],
     "tools": [],
-    "effects": ["channel.send", "payment-claim.record", "agent.tag", "work-item.raise", "lead.ensure"]
+    "effects": [
+      "channel.send",
+      "payment-claim.record",
+      "agent.tag",
+      "work-item.raise",
+      "lead.ensure"
+    ]
   },
   "nodes": [
     {
       "key": "classify",
       "kind": "execute",
       "step": "intent.classify",
-      "input": { "text": { "$ref": "trigger.text" }, "messages": { "$ref": "trigger.messages" } },
+      "input": {
+        "text": {
+          "$ref": "trigger.text"
+        },
+        "messages": {
+          "$ref": "trigger.messages"
+        }
+      },
       "next": "has-attachment"
     },
     {
       "key": "has-attachment",
       "kind": "condition",
       "step": "intent.has",
-      "params": { "intent": "attachment" },
-      "input": { "intents": { "$ref": "classify.intents" } },
-      "routes": { "yes": "staff-attachment", "no": "has-question" }
+      "params": {
+        "intent": "attachment"
+      },
+      "input": {
+        "intents": {
+          "$ref": "classify.intents"
+        }
+      },
+      "routes": {
+        "yes": "staff-attachment",
+        "no": "has-question"
+      }
     },
     {
       "key": "staff-attachment",
       "kind": "output",
       "step": "core.raise-work-item",
-      "params": { "action": "handoff_lead", "title": "Khách gửi ảnh cần nhân viên xem" },
+      "params": {
+        "action": "handoff_lead",
+        "title": "Khách gửi ảnh cần nhân viên xem"
+      },
       "input": {
         "payload": {
-          "conversationId": { "$ref": "trigger.conversationId" },
-          "leadId": { "$ref": "trigger.leadId" },
-          "channel": { "$ref": "trigger.channel" },
-          "attachmentCount": { "$ref": "classify.attachment.count" }
+          "conversationId": {
+            "$ref": "trigger.conversationId"
+          },
+          "leadId": {
+            "$ref": "trigger.leadId"
+          },
+          "channel": {
+            "$ref": "trigger.channel"
+          },
+          "attachmentCount": {
+            "$ref": "classify.attachment.count"
+          }
         },
         "amountVnd": null,
         "claimId": null
@@ -54,7 +134,9 @@
       "kind": "output",
       "step": "core.reply",
       "input": {
-        "conversationId": { "$ref": "trigger.conversationId" },
+        "conversationId": {
+          "$ref": "trigger.conversationId"
+        },
         "text": "Em đã nhận ảnh, em kiểm tra và phản hồi ngay ạ"
       },
       "next": "has-question"
@@ -63,56 +145,46 @@
       "key": "has-question",
       "kind": "condition",
       "step": "intent.has",
-      "params": { "intent": "question" },
-      "input": { "intents": { "$ref": "classify.intents" } },
-      "routes": { "yes": "answer", "no": "has-order" }
+      "params": {
+        "intent": "question"
+      },
+      "input": {
+        "intents": {
+          "$ref": "classify.intents"
+        }
+      },
+      "routes": {
+        "yes": "answer",
+        "no": "has-claim"
+      }
     },
     {
       "key": "answer",
       "kind": "execute",
       "step": "knowledge.answer",
-      "params": { "locale": "vi", "claims": null },
-      "input": { "question": { "$ref": "trigger.text" }, "recordedEffects": [] },
+      "params": {
+        "locale": "vi",
+        "claims": null
+      },
+      "input": {
+        "question": {
+          "$ref": "trigger.text"
+        },
+        "recordedEffects": []
+      },
       "next": "reply"
     },
     {
       "key": "reply",
       "kind": "output",
       "step": "core.reply",
-      "input": { "conversationId": { "$ref": "trigger.conversationId" }, "text": { "$ref": "answer.reply" } },
-      "next": "has-order"
-    },
-    {
-      "key": "has-order",
-      "kind": "condition",
-      "step": "intent.has",
-      "params": { "intent": "order" },
-      "input": { "intents": { "$ref": "classify.intents" } },
-      "routes": { "yes": "ensure-lead-order", "no": "has-claim" }
-    },
-    {
-      "key": "ensure-lead-order",
-      "kind": "output",
-      "step": "lead.ensure",
       "input": {
-        "conversationId": { "$ref": "trigger.conversationId" },
-        "name": null,
-        "phone": null,
-        "channel": { "$ref": "trigger.channel" }
-      },
-      "next": "handoff-sales"
-    },
-    {
-      "key": "handoff-sales",
-      "kind": "output",
-      "step": "core.handoff",
-      "params": { "toModuleKey": "sales" },
-      "input": {
-        "text": { "$ref": "trigger.text" },
-        "leadId": { "$ref": "ensure-lead-order.leadId" },
-        "channel": { "$ref": "trigger.channel" },
-        "conversationId": { "$ref": "trigger.conversationId" },
-        "context": { "$ref": "classify.order" }
+        "conversationId": {
+          "$ref": "trigger.conversationId"
+        },
+        "text": {
+          "$ref": "answer.reply"
+        }
       },
       "next": "has-claim"
     },
@@ -120,19 +192,32 @@
       "key": "has-claim",
       "kind": "condition",
       "step": "intent.has",
-      "params": { "intent": "payment_claim" },
-      "input": { "intents": { "$ref": "classify.intents" } },
-      "routes": { "yes": "ensure-lead-claim", "no": "end" }
+      "params": {
+        "intent": "payment_claim"
+      },
+      "input": {
+        "intents": {
+          "$ref": "classify.intents"
+        }
+      },
+      "routes": {
+        "yes": "ensure-lead-claim",
+        "no": "has-order"
+      }
     },
     {
       "key": "ensure-lead-claim",
       "kind": "output",
       "step": "lead.ensure",
       "input": {
-        "conversationId": { "$ref": "trigger.conversationId" },
+        "conversationId": {
+          "$ref": "trigger.conversationId"
+        },
         "name": null,
         "phone": null,
-        "channel": { "$ref": "trigger.channel" }
+        "channel": {
+          "$ref": "trigger.channel"
+        }
       },
       "next": "claim-ack"
     },
@@ -140,13 +225,25 @@
       "key": "claim-ack",
       "kind": "output",
       "step": "payment.claim-ack",
-      "params": { "locale": "vi" },
+      "params": {
+        "locale": "vi"
+      },
       "input": {
-        "conversationId": { "$ref": "trigger.conversationId" },
-        "leadId": { "$ref": "ensure-lead-claim.leadId" },
-        "body": { "$ref": "trigger.text" },
-        "amountVnd": { "$ref": "classify.paymentClaim.amountVnd" },
-        "payerName": { "$ref": "classify.paymentClaim.payerName" }
+        "conversationId": {
+          "$ref": "trigger.conversationId"
+        },
+        "leadId": {
+          "$ref": "ensure-lead-claim.leadId"
+        },
+        "body": {
+          "$ref": "trigger.text"
+        },
+        "amountVnd": {
+          "$ref": "classify.paymentClaim.amountVnd"
+        },
+        "payerName": {
+          "$ref": "classify.paymentClaim.payerName"
+        }
       },
       "next": "handoff-accounting"
     },
@@ -154,15 +251,95 @@
       "key": "handoff-accounting",
       "kind": "output",
       "step": "core.handoff",
-      "params": { "toModuleKey": "accounting" },
+      "params": {
+        "toModuleKey": "accounting"
+      },
       "input": {
-        "text": { "$ref": "trigger.text" },
-        "leadId": { "$ref": "ensure-lead-claim.leadId" },
-        "channel": { "$ref": "trigger.channel" },
-        "conversationId": { "$ref": "trigger.conversationId" },
-        "context": { "claimKind": { "$ref": "claim-ack.claim.kind" }, "claimId": { "$ref": "claim-ack.claim.id" } }
+        "text": {
+          "$ref": "trigger.text"
+        },
+        "leadId": {
+          "$ref": "ensure-lead-claim.leadId"
+        },
+        "channel": {
+          "$ref": "trigger.channel"
+        },
+        "conversationId": {
+          "$ref": "trigger.conversationId"
+        },
+        "context": {
+          "claimKind": {
+            "$ref": "claim-ack.claim.kind"
+          },
+          "claimId": {
+            "$ref": "claim-ack.claim.id"
+          }
+        }
+      },
+      "next": "has-order"
+    },
+    {
+      "key": "has-order",
+      "kind": "condition",
+      "step": "intent.has",
+      "params": {
+        "intent": "order"
+      },
+      "input": {
+        "intents": {
+          "$ref": "classify.intents"
+        }
+      },
+      "routes": {
+        "yes": "ensure-lead-order",
+        "no": "end"
       }
     },
-    { "key": "end", "kind": "output", "step": "stop" }
+    {
+      "key": "ensure-lead-order",
+      "kind": "output",
+      "step": "lead.ensure",
+      "input": {
+        "conversationId": {
+          "$ref": "trigger.conversationId"
+        },
+        "name": null,
+        "phone": null,
+        "channel": {
+          "$ref": "trigger.channel"
+        }
+      },
+      "next": "handoff-sales"
+    },
+    {
+      "key": "handoff-sales",
+      "kind": "output",
+      "step": "core.handoff",
+      "params": {
+        "toModuleKey": "sales"
+      },
+      "input": {
+        "text": {
+          "$ref": "trigger.text"
+        },
+        "leadId": {
+          "$ref": "ensure-lead-order.leadId"
+        },
+        "channel": {
+          "$ref": "trigger.channel"
+        },
+        "conversationId": {
+          "$ref": "trigger.conversationId"
+        },
+        "context": {
+          "$ref": "classify.order"
+        }
+      }
+    },
+    {
+      "key": "end",
+      "kind": "output",
+      "step": "stop"
+    }
   ]
 }

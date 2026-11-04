@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { z } from "zod"
 import { nextKeyOf, STOP_STEP } from "@nivo-lite/agent-sdk/graph"
@@ -6,6 +6,7 @@ import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { NodeRunError, resolveInput, RightsDeniedError, ToolUndeclaredError } from "@nivo-lite/agent-sdk/node"
 import type { NodeRun } from "@nivo-lite/agent-sdk/node"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
+import { AgentTagService } from "@modules/domain/agent-work"
 import type { AgentStepHandler, StepAnswer, StepDecision, StepJson, StepView } from "@modules/domain/agent-runs"
 import {
     GraphNodeHostService,
@@ -162,6 +163,7 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
         private readonly nodes: GraphNodeRegistryService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectClock() private readonly clock: Clock,
+        @Optional() private readonly tags?: AgentTagService,
     ) {}
 
     /** Registers with the run engine once the app has started. */
@@ -177,15 +179,24 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
         const { flow } = await this.graphs.documentOf(step.workspaceId, step.agentId, input.versionId)
         const node = flow?.nodes.find((candidate) => candidate.key === input.nodeKey)
         if (flow === undefined || node === undefined) return { kind: "failed", code: NODE_MISSING }
-        if (node.step === STOP_STEP) return { kind: "done", result: { output: null, effects: [] }, next: [] }
+        if (node.step === STOP_STEP)
+            return this.ended(step, input, { kind: "done", result: { output: null, effects: [] }, next: [] })
         const ran = await this.ran(step, flow, node, input)
         if ("code" in ran) return { kind: "failed", code: ran.code }
         if ("ask" in ran) return this.waitForApproval(step, input, ran)
-        return {
-            kind: "done",
-            result: { output: ran.output, effects: ran.effects },
-            next: this.nextOf(flow, node, ran.output, input),
-        }
+        const next = this.nextOf(flow, node, ran.output, input)
+        return this.ended(step, input, { kind: "done", result: { output: ran.output, effects: ran.effects }, next })
+    }
+
+    /**
+     * A step after which the run's path goes on is answered as it is. A step that ends the path ends the agent's work in the trigger's
+     * conversation: the right to speak in it goes to the next hand-off that waits, else back to the agent that opened the door.
+     */
+    private async ended(step: StepView, input: GraphNodeStepInput, answer: StepAnswer): Promise<StepAnswer> {
+        const conversationId = textOf(input.trigger, "conversationId")
+        if (answer.kind === "done" && answer.next.length === 0 && conversationId !== null)
+            await this.tags?.release(step.workspaceId, conversationId, step.agentId)
+        return answer
     }
 
     /**

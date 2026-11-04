@@ -3,6 +3,7 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { NodeRunError } from "@nivo-lite/agent-sdk/node"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
+import { AgentTagService } from "@modules/domain/agent-work"
 import type { StepDecision, StepSpec, StepView } from "@modules/domain/agent-runs"
 import {
     GraphNodeHostService,
@@ -62,6 +63,8 @@ const raise = { effect: "work-item.raise", execute: jest.fn().mockResolvedValue(
 
 const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FLOW }) => {
     const handlers = mock<AgentRunHandlersService>()
+    const tags = mock<AgentTagService>()
+    tags.release.mockResolvedValue(undefined)
     const graphs = mock<AgentGraphsService>({ documentOf: jest.fn().mockResolvedValue(document) })
     const host = mock<GraphNodeHostService>()
     const nodes = mock<GraphNodeRegistryService>({ optionalExecutorOf: jest.fn().mockReturnValue(raise) })
@@ -84,9 +87,10 @@ const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FL
             { provide: GraphNodeRegistryService, useValue: nodes },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: AgentTagService, useValue: tags },
         ],
     }).compile()
-    return { steps: moduleRef.get(AgentGraphNodeStepService), handlers, host, nodes }
+    return { steps: moduleRef.get(AgentGraphNodeStepService), handlers, host, nodes, tags }
 }
 
 describe("AgentGraphNodeStepService", () => {
@@ -367,5 +371,29 @@ describe("AgentGraphNodeStepService approval verdicts", () => {
         host.run.mockRejectedValue(approvalRequired())
         nodes.optionalExecutorOf.mockReturnValue(undefined)
         await expect(steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "approval_unavailable" })
+    })
+})
+
+describe("AgentGraphNodeStepService the end of an agent's work", () => {
+    it("hands the conversation on when the run's path ends at stop or at a node with no next, for the run's agent", async () => {
+        const { steps, host, tags } = await build()
+        host.run.mockResolvedValue({ output: { branch: "no" }, effects: [] })
+
+        await steps.run(stepOf("end"))
+        await steps.run(stepOf("check"))
+
+        expect(tags.release).toHaveBeenCalledTimes(2)
+        expect(tags.release).toHaveBeenCalledWith("ws-1", "c-1", "agent-1")
+    })
+
+    it("keeps the conversation while the path goes on, and has none to hand on without a conversation", async () => {
+        const { steps, host, tags } = await build()
+        host.run.mockResolvedValue({ output: { done: true }, effects: [] })
+        const bare = { ...TRIGGER, conversationId: undefined }
+
+        await steps.run(stepOf("keep"))
+        await steps.run(stepOf("end", { input: { versionId: "version-1", nodeKey: "end", trigger: bare } }))
+
+        expect(tags.release).not.toHaveBeenCalled()
     })
 })

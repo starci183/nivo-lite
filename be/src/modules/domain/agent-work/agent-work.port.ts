@@ -104,13 +104,23 @@ export interface AgentTagRights {
     canTag(agentId: string, targetAgentId: string): Promise<boolean>
 }
 
-/** What the tag door asks of the conversations side: show the hand-off in the conversation, or move the conversation silently. */
+/**
+ * What the tag door asks of the conversations side: show the hand-off in the conversation, or move the conversation silently, and keep
+ * the one speaker of a conversation, the holder of its right to speak to the customer.
+ */
 export interface AgentTagVisibilityPort {
     /** Posts the visible tag line in the conversation, in the caller's transaction. */
     announce(notice: AgentTagNotice, tx: EntityManager): Promise<void>
     /** Moves the conversation to the target agent with no line in it. */
     redirect(notice: AgentTagNotice): Promise<void>
+    /** The agent that holds the conversation's right to speak, or null when a person holds it or there is no such conversation. */
+    holderOf(workspaceId: string, conversationId: string): Promise<OptionalSpeaker>
+    /** Gives the right to speak back to the agent that opened the door, when the holder is done; nothing when a person holds it. */
+    handBack(workspaceId: string, conversationId: string, fromAgentId: string): Promise<void>
 }
+
+/** The agent that speaks in a conversation, or null. */
+export type OptionalSpeaker = string | null
 
 /** The burst a flow asks of one kind of tag, in milliseconds; the longest wait is null when the flow names none. */
 export interface AgentBurstSetting {

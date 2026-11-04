@@ -6,10 +6,12 @@ export const AGENT_CONVERSATIONS_MESSAGES: MessageBundle = {
         "errors.AGENT_CONVERSATIONS_NOT_FOUND": "Không tìm thấy cuộc trò chuyện này.",
         "errors.AGENT_CONVERSATIONS_NOT_STORED": "Không lưu được cuộc trò chuyện.",
         "handover.dealWon": "Đơn đã chốt, trả khách về cho người mở cuộc trò chuyện.",
+        "handover.workDone": "Việc đã xong, trả cuộc trò chuyện về cho người mở cuộc trò chuyện.",
     },
     en: {
         "errors.AGENT_CONVERSATIONS_NOT_FOUND": "That conversation was not found.",
         "errors.AGENT_CONVERSATIONS_NOT_STORED": "The conversation could not be stored.",
         "handover.dealWon": "The deal is won, so the customer goes back to the agent that opened the conversation.",
+        "handover.workDone": "The work is done, so the conversation goes back to the agent that opened it.",
     },
 }
