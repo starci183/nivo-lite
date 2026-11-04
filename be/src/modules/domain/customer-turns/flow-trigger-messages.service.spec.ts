@@ -15,17 +15,15 @@ describe("FlowTriggerMessagesService", () => {
             unansweredLinesOf: jest.fn().mockResolvedValue([]),
         })
         const files = mock<ChatFilesService>({
-            viewsOf: jest
-                .fn()
-                .mockResolvedValue([
-                    {
-                        id: "f-1",
-                        messageId: "m-2",
-                        name: "bidv.jpg",
-                        contentType: "image/jpeg",
-                        url: "https://files.test/f-1",
-                    },
-                ]),
+            viewsOf: jest.fn().mockResolvedValue([
+                {
+                    id: "f-1",
+                    messageId: "m-2",
+                    name: "bidv.jpg",
+                    contentType: "image/jpeg",
+                    url: "https://files.test/f-1",
+                },
+            ]),
         })
         const moduleRef = await Test.createTestingModule({
             providers: [
