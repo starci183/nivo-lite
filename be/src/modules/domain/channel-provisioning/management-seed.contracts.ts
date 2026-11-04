@@ -9,6 +9,7 @@ export const MANAGEMENT_CONNECTION_IDS = {
     payos: "103ceb10-102c-4904-9ce4-d9c1b03ddcef",
     zaloOa: "ff2e59dc-5ed2-4327-8a73-ca3526bc3b6f",
     telegram: "72f2699d-7f93-45e1-964a-8a2228137985",
+    google: "3cdf964f-f19f-4dde-80ff-c655deb2bd8a",
 } as const
 
 /** The mail server of the management workspace. */
@@ -33,6 +34,6 @@ export interface ManagementSeed {
     readonly ownerEmail: string
     /** Its own mail server, when the document gives one. */
     readonly smtp: ManagementSmtp | undefined
-    /** Its Telegram, Zalo OA, SePay and payOS connections. */
+    /** Its Telegram, Zalo OA, SePay, payOS and (when its OAuth client is given) Google connections. */
     readonly channels: ChannelSeed
 }

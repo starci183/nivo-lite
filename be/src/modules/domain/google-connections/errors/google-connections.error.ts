@@ -13,6 +13,10 @@ export enum GoogleConnectionsErrorCode {
     Lost = "GOOGLE_CONNECTIONS_LOST",
     /** The owner unticked the Drive access on the Google consent screen. */
     ScopeMissing = "GOOGLE_CONNECTIONS_SCOPE_MISSING",
+    /** The owner unticked the spreadsheets access on the Google consent screen of the ledger grant. */
+    SheetsScopeMissing = "GOOGLE_CONNECTIONS_SHEETS_SCOPE_MISSING",
+    /** The text given as the ledger sheet is neither a Google spreadsheet link nor its id. */
+    SheetInvalid = "GOOGLE_CONNECTIONS_SHEET_INVALID",
 }
 
 /** How each google-connections code travels. */
@@ -22,6 +26,8 @@ export const GOOGLE_CONNECTIONS_ERROR_KINDS: Record<GoogleConnectionsErrorCode, 
     [GoogleConnectionsErrorCode.Missing]: "not-found",
     [GoogleConnectionsErrorCode.Lost]: "conflict",
     [GoogleConnectionsErrorCode.ScopeMissing]: "invalid",
+    [GoogleConnectionsErrorCode.SheetsScopeMissing]: "invalid",
+    [GoogleConnectionsErrorCode.SheetInvalid]: "invalid",
 }
 
 /** The one error class of the google-connections capability. */

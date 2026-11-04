@@ -21,5 +21,8 @@ export const storeFailureReason = (error: unknown): string => {
     if (consentFailureOf(error) !== "") return "unavailable"
     if (!(error instanceof GoogleConnectionsError)) return "failed"
     if (error.code === GoogleConnectionsErrorCode.Missing) return "no_refresh"
-    return error.code === GoogleConnectionsErrorCode.ScopeMissing ? "scope" : "failed"
+    const scopeMissing =
+        error.code === GoogleConnectionsErrorCode.ScopeMissing ||
+        error.code === GoogleConnectionsErrorCode.SheetsScopeMissing
+    return scopeMissing ? "scope" : "failed"
 }

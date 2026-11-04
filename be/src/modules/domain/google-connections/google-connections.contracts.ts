@@ -8,6 +8,8 @@ export interface GoogleConnectionAccount {
     readonly email: string
     /** The status of the connection. */
     readonly status: string
+    /** True when the connection was set up for the workspace and still waits for the owner's first consent: it holds no token. */
+    readonly consentNeeded: boolean
 }
 
 /** Where the browser goes back to once the consent is decided: an absolute location on the site with the result in its query. */
@@ -55,16 +57,33 @@ export interface DriveGrant {
     readonly email: string
 }
 
+/** Where the ledger of a workspace stands: no spreadsheets access, access without a sheet, working, or the access was lost. */
+export type LedgerGrantState = "none" | "granted" | "ready" | "lost"
+
+/** The ledger a workspace keeps in a Google spreadsheet. */
+export interface LedgerGrant {
+    /** Whether the access was given, a sheet was named, and whether it still works. */
+    readonly state: LedgerGrantState
+    /** The Google account that gave the access, blank when none or Google never said. */
+    readonly email: string
+    /** The id of the spreadsheet the ledger is written to, blank until the owner names one. */
+    readonly sheetId: string
+    /** The address of that spreadsheet, blank until the owner names one. */
+    readonly sheetUrl: string
+}
+
 /** A consent to start: the Google page the browser must go to. */
 export interface ConsentStart {
     /** The Google consent url. */
     readonly url: string
 }
 
-/** Whether Google can be used on this deployment. */
+/** Whether Google can be used on this deployment, and whether a Google connection waits for the owner's first consent. */
 export interface GoogleSetup {
     /** True when an OAuth client and a site url are configured. */
     readonly configured: boolean
+    /** True when the workspace has a Google connection that was set up for it and still waits for the owner to consent once. */
+    readonly consentNeeded: boolean
 }
 
 /** What a consent start signs into its state. */

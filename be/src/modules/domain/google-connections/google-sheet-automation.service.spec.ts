@@ -25,7 +25,9 @@ const context: ExecutorContext = {
 const build = async () => {
     const extensions = mock<AutomationExtensionsService>()
     const google = mock<GoogleConnectionsService>()
-    google.accountsOf.mockResolvedValue([{ id: "g1", email: "shop@example.test", status: "connected" }])
+    google.accountsOf.mockResolvedValue([
+        { id: "g1", email: "shop@example.test", status: "connected", consentNeeded: false },
+    ])
     const sheets = mock<GoogleSheetsService>()
     sheets.provisionOrdersSheet.mockResolvedValue({
         spreadsheetId: "sheet-new",
@@ -58,7 +60,7 @@ describe("GoogleSheetAutomationService", () => {
         const extension = extensions.add.mock.calls[0]?.[0]
         expect(extension?.executors?.sheet_orders).toBeDefined()
         await expect(extension?.googleAccounts?.("ws-1")).resolves.toEqual([
-            { id: "g1", email: "shop@example.test", status: "connected" },
+            { id: "g1", email: "shop@example.test", status: "connected", consentNeeded: false },
         ])
     })
 

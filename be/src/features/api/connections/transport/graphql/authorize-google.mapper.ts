@@ -6,6 +6,7 @@ import type { AuthorizeUrlType } from "./dto/authorize-url.type"
 export const toAuthorizeGoogleRequest = (workspaceId: string, input: AuthorizeGoogleInput): AuthorizeGoogleRequest => ({
     workspaceId,
     returnTo: input.returnTo,
+    purpose: input.purpose,
 })
 
 /** Maps the answer of authorizeGoogle to the GraphQL type. */

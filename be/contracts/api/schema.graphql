@@ -1418,6 +1418,7 @@ input AuthorizeDriveInput {
 }
 
 input AuthorizeGoogleInput {
+  purpose: String @inputBounds(maxLength: 10)
   returnTo: String! @inputBounds(maxLength: 200)
 }
 
@@ -3695,8 +3696,17 @@ input GetZaloPageInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
+type GoogleLedgerType {
+  email: String!
+  sheetId: String!
+  sheetUrl: String!
+  state: String!
+}
+
 type GoogleStateType {
   configured: Boolean!
+  consentNeeded: Boolean!
+  ledger: GoogleLedgerType!
 }
 
 enum GovernanceDecidedPath {
@@ -5906,6 +5916,7 @@ type Mutation {
   setHiringJobStatus(input: SetHiringJobStatusInput!): HiringStatusType!
   setInventoryItemActive(input: SetInventoryItemActiveInput!): Boolean!
   setKnowledgeSuggestionState(input: SetKnowledgeSuggestionStateInput!): Boolean!
+  setLedgerSheet(input: SetLedgerSheetInput!): GoogleLedgerType!
   setMcpConnectorCredential(input: SetMcpConnectorCredentialInput!): Int!
   setMcpToolGrant(input: SetMcpToolGrantInput!): Boolean!
   setMemberStatus(input: SetMemberStatusInput!): Boolean!
@@ -8335,6 +8346,10 @@ input SetInventoryItemActiveInput {
 input SetKnowledgeSuggestionStateInput {
   key: String! @inputBounds(maxLength: 60)
   state: String @inputBounds(maxLength: 40)
+}
+
+input SetLedgerSheetInput {
+  sheet: String! @inputBounds(maxLength: 300)
 }
 
 input SetMcpConnectorCredentialInput {

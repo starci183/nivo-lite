@@ -44,6 +44,16 @@ describe("NodeToolDoorService call", () => {
         })
     })
 
+    it("answers the typed connection-refused error when the provider refused the workspace's connection", async () => {
+        const { door, gateway } = build()
+        gateway.call.mockResolvedValue({ ok: false, code: "tool_error", detail: '{"error":"connection_refused"}' })
+
+        await expect(door.call(TURN, "ledger.append", {}, "step-1")).rejects.toMatchObject({
+            code: GraphNodesErrorCode.ToolConnectionRefused,
+            params: { tool: "ledger.append" },
+        })
+    })
+
     it.each([
         ["another tool error", { ok: false, code: "tool_error", detail: '{"error":"internal_only"}' }, "tool_error"],
         ["a grant it lacks", { ok: false, code: "not_granted", detail: "" }, "not_granted"],

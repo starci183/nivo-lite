@@ -17,8 +17,8 @@ const TLS_PORT = 465
 
 @Injectable()
 /**
- * The seed of the NIVO management workspace: its owner account, the workspace, its mail server and its Telegram, Zalo OA, SePay and
- * payOS connections under fixed ids. It runs as the data seed command of the stack, so the documents arrive on stdin, already
+ * The seed of the NIVO management workspace: its owner account, the workspace, its mail server and its Telegram, Zalo OA, SePay,
+ * payOS and Google connections under fixed ids (Google waits for the owner's consent). It runs as the data seed command of the stack, so the documents arrive on stdin, already
  * opened from their sealed member; it prints what it did and never a value.
  */
 export class ManagementSeedService {
@@ -43,7 +43,8 @@ export class ManagementSeedService {
         this.options.print(`management workspace ${id}`)
         for (const seeded of await this.channels.ensure(actor, seed.channels)) {
             this.options.print(
-                `${seeded.provider} connection ${seeded.id} ${seeded.action}, credentials ${seeded.credentials}`,
+                `${seeded.provider} connection ${seeded.id} ${seeded.action}, credentials ${seeded.credentials}` +
+                    (seeded.consent === undefined ? "" : `, owner consent ${seeded.consent}`),
             )
         }
         if (seed.smtp !== undefined) await this.mail(actor, seed.smtp)

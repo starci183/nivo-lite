@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
 import {
@@ -18,9 +19,9 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { CONNECTION_BINDINGS, readGraphSpecs } from "./graph-seed.policy"
 import { ProfileActivationService } from "./profile-activation.service"
-import { InjectSeedAgents, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
+import { InjectSeedAgents, InjectSeedToolGrants, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
 import type { WorkspaceSeedOptions } from "./workspace-seed.options"
-import type { SeedAgentRecords } from "./workspace-seed.port"
+import type { SeedAgentRecords, SeedToolGrants } from "./workspace-seed.port"
 
 /** The language the agents and installations seeded here are named in, as the profile seed names them. */
 const SEED_LOCALE = "vi"
@@ -54,6 +55,7 @@ export class GraphSeedService {
         private readonly flows: AgentGraphFlowService,
         private readonly bindings: AgentBindingsService,
         private readonly tagGrants: ModuleTagGrantsService,
+        @InjectSeedToolGrants() private readonly toolGrants: SeedToolGrants,
     ) {}
 
     /** Seeds every graph of the envelope read from `text` into the workspace named `workspaceName`; a refused graph stops the run. */
@@ -67,6 +69,7 @@ export class GraphSeedService {
             const { installation, agentId } = await this.seatOf(workspaceId, module)
             // Before the fast path: an agent seeded by an earlier run, or before tag rights existed, gets them on any rerun.
             await this.tagGrants.grantFor(workspaceId, module.key, agentId)
+            await this.grantTools(workspaceId, agentId, spec)
             if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
                 this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
                 continue
@@ -91,6 +94,24 @@ export class GraphSeedService {
                 `${module.key} agent ${agentId} ${statuses[module.agent.handle] ?? "unknown"}, graph ${published}, ${bound} connections assigned`,
             )
         }
+    }
+
+    /**
+     * Gives the agent the gateway grant of each tool its graph declares, in mode `auto`. The graph is the spec the owner published, and a
+     * tool it names is one of its nodes calls: a side-effect tool with no grant would ask a person on every run. An upsert: a rerun of the seed restates `auto`,
+     * so a mode the owner changed in the console for a tool the graph declares is set back by the next seed run.
+     */
+    private async grantTools(workspaceId: string, agentId: string, spec: GraphSpec): Promise<void> {
+        await this.toolGrants.upsert(
+            spec.grant.tools.map((tool) => ({
+                workspaceId,
+                agentId,
+                tool,
+                mode: "auto",
+                limitVnd: null,
+                constraints: [],
+            })),
+        )
     }
 
     /**

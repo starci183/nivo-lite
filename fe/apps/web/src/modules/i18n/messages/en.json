@@ -2545,7 +2545,21 @@
     "failUnavailable": "NIVO has not turned on the Google integration yet. Please try again later.",
     "failState": "The connection link expired. Press Connect Google again.",
     "failGeneric": "Something went wrong while connecting. Press Connect Google again.",
-    "failNoRefresh": "Google did not grant lasting access. Press Connect Google again and accept every permission."
+    "failNoRefresh": "Google did not grant lasting access. Press Connect Google again and accept every permission.",
+    "failScope": "The Google Sheets permission was not ticked. Press Allow Google Sheets again and tick it.",
+    "consentNeeded": "NIVO set up Google for this workspace. Press Connect Google once to give your consent; until then nothing is written to Google.",
+    "ledgerTitle": "Ledger in Google Sheets",
+    "ledgerBody": "For each payment it settles, NIVO adds one row to the sheet you choose. The sheet is a copy: it only grows, and NIVO never reads or changes what is already in it.",
+    "ledgerNone": "NIVO is not allowed to write to your Google Sheets yet.",
+    "ledgerGranted": "Access given by {email}. Choose the spreadsheet below.",
+    "ledgerReady": "Writing to the sheet with the access of {email}.",
+    "ledgerLost": "Google withdrew the access. Allow Google Sheets again.",
+    "ledgerAllow": "Allow Google Sheets",
+    "ledgerSheetLabel": "Ledger spreadsheet (link or id)",
+    "ledgerSheetHint": "NIVO writes as the Google account that gave the access, so use a sheet that account can edit. Use an empty sheet: NIVO writes the header row first.",
+    "ledgerSave": "Use this sheet",
+    "ledgerSaved": "The ledger sheet is saved.",
+    "ledgerAccessOk": "The Google Sheets access is given. Choose the spreadsheet below."
   },
   "governance": {
     "dept_chatbot": "Chatbot AI",

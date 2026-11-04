@@ -1,5 +1,5 @@
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
-import type { SeedPayos, SeedSepay } from "./channel-seed.contracts"
+import type { SeedGoogle, SeedPayos, SeedSepay } from "./channel-seed.contracts"
 import { accountFacts, clean, isAccountNumber, isSepayKey, squeeze } from "./money-provider.policy"
 
 /** What a sealed seed value reads as when its owner has not issued it yet. */
@@ -49,4 +49,15 @@ export const payosKeysOf = (seed: SeedPayos): PayosKeys | undefined => {
     if (clientId === undefined && apiKey === undefined && checksumKey === undefined) return undefined
     if (clientId === undefined || apiKey === undefined || checksumKey === undefined) return invalidSeed("payos")
     return { clientId, apiKey, checksumKey }
+}
+
+/** The Google OAuth client of a seed, or undefined when none is given; a part of it is refused. */
+export const googleClientOf = (
+    seed: SeedGoogle | undefined,
+): { readonly clientId: string; readonly clientSecret: string } | undefined => {
+    const clientId = filled(seed?.clientId)
+    const clientSecret = filled(seed?.clientSecret)
+    if (clientId === undefined && clientSecret === undefined) return undefined
+    if (clientId === undefined || clientSecret === undefined) return invalidSeed("google")
+    return { clientId, clientSecret }
 }

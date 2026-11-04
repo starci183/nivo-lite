@@ -28,6 +28,7 @@ import { StartSmtpConnectionResolver } from "./start-smtp-connection.resolver"
 import { SendSmtpTestResolver } from "./send-smtp-test.resolver"
 import { ChangeSmtpPasswordResolver } from "./change-smtp-password.resolver"
 import { SetDefaultSmtpResolver } from "./set-default-smtp.resolver"
+import { SetLedgerSheetResolver } from "./set-ledger-sheet.resolver"
 import { StartMoneyConnectionResolver } from "./start-money-connection.resolver"
 import { StartWebhookConnectionResolver } from "./start-webhook-connection.resolver"
 import { StartZaloConnectionResolver } from "./start-zalo-connection.resolver"
@@ -67,6 +68,7 @@ import { WantConnectorResolver } from "./want-connector.resolver"
         SendSmtpTestResolver,
         ChangeSmtpPasswordResolver,
         SetDefaultSmtpResolver,
+        SetLedgerSheetResolver,
         StartWebhookConnectionResolver,
         StartZaloConnectionResolver,
         TestWebhookConnectionResolver,

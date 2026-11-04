@@ -6,4 +6,4 @@ entries:
     target: [node, be/dist/apps/cli/src/main.js, seed-management]
     mode: once
     schema: be/src/modules/domain/channel-provisioning/management-seed.schema.json
-    reason: The NIVO management workspace is the product's own account on its own platform; its owner address and its provider connections (mail, Telegram, Zalo OA, SePay, payOS) are the ones NIVO itself runs on, sealed in seeds-nivo-workspace.
+    reason: The NIVO management workspace is the product's own account on its own platform; its owner address and its provider connections (mail, Telegram, Zalo OA, SePay, payOS, Google) are the ones NIVO itself runs on, sealed in seeds-nivo-workspace.
