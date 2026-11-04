@@ -36,7 +36,7 @@ export const intentClassifyNode: NodeDefinition<
             input: { messages: messagesOf(given.text) },
             images: images.slice(0, IMAGES_SHOWN_MAX).map((file) => file.url),
         })
-        return classificationOf(reply, images.length)
+        return classificationOf(reply, images.length, given.text)
     },
     examples: [
         {

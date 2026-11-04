@@ -6248,6 +6248,7 @@
     "err_zalo_token": "Zalo từ chối quyền truy cập của NIVO: hãy kết nối lại Zalo OA trong Kết nối",
     "err_zalo_not_connected": "Hội thoại này không có kết nối Zalo để gửi",
     "err_zalo_error": "Zalo từ chối tin nhắn này",
+    "err_channel_plan": "Gói OA hiện tại không cho gửi tin tư vấn cho khách; nâng gói OA để NIVO trả lời được trên Zalo",
     "err_recipient_not_linked": "Khách chưa liên kết kênh chat này (chưa có tài khoản Zalo để gửi tới)",
     "channelFacebook": "Facebook",
     "channelInstagram": "Instagram",
@@ -7655,6 +7656,7 @@
     "err_zalo_template": "Mẫu ZNS chưa được duyệt hoặc dữ liệu không khớp với mẫu.",
     "err_zalo_quota": "Official Account đã hết hạn mức gửi hoặc hết số dư ZNS.",
     "err_zalo_not_permitted": "Official Account chưa được cấp quyền dùng tính năng này của Zalo.",
+    "err_channel_plan": "Gói OA hiện tại không cho gửi tin tư vấn cho khách; nâng gói OA để NIVO trả lời được trên Zalo",
     "err_zalo_error": "Zalo từ chối tin nhắn này.",
     "err_token_expired": "Mã truy cập Zalo OA đã hết hạn. Hãy kết nối lại Zalo OA."
   },
@@ -7760,6 +7762,7 @@
     "reasonTemplate": "mẫu tin bị từ chối",
     "reasonQuota": "hết hạn mức gửi",
     "reasonNotPermitted": "thiếu quyền gửi tin",
+    "reasonChannelPlan": "gói OA không cho gửi tin tư vấn",
     "reasonOther": "Zalo từ chối",
     "outcomeReceived": "Nhận",
     "outcomeSent": "Đã gửi",

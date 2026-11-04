@@ -14,6 +14,7 @@ const API_ERRORS: ReadonlyArray<readonly [ZaloErrorCode, ReadonlyArray<number>]>
     [ZaloErrorCode.TemplateRejected, [-109, -111, -112, -131, -132]],
     [ZaloErrorCode.QuotaExhausted, [-115, -137, -144, -211]],
     [ZaloErrorCode.NotPermitted, [-117, -120, -126, -127, -135, -138]],
+    [ZaloErrorCode.PlanRestricted, [-224]],
 ]
 
 const FAILURES: Partial<Record<ZaloErrorCode, ZaloFailure>> = {
@@ -25,6 +26,7 @@ const FAILURES: Partial<Record<ZaloErrorCode, ZaloFailure>> = {
     [ZaloErrorCode.TemplateRejected]: "zalo_template",
     [ZaloErrorCode.QuotaExhausted]: "zalo_quota",
     [ZaloErrorCode.NotPermitted]: "zalo_not_permitted",
+    [ZaloErrorCode.PlanRestricted]: "channel_plan",
 }
 
 /** The numeric error Zalo gave with a refusal, or null when the failure carries none (a network failure). */

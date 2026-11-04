@@ -81,6 +81,8 @@ export interface ModelOrder {
     readonly items: ReadonlyArray<{ readonly name: string; readonly quantity?: number | null | undefined }>
     readonly address?: string | null | undefined
     readonly customer?: string | null | undefined
+    /** Whatever else the model wrote in the slot, an address under another name included. */
+    readonly [member: string]: unknown
 }
 
 /** The payment claim as the model writes it, before it is cleaned. */

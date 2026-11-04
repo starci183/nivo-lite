@@ -37,6 +37,7 @@ describe("zalo-failure policy", () => {
             [-115, "zalo_quota"],
             [-144, "zalo_quota"],
             [-117, "zalo_not_permitted"],
+            [-224, "channel_plan"],
             [-133, "zalo_night_hours"],
             [-1, "zalo_error"],
         ])("maps the Zalo error %s to %s", async (code, failure) => {

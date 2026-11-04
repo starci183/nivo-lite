@@ -258,4 +258,17 @@ describe("ChannelSendExecutorService", () => {
         expect(delivery.deliver).not.toHaveBeenCalled()
         expect(messages.lastCustomerAt).not.toHaveBeenCalled()
     })
+
+    it("succeeds without retry when the plan of the channel does not allow the reply, leaving the verdict the channel stored", async () => {
+        const { executor, messages, delivery, logger } = await build()
+        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "channel_plan", outcome: "rejected" })
+
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+
+        expect(messages.markDelivery).not.toHaveBeenCalled()
+        expect(logger.info).toHaveBeenCalledWith("chat_node_ports.plan_blocked", {
+            conversationId: "c1",
+            channel: "telegram",
+        })
+    })
 })

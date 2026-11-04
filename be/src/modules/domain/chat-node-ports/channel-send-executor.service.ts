@@ -78,6 +78,8 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         )
         if (!linked) return this.keptUndelivered(conversation, messageId)
         const receipt = await this.delivery.deliver({ conversationId: conversation.id, messageId, text })
+        if (!receipt.delivered && receipt.failure === "channel_plan")
+            return this.keptPlanBlocked(conversation, messageId)
         if (!receipt.delivered && receipt.outcome === "rejected" && recipientRefused(receipt.failure)) {
             return this.keptUndelivered(conversation, messageId)
         }
@@ -98,6 +100,15 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
             conversationId: conversation.id,
             channel: conversation.channel,
             reason: RECIPIENT_NOT_LINKED,
+        })
+        return { kind: "message", id: messageId }
+    }
+
+    /** The plan of the channel does not let the agent answer: the message stays in the conversation marked as such (the channel layer stored the reason and told the owner once), and the run goes on, since no retry can help. */
+    private keptPlanBlocked(conversation: TurnConversation, messageId: string): SubjectRef {
+        this.logger.info(ChatNodePortsLogEvent.PlanBlocked, {
+            conversationId: conversation.id,
+            channel: conversation.channel,
         })
         return { kind: "message", id: messageId }
     }

@@ -157,6 +157,61 @@ describe("InboundEventsService keepForOwner", () => {
     })
 })
 
+describe("InboundEventsService outages of the owner", () => {
+    const outage = { workspaceId: "ws-1", channel: "zalo", sender: "OA", body: "Nâng gói", eventId: "channel-plan:c-1" }
+
+    it("writes a new item for the outage when its series has none open, keyed by the moment it began", async () => {
+        const { events, tx } = await build(mockEntityManager({ findOne: [InboundEventEntity, null] }))
+        const [insert] = queueQueryBuilders(tx.em, [INSERTED("ev-1")])
+
+        await expect(events.keepOutageForOwner(tx.em, outage)).resolves.toBe(true)
+
+        const stamp = new Date(NOW).getTime()
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                {
+                    workspaceId: "ws-1",
+                    channel: "zalo",
+                    kind: "message",
+                    senderName: "OA",
+                    body: "Nâng gói",
+                    eventId: `channel-plan:c-1:${stamp}`,
+                    dedupeKey: `zalo:message:channel-plan:c-1:${stamp}`,
+                    status: "needs_decision",
+                },
+            ],
+        ])
+    })
+
+    it("writes nothing while an item of the series is still open, and says so when the key was taken", async () => {
+        const open = await build(mockEntityManager({ findOne: [InboundEventEntity, { id: "ev-0" } as never] }))
+        await expect(open.events.keepOutageForOwner(open.tx.em, outage)).resolves.toBe(false)
+        expect(open.tx.em.createQueryBuilder).not.toHaveBeenCalled()
+
+        const taken = await build(mockEntityManager({ findOne: [InboundEventEntity, null] }))
+        queueQueryBuilders(taken.tx.em, [IGNORED])
+        await expect(taken.events.keepOutageForOwner(taken.tx.em, outage)).resolves.toBe(false)
+    })
+
+    it("closes the open items of the series when the outage is over", async () => {
+        const em = mockEntityManager({ update: [InboundEventEntity, { affected: 1 }] })
+        const { events } = await build(em)
+
+        await events.closeOutage("ws-1", "zalo", "channel-plan:c-1")
+
+        expect(em.update).toHaveBeenCalledWith(
+            InboundEventEntity,
+            expect.objectContaining({
+                workspaceId: "ws-1",
+                channel: "zalo",
+                kind: "message",
+                status: "needs_decision",
+            }),
+            { status: "processed" },
+        )
+    })
+})
+
 describe("InboundEventsService keepUnrouted", () => {
     it("keeps an unrouted message in the inbox under a dedupe key made of its channel and event id", async () => {
         const { events, tx } = await build()

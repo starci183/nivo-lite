@@ -72,6 +72,7 @@ export type ZaloFailure =
     | "zalo_template"
     | "zalo_quota"
     | "zalo_not_permitted"
+    | "channel_plan"
     | "zalo_error"
 
 /** One Zalo Notification Service (ZNS) message: an approved template filled for one phone. */

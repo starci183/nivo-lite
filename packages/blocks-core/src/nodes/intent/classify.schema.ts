@@ -91,7 +91,7 @@ export const modelReplySchema: NodeSchema<ModelReply, unknown> = z.object({
         .max(INTENTS_MAX * 2)
         .default([]),
     order: z
-        .object({
+        .looseObject({
             items: z
                 .array(z.object({ name: z.string(), quantity: z.number().nullish() }))
                 .max(ITEMS_MAX)

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, Like } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -114,6 +114,46 @@ export class InboundEventsService {
             dedupeKey: `${message.channel}:message:${message.eventId}`,
             status: "needs_decision",
         })
+    }
+
+    /**
+     * Keeps one work item for an outage the owner must act on: `message.eventId` names the series (a connection), and a new item is written only
+     * when the series has none open (`needs_decision`), so a failure that repeats is one item until the owner closes it or the outage ends.
+     * Answers whether a new item was written. It writes in the caller's transaction.
+     */
+    async keepOutageForOwner(manager: EntityManager, message: UnroutedMessage): Promise<boolean> {
+        const open = await manager.findOne(InboundEventEntity, {
+            select: { id: true },
+            where: {
+                workspaceId: message.workspaceId,
+                channel: message.channel,
+                kind: "message",
+                status: "needs_decision",
+                eventId: Like(`${message.eventId}:%`),
+            },
+        })
+        if (open !== null) return false
+        const outage = `${message.eventId}:${this.clock.now().getTime()}`
+        const created = await insertOnce(manager, {
+            workspaceId: message.workspaceId,
+            channel: message.channel,
+            kind: "message",
+            senderName: message.sender,
+            body: message.body,
+            eventId: outage,
+            dedupeKey: `${message.channel}:message:${outage}`,
+            status: "needs_decision",
+        })
+        return created !== undefined
+    }
+
+    /** Closes the open work item of an outage series, because the outage is over; a series with none open changes nothing. */
+    async closeOutage(workspaceId: string, channel: string, series: string): Promise<void> {
+        await this.entityManager.update(
+            InboundEventEntity,
+            { workspaceId, channel, kind: "message", status: "needs_decision", eventId: Like(`${series}:%`) },
+            { status: "processed" },
+        )
     }
 
     /** Holds an inbound event for the owner's check until an agent matches it; an event already past that stage is left as it is. */
