@@ -15,7 +15,11 @@ import { ChatbotCustomerRows } from "@/components/composites/ChatbotCustomerRows
 import { ChatbotGapRows } from "@/components/composites/ChatbotGapRows"
 import { CHATBOT_WORKBENCH_TABS as CHATBOT_TABS } from "@/modules/types"
 /** The actual Chatbot list, conversation, gaps and explanation drawings. */
-export const CHATBOT_WORKBENCH_SHAPES: readonly [...typeof CHATBOT_TABS, "conversation", "explanation"] = [...CHATBOT_TABS, "conversation", "explanation"]
+export const CHATBOT_WORKBENCH_SHAPES: readonly [...typeof CHATBOT_TABS, "conversation", "explanation"] = [
+    ...CHATBOT_TABS,
+    "conversation",
+    "explanation",
+]
 type ChatbotWorkbenchShape = (typeof CHATBOT_WORKBENCH_SHAPES)[number]
 /** Supplies the selected drawing, resolved workbench data, and customer actions. */
 export interface ChatbotWorkbenchBaseProps {

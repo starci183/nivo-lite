@@ -51,7 +51,15 @@ describe("BankTransactionGraphAdapter", () => {
         const { adapter, em } = await build()
 
         await expect(
-            adapter.read(turn, { where: { id: "tx-95958515", status: "unmatched", amountVnd: 5000, orderId: "o" }, fields: ["id", "amountVnd", "content", "receivedAt", "orderId"], limit: 999 }, "workspace"),
+            adapter.read(
+                turn,
+                {
+                    where: { id: "tx-95958515", status: "unmatched", amountVnd: 5000, orderId: "o" },
+                    fields: ["id", "amountVnd", "content", "receivedAt", "orderId"],
+                    limit: 999,
+                },
+                "workspace",
+            ),
         ).resolves.toEqual([
             {
                 id: "tx-95958515",
@@ -63,7 +71,14 @@ describe("BankTransactionGraphAdapter", () => {
         ])
 
         expect(em.find).toHaveBeenCalledWith(TransactionEntity, {
-            where: { id: "tx-95958515", status: "unmatched", amountVnd: 5000, orderId: "o", workspaceId: "ws-1", direction: "credit" },
+            where: {
+                id: "tx-95958515",
+                status: "unmatched",
+                amountVnd: 5000,
+                orderId: "o",
+                workspaceId: "ws-1",
+                direction: "credit",
+            },
             order: { occurredAt: "DESC" },
             take: 200,
         })
@@ -83,7 +98,9 @@ describe("BankTransactionGraphAdapter", () => {
 
         await adapter.read({ ...turn, subject }, { fields: ["id"] }, "turn")
         await expect(adapter.read(turn, { fields: ["id"] }, "turn")).resolves.toEqual([])
-        await expect(adapter.read({ ...turn, subject: { kind: "order", id: "o" } }, { fields: ["id"] }, "turn")).resolves.toEqual([])
+        await expect(
+            adapter.read({ ...turn, subject: { kind: "order", id: "o" } }, { fields: ["id"] }, "turn"),
+        ).resolves.toEqual([])
 
         expect(em.find).toHaveBeenCalledTimes(1)
         expect(em.find).toHaveBeenCalledWith(

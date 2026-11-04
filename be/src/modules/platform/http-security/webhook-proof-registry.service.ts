@@ -66,7 +66,7 @@ export class WebhookProofRegistryService implements WebhookProofRegistry {
             provider: proof.provider,
             scope: request.scope,
             code: HttpSecurityErrorCode.WebhookSignatureInvalid,
-            ...(proof.facts?.(request) ?? {}),
+            ...proof.facts?.(request),
             ...(before === undefined || before.suppressed === 0 ? {} : { suppressed: before.suppressed }),
         })
     }

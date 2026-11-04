@@ -30,7 +30,9 @@ const attachmentsOf = (
         const url = textField(payload, "url")
         const localPath = allowLocalPath ? textField(item, "localPath") : ""
         if (url === "" && localPath === "") return []
-        return [{ kind, url, thumbnailUrl: textField(payload, "thumbnail"), name: textField(payload, "name"), localPath }]
+        return [
+            { kind, url, thumbnailUrl: textField(payload, "thumbnail"), name: textField(payload, "name"), localPath },
+        ]
     })
 }
 
@@ -38,7 +40,10 @@ const attachmentsOf = (
  * The customer message of one Zalo event: text, or a picture or file with its caption. A refusal for any other event and for one that lacks the
  * sender, the message id, the text (of a text event) or any attachment with an address (of a picture or file event).
  */
-export const readZaloEvent = (raw?: Buffer, options: ZaloReadOptions = {}): Outcome<ZaloInbound, ConversationsErrorCode> => {
+export const readZaloEvent = (
+    raw?: Buffer,
+    options: ZaloReadOptions = {},
+): Outcome<ZaloInbound, ConversationsErrorCode> => {
     const body = readJsonObject(raw)
     if (body.kind !== "ok") return body
     const event = body.value
@@ -53,7 +58,9 @@ export const readZaloEvent = (raw?: Buffer, options: ZaloReadOptions = {}): Outc
     if (name === TEXT_EVENT && text !== "") return ok({ appId, userId, messageId, text, attachments: [], sentAt })
     if (kind === undefined) return refused(ConversationsErrorCode.NotAnswered)
     const attachments = attachmentsOf(event.message, kind, options.allowLocalPath === true)
-    return attachments.length === 0 ? refused(ConversationsErrorCode.NotAnswered) : ok({ appId, userId, messageId, text, attachments, sentAt })
+    return attachments.length === 0
+        ? refused(ConversationsErrorCode.NotAnswered)
+        : ok({ appId, userId, messageId, text, attachments, sentAt })
 }
 
 /** True when the event is a picture or a file: the events whose shape is worth a log line when no attachment can be read from them. */

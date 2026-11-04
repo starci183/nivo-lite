@@ -7,6 +7,8 @@ export { agentRecordRedirectMetadata as generateMetadata } from "@/features/page
 type PageProps = { readonly params: Promise<{ agentId: string }> }
 
 /** Moved: an agent's setup lives in its instance (/agents/<module>/<installationId>). The agent chat pages below keep working. */
-const Page = async ({ params }: PageProps): Promise<ReactElement> => <AgentRecordRedirectPage agentId={(await params).agentId} />
+const Page = async ({ params }: PageProps): Promise<ReactElement> => (
+    <AgentRecordRedirectPage agentId={(await params).agentId} />
+)
 
 export default Page

@@ -73,9 +73,15 @@ describe("readZaloEvent the time of the event", () => {
     it("reads the timestamp Zalo sends as digits or as a number", async () => {
         const subject = await buildSubject()
 
-        expect(subject.readZaloEvent(event({ timestamp: "1762217400123" }))).toMatchObject({ value: { sentAt: 1_762_217_400_123 } })
-        expect(subject.readZaloEvent(event({ timestamp: 1_762_217_400_123 }))).toMatchObject({ value: { sentAt: 1_762_217_400_123 } })
-        expect(subject.readZaloEvent(imageEvent({}, { timestamp: "1762217400123" }))).toMatchObject({ value: { sentAt: 1_762_217_400_123 } })
+        expect(subject.readZaloEvent(event({ timestamp: "1762217400123" }))).toMatchObject({
+            value: { sentAt: 1_762_217_400_123 },
+        })
+        expect(subject.readZaloEvent(event({ timestamp: 1_762_217_400_123 }))).toMatchObject({
+            value: { sentAt: 1_762_217_400_123 },
+        })
+        expect(subject.readZaloEvent(imageEvent({}, { timestamp: "1762217400123" }))).toMatchObject({
+            value: { sentAt: 1_762_217_400_123 },
+        })
     })
 
     it("has no time when the event carries none that is usable", async () => {
@@ -100,7 +106,13 @@ describe("readZaloEvent pictures and files", () => {
                 text: "Em chuyen khoan roi",
                 sentAt: null,
                 attachments: [
-                    { kind: "image", url: "https://cdn.test/a.jpg", thumbnailUrl: "https://cdn.test/t.jpg", name: "", localPath: "" },
+                    {
+                        kind: "image",
+                        url: "https://cdn.test/a.jpg",
+                        thumbnailUrl: "https://cdn.test/t.jpg",
+                        name: "",
+                        localPath: "",
+                    },
                     { kind: "image", url: "https://cdn.test/b.jpg", thumbnailUrl: "", name: "", localPath: "" },
                 ],
             },
@@ -110,14 +122,20 @@ describe("readZaloEvent pictures and files", () => {
     it("reads a picture that came without a caption", async () => {
         const subject = await buildSubject()
 
-        expect(subject.readZaloEvent(imageEvent({ text: undefined }))).toMatchObject({ kind: "ok", value: { text: "" } })
+        expect(subject.readZaloEvent(imageEvent({ text: undefined }))).toMatchObject({
+            kind: "ok",
+            value: { text: "" },
+        })
     })
 
     it("reads a file event with its name", async () => {
         const subject = await buildSubject()
         const file = event({
             event_name: "user_send_file",
-            message: { msg_id: "m-3", attachments: [{ type: "file", payload: { url: "https://cdn.test/f.pdf", name: "bill.pdf" } }] },
+            message: {
+                msg_id: "m-3",
+                attachments: [{ type: "file", payload: { url: "https://cdn.test/f.pdf", name: "bill.pdf" } }],
+            },
         })
 
         expect(subject.readZaloEvent(file)).toMatchObject({
@@ -128,9 +146,19 @@ describe("readZaloEvent pictures and files", () => {
 
     it("leaves out an attachment with no address and refuses an event that has none left", async () => {
         const subject = await buildSubject()
-        const mixed = imageEvent({ attachments: [{ type: "image", payload: {} }, { type: "image" }, "junk", { payload: { url: "https://cdn.test/c.jpg" } }] })
+        const mixed = imageEvent({
+            attachments: [
+                { type: "image", payload: {} },
+                { type: "image" },
+                "junk",
+                { payload: { url: "https://cdn.test/c.jpg" } },
+            ],
+        })
 
-        expect(subject.readZaloEvent(mixed)).toMatchObject({ kind: "ok", value: { attachments: [{ url: "https://cdn.test/c.jpg" }] } })
+        expect(subject.readZaloEvent(mixed)).toMatchObject({
+            kind: "ok",
+            value: { attachments: [{ url: "https://cdn.test/c.jpg" }] },
+        })
         expect(subject.readZaloEvent(imageEvent({ attachments: [{ payload: {} }] })).kind).toBe("refused")
         expect(subject.readZaloEvent(imageEvent({ attachments: "x" })).kind).toBe("refused")
         expect(subject.readZaloEvent(imageEvent({ attachments: undefined })).kind).toBe("refused")
@@ -179,8 +207,12 @@ describe("zalo attachment events", () => {
     it("marks the parts that are missing", async () => {
         const subject = await buildSubject()
 
-        expect(subject.zaloAttachmentShapeOf(imageEvent({ attachments: [] }, { message: undefined }))).toBe("message[-] attachment[-] payload[-]")
-        expect(subject.zaloAttachmentShapeOf(imageEvent({ attachments: ["x"] }))).toBe("message[attachments,msg_id,text] attachment[-] payload[-]")
+        expect(subject.zaloAttachmentShapeOf(imageEvent({ attachments: [] }, { message: undefined }))).toBe(
+            "message[-] attachment[-] payload[-]",
+        )
+        expect(subject.zaloAttachmentShapeOf(imageEvent({ attachments: ["x"] }))).toBe(
+            "message[attachments,msg_id,text] attachment[-] payload[-]",
+        )
         expect(subject.zaloAttachmentShapeOf()).toBe("")
     })
 })
@@ -198,7 +230,10 @@ describe("readZaloEvent a live picture event", () => {
                 attachments: [
                     {
                         type: "image",
-                        payload: { url: "https://photo-stal-34.zdn.vn/jpg/aaaa/bbbb", thumbnail: "https://photo-stal-34.zdn.vn/jpg/aaaa/thumb" },
+                        payload: {
+                            url: "https://photo-stal-34.zdn.vn/jpg/aaaa/bbbb",
+                            thumbnail: "https://photo-stal-34.zdn.vn/jpg/aaaa/thumb",
+                        },
                     },
                 ],
             },

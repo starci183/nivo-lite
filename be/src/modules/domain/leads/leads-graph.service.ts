@@ -52,7 +52,8 @@ export class LeadsGraphService implements OnModuleInit {
     }
 
     private async read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<ReadonlyArray<NodeRow>> {
-        const found = scope === "workspace" ? await this.records.list(turn.workspaceId, WORKSPACE_LIMIT) : await this.linked(turn)
+        const found =
+            scope === "workspace" ? await this.records.list(turn.workspaceId, WORKSPACE_LIMIT) : await this.linked(turn)
         return rowsAnswering(found.map(rowOf), query)
     }
 

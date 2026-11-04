@@ -9,7 +9,7 @@ import { WORKSPACE_HEADER, selectWorkspace } from "./workspace-selector.policy"
  * The workspace the request names in `X-Workspace-Id`. It only selects: the handler proves access by asking the
  * members service to `require` the caller's membership in it.
  */
-export const WorkspaceId: (...dataOrPipes: unknown[]) => ParameterDecorator = createParamDecorator(
+export const WorkspaceId: (...dataOrPipes: Array<unknown>) => ParameterDecorator = createParamDecorator(
     (_data: unknown, context: ExecutionContext): string =>
         unwrapOutcome(selectWorkspace(requestOf(context).headers[WORKSPACE_HEADER]), WorkspaceMembersError),
 )

@@ -39,7 +39,7 @@ export const moved = (
     },
     {
         readonly waitingMemberId: string | null
-        readonly missingFields: string[]
+        readonly missingFields: Array<string>
         readonly approvalRequestId?: string
         readonly state: string
     },

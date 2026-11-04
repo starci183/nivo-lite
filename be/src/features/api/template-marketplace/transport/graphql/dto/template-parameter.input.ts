@@ -11,11 +11,13 @@ export class TemplateParameterInput {
     @Field(() => String)
     @IsString()
     @Matches(/^[a-z][a-zA-Z0-9_]{0,39}$/)
+    @MaxLength(60)
     key!: string
 
     /** `number`, `text`, `toggle` or `textarea`. */
     @Field(() => String)
     @IsIn(["number", "text", "toggle", "textarea"])
+    @MaxLength(40)
     kind!: string
 
     /** The label. */

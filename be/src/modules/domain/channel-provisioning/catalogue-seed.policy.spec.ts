@@ -23,7 +23,10 @@ const document = (items: unknown, overrides: Record<string, unknown> = {}) => ({
 describe("readCatalogueItems", () => {
     it("reads the items of every document, in order", () => {
         const items = readCatalogueItems(
-            envelope(document([item(), item({ sku: "BO-HONG-20", sellPriceVnd: 0 })]), document([item({ sku: "KE-1" })])),
+            envelope(
+                document([item(), item({ sku: "BO-HONG-20", sellPriceVnd: 0 })]),
+                document([item({ sku: "KE-1" })]),
+            ),
         )
 
         expect(items.map((read) => [read.sku, read.sellPriceVnd])).toEqual([

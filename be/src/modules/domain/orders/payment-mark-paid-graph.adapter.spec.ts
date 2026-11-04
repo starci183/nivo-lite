@@ -20,7 +20,11 @@ const turn: NodeTurn = {
     locale: "vi",
 }
 
-const payload = { orderId: "order-dinh", transactionId: "tx-95958515", evidence: ["Tên, số tiền và lời báo của khách khớp"] }
+const payload = {
+    orderId: "order-dinh",
+    transactionId: "tx-95958515",
+    evidence: ["Tên, số tiền và lời báo của khách khớp"],
+}
 
 const claim = (id: string): PaymentClaimRow => ({
     id,

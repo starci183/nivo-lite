@@ -17,7 +17,7 @@ export interface LinkMailInput extends InviteMailInput {
 
 interface LinkCopy<Input extends InviteMailInput> {
     readonly subject: string
-    readonly paragraphs: (input: Input) => readonly string[]
+    readonly paragraphs: (input: Input) => ReadonlyArray<string>
     readonly button: string
     readonly footer: string
 }

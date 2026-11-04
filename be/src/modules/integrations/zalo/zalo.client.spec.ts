@@ -544,7 +544,8 @@ describe("ZaloClient / recentChats and conversation", () => {
 
 describe("ZaloClient / what an error says", () => {
     /** The `body` param of a failure, as text. */
-    const bodyOf = (failure: unknown): string => String(Reflect.get(Object(Reflect.get(Object(failure), "params")), "body"))
+    const bodyOf = (failure: unknown): string =>
+        String(Reflect.get(Object(Reflect.get(Object(failure), "params")), "body"))
 
     it("keeps Zalo's number, its words, the status and the answer, and the endpoint without the query that names a customer", async () => {
         const { client, http } = await build()
@@ -588,7 +589,12 @@ describe("ZaloClient / what an error says", () => {
 
         expect(failure).toMatchObject({
             code: ZaloErrorCode.Unavailable,
-            params: { path: "/v2.0/oa/listrecentchat", reason: "HTTP 502", status: 502, body: '{"message":"bad gateway"}' },
+            params: {
+                path: "/v2.0/oa/listrecentchat",
+                reason: "HTTP 502",
+                status: 502,
+                body: '{"message":"bad gateway"}',
+            },
         })
     })
 
@@ -603,7 +609,10 @@ describe("ZaloClient / what an error says", () => {
 
     it("keeps the status and the answer of a refused token exchange, without any token it echoed", async () => {
         const { client, http } = await build()
-        http.request.mockResolvedValue({ status: 400, body: { error: -118, error_name: "invalid code", access_token: "" } })
+        http.request.mockResolvedValue({
+            status: 400,
+            body: { error: -118, error_name: "invalid code", access_token: "" },
+        })
 
         const failure = await client.exchangeCode("app", "secret", "code", "verifier").catch((cause: unknown) => cause)
 

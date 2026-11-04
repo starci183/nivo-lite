@@ -26,7 +26,9 @@ const itemOf = entityOf(InventoryItemEntity, {
 })
 
 const build = async (withRegistry = true) => {
-    const em = mockEntityManager({ find: [[InventoryItemEntity, [itemOf(), itemOf({ id: "item-2", sellPriceVnd: null, active: false })]]] })
+    const em = mockEntityManager({
+        find: [[InventoryItemEntity, [itemOf(), itemOf({ id: "item-2", sellPriceVnd: null, active: false })]]],
+    })
     const registry = mock<GraphNodeRegistryService>()
     const moduleRef = await Test.createTestingModule({
         providers: [

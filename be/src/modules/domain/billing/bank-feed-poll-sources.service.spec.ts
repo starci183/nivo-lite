@@ -11,7 +11,11 @@ const connection = { id: "c-1" } as ConnectionRecord
 
 const build = () => {
     const pollers = new BankFeedPollerRegistry()
-    const poller = Object.assign(mock<BankFeedPoller>(), { provider: "sepay", inboxProvider: "sepay-feed" as const, limits })
+    const poller = Object.assign(mock<BankFeedPoller>(), {
+        provider: "sepay",
+        inboxProvider: "sepay-feed" as const,
+        limits,
+    })
     pollers.register(poller)
     const feed = mock<BankFeedService>()
     const registry = new PollSourceRegistry()

@@ -30,7 +30,7 @@ const NO_SESSION = "00000000-0000-0000-0000-000000000000"
 type Purpose = typeof CONFIRM | typeof RESET
 
 /** The languages the mails are written in. */
-const LANGUAGES: readonly MailLanguage[] = ["vi", "en"]
+const LANGUAGES: ReadonlyArray<MailLanguage> = ["vi", "en"]
 
 @Injectable()
 /**

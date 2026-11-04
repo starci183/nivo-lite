@@ -28,5 +28,4 @@ export interface SignedObjectUrl {
 
 /** Why storage refused: the object is not there, or the store could not be reached. */
 export type StorageFailureCode =
-    | typeof OBJECT_STORAGE_ERROR_CODES.ObjectNotFound
-    | typeof OBJECT_STORAGE_ERROR_CODES.Unavailable
+    typeof OBJECT_STORAGE_ERROR_CODES.ObjectNotFound | typeof OBJECT_STORAGE_ERROR_CODES.Unavailable

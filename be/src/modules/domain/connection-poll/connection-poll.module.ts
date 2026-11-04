@@ -20,7 +20,13 @@ const limiterStoreOf = (redis: PollRedisOptions | undefined): Provider =>
               provide: POLL_LIMITER_STORE,
               useFactory: () =>
                   new RedisPollLimiterStore(
-                      new Redis({ host: redis.host, port: redis.port, db: redis.db, password: redis.password, lazyConnect: true }),
+                      new Redis({
+                          host: redis.host,
+                          port: redis.port,
+                          db: redis.db,
+                          password: redis.password,
+                          lazyConnect: true,
+                      }),
                       redis.prefix,
                   ),
           }

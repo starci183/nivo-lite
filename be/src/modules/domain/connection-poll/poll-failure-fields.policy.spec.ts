@@ -5,7 +5,13 @@ describe("failureFieldsOf", () => {
     it("carries the code of a domain error and its params: the provider's own code, its reason, the endpoint and the answer", () => {
         const error = new ZaloError({
             code: ZaloErrorCode.Rejected,
-            params: { path: "/v2.0/oa/listrecentchat", reason: "no permission", zaloCode: -224, status: 200, body: "{}" },
+            params: {
+                path: "/v2.0/oa/listrecentchat",
+                reason: "no permission",
+                zaloCode: -224,
+                status: 200,
+                body: "{}",
+            },
         })
 
         expect(failureFieldsOf(error)).toEqual({

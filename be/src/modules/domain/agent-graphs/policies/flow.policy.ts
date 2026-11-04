@@ -33,4 +33,5 @@ export const requireSoundFlow = (flow: GraphSpec, installed: NodeIndex): void =>
     throw new AgentGraphsError({ code: AgentGraphsErrorCode.PublishRefused, params: { problems: listed } })
 }
 /** True for a graph that holds a flow and none of the old nodes: the flow runs the agent, so the old walk has nothing to judge and must not answer for it. */
-export const isFlowOnly = (document: GraphDocument): boolean => document.flow !== undefined && document.nodes.length === 0
+export const isFlowOnly = (document: GraphDocument): boolean =>
+    document.flow !== undefined && document.nodes.length === 0

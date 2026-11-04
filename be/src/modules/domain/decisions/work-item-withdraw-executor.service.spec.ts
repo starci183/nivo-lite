@@ -44,7 +44,10 @@ describe("WorkItemWithdrawExecutorService", () => {
         const { engine, executor } = await build()
         engine.resumeWork.mockResolvedValue({ id: "item-1" } as WorkItem)
 
-        await expect(executor.execute(TURN, { id: "item-1" }, CALL)).resolves.toEqual({ kind: "work-item", id: "item-1" })
+        await expect(executor.execute(TURN, { id: "item-1" }, CALL)).resolves.toEqual({
+            kind: "work-item",
+            id: "item-1",
+        })
 
         expect(engine.resumeWork).toHaveBeenCalledWith(
             { workspaceId: "ws-1", actor: "NIVO", locale: "vi" },
@@ -59,7 +62,10 @@ describe("WorkItemWithdrawExecutorService", () => {
         const { engine, executor } = await build()
         engine.resumeWork.mockRejectedValue(new DecisionsError({ code: DecisionsErrorCode.NotWaiting }))
 
-        await expect(executor.execute(TURN, { id: "item-1" }, CALL)).resolves.toEqual({ kind: "work-item", id: "item-1" })
+        await expect(executor.execute(TURN, { id: "item-1" }, CALL)).resolves.toEqual({
+            kind: "work-item",
+            id: "item-1",
+        })
     })
 
     it("lets any other failure through, so the undo is tried again", async () => {

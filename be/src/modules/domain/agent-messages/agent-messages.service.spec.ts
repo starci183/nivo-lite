@@ -203,7 +203,9 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
         const { em: inside, fakes } = withStatements(mockEntityManager(), stored("m-1"))
         const at = new Date("2026-11-04T00:50:00.000Z")
 
-        await expect(service.storeCustomer("ws-1", "conv-1", "Hello", inside, "user-1", { at, tieMicros: 417 })).resolves.toBe("m-1")
+        await expect(
+            service.storeCustomer("ws-1", "conv-1", "Hello", inside, "user-1", { at, tieMicros: 417 }),
+        ).resolves.toBe("m-1")
 
         const values = evaluatedValues(fakes[0]?.callsOf("values")[0]?.[0])
         expect(values).toEqual({
@@ -212,7 +214,8 @@ describe("AgentMessagesService storeCustomer and storeGreeting", () => {
             role: "user",
             body: "Hello",
             authorUserId: "user-1",
-            createdAt: "CAST(:stampAt AS timestamptz) + make_interval(secs => CAST(:stampTie AS double precision) / 1000000)",
+            createdAt:
+                "CAST(:stampAt AS timestamptz) + make_interval(secs => CAST(:stampTie AS double precision) / 1000000)",
         })
         expect(fakes[0]?.callsOf("setParameters")).toEqual([[{ stampAt: at, stampTie: 417 }]])
         expect(inside.update).not.toHaveBeenCalled()
@@ -415,10 +418,17 @@ describe("AgentMessagesService transcript", () => {
 describe("AgentMessagesService customerLinesOf", () => {
     it("answers the customer's messages among the ids in the order they were said, and reads nothing for no id", async () => {
         const at = new Date("2026-11-04T01:00:00.000Z")
-        const em = mockEntityManager({ find: [AgentMessageEntity, [Object.assign(new AgentMessageEntity(), { id: "m-1", body: "Chào", createdAt: at })]] })
+        const em = mockEntityManager({
+            find: [
+                AgentMessageEntity,
+                [Object.assign(new AgentMessageEntity(), { id: "m-1", body: "Chào", createdAt: at })],
+            ],
+        })
         const { service } = await build(em)
 
-        await expect(service.customerLinesOf("conv-1", ["m-1", "m-2"])).resolves.toEqual([{ id: "m-1", body: "Chào", at }])
+        await expect(service.customerLinesOf("conv-1", ["m-1", "m-2"])).resolves.toEqual([
+            { id: "m-1", body: "Chào", at },
+        ])
         expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
             select: { id: true, body: true, createdAt: true },
             where: { conversationId: "conv-1", id: In(["m-1", "m-2"]), role: "user" },
@@ -435,11 +445,16 @@ describe("AgentMessagesService unansweredLinesOf", () => {
         const later = new Date("2026-11-04T01:00:03.000Z")
         const em = mockEntityManager({
             findOne: [AgentMessageEntity, Object.assign(new AgentMessageEntity(), { createdAt: replied })],
-            find: [AgentMessageEntity, [Object.assign(new AgentMessageEntity(), { id: "m-2", body: "Còn hàng?", createdAt: later })]],
+            find: [
+                AgentMessageEntity,
+                [Object.assign(new AgentMessageEntity(), { id: "m-2", body: "Còn hàng?", createdAt: later })],
+            ],
         })
         const { service } = await build(em)
 
-        await expect(service.unansweredLinesOf("conv-1", 30)).resolves.toEqual([{ id: "m-2", body: "Còn hàng?", at: later }])
+        await expect(service.unansweredLinesOf("conv-1", 30)).resolves.toEqual([
+            { id: "m-2", body: "Còn hàng?", at: later },
+        ])
         expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, {
             select: { id: true, body: true, createdAt: true },
             where: { conversationId: "conv-1", role: "user", createdAt: MoreThan(replied) },
@@ -454,7 +469,10 @@ describe("AgentMessagesService unansweredLinesOf", () => {
 
         await service.unansweredLinesOf("conv-1", 30)
 
-        expect(em.find).toHaveBeenCalledWith(AgentMessageEntity, expect.objectContaining({ where: { conversationId: "conv-1", role: "user" } }))
+        expect(em.find).toHaveBeenCalledWith(
+            AgentMessageEntity,
+            expect.objectContaining({ where: { conversationId: "conv-1", role: "user" } }),
+        )
     })
 })
 

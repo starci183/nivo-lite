@@ -65,7 +65,15 @@ export class RedisPollLimiterStore implements PollLimiterStore {
 
     /** Takes a slot of `key` for `member`. */
     async enter(key: string, member: string, cap: number, leaseMs: number, now: number): Promise<boolean> {
-        const reply = await this.redis.eval(ENTER_SCRIPT, 1, `${this.prefix}:poll:slots:${key}`, now, cap, leaseMs, member)
+        const reply = await this.redis.eval(
+            ENTER_SCRIPT,
+            1,
+            `${this.prefix}:poll:slots:${key}`,
+            now,
+            cap,
+            leaseMs,
+            member,
+        )
         return Number(reply) === 1
     }
 

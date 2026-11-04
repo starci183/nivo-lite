@@ -17,7 +17,9 @@ const feed = (overrides: Partial<FeedAccountFacts> = {}): FeedAccountFacts => ({
 
 const build = async (byProvider: Readonly<Record<string, ReadonlyArray<FeedAccountFacts>>>) => {
     const bindings = mock<ConnectionBindingsReadService>()
-    bindings.feedAccountsOf.mockImplementation((_workspaceId, provider) => Promise.resolve([...(byProvider[provider] ?? [])]))
+    bindings.feedAccountsOf.mockImplementation((_workspaceId, provider) =>
+        Promise.resolve([...(byProvider[provider] ?? [])]),
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [WorkspacePaymentAccountService, { provide: ConnectionBindingsReadService, useValue: bindings }],
     }).compile()
@@ -45,13 +47,25 @@ describe("WorkspacePaymentAccountService accountOf", () => {
             sepay: [feed({ id: "new", bankCode: "TCB", accountNumber: "999888777" }), feed({ id: "old" })],
         })
 
-        await expect(service.accountOf("ws-1")).resolves.toMatchObject({ provider: "sepay", connectionId: "new", bankCode: "TCB" })
+        await expect(service.accountOf("ws-1")).resolves.toMatchObject({
+            provider: "sepay",
+            connectionId: "new",
+            bankCode: "TCB",
+        })
     })
 
     it("skips feeds without a full account number or a bank code and falls back to Casso", async () => {
         const { service } = await build({
             sepay: [feed({ id: "legacy", accountNumber: null }), feed({ id: "no-bank", bankCode: null })],
-            casso: [feed({ id: "casso", provider: "casso", bankCode: "ACB", accountNumber: "55556666", accountHolder: null })],
+            casso: [
+                feed({
+                    id: "casso",
+                    provider: "casso",
+                    bankCode: "ACB",
+                    accountNumber: "55556666",
+                    accountHolder: null,
+                }),
+            ],
         })
 
         await expect(service.accountOf("ws-1")).resolves.toEqual({

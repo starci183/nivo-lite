@@ -4,7 +4,7 @@ import type { PollPage } from "./connection-poll.contracts"
 export const POLL_CURSOR_KEY = "poll_seen_at"
 
 /** How far back the first poll of a connection reads. */
-export const POLL_BACKFILL_MS = 7 * 86_400_000
+export const POLL_BACKFILL_MS: number = 7 * 86_400_000
 
 /** How much of the already-read past a poll reads again, so a transaction booked late is still found; the inbox ignores the repeats. */
 export const POLL_OVERLAP_MS = 3_600_000

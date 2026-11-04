@@ -81,9 +81,15 @@ describe("AgentTagEffectService", () => {
         tags.tagAgent.mockResolvedValue({ tagged: false, reason: "duplicate" })
 
         await expect(
-            executor.execute(TURN, { toAgentId: "care-1", text: "hi", conversationId: "c-2" }, { key: "k", dedupeKey: null }),
+            executor.execute(
+                TURN,
+                { toAgentId: "care-1", text: "hi", conversationId: "c-2" },
+                { key: "k", dedupeKey: null },
+            ),
         ).resolves.toEqual({ kind: "wake", id: "call:k" })
-        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "care-1", conversationId: "c-2" }))
+        expect(tags.tagAgent).toHaveBeenCalledWith(
+            expect.objectContaining({ toAgentId: "care-1", conversationId: "c-2" }),
+        )
     })
 
     it("refuses a tag the rights refuse, one too large, and one whose module runs no agent", async () => {

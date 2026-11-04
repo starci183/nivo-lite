@@ -8,17 +8,8 @@ export type { LikenessGrantRequest } from "./template-likeness.service"
 export { TemplateListingsService } from "./template-listings.service"
 export type { ReviewRequest, SubmitListingRequest } from "./template-listings.service"
 export { TemplateMarketplaceModule } from "./template-marketplace.module"
-export { TemplatePaymentsService } from "./template-payments.service"
 export { TemplatePurchasesService } from "./template-purchases.service"
 export type { InstallListingRequest } from "./template-purchases.service"
 export { TemplateUpdatesService } from "./template-updates.service"
 export { templateMarketplaceEntities } from "./persistence/entities"
-export type {
-    CreatorLedgerView,
-    LedgerLine,
-    LikenessGrantView,
-    ListingCard,
-    ListingCheck,
-    ListingStatus,
-    ListingView,
-} from "./template-marketplace.contracts"
+export type { CreatorLedgerView, LikenessGrantView, ListingCard, ListingView } from "./template-marketplace.contracts"

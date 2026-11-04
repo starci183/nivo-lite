@@ -17,7 +17,11 @@ import {
 } from "@modules/domain/payment-orders"
 import { CREDITS_ERROR_KINDS, CREDITS_MESSAGES, CreditsModule } from "@modules/domain/credits"
 import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
-import { CONNECTION_POLL_ERROR_KINDS, CONNECTION_POLL_MESSAGES, ConnectionPollModule } from "@modules/domain/connection-poll"
+import {
+    CONNECTION_POLL_ERROR_KINDS,
+    CONNECTION_POLL_MESSAGES,
+    ConnectionPollModule,
+} from "@modules/domain/connection-poll"
 import { ProviderRegistryModule } from "@modules/domain/provider-registry"
 import { SepayProviderModule } from "@modules/domain/sepay-provider"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"

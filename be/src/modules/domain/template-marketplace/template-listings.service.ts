@@ -232,7 +232,7 @@ export class TemplateListingsService {
         return view
     }
 
-    private async viewsOf(rows: ReadonlyArray<TemplateListingEntity>): Promise<ReadonlyArray<ListingView>> {
+    private viewsOf(rows: ReadonlyArray<TemplateListingEntity>): Promise<ReadonlyArray<ListingView>> {
         return Promise.all(
             rows.map(async (row) => {
                 const stored = await this.versions.find(row.templateKey, row.version)

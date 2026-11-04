@@ -63,15 +63,6 @@ export type {
     AgentWorkHandler,
 } from "./agent-work.port"
 export type { AgentBegin } from "./agent-work-turns.contracts"
-export type { WakeOrigin } from "./wake-origin.policy"
-export type {
-    AgentTagNotice,
-    AgentTagVisibility,
-    AgentTagRequest,
-    AgentTagResult,
-    AgentTaggedByAgent,
-    AgentTaggedByPerson,
-    AgentTaggedBySource,
-} from "./agent-tag.contracts"
-export type { AgentBurstPolicy, AgentBurstSetting, AgentTagRights, AgentTagVisibilityPort } from "./agent-work.port"
+export type { AgentTagNotice } from "./agent-tag.contracts"
+export type { AgentBurstPolicy, AgentBurstSetting, AgentTagVisibilityPort } from "./agent-work.port"
 export { contextOf as storedWakeContextOf } from "./agent-work-results.policy"

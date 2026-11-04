@@ -91,7 +91,9 @@ export class ZaloInboxPoller implements MessageInboxPoller<ZaloChatMessage> {
         if (error instanceof ZaloError) return this.classifyZalo(error)
         if (error instanceof ChannelsError) {
             if (error.code === ChannelsErrorCode.ZaloRefreshBusy) return { kind: "transient" }
-            const needsOwner = [ChannelsErrorCode.ZaloNotAuthorized, ChannelsErrorCode.SecretUnreadable].includes(error.code)
+            const needsOwner = [ChannelsErrorCode.ZaloNotAuthorized, ChannelsErrorCode.SecretUnreadable].includes(
+                error.code,
+            )
             return needsOwner ? { kind: "auth_failed", reason: "credential" } : { kind: "fatal" }
         }
         return { kind: "fatal" }
@@ -115,11 +117,7 @@ export class ZaloInboxPoller implements MessageInboxPoller<ZaloChatMessage> {
         connectionId: string,
         window: PollWindow,
     ): Promise<ReadonlyArray<ZaloChatMessage>> {
-        const recent = await this.readBack(
-            connectionId,
-            (offset) => this.zalo.recentChats(accessToken, offset),
-            window,
-        )
+        const recent = await this.readBack(connectionId, (offset) => this.zalo.recentChats(accessToken, offset), window)
         const users = [...new Set(recent.map((chat) => chat.userId))]
         const written: Array<ZaloChatMessage> = []
         await eachInOrder(users, async (userId) => {

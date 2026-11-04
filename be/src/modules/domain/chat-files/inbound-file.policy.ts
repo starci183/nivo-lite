@@ -7,7 +7,8 @@ export const INBOUND_FILE_MAX_REDIRECTS = 3
 /** The request headers of a download: what a browser fetching a picture sends, which the CDNs of the channels expect. */
 export const INBOUND_FILE_HEADERS: Readonly<Record<string, string>> = {
     accept: "image/*,application/pdf;q=0.9,*/*;q=0.5",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "user-agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
 }
 
 /** How long a download of a file a channel brought in may take. */
@@ -22,7 +23,8 @@ const INTERNAL_HOST = /^(?:localhost|.*\.local|.*\.internal|.*\.localhost)$/iu
  */
 export const isFetchableFileUrl = (url: string): boolean => {
     const parsed = URL.canParse(url) ? new URL(url) : null
-    if (parsed === null || parsed.protocol !== "https:" || parsed.username !== "" || parsed.password !== "") return false
+    if (parsed === null || parsed.protocol !== "https:" || parsed.username !== "" || parsed.password !== "")
+        return false
     const host = parsed.hostname.replace(/^\[|\]$/gu, "")
     return host !== "" && isIP(host) === 0 && !INTERNAL_HOST.test(host)
 }
@@ -31,7 +33,12 @@ export const isFetchableFileUrl = (url: string): boolean => {
 export const isAcceptedDeclaredType = (declared: string | undefined): boolean => {
     if (declared === undefined || declared === "") return true
     const type = declared.replace(/;.*$/u, "").trim().toLowerCase()
-    return type.startsWith("image/") || type === "application/pdf" || type === "application/octet-stream" || type === "binary/octet-stream"
+    return (
+        type.startsWith("image/") ||
+        type === "application/pdf" ||
+        type === "application/octet-stream" ||
+        type === "binary/octet-stream"
+    )
 }
 
 /** The file of a manual import as a path inside the import folder, or null when the path would leave it. */

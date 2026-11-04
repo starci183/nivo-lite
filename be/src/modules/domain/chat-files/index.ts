@@ -4,7 +4,6 @@ export type {
     ChatFileUpload,
     ChatFileView,
     DownloadedChatFile,
-    InboundFileSource,
 } from "./chat-files.contracts"
 export { filesOfMessage } from "./chat-file.policy"
 export { fileReadBlockOf } from "./file-read.policy"

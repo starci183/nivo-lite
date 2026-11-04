@@ -20,4 +20,4 @@ export { useHiringRun } from "./useHiringRun"
 export { useHiringSay } from "./useHiringSay"
 export { useHiringWorkbench } from "./useHiringWorkbench"
 
-export type {HiringOwner} from "./useHiringRun"
+export type { HiringOwner } from "./useHiringRun"

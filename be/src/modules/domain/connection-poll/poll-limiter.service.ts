@@ -35,7 +35,13 @@ export class PollLimiterService {
     /** Takes one of the provider's concurrency slots for the connection; undefined when all are taken. */
     async enter(provider: string, connectionId: string, limits: PollLimits): Promise<PollSlot | undefined> {
         const { leaseMs } = this.options.schedule
-        const granted = await this.store.enter(provider, connectionId, limits.concurrency, leaseMs, this.clock.now().getTime())
+        const granted = await this.store.enter(
+            provider,
+            connectionId,
+            limits.concurrency,
+            leaseMs,
+            this.clock.now().getTime(),
+        )
         return granted ? { release: () => this.store.leave(provider, connectionId) } : undefined
     }
 

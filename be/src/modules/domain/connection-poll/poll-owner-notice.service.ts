@@ -20,7 +20,11 @@ export class PollOwnerNoticeService {
      * Marks the connection failing with the reason (a bad credential, or one without the permission to read) and keeps one owner work item for the
      * outage that began at `openedAt`; a repeat of the same outage is no new item.
      */
-    async needsReauth(record: ConnectionRecord, openedAt: number, why: AuthFailureReason = "credential"): Promise<void> {
+    async needsReauth(
+        record: ConnectionRecord,
+        openedAt: number,
+        why: AuthFailureReason = "credential",
+    ): Promise<void> {
         const reason = why === "permission" ? POLL_NEEDS_PERMISSION_REASON : POLL_NEEDS_REAUTH_REASON
         await this.connections.markFailing(record.id, reason)
         await this.entityManager.transaction((manager) =>

@@ -63,7 +63,19 @@ describe("CatalogueSeedService > run", () => {
         await service.run(TEXT, "NIVO")
 
         expect(em.query).toHaveBeenCalledWith(SAVE_ITEM, [
-            "ws-1", null, "CHAU-MINI", "Chậu hoa mini", "chậu", "[]", "", 0, 5000, 0, 0, null, [],
+            "ws-1",
+            null,
+            "CHAU-MINI",
+            "Chậu hoa mini",
+            "chậu",
+            "[]",
+            "",
+            0,
+            5000,
+            0,
+            0,
+            null,
+            [],
         ])
         expect(calls).toEqual([SAVE_ITEM])
         expect(print.mock.calls).toEqual([["catalogue CHAU-MINI created"]])
@@ -84,8 +96,19 @@ describe("CatalogueSeedService > run", () => {
         await service.run(TEXT, "NIVO")
 
         expect(em.query).toHaveBeenCalledWith(SAVE_ITEM, [
-            "ws-1", "item-1", "CHAU-MINI", "Chậu hoa mini", "chậu", '[{"unit":"thùng","factor":10}]', "Hoa",
-            "2000.00", 5000, "3.000", "10.000", "supplier-1", ["chau"],
+            "ws-1",
+            "item-1",
+            "CHAU-MINI",
+            "Chậu hoa mini",
+            "chậu",
+            '[{"unit":"thùng","factor":10}]',
+            "Hoa",
+            "2000.00",
+            5000,
+            "3.000",
+            "10.000",
+            "supplier-1",
+            ["chau"],
         ])
         expect(print.mock.calls).toEqual([["catalogue CHAU-MINI updated"]])
     })

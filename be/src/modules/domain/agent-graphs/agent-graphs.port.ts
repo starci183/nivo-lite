@@ -93,7 +93,11 @@ export interface FlowTriggerConversation {
  */
 export interface FlowTriggerMessages {
     /** The customer's messages among the ids, in the order they were said, with their files. */
-    messagesOf(workspaceId: string, conversationId: string, messageIds: ReadonlyArray<string>): Promise<ReadonlyArray<FlowTriggerMessage>>
+    messagesOf(
+        workspaceId: string,
+        conversationId: string,
+        messageIds: ReadonlyArray<string>,
+    ): Promise<ReadonlyArray<FlowTriggerMessage>>
     /** The conversation's customer and channel, or null when it is gone. */
     conversationOf(conversationId: string): Promise<FlowTriggerConversation | null>
 }

@@ -15,7 +15,6 @@ export { AGENT_CONVERSATIONS_MESSAGES } from "./messages/agent-conversations.mes
 export type {
     ConversationRef,
     ConversationTarget,
-    NodeConversation,
     NodeConversationFilter,
     TurnConversation,
 } from "./agent-conversations.contracts"

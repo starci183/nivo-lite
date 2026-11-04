@@ -16,7 +16,13 @@ describe("FlowTriggerMessagesService", () => {
         })
         const files = mock<ChatFilesService>({
             viewsOf: jest.fn().mockResolvedValue([
-                { id: "f-1", messageId: "m-2", name: "bidv.jpg", contentType: "image/jpeg", url: "https://files.test/f-1" },
+                {
+                    id: "f-1",
+                    messageId: "m-2",
+                    name: "bidv.jpg",
+                    contentType: "image/jpeg",
+                    url: "https://files.test/f-1",
+                },
             ]),
         })
         const moduleRef = await Test.createTestingModule({
@@ -28,13 +34,17 @@ describe("FlowTriggerMessagesService", () => {
             ],
         }).compile()
 
-        await expect(moduleRef.get(FlowTriggerMessagesService).messagesOf("ws-1", "c-1", ["m-2", "m-1"])).resolves.toEqual([
+        await expect(
+            moduleRef.get(FlowTriggerMessagesService).messagesOf("ws-1", "c-1", ["m-2", "m-1"]),
+        ).resolves.toEqual([
             { id: "m-1", text: "Chào shop", at: "2026-11-04T01:00:00.000Z", attachments: [] },
             {
                 id: "m-2",
                 text: "Đã chuyển khoản",
                 at: "2026-11-04T01:00:05.000Z",
-                attachments: [{ id: "f-1", name: "bidv.jpg", contentType: "image/jpeg", url: "https://files.test/f-1" }],
+                attachments: [
+                    { id: "f-1", name: "bidv.jpg", contentType: "image/jpeg", url: "https://files.test/f-1" },
+                ],
             },
         ])
         expect(messages.customerLinesOf).toHaveBeenCalledWith("c-1", ["m-2", "m-1"])
@@ -43,7 +53,13 @@ describe("FlowTriggerMessagesService", () => {
     })
 
     it("answers a burst of five coalesced wakes whole, in order and once each, though the surviving wake named only one", async () => {
-        const said = ["Alo, đặt giùm Định 1 chậu hoa", "giao tới 69 Hàng Xanh", "Tôi cần tư vấn", "Tôi đã chuyển khoản 5k", "tên BUI NGUYEN DINH"]
+        const said = [
+            "Alo, đặt giùm Định 1 chậu hoa",
+            "giao tới 69 Hàng Xanh",
+            "Tôi cần tư vấn",
+            "Tôi đã chuyển khoản 5k",
+            "tên BUI NGUYEN DINH",
+        ]
         const lines = said.map((body, index) => ({
             id: `m-${index + 1}`,
             body,
@@ -57,7 +73,10 @@ describe("FlowTriggerMessagesService", () => {
             providers: [
                 FlowTriggerMessagesService,
                 { provide: AgentMessagesService, useValue: messages },
-                { provide: ChatFilesService, useValue: mock<ChatFilesService>({ viewsOf: jest.fn().mockResolvedValue([]) }) },
+                {
+                    provide: ChatFilesService,
+                    useValue: mock<ChatFilesService>({ viewsOf: jest.fn().mockResolvedValue([]) }),
+                },
                 { provide: AgentConversationsService, useValue: mock<AgentConversationsService>() },
             ],
         }).compile()

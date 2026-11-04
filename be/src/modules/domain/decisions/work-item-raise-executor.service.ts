@@ -84,7 +84,10 @@ export class WorkItemRaiseExecutorService implements OnModuleInit {
             preset: true,
             forceAsk: "branch_ask",
         }
-        const item = await this.engine.runWork({ workspaceId: turn.workspaceId, actor: ACTOR, locale: turn.locale }, spec)
+        const item = await this.engine.runWork(
+            { workspaceId: turn.workspaceId, actor: ACTOR, locale: turn.locale },
+            spec,
+        )
         if (given.claimId !== undefined) await this.hook?.raised(turn.workspaceId, given.claimId, item.id)
         return { kind: "work-item", id: item.id }
     }

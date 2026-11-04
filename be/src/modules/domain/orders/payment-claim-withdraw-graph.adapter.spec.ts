@@ -38,7 +38,10 @@ describe("PaymentClaimWithdrawGraphAdapter", () => {
     it("withdraws the claim of the payload through the ledger, which leaves a settled claim as it is, and answers the claim", async () => {
         const { adapter, claims } = await build()
 
-        await expect(adapter.execute(turn, { id: "claim-dinh" })).resolves.toEqual({ kind: "payment-claim", id: "claim-dinh" })
+        await expect(adapter.execute(turn, { id: "claim-dinh" })).resolves.toEqual({
+            kind: "payment-claim",
+            id: "claim-dinh",
+        })
         await adapter.execute(turn, { id: "claim-dinh" })
 
         expect(claims.withdraw).toHaveBeenCalledTimes(2)

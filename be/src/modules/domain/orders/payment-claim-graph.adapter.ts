@@ -16,7 +16,12 @@ const textOf = (value: unknown): string | undefined => (typeof value === "string
 /** The equalities of a query the claims table can answer: id, lead, conversation and status. */
 const whereOf = (query: NodeQuery): PaymentClaimWhere => {
     const { id, leadId, conversationId, status } = query.where ?? {}
-    const known = { id: textOf(id), leadId: textOf(leadId), conversationId: textOf(conversationId), status: textOf(status) }
+    const known = {
+        id: textOf(id),
+        leadId: textOf(leadId),
+        conversationId: textOf(conversationId),
+        status: textOf(status),
+    }
     return Object.fromEntries(Object.entries(known).filter(([, value]) => value !== undefined)) as PaymentClaimWhere
 }
 
@@ -63,7 +68,8 @@ export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecuto
     async read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<ReadonlyArray<NodeRow>> {
         if (scope === "turn" && turn.conversationId === null) return []
         const where = whereOf(query)
-        const scoped = scope === "turn" && turn.conversationId !== null ? { ...where, conversationId: turn.conversationId } : where
+        const scoped =
+            scope === "turn" && turn.conversationId !== null ? { ...where, conversationId: turn.conversationId } : where
         const rows = await this.claims.query(turn.workspaceId, scoped, query.limit ?? READ_LIMIT)
         return rows.map((claim) => cut(viewOf(claim), query.fields))
     }

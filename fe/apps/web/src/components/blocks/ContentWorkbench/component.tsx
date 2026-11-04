@@ -23,7 +23,10 @@ import { ContentBrandSettings } from "@/components/composites/ContentBrandSettin
 import { ContentAutomationSettings } from "@/components/composites/ContentAutomationSettings"
 
 /** Only actual content tabs and the recorded-explanation arrangement are shapes. */
-export const CONTENT_WORKBENCH_SHAPES: readonly [...typeof CONTENT_TABS, "explanation"] = [...CONTENT_TABS, "explanation"]
+export const CONTENT_WORKBENCH_SHAPES: readonly [...typeof CONTENT_TABS, "explanation"] = [
+    ...CONTENT_TABS,
+    "explanation",
+]
 type ContentShape = (typeof CONTENT_WORKBENCH_SHAPES)[number]
 
 /** One Content world, resolved atomic data slots and commands. */

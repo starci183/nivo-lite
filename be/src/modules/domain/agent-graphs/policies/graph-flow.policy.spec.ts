@@ -1,7 +1,12 @@
 import { graphNodeStepOf, localeOf, outputsOf, subjectOfLabel, tagSourceOf, triggerScopeOf } from "./graph-flow.policy"
 import type { FlowWake } from "./graph-flow.policy"
 
-const wake = (overrides: Partial<FlowWake> = {}): FlowWake => ({ source: "tag", context: {}, actorMemberId: null, ...overrides })
+const wake = (overrides: Partial<FlowWake> = {}): FlowWake => ({
+    source: "tag",
+    context: {},
+    actorMemberId: null,
+    ...overrides,
+})
 
 describe("tagSourceOf", () => {
     it("names where a wake came from in the words of a tag trigger", () => {

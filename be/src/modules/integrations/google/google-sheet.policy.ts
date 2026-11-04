@@ -82,7 +82,7 @@ export const buildCreateBody = (
         locale: string
         timeZone: string
     }
-    sheets: (
+    sheets: Array<
         | {
               properties: {
                   sheetId: number
@@ -94,14 +94,14 @@ export const buildCreateBody = (
                       columnCount: 9
                   }
               }
-              data: {
+              data: Array<{
                   startRow: number
                   startColumn: number
-                  columnMetadata: {
+                  columnMetadata: Array<{
                       pixelSize: number
-                  }[]
-                  rowData: {
-                      values: (
+                  }>
+                  rowData: Array<{
+                      values: Array<
                           | {
                                 userEnteredFormat?: {
                                     textFormat: {
@@ -117,9 +117,9 @@ export const buildCreateBody = (
                                     numberValue: number
                                 }
                             }
-                      )[]
-                  }[]
-              }[]
+                      >
+                  }>
+              }>
           }
         | {
               properties: {
@@ -132,14 +132,14 @@ export const buildCreateBody = (
                       columnCount: 7
                   }
               }
-              data: {
+              data: Array<{
                   startRow: number
                   startColumn: number
-                  columnMetadata: {
+                  columnMetadata: Array<{
                       pixelSize: number
-                  }[]
-                  rowData: {
-                      values: {
+                  }>
+                  rowData: Array<{
+                      values: Array<{
                           userEnteredFormat?: {
                               textFormat: {
                                   bold: boolean
@@ -148,11 +148,11 @@ export const buildCreateBody = (
                           userEnteredValue: {
                               stringValue: string
                           }
-                      }[]
-                  }[]
-              }[]
+                      }>
+                  }>
+              }>
           }
-    )[]
+    >
 } => {
     const sample: ReadonlyArray<SheetCell> = [
         formatVnTime(now.toISOString(), now),
@@ -212,7 +212,7 @@ export const buildCreateBody = (
  * header.
  */
 export const buildFormatBody = (): {
-    requests: {
+    requests: Array<{
         repeatCell: {
             range: {
                 sheetId: number
@@ -231,7 +231,7 @@ export const buildFormatBody = (): {
             }
             fields: string
         }
-    }[]
+    }>
 } => ({
     requests: [
         {

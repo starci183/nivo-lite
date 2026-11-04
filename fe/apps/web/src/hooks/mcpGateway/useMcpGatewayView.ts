@@ -10,7 +10,14 @@ import { useFormatter, useTranslations } from "next-intl"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { connectorRowsOf } from "./mcpGateway.shared"
 import { argsWordsOf, constraintBadgesOf, modeWordOf, outcomeWordOf, toolNameOf } from "@/modules/mcpGateway"
-import type { McpBadgeView, McpFormatter, McpTone, McpToolRowView, McpTranslator, McpConnectorRowView } from "./mcpGateway.shared"
+import type {
+    McpBadgeView,
+    McpFormatter,
+    McpTone,
+    McpToolRowView,
+    McpTranslator,
+    McpConnectorRowView,
+} from "./mcpGateway.shared"
 import { useMcpConnectorCommands } from "./useMcpConnectorCommands"
 import { useMcpConnectorForms } from "./useMcpConnectorForms"
 import { grantKeyOf, useMcpGrantCommands } from "@/hooks/mcpGrants"

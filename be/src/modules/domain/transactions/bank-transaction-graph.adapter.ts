@@ -44,7 +44,7 @@ const viewOf = (row: TransactionEntity): NodeRow => ({
  * workspace.
  */
 export class BankTransactionGraphAdapter implements NodeDataPort, OnModuleInit {
-    readonly kind = SUBJECT_KIND
+    readonly kind: string = SUBJECT_KIND
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,

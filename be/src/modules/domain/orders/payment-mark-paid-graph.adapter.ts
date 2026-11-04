@@ -43,8 +43,14 @@ export class PaymentMarkPaidGraphAdapter implements NodeEffectExecutor, OnModule
             }
             await this.transactions.matchOrder(turn.workspaceId, transactionId, orderId, tx)
             const leadId = order?.lead_id ?? null
-            const open = leadId === null ? [] : (await this.claims.query(turn.workspaceId, { leadId, status: "open" }, 100))
-            await this.claims.settle(turn.workspaceId, open.map((claim) => claim.id), transactionId, tx)
+            const open =
+                leadId === null ? [] : await this.claims.query(turn.workspaceId, { leadId, status: "open" }, 100)
+            await this.claims.settle(
+                turn.workspaceId,
+                open.map((claim) => claim.id),
+                transactionId,
+                tx,
+            )
         })
         return { kind: "order", id: orderId }
     }

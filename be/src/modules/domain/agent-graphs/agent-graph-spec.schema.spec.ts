@@ -7,7 +7,9 @@ const COMMITTED = join(__dirname, "agent-graph-spec.schema.json")
 
 /** The seeded graphs, which both schemas must take. */
 const SEEDED = ["sales", "chatbot", "accounting"].map((name) =>
-    JSON.parse(readFileSync(join(__dirname, `../../../../../.starcistacks/dev/seeds/data/graphs/${name}.json`), "utf8")),
+    JSON.parse(
+        readFileSync(join(__dirname, `../../../../../.starcistacks/dev/seeds/data/graphs/${name}.json`), "utf8"),
+    ),
 )
 
 describe("agent-graph-spec.schema.json", () => {

@@ -2,7 +2,7 @@ import { Column, Entity } from "typeorm"
 import { UuidAbstractEntity } from "@modules/platform/database"
 import type { ListingCheck, ListingStatus } from "../../template-marketplace.contracts"
 
-const vnd = { to: (value: number): number => value, from: (value: string): number => Number(value) }
+const vnd = { to: (value: number): number => value, from: Number }
 
 @Entity({ schema: "public", name: "template_listings" })
 /** One template version offered to others, with its review. */

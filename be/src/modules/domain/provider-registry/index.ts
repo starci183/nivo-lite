@@ -1,5 +1,4 @@
 export { ProviderRegistryModule } from "./provider-registry.module"
-export { ProviderRegistry } from "./provider-registry.service"
 export {
     BankFeedPollerRegistry,
     BankTransactionsRegistry,

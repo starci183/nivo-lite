@@ -6,7 +6,7 @@ import { ConnectionReadyEvent } from "@modules/events/api"
 import { CONNECTION_READY_BANK_FEED_POLL_TOPIC_QUEUE } from "@modules/platform/event-bus"
 import { EVENT_CONSUMER_REGISTRY } from "@modules/platform/event-bus/event-bus.decorators"
 import type { EventConsumer } from "@modules/platform/event-bus"
-import { BankFeedPollMessageModule } from "./transport/message/bank-feed-poll-message.module"
+import { BankFeedPollMessageModule } from "../transport/message/bank-feed-poll-message.module"
 
 const payload = { workspaceId: "ws-1", connectionId: "conn-1", provider: "sepay", dedupeKey: "conn-1:api_token:abc" }
 

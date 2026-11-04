@@ -4,7 +4,7 @@ import type { Logger } from "@modules/platform/logging"
 import { AiTasksLogEvent } from "./ai-tasks.log-events"
 
 /** The largest picture a model call carries, bytes: a larger one is left out and logged. */
-export const IMAGE_MAX_BYTES = 5 * 1024 * 1024
+export const IMAGE_MAX_BYTES: number = 5 * 1024 * 1024
 
 /** How long one picture may take to read from the store, milliseconds. */
 const IMAGE_TIMEOUT_MS = 15_000
@@ -31,7 +31,10 @@ export class NodeImagesService {
         const read = await Promise.all(urls.map((url) => this.dataUrlOf(url)))
         const images = read.filter((image): image is string => image !== null)
         if (images.length < urls.length) {
-            this.logger.warn(AiTasksLogEvent.ImagesDropped, { dropped: urls.length - images.length, sent: images.length })
+            this.logger.warn(AiTasksLogEvent.ImagesDropped, {
+                dropped: urls.length - images.length,
+                sent: images.length,
+            })
         }
         return { images, dropped: urls.length - images.length }
     }

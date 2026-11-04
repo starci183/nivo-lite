@@ -24,7 +24,10 @@ export interface BucketTaken {
  */
 export const takeToken = (state: BucketState | undefined, now: number, limits: PollLimits): BucketTaken => {
     const before = state ?? { tokens: limits.burst, at: now }
-    const refilled = Math.min(limits.burst, before.tokens + (Math.max(0, now - before.at) * limits.ratePerSecond) / 1000)
+    const refilled = Math.min(
+        limits.burst,
+        before.tokens + (Math.max(0, now - before.at) * limits.ratePerSecond) / 1000,
+    )
     if (refilled >= 1) return { allowed: true, waitMs: 0, state: { tokens: refilled - 1, at: now } }
     return {
         allowed: false,

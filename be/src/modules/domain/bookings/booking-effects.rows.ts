@@ -1,5 +1,5 @@
 /** The columns of a booking the effects and the notices read, selected as `EffectsBaseFacts` with its instants as epoch milliseconds. */
-export const EFFECTS_COLUMNS: string[] = [
+export const EFFECTS_COLUMNS: Array<string> = [
     "b.id AS id",
     "b.workspaceId AS workspace_id",
     "b.status AS status",

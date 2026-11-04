@@ -20,7 +20,10 @@ import { AccountingUpcomingRows } from "@/components/composites/AccountingUpcomi
 import { AccountingWaitingRows } from "@/components/composites/AccountingWaitingRows"
 
 /** The real Accounting areas and the explanation arrangement. */
-export const ACCOUNTING_WORKBENCH_SHAPES: readonly [...typeof ACCOUNTING_TABS, "explanation"] = [...ACCOUNTING_TABS, "explanation"]
+export const ACCOUNTING_WORKBENCH_SHAPES: readonly [...typeof ACCOUNTING_TABS, "explanation"] = [
+    ...ACCOUNTING_TABS,
+    "explanation",
+]
 type AccountingWorkbenchShape = (typeof ACCOUNTING_WORKBENCH_SHAPES)[number]
 
 /** Resolved read models and atomic commands; no render tree crosses the block boundary. */

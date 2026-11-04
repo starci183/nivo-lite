@@ -184,14 +184,21 @@ describe("ConnectionPollRun the outcome a scheduler plans with", () => {
         poller.fetch.mockResolvedValue(pageOf(["a", "b"], 2, T1, T2))
         poller.store.mockResolvedValue(true)
 
-        await expect(run.poll(poller, recordOf(), emptyPollSummary())).resolves.toEqual({ kind: "done", fetched: 2, recorded: 2 })
+        await expect(run.poll(poller, recordOf(), emptyPollSummary())).resolves.toEqual({
+            kind: "done",
+            fetched: 2,
+            recorded: 2,
+        })
     })
 
     it("answers skipped with the reason", async () => {
         const { run, poller } = build()
         poller.fetch.mockResolvedValue({ kind: "skipped", reason: "no_token" })
 
-        await expect(run.poll(poller, recordOf(), emptyPollSummary())).resolves.toEqual({ kind: "skipped", reason: "no_token" })
+        await expect(run.poll(poller, recordOf(), emptyPollSummary())).resolves.toEqual({
+            kind: "skipped",
+            reason: "no_token",
+        })
     })
 
     it("takes the gate before every call to the provider and ends the poll when the gate refuses", async () => {
@@ -203,7 +210,13 @@ describe("ConnectionPollRun the outcome a scheduler plans with", () => {
         })
         const connections = mock<ConnectionsService>()
         const gate = jest.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("deferred"))
-        const run = new ConnectionPollRun({ clock: new FakeClock(NOW.toISOString()), logger, timer, connections, beforeFetch: gate })
+        const run = new ConnectionPollRun({
+            clock: new FakeClock(NOW.toISOString()),
+            logger,
+            timer,
+            connections,
+            beforeFetch: gate,
+        })
         const poller = mock<ConnectionPoller<string>>()
         poller.fetch.mockResolvedValue(pageOf(["a"], POLL_PAGE_SIZE, T1, T2))
         poller.store.mockResolvedValue(true)
@@ -229,7 +242,13 @@ describe("ConnectionPollRun the outcome a scheduler plans with", () => {
         const outcome = await run.poll(poller, recordOf(), emptyPollSummary(), { maxPages: 2 })
 
         expect(poller.fetch).toHaveBeenCalledTimes(2)
-        expect(outcome).toEqual({ kind: "partial", fetched: 2 * POLL_PAGE_SIZE, recorded: 2, resumeTo: new Date(T1.getTime() - 2000), newest: T1 })
+        expect(outcome).toEqual({
+            kind: "partial",
+            fetched: 2 * POLL_PAGE_SIZE,
+            recorded: 2,
+            resumeTo: new Date(T1.getTime() - 2000),
+            newest: T1,
+        })
         expect(connections.patch).not.toHaveBeenCalled()
     })
 
