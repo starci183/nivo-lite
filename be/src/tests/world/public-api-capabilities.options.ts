@@ -3,6 +3,7 @@ import { ConnectionsModule } from "@modules/domain/connections"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { DataRecordsReadService } from "@modules/domain/data-records"
 import { Injectable, Module } from "@nestjs/common"
+import { mock } from "@starci/jest-preset"
 import type { DynamicModule } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ApiKeysService } from "@modules/domain/api-keys"
@@ -56,11 +57,14 @@ import {
     MODULE_CATALOG_SOURCE,
     OUTBOUND_ACCESS_GATE,
 } from "../../modules/domain/decisions/work-engine.decorators"
+import { WorkBranchService } from "../../modules/domain/decisions/work-branch.service"
 import { WorkIntakeService } from "../../modules/domain/decisions/work-intake.service"
+import { WorkItemClosedService } from "../../modules/domain/decisions/work-item-closed.service"
 import { WORK_PERFORMER_REGISTRY } from "../../modules/domain/decisions/work-performer.port"
 import { WorkPerformersService } from "../../modules/domain/decisions/work-performers.service"
 import { WorkRecorderService } from "../../modules/domain/decisions/work-recorder.service"
 import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
+import { LeadHandoverService } from "../../modules/domain/work-performers/lead-handover.service"
 import { PerformerKitService } from "../../modules/domain/work-performers/performer-kit.service"
 import { queueOptions } from "./test-capabilities.options"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
@@ -187,9 +191,11 @@ class PublicApiProofPeersModule {
             HandoffLeadPerformerService,
             PerformerKitService,
             WorkApprovalService,
+            WorkBranchService,
             WorkChainService,
             WorkEngineService,
             WorkIntakeService,
+            WorkItemClosedService,
             WorkItemsService,
             WorkItemsChainReadService,
             WorkItemsLeadReadService,
@@ -207,6 +213,11 @@ class PublicApiProofPeersModule {
             imports: [KnowledgeQueueModule.register({})],
             providers: [
                 ...services,
+                // No sales agent is bound in these proofs, so a handover moves nothing.
+                {
+                    provide: LeadHandoverService,
+                    useFactory: () => mock<LeadHandoverService>({ toSales: jest.fn().mockResolvedValue(false) }),
+                },
                 { provide: KNOWLEDGE_STORAGE, useClass: PublicApiProofStorage },
                 { provide: RESPONSIBILITY_LEAD_DESK, useClass: PublicApiProofLeadDesk },
                 { provide: AGENT_DIRECTORY, useExisting: PublicApiProofDirectory },

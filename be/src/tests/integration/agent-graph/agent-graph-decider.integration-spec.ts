@@ -28,12 +28,13 @@ const RULE: AuthorityRule = ruleOf({
     required_fields: [],
 })
 
-/** The graph with its decide point on the action of the proof. */
+/** The graph with its decide point and its act on the action of the proof (a walk that meets the act of another action is diverted). */
 const forAction = (document: GraphDocument): GraphDocument => ({
     ...document,
-    nodes: document.nodes.map((node) =>
-        node.decide === undefined ? node : { ...node, decide: { ...node.decide, intent: ACTION } },
-    ),
+    nodes: document.nodes.map((node) => {
+        const decided = node.decide === undefined ? node : { ...node, decide: { ...node.decide, intent: ACTION } }
+        return decided.action === undefined ? decided : { ...decided, action: ACTION }
+    }),
 })
 
 /** The request the engine makes of the decider for an item the model priced at `modelVnd`, with the owner rule as the gate. */

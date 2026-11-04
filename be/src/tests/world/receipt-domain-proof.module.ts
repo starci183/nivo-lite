@@ -2,18 +2,19 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentConnectionsModule } from "@modules/domain/agent-connections"
-import { AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
+import { AGENTS_INSTALLATIONS, AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { ZaloCredentialsService, ZaloWebhookGateService } from "@modules/domain/channels"
 import { CHANNELS_OPTIONS } from "../../modules/domain/channels/channels.decorators"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
-import { InboundFilesService } from "@modules/domain/chat-files"
 import { ConversationsService } from "@modules/domain/conversations"
+import { CustomerHearingService } from "../../modules/domain/conversations/customer-hearing.service"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { InboundEventsService } from "@modules/domain/inbound-events"
+import { ProviderRegistryModule } from "@modules/domain/provider-registry"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
@@ -26,6 +27,7 @@ import { Secret } from "@modules/platform/config"
 import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ChatTurnQueue } from "@modules/queues/chat-turn"
+import { QUIET_CUSTOMER_INTAKE, QUIET_INBOUND_FILES, QUIET_INSTALLATIONS } from "./quiet-peers"
 import { ZaloDeliveryQueue } from "../../modules/queues/zalo-delivery/zalo-delivery.queue"
 
 const tokenKey = new Secret(Buffer.alloc(32, 7).toString("base64"))
@@ -45,17 +47,24 @@ const billingOptions = (): BillingOptions => ({
         ZaloCredentialsService,
         ZaloWebhookGateService,
         ConversationsService,
-        {
-            provide: InboundFilesService,
-            useValue: { download: () => Promise.resolve(null), keep: () => Promise.resolve(false) },
-        },
+        CustomerHearingService,
+        QUIET_CUSTOMER_INTAKE,
+        QUIET_INSTALLATIONS,
+        QUIET_INBOUND_FILES,
         InboundEventsService,
         PaymentSecretsService,
         PaymentProofService,
         PaymentOrdersService,
         SepayTransactionsService,
     ],
-    exports: [ConversationsService, SepayTransactionsService, ZaloDeliveryQueue, ZaloWebhookGateService],
+    exports: [
+        ConversationsService,
+        AGENTS_INSTALLATIONS,
+        InboundEventsService,
+        SepayTransactionsService,
+        ZaloDeliveryQueue,
+        ZaloWebhookGateService,
+    ],
 })
 /** Composes real receipt consumers and their dependencies; these proofs make no provider network calls. */
 export class ReceiptDomainProofModule {
@@ -81,6 +90,7 @@ export const RECEIPT_DOMAIN_MODULES: ReadonlyArray<DynamicModule> = [
         businessBase: "http://127.0.0.1:1",
         timeoutMs: 100,
     }),
+    ProviderRegistryModule.register({ isGlobal: true }),
     ZaloInboxModule.register({ isGlobal: true }),
     EventsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),

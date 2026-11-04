@@ -1,8 +1,13 @@
 import type { InjectionToken } from "@nestjs/common"
 import type { Secret } from "@modules/platform/config"
+import type { ConnectionPollOptions } from "../../../modules/domain/connection-poll/poll-schedule.contracts"
 
 /** The build wiring proof result overrides record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOverridesShape = { token: InjectionToken; value: unknown }
+/** The build wiring proof result options agent work record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsAgentWorkShape = { debounceMs: number }
+/** The build wiring proof result options zalo provider record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsZaloProviderShape = { replyWindowMs: number; staleAfterMs: number }
 /** The build wiring proof result options knowledge record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsKnowledgeShape = { indexChunkDelayMs: number }
 /** The build wiring proof result options mcp gateway remote record the builders hand out and the specs expect. */
@@ -274,6 +279,8 @@ export type BuildWiringProofResultOptionsShape = {
     workspaces: BuildWiringProofResultOptionsWorkspacesShape
     workspaceInvites: BuildWiringProofResultOptionsWorkspaceInvitesShape
     billing: BuildWiringProofResultOptionsBillingShape
+    chatFilesImportRoot: string
+    connectionPoll: ConnectionPollOptions
     openclaw: BuildWiringProofResultOptionsOpenclawShape
     agentTurns: BuildWiringProofResultOptionsAgentTurnsShape
     aiTasks: BuildWiringProofResultOptionsAiTasksShape
@@ -283,12 +290,14 @@ export type BuildWiringProofResultOptionsShape = {
     telegram: BuildWiringProofResultOptionsTelegramShape
     sepay: BuildWiringProofResultOptionsTelegramShape
     zalo: BuildWiringProofResultOptionsZaloShape
+    zaloProvider: BuildWiringProofResultOptionsZaloProviderShape
     mail: BuildWiringProofResultOptionsMailShape
     dataSources: BuildWiringProofResultOptionsDataSourcesShape
     telegramUser: BuildWiringProofResultOptionsTelegramUserShape
     platformAdmin: BuildWiringProofResultOptionsPlatformAdminShape
     realtime: BuildWiringProofResultOptionsRealtimeShape
     queue: BuildWiringProofResultOptionsQueueShape
+    agentWork: BuildWiringProofResultOptionsAgentWorkShape
     jobs: BuildWiringProofResultOptionsJobsShape
     jobsAlert: BuildWiringProofResultOptionsJobsAlertShape
     connections: BuildWiringProofResultOptionsConnectionsShape

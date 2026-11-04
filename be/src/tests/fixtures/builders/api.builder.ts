@@ -6,6 +6,8 @@ import { HTTP_CLIENT, HttpError, HttpErrorCode } from "@modules/platform/http"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { QueueModule } from "@modules/platform/queue"
 import { IdentityModule } from "@modules/domain/identity"
+import { DEFAULT_POLL_SCHEDULE } from "../../../modules/domain/connection-poll/poll-schedule.policy"
+import { ZALO_POLL_DEFAULTS } from "../../../modules/domain/zalo-provider/zalo-poll.policy"
 
 const PRIMARY_DATA_SOURCE = "primaryDataSource"
 const wiringIds = fakeIds()
@@ -97,6 +99,10 @@ const options = {
     channels: { siteUrl: "https://site.invalid" },
     telegram: { apiBase: "https://telegram.invalid", timeoutMs: 1000 },
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
+    chatFilesImportRoot: "wiring/imports",
+    connectionPoll: { schedule: DEFAULT_POLL_SCHEDULE, redis: undefined },
+    zaloProvider: ZALO_POLL_DEFAULTS,
+    agentWork: { debounceMs: 0 },
     zalo: {
         oauthBase: "https://zalo.invalid",
         apiBase: "https://zalo.invalid",

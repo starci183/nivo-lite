@@ -34,7 +34,7 @@ describe("Public API processor (persisted local integration)", () => {
                 title: "Service policy",
                 topic: "service",
                 tags: ["annual", "contract"],
-                visibility: "public",
+                visibility: "internal",
                 origin: "api:Public API proof",
             }),
         ])

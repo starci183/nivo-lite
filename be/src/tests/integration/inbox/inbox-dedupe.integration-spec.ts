@@ -158,7 +158,8 @@ describe("durable HAKUEN write dedupe on the migrated local database", () => {
             Array.from({ length: 24 }, () => gateway.call(keyed, "hakuen.booking.hold", { roomType: "deluxe" })),
         )
         expect(server.calls).toHaveLength(before + 1)
-        const completed: GatewayCallResult = { ok: true, value: { holdId: `hold-${String(before + 1)}` } }
+        const holdId = `hold-${String(before + 1)}`
+        const completed: GatewayCallResult = { ok: true, summary: JSON.stringify({ holdId }), value: { holdId } }
         const pending: GatewayCallResult = { ok: false, code: "unknown_outcome", detail: "operation_pending" }
         expect(results).toContainEqual(completed)
         for (const result of results) expect([completed, pending]).toContainEqual(result)

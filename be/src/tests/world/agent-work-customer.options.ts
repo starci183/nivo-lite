@@ -1,11 +1,18 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
+import { INBOUND_ADAPTER_REGISTRY } from "../../modules/domain/agent-inbound/agent-inbound.decorators"
+import { InboundAdapterRegistryService } from "../../modules/domain/agent-inbound/inbound-adapter-registry.service"
+import { InboundDoorService } from "../../modules/domain/agent-inbound/inbound-door.service"
+import { INBOX, InboxService } from "@modules/platform/inbox"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { jobsEntities } from "@modules/platform/jobs"
 import { ChatTurnModule } from "@modules/queues/chat-turn"
 import { AgentWorkSettingsEntity } from "../../modules/domain/agent-work/persistence/entities"
 import { CustomerIntakeService } from "../../modules/domain/conversations/customer-intake.service"
+import { AgentEventWakesService } from "../../modules/domain/agent-schedules/agent-event-wakes.service"
+import { QUIET_INSTALLATIONS, QUIET_RUNS } from "./quiet-peers"
 import { agentRoadModules } from "./agent-road-capabilities.options"
 
 @Module({})
@@ -15,8 +22,18 @@ class CustomerIntakeProofModule {
         return {
             module: CustomerIntakeProofModule,
             global: true,
-            providers: [CustomerIntakeService],
-            exports: [CustomerIntakeService],
+            imports: [ChatTurnModule.register({})],
+            providers: [
+                CustomerIntakeService,
+                QUIET_INSTALLATIONS,
+                QUIET_RUNS,
+                AgentEventWakesService,
+                InboundDoorService,
+                InboundAdapterRegistryService,
+                { provide: INBOUND_ADAPTER_REGISTRY, useExisting: InboundAdapterRegistryService },
+                { provide: INBOX, useClass: InboxService },
+            ],
+            exports: [CustomerIntakeService, AGENTS_INSTALLATIONS, AgentEventWakesService, InboundDoorService],
         }
     }
 }
@@ -25,7 +42,6 @@ class CustomerIntakeProofModule {
 export const agentCustomerModules = (prefix: string): Array<DynamicModule> => [
     ...agentRoadModules(prefix),
     AgentConversationsModule.register({ isGlobal: true }),
-    ChatTurnModule.register({}),
     CustomerIntakeProofModule.register(),
 ]
 

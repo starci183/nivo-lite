@@ -1,5 +1,6 @@
 import type { JobClaims, JobProcessorRegistry, FencedProcessor, ClaimedJob, AdvanceWrite } from "@modules/platform/jobs"
 import assert from "node:assert/strict"
+import { ZaloWebhookGateService } from "@modules/domain/channels"
 import { ZaloInboxService } from "@modules/domain/zalo-inbox"
 import { JOB_CLAIMS, JOB_PROCESSOR_REGISTRY, JobsModule } from "@modules/platform/jobs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -73,6 +74,9 @@ export const zaloPublicationBuilder = (world: LiteWorld): ZaloPublicationBuilder
         await removeReceipts(world.db.primary, "zalo", message.deliveryId)
     })
     const actual = world.resolve<QueueOutbox>(QUEUE_OUTBOX)
+    // The connection of a delivery proof holds no OA secret key, and a call to such a connection is closed unread: the proof is about the
+    // road after the gate, so the gate is told the key is held.
+    jest.spyOn(world.resolve(ZaloWebhookGateService), "holdsProofKey").mockResolvedValue(true)
     return {
         message,
         queue: world.resolve(ZaloDeliveryQueue),

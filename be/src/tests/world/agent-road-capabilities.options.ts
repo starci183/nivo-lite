@@ -16,6 +16,8 @@ import type {
 import { InvoicesModule } from "@modules/domain/invoices"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { IdsModule } from "@modules/platform/ids"
+import { AgentRunSweepService } from "../../modules/domain/agent-runs/agent-run-sweep.service"
+import { QUIET_RUN_SWEEP } from "./quiet-peers"
 import { OFFICE_CHAIN_MODULES } from "./office-chain-capabilities.options"
 import { KnowledgeReadModule } from "./agent-road-knowledge-read.module"
 import { redisQueueModules } from "./redis-capabilities.options"
@@ -30,12 +32,7 @@ export class RoadWork implements AgentWorkHandler, AgentTurnExecutor {
     /** The wakes whose model call began. */
     readonly ran: Array<string> = []
 
-    constructor(
-        registry: AgentWorkHandlersService,
-        private readonly probes: AgentProbesService,
-    ) {
-        registry.add(this)
-    }
+    constructor(private readonly probes: AgentProbesService) {}
 
     async prepare(turn: AgentTurnView): Promise<AgentTurnPrep> {
         const decision = await this.probes.decide(
@@ -71,6 +68,14 @@ export class RoadWork implements AgentWorkHandler, AgentTurnExecutor {
     }
 }
 
+@Injectable()
+/** Registers the handler after the registry and its shared executor are both constructed: the registry reads the executor, and the handler is the executor. */
+class RoadWorkRegistration {
+    constructor(registry: AgentWorkHandlersService, handler: RoadWork) {
+        registry.add(handler)
+    }
+}
+
 @Module({})
 class RoadWorkModule {
     /** Binds the handler and the executor the way the capabilities that own them bind theirs. */
@@ -78,11 +83,14 @@ class RoadWorkModule {
         return {
             module: RoadWorkModule,
             global: true,
-            providers: [RoadWork, { provide: AGENT_TURN_EXECUTOR, useExisting: RoadWork }],
+            providers: [RoadWork, RoadWorkRegistration, { provide: AGENT_TURN_EXECUTOR, useExisting: RoadWork }],
             exports: [RoadWork, AGENT_TURN_EXECUTOR],
         }
     }
 }
+
+@Module({ providers: [QUIET_RUN_SWEEP], exports: [AgentRunSweepService] })
+class QuietRunsModule {}
 
 /** The clock of the agents as the api composes it, over a private Redis under `prefix`: the office, the work store, the schedules and a handler that asks the probes first. */
 export const agentRoadModules = (prefix: string): Array<DynamicModule> => [
@@ -93,6 +101,7 @@ export const agentRoadModules = (prefix: string): Array<DynamicModule> => [
     ModuleInstallationsModule.register({ isGlobal: true }),
     KnowledgeReadModule.register(),
     AgentWorkModule.register({ isGlobal: true, debounceMs: 0 }),
+    { module: QuietRunsModule, global: true },
     AgentSchedulesModule.register({ isGlobal: true }),
     RoadWorkModule.register(),
 ]

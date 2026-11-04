@@ -10,7 +10,7 @@ import {
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { LeadReadService } from "@modules/domain/leads"
-import { OrdersService } from "@modules/domain/orders"
+import { OrdersLabelReadService, OrdersService } from "@modules/domain/orders"
 import {
     AUTHORITY_RULES_ERROR_KINDS,
     AUTHORITY_RULES_MESSAGES,
@@ -34,6 +34,7 @@ import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { I18nModule } from "@modules/platform/i18n"
 import type { LiteWorld } from "./lite-world.service"
+import { QUIET_PAYMENT_DEMAND } from "./quiet-peers"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
 
 /** The token of the Auth account directory of the office chain proofs. */
@@ -60,6 +61,8 @@ class OfficeAgentOwnersModule {
                 AuthorityActionsService,
                 LeadReadService,
                 OrdersService,
+                OrdersLabelReadService,
+                QUIET_PAYMENT_DEMAND,
                 { provide: OFFICE_ACCOUNTS, useClass: UnreadAccountDirectory },
             ],
             exports: [
@@ -68,6 +71,7 @@ class OfficeAgentOwnersModule {
                 AuthorityActionsService,
                 LeadReadService,
                 OrdersService,
+                OrdersLabelReadService,
                 OFFICE_ACCOUNTS,
             ],
         }

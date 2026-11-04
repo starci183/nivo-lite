@@ -88,6 +88,7 @@ describe("agent-work/bridge-needs-turn: a call of the bridge plugin is for the t
             source: "tag",
             conversationId: null,
             authorUserId: identity.users.nam,
+            pinnedIntent: null,
         })
 
         await world

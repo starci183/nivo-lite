@@ -4,6 +4,8 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import { AgentBindingsService, AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { AiUsageEventsModule } from "@modules/domain/ai-usage-events"
 import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
+import { ConnectionPollModule } from "@modules/domain/connection-poll"
+import { ProviderRegistryModule } from "@modules/domain/provider-registry"
 import { BillingModule } from "@modules/domain/billing"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChatActivityModule } from "@modules/domain/chat-activity"
@@ -19,12 +21,13 @@ import { TransactionsModule } from "@modules/domain/transactions"
 import { AiModule } from "@modules/integrations/ai"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { DocumentsModule } from "@modules/integrations/documents"
-import { ObjectStorageModule, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import { ObjectStorageModule, STORAGE_ASSETS, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { HttpError, HttpErrorCode } from "@modules/platform/http"
 import { HttpSecurityModule } from "@modules/platform/http-security"
 import { JobsModule } from "@modules/platform/jobs"
+import { DEFAULT_POLL_SCHEDULE } from "../../modules/domain/connection-poll/poll-schedule.policy"
 import { AGENT_WORK_MODULES } from "./agent-work-capabilities.options"
 
 /** Synthetic credentials for the proof's real integrations; no deployed account is used. */
@@ -119,13 +122,20 @@ export const AGENT_TAG_MODULES: Array<DynamicModule> = [
     BankFeedInboxModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
+    ProviderRegistryModule.register({ isGlobal: true }),
+    ConnectionPollModule.register({ isGlobal: true, schedule: DEFAULT_POLL_SCHEDULE, redis: undefined }),
     BillingModule.register({
         isGlobal: true,
         sepayApiKey: undefined,
         bankAccount: { account: "", bank: "", holder: "" },
     }),
     AiUsageEventsModule.register({ isGlobal: true }),
-    ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
+    ChatFilesModule.register({
+        isGlobal: true,
+        storage: STORAGE_OBJECTS,
+        assets: STORAGE_ASSETS,
+        importRoot: "world-proof/imports",
+    }),
     ChatActivityModule.register({ isGlobal: true }),
     AgentTagProofModule.register(),
     MessagesModule.register({ isGlobal: true, agentDirectory: ProofAgentDirectory }),

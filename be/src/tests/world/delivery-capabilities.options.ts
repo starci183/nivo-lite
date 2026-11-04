@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import type { EntityManager } from "typeorm"
 import type { DynamicModule } from "@nestjs/common"
 import { Secret } from "@modules/platform/config"
 import { CLOCK } from "@modules/platform/clock"
@@ -6,6 +7,8 @@ import type { Clock } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EVENT_BUS } from "@modules/platform/event-bus"
+import type { EventBus } from "@modules/platform/event-bus"
 import { I18nModule } from "@modules/platform/i18n"
 import { JobsModule } from "@modules/platform/jobs"
 import { HttpSecurityModule } from "@modules/platform/http-security"
@@ -16,10 +19,11 @@ import { MetaModule } from "@modules/integrations/meta"
 import { ConnectionSecretReadsService, ConnectionsModule, ConnectionsService } from "@modules/domain/connections"
 import { ConnectionSecretsModule, ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConversationsService, CONVERSATIONS_MESSAGES } from "@modules/domain/conversations"
+import { CustomerHearingService } from "../../modules/domain/conversations/customer-hearing.service"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { AgentConversationsModule } from "@modules/domain/agent-conversations"
 import { AgentConnectionsModule } from "@modules/domain/agent-connections"
-import { AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
+import { AGENTS_INSTALLATIONS, AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
 import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { EventsModule } from "@modules/domain/events"
@@ -29,6 +33,8 @@ import { WorkspacesModule } from "@modules/domain/workspaces"
 import { PaymentOrdersModule } from "@modules/domain/payment-orders"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
+import { ConnectionPollModule } from "@modules/domain/connection-poll"
+import { ProviderRegistryModule } from "@modules/domain/provider-registry"
 import { BillingModule, BILLING_MESSAGES } from "@modules/domain/billing"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { TransactionsModule } from "@modules/domain/transactions"
@@ -36,6 +42,9 @@ import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { MetaInboxModule } from "@modules/domain/meta-inbox"
 import { ChatTurnModule } from "@modules/queues/chat-turn"
+import { QUIET_AGENT_TAGS, QUIET_CUSTOMER_INTAKE, QUIET_INBOUND_FILES, QUIET_INSTALLATIONS } from "./quiet-peers"
+import { AgentTagService } from "../../modules/domain/agent-work/agent-tag.service"
+import { DEFAULT_POLL_SCHEDULE } from "../../modules/domain/connection-poll/poll-schedule.policy"
 import { worldIds } from "./lite-world.service"
 import { QUEUE_MODULES } from "./test-capabilities.options"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
@@ -65,8 +74,13 @@ class DeliveryPeersModule {
             imports: [ChatTurnModule.register({})],
             providers: [
                 ConversationsService,
+                CustomerHearingService,
                 DeferredMetaEvents,
                 ProofAccounts,
+                QUIET_AGENT_TAGS,
+                QUIET_CUSTOMER_INTAKE,
+                QUIET_INSTALLATIONS,
+                QUIET_INBOUND_FILES,
                 {
                     provide: ZaloCredentialsService,
                     useFactory: (
@@ -76,6 +90,8 @@ class DeliveryPeersModule {
                         secrets: ConnectionSecretsService,
                         connections: ConnectionsService,
                         secretReads: ConnectionSecretReadsService,
+                        entityManager: EntityManager,
+                        bus: EventBus,
                     ) =>
                         new ZaloCredentialsService(
                             clock,
@@ -85,6 +101,8 @@ class DeliveryPeersModule {
                             secrets,
                             connections,
                             secretReads,
+                            entityManager,
+                            bus,
                         ),
                     inject: [
                         CLOCK,
@@ -93,10 +111,12 @@ class DeliveryPeersModule {
                         ConnectionSecretsService,
                         ConnectionsService,
                         ConnectionSecretReadsService,
+                        PRIMARY_ENTITY_MANAGER,
+                        EVENT_BUS,
                     ],
                 },
             ],
-            exports: [ConversationsService, DeferredMetaEvents, ProofAccounts],
+            exports: [ConversationsService, DeferredMetaEvents, ProofAccounts, AgentTagService, AGENTS_INSTALLATIONS],
         }
     }
 }
@@ -160,6 +180,8 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
     TransactionsModule.register({ isGlobal: true }),
     ChannelSetupModule.register({ isGlobal: true, zaloOauthBase: undefined, siteUrl: undefined, timeoutMs: 1000 }),
     ChannelConnectionsModule.register({ isGlobal: true }),
+    ProviderRegistryModule.register({ isGlobal: true }),
+    ConnectionPollModule.register({ isGlobal: true, schedule: DEFAULT_POLL_SCHEDULE, redis: undefined }),
     BillingModule.register({
         isGlobal: true,
         sepayApiKey: new Secret("delivery-proof-key"),

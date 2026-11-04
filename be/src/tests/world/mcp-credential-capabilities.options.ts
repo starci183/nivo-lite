@@ -8,6 +8,7 @@ import {
 } from "@modules/domain/connection-secrets"
 import { EventsModule } from "@modules/domain/events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
+import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { DataRecordsModule } from "@modules/domain/data-records"
@@ -67,5 +68,6 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
     TransactionsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: MCP_PROOF_TOKEN_KEY }),
+    McpCallLogModule.register({ isGlobal: true }),
     McpGatewayModule.register({ isGlobal: true, remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 }),
 ]

@@ -23,6 +23,9 @@ const [InboundEventEntity] = inboundEventsEntities
 const [LeadEntity] = leadsEntities
 const [KnowledgeSourceEntity] = knowledgeSourcesEntities
 
+/** A new workspace already holds the default rules of the stable modules, so a proof sets its own rule over the default. */
+const RULE_KEY = ["workspaceId", "department", "action"]
+
 /** All identities are supplied by the suite's isolated local world. */
 export interface PublicApiIdentity {
     readonly workspaceId: string
@@ -57,19 +60,27 @@ export const persistPublicApiWorkspace = async (manager: EntityManager, identity
             role: "chatbot",
             instructions: "Local integration proof",
         })
-        await tx.insert(AuthorityRuleEntity, {
-            workspaceId: identity.workspaceId,
-            department: "chatbot",
-            action: "reply_customer",
-            mode: "auto",
-        })
-        await tx.insert(AuthorityRuleEntity, {
-            workspaceId: identity.workspaceId,
-            department: "chatbot",
-            action: "handoff_lead",
-            mode: "auto",
-            requiredFields: ["contact_name", "need"],
-        })
+        await tx.upsert(
+            AuthorityRuleEntity,
+            {
+                workspaceId: identity.workspaceId,
+                department: "chatbot",
+                action: "reply_customer",
+                mode: "auto",
+            },
+            RULE_KEY,
+        )
+        await tx.upsert(
+            AuthorityRuleEntity,
+            {
+                workspaceId: identity.workspaceId,
+                department: "chatbot",
+                action: "handoff_lead",
+                mode: "auto",
+                requiredFields: ["contact_name", "need"],
+            },
+            RULE_KEY,
+        )
     })
 }
 

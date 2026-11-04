@@ -3,9 +3,10 @@ import type { DynamicModule } from "@nestjs/common"
 import { LeadReadService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { WorkThreadsService } from "@modules/domain/work-threads"
+import { QUIET_PAYMENT_DEMAND } from "./quiet-peers"
 
 @Module({
-    providers: [LeadReadService, OrdersService, WorkThreadsService],
+    providers: [LeadReadService, OrdersService, QUIET_PAYMENT_DEMAND, WorkThreadsService],
     exports: [LeadReadService, OrdersService, WorkThreadsService],
 })
 /** The real list owners over the local database; the world supplies the primary manager and clock. */

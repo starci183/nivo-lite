@@ -281,7 +281,7 @@ describe("agent-work/kill-switch: held, never dropped", () => {
         await expect(settings.setAgentWork(identity.users.nam, world.id(), AGENT, false)).rejects.toMatchObject({
             code: "WORKSPACE_MEMBERS_NOT_MEMBER",
         })
-        expect((await settings.settingsOf(WS)).road).toBe("legacy")
+        expect((await settings.settingsOf(WS)).road).toBe("core")
 
         await settings.setWorkspaceWork(identity.users.nam, WS, false)
         await post(wake)

@@ -74,6 +74,7 @@ describe("MCP gateway with a credential sealed in the database: register and cal
 
         await expect(gateway.call(caller, "proof.rates.quote", { nights: 2 })).resolves.toEqual({
             ok: true,
+            summary: '{"totalVnd":2400000}',
             value: { totalVnd: 2_400_000 },
         })
         expect(server.seen.authorized).toBeGreaterThan(before)
@@ -103,6 +104,7 @@ describe("MCP gateway with a credential sealed in the database: rotation and rol
 
         await expect(gateway.call(caller, "proof.rates.quote", { nights: 3 })).resolves.toEqual({
             ok: true,
+            summary: '{"totalVnd":3600000}',
             value: { totalVnd: 3_600_000 },
         })
     })

@@ -62,13 +62,13 @@ describe("agent-graph/rights: the data rights of an agent at the gateway", () =>
         await Promise.all([shadowed, closed, granted, hidden].map((who) => arrange(who, "accounting")))
     })
 
-    it("agent-graph/rights-shadow-open: a graph that only records leaves the reads as they were", async () => {
+    it("agent-graph/rights-shadow-default-deny: a graph that only records still holds default deny, as an enforced one does", async () => {
         await govern(shadowed, [], "shadow")
 
         const reply = await search(shadowed)
 
-        expect(reply.body).toMatchObject({ result: { isError: false } })
-        expect(JSON.stringify(reply.body)).toContain("8 to 21 every day")
+        expect(reply.body).toMatchObject({ result: { isError: true } })
+        expect(JSON.stringify(reply.body)).not.toContain("8 to 21 every day")
     })
 
     it("agent-graph/rights-default-deny: an enforced graph with no right on a kind refuses the read and audits it", async () => {

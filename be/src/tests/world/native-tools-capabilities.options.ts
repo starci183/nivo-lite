@@ -9,6 +9,8 @@ import { DossierReviewModule } from "@modules/domain/dossier-review"
 import { KnowledgeModule } from "@modules/domain/knowledge"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesModule } from "@modules/domain/knowledge-sources"
+import { ProviderRegistryModule } from "@modules/domain/provider-registry"
+import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { NativeToolsModule, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
@@ -43,6 +45,8 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     AgentMessagesModule.register({ isGlobal: true, readOnly: true }),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     NativeToolsModule.register({ isGlobal: true }),
+    ProviderRegistryModule.register({ isGlobal: true }),
+    McpCallLogModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,
         remote: { clientName: "nivo-mcp-gateway" },

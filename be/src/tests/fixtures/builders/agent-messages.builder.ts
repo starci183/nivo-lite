@@ -18,6 +18,7 @@ export const messageOf: (overrides?: Partial<AgentMessageEntity>) => AgentMessag
     deliveryError: null,
     inReplyTo: null,
     authorUserId: null,
+    channelRef: null,
     updatedAt: new Date("2026-10-12T10:00:00.000Z"),
 })
 
