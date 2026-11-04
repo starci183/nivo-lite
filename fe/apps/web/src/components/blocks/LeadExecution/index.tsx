@@ -19,7 +19,6 @@ interface LeadExecutionProps {
 export const LeadExecution = (props: LeadExecutionProps) => {
     const t = useTranslations("lead")
     const a = useTranslations("approval")
-    const common = useTranslations("common")
     const format = useFormatter()
     const slotLabels = useSlotLabels()
     const query = useLeadJourney(props.leadId)
@@ -84,7 +83,6 @@ export const LeadExecution = (props: LeadExecutionProps) => {
                 actorName,
                 earlier,
                 slotLabels,
-                common,
                 a,
             })}
             on={{
@@ -107,7 +105,6 @@ interface BuildExecutionPanelViewContext {
     readonly actorName: string
     readonly earlier: readonly ExecutionRecord[]
     readonly slotLabels: ReturnType<typeof useSlotLabels>
-    readonly common: ReturnType<typeof useTranslations<"common">>
     readonly a: ReturnType<typeof useTranslations<"approval">>
 }
 /** Builds the LeadExecutionContent section from the current view. */
@@ -120,7 +117,6 @@ const buildExecutionPanelView = ({
     actorName,
     earlier,
     slotLabels,
-    common,
     a,
 }: BuildExecutionPanelViewContext) =>
     ({
@@ -136,7 +132,6 @@ const buildExecutionPanelView = ({
             earlierMeta: t("decidedCount", { count: earlier.length }),
             slot: slotLabels(t("noOpenNext")),
             approval: {
-                aiChip: common("aiChip"),
                 draft: a("draftLabel"),
                 copy: a("copy"),
                 copied: a("copied"),
@@ -145,6 +140,7 @@ const buildExecutionPanelView = ({
                 edit: a("edit"),
                 discardEdits: a("discardEdits"),
                 reject: a("reject"),
+                note: a("note"),
             },
         },
     }) as const
