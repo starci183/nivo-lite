@@ -42,7 +42,9 @@ export const WorkspacePayment = (props: WorkspacePaymentProps) => {
                 description: [state.workspace?.name, locale === "vi" ? state.plan?.nameVi : state.plan?.nameEn]
                     .filter(Boolean)
                     .join(" · "),
-                steps: [t("stepPlan"), t("stepWorkspace"), t("stepPayment")],
+                crumbLabel: t("crumbLabel"),
+                crumbHomeLabel: t("workspacesTitle"),
+                crumbHomeHref: AUTH_ROUTES.workspaces,
                 phase,
                 loadingLabel: t("paymentLoading"),
                 creatingLabel: t("paymentCreating"),

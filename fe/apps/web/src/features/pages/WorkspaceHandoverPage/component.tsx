@@ -21,7 +21,7 @@ export const WorkspaceHandoverPageBase = (props: WorkspaceHandoverPageBaseProps)
             artwork={
                 <Mascot
                     src="/images/entry/onboarding-ai.webp"
-                    size="lg"
+                    size="md"
                     loading="eager"
                     assetSlot="onboarding-ai"
                     assetSha256="80f259a7ea38a66a5dba4de2c03a38282e553f49004b0b1d41b6b2b409382e38"

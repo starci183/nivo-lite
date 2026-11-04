@@ -21,7 +21,7 @@ export const WorkspaceNewPageBase = (props: WorkspaceNewPageBaseProps) => (
             artwork={
                 <Mascot
                     src="/images/entry/onboarding-business.webp"
-                    size="lg"
+                    size="md"
                     loading="eager"
                     assetSlot="onboarding-business"
                     assetSha256="b1bad1b482e9dca0e140479816678846fa4e4c896d4d3532e090f417ea5e11be"

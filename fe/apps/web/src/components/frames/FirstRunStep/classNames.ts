@@ -14,7 +14,7 @@ export const STEP_BODY_CLASS_NAME: string | undefined = cn(
 )
 /** The step track at a fixed share of the card width so short step names stay on one line. */
 export const STEP_TRACK_CLASS_NAME: string | undefined = cn("w-full", "max-w-xl")
-/** The step mascot keeps its own size beside the card instead of taking the free width. */
-export const STEP_ART_CLASS_NAME: string | undefined = cn("flex", "shrink-0", "justify-center")
+/** The step mascot keeps its own size beside the card instead of taking the free width, and a phone shows none. */
+export const STEP_ART_CLASS_NAME: string | undefined = cn("hidden", "shrink-0", "justify-center", "sm:flex")
 /** The card column at the form measure, so the card and the mascot sit together in the centre. */
 export const STEP_CARD_CLASS_NAME: string | undefined = cn("w-full", "max-w-lg", "min-w-0")

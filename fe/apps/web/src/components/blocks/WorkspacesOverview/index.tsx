@@ -1,10 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useWorkspaceCards } from "@/hooks/workspaces"
 import { WorkspacesOverviewBase } from "./component"
-import type { WorkspacesCount } from "./component"
 
 /** What the workspaces page tells the overview. */
 interface WorkspacesOverviewProps {
@@ -15,9 +13,7 @@ interface WorkspacesOverviewProps {
 /** The connected workspaces overview: the header, the first-run welcome or the list, by what the back end GraphQL API answers. */
 export const WorkspacesOverview = (props: WorkspacesOverviewProps) => {
     const t = useTranslations("onboarding")
-    const slotLabels = useSlotLabels()
-    const { cards, status, reload, read } = useWorkspaceCards()
-    const slot = mapSlot(slotOfSwr(read), (): WorkspacesCount => ({ count: cards.length }))
+    const { status } = useWorkspaceCards()
     return (
         <WorkspacesOverviewBase
             shape={status === "empty" ? "welcome" : "list"}
@@ -28,10 +24,7 @@ export const WorkspacesOverview = (props: WorkspacesOverviewProps) => {
                 welcomeStepsLabel: t("welcomeStepsLabel"),
                 welcomeSteps: [t("welcomeStep1"), t("welcomeStep2"), t("welcomeStep3")],
                 reason: props.reason === "disabled" ? t("reasonDisabled") : undefined,
-                slot,
-                slotLabels: slotLabels(t("welcomeTitle")),
             }}
-            on={{ retry: reload }}
         />
     )
 }
