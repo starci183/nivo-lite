@@ -18,7 +18,14 @@ import type {
     StepJson,
     OptionalRunWait,
 } from "./agent-runs.contracts"
-import type { ClaimResult, InlineResult, RunAdvance, RunView, StepEnd } from "./agent-runs-engine.contracts"
+import type {
+    ClaimResult,
+    InlineResult,
+    OptionalRunView,
+    RunAdvance,
+    RunView,
+    StepEnd,
+} from "./agent-runs-engine.contracts"
 
 /** What a claim that did not run the step says to the caller that named the step. */
 const refusalOf = (claim: ClaimResult): string => {
@@ -53,6 +60,11 @@ export class AgentRunsService {
         if (specs.length === 0) return
         const run = await this.store.runIn(tx, runId)
         await this.store.append(tx, { runId, workspaceId: run.workspaceId }, specs)
+    }
+
+    /** The run, or null when there is none: what a notice about it needs to name its workspace, agent and conversation. */
+    runOf(runId: string): Promise<OptionalRunView> {
+        return this.store.runById(runId)
     }
 
     /** Registers a durable wait in the work item's transaction; the item cannot become visible before its waiting step. */

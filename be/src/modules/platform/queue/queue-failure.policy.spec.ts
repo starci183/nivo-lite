@@ -39,8 +39,17 @@ describe("classifyFailure", () => {
 
         expect(subject.classifyFailure(new Coded({ code: "HTTP_TIMEOUT" }))).toBe("transient")
         expect(subject.classifyFailure(new Coded({ code: "QUEUE_REDIS_DEADLINE" }))).toBe("transient")
-        expect(subject.classifyFailure(new Coded({ code: "SALES_NOT_FOUND" }))).toBe("code")
+        expect(subject.classifyFailure(new Coded({ code: "SALES_NOT_FOUND" }))).toBe("input")
         expect(subject.classifyFailure(wrapped)).toBe("transient")
+    })
+
+    it("calls a capability error input, or config when its code names a setting or a connection", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.classifyFailure(new Coded({ code: "ZALO_CONNECTION_MISSING" }))).toBe("config")
+        expect(subject.classifyFailure(new Coded({ code: "ZALO_TOKEN_REVOKED" }))).toBe("input")
+        expect(subject.classifyFailure(new Coded({ code: "BILLING_CONFIG_INVALID" }))).toBe("config")
+        expect(subject.classifyFailure(new Coded({ code: "ZALO_X_CONNECTION_GONE" }))).toBe("config")
     })
 
     it("keeps the class a failure was thrown with", async () => {
@@ -52,7 +61,7 @@ describe("classifyFailure", () => {
             ),
         ).toBe("input")
         const unknown = new QueueError({ code: QueueErrorCode.FlowFailure, params: { failureClass: "other" } })
-        expect(subject.classifyFailure(unknown)).toBe("code")
+        expect(subject.classifyFailure(unknown)).toBe("input")
         expect(
             subject.classifyFailure(
                 new Error("outer", {

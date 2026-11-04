@@ -10,6 +10,7 @@ import { BookingToolsService } from "./booking-tools.service"
 import { CarePerformerService } from "./care-performer.service"
 import { GatewayCallPerformerService } from "./gateway-call-performer.service"
 import { HandOverConversationPerformerService } from "./hand-over-conversation-performer.service"
+import { ResumeRunPerformerService } from "./resume-run-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
 import { ConversationLeadsService } from "./conversation-leads.service"
@@ -63,6 +64,7 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 CarePerformerService,
                 GatewayCallPerformerService,
                 HandOverConversationPerformerService,
+                ResumeRunPerformerService,
                 ConfirmOrderPerformerService,
                 IssueInvoicePerformerService,
                 ReconcilePaymentPerformerService,

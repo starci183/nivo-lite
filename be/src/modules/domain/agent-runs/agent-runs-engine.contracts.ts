@@ -34,6 +34,9 @@ export interface RunView {
     readonly spoken: boolean
 }
 
+/** The run, or null when there is none. */
+export type OptionalRunView = RunView | null
+
 /** The run a write names, with its workspace for the job's limit. */
 export interface RunRef {
     /** The run. */

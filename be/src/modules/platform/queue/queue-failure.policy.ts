@@ -56,10 +56,23 @@ const namedClassOf = (link: object): FailureClass | undefined => {
     return CLASSES.find((candidate) => candidate === link.params.failureClass)
 }
 
-/** The class of a thrown failure: the one it carries, `transient` for the network, a deadline, a server that failed or a lost transaction race, else `code`. */
+/** A capability error is refused input, or a missing setting or connection when its code says so; the thrower named what was wrong with the request, not with the moment. */
+const classOfDomainError = (cause: unknown): FailureClass | undefined => {
+    const link = chainOf(cause).find((candidate) => candidate instanceof DomainError)
+    if (link === undefined) return undefined
+    const code = fieldOf(link, "code")
+    return typeof code === "string" && /_(CONFIG|CONNECTION)_/u.test(code) ? "config" : "input"
+}
+
+/**
+ * The class of a thrown failure. A failure that carries a class decides its own. The network, a deadline, a server that failed and a lost
+ * transaction race are `transient`. A capability error is `input`, or `config` when its code contains `_CONFIG_` or `_CONNECTION_`. Anything
+ * else is `code`.
+ */
 export const classifyFailure = (cause: unknown): FailureClass => {
     const chain = chainOf(cause)
     const named = chain.map(namedClassOf).find((candidate) => candidate !== undefined)
     if (named !== undefined) return named
-    return chain.some(isTransientLink) ? "transient" : "code"
+    if (chain.some(isTransientLink)) return "transient"
+    return classOfDomainError(cause) ?? "code"
 }
