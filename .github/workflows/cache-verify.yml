@@ -47,6 +47,8 @@ jobs:
             ${{ runner.os }}-node22-build-
       - run: npm ci --ignore-scripts
         if: steps.deps.outputs.cache-hit != 'true'
+      - name: build the workspace packages
+        run: npm run build:modules --silent
       - name: verify the committed cache
         run: npx --no-install starci app check
         env:

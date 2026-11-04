@@ -19,7 +19,7 @@
   },
   "peerDependencies": {
     "@nivo-lite/agent-sdk": "*",
-    "@starci/grammar": "0.21.29",
+    "@starci/grammar": "0.21.32",
     "react": "19.2.3",
     "zod": "4.6.7"
   },

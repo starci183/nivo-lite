@@ -37,6 +37,7 @@ ci:
 # hfs, types, wiring, db, secrets, format and the tests block on every branch, and main is never declared (it always runs the full gate).
 branches:
   dev: { gates: { lint: report, sonar: report, codecov: report } }
+  "ui/*": { gates: { lint: report, sonar: report, codecov: report } }
 
 components:
   nivo-api:
