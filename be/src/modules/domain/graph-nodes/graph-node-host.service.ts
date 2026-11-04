@@ -36,12 +36,18 @@ export class GraphNodeHostService {
         @Optional() private readonly tokens?: GraphNodeRunTokensService,
     ) {}
 
-    /** Runs the node and answers its parsed output and the effects it ran. */
+    /**
+     * Runs the node and answers its parsed output and the effects it ran. A tool call that waits for a person's approval stops the node
+     * whatever the node does with the refusal: a node that catches its tool's failures (to file a connect item, to take a skip branch)
+     * cannot swallow the ask, and no write or effect runs after it, so the step always waits for the person instead of acting on a refusal
+     * it misread.
+     */
     async run(input: NodeRunInput): Promise<NodeRun> {
         const installed = this.registry.installed()
         const node = this.registry.nodeOf(input.nodeId)
         const turn = await this.withSubject(input.turn)
-        return runNode(
+        const asks: Array<GraphNodesError> = []
+        const ran = await runNode(
             {
                 node,
                 params: input.params,
@@ -52,8 +58,13 @@ export class GraphNodeHostService {
                 tools: installed.tools,
                 key: input.key,
             },
-            this.portsOf(turn, input.approval ?? null),
-        )
+            this.portsOf(turn, input.approval ?? null, asks),
+        ).catch((cause: unknown) => {
+            throw asks[0] ?? cause
+        })
+        const [ask] = asks
+        if (ask !== undefined) throw ask
+        return ran
     }
 
     /**
@@ -91,17 +102,19 @@ export class GraphNodeHostService {
         return subject === null ? this.firstSubject(turn, rest) : { ...turn, subject }
     }
 
-    private portsOf(turn: NodeTurn, approval: NodeToolApproval | null): NodeHostPorts {
+    private portsOf(turn: NodeTurn, approval: NodeToolApproval | null, asks: Array<GraphNodesError>): NodeHostPorts {
         const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale }
         return {
             read: (kind, query, rightScope) => this.registry.portOf(kind).read(turn, query, rightScope),
             write: (kind, record) => {
+                if (asks[0] !== undefined) throw asks[0]
                 const port = this.registry.portOf(kind)
                 if (port.write === undefined)
                     throw new GraphNodesError({ code: GraphNodesErrorCode.PortMissing, params: { kind } })
                 return port.write(turn, record)
             },
             execute: (effect, payload, call) => {
+                if (asks[0] !== undefined) throw asks[0]
                 const executor = this.registry.executorOf(effect.id)
                 return this.effects.once(turn.workspaceId, effect.id, call, () => executor.execute(turn, payload, call))
             },
@@ -109,7 +122,12 @@ export class GraphNodeHostService {
                 if (this.door === null) {
                     throw new GraphNodesError({ code: GraphNodesErrorCode.ToolDoorMissing, params: { tool: tool.id } })
                 }
-                return this.door.call({ token: this.tokens?.mint(turn) ?? "", tool: tool.id, args, key, approval })
+                const call = { token: this.tokens?.mint(turn) ?? "", tool: tool.id, args, key, approval }
+                return this.door.call(call).catch((cause: unknown) => {
+                    if (cause instanceof GraphNodesError && cause.code === GraphNodesErrorCode.ToolApprovalRequired)
+                        asks.push(cause)
+                    throw cause
+                })
             },
             model: {
                 text: (ask) => this.ai.nodeText(scope, ask),

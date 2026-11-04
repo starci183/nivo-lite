@@ -4,7 +4,7 @@ import { z } from "zod"
 import { defineEffect, defineNode, defineTool, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { CLOCK } from "@modules/platform/clock"
-import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
+import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeHostService } from "./graph-node-host.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
@@ -95,6 +95,36 @@ const probe = defineNode({
     ],
 }) as unknown as NodeDefinition
 
+/** A node that catches every failure of its tool and answers a fallback, the way a node files a connect item or takes a skip branch. */
+const swallow = defineNode({
+    id: "core.swallow",
+    role: "execute",
+    title: { key: "s" },
+    params: z.object({}),
+    input: z.object({}),
+    output: z.object({ fell: z.boolean() }),
+    rights: [],
+    effects: ["core.ping"],
+    tools: ["core.look"],
+    run: async (_input, context) => {
+        try {
+            await context.tools.call("core.look", {})
+            return { fell: false }
+        } catch {
+            await context.effect("core.ping", { n: 1 })
+            return { fell: true }
+        }
+    },
+    examples: [{ name: "s", params: {}, input: {}, output: { fell: false }, effects: [], tools: [{ seen: true }] }],
+}) as unknown as NodeDefinition
+
+/** The refusal of a door for a call that waits for a person. */
+const askOf = (): GraphNodesError =>
+    new GraphNodesError({
+        code: GraphNodesErrorCode.ToolApprovalRequired,
+        params: { tool: "core.look", fingerprint: "f" },
+    })
+
 const INPUT: NodeRunInput = {
     nodeId: "core.probe",
     params: {},
@@ -137,7 +167,7 @@ const build = async (
             ...(door === null ? [] : [{ provide: GRAPH_NODE_TOOL_DOOR, useValue: door }]),
         ],
     }).compile()
-    return { host: moduleRef.get(GraphNodeHostService), executor, effects, ai, tokens }
+    return { host: moduleRef.get(GraphNodeHostService), executor, effects, ai, tokens, registry }
 }
 
 const door = (): NodeToolDoor => ({ call: jest.fn().mockResolvedValue({ seen: true }) })
@@ -171,6 +201,46 @@ describe("GraphNodeHostService", () => {
             key: "run-1:node:tool:0",
             approval: null,
         })
+    })
+
+    it("stops the node at a call that waits for a person, even when the node catches its tool's failures", async () => {
+        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([]) }
+        const tools = door()
+        const ask = askOf()
+        jest.mocked(tools.call).mockRejectedValue(ask)
+        const { host, registry, executor } = await build(tools, port)
+        registry.nodeOf.mockReturnValue(swallow)
+        registry.installed.mockReturnValue(
+            nodeIndexOf({ nodes: [probe, swallow], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),
+        )
+
+        await expect(host.run({ ...INPUT, nodeId: "core.swallow", input: {} })).rejects.toBe(ask)
+        expect(executor.execute).not.toHaveBeenCalled()
+    })
+
+    it("lets a node handle any other failure of its tool", async () => {
+        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([]) }
+        const tools = door()
+        jest.mocked(tools.call).mockRejectedValue(new GraphNodesError({ code: GraphNodesErrorCode.ToolNotConnected }))
+        const { host, registry } = await build(tools, port)
+        registry.nodeOf.mockReturnValue(swallow)
+        registry.installed.mockReturnValue(
+            nodeIndexOf({ nodes: [probe, swallow], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),
+        )
+
+        await expect(host.run({ ...INPUT, nodeId: "core.swallow", input: {} })).resolves.toMatchObject({
+            output: { fell: true },
+        })
+    })
+
+    it("answers the ask, not the node's own error, when a node throws after its call was refused for a person", async () => {
+        const port: NodeDataPort = { kind: "record", read: jest.fn().mockResolvedValue([]) }
+        const tools = door()
+        const ask = askOf()
+        jest.mocked(tools.call).mockRejectedValue(ask)
+        const { host } = await build(tools, port)
+
+        await expect(host.run(INPUT)).rejects.toBe(ask)
     })
 
     it("hands the tool door the run token and the approval the step carries", async () => {
