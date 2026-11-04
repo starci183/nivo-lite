@@ -13,6 +13,7 @@ export {
 export type {
     AgentTagPayload,
     ChannelSendPayload,
+    LeadEnsurePayload,
     OrderConfirmPayload,
     OrderLine,
     OrderRecordPayload,
@@ -25,6 +26,7 @@ export {
     agentTagEffect,
     channelSendEffect,
     coreEffects,
+    leadEnsureEffect,
     orderConfirmEffect,
     orderVoidEffect,
     orderRecordEffect,

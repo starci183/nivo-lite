@@ -10,10 +10,11 @@
     "rights": [
       { "kind": "knowledge-document", "access": "read", "scope": "workspace", "fields": ["id", "title", "body", "visibility"] },
       { "kind": "message", "access": "write", "scope": "turn", "fields": ["body"] },
-      { "kind": "payment-claim", "access": "write", "scope": "turn", "fields": ["leadId", "amountVnd", "names", "body"] }
+      { "kind": "payment-claim", "access": "write", "scope": "turn", "fields": ["leadId", "amountVnd", "names", "body"] },
+      { "kind": "sales-lead", "access": "write", "scope": "turn", "fields": ["contactName", "phone", "channel"] }
     ],
     "tools": [],
-    "effects": ["channel.send", "payment-claim.record", "agent.tag", "work-item.raise"]
+    "effects": ["channel.send", "payment-claim.record", "agent.tag", "work-item.raise", "lead.ensure"]
   },
   "nodes": [
     {
@@ -87,7 +88,19 @@
       "step": "intent.has",
       "params": { "intent": "order" },
       "input": { "intents": { "$ref": "classify.intents" } },
-      "routes": { "yes": "handoff-sales", "no": "has-claim" }
+      "routes": { "yes": "ensure-lead-order", "no": "has-claim" }
+    },
+    {
+      "key": "ensure-lead-order",
+      "kind": "output",
+      "step": "lead.ensure",
+      "input": {
+        "conversationId": { "$ref": "trigger.conversationId" },
+        "name": null,
+        "phone": null,
+        "channel": { "$ref": "trigger.channel" }
+      },
+      "next": "handoff-sales"
     },
     {
       "key": "handoff-sales",
@@ -96,7 +109,7 @@
       "params": { "toModuleKey": "sales" },
       "input": {
         "text": { "$ref": "trigger.text" },
-        "leadId": { "$ref": "trigger.leadId" },
+        "leadId": { "$ref": "ensure-lead-order.leadId" },
         "channel": { "$ref": "trigger.channel" },
         "conversationId": { "$ref": "trigger.conversationId" },
         "context": { "$ref": "classify.order" }
@@ -109,7 +122,19 @@
       "step": "intent.has",
       "params": { "intent": "payment_claim" },
       "input": { "intents": { "$ref": "classify.intents" } },
-      "routes": { "yes": "claim-ack", "no": "end" }
+      "routes": { "yes": "ensure-lead-claim", "no": "end" }
+    },
+    {
+      "key": "ensure-lead-claim",
+      "kind": "output",
+      "step": "lead.ensure",
+      "input": {
+        "conversationId": { "$ref": "trigger.conversationId" },
+        "name": null,
+        "phone": null,
+        "channel": { "$ref": "trigger.channel" }
+      },
+      "next": "claim-ack"
     },
     {
       "key": "claim-ack",
@@ -118,7 +143,7 @@
       "params": { "locale": "vi" },
       "input": {
         "conversationId": { "$ref": "trigger.conversationId" },
-        "leadId": { "$ref": "trigger.leadId" },
+        "leadId": { "$ref": "ensure-lead-claim.leadId" },
         "body": { "$ref": "trigger.text" },
         "amountVnd": { "$ref": "classify.paymentClaim.amountVnd" },
         "payerName": { "$ref": "classify.paymentClaim.payerName" }
@@ -132,7 +157,7 @@
       "params": { "toModuleKey": "accounting" },
       "input": {
         "text": { "$ref": "trigger.text" },
-        "leadId": { "$ref": "trigger.leadId" },
+        "leadId": { "$ref": "ensure-lead-claim.leadId" },
         "channel": { "$ref": "trigger.channel" },
         "conversationId": { "$ref": "trigger.conversationId" },
         "context": { "claimKind": { "$ref": "claim-ack.claim.kind" }, "claimId": { "$ref": "claim-ack.claim.id" } }

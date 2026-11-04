@@ -9,6 +9,17 @@ export interface ChannelSendPayload {
     readonly attachments?: ReadonlyArray<{ readonly url: string; readonly name: string }> | undefined
 }
 
+/** The customer of a conversation: found, or created from what the chat knows. */
+export interface LeadEnsurePayload {
+    readonly conversationId: string
+    /** The name the customer gave, when known. */
+    readonly name?: string | undefined
+    /** The phone the customer gave, when known. */
+    readonly phone?: string | undefined
+    /** The channel the conversation runs on. */
+    readonly channel: string
+}
+
 /** One line of an order. */
 export interface OrderLine {
     readonly name: string
@@ -105,6 +116,13 @@ const orderRecordPayload: z.ZodType<OrderRecordPayload> = z.object({
     note: z.string().optional(),
 })
 
+const leadEnsurePayload: z.ZodType<LeadEnsurePayload> = z.object({
+    conversationId: id,
+    name: z.string().min(1).optional(),
+    phone: z.string().min(1).optional(),
+    channel: id,
+})
+
 const orderConfirmPayload: z.ZodType<OrderConfirmPayload> = z.object({ orderId: id })
 
 const paymentMarkPaidPayload: z.ZodType<PaymentMarkPaidPayload> = z.object({
@@ -149,6 +167,17 @@ export const channelSendEffect: EffectDefinition<z.ZodType<ChannelSendPayload>> 
     title: { key: "effectChannelSend" },
     payload: channelSendPayload,
     rights: [{ kind: "message", access: "write", scope: "turn", fields: ["body"] }],
+})
+
+/**
+ * Finds the customer of a conversation or creates one and ties it to the conversation; the subject is the customer. A pivot: a
+ * customer other records may already point at cannot be cleanly taken back, so it has no undo.
+ */
+export const leadEnsureEffect: EffectDefinition<z.ZodType<LeadEnsurePayload>> = defineEffect({
+    id: "lead.ensure",
+    title: { key: "effectLeadEnsure" },
+    payload: leadEnsurePayload,
+    rights: [{ kind: "sales-lead", access: "write", scope: "turn", fields: ["contactName", "phone", "channel"] }],
 })
 
 /** Records an order; the subject is the order. */
@@ -232,6 +261,7 @@ export const workItemWithdrawEffect: EffectDefinition<z.ZodType<UndoPayload>> = 
 /** Every effect the core nodes may run and every undo a compensation runs; the back end registers an executor for each. */
 export const coreEffects: ReadonlyArray<EffectDefinition> = [
     channelSendEffect,
+    leadEnsureEffect,
     orderRecordEffect,
     orderVoidEffect,
     orderConfirmEffect,
