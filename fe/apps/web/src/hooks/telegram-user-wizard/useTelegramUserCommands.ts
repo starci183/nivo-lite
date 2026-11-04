@@ -12,7 +12,7 @@ import {
     useMutateSubmitTelegramCodeSwr,
     useMutateSubmitTelegramPasswordSwr,
 } from "@/hooks/swr"
-import type { PickedChat, SinceDays } from "./telegram-user-wizard.shared"
+import type { PickedChat, SinceDays } from "@/hooks/telegram-chats"
 
 /** What starting a login takes. */
 export interface StartLoginForm {

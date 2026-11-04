@@ -8,8 +8,9 @@ import {
     OPEN_API_PULL_ENTITIES,
     OPEN_API_SCHEDULES,
     openApiOpLabel,
-} from "./openapi-wizard.shared"
-import { OPEN_API_SHOWN, requiredQueryOf } from "./openapi-wizard.ops"
+    OPEN_API_SHOWN,
+    requiredQueryOf,
+} from "@/modules/openapi-spec"
 import type { useOpenApiWizard } from "./useOpenApiWizard"
 
 /** The state the view reads. */

@@ -8,7 +8,7 @@ import { ChatbotReplyEditor } from "@/components/branches/ChatbotReplyEditor"
 import { ChatbotCustomerRows } from "@/components/composites/ChatbotCustomerRows"
 import { ChatbotGapRows } from "@/components/composites/ChatbotGapRows"
 import { CHATBOT_WORKBENCH_TABS as CHATBOT_TABS } from "@/modules/types"
-import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
+import { ChatbotInboxSlot } from "@/components/frames/ChatbotConversationBody"
 import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 /** The actual Chatbot list, conversation, gaps and explanation drawings. */
 export const CHATBOT_WORKBENCH_SHAPES: readonly [...typeof CHATBOT_TABS, "conversation", "explanation"] = [
@@ -23,13 +23,6 @@ export interface ChatbotWorkbenchBaseProps {
     readonly props: ChatbotWorkbenchViewData
     readonly on: ChatbotWorkbenchActions
 }
-const Inbox = (props: Omit<ChatbotWorkbenchBaseProps, "shape">) => (
-    <SlotView
-        {...props.props.inbox}
-        onRetry={props.on.inbox.reload}
-        render={(inbox, isLoading) => <ChatbotConversationBody {...inbox} isLoading={isLoading} on={props.on.inbox} />}
-    />
-)
 const ModulePanel = (props: ChatbotWorkbenchBaseProps) => {
     const view = props.props
     switch (props.shape) {
@@ -54,7 +47,7 @@ const ModulePanel = (props: ChatbotWorkbenchBaseProps) => {
                 />
             )
         case "conversation":
-            return <Inbox props={props.props} on={props.on} />
+            return <ChatbotInboxSlot inbox={props.props.inbox} on={props.on.inbox} />
         case "gaps":
             return !view.gaps.canFill ? null : (
                 <SlotView

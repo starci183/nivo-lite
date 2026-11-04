@@ -8,10 +8,16 @@ import { useFirstEvent, useSetConnectionAgents } from "@/hooks/connections"
 import { useQueryZaloConnectionSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
 import type { AgentOption, FirstEvent, DataSlot, WizardNote, WizardResume, ZaloWizardConnection } from "@/modules/types"
-import { canSaveOaSecret, ZALO_STEPS, zaloFailureOf, zaloStartStepOf, type ZaloFields } from "./zalo-wizard.shared"
+import {
+    canSaveOaSecret,
+    createZaloWizardActions,
+    ZALO_STEPS,
+    zaloFailureOf,
+    zaloStartStepOf,
+    type ZaloFields,
+} from "./zalo-wizard.shared"
 
 import { useZaloCommands } from "./useZaloCommands"
-import { createZaloWizardActions } from "./zaloWizardActions.shared"
 import type { SetStateAction, Dispatch } from "react"
 
 /** What the Zalo wizard needs from its drawer. */

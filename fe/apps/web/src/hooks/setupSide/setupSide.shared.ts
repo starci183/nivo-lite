@@ -4,10 +4,9 @@ import type { MODULE_KEYS } from "@/modules/catalog"
 import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
 import type { ContextVersion, SetupSession } from "@/modules/installations"
 import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
-import type { useFormatter } from "next-intl"
 import type { useSetupRequirements } from "@/hooks/setupRequirements"
 import type { SetupSideKnowledge, SetupSideNotice, SetupSideVersions, SetupSideView } from "@/modules/types"
-import type { useTranslations } from "next-intl"
+import type { useFormatter, useTranslations } from "next-intl"
 
 import type { Dispatch, SetStateAction } from "react"
 
@@ -75,6 +74,7 @@ export const commandsOf = (gatesState: ReturnType<typeof useSetupGates>): Comman
     apply: (): undefined => void gatesState.apply(),
 })
 
+/** The knowledge card of the setup side: document and fact counts and the links to the brain. */
 export const knowledgeOf = (
     t: ReturnType<typeof useTranslations<"moduleSetup">>,
     counts: SetupKnowledgeCounts | null,
@@ -98,6 +98,7 @@ type GateViewMapperResult = (
     >[number],
 ) => SetupSideView["gates"]["gates"][number]
 
+/** Builds the mapper that turns a catalog gate into its row, with the status of the session evidence. */
 export const gateViewMapper = (
     session: SetupSession,
     locale: "vi" | "en",
@@ -117,6 +118,7 @@ export const gateViewMapper = (
     }
 }
 
+/** The context version list of the setup side, the active version marked. */
 export const versionsOf = (
     t: ReturnType<typeof useTranslations<"moduleSetup">>,
     versions: readonly ContextVersion[],

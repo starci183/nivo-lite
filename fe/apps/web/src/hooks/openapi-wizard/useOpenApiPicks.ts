@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { matchesOpenApiOp, newOpenApiPull, OPEN_API_SHOWN, openApiEntityOf } from "./openapi-wizard.ops"
-import type { OpenApiOp, OpenApiPullDef, OpenApiPullField } from "./openapi-wizard.shared"
+import { matchesOpenApiOp, newOpenApiPull, OPEN_API_SHOWN, openApiEntityOf } from "@/modules/openapi-spec"
+import type { OpenApiOp, OpenApiPullDef, OpenApiPullField } from "@/modules/openapi-spec"
 import type { SetStateAction, Dispatch } from "react"
 
 /** What a saved connection brings back to the pull, tool and schedule steps. */

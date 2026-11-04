@@ -7,11 +7,10 @@ import * as StarciOutline from "@starci/heroicons/24/outline"
 import { Icon as GrammarIcon } from "@starci/grammar/common"
 import type { IconUsage } from "@starci/grammar/common"
 import type { SVGProps, ReactElement } from "react"
-import { GoogleMark } from "./GoogleMark"
-import type { IconName } from "./iconName"
+import { GoogleMark } from "./component"
+import type { IconName } from "./component"
 
-export type { IconName } from "./iconName"
-
+export type { IconName } from "./component"
 /** Every source in this registry is callable (Heroicons are forward-ref callables; custom marks are functions). */
 type GlyphComponent = (props: SVGProps<SVGSVGElement>) => unknown
 

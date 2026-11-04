@@ -1,7 +1,8 @@
 "use client"
 
-import { OPEN_API_EDIT_STEPS, OPEN_API_STEPS } from "./openapi-wizard.shared"
-import { openApiAuthInputOf, viewOf } from "./useOpenApiWizardView"
+import { OPEN_API_EDIT_STEPS, OPEN_API_STEPS } from "@/modules/openapi-spec"
+import { openApiAuthInputOf, viewOf } from "./openapi-wizard.shared"
+import type { OpenApiWizardView } from "./openapi-wizard.shared"
 import { useOpenApiWizardCommands } from "./useOpenApiWizardCommands"
 import { useOpenApiAuthForm } from "@/hooks/rhf"
 import { useState } from "react"
@@ -19,7 +20,7 @@ interface OpenApiWizardInput {
     readonly onClose: (changed: boolean) => void
 }
 
-type UseOpenApiWizardResult = ReturnType<typeof viewOf>
+type UseOpenApiWizardResult = OpenApiWizardView
 
 /** The state machine of the OpenAPI wizard: spec, auth, pulled endpoints, agent tools, schedule, test, agents. */
 export const useOpenApiWizard = ({ resumeId, onClose }: OpenApiWizardInput): UseOpenApiWizardResult => {

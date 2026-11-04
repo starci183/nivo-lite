@@ -1,8 +1,7 @@
 "use client"
 
-import { BLANK_INITIAL } from "./telegram-user-wizard.shared"
-import { viewOf, type ViewOfResult } from "./useTelegramUserView"
-import { createTelegramUserWizardActions } from "./useTelegramUserActions"
+import { BLANK_INITIAL } from "@/hooks/telegram-chats"
+import { createTelegramUserWizardActions, viewOf, type ViewOfResult } from "./telegram-user-wizard.shared"
 import { useEffect, useReducer, useRef, useState, useTransition } from "react"
 import { useSetConnectionAgents } from "@/hooks/connections"
 
@@ -105,7 +104,6 @@ export const useTelegramUserWizard = (input: TelegramUserWizardInput): UseTelegr
     })
 
     return viewOf({
-        step,
         boot,
         index,
         login,

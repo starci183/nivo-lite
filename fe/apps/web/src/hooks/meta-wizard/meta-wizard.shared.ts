@@ -1,5 +1,9 @@
+import type { Dispatch, SetStateAction, TransitionStartFunction } from "react"
+import type { useTranslations } from "next-intl"
 import type { CatalogReader } from "@/hooks/connection-wizard"
+import type { useSetConnectionAgents } from "@/hooks/connections"
 import type { MetaCheck, MetaWizardConnection, WizardNote } from "@/modules/types"
+import type { MetaCommands } from "./useMetaCommands"
 
 /** The steps of the Meta wizard, in order. */
 export const META_STEPS = ["connect", "pick", "agent", "test"] as const
@@ -58,4 +62,88 @@ export const metaCheckLines = (check: MetaCheck, m: CatalogReader): ReadonlyArra
     if (check.localOnly) lines.push({ key: "local", tone: "informative", text: m("testLocal") })
     if (!check.verifyTokenSet) lines.push({ key: "verify", tone: "negative", text: m("testNoVerify") })
     return lines
+}
+
+/** The resolved inputs for meta wizard actions input. */
+interface MetaWizardActionsInput {
+    readonly setNote: Dispatch<SetStateAction<WizardNote | null>>
+    readonly setIndex: Dispatch<SetStateAction<number>>
+    readonly conn: MetaWizardConnection | null
+    readonly startChecking: TransitionStartFunction
+    readonly commands: MetaCommands
+    readonly setCheck: Dispatch<SetStateAction<MetaCheck | null>>
+    readonly startTransition: TransitionStartFunction
+    readonly pageId: string
+    readonly tm: ReturnType<typeof useTranslations<"metaWizard">>
+    readonly setConn: Dispatch<SetStateAction<MetaWizardConnection | null>>
+    readonly setAgentsOf: ReturnType<typeof useSetConnectionAgents>
+    readonly agentIds: ReadonlyArray<string>
+}
+
+/** The commands the Meta wizard's steps run. */
+export interface MetaWizardActions {
+    readonly fail: (message: string) => void
+    readonly go: (to: number) => void
+    readonly runCheck: (repair: boolean) => void
+    readonly login: () => void
+    readonly choose: () => void
+    readonly saveAgents: () => void
+}
+
+/** The wizard's commands: each runs in a transition, reports a refusal as a note and moves the step on success. */
+export const createMetaWizardActions = ({
+    setNote,
+    setIndex,
+    conn,
+    startChecking,
+    commands,
+    setCheck,
+    startTransition,
+    pageId,
+    tm,
+    setConn,
+    setAgentsOf,
+    agentIds,
+}: MetaWizardActionsInput): MetaWizardActions => {
+    const go = (to: number): void => {
+        setNote(null)
+        setIndex(to)
+    }
+    const fail = (message: string): void => setNote({ tone: "negative", text: message })
+
+    const runCheck = (repair: boolean): void => {
+        if (conn === null) return
+        startChecking(async () => {
+            const answer = await commands.check(conn.id, repair)
+            if (answer.kind !== "ok") return fail(answer.message)
+            setCheck(answer.value)
+        })
+    }
+
+    const login = (): void =>
+        startTransition(async () => {
+            setNote(null)
+            const answer = await commands.authorize(conn === null ? undefined : conn.id)
+            if (answer.kind !== "ok") return fail(answer.message)
+            window.location.assign(answer.value)
+        })
+    const choose = (): void => {
+        if (conn === null || pageId === "") return setNote({ tone: "negative", text: tm("pickPick") })
+        startTransition(async () => {
+            const answer = await commands.choosePage(conn.id, pageId)
+            if (answer.kind !== "ok") return fail(answer.message)
+            setConn(answer.value)
+            go(2)
+        })
+    }
+    const saveAgents = (): void => {
+        if (conn === null) return go(3)
+        startTransition(async () => {
+            const answer = await setAgentsOf(conn.id, agentIds)
+            if (answer.kind !== "ok") return fail(answer.message)
+            go(3)
+            runCheck(false)
+        })
+    }
+    return { fail, go, runCheck, login, choose, saveAgents }
 }

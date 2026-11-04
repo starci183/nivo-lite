@@ -15,7 +15,7 @@ import { SalesContractRows } from "@/components/composites/SalesContractRows"
 import { SalesOrderRows } from "@/components/composites/SalesOrderRows"
 import { SalesPipelineBoard } from "@/components/composites/SalesPipelineBoard"
 import { SALES_WORKBENCH_TABS as SALES_TABS } from "@/modules/types"
-import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
+import { ChatbotInboxSlot } from "@/components/frames/ChatbotConversationBody"
 import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 /** The six Sales areas, optional customer conversation and explanation drawings. */
 export const SALES_WORKBENCH_SHAPES: readonly [...typeof SALES_TABS, "conversation", "explanation"] = [
@@ -129,17 +129,10 @@ const SalesPanel = (props: SalesWorkbenchBaseProps) => {
             return null
     }
 }
-const Inbox = (props: Omit<SalesWorkbenchBaseProps, "shape">) => (
-    <SlotView
-        {...props.props.inbox}
-        onRetry={props.on.inbox.reload}
-        render={(inbox, isLoading) => <ChatbotConversationBody {...inbox} isLoading={isLoading} on={props.on.inbox} />}
-    />
-)
 const ModulePanel = (props: SalesWorkbenchBaseProps) => {
     switch (props.shape) {
         case "conversation":
-            return <Inbox props={props.props} on={props.on} />
+            return <ChatbotInboxSlot inbox={props.props.inbox} on={props.on.inbox} />
         case "attention":
         case "pipeline":
         case "decisions":

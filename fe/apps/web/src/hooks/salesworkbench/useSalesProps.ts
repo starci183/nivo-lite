@@ -19,18 +19,9 @@ import type { useSalesWaiting } from "@/hooks/salesWaiting"
 import { mapSlot, slotOfReads, useSlotLabels, WAITING_ROWS_PLACEHOLDER } from "@/hooks/slot"
 import { workbenchRowDataOf } from "@/hooks/workbench"
 import type { workbenchWaitingDataOf } from "@/hooks/workbench"
+import { SALES_INBOX_TABS, type SalesArea } from "./salesworkbench.shared"
 import type { useSalesOrdersView } from "./useSalesOrdersView"
-
-export const SALES_INBOX_TABS: readonly [
-    "attention",
-    "pipeline",
-    "decisions",
-    "handoff",
-    "contracts",
-    "activity",
-    "conversation",
-] = [...SALES_TABS, "conversation"] as const
-export type SalesArea = (typeof SALES_INBOX_TABS)[number]
+import type { SalesWorkbenchViewData } from "@/modules/types"
 
 /** The existing Sales route identity and server-resolved tab labels. */
 export interface SalesWorkbenchViewInput {
@@ -40,10 +31,6 @@ export interface SalesWorkbenchViewInput {
     readonly conversation: string | null
     readonly tabs: Readonly<Record<SalesArea, string>>
 }
-
-/** The optional conversation and explanation remain actual product drawings, not data-status shapes. */
-export const salesShapeOf = (tab: SalesArea, isOverview: boolean): SalesArea | "explanation" =>
-    isOverview ? tab : "explanation"
 
 interface SalesPropsInput {
     readonly input: SalesWorkbenchViewInput
@@ -63,8 +50,8 @@ interface SalesPropsInput {
     readonly waitingData: ReturnType<typeof workbenchWaitingDataOf>
 }
 
-/** Resolves the desk's actual data regions and copy after its domain owners have been read. */
-export const useSalesProps = (source: SalesPropsInput) => {
+/** Resolves the desk's actual data regions, copy and tab strip after its domain owners have been read. */
+export const useSalesProps = (source: SalesPropsInput): SalesWorkbenchViewData => {
     const t = useTranslations("workbenchSales")
     const dashboard = useTranslations("agentDashboard")
     const chatbot = useTranslations("workbenchChatbot")

@@ -1,5 +1,5 @@
-import { OPEN_API_AUTH_TYPES, OPEN_API_PULL_ENTITIES, OPEN_API_SCHEDULES } from "./openapi-wizard.shared"
-import type { OpenApiAuthType, OpenApiConfigView, OpenApiOp, OpenApiPullDef } from "./openapi-wizard.shared"
+import { OPEN_API_AUTH_TYPES, OPEN_API_PULL_ENTITIES, OPEN_API_SCHEDULES } from "./spec"
+import type { OpenApiAuthType, OpenApiConfigView, OpenApiOp, OpenApiPullDef } from "./spec"
 
 /** The most operations one list shows; a search narrows the rest. */
 export const OPEN_API_SHOWN = 200

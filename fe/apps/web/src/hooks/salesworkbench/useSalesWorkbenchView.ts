@@ -18,12 +18,14 @@ import { useSalesWaiting } from "@/hooks/salesWaiting"
 import { workbenchWaitingDataOf } from "@/hooks/workbench"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useSalesOrdersView } from "./useSalesOrdersView"
-import { SALES_INBOX_TABS, salesShapeOf, useSalesProps, type SalesWorkbenchViewInput } from "./useSalesProps"
+import { SALES_INBOX_TABS, salesShapeOf } from "./salesworkbench.shared"
+import { useSalesProps, type SalesWorkbenchViewInput } from "./useSalesProps"
+import type { SalesWorkbenchActions, SalesWorkbenchViewData } from "@/modules/types"
 
 type UseSalesWorkbenchViewResult = {
     shape: ReturnType<typeof salesShapeOf>
-    props: ReturnType<typeof useSalesProps>
-    on: ReturnType<typeof salesOnOf>
+    props: SalesWorkbenchViewData
+    on: SalesWorkbenchActions
 }
 
 /** Owns the real Sales desk and the independent lifetimes of its six panels and optional customer conversation. */
@@ -71,7 +73,7 @@ export const useSalesWorkbenchView = (input: SalesWorkbenchViewInput): UseSalesW
             waiting,
             waitingData,
         }),
-        on: salesOnOf({
+        on: salesOnShape({
             tabs,
             frame,
             workbench,
@@ -106,7 +108,7 @@ interface SalesOnInput {
 }
 
 /** The commands of the desk: every panel's own commands under the name of its panel. */
-const salesOnOf = ({
+const salesOnShape = ({
     tabs,
     frame,
     workbench,
@@ -120,7 +122,7 @@ const salesOnOf = ({
     contracts,
     inbox,
     inboxRead,
-}: SalesOnInput) => ({
+}: SalesOnInput): SalesWorkbenchActions => ({
     selectTab: tabs.select,
     closeWhy: frame.closeWhy,
     retryDashboard: frame.reload,
