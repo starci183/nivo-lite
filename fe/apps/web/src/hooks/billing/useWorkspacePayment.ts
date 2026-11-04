@@ -12,7 +12,7 @@ import {
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { dayjs } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES, workspaceBillingPath } from "@/modules/routes"
+import { APP_ROUTES, creditsPath } from "@/modules/routes"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
 import { readError } from "@/hooks/workspaceread"
 import { messageOf } from "./billing.shared"
@@ -143,7 +143,7 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors): Works
     const now = useNow({ updateInterval: 1000 })
     const expiresAt = payment?.expiresAt
     const paid = payment?.status === "paid" || (workspace?.status === "active" && !selectors.renewing)
-    const returnTo = workspaceId && selectors.renewing ? workspaceBillingPath(workspaceId) : APP_ROUTES.chat
+    const returnTo = workspaceId && selectors.renewing ? creditsPath() : APP_ROUTES.chat
 
     useEffect(() => {
         if (!paid || !workspaceId) return

@@ -11,7 +11,7 @@ import {
 } from "@/hooks/workspaces"
 import type { WorkspaceState } from "@/hooks/workspaces"
 import { usePaneCopy } from "@/hooks/paneFrame"
-import { workspaceBillingPath } from "@/modules/routes"
+import { creditsPath } from "@/modules/routes"
 import { WorkspacesListBase } from "./component"
 
 const STATE_TONES: Readonly<Record<WorkspaceState, "success" | "warning" | "neutral">> = {
@@ -53,7 +53,7 @@ export const WorkspacesList = () => {
                     actionLabel: card.state === "active" ? t("open") : t("payNow"),
                     canOpen: canOpenWorkspace(card),
                     isOpening: openingId === card.id,
-                    billingHref: canBillWorkspace(card) ? workspaceBillingPath(card.id) : undefined,
+                    billingHref: canBillWorkspace(card) ? creditsPath() : undefined,
                 })),
             }}
             on={{
