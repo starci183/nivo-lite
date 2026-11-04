@@ -19,6 +19,7 @@ export const ApiQuickStart = (props: ApiQuickStartProps) => {
     const t = useTranslations("developers")
     const member = useMember()
     const [copiedId, setCopiedId] = useState<string>()
+    const [isOpen, setIsOpen] = useState(false)
     const copy = (id: string, code: string) => {
         navigator.clipboard.writeText(code).then(
             () => setCopiedId(id),
@@ -54,6 +55,8 @@ export const ApiQuickStart = (props: ApiQuickStartProps) => {
         <ApiQuickStartBase
             props={{
                 title: t("guideTitle"),
+                meta: t("guideMeta"),
+                isOpen,
                 intro: t("guideIntro", { base: props.base }),
                 examples: [
                     sample("header", t("header"), "Authorization: Bearer nvk_..."),
@@ -81,7 +84,7 @@ export const ApiQuickStart = (props: ApiQuickStartProps) => {
                     ],
                 },
             }}
-            on={{ copy }}
+            on={{ copy, toggle: setIsOpen }}
         />
     )
 }

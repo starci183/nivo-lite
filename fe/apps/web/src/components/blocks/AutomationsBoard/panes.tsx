@@ -33,6 +33,7 @@ export interface AutomationsPanesCopy {
     readonly clearSearch: string
     readonly back: string
     readonly moreActions: string
+    readonly moreFilters: (count: number) => string
     readonly pickTitle: string
     readonly pickBody: string
     readonly emptyFiltered: string
@@ -214,10 +215,9 @@ const ListPane = (props: ListPaneProps) => {
                 selectedKey={view.filters.selectedId}
                 inset="none"
                 labelVisibility="always"
-                items={view.filters.items.map((item) => ({
-                    id: item.id,
-                    label: item.count === undefined ? item.label : `${item.label} ${item.count}`,
-                }))}
+                kind="filter"
+                moreLabel={panes.copy.moreFilters}
+                items={view.filters.items}
                 onSelect={on.setFilter}
             />
             <ListBox

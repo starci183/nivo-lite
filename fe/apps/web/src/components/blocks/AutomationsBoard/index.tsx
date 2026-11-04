@@ -74,6 +74,7 @@ export const AutomationsBoard = (props: AutomationsBoardProps) => {
                         clearSearch: pane.clearSearch,
                         back: pane.backToList,
                         moreActions: pane.moreActions,
+                        moreFilters: pane.moreFilters,
                         pickTitle: t("pickTitle"),
                         pickBody: t("pickBody"),
                         emptyFiltered: t("emptyFiltered"),

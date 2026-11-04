@@ -9,6 +9,20 @@ import { isManager, useMember } from "@/hooks/member"
 import { useSlotLabels } from "@/hooks/slot"
 import { DevelopersPanelBase } from "./component"
 
+/** The one line under a webhook: its masked address and the events it receives, in the owner's words. */
+const webhookLineOf = (meta: Readonly<Record<string, string>>, eventLabel: (event: string) => string): string =>
+    [
+        meta.url_masked ?? meta.host ?? "",
+        (meta.events ?? "")
+            .split(",")
+            .map((event) => event.trim())
+            .filter((event) => event !== "")
+            .map(eventLabel)
+            .join(", "),
+    ]
+        .filter((part) => part !== "")
+        .join(" \u00b7 ")
+
 /** The sections the page draws under the outgoing events. */
 type DevelopersPanelProps = {
     readonly children: ReactNode
@@ -19,6 +33,8 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
     const t = useTranslations("developers")
     const member = useMember()
     const tc = useTranslations("connections")
+    const ta = useTranslations("automations")
+    const tw = useTranslations("webhookWizard")
     const { webhooks, canManage, read, retry } = useDeveloperWebhooks()
     const slotLabels = useSlotLabels()
     const overlays = useConnectionOverlays()
@@ -30,6 +46,10 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                 webhooks: sortRows(webhooks).map((connection) => ({
                     id: connection.id,
                     name: connection.name,
+                    description: webhookLineOf(connection.meta, (event) =>
+                        tw.has(`event_${event.replace(".", "_")}`) ? tw(`event_${event.replace(".", "_")}`) : event,
+                    ),
+                    isIncomplete: connection.status === "pending",
                     statusLabel: tc(statusKey(connection.status)),
                     tone: statusTone(connection.status),
                 })),
@@ -44,12 +64,13 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                     addLabel: tc("add"),
                     connectLabel: tc("connect"),
                     editLabel: tc("edit"),
+                    continueLabel: tc("continue"),
                 },
                 crumbLabel: t("crumbLabel"),
                 crumbHome: t("crumbHome"),
+                crumbAutomations: ta("title"),
                 title: t("title"),
                 description: t("description"),
-                backLabel: t("backToAutomations"),
                 eventsTitle: t("eventsTitle"),
                 eventsBody: t("eventsBody"),
                 slotLabels: { ...slotLabels(t("title")), forbidden: t("forbiddenBody") },

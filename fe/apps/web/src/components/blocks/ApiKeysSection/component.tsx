@@ -4,6 +4,7 @@ import {
     Button,
     Cluster,
     EmptyNotice,
+    Icon,
     Input,
     Stack,
     SurfaceCard,
@@ -11,6 +12,7 @@ import {
     type Band,
 } from "@starci/grammar/common"
 
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { FIELD_GROW_CLASS } from "./classNames"
 
 /** One key row, already in the reader's words. */
@@ -84,6 +86,7 @@ const createKeyBandOf = (props: ApiKeysSectionBaseProps): Band => {
                             id="api-key-name"
                             name="keyName"
                             label={view.nameLabel}
+                            isLabelHidden
                             placeholder={view.nameHint}
                             isDisabled={view.isCreating}
                             value={view.nameValue}
@@ -92,6 +95,7 @@ const createKeyBandOf = (props: ApiKeysSectionBaseProps): Band => {
                     </div>
                     <Button
                         intent="commit"
+                        startContent={<Icon source={nivoIconSource("add", "leading")} usage="leading" />}
                         isPending={view.isCreating}
                         isDisabled={view.isCreateDisabled}
                         onPress={props.on.create}
