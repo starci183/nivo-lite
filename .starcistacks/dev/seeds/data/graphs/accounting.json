@@ -17,7 +17,7 @@
       { "kind": "conversation", "access": "read", "scope": "workspace", "fields": ["id", "leadId", "lastMessageAt"] },
       { "kind": "message", "access": "write", "scope": "turn", "fields": ["body"] }
     ],
-    "tools": [],
+    "tools": ["ledger.append", "ledger.void", "ledger.status"],
     "effects": ["payment.mark-paid", "channel.send", "work-item.raise"]
   },
   "nodes": [
@@ -50,6 +50,25 @@
         "mode": "apply",
         "candidateIds": { "$ref": "match-code.candidateIds" },
         "reasons": { "$ref": "match-code.reasons" }
+      },
+      "next": "ledger-ready-code"
+    },
+    {
+      "key": "ledger-ready-code",
+      "kind": "condition",
+      "step": "accounting.ledger-ready",
+      "input": { "result": { "$ref": "settle-code.result" } },
+      "routes": { "record": "ledger-code", "skip": "end" }
+    },
+    {
+      "key": "ledger-code",
+      "kind": "output",
+      "step": "accounting.ledger-append",
+      "params": { "reconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán" },
+      "input": {
+        "transactionId": { "$ref": "trigger.subject.id" },
+        "orderId": { "$ref": "settle-code.orderId" },
+        "result": { "$ref": "settle-code.result" }
       }
     },
     {
@@ -93,6 +112,25 @@
         "mode": "apply",
         "candidateIds": { "$ref": "judge.candidateIds" },
         "reasons": { "$ref": "judge.reasons" }
+      },
+      "next": "ledger-ready-judged"
+    },
+    {
+      "key": "ledger-ready-judged",
+      "kind": "condition",
+      "step": "accounting.ledger-ready",
+      "input": { "result": { "$ref": "settle-judged.result" } },
+      "routes": { "record": "ledger-judged", "skip": "end" }
+    },
+    {
+      "key": "ledger-judged",
+      "kind": "output",
+      "step": "accounting.ledger-append",
+      "params": { "reconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán" },
+      "input": {
+        "transactionId": { "$ref": "trigger.subject.id" },
+        "orderId": { "$ref": "settle-judged.orderId" },
+        "result": { "$ref": "settle-judged.result" }
       }
     },
     {
@@ -116,6 +154,7 @@
         "overdueTitle": "Đối soát khoản chuyển chưa thấy tiền"
       },
       "input": { "claimId": { "$ref": "evidence.claims.0.id" }, "timedOut": false }
-    }
+    },
+    { "key": "end", "kind": "output", "step": "stop" }
   ]
 }
