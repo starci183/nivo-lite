@@ -16,8 +16,11 @@ export interface InviteView {
     readonly next: string
     readonly title: string
     readonly body: string
+    /** The e-mail the invitation is for and the staff member it attaches to, as values of the card's description list. */
     readonly forEmail: string
     readonly asStaff?: string | undefined
+    readonly forTerm: string
+    readonly staffTerm: string
     readonly signedOutHint: string
     readonly signInLabel: string
     readonly signUpLabel: string
@@ -70,6 +73,8 @@ export const useInviteView = (token: string): InviteView => {
         signedInAs: t("signedInAs", { email: email ?? "" }),
         mismatchTitle: t("mismatchTitle"),
         forEmail: "",
+        forTerm: t("forTerm"),
+        staffTerm: t("staffTerm"),
         signedOutHint: "",
         mismatchBody: "",
     }
@@ -86,8 +91,8 @@ export const useInviteView = (token: string): InviteView => {
             workspace: preview.workspaceName,
             role: t(preview.role === "manager" ? "roleManager" : "roleStaff"),
         }),
-        forEmail: t("forEmail", { email: preview.email }),
-        asStaff: preview.staffName === null ? undefined : t("asStaff", { name: preview.staffName }),
+        forEmail: preview.email,
+        asStaff: preview.staffName === null ? undefined : preview.staffName,
         signedOutHint: t("signedOutHint", { email: preview.email }),
         mismatchBody: t("mismatchBody", { current: email ?? "", email: preview.email }),
     }

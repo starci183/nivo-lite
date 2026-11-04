@@ -3216,11 +3216,11 @@
     "duplicatesNote": "An event received again (same event id) is counted as a duplicate and never handled twice."
   },
   "invite": {
-    "eyebrow": "INVITATION",
+    "eyebrow": "Invitation",
     "title": "Join {workspace}",
     "lead": "You were invited to {workspace} as {role}.",
-    "forEmail": "This invitation is for {email}.",
-    "asStaff": "You will be linked to staff member {name}.",
+    "forTerm": "For",
+    "staffTerm": "Attached to staff member",
     "roleManager": "Manager",
     "roleStaff": "Staff",
     "signedOutHint": "Sign in or create an account with {email} to accept.",

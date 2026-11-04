@@ -3216,11 +3216,11 @@
     "duplicatesNote": "Sự kiện nhận lại (cùng mã sự kiện) được đếm là trùng lặp, không xử lý hai lần."
   },
   "invite": {
-    "eyebrow": "LỜI MỜI",
+    "eyebrow": "Lời mời",
     "title": "Tham gia {workspace}",
     "lead": "Bạn được mời vào {workspace} với vai trò {role}.",
-    "forEmail": "Lời mời này dành cho {email}.",
-    "asStaff": "Bạn sẽ được gắn với nhân viên {name}.",
+    "forTerm": "Dành cho",
+    "staffTerm": "Gắn với nhân viên",
     "roleManager": "Quản lý",
     "roleStaff": "Nhân viên",
     "signedOutHint": "Đăng nhập hoặc tạo tài khoản bằng {email} để chấp nhận.",
