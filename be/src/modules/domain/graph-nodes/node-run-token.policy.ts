@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto"
 import { parseJsonText } from "@modules/platform/primitives"
-import type { NodeRunClaims, OptionalRunClaims, ToolArgs } from "./node-run-token.contracts"
+import type { NodeRunClaims, OptionalRunClaims, NodeToolArgs } from "./node-run-token.contracts"
 
 const ORIGINS: ReadonlySet<unknown> = new Set(["customer", "owner", "staff", "system"])
 const SCOPES: ReadonlySet<unknown> = new Set(["public", "workspace"])
@@ -60,7 +60,7 @@ const canonical = (value: unknown): string => {
 }
 
 /** The fingerprint of one tool call: the tool and its arguments, hashed, so an approval binds to exactly what the person saw. */
-export const toolFingerprintOf = (tool: string, args: ToolArgs): string =>
+export const toolFingerprintOf = (tool: string, args: NodeToolArgs): string =>
     createHash("sha256")
         .update(`${tool}\n${canonical(args)}`)
         .digest("hex")

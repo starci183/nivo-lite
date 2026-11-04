@@ -85,7 +85,9 @@ export class LedgerNativeService implements NativeAdapter {
         }
         if (tool === "void") {
             const { transactionId } = argumentsOf(tool, LEDGER_VOID_SCHEMA, args)
-            return this.written(workspaceId, `ledger:${transactionId}:void`, (port) => port.void(workspaceId, transactionId))
+            return this.written(workspaceId, `ledger:${transactionId}:void`, (port) =>
+                port.void(workspaceId, transactionId),
+            )
         }
         throw unknownTool(tool)
     }
@@ -103,7 +105,8 @@ export class LedgerNativeService implements NativeAdapter {
             return { kind: "ledger-entry", id: ref }
         }
         const call = { key, dedupeKey: key }
-        const subject = this.once === undefined ? await act() : await this.once.once(workspaceId, "ledger.write", call, act)
+        const subject =
+            this.once === undefined ? await act() : await this.once.once(workspaceId, "ledger.write", call, act)
         return { ref: subject.id }
     }
 

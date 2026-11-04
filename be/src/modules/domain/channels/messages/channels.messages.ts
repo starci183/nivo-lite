@@ -7,7 +7,8 @@ export const ZALO_RECONNECT_REASON = "Zalo OA cần được kết nối lại (
 export const ZALO_AUTHORIZATION_FAILED_REASON = "Không hoàn tất được việc cấp quyền Zalo. Bấm Kết nối lại để thử lại."
 
 /** What the owner reads, as a work item, when the OA plan does not let the connection answer customers: Vietnamese as the product does. */
-export const CHANNEL_PLAN_NOTICE = "Gói OA hiện tại không cho gửi tin tư vấn cho khách; nâng gói OA để NIVO trả lời được trên Zalo"
+export const CHANNEL_PLAN_NOTICE =
+    "Gói OA hiện tại không cho gửi tin tư vấn cho khách; nâng gói OA để NIVO trả lời được trên Zalo"
 
 /** Display text of the channels codes, Vietnamese and English. */
 export const CHANNELS_MESSAGES: MessageBundle = {

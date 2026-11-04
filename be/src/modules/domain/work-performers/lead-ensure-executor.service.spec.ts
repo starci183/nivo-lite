@@ -111,7 +111,9 @@ describe("LeadEnsureExecutorService", () => {
 
     it("names a customer with no name by the conversation, and then by the words for not shared", async () => {
         const { conversations, leads, executor } = await build()
-        conversations.turnOf.mockResolvedValueOnce(conversationOf()).mockResolvedValueOnce(conversationOf({ visitorName: null }))
+        conversations.turnOf
+            .mockResolvedValueOnce(conversationOf())
+            .mockResolvedValueOnce(conversationOf({ visitorName: null }))
 
         await executor.execute(TURN, PAYLOAD, CALL)
         await executor.execute(TURN, PAYLOAD, CALL)
@@ -140,7 +142,9 @@ describe("LeadEnsureExecutorService", () => {
 
     it("leaves the phone of a matched lead that has one, and fills nothing when the chat gave none", async () => {
         const { leads, executor } = await build()
-        leads.match.mockResolvedValueOnce(leadOf({ phone: "84900000000" })).mockResolvedValueOnce(leadOf({ phone: null }))
+        leads.match
+            .mockResolvedValueOnce(leadOf({ phone: "84900000000" }))
+            .mockResolvedValueOnce(leadOf({ phone: null }))
 
         await executor.execute(TURN, { ...PAYLOAD, phone: "0901234567" }, CALL)
         await executor.execute(TURN, PAYLOAD, CALL)

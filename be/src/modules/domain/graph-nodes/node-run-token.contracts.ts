@@ -36,7 +36,7 @@ export interface NodeToolApproval {
 }
 
 /** The arguments of one tool call: business data only, never a destination, an account or a credential. */
-export interface ToolArgs {
+export interface NodeToolArgs {
     /** One argument by name. */
     readonly [name: string]: unknown
 }
@@ -48,7 +48,7 @@ export interface NodeToolCall {
     /** The capability tool. */
     readonly tool: string
     /** Its arguments: business data only. */
-    readonly args: ToolArgs
+    readonly args: NodeToolArgs
     /** The replay key of the call. */
     readonly key: string
     /** The person's approval this call replays, or null. */

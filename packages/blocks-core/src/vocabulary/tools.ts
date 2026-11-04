@@ -110,7 +110,10 @@ const ledgerEntry: z.ZodType<LedgerEntry> = z.object({
 const ledgerRef: z.ZodType<LedgerRef> = z.object({ ref: z.string().max(MAX_BODY) })
 
 /** Records one entry in the business ledger the workspace connected; a transaction is recorded once, however often it is asked. */
-export const ledgerAppendTool: ToolDefinition<z.ZodType<{ readonly entry: LedgerEntry }>, z.ZodType<LedgerRef>> = defineTool({
+export const ledgerAppendTool: ToolDefinition<
+    z.ZodType<{ readonly entry: LedgerEntry }>,
+    z.ZodType<LedgerRef>
+> = defineTool({
     id: "ledger.append",
     title: { key: "toolLedgerAppend" },
     args: z.object({ entry: ledgerEntry }),
@@ -120,7 +123,10 @@ export const ledgerAppendTool: ToolDefinition<z.ZodType<{ readonly entry: Ledger
 })
 
 /** Takes an earlier entry back by adding a void entry for its transaction; nothing already written is changed or removed. */
-export const ledgerVoidTool: ToolDefinition<z.ZodType<{ readonly transactionId: string }>, z.ZodType<LedgerRef>> = defineTool({
+export const ledgerVoidTool: ToolDefinition<
+    z.ZodType<{ readonly transactionId: string }>,
+    z.ZodType<LedgerRef>
+> = defineTool({
     id: "ledger.void",
     title: { key: "toolLedgerVoid" },
     args: z.object({ transactionId: z.string().min(1).max(MAX_ID) }),
@@ -130,7 +136,10 @@ export const ledgerVoidTool: ToolDefinition<z.ZodType<{ readonly transactionId: 
 })
 
 /** Whether the workspace has a ledger to write to; reads only, so a condition may call it. */
-export const ledgerStatusTool: ToolDefinition<z.ZodType<Record<string, never>>, z.ZodType<LedgerStatusResult>> = defineTool({
+export const ledgerStatusTool: ToolDefinition<
+    z.ZodType<Record<string, never>>,
+    z.ZodType<LedgerStatusResult>
+> = defineTool({
     id: "ledger.status",
     title: { key: "toolLedgerStatus" },
     args: z.object({}),

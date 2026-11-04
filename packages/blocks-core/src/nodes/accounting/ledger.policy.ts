@@ -14,7 +14,8 @@ export type LedgerResult = "paid" | "already-paid" | "raised" | "voided"
 export const isRecordable = (result: LedgerResult): boolean => result === "paid" || result === "already-paid"
 
 /** The shop's calendar day of an instant, `YYYY-MM-DD`. */
-export const dayOf = (instant: string): string => new Date(Date.parse(instant) + VIETNAM_OFFSET_MS).toISOString().slice(0, 10)
+export const dayOf = (instant: string): string =>
+    new Date(Date.parse(instant) + VIETNAM_OFFSET_MS).toISOString().slice(0, 10)
 
 /** True when a failure is the door saying the provider refused the connection. */
 export const isConnectionRefused = (error: unknown): boolean =>

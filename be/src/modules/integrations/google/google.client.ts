@@ -191,7 +191,11 @@ export class GoogleClient {
     }
 
     /** The values of an A1 range of the first tab, as text rows (blank cells at the end of a row are not sent by Google). */
-    async readValues(token: string, spreadsheetId: string, range: string): Promise<ReadonlyArray<ReadonlyArray<string>>> {
+    async readValues(
+        token: string,
+        spreadsheetId: string,
+        range: string,
+    ): Promise<ReadonlyArray<ReadonlyArray<string>>> {
         const body = await this.call({
             method: "GET",
             url: `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}`,
