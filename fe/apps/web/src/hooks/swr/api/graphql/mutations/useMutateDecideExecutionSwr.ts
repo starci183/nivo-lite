@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDecideExecution } from "@/modules/api/graphql/mutations/mutation-decide-execution"
-import type { MutateDecideExecutionRequest } from "@/modules/api/graphql/mutations/mutation-decide-execution"
+import {
+    mutateDecideExecution,
+    type MutateDecideExecutionRequest,
+} from "@/modules/api/graphql/mutations/mutation-decide-execution"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DecideExecutionMutation } from "@/modules/api"
 
 /** What the DecideExecution mutation is triggered with. */
 interface DecideExecutionArg {
@@ -16,7 +18,7 @@ export const MUTATE_DECIDE_EXECUTION_SWR_KEY = "MUTATE_DECIDE_EXECUTION_SWR"
 
 /** SWR mutation for {@link mutateDecideExecution}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateDecideExecutionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDecideExecution>["decideExecution"],
+    DecideExecutionMutation["decideExecution"],
     Error,
     typeof MUTATE_DECIDE_EXECUTION_SWR_KEY,
     DecideExecutionArg["arg"]

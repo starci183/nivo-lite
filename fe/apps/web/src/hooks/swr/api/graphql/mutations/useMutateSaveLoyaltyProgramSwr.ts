@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateSaveLoyaltyProgram } from "@/modules/api/graphql/mutations/mutation-save-loyalty-program"
 import type { MutateSaveLoyaltyProgramRequest } from "@/modules/api/graphql/mutations/types/save-loyalty-program"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveLoyaltyProgramMutation } from "@/modules/api"
 
 /** The SWR key of the `saveLoyaltyProgram` mutation. */
 export const MUTATE_SAVE_LOYALTY_PROGRAM_SWR_KEY = "MUTATE_SAVE_LOYALTY_PROGRAM_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Saves the loyalty programme (name, enabled switch, whole config). */
 export const useMutateSaveLoyaltyProgramSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveLoyaltyProgram>["saveLoyaltyProgram"],
+    SaveLoyaltyProgramMutation["saveLoyaltyProgram"],
     Error,
     typeof MUTATE_SAVE_LOYALTY_PROGRAM_SWR_KEY,
     TriggerArg["arg"]

@@ -1,12 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { AgentTemplateInstallerService, TemplateLicenseEntity } from "@modules/domain/agent-templates"
-import type { InstalledTemplate, ParameterValues } from "@nivo-lite/agent-sdk/template"
+import { AgentTemplateInstallerService, TemplateRecordsService, valuesOf } from "@modules/domain/agent-templates"
+import type { InstalledTemplate } from "@nivo-lite/agent-sdk/template"
 import type { PayableOrder } from "@modules/domain/billing"
 import { CreditsService } from "@modules/domain/credits"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Locale } from "@modules/platform/i18n"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"
@@ -17,10 +14,10 @@ export interface InstallListingRequest {
     readonly workspaceId: string
     /** The listing. */
     readonly listingId: string
-    /** The values of the parameters. */
-    readonly values: ParameterValues
-    /** The label of the agent, or null. */
-    readonly name: string | null
+    /** The values of the parameters, by key, as the form gave them. */
+    readonly values: object
+    /** The label of the agent, when the buyer gave one. */
+    readonly name?: string | null | undefined
     /** The language. */
     readonly locale: Locale
 }
@@ -32,8 +29,8 @@ export interface InstallListingRequest {
  */
 export class TemplatePurchasesService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly listings: TemplateListingsService,
+        private readonly records: TemplateRecordsService,
         private readonly installer: AgentTemplateInstallerService,
         private readonly credits: CreditsService,
         private readonly members: WorkspaceMembersService,
@@ -62,19 +59,16 @@ export class TemplatePurchasesService {
             workspaceId: request.workspaceId,
             key: row.templateKey,
             version: row.version,
-            values: request.values,
-            name: request.name,
+            values: valuesOf(request.values),
+            name: request.name ?? null,
             locale: request.locale,
             access: { kind: "licensed", license: row.priceVnd === 0 ? "free" : "paid", listingId: row.id, licenseId },
         })
     }
 
     private async paidLicense(workspaceId: string, templateKey: string, listingId: string): Promise<string> {
-        const license = await this.entityManager.findOne(TemplateLicenseEntity, {
-            where: { workspaceId, templateKey, listingId, kind: "paid", status: "active", installationId: IsNull() },
-            order: { createdAt: "ASC" },
-        })
-        if (license === null || license.installationId !== null) {
+        const license = await this.records.unclaimedPaidLicense(workspaceId, templateKey, listingId)
+        if (license?.installationId !== null) {
             throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.PaymentRequired })
         }
         return license.id

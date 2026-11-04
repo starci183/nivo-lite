@@ -2,7 +2,6 @@ import { readFile, readdir } from "node:fs/promises"
 import { join } from "node:path"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import type { SqlText } from "./database.sql"
 import { InjectPrimaryEntityManager } from "./primary.decorators"
 
 /** The stack environment whose seed runs when `--env` is not given. */
@@ -14,15 +13,6 @@ export const DEFAULT_SEED_ENV = "dev"
  */
 export const seedDirectoryOf = (env?: string): string =>
     env === undefined ? join(".starcistacks", "seeds", "sql") : join(".starcistacks", env, "seeds", "sql")
-
-function assertSeedText(_text: string): asserts _text is SqlText {
-    // The brand is compile-time only; this function's caller reads a tracked seed file verbatim.
-}
-
-const seedText = (text: string): SqlText => {
-    assertSeedText(text)
-    return text
-}
 
 /** The `*.sql` files of a seed folder in name order; a folder that is absent holds none. */
 const seedFilesOf = async (directory: string): Promise<ReadonlyArray<string>> => {
@@ -50,7 +40,7 @@ export class SeedRunnerService {
     }
 
     private async apply(file: string): Promise<void> {
-        const text = seedText(await readFile(file, "utf8"))
+        const text = await readFile(file, "utf8")
         if (text.trim() !== "") await this.entityManager.query(text)
     }
 }

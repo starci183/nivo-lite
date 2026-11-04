@@ -1,21 +1,21 @@
 "use client"
 
 import useSWR from "swr"
+import { answeredData } from "@/hooks/workspaceread"
 import type { SWRResponse } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
-import type { MarketplaceListingsData } from "@/modules/api/graphql"
+import type { MarketplaceListingsQuery } from "@/modules/api"
 import { queryMarketplaceListings } from "@/modules/api/graphql/queries/query-marketplace-listings"
 
 /** The SWR key of {@link useQueryMarketplaceListingsSwr}. */
 export const QUERY_MARKETPLACE_LISTINGS_SWR_KEY = "QUERY_MARKETPLACE_LISTINGS_SWR"
 
 /** The back end `marketplaceListings` query. */
-export const useQueryMarketplaceListingsSwr = (enabled = true): SWRResponse<MarketplaceListingsData, Error> =>
+export const useQueryMarketplaceListingsSwr = (
+    enabled = true,
+): SWRResponse<MarketplaceListingsQuery["marketplaceListings"], Error> =>
     useSWR(
         useWorkspaceKey(QUERY_MARKETPLACE_LISTINGS_SWR_KEY, [], enabled),
-        async ({ signal }: { signal?: AbortSignal } = {}) => {
-            const result = await queryMarketplaceListings({ signal })
-            if (!result.data) throw new Error("marketplaceListings answered no data")
-            return result.data.marketplaceListings
-        },
+        async ({ signal }: { signal?: AbortSignal } = {}) =>
+            answeredData(await queryMarketplaceListings({ signal }), "marketplaceListings").marketplaceListings,
     )

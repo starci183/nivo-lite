@@ -1,10 +1,12 @@
 "use client"
 
-import { queryPreviewCsvSource } from "@/modules/api/graphql/queries/query-preview-csv-source"
-import type { queryPreviewCsvSource as QueryPreviewCsvSourceOperation } from "@/modules/api/graphql/queries/query-preview-csv-source"
+import {
+    queryPreviewCsvSource,
+    type queryPreviewCsvSource as QueryPreviewCsvSourceOperation,
+} from "@/modules/api/graphql/queries/query-preview-csv-source"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { PreviewCsvSourceQuery } from "@/modules/api"
 
 /** The SWR key of the previewCsvSource query. */
 export const QUERY_PREVIEW_CSV_SOURCE_SWR_KEY = "QUERY_PREVIEW_CSV_SOURCE_SWR"
@@ -16,7 +18,7 @@ interface TriggerArg {
 
 /** Lazily previews an import source; `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useQueryPreviewCsvSourceSwr = (): SWRMutationResponse<
-    OperationData<typeof queryPreviewCsvSource>["previewCsvSource"],
+    PreviewCsvSourceQuery["previewCsvSource"],
     Error,
     typeof QUERY_PREVIEW_CSV_SOURCE_SWR_KEY,
     TriggerArg["arg"]

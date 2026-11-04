@@ -10,12 +10,12 @@ import { toMarketplaceListingsType } from "./marketplace-listings.mapper"
 @Resolver()
 /** GraphQL door of marketplaceListings. */
 export class MarketplaceListingsResolver {
-    constructor(@InjectQueryBus() private readonly bus: QueryBus) {}
+    constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Lists the approved listings of the marketplace, for the catalogue next to the built-in modules. */
     @Query(() => [ListingCardType], { name: "marketplaceListings" })
     async marketplaceListings(@CurrentPrincipal() principal: Principal): Promise<Array<ListingCardType>> {
-        const result = await this.bus.execute(new MarketplaceListingsQuery({ request: {}, principal }))
+        const result = await this.queryBus.execute(new MarketplaceListingsQuery({ request: {}, principal }))
         return toMarketplaceListingsType(result)
     }
 }

@@ -1,9 +1,17 @@
-import type { useSetupGates } from "@/hooks/agentSetup"
+import type { SetupKnowledgeCounts, useSetupGates } from "@/hooks/agentSetup"
+import type { useModuleCatalog } from "@/hooks/moduleCatalog"
+import type { MODULE_KEYS } from "@/modules/catalog"
+import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
+import type { ContextVersion, SetupSession } from "@/modules/installations"
+import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
+import type { useFormatter } from "next-intl"
 import type { useSetupRequirements } from "@/hooks/setupRequirements"
-import type { SetupSideNotice, SetupSideVersions, SetupSideView } from "@/modules/types"
+import type { SetupSideKnowledge, SetupSideNotice, SetupSideVersions, SetupSideView } from "@/modules/types"
 import type { useTranslations } from "next-intl"
 
 import type { Dispatch, SetStateAction } from "react"
+
+const GATE_TONE = { missing: "neutral", proposed: "warning", confirmed: "success" } as const
 
 /** The notice that explains which requirements block setup. */
 export const setupRequirementsNoticeOf = (
@@ -66,3 +74,67 @@ export const commandsOf = (gatesState: ReturnType<typeof useSetupGates>): Comman
     stopEdit: gatesState.stopEdit,
     apply: (): undefined => void gatesState.apply(),
 })
+
+export const knowledgeOf = (
+    t: ReturnType<typeof useTranslations<"moduleSetup">>,
+    counts: SetupKnowledgeCounts | null,
+    moduleKey: string,
+): SetupSideKnowledge => {
+    return {
+        title: t("k_cardTitle"),
+        businessLine: t("k_cardBusiness", { docs: counts?.documents ?? 0, facts: counts?.facts ?? 0 }),
+        publicLine: "",
+        emptyHint: counts !== null && counts.documents === 0 && counts.facts === 0 ? t("k_cardEmpty") : "",
+        knowledgeHref: brainTabHref("sources", { module: moduleKey }),
+        knowledgeLabel: t("k_cardLink"),
+        nivoHref: KNOWLEDGE_ROUTES.nivo,
+        nivoLabel: t("k_nivoLink"),
+    }
+}
+
+type GateViewMapperResult = (
+    gate: NonNullable<
+        NonNullable<ReturnType<typeof useModuleCatalog>["modules"][(typeof MODULE_KEYS)[number]]>["gates"]
+    >[number],
+) => SetupSideView["gates"]["gates"][number]
+
+export const gateViewMapper = (
+    session: SetupSession,
+    locale: "vi" | "en",
+    t: ReturnType<typeof useTranslations<"moduleSetup">>,
+): GateViewMapperResult => {
+    return (gate) => {
+        const entry = gateEntry(session.gateEvidence, gate.key)
+        return {
+            key: gate.key,
+            label: gateLabel(gate, locale),
+            hint: gateHint(gate, locale),
+            status: entry.status,
+            statusLabel: t(`gate_${entry.status}`),
+            statusTone: GATE_TONE[entry.status],
+            evidence: entry.evidence,
+        }
+    }
+}
+
+export const versionsOf = (
+    t: ReturnType<typeof useTranslations<"moduleSetup">>,
+    versions: readonly ContextVersion[],
+    format: ReturnType<typeof useFormatter>,
+    activeVersionId: string | null,
+): SetupSideVersions => {
+    return {
+        title: t("versionsTitle"),
+        emptyText: t("versionsEmpty"),
+        inUseLabel: t("inUse"),
+        versions: versions.map((version) => ({
+            id: version.id,
+            line: t("versionLine", { version: version.version }),
+            detail: `${t("versionBy", {
+                who: version.appliedBy,
+                when: format.dateTime(new Date(version.appliedAt), { dateStyle: "medium", timeStyle: "short" }),
+            })} · ${t("versionFacts", { count: version.snapshot.facts.length })}`,
+            isActive: version.id === activeVersionId,
+        })),
+    }
+}

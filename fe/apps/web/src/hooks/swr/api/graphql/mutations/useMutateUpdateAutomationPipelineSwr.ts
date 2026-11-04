@@ -1,8 +1,10 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateUpdateAutomationPipeline } from "@/modules/api/graphql/mutations/mutation-update-automation-pipeline"
-import type { MutateUpdateAutomationPipelineRequest } from "@/modules/api/graphql/mutations/mutation-update-automation-pipeline"
+import {
+    mutateUpdateAutomationPipeline,
+    type MutateUpdateAutomationPipelineRequest,
+} from "@/modules/api/graphql/mutations/mutation-update-automation-pipeline"
 import { automationCardViewOf } from "@/modules/automations"
 import type { SWRMutationResponse } from "swr/mutation"
 

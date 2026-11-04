@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateUpdateMoneyConnection } from "@/modules/api/graphql/mutations/mutation-update-money-connection"
-import type { mutateUpdateMoneyConnection as MutateUpdateMoneyConnectionOperation } from "@/modules/api/graphql/mutations/mutation-update-money-connection"
+import {
+    mutateUpdateMoneyConnection,
+    type mutateUpdateMoneyConnection as MutateUpdateMoneyConnectionOperation,
+} from "@/modules/api/graphql/mutations/mutation-update-money-connection"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { UpdateMoneyConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the updateMoneyConnection mutation. */
 export const MUTATE_UPDATE_MONEY_CONNECTION_SWR_KEY = "MUTATE_UPDATE_MONEY_CONNECTION_SWR"
 
 /** SWR mutation for {@link mutateUpdateMoneyConnection}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateUpdateMoneyConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateUpdateMoneyConnection>["updateMoneyConnection"],
+    UpdateMoneyConnectionMutation["updateMoneyConnection"],
     Error,
     typeof MUTATE_UPDATE_MONEY_CONNECTION_SWR_KEY,
     TriggerArg["arg"]

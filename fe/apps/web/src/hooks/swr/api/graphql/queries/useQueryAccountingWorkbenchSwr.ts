@@ -1,9 +1,9 @@
 "use client"
 
 import useSWR from "swr"
+import type { SWRResponse } from "swr"
 import { queryAccountingWorkbench } from "@/modules/api/graphql/queries/query-accounting-workbench"
 import { accountingWorkbenchOf } from "@/modules/utils"
-import type { ReadResponse } from "@/hooks/workspaceread"
 
 /** Cache identity of the accounting workbench. */
 export const QUERY_ACCOUNTING_WORKBENCH_SWR_KEY = "QUERY_ACCOUNTING_WORKBENCH_SWR"
@@ -11,7 +11,7 @@ export const QUERY_ACCOUNTING_WORKBENCH_SWR_KEY = "QUERY_ACCOUNTING_WORKBENCH_SW
 /** Loads the complete accounting workbench for the active workspace. */
 export const useQueryAccountingWorkbenchSwr = (
     workspaceId: string | undefined,
-): ReadResponse<ReturnType<typeof accountingWorkbenchOf>> => {
+): SWRResponse<ReturnType<typeof accountingWorkbenchOf>, Error> => {
     return useSWR(workspaceId ? [QUERY_ACCOUNTING_WORKBENCH_SWR_KEY, workspaceId] : null, async () => {
         const result = await queryAccountingWorkbench({})
         if (!result.data) throw new Error("accountingWorkbench answered no data")

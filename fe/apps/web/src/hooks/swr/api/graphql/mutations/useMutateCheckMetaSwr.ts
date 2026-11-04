@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateCheckMeta } from "@/modules/api/graphql/mutations/mutation-check-meta"
-import type { mutateCheckMeta as MutateCheckMetaOperation } from "@/modules/api/graphql/mutations/mutation-check-meta"
+import {
+    mutateCheckMeta,
+    type mutateCheckMeta as MutateCheckMetaOperation,
+} from "@/modules/api/graphql/mutations/mutation-check-meta"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CheckMetaMutation } from "@/modules/api"
 
 /** The SWR key of the checkMeta mutation. */
 export const MUTATE_CHECK_META_SWR_KEY = "MUTATE_CHECK_META_SWR"
 
 /** SWR mutation for {@link mutateCheckMeta}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateCheckMetaSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCheckMeta>["checkMeta"],
+    CheckMetaMutation["checkMeta"],
     Error,
     typeof MUTATE_CHECK_META_SWR_KEY,
     TriggerArg["arg"]

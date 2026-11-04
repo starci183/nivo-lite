@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateImportBrainDossiers } from "@/modules/api/graphql/mutations/mutation-import-brain-dossiers"
-import type { MutateImportBrainDossiersRequest } from "@/modules/api/graphql/mutations/mutation-import-brain-dossiers"
+import {
+    mutateImportBrainDossiers,
+    type MutateImportBrainDossiersRequest,
+} from "@/modules/api/graphql/mutations/mutation-import-brain-dossiers"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ImportBrainDossiersMutation } from "@/modules/api"
 
 /** What the ImportBrainDossiers mutation is triggered with. */
 interface ImportBrainDossiersArg {
@@ -16,7 +18,7 @@ export const MUTATE_IMPORT_BRAIN_DOSSIERS_SWR_KEY = "MUTATE_IMPORT_BRAIN_DOSSIER
 
 /** SWR mutation for {@link mutateImportBrainDossiers}: replaces the dossiers of the workspace with those of a checklist workbook. `trigger(input)` rejects with the back end failure. */
 export const useMutateImportBrainDossiersSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateImportBrainDossiers>["importBrainDossiers"],
+    ImportBrainDossiersMutation["importBrainDossiers"],
     Error,
     typeof MUTATE_IMPORT_BRAIN_DOSSIERS_SWR_KEY,
     ImportBrainDossiersArg["arg"]

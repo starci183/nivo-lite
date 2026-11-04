@@ -12,6 +12,9 @@ import { TemplateLikenessGrantEntity } from "./persistence/entities"
 import { consentCovers } from "./policies/likeness.policy"
 import type { LikenessClaim } from "@nivo-lite/agent-sdk/template"
 
+/** The real person a persona claims to be modelled on, or null for a neutral assistant. */
+export type ClaimedLikeness = LikenessClaim | null
+
 /** What the creator records. */
 export interface LikenessGrantRequest {
     /** The template. */
@@ -22,8 +25,8 @@ export interface LikenessGrantRequest {
     readonly allowedUses: ReadonlyArray<"name" | "avatar" | "voice_style" | "first_person">
     /** The line shown to every customer. */
     readonly disclosure: string
-    /** When the consent ends, or null. */
-    readonly expiresAt: Date | null
+    /** When the consent ends, ISO 8601, when it does. */
+    readonly expiresAt?: string | undefined
 }
 
 /** The most records one template lists. */
@@ -63,7 +66,7 @@ export class TemplateLikenessService {
             allowedUses: [...request.allowedUses],
             disclosure: request.disclosure.trim(),
             grantedBy: userId,
-            expiresAt: request.expiresAt,
+            expiresAt: request.expiresAt === undefined ? null : new Date(request.expiresAt),
         })
         return this.viewOf(insertedId(inserted.identifiers))
     }
@@ -102,7 +105,7 @@ export class TemplateLikenessService {
     }
 
     /** True when the persona is covered by a verified consent that is still valid. */
-    async covers(templateKey: string, claim: LikenessClaim | null): Promise<boolean> {
+    async covers(templateKey: string, claim: ClaimedLikeness): Promise<boolean> {
         if (claim === null) return true
         const rows = await this.entityManager.find(TemplateLikenessGrantEntity, {
             where: { templateKey },

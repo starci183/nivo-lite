@@ -32,7 +32,7 @@ export class MailRelayService {
 
     /** Sends one message through a workspace SMTP account. Throws a MailError. */
     sendThroughSmtp(config: SmtpConfig, delivery: MailDelivery): Promise<SentMail> {
-        const mailer = this.mailers(this.optionsOf(config))
+        const mailer = this.mailers.create(this.optionsOf(config))
         return mailer
             .send(delivery)
             .catch((cause: unknown) => {

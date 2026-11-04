@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateAcceptInvite } from "@/modules/api/graphql/mutations/mutation-accept-invite"
-import type { mutateAcceptInvite as MutateAcceptInviteOperation } from "@/modules/api/graphql/mutations/mutation-accept-invite"
+import {
+    mutateAcceptInvite,
+    type mutateAcceptInvite as MutateAcceptInviteOperation,
+} from "@/modules/api/graphql/mutations/mutation-accept-invite"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { AcceptInviteMutation } from "@/modules/api"
 
 /** The SWR key of the acceptInvite mutation. */
 export const MUTATE_ACCEPT_INVITE_SWR_KEY = "MUTATE_ACCEPT_INVITE_SWR"
 
 /** SWR mutation for {@link mutateAcceptInvite}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateAcceptInviteSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateAcceptInvite>["acceptInvite"],
+    AcceptInviteMutation["acceptInvite"],
     Error,
     typeof MUTATE_ACCEPT_INVITE_SWR_KEY,
     TriggerArg["arg"]

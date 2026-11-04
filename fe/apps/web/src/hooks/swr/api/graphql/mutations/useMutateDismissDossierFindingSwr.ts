@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDismissDossierFinding } from "@/modules/api/graphql/mutations/mutation-dismiss-dossier-finding"
-import type { MutateDismissDossierFindingRequest } from "@/modules/api/graphql/mutations/mutation-dismiss-dossier-finding"
+import {
+    mutateDismissDossierFinding,
+    type MutateDismissDossierFindingRequest,
+} from "@/modules/api/graphql/mutations/mutation-dismiss-dossier-finding"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DismissDossierFindingMutation } from "@/modules/api"
 
 /** What the DismissDossierFinding mutation is triggered with. */
 interface DismissDossierFindingArg {
@@ -16,7 +18,7 @@ export const MUTATE_DISMISS_DOSSIER_FINDING_SWR_KEY = "MUTATE_DISMISS_DOSSIER_FI
 
 /** SWR mutation for {@link mutateDismissDossierFinding}: dismisses a finding, with the reason that keeps NIVO from raising it again while the documents stay the same. `trigger(input)` rejects with the back end failure. */
 export const useMutateDismissDossierFindingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDismissDossierFinding>["dismissDossierFinding"],
+    DismissDossierFindingMutation["dismissDossierFinding"],
     Error,
     typeof MUTATE_DISMISS_DOSSIER_FINDING_SWR_KEY,
     DismissDossierFindingArg["arg"]

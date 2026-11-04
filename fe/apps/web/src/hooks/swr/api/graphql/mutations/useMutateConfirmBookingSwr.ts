@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateConfirmBooking } from "@/modules/api/graphql/mutations/mutation-confirm-booking"
 import type { MutateConfirmBookingRequest } from "@/modules/api/graphql/mutations/types/confirm-booking"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ConfirmBookingMutation } from "@/modules/api"
 
 /** The SWR key of the `confirmBooking` mutation. */
 export const MUTATE_CONFIRM_BOOKING_SWR_KEY = "MUTATE_CONFIRM_BOOKING_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Confirms a requested booking. */
 export const useMutateConfirmBookingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateConfirmBooking>["confirmBooking"],
+    ConfirmBookingMutation["confirmBooking"],
     Error,
     typeof MUTATE_CONFIRM_BOOKING_SWR_KEY,
     TriggerArg["arg"]

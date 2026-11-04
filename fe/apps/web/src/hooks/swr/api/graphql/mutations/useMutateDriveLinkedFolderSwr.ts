@@ -2,10 +2,12 @@
 
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import { queryDriveLinkedFolder } from "@/modules/api/graphql/queries/query-drive-linked-folder"
-import type { QueryDriveLinkedFolderRequest } from "@/modules/api/graphql/queries/query-drive-linked-folder"
+import {
+    queryDriveLinkedFolder,
+    type QueryDriveLinkedFolderRequest,
+} from "@/modules/api/graphql/queries/query-drive-linked-folder"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DriveLinkedFolderQuery } from "@/modules/api"
 
 /** The SWR key of the driveLinkedFolder read. */
 export const MUTATE_DRIVE_LINKED_FOLDER_SWR_KEY = "MUTATE_DRIVE_LINKED_FOLDER_SWR"
@@ -15,7 +17,7 @@ export const MUTATE_DRIVE_LINKED_FOLDER_SWR_KEY = "MUTATE_DRIVE_LINKED_FOLDER_SW
  * (the back end `driveLinkedFolder` query): `trigger({ url })` answers the folder and rejects with the back end failure.
  */
 export const useMutateDriveLinkedFolderSwr = (): SWRMutationResponse<
-    OperationData<typeof queryDriveLinkedFolder>["driveLinkedFolder"],
+    DriveLinkedFolderQuery["driveLinkedFolder"],
     Error,
     typeof MUTATE_DRIVE_LINKED_FOLDER_SWR_KEY,
     TriggerArg["arg"]

@@ -13,4 +13,4 @@ export { SUBJECT_TYPES } from "./brain-facts.contracts"
 
 export type { FactInput } from "./brain-facts.contracts"
 export { batchIdOf, bulkNoteOf, isBulkSafe } from "./bulk-apply.policy"
-export type { FactSource, ProposalKind } from "./brain-facts.contracts"
+export type { FactSource, FactProposalKind } from "./brain-facts.contracts"

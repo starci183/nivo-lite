@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateFinishWebhookConnection } from "@/modules/api/graphql/mutations/mutation-finish-webhook-connection"
-import type { MutateFinishWebhookConnectionRequest } from "@/modules/api/graphql/mutations/mutation-finish-webhook-connection"
+import {
+    mutateFinishWebhookConnection,
+    type MutateFinishWebhookConnectionRequest,
+} from "@/modules/api/graphql/mutations/mutation-finish-webhook-connection"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { FinishWebhookConnectionMutation } from "@/modules/api"
 
 /** What the finishWebhookConnection mutation is triggered with. */
 interface FinishWebhookConnectionArg {
@@ -16,7 +18,7 @@ export const MUTATE_FINISH_WEBHOOK_CONNECTION_SWR_KEY = "MUTATE_FINISH_WEBHOOK_C
 
 /** SWR mutation for {@link mutateFinishWebhookConnection}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateFinishWebhookConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateFinishWebhookConnection>["finishWebhookConnection"],
+    FinishWebhookConnectionMutation["finishWebhookConnection"],
     Error,
     typeof MUTATE_FINISH_WEBHOOK_CONNECTION_SWR_KEY,
     FinishWebhookConnectionArg["arg"]

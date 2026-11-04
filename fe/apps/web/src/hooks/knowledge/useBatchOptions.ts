@@ -2,42 +2,15 @@
 
 import { useState } from "react"
 import { AGENT_MODULES } from "@/modules/documents"
-import type { AgentModule, BatchMeta, InstanceOption } from "@/modules/documents"
+import type { InstanceOption } from "@/modules/documents"
+import type { AddPreset, BatchOptionFields, BatchOptions } from "@/hooks/knowledgeAddTypes"
 
 /** The module value of the "For" select: a type, or one instance of a type. */
 const INSTANCE_PREFIX = "inst:"
 
-/** Opens the form with a topic (and tags) already chosen: on "Write" for a suggestion, on the files for a dossier. */
-export interface AddPreset {
-    readonly topic: string
-    /** Comma-separated tags the batch carries, e.g. the one that files a document under a dossier. */
-    readonly tags?: string
-    /** The mode the drawer opens on; "write" when absent. */
-    readonly mode?: "files" | "write"
-}
-
-/** The options of the batch as the person chose them. */
-interface Options {
-    readonly topic: string
-    readonly tags: string
-    readonly module: AgentModule | "all"
-    readonly instanceId: string | null
-}
-
-/** What the batch options give the drawer. */
-export interface BatchOptions extends Options {
-    /** The value the "For" select shows. */
-    readonly moduleValue: string
-    readonly setTopic: (value: string) => void
-    readonly setTags: (value: string) => void
-    readonly pickModule: (value: string | null) => void
-    /** The options in the form a send needs. */
-    readonly meta: () => BatchMeta
-}
-
 /** The topic, tags and agent chosen once for everything the drawer adds. */
 export const useBatchOptions = (preset: AddPreset | null, instances: ReadonlyArray<InstanceOption>): BatchOptions => {
-    const [options, setOptions] = useState<Options>({
+    const [options, setOptions] = useState<BatchOptionFields>({
         topic: preset?.topic ?? "",
         tags: preset?.tags ?? "",
         module: "all",

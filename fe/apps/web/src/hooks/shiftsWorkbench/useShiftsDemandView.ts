@@ -2,13 +2,14 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import { useShiftsOperation } from "./useShiftsOperation"
 import type { ShiftsSetupViews, ShiftsSetupActions } from "@/modules/types"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
-type FullView = { readonly props: ShiftsSetupViews["demandData"]; readonly on: ShiftsSetupActions["demand"] }
-type DemandForm = ShiftsSetupViews["demandDemandForm"]
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
+
+type FullView = { readonly props: ShiftsSetupViews["demandData"]; readonly on: ShiftsSetupActions["demand"] }
+type DemandForm = ShiftsSetupViews["demandDemandForm"]
 
 /** State values and commands consumed by the connected surface. */
 type ShiftsDemandControllerInput = {
@@ -105,116 +106,8 @@ const renderShiftsDemand = (context: ReturnType<typeof createShiftsDemandRows>):
 }
 
 type UseShiftsDemandViewResult =
-    | {
-          copy: Omit<
-              {
-                  readonly title: string
-                  readonly hint: string
-                  readonly emptyLabel: string
-                  readonly addTitle: string
-                  readonly addLabel: string
-                  readonly removeLabel: string
-                  readonly labels: {
-                      readonly days: string
-                      readonly from: string
-                      readonly to: string
-                      readonly position: string
-                      readonly min: string
-                      readonly ideal: string
-                      readonly peak: string
-                  }
-                  readonly groups: ReadonlyArray<ShiftsSetupViews["demandDemandGroupView"]>
-                  readonly dayOptions: ReadonlyArray<{
-                      readonly value: string
-                      readonly label: string
-                  }>
-                  readonly timeOptions: ReadonlyArray<ShiftsSetupViews["demandOptionView"]>
-                  readonly positionOptions: ReadonlyArray<ShiftsSetupViews["demandOptionView"]>
-                  readonly form: ShiftsSetupViews["demandDemandForm"]
-                  readonly hasBlocks: boolean
-                  readonly isBusy: boolean
-                  readonly canAdd: boolean
-              },
-              "groups" | "positionOptions" | "form" | "hasBlocks" | "canAdd"
-          >
-          data: undefined
-          on: undefined
-      }
-    | {
-          copy: Omit<
-              {
-                  readonly title: string
-                  readonly hint: string
-                  readonly emptyLabel: string
-                  readonly addTitle: string
-                  readonly addLabel: string
-                  readonly removeLabel: string
-                  readonly labels: {
-                      readonly days: string
-                      readonly from: string
-                      readonly to: string
-                      readonly position: string
-                      readonly min: string
-                      readonly ideal: string
-                      readonly peak: string
-                  }
-                  readonly groups: ReadonlyArray<ShiftsSetupViews["demandDemandGroupView"]>
-                  readonly dayOptions: ReadonlyArray<{
-                      readonly value: string
-                      readonly label: string
-                  }>
-                  readonly timeOptions: ReadonlyArray<ShiftsSetupViews["demandOptionView"]>
-                  readonly positionOptions: ReadonlyArray<ShiftsSetupViews["demandOptionView"]>
-                  readonly form: ShiftsSetupViews["demandDemandForm"]
-                  readonly hasBlocks: boolean
-                  readonly isBusy: boolean
-                  readonly canAdd: boolean
-              },
-              "groups" | "positionOptions" | "form" | "hasBlocks" | "canAdd"
-          >
-          data: Pick<
-              {
-                  readonly title: string
-                  readonly hint: string
-                  readonly emptyLabel: string
-                  readonly addTitle: string
-                  readonly addLabel: string
-                  readonly removeLabel: string
-                  readonly labels: {
-                      readonly days: string
-                      readonly from: string
-                      readonly to: string
-                      readonly position: string
-                      readonly min: string
-                      readonly ideal: string
-                      readonly peak: string
-                  }
-                  readonly groups: ReadonlyArray<ShiftsSetupViews["demandDemandGroupView"]>
-                  readonly dayOptions: ReadonlyArray<{
-                      readonly value: string
-                      readonly label: string
-                  }>
-                  readonly timeOptions: ReadonlyArray<ShiftsSetupViews["demandOptionView"]>
-                  readonly positionOptions: ReadonlyArray<ShiftsSetupViews["demandOptionView"]>
-                  readonly form: ShiftsSetupViews["demandDemandForm"]
-                  readonly hasBlocks: boolean
-                  readonly isBusy: boolean
-                  readonly canAdd: boolean
-              },
-              "groups" | "positionOptions" | "form" | "hasBlocks" | "canAdd"
-          >
-          on: {
-              readonly days: (days: Array<string>) => void
-              readonly start: (value: string) => void
-              readonly end: (value: string) => void
-              readonly position: (id: string) => void
-              readonly min: (value: number) => void
-              readonly ideal: (value: number) => void
-              readonly peak: (value: boolean) => void
-              readonly add: () => void
-              readonly remove: (id: string) => void
-          }
-      }
+    | { copy: ShiftsSetupViews["demandCopy"]; data: undefined; on: undefined }
+    | { copy: ShiftsSetupViews["demandCopy"]; data: FullView["props"]; on: FullView["on"] }
 
 /** The people needed per time block: the blocks by weekday and the form that adds blocks over several days. */
 export const useShiftsDemandView = (input: ShiftsPanelInput): UseShiftsDemandViewResult => {

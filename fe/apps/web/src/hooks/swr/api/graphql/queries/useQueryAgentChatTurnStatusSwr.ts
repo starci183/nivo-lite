@@ -1,10 +1,9 @@
 "use client"
 
-import { workspaceArgumentKey } from "@/hooks/workspaceread"
+import { workspaceArgumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
-import type { AgentChatTurnStatusType } from "@/modules/api"
+import type { AgentChatTurnStatusType, AgentChatTurnStatusQuery } from "@/modules/api"
 import { queryAgentChatTurnStatus } from "@/modules/api/graphql/queries/query-agent-chat-turn-status"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
 
 /** SWR identity for the backend job state of an accepted message. */
 export const QUERY_AGENT_CHAT_TURN_STATUS_SWR_KEY = "QUERY_AGENT_CHAT_TURN_STATUS_SWR"
@@ -18,7 +17,7 @@ export const useQueryAgentChatTurnStatusSwr = (
     workspaceId: string | undefined,
     id: string | undefined,
     onSettled: (turn: AgentChatTurnStatusType) => void,
-): ReadResponse<OperationData<typeof queryAgentChatTurnStatus>["agentChatTurnStatus"]> =>
+): ReadResponse<AgentChatTurnStatusQuery["agentChatTurnStatus"]> =>
     useSWR(
         workspaceArgumentKey(QUERY_AGENT_CHAT_TURN_STATUS_SWR_KEY, workspaceId, id),
         async ([, scope, messageId]: [string, string, string]) => {

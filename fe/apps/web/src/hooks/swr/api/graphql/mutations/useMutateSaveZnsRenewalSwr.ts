@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSaveZnsRenewal } from "@/modules/api/graphql/mutations/mutation-save-zns-renewal"
-import type { mutateSaveZnsRenewal as MutateSaveZnsRenewalOperation } from "@/modules/api/graphql/mutations/mutation-save-zns-renewal"
+import {
+    mutateSaveZnsRenewal,
+    type mutateSaveZnsRenewal as MutateSaveZnsRenewalOperation,
+} from "@/modules/api/graphql/mutations/mutation-save-zns-renewal"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveZnsRenewalMutation } from "@/modules/api"
 
 /** The SWR key of the saveZnsRenewal mutation. */
 export const MUTATE_SAVE_ZNS_RENEWAL_SWR_KEY = "MUTATE_SAVE_ZNS_RENEWAL_SWR_KEY"
 
 /** SWR mutation for {@link mutateSaveZnsRenewal}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSaveZnsRenewalSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveZnsRenewal>["saveZnsRenewal"],
+    SaveZnsRenewalMutation["saveZnsRenewal"],
     Error,
     typeof MUTATE_SAVE_ZNS_RENEWAL_SWR_KEY,
     TriggerArg["arg"]

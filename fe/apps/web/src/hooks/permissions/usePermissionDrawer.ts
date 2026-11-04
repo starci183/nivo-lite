@@ -7,13 +7,11 @@ import { useQueryMemberGrantsSwr } from "@/hooks/swr"
 import type { StoredRule } from "@/hooks/authority"
 import { bandsValid, changeOf, draftOf, grantCandidates, grantMax } from "@/modules/permissions"
 import type { Approver, GrantCandidate, GrantDraft, PermissionDraft } from "@/modules/permissions"
+import type { DataSlot, SlotLabels } from "@/modules/types"
 import { permissionEditsOf } from "./permissions.shared"
-import { usePermissionDrawerWords } from "./usePermissionDrawerWords"
+import { usePermissionDrawerWords, type DrawerWordsView } from "./usePermissionDrawerWords"
 import { useSavePermission } from "./useSavePermission"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
-
-import type { ApproverRole, ApprovalPolicy, RuleUnit } from "@/modules/authority"
-import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The drawer while it is open: the rule being changed, what was typed, and the limits typed over the stored ones. */
 interface DrawerState {
@@ -48,98 +46,34 @@ const stateOf = (draft: PermissionDraft, who: Viewer) => ({
     isPending: who.isSaving,
 })
 
+/** A member's approval limit as the drawer draws it. */
+interface GrantRow {
+    readonly maxLabel: string
+    readonly name: string
+    readonly memberId: string
+    readonly enabled: boolean
+    readonly max: number
+}
+
+/** What the rule drawer shows and the events it raises; `props` is null while the drawer is closed. */
 type UsePermissionDrawerResult = {
-    grantsSlot: DataSlot<
-        {
-            maxLabel: string
-            name: string
-            memberId: string
-            enabled: boolean
-            max: number
-        }[]
-    >
+    grantsSlot: DataSlot<GrantRow[]>
     grantsLabels: SlotLabels
     retryGrants: () => undefined
     open: (rule: StoredRule) => void
-    props: {
-        grants: {
-            maxLabel: string
-            name: string
-            memberId: string
-            enabled: boolean
-            max: number
-        }[]
-        agentOptions: readonly {
-            readonly id: string
-            readonly label: string
-        }[]
-        roomOptions: readonly {
-            readonly id: string
-            readonly label: string
-        }[]
-        memberOptions: {
-            id: string
-            label: string
-        }[]
-        draft: PermissionDraft
-        canGrant: boolean
-        canSave: boolean
-        isBandsInvalid: boolean
-        isPending: boolean
-        title: string
-        copy: {
-            drawerDesc: string
-            close: string
-            agentsLabel: string
-            agentsHint: string
-            strategyLabel: string
-            unitLabel: string
-            autoMaxLabel: string
-            askMaxLabel: string
-            sliderLabel: string
-            bandsInvalid: string
-            groupLabel: string
-            rolesLabel: string
-            roomsLabel: string
-            roomsNone: string
-            membersLabel: string
-            membersHint: string
-            policyLabel: string
-            timeoutLabel: string
-            timeoutNote: string
-            grantsLabel: string
-            grantsNote: string
-            ownerAlways: string
-            save: string
-            cancel: string
-        }
-        legend: {
-            auto: string
-            ask: string
-            never: string
-        }
-        sliderMax: number
-        strategyOptions: {
-            id: string
-            label: string
-        }[]
-        roleOptions: {
-            id: ApproverRole
-            label: string
-        }[]
-        policyOptions: {
-            id: ApprovalPolicy
-            label: string
-        }[]
-        unitOptions: {
-            id: RuleUnit
-            label: string
-        }[]
-        timeoutOptions: {
-            id: string
-            label: string
-        }[]
-    } | null
+    props:
+        | (DrawerWordsView & {
+              grants: GrantRow[]
+              agentOptions: DrawerOptions["agentOptions"]
+              roomOptions: DrawerOptions["roomOptions"]
+              memberOptions: { id: string; label: string }[]
+              draft: PermissionDraft
+              canGrant: boolean
+              canSave: boolean
+              isBandsInvalid: boolean
+              isPending: boolean
+          })
+        | null
     on: {
         save: () => Promise<void>
         close: () => void

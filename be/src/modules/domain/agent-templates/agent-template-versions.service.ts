@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { agentTemplatePackageSchema } from "./agent-template.schema"
@@ -26,6 +27,12 @@ export interface StoredVersion {
     /** True for a template of the platform itself. */
     readonly firstParty: boolean
 }
+
+/** The template of a key, or null when there is none. */
+export type FoundTemplate = AgentTemplateEntity | null
+
+/** One version with its template, or null when it does not exist or does not parse. */
+export type FoundVersion = StoredVersion | null
 
 /** What saving a new version takes. */
 export interface NewVersion {
@@ -67,7 +74,7 @@ export class AgentTemplateVersionsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The template with this key, or null. */
-    templateOf(key: string): Promise<AgentTemplateEntity | null> {
+    templateOf(key: string): Promise<FoundTemplate> {
         return this.entityManager.findOne(AgentTemplateEntity, { where: { key } })
     }
 
@@ -82,7 +89,7 @@ export class AgentTemplateVersionsService {
     }
 
     /** One version of a template, or null when it does not exist or does not parse. */
-    async find(key: string, version: number): Promise<StoredVersion | null> {
+    async find(key: string, version: number): Promise<FoundVersion> {
         const template = await this.templateOf(key)
         const row = await this.entityManager.findOne(AgentTemplateVersionEntity, { where: { key, version } })
         if (template === null || row === null) return null
@@ -115,22 +122,29 @@ export class AgentTemplateVersionsService {
             order: { createdAt: "DESC" },
             take: LIST_MAX,
         })
-        return Promise.all(
-            templates.map(async (template) => {
-                const rows = await this.entityManager.find(AgentTemplateVersionEntity, {
-                    where: { templateId: template.id },
-                    order: { version: "DESC" },
-                    take: LIST_MAX,
-                })
-                return {
-                    id: template.id,
-                    key: template.key,
-                    baseModule: template.baseModule,
-                    name: template.name,
-                    versions: rows.map((row) => versionViewOf(row)),
-                }
-            }),
-        )
+        const versions = await this.versionsOf(templates.map((template) => template.id))
+        return templates.map((template) => ({
+            id: template.id,
+            key: template.key,
+            baseModule: template.baseModule,
+            name: template.name,
+            versions: (versions.get(template.id) ?? []).slice(0, LIST_MAX).map((row) => versionViewOf(row)),
+        }))
+    }
+
+    /** The version rows of the templates, newest first, grouped by template. */
+    private async versionsOf(
+        templateIds: ReadonlyArray<string>,
+    ): Promise<ReadonlyMap<string, Array<AgentTemplateVersionEntity>>> {
+        const grouped = new Map<string, Array<AgentTemplateVersionEntity>>()
+        if (templateIds.length === 0) return grouped
+        const rows = await this.entityManager.find(AgentTemplateVersionEntity, {
+            where: { templateId: In([...templateIds]) },
+            order: { version: "DESC" },
+            take: LIST_MAX * LIST_MAX,
+        })
+        for (const row of rows) grouped.set(row.templateId, [...(grouped.get(row.templateId) ?? []), row])
+        return grouped
     }
 
     /**

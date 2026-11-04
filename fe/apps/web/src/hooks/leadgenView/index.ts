@@ -1,1 +1,2 @@
-export { commentsViewOf, handoffsViewOf, leadsViewOf, sourcesViewOf } from "./leadgenView.shared"
+export { handoffsViewOf, leadsViewOf, sourcesViewOf } from "./leadgenView.shared"
+export { commentsViewOf } from "@/hooks/leadgenComments"

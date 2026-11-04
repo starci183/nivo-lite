@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRescreenHiringCandidate } from "@/modules/api/graphql/mutations/mutation-rescreen-hiring-candidate"
-import type { MutateRescreenHiringCandidateRequest } from "@/modules/api/graphql/mutations/mutation-rescreen-hiring-candidate"
+import {
+    mutateRescreenHiringCandidate,
+    type MutateRescreenHiringCandidateRequest,
+} from "@/modules/api/graphql/mutations/mutation-rescreen-hiring-candidate"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RescreenHiringCandidateMutation } from "@/modules/api"
 
 /** What the rescreenHiringCandidate mutation is triggered with. */
 interface RescreenHiringCandidateArg {
@@ -16,7 +18,7 @@ export const MUTATE_RESCREEN_HIRING_CANDIDATE_SWR_KEY = "MUTATE_RESCREEN_HIRING_
 
 /** SWR mutation for {@link mutateRescreenHiringCandidate}: `trigger(request)` answers `rescreenHiringCandidate` and rejects with the back end failure. */
 export const useMutateRescreenHiringCandidateSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRescreenHiringCandidate>["rescreenHiringCandidate"],
+    RescreenHiringCandidateMutation["rescreenHiringCandidate"],
     Error,
     typeof MUTATE_RESCREEN_HIRING_CANDIDATE_SWR_KEY,
     RescreenHiringCandidateArg["arg"]

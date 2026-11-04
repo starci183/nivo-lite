@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateStopFailedStep } from "@/modules/api/graphql/mutations/mutation-stop-failed-step"
-import type { MutateStopFailedStepRequest } from "@/modules/api/graphql/mutations/mutation-stop-failed-step"
+import {
+    mutateStopFailedStep,
+    type MutateStopFailedStepRequest,
+} from "@/modules/api/graphql/mutations/mutation-stop-failed-step"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { StopFailedStepMutation } from "@/modules/api"
 
 /** What the stopFailedStep mutation is triggered with. */
 interface StopFailedStepArg {
@@ -16,7 +18,7 @@ export const MUTATE_STOP_FAILED_STEP_SWR_KEY = "MUTATE_STOP_FAILED_STEP_SWR"
 
 /** SWR mutation for {@link mutateStopFailedStep}: `trigger(request)` answers the result and rejects with the back end failure. */
 export const useMutateStopFailedStepSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateStopFailedStep>["stopFailedStep"],
+    StopFailedStepMutation["stopFailedStep"],
     Error,
     typeof MUTATE_STOP_FAILED_STEP_SWR_KEY,
     StopFailedStepArg["arg"]

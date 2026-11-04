@@ -2,6 +2,7 @@
 
 import type { VideoLibraryActions, VideoLibraryViews } from "@/modules/types"
 type VideoBrandSettingsFields = VideoLibraryViews["brand"]
+/** Handlers the brand settings card calls. */
 export type VideoBrandSettingsActions = VideoLibraryActions["brand"]
 import type { Brand, MediaItem } from "@/modules/video"
 import { useState } from "react"

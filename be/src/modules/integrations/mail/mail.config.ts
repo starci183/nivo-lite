@@ -1,6 +1,7 @@
 import type { MailSecurity } from "@starci/mail"
 import type { EnvSource } from "@modules/platform/config"
 import { DEFAULT_SUPPRESS, parseSuppressList } from "./mail-suppress.policy"
+import { isPublicSite } from "./mail-site.policy"
 import type { MailLanguage, MailOptions } from "./mail.options"
 
 const DEFAULT_PORT = 587
@@ -10,14 +11,6 @@ const RESET_TTL_SECONDS = 3_600
 const HELLO_NAME = "nivo.vn"
 const SECURITIES: ReadonlyArray<MailSecurity> = ["tls", "starttls", "none"]
 const LANGUAGES: ReadonlyArray<MailLanguage> = ["vi", "en"]
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
-
-/** True when the site address is a public https origin; a missing, plain-http or local address means a development site. */
-const isPublicSite = (siteUrl: string | undefined): boolean => {
-    if (siteUrl === undefined || !URL.canParse(siteUrl)) return false
-    const url = new URL(siteUrl)
-    return url.protocol === "https:" && !LOCAL_HOSTS.has(url.hostname) && !url.hostname.endsWith(".localhost")
-}
 
 /**
  * Reads the mail configuration with no credential or server defaults; the login is optional and its password reads `<KEY>_FILE`

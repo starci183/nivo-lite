@@ -2,7 +2,7 @@
 
 import { isSmallAdjustment, num } from "./inventory.shared"
 import { useInventoryFormat, type InventoryFormat } from "./useInventoryFormat"
-import type { AdjustState } from "./useAdjustDrawer"
+import type { AdjustState } from "@/hooks/inventoryAdjustView"
 
 /** The view `useAdjustmentPreview` returns. */
 export interface AdjustmentPreviewView {

@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateTransitionContentItem } from "@/modules/api/graphql/mutations/mutation-transition-content-item"
-import type { mutateTransitionContentItem as MutateTransitionContentItemOperation } from "@/modules/api/graphql/mutations/mutation-transition-content-item"
+import {
+    mutateTransitionContentItem,
+    type mutateTransitionContentItem as MutateTransitionContentItemOperation,
+} from "@/modules/api/graphql/mutations/mutation-transition-content-item"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { TransitionContentItemMutation } from "@/modules/api"
 
 /** The SWR key of the transitionContentItem mutation. */
 export const MUTATE_TRANSITION_CONTENT_ITEM_SWR_KEY = "MUTATE_TRANSITION_CONTENT_ITEM_SWR"
 
 /** SWR mutation for {@link mutateTransitionContentItem}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateTransitionContentItemSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateTransitionContentItem>["transitionContentItem"],
+    TransitionContentItemMutation["transitionContentItem"],
     Error,
     typeof MUTATE_TRANSITION_CONTENT_ITEM_SWR_KEY,
     TriggerArg["arg"]

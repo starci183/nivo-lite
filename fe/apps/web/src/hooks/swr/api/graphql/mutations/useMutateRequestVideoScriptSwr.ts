@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateRequestVideoScript } from "@/modules/api/graphql/mutations/mutation-request-video-script"
-import type { mutateRequestVideoScript as MutateRequestVideoScriptOperation } from "@/modules/api/graphql/mutations/mutation-request-video-script"
+import {
+    mutateRequestVideoScript,
+    type mutateRequestVideoScript as MutateRequestVideoScriptOperation,
+} from "@/modules/api/graphql/mutations/mutation-request-video-script"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestVideoScriptMutation } from "@/modules/api"
 
 /** The SWR key of the requestVideoScript mutation. */
 export const MUTATE_REQUEST_VIDEO_SCRIPT_SWR_KEY = "MUTATE_REQUEST_VIDEO_SCRIPT_SWR"
 
 /** SWR mutation for {@link mutateRequestVideoScript}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateRequestVideoScriptSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestVideoScript>["requestVideoScript"],
+    RequestVideoScriptMutation["requestVideoScript"],
     Error,
     typeof MUTATE_REQUEST_VIDEO_SCRIPT_SWR_KEY,
     TriggerArg["arg"]

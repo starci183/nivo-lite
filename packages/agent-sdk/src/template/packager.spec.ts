@@ -1,6 +1,18 @@
-import { CREATOR, SECRET_IN_ENV, draftOf, leakyGraph, packageOf } from "../testing"
+import { CREATOR, SECRET_IN_ENV, draftOf, leakyGraph, packageOf } from "../tests/fixtures"
 import { canonicalJson, hashOfPackage } from "./canonical"
 import { leakProblems, previewPackage, suggestionsOf } from "./packager"
+
+/** What reading a text of JSON gave: the value it holds, or the failure of the reader. */
+type ReadBack = { readonly value: unknown } | { readonly failure: unknown }
+
+/** Reads a text of JSON back into the value it holds. */
+const readBack = (text: string): ReadBack => {
+    try {
+        return { value: JSON.parse(text) }
+    } catch (failure) {
+        return { failure }
+    }
+}
 
 describe("previewPackage: the allowlist", () => {
     it("keeps the process and leaves out the internal Brain, customer data, people and the secrets of the creator agent", () => {
@@ -95,7 +107,7 @@ describe("previewPackage: the allowlist", () => {
     it("yields a package whose canonical text reads back to the same package and the same hash", () => {
         const made = packageOf()
 
-        expect(JSON.parse(canonicalJson(made))).toEqual(made)
+        expect(readBack(canonicalJson(made))).toEqual({ value: made })
         const { hash, ...body } = made
         expect(hashOfPackage(body)).toBe(hash)
     })
@@ -143,7 +155,7 @@ describe("previewPackage: the last scan", () => {
 
     it("scans the starter knowledge and the persona too", () => {
         const draft = draftOf({
-            starterKnowledge: [{ title: "Liên hệ", body: "Gọi anh Nam qua nam@shop.vn" }],
+            starterKnowledge: [{ title: "Lien he", body: "Goi anh Nam qua nam@shop.vn" }],
         })
 
         expect(previewPackage(leakyGraph(), draft).package).toBeNull()
@@ -175,6 +187,23 @@ describe("previewPackage: bindings", () => {
         expect(previewPackage(leakyGraph(), draft).problems.join()).toMatch(/no branch/)
         expect(previewPackage(leakyGraph(), unknown).problems.join()).toMatch(/unknown parameter/)
         expect(previewPackage(leakyGraph(), notNumber).package).toBeNull()
+    })
+
+    it("refuses a binding that points at a node that does not exist or a node without a decide point", () => {
+        const binding = { parameter: "autoLimit", target: "branch_timeout", branchKey: "middle" } as const
+        const ghost = draftOf({ bindings: [{ ...binding, nodeKey: "ghost" }] })
+        const plain = draftOf({ bindings: [{ ...binding, nodeKey: "end" }] })
+
+        expect(previewPackage(leakyGraph(), ghost).problems.join()).toMatch(/no branch ghost\/middle/)
+        expect(previewPackage(leakyGraph(), plain).problems.join()).toMatch(/no branch end\/middle/)
+    })
+
+    it("packages a graph that has no contracts", () => {
+        const { nodes, rights } = leakyGraph()
+        const preview = previewPackage({ nodes, rights }, draftOf())
+
+        expect(preview.problems).toEqual([])
+        expect(preview.package?.graph.contracts).toBeUndefined()
     })
 
     it("suggests the numbers of the graph a creator could turn into parameters", () => {

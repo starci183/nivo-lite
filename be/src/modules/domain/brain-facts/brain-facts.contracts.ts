@@ -25,7 +25,7 @@ export type FactStatus = "proposed" | "scheduled" | "active" | "superseded" | "r
 export type FactSource = "owner" | "manager" | "document" | "system" | "staff" | "customer" | "ai"
 
 /** A value (set) or a proposal to stop using an active fact (retire). */
-export type ProposalKind = "set" | "retire"
+export type FactProposalKind = "set" | "retire"
 
 /** Who the answer is for; `customer` only ever sees public facts. */
 export type FactAudience = "customer" | "internal"
@@ -99,7 +99,7 @@ export interface FactRecord {
     /** The active fact a proposal disagrees with, or the one a retire proposal points at. */
     readonly conflictWith: string | null
     /** A value or a proposal to stop using one. */
-    readonly proposalKind: ProposalKind
+    readonly proposalKind: FactProposalKind
     /** What supports it. */
     readonly evidence: ReadonlyArray<Evidence>
     /** Who proposed it. */

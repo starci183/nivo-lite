@@ -11,7 +11,6 @@ export {
     parseSigned,
     findTier,
     tierTone,
-    LOYALTY_TABS,
     loyaltyReadOf,
 } from "./loyalty.shared"
 export type { LoyaltyTab, LoyaltyPanelActivation, LoyaltyPanelInput } from "./loyalty.shared"

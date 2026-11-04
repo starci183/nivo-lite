@@ -2,10 +2,12 @@
 
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import { queryDrivePickedFolder } from "@/modules/api/graphql/queries/query-drive-picked-folder"
-import type { QueryDrivePickedFolderRequest } from "@/modules/api/graphql/queries/query-drive-picked-folder"
+import {
+    queryDrivePickedFolder,
+    type QueryDrivePickedFolderRequest,
+} from "@/modules/api/graphql/queries/query-drive-picked-folder"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DrivePickedFolderQuery } from "@/modules/api"
 
 /** The SWR key of the drivePickedFolder read. */
 export const MUTATE_DRIVE_PICKED_FOLDER_SWR_KEY = "MUTATE_DRIVE_PICKED_FOLDER_SWR"
@@ -15,7 +17,7 @@ export const MUTATE_DRIVE_PICKED_FOLDER_SWR_KEY = "MUTATE_DRIVE_PICKED_FOLDER_SW
  * `drivePickedFolder` query; the token is used for this call and never stored): `trigger({ folderId, token })` answers the folder.
  */
 export const useMutateDrivePickedFolderSwr = (): SWRMutationResponse<
-    OperationData<typeof queryDrivePickedFolder>["drivePickedFolder"],
+    DrivePickedFolderQuery["drivePickedFolder"],
     Error,
     typeof MUTATE_DRIVE_PICKED_FOLDER_SWR_KEY,
     TriggerArg["arg"]

@@ -1,4 +1,9 @@
-import type { ForkRequest } from "@modules/domain/template-marketplace"
-
 /** What the ForkFirstPartyTemplate operation takes. */
-export type ForkFirstPartyTemplateRequest = ForkRequest
+export interface ForkFirstPartyTemplateRequest {
+    /** The workspace the creator names, whose owner they are. */
+    readonly workspaceId: string
+    /** The first-party key. */
+    readonly sourceKey: string
+    /** The key of the derivative. */
+    readonly key: string
+}

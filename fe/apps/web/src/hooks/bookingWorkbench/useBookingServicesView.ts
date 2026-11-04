@@ -1,30 +1,35 @@
 "use client"
 
-import { BLANK_SERVICE_FIELDS, bookingServiceDigits, serviceFieldsOf } from "@/modules/booking-desk"
-import type { ServiceFields } from "@/modules/booking-desk"
-
 import type { useBookingBoard } from "@/hooks/bookingBoard"
 import { useFormatter, useTranslations } from "next-intl"
+import type { Dispatch, SetStateAction } from "react"
+import { bookingServiceDigits } from "@/modules/booking-desk"
 import type { useBookingTransition } from "@/hooks/bookingDesk"
-import { bookingServiceFormOf, useBookingCatalogEditor, useBookingServiceCommands } from "@/hooks/bookingSetup"
+import { useBookingCatalogEditor, useBookingServiceCommands } from "@/hooks/bookingSetup"
+import {
+    bookingServicesOn,
+    bookingServicesProps,
+    type BookingServicesOn,
+    type BookingServicesProps,
+    type ServicesConnected,
+    type ServiceDraft,
+} from "@/hooks/bookingServicesView"
 
-/** The form being edited: a new service has no id. */
-interface Draft {
-    readonly id: string | null
-    readonly fields: ServiceFields
+/** The view `useBookingServicesView` returns. */
+export interface BookingServicesView {
+    readonly props: BookingServicesProps
+    readonly on: BookingServicesOn
 }
 
-/** The connected services list: add, edit and remove the services the shop sells by appointment. */
-/** Connects the state and commands used by BookingServices. */
 /** Inputs for the connected state mapping. */
 interface BuildBookingServicesStateInput {
     readonly board: ReturnType<typeof useBookingBoard>["board"]
     readonly removeId: string | null
-    readonly draft: Draft | null
+    readonly draft: ServiceDraft | null
     readonly startTransition: ReturnType<typeof useBookingTransition>["run"]
     readonly commands: ReturnType<typeof useBookingServiceCommands>
-    readonly setDraft: import("react").Dispatch<import("react").SetStateAction<Draft | null>>
-    readonly setRemoveId: import("react").Dispatch<import("react").SetStateAction<string | null>>
+    readonly setDraft: Dispatch<SetStateAction<ServiceDraft | null>>
+    readonly setRemoveId: Dispatch<SetStateAction<string | null>>
     readonly t: ReturnType<typeof useTranslations<"workbenchBooking">>
     readonly format: ReturnType<typeof useFormatter>
     readonly isPending: boolean
@@ -42,7 +47,7 @@ const buildBookingServicesState = ({
     t,
     format,
     isPending,
-}: BuildBookingServicesStateInput) => {
+}: BuildBookingServicesStateInput): ServicesConnected => {
     const removing = board.services.find((service) => service.id === removeId)
     const save = () => {
         if (draft === null) return
@@ -71,61 +76,7 @@ const buildBookingServicesState = ({
             setRemoveId(null)
         })
     }
-    return { t, board, format, draft, removing, isPending, setDraft, setRemoveId, save, remove } as const
-}
-
-/** The view `useBookingServicesView` returns. */
-export interface BookingServicesView {
-    readonly props: {
-        readonly isPending: boolean
-        readonly removing?: {
-            title: string
-            description: string
-            confirmLabel: string
-            cancelLabel: string
-        }
-        readonly form?: {
-            heading: string
-            fields: ServiceFields
-            nameLabel: string
-            durationLabel: string
-            bufferLabel: string
-            priceLabel: string
-            pricePlaceholder: string
-            kindLabel: string
-            kindPlaceholder: string
-            followupLabel: string
-            followupPlaceholder: string
-            descriptionLabel: string
-            activeLabel: string
-            saveLabel: string
-            cancelLabel: string
-        }
-        readonly title: string
-        readonly hint: string
-        readonly list: {
-            readonly label: string
-            readonly emptyText: string
-            readonly editLabel: string
-            readonly removeLabel: string
-            readonly rows: {
-                id: string
-                title: string
-                detail: string
-            }[]
-        }
-        readonly addLabel: string
-    }
-    readonly on: {
-        readonly add: () => void
-        readonly edit: (id: string) => void
-        readonly ask: (id: string) => void
-        readonly change: (patch: Partial<ServiceFields>) => false | void
-        readonly save: () => void
-        readonly cancelForm: () => void
-        readonly confirmRemove: () => void
-        readonly cancelRemove: () => void
-    }
+    return { t, board, format, draft, removing, isPending, setDraft, setRemoveId, save, remove }
 }
 
 /** Draws the connected view from its current state. */
@@ -138,10 +89,8 @@ export const useBookingServicesView = (
     const t = useTranslations("workbenchBooking")
     const format = useFormatter()
     const commands = useBookingServiceCommands()
-    const { draft, setDraft, removeId, setRemoveId, isPending, startTransition } = useBookingCatalogEditor<Draft>(
-        isActive,
-        scope,
-    )
+    const { draft, setDraft, removeId, setRemoveId, isPending, startTransition } =
+        useBookingCatalogEditor<ServiceDraft>(isActive, scope)
 
     const connected = buildBookingServicesState({
         board,
@@ -158,75 +107,5 @@ export const useBookingServicesView = (
     return {
         props: { ...bookingServicesProps(connected), isPending: connected.isPending },
         on: { ...bookingServicesOn(connected) },
-    } as const
-}
-
-/** Builds the props supplied to BookingServicesBase. */
-const bookingServicesProps = (connected: NonNullable<ReturnType<typeof buildBookingServicesState>>) => {
-    const { t, board, format, draft, removing, isPending } = connected
-    return {
-        title: t("servicesTitle"),
-        hint: t("servicesHint"),
-        list: {
-            label: t("servicesTitle"),
-            emptyText: t("servicesEmpty"),
-            editLabel: t("edit"),
-            removeLabel: t("remove"),
-            rows: board.services.map((service) => ({
-                id: service.id,
-                title: service.name,
-                detail: [
-                    t("minutes", { n: service.durationMin }),
-                    service.priceVnd === null
-                        ? ""
-                        : format.number(service.priceVnd, {
-                              style: "currency",
-                              currency: "VND",
-                              maximumFractionDigits: 0,
-                          }),
-                    service.resourceKind ?? "",
-                    service.active ? "" : t("servicePaused"),
-                ]
-                    .filter((part) => part !== "")
-                    .join(" · "),
-            })),
-        },
-        addLabel: t("serviceAdd"),
-        ...(draft === null
-            ? {}
-            : {
-                  form: bookingServiceFormOf(draft, t),
-              }),
-        ...(removing === undefined
-            ? {}
-            : {
-                  removing: {
-                      title: t("serviceRemoveTitle", { name: removing.name }),
-                      description: t("serviceRemoveBody"),
-                      confirmLabel: t("remove"),
-                      cancelLabel: t("keep"),
-                  },
-              }),
-        isPending,
-    } as const
-}
-
-/** Builds the on supplied to BookingServicesBase. */
-const bookingServicesOn = (connected: NonNullable<ReturnType<typeof buildBookingServicesState>>) => {
-    const { setDraft, board, setRemoveId, draft, save, remove } = connected
-    return {
-        add: () => setDraft({ id: null, fields: BLANK_SERVICE_FIELDS }),
-        edit: (id: string) => {
-            const service = board.services.find((candidate) => candidate.id === id)
-            if (service === undefined) return
-            setDraft({ id, fields: serviceFieldsOf(service) })
-        },
-        ask: (id: string) => setRemoveId(id),
-        change: (patch: Partial<ServiceFields>) =>
-            draft !== null && setDraft({ ...draft, fields: { ...draft.fields, ...patch } }),
-        save,
-        cancelForm: () => setDraft(null),
-        confirmRemove: remove,
-        cancelRemove: () => setRemoveId(null),
     } as const
 }

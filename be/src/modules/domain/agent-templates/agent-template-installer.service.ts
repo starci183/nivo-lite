@@ -7,11 +7,13 @@ import { PublicDocumentsService } from "@modules/domain/public-documents"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Locale } from "@modules/platform/i18n"
+import { eachInOrder } from "@modules/platform/primitives"
 import { AgentTemplatesError, AgentTemplatesErrorCode } from "./errors/agent-templates.error"
 import { AgentTemplateVersionsService } from "./agent-template-versions.service"
 import type { InstalledTemplate } from "./agent-templates.contracts"
 import { TemplateInstallEntity, TemplateLicenseEntity } from "./persistence/entities"
 import { insertedId } from "./policies/inserted-id.policy"
+import { valuesOf } from "./policies/parameter-values.policy"
 import { instantiate, resolveValues } from "@nivo-lite/agent-sdk/template"
 import type { ParameterValues } from "@nivo-lite/agent-sdk/template"
 
@@ -46,6 +48,22 @@ export interface InstallTemplateRequest {
     readonly access: InstallAccess
 }
 
+/** What a creator takes to install a template of their own account: the values are what the form gave, read in the domain. */
+export interface ImportTemplateRequest {
+    /** The workspace of the buyer. */
+    readonly workspaceId: string
+    /** The key. */
+    readonly templateKey: string
+    /** The version. */
+    readonly version: number
+    /** The values the buyer gave. */
+    readonly values: object
+    /** The label of the agent, when the buyer gave one. */
+    readonly name?: string | undefined
+    /** The language of the names. */
+    readonly locale: Locale
+}
+
 @Injectable()
 /**
  * Installs a template into a workspace. Only the owner of the buyer workspace does. It makes the agent through the same install as any
@@ -66,6 +84,19 @@ export class AgentTemplateInstallerService {
         private readonly publish: AgentGraphPublishService,
         private readonly documents: PublicDocumentsService,
     ) {}
+
+    /** Installs a template of the caller's own account as a new agent in this workspace, in shadow mode. */
+    importOwn(userId: string, request: ImportTemplateRequest): Promise<InstalledTemplate> {
+        return this.install(userId, {
+            workspaceId: request.workspaceId,
+            key: request.templateKey,
+            version: request.version,
+            values: valuesOf(request.values),
+            name: request.name ?? null,
+            locale: request.locale,
+            access: { kind: "private" },
+        })
+    }
 
     /** Installs one version of a template as a new agent. */
     async install(userId: string, request: InstallTemplateRequest): Promise<InstalledTemplate> {
@@ -101,9 +132,9 @@ export class AgentTemplateInstallerService {
         if (!filled.success) throw new AgentTemplatesError({ code: AgentTemplatesErrorCode.ValuesRefused })
         await this.publish.publishTemplate(request.workspaceId, made.agentId, filled.data, by)
         await this.publish.setMode(request.workspaceId, made.agentId, "shadow", by)
-        for (const document of pkg.starterKnowledge) {
-            await this.documents.write(userId, request.workspaceId, { title: document.title, body: document.body })
-        }
+        await eachInOrder(pkg.starterKnowledge, (document) =>
+            this.documents.write(userId, request.workspaceId, { title: document.title, body: document.body }),
+        )
         const licenseId = await this.recordInstall(userId, request, made.installationId, resolved.values)
         return {
             installationId: made.installationId,
@@ -114,7 +145,7 @@ export class AgentTemplateInstallerService {
         }
     }
 
-    private async recordInstall(
+    private recordInstall(
         userId: string,
         request: InstallTemplateRequest,
         installationId: string,

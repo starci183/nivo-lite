@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryLoadDatabaseConnection } from "@/modules/api/graphql/queries/query-load-database-connection"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { LoadDatabaseConnectionQuery } from "@/modules/api"
 
 /** The SWR key of the loadDatabaseConnection query. */
 export const QUERY_LOAD_DATABASE_CONNECTION_SWR_KEY = "QUERY_LOAD_DATABASE_CONNECTION_SWR"
@@ -13,7 +13,7 @@ export const QUERY_LOAD_DATABASE_CONNECTION_SWR_KEY = "QUERY_LOAD_DATABASE_CONNE
 export const useQueryLoadDatabaseConnectionSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryLoadDatabaseConnection>["loadDatabaseConnection"]> =>
+): ReadResponse<LoadDatabaseConnectionQuery["loadDatabaseConnection"]> =>
     useSWR(
         argumentKey(QUERY_LOAD_DATABASE_CONNECTION_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

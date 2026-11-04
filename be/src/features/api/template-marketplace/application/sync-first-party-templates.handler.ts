@@ -17,7 +17,6 @@ export class SyncFirstPartyTemplatesHandler extends ICQRSHandler<SyncFirstPartyT
     }
 
     protected override process(command: SyncFirstPartyTemplatesCommand): Promise<FirstPartySyncReport> {
-        const pr = command.params.principal
-        return this.svc.sync(pr)
+        return this.svc.sync(command.params.principal)
     }
 }

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveDossierRemedyDraft } from "@/modules/api/graphql/mutations/mutation-save-dossier-remedy-draft"
-import type { MutateSaveDossierRemedyDraftRequest } from "@/modules/api/graphql/mutations/mutation-save-dossier-remedy-draft"
+import {
+    mutateSaveDossierRemedyDraft,
+    type MutateSaveDossierRemedyDraftRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-dossier-remedy-draft"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveDossierRemedyDraftMutation } from "@/modules/api"
 
 /** What the SaveDossierRemedyDraft mutation is triggered with. */
 interface SaveDossierRemedyDraftArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_DOSSIER_REMEDY_DRAFT_SWR_KEY = "MUTATE_SAVE_DOSSIER_REM
 
 /** SWR mutation for {@link mutateSaveDossierRemedyDraft}: saves the owner's edits of the title and body of a proposed draft. `trigger(input)` rejects with the back end failure. */
 export const useMutateSaveDossierRemedyDraftSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveDossierRemedyDraft>["saveDossierRemedyDraft"],
+    SaveDossierRemedyDraftMutation["saveDossierRemedyDraft"],
     Error,
     typeof MUTATE_SAVE_DOSSIER_REMEDY_DRAFT_SWR_KEY,
     SaveDossierRemedyDraftArg["arg"]

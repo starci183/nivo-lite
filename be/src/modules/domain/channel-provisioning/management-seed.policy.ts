@@ -11,8 +11,8 @@ type Values = Readonly<Record<string, string>>
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     value !== null && typeof value === "object" && !Array.isArray(value)
 
-const invalid = (field: string): never => {
-    throw new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
+const invalid = (field: string, cause?: unknown): never => {
+    throw new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field }, cause })
 }
 
 const textOf = (value: unknown, field: string): string =>
@@ -85,8 +85,8 @@ export const readSeedDocuments = (text: string): ReadonlyArray<unknown> => {
     let envelope: unknown
     try {
         envelope = JSON.parse(text)
-    } catch {
-        return invalid("input")
+    } catch (cause) {
+        return invalid("input", cause)
     }
     if (!isRecord(envelope) || !Array.isArray(envelope.documents)) return invalid("input")
     return envelope.documents.map((entry: unknown) =>

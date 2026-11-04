@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSetMcpConnectorCredential } from "@/modules/api/graphql/mutations/mutation-set-mcp-connector-credential"
-import type { MutateSetMcpConnectorCredentialRequest } from "@/modules/api/graphql/mutations/mutation-set-mcp-connector-credential"
+import {
+    mutateSetMcpConnectorCredential,
+    type MutateSetMcpConnectorCredentialRequest,
+} from "@/modules/api/graphql/mutations/mutation-set-mcp-connector-credential"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetMcpConnectorCredentialMutation } from "@/modules/api"
 
 /** What the SetMcpConnectorCredential mutation is triggered with. */
 interface SetMcpConnectorCredentialArg {
@@ -16,7 +18,7 @@ export const MUTATE_SET_MCP_CONNECTOR_CREDENTIAL_SWR_KEY = "MUTATE_SET_MCP_CONNE
 
 /** SWR mutation for {@link mutateSetMcpConnectorCredential}: `trigger(input)` sets or rotates the sealed credential and answers the tool count; rejects with the back end failure. */
 export const useMutateSetMcpConnectorCredentialSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetMcpConnectorCredential>["setMcpConnectorCredential"],
+    SetMcpConnectorCredentialMutation["setMcpConnectorCredential"],
     Error,
     typeof MUTATE_SET_MCP_CONNECTOR_CREDENTIAL_SWR_KEY,
     SetMcpConnectorCredentialArg["arg"]

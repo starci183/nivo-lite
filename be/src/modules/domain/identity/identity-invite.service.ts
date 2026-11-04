@@ -33,7 +33,7 @@ export class IdentityInviteService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectMailer() private readonly mailer: Mailer,
-        @InjectMailSettings() private readonly mail: MailOptions,
+        @InjectMailSettings() private readonly mailOptions: MailOptions,
         @InjectClock() private readonly clock: Clock,
         @InjectIds() private readonly ids: Ids,
         @InjectIdentityAuthOptions() private readonly options: IdentityAuthOptions,
@@ -52,9 +52,9 @@ export class IdentityInviteService {
             if (known !== undefined) {
                 await this.send(
                     address,
-                    inviteExistingMail(this.mail.defaultLanguage, {
-                        brand: this.mail.brandName,
-                        url: `${this.mail.webOrigin}${next}`,
+                    inviteExistingMail(this.mailOptions.defaultLanguage, {
+                        brand: this.mailOptions.brandName,
+                        url: `${this.mailOptions.webOrigin}${next}`,
                     }),
                 )
                 return "existing"
@@ -69,11 +69,11 @@ export class IdentityInviteService {
             })
             if (created === undefined) return "none"
             const token = await this.mint(created)
-            const url = `${this.mail.webOrigin}/auth/reset?token=${encodeURIComponent(token)}&next=${encodeURIComponent(next)}`
+            const url = `${this.mailOptions.webOrigin}/auth/reset?token=${encodeURIComponent(token)}&next=${encodeURIComponent(next)}`
             const hours = Math.ceil(this.options.inviteTtlSeconds / SECONDS_PER_HOUR)
             await this.send(
                 address,
-                inviteAccountMail(this.mail.defaultLanguage, { brand: this.mail.brandName, url, hours }),
+                inviteAccountMail(this.mailOptions.defaultLanguage, { brand: this.mailOptions.brandName, url, hours }),
             )
             return "invited"
         } catch (cause) {

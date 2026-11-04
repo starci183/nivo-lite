@@ -1,6 +1,5 @@
-import { useMutateCreateLeadSwr } from "@/hooks/swr"
+import { useMutateCreateLeadSwr, type LeadActionQueuedType } from "@/hooks/swr"
 import { useLeadAction } from "./useLeadAction"
-import type { LeadActionQueuedType } from "@/modules/api"
 
 /** What the new-lead form submits. */
 interface NewLeadInput {

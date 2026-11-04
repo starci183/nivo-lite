@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateGenerateHiringAd } from "@/modules/api/graphql/mutations/mutation-generate-hiring-ad"
-import type { MutateGenerateHiringAdRequest } from "@/modules/api/graphql/mutations/mutation-generate-hiring-ad"
+import {
+    mutateGenerateHiringAd,
+    type MutateGenerateHiringAdRequest,
+} from "@/modules/api/graphql/mutations/mutation-generate-hiring-ad"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { GenerateHiringAdMutation } from "@/modules/api"
 
 /** What the generateHiringAd mutation is triggered with. */
 interface GenerateHiringAdArg {
@@ -16,7 +18,7 @@ export const MUTATE_GENERATE_HIRING_AD_SWR_KEY = "MUTATE_GENERATE_HIRING_AD_SWR"
 
 /** SWR mutation for {@link mutateGenerateHiringAd}: `trigger(request)` answers `generateHiringAd` and rejects with the back end failure. */
 export const useMutateGenerateHiringAdSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateGenerateHiringAd>["generateHiringAd"],
+    GenerateHiringAdMutation["generateHiringAd"],
     Error,
     typeof MUTATE_GENERATE_HIRING_AD_SWR_KEY,
     GenerateHiringAdArg["arg"]

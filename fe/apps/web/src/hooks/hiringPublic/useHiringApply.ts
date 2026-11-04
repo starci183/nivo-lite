@@ -63,12 +63,19 @@ export const useHiringApply = (
     const values = form.watch()
     const cvError = cv !== null && cv.size > CV_MAX_BYTES ? t("applyCvTooBig") : undefined
     const store = async (file: File): Promise<StoredCv | null> => {
-        const upload = await runGraphQL(() => createUpload({ ws: target.ws, job: target.job, fileName: file.name, contentType: file.type }), {
-            showSuccessToast: false,
-            showErrorToast: false,
-        })
+        const upload = await runGraphQL(
+            () => createUpload({ ws: target.ws, job: target.job, fileName: file.name, contentType: file.type }),
+            {
+                showSuccessToast: false,
+                showErrorToast: false,
+            },
+        )
         if (upload === undefined) return null
-        const sent = await putPresigned({ url: cvUploadUrl(upload.path, upload.token), file, contentType: upload.contentType }).then(
+        const sent = await putPresigned({
+            url: cvUploadUrl(upload.path, upload.token),
+            file,
+            contentType: upload.contentType,
+        }).then(
             () => true,
             () => false,
         )

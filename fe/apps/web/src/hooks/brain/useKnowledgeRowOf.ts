@@ -16,7 +16,7 @@ import {
 } from "@/hooks/knowledge"
 import { appliedBatchOf, waitingFactCountOf } from "@/modules/brain"
 import type { DocumentRowBadgeView, DocumentRowView, LiveProgress } from "@/modules/documents"
-import type { BrainExtraction, KnowledgeDocument, RowActionView, IdeaDecision } from "@/modules/types"
+import type { BrainExtraction, KnowledgeDocument, RowActionView } from "@/modules/types"
 import { toast } from "@/modules/toast"
 import { useBrainBoard } from "./useBrainBoard"
 import type { BrainBoard } from "./useBrainBoard"
@@ -104,42 +104,7 @@ const retryActionsOf = (t: Translate, choice: RetryChoice, pending: string | und
 /** The view `useKnowledgeRowOf` returns. */
 export interface KnowledgeRowOfView {
     rowOf: (source: KnowledgeDocument) => DocumentRowView
-    commands: {
-        pending: Readonly<Record<string, string>>
-        retrying: ReadonlySet<string>
-        isPending: boolean
-        retry: (sourceId: string) => Promise<
-            | {
-                  id: string
-              }
-            | undefined
-        >
-        reread: (sourceId: string) => Promise<
-            | {
-                  id: string
-              }
-            | undefined
-        >
-        applyFacts: (sourceId: string) => Promise<
-            | {
-                  applied: number
-                  batchId: string
-                  skipped: number
-              }
-            | undefined
-        >
-        undoFacts: (
-            batchId: string,
-            sourceId: string,
-        ) => Promise<
-            | {
-                  kept: number
-                  restored: number
-              }
-            | undefined
-        >
-        decide: (key: string, state: IdeaDecision | null) => Promise<boolean | undefined>
-    }
+    commands: ReturnType<typeof useLibraryCommands>
     member: WorkspaceMember
     board: BrainBoard
     dispatch: (sourceId: string, actionId: string) => void

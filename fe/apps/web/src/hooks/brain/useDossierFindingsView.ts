@@ -9,12 +9,12 @@ import {
     filterOfStatus,
     queryOfDossier,
     reviewedStatusOf,
-    selectionOf,
-    type FindingDialogView,
-    type FindingRowView,
+    type FindingAction,
     type FindingDialogValues,
+    type FindingFilter,
+    type DossierFindingsPane,
+    type FindingView,
 } from "@/modules/brain"
-import type { CategoryView, FindingAction, FindingFilter, FindingView } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref } from "@/modules/routes"
 import { toast } from "@/modules/toast"
@@ -23,6 +23,8 @@ import {
     DOSSIER_FILTER_KEY,
     dossierBadgesOf,
     dossierFilterOf,
+    dossierIdOf,
+    type FindingsSelection,
     dossierReviewedLineOf,
 } from "./brain.shared"
 import { useBrainDossiers } from "./useBrainDossiers"
@@ -33,12 +35,6 @@ import { useDossierReviewSummary } from "./useDossierReviewSummary"
 import { useFindingDialog } from "./useFindingDialog"
 import { useFindingRows } from "./useFindingRows"
 import type { UploadTarget } from "./useFindingRows"
-import type { DataSlot, SlotLabels } from "@/modules/types"
-
-/** A direct dossier pane, or a map node whose dossier must be proven by the actual map read. */
-type FindingsSelection =
-    | { readonly kind: "dossier"; readonly dossierId: string; readonly findingId: string | undefined }
-    | { readonly kind: "map"; readonly nodeId: string | undefined }
 
 /** The real read and its resolved inputs, before the pane's atom projection. */
 interface PaneContext {
@@ -59,7 +55,7 @@ interface PaneContext {
 }
 
 /** Words the actual findings read without changing its independent status, failure or paging state. */
-const paneOf = (context: PaneContext) => {
+const paneOf = (context: PaneContext): DossierFindingsPane => {
     const { dossierId, findingId, dossier, summary, list, rowOf, t, brain, format, canWrite, filter } = context
     const review = dossierId === undefined ? undefined : summary.reviewOf(dossierId)
     const standing = reviewedStatusOf(dossier?.status ?? "", review)
@@ -105,58 +101,12 @@ const paneOf = (context: PaneContext) => {
     }
 }
 
-/** A map node resolves to its dossier only once the categories are read: until then no dossier is selected and the pane stays hidden. */
-const dossierIdOf = (
-    input: FindingsSelection,
-    categories: ReadonlyArray<CategoryView> | undefined,
-): string | undefined => {
-    if (input.kind === "dossier") return input.dossierId
-    if (categories === undefined) return undefined
-    const selected = selectionOf(categories, input.nodeId ?? null)
-    return selected.kind === "dossier" ? selected.dossier.id : undefined
-}
+/** The props of the findings pane, as `paneOf` words them. */
+type DossierFindingsProps = DossierFindingsPane
 
 /** The view `useDossierFindingsView` returns. */
 export interface DossierFindingsView {
-    props: {
-        isVisible: boolean
-        frame: {
-            title: string
-            badges: (
-                | {
-                      id: string
-                      label: string
-                      tone: "success" | "neutral" | "danger" | "warning" | "accent"
-                  }
-                | {
-                      id: string
-                      label: string
-                      tone: "muted"
-                  }
-            )[]
-            reviewedLine: string
-            isRunning: boolean
-            runningLabel: string
-            reviewLabel: string | null
-            isReviewPending: boolean
-            aiNotice: string | null
-            hasNextPage: boolean
-            isLoadingMore: boolean
-            loadMoreLabel: string
-            pageFailure: string | null
-            retryLabel: string
-            dialog: FindingDialogView | null
-        }
-        filterLabel: string
-        filters: {
-            value: "open" | "confirmed" | "closed"
-            label: string
-        }[]
-        filter: "open" | "confirmed" | "closed"
-        listLabel: string
-        slot: DataSlot<FindingRowView[]>
-        slotLabels: SlotLabels
-    }
+    props: DossierFindingsProps
     on: {
         setFilter: (value: string) => void
         review: () => void

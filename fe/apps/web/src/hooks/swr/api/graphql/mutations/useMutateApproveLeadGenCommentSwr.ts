@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateApproveLeadGenComment } from "@/modules/api/graphql/mutations/mutation-approve-lead-gen-comment"
-import type { MutateApproveLeadGenCommentRequest } from "@/modules/api/graphql/mutations/mutation-approve-lead-gen-comment"
+import {
+    mutateApproveLeadGenComment,
+    type MutateApproveLeadGenCommentRequest,
+} from "@/modules/api/graphql/mutations/mutation-approve-lead-gen-comment"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ApproveLeadGenCommentMutation } from "@/modules/api"
 
 /** The SWR key of the approveLeadGenComment mutation. */
 export const MUTATE_APPROVE_LEAD_GEN_COMMENT_SWR_KEY = "MUTATE_APPROVE_LEAD_GEN_COMMENT_SWR"
 
 /** SWR mutation for {@link mutateApproveLeadGenComment}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateApproveLeadGenCommentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateApproveLeadGenComment>["approveLeadGenComment"],
+    ApproveLeadGenCommentMutation["approveLeadGenComment"],
     Error,
     typeof MUTATE_APPROVE_LEAD_GEN_COMMENT_SWR_KEY,
     TriggerArg["arg"]

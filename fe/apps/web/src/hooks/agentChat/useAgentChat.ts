@@ -2,12 +2,11 @@
 
 import { viewOf } from "./agentChat.shared"
 import { useAgentChatNavigation } from "./useAgentChatNavigation"
+import { useAgentChatRoute } from "./useAgentChatRoute"
 import { useAgentChatThreadView } from "./useAgentChatThreadView"
 import { useQueryAgentChatConversationsSwr, useQueryAgentChatMessagesSwr, useQueryAgentChatPageSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { useFormatter, useTranslations } from "next-intl"
-import { useMemo, useState } from "react"
 import { useAgentChatActions } from "./useAgentChatActions"
 import { readError } from "@/hooks/workspaceread"
 import { slotOfReads } from "@/hooks/slot"
@@ -34,23 +33,6 @@ export interface AgentChatRoute {
 
 /** The conversation each channel has open. */
 export type Selection = Record<ChatTab, string | null>
-
-/** The chat tab a stored kind belongs to. */
-
-/** The author of one message as the thread draws it. */
-
-/** The tab the page opens on: the customer channel needs an agent that has one. */
-const routeTabOf = (hasCustomerChannel: boolean, route: AgentChatRoute): ChatTab =>
-    hasCustomerChannel ? route.initialTab : "test"
-
-/** The selection the route starts with. */
-const routeSelectionOf = (hasCustomerChannel: boolean, route: AgentChatRoute): Selection => {
-    const tab = routeTabOf(hasCustomerChannel, route)
-    return {
-        test: tab === "test" ? route.initialConversationId : null,
-        customer: tab === "customer" ? route.initialConversationId : null,
-    }
-}
 
 /** The view `useAgentChat` returns. */
 export interface AgentChatView {
@@ -130,33 +112,10 @@ export interface AgentChatView {
 /** Conversation selection, SWR history and validated chat mutations. */
 export const useAgentChat = (route: AgentChatRoute): AgentChatView => {
     const t = useTranslations("agentChat")
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const page = useQueryAgentChatPageSwr(activeWorkspaceId, route.agentId, route.welcome)
-    const loaded =
-        page.data?.workspaceId === activeWorkspaceId && page.data?.id === route.agentId ? page.data : undefined
-    const agent = useMemo(
-        (): AgentChatAgent | undefined =>
-            loaded === undefined
-                ? undefined
-                : {
-                      agentId: loaded.id,
-                      workspaceId: loaded.workspaceId,
-                      hasCustomerChannel: loaded.hasCustomerChannel,
-                  },
-        [loaded],
-    )
+    const { page, loaded, agent, tab, selected, setTab, setSelected } = useAgentChatRoute(route)
     const format = useFormatter()
     const router = navigation.useRouter()
     const hasCustomerChannel = agent?.hasCustomerChannel === true
-    const routeKey = `${agent?.workspaceId}:${agent?.agentId}:${hasCustomerChannel}:${route.initialTab}:${route.initialConversationId}`
-    const [seenRoute, setSeenRoute] = useState(routeKey)
-    const [tab, setTab] = useState(routeTabOf(hasCustomerChannel, route))
-    const [selected, setSelected] = useState(routeSelectionOf(hasCustomerChannel, route))
-    if (seenRoute !== routeKey) {
-        setSeenRoute(routeKey)
-        setTab(routeTabOf(hasCustomerChannel, route))
-        setSelected(routeSelectionOf(hasCustomerChannel, route))
-    }
     const history = useQueryAgentChatConversationsSwr(agent?.workspaceId, agent?.agentId)
     const selectedId = selected[tab]
     const messages = useQueryAgentChatMessagesSwr(agent?.workspaceId, selectedId)

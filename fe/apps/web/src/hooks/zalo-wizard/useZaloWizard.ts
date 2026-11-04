@@ -10,7 +10,8 @@ import type { SlotRead } from "@/hooks/slot"
 import type { AgentOption, FirstEvent, DataSlot, WizardNote, WizardResume, ZaloWizardConnection } from "@/modules/types"
 import { canSaveOaSecret, ZALO_STEPS, zaloFailureOf, zaloStartStepOf, type ZaloFields } from "./zalo-wizard.shared"
 
-import { useZaloCommands, type ZaloCommands } from "./useZaloCommands"
+import { useZaloCommands } from "./useZaloCommands"
+import { createZaloWizardActions } from "./zaloWizardActions.shared"
 import type { SetStateAction, Dispatch } from "react"
 
 /** What the Zalo wizard needs from its drawer. */
@@ -126,76 +127,4 @@ export const useZaloWizard = (input: ZaloWizardInput): UseZaloWizardResult => {
             agents: setAgentIds,
         },
     }
-}
-
-type ZaloWizardActionsInput = {
-    readonly conn: ZaloWizardConnection | null
-    readonly fields: ZaloFields
-    readonly startTransition: import("react").TransitionStartFunction
-    readonly commands: ZaloCommands
-    readonly setConn: import("react").Dispatch<import("react").SetStateAction<ZaloWizardConnection | null>>
-    readonly setFields: import("react").Dispatch<import("react").SetStateAction<ZaloFields>>
-    readonly setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>
-    readonly setIndex: import("react").Dispatch<import("react").SetStateAction<number>>
-    readonly input: ZaloWizardInput
-    readonly setAgentsOf: ReturnType<typeof useSetConnectionAgents>
-    readonly agentIds: ReadonlyArray<string>
-}
-
-const createZaloWizardActions = ({
-    conn,
-    fields,
-    startTransition,
-    commands,
-    setConn,
-    setFields,
-    setNote,
-    setIndex,
-    input,
-    setAgentsOf,
-    agentIds,
-}: ZaloWizardActionsInput) => {
-    const saveSecret = (): void => {
-        if (conn === null) return
-        if (conn.oaSecretSaved && fields.oaSecret.trim() === "") return go(2)
-        startTransition(async () => {
-            const answer = await commands.saveOaSecret(conn.id, fields.oaSecret)
-            if (answer.kind !== "ok") return fail(answer.message)
-            setConn(answer.value)
-            setFields((current) => ({ ...current, oaSecret: "" }))
-            go(2)
-        })
-    }
-
-    const authorize = (): void => {
-        if (conn === null) return
-        startTransition(async () => {
-            const answer = await commands.authorize(conn.id)
-            if (answer.kind !== "ok") return fail(answer.message)
-            window.location.assign(answer.value)
-        })
-    }
-    const go = (to: number): void => {
-        setNote(null)
-        setIndex(to)
-    }
-    const fail = (message: string) => setNote({ tone: "negative", text: message })
-    const create = (): void => {
-        if (conn !== null) return go(1)
-        startTransition(async () => {
-            const answer = await commands.start(fields)
-            if (answer.kind !== "ok") return fail(answer.message)
-            setConn(answer.value)
-            go(1)
-        })
-    }
-    const finish = (): void => {
-        if (conn === null) return input.onClose(false)
-        startTransition(async () => {
-            const answer = await setAgentsOf(conn.id, agentIds)
-            if (answer.kind !== "ok") return fail(answer.message)
-            input.onClose(true)
-        })
-    }
-    return { saveSecret, authorize, go, fail, create, finish }
 }

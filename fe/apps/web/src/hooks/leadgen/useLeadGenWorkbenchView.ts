@@ -8,7 +8,7 @@ import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { LEADGEN_PENDING_METRICS, leadGenFiguresOf } from "./leadgen.shared"
 import { useLeadGenComments } from "./useLeadGenComments"
 import { useLeadGenWorkbench } from "./useLeadGenWorkbench"
-import type { BadgeTone, Figure } from "@starci/grammar/common"
+import type { Figure } from "@starci/grammar/common"
 
 type LeadGenTab = (typeof LEADGEN_TABS)[number]
 
@@ -19,174 +19,23 @@ interface LeadGenWorkbenchViewInput {
     readonly tabs: Readonly<Record<LeadGenTab, string>>
 }
 
+type DashboardFrame = ReturnType<typeof useAgentDashboardFrame>
+type CommentsHook = ReturnType<typeof useLeadGenComments>
+
+/** The four tab panels, each as its lower view draws it. */
+interface LeadGenPanel {
+    leads: ReturnType<typeof leadsViewOf>
+    sources: ReturnType<typeof sourcesViewOf>
+    handoffs: ReturnType<typeof handoffsViewOf>
+    comments: CommentsHook["props"]
+}
+
 /** The view `useLeadGenWorkbenchView` returns. */
 export interface LeadGenWorkbenchViewShape {
     shape: "sources" | "explanation" | "leads" | "comments" | "handoffs"
     props: {
-        why: {
-            view: null
-            labels: {
-                pathLabel: string
-                factsLabel: string
-                sourcesLabel: string
-                approverLabel: string
-                timeLabel: string
-                openOnMap: string
-                missingTitle: string
-                missingBody: string
-            }
-            closeLabel: string
-            openLabel: string
-            paneLabel: string
-            listLabel: string
-            workItemId: string | null
-        }
-        regions: {
-            waiting: {
-                label: string
-                slot: DataSlot<{
-                    count: string | null
-                    rows: {
-                        id: string
-                        title: string
-                        description: string
-                        href: string
-                    }[]
-                    openLabel: string
-                    more: string | null
-                    emptyMessage: string
-                    emptyDescription: string
-                }>
-                placeholder: {
-                    count: string
-                    rows: {
-                        id: string
-                        title: string
-                        description: string
-                        href: string
-                    }[]
-                    openLabel: string
-                    more: string | null
-                    emptyMessage: string
-                    emptyDescription: string
-                }
-                labels: SlotLabels
-            }
-            done: {
-                label: string
-                slot: DataSlot<{
-                    count: string
-                    logLabel: string
-                    logHref: string
-                    rows: {
-                        id: string
-                        title: string
-                        description: string
-                        href: string
-                    }[]
-                    emptyMessage: string
-                    emptyDescription: string
-                }>
-                placeholder: {
-                    rows: {
-                        id: string
-                        title: string
-                        description: string
-                        href: string
-                    }[]
-                    count: string
-                    logLabel: string
-                    logHref: string
-                    emptyMessage: string
-                    emptyDescription: string
-                }
-                labels: SlotLabels
-            }
-            connections: {
-                label: string
-                slot: DataSlot<{
-                    manageLabel: string
-                    manageHref: "/connections"
-                    rows: {
-                        id: string
-                        name: string
-                        description: string
-                        statusLabel: string
-                        statusTone: BadgeTone
-                        accessLabel: string
-                    }[]
-                    emptyMessage: string
-                    emptyDescription: string
-                }>
-                placeholder: {
-                    rows: {
-                        name: string
-                        statusLabel: string
-                        statusTone: "neutral"
-                        accessLabel: string
-                        id: string
-                        title: string
-                        description: string
-                        href: string
-                    }[]
-                    manageLabel: string
-                    manageHref: "/connections"
-                    emptyMessage: string
-                    emptyDescription: string
-                }
-                labels: SlotLabels
-            }
-            knowledge: {
-                label: string
-                slot: DataSlot<{
-                    openLabel: string
-                    openHref: string
-                    footer: string
-                    publicTitle: string
-                    publicDescription: string
-                    internalTitle: string
-                    internalDescription: string
-                    gaps: {
-                        label: string
-                        count: string | null
-                        openLabel: string
-                        openHref: string
-                        rows: {
-                            id: string
-                            title: string
-                            description: string
-                            asked: string
-                        }[]
-                        emptyMessage: string
-                        emptyDescription: string
-                    } | null
-                }>
-                placeholder: {
-                    openLabel: string
-                    openHref: string
-                    footer: string
-                    publicTitle: string
-                    publicDescription: string
-                    internalTitle: string
-                    internalDescription: string
-                    gaps: {
-                        label: string
-                        count: string | null
-                        openLabel: string
-                        openHref: string
-                        rows: {
-                            id: string
-                            title: string
-                            description: string
-                            asked: string
-                        }[]
-                        emptyMessage: string
-                        emptyDescription: string
-                    } | null
-                }
-                labels: SlotLabels
-            }
-        }
+        why: DashboardFrame["why"]
+        regions: DashboardFrame["regions"]
         tabsLabel: string
         selectedTab: "sources" | "leads" | "comments" | "handoffs"
         tabs: {
@@ -200,172 +49,8 @@ export interface LeadGenWorkbenchViewShape {
             labels: SlotLabels
         }
         panel: {
-            slot: DataSlot<{
-                leads: {
-                    label: string
-                    emptyTitle: string
-                    emptyBody: string
-                    hiddenText: string | null
-                    rows: {
-                        id: string
-                        title: string
-                        href: string
-                        description: string
-                        badges: {
-                            label: string
-                            tone: BadgeTone
-                        }[]
-                    }[]
-                }
-                sources: {
-                    label: string
-                    emptyTitle: string
-                    emptyBody: string
-                    hiddenText: null
-                    rows: {
-                        id: string
-                        title: string
-                        href: null
-                        description: string
-                        badges: {
-                            label: string
-                            tone: "neutral"
-                        }[]
-                    }[]
-                }
-                handoffs: {
-                    label: string
-                    emptyTitle: string
-                    emptyBody: string
-                    hiddenText: null
-                    rows: {
-                        id: string
-                        title: string
-                        href: string
-                        description: string
-                        badges: (
-                            | {
-                                  label: string
-                                  tone: BadgeTone
-                                  isDot?: never
-                              }
-                            | {
-                                  label: string
-                                  tone: BadgeTone
-                                  isDot: boolean
-                              }
-                        )[]
-                    }[]
-                }
-                comments: {
-                    label: string
-                    emptyTitle: string
-                    emptyBody: string
-                    draftLabel: string
-                    noDraft: string
-                    editLabel: string
-                    approveLabel: string
-                    cancelLabel: string
-                    saveApproveLabel: string
-                    retryLabel: string
-                    busyId: string | null
-                    isApproving: boolean
-                    rows: {
-                        id: string
-                        title: string
-                        description: string
-                        sourceLabel: string
-                        comment: string
-                        draft: string
-                        isEditing: boolean
-                        draftValue: string
-                        error: string | null
-                    }[]
-                }
-            }>
-            placeholder: {
-                leads: {
-                    label: string
-                    emptyTitle: string
-                    emptyBody: string
-                    hiddenText: string | null
-                    rows: {
-                        id: string
-                        title: string
-                        href: string
-                        description: string
-                        badges: {
-                            label: string
-                            tone: BadgeTone
-                        }[]
-                    }[]
-                }
-                sources: {
-                    label: string
-                    emptyTitle: string
-                    emptyBody: string
-                    hiddenText: null
-                    rows: {
-                        id: string
-                        title: string
-                        href: null
-                        description: string
-                        badges: {
-                            label: string
-                            tone: "neutral"
-                        }[]
-                    }[]
-                }
-                handoffs: {
-                    label: string
-                    emptyTitle: string
-                    emptyBody: string
-                    hiddenText: null
-                    rows: {
-                        id: string
-                        title: string
-                        href: string
-                        description: string
-                        badges: (
-                            | {
-                                  label: string
-                                  tone: BadgeTone
-                                  isDot?: never
-                              }
-                            | {
-                                  label: string
-                                  tone: BadgeTone
-                                  isDot: boolean
-                              }
-                        )[]
-                    }[]
-                }
-                comments: {
-                    label: string
-                    emptyTitle: string
-                    emptyBody: string
-                    draftLabel: string
-                    noDraft: string
-                    editLabel: string
-                    approveLabel: string
-                    cancelLabel: string
-                    saveApproveLabel: string
-                    retryLabel: string
-                    busyId: string | null
-                    isApproving: boolean
-                    rows: {
-                        id: string
-                        title: string
-                        description: string
-                        sourceLabel: string
-                        comment: string
-                        draft: string
-                        isEditing: boolean
-                        draftValue: string
-                        error: string | null
-                    }[]
-                }
-            }
+            slot: DataSlot<LeadGenPanel>
+            placeholder: LeadGenPanel
             labels: SlotLabels
         }
     }
@@ -374,13 +59,7 @@ export interface LeadGenWorkbenchViewShape {
         closeWhy: () => void
         retryDashboard: () => void
         retry: () => void
-        comments: {
-            edit: (id: string) => void
-            cancel: () => void
-            draft: (_id: string, value: string) => void
-            approve: (id: string, edited: boolean) => void
-            retry: () => void
-        }
+        comments: CommentsHook["on"]
     }
 }
 

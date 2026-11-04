@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
+import { mock } from "@starci/jest-preset"
 import { MAILER, MailError as PackageMailError } from "@starci/mail"
 import type { Mailer, MailOptions as MailerOptions } from "@starci/mail"
 import { MailErrorCode } from "./errors/mail.error"
 import type { MailDelivery, SmtpConfig } from "./mail.contracts"
 import { MAILER_FACTORY, MAIL_SETTINGS } from "./mail.decorators"
-import type { ClosableMailer } from "./mail.decorators"
+import type { ClosableMailer, MailerFactory } from "./mail.decorators"
 import type { MailOptions } from "./mail.options"
 import { MailRelayService } from "./mail-relay.service"
 
@@ -43,6 +43,8 @@ const delivery: MailDelivery = { to: "a@b.vn", message: { subject: "Hi", html: "
 const sentOf = { messageId: "<m1>", accepted: ["a@b.vn"] }
 
 const build = async (settings: MailOptions, answer: Error | null = null) => {
+    const options = mock<MailOptions>(settings)
+    Reflect.set(options, "helloName", settings.helloName)
     const account = mock<ClosableMailer>({
         send: jest.fn(() => (answer === null ? Promise.resolve(sentOf) : Promise.reject(answer))),
         onModuleDestroy: jest.fn(),
@@ -50,11 +52,11 @@ const build = async (settings: MailOptions, answer: Error | null = null) => {
     const platform = mock<Mailer>({
         send: jest.fn(() => (answer === null ? Promise.resolve(sentOf) : Promise.reject(answer))),
     })
-    const factory = jest.fn((_options: MailerOptions) => account)
+    const factory = mock<MailerFactory>({ create: jest.fn((_options: MailerOptions) => account) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             MailRelayService,
-            { provide: MAIL_SETTINGS, useValue: builder<MailOptions>(settings)() },
+            { provide: MAIL_SETTINGS, useValue: options },
             { provide: MAILER_FACTORY, useValue: factory },
             { provide: MAILER, useValue: platform },
         ],
@@ -95,7 +97,7 @@ describe("MailRelayService / sendThroughSmtp", () => {
 
         await expect(relay.sendThroughSmtp(config, delivery)).resolves.toEqual(sentOf)
 
-        expect(factory).toHaveBeenCalledWith({
+        expect(factory.create).toHaveBeenCalledWith({
             host: "smtp.example.com",
             port: 587,
             security: "starttls",
@@ -114,7 +116,7 @@ describe("MailRelayService / sendThroughSmtp", () => {
 
         await relay.sendThroughSmtp({ ...config, security: "tls", user: "", pass: "", replyTo: "" }, delivery)
 
-        expect(factory).toHaveBeenCalledWith({
+        expect(factory.create).toHaveBeenCalledWith({
             host: "smtp.example.com",
             port: 587,
             security: "tls",
@@ -128,7 +130,7 @@ describe("MailRelayService / sendThroughSmtp", () => {
 
         await relay.sendThroughSmtp({ ...config, user: "", pass: "", replyTo: undefined }, delivery)
 
-        expect(factory).toHaveBeenCalledWith(
+        expect(factory.create).toHaveBeenCalledWith(
             expect.objectContaining({ security: "none", allowSelfSigned: true, publicTargetOnly: false }),
         )
     })
@@ -137,7 +139,9 @@ describe("MailRelayService / sendThroughSmtp", () => {
 
         await relay.sendThroughSmtp(config, delivery)
 
-        expect(factory).toHaveBeenCalledWith(expect.objectContaining({ security: "starttls", allowSelfSigned: true }))
+        expect(factory.create).toHaveBeenCalledWith(
+            expect.objectContaining({ security: "starttls", allowSelfSigned: true }),
+        )
     })
     it("answers a failure as the integration error and closes the connection all the same", async () => {
         const failure = new PackageMailError("MAIL_AUTH", { detail: "535 bad login" })

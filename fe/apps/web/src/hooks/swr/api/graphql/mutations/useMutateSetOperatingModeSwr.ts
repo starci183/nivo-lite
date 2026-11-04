@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSetOperatingMode } from "@/modules/api/graphql/mutations/mutation-set-operating-mode"
-import type { MutateSetOperatingModeRequest } from "@/modules/api/graphql/mutations/mutation-set-operating-mode"
+import {
+    mutateSetOperatingMode,
+    type MutateSetOperatingModeRequest,
+} from "@/modules/api/graphql/mutations/mutation-set-operating-mode"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetOperatingModeMutation } from "@/modules/api"
 
 /** What the SetOperatingMode mutation is triggered with. */
 interface SetOperatingModeArg {
@@ -16,7 +18,7 @@ export const MUTATE_SET_OPERATING_MODE_SWR_KEY = "MUTATE_SET_OPERATING_MODE_SWR"
 
 /** SWR mutation for {@link mutateSetOperatingMode}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateSetOperatingModeSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetOperatingMode>["setOperatingMode"],
+    SetOperatingModeMutation["setOperatingMode"],
     Error,
     typeof MUTATE_SET_OPERATING_MODE_SWR_KEY,
     SetOperatingModeArg["arg"]

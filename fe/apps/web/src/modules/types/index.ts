@@ -314,7 +314,6 @@ export type {
     ProgramSwitchField,
     ProgramTextField,
     ProgramValues,
-    TierErrorView,
     TierTextField,
     TierValues,
 } from "@nivo-lite/module-loyalty/workbench"
@@ -440,9 +439,6 @@ export type { InventoryNewPoEditorData } from "./inventory-editors"
 export type { InventoryPoEditorData } from "./inventory-editors"
 export type { InventorySupplierEditorData } from "./inventory-editors"
 export type { InventoryRecipeEditorData } from "./inventory-editors"
-export type { LoyaltyViews } from "@nivo-lite/module-loyalty/workbench"
-export type { LoyaltyActions } from "@nivo-lite/module-loyalty/workbench"
-export type { LoyaltyWorkbenchData, LoyaltyWorkbenchOn } from "@nivo-lite/module-loyalty/workbench"
 export type { WorkbenchFigureData } from "./workbench-dashboard"
 export type { WorkbenchWaitingRegionView, WorkbenchDoneRegionView } from "./workbench-dashboard"
 export type { WorkbenchConnectionsRegionView, WorkbenchKnowledgeRegionView } from "./workbench-dashboard"

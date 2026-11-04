@@ -10,12 +10,12 @@ import { toTemplateReviewQueueType } from "./template-review-queue.mapper"
 @Resolver()
 /** GraphQL door of templateReviewQueue. */
 export class TemplateReviewQueueResolver {
-    constructor(@InjectQueryBus() private readonly bus: QueryBus) {}
+    constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Lists the submitted listings waiting for a platform reviewer. */
     @Query(() => [ListingType], { name: "templateReviewQueue" })
     async templateReviewQueue(@CurrentPrincipal() principal: Principal): Promise<Array<ListingType>> {
-        const result = await this.bus.execute(new TemplateReviewQueueQuery({ request: {}, principal }))
+        const result = await this.queryBus.execute(new TemplateReviewQueueQuery({ request: {}, principal }))
         return toTemplateReviewQueueType(result)
     }
 }

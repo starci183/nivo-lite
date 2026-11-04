@@ -17,8 +17,6 @@ export class ReviewTemplateListingHandler extends ICQRSHandler<ReviewTemplateLis
     }
 
     protected override process(command: ReviewTemplateListingCommand): Promise<ListingView> {
-        const pr = command.params.principal
-        const r = command.params.request
-        return this.svc.review(pr, r)
+        return this.svc.review(command.params.principal, command.params.request)
     }
 }

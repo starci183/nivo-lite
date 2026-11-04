@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Badge, Button, Cluster, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Stack, Text } from "@starci/grammar/common"
 import type { OfficeExceptionView, OfficeThreadProps } from "@/modules/types"
 import { QUOTE_CLASS_NAME } from "./classNames"
 
@@ -29,21 +29,19 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
             </Cluster>
             {renderOfficeExceptionCardProposal(item, copy)}
             {item.creditLine === null ? null : (
-                <SurfaceCard ariaLabel={copy.reconcileCredit}>
-                    <div className={QUOTE_CLASS_NAME}>
-                        <Stack gap="identity">
-                            <Text size="xs" tone="muted" isStrong>
-                                {copy.reconcileCredit}
-                            </Text>
-                            <Text as="p" size="sm">
-                                {item.creditLine}
-                            </Text>
-                            <Text as="p" size="sm" tone="muted">
-                                {copy.reconcileWarning}
-                            </Text>
-                        </Stack>
-                    </div>
-                </SurfaceCard>
+                <div role="group" aria-label={copy.reconcileCredit} className={QUOTE_CLASS_NAME}>
+                    <Stack gap="identity">
+                        <Text size="xs" tone="muted" isStrong>
+                            {copy.reconcileCredit}
+                        </Text>
+                        <Text as="p" size="sm">
+                            {item.creditLine}
+                        </Text>
+                        <Text as="p" size="sm" tone="muted">
+                            {copy.reconcileWarning}
+                        </Text>
+                    </Stack>
+                </div>
             )}
             {props.form}
             {item.heldLine === null ? null : (
@@ -111,19 +109,17 @@ const renderOfficeExceptionCardProposal = (
     const isReply = item.errorText === null && item.draft !== null
     const label = item.errorText === null ? copy.exceptionProposes : copy.exceptionErrorLabel
     return (
-        <SurfaceCard ariaLabel={label}>
-            <div className={QUOTE_CLASS_NAME}>
-                <Stack gap="identity">
-                    {isReply ? (
-                        <>
-                            <ProposalPart label={copy.exceptionAsked} body={item.summary} isMuted />
-                            <ProposalPart label={copy.exceptionWillReply} body={item.draft ?? ""} isMuted={false} />
-                        </>
-                    ) : (
-                        <ProposalPart label={label} body={item.errorText ?? item.summary} isMuted={false} />
-                    )}
-                </Stack>
-            </div>
-        </SurfaceCard>
+        <div role="group" aria-label={label} className={QUOTE_CLASS_NAME}>
+            <Stack gap="identity">
+                {isReply ? (
+                    <>
+                        <ProposalPart label={copy.exceptionAsked} body={item.summary} isMuted />
+                        <ProposalPart label={copy.exceptionWillReply} body={item.draft ?? ""} isMuted={false} />
+                    </>
+                ) : (
+                    <ProposalPart label={label} body={item.errorText ?? item.summary} isMuted={false} />
+                )}
+            </Stack>
+        </div>
     )
 }

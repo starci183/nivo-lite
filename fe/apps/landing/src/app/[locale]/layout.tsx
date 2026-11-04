@@ -1,7 +1,6 @@
-import { createReadLocaleSegment } from "@starci/next-i18n/layout"
+import { readLocaleSegment } from "@nivo-lite/i18n"
 import type { ReactElement, ReactNode } from "react"
 import { SiteLayout, siteLayoutMetadata } from "@/features/layouts/SiteLayout"
-import { i18n } from "@/modules/i18n"
 import { LandingProviders } from "./providers"
 import "../globals.css"
 import "@/modules/brand"
@@ -22,7 +21,7 @@ export const generateMetadata = async (props: LayoutProps): Promise<Metadata> =>
 
 /** The locale segment's document, providers and app chrome. */
 const Layout = async (props: LayoutProps): Promise<ReactElement> => {
-    const { locale, messages, timeZone } = await createReadLocaleSegment(i18n)(props.params)
+    const { locale, messages, timeZone } = await readLocaleSegment(props.params)
     return (
         <SiteLayout
             locale={locale}

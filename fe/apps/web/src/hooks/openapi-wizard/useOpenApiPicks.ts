@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { matchesOpenApiOp, newOpenApiPull, OPEN_API_SHOWN, openApiEntityOf } from "./openapi-wizard.shared"
+import { matchesOpenApiOp, newOpenApiPull, OPEN_API_SHOWN, openApiEntityOf } from "./openapi-wizard.ops"
 import type { OpenApiOp, OpenApiPullDef, OpenApiPullField } from "./openapi-wizard.shared"
 import type { SetStateAction, Dispatch } from "react"
 

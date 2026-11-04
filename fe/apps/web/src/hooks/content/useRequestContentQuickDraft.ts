@@ -7,12 +7,7 @@ import { useContentAiJob } from "./useContentAiJob"
 
 /** The view `useRequestContentQuickDraft` returns. */
 export interface RequestContentQuickDraftView {
-    request: (
-        input: {} & {
-            channels: string[]
-            topic: string
-        },
-    ) => Promise<
+    request: (input: { channels: string[]; topic: string }) => Promise<
         | {
               id: string
               itemId: string | null

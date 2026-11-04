@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveAgentTrigger } from "@/modules/api/graphql/mutations/mutation-save-agent-trigger"
-import type { MutateSaveAgentTriggerRequest } from "@/modules/api/graphql/mutations/mutation-save-agent-trigger"
+import {
+    mutateSaveAgentTrigger,
+    type MutateSaveAgentTriggerRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-agent-trigger"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveAgentTriggerMutation } from "@/modules/api"
 
 /** What the SaveAgentTrigger mutation is triggered with. */
 interface SaveAgentTriggerArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_AGENT_TRIGGER_SWR_KEY = "MUTATE_SAVE_AGENT_TRIGGER_SWR"
 
 /** SWR mutation for {@link mutateSaveAgentTrigger}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateSaveAgentTriggerSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveAgentTrigger>["saveAgentTrigger"],
+    SaveAgentTriggerMutation["saveAgentTrigger"],
     Error,
     typeof MUTATE_SAVE_AGENT_TRIGGER_SWR_KEY,
     SaveAgentTriggerArg["arg"]

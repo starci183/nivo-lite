@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSaveAgentGraphDraft } from "@/modules/api/graphql/mutations/mutation-save-agent-graph-draft"
-import type { mutateSaveAgentGraphDraft as MutateSaveAgentGraphDraftOperation } from "@/modules/api/graphql/mutations/mutation-save-agent-graph-draft"
+import {
+    mutateSaveAgentGraphDraft,
+    type mutateSaveAgentGraphDraft as MutateSaveAgentGraphDraftOperation,
+} from "@/modules/api/graphql/mutations/mutation-save-agent-graph-draft"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveAgentGraphDraftMutation } from "@/modules/api"
 
 /** The SWR key of the saveAgentGraphDraft mutation. */
 export const MUTATE_SAVE_AGENT_GRAPH_DRAFT_SWR_KEY = "MUTATE_SAVE_AGENT_GRAPH_DRAFT_SWR"
 
 /** SWR mutation for {@link mutateSaveAgentGraphDraft}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSaveAgentGraphDraftSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveAgentGraphDraft>["saveAgentGraphDraft"],
+    SaveAgentGraphDraftMutation["saveAgentGraphDraft"],
     Error,
     typeof MUTATE_SAVE_AGENT_GRAPH_DRAFT_SWR_KEY,
     TriggerArg["arg"]

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDraftPublicDocument } from "@/modules/api/graphql/mutations/mutation-draft-public-document"
-import type { MutateDraftPublicDocumentRequest } from "@/modules/api/graphql/mutations/mutation-draft-public-document"
+import {
+    mutateDraftPublicDocument,
+    type MutateDraftPublicDocumentRequest,
+} from "@/modules/api/graphql/mutations/mutation-draft-public-document"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DraftPublicDocumentMutation } from "@/modules/api"
 
 /** What the DraftPublicDocument mutation is triggered with. */
 interface DraftPublicDocumentArg {
@@ -16,7 +18,7 @@ export const MUTATE_DRAFT_PUBLIC_DOCUMENT_SWR_KEY = "MUTATE_DRAFT_PUBLIC_DOCUMEN
 
 /** SWR mutation for {@link mutateDraftPublicDocument}: NIVO drafts a public document from internal documents, with nobody asking it in a customer chat. `trigger(input)` rejects with the back end failure. */
 export const useMutateDraftPublicDocumentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDraftPublicDocument>["draftPublicDocument"],
+    DraftPublicDocumentMutation["draftPublicDocument"],
     Error,
     typeof MUTATE_DRAFT_PUBLIC_DOCUMENT_SWR_KEY,
     DraftPublicDocumentArg["arg"]

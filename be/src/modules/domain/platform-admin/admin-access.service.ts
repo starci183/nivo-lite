@@ -7,6 +7,14 @@ import { InjectPlatformAdminOptions } from "./platform-admin.decorators"
 import type { PlatformAdminOptions } from "./platform-admin.options"
 import { isPlatformAdmin } from "./platform-admin.policy"
 
+/** The workspace an action touched, or null when it touched none. */
+export type OptionalWorkspaceId = string | null
+
+/** What the audit trail keeps beside an action, by key. */
+export interface AuditData {
+    readonly [key: string]: unknown
+}
+
 @Injectable()
 /** Who may use the console, and the audit trail of everything they view or change. */
 export class AdminAccessService {
@@ -24,12 +32,7 @@ export class AdminAccessService {
     }
 
     /** Writes what the admin viewed or changed; the trail never fails the request. */
-    audit(
-        admin: AdminIdentity,
-        action: string,
-        workspaceId: string | null,
-        data: Readonly<Record<string, unknown>> = {},
-    ): Promise<void> {
+    audit(admin: AdminIdentity, action: string, workspaceId: OptionalWorkspaceId, data: AuditData = {}): Promise<void> {
         return this.audits.record({ actorId: admin.userId, actorEmail: admin.email, action, workspaceId, data })
     }
 }

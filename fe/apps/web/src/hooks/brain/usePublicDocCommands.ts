@@ -33,7 +33,7 @@ export interface PublicDocCommandsView {
     ) => Promise<PublicDocument | undefined>
     /** The owner writes the document by hand. */
     write: (
-        request: {} & {
+        request: {
             body: string
             title: string
         },

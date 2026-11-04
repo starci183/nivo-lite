@@ -51,18 +51,25 @@ export const returnedFacts = (raw: unknown): Array<BrainFactEntity> =>
 export const scopeOf = (installationId: InstallationScope): string | FindOperator<string> =>
     installationId === null ? IsNull() : installationId
 
+/** The condition that selects the facts of one key. */
+export interface FactKeyCondition {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The subject. */
+    readonly subjectKey: string
+    /** The attribute. */
+    readonly attribute: string
+    /** The installation, or the workspace-wide facts. */
+    readonly installationId: string | FindOperator<string>
+}
+
 /** The facts of one key waiting to be decided, the part of a condition every decision shares. */
 export const factKeyOf = (
     workspaceId: string,
     subjectKey: string,
     attribute: string,
     installationId: InstallationScope,
-): {
-    workspaceId: string
-    subjectKey: string
-    attribute: string
-    installationId: string | FindOperator<string>
-} => ({
+): FactKeyCondition => ({
     workspaceId,
     subjectKey,
     attribute,

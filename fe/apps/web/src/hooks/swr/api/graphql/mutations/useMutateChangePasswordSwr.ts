@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateChangePassword } from "@/modules/api/graphql/mutations/mutation-change-password"
-import type { mutateChangePassword as MutateChangePasswordOperation } from "@/modules/api/graphql/mutations/mutation-change-password"
+import {
+    mutateChangePassword,
+    type mutateChangePassword as MutateChangePasswordOperation,
+} from "@/modules/api/graphql/mutations/mutation-change-password"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ChangePasswordMutation } from "@/modules/api"
 
 /** The SWR key of the changePassword mutation. */
 export const MUTATE_CHANGE_PASSWORD_SWR_KEY = "MUTATE_CHANGE_PASSWORD_SWR"
 
 /** SWR mutation for {@link mutateChangePassword}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateChangePasswordSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateChangePassword>["changePassword"],
+    ChangePasswordMutation["changePassword"],
     Error,
     typeof MUTATE_CHANGE_PASSWORD_SWR_KEY,
     TriggerArg["arg"]

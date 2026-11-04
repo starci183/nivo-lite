@@ -2,13 +2,17 @@
 
 import useSWRInfinite from "swr/infinite"
 import type { SWRInfiniteKeyLoader } from "swr/infinite"
-import { connectionPageKey, connectionPageView, connectionReadParameters } from "@/hooks/connectionPages"
-import type { ConnectionPage, ConnectionPageKey } from "@/hooks/connectionPages"
+import {
+    connectionPageKey,
+    connectionPageView,
+    connectionReadParameters,
+    type ConnectionPage,
+    type ConnectionPageKey,
+} from "@/hooks/connectionPages"
 import { noData } from "@/hooks/workspaceread"
 import { useAppSelector } from "@/redux"
 import { queryWorkThreads } from "@/modules/api/graphql/queries/query-work-threads"
-import { GraphQLHeadersKey } from "@/modules/api"
-import type { WorkThreadsQuery } from "@/modules/api"
+import { GraphQLHeadersKey, type WorkThreadsQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryWorkThreadsSwr}. */
 export const QUERY_WORK_THREADS_SWR_KEY = "QUERY_WORK_THREADS_SWR"

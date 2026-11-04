@@ -10,12 +10,12 @@ import { toMyTemplateListingsType } from "./my-template-listings.mapper"
 @Resolver()
 /** GraphQL door of myTemplateListings. */
 export class MyTemplateListingsResolver {
-    constructor(@InjectQueryBus() private readonly bus: QueryBus) {}
+    constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Lists the listings of the templates of the caller with their review state. */
     @Query(() => [ListingType], { name: "myTemplateListings" })
     async myTemplateListings(@CurrentPrincipal() principal: Principal): Promise<Array<ListingType>> {
-        const result = await this.bus.execute(new MyTemplateListingsQuery({ request: {}, principal }))
+        const result = await this.queryBus.execute(new MyTemplateListingsQuery({ request: {}, principal }))
         return toMyTemplateListingsType(result)
     }
 }

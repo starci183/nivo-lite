@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
-import { isManager, useMember } from "@/hooks/member"
+import { useMemo } from "react"
+import { useMember } from "@/hooks/member"
 import { useSubscribeOfficeActivitySwr } from "@/hooks/swr"
 import {
     useOfficeBoard,
@@ -12,24 +12,10 @@ import {
     useOfficeThread,
     useOfficeWords,
 } from "@/hooks/office"
-import type { OfficeBoard } from "@/hooks/office"
-import {
-    NIVO_AVATAR,
-    acceptsCommands,
-    mentionsOf,
-    roomAgentsOf,
-    roomApprovalsOf,
-    roomOf,
-    roomWorksOf,
-    staffHandlesOf,
-    waitingOf,
-    withReceipt,
-} from "@/modules/office"
-import type { OfficeMessage, OfficeRoom, OfficeWaiting } from "@/modules/office"
-import { useOfficePanels } from "./useOfficePanels"
-import { officeReadSlots } from "./officeMessenger.shared"
-import { useOfficeThreadView } from "./useOfficeThreadView"
-
+import { roomAgentsOf, roomOf, staffHandlesOf, withReceipt } from "@/modules/office"
+import type { ChatFileAddress, ChatFileProblem, UploadedChatFile } from "@/hooks/chatFile"
+import type { OfficeRead, ReadingAgent, SendPlan } from "@/hooks/office"
+import type { OfficeMessage, OfficeWaiting } from "@/modules/office"
 import type {
     OfficeThreadItem,
     DataSlot,
@@ -42,89 +28,21 @@ import type {
     OfficeAvatarView,
     OfficeText,
 } from "@/modules/types"
-import type { ChatFileProblem } from "../chatFile/chatFile.shared"
-import type { OfficeRead } from "../office/office.shared"
-import type { SendPlan, ReadingAgent } from "@/hooks/office/useOfficeSend"
-import type { ChatFileAddress, UploadedChatFile } from "@/hooks/chatFile/useChatFile"
+import { useOfficeThreadView } from "./useOfficeThreadView"
+import { officeReadSlots, readingOf, scopedBoard } from "./officeMessenger.shared"
+import { useOfficePanelBundle } from "./useOfficePanelBundle"
+import { useOfficeSendLine } from "./useOfficeSendLine"
 
-/** Where the header chip jumps: the oldest thing that waits for a person's decision; none when nothing waits. */
-const firstJumpOf = (waiting: ReadonlyArray<OfficeWaiting>): OfficeWaiting | null => waiting[0] ?? null
-
-/** The board scoped to a room: the approvals of its agents and the exceptions of their departments. */
-const scopedBoard = (full: OfficeBoard, current: OfficeRoom | null): OfficeBoard => ({
-    ...full,
-    pending: roomApprovalsOf(current, full.pending),
-    decided: roomApprovalsOf(current, full.decided),
-    exceptions: roomWorksOf(current, full.exceptions, full.agents),
-    decidedCards: roomWorksOf(current, full.decidedCards, full.agents),
-})
-
-/** The lines the sender needs about a body: the agents it calls and, for an owner or manager, the one command the server reads. */
-const useSendLine = (
-    agents: OfficeBoard["agents"],
-    sender: ReturnType<typeof useOfficeSend>,
-    roomKey: string | null,
-) => {
-    const me = useMember()
-    return useCallback(
-        (body: string): Promise<boolean> => {
-            const called = mentionsOf(body)
-            const active = agents.filter((agent) => agent.isActive)
-            const target = called.length === 1 ? active.find((agent) => agent.handle === called[0]) : undefined
-            const canRead = isManager(me)
-            return sender.send({
-                body,
-                room: roomKey,
-                callNames: active.filter((agent) => called.includes(agent.handle)).map((agent) => agent.name),
-                reading:
-                    canRead && target !== undefined && acceptsCommands(target.module)
-                        ? { handle: target.handle, module: target.module }
-                        : null,
-            })
-        },
-        [agents, me, sender, roomKey],
-    )
+/** The loading command as the thread draws it: who is reading, in which words. */
+export interface OfficeMessengerReading {
+    readonly avatar: OfficeAvatarView
+    readonly ask: string
+    readonly agent: string
+    readonly label: string
+    readonly gateNote: string
 }
 
-/** Resolves the room-scoped panel read and the waiting targets from the same board. */
-const usePanelBundle = (
-    messages: ReturnType<typeof withReceipt> | undefined,
-    board: OfficeBoard,
-    words: ReturnType<typeof useOfficeWords>,
-    current: OfficeRoom | null,
-    roomKey: string | null,
-    hub: ReturnType<typeof useOfficeRooms>,
-    roomAgents: OfficeBoard["agents"],
-) => {
-    const waiting = useMemo(() => waitingOf(board.pending, board.exceptions), [board.pending, board.exceptions])
-    const panelRoom = useMemo(
-        () => ({
-            current,
-            key: roomKey,
-            rooms: hub.rooms,
-            channels: hub.channels,
-            agents: roomAgents,
-            unread: hub.unread,
-        }),
-        [current, roomKey, hub.rooms, hub.channels, roomAgents, hub.unread],
-    )
-    const panels = useOfficePanels(messages ?? [], board, words, waiting.length, panelRoom)
-    return { waiting, panels }
-}
-
-/** Resolves the loading command's name and note from its actual target. */
-const readingOf = (reading: ReturnType<typeof useOfficeSend>["reading"], words: ReturnType<typeof useOfficeWords>) => {
-    if (reading === null) return null
-    const agent = words.moduleName(reading.module)
-    return {
-        avatar: NIVO_AVATAR,
-        ask: words.t("cmdAskReading", { handle: reading.handle }),
-        agent,
-        label: words.t("cmdCardLabel", { agent }),
-        gateNote: words.t("cmdGateNote", { agent }),
-    }
-}
-
+/** What `useOfficeMessenger` returns. */
 type UseOfficeMessengerResult = {
     items: readonly OfficeThreadItem[]
     thread: {
@@ -182,13 +100,7 @@ type UseOfficeMessengerResult = {
     peersTyping: string[]
     onDraft: (draft: string) => void
     onDutyCount: number
-    reading: {
-        avatar: OfficeAvatarView
-        ask: string
-        agent: string
-        label: string
-        gateNote: string
-    } | null
+    reading: OfficeMessengerReading | null
     chatbotHandle: string | null
     text: OfficeText
     send: (body: string) => Promise<boolean>
@@ -201,6 +113,9 @@ type UseOfficeMessengerResult = {
     retryThread: () => void
     retryComposer: () => void
 }
+
+/** Where the header chip jumps: the oldest thing that waits for a person's decision; none when nothing waits. */
+const firstJumpOf = (waiting: ReadonlyArray<OfficeWaiting>): OfficeWaiting | null => waiting[0] ?? null
 
 /** The whole Office messenger for one Hub room (null = the Office room): its data, its words and its commands. */
 export const useOfficeMessenger = (
@@ -234,11 +149,11 @@ export const useOfficeMessenger = (
         () => (fetched === undefined ? undefined : withReceipt(fetched, marker)),
         [fetched, marker],
     )
-    const { waiting, panels } = usePanelBundle(messages, board, words, current, roomKey, hub, roomAgents)
+    const { waiting, panels } = useOfficePanelBundle(messages, board, words, current, roomKey, hub, roomAgents)
     const waitingCount = waiting.length
     const items = useOfficeThreadView(messages, board, words, focusedId, decisions.alreadyIds, sender.outbox.length > 0)
 
-    const send = useSendLine(board.agents, sender, roomKey)
+    const send = useOfficeSendLine(board.agents, sender, roomKey)
 
     return {
         ...officeReadSlots({ board: fullBoard, hub, thread, list: panels.list }),

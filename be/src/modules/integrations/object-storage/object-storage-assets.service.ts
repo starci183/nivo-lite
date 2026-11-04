@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError } from "@starci/object-storage"
 import type { ObjectStorage } from "@starci/object-storage"
+import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
 import { InjectObjectStorage, InjectStorageOptions } from "./object-storage.decorators"
 import type { ObjectStorageOptions } from "./object-storage.options"
 import type { StorageAssetDownload, StorageAssetUpload, StorageAssetsPort } from "./object-storage.port"
@@ -19,7 +19,7 @@ export class StorageAssetsService implements StorageAssetsPort {
         try {
             const found = await this.storage.get(bucketNameOf(this.options.bucketPrefix, bucket), path)
             if (found === null) {
-                return { data: null, error: new ObjectStorageError(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound) }
+                return { data: null, error: new ObjectStorageError({ code: ObjectStorageErrorCode.ObjectNotFound }) }
             }
             return { data: new Blob([found.bytes], { type: found.contentType }), error: null }
         } catch (failure) {

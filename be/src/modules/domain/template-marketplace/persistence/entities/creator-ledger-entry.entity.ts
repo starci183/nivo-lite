@@ -1,7 +1,7 @@
 import { Column, Entity } from "typeorm"
 import { UuidAbstractEntity } from "@modules/platform/database"
 
-const vnd = { to: (value: number): number => value, from: (value: string): number => Number(value) }
+const vnd = { to: (value: number): number => value, from: Number }
 
 @Entity({ schema: "public", name: "creator_ledger_entries" })
 /** One line of what a creator is owed: written once from a paid order and never changed. */

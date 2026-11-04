@@ -1,6 +1,7 @@
 "use client"
 
 import type { VideoEditorActions } from "@/modules/types"
+/** Handlers the goal step form calls. */
 export type VideoGoalFormActions = VideoEditorActions["goal"]
 import { useState } from "react"
 import { useTranslations } from "next-intl"

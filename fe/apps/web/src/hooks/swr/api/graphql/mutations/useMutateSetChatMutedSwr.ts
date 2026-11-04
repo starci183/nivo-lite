@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSetChatMuted } from "@/modules/api/graphql/mutations/mutation-set-chat-muted"
-import type { MutateSetChatMutedRequest } from "@/modules/api/graphql/mutations/mutation-set-chat-muted"
+import {
+    mutateSetChatMuted,
+    type MutateSetChatMutedRequest,
+} from "@/modules/api/graphql/mutations/mutation-set-chat-muted"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetChatMutedMutation } from "@/modules/api"
 
 /** What the SetChatMuted mutation is triggered with. */
 interface SetChatMutedArg {
@@ -16,7 +18,7 @@ export const MUTATE_SET_CHAT_MUTED_SWR_KEY = "MUTATE_SET_CHAT_MUTED_SWR"
 
 /** SWR mutation for {@link mutateSetChatMuted}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateSetChatMutedSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetChatMuted>["setChatMuted"],
+    SetChatMutedMutation["setChatMuted"],
     Error,
     typeof MUTATE_SET_CHAT_MUTED_SWR_KEY,
     SetChatMutedArg["arg"]

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDeleteHiringCandidate } from "@/modules/api/graphql/mutations/mutation-delete-hiring-candidate"
-import type { MutateDeleteHiringCandidateRequest } from "@/modules/api/graphql/mutations/mutation-delete-hiring-candidate"
+import {
+    mutateDeleteHiringCandidate,
+    type MutateDeleteHiringCandidateRequest,
+} from "@/modules/api/graphql/mutations/mutation-delete-hiring-candidate"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DeleteHiringCandidateMutation } from "@/modules/api"
 
 /** What the deleteHiringCandidate mutation is triggered with. */
 interface DeleteHiringCandidateArg {
@@ -16,7 +18,7 @@ export const MUTATE_DELETE_HIRING_CANDIDATE_SWR_KEY = "MUTATE_DELETE_HIRING_CAND
 
 /** SWR mutation for {@link mutateDeleteHiringCandidate}: `trigger(request)` answers `deleteHiringCandidate` and rejects with the back end failure. */
 export const useMutateDeleteHiringCandidateSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDeleteHiringCandidate>["deleteHiringCandidate"],
+    DeleteHiringCandidateMutation["deleteHiringCandidate"],
     Error,
     typeof MUTATE_DELETE_HIRING_CANDIDATE_SWR_KEY,
     DeleteHiringCandidateArg["arg"]

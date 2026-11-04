@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateWantConnector } from "@/modules/api/graphql/mutations/mutation-want-connector"
-import type { mutateWantConnector as MutateWantConnectorOperation } from "@/modules/api/graphql/mutations/mutation-want-connector"
+import {
+    mutateWantConnector,
+    type mutateWantConnector as MutateWantConnectorOperation,
+} from "@/modules/api/graphql/mutations/mutation-want-connector"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { WantConnectorMutation } from "@/modules/api"
 
 /** The SWR key of the wantConnector mutation. */
 export const MUTATE_WANT_CONNECTOR_SWR_KEY = "MUTATE_WANT_CONNECTOR_SWR"
 
 /** SWR mutation for {@link mutateWantConnector}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateWantConnectorSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateWantConnector>["wantConnector"],
+    WantConnectorMutation["wantConnector"],
     Error,
     typeof MUTATE_WANT_CONNECTOR_SWR_KEY,
     TriggerArg["arg"]

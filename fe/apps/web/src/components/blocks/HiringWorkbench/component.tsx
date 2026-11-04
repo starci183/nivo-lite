@@ -1,11 +1,6 @@
 import type { ReactElement } from "react"
 import { HIRING_TABS, type HiringViews, type HiringActions } from "@/modules/types"
 
-import { Grid, Stack } from "@starci/grammar/common"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -24,6 +19,7 @@ import { HiringCvSection } from "@/components/composites/HiringCvSection"
 import { HiringInterviewDialog } from "@/components/composites/HiringInterviewDialog"
 import { HiringOfferDialog } from "@/components/composites/HiringOfferDialog"
 import { HiringCandidateHistory } from "@/components/leaves/HiringCandidateHistory"
+import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 
 /** Existing real panel arrangements and the recorded-explanation arrangement. */
 export const HIRING_WORKBENCH_SHAPES: readonly [...typeof HIRING_TABS, "explanation"] = [...HIRING_TABS, "explanation"]
@@ -167,45 +163,17 @@ const Candidate = (props: Pick<HiringWorkbenchBaseProps, "props" | "on">) => {
     )
 }
 
-const DashboardCards = (props: Pick<HiringWorkbenchBaseProps, "props" | "on">) => {
-    const regions = props.props.regions
-    return (
-        <Grid kind="cards" columns={3}>
-            <SlotView
-                {...regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <DoneRegion label={regions.done.label} view={done} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.connections}
-                onRetry={props.on.retryDashboard}
-                render={(connections, isLoading) => (
-                    <ConnectionsRegion label={regions.connections.label} view={connections} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.knowledge}
-                onRetry={props.on.retryDashboard}
-                render={(knowledge, isLoading) => (
-                    <KnowledgeRegion label={regions.knowledge.label} view={knowledge} isLoading={isLoading} />
-                )}
-            />
-        </Grid>
-    )
-}
-
 const Overview = (props: HiringWorkbenchBaseProps) => {
     const view = props.props
     return (
-        <Stack gap="region">
-            <WorkbenchOverviewTop view={view} on={{ ...props.on, retryRibbon: props.on.retry }}>
-                <ModulePanel shape={props.shape} props={props.props} on={props.on} />
-            </WorkbenchOverviewTop>
-            <DashboardCards {...props} />
-            <Candidate {...props} />
-        </Stack>
+        <WorkbenchOverview
+            view={view}
+            ribbon={view.ribbon}
+            on={{ ...props.on, retryRibbon: props.on.retry }}
+            after={<Candidate {...props} />}
+        >
+            <ModulePanel shape={props.shape} props={props.props} on={props.on} />
+        </WorkbenchOverview>
     )
 }
 

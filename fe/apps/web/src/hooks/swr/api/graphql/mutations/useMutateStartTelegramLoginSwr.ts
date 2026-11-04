@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateStartTelegramLogin } from "@/modules/api/graphql/mutations/mutation-start-telegram-login"
-import type { mutateStartTelegramLogin as MutateStartTelegramLoginOperation } from "@/modules/api/graphql/mutations/mutation-start-telegram-login"
+import {
+    mutateStartTelegramLogin,
+    type mutateStartTelegramLogin as MutateStartTelegramLoginOperation,
+} from "@/modules/api/graphql/mutations/mutation-start-telegram-login"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { StartTelegramLoginMutation } from "@/modules/api"
 
 /** The SWR key of the startTelegramLogin mutation. */
 export const MUTATE_START_TELEGRAM_LOGIN_SWR_KEY = "MUTATE_START_TELEGRAM_LOGIN_SWR"
 
 /** SWR mutation for {@link mutateStartTelegramLogin}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateStartTelegramLoginSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateStartTelegramLogin>["startTelegramLogin"],
+    StartTelegramLoginMutation["startTelegramLogin"],
     Error,
     typeof MUTATE_START_TELEGRAM_LOGIN_SWR_KEY,
     TriggerArg["arg"]

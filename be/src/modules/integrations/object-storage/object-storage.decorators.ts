@@ -5,6 +5,8 @@ import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { ObjectStorageOptions } from "./object-storage.options"
 import type { StorageAssetsPort, StorageObjectsPort } from "./object-storage.port"
 
+export { OBJECT_STORAGE }
+
 /** Token of the options of the storage integration, exported so a spec can provide it. */
 export const STORAGE_OPTIONS: unique symbol = Symbol("integrations.object-storage.options")
 /** Token of the objects service domains issue upload addresses and read stored objects through. */

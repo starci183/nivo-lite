@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey } from "@/hooks/workspaceread"
+import { argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryLoadImapConnection } from "@/modules/api/graphql/queries/query-load-imap-connection"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { LoadImapConnectionQuery } from "@/modules/api"
 
 /** The SWR key of the loadImapConnection query. */
 export const QUERY_LOAD_IMAP_CONNECTION_SWR_KEY = "QUERY_LOAD_IMAP_CONNECTION_SWR"
@@ -13,7 +13,7 @@ export const QUERY_LOAD_IMAP_CONNECTION_SWR_KEY = "QUERY_LOAD_IMAP_CONNECTION_SW
 export const useQueryLoadImapConnectionSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryLoadImapConnection>["loadImapConnection"]> =>
+): ReadResponse<LoadImapConnectionQuery["loadImapConnection"]> =>
     useSWR(
         argumentKey(QUERY_LOAD_IMAP_CONNECTION_SWR_KEY, connectionId),
         async ([, id]) => {

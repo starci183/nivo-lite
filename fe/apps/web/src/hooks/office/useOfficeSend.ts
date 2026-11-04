@@ -8,8 +8,7 @@ import { bodyPartsOf } from "@/modules/office"
 import type { OfficeOutboxView } from "@/modules/types"
 import { refreshOffice } from "./office.shared"
 
-import type { ChatFileProblem } from "../chatFile/chatFile.shared"
-import type { ChatFileAddress, UploadedChatFile } from "@/hooks/chatFile/useChatFile"
+import type { ChatFileProblem, ChatFileAddress, UploadedChatFile } from "@/hooks/chatFile"
 
 /** The one agent that takes commands, drawn as the card skeleton while the line is read. */
 export interface ReadingAgent {

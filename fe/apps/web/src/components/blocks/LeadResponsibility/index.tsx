@@ -81,7 +81,7 @@ export const LeadResponsibility = (props: LeadResponsibilityProps) => {
         const nextAction = mode === "due" ? active.next_action : step.nextAction
         return commands.assignResponsibility(active.id, { ...step, nextAction })
     }
-    const submit = rhf.handleSubmit(async (input) => {
+    const submit = rhf.onSubmit(async (input) => {
         if (detail === null) return
         setError(null)
         const result = await send(detail, current, input)

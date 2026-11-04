@@ -12,7 +12,7 @@ import { toPackageAgentTemplateRequest, toPackageAgentTemplateType } from "./pac
 @Resolver()
 /** GraphQL door of packageAgentTemplate. */
 export class PackageAgentTemplateResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Packages a frozen version of an agent as the next version of a template of the caller. */
     @Mutation(() => TemplateVersionType, { name: "packageAgentTemplate" })
@@ -21,7 +21,7 @@ export class PackageAgentTemplateResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: PackageAgentTemplateInput,
     ): Promise<TemplateVersionType> {
-        const result = await this.bus.execute(
+        const result = await this.commandBus.execute(
             new PackageAgentTemplateCommand({ request: toPackageAgentTemplateRequest(workspaceId, input), principal }),
         )
         return toPackageAgentTemplateType(result)

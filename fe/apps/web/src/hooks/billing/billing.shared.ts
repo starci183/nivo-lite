@@ -155,3 +155,10 @@ export const reviewSlotOf = (
             })),
         ),
     )
+
+/** The words of a failure: its message, the text itself, or the fallback for any other truthy value; none when nothing failed. */
+export const messageOf = (error: unknown, fallback: string): string | undefined => {
+    if (error instanceof Error) return error.message
+    if (typeof error === "string") return error
+    return error ? fallback : undefined
+}

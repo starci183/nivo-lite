@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateCheckConnection } from "@/modules/api/graphql/mutations/mutation-check-connection"
-import type { mutateCheckConnection as MutateCheckConnectionOperation } from "@/modules/api/graphql/mutations/mutation-check-connection"
+import {
+    mutateCheckConnection,
+    type mutateCheckConnection as MutateCheckConnectionOperation,
+} from "@/modules/api/graphql/mutations/mutation-check-connection"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CheckConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the checkConnection mutation. */
 export const MUTATE_CHECK_CONNECTION_SWR_KEY = "MUTATE_CHECK_CONNECTION_SWR"
 
 /** SWR mutation for {@link mutateCheckConnection}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateCheckConnectionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCheckConnection>["checkConnection"],
+    CheckConnectionMutation["checkConnection"],
     Error,
     typeof MUTATE_CHECK_CONNECTION_SWR_KEY,
     TriggerArg["arg"]

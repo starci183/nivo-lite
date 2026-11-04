@@ -141,7 +141,7 @@ readonly respondent:
 
 Follows the deal. Tabs stay: Attention, Pipeline, Decisions, Handoff to accounting, Contracts, Activity. `SalesFigures` stays. New: the Waiting slot (section 4), and `SalesConversation`, drawn in the panel when `?conversation=<id>` is present, on the same `ChatbotThreadView` and `ChatbotSidePanel` the inbox uses. It shows the thread, the handover line, the pending decision as a `WorkbenchDecisionRow` under the last message, and the side panel of section 7.1. `SalesDecision` and `AttentionRow` gain `conversationId`, from `latestOfLead`.
 
-Pipeline stays `SalesPipeline`: five lanes in a `HorizontalScrollRegion`, with app layout in its `fe/apps/web/src/components/blocks/SalesPipeline/classNames.ts` (FE-CSS-1). The stage `Stepper` stays in the side panel, not on a card.
+Pipeline stays `SalesPipeline`: five lanes in a `HorizontalScrollRegion`, with app layout in its `fe/apps/web/src/components/composites/SalesPipelineBoard/classNames.ts` (FE-CSS-1). The stage `Stepper` stays in the side panel, not on a card.
 
 ### 7.1 Side panel of a shared conversation
 
@@ -278,14 +278,14 @@ If W4, W5 or W6 has shipped without an item here, the brief that needs it report
 
 Against 0.19.1:
 
-| Drawn              | Composes?                                                                                                                                                                       | Result          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| Lane board         | Yes. `HorizontalScrollRegion` around app columns in `fe/apps/web/src/components/blocks/SalesPipeline/classNames.ts` (FE-CSS-1). `SalesPipeline` does this today and passes lint | No package work |
-| Bar chart          | Yes. `Meter` rows carry income by week, as they do today. `recharts` is the stack's chart library (`D:/.claude/contexts/stack/fe.yaml`) if a real chart is ever wanted          | No package work |
-| Source quote box   | No. It needs a tinted box at the nested inset inside a pane. `SurfaceCard` may not stand there (`pane-grid.choose.frame:cards`), and `Alert` reports an outcome, not a quote    | Package brief P |
-| `ConnectionStatus` | Not used: no feed (section 2)                                                                                                                                                   | None            |
-| `Stepper dense`    | Yes, section 7.1                                                                                                                                                                | Needs the pin   |
-| `Progress tone`    | Yes, section 5                                                                                                                                                                  | Needs the pin   |
+| Drawn              | Composes?                                                                                                                                                                                | Result          |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| Lane board         | Yes. `HorizontalScrollRegion` around app columns in `fe/apps/web/src/components/composites/SalesPipelineBoard/classNames.ts` (FE-CSS-1). `SalesPipeline` does this today and passes lint | No package work |
+| Bar chart          | Yes. `Meter` rows carry income by week, as they do today. `recharts` is the stack's chart library (`D:/.claude/contexts/stack/fe.yaml`) if a real chart is ever wanted                   | No package work |
+| Source quote box   | No. It needs a tinted box at the nested inset inside a pane. `SurfaceCard` may not stand there (`pane-grid.choose.frame:cards`), and `Alert` reports an outcome, not a quote             | Package brief P |
+| `ConnectionStatus` | Not used: no feed (section 2)                                                                                                                                                            | None            |
+| `Stepper dense`    | Yes, section 7.1                                                                                                                                                                         | Needs the pin   |
+| `Progress tone`    | Yes, section 5                                                                                                                                                                           | Needs the pin   |
 
 Until P lands, B1 draws a source as `Text` with a source word and a byline, on no ground, and swaps to `Quote` when the pin carries it.
 

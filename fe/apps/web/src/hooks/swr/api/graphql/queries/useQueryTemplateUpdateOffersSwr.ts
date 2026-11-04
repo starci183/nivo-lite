@@ -1,21 +1,21 @@
 "use client"
 
 import useSWR from "swr"
+import { answeredData } from "@/hooks/workspaceread"
 import type { SWRResponse } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
-import type { TemplateUpdateOffersData } from "@/modules/api/graphql"
+import type { TemplateUpdateOffersQuery } from "@/modules/api"
 import { queryTemplateUpdateOffers } from "@/modules/api/graphql/queries/query-template-update-offers"
 
 /** The SWR key of {@link useQueryTemplateUpdateOffersSwr}. */
 export const QUERY_TEMPLATE_UPDATE_OFFERS_SWR_KEY = "QUERY_TEMPLATE_UPDATE_OFFERS_SWR"
 
 /** The back end `templateUpdateOffers` query. */
-export const useQueryTemplateUpdateOffersSwr = (enabled = true): SWRResponse<TemplateUpdateOffersData, Error> =>
+export const useQueryTemplateUpdateOffersSwr = (
+    enabled = true,
+): SWRResponse<TemplateUpdateOffersQuery["templateUpdateOffers"], Error> =>
     useSWR(
         useWorkspaceKey(QUERY_TEMPLATE_UPDATE_OFFERS_SWR_KEY, [], enabled),
-        async ({ signal }: { signal?: AbortSignal } = {}) => {
-            const result = await queryTemplateUpdateOffers({ signal })
-            if (!result.data) throw new Error("templateUpdateOffers answered no data")
-            return result.data.templateUpdateOffers
-        },
+        async ({ signal }: { signal?: AbortSignal } = {}) =>
+            answeredData(await queryTemplateUpdateOffers({ signal }), "templateUpdateOffers").templateUpdateOffers,
     )

@@ -37,8 +37,8 @@
       "default": "./dist/template/index.js"
     },
     "./testing": {
-      "types": "./dist/testing/index.d.ts",
-      "default": "./dist/testing/index.js"
+      "types": "./dist/tests/fixtures/index.d.ts",
+      "default": "./dist/tests/fixtures/index.js"
     },
     "./client": {
       "types": "./dist/esm/client/index.d.ts",

@@ -26,7 +26,6 @@ import {
 import { useSegmentLabel } from "./useSegmentLabel"
 import { useFeatureReset } from "@/hooks/reuseables"
 import type { UseFormReturn } from "react-hook-form"
-import type { SWRResponse } from "swr"
 
 /** How many members a segment reaches, and a few of them. */
 export interface PromoPreview {
@@ -52,70 +51,10 @@ export interface LoyaltyPromoViewShape {
     setBrief: (value: string) => void
     form: UseFormReturn<LoyaltyCampaignValues>
     segmentLabel: string
-    previewRead: SWRResponse<
-        {
-            reachable: number
-            total: number
-            sample: Array<{
-                id: string
-                name: string
-                tierKey: string | null
-            }>
-        },
-        Error
-    >
-    campaignRead: SWRResponse<
-        {
-            createdAt: string
-            createdBy: string
-            draft: string
-            draftMs: number | null
-            errorCode: string | null
-            failed: number
-            finishedAt: string | null
-            id: string
-            messageDraft: string
-            name: string
-            queued: number
-            recipients: number
-            sent: number
-            skipped: number
-            status: string
-            workItemId: string | null
-            segment: {
-                birthdayThisMonth: boolean
-                inactiveDays: number
-                minSpendVnd: number
-                tiers: Array<string>
-            }
-        },
-        Error
-    >
+    previewRead: ReturnType<typeof useQueryLoyaltySegmentPreviewSwr>
+    campaignRead: ReturnType<typeof useQueryLoyaltyCampaignSwr>
     hasCampaign: boolean
-    created: {
-        createdAt: string
-        createdBy: string
-        draft: string
-        draftMs: number | null
-        errorCode: string | null
-        failed: number
-        finishedAt: string | null
-        id: string
-        messageDraft: string
-        name: string
-        queued: number
-        recipients: number
-        sent: number
-        skipped: number
-        status: string
-        workItemId: string | null
-        segment: {
-            birthdayThisMonth: boolean
-            inactiveDays: number
-            minSpendVnd: number
-            tiers: Array<string>
-        }
-    } | null
+    created: NonNullable<ReturnType<typeof useQueryLoyaltyCampaignSwr>["data"]> | null
     isWriting: boolean
     isBusy: boolean
     submit: (e?: React.BaseSyntheticEvent) => Promise<void>

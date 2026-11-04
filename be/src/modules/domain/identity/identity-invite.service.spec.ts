@@ -26,25 +26,21 @@ const AT = "2026-02-03T04:05:06.000Z"
 const NOW = new Date(AT)
 const REDIRECT = "https://app.example.test/auth/confirm?next=%2Finvite%2Ftoken-1"
 const OPTIONS: IdentityAuthOptions = { inviteTtlSeconds: 7200 }
-const SETTINGS = {
+const SETTINGS = mock<MailOptions>({
     webOrigin: "https://app.example.test",
     brandName: "Acme",
     defaultLanguage: "en",
     confirmTtlSeconds: 86_400,
     resetTtlSeconds: 3_600,
-} as unknown as MailOptions
+})
 
-const withTokens = (query: ReadonlyArray<readonly [string, unknown]>): MockEntityManager => {
-    const entityManager = mockEntityManager({
+const build = async (query: ReadonlyArray<readonly [string, unknown]>) => {
+    const entityManager: MockEntityManager = mockEntityManager({
         query,
         insert: [IdentityEmailTokenEntity, {}],
         update: [IdentityEmailTokenEntity, {}],
     })
     fakeTransaction(entityManager)
-    return entityManager
-}
-
-const build = async (entityManager: MockEntityManager) => {
     const mailer = mock<Mailer>()
     mailer.send.mockResolvedValue({ messageId: "<m>", accepted: ["a@example.test"] })
     const logger = mock<Logger>()
@@ -53,20 +49,19 @@ const build = async (entityManager: MockEntityManager) => {
             IdentityInviteService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: MAILER, useValue: mailer },
-            { provide: MAIL_SETTINGS, useValue: mock<MailOptions>(SETTINGS) },
+            { provide: MAIL_SETTINGS, useValue: SETTINGS },
             { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: IDS, useValue: fakeIds() },
             { provide: IDENTITY_AUTH_OPTIONS, useValue: OPTIONS },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
-    return { subject: moduleRef.get(IdentityInviteService), mailer, logger }
+    return { subject: moduleRef.get(IdentityInviteService), mailer, logger, entityManager }
 }
 
 describe("IdentityInviteService.deliver", () => {
     it("mails a person who already has an account the invitation link on the web origin", async () => {
-        const entityManager = withTokens([[USER_BY_EMAIL, [account()]]])
-        const { subject, mailer } = await build(entityManager)
+        const { subject, mailer, entityManager } = await build([[USER_BY_EMAIL, [account()]]])
 
         await expect(subject.deliver("An@Example.test", REDIRECT)).resolves.toBe("existing")
 
@@ -77,11 +72,10 @@ describe("IdentityInviteService.deliver", () => {
     })
 
     it("creates an account for a new person and mails a link to set a password that continues to the invitation", async () => {
-        const entityManager = withTokens([
+        const { subject, mailer, entityManager } = await build([
             [USER_BY_EMAIL, []],
             [CREATE_USER, [{ be_auth_create_user: CREATED }]],
         ])
-        const { subject, mailer } = await build(entityManager)
 
         await expect(subject.deliver("new@example.test", REDIRECT)).resolves.toBe("invited")
 
@@ -118,11 +112,10 @@ describe("IdentityInviteService.deliver", () => {
     })
 
     it("continues to the path of the link itself when it carries no next value", async () => {
-        const entityManager = withTokens([
+        const { subject, mailer } = await build([
             [USER_BY_EMAIL, []],
             [CREATE_USER, [{ be_auth_create_user: CREATED }]],
         ])
-        const { subject, mailer } = await build(entityManager)
 
         await expect(subject.deliver("new@example.test", "https://app.example.test/invite/token-2?x=1")).resolves.toBe(
             "invited",
@@ -131,13 +124,14 @@ describe("IdentityInviteService.deliver", () => {
         const url = new URL(/https:\/\/[^\s"<]+/u.exec(mailer.send.mock.calls[0]?.[0].message.text ?? "")?.[0] ?? "")
         expect(url.searchParams.get("next")).toBe("/invite/token-2?x=1")
     })
+})
 
+describe("IdentityInviteService.deliver refusals", () => {
     it("falls back to the root when the invitation address is not a link, and answers none when the account is not created", async () => {
-        const entityManager = withTokens([
+        const { subject, mailer } = await build([
             [USER_BY_EMAIL, []],
             [CREATE_USER, []],
         ])
-        const { subject, mailer } = await build(entityManager)
 
         await expect(subject.deliver("x@example.test", "not a url")).resolves.toBe("none")
 
@@ -145,7 +139,7 @@ describe("IdentityInviteService.deliver", () => {
     })
 
     it("answers none and logs when the mail cannot be sent", async () => {
-        const { subject, mailer, logger } = await build(withTokens([[USER_BY_EMAIL, [account()]]]))
+        const { subject, mailer, logger } = await build([[USER_BY_EMAIL, [account()]]])
         const failure = new Error("smtp down")
         mailer.send.mockRejectedValue(failure)
 

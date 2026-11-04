@@ -12,7 +12,7 @@ import { toOrderTemplateListingRequest, toOrderTemplateListingType } from "./ord
 @Resolver()
 /** GraphQL door of orderTemplateListing. */
 export class OrderTemplateListingResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Orders a paid listing: the transfer to make through SePay, the same way as any other order. */
     @Mutation(() => TemplateOrderType, { name: "orderTemplateListing" })
@@ -21,7 +21,7 @@ export class OrderTemplateListingResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: OrderTemplateListingInput,
     ): Promise<TemplateOrderType> {
-        const result = await this.bus.execute(
+        const result = await this.commandBus.execute(
             new OrderTemplateListingCommand({ request: toOrderTemplateListingRequest(workspaceId, input), principal }),
         )
         return toOrderTemplateListingType(result)

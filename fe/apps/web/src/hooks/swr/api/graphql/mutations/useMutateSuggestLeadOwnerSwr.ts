@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSuggestLeadOwner } from "@/modules/api/graphql/mutations/mutation-suggest-lead-owner"
-import type { MutateSuggestLeadOwnerRequest } from "@/modules/api/graphql/mutations/mutation-suggest-lead-owner"
+import {
+    mutateSuggestLeadOwner,
+    type MutateSuggestLeadOwnerRequest,
+} from "@/modules/api/graphql/mutations/mutation-suggest-lead-owner"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SuggestLeadOwnerMutation } from "@/modules/api"
 
 /** What the suggestLeadOwner mutation is triggered with. */
 interface SuggestLeadOwnerArg {
@@ -16,7 +18,7 @@ export const MUTATE_SUGGEST_LEAD_OWNER_SWR_KEY = "MUTATE_SUGGEST_LEAD_OWNER_SWR"
 
 /** SWR mutation for {@link mutateSuggestLeadOwner}: `trigger(request)` answers the result and rejects with the back end failure. */
 export const useMutateSuggestLeadOwnerSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSuggestLeadOwner>["suggestLeadOwner"],
+    SuggestLeadOwnerMutation["suggestLeadOwner"],
     Error,
     typeof MUTATE_SUGGEST_LEAD_OWNER_SWR_KEY,
     SuggestLeadOwnerArg["arg"]

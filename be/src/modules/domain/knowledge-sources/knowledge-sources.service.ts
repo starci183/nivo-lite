@@ -289,7 +289,8 @@ export class KnowledgeSourcesService {
         if (filename.trim() === "")
             throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileNameRequired })
         const signedType = uploadContentTypeOf(KNOWLEDGE_UPLOAD_MIME, filename, contentType)
-        if (signedType === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileTypeUnsupported })
+        if (signedType === null)
+            throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileTypeUnsupported })
         await this.entitlements.requireStorageFor(workspaceId, 0)
         const path = `${workspaceId}/${this.ids.next()}/${safeFileName(filename)}`
         const signed = await this.storage.signedUpload(KNOWLEDGE_UPLOAD_BUCKET, path, signedType)

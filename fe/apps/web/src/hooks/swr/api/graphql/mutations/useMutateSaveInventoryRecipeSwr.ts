@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveInventoryRecipe } from "@/modules/api/graphql/mutations/mutation-save-inventory-recipe"
-import type { MutateSaveInventoryRecipeRequest } from "@/modules/api/graphql/mutations/mutation-save-inventory-recipe"
+import {
+    mutateSaveInventoryRecipe,
+    type MutateSaveInventoryRecipeRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-inventory-recipe"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveInventoryRecipeMutation } from "@/modules/api"
 
 /** What the saveInventoryRecipe mutation is triggered with. */
 interface SaveInventoryRecipeArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_INVENTORY_RECIPE_SWR_KEY = "MUTATE_SAVE_INVENTORY_RECIP
 
 /** SWR mutation for {@link mutateSaveInventoryRecipe}: `trigger(request)` answers `saveInventoryRecipe` and rejects with the back end failure. */
 export const useMutateSaveInventoryRecipeSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveInventoryRecipe>["saveInventoryRecipe"],
+    SaveInventoryRecipeMutation["saveInventoryRecipe"],
     Error,
     typeof MUTATE_SAVE_INVENTORY_RECIPE_SWR_KEY,
     SaveInventoryRecipeArg["arg"]

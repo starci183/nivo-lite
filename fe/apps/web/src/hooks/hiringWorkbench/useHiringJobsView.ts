@@ -1,6 +1,6 @@
 "use client"
 import { useTranslations } from "next-intl"
-import { NEXT_JOB_STATUS, jobStatusTone, useHiringFormat } from "@/hooks/hiring"
+import { useHiringFormat } from "@/hooks/hiring"
 import {
     APPLY_CHANNELS,
     EMPLOYMENT_TYPES,
@@ -10,81 +10,19 @@ import {
     useHiringJobEditor,
     useHiringJobs,
 } from "@/hooks/hiringJobs"
-import type { HiringWorkbenchData, JobView, AdView } from "@/hooks/hiringWire"
 import { useHiringJobForm } from "@/hooks/rhf"
-import type { HiringViewInput } from "./hiringWorkbench.shared"
+import { jobAdDialogOf, jobRowOf, type HiringViewInput } from "./hiringWorkbench.shared"
 
 import { useFeatureReset } from "@/hooks/reuseables"
 import type { HiringWorkbenchCopy, HiringJobValues, HiringQuestionValues, FieldOf } from "@/modules/types"
-import type { BadgeTone } from "@starci/grammar/common"
 import type { Dispatch, SetStateAction } from "react"
 
-/** The candidates of each job: all of them, the fresh ones and the hired ones. */
-const countsOf = (data: HiringWorkbenchData, jobId: string) => {
-    const mine = data.candidates.filter((candidate) => candidate.jobId === jobId)
-    return {
-        all: mine.length,
-        fresh: mine.filter((candidate) => candidate.stage === "applied").length,
-        hired: mine.filter((candidate) => candidate.stage === "hired").length,
-    }
-}
-
-/** What one job row needs besides the job: the workbench data, the formatter, the words and the id whose link was just copied. */
-interface JobRowContext {
-    readonly data: HiringWorkbenchData
-    readonly format: ReturnType<typeof useHiringFormat>
-    readonly t: ReturnType<typeof useTranslations<"hiring">>
-    readonly copiedId: string | null
-}
-
-/** Resolves the job facts and available status transitions. */
-const rowOf = (job: JobView, context: JobRowContext) => {
-    const { data, format, t, copiedId } = context
-    const counts = countsOf(data, job.id)
-    const copyKey = copiedId === job.id ? "copiedLink" : "copyLink"
-    return {
-        id: job.id,
-        title: job.title,
-        statusLabel: format.label("jobStatus", job.status),
-        statusTone: jobStatusTone(job.status),
-        facts: [
-            format.label("employment", job.employmentType),
-            format.pay(job.payMinVnd, job.payMaxVnd, job.payUnit),
-            job.location,
-            job.schedule,
-        ]
-            .filter((part) => part !== "")
-            .join(" · "),
-        counts: t("jobsCounts", { all: counts.all, fresh: counts.fresh, hired: counts.hired, need: job.headcount }),
-        publicUrl: job.publicUrl !== null && job.status !== "draft" ? job.publicUrl : null,
-        copyLabel: job.publicUrl !== null && job.status === "open" ? t(copyKey) : null,
-        transitions: (NEXT_JOB_STATUS[job.status] ?? []).map((to) => ({
-            to,
-            label: t(`jobAction_${job.status}_${to}`),
-            isPrimary: to === "open",
-        })),
-    }
-}
 /** The view `useHiringJobsView` returns. */
 export interface HiringJobsViewShape {
     props: {
         copy: HiringWorkbenchCopy
         fact: string
-        rows: {
-            id: string
-            title: string
-            statusLabel: string
-            statusTone: BadgeTone
-            facts: string
-            counts: string
-            publicUrl: string | null
-            copyLabel: string | null
-            transitions: {
-                to: string
-                label: string
-                isPrimary: boolean
-            }[]
-        }[]
+        rows: ReturnType<typeof jobRowOf>[]
         isBusy: boolean
         error: string | null
         isEditorOpen: boolean
@@ -118,22 +56,7 @@ export interface HiringJobsViewShape {
             error: string | null
         }
         isAdOpen: boolean
-        ad: {
-            copy: HiringWorkbenchCopy
-            title: string
-            ads: AdView | null
-            meta: string | null
-            publicUrl: string | null
-            publicLinkLabel: string | null
-            kindLabels: {
-                facebook: string
-                zalo: string
-                topcv: string
-            }
-            copiedId: string | null
-            isBusy: boolean
-            error: string | null
-        }
+        ad: ReturnType<typeof jobAdDialogOf>
     }
     on: {
         list: {
@@ -187,7 +110,7 @@ export const useHiringJobsView = (input: HiringViewInput): HiringJobsViewShape =
     const props = {
         copy: input.copy,
         fact: t("jobsFact", { n: data.jobs.length }),
-        rows: data.jobs.map((job) => rowOf(job, { data, format, t, copiedId: jobs.copiedId })),
+        rows: data.jobs.map((job) => jobRowOf(job, { data, format, t, copiedId: jobs.copiedId })),
         isBusy: jobs.isPending,
         error: jobs.error,
         isEditorOpen: jobs.editing !== null,
@@ -209,7 +132,7 @@ export const useHiringJobsView = (input: HiringViewInput): HiringJobsViewShape =
             error: editor.error,
         },
         isAdOpen: jobs.adJob !== undefined,
-        ad: adDialogOf({ job: jobs.adJob, ad, copy: input.copy, t }),
+        ad: jobAdDialogOf({ job: jobs.adJob, ad, copy: input.copy, t }),
     }
     const on = {
         list: {
@@ -232,30 +155,4 @@ export const useHiringJobsView = (input: HiringViewInput): HiringJobsViewShape =
         ad: { generate: ad.generate, copy: ad.copy, close: jobs.closeAd },
     }
     return { props, on }
-}
-
-/** What the ad dialog needs: the job it is for, the ad being drafted, the copy words and the translator. */
-interface AdDialogInput {
-    readonly job: JobView | undefined
-    readonly ad: ReturnType<typeof useHiringJobAd>
-    readonly copy: HiringViewInput["copy"]
-    readonly t: ReturnType<typeof useTranslations<"hiring">>
-}
-
-/** The ad dialog keeps all three actual variants and its record-specific title/link labels together. */
-const adDialogOf = (input: AdDialogInput) => {
-    const { job, ad, t } = input
-    const publicUrl = job?.publicUrl ?? null
-    return {
-        copy: input.copy,
-        title: t("adTitle", { title: job?.title ?? "" }),
-        ads: ad.ads,
-        meta: ad.meta,
-        publicUrl: publicUrl,
-        publicLinkLabel: publicUrl === null ? null : t("adLink", { url: publicUrl }),
-        kindLabels: { facebook: t("adKind_facebook"), zalo: t("adKind_zalo"), topcv: t("adKind_topcv") },
-        copiedId: ad.copiedId,
-        isBusy: ad.isPending,
-        error: ad.error,
-    }
 }

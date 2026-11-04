@@ -1,6 +1,7 @@
 "use client"
 
 import { VIDEO_EDITOR_STEPS, type VideoEditorActions } from "@/modules/types"
+/** Handlers the editor stepper calls. */
 export type VideoEditStepsActions = VideoEditorActions["stepper"]
 import { useTranslations } from "next-intl"
 import { useFeatureLifetime } from "@/hooks/reuseables"

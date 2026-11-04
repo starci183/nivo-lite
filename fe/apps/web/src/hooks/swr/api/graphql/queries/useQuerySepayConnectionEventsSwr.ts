@@ -1,10 +1,10 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { querySepayConnectionEvents } from "@/modules/api/graphql/queries/query-sepay-connection-events"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { SepayConnectionEventsQuery } from "@/modules/api"
 
 /** The SWR key of the sepayConnectionEvents query. */
 export const QUERY_SEPAY_CONNECTION_EVENTS_SWR_KEY = "QUERY_SEPAY_CONNECTION_EVENTS_SWR"
@@ -13,7 +13,7 @@ export const QUERY_SEPAY_CONNECTION_EVENTS_SWR_KEY = "QUERY_SEPAY_CONNECTION_EVE
 export const useQuerySepayConnectionEventsSwr = (
     connectionId: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<OperationData<typeof querySepayConnectionEvents>["sepayConnectionEvents"]> =>
+): ReadResponse<SepayConnectionEventsQuery["sepayConnectionEvents"]> =>
     useSWR(
         argumentKey(QUERY_SEPAY_CONNECTION_EVENTS_SWR_KEY, connectionId),
         async ([, input]: readonly [string, NonNullable<typeof connectionId>]) =>

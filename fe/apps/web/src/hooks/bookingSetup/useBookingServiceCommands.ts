@@ -25,11 +25,7 @@ export interface BookingServiceCommandsView {
           }
         | undefined
     >
-    removeService: (
-        arg: {} & {
-            id: string | number
-        },
-    ) => Promise<
+    removeService: (arg: { id: string | number }) => Promise<
         | {
               id: string
           }

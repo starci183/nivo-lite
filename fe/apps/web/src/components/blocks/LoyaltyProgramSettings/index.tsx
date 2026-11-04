@@ -23,7 +23,7 @@ import type {
     ProgramValues,
     TierTextField,
 } from "@/modules/types"
-import { LoyaltyProgramSettingsView } from "@nivo-lite/module-loyalty/workbench"
+import { LoyaltyProgramSettingsBase } from "./component"
 
 /** Inputs needed to build the programme commands. */
 interface BuildProgramCommandsContext {
@@ -54,7 +54,7 @@ export const LoyaltyProgramSettings = () => {
     const submit = form.handleSubmit((submitted) => saver.save(submitted))
     const slug = data?.program?.slug
     return (
-        <LoyaltyProgramSettingsView
+        <LoyaltyProgramSettingsBase
             props={{
                 slot: slotOfSwr({
                     data: data === undefined ? undefined : (true as const),

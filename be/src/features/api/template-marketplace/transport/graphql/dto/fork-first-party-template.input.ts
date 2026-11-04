@@ -13,5 +13,6 @@ export class ForkFirstPartyTemplateInput {
     /** The key of the derivative. */
     @Field(() => String)
     @Matches(/^[a-z][a-z0-9-]{2,59}$/)
+    @MaxLength(60)
     key!: string
 }

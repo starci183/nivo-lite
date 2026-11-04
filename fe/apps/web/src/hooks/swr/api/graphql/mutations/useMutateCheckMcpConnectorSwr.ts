@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCheckMcpConnector } from "@/modules/api/graphql/mutations/mutation-check-mcp-connector"
-import type { MutateCheckMcpConnectorRequest } from "@/modules/api/graphql/mutations/mutation-check-mcp-connector"
+import {
+    mutateCheckMcpConnector,
+    type MutateCheckMcpConnectorRequest,
+} from "@/modules/api/graphql/mutations/mutation-check-mcp-connector"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CheckMcpConnectorMutation } from "@/modules/api"
 
 /** What the CheckMcpConnector mutation is triggered with. */
 interface CheckMcpConnectorArg {
@@ -16,7 +18,7 @@ export const MUTATE_CHECK_MCP_CONNECTOR_SWR_KEY = "MUTATE_CHECK_MCP_CONNECTOR_SW
 
 /** SWR mutation for {@link mutateCheckMcpConnector}: `trigger({ key })` answers the recorded status and rejects with the back end failure. */
 export const useMutateCheckMcpConnectorSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCheckMcpConnector>["checkMcpConnector"],
+    CheckMcpConnectorMutation["checkMcpConnector"],
     Error,
     typeof MUTATE_CHECK_MCP_CONNECTOR_SWR_KEY,
     CheckMcpConnectorArg["arg"]

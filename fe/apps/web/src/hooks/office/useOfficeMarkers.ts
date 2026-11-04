@@ -6,18 +6,11 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { chatTargetOf } from "@/modules/office"
 import type { ChatMarkerWire } from "@/modules/office"
 
-import type { SWRResponse, SWRConfiguration } from "swr"
-import type { ChatMarkerStateAnswer } from "@/hooks/swr/api/graphql/queries/useQueryChatMarkerStateSwr"
-
 /** The Hub room keys whose state is asked: a null key is the Office room. */
 type RoomKeys = ReadonlyArray<string | null>
 
 type UseOfficeMarkersResult = {
-    read: SWRResponse<
-        readonly ChatMarkerStateAnswer[],
-        unknown,
-        SWRConfiguration<readonly ChatMarkerStateAnswer[]> | undefined
-    >
+    read: ReturnType<typeof useQueryChatMarkerStateSwr>
     markers: ReadonlyMap<string, ChatMarkerWire | undefined>
     setMute: (room: string | null, muted: boolean) => Promise<void>
     isLoading: boolean

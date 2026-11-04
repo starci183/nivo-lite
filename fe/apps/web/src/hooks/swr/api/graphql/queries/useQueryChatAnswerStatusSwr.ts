@@ -1,11 +1,16 @@
 "use client"
 
-import { workspaceArgumentKey, terminalStatusOptions } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import {
+    answeredData,
+    terminalStatusOptions,
+    workspaceArgumentKey,
+    type ReadResponse,
+    type WorkspaceReadKey,
+} from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { StatusPollOptions } from "@/hooks/reuseables"
 import { queryChatAnswerStatus } from "@/modules/api/graphql/queries/query-chat-answer-status"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ChatAnswerStatusQuery } from "@/modules/api"
 
 /** The SWR key of the chatAnswerStatus query. */
 export const QUERY_CHAT_ANSWER_STATUS_SWR_KEY = "QUERY_CHAT_ANSWER_STATUS_SWR"
@@ -18,13 +23,12 @@ export const useQueryChatAnswerStatusSwr = (
     workspaceId: string | undefined,
     workItemId: string | undefined,
     options: StatusPollOptions = {},
-): ReadResponse<OperationData<typeof queryChatAnswerStatus>["chatAnswerStatus"]> =>
+): ReadResponse<ChatAnswerStatusQuery["chatAnswerStatus"]> =>
     useSWR(
         workspaceArgumentKey(QUERY_CHAT_ANSWER_STATUS_SWR_KEY, workspaceId, workItemId),
         async ([, , id]: WorkspaceReadKey<string>) => {
-            const result = await queryChatAnswerStatus({ request: { workItemId: id } })
-            if (!result.data) throw new Error("chatAnswerStatus answered no data")
-            return result.data.chatAnswerStatus
+            return answeredData(await queryChatAnswerStatus({ request: { workItemId: id } }), "chatAnswerStatus")
+                .chatAnswerStatus
         },
         terminalStatusOptions(CHAT_ANSWER_STATUS_REFRESH_MS, options),
     )

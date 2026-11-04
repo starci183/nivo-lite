@@ -1,3 +1,4 @@
+import { ModuleListError } from "./module-list-error"
 import type { ModuleListProblem, ModuleServer, ModuleTemplate } from "./module.types"
 
 /** The commands of one template that name an action the template does not govern. */
@@ -33,6 +34,6 @@ export const moduleListProblems = (modules: ReadonlyArray<ModuleServer>): Readon
 /** The templates of a module list in catalogue order; throws on the first problem, so a wiring bug stops the start and never a request. */
 export const templatesOf = (modules: ReadonlyArray<ModuleServer>): ReadonlyArray<ModuleTemplate> => {
     const [problem] = moduleListProblems(modules)
-    if (problem !== undefined) throw new Error(`${problem.code}: ${problem.key}`)
+    if (problem !== undefined) throw new ModuleListError(problem.code, problem.key)
     return modules.map((module) => module.template).sort((left, right) => left.order - right.order)
 }

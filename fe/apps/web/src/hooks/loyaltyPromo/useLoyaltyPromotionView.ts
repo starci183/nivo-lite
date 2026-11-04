@@ -10,9 +10,9 @@ import {
     promotionResultOf,
     isDrafting,
 } from "./loyaltyPromo.shared"
+import type { PromotionViewData } from "@/hooks/loyaltyPromoView"
 import { useSegmentLabel } from "./useSegmentLabel"
 import type { useLoyaltyPromo } from "./useLoyaltyPromo"
-import type { BadgeTone } from "@starci/grammar/common"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 /** Inputs needed to build the LoyaltyPromoContent section. */
 interface BuildPromotionCopyContext {
@@ -102,83 +102,15 @@ const buildPromotionView = ({ board, t, values, promo, reachNobody, format, labe
 
 /** The view `useLoyaltyPromotionView` returns. */
 export interface LoyaltyPromotionView {
-    data: {
-        readonly canManage: boolean
-        readonly copy: {
-            readonly title: string
-            readonly body: string
-            readonly tiers: string
-            readonly tiersHint: string
-            readonly inactive: string
-            readonly inactiveHint: string
-            readonly spend: string
-            readonly spendHint: string
-            readonly birthday: string
-            readonly name: string
-            readonly nameHint: string
-            readonly brief: string
-            readonly briefHint: string
-            readonly submit: string
-            readonly drafting: string
-            readonly failedTitle: string
-            readonly draftLabel: string
-            readonly managersOnly: string
-            readonly managersOnlyBody: string
-            readonly campaignsTitle: string
-            readonly campaignsEmptyTitle: string
-            readonly campaignsEmptyBody: string
-        }
-        readonly tierOptions: {
-            value: string
-            label: string
-        }[]
-        readonly values: {
-            readonly tiers: string[]
-            readonly inactive: string
-            readonly spend: string
-            readonly birthday: boolean
-            readonly name: string
-            readonly brief: string
-        }
-        readonly briefError: string | undefined
-        readonly briefMax: 500
-        readonly isBusy: boolean
-        readonly isDrafting: boolean
-        readonly isSubmitDisabled: boolean
-        readonly rows: {
-            id: string
-            name: string
-            statusLabel: string
-            statusTone: BadgeTone
-            counts: string
-            meta: string
-            draft: string
-        }[]
-    }
+    data: PromotionViewData
     preview: {
-        slot: DataSlot<
-            {
-                readonly id: string
-                readonly text: string
-                readonly emphasis: boolean
-            }[]
-        >
+        slot: DataSlot<ReturnType<typeof promotionPreviewOf>>
         labels: SlotLabels
         loadingLabel: string
         audienceLabel: string
     }
     campaign: {
-        slot: DataSlot<{
-            result:
-                | {
-                      readonly title: string
-                      readonly recipients: string
-                      readonly time: string
-                      readonly draft: string
-                  }
-                | undefined
-            failure: string | undefined
-        }>
+        slot: DataSlot<ReturnType<typeof promotionResultOf>>
         labels: SlotLabels
         hasCampaign: boolean
     }

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateEnqueueKnowledgeSource } from "@/modules/api/graphql/mutations/mutation-enqueue-knowledge-source"
-import type { MutateEnqueueKnowledgeSourceRequest } from "@/modules/api/graphql/mutations/mutation-enqueue-knowledge-source"
+import {
+    mutateEnqueueKnowledgeSource,
+    type MutateEnqueueKnowledgeSourceRequest,
+} from "@/modules/api/graphql/mutations/mutation-enqueue-knowledge-source"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { EnqueueKnowledgeSourceMutation } from "@/modules/api"
 
 /** What the EnqueueKnowledgeSource mutation is triggered with. */
 interface EnqueueKnowledgeSourceArg {
@@ -16,7 +18,7 @@ export const MUTATE_ENQUEUE_KNOWLEDGE_SOURCE_SWR_KEY = "MUTATE_ENQUEUE_KNOWLEDGE
 
 /** SWR mutation for {@link mutateEnqueueKnowledgeSource}: Adds a document and queues its indexing; answers the new document id. `trigger(input)` rejects with the back end failure. */
 export const useMutateEnqueueKnowledgeSourceSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateEnqueueKnowledgeSource>["enqueueKnowledgeSource"],
+    EnqueueKnowledgeSourceMutation["enqueueKnowledgeSource"],
     Error,
     typeof MUTATE_ENQUEUE_KNOWLEDGE_SOURCE_SWR_KEY,
     EnqueueKnowledgeSourceArg["arg"]

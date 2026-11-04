@@ -7,9 +7,15 @@ export const leavesOf = (condition: Condition): ReadonlyArray<Condition> => {
     return [condition]
 }
 
+/** A condition rewritten, and how many terms it held. */
+interface Walked {
+    readonly node: Condition
+    readonly used: number
+}
+
 /** The same condition with the value of the nth term (counted as `leavesOf` counts) replaced; a condition with no such number is unchanged. */
 export const withLeafValue = (condition: Condition, index: number, value: number): Condition => {
-    const walk = (node: Condition, from: number): { readonly node: Condition; readonly used: number } => {
+    const walk = (node: Condition, from: number): Walked => {
         if ("all" in node || "any" in node) {
             const parts = "all" in node ? node.all : node.any
             let used = 0
