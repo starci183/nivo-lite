@@ -49,11 +49,56 @@ const lineOf = (item: ModelOrder["items"][number]): ReadonlyArray<OrderLine> => 
     return name === null ? [] : [{ name, quantity, priceVnd: null }]
 }
 
+/** The names under which a model may put the delivery address when it does not use `address`. */
+const ADDRESS_ALIASES: ReadonlyArray<string> = [
+    "delivery_address",
+    "shipping_address",
+    "deliveryAddress",
+    "shippingAddress",
+    "address_line",
+    "dia_chi",
+    "location",
+]
+
+/** The address the model gave: `address`, else the first alias that holds text. */
+const addressOf = (order: ModelOrder): string | null => {
+    const given = [order.address, ...ADDRESS_ALIASES.map((name) => order[name])]
+    const found = given.map((value) => textOrNull(typeof value === "string" ? value : null, ADDRESS_MAX))
+    return found.find((address) => address !== null) ?? null
+}
+
+/** "giao", "giao tới", "giao đến", "giao hàng tới", then "địa chỉ" when the customer says it, then the place to the end of the line. */
+const DELIVER_TO =
+    /(?<![\p{L}\p{N}])giao(?:\s+h(?:àng|ang))?(?:\s+(?:tới|toi|đến|den|tại|tai|ở))?(?:\s+(địa\s*chỉ|dia\s*chi|đc|dc))?\s*[:-]?\s*(\S[^\n]*)$/iu
+const HAS_DIGIT = /\d/u
+const TRAILING_MARKS = /[\s.,;!]+$/u
+
+/**
+ * The delivery address written in the words of the customer, for when the model left it out: what follows a delivery word ("giao 25 Nguyễn Huệ",
+ * "giao tới địa chỉ 69 Hàng Xanh"). The place counts when the customer said "địa chỉ" or when it holds a number, so "giao hàng nhanh nhé" is no address.
+ */
+export const addressInWords = (text: string): string | null => {
+    for (const line of messagesOf(text.normalize("NFC"))) {
+        const found = DELIVER_TO.exec(line)
+        const place = (found?.[2] ?? "").replace(TRAILING_MARKS, "").slice(0, ADDRESS_MAX)
+        if (place !== "" && (found?.[1] !== undefined || HAS_DIGIT.test(place))) return place
+    }
+    return null
+}
+
 const orderOf = (order: ModelOrder): OrderSlot => ({
     items: order.items.flatMap(lineOf),
-    address: textOrNull(order.address, ADDRESS_MAX),
+    address: addressOf(order),
     customer: textOrNull(order.customer, NAME_MAX),
 })
+
+/** The order slot with the address the customer wrote filled in when the model had none; an order the model named but gave no slot for becomes a slot with the address alone. */
+const orderWithAddress = (order: OrderSlot | null, listed: ReadonlyArray<Intent>, text: string): OrderSlot | null => {
+    const written = addressInWords(text)
+    if (order === null)
+        return listed.includes("order") && written !== null ? { items: [], address: written, customer: null } : null
+    return order.address === null ? { ...order, address: written } : order
+}
 
 const claimOf = (claim: ModelClaim): PaymentClaimSlot => ({
     amountVnd: vndOf(claim.amount_vnd),
@@ -89,11 +134,11 @@ export const imagesOf = (messages: ClassifyInput["messages"]): ReadonlyArray<Tri
  * null), a receipt picture is a payment claim, any other picture, and one the model gave no kind for, is an `attachment`, so a burst of
  * a picture alone is never `other`.
  */
-export const classificationOf = (reply: ModelReply, imageCount: number): ClassifyOutput => {
+export const classificationOf = (reply: ModelReply, imageCount: number, text: string): ClassifyOutput => {
     const kinds = Array.from({ length: imageCount }, (_, index) => reply.images[index] ?? "unreadable")
     const receipts = kinds.filter((kind) => kind === "payment_receipt").length
     const others = kinds.filter((kind) => kind !== "payment_receipt")
-    const order = reply.order == null ? null : orderOf(reply.order)
+    const order = orderWithAddress(reply.order == null ? null : orderOf(reply.order), reply.intents, text)
     const stated = reply.payment_claim == null ? null : claimOf(reply.payment_claim)
     const paymentClaim = stated ?? (receipts > 0 ? { amountVnd: null, payerName: null } : null)
     const attachment =

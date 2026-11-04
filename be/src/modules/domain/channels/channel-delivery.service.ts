@@ -11,6 +11,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectChannelSenderRegistry } from "./channels.decorators"
 import type { ChannelSenderRegistry, DeliveryRequest, DeliveryReceipt, PersonMessage } from "./channels.contracts"
+import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
 import { deliveryFailureFieldsOf } from "./delivery-failure-fields.policy"
 import { RECIPIENT_NOT_LINKED, recipientLinked } from "./delivery-recipient.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
@@ -57,6 +58,7 @@ export class ChannelDeliveryService {
         private readonly secrets: ConnectionSecretReadsService,
         private readonly credentials: ZaloCredentialsService,
         private readonly zaloDelivery: ZaloDeliveryService,
+        private readonly planNotice: ChannelPlanNoticeService,
         @InjectTelegram() private readonly telegram: TelegramClient,
         @InjectZalo() private readonly zalo: ZaloClient,
         @InjectChannelSenderRegistry() private readonly senders: ChannelSenderRegistry,
@@ -89,6 +91,7 @@ export class ChannelDeliveryService {
             return this.keptUndelivered(target.value, request.messageId)
         }
         await this.messages.markDelivery(request.messageId, result.delivered, deliveryErrorOf(result))
+        if (result.failure === "channel_plan") await this.planNotice.planBlocked(target.value)
         return result
     }
 

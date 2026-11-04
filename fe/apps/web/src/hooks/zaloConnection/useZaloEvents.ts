@@ -52,6 +52,8 @@ export const useZaloEvents = (connectionId: string): UseZaloEventsResult => {
                 return t("reasonQuota")
             case "zalo_not_permitted":
                 return t("reasonNotPermitted")
+            case "channel_plan":
+                return t("reasonChannelPlan")
             default:
                 return t("reasonOther")
         }

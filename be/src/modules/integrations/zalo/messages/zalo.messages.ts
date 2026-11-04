@@ -16,6 +16,7 @@ export const ZALO_MESSAGES: MessageBundle = {
         "errors.ZALO_TEMPLATE_REJECTED": "Mẫu ZNS chưa được duyệt hoặc dữ liệu không khớp với mẫu.",
         "errors.ZALO_QUOTA_EXHAUSTED": "Official Account đã hết hạn mức gửi hoặc hết số dư ZNS.",
         "errors.ZALO_NOT_PERMITTED": "Official Account chưa được cấp quyền dùng tính năng này của Zalo.",
+        "errors.ZALO_PLAN_RESTRICTED": "Gói OA hiện tại không cho gửi tin tư vấn cho khách; nâng gói OA để NIVO trả lời được trên Zalo",
     },
     en: {
         "errors.ZALO_UNAVAILABLE": "Zalo is not answering.",
@@ -31,5 +32,6 @@ export const ZALO_MESSAGES: MessageBundle = {
         "errors.ZALO_TEMPLATE_REJECTED": "The ZNS template is not approved, or the data does not fit it.",
         "errors.ZALO_QUOTA_EXHAUSTED": "The Official Account has used up its sending quota or its ZNS balance.",
         "errors.ZALO_NOT_PERMITTED": "The Official Account is not permitted to use this Zalo feature.",
+        "errors.ZALO_PLAN_RESTRICTED": "The current OA plan does not allow consultation messages to customers; upgrade the OA plan so NIVO can answer on Zalo",
     },
 }

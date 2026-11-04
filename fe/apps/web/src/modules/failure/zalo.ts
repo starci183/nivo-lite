@@ -30,6 +30,7 @@ const ZALO_FAILURES: ReadonlySet<string> = new Set([
     "zalo_template",
     "zalo_quota",
     "zalo_not_permitted",
+    "channel_plan",
     "zalo_error",
     "token_expired",
 ])

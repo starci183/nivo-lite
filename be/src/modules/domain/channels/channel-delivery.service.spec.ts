@@ -17,6 +17,7 @@ import type { ChannelSenderRegistry, DeliveryRequest } from "./channels.contract
 import { CHANNEL_SENDER_REGISTRY } from "./channels.decorators"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
+import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
 import { ZaloDeliveryService } from "./zalo-delivery.service"
 
 const target = (patch: Partial<ConversationTarget> = {}): ConversationTarget => ({
@@ -51,6 +52,7 @@ const build = async (found: ConversationTarget | null = target()) => {
     const credentials = mock<ZaloCredentialsService>()
     const senders = mock<ChannelSenderRegistry>()
     const zaloDelivery = mock<ZaloDeliveryService>()
+    const planNotice = mock<ChannelPlanNoticeService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelDeliveryService,
@@ -63,6 +65,7 @@ const build = async (found: ConversationTarget | null = target()) => {
             { provide: ConnectionSecretReadsService, useValue: secrets },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZaloDeliveryService, useValue: zaloDelivery },
+            { provide: ChannelPlanNoticeService, useValue: planNotice },
         ],
     }).compile()
     return {
@@ -75,6 +78,7 @@ const build = async (found: ConversationTarget | null = target()) => {
         credentials,
         senders,
         zaloDelivery,
+        planNotice,
     }
 }
 
@@ -300,6 +304,19 @@ describe("ChannelDeliveryService", () => {
                 expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", false, failure)
             },
         )
+
+        it("stores channel_plan and tells the owner once per refusal of the plan, and tells nobody of another failure", async () => {
+            const { service, zaloDelivery, messages, planNotice } = await build(zaloTarget())
+            zaloDelivery.send.mockResolvedValueOnce({ delivered: false, failure: "channel_plan", outcome: "rejected" })
+            zaloDelivery.send.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
+
+            await service.deliver(request)
+            expect(messages.markDelivery).toHaveBeenLastCalledWith("msg-1", false, "channel_plan")
+            expect(planNotice.planBlocked).toHaveBeenCalledWith(zaloTarget())
+
+            await service.deliver(request)
+            expect(planNotice.planBlocked).toHaveBeenCalledTimes(1)
+        })
 
         it("lets the caller retry when another worker is renewing the token", async () => {
             const { service, zaloDelivery, messages } = await build(zaloTarget())

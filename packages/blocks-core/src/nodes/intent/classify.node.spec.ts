@@ -4,7 +4,8 @@ import { EXAMPLE_TURN, fakeNodePorts, nodeExampleMismatches } from "@nivo-lite/a
 import { coreEffects } from "../../vocabulary/effects"
 import { CLASSIFY_INSTRUCTIONS } from "./classify.messages"
 import { intentClassifyNode } from "./classify.node"
-import { classificationOf, imagesOf, messagesOf, vndOf } from "./classify.policy"
+import { modelReplySchema } from "./classify.schema"
+import { addressInWords, classificationOf, imagesOf, messagesOf, vndOf } from "./classify.policy"
 
 describe("intent.classify", () => {
     it.each(intentClassifyNode.examples.map((each) => [each.name, each] as const))(
@@ -47,12 +48,18 @@ describe("vndOf", () => {
     })
 })
 
+const classified = (
+    reply: Parameters<typeof classificationOf>[0],
+    imageCount: number,
+    text = "",
+): ReturnType<typeof classificationOf> => classificationOf(reply, imageCount, text)
+
 const IMG = { name: "a.jpg", contentType: "image/jpeg", url: "https://files/a.jpg" }
 const PDF = { name: "a.pdf", contentType: "application/pdf", url: "https://files/a.pdf" }
 
 describe("classificationOf", () => {
     it("cleans the slots: blank items dropped, quantity bounded, blank strings null", () => {
-        const output = classificationOf(
+        const output = classified(
             {
                 intents: ["order", "other", "order"],
                 order: {
@@ -87,9 +94,7 @@ describe("classificationOf", () => {
     })
 
     it("keeps an order intent whose slot is absent, and drops other beside a real intent", () => {
-        expect(
-            classificationOf({ intents: ["other", "order"], order: null, payment_claim: null, images: [] }, 0),
-        ).toEqual({
+        expect(classified({ intents: ["other", "order"], order: null, payment_claim: null, images: [] }, 0)).toEqual({
             intents: ["order"],
             order: null,
             paymentClaim: null,
@@ -98,7 +103,7 @@ describe("classificationOf", () => {
     })
 
     it("turns every field the model left out into null, whatever the slot", () => {
-        const output = classificationOf(
+        const output = classified(
             { intents: [], order: { items: [{ name: "hoa" }] }, payment_claim: {}, images: [] },
             0,
         )
@@ -108,7 +113,7 @@ describe("classificationOf", () => {
             customer: null,
         })
         expect(output.paymentClaim).toEqual({ amountVnd: null, payerName: null })
-        expect(classificationOf({ intents: [], images: [] }, 0)).toEqual({
+        expect(classified({ intents: [], images: [] }, 0)).toEqual({
             intents: ["other"],
             order: null,
             paymentClaim: null,
@@ -117,30 +122,96 @@ describe("classificationOf", () => {
     })
 
     it("reads a receipt picture as a payment claim even when the model gave no claim, and keeps what it read", () => {
-        expect(classificationOf({ intents: ["other"], images: ["payment_receipt"] }, 1)).toMatchObject({
+        expect(classified({ intents: ["other"], images: ["payment_receipt"] }, 1)).toMatchObject({
             intents: ["payment_claim"],
             paymentClaim: { amountVnd: null, payerName: null },
             attachment: null,
         })
         expect(
-            classificationOf({ intents: [], payment_claim: { amount_vnd: 5000 }, images: ["payment_receipt"] }, 1)
+            classified({ intents: [], payment_claim: { amount_vnd: 5000 }, images: ["payment_receipt"] }, 1)
                 .paymentClaim,
         ).toEqual({ amountVnd: 5000, payerName: null })
     })
 
     it("counts the pictures that are no receipt as an attachment, understood only when every one is", () => {
-        expect(
-            classificationOf({ intents: ["question"], images: ["other", "payment_receipt", "other"] }, 3),
-        ).toMatchObject({
+        expect(classified({ intents: ["question"], images: ["other", "payment_receipt", "other"] }, 3)).toMatchObject({
             intents: ["question", "payment_claim", "attachment"],
             attachment: { count: 2, understood: true },
         })
-        expect(classificationOf({ intents: [], images: ["other", "unreadable"] }, 2).attachment).toEqual({
+        expect(classified({ intents: [], images: ["other", "unreadable"] }, 2).attachment).toEqual({
             count: 2,
             understood: false,
         })
-        expect(classificationOf({ intents: [], images: [] }, 2).attachment).toEqual({ count: 2, understood: false })
-        expect(classificationOf({ intents: [], images: ["other"] }, 0).attachment).toBeNull()
+        expect(classified({ intents: [], images: [] }, 2).attachment).toEqual({ count: 2, understood: false })
+        expect(classified({ intents: [], images: ["other"] }, 0).attachment).toBeNull()
+    })
+})
+
+describe("the delivery address", () => {
+    it.each([
+        ["Cho mình đặt 1 giỏ hoa nhỏ, giao 25 Nguyễn Huệ", "25 Nguyễn Huệ"],
+        ["Alo, đặt giùm Định 1 chậu hoa, giao tới địa chỉ 69 Hàng Xanh", "69 Hàng Xanh"],
+        ["Đặt 2 chậu, giao đến 12 Lê Lợi, Huế.", "12 Lê Lợi, Huế"],
+        ["Mình ở xa, giao hàng tới địa chỉ chợ Đông Ba nhé", "chợ Đông Ba nhé"],
+        ["mua 1 chau hoa\ngiao toi 7 Tran Phu", "7 Tran Phu"],
+    ])("reads the address after a delivery word in %p", (text, address) => {
+        expect(addressInWords(text)).toBe(address)
+    })
+
+    it("reads no address from a delivery word that names no place", () => {
+        expect(addressInWords("Giao hàng nhanh nhé")).toBeNull()
+        expect(addressInWords("Cho mình đặt chậu hoa")).toBeNull()
+        expect(addressInWords("giaodich xong rồi")).toBeNull()
+        expect(addressInWords("giao")).toBeNull()
+    })
+
+    it.each([
+        ["Cho mình đặt 1 giỏ hoa nhỏ, giao 25 Nguyễn Huệ", "25 Nguyễn Huệ"],
+        ["Alo, đặt giùm Định 1 chậu hoa, giao tới địa chỉ 69 Hàng Xanh", "69 Hàng Xanh"],
+    ])("fills the address the model left null from %p", (text, address) => {
+        const output = classified(
+            { intents: ["order"], order: { items: [{ name: "hoa" }], address: null }, images: [] },
+            0,
+            text,
+        )
+        expect(output.order?.address).toBe(address)
+    })
+
+    it("keeps the address the model gave, and takes it from another member name when it used one", () => {
+        const given = classified(
+            { intents: ["order"], order: { items: [], address: "1 Lê Lợi" }, images: [] },
+            0,
+            "giao 25 Nguyễn Huệ",
+        )
+        expect(given.order?.address).toBe("1 Lê Lợi")
+        const aliased = classified(
+            { intents: ["order"], order: { items: [], delivery_address: "  9 Hàng Bài ", location: 5 }, images: [] },
+            0,
+            "đặt hoa",
+        )
+        expect(aliased.order?.address).toBe("9 Hàng Bài")
+    })
+
+    it("makes an order slot of the address alone when the model named the order but gave no slot", () => {
+        expect(classified({ intents: ["order"], images: [] }, 0, "đặt hoa, giao 25 Nguyễn Huệ").order).toEqual({
+            items: [],
+            address: "25 Nguyễn Huệ",
+            customer: null,
+        })
+        expect(classified({ intents: ["question"], images: [] }, 0, "giao 25 Nguyễn Huệ được không").order).toBeNull()
+        expect(classified({ intents: ["order"], images: [] }, 0, "đặt hoa").order).toBeNull()
+    })
+
+    it("lets the model's reply keep a member under another name through the schema", () => {
+        const parsed = modelReplySchema.parse({
+            intents: ["order"],
+            order: { items: [], shipping_address: "3 Trần Phú" },
+        })
+        expect(classified(parsed, 0).order?.address).toBe("3 Trần Phú")
+    })
+
+    it("asks the model for the exact member names, the address included", () => {
+        expect(CLASSIFY_INSTRUCTIONS).toContain('"address": string|null')
     })
 })
 

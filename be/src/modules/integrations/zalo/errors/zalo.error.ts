@@ -25,6 +25,8 @@ export enum ZaloErrorCode {
     QuotaExhausted = "ZALO_QUOTA_EXHAUSTED",
     /** The OA or its app has no permission for this API (ZNS not enabled, development mode). */
     NotPermitted = "ZALO_NOT_PERMITTED",
+    /** The OA package does not allow consultation messages (Zalo -224: the OA needs to upgrade its tier package). */
+    PlanRestricted = "ZALO_PLAN_RESTRICTED",
 }
 
 /** How each Zalo code travels. */
@@ -40,6 +42,7 @@ export const ZALO_ERROR_KINDS: Record<ZaloErrorCode, ErrorKind> = {
     [ZaloErrorCode.TemplateRejected]: "invalid",
     [ZaloErrorCode.QuotaExhausted]: "rate-limited",
     [ZaloErrorCode.NotPermitted]: "forbidden",
+    [ZaloErrorCode.PlanRestricted]: "forbidden",
 }
 
 /** The one error class of the Zalo integration. */

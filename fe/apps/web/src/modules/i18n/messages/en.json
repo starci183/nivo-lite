@@ -6243,6 +6243,7 @@
     "err_zalo_token": "NIVO's Zalo access was refused: reconnect the Zalo OA in Connections",
     "err_zalo_not_connected": "This conversation has no Zalo connection to send through",
     "err_zalo_error": "Zalo refused the message",
+    "err_channel_plan": "The current OA plan does not allow consultation messages to customers; upgrade the OA plan so NIVO can answer on Zalo",
     "err_recipient_not_linked": "The customer has not linked this chat channel yet (no Zalo account to send to)",
     "channelFacebook": "Facebook",
     "channelInstagram": "Instagram",
@@ -7650,6 +7651,7 @@
     "err_zalo_template": "The ZNS template is not approved, or the data does not fit it.",
     "err_zalo_quota": "The Official Account has used up its sending quota or its ZNS balance.",
     "err_zalo_not_permitted": "The Official Account is not permitted to use this Zalo feature.",
+    "err_channel_plan": "The current OA plan does not allow consultation messages to customers; upgrade the OA plan so NIVO can answer on Zalo",
     "err_zalo_error": "Zalo refused the message.",
     "err_token_expired": "The Zalo OA access token has expired. Reconnect the Zalo OA."
   },
@@ -7755,6 +7757,7 @@
     "reasonTemplate": "message template refused",
     "reasonQuota": "sending quota used up",
     "reasonNotPermitted": "missing permission to send",
+    "reasonChannelPlan": "the OA plan does not allow consultation messages",
     "reasonOther": "Zalo refused it",
     "outcomeReceived": "Received",
     "outcomeSent": "Sent",
