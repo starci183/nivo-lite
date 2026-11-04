@@ -1,8 +1,9 @@
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { z } from "zod"
+import type { ValidatingMark } from "./slots.types"
 
 /** The validating mark a ready slot carries over to what is made of it. */
-const validatingOf = (slot: { readonly isValidating?: boolean }): { readonly isValidating?: boolean } =>
+const validatingOf = (slot: ValidatingMark): ValidatingMark =>
     slot.isValidating === undefined ? {} : { isValidating: slot.isValidating }
 
 /** Reads the items of a ready slot through a schema; data that does not fit is a failed read, never half a block. */

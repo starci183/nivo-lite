@@ -1,12 +1,20 @@
 import { defineDataKind } from "@nivo-lite/agent-sdk/node"
 import type { DataKindDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
+import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../bounds"
 
-const id = z.string()
-const text = z.string()
-const nullableText = z.string().nullable()
-const moment = z.string()
+const id = z.string().max(MAX_ID)
+const text = z.string().max(MAX_LINE)
+const longText = z.string().max(MAX_BODY)
+const nullableText = text.nullable()
+const moment = z.string().max(MAX_ID)
 const amount = z.number().nullable()
+const orderLine = z.object({
+    name: text,
+    qty: z.number(),
+    unitPriceVnd: z.number().optional(),
+    catalogueItemId: id.optional(),
+})
 
 /** A sales order. */
 export const orderKind: DataKindDefinition = defineDataKind({
@@ -16,7 +24,7 @@ export const orderKind: DataKindDefinition = defineDataKind({
         id,
         orderNo: text,
         leadId: id,
-        items: z.array(z.record(z.string(), z.unknown())),
+        items: z.array(orderLine).max(MAX_ENTRIES),
         amountVnd: amount,
         status: text,
         note: nullableText,
@@ -56,7 +64,7 @@ export const bankTransactionKind: DataKindDefinition = defineDataKind({
     fields: z.object({
         id,
         amountVnd: z.number(),
-        content: text,
+        content: longText,
         counterpartName: nullableText,
         receivedAt: moment,
         orderId: id.nullable(),
@@ -73,8 +81,8 @@ export const paymentClaimKind: DataKindDefinition = defineDataKind({
         leadId: id.nullable(),
         conversationId: id.nullable(),
         amountVnd: amount,
-        names: z.array(text),
-        body: text,
+        names: z.array(text).max(MAX_ENTRIES),
+        body: longText,
         claimedAt: moment,
         status: text,
     }),
@@ -105,14 +113,14 @@ export const conversationKind: DataKindDefinition = defineDataKind({
 export const messageKind: DataKindDefinition = defineDataKind({
     kind: "message",
     title: { key: "dataKindMessage" },
-    fields: z.object({ id, conversationId: id, authorKind: text, body: text, createdAt: moment }),
+    fields: z.object({ id, conversationId: id, authorKind: text, body: longText, createdAt: moment }),
 })
 
 /** A document of the business brain; a customer turn reads only the public ones. */
 export const knowledgeDocumentKind: DataKindDefinition = defineDataKind({
     kind: "knowledge-document",
     title: { key: "dataKindKnowledgeDocument" },
-    fields: z.object({ id, title: text, body: text, visibility: z.enum(["public", "internal"]) }),
+    fields: z.object({ id, title: text, body: longText, visibility: z.enum(["public", "internal"]) }),
 })
 
 /** Every data kind the core nodes may hold rights over; the back end registers a data port for each. */

@@ -1,39 +1,56 @@
 import { defineEffect } from "@nivo-lite/agent-sdk/node"
 import type { EffectDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
+import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../bounds"
+import { boundedRecord } from "../json.schema"
 
 /** A message to a customer conversation, through the channel it came from. */
 export interface ChannelSendPayload {
+    /** The conversation the message goes to. */
     readonly conversationId: string
+    /** The words of the message. */
     readonly text: string
+    /** Files sent with the message. */
     readonly attachments?: ReadonlyArray<{ readonly url: string; readonly name: string }> | undefined
 }
 
 /** One line of an order. */
 export interface OrderLine {
+    /** What the customer ordered, as the catalogue names it. */
     readonly name: string
+    /** How many of it. */
     readonly qty: number
+    /** The price of one, in VND, when the catalogue has one. */
     readonly unitPriceVnd?: number | undefined
+    /** The catalogue item the line resolved to. */
     readonly catalogueItemId?: string | undefined
 }
 
 /** A new order for a customer. */
 export interface OrderRecordPayload {
+    /** The customer the order is for. */
     readonly leadId: string
+    /** What the order holds. */
     readonly items: ReadonlyArray<OrderLine>
+    /** The total in VND, or null while a price is missing. */
     readonly amountVnd: number | null
+    /** What the customer asked for besides the items. */
     readonly note?: string | undefined
 }
 
 /** An order to confirm. */
 export interface OrderConfirmPayload {
+    /** The order to confirm. */
     readonly orderId: string
 }
 
 /** An order a bank credit paid, with the evidence that matched them. */
 export interface PaymentMarkPaidPayload {
+    /** The order that was paid. */
     readonly orderId: string
+    /** The bank credit that paid it. */
     readonly transactionId: string
+    /** Why the credit and the order match. */
     readonly evidence: ReadonlyArray<string>
 }
 
@@ -41,18 +58,27 @@ export interface PaymentMarkPaidPayload {
 export interface PaymentClaimRecordPayload {
     /** The customer, or null while the conversation has no lead yet: the claim then belongs to the conversation. */
     readonly leadId: string | null
+    /** The conversation the claim came in on. */
     readonly conversationId: string
+    /** The amount the customer named, when they named one. */
     readonly amountVnd?: number | undefined
+    /** The names the customer gave as the sender. */
     readonly names: ReadonlyArray<string>
+    /** The words of the claim. */
     readonly body: string
 }
 
 /** A tag of another agent: by id, or by the module whose agent the workspace runs. */
 export interface AgentTagPayload {
+    /** The agent to tag. */
     readonly toAgentId?: string | undefined
+    /** The module whose agent to tag. */
     readonly toModuleKey?: string | undefined
+    /** What the tag says. */
     readonly text: string
+    /** The conversation the tag is about. */
     readonly conversationId?: string | undefined
+    /** The record the tag is about. */
     readonly subject?: { readonly kind: string; readonly id: string } | undefined
     /** The customer the tag is about, which the target's turn is scoped to. */
     readonly leadId?: string | undefined
@@ -66,9 +92,13 @@ export interface AgentTagPayload {
 
 /** A piece of work raised for a person or the gate. */
 export interface WorkItemRaisePayload {
+    /** The action the work item asks for. */
     readonly action: string
+    /** What the person sees. */
     readonly title: string
+    /** The data the action runs with. */
     readonly payload: Readonly<Record<string, unknown>>
+    /** The amount at stake in VND. */
     readonly amountVnd?: number | undefined
     /** The claim of a customer's word this work settles or escalates, when it is about one. */
     readonly claimId?: string | undefined
@@ -76,17 +106,23 @@ export interface WorkItemRaisePayload {
 
 /** What every undo effect is given: the id of the subject the effect it undoes touched. */
 export interface UndoPayload {
+    /** The id of the subject to undo. */
     readonly id: string
 }
 
-const id = z.string().min(1)
+const id = z.string().min(1).max(MAX_ID)
+const line = z.string().min(1).max(MAX_LINE)
+const body = z.string().min(1).max(MAX_BODY)
 
 const undoPayload: z.ZodType<UndoPayload> = z.object({ id })
 
 const channelSendPayload: z.ZodType<ChannelSendPayload> = z.object({
     conversationId: id,
-    text: z.string().min(1),
-    attachments: z.array(z.object({ url: z.string(), name: z.string() })).optional(),
+    text: body,
+    attachments: z
+        .array(z.object({ url: z.string().max(MAX_BODY), name: z.string().max(MAX_LINE) }))
+        .max(MAX_ENTRIES)
+        .optional(),
 })
 
 const orderRecordPayload: z.ZodType<OrderRecordPayload> = z.object({
@@ -94,15 +130,16 @@ const orderRecordPayload: z.ZodType<OrderRecordPayload> = z.object({
     items: z
         .array(
             z.object({
-                name: z.string().min(1),
+                name: line,
                 qty: z.number().positive(),
                 unitPriceVnd: z.number().nonnegative().optional(),
                 catalogueItemId: id.optional(),
             }),
         )
-        .min(1),
+        .min(1)
+        .max(MAX_ENTRIES),
     amountVnd: z.number().nonnegative().nullable(),
-    note: z.string().optional(),
+    note: z.string().max(MAX_BODY).optional(),
 })
 
 const orderConfirmPayload: z.ZodType<OrderConfirmPayload> = z.object({ orderId: id })
@@ -110,35 +147,35 @@ const orderConfirmPayload: z.ZodType<OrderConfirmPayload> = z.object({ orderId: 
 const paymentMarkPaidPayload: z.ZodType<PaymentMarkPaidPayload> = z.object({
     orderId: id,
     transactionId: id,
-    evidence: z.array(z.string()),
+    evidence: z.array(z.string().max(MAX_BODY)).max(MAX_ENTRIES),
 })
 
 const paymentClaimRecordPayload: z.ZodType<PaymentClaimRecordPayload> = z.object({
     leadId: id.nullable(),
     conversationId: id,
     amountVnd: z.number().positive().optional(),
-    names: z.array(z.string()),
-    body: z.string().min(1),
+    names: z.array(z.string().max(MAX_LINE)).max(MAX_ENTRIES),
+    body,
 })
 
 const agentTagPayload: z.ZodType<AgentTagPayload> = z
     .object({
         toAgentId: id.optional(),
         toModuleKey: id.optional(),
-        text: z.string().min(1),
+        text: body,
         conversationId: id.optional(),
         subject: z.object({ kind: id, id }).optional(),
         leadId: id.optional(),
         channel: id.optional(),
-        context: z.record(z.string(), z.unknown()).optional(),
+        context: boundedRecord.optional(),
         visibility: z.enum(["chat", "redirect"]).optional(),
     })
     .refine((payload) => (payload.toAgentId === undefined) !== (payload.toModuleKey === undefined))
 
 const workItemRaisePayload: z.ZodType<WorkItemRaisePayload> = z.object({
     action: id,
-    title: z.string().min(1),
-    payload: z.record(z.string(), z.unknown()),
+    title: line,
+    payload: boundedRecord,
     amountVnd: z.number().nonnegative().optional(),
     claimId: id.optional(),
 })
@@ -192,7 +229,9 @@ export const paymentClaimRecordEffect: EffectDefinition<z.ZodType<PaymentClaimRe
     id: "payment-claim.record",
     title: { key: "effectPaymentClaimRecord" },
     payload: paymentClaimRecordPayload,
-    rights: [{ kind: "payment-claim", access: "write", scope: "turn", fields: ["leadId", "amountVnd", "names", "body"] }],
+    rights: [
+        { kind: "payment-claim", access: "write", scope: "turn", fields: ["leadId", "amountVnd", "names", "body"] },
+    ],
     compensation: "payment-claim.withdraw",
 })
 
@@ -241,4 +280,4 @@ export const coreEffects: ReadonlyArray<EffectDefinition> = [
     agentTagEffect,
     workItemRaiseEffect,
     workItemWithdrawEffect,
-] as ReadonlyArray<EffectDefinition>
+]

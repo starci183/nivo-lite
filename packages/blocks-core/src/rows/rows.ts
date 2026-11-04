@@ -1,24 +1,34 @@
 import { z } from "zod"
+import { MAX_ENTRIES } from "../bounds"
+import { boundedRecord } from "../json.schema"
 import { textOf, valueAt } from "../slots/paths"
 
 /** One row of a record list as the block draws it; an empty badge draws no badge. */
 export interface RecordRow {
+    /** The id the row is told apart by. */
     readonly id: string
+    /** The headline of the row. */
     readonly title: string
+    /** The line under the headline. */
     readonly description: string
+    /** The words of the badge; empty draws none. */
     readonly badge: string
 }
 
 /** The dotted paths of a record that name the parts of its row. */
 export interface RowPaths {
+    /** The path of the id. */
     readonly idPath: string
+    /** The path of the headline. */
     readonly titlePath: string
+    /** The path of the line under the headline, when the row has one. */
     readonly descriptionPath?: string | undefined
+    /** The path of the badge, when the row has one. */
     readonly badgePath?: string | undefined
 }
 
 /** The shape of a bound list: any records, read through paths. */
-export const recordsView: z.ZodType<ReadonlyArray<unknown>> = z.array(z.unknown())
+export const recordsView: z.ZodType<ReadonlyArray<unknown>> = z.array(boundedRecord).max(MAX_ENTRIES)
 
 /** The rows a skeleton draws. */
 const PLACEHOLDER_COUNT = 3
