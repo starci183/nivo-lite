@@ -11,11 +11,10 @@ export type GovFormat = ReturnType<typeof useFormatter>
 
 const EXCEPTION_ORDER: ReadonlyArray<ReasonCode> = ["missing_data", "over_authority", "unclear_outcome", "not_allowed"]
 /** How many waiting items the overview lists. */
-export const TOP_WAITING = 3
-const TOP_HISTORY = 5
+const TOP_WAITING = 3
 
 /** One department tile of the summary. */
-export interface GovDepartment {
+interface GovDepartment {
     readonly id: string
     readonly name: string
     readonly done: string
@@ -26,36 +25,20 @@ export interface GovDepartment {
 }
 
 /** One waiting item. */
-export interface GovWaitingItem {
+interface GovWaitingItem {
     readonly id: string
     readonly title: string
     readonly department: string
     readonly reason: string | null
     readonly summary: string | null
-}
-
-/** One decision of the history. */
-export interface GovHistoryRow {
-    readonly id: string
-    readonly action: string
-    readonly outcome: string
-    readonly outcomeTone: "success" | "accent" | "warning" | "danger"
-    readonly when: string
-    readonly exact: string
-    readonly detail: string
+    readonly createdAt: string
 }
 
 /** One exception count. */
-export interface GovExceptionChip {
+interface GovExceptionChip {
     readonly id: string
     readonly label: string
     readonly tone: "warning" | "danger"
-}
-
-const OUTCOME_TONES: Readonly<Record<string, GovHistoryRow["outcomeTone"]>> = {
-    auto_done: "success",
-    approved: "accent",
-    edited: "warning",
 }
 
 /** A relative time ("5 minutes ago") for recent instants, the exact date for old ones. */
@@ -65,9 +48,6 @@ const whenOf = (format: GovFormat, iso: string): string => {
     if (age < 7 * 86_400_000) return format.relativeTime(at, new Date())
     return format.dateTime(at, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
 }
-
-const exactOf = (format: GovFormat, iso: string): string =>
-    format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
 
 /** The department tiles of the summary. */
 export const departmentsOf = (
@@ -103,6 +83,7 @@ export const waitingItemsOf = (g: GovTranslator, waiting: ReadonlyArray<WaitingW
             department: g(`dept_${item.department}`),
             reason: item.reason ? g(`reason_${item.reason}`) : null,
             summary: item.summary || null,
+            createdAt: item.createdAt,
         }
     })
 
@@ -131,23 +112,3 @@ export const exceptionChipsOf = (
 /** The total of all exceptions. */
 export const exceptionTotalOf = (governance: Governance): number =>
     EXCEPTION_ORDER.reduce((sum, key) => sum + governance.exceptions[key], 0) + governance.exceptions.failed
-
-/** The latest decisions of the history. */
-export const historyRowsOf = (
-    g: GovTranslator,
-    format: GovFormat,
-    governance: Governance,
-): ReadonlyArray<GovHistoryRow> =>
-    governance.recentDecisions.slice(0, TOP_HISTORY).map((row) => {
-        const department = g(`dept_${row.department}`)
-        const leadName = row.leadName ? ` · ${row.leadName}` : ""
-        return {
-            id: row.id,
-            action: actionWordOf(g, row.action),
-            outcome: g(`outcome_${row.outcome}`),
-            outcomeTone: OUTCOME_TONES[row.outcome] ?? "danger",
-            when: whenOf(format, row.createdAt),
-            exact: exactOf(format, row.createdAt),
-            detail: `${department} · ${row.deciderKind === "policy" ? g("decider_policy") : row.decidedBy}${leadName}`,
-        }
-    })

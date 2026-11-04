@@ -183,6 +183,7 @@ export const waitingWorkFrom = (exceptions: Dashboard["exceptions"]): Array<Wait
             reason: reasonOf(x.reason),
             summary: x.summary ?? null,
             leadName: x.lead?.contactName ?? null,
+            createdAt: x.createdAt,
         }))
 
 /** Minutes between creation and a non-policy decision for each known work item. */

@@ -78,6 +78,7 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     dark: cuts(Outline.MoonIcon, Solid.MoonIcon),
     locale: cuts(Outline.LanguageIcon, Solid.LanguageIcon),
     search: cuts(Outline.MagnifyingGlassIcon, Solid.MagnifyingGlassIcon),
+    filter: cuts(Outline.FunnelIcon, Solid.FunnelIcon),
     cart: cuts(Outline.ShoppingCartIcon, Solid.ShoppingCartIcon),
     notification: cuts(Outline.BellIcon, Solid.BellIcon),
     account: cuts(Outline.UserCircleIcon, Solid.UserCircleIcon),

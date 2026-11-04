@@ -40,6 +40,7 @@ export type IconName =
     | "disclosure"
     | "edit"
     | "add"
+    | "filter"
     | "retry"
     | "send"
     | "attach"

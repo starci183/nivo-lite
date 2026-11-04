@@ -35,6 +35,13 @@ const excludedKey = (reason: string): string => {
     return "excludedOverLimit"
 }
 
+/** The word on the chip that opens a card: it still needs a decision, or how it ended. */
+const statusLabelOf = (card: NonNullable<ThreadMessageType["approval"]>, t: ThreadWords): string => {
+    if (card.outcome === "pending") return t("cardPending")
+    if (card.outcome === "expired") return t("expiredLine")
+    return t(voteKey(card.outcome))
+}
+
 /** How a settled card reads: who decided it, how and at what time; an empty text while it waits. */
 const decidedLineOf = (card: NonNullable<ThreadMessageType["approval"]>, t: ThreadWords): string => {
     if (card.outcome === "pending") return ""
@@ -86,6 +93,7 @@ export const approvalViewOf = (
             line: t("excludedLine", { name: left.name, reason: t(excludedKey(left.reason)) }),
         })),
         fallbackLine: card.owner === null ? null : t("fallbackLine", { name: card.owner.name }),
+        statusLabel: statusLabelOf(card, t),
         isPending: card.outcome === "pending",
         decidedLine: decidedLineOf(card, t),
         decidedTone: chainStatusTone(card.outcome),

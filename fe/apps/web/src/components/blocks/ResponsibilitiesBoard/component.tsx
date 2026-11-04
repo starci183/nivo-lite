@@ -1,10 +1,25 @@
-import { Button, Cluster, Page, SearchField, Section, Select, Stack, Tabs, TextAction } from "@starci/grammar/common"
-import type { BreadcrumbItem } from "@starci/grammar/common"
-import { OwnerGroupList } from "@/components/composites/OwnerGroupList"
-import type { OwnerGroupListLabels } from "@/components/composites/OwnerGroupList"
+import { Page, Pane, PaneGrid } from "@starci/grammar/common"
+import type { ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { DataSlot, OwnerGroupView, ResponsibilityRowView, SlotLabels } from "@/modules/types"
-import { SEARCH_CLASS, SORT_CLASS } from "./classNames"
+import { PaneBlank } from "@/components/composites/PaneBlank"
+import { PaneHead } from "@/components/composites/PaneHead"
+import { ResponsibilityDetail } from "@/components/composites/ResponsibilityDetail"
+import { RowTrailing } from "@/components/composites/RowTrailing"
+import { PaneBody } from "@/components/frames/PaneBody"
+import { PaneList } from "@/components/frames/PaneList"
+import { ResponsibilityListHead } from "@/components/frames/ResponsibilityListHead"
+import { ResponsibilityMainHead } from "@/components/frames/ResponsibilityMainHead"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { leadHref } from "@/modules/routes"
+import type {
+    DataSlot,
+    PaneGridLayout,
+    ResponsibilitiesBoardCopy,
+    ResponsibilityOpenedView,
+    ResponsibilityRowView,
+    SlotLabels,
+} from "@/modules/types"
 
 /** One choice of a select or one tab. */
 export interface ResponsibilityChoiceView {
@@ -15,191 +30,267 @@ export interface ResponsibilityChoiceView {
 /** Copy, values and state of the responsibility board. */
 export interface ResponsibilitiesBoardBaseProps {
     readonly props: {
-        readonly crumbLabel: string
-        readonly crumbs: ReadonlyArray<BreadcrumbItem>
-        readonly title: string
-        readonly description: string
-        readonly newLeadLabel: string
-        readonly newLeadHref: string
-        readonly showFilters: boolean
-        readonly ownerLabel: string
-        readonly owners: ReadonlyArray<ResponsibilityChoiceView>
-        readonly owner: string
-        readonly dueLabel: string
-        readonly dues: ReadonlyArray<ResponsibilityChoiceView>
-        readonly due: string
-        readonly clearLabel: string
-        readonly isFiltered: boolean
-        readonly tabsLabel: string
+        readonly copy: ResponsibilitiesBoardCopy
         readonly tabs: ReadonlyArray<ResponsibilityChoiceView>
         readonly status: string
-        readonly searchLabel: string
-        readonly searchPlaceholder: string
         readonly query: string
-        readonly filtersLabel: string
-        readonly sortLabel: string
+        readonly owners: ReadonlyArray<ResponsibilityChoiceView>
+        readonly owner: string
+        readonly dues: ReadonlyArray<ResponsibilityChoiceView>
+        readonly due: string
         readonly sorts: ReadonlyArray<ResponsibilityChoiceView>
         readonly sort: string
-        readonly listTitle: string
-        readonly count: string
-        readonly verifiedLabel: string
-        readonly slot: DataSlot<ReadonlyArray<OwnerGroupView>>
-        readonly slotLabels: SlotLabels
-        readonly groupLabels: OwnerGroupListLabels
+        readonly isFiltered: boolean
+        readonly isFiltersOpen: boolean
+        readonly slot: DataSlot<{ readonly rows: ReadonlyArray<ResponsibilityOpenedView> }>
+        /** The first read has no data yet. */
+        readonly isWaiting: boolean
+        readonly labels: SlotLabels
+        readonly selectedId: string | null
         readonly draftingId: string | null
         readonly copiedId: string | null
+        readonly grid: PaneGridLayout
     }
     readonly on: {
-        readonly owner: (value: string | null) => void
-        readonly due: (value: string | null) => void
-        readonly clear: () => void
         readonly status: (key: string) => void
         readonly query: (value: string) => void
-        readonly toggleFilters: () => void
+        readonly owner: (value: string | null) => void
+        readonly due: (value: string | null) => void
         readonly sort: (value: string | null) => void
+        readonly clear: () => void
+        readonly filtersOpenChange: (isOpen: boolean) => void
+        readonly select: (id: string) => void
+        readonly back: () => void
+        readonly retry: () => void
         readonly draft: (responsibilityId: string) => void
         readonly copy: (responsibilityId: string, leadId: string) => void
-        readonly retry: () => void
+        /** The words of the "+N" overflow of the filter row. */
+        readonly moreFilters: (count: number) => string
     }
 }
 
-/** Fake rows of the same shape: the skeleton reuses the ready tree. */
+type Props = ResponsibilitiesBoardBaseProps
+
+/** One resting row: the skeleton keeps the geometry of the ready list and detail. */
 const PLACEHOLDER_ROW: ResponsibilityRowView = {
-    id: "placeholder-row",
-    leadId: "placeholder-lead",
-    customer: "…",
-    title: "…",
-    nextAction: "…",
-    dueLabel: "…",
+    id: "",
+    leadId: "",
+    customer: "",
+    title: "",
+    nextAction: "",
+    dueLabel: "",
     dueAt: null,
     createdAt: "",
     isOverdue: false,
     isDueToday: false,
     isDueThisWeek: false,
     status: "open",
-    statusLabel: "…",
-    ownerKey: "placeholder-owner",
-    ownerName: "…",
+    statusLabel: "",
+    ownerKey: "",
+    ownerName: "",
     ownerKind: "human",
     ownerHandle: null,
 }
+const PLACEHOLDER_ROWS: ReadonlyArray<ResponsibilityOpenedView> = ["a", "b", "c", "d", "e"].map((id) => ({
+    row: { ...PLACEHOLDER_ROW, id },
+    avatarUrl: null,
+    ownerRole: "",
+    dueDate: null,
+    canDraft: false,
+}))
 
-/** What the owner groups draw while their read is in flight: one owner with two rows. */
-const OWNER_GROUPS_PLACEHOLDER: ReadonlyArray<OwnerGroupView> = [
-    {
-        key: "placeholder-owner",
-        name: "…",
-        kind: "human",
-        handle: null,
-        glyph: "moduleChatbot",
-        avatarUrl: null,
-        rows: [PLACEHOLDER_ROW, { ...PLACEHOLDER_ROW, id: "placeholder-row-2" }],
-    },
-]
-
-/** The section's count is a worded number while the read is settled, and stays hidden while it loads. */
-const countOf = (count: string): number | undefined => (count === "" ? undefined : Number(count))
-
-/** Draws the responsibility board: filter cards, status tabs with counts, search and sort over the owner-grouped rows. */
-export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps) => {
-    const view = props.props
-    const count = countOf(view.count)
-    return (
-        <Page
-            measure="product"
-            header={{
-                breadcrumbs: { label: view.crumbLabel, items: view.crumbs },
-                title: view.title,
-                description: view.description,
-                actions: (
-                    <Button intent="commit" href={view.newLeadHref}>
-                        {view.newLeadLabel}
-                    </Button>
-                ),
+/** The list rows: the customer, the next step, and at the end the due words over the state. */
+const itemOf = (opened: ResponsibilityOpenedView, nextLabel: (action: string) => string): ListBoxItem => ({
+    id: opened.row.id,
+    label: opened.row.customer.split(" · ")[0] ?? opened.row.customer,
+    description: nextLabel(opened.row.nextAction),
+    descriptionLines: 2,
+    leading: <PersonAvatar name={opened.row.customer.split(" · ")[0] ?? ""} size="md" />,
+    trailing: (
+        <RowTrailing
+            {...(opened.row.dueLabel === null ? {} : { meta: opened.row.dueLabel })}
+            badge={{
+                label: opened.row.statusLabel,
+                tone: opened.row.status === "waiting_approval" ? "warning" : "neutral",
             }}
-        >
-            <Stack gap="section">
-                {view.showFilters ? (
-                    <Cluster gap="row" align="end">
-                        <Select
-                            label={view.ownerLabel}
-                            options={view.owners}
-                            value={view.owner}
-                            onValueChange={props.on.owner}
-                        />
-                        <Select
-                            label={view.dueLabel}
-                            options={view.dues}
-                            value={view.due}
-                            onValueChange={props.on.due}
-                        />
-                        <TextAction onPress={props.on.clear} isDisabled={!view.isFiltered}>
-                            {view.clearLabel}
-                        </TextAction>
-                    </Cluster>
-                ) : null}
-                <ResponsibilityToolbar {...props} />
-                <Section title={view.listTitle} {...(count === undefined ? {} : { count })} meta={view.verifiedLabel}>
-                    <SlotView
-                        slot={view.slot}
-                        placeholder={OWNER_GROUPS_PLACEHOLDER}
-                        labels={view.slotLabels}
-                        onRetry={props.on.retry}
-                        render={(groups, isLoading) => (
-                            <OwnerGroupList
-                                isLoading={isLoading}
-                                groups={groups}
-                                labels={view.groupLabels}
-                                draftingId={view.draftingId}
-                                copiedId={view.copiedId}
-                                onDraft={props.on.draft}
-                                onCopy={props.on.copy}
-                            />
-                        )}
-                    />
-                </Section>
-            </Stack>
-        </Page>
+        />
+    ),
+})
+
+/** The opened responsibility: the one chosen (the first when none was), a skeleton row while waiting, none when there is none. */
+const openedOf = (view: Props["props"]): ResponsibilityOpenedView | null => {
+    if (view.isWaiting) return PLACEHOLDER_ROWS[0] ?? null
+    const rows = "items" in view.slot ? view.slot.items.rows : []
+    return rows.find((opened) => opened.row.id === view.selectedId) ?? null
+}
+
+/** The list body: the search and the status filter over the rows, with the notice that fits an empty or a filtered list. */
+const ListBody = (props: Props) => {
+    const { copy } = props.props
+    return (
+        <SlotView
+            slot={props.props.slot}
+            placeholder={{ rows: PLACEHOLDER_ROWS }}
+            labels={props.props.labels}
+            errorDescription={copy.errorBody}
+            onRetry={props.on.retry}
+            render={(list, isLoading) => (
+                <PaneList
+                    label={copy.listLabel}
+                    search={{
+                        label: copy.searchLabel,
+                        placeholder: copy.searchPlaceholder,
+                        clearLabel: copy.clearSearch,
+                        value: props.props.query,
+                        onChange: props.on.query,
+                    }}
+                    choice={{
+                        label: copy.tabsLabel,
+                        options: props.props.tabs.map((tab) => ({ value: tab.id, label: tab.label })),
+                        value: props.props.status,
+                        onChange: props.on.status,
+                        moreLabel: props.on.moreFilters,
+                        searchLabel: copy.filterSearch,
+                        emptyLabel: copy.filterNoMatch,
+                    }}
+                    items={list.rows.map((opened) => itemOf(opened, copy.detail.nextOf))}
+                    selectedId={props.props.selectedId}
+                    onSelect={props.on.select}
+                    empty={{
+                        message: props.props.labels.empty,
+                        description: copy.emptyBody,
+                        iconSource: nivoIconSource("filter", "leading"),
+                        ...(props.props.isFiltered ? { actionLabel: copy.clearFilters, onAction: props.on.clear } : {}),
+                    }}
+                    isLoading={isLoading}
+                />
+            )}
+        />
     )
 }
 
-/** Renders the ResponsibilityToolbar section. */
-const ResponsibilityToolbar = (props: ResponsibilitiesBoardBaseProps) => {
+/** The head of the opened responsibility (or of the page while none is open), with the draft command when one can be asked. */
+const MainHead = (props: Props) => {
     const view = props.props
-    return (
-        <Cluster gap="row" justify="between" align="end">
-            <Tabs
-                label={view.tabsLabel}
-                selectedKey={view.status}
-                inset="none"
-                labelVisibility="always"
-                items={view.tabs}
-                onSelect={props.on.status}
+    const opened = openedOf(view)
+    if (opened === null) {
+        return (
+            <PaneHead
+                title={view.copy.title}
+                headingLevel={1}
+                description={view.copy.pageBody}
+                back={{ label: view.copy.back, onPress: props.on.back }}
             />
-            <Cluster gap="row" align="end">
-                <div className={SEARCH_CLASS}>
-                    <SearchField
-                        label={view.searchLabel}
-                        isLabelHidden
-                        placeholder={view.searchPlaceholder}
-                        value={view.query}
-                        onValueChange={props.on.query}
-                        onClear={() => props.on.query("")}
+        )
+    }
+    const { row } = opened
+    const isDrafting = view.draftingId === row.id
+    return (
+        <ResponsibilityMainHead
+            title={row.title}
+            customer={row.customer}
+            statusLabel={row.statusLabel}
+            isWaitingApproval={row.status === "waiting_approval"}
+            isLoading={view.isWaiting}
+            backLabel={view.copy.back}
+            onBack={props.on.back}
+            moreLabel={view.copy.moreActions}
+            leadHref={leadHref(row.leadId)}
+            labels={{
+                openLead: view.copy.detail.openLead,
+                openOffice: view.copy.detail.openOffice,
+                copyLink: view.copy.menuCopy,
+            }}
+            onCopy={() => props.on.copy(row.id, row.leadId)}
+            primary={
+                opened.canDraft
+                    ? {
+                          label: isDrafting ? view.copy.drafting : view.copy.draft,
+                          isPending: isDrafting,
+                          onPress: () => props.on.draft(row.id),
+                      }
+                    : undefined
+            }
+        />
+    )
+}
+
+/** Draws the responsibilities as the chat pattern: the list beside the opened responsibility; a phone shows one pane. */
+export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps) => {
+    const view = props.props
+    const { copy } = view
+    const opened = openedOf(view)
+    const isDrafting = opened !== null && view.draftingId === opened.row.id
+    const primary =
+        opened?.canDraft !== true
+            ? undefined
+            : {
+                  label: isDrafting ? copy.drafting : copy.draft,
+                  isPending: isDrafting,
+                  onPress: () => props.on.draft(opened.row.id),
+              }
+    return (
+        <Page chrome="panes">
+            <PaneGrid label={copy.grid} areas={view.grid.areas} columns={view.grid.columns} rows={view.grid.rows}>
+                <Pane area="listHead" surface>
+                    <PaneHead
+                        title={copy.title}
+                        actions={
+                            <ResponsibilityListHead
+                                count={copy.count}
+                                filtersLabel={copy.filtersLabel}
+                                filtersTitle={copy.filtersTitle}
+                                isOpen={view.isFiltersOpen}
+                                onOpenChange={props.on.filtersOpenChange}
+                                filters={{
+                                    copy: copy.filters,
+                                    owners: view.owners,
+                                    owner: view.owner,
+                                    dues: view.dues,
+                                    due: view.due,
+                                    sorts: view.sorts,
+                                    sort: view.sort,
+                                    onOwner: props.on.owner,
+                                    onDue: props.on.due,
+                                    onSort: props.on.sort,
+                                    onClear: props.on.clear,
+                                }}
+                            />
+                        }
                     />
-                </div>
-                <Button intent="neutral" onPress={props.on.toggleFilters}>
-                    {view.filtersLabel}
-                </Button>
-                <div className={SORT_CLASS}>
-                    <Select
-                        label={view.sortLabel}
-                        isLabelHidden
-                        options={view.sorts}
-                        value={view.sort}
-                        onValueChange={props.on.sort}
-                    />
-                </div>
-            </Cluster>
-        </Cluster>
+                </Pane>
+                <Pane area="list" surface scroll label={copy.listLabel}>
+                    <PaneBody>
+                        <ListBody {...props} />
+                    </PaneBody>
+                </Pane>
+                <Pane area="head" surface>
+                    <MainHead {...props} />
+                </Pane>
+                {opened === null ? (
+                    <Pane area="main" label={copy.detailLabel}>
+                        <PaneBlank
+                            message={copy.pickTitle}
+                            description={copy.pickBody}
+                            iconSource={nivoIconSource("review", "leading")}
+                        />
+                    </Pane>
+                ) : (
+                    <Pane area="main" scroll label={copy.detailLabel}>
+                        <PaneBody {...(primary === undefined ? {} : { phonePrimary: primary })}>
+                            <ResponsibilityDetail
+                                row={opened.row}
+                                copy={copy.detail}
+                                avatarUrl={opened.avatarUrl}
+                                ownerRole={opened.ownerRole}
+                                dueDate={opened.dueDate}
+                                isCopied={view.copiedId === opened.row.id}
+                                isLoading={view.isWaiting}
+                            />
+                        </PaneBody>
+                    </Pane>
+                )}
+            </PaneGrid>
+        </Page>
     )
 }

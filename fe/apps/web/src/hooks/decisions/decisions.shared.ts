@@ -1,5 +1,14 @@
-import type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "@/modules/types"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import type { useFormatter, useTranslations } from "next-intl"
+import { actionWordOf } from "@/hooks/actionWord"
+import type {
+    DeciderKind,
+    DecisionKind,
+    DecisionOutcome,
+    DecisionRecord,
+    GateReason,
+    DecisionHistoryRowView,
+} from "@/modules/types"
+import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
 
 /** The decision history filters, in the order the tabs show them. */
 export const DECISION_KINDS: ReadonlyArray<DecisionKind> = ["policy", "human", "rejected"]
@@ -91,3 +100,53 @@ export const toDecisionRecord = (row: DecisionWire): DecisionRecord => ({
     note: row.note,
     created_at: row.created_at,
 })
+
+/** The translators and formatter the rows of the history are worded with. */
+export interface DecisionWords {
+    readonly t: ReturnType<typeof useTranslations>
+    readonly g: ReturnType<typeof useTranslations>
+    readonly format: ReturnType<typeof useFormatter>
+    readonly now: Date
+}
+
+/** The calendar day of an instant, as text. */
+const dayOf = (words: DecisionWords, date: Date): string =>
+    words.format.dateTime(date, { day: "2-digit", month: "2-digit", year: "numeric" })
+
+/** The clock time of an instant, as text. */
+const timeOf = (words: DecisionWords, date: Date): string =>
+    words.format.dateTime(date, { hour: "2-digit", minute: "2-digit" })
+
+/** When it happened for the list: the time today, "yesterday", or the day and month. */
+const shortWhenOf = (words: DecisionWords, date: Date): string => {
+    if (dayOf(words, date) === dayOf(words, words.now)) return timeOf(words, date)
+    if (dayOf(words, date) === dayOf(words, new Date(words.now.getTime() - 86_400_000))) return words.t("yesterday")
+    return words.format.dateTime(date, { day: "2-digit", month: "2-digit" })
+}
+
+/** One decision of the history in the words of the reader: the list line, the facts and why the gate asked. */
+export const decisionRowViewOf = (words: DecisionWords, row: DecisionRecord): DecisionHistoryRowView => {
+    const { g, t } = words
+    const parts = splitBasis(row.note)
+    const at = new Date(row.created_at)
+    const decider = row.decider_kind === "policy" ? g("decider_policy") : row.decided_by
+    const hasReason = row.reason !== null && row.reason !== "routine"
+    return {
+        id: row.id,
+        title: actionWordOf(g, row.action),
+        departmentLabel: g(`dept_${row.department}`),
+        decider,
+        isPolicy: row.decider_kind === "policy",
+        outcomeLabel: g(`outcome_${row.outcome}`),
+        outcomeTone: outcomeTone(row.outcome),
+        line: [g(`dept_${row.department}`), decider, shortWhenOf(words, at)].join(" · "),
+        whenShort: shortWhenOf(words, at),
+        whenLong: `${timeOf(words, at)}, ${dayOf(words, at)}`,
+        reasonTitle: hasReason ? g(`reason_${row.reason}`) : null,
+        reasonHint: hasReason ? g(`reasonHint_${row.reason}`) : null,
+        basis: parts.basis,
+        note: parts.rest,
+        leadHref: row.lead_id === null ? null : leadHref(row.lead_id),
+        leadLabel: row.leadName ?? t("openLead"),
+    }
+}

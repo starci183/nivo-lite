@@ -1,5 +1,5 @@
-import type { BreadcrumbItem } from "@starci/grammar/common"
 import type { ModuleIconName } from "./module-icon"
+import type { PaneGridLayout } from "./panes"
 import type { DataSlot, SlotLabels } from "./slot"
 
 /** The tone a status badge takes. */
@@ -22,6 +22,7 @@ export interface ThreadRowView {
     readonly id: string
     readonly title: string
     readonly statusLabel: string
+    readonly statusTone: StatusTone
     readonly isSelected: boolean
     readonly countLabel: string
 }
@@ -55,6 +56,8 @@ export interface ThreadApprovalCardView {
     readonly approvers: ReadonlyArray<ApprovalLineView>
     readonly excluded: ReadonlyArray<{ readonly id: string; readonly line: string }>
     readonly fallbackLine: string | null
+    /** The chip that opens the card: that it needs a decision, or how it ended. */
+    readonly statusLabel: string
     /** Whether the card still waits for a decision: the buttons show only then. */
     readonly isPending: boolean
     /** Who decided it and how, or an empty text while it waits. */
@@ -81,6 +84,8 @@ export interface ThreadMessageView {
 export interface ThreadFeedView {
     readonly title: string
     readonly subtitle: string
+    /** How many approval cards still wait for a decision. */
+    readonly pendingCount: number
     readonly messages: ReadonlyArray<ThreadMessageView>
 }
 
@@ -129,10 +134,23 @@ export interface ThreadRailForm {
 
 /** The words, values and state of the work threads board. */
 export interface WorkThreadBoardView {
-    readonly crumbLabel: string
-    readonly crumbs: ReadonlyArray<BreadcrumbItem>
     readonly title: string
     readonly subtitle: string
+    /** The areas and tracks of the pane grid at each width, for the pane the phone shows and the chain pane. */
+    readonly grid: PaneGridLayout
+    readonly labels: {
+        readonly back: string
+        readonly chainOpen: string
+        readonly chainClose: string
+        readonly chainToggle: string
+        readonly pendingApprovals: (count: number) => string
+        readonly noSelectionTitle: string
+        readonly emptyFeedTitle: string
+        readonly emptyRailTitle: string
+        readonly emptyRailBody: string
+    }
+    readonly isChainDocked: boolean
+    readonly isChainDrawerOpen: boolean
     readonly rail: {
         readonly title: string
         readonly listLabel: string
@@ -184,6 +202,9 @@ export interface WorkThreadBoardHandlers {
     readonly cancelForm: () => void
     readonly title: (value: string) => void
     readonly create: () => void
+    readonly back: () => void
+    readonly toggleChain: () => void
+    readonly chainDrawerOpenChange: (isOpen: boolean) => void
     readonly draft: (value: string) => void
     readonly pickMention: (option: ComposerOption) => void
     readonly send: () => void

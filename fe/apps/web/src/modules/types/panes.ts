@@ -6,3 +6,5 @@ export interface PaneGridLayout {
     readonly columns: Exclude<NonNullable<PaneGridProps["columns"]>, ReadonlyArray<PaneTrack>>
     readonly rows: Exclude<NonNullable<PaneGridProps["rows"]>, ReadonlyArray<PaneTrack>>
 }
+
+export type { OverviewPaneCopy, OverviewPaneReady } from "./overview"

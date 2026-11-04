@@ -72,7 +72,7 @@ export type { Access, Environment, Provider, ProviderKind, Purpose } from "./con
 export type { AgentOption, Connection, ConnectionAgentRowView, ConnectionStatus, ConnectionTone } from "./connections"
 export type { ConnectionCheck, ConnectionFactView, ConnectionHeadView, ConnectionPageHeadView } from "./connections"
 export type { InboxRowView } from "./inbox"
-export type { PaneGridLayout } from "./panes"
+export type { OverviewPaneCopy, OverviewPaneReady, PaneGridLayout } from "./panes"
 export type { ConnectionPageHeadCommands } from "./connections"
 export type { ConnectionLineView, ConnectionRailLinesView, ConnectionRefusalView } from "./connections"
 export type { ConnectionNotice } from "./connections"
@@ -162,15 +162,14 @@ export type {
     TemplatePack,
 } from "./automations"
 export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason } from "./decisions"
+export type { DecisionHistoryRowView } from "./decisions"
 export type { AttentionKind, AttentionRow, AttentionItemView } from "./sales"
 export type { ActivityItemView } from "./sales"
 export type { SalesContract, SalesContractStatus, ContractItemView } from "./sales"
 export type { SalesDeal, DealView, LaneView, MoveDialogView } from "./sales"
 export type { HandoffRow, HandoffItemView, SalesShipping } from "./sales"
 export type { SalesDecision, DecisionRowView, DecisionRowLabels, DecisionRowActions } from "./sales"
-export type { SalesConversion, SalesMetrics } from "./sales"
-export type { SalesOrderRowView } from "./sales"
-export type { SalesWorkbenchData } from "./sales"
+export type { SalesConversion, SalesMetrics, SalesOrderRowView, SalesWorkbenchData } from "./sales"
 export type {
     LeadGenComment,
     LeadGenHandoff,
@@ -340,6 +339,7 @@ export type { ProfileRegionBaseProps } from "./agent-profile"
 export type { AdminBadgeView, AdminCardView, AdminInviteRef, AdminRowView, AdminWorkspaceRowView } from "./admin"
 export type { BillingPlanView, BillingRowView, BillingTone, PlanCardView, PlanGroupView } from "./billing"
 export type { OwnerGroupView, ResponsibilityRowView, RowStatus } from "./responsibilities"
+export type { ResponsibilitiesBoardCopy, ResponsibilityOpenedView } from "./responsibilities"
 export type {
     SetupGatesCardProps,
     SetupSideGate,

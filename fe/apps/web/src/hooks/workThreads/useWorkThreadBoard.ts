@@ -10,7 +10,14 @@ import {
     useQueryWorkThreadSwr,
     useQueryWorkThreadsSwr,
 } from "@/hooks/swr"
-import type { ChainPanelView, ComposerOption, DataSlot, ThreadFeedView, ThreadRowView } from "@/modules/types"
+import type {
+    ChainPanelView,
+    ComposerOption,
+    DataSlot,
+    StatusTone,
+    ThreadFeedView,
+    ThreadRowView,
+} from "@/modules/types"
 import { THREAD_POLL_MS, approvalViewOf, bodySegmentsOf, chainViewOf, composerOptionsOf } from "@/modules/work-threads"
 
 /** What the work threads board reads: the list, the open thread, its chain and who can be tagged, all worded. */
@@ -28,6 +35,12 @@ interface WorkThreadBoardData {
     readonly retryPage: () => void
     readonly reload: () => void
 }
+
+const STATUS_TONES = { open: "neutral", waiting: "warning", done: "success", stopped: "neutral" } as const
+
+/** The tone a thread status wears; a status that is not listed is open. */
+const statusToneOf = (status: string): StatusTone =>
+    status === "waiting" || status === "done" || status === "stopped" ? STATUS_TONES[status] : STATUS_TONES.open
 
 const STATUS_WORDS = {
     open: "statusOpen",
@@ -54,6 +67,8 @@ export const useWorkThreadBoard = (selectedId: string | null): WorkThreadBoardDa
     if ((autoId === null || isAutoGone) && newestId !== autoId) setAutoId(newestId)
     const activeId = selectedId ?? autoId
     const request = activeId === null ? null : { threadId: activeId }
+    // Until the list answers no thread is known, so the thread and its chain wait with it: one skeleton for the whole first load.
+    const isListFirstRead = activeId === null && list.isLoading
     const thread = useQueryWorkThreadSwr(request, { refreshInterval: THREAD_POLL_MS })
     const chain = useQueryWorkChainSwr(request, { refreshInterval: THREAD_POLL_MS })
     const directory = useQueryMentionDirectorySwr()
@@ -63,35 +78,38 @@ export const useWorkThreadBoard = (selectedId: string | null): WorkThreadBoardDa
         id: row.id,
         title: row.title,
         statusLabel: t(statusWordOf(row.waitingApproval ? "waiting" : row.status)),
+        statusTone: statusToneOf(row.waitingApproval ? "waiting" : row.status),
         isSelected: row.id === activeId,
         countLabel: t("messageCount", { count: row.messageCount }),
     }))
+    const messages = thread.data?.messages.map((message) => ({
+        id: message.id,
+        authorName: message.authorName,
+        isAgent: message.authorKind === "agent",
+        glyph: message.authorKind === "agent" ? moduleGlyphOf(message.authorRole) : null,
+        avatarUrl: message.authorKind === "agent" ? pictureOf({ name: message.authorName }) : null,
+        time: time(message.createdAt),
+        segments: bodySegmentsOf(message.body, message.mentions),
+        quoted: message.quoted,
+        approval: approvalViewOf(message, t, locale),
+    }))
     const feed: ThreadFeedView | undefined =
-        thread.data === undefined
+        thread.data === undefined || messages === undefined
             ? undefined
             : {
                   title: thread.data.thread.title,
-                  subtitle: t(statusWordOf(thread.data.thread.status)),
-                  messages: thread.data.messages.map((message) => ({
-                      id: message.id,
-                      authorName: message.authorName,
-                      isAgent: message.authorKind === "agent",
-                      glyph: message.authorKind === "agent" ? moduleGlyphOf(message.authorRole) : null,
-                      avatarUrl: message.authorKind === "agent" ? pictureOf({ name: message.authorName }) : null,
-                      time: time(message.createdAt),
-                      segments: bodySegmentsOf(message.body, message.mentions),
-                      quoted: message.quoted,
-                      approval: approvalViewOf(message, t, locale),
-                  })),
+                  subtitle: `${t(statusWordOf(thread.data.thread.status))} · ${t("messageCount", { count: messages.length })}`,
+                  pendingCount: messages.filter((message) => message.approval?.isPending === true).length,
+                  messages,
               }
     return {
         activeId,
         list: slotOfSwr({ data: rows, error: list.error, isLoading: list.isLoading }),
-        feed: slotOfSwr({ data: feed, error: thread.error, isLoading: thread.isLoading }),
+        feed: slotOfSwr({ data: feed, error: thread.error, isLoading: thread.isLoading || isListFirstRead }),
         chain: slotOfSwr({
             data: chain.data === undefined ? undefined : chainViewOf(chain.data, t),
             error: chain.error,
-            isLoading: chain.isLoading,
+            isLoading: chain.isLoading || isListFirstRead,
         }),
         options: composerOptionsOf(directory.data, {
             member: t("sectionPeople"),

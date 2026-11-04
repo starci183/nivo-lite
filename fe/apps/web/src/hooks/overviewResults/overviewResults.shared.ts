@@ -1,8 +1,11 @@
+import type { Figure } from "@starci/grammar/common"
 import type { GovFormat, GovTranslator } from "@/hooks/overviewGov"
+import type { ResponsibilityRowModel } from "@/hooks/overviewRows"
+import { CONSOLE_ROUTES, responsibilitiesHref } from "@/modules/routes"
 import type { Governance } from "@/hooks/overviewFigures"
 
 /** One status: what it is and what it rests on, then its figure and, for money, the record count. */
-export interface GovStatusRow {
+interface GovStatusRow {
     readonly id: string
     readonly label: string
     readonly context: string
@@ -88,6 +91,52 @@ export const goalLinesOf = (
                           value: format.number(status.newLeads7d),
                           goal: format.number(goals.newCustomers),
                       }),
+        },
+    ]
+}
+
+/** The five counts of the week, each with what it counts and the filtered list it opens. */
+export const weekFiguresOf = (
+    t: GovTranslator,
+    rows: ReadonlyArray<ResponsibilityRowModel>,
+    leads: number,
+): ReadonlyArray<Figure> => {
+    const active = rows.filter((row) => row.status !== "done")
+    return [
+        {
+            id: "open",
+            term: t("kpiOpen"),
+            value: rows.filter((row) => row.status === "open").length,
+            meta: t("kpiOpenCtx"),
+            href: responsibilitiesHref("status=open"),
+        },
+        {
+            id: "waiting",
+            term: t("kpiWaiting"),
+            value: rows.filter((row) => row.status === "waiting_approval").length,
+            meta: t("kpiWaitingCtx"),
+            href: responsibilitiesHref("status=waiting_approval"),
+        },
+        {
+            id: "today",
+            term: t("kpiToday"),
+            value: active.filter((row) => row.isDueToday).length,
+            meta: t("kpiTodayCtx"),
+            href: responsibilitiesHref("due=today"),
+        },
+        {
+            id: "overdue",
+            term: t("kpiOverdue"),
+            value: active.filter((row) => row.isOverdue).length,
+            meta: t("kpiOverdueCtx"),
+            href: responsibilitiesHref("due=overdue"),
+        },
+        {
+            id: "leads",
+            term: t("kpiLeads"),
+            value: leads,
+            meta: t("kpiLeadsCtx"),
+            href: CONSOLE_ROUTES.leads,
         },
     ]
 }

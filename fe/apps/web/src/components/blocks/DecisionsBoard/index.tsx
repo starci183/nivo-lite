@@ -1,23 +1,24 @@
 "use client"
 
+import { useState } from "react"
 import { useFormatter, useTranslations } from "next-intl"
 import {
     DECISIONS_LIMIT,
     DECISION_KINDS,
     KIND_KEYS,
+    decisionRowViewOf,
     decisionsHref,
     decisionKindOf,
-    outcomeTone,
-    splitBasis,
     useDecisionHistory,
 } from "@/hooks/decisions"
+import { paneGridOf, usePaneCopy, usePanePhone } from "@/hooks/paneFrame"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useQueryAgentsSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
+import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { DecisionKind, DecisionRecord } from "@/modules/types"
-import { DecisionsBoardBase, type DecisionListView, type DecisionsBoardRowView } from "./component"
-import { actionWordOf } from "@/hooks/actionWord"
+import { DecisionsBoardBase } from "./component"
+import type { DecisionListView, DecisionsBoardCopy } from "./component"
 
 const ALL = "all"
 
@@ -29,76 +30,93 @@ interface DecisionsBoardProps {
     readonly department: string | null
 }
 
-const PLACEHOLDER: DecisionListView = { rows: [], count: "", isFiltered: false }
+/** The translator of the decisions catalog. */
+type Translate = ReturnType<typeof useTranslations<"decisions">>
+
+/** The words of the decision history: the page, the states, the filters and the opened decision. */
+const copyOf = (t: Translate, pane: ReturnType<typeof usePaneCopy>): DecisionsBoardCopy => ({
+    grid: t("gridLabel"),
+    title: t("title"),
+    pageBody: t("description"),
+    listLabel: t("listAria"),
+    detailLabel: t("detailLabel"),
+    pickTitle: t("pickTitle"),
+    pickBody: t("pickBody"),
+    emptyTitle: t("emptyTitle"),
+    emptyBody: t("emptyBody"),
+    noMatchTitle: t("noMatchTitle"),
+    noMatchBody: t("noMatchBody"),
+    clearFilters: t("clearFilters"),
+    errorBody: t("loadFailedBody"),
+    back: pane.backToList,
+    refresh: pane.refresh,
+    openLead: t("openLead"),
+    kindLabel: t("kindLabel"),
+    deptLabel: t("deptLabel"),
+    filterSearch: pane.filterSearch,
+    filterNoMatch: pane.filterNoMatch,
+    detail: {
+        decisionTitle: t("decisionTitle"),
+        whyTitle: t("whyTitle"),
+        basisLabel: t("basisLabel"),
+        noteLabel: t("noteLabel"),
+        noLead: t("noLead"),
+        terms: {
+            job: t("termJob"),
+            department: t("termDepartment"),
+            decider: t("termDecider"),
+            outcome: t("termOutcome"),
+            when: t("termWhen"),
+            lead: t("termLead"),
+        },
+    },
+})
 
 /** The decision history: the words and the filter navigation live here, the drawing in the pure half. */
 export const DecisionsBoard = (props: DecisionsBoardProps) => {
     const t = useTranslations("decisions")
     const g = useTranslations("governance")
+    const pane = usePaneCopy()
     const slotLabels = useSlotLabels()
     const format = useFormatter()
-    const { slot: history, reload } = useDecisionHistory(props.kind, props.department)
+    const phone = usePanePhone()
     const router = navigation.useRouter()
+    const { slot: history, reload } = useDecisionHistory(props.kind, props.department)
+    const [chosen, setChosen] = useState<string | null>(null)
     const installed = new Set((useQueryAgentsSwr({}).data ?? []).map((agent) => agent.module))
     const departments = props.departments.filter((key) => installed.has(key) || key === props.department)
     const isFiltered = props.kind !== null || props.department !== null
-    const rowOf = (row: DecisionRecord): DecisionsBoardRowView => {
-        const parts = splitBasis(row.note)
-        return {
-            id: row.id,
-            actionLabel: actionWordOf(g, row.action),
-            outcomeLabel: g(`outcome_${row.outcome}`),
-            outcomeTone: outcomeTone(row.outcome),
-            when: format.dateTime(new Date(row.created_at), { dateStyle: "short", timeStyle: "short" }),
-            departmentLabel: g(`dept_${row.department}`),
-            decider: row.decider_kind === "policy" ? g("decider_policy") : row.decided_by,
-            reason:
-                row.reason === null || row.reason === "routine"
-                    ? null
-                    : `${g("reason_" + row.reason)} - ${g("reasonHint_" + row.reason)}`,
-            basis: parts.basis === null ? null : t("basis", { basis: parts.basis }),
-            note: parts.rest === null ? null : t("note", { note: parts.rest }),
-            leadHref: row.lead_id === null ? null : leadHref(row.lead_id),
-            leadLabel: `${row.leadName ?? t("openLead")} →`,
-            noLead: t("noLead"),
-        }
-    }
+    const words = { t, g, format, now: new Date() }
     const listOf = (records: ReadonlyArray<DecisionRecord>): DecisionListView => ({
-        rows: records.map(rowOf),
+        rows: records.map((row) => decisionRowViewOf(words, row)),
         count: t(records.length >= DECISIONS_LIMIT ? "countCapped" : "count", { n: records.length }),
         isFiltered,
     })
+    const slot = "isEmpty" in history ? mapSlot({ items: [] }, listOf) : mapSlot(history, listOf)
+    const rows = "items" in slot ? slot.items.rows : []
+    const selectedId = rows.some((row) => row.id === chosen) ? chosen : (rows[0]?.id ?? null)
     return (
         <DecisionsBoardBase
             props={{
-                crumbLabel: t("crumbLabel"),
-                crumbs: [
-                    { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-                    { id: "decisions", label: t("title") },
-                ],
-                title: t("title"),
-                description: t("description"),
-                kindLabel: t("kindLabel"),
+                copy: copyOf(t, pane),
                 kindKey: props.kind ?? ALL,
                 kinds: [
                     { id: ALL, label: t("kindAll") },
                     ...DECISION_KINDS.map((kind) => ({ id: kind, label: t(KIND_KEYS[kind]) })),
                 ],
-                deptLabel: t("deptLabel"),
                 deptKey: props.department ?? ALL,
                 depts: [
                     { id: ALL, label: t("deptAll") },
                     ...departments.map((key) => ({ id: key, label: g(`dept_${key}`) })),
                 ],
-                listAria: t("listAria"),
-                slot: mapSlot(history, listOf),
-                placeholder: PLACEHOLDER,
-                slotLabels: slotLabels(isFiltered ? t("noMatchTitle") : t("emptyTitle")),
-                noMatchTitle: t("noMatchTitle"),
-                noMatchBody: t("noMatchBody"),
-                emptyTitle: t("emptyTitle"),
-                emptyBody: t("emptyBody"),
-                clearFilters: t("clearFilters"),
+                slot,
+                isWaiting: "isLoading" in slot,
+                labels: {
+                    ...slotLabels(isFiltered ? t("noMatchTitle") : t("emptyTitle")),
+                    error: t("loadFailedTitle"),
+                },
+                selectedId,
+                grid: paneGridOf({ hasList: true, hasAside: false, phone: phone.phone }),
             }}
             on={{
                 kind: (key) => router.push(decisionsHref(decisionKindOf(key), props.department)),
@@ -106,6 +124,13 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
                     router.push(decisionsHref(props.kind, departments.find((module) => module === key) ?? null)),
                 clear: () => router.push(CONSOLE_ROUTES.decisions),
                 retry: reload,
+                select: (id) => {
+                    setChosen(id)
+                    phone.showMain()
+                },
+                back: phone.showList,
+                go: (href) => router.push(href),
+                moreFilters: pane.moreFilters,
             }}
         />
     )

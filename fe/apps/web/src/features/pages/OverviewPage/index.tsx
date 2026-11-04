@@ -9,8 +9,5 @@ export const overviewMetadata = async (): Promise<Metadata> => {
     return { title: t("crumbHome") }
 }
 
-/** The executive overview: a server shell that resolves the eyebrow and lays out connected regions, each reading its data in the browser. */
-export const OverviewPage = async (): Promise<ReactElement> => {
-    const t = await getTranslations("overview")
-    return <OverviewPageBase props={{ eyebrow: t("eyebrow") }} />
-}
+/** The executive overview: the connected pane block reads the dashboard in the browser. */
+export const OverviewPage = (): ReactElement => <OverviewPageBase />
