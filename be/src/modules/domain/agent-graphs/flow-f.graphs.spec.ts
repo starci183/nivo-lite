@@ -319,8 +319,103 @@ describe("flow F graphs on fake ports", () => {
         const run = await drive(await build(world, graph, model), graph, wake)
 
         expect(run.failed).toBeNull()
-        expect(run.path).toEqual(["evidence", "match-code", "judge", "claim-wait"])
+        expect(run.path).toEqual(["entry", "evidence", "match-code", "judge", "claim-wait"])
         expect(world.ran).toEqual([])
+    })
+
+    /** The tag the Chatbot's hand-off writes for Accounting, built by the tag door's own policy. */
+    const claimWake = (claimId: string): FlowWake => {
+        const tag = {
+            fromAgentId: "chatbot-1",
+            workspaceId: "ws-1",
+            toAgentId: "agent-1",
+            text: "Tôi đã chuyển 2k",
+            conversationId: "conv-1",
+            leadId: "lead-1",
+            context: { claimKind: "payment-claim.record", claimId },
+        }
+        return { source: "tag", actorMemberId: null, context: tagContextOf(tag, tagPayloadTextOf(tag) ?? undefined) }
+    }
+    const claimRow = {
+        id: "claim-momo",
+        leadId: "lead-1",
+        conversationId: "conv-1",
+        amountVnd: 2000,
+        names: [],
+        body: "[ảnh biên lai MoMo] Em đã chuyển 2.000đ",
+        claimedAt: "2026-11-03T22:55:00.000Z",
+        status: "open",
+    }
+    const feedRow = {
+        id: "tx-95937289",
+        amountVnd: 2000,
+        content: "Test Sepay",
+        counterpartName: null,
+        receivedAt: "2026-11-03T22:51:00.000Z",
+        orderId: null,
+        status: "unmatched",
+    }
+    const orderRow = {
+        id: "order-1",
+        orderNo: "SO-0001",
+        leadId: "lead-1",
+        items: [],
+        amountVnd: 5000,
+        status: "confirmed",
+        confirmedAt: "2026-11-04T00:40:00.000Z",
+        createdAt: "2026-11-04T00:35:00.000Z",
+    }
+
+    it("Accounting, tagged by the Chatbot with a claim of 2,000 and a MoMo receipt, finds transaction 95937289 but no order of 2,000 and raises it to the owner", async () => {
+        const graph = graphOf("accounting")
+        const world = worldOf({
+            "bank-transaction": [feedRow],
+            "payment-claim": [claimRow],
+            order: [orderRow],
+            "sales-lead": [{ id: "lead-1", contactName: "Bùi Nguyên Định" }],
+        })
+        const model = {
+            "payment.judge:payment-judge": [
+                { verdict: "ambiguous", candidate_id: null, reasons: ["Khớp số tiền nhưng không có đơn 2.000đ"] },
+            ],
+        }
+        const run = await drive(await build(world, graph, model), graph, claimWake("claim-momo"))
+
+        expect(run.failed).toBeNull()
+        expect(run.path).toEqual(["entry", "evidence", "match-code", "judge", "raise-ambiguous"])
+        expect(world.ran.map((entry) => entry.effect)).toEqual(["work-item.raise"])
+        expect(world.ran[0]?.payload).toMatchObject({
+            action: "reconcile_payment",
+            payload: { transactionId: "tx-95937289" },
+            claimId: "claim-momo",
+        })
+    })
+
+    it("Accounting, tagged with a claim whose money is not in the feed yet, answers the customer neutrally and waits", async () => {
+        const graph = graphOf("accounting")
+        const world = worldOf({ "bank-transaction": [], "payment-claim": [claimRow], order: [orderRow] })
+        const run = await drive(await build(world, graph, {}), graph, claimWake("claim-momo"))
+
+        expect(run.failed).toBeNull()
+        expect(run.path).toEqual(["entry", "evidence", "match-code", "judge", "claim-wait"])
+        expect(world.ran.map((entry) => entry.effect)).toEqual(["channel.send"])
+    })
+
+    it("Accounting ends a tag that is neither a credit nor a claim", async () => {
+        const graph = graphOf("accounting")
+        const world = worldOf({})
+        const wake: FlowWake = { source: "tag", actorMemberId: null, context: { text: "hello", authorAgentId: "agent-chat" } }
+        const run = await drive(await build(world, graph, {}), graph, wake)
+
+        expect(run.failed).toBeNull()
+        expect(run.path).toEqual(["entry", "end"])
+        expect(world.ran).toEqual([])
+    })
+
+    it("the Chatbot passes the claim it recorded to Accounting as the context of its tag", () => {
+        const handoff = graphOf("chatbot").nodes.find((node) => node.key === "handoff-accounting")
+
+        expect(handoff?.input).toMatchObject({ context: { claimId: { $ref: "claim-ack.claim.id" } } })
     })
 })
 

@@ -73,7 +73,7 @@ describe("a claim of a customer with no lead yet", () => {
         const evidence = await run(
             byId("payment.evidence"),
             { windowHours: 72 },
-            { transactionId: TRANSACTION_DINH.id },
+            { transactionId: TRANSACTION_DINH.id, claimId: null },
             { store },
         )
 
@@ -89,7 +89,7 @@ describe("a claim of a customer with no lead yet", () => {
         const evidence = await run(
             byId("payment.evidence"),
             { windowHours: 72 },
-            { transactionId: TRANSACTION_DINH.id },
+            { transactionId: TRANSACTION_DINH.id, claimId: null },
             { store },
         )
 
@@ -102,7 +102,7 @@ describe("the real case end to end", () => {
         const evidence = await run(
             byId("payment.evidence"),
             { windowHours: 72 },
-            { transactionId: TRANSACTION_DINH.id },
+            { transactionId: TRANSACTION_DINH.id, claimId: null },
             { store: STORE_REAL_CASE },
         )
         expect(evidence.output).toMatchObject({ arrival: ARRIVAL_DINH, claims: [CLAIM_OF_DINH] })
@@ -140,7 +140,7 @@ describe("the real case end to end", () => {
         const momo = await run(
             byId("payment.evidence"),
             { windowHours: 72 },
-            { transactionId: TRANSACTION_MOMO.id },
+            { transactionId: TRANSACTION_MOMO.id, claimId: null },
             { store: STORE_REAL_CASE },
         )
         const left = await run(byId("payment.judge"), {}, momo.output, {})
@@ -154,7 +154,7 @@ describe("the real case end to end", () => {
                 {
                     node: byId("payment.evidence"),
                     params: { windowHours: 72 },
-                    input: { transactionId: TRANSACTION_DINH.id },
+                    input: { transactionId: TRANSACTION_DINH.id, claimId: null },
                     turn: EXAMPLE_TURN,
                     grant: { rights: [] },
                     effects: new Map(),
@@ -164,5 +164,16 @@ describe("the real case end to end", () => {
                 fake.ports,
             ),
         ).rejects.toThrow()
+    })
+})
+
+describe("the evidence node's input", () => {
+    it("takes a transaction or a claim, never both and never neither", () => {
+        const input = byId("payment.evidence").input
+
+        expect(input.safeParse({ transactionId: "tx-1", claimId: null }).success).toBe(true)
+        expect(input.safeParse({ transactionId: null, claimId: "claim-1" }).success).toBe(true)
+        expect(input.safeParse({ transactionId: "tx-1", claimId: "claim-1" }).success).toBe(false)
+        expect(input.safeParse({ transactionId: null, claimId: null }).success).toBe(false)
     })
 })

@@ -99,6 +99,18 @@ export const CLAIM_DINH: ClaimRow = {
     status: "open",
 }
 
+/** The owner's claim of 2,000 with a MoMo receipt image, four minutes after transaction 95937289: no order is for 2,000. */
+export const CLAIM_MOMO: ClaimRow = {
+    id: "claim-momo",
+    leadId: "lead-dinh",
+    conversationId: "conversation-dinh",
+    amountVnd: 2000,
+    names: [],
+    body: "[ảnh biên lai MoMo] Em đã chuyển 2.000đ",
+    claimedAt: "2026-11-03T22:55:00.000Z",
+    status: "open",
+}
+
 /** The store the nodes read in the real case. */
 export const STORE_REAL_CASE: NodeStore = {
     "bank-transaction": [TRANSACTION_DINH, TRANSACTION_MOMO],
@@ -107,6 +119,9 @@ export const STORE_REAL_CASE: NodeStore = {
     conversation: [CONVERSATION_OLD, CONVERSATION_DINH],
     "payment-claim": [CLAIM_DINH],
 }
+
+/** The real case with the owner's MoMo claim as the only open claim. */
+export const STORE_MOMO_CLAIM: NodeStore = { ...STORE_REAL_CASE, "payment-claim": [CLAIM_MOMO] }
 
 /** The real case plus a second open order, a named 7,000 transfer and a transfer that already paid another order. */
 export const STORE_EXTENDED: NodeStore = {
@@ -212,5 +227,24 @@ export const EVIDENCED_CODE_WRONG_AMOUNT: ReadonlyArray<Evidenced> = scoreCandid
     { ...ARRIVAL_DINH, amount: 4000, text: `${ARRIVAL_DINH.text} SO-0001` },
     [CANDIDATE_DINH],
     [],
+    OPTIONS,
+)
+
+/** The MoMo claim in the ledger's shape. */
+export const CLAIM_OF_MOMO: Claim = {
+    id: CLAIM_MOMO.id,
+    partyKey: "lead-dinh",
+    amount: 2000,
+    names: [],
+    text: CLAIM_MOMO.body,
+    at: Date.parse("2026-11-03T22:55:00.000Z"),
+    status: "open",
+}
+
+/** The evidence for the 2,000 transfer when the owner's claim speaks for it: the claim holds for Định's order, the amount does not. */
+export const EVIDENCED_FOR_MOMO_CLAIM: ReadonlyArray<Evidenced> = scoreCandidates(
+    ARRIVAL_MOMO,
+    [CANDIDATE_DINH],
+    [CLAIM_OF_MOMO],
     OPTIONS,
 )
