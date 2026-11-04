@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "../schema/zod.schema"
 import { isNamespaced } from "../schema/namespaced"
 import type { JsonSchema, Namespaced, PropsSchema } from "../schema/schema.types"
 import type {

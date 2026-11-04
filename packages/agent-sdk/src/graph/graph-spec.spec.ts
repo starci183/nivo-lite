@@ -5,6 +5,8 @@ import type { DataRight } from "../rights/rights.types"
 import { edgesOf, graphSpecJsonSchema, graphSpecProblems, nextKeyOf } from "./graph-spec"
 import { graphSpecSchema } from "./graph-spec.schema"
 import type { GraphSpec } from "./graph-spec.types"
+import { trusted } from "../schema/trusted"
+import { present } from "../schema/present"
 
 const READ: DataRight = { kind: "order", access: "read", scope: "turn", fields: ["id"] }
 const SEND: DataRight = { kind: "message", access: "write", scope: "turn", fields: ["body"] }
@@ -19,29 +21,38 @@ const look = defineTool({
     rights: [],
 })
 
-const base = { title: { key: "t" }, params: z.object({}), input: z.object({}), run: () => Promise.resolve({} as never) }
-const example = { name: "e", params: {}, input: {}, output: {} as never, effects: [] }
+const base = {
+    title: { key: "t" },
+    params: z.object({}),
+    input: z.object({}),
+    run: () => Promise.resolve(trusted<never>({})),
+}
+const example = { name: "e", params: {}, input: {}, output: trusted<never>({}), effects: [] }
 
-const check = defineNode({
-    ...base,
-    id: "order.check",
-    role: "condition",
-    output: z.object({ branch: z.enum(["yes", "no"]) }),
-    rights: [READ],
-    effects: [],
-    tools: ["order.look"],
-    examples: [example],
-}) as unknown as NodeDefinition
+const check = trusted<NodeDefinition>(
+    defineNode({
+        ...base,
+        id: "order.check",
+        role: "condition",
+        output: z.object({ branch: z.enum(["yes", "no"]) }),
+        rights: [READ],
+        effects: [],
+        tools: ["order.look"],
+        examples: [example],
+    }),
+)
 
-const reply = defineNode({
-    ...base,
-    id: "core.reply",
-    role: "output",
-    output: z.object({}),
-    rights: [],
-    effects: ["channel.send"],
-    examples: [example],
-}) as unknown as NodeDefinition
+const reply = trusted<NodeDefinition>(
+    defineNode({
+        ...base,
+        id: "core.reply",
+        role: "output",
+        output: z.object({}),
+        rights: [],
+        effects: ["channel.send"],
+        examples: [example],
+    }),
+)
 
 const index = nodeIndexOf({ nodes: [check, reply], effects: [send], tools: [look], dataKinds: [] })
 
@@ -77,14 +88,14 @@ describe("graphSpecSchema", () => {
 describe("graph spec walking", () => {
     it("lists the edges of a node and picks the next key from the branch of a condition", () => {
         const [first, second] = SPEC.nodes
-        expect(edgesOf({ ...second!, next: "x" })).toEqual(["x"])
-        expect(edgesOf(first!)).toEqual(["say", "say-no"])
-        expect(nextKeyOf(first!, { branch: "no" })).toBe("say-no")
-        expect(nextKeyOf(first!, { branch: "maybe" })).toBeNull()
-        expect(nextKeyOf(first!, null)).toBeNull()
-        expect(nextKeyOf(first!, { branch: 1 })).toBeNull()
-        expect(nextKeyOf(second!, {})).toBeNull()
-        expect(nextKeyOf({ ...second!, next: "x" }, {})).toBe("x")
+        expect(edgesOf({ ...present(second), next: "x" })).toEqual(["x"])
+        expect(edgesOf(present(first))).toEqual(["say", "say-no"])
+        expect(nextKeyOf(present(first), { branch: "no" })).toBe("say-no")
+        expect(nextKeyOf(present(first), { branch: "maybe" })).toBeNull()
+        expect(nextKeyOf(present(first), null)).toBeNull()
+        expect(nextKeyOf(present(first), { branch: 1 })).toBeNull()
+        expect(nextKeyOf(present(second), {})).toBeNull()
+        expect(nextKeyOf({ ...present(second), next: "x" }, {})).toBe("x")
     })
 })
 
@@ -97,7 +108,7 @@ describe("graphSpecProblems", () => {
         const spec: GraphSpec = {
             ...SPEC,
             nodes: [
-                { ...SPEC.nodes[0]!, routes: { yes: "say", no: "ghost" } },
+                { ...present(SPEC.nodes[0]), routes: { yes: "say", no: "ghost" } },
                 { key: "say", kind: "output", step: "core.reply", input: { x: { $ref: "lost.x" } } },
                 { key: "say", kind: "output", step: "core.reply" },
                 { key: "lost", kind: "output", step: "core.reply" },
@@ -153,15 +164,17 @@ describe("graphSpecProblems", () => {
             rights: [],
         })
         const record = defineEffect({ ...undo, id: "order.record", compensation: "order.void" })
-        const keep = defineNode({
-            ...base,
-            id: "order.keep",
-            role: "output",
-            output: z.object({}),
-            rights: [],
-            effects: ["order.record"],
-            examples: [example],
-        }) as unknown as NodeDefinition
+        const keep = trusted<NodeDefinition>(
+            defineNode({
+                ...base,
+                id: "order.keep",
+                role: "output",
+                output: z.object({}),
+                rights: [],
+                effects: ["order.record"],
+                examples: [example],
+            }),
+        )
         const saga = nodeIndexOf({ nodes: [keep, reply], effects: [send, undo, record], tools: [], dataKinds: [] })
         const spec: GraphSpec = {
             ...SPEC,
@@ -207,7 +220,7 @@ describe("graph spec burst", () => {
 
         expect(graphSpecSchema.safeParse(sound).success).toBe(true)
         expect(graphSpecSchema.safeParse(SPEC).success).toBe(true)
-        expect(graphSpecProblems(sound as unknown as GraphSpec, index)).toEqual([])
+        expect(graphSpecProblems(trusted<GraphSpec>(sound), index)).toEqual([])
     })
 
     it.each([
@@ -222,10 +235,9 @@ describe("graph spec burst", () => {
     })
 
     it("names a bad entry, and one for a source the trigger does not list, as problems", () => {
-        const bad = withBurst({ channel: { window: "soon" }, schedule: { window: "6s" } }, [
-            "channel",
-            "agent",
-        ]) as unknown as GraphSpec
+        const bad = trusted<GraphSpec>(
+            withBurst({ channel: { window: "soon" }, schedule: { window: "6s" } }, ["channel", "agent"]),
+        )
 
         expect(graphSpecProblems(bad, index)).toEqual([
             { code: "GRAPH_BURST_INVALID", at: "burst.channel" },

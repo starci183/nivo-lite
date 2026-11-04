@@ -1,9 +1,10 @@
 import { z } from "zod"
 import { defineAction, defineBlock, defineRead } from "../block/block"
+import type { ActionDefinition, BlockDefinition, ReadDefinition } from "../block/block.types"
 import type { SpecDocument, SpecNode } from "./spec.types"
 
 /** A container block of the spec specs: at most three children, of two kinds. */
-export const STACK = defineBlock({
+export const STACK: BlockDefinition = defineBlock({
     id: "test.stack",
     title: { key: "stack" },
     props: z.object({ gap: z.enum(["row", "section"]) }).strict(),
@@ -12,7 +13,7 @@ export const STACK = defineBlock({
 })
 
 /** A leaf block with a required list slot of `order` data, an optional action slot and nested props. */
-export const LIST = defineBlock({
+export const LIST: BlockDefinition = defineBlock({
     id: "test.list",
     title: { vi: "Danh sach", en: "List" },
     props: z.object({
@@ -30,7 +31,7 @@ export const LIST = defineBlock({
 })
 
 /** A block that holds anything. */
-export const FREE = defineBlock({
+export const FREE: BlockDefinition = defineBlock({
     id: "test.free",
     title: { key: "free" },
     props: z.object({}),
@@ -38,7 +39,8 @@ export const FREE = defineBlock({
     children: {},
 })
 
-export const ORDERS = defineRead({
+/** A read of the `order` list the list block binds to. */
+export const ORDERS: ReadDefinition = defineRead({
     id: "sales.orders",
     dataKind: "order",
     shape: "list",
@@ -49,7 +51,8 @@ export const ORDERS = defineRead({
     permission: "sales.read",
 })
 
-export const PEOPLE = defineRead({
+/** A read of the `person` list, a data kind the list block does not accept. */
+export const PEOPLE: ReadDefinition = defineRead({
     id: "sales.people",
     dataKind: "person",
     shape: "list",
@@ -60,14 +63,16 @@ export const PEOPLE = defineRead({
     permission: "sales.read",
 })
 
-export const OPEN = defineAction({
+/** An action the list block binds to its optional action slot. */
+export const OPEN: ActionDefinition = defineAction({
     id: "sales.open",
     operation: "open",
     permission: "sales.write",
     label: { key: "open" },
 })
 
-export const BLOCKS = [STACK, LIST, FREE] as const
+/** The blocks the spec specs install. */
+export const BLOCKS: ReadonlyArray<BlockDefinition> = [STACK, LIST, FREE]
 
 /** A node of the list block bound to the orders read. */
 export const listNode = (id: string, extra: Partial<SpecNode> = {}): SpecNode => ({

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { body, ident, prose } from "../schema/bounded.schema"
+import { body, keyText, prose } from "../schema/bounded.schema"
 import { entriesAtMost } from "../schema/entries"
 import { specText } from "../schema/spec-text.schema"
 import type { Namespaced } from "../schema/schema.types"
@@ -15,8 +15,8 @@ import type {
 const bilingual = z.object({ vi: prose, en: prose }).strict()
 const longBilingual = z.object({ vi: body, en: body }).strict()
 const bilingualList = z.object({ vi: z.array(prose).max(50), en: z.array(prose).max(50) }).strict()
-const namespaced: z.ZodType<Namespaced> = z.templateLiteral([ident, ".", ident])
-const stringList = z.array(ident).max(100)
+const namespaced: z.ZodType<Namespaced> = z.templateLiteral([keyText, ".", keyText])
+const stringList = z.array(keyText).max(100)
 const role = z.enum([
     "identity.find",
     "identity.upsert",
@@ -35,16 +35,16 @@ const manifestSchema = z
         description: bilingual,
         points: bilingualList,
         purpose: prose,
-        icon: ident,
-        glyph: ident,
-        mascot: ident,
-        category: ident,
+        icon: keyText,
+        glyph: keyText,
+        mascot: keyText,
+        category: keyText,
         status: z.enum(["stable", "early"]),
         audience: z.enum(["customer", "internal"]),
         includedWithWorkspace: z.boolean(),
         available: z.boolean(),
-        knowledgeFolder: ident,
-        settingsExtras: ident.nullable(),
+        knowledgeFolder: keyText,
+        settingsExtras: keyText.nullable(),
         requires: z
             .object({
                 capabilities: stringList,
@@ -76,19 +76,19 @@ const gateWrite = z.union([
                 "place",
                 "other",
             ]),
-            attributeLabel: ident,
+            attributeLabel: keyText,
             scope: z.enum(["public", "internal", "restricted"]),
         })
         .strict(),
-    z.object({ kind: z.literal("rule"), action: ident, field: z.enum(["mode", "limit_vnd"]) }).strict(),
+    z.object({ kind: z.literal("rule"), action: keyText, field: z.enum(["mode", "limit_vnd"]) }).strict(),
 ])
 
 const right = z
     .object({
-        kind: ident,
+        kind: keyText,
         access: z.enum(["read", "write"]),
         scope: z.enum(["turn", "workspace"]),
-        fields: z.tuple([ident], ident),
+        fields: z.tuple([keyText], keyText),
     })
     .strict()
 
@@ -97,7 +97,7 @@ const templateSchema = z
         agent: z
             .object({
                 label: bilingual,
-                handle: ident,
+                handle: keyText,
                 summary: bilingual,
                 capabilities: bilingualList,
                 role: bilingual,
@@ -108,7 +108,7 @@ const templateSchema = z
             .array(
                 z
                     .object({
-                        key: ident,
+                        key: keyText,
                         label: bilingual,
                         hint: bilingual,
                         writes: z.array(gateWrite).max(50).optional(),
@@ -120,7 +120,7 @@ const templateSchema = z
             .array(
                 z
                     .object({
-                        action: ident,
+                        action: keyText,
                         label: bilingual,
                         mode: z.enum(["auto", "ask", "never"]),
                         limitVnd: z.number().nullable(),
@@ -138,9 +138,9 @@ const templateSchema = z
             .array(
                 z
                     .object({
-                        command: ident,
-                        action: ident,
-                        subjectType: ident,
+                        command: keyText,
+                        action: keyText,
+                        subjectType: keyText,
                         requiredFields: stringList,
                         description: bilingual,
                     })
@@ -151,10 +151,10 @@ const templateSchema = z
             .array(
                 z
                     .object({
-                        key: ident,
+                        key: keyText,
                         preset: z.enum(["every_15m", "hourly", "daily_at", "weekdays_at"]),
-                        atTime: ident.optional(),
-                        probeKey: ident.optional(),
+                        atTime: keyText.optional(),
+                        probeKey: keyText.optional(),
                     })
                     .strict(),
             )
@@ -193,7 +193,7 @@ const memberSchema: z.ZodType<MemberSpec> = z.lazy(() =>
         z
             .object({
                 type: z.literal("object"),
-                properties: z.record(ident, memberSchema).refine(entriesAtMost(100)),
+                properties: z.record(keyText, memberSchema).refine(entriesAtMost(100)),
                 required: stringList,
                 nullable: z.boolean().optional(),
             })
@@ -203,17 +203,17 @@ const memberSchema: z.ZodType<MemberSpec> = z.lazy(() =>
 
 const conditionSchema: z.ZodType<OutcomeCondition> = z.lazy(() =>
     z.union([
-        z.object({ signal: ident }).strict(),
-        z.object({ missing: ident }).strict(),
-        z.object({ check: ident }).strict(),
-        z.object({ fact: z.object({ subjectType: ident, attributeLabel: ident }).strict() }).strict(),
+        z.object({ signal: keyText }).strict(),
+        z.object({ missing: keyText }).strict(),
+        z.object({ check: keyText }).strict(),
+        z.object({ fact: z.object({ subjectType: keyText, attributeLabel: keyText }).strict() }).strict(),
         z.object({ all: z.array(conditionSchema).max(100) }).strict(),
     ]),
 )
 
 const outcomeSchema: z.ZodType<OutcomeSpec> = z.union([
     z.enum(["act", "reask_then_person", "person", "decline"]),
-    z.object({ pending: ident }).strict(),
+    z.object({ pending: keyText }).strict(),
 ])
 
 const outcomeRulesSchema: z.ZodType<OutcomeRulesSpec> = z
@@ -228,16 +228,19 @@ const trusts = z.array(z.enum(["outsider", "member", "manager", "system"])).max(
 const contractsSchema = z
     .object({
         limits: z
-            .record(ident, z.object({ text: specText, member: ident.optional(), trusts: trusts.optional() }).strict())
+            .record(
+                keyText,
+                z.object({ text: specText, member: keyText.optional(), trusts: trusts.optional() }).strict(),
+            )
             .refine(entriesAtMost(100)),
-        members: z.record(ident, memberSchema).refine(entriesAtMost(100)),
+        members: z.record(keyText, memberSchema).refine(entriesAtMost(100)),
         signals: z
             .array(
                 z
                     .object({
-                        key: ident,
+                        key: keyText,
                         question: specText,
-                        requires: z.object({ intent: ident, member: ident }).strict().optional(),
+                        requires: z.object({ intent: keyText, member: keyText }).strict().optional(),
                     })
                     .strict(),
             )
@@ -245,7 +248,7 @@ const contractsSchema = z
         effects: z.array(namespaced).max(100),
         claims: z
             .record(
-                ident,
+                keyText,
                 z
                     .object({
                         requires: namespaced,
@@ -255,12 +258,12 @@ const contractsSchema = z
                     .strict(),
             )
             .refine(entriesAtMost(100)),
-        outcomes: z.record(ident, outcomeRulesSchema).refine(entriesAtMost(100)),
+        outcomes: z.record(keyText, outcomeRulesSchema).refine(entriesAtMost(100)),
         intents: z
             .array(
                 z
                     .object({
-                        intent: ident,
+                        intent: keyText,
                         triggers: stringList,
                         answers: z.boolean(),
                         ownTurn: z.boolean(),
@@ -268,14 +271,14 @@ const contractsSchema = z
                         limits: stringList,
                         result: namespaced,
                         owns: stringList,
-                        required: z.array(z.object({ member: ident, ask: specText }).strict()).max(100),
+                        required: z.array(z.object({ member: keyText, ask: specText }).strict()).max(100),
                         checks: z
                             .array(
                                 z
                                     .object({
                                         id: namespaced,
                                         params: z
-                                            .record(ident, z.union([ident, z.number(), z.boolean()]))
+                                            .record(keyText, z.union([keyText, z.number(), z.boolean()]))
                                             .refine(entriesAtMost(50))
                                             .optional(),
                                     })
@@ -283,7 +286,7 @@ const contractsSchema = z
                             )
                             .max(100),
                         claims: stringList,
-                        outcome: ident.nullable(),
+                        outcome: keyText.nullable(),
                         policy: namespaced.nullable(),
                     })
                     .strict(),
@@ -299,13 +302,13 @@ const contractsSchema = z
 export const moduleDocumentSchema: z.ZodType<ModuleDocument> = z
     .object({
         schema: z.literal("nivo/module@1"),
-        key: ident,
+        key: keyText,
         version: z.number(),
         changelog: body,
         breaking: z.boolean(),
         manifest: manifestSchema,
         template: templateSchema,
         contracts: contractsSchema,
-        workbenches: z.record(ident, specDocumentSchema).refine(entriesAtMost(50)),
+        workbenches: z.record(keyText, specDocumentSchema).refine(entriesAtMost(50)),
     })
     .strict()

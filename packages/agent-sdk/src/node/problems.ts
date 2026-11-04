@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "../schema/zod.schema"
 import { rightsGaps } from "../rights/rights"
 import type { DataRight, RightsGrant } from "../rights/rights.types"
 import { isNamespaced } from "../schema/namespaced"
@@ -26,32 +26,47 @@ export type NodeProblemCode =
 
 /** One problem and where it is: a node, effect or data kind id, or a graph node key. */
 export interface NodeProblem {
+    /** The kind of problem, from a closed list. */
     readonly code: NodeProblemCode
+    /** The id or key the problem is at. */
     readonly at: string
 }
 
 /** What an app installs: the nodes, the effects they may run, the NIVO MCP tools they may call and the data kinds rights may name. */
 export interface NodeInstall {
+    /** The node definitions the app installs. */
     readonly nodes: ReadonlyArray<NodeDefinition>
+    /** The effects the installed nodes may run. */
     readonly effects: ReadonlyArray<EffectDefinition>
+    /** The NIVO MCP tools the installed nodes may call. */
     readonly tools: ReadonlyArray<ToolDefinition>
+    /** The data kinds rights may name. */
     readonly dataKinds: ReadonlyArray<DataKindDefinition>
 }
 
 /** The install by id, for lookups. */
 export interface NodeIndex {
+    /** The node definitions by node id. */
     readonly nodes: ReadonlyMap<string, NodeDefinition>
+    /** The effect definitions by effect id. */
     readonly effects: ReadonlyMap<string, EffectDefinition>
+    /** The tool definitions by tool id. */
     readonly tools: ReadonlyMap<string, ToolDefinition>
+    /** The data kind definitions by kind id. */
     readonly dataKinds: ReadonlyMap<string, DataKindDefinition>
 }
 
 /** A graph node as the problems read it: its key, kind and step, and what it sets on the node its step names. */
 export interface GraphNodeRef {
+    /** The key of the node in the graph. */
     readonly key: string
+    /** The role of the node in the graph. */
     readonly kind: string
+    /** The id of the node definition the step names. */
     readonly step: string
+    /** What the graph node sets on the node definition, as written. */
     readonly params?: unknown
+    /** The next node key by outcome name, when the node routes. */
     readonly routes?: Readonly<Record<string, string>> | undefined
 }
 

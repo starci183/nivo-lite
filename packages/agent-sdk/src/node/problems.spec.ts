@@ -4,6 +4,7 @@ import { defineDataKind, defineEffect } from "./effect"
 import { defineNode } from "./node"
 import type { NodeDefinition } from "./node.types"
 import { branchesOf, graphNodeProblems, nodeIndexOf, nodeListProblems } from "./problems"
+import { trusted } from "../schema/trusted"
 
 const READ: DataRight = { kind: "order", access: "read", scope: "turn", fields: ["id"] }
 const SEND: DataRight = { kind: "message", access: "write", scope: "turn", fields: ["body"] }
@@ -20,11 +21,11 @@ const base = {
     title: { key: "t" },
     params: z.object({ limit: z.number() }),
     input: z.object({}),
-    run: () => Promise.resolve({ branch: "yes" } as never),
+    run: () => Promise.resolve(trusted<never>({ branch: "yes" })),
 } as const
 
 /** A condition hand-built with an effect, which defineNode refuses, so the list checks still see one. */
-const pick = {
+const pick = trusted<NodeDefinition>({
     ...defineNode({
         ...base,
         id: "order.pick",
@@ -35,17 +36,19 @@ const pick = {
         examples: [{ name: "e", params: { limit: 1 }, input: {}, output: { branch: "yes" }, effects: [] }],
     }),
     effects: ["channel.send"],
-} as unknown as NodeDefinition
+})
 
-const free = defineNode({
-    ...base,
-    id: "order.free",
-    role: "condition",
-    output: z.object({ branch: z.string().max(200) }),
-    rights: [],
-    effects: [],
-    examples: [{ name: "e", params: { limit: 1 }, input: {}, output: { branch: "yes" }, effects: [] }],
-}) as unknown as NodeDefinition
+const free = trusted<NodeDefinition>(
+    defineNode({
+        ...base,
+        id: "order.free",
+        role: "condition",
+        output: z.object({ branch: z.string().max(200) }),
+        rights: [],
+        effects: [],
+        examples: [{ name: "e", params: { limit: 1 }, input: {}, output: { branch: "yes" }, effects: [] }],
+    }),
+)
 
 const index = nodeIndexOf({ nodes: [pick, free], effects: [send], tools: [], dataKinds: [order, message] })
 const grant = { rights: [READ, SEND] }
@@ -128,7 +131,7 @@ describe("graphNodeProblems", () => {
     })
 
     it("does not route an execute node, and counts an uninstalled effect as no right", () => {
-        const run = { ...pick, id: "order.run", role: "execute", effects: ["order.ghost"] } as unknown as NodeDefinition
+        const run = trusted<NodeDefinition>({ ...pick, id: "order.run", role: "execute", effects: ["order.ghost"] })
         const withRun = nodeIndexOf({ nodes: [run], effects: [], tools: [], dataKinds: [] })
         expect(
             graphNodeProblems({ key: "k", kind: "execute", step: "order.run", params: { limit: 1 } }, withRun, grant),

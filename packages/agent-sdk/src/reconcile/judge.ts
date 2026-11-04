@@ -25,6 +25,7 @@ export const REASON = {
 
 /** An outcome the code rule gives: the match is applied, or a person is asked; the rule never leaves an arrival. */
 export type CodeOutcome = Omit<Outcome, "effect"> & {
+    /** The decision of the code rule: the match is applied, or a person is asked. */
     readonly effect: Extract<Effect, { readonly kind: "apply" | "ask" }>
 }
 

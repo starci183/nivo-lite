@@ -2,6 +2,7 @@ import { BLOCKS, docOf, listNode } from "./spec.fixture"
 import type { PlanView } from "./render-plan"
 import { planNode, renderPlan, viewOf } from "./render-plan"
 import type { SpecNode } from "./spec.types"
+import { present } from "../schema/present"
 
 const root: SpecNode = {
     id: "root",
@@ -59,11 +60,8 @@ describe("renderPlan", () => {
 
 describe("viewOf", () => {
     const planned = renderPlan(docOf(root), BLOCKS)
-    const base = planned.ok ? planned.views[0] : undefined
-    const view = (id: string, extra: Partial<PlanView> = {}): PlanView => {
-        if (base === undefined) throw new RangeError("fixture")
-        return { ...base, id, ...extra }
-    }
+    const base = present(planned.ok ? planned.views[0] : undefined)
+    const view = (id: string, extra: Partial<PlanView> = {}): PlanView => ({ ...base, id, ...extra })
     const none = (): string | null => null
 
     it("opens the hidden view whose query is present, else the named tab, else the first visible view", () => {

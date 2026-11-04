@@ -4,40 +4,55 @@ import { SdkError } from "../sdk-error"
 
 /** What a node test tunes. */
 export interface FakeNodePortsOptions {
+    /** The records the fake reads from, by data kind. */
     readonly store?: NodeStore | undefined
     /** The model's answers, in call order: a text for `text`, a value for `json`. */
     readonly model?: ReadonlyArray<unknown> | undefined
     /** The tools' results, in call order. */
     readonly tools?: ReadonlyArray<unknown> | undefined
+    /** The time the fake clock reports; the epoch when absent. */
     readonly now?: Date | undefined
 }
 
 /** One tool call the fake host answered. */
 export interface FakeToolCall {
+    /** The id of the tool that was called. */
     readonly id: string
+    /** The arguments the runner passed, already parsed. */
     readonly args: Readonly<Record<string, unknown>>
+    /** The idempotency key of the call. */
     readonly key: string
 }
 
 /** One effect the fake host ran. */
 export interface FakeExecuted {
+    /** The id of the effect that ran. */
     readonly id: string
+    /** The payload the effect ran with. */
     readonly payload: EffectPayload
+    /** The key of the effect call. */
     readonly key: string
+    /** The business dedupe key of the call, or null. */
     readonly dedupeKey: string | null
 }
 
 /** One write the fake host saw. */
 export interface FakeWrite {
+    /** The data kind written. */
     readonly kind: string
+    /** The record written. */
     readonly record: Readonly<Record<string, unknown>>
 }
 
 /** Fake host ports over an in-memory store, with what they ran recorded. */
 export interface FakeNodePorts {
+    /** The ports to hand to `runNode`. */
     readonly ports: NodeHostPorts
+    /** The effects run so far, in order. */
     readonly executed: ReadonlyArray<FakeExecuted>
+    /** The writes seen so far, in order. */
     readonly writes: ReadonlyArray<FakeWrite>
+    /** The tool calls answered so far, in order. */
     readonly toolCalls: ReadonlyArray<FakeToolCall>
 }
 

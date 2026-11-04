@@ -15,22 +15,35 @@ import type {
 
 /** One node ready to draw: its block, props parsed by the block zod schema, bindings split by kind, and its children. */
 export interface PlanNode {
+    /** The spec node id. */
     readonly id: string
+    /** The block definition that draws the node. */
     readonly block: BlockDefinition
+    /** The node props, parsed by the block zod schema. */
     readonly props: Readonly<Record<string, unknown>>
+    /** The read bindings by slot key. */
     readonly reads: Readonly<Record<string, SpecReadBinding>>
+    /** The action bindings by slot key. */
     readonly actions: Readonly<Record<string, SpecActionBinding>>
+    /** The child nodes, in drawing order. */
     readonly children: ReadonlyArray<PlanNode>
+    /** The condition under which the node is shown, or null when always. */
     readonly when: SpecWhen | null
+    /** What the node does when the viewer lacks the permission. */
     readonly forbidden: SpecForbidden
 }
 
 /** One view ready to draw. */
 export interface PlanView {
+    /** The view id. */
     readonly id: string
+    /** The words the view is named by. */
     readonly label: SpecText
+    /** True when the view is not in the navigation and is opened only by another view. */
     readonly hidden: boolean
+    /** The id of the action that opens the view, or null. */
     readonly openBy: string | null
+    /** The root node of the view. */
     readonly root: PlanNode
 }
 

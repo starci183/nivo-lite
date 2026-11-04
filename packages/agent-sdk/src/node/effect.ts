@@ -1,4 +1,4 @@
-import type { z } from "zod"
+import type { z } from "../schema/zod.schema"
 import { assertNamespaced } from "../block/block"
 import { SdkDefinitionError } from "../block/definition-error"
 import type {

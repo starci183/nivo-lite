@@ -20,7 +20,9 @@ describe("defineRenderer", () => {
         })
         expect(renderer.id).toBe("test.label")
         expect(renderer.block).toBe(BLOCK)
-        renderer.Component({ props: {}, slots: { rows: UNBOUND_READ }, children: null, nodeId: "n1" })
+        expect(
+            renderer.Component({ props: {}, slots: { rows: UNBOUND_READ }, children: null, nodeId: "n1" }),
+        ).toBeNull()
         expect(seen).toEqual(["none", "n1", UNBOUND_READ])
     })
 })

@@ -26,7 +26,7 @@ export const edgesOf = (node: GraphSpecNode): ReadonlyArray<string> => [
  */
 export const nextKeyOf = (node: GraphSpecNode, output: unknown): string | null => {
     if (node.routes === undefined) return node.next ?? null
-    const branch =
+    const branch: unknown =
         typeof output === "object" && output !== null ? Reflect.get(output, BRANCH_FIELD) : undefined
     return typeof branch === "string" ? (node.routes[branch] ?? null) : null
 }

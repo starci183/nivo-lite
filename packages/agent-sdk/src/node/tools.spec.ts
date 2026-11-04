@@ -3,6 +3,7 @@ import { SdkDefinitionError } from "../block/definition-error"
 import type { DataRight } from "../rights/rights.types"
 import { EXAMPLE_TURN, nodeExampleMismatches } from "../testing/node-examples"
 import { scriptedNodePorts } from "../testing/node-ports"
+import type { ToolDefinition } from "./effect.types"
 import { defineDataKind, defineTool } from "./effect"
 import { runNode } from "./host"
 import type { NodeRunRequest } from "./host.types"
@@ -11,6 +12,7 @@ import type { NodeDefinition } from "./node.types"
 import { graphNodeProblems, nodeIndexOf, nodeListProblems } from "./problems"
 import { RightsDeniedError } from "./rights-denied-error"
 import { ToolUndeclaredError } from "./tool-undeclared-error"
+import { trusted } from "../schema/trusted"
 
 const READ: DataRight = { kind: "order", access: "read", scope: "turn", fields: ["id"] }
 
@@ -26,34 +28,39 @@ const instruction = defineTool({
 const charge = defineTool({ ...instruction, id: "payment.charge", mutates: true, rights: [] })
 
 /** A node that calls the tool its input names. */
-const caller = defineNode({
-    id: "payment.caller",
-    role: "execute",
-    title: { key: "c" },
-    params: z.object({}),
-    input: z.object({ tool: z.string().max(200), orderNo: z.unknown() }),
-    output: z.object({ qrUrl: z.string().max(200) }),
-    rights: [],
-    effects: [],
-    tools: ["payment.instruction", "payment.charge", "payment.ghost"],
-    run: (input, context) => context.tools.call<{ qrUrl: string }>(input.tool as "a.b", { orderNo: input.orderNo }),
-    examples: [
-        {
-            name: "asks",
-            params: {},
-            input: { tool: "payment.instruction", orderNo: "A1" },
-            output: { qrUrl: "q" },
-            effects: [],
-            tools: [{ qrUrl: "q" }],
-            grant: { rights: [READ], tools: ["payment.instruction"] },
-        },
-    ],
-}) as unknown as NodeDefinition
+const caller = trusted<NodeDefinition>(
+    defineNode({
+        id: "payment.caller",
+        role: "execute",
+        title: { key: "c" },
+        params: z.object({}),
+        input: z.object({ tool: z.string().max(200), orderNo: z.union([z.string().max(200), z.number()]) }),
+        output: z.object({ qrUrl: z.string().max(200) }),
+        rights: [],
+        effects: [],
+        tools: ["payment.instruction", "payment.charge", "payment.ghost"],
+        run: (input, context) =>
+            context.tools.call<{ qrUrl: string }>(trusted<"a.b">(input.tool), { orderNo: input.orderNo }),
+        examples: [
+            {
+                name: "asks",
+                params: {},
+                input: { tool: "payment.instruction", orderNo: "A1" },
+                output: { qrUrl: "q" },
+                effects: [],
+                tools: [{ qrUrl: "q" }],
+                grant: { rights: [READ], tools: ["payment.instruction"] },
+            },
+        ],
+    }),
+)
 
-const tools = new Map([
-    [instruction.id, instruction],
-    [charge.id, charge],
-]) as unknown as NodeRunRequest["tools"]
+const tools = trusted<NodeRunRequest["tools"]>(
+    new Map([
+        [instruction.id, instruction],
+        [charge.id, charge],
+    ]),
+)
 
 const requestOf = (tool: string, overrides: Partial<NodeRunRequest> = {}): NodeRunRequest => ({
     node: caller,
@@ -70,8 +77,8 @@ const requestOf = (tool: string, overrides: Partial<NodeRunRequest> = {}): NodeR
 describe("defineTool", () => {
     it("defines a tool and refuses a malformed tool id on a node", () => {
         expect(instruction.entry).toBe("tool")
-        expect(() => defineTool({ ...instruction, id: "Bad" as "a.b" })).toThrow(SdkDefinitionError)
-        expect(() => defineNode({ ...caller, tools: ["Bad.x"] } as never)).toThrow(SdkDefinitionError)
+        expect(() => defineTool({ ...instruction, id: trusted<"a.b">("Bad") })).toThrow(SdkDefinitionError)
+        expect(() => defineNode(trusted<never>({ ...caller, tools: ["Bad.x"] }))).toThrow(SdkDefinitionError)
     })
 })
 
@@ -90,7 +97,7 @@ describe("runNode tools", () => {
     it("refuses an undeclared, uninstalled or ungranted tool", async () => {
         const { ports } = scriptedNodePorts({ tools: [{ qrUrl: "q" }] })
         await expect(runNode(requestOf("payment.other"), ports)).rejects.toThrow(ToolUndeclaredError)
-        const toolless = { ...caller, tools: undefined } as unknown as NodeDefinition
+        const toolless = trusted<NodeDefinition>({ ...caller, tools: undefined })
         await expect(runNode(requestOf("payment.instruction", { node: toolless }), ports)).rejects.toThrow(
             ToolUndeclaredError,
         )
@@ -116,10 +123,25 @@ describe("runNode tools", () => {
             "TOOL_RESULT_INVALID",
         )
         await expect(runNode(requestOf("payment.charge"), scriptedNodePorts().ports)).rejects.toThrow("TOOL_UNSCRIPTED")
-        const condition = { ...caller, role: "condition" } as NodeDefinition
+        const condition = trusted<NodeDefinition>({ ...caller, role: "condition" })
         await expect(
             runNode(requestOf("payment.charge", { node: condition }), scriptedNodePorts().ports),
         ).rejects.toThrow("TOOL_MUTATES")
+    })
+
+    it("refuses args that parse to something other than a record", async () => {
+        const plain = trusted<ToolDefinition>(
+            defineTool({
+                ...instruction,
+                id: "payment.ghost",
+                args: z.object({ orderNo: z.string().max(200) }).transform((args) => args.orderNo),
+            }),
+        )
+        const asked = requestOf("payment.ghost", {
+            tools: new Map([[plain.id, plain]]),
+            grant: { rights: [READ], tools: ["payment.ghost"] },
+        })
+        await expect(runNode(asked, scriptedNodePorts().ports)).rejects.toThrow("TOOL_ARGS_INVALID")
     })
 
     it("runs an example with scripted tool results, granting the node's own tools by default", async () => {
@@ -133,7 +155,7 @@ describe("runNode tools", () => {
 
 describe("tool problems", () => {
     const order = defineDataKind({ kind: "order", title: { key: "o" }, fields: z.object({ id: z.string().max(200) }) })
-    const condition = { ...caller, id: "payment.check", role: "condition" } as NodeDefinition
+    const condition = trusted<NodeDefinition>({ ...caller, id: "payment.check", role: "condition" })
 
     it("names an unknown tool, a mutating tool in a condition, a duplicate and a tool right over an unknown kind", () => {
         expect(

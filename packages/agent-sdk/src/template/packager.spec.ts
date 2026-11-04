@@ -1,6 +1,16 @@
+import { SdkError } from "../sdk-error"
 import { CREATOR, SECRET_IN_ENV, draftOf, leakyGraph, packageOf } from "../testing"
 import { canonicalJson, hashOfPackage } from "./canonical"
 import { leakProblems, previewPackage, suggestionsOf } from "./packager"
+
+/** The value a canonical text holds; a text that is not JSON is a failure of the test subject. */
+const readBack = (text: string): unknown => {
+    try {
+        return JSON.parse(text)
+    } catch (error) {
+        throw new SdkError("JSON_INVALID", "JSON_INVALID: the canonical text does not parse", error)
+    }
+}
 
 describe("previewPackage: the allowlist", () => {
     it("keeps the process and leaves out the internal Brain, customer data, people and the secrets of the creator agent", () => {
@@ -95,7 +105,7 @@ describe("previewPackage: the allowlist", () => {
     it("yields a package whose canonical text reads back to the same package and the same hash", () => {
         const made = packageOf()
 
-        expect(JSON.parse(canonicalJson(made))).toEqual(made)
+        expect(readBack(canonicalJson(made))).toEqual(made)
         const { hash, ...body } = made
         expect(hashOfPackage(body)).toBe(hash)
     })

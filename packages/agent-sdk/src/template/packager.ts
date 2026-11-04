@@ -20,7 +20,8 @@ import type {
 } from "./graph.types"
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-const EMAIL = /[^\s@"]+@(?:[a-z0-9-]+\.)+[a-z]{2,}/i
+/** An email address; each part is bounded, so a long run of text without an `@` costs a fixed amount per position. */
+const EMAIL = /[^\s@"]{1,64}@(?:[a-z0-9-]{1,63}\.){1,8}[a-z]{2,24}/i
 const SECRETS: ReadonlyArray<RegExp> = [
     /sk-[\w-]{16,}/,
     /Bearer\s+[\w.-]{16,}/i,

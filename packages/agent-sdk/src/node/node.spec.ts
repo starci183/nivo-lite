@@ -9,8 +9,9 @@ import { runNode } from "./host"
 import type { NodeRunRequest } from "./host.types"
 import { defineNode } from "./node"
 import { NodeRunError } from "./node-run-error"
-import type { NodeDefinition } from "./node.types"
+import type { NodeContext, NodeDefinition } from "./node.types"
 import { RightsDeniedError } from "./rights-denied-error"
+import { trusted } from "../schema/trusted"
 
 const READ_ORDERS: DataRight = { kind: "order", access: "read", scope: "turn", fields: ["id", "total"] }
 const WRITE_ORDERS: DataRight = { kind: "order", access: "write", scope: "turn", fields: ["id", "total"] }
@@ -58,18 +59,18 @@ const probe = defineNode({
             })
             return { said: `${text}${json.n}${context.now().getTime()}${context.turn.turnId}` }
         }
-        return input.act === "bad-output" ? ({ said: 1 } as unknown as { said: string }) : { said: "" }
+        return input.act === "bad-output" ? trusted<{ said: string }>({ said: 1 }) : { said: "" }
     },
     examples: [{ name: "one", params: { prefix: "" }, input: { act: "" }, output: { said: "" }, effects: [] }],
 })
 
 const requestOf = (act: string, overrides: Partial<NodeRunRequest> = {}): NodeRunRequest => ({
-    node: probe as unknown as NodeDefinition,
+    node: trusted<NodeDefinition>(probe),
     params: { prefix: "#" },
     input: { act },
     turn: EXAMPLE_TURN,
     grant: { rights: [READ_ORDERS, WRITE_ORDERS] },
-    effects: new Map([[notify.id, notify as unknown as typeof notify]]),
+    effects: new Map([[notify.id, trusted<typeof notify>(notify)]]),
     tools: new Map(),
     key: "run-1:step",
     ...overrides,
@@ -84,8 +85,8 @@ describe("defineNode", () => {
             input: z.object({}),
             output: z.object({}),
             rights: [],
-            run: async () => ({}) as never,
-            examples: [{ name: "e", params: {}, input: {}, output: {} as never, effects: [] }],
+            run: () => Promise.resolve(trusted<never>({})),
+            examples: [{ name: "e", params: {}, input: {}, output: trusted<never>({}), effects: [] }],
         } as const
         expect(() => defineNode({ ...config, id: "Bad.x", effects: [] })).toThrow(SdkDefinitionError)
         expect(() => defineNode({ ...config, id: "ok.node", effects: ["Bad.x"] })).toThrow(SdkDefinitionError)
@@ -106,7 +107,7 @@ describe("defineNode", () => {
 describe("defineEffect and defineDataKind", () => {
     it("define an effect and a data kind with its field names, and refuse malformed names", () => {
         expect(notify.entry).toBe("effect")
-        expect(() => defineEffect({ ...notify, id: "bad" as "a.b" })).toThrow(SdkDefinitionError)
+        expect(() => defineEffect({ ...notify, id: trusted<"a.b">("bad") })).toThrow(SdkDefinitionError)
         const kind = defineDataKind({
             kind: "order",
             title: { key: "o" },
@@ -145,16 +146,16 @@ describe("runNode", () => {
     })
 
     it("reads in the workspace scope only when the node declares it and the grant holds it", async () => {
-        const wide = { ...probe, rights: [READ_ALL] } as unknown as NodeDefinition
+        const wide = trusted<NodeDefinition>({ ...probe, rights: [READ_ALL] })
         const read = jest.fn().mockResolvedValue([])
         const { ports } = scriptedNodePorts()
-        const node = {
+        const node = trusted<NodeDefinition>({
             ...wide,
-            run: async (_: unknown, context: { data: { read: typeof read } }) => {
+            run: async (_: unknown, context: NodeContext) => {
                 await context.data.read("order", { fields: ["id"] })
                 return { said: "" }
             },
-        } as unknown as NodeDefinition
+        })
         await runNode(requestOf("", { node, grant: { rights: [READ_ALL] } }), { ...ports, read })
         expect(read).toHaveBeenCalledWith("order", { fields: ["id"] }, "workspace")
         await expect(
@@ -187,7 +188,7 @@ describe("runNode", () => {
         await expect(runNode(requestOf("effect-ghost"), ports)).rejects.toThrow("EFFECT_UNKNOWN")
         await expect(runNode(requestOf("effect-bad"), ports)).rejects.toThrow("EFFECT_PAYLOAD_INVALID")
         const locked = defineEffect({ ...notify, rights: [READ_ALL] })
-        const effects = new Map([[locked.id, locked as unknown as typeof notify]])
+        const effects = new Map([[locked.id, trusted<typeof notify>(locked)]])
         await expect(runNode(requestOf("effect", { effects }), ports)).rejects.toThrow(RightsDeniedError)
     })
 

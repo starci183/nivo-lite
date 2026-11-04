@@ -1,4 +1,4 @@
-import type { z } from "zod"
+import type { z } from "../schema/zod.schema"
 import { rightsGaps } from "../rights/rights"
 import type { DataAccess, DataRight, RightScope, RightsGrant } from "../rights/rights.types"
 import { isRecord } from "../schema/is-record"
@@ -16,6 +16,7 @@ import type {
 } from "./node.types"
 import { RightsDeniedError } from "./rights-denied-error"
 import { ToolUndeclaredError } from "./tool-undeclared-error"
+import { trusted } from "../schema/trusted"
 
 /** Whether a grant covers one right. */
 const covers = (grant: RightsGrant, right: DataRight): boolean => rightsGaps(grant, [right]).length === 0
@@ -89,7 +90,9 @@ const toolsOf = (request: NodeRunRequest, ports: NodeHostPorts): NodeTools => {
             const checked = parsedRecord(tool.args, args, "TOOL_ARGS_INVALID", name)
             const key = `${request.key}:tool:${calls}`
             calls += 1
-            return parsed(tool.result, await ports.callTool(tool, checked, key), "TOOL_RESULT_INVALID", name) as R
+            return trusted<R>(
+                parsed(tool.result, await ports.callTool(tool, checked, key), "TOOL_RESULT_INVALID", name),
+            )
         },
     }
 }
@@ -112,7 +115,7 @@ const contextOf = (
         data: {
             read: async <T>(kind: string, query: NodeQuery): Promise<ReadonlyArray<T>> => {
                 const scope = scopeOf(request, kind, "read", query.fields)
-                return (await ports.read(kind, query, scope)) as ReadonlyArray<T>
+                return trusted<ReadonlyArray<T>>(await ports.read(kind, query, scope))
             },
             write: (kind, record) => {
                 scopeOf(request, kind, "write", Object.keys(record))

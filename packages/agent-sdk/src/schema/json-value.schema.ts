@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { ident, prose } from "./bounded.schema"
+import { keyText, prose } from "./bounded.schema"
 import { entriesAtMost } from "./entries"
 import type { JsonValue } from "./schema.types"
 
@@ -11,6 +11,6 @@ export const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
         z.boolean(),
         z.null(),
         z.array(jsonValue).max(500),
-        z.record(ident, jsonValue).refine(entriesAtMost(200)),
+        z.record(keyText, jsonValue).refine(entriesAtMost(200)),
     ]),
 )

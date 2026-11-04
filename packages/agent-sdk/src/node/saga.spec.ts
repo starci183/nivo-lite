@@ -4,6 +4,7 @@ import { defineNode } from "./node"
 import type { NodeDefinition } from "./node.types"
 import { nodeIndexOf, nodeListProblems } from "./problems"
 import { nodeSagaOf } from "./saga"
+import { trusted } from "../schema/trusted"
 
 const voidOrder = defineEffect({
     id: "order.void",
@@ -27,19 +28,21 @@ const nodeOf = (
     effects: ReadonlyArray<"order.record" | "channel.send" | "order.ghost">,
     tools: ReadonlyArray<"order.look" | "order.charge" | "order.gone"> = [],
 ): NodeDefinition =>
-    defineNode({
-        id: "order.step",
-        role: "output",
-        title: { key: "s" },
-        params: z.object({}),
-        input: z.object({}),
-        output: z.object({}),
-        rights: [],
-        effects,
-        tools,
-        run: () => Promise.resolve({}),
-        examples: [{ name: "e", params: {}, input: {}, output: {}, effects: [] }],
-    }) as unknown as NodeDefinition
+    trusted<NodeDefinition>(
+        defineNode({
+            id: "order.step",
+            role: "output",
+            title: { key: "s" },
+            params: z.object({}),
+            input: z.object({}),
+            output: z.object({}),
+            rights: [],
+            effects,
+            tools,
+            run: () => Promise.resolve({}),
+            examples: [{ name: "e", params: {}, input: {}, output: {}, effects: [] }],
+        }),
+    )
 
 const index = nodeIndexOf({ nodes: [], effects: [voidOrder, record, send], tools: [look, charge], dataKinds: [] })
 
@@ -59,7 +62,7 @@ describe("nodeSagaOf", () => {
 
 describe("effect compensation", () => {
     it("refuses a malformed compensation id, and names one nobody installed", () => {
-        expect(() => defineEffect({ ...voidOrder, compensation: "Bad" as "a.b" })).toThrow("ID_MALFORMED")
+        expect(() => defineEffect({ ...voidOrder, compensation: trusted<"a.b">("Bad") })).toThrow("ID_MALFORMED")
         expect(nodeListProblems({ nodes: [], effects: [record], tools: [], dataKinds: [] })).toEqual([
             { code: "EFFECT_COMPENSATION_UNKNOWN", at: "order.record:order.void" },
         ])
