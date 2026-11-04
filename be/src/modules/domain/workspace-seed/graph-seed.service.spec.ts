@@ -131,7 +131,7 @@ describe("GraphSeedService > tool grants", () => {
         await service.run(LEDGER_TEXT, "NIVO")
 
         expect(toolGrants.insertMissing).toHaveBeenCalledWith(
-            ["ledger.append", "ledger.void"].map((tool) => ({
+            ["ledger.append", "ledger.void", "ledger.status"].map((tool) => ({
                 workspaceId: "ws-1",
                 agentId: "agent-1",
                 tool,

@@ -28,8 +28,12 @@ const SEED_LOCALE = "vi"
 /** The most workspaces looked through for the named one. */
 const WORKSPACE_SCAN_LIMIT = 1000
 
-/** The tools of the ledger copy the seed grants `auto` to the agent whose graph declares them; no other tool is granted by the seed. */
-const LEDGER_SEED_TOOLS: ReadonlySet<string> = new Set(["ledger.append", "ledger.void"])
+/**
+ * The tools of the ledger copy the seed grants `auto` to the agent whose graph declares them (the append-only copy, its void, and the
+ * read that says whether a ledger is connected: without it a read with no grant is denied and the copy is never written); no other tool
+ * is granted by the seed.
+ */
+const LEDGER_SEED_TOOLS: ReadonlySet<string> = new Set(["ledger.append", "ledger.void", "ledger.status"])
 
 /** The installation that runs a module's graph, with the agent it drives. */
 interface Seat {
