@@ -7,7 +7,6 @@ export { CONVERSATIONS_MESSAGES } from "./messages/conversations.messages"
 export { readTelegramUpdate } from "./telegram-update.policy"
 export { isZaloAttachmentEvent, readZaloEvent, zaloAttachmentShapeOf } from "./zalo-event.policy"
 export type {
-    InboundAttachment,
     CustomerTurn,
     ChatTurnProposal,
     ChatTurnRuntime,
@@ -18,4 +17,3 @@ export type {
 } from "./conversations.contracts"
 export type { MessageIntake } from "./conversations.contracts"
 export { customerWakeContextOf } from "./customer-wake.policy"
-export type { CustomerWakeIntake } from "./customer-wake.policy"

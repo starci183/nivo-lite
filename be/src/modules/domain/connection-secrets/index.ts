@@ -9,5 +9,5 @@ export {
 } from "./errors/connection-secrets.error"
 export { CONNECTION_SECRETS_MESSAGES } from "./messages/connection-secrets.messages"
 export { randomSecret, safeEqual } from "./secret-cipher.policy"
-export type { ConnectionSecret, OptionalApiToken, OptionalStoredSecret } from "./connection-secrets.contracts"
+export type { ConnectionSecret, OptionalStoredSecret } from "./connection-secrets.contracts"
 export { connectionSecretsEntities } from "./persistence/entities"
