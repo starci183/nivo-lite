@@ -54,6 +54,7 @@ const worldOf = (store: Record<string, Array<NodeRow>>, failOn: string | null = 
     const subjectKinds: Readonly<Record<string, string>> = {
         "order.record": "order",
         "payment-claim.record": "payment-claim",
+        "lead.ensure": "sales-lead",
         "work-item.raise": "work-item",
         "channel.send": "message",
     }
@@ -274,11 +275,21 @@ describe("flow F graphs on fake ports", () => {
         const run = await drive(await build(world, graph, model), graph, wake)
 
         expect(run.failed).toBeNull()
-        expect(run.path).toEqual(["classify", "has-attachment", "has-question", "has-order", "handoff-sales", "has-claim", "end"])
-        expect(world.ran.map((entry) => entry.effect)).toEqual(["agent.tag"])
-        expect(world.ran[0]?.payload).toMatchObject({
+        expect(run.path).toEqual([
+            "classify",
+            "has-attachment",
+            "has-question",
+            "has-order",
+            "ensure-lead-order",
+            "handoff-sales",
+            "has-claim",
+            "end",
+        ])
+        expect(world.ran.map((entry) => entry.effect)).toEqual(["lead.ensure", "agent.tag"])
+        expect(world.ran[0]?.payload).toMatchObject({ conversationId: "conv-1" })
+        expect(world.ran[1]?.payload).toMatchObject({
             toModuleKey: "sales",
-            leadId: "lead-1",
+            leadId: "sales-lead-1",
             conversationId: "conv-1",
             context: { items: [{ name: "chậu hoa", quantity: 1, priceVnd: null }], address: "69 Hàng Xanh" },
         })
