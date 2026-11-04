@@ -7,10 +7,9 @@ import {
     OPEN_API_AUTH_TYPES,
     OPEN_API_PULL_ENTITIES,
     OPEN_API_SCHEDULES,
-    OPEN_API_SHOWN,
     openApiOpLabel,
-    requiredQueryOf,
 } from "./openapi-wizard.shared"
+import { OPEN_API_SHOWN, requiredQueryOf } from "./openapi-wizard.ops"
 import type { useOpenApiWizard } from "./useOpenApiWizard"
 
 /** The state the view reads. */

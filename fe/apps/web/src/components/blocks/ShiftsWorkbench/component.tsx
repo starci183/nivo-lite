@@ -1,12 +1,8 @@
-import { Grid, Stack, Tabs } from "@starci/grammar/common"
+import { Stack } from "@starci/grammar/common"
 import { ShiftsWeek } from "@/components/frames/ShiftsWeek"
 import { ShiftsSetup } from "@/components/frames/ShiftsSetup"
 import { ShiftsMyRoster } from "@/components/frames/ShiftsMyRoster"
 import { ShiftsPersonalRequests } from "@/components/frames/ShiftsPersonalRequests"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { WaitingRegion } from "@/components/composites/WaitingRegion"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -21,6 +17,7 @@ import type {
     ShiftsRequestViews,
     ShiftsPersonalViews,
 } from "@/modules/types"
+import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 /** The existing five panels and recorded explanation arrangement. */
 export const SHIFTS_WORKBENCH_SHAPES = ["week", "requests", "setup", "quick", "mine", "explanation"] as const
 /** Pure atoms, actual read payloads and separate initiating event handlers. */
@@ -71,7 +68,6 @@ const PERSONAL_EMPTY: ShiftsPersonalViews["personalReady"] = {
     myAvailability: { fields: [], rows: [] },
     mySwaps: { rows: [] },
 }
-const panelId = (id: string): string => `agent-dashboard-panel-${id}`
 type ShiftsPanelProps = Pick<ShiftsWorkbenchBaseProps, "props" | "on">
 
 const MinePanel = (props: ShiftsPanelProps) => {
@@ -163,70 +159,27 @@ const ModulePanel = (props: ShiftsWorkbenchBaseProps) => {
             return null
     }
 }
-const DashboardCards = (props: ShiftsPanelProps) => {
-    const regions = props.props.regions
-    return (
-        <Grid kind="cards" columns={3}>
-            <SlotView
-                {...regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <DoneRegion label={regions.done.label} view={done} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.connections}
-                onRetry={props.on.retryDashboard}
-                render={(connections, isLoading) => (
-                    <ConnectionsRegion label={regions.connections.label} view={connections} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.knowledge}
-                onRetry={props.on.retryDashboard}
-                render={(knowledge, isLoading) => (
-                    <KnowledgeRegion label={regions.knowledge.label} view={knowledge} isLoading={isLoading} />
-                )}
-            />
-        </Grid>
-    )
-}
-
 const Overview = (props: ShiftsWorkbenchBaseProps) => {
     const view = props.props
     return (
-        <Stack gap="region">
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(waiting, isLoading) => (
-                    <WaitingRegion label={view.regions.waiting.label} view={waiting} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...view.ribbon}
-                placeholder={FIGURES_EMPTY}
-                onRetry={props.on.retryRibbon}
-                render={(figures, isLoading) =>
-                    figures.isVisible ? (
-                        <ShiftsFigures {...view.ribbon.copy} {...figures} isLoading={isLoading} />
-                    ) : null
-                }
-            />
-            <Tabs
-                label={view.tabsLabel}
-                selectedKey={view.selectedTab}
-                inset="none"
-                labelVisibility="always"
-                items={view.tabs}
-                panelId={panelId}
-                onSelect={props.on.selectTab}
-            />
-            <div role="tabpanel" id={panelId(view.selectedTab)}>
-                <ModulePanel {...props} />
-            </div>
-            <DashboardCards {...props} />
-        </Stack>
+        <WorkbenchOverview
+            view={view}
+            on={props.on}
+            figures={
+                <SlotView
+                    {...view.ribbon}
+                    placeholder={FIGURES_EMPTY}
+                    onRetry={props.on.retryRibbon}
+                    render={(figures, isLoading) =>
+                        figures.isVisible ? (
+                            <ShiftsFigures {...view.ribbon.copy} {...figures} isLoading={isLoading} />
+                        ) : null
+                    }
+                />
+            }
+        >
+            <ModulePanel {...props} />
+        </WorkbenchOverview>
     )
 }
 

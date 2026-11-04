@@ -33,7 +33,8 @@ export interface MoneyWizardInput {
     readonly onClose: (changed: boolean) => void
 }
 
-type UseMoneyWizardResult = {
+/** What the wizard drawer draws and the events it raises. */
+export type UseMoneyWizardResult = {
     reads: readonly SlotRead<unknown>[]
     index: number
     step: "env" | "account" | "follow" | "verify" | "agent"

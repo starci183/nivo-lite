@@ -2,7 +2,7 @@ import { z } from "zod"
 import { SdkDefinitionError } from "../block/definition-error"
 import { rightsGaps } from "../rights/rights"
 import type { DataRight } from "../rights/rights.types"
-import { fakeNodeContext } from "../testing/node-context"
+import { sampleNodeContext } from "../tests/fixtures/node-context"
 import { defineNode } from "./node"
 import { RightsDeniedError } from "./rights-denied-error"
 
@@ -29,7 +29,7 @@ const node = defineNode({
 
 describe("defineNode", () => {
     it("defines a step that runs under a fake context with its store and records its effect", async () => {
-        const context = fakeNodeContext({
+        const context = sampleNodeContext({
             grant: { rights: [READ_ORDERS] },
             store: { order: [{ id: "o1", total: 5 }] },
             now: new Date(5),
@@ -56,9 +56,9 @@ describe("defineNode", () => {
     })
 })
 
-describe("fakeNodeContext", () => {
+describe("sampleNodeContext", () => {
     it("denies by default, for reads without fields, and for writes outside the grant", () => {
-        const context = fakeNodeContext()
+        const context = sampleNodeContext()
         expect(() => context.data.read("order", { fields: ["id"] })).toThrow(RightsDeniedError)
         expect(() => context.data.read("order", { fields: [] })).toThrow(RightsDeniedError)
         expect(() => context.data.write("order", { id: "1" })).toThrow(RightsDeniedError)
@@ -66,7 +66,7 @@ describe("fakeNodeContext", () => {
 
     it("limits and cuts rows, filters by where, and records allowed writes", async () => {
         const write: DataRight = { kind: "order", access: "write", scope: "turn", fields: ["id"] }
-        const context = fakeNodeContext({
+        const context = sampleNodeContext({
             grant: { rights: [READ_ORDERS, write] },
             store: {
                 order: [
@@ -88,10 +88,10 @@ describe("fakeNodeContext", () => {
     })
 })
 
-describe("fakeNodeContext defaults", () => {
+describe("sampleNodeContext defaults", () => {
     it("reads nothing from an empty store, writes a record without fields, and tells the epoch", async () => {
         const write: DataRight = { kind: "order", access: "write", scope: "turn", fields: ["id"] }
-        const context = fakeNodeContext({ grant: { rights: [READ_ORDERS, write] } })
+        const context = sampleNodeContext({ grant: { rights: [READ_ORDERS, write] } })
         await expect(context.data.read("order", { fields: ["id"] })).resolves.toEqual([])
         await expect(context.data.write("order", {})).resolves.toMatchObject({ kind: "order" })
         expect(context.now().getTime()).toBe(0)

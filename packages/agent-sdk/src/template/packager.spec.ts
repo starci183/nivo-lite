@@ -1,4 +1,4 @@
-import { CREATOR, SECRET_IN_ENV, draftOf, leakyGraph, packageOf } from "../testing"
+import { CREATOR, SECRET_IN_ENV, draftOf, leakyGraph, packageOf } from "../tests/fixtures"
 import { canonicalJson, hashOfPackage } from "./canonical"
 import { leakProblems, previewPackage, suggestionsOf } from "./packager"
 

@@ -7,46 +7,15 @@ import { TELEGRAM_PAGE_POLL_MS } from "./telegramConnection.shared"
 import type { DataSlot } from "@/modules/types"
 import type { SWRResponse, KeyedMutator } from "swr"
 
+type TelegramPageRead = ReturnType<typeof useQueryTelegramConnectionPageSwr>
+type TelegramPageRow = NonNullable<TelegramPageRead["data"]>
+
 type UseTelegramPageResult = {
-    read: SWRResponse<
-        {
-            id: string
-            name: string
-            status: string
-            healthy: boolean
-            botUsername: string
-            webhookUrl: string
-            lastError: string | null
-            lastEventAt: string | null
-            agentIds: Array<string>
-        },
-        unknown,
-        any
-    >
-    slot: DataSlot<{
-        id: string
-        name: string
-        status: string
-        healthy: boolean
-        botUsername: string
-        webhookUrl: string
-        lastError: string | null
-        lastEventAt: string | null
-        agentIds: Array<string>
-    }>
+    read: SWRResponse<TelegramPageRow, unknown>
+    slot: DataSlot<TelegramPageRow>
     isMissing: boolean
     reload: () => undefined
-    mutate: KeyedMutator<{
-        id: string
-        name: string
-        status: string
-        healthy: boolean
-        botUsername: string
-        webhookUrl: string
-        lastError: string | null
-        lastEventAt: string | null
-        agentIds: Array<string>
-    }>
+    mutate: KeyedMutator<TelegramPageRow>
 }
 
 /**

@@ -1,6 +1,6 @@
 import type { GraphDocument } from "./graph.types"
 import { instantiate } from "./parameters"
-import { draftOf, leakyGraph, nodeOf, packageOf, withExtraBranch } from "../testing"
+import { draftOf, leakyGraph, nodeOf, packageOf, withExtraBranch } from "../tests/fixtures"
 import { applyUnits, updateUnits } from "./merge"
 
 const VALUES = { autoLimit: 5_000_000, waitMinutes: 240, shop: "Spa Hoa" }

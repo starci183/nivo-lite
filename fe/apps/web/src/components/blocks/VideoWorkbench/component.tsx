@@ -4,11 +4,7 @@ type VideoWorkbenchFields = VideoWorkbenchViews["fields"]
 type VideoEditorPanelFields = VideoWorkbenchViews["editorPanel"]
 type VideoNormalPanelFields = VideoWorkbenchViews["normalPanel"]
 
-import { Button, Grid, Stack } from "@starci/grammar/common"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
+import { Button, Stack } from "@starci/grammar/common"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -20,6 +16,7 @@ import { VideoEditSteps } from "@/components/composites/VideoEditSteps"
 import { VideoPreviewCard, VIDEO_PREVIEW_CARD_READ_DEFAULTS } from "@/components/composites/VideoPreviewCard"
 import { VideoResultView, VIDEO_RESULT_VIEW_READ_DEFAULTS } from "@/components/composites/VideoResultView"
 import { VideoLibraryList } from "@/components/composites/VideoLibraryList"
+import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 /** The approved normal, five editor and explanation drawings remain exhaustive. */
 export const VIDEO_WORKBENCH_SHAPES: readonly ["library", "brand", ...typeof VIDEO_EDITOR_STEPS, "explanation"] = [
     "library",
@@ -190,34 +187,6 @@ const Normal = (props: NormalProps) => {
             return null
     }
 }
-const DashboardCards = (props: VideoWorkbenchBaseProps) => {
-    const regions = props.props.regions
-    return (
-        <Grid kind="cards" columns={3}>
-            <SlotView
-                {...regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <DoneRegion label={regions.done.label} view={done} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.connections}
-                onRetry={props.on.retryDashboard}
-                render={(connections, isLoading) => (
-                    <ConnectionsRegion label={regions.connections.label} view={connections} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.knowledge}
-                onRetry={props.on.retryDashboard}
-                render={(knowledge, isLoading) => (
-                    <KnowledgeRegion label={regions.knowledge.label} view={knowledge} isLoading={isLoading} />
-                )}
-            />
-        </Grid>
-    )
-}
 const Explanation = (props: VideoWorkbenchBaseProps) => {
     const view = props.props
     const why = view.why
@@ -261,20 +230,17 @@ const Explanation = (props: VideoWorkbenchBaseProps) => {
 const Overview = (props: VideoWorkbenchBaseProps) => {
     const view = props.props
     return (
-        <Stack gap="region">
-            <WorkbenchOverviewTop view={view} on={{ ...props.on, retryRibbon: props.on.retryFigures }}>
-                <SlotView
-                    {...view.normal}
-                    placeholder={NORMAL_READ_MISSING}
-                    errorDescription={view.loadFailedBody}
-                    onRetry={props.on.retryNormal}
-                    render={(data, isLoading) => (
-                        <Normal data={data} ui={view.ui} shape={props.shape} isLoading={isLoading} on={props.on} />
-                    )}
-                />
-            </WorkbenchOverviewTop>
-            <DashboardCards {...props} />
-        </Stack>
+        <WorkbenchOverview view={view} ribbon={view.ribbon} on={{ ...props.on, retryRibbon: props.on.retryFigures }}>
+            <SlotView
+                {...view.normal}
+                placeholder={NORMAL_READ_MISSING}
+                errorDescription={view.loadFailedBody}
+                onRetry={props.on.retryNormal}
+                render={(data, isLoading) => (
+                    <Normal data={data} ui={view.ui} shape={props.shape} isLoading={isLoading} on={props.on} />
+                )}
+            />
+        </WorkbenchOverview>
     )
 }
 /** The original editor bypasses the normal dashboard; every actual read keeps its own status recipe. */

@@ -44,6 +44,9 @@ const heldSmtp = (host: string, from: string): ConnectionRecord => ({
     createdAt: "2026-11-03T00:00:00.000Z",
 })
 
+/** A partial-object matcher, typed `unknown` so it flows into any slot. */
+const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
+
 const build = async (held: ReadonlyArray<ConnectionRecord> = []) => {
     const owners = mock<OwnersService>()
     owners.ensureAccount.mockResolvedValue(ACTOR.principalId)
@@ -83,7 +86,7 @@ describe("ManagementSeedService > a production document", () => {
 
         expect(owners.ensureAccount).toHaveBeenCalledWith("owner@nivo.test")
         expect(workspaces.ensureNamed).toHaveBeenCalledWith("owner-1", "NIVO")
-        expect(channels.ensure).toHaveBeenCalledWith(ACTOR, expect.objectContaining({ telegram: expect.anything() }))
+        expect(channels.ensure).toHaveBeenCalledWith(ACTOR, objectLike({ telegram: expect.anything() }))
         expect(smtp.start).toHaveBeenCalledWith(ACTOR, {
             preset: "relay_service",
             host: "smtp.nivo.test",

@@ -24,8 +24,8 @@ Each subpath is one entry of the `exports` of the package manifest; a side impor
 | `@nivo-lite/agent-sdk/workbench/spec`     | React-free           | the earlier spec format with its registry and its own `specProblems`                                                                                                                                |
 | `@nivo-lite/agent-sdk/workbench/view`     | React-free           | the view types of the shared workbench regions                                                                                                                                                      |
 
-The sources sit under `src` in one folder per subpath (`src/block`, `src/node`, `src/spec`, `src/module`, `src/template`, `src/testing`,
-`src/rights`, `src/schema`, `src/client`, `src/workbench`), with `src/slot`, `src/host` and `src/errors.ts` shared between them.
+The sources sit under `src` in one folder per subpath (`src/block`, `src/node`, `src/spec`, `src/module`, `src/template`, `src/tests/fixtures`,
+`src/rights`, `src/schema`, `src/client`, `src/workbench`), with `src/slot`, `src/host` and `src/sdk-error.ts` shared between them.
 
 ## Code and data
 

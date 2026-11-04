@@ -26,7 +26,9 @@ export class ZaloInboxService {
     ) {}
 
     /** A redelivered message is acknowledged without being processed again; every event type has its own id, so a follow event is claimed once and never overwrites another. */
-    acceptZaloDelivery(rawBody: ZaloRawDelivery, connection: string): Promise<void> {
+    async acceptZaloDelivery(rawBody: ZaloRawDelivery, connection: string): Promise<void> {
+        // A connection that holds no OA secret key yet proved nothing: the call is acknowledged and closed, never read as an event.
+        const isProven = await this.gate.holdsProofKey(connection)
         return this.entityManager.transaction(async (manager) => {
             const payload = { connection, rawBody: rawBody?.toString("utf8") ?? "" }
             const deliveryId = rawBody === undefined ? "" : zaloDeliveryIdOf(connection, rawBody)
@@ -37,8 +39,7 @@ export class ZaloInboxService {
             }
             const receiptId = await this.inbox.claimRow("zalo", deliveryId, manager, receipt)
             if (receiptId === undefined) return
-            // A connection that holds no OA secret key yet proved nothing: the call is acknowledged and closed, never read as an event.
-            if (!(await this.gate.holdsProofKey(connection))) {
+            if (!isProven) {
                 await manager.update(ZaloInboxEntity, { id: receiptId }, { processedAt: () => "now()" })
                 return
             }

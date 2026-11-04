@@ -2,15 +2,16 @@ import { useFeatureReset } from "@/hooks/reuseables"
 import { useShiftsOperation } from "./useShiftsOperation"
 import type { ShiftsSetupViews, ShiftsSetupActions, ShiftsStaffView } from "@/modules/types"
 import type { ShiftsPanelInput } from "./shiftsWorkbench.shared"
-type FullView = { readonly props: ShiftsSetupViews["staffData"]; readonly on: ShiftsSetupActions["staff"] }
-type StaffForm = ShiftsSetupViews["staffStaffForm"]
-type StaffTextField = ShiftsSetupViews["staffStaffTextField"]
-type StaffNumberField = ShiftsSetupViews["staffStaffNumberField"]
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useShiftsBenchData, useShiftsFormat } from "@/hooks/shifts"
 import { useShiftsSetupCommands } from "@/hooks/shiftsCommands"
+
+type FullView = { readonly props: ShiftsSetupViews["staffData"]; readonly on: ShiftsSetupActions["staff"] }
+type StaffForm = ShiftsSetupViews["staffStaffForm"]
+type StaffTextField = ShiftsSetupViews["staffStaffTextField"]
+type StaffNumberField = ShiftsSetupViews["staffStaffNumberField"]
 
 /** State values and commands consumed by the connected surface. */
 type ShiftsStaffControllerInput = {
@@ -119,151 +120,8 @@ const renderShiftsStaff = (context: ReturnType<typeof createShiftsStaffRows>): F
 }
 
 type UseShiftsStaffViewResult =
-    | {
-          copy: Omit<
-              {
-                  readonly title: string
-                  readonly hint: string
-                  readonly emptyTitle: string
-                  readonly emptyBody: string
-                  readonly editLabel: string
-                  readonly formTitle: string
-                  readonly saveLabel: string
-                  readonly cancelLabel: string
-                  readonly labels: {
-                      readonly name: string
-                      readonly wage: string
-                      readonly maxWeek: string
-                      readonly maxDay: string
-                      readonly minRest: string
-                      readonly phone: string
-                      readonly telegram: string
-                      readonly zalo: string
-                      readonly link: string
-                      readonly positions: string
-                      readonly active: string
-                  }
-                  readonly people: ReadonlyArray<{
-                      readonly id: string
-                      readonly title: string
-                      readonly notes: ReadonlyArray<string>
-                  }>
-                  readonly form: ShiftsSetupViews["staffStaffForm"]
-                  readonly positionOptions: ReadonlyArray<{
-                      readonly value: string
-                      readonly label: string
-                  }>
-                  readonly linkOptions: ReadonlyArray<{
-                      readonly id: string
-                      readonly label: string
-                  }>
-                  readonly noLinkId: string
-                  readonly isBusy: boolean
-                  readonly canSave: boolean
-              },
-              "people" | "positionOptions" | "linkOptions"
-          >
-          data: undefined
-          on: undefined
-      }
-    | {
-          copy: Omit<
-              {
-                  readonly title: string
-                  readonly hint: string
-                  readonly emptyTitle: string
-                  readonly emptyBody: string
-                  readonly editLabel: string
-                  readonly formTitle: string
-                  readonly saveLabel: string
-                  readonly cancelLabel: string
-                  readonly labels: {
-                      readonly name: string
-                      readonly wage: string
-                      readonly maxWeek: string
-                      readonly maxDay: string
-                      readonly minRest: string
-                      readonly phone: string
-                      readonly telegram: string
-                      readonly zalo: string
-                      readonly link: string
-                      readonly positions: string
-                      readonly active: string
-                  }
-                  readonly people: ReadonlyArray<{
-                      readonly id: string
-                      readonly title: string
-                      readonly notes: ReadonlyArray<string>
-                  }>
-                  readonly form: ShiftsSetupViews["staffStaffForm"]
-                  readonly positionOptions: ReadonlyArray<{
-                      readonly value: string
-                      readonly label: string
-                  }>
-                  readonly linkOptions: ReadonlyArray<{
-                      readonly id: string
-                      readonly label: string
-                  }>
-                  readonly noLinkId: string
-                  readonly isBusy: boolean
-                  readonly canSave: boolean
-              },
-              "people" | "positionOptions" | "linkOptions"
-          >
-          data: Pick<
-              {
-                  readonly title: string
-                  readonly hint: string
-                  readonly emptyTitle: string
-                  readonly emptyBody: string
-                  readonly editLabel: string
-                  readonly formTitle: string
-                  readonly saveLabel: string
-                  readonly cancelLabel: string
-                  readonly labels: {
-                      readonly name: string
-                      readonly wage: string
-                      readonly maxWeek: string
-                      readonly maxDay: string
-                      readonly minRest: string
-                      readonly phone: string
-                      readonly telegram: string
-                      readonly zalo: string
-                      readonly link: string
-                      readonly positions: string
-                      readonly active: string
-                  }
-                  readonly people: ReadonlyArray<{
-                      readonly id: string
-                      readonly title: string
-                      readonly notes: ReadonlyArray<string>
-                  }>
-                  readonly form: ShiftsSetupViews["staffStaffForm"]
-                  readonly positionOptions: ReadonlyArray<{
-                      readonly value: string
-                      readonly label: string
-                  }>
-                  readonly linkOptions: ReadonlyArray<{
-                      readonly id: string
-                      readonly label: string
-                  }>
-                  readonly noLinkId: string
-                  readonly isBusy: boolean
-                  readonly canSave: boolean
-              },
-              "people" | "positionOptions" | "linkOptions"
-          >
-          on: {
-              readonly edit: (id: string) => void
-              readonly text: (field: "name" | "phone" | "telegramChatId" | "zaloUserId", value: string) => void
-              readonly number: (field: "wage" | "maxWeek" | "maxDay" | "minRest", value: number) => void
-              readonly positions: (ids: Array<string>) => void
-              readonly link: (id: string) => void
-              readonly active: (value: boolean) => void
-              readonly save: () => void
-              readonly cancel: () => void
-          }
-      }
+    | { copy: ShiftsSetupViews["staffCopy"]; data: undefined; on: undefined }
+    | { copy: ShiftsSetupViews["staffCopy"]; data: FullView["props"]; on: FullView["on"] }
 
 /** The roster: who works here, what they can do, their wage and limits, and the form to add or edit one person. */
 export const useShiftsStaffView = (input: ShiftsPanelInput): UseShiftsStaffViewResult => {

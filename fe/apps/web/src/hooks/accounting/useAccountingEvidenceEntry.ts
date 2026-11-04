@@ -11,7 +11,7 @@ import { useAccountingSubmit } from "./useAccountingSubmit"
 import { useRecordManualEvidence } from "./useRecordManualEvidence"
 
 /** The manual-evidence form as the tab draws it: its words and current values. */
-export interface AccountingEvidenceForm {
+export interface AccountingEvidenceFormState {
     amount: string
     date: string
     maxDate: string
@@ -39,7 +39,7 @@ export interface AccountingEvidenceForm {
 export interface AccountingEvidenceEntry {
     isFormOpen: boolean
     formOpenLabel: string
-    form: AccountingEvidenceForm
+    form: AccountingEvidenceFormState
     on: {
         openForm: () => void
         closeForm: () => void

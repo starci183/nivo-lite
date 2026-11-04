@@ -3,7 +3,7 @@
 import { useTransition } from "react"
 import { useConnectionsRefresh, useSetConnectionAgents, useSyncNow } from "@/hooks/connections"
 import type { useOpenApiAuthForm } from "@/hooks/rhf"
-import { openApiScheduleMinutesOf } from "./openapi-wizard.shared"
+import { openApiScheduleMinutesOf } from "./openapi-wizard.ops"
 import type { OpenApiCommands } from "./useOpenApiCommands"
 import type { useOpenApiPicks } from "./useOpenApiPicks"
 import type { useOpenApiSource } from "./useOpenApiSource"

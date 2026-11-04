@@ -1,6 +1,15 @@
+import { Test } from "@nestjs/testing"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
 import { MANAGEMENT_CONNECTION_IDS, MANAGEMENT_SEED_SCHEMA } from "./management-seed.contracts"
 import { readManagementSeed, readSeedDocuments } from "./management-seed.policy"
+
+const SUBJECT = Symbol("./management-seed.policy")
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { readManagementSeed, readSeedDocuments } }],
+    }).compile()
+    return moduleRef.get<typeof import("./management-seed.policy")>(SUBJECT)
+}
 
 const refused = (field: string) =>
     new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
@@ -36,8 +45,9 @@ const without = (...names: ReadonlyArray<string>): Record<string, string> =>
 const dev = { schema: MANAGEMENT_SEED_SCHEMA, workspaceName: "NIVO", ownerEmail: " Dev-Owner@Nivo.test " }
 
 describe("readManagementSeed > a production document", () => {
-    it("reads the owner, the mail server and the four connections from the sealed values", () => {
-        const seed = readManagementSeed(production())
+    it("reads the owner, the mail server and the four connections from the sealed values", async () => {
+        const subject = await build()
+        const seed = subject.readManagementSeed(production())
 
         expect(seed.workspaceName).toBe("NIVO")
         expect(seed.ownerEmail).toBe("owner@nivo.test")
@@ -81,8 +91,9 @@ describe("readManagementSeed > a production document", () => {
         })
     })
 
-    it("reads a document without the mail server or the SePay key", () => {
-        const seed = readManagementSeed(
+    it("reads a document without the mail server or the SePay key", async () => {
+        const subject = await build()
+        const seed = subject.readManagementSeed(
             production(
                 without(
                     "WORKSPACE_SMTP_HOST",
@@ -106,14 +117,16 @@ describe("readManagementSeed > a production document", () => {
         ["an owner that is no address", { ...SEALED, WORKSPACE_OWNER_EMAIL: "owner" }, "ownerEmail"],
         ["no owner at all", without("WORKSPACE_OWNER_EMAIL"), "ownerEmail"],
         ["a value that is not text", { ...SEALED, WORKSPACE_TELEGRAM_BOT_TOKEN: 5 }, "WORKSPACE_TELEGRAM_BOT_TOKEN"],
-    ])("refuses %s by the name of the field", (_name, values, field) => {
-        expect(() => readManagementSeed(production(values))).toThrow(refused(field))
+    ])("refuses %s by the name of the field", async (_name, values, field) => {
+        const subject = await build()
+        expect(() => subject.readManagementSeed(production(values))).toThrow(refused(field))
     })
 })
 
 describe("readManagementSeed > a development document", () => {
-    it("reads the owner it names and leaves every connection without credentials", () => {
-        const seed = readManagementSeed(dev)
+    it("reads the owner it names and leaves every connection without credentials", async () => {
+        const subject = await build()
+        const seed = subject.readManagementSeed(dev)
 
         expect(seed.ownerEmail).toBe("dev-owner@nivo.test")
         expect(seed.smtp).toBeUndefined()
@@ -122,11 +135,12 @@ describe("readManagementSeed > a development document", () => {
         expect(seed.channels.payos.apiKey).toBeUndefined()
     })
 
-    it("takes the owner from the sealed values when both name one, and from the document when the member lacks it", () => {
+    it("takes the owner from the sealed values when both name one, and from the document when the member lacks it", async () => {
+        const subject = await build()
         const both = { ...dev, values: { WORKSPACE_OWNER_EMAIL: "owner@nivo.test" } }
 
-        expect(readManagementSeed(both).ownerEmail).toBe("owner@nivo.test")
-        expect(readManagementSeed({ ...dev, values: { WORKSPACE_TELEGRAM_BOT_TOKEN: "t" } }).ownerEmail).toBe(
+        expect(subject.readManagementSeed(both).ownerEmail).toBe("owner@nivo.test")
+        expect(subject.readManagementSeed({ ...dev, values: { WORKSPACE_TELEGRAM_BOT_TOKEN: "t" } }).ownerEmail).toBe(
             "dev-owner@nivo.test",
         )
     })
@@ -138,13 +152,15 @@ describe("readManagementSeed > a document off its contract", () => {
         ["another schema", { ...dev, schema: "other@1" }, "schema"],
         ["no workspace name", { ...dev, workspaceName: " " }, "workspaceName"],
         ["values that are no object", { ...dev, ownerEmail: undefined, values: [] }, "values"],
-    ])("refuses %s", (_name, document, field) => {
-        expect(() => readManagementSeed(document)).toThrow(refused(field))
+    ])("refuses %s", async (_name, document, field) => {
+        const subject = await build()
+        expect(() => subject.readManagementSeed(document)).toThrow(refused(field))
     })
 })
 
 describe("readSeedDocuments", () => {
-    it("reads the documents of the envelope the stack seed step writes", () => {
+    it("reads the documents of the envelope the stack seed step writes", async () => {
+        const subject = await build()
         const envelope = {
             env: "dev",
             scope: "dev",
@@ -153,14 +169,30 @@ describe("readSeedDocuments", () => {
             documents: [{ path: "data/a.json", document: dev }],
         }
 
-        expect(readSeedDocuments(`${JSON.stringify(envelope)}\n`)).toEqual([dev])
+        expect(subject.readSeedDocuments(`${JSON.stringify(envelope)}\n`)).toEqual([dev])
     })
 
     it.each([
-        ["text that is not JSON", "{"],
         ["an envelope without documents", "{}"],
         ["a document entry without its document", JSON.stringify({ documents: [{ path: "a" }] })],
-    ])("refuses %s as an input it cannot read", (_name, text) => {
-        expect(() => readSeedDocuments(text)).toThrow(refused("input"))
+    ])("refuses %s as an input it cannot read", async (_name, text) => {
+        const subject = await build()
+        expect(() => subject.readSeedDocuments(text)).toThrow(refused("input"))
+    })
+
+    it("refuses text that is not JSON as an input it cannot read, with the parse failure as its cause", async () => {
+        const subject = await build()
+        const thrown = (() => {
+            try {
+                return subject.readSeedDocuments("{")
+            } catch (error) {
+                return error
+            }
+        })()
+        expect(thrown).toMatchObject({
+            code: ConnectionsErrorCode.CommandInvalid,
+            params: { field: "input" },
+        })
+        expect(thrown instanceof Error && thrown.cause instanceof SyntaxError).toBe(true)
     })
 })

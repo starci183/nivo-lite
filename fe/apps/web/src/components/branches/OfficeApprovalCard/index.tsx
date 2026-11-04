@@ -1,4 +1,4 @@
-import { Badge, Button, Cluster, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Text, Textarea } from "@starci/grammar/common"
 import type { OfficeApprovalView, OfficeCardDraft, OfficeThreadProps } from "@/modules/types"
 import { QUOTE_CLASS_NAME } from "./classNames"
 
@@ -52,13 +52,15 @@ export const OfficeApprovalCard = (props: OfficeApprovalCardProps) => {
                     onValueChange={(value) => edit({ text: value })}
                 />
             ) : (
-                <SurfaceCard ariaLabel={approval.title === "" ? copy.draftLabel : approval.title}>
-                    <div className={QUOTE_CLASS_NAME}>
-                        <Text as="p" size="sm">
-                            {shown}
-                        </Text>
-                    </div>
-                </SurfaceCard>
+                <div
+                    role="group"
+                    aria-label={approval.title === "" ? copy.draftLabel : approval.title}
+                    className={QUOTE_CLASS_NAME}
+                >
+                    <Text as="p" size="sm">
+                        {shown}
+                    </Text>
+                </div>
             )}
             {!isWaiting && isLong ? (
                 <div>

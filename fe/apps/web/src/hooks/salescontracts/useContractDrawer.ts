@@ -2,13 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import type { Dispatch, SetStateAction } from "react"
 import { useSalesContractForm } from "@/hooks/rhf"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useSalesActions } from "@/hooks/sales"
-import { digitsToNumber } from "@/modules/utils"
 import type { SalesContract, SalesContractStatus } from "@/modules/types"
-import { useGraphQLWithToast } from "@/modules/toast"
 import {
     contractDrawerOf,
     firstContractError,
@@ -17,6 +14,8 @@ import {
     contractStatusOf,
 } from "./salescontracts.shared"
 import type { ContractLeadOption } from "./salescontracts.shared"
+import { useContractSubmit } from "./useContractSubmit"
+import type { ContractOperation } from "./useContractSubmit"
 
 /** The real leads, date and mounted panel that own this contract editor. */
 interface ContractDrawerInput {
@@ -25,11 +24,6 @@ interface ContractDrawerInput {
     readonly setNote: (note: string) => void
     readonly isActive?: boolean
     readonly scope?: string
-}
-
-interface ContractOperation {
-    readonly scope: string
-    readonly isCurrent: () => boolean
 }
 
 type UseContractDrawerResult = {
@@ -86,7 +80,6 @@ type UseContractDrawerResult = {
 /** Owns the same contract form and command while its original contracts panel is present. */
 export const useContractDrawer = (input: ContractDrawerInput): UseContractDrawerResult => {
     const t = useTranslations("workbenchSales")
-    const runGraphQL = useGraphQLWithToast()
     const isActive = input.isActive ?? true
     const scope = input.scope ?? ""
     const actions = useSalesActions(input.isActive === undefined ? undefined : { isActive, scope })
@@ -115,10 +108,9 @@ export const useContractDrawer = (input: ContractDrawerInput): UseContractDrawer
         form.reset(contractFormOf(contract, input.today))
         setOpen(true)
     }
-    const submit = contractSubmitOf({
+    const submit = useContractSubmit({
         form,
         actions,
-        runGraphQL,
         editing,
         isOpen,
         isPending,
@@ -162,48 +154,4 @@ export const useContractDrawer = (input: ContractDrawerInput): UseContractDrawer
         },
         open,
     }
-}
-
-interface ContractSubmitInput {
-    readonly runGraphQL: ReturnType<typeof useGraphQLWithToast>
-    readonly form: ReturnType<typeof useSalesContractForm>
-    readonly actions: ReturnType<typeof useSalesActions>
-    readonly editing: SalesContract | null
-    readonly isOpen: boolean
-    readonly isPending: boolean
-    readonly scope: string
-    readonly capture: () => () => boolean
-    readonly setOperation: Dispatch<SetStateAction<ContractOperation | null>>
-    readonly onSaved: () => void
-}
-
-/** RHF validates locally; the original command owns remote feedback and this operation owns local completion. */
-const contractSubmitOf = (input: ContractSubmitInput) => (): void => {
-    const { form, actions, editing } = input
-    const pending = { scope: input.scope, isCurrent: input.capture() }
-    if (!pending.isCurrent() || !input.isOpen || input.isPending) return
-    input.setOperation(pending)
-    const finish = () => input.setOperation((current) => (current === pending ? null : current))
-    form.handleSubmit((submitted) => {
-        if (!pending.isCurrent()) return finish()
-        actions
-            .saveContract({
-                contractId: editing?.id ?? null,
-                leadId: submitted.leadId === NO_LEAD ? null : submitted.leadId,
-                customerName: submitted.customerName,
-                plan: submitted.plan,
-                startsOn: submitted.startsOn,
-                endsOn: submitted.endsOn,
-                amountVnd: digitsToNumber(submitted.amount),
-                status: submitted.status,
-                note: submitted.note,
-            })
-            .then((result) => {
-                if (result !== undefined && pending.isCurrent()) input.onSaved()
-            })
-            .catch((error: unknown) => input.runGraphQL(() => Promise.reject(error), { showSuccessToast: false }))
-            .finally(finish)
-    }, finish)().catch((error: unknown) =>
-        input.runGraphQL(() => Promise.reject(error), { showSuccessToast: false }).finally(finish),
-    )
 }

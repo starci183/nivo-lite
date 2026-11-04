@@ -1,10 +1,10 @@
+import type { LeadActionQueuedType } from "@/hooks/swr"
 import {
     useMutateDraftLeadExecutionSwr,
     useMutateRefreshLeadContextSwr,
     useMutateSuggestLeadOwnerSwr,
 } from "@/hooks/swr"
 import { useLeadAction } from "./useLeadAction"
-import type { LeadActionQueuedType } from "@/modules/api"
 
 /** The view `useLeadActions` returns. */
 export interface LeadActionsView {

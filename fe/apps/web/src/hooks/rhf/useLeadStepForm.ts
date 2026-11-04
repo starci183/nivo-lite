@@ -43,9 +43,9 @@ type UseLeadStepFormResult = {
     resetField: UseFormResetField<LeadStepValues>
     reset: UseFormReset<LeadStepValues>
     resetDefaultValues: UseFormResetDefaultValues<LeadStepValues>
-    handleSubmit: UseFormHandleSubmit<LeadStepValues, LeadStepValues>
+    onSubmit: UseFormHandleSubmit<LeadStepValues, LeadStepValues>
     unregister: UseFormUnregister<LeadStepValues>
-    control: Control<LeadStepValues, any, LeadStepValues>
+    control: Control<LeadStepValues, unknown, LeadStepValues>
     register: UseFormRegister<LeadStepValues>
     setFocus: UseFormSetFocus<LeadStepValues>
     subscribe: UseFormSubscribe<LeadStepValues>
@@ -75,7 +75,8 @@ export const useLeadStepForm = (mode: LeadStepMode | null): UseLeadStepFormResul
         defaultValues: { title: "", owner: "human", nextAction: "", due: null },
     })
     const values = useWatch({ control: form.control })
-    return { ...form, ...stepFormInputs(values, t) }
+    const { handleSubmit: onSubmit, ...rest } = form
+    return { ...rest, onSubmit, ...stepFormInputs(values, t) }
 }
 
 /** Normalizes watched fields and supplies the labels for each edit mode. */

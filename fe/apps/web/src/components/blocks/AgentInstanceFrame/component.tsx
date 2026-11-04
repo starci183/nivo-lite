@@ -75,22 +75,15 @@ export interface AgentInstanceFrameBaseProps {
 
 type FrameCopy = AgentInstanceFrameBaseProps["props"]
 
-interface FrameBodyProps {
-    readonly body: ReactNode
+interface FrameNoticeProps {
     readonly read: DataSlot<boolean>
     readonly labels: SlotLabels
     readonly onRetry: () => void
 }
 
-/** The header read fails once in the Page body while its route chrome stays in place. */
-const FrameBody = (props: FrameBodyProps) => (
-    <SlotView
-        slot={props.read}
-        placeholder={false}
-        labels={props.labels}
-        onRetry={props.onRetry}
-        render={() => props.body}
-    />
+/** The header read fails once beside the routed tab, which reads and fails on its own; nothing shows while it is read or ready. */
+const FrameNotice = (props: FrameNoticeProps) => (
+    <SlotView slot={props.read} placeholder={false} labels={props.labels} onRetry={props.onRetry} render={() => null} />
 )
 
 /** What a part of the header reads: the copy and the view of the frame. */
@@ -212,12 +205,8 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
             <Page chrome="panes" measure="product" isLoading={copy.isLoading} minHeight="lg" header={header}>
                 <PaneGrid label={copy.ariaLabel} areas={["tab"]}>
                     <Pane area="tab" inset="flush">
-                        <FrameBody
-                            body={props.children}
-                            read={copy.read}
-                            labels={copy.labels}
-                            onRetry={props.on.retry}
-                        />
+                        <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+                        {props.children}
                     </Pane>
                 </PaneGrid>
             </Page>
@@ -225,7 +214,8 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
     }
     return (
         <Page measure="product" isLoading={copy.isLoading} header={header}>
-            <FrameBody body={props.children} read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+            <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+            {props.children}
         </Page>
     )
 }

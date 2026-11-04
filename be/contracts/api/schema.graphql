@@ -3631,7 +3631,7 @@ type FirstPartySyncReportType {
 }
 
 input ForkFirstPartyTemplateInput {
-  key: String!
+  key: String! @inputBounds(maxLength: 60)
   sourceKey: String! @inputBounds(maxLength: 60)
 }
 
@@ -6240,7 +6240,7 @@ input PackageAgentTemplateInput {
   category: String! @inputBounds(maxLength: 60)
   changelog: String! @inputBounds(maxLength: 2000)
   graphVersionId: ID! @inputBounds(maxLength: 36)
-  key: String!
+  key: String! @inputBounds(maxLength: 60)
   likeness: LikenessClaimInput
   name: TemplateTextInput!
   parameters: [TemplateParameterInput!]! @inputBounds(maxItems: 20)
@@ -6282,7 +6282,7 @@ input ParameterBindingInput {
   branchKey: String! @inputBounds(maxLength: 60)
   nodeKey: String! @inputBounds(maxLength: 60)
   parameter: String! @inputBounds(maxLength: 40)
-  target: String!
+  target: String! @inputBounds(maxLength: 20)
   termIndex: Int @inputBounds(min: 0, max: 30)
 }
 
@@ -6997,7 +6997,7 @@ type RecordOutcomeType {
 input RecordTemplateLikenessInput {
   allowedUses: [String!]! @inputBounds(maxItems: 4)
   disclosure: String! @inputBounds(maxLength: 300)
-  expiresAt: String
+  expiresAt: String @inputBounds(maxLength: 40)
   personName: String! @inputBounds(maxLength: 120)
   templateKey: String! @inputBounds(maxLength: 60)
 }
@@ -7419,7 +7419,7 @@ input RevealSepayKeyInput {
 }
 
 input ReviewTemplateListingInput {
-  decision: String!
+  decision: String! @inputBounds(maxLength: 10)
   listingId: ID! @inputBounds(maxLength: 36)
   note: String! @inputBounds(maxLength: 2000)
   revenueSharePct: Int @inputBounds(min: 0, max: 100)
@@ -9051,8 +9051,8 @@ type TemplateOrderType {
 input TemplateParameterInput {
   defaultValue: String! @inputBounds(maxLength: 2000)
   hint: TemplateTextInput
-  key: String!
-  kind: String!
+  key: String! @inputBounds(maxLength: 40)
+  kind: String! @inputBounds(maxLength: 20)
   label: TemplateTextInput!
   max: Float
   min: Float

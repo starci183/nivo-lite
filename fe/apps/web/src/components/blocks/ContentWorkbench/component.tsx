@@ -1,10 +1,6 @@
 import type { ReactElement } from "react"
 import { CONTENT_TABS, type ContentViews, type ContentActions } from "@/modules/types"
-import { Alert, Cluster, Grid, Stack } from "@starci/grammar/common"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
-import { WorkbenchOverviewTop } from "@/components/frames/WorkbenchOverviewTop"
+import { Alert, Cluster, Stack } from "@starci/grammar/common"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -21,9 +17,13 @@ import { ContentPillarSettings } from "@/components/composites/ContentPillarSett
 import { ContentCadenceSettings } from "@/components/composites/ContentCadenceSettings"
 import { ContentBrandSettings } from "@/components/composites/ContentBrandSettings"
 import { ContentAutomationSettings } from "@/components/composites/ContentAutomationSettings"
+import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 
 /** Only actual content tabs and the recorded-explanation arrangement are shapes. */
-export const CONTENT_WORKBENCH_SHAPES: readonly [...typeof CONTENT_TABS, "explanation"] = [...CONTENT_TABS, "explanation"]
+export const CONTENT_WORKBENCH_SHAPES: readonly [...typeof CONTENT_TABS, "explanation"] = [
+    ...CONTENT_TABS,
+    "explanation",
+]
 type ContentShape = (typeof CONTENT_WORKBENCH_SHAPES)[number]
 
 /** One Content world, resolved atomic data slots and commands. */
@@ -178,45 +178,17 @@ const ModulePanel = (props: ContentWorkbenchBaseProps) => (
     />
 )
 
-const DashboardCards = (props: Pick<ContentWorkbenchBaseProps, "props" | "on">) => {
-    const regions = props.props.regions
-    return (
-        <Grid kind="cards" columns={3}>
-            <SlotView
-                {...regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <DoneRegion label={regions.done.label} view={done} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.connections}
-                onRetry={props.on.retryDashboard}
-                render={(connections, isLoading) => (
-                    <ConnectionsRegion label={regions.connections.label} view={connections} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.knowledge}
-                onRetry={props.on.retryDashboard}
-                render={(knowledge, isLoading) => (
-                    <KnowledgeRegion label={regions.knowledge.label} view={knowledge} isLoading={isLoading} />
-                )}
-            />
-        </Grid>
-    )
-}
-
 const Overview = (props: ContentWorkbenchBaseProps) => {
     const view = props.props
     return (
-        <Stack gap="region">
-            <WorkbenchOverviewTop view={view} on={{ ...props.on, retryRibbon: props.on.retry }}>
-                <ModulePanel shape={props.shape} props={props.props} on={props.on} />
-            </WorkbenchOverviewTop>
-            <DashboardCards {...props} />
-            {view.editor === null ? null : <ContentPostEditorView {...view.editor} on={props.on.editor} />}
-        </Stack>
+        <WorkbenchOverview
+            view={view}
+            ribbon={view.ribbon}
+            on={{ ...props.on, retryRibbon: props.on.retry }}
+            after={view.editor === null ? null : <ContentPostEditorView {...view.editor} on={props.on.editor} />}
+        >
+            <ModulePanel shape={props.shape} props={props.props} on={props.on} />
+        </WorkbenchOverview>
     )
 }
 

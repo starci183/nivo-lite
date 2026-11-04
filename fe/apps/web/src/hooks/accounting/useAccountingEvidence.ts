@@ -5,7 +5,7 @@ import type { AccountingEvidenceValues } from "@/hooks/rhf"
 import type { AccountingWorkbenchData } from "@/modules/types"
 import { useFormatter, useTranslations } from "next-intl"
 import { supplierNeedOf } from "@/hooks/accountingUpcoming"
-import { useAccountingEvidenceEntry, type AccountingEvidenceForm } from "./useAccountingEvidenceEntry"
+import { useAccountingEvidenceEntry, type AccountingEvidenceFormState } from "./useAccountingEvidenceEntry"
 
 /** The view `useAccountingEvidence` returns. */
 export interface AccountingEvidenceView {
@@ -32,7 +32,7 @@ export interface AccountingEvidenceView {
         }
         isFormOpen: boolean
         formOpenLabel: string
-        form: AccountingEvidenceForm
+        form: AccountingEvidenceFormState
         creditsTitle: string
         creditsIntro: string
         creditsEmpty: string

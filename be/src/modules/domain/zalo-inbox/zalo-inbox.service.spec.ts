@@ -96,7 +96,10 @@ describe("ZaloInboxService receipt delivery", () => {
         await service.acceptZaloDelivery(body, "c-1")
         expect(gate.holdsProofKey).toHaveBeenCalledWith("c-1")
         expect(outbox.jobs).toEqual([])
-        expect(stampedValues(tx.em.update.mock.calls[0]?.[2])).toEqual({ processedAt: "function" })
+        const [, , set] = tx.em.update.mock.calls[0] ?? []
+        expect(stampedValues(set)).toEqual({ processedAt: "function" })
+        const processedAt: unknown = Reflect.get(Object(set), "processedAt")
+        expect(typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined).toBe("now()")
         expect(tx.commits).toBe(1)
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
     })

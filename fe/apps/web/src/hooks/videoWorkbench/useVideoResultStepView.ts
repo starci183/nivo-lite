@@ -2,7 +2,6 @@
 
 import type { VideoProductionActions, VideoProductionViews } from "@/modules/types"
 type VideoResultViewFields = VideoProductionViews["result"]
-export type VideoResultViewActions = VideoProductionActions["result"]
 import { useState } from "react"
 import { useTranslations, useFormatter } from "next-intl"
 import { useVideoRelease, useVideoFailure } from "@/hooks/video"
@@ -12,9 +11,27 @@ import { editorHref } from "@/modules/video"
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { shapeOf, videoOwnerOf, videoResultBadgesOf } from "./videoWorkbench.shared"
-import type { VideoViewInput, VideoResultBadge } from "./videoWorkbench.shared"
+import type { VideoViewInput } from "./videoWorkbench.shared"
+/** The actions the result step offers: approve, share, mark posted, edit again, re-render. */
+export type VideoResultViewActions = VideoProductionActions["result"]
 type ResultBusy = "approve" | "share" | "posted"
-const copyOf = (t: ReturnType<typeof useTranslations<"video">>) => ({
+type ResultCopy = Pick<
+    VideoResultViewFields,
+    | "heading"
+    | "waitingLabel"
+    | "captionsLabel"
+    | "approveLabel"
+    | "downloadLabel"
+    | "shareLabel"
+    | "postedLabel"
+    | "soonLabel"
+    | "tikTokLabel"
+    | "facebookLabel"
+    | "postNote"
+    | "editLabel"
+    | "rerenderLabel"
+>
+const copyOf = (t: ReturnType<typeof useTranslations<"video">>): ResultCopy => ({
     heading: t("resultHeading"),
     waitingLabel: t("status_rendering"),
     captionsLabel: t("captionsLabel"),
@@ -37,7 +54,37 @@ interface ResultProjection {
     readonly busy: ResultBusy | null
     readonly message: VideoResultViewFields["message"]
 }
-const resultFieldsOf = (context: ResultProjection) => {
+type ResultUi = ResultCopy & {
+    readonly failedTitle: string
+    readonly approveHeading: string
+    readonly approveHelp: string
+    readonly approving: boolean
+    readonly sharing: boolean
+    readonly posting: boolean
+    readonly lockedNote: string
+    readonly message: VideoResultViewFields["message"]
+}
+type ResultRead = Pick<
+    VideoResultViewFields,
+    | "fact"
+    | "title"
+    | "shape"
+    | "videoUrl"
+    | "posterUrl"
+    | "captionsUrl"
+    | "captionsLang"
+    | "failedDetail"
+    | "badges"
+    | "showApprove"
+    | "approveDisabled"
+    | "downloadUrl"
+    | "showShare"
+    | "showPosted"
+    | "canEdit"
+    | "rerenderDisabled"
+> & { readonly isApproved: boolean; readonly hasFailedRender: boolean }
+type ResultFields = { readonly ui: ResultUi; readonly read: ResultRead | null }
+const resultFieldsOf = (context: ResultProjection): ResultFields => {
     const { input, t, format, failure, busy, message } = context,
         editor = input.editor,
         project = editor?.project ?? null
@@ -81,86 +128,7 @@ const resultFieldsOf = (context: ResultProjection) => {
         },
     }
 }
-type UseVideoResultStepViewResult =
-    | {
-          on: VideoResultViewActions
-          ui: {
-              failedTitle: string
-              approveHeading: string
-              approveHelp: string
-              approving: boolean
-              sharing: boolean
-              posting: boolean
-              lockedNote: string
-              message: {
-                  readonly tone: "negative" | "informative"
-                  readonly text: string
-              } | null
-              heading: string
-              waitingLabel: string
-              captionsLabel: string
-              approveLabel: string
-              downloadLabel: string
-              shareLabel: string
-              postedLabel: string
-              soonLabel: string
-              tikTokLabel: string
-              facebookLabel: string
-              postNote: string
-              editLabel: string
-              rerenderLabel: string
-          }
-          read: null
-      }
-    | {
-          on: VideoResultViewActions
-          ui: {
-              failedTitle: string
-              approveHeading: string
-              approveHelp: string
-              approving: boolean
-              sharing: boolean
-              posting: boolean
-              lockedNote: string
-              message: {
-                  readonly tone: "negative" | "informative"
-                  readonly text: string
-              } | null
-              heading: string
-              waitingLabel: string
-              captionsLabel: string
-              approveLabel: string
-              downloadLabel: string
-              shareLabel: string
-              postedLabel: string
-              soonLabel: string
-              tikTokLabel: string
-              facebookLabel: string
-              postNote: string
-              editLabel: string
-              rerenderLabel: string
-          }
-          read: {
-              fact: string
-              title: string
-              shape: "portrait" | "square" | "landscape"
-              videoUrl: string | null
-              posterUrl: string | null
-              captionsUrl: string | null
-              captionsLang: string | null
-              failedDetail: string | null
-              badges: readonly VideoResultBadge[]
-              showApprove: boolean
-              approveDisabled: boolean
-              downloadUrl: string | null
-              showShare: boolean
-              showPosted: boolean
-              canEdit: boolean
-              rerenderDisabled: boolean
-              isApproved: boolean
-              hasFailedRender: boolean
-          }
-      }
+type UseVideoResultStepViewResult = ResultFields & { on: VideoResultViewActions }
 
 /** Existing release actions retain their same result predicates and standard feedback owner. */
 export const useVideoResultStepView = (input: VideoViewInput): UseVideoResultStepViewResult => {

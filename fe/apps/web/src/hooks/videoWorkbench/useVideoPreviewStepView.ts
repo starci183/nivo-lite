@@ -1,7 +1,6 @@
 "use client"
 
-import type { VideoProductionActions } from "@/modules/types"
-export type VideoPreviewCardActions = VideoProductionActions["preview"]
+import type { VideoProductionActions, VideoProductionViews } from "@/modules/types"
 import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { useVideoRender, useVideoFailure } from "@/hooks/video"
@@ -13,7 +12,9 @@ import { useGraphQLWithToast } from "@/modules/toast"
 import { shapeOf, videoOwnerOf } from "./videoWorkbench.shared"
 
 import type { VideoViewInput } from "./videoWorkbench.shared"
-import type { VideoJobRead } from "@/hooks/video/useVideoJob"
+
+/** The actions the preview step card offers: go back, start a render, dismiss an error. */
+export type VideoPreviewCardActions = VideoProductionActions["preview"]
 
 const STAGES: ReadonlySet<string> = new Set(["tts", "scenes", "mix", "encode", "upload"])
 interface PreviewProjection {
@@ -25,7 +26,25 @@ interface PreviewProjection {
     readonly pending: boolean
     readonly rendering: boolean
 }
-const videoPreviewFieldsOf = (context: PreviewProjection) => {
+type PreviewUi = Pick<
+    VideoProductionViews["preview"],
+    | "heading"
+    | "hint"
+    | "progressTitle"
+    | "progressLabel"
+    | "note"
+    | "backLabel"
+    | "renderLabel"
+    | "pending"
+    | "error"
+    | "dismissLabel"
+>
+type PreviewRead = Pick<
+    VideoProductionViews["preview"],
+    "estimateLabel" | "shape" | "frames" | "live" | "stageLabel" | "progress" | "canRender"
+> & { readonly hasRender: boolean; readonly statusFailure: string | null }
+type PreviewFields = { readonly ui: PreviewUi; readonly read: PreviewRead | null }
+const videoPreviewFieldsOf = (context: PreviewProjection): PreviewFields => {
     const { input, t, renderJob, failure, error, pending, rendering } = context,
         editor = input.editor,
         project = editor?.project ?? null
@@ -69,79 +88,11 @@ const videoPreviewFieldsOf = (context: PreviewProjection) => {
         },
     }
 }
-type UseVideoPreviewStepViewResult =
-    | {
-          on: VideoPreviewCardActions
-          statusRead: VideoJobRead<{
-              durationMs: number | null
-              errorCode: string | null
-              id: string
-              outputPath: string | null
-              posterPath: string | null
-              progress: number
-              sizeBytes: number | null
-              stage: string | null
-              status: string
-          }>
-          isStatusEnabled: boolean
-          ui: {
-              heading: string
-              hint: string
-              progressTitle: string
-              progressLabel: string
-              note: string
-              backLabel: string
-              renderLabel: string
-              pending: boolean
-              error: string | null
-              dismissLabel: string
-          }
-          read: null
-      }
-    | {
-          on: VideoPreviewCardActions
-          statusRead: VideoJobRead<{
-              durationMs: number | null
-              errorCode: string | null
-              id: string
-              outputPath: string | null
-              posterPath: string | null
-              progress: number
-              sizeBytes: number | null
-              stage: string | null
-              status: string
-          }>
-          isStatusEnabled: boolean
-          ui: {
-              heading: string
-              hint: string
-              progressTitle: string
-              progressLabel: string
-              note: string
-              backLabel: string
-              renderLabel: string
-              pending: boolean
-              error: string | null
-              dismissLabel: string
-          }
-          read: {
-              estimateLabel: string
-              shape: "portrait" | "square" | "landscape"
-              frames: {
-                  label: string
-                  caption: string
-                  mediaName: string | null
-                  mediaUrl: string | null
-                  mediaKind: "video" | "image" | null
-              }[]
-              live: boolean
-              stageLabel: string
-              progress: number
-              canRender: boolean
-              hasRender: boolean
-              statusFailure: string | null
-          }
-      }
+type UseVideoPreviewStepViewResult = PreviewFields & {
+    on: VideoPreviewCardActions
+    statusRead: ReturnType<typeof useVideoRender>["read"]
+    isStatusEnabled: boolean
+}
 
 /** Follows the actual selected render; leaving this step pauses its status read. */
 export const useVideoPreviewStepView = (input: VideoViewInput): UseVideoPreviewStepViewResult => {

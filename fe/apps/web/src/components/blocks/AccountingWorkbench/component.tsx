@@ -6,11 +6,7 @@ import { AccountingRecordList } from "@/components/leaves/AccountingRecordList"
 import { AccountingAdjustment } from "@/components/branches/AccountingAdjustment"
 import { AccountingEvidence, AccountingEvidenceForm } from "@/components/composites/AccountingEvidence"
 import { AccountingLedger, AccountingLedgerLineage } from "@/components/composites/AccountingLedger"
-import { Button, Grid, Stack, Tabs, Text } from "@starci/grammar/common"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
+import { Button, Text } from "@starci/grammar/common"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -18,9 +14,13 @@ import { AccountingOverview } from "@/components/composites/AccountingOverview"
 import { AccountingQuestions } from "@/components/composites/AccountingQuestions"
 import { AccountingUpcomingRows } from "@/components/composites/AccountingUpcomingRows"
 import { AccountingWaitingRows } from "@/components/composites/AccountingWaitingRows"
+import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 
 /** The real Accounting areas and the explanation arrangement. */
-export const ACCOUNTING_WORKBENCH_SHAPES: readonly [...typeof ACCOUNTING_TABS, "explanation"] = [...ACCOUNTING_TABS, "explanation"]
+export const ACCOUNTING_WORKBENCH_SHAPES: readonly [...typeof ACCOUNTING_TABS, "explanation"] = [
+    ...ACCOUNTING_TABS,
+    "explanation",
+]
 type AccountingWorkbenchShape = (typeof ACCOUNTING_WORKBENCH_SHAPES)[number]
 
 /** Resolved read models and atomic commands; no render tree crosses the block boundary. */
@@ -29,8 +29,6 @@ export interface AccountingWorkbenchBaseProps {
     readonly props: AccountingWorkbenchDataView
     readonly on: AccountingWorkbenchActions
 }
-
-const panelId = (id: string): string => `agent-dashboard-panel-${id}`
 
 const EvidencePanel = (props: Omit<AccountingWorkbenchBaseProps, "shape">) => (
     <SlotView
@@ -155,74 +153,32 @@ const ModulePanel = (props: AccountingWorkbenchBaseProps) => {
     }
 }
 
-const DashboardCards = (props: Omit<AccountingWorkbenchBaseProps, "shape">) => {
-    const regions = props.props.regions
-    return (
-        <Grid kind="cards" columns={3}>
-            <SlotView
-                {...regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <DoneRegion label={regions.done.label} view={done} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.connections}
-                onRetry={props.on.retryDashboard}
-                render={(connections, isLoading) => (
-                    <ConnectionsRegion label={regions.connections.label} view={connections} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.knowledge}
-                onRetry={props.on.retryDashboard}
-                render={(knowledge, isLoading) => (
-                    <KnowledgeRegion label={regions.knowledge.label} view={knowledge} isLoading={isLoading} />
-                )}
-            />
-        </Grid>
-    )
-}
-
 const Overview = (props: AccountingWorkbenchBaseProps) => {
     const view = props.props
     return (
-        <Stack gap="region">
-            <SlotView
-                {...view.waiting}
-                empty="collapse"
-                onRetry={props.on.retry}
-                render={(waiting, isLoading) => (
-                    <AccountingWaitingRows
-                        view={waiting}
-                        isLoading={isLoading}
-                        onApprove={props.on.waiting.approve}
-                        onReject={props.on.waiting.reject}
-                        onChangeBasis={props.on.waiting.changeBasis}
-                    />
-                )}
-            />
-            <SlotView
-                {...view.ribbon}
-                onRetry={props.on.retry}
-                render={(items, isLoading) => (
-                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
-                )}
-            />
-            <Tabs
-                label={view.tabsLabel}
-                selectedKey={view.selectedTab}
-                inset="none"
-                labelVisibility="always"
-                items={view.tabs}
-                panelId={panelId}
-                onSelect={props.on.selectTab}
-            />
-            <div role="tabpanel" id={panelId(view.selectedTab)}>
-                <ModulePanel {...props} />
-            </div>
-            <DashboardCards props={props.props} on={props.on} />
-        </Stack>
+        <WorkbenchOverview
+            view={view}
+            ribbon={view.ribbon}
+            on={{ ...props.on, retryRibbon: props.on.retry }}
+            waiting={
+                <SlotView
+                    {...view.waiting}
+                    empty="collapse"
+                    onRetry={props.on.retry}
+                    render={(waiting, isLoading) => (
+                        <AccountingWaitingRows
+                            view={waiting}
+                            isLoading={isLoading}
+                            onApprove={props.on.waiting.approve}
+                            onReject={props.on.waiting.reject}
+                            onChangeBasis={props.on.waiting.changeBasis}
+                        />
+                    )}
+                />
+            }
+        >
+            <ModulePanel {...props} />
+        </WorkbenchOverview>
     )
 }
 

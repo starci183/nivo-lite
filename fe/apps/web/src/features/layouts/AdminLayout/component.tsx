@@ -1,9 +1,8 @@
-import { Text, TopBar, WorkspaceShell } from "@starci/grammar/common"
+import { WorkspaceShell } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { AdminAccount } from "@/components/blocks/AdminAccount"
-import { AdminNavigation } from "@/components/blocks/AdminNavigation"
+import { AdminHeader } from "@/components/blocks/AdminHeader"
 
-/** The words and the signed-in admin the console frame draws. */
+/** The words the console frame draws. */
 export interface AdminLayoutBaseProps {
     readonly props: {
         readonly title: string
@@ -11,19 +10,12 @@ export interface AdminLayoutBaseProps {
     readonly children: ReactNode
 }
 
-/** Draws the team console frame: the bar with brand, destinations and who is signed in, placed as plain layout above the routed page, which draws its own one `Page`. */
+/** Draws the team console frame: the connected bar with title, destinations, language, appearance and the signed-in admin, placed as plain layout above the routed page, which draws its own one `Page`. */
 export const AdminLayoutBase = (props: AdminLayoutBaseProps) => (
     <WorkspaceShell
         viewport="fixed"
         primaryLabel={props.props.title}
-        header={
-            <TopBar
-                brand={<Text isStrong>{props.props.title}</Text>}
-                actions={<AdminAccount />}
-                subnavigation={<AdminNavigation />}
-                subnavigationLabel={props.props.title}
-            />
-        }
+        header={<AdminHeader />}
         primary={props.children}
     />
 )

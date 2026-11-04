@@ -15,6 +15,14 @@ const IDS = {
 }
 const TOKEN = ["123456789", "AAEabcdefghijklmnopqrstuvwxyz012345"].join(":")
 const SEPAY_KEY = ["nivo", "ab12".repeat(16)].join("_")
+/** The JSON a stored credential holds. */
+const jsonOf = (text: string): unknown => {
+    try {
+        return JSON.parse(text)
+    } catch (cause) {
+        throw new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field: "secret" }, cause })
+    }
+}
 const hashOf = (text: string): string => createHash("sha256").update(text).digest("hex")
 
 const BARE: ChannelSeed = {
@@ -87,7 +95,7 @@ describe("ChannelSeedService > a workspace without the connections", () => {
             expect(input).toMatchObject({ workspaceId: "ws-1", createdBy: "owner-1", status: "pending" })
         }
         expect(createdWith(connections, IDS.telegram)?.secret.plain).toBe(TOKEN)
-        expect(JSON.parse(createdWith(connections, IDS.payos)?.secret.plain ?? "")).toEqual({
+        expect(jsonOf(createdWith(connections, IDS.payos)?.secret.plain ?? "")).toEqual({
             clientId: "client",
             apiKey: "payos-key-1",
             checksumKey: "checksum-1",
@@ -131,7 +139,7 @@ describe("ChannelSeedService > a workspace without the connections", () => {
         const created = createdWith(connections, IDS.zaloOa)
         expect(zalo).toMatchObject({ credentials: "missing" })
         expect(created?.meta).toEqual({ app_id: "1234567", oa_secret_saved: "false" })
-        expect(JSON.parse(created?.secret.plain ?? "")).toEqual({
+        expect(jsonOf(created?.secret.plain ?? "")).toEqual({
             appId: "1234567",
             appSecret: "app-secret-1",
             oaSecret: "",
@@ -152,25 +160,25 @@ describe("ChannelSeedService > a workspace without the connections", () => {
     })
 })
 
-describe("ChannelSeedService > a workspace that has them", () => {
-    const rows = [
-        recordOf(IDS.telegram, "telegram"),
-        recordOf(IDS.zaloOa, "zalo_oa"),
-        recordOf(IDS.sepay, "sepay", { note: "kept" }),
-        recordOf(IDS.payos, "payos"),
-    ]
-    const held: Held = {
-        rows,
-        secrets: {
-            [IDS.telegram]: TOKEN,
-            [IDS.zaloOa]: JSON.stringify({ appId: "1234567", appSecret: "app-secret-1", oaSecret: "oa-secret-1" }),
-            [IDS.sepay]: SEPAY_KEY,
-            [IDS.payos]: JSON.stringify({ clientId: "client", apiKey: "payos-key-1", checksumKey: "checksum-1" }),
-        },
-    }
+const HELD_ROWS = [
+    recordOf(IDS.telegram, "telegram"),
+    recordOf(IDS.zaloOa, "zalo_oa"),
+    recordOf(IDS.sepay, "sepay", { note: "kept" }),
+    recordOf(IDS.payos, "payos"),
+]
+const HELD: Held = {
+    rows: HELD_ROWS,
+    secrets: {
+        [IDS.telegram]: TOKEN,
+        [IDS.zaloOa]: JSON.stringify({ appId: "1234567", appSecret: "app-secret-1", oaSecret: "oa-secret-1" }),
+        [IDS.sepay]: SEPAY_KEY,
+        [IDS.payos]: JSON.stringify({ clientId: "client", apiKey: "payos-key-1", checksumKey: "checksum-1" }),
+    },
+}
 
+describe("ChannelSeedService > a workspace that has them", () => {
     it("creates nothing and rewrites nothing when the credentials are the same", async () => {
-        const { service, connections } = await build(held)
+        const { service, connections } = await build(HELD)
 
         const seeded = await service.ensure(ACTOR, FULL)
 
@@ -180,16 +188,18 @@ describe("ChannelSeedService > a workspace that has them", () => {
     })
 
     it("keeps the SePay key it holds when the seed supplies none", async () => {
-        const { service, connections } = await build(held)
+        const { service, connections } = await build(HELD)
 
         await service.ensure(ACTOR, BARE)
 
         expect(connections.writeSecret).not.toHaveBeenCalled()
         expect(connections.patch).not.toHaveBeenCalled()
     })
+})
 
+describe("ChannelSeedService > a workspace that has them, given new credentials", () => {
     it("takes new credentials into the same rows", async () => {
-        const { service, connections } = await build(held)
+        const { service, connections } = await build(HELD)
         const next = ["nivo", "cd34".repeat(16)].join("_")
         const token = [TOKEN, "x"].join("")
 
@@ -206,9 +216,9 @@ describe("ChannelSeedService > a workspace that has them", () => {
             IDS.payos,
             JSON.stringify({ clientId: "client", apiKey: "payos-key-2", checksumKey: "checksum-1" }),
         )
-        expect(connections.patch).toHaveBeenCalledWith("ws-1", IDS.sepay, {
-            meta: expect.objectContaining({ note: "kept", bank_code: "VCB" }),
-        })
+        const [workspaceId, id, change] = connections.patch.mock.calls[0] ?? []
+        expect([workspaceId, id]).toEqual(["ws-1", IDS.sepay])
+        expect(change?.meta).toMatchObject({ note: "kept", bank_code: "VCB" })
         expect(connections.create).not.toHaveBeenCalled()
     })
 
@@ -220,14 +230,14 @@ describe("ChannelSeedService > a workspace that has them", () => {
             accessToken: "access-1",
             renewalToken: "renewal-1",
         })
-        const { service, connections } = await build({ ...held, secrets: { ...held.secrets, [IDS.zaloOa]: issued } })
+        const { service, connections } = await build({ ...HELD, secrets: { ...HELD.secrets, [IDS.zaloOa]: issued } })
 
         await service.ensure(ACTOR, FULL)
 
         expect(connections.writeSecret).toHaveBeenCalledTimes(1)
-        const [id, written] = connections.writeSecret.mock.calls[0] ?? []
-        expect(id).toBe(IDS.zaloOa)
-        expect(JSON.parse(written ?? "")).toEqual({
+        const written = connections.writeSecret.mock.calls[0]
+        expect(written?.[0]).toBe(IDS.zaloOa)
+        expect(jsonOf(written?.[1] ?? "")).toEqual({
             appId: "1234567",
             appSecret: "app-secret-1",
             oaSecret: "oa-secret-1",
@@ -240,11 +250,59 @@ describe("ChannelSeedService > a workspace that has them", () => {
     })
 
     it("does not write a PENDING- OA secret over the one the row holds", async () => {
-        const { service, connections } = await build(held)
+        const { service, connections } = await build(HELD)
 
         await service.ensure(ACTOR, { ...FULL, zaloOa: { ...FULL.zaloOa, oaSecret: "PENDING-later" } })
 
         expect(connections.writeSecret).not.toHaveBeenCalled()
+    })
+})
+
+describe("ChannelSeedService > a workspace whose rows hold no credential yet", () => {
+    const EMPTY: Held = { rows: HELD_ROWS }
+
+    it("writes the Telegram token and the SePay key given, since nothing is stored to equal them", async () => {
+        const { service, connections } = await build(EMPTY)
+
+        await service.ensure(ACTOR, FULL)
+
+        expect(connections.writeSecret).toHaveBeenCalledWith(IDS.telegram, TOKEN)
+        expect(connections.writeSecret).toHaveBeenCalledWith(IDS.sepay, SEPAY_KEY, hashOf(SEPAY_KEY))
+    })
+
+    it("seals the Zalo values given as the whole credential", async () => {
+        const { service, connections } = await build(EMPTY)
+
+        await service.ensure(ACTOR, FULL)
+
+        const written = connections.writeSecret.mock.calls.find(([id]) => id === IDS.zaloOa)
+        expect(jsonOf(written?.[1] ?? "")).toEqual({
+            appId: "1234567",
+            appSecret: "app-secret-1",
+            oaSecret: "oa-secret-1",
+        })
+    })
+
+    it("seals empty Zalo values when the seed gives none", async () => {
+        const { service, connections } = await build(EMPTY)
+
+        await service.ensure(ACTOR, BARE)
+
+        const written = connections.writeSecret.mock.calls.find(([id]) => id === IDS.zaloOa)
+        expect(jsonOf(written?.[1] ?? "")).toEqual({ appId: "", appSecret: "", oaSecret: "" })
+    })
+
+    it("keeps the Zalo values the row holds for every one the seed leaves out", async () => {
+        const { service, connections } = await build(HELD)
+
+        await service.ensure(ACTOR, { ...BARE, zaloOa: { id: IDS.zaloOa, appId: "7654321" } })
+
+        const written = connections.writeSecret.mock.calls.find(([id]) => id === IDS.zaloOa)
+        expect(jsonOf(written?.[1] ?? "")).toEqual({
+            appId: "7654321",
+            appSecret: "app-secret-1",
+            oaSecret: "oa-secret-1",
+        })
     })
 })
 

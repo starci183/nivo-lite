@@ -1,11 +1,6 @@
 import type { ReactElement } from "react"
 import type { SalesWorkbenchViewData, SalesWorkbenchActions } from "@/modules/types"
-import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
-import { Button, Grid, Stack, Tabs, Text } from "@starci/grammar/common"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
-import { FiguresStrip } from "@/components/composites/FiguresStrip"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
+import { Button, Stack, Text } from "@starci/grammar/common"
 import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWaitingList } from "@/components/composites/WorkbenchWaitingList"
 import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
@@ -20,6 +15,8 @@ import { SalesContractRows } from "@/components/composites/SalesContractRows"
 import { SalesOrderRows } from "@/components/composites/SalesOrderRows"
 import { SalesPipelineBoard } from "@/components/composites/SalesPipelineBoard"
 import { SALES_WORKBENCH_TABS as SALES_TABS } from "@/modules/types"
+import { ChatbotConversationBody } from "@/components/frames/ChatbotConversationBody"
+import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 /** The six Sales areas, optional customer conversation and explanation drawings. */
 export const SALES_WORKBENCH_SHAPES: readonly [...typeof SALES_TABS, "conversation", "explanation"] = [
     ...SALES_TABS,
@@ -32,14 +29,6 @@ interface SalesWorkbenchBaseProps {
     readonly props: SalesWorkbenchViewData
     readonly on: SalesWorkbenchActions
 }
-const panelId = (id: string): string => `agent-dashboard-panel-${id}`
-const Inbox = (props: Omit<SalesWorkbenchBaseProps, "shape">) => (
-    <SlotView
-        {...props.props.inbox}
-        onRetry={props.on.inbox.reload}
-        render={(inbox, isLoading) => <ChatbotConversationBody {...inbox} isLoading={isLoading} on={props.on.inbox} />}
-    />
-)
 const Orders = (props: Omit<SalesWorkbenchBaseProps, "shape">) => {
     const view = props.props.orders,
         on = props.on.orders
@@ -140,6 +129,13 @@ const SalesPanel = (props: SalesWorkbenchBaseProps) => {
             return null
     }
 }
+const Inbox = (props: Omit<SalesWorkbenchBaseProps, "shape">) => (
+    <SlotView
+        {...props.props.inbox}
+        onRetry={props.on.inbox.reload}
+        render={(inbox, isLoading) => <ChatbotConversationBody {...inbox} isLoading={isLoading} on={props.on.inbox} />}
+    />
+)
 const ModulePanel = (props: SalesWorkbenchBaseProps) => {
     switch (props.shape) {
         case "conversation":
@@ -182,62 +178,16 @@ const WaitingCard = (props: Omit<SalesWorkbenchBaseProps, "shape">) => (
         )}
     />
 )
-const DashboardCards = (props: Omit<SalesWorkbenchBaseProps, "shape">) => {
-    const regions = props.props.regions
-    return (
-        <Grid kind="cards" columns={3}>
-            <SlotView
-                {...regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <DoneRegion label={regions.done.label} view={done} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.connections}
-                onRetry={props.on.retryDashboard}
-                render={(connections, isLoading) => (
-                    <ConnectionsRegion label={regions.connections.label} view={connections} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.knowledge}
-                onRetry={props.on.retryDashboard}
-                render={(knowledge, isLoading) => (
-                    <KnowledgeRegion label={regions.knowledge.label} view={knowledge} isLoading={isLoading} />
-                )}
-            />
-        </Grid>
-    )
-}
-const Overview = (props: SalesWorkbenchBaseProps) => {
-    const view = props.props
-    return (
-        <Stack gap="region">
-            <WaitingCard props={props.props} on={props.on} />
-            <SlotView
-                {...view.ribbon}
-                onRetry={props.on.retry}
-                render={(items, isLoading) => (
-                    <FiguresStrip label={view.ribbon.label} items={items} isLoading={isLoading} />
-                )}
-            />
-            <Tabs
-                label={view.tabsLabel}
-                selectedKey={view.selectedTab}
-                inset="none"
-                labelVisibility="always"
-                items={view.tabs}
-                panelId={panelId}
-                onSelect={props.on.selectTab}
-            />
-            <div role="tabpanel" id={panelId(view.selectedTab)}>
-                <ModulePanel {...props} />
-            </div>
-            <DashboardCards props={props.props} on={props.on} />
-        </Stack>
-    )
-}
+const Overview = (props: SalesWorkbenchBaseProps) => (
+    <WorkbenchOverview
+        view={props.props}
+        ribbon={props.props.ribbon}
+        on={{ ...props.on, retryRibbon: props.on.retry }}
+        waiting={<WaitingCard props={props.props} on={props.on} />}
+    >
+        <ModulePanel {...props} />
+    </WorkbenchOverview>
+)
 const Explanation = (props: Omit<SalesWorkbenchBaseProps, "shape">) => {
     const view = props.props
     const why = view.why
