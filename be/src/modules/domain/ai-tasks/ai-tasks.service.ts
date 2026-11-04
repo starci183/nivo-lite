@@ -340,7 +340,7 @@ Current rules: ${currentRules}`,
 
     /** A graph node's structured call: the answer the schema asks for, asked again as often as the options allow. */
     async nodeJson(scope: AiTaskScope, ask: NodeAsk, schema: TaskSchema): Promise<JsonRecord> {
-        return this.completeJson(scope, nodeMessagesOf(await this.inlined(ask)), nodeMetaOf(ask), schema)
+        return this.completeJson(scope, nodeMessagesOf(await this.inlined(ask), schema), nodeMetaOf(ask), schema)
     }
 
     /** The node's call with its pictures carried as bytes: a provider outside the deployment cannot fetch the store's own addresses. */

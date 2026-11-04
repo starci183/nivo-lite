@@ -283,6 +283,7 @@ describe("AiTasksService", () => {
                 ],
             })
             expect(generator.generate.mock.calls[1]?.[0].messages[1]?.content).toBe("null")
+            expect(generator.generate.mock.calls[1]?.[0].messages[0]?.content).toContain('"n":{"type":"number"}')
         })
 
         it("carries a node's pictures as bytes to the AI endpoint", async () => {

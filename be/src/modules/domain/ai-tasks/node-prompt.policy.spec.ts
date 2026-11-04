@@ -1,3 +1,4 @@
+import { z } from "zod"
 import { nodeMessagesOf, nodeMetaOf } from "./node-prompt.policy"
 
 const ASK = { purpose: "intent.classify:read", instructions: "Rules", input: { text: "hi" } }
@@ -9,6 +10,22 @@ describe("node-prompt policy", () => {
             { role: "user", content: '{"text":"hi"}' },
         ])
         expect(nodeMessagesOf({ ...ASK, input: undefined })[1]).toEqual({ role: "user", content: "null" })
+    })
+
+    it("names the answer's members, types and allowed values in the system message of a structured call", () => {
+        const schema = z.object({ intents: z.array(z.enum(["order", "question"])), address: z.string().nullable() })
+        const [system] = nodeMessagesOf(ASK, schema)
+        const named = JSON.parse(system?.content.split("\n").at(-1) ?? "{}") as { properties?: Record<string, unknown> }
+
+        expect(system?.content.startsWith("Rules\n\nAnswer with one JSON object")).toBe(true)
+        expect(Object.keys(named.properties ?? {})).toEqual(["intents", "address"])
+        expect(JSON.stringify(named.properties?.intents)).toContain('"enum":["order","question"]')
+    })
+
+    it("still describes an answer whose schema transforms what it parses", () => {
+        const [system] = nodeMessagesOf(ASK, z.object({ at: z.string().transform((value) => new Date(value)) }))
+
+        expect(system?.content).toContain('"at"')
     })
 
     it("attaches the pictures of the call to the user message, and leaves the key out when there are none", () => {
