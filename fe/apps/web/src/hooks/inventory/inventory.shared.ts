@@ -133,24 +133,32 @@ export type ItemFormField = keyof ItemFormValues
 interface StockDetailInput {
     readonly board: Pick<InventoryWorkbenchData, "locations" | "suppliers">
     readonly format: ReturnType<typeof useInventoryFormat>
-    readonly t: ReturnType<typeof useTranslations<"workbenchInventory">>
 }
 
-/** Item identity, supplier, location totals and replenishment details. */
-export const stockDetailOf = (item: ItemView, { board, format, t }: StockDetailInput): string => {
+/** What the stock table shows of one item beside its name and level: the identity line, the minimum level and the unit cost. */
+export interface StockDetail {
+    readonly identity: string
+    readonly minimum: string
+    readonly cost: string
+}
+
+/** Item identity, supplier and location totals for the name cell, the minimum level and the unit cost for their own columns. */
+export const stockDetailOf = (item: ItemView, { board, format }: StockDetailInput): StockDetail => {
     const placeName = (id: string): string => board.locations.find((location) => location.id === id)?.name ?? ""
-    return [
-        item.sku,
-        item.category,
-        board.suppliers.find((supplier) => supplier.id === item.supplierId)?.name ?? "",
-        board.locations.length > 1
-            ? item.levels.map((level) => `${placeName(level.locationId)} ${format.qty(level.qty)}`).join(", ")
-            : "",
-        item.reorderPoint > 0 ? t("stockMin", { qty: format.qty(item.reorderPoint) }) : "",
-        item.costVnd > 0 ? t("stockCost", { cost: format.money(item.costVnd), unit: item.unit }) : "",
-    ]
-        .filter((part) => part !== "")
-        .join(" · ")
+    return {
+        identity: [
+            item.sku,
+            item.category,
+            board.suppliers.find((supplier) => supplier.id === item.supplierId)?.name ?? "",
+            board.locations.length > 1
+                ? item.levels.map((level) => `${placeName(level.locationId)} ${format.qty(level.qty)}`).join(", ")
+                : "",
+        ]
+            .filter((part) => part !== "")
+            .join(" · "),
+        minimum: item.reorderPoint > 0 ? `${format.qty(item.reorderPoint)} ${item.unit}` : "",
+        cost: item.costVnd > 0 ? `${format.money(item.costVnd)}/${item.unit}` : "",
+    }
 }
 
 /** The actual activation and identity of a formerly conditional inventory panel. */

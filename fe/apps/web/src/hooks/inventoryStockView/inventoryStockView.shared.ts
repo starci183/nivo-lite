@@ -10,6 +10,7 @@ import {
     type useItemDrawer,
     type StockFilter,
     type ItemFormField,
+    type StockDetail,
     type ItemDrawerView,
     type AdjustDrawerView,
 } from "@/hooks/inventory"
@@ -29,7 +30,7 @@ export interface BuildStockListViewContext {
     readonly filter: StockFilter
     readonly rows: ItemView[]
     readonly format: ReturnType<typeof useInventoryFormat>
-    readonly detailOf: (item: ItemView) => string
+    readonly detailOf: (item: ItemView) => StockDetail
     readonly run: ReturnType<typeof useInventoryRun>
     readonly itemDrawer: ReturnType<typeof useItemDrawer>
     readonly adjustDrawer: ReturnType<typeof useAdjustDrawer>
@@ -62,6 +63,13 @@ export interface InventoryStockProps {
         label: string
     }[]
     readonly listLabel: string
+    readonly columns: {
+        item: string
+        onHand: string
+        minimum: string
+        status: string
+        cost: string
+    }
     readonly emptyTitle: string
     readonly emptyBody: string
     readonly adjustLabel: string
@@ -75,7 +83,9 @@ export interface InventoryStockProps {
         statusLabel: string
         statusTone: "success" | "neutral" | "danger" | "warning"
         onOrderLabel: string | null
-        detail: string
+        identity: string
+        minimum: string
+        cost: string
         total: string
         stepLabel: string
         lessLabel: string
@@ -121,6 +131,13 @@ export const buildStockListView = (c: BuildStockListViewContext): InventoryStock
     filterLabel: c.t("stockFilter"),
     filters: STOCK_FILTERS.map((value) => ({ value, label: c.t(`filter_${value}`) })),
     listLabel: c.t("stockList"),
+    columns: {
+        item: c.t("stockColItem"),
+        onHand: c.t("stockColOnHand"),
+        minimum: c.t("stockColMinimum"),
+        status: c.t("stockColStatus"),
+        cost: c.t("stockColCost"),
+    },
     emptyTitle: c.t(c.empty ? "stockEmptyTitle" : "stockNoMatchTitle"),
     emptyBody: c.t(c.empty ? "stockEmptyBody" : "stockNoMatchBody"),
     adjustLabel: c.t("stockAdjust"),
@@ -135,7 +152,7 @@ export const buildStockListView = (c: BuildStockListViewContext): InventoryStock
         statusTone: STOCK_TONES[item.status],
         onOrderLabel:
             item.onOrder > 0 ? c.t("stockOnOrder", { qty: c.format.qty(item.onOrder), unit: item.unit }) : null,
-        detail: c.detailOf(item),
+        ...c.detailOf(item),
         total: `${c.format.qty(item.total)} ${item.unit}`,
         stepLabel: c.format.qty(stepOf(item)),
         lessLabel: c.t("stockLess", { qty: c.format.qty(stepOf(item)), unit: item.unit, name: item.name }),

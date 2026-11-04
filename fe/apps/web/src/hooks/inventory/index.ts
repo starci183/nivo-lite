@@ -14,7 +14,7 @@ export {
     stepOf,
     stockToggleLabel,
 } from "./inventory.shared"
-export type { StockFilter, InventoryPanelScope } from "./inventory.shared"
+export type { StockFilter, StockDetail, InventoryPanelScope } from "./inventory.shared"
 export { useAdjustDrawer } from "./useAdjustDrawer"
 export type { AdjustDrawerView } from "./useAdjustDrawer"
 export { useDrawer } from "./useDrawer"
