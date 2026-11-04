@@ -3,7 +3,7 @@
 import { useFormatter, useNow, useTranslations } from "next-intl"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
-import { mapSlot, slotOfSwr } from "@/hooks/slot"
+import { isWaitingOf, mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
 import type { DataSlot, InboxRowView } from "@/modules/types"
 
@@ -110,7 +110,7 @@ export const useInboxFeed = (): InboxFeedView => {
     const slot = mapSlot(slotOfSwr(swrRead), (events) => events.map(rowOf))
     return {
         slot,
-        isWaiting: "isLoading" in slot,
+        isWaiting: isWaitingOf(slot),
         refresh: () => void mutate(),
     }
 }
