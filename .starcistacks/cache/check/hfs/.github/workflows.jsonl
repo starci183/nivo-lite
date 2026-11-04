@@ -1,4 +1,5 @@
-{"data":{},"findings":[],"hash":"c95e758d06a08a259522f0ec844d8d26d25f2dcd46e05b9ed6260b64a2abc3e2","path":".github/workflows/ci.yml","step":"file-rules"}
+{"data":{},"findings":[],"hash":"59e13d612ad132285b1b79169abc60d72c409ac877db8427631ca7a26fc241fa","path":".github/workflows/cache-verify.yml","step":"file-rules"}
+{"data":{},"findings":[],"hash":"bfa6245fef9db3979cee92000f2e34552041ae444d149be23ccd1f1bd722c803","path":".github/workflows/ci.yml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"55b739c1bab365bc8b9d69a17ad1d324d69b50c9318a34a34cf57cbd067fab9a","path":".github/workflows/cli-deploy.yml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5de7802f0b0e6e8676c005bb19152e7bbbf0acf9271a64a1783ce75b8fae6339","path":".github/workflows/images.yml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a960f8f1cf4e425cae0b67081f44e51692fcc08a1e22a079a0ae8237c48b5dd6","path":".github/workflows/stack-deploy.yml","step":"file-rules"}

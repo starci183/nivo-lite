@@ -1,19 +1,20 @@
-{"data":{},"findings":[],"hash":"4323d77cffdf16dbdba9b4a63166e8af3070b17226bb25b76bc91e0399137e3e","path":"packages/blocks-core/package.json","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/package.json gives a folder a package.json of its own, which makes it a service root outside be/apps/<service>/; a back-end service is a Nest app at be/apps/<service>/ (own Dockerfile there) sharing the be/src libraries and the one package.json, never a folder of its own.","path":"packages/blocks-core/package.json","rule":"HFS_SERVICE_PLACEMENT"}],"hash":"8178cb93c644b5bd8c94c1ccdaddad1f3dd15adedfb360f0e82045ff67684719","path":"packages/blocks-core/package.json","step":"hfs"}
+{"data":{},"findings":[],"hash":"fa6de2f5ff421b5bb31f7455d17f85a254b3b407b43e473bd340629bcc029194","path":"packages/blocks-core/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"15abaabe33728d764ba8f1f0d811f161eabaa45a39ec8ceae594b3ebeff067d5","path":"packages/blocks-core/src/blocks/bounds.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"86199fde9506d5574bfb5531b81156954139c5b3ed9675dfc462ff27b956bdf8","path":"packages/blocks-core/src/blocks/card-grid.block.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/blocks/core-blocks.ts is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/blocks/core-blocks.ts","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/blocks/core-blocks.ts","step":"hfs"}
-{"data":{},"findings":[],"hash":"7d43a6e38ae637737e4868ae003315d9314e3c1534603757b3c0cb8292b22299","path":"packages/blocks-core/src/blocks/dashboard-cards.block.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"11d8b0310399ac56deb02e8708e9e556bc30d9768e0bc85f195a98dc1acbce77","path":"packages/blocks-core/src/blocks/decision-queue.block.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"adcda17ade9e37aa8f5e6357553073a006e045a88b190706991b80f85a8fb24d","path":"packages/blocks-core/src/blocks/detail.block.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"2418d6000a00db1b648a06d1ebc3d581f54360dac4c0c25bbb736f39d2aedae4","path":"packages/blocks-core/src/blocks/explanation.block.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"71c1b1698e8fbe09ef519921b91194cac448ef7624c6f6c8db19e38e6dcaa8a1","path":"packages/blocks-core/src/blocks/figures.block.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"3787da4212fd5a19552bd34ae307f5927a0aaeed3f8acfaeab5f64311dd8ccd8","path":"packages/blocks-core/src/blocks/core-blocks.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"c4f2c9622747a7c8ac5ea0af8d96022e4597294047d9448723b9dd0bb0a2410b","path":"packages/blocks-core/src/blocks/core-blocks.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"02f68d6785f4ce061faa6fef02db7fa1c1aa53f623c6e5c98aa75b6b1405f7b3","path":"packages/blocks-core/src/blocks/dashboard-cards.block.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"1bce6a393e610a8dfbfeea598b7869999269c9bca0bade57ef1cd699674228dd","path":"packages/blocks-core/src/blocks/decision-queue.block.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"73cc865045aa301de9205ed0248b7ee230e23bf76738a09dba0835bafd686336","path":"packages/blocks-core/src/blocks/detail.block.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"2b5572d1f1a94b2aff256110458daf9ce3720e1d8fffd3d23011bddfc3de90a1","path":"packages/blocks-core/src/blocks/explanation.block.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"de4eb6ee5a2edb4f03bbd6d7ed24de5d5b18ace47a68fe6e6c4be3f2d339f70f","path":"packages/blocks-core/src/blocks/figures.block.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3cfcada56f87543b81d1da5e55bb1f3a297b23583bd2a36290d4e772a6685098","path":"packages/blocks-core/src/blocks/master-detail.block.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"ac0764fab1aec36c373693d9299067766efecc73be5b984a19cea651e392c4db","path":"packages/blocks-core/src/blocks/record-list.block.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"644c38d58ae1adb6b5656c7f7de2c6a9bd021805aa3a3b20d3c4693931745191","path":"packages/blocks-core/src/blocks/schema-types.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"ca944ca3131cfbba829f2f27142c0a78a5041f1ee966def73ef72c8f07bee5ab","path":"packages/blocks-core/src/blocks/record-list.block.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"38e641c59f4d598282ba5dc06a376f71b26b2fa3008bf6943928a0764b0ab706","path":"packages/blocks-core/src/blocks/schema-types.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c0e48403b03322f6a8bf61f9eeb2507376b651b0b6bd0700716b011f7c8f8816","path":"packages/blocks-core/src/blocks/section.block.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"76a85790983f7db1af68af3eac2fe89b6c994b86713b4847f3eff379bf2683d5","path":"packages/blocks-core/src/blocks/stack.block.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"8abe1e27509e9fdd2c7da8f0ff46f013685371df246e0a3d10f0369eeb61e2af","path":"packages/blocks-core/src/blocks/waiting.block.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/bounds.ts is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/bounds.ts","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/bounds.ts","step":"hfs"}
+{"data":{},"findings":[],"hash":"1faf6c6ad9d590dfd904001e47f54123e19c8493450df499c694ac2fe8552f57","path":"packages/blocks-core/src/blocks/waiting.block.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"ca122a190212a9e0c0f4cdcc99436db3a0c11b7115cd1a0f5b287cce903ea5b0","path":"packages/blocks-core/src/bounds.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"cf395efa2ca3a5735621b65e6d686e9ae81a43dd3bbd82769483de28ff2a461e","path":"packages/blocks-core/src/client/blocks/CardGridBlock.tsx","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5c2df92395af686d8d5b203b1f9c231737f26e97d31ea6dcd171ad23a361cee1","path":"packages/blocks-core/src/client/blocks/DashboardCardsBlock.tsx","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1ab60b1a02aa7b9f5563387499fcb7139c39f3151c3e72389db39b2348170dbe","path":"packages/blocks-core/src/client/blocks/DecisionQueueBlock.tsx","step":"file-rules"}
@@ -37,22 +38,28 @@
 {"data":{},"findings":[],"hash":"4cac5c2b8dfb8b841fff2306cde5a40fc8c169f954b34284de6e7423576a2954","path":"packages/blocks-core/src/client/composites/WaitingRegion.tsx","step":"file-rules"}
 {"data":{},"findings":[],"hash":"de5e3eb7f81d488ba220f44a9d5ecc96b1cb35316b91b79338f3179812022a91","path":"packages/blocks-core/src/client/composites/WhyPanel.tsx","step":"file-rules"}
 {"data":{},"findings":[],"hash":"546758051d823221857f258244181bbfac1efcc3fef54cae094e6e652c96ef7a","path":"packages/blocks-core/src/client/composites/useBlockWords.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"6001c39e7fcf51234da91c0f5904852bc4ae237b83a9370a0e084f59869272bb","path":"packages/blocks-core/src/client/core-blocks.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"6001c39e7fcf51234da91c0f5904852bc4ae237b83a9370a0e084f59869272bb","path":"packages/blocks-core/src/client/core-renderers.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/client/index.ts is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/client/index.ts","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/client/index.ts","step":"hfs"}
+{"data":{},"findings":[],"hash":"5e7ed067b08e65ca71288d07c74b81bf7316a98556efb4a2beebdb6fc973dce7","path":"packages/blocks-core/src/client/index.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c21bb3c2338f7b8f757b21c6ce2db494c37da1cfa8665ff19baab8dbd9e87e35","path":"packages/blocks-core/src/client/leaves/TraceLine.tsx","step":"file-rules"}
 {"data":{},"findings":[],"hash":"fafa3f793704fe12456bd332132c706d1482a0f28fe1fb4b45d25c43e151452f","path":"packages/blocks-core/src/client/render-props.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"613f8633d4461a5ea6fd50a9efba9400577c05a6120f0568ecffb07b5f99204c","path":"packages/blocks-core/src/conformance.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"bc7542d89b917b4e4ced8c0dc768f5691c4529632323fd4388b2d0030bc1c421","path":"packages/blocks-core/src/conformance.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"bf048582daa6461fabecab7eaec34d948887216df6d9b2ab168193ac6fc2706c","path":"packages/blocks-core/src/graphs.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"ed34d8cc8612c5c977d5b9c76bad1f8eb0d633c0148f07b464dc7f358c70c37d","path":"packages/blocks-core/src/index.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/json.schema.ts is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/json.schema.ts","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/json.schema.ts","step":"hfs"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/messages/catalog.ts is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/messages/catalog.ts","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/messages/catalog.ts","step":"hfs"}
-{"data":{},"findings":[],"hash":"76bdd7b0461e848ada4ac6e7a2e5e777ca1307cd4798becd6deda8b937b88700","path":"packages/blocks-core/src/messages/en.json","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/messages/samples.json is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/messages/samples.json","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/messages/samples.json","step":"hfs"}
-{"data":{},"findings":[],"hash":"cc3c185b5a6139a4efcfcaee5b0e7240d38a45aa27421f30ff1e27afb3395492","path":"packages/blocks-core/src/messages/vi.json","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/messages/words.json is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/messages/words.json","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/messages/words.json","step":"hfs"}
-{"data":{},"findings":[],"hash":"cba5dc4564c1a064a895594a0d8727da14fe7a986d3dcafce4c596271ddf3922","path":"packages/blocks-core/src/nodes/core-nodes.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/nodes/core/failure.policy.spec.ts is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/nodes/core/failure.policy.spec.ts","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/nodes/core/failure.policy.spec.ts","step":"hfs"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/nodes/core/failure.policy.ts is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/nodes/core/failure.policy.ts","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/nodes/core/failure.policy.ts","step":"hfs"}
+{"data":{},"findings":[],"hash":"0a790edf9b1d1e787108937a8c926b8ed1fc811967bbd41b8e0a17977c5b1cad","path":"packages/blocks-core/src/index.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"873130719226f92ad361027d096a7268daba620fd1d3d46780403bf5b51c50d6","path":"packages/blocks-core/src/json.schema.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"3ea60fbc590bc3562408a6d32be863d155680dd9c1445703db7de35b12afd793","path":"packages/blocks-core/src/messages/catalog.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"519dd20cf6cb25c1362c91a2ed7293350906bdec45320412a91348ab80bd3111","path":"packages/blocks-core/src/messages/en.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"38e5bfe219a1c64102082119b894fd877fa474da7edec372f99796e9a479cc08","path":"packages/blocks-core/src/messages/samples.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"c5a49182910d1ad7bcf91954bd8ecf1d3866839729034e1a79a44fc954a76626","path":"packages/blocks-core/src/messages/vi.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"148f8a373855bcfc735515a40a020d310816d39d961b0f53dff885c9ad7cb38a","path":"packages/blocks-core/src/messages/words.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"3f7a79422930bcfe93228aaada1da2ba67c881b20cdf3e24bcdcfafa9aaa0231","path":"packages/blocks-core/src/nodes/accounting/ledger-append.node.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"b064f2a67a4628f052984596da1ffe9cbbcb0ea385757b1da752d45d0b386f19","path":"packages/blocks-core/src/nodes/accounting/ledger-append.node.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"635304f886708fadac9ae8393e3839630093431cd4a58264635791c341f571cc","path":"packages/blocks-core/src/nodes/accounting/ledger-ready.node.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"e62ca392e847e5a2d278aa730b97f49dc9b36cf669c657a65a60a8190579d588","path":"packages/blocks-core/src/nodes/accounting/ledger.policy.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"2919ad257677c3195d05add4a9dfda467bd5c3b59d21d8136c7b6f77564d1906","path":"packages/blocks-core/src/nodes/accounting/ledger.policy.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"25da1115d4bd31668902fe21c3f331af4597f0f6325bbbad0d4a30e388b7eb9f","path":"packages/blocks-core/src/nodes/core-nodes.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"654c789dff01667327b236feeb07e8606db6c71012cc0394c55dafb2c6de10b7","path":"packages/blocks-core/src/nodes/core/failure.policy.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"7060916c4a7dc03b5ac0c2807b756683e89b2cbe1db4af5eeaf96454e42e948a","path":"packages/blocks-core/src/nodes/core/failure.policy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"9890ac06786d82f8fc5fb2dae4e14377d58b8703f9a02bbea2c0865b177eed51","path":"packages/blocks-core/src/nodes/core/handoff.node.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2b8a2af6aa17d6558ff65bec34e968341b92bf9037ad5fe1d6d16f031604632c","path":"packages/blocks-core/src/nodes/core/handoff.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3cc95e6be37207da4b26ed40682c64c9670484976961c97130563f52c62e1eb0","path":"packages/blocks-core/src/nodes/core/handoff.policy.ts","step":"file-rules"}
@@ -62,12 +69,12 @@
 {"data":{},"findings":[],"hash":"3db6373fea3ba5fe321664c771ee0218c96b8be3d4b59c44a59317cd18d63706","path":"packages/blocks-core/src/nodes/core/reply.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3dbf477a9609eafe6c1acf4efa5cd40ec31b7de75a792e36e9976336d740d79c","path":"packages/blocks-core/src/nodes/core/reply.policy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"97a082b99ad68e411648455d9ac1e10e12287148887bebfdb69d0c876ed07b58","path":"packages/blocks-core/src/nodes/core/reply.types.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"fb5dde3d117c172839e287e63d9155d3cf46a22fc66eac52779ce7a6eb52f3e2","path":"packages/blocks-core/src/nodes/intent/classify.messages.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"62988e3eeb27470e419e2875eb23c537c0f982635ea46b58128900ed9388200c","path":"packages/blocks-core/src/nodes/intent/classify.node.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"15a6e0d5c229f523af85e0ed4502871d546d62b65d28de05a102f170509deff9","path":"packages/blocks-core/src/nodes/intent/classify.node.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"619a838520b28f7f8c9e0e551e362709ece46e41fad05ac81b57f724f3c5b7bb","path":"packages/blocks-core/src/nodes/intent/classify.policy.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"14313d178547a4af21159ef3f910d10085eab67304966eece909014c9c0de418","path":"packages/blocks-core/src/nodes/intent/classify.schema.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"e81cfa3b3e7f7fdc2d5c84edf9f92a5c5b1a81a573e7db041e4036336056c06b","path":"packages/blocks-core/src/nodes/intent/classify.types.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"43da9d2396b56a799b14b9f836da6078632422180e3687ab9b04481f651d7790","path":"packages/blocks-core/src/nodes/intent/classify.messages.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"eaa981c7f7d39441310fba31817fff2f8b13bf1c64f7f7d3a0aeb2df34ccc131","path":"packages/blocks-core/src/nodes/intent/classify.node.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a7bdd51a34cb3a95d279dd663f32f2684dee9bf39844512550aba3a681edd10d","path":"packages/blocks-core/src/nodes/intent/classify.node.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"db1388c264191b664facb0b6ad87f9c4eca83dd6e833c9c466370983c8399ff2","path":"packages/blocks-core/src/nodes/intent/classify.policy.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"3320d2c3c87264208b169b728fd4cb7ecb6fa8cc29365469c054dbd79cb17fe4","path":"packages/blocks-core/src/nodes/intent/classify.schema.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"3dd922c9666358b446a5a9afeb91dd285bfa61627863766e3e0b4bc5bd424737","path":"packages/blocks-core/src/nodes/intent/classify.types.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"09c9416a58d851e5badc9524327f2a509c82b183976faf1cae381c7ded2f6da2","path":"packages/blocks-core/src/nodes/intent/has.node.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"4257f57f2d07246d0209f57f33695e2f4a2c426d478d0eb5de9b7a2819592dad","path":"packages/blocks-core/src/nodes/intent/has.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e53673f6fde31aa522ed6373f9170a42112ccc3da437ad5176fcf5030967d8a2","path":"packages/blocks-core/src/nodes/knowledge/answer.messages.ts","step":"file-rules"}
@@ -78,6 +85,8 @@
 {"data":{},"findings":[],"hash":"22c4acf17466911b14120415884b0a224637d8d1ca7ba49aebf56f41c68d76b6","path":"packages/blocks-core/src/nodes/knowledge/answer.types.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"7f4d9e8441f71e19852681a7401ed21bdd5578eea483d87d82b729d457dd1462","path":"packages/blocks-core/src/nodes/knowledge/claims.policy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"fd2c799fc1dd5c6a78fe890e467369a74428a872c90c0dc73b823be1f562245a","path":"packages/blocks-core/src/nodes/knowledge/figures.policy.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9eac38a8b0705423882e2c3b2a6288ddfb13a6053cfb7c72cfea13a2e524e0d8","path":"packages/blocks-core/src/nodes/lead/ensure.node.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"8972dd5ec5e395a7ac4915c04a64b021a356c95dd279f203503084e8e3eda52c","path":"packages/blocks-core/src/nodes/lead/ensure.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5ad674ffb400bea493b5c97b63890baa63953ac6c2916f64012fd88217d2978a","path":"packages/blocks-core/src/nodes/node-schema.types.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"bde632ff916fc178ab6336bf41797b3321b8d1fd42b7a38f2c2d349456cc065f","path":"packages/blocks-core/src/nodes/nodes.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3cc1fc0e166e38cb1b02a56f1ba41fe66498fd03ca07b9774f2d42c4688f828c","path":"packages/blocks-core/src/nodes/order/ask-missing.messages.ts","step":"file-rules"}
@@ -95,31 +104,37 @@
 {"data":{},"findings":[],"hash":"ce6aeac03fd57d4647d5967a1a77b6d7083b35fe903b72cfeb0080bf69b2c23d","path":"packages/blocks-core/src/nodes/payment/claim-ack.policy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"9094453a81cb571d92a0bf748e9db60c1b741f662ecfa459f6253c1470737fea","path":"packages/blocks-core/src/nodes/payment/claim-ack.types.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2455f7085fd8e752327002c5927f3dfffc6792c57b2c1cc2dd2b1b2d91b2eb7f","path":"packages/blocks-core/src/nodes/payment/claim-wait.node.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"a1922905d729a04bf5f6155e256036fb31410ab099af3d53dd351977e125b5aa","path":"packages/blocks-core/src/nodes/payment/evidence.node.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"f21cd1a867b6dbfe97d97eeeeb34002d127f3464589547dc5f8b32aef0233cfd","path":"packages/blocks-core/src/nodes/payment/judge.node.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"5cfa81de01b54fa4e63b5c08f4ec632c168438e3cd2fdcd3da14c685944ee8b4","path":"packages/blocks-core/src/nodes/payment/entry.node.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"eba05ba2a65325a9363262e5852aaf5e012348c607dede911eb564747b9f8e66","path":"packages/blocks-core/src/nodes/payment/evidence.node.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"723f343947b20f0da9af92a7c24ea2c25656208b18613100e6ace7fb360b76e0","path":"packages/blocks-core/src/nodes/payment/evidence.policy.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"b4ceba58bd0c4ada9062360833cd3654c95ae946a688dde2e07bc2781585c2f3","path":"packages/blocks-core/src/nodes/payment/judge.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"7c7ef57da03c09a8819744609f032917876eccc2fa59341b0d1497eaae84735d","path":"packages/blocks-core/src/nodes/payment/match-code.node.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"c626118c8d8366bebb96638879f42c97730ab4e824a6fcd3c22675530ff7e327","path":"packages/blocks-core/src/nodes/payment/payment-nodes.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"569dde2f05f4e96bad1410eb8d15d2174bf8029aaf56bdfacfc9c4bd50b4f7e7","path":"packages/blocks-core/src/nodes/payment/payment-nodes.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"fa717bff8f885db01c97fa21d7abe262421bb438eb8eb0a0c6b1e16926503dab","path":"packages/blocks-core/src/nodes/payment/payment-request.messages.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d8ea04cfa6332485c0fefc4c479384c493ed6211d64f7f48b0462230b02d0a0c","path":"packages/blocks-core/src/nodes/payment/payment-request.policy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"30cddc7b15bcbf9641897d46be65e9fc4ef7e496e4f912795fd956695442b073","path":"packages/blocks-core/src/nodes/payment/payment-request.policy.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"7ee52f4d5eafa2f7f6a5ffcab229e2aa3dbe22b1b028895f1550307d65a766d0","path":"packages/blocks-core/src/nodes/payment/payment.fixtures.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"cf66580057e3e5cc7ef4040b0864d97b3b2bbf3a292c82780b8476e0170092ee","path":"packages/blocks-core/src/nodes/payment/payment.nodes.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a7d8544cc1401a2cfe76272a20d5364bdcf210285f96c4942dcdaf1832c183f0","path":"packages/blocks-core/src/nodes/payment/payment.fixtures.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"1147e6da19ffeb7f0bcea17ff110a3f26b7cd29e8ba116040a4e5aaee52b98c4","path":"packages/blocks-core/src/nodes/payment/payment.nodes.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"f0473e1f67278c9bc40fb5ab527c8fea6799487e615b974872f7b283a805866f","path":"packages/blocks-core/src/nodes/payment/payment.rights.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"98ea232351f665c53e6d840424d2a531728d35331cbbfdc8c625c19942f65dba","path":"packages/blocks-core/src/nodes/payment/payment.schemas.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"7f1ce29719645e6c4faef4e4fca46c2c089356edf57f765bf0f3120dd3ef56fa","path":"packages/blocks-core/src/nodes/payment/request.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c6289cffd0670e0d8f3bb772c90b1a88e062ed158ce39ea239047d06d045690d","path":"packages/blocks-core/src/nodes/payment/settle.node.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"eb36c01b20528f2a6135cd9efc169aa1d671410682cd84b1dd7c95b0b72b8e2b","path":"packages/blocks-core/src/rows/rows.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"2e31550b5388785b83524766e8a996a4edb3f11fb6e458636e46268daeeb1ebf","path":"packages/blocks-core/src/rows/rows.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"2222e125c6665e47b4754035c7825ec5d92b5e9ee3158a0a9aed98e84d70a1f2","path":"packages/blocks-core/src/rows/rows.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"88c157176abdca97f2cd83cda88b01f5cde020ee1515e7057df3accfe98af0fb","path":"packages/blocks-core/src/slots/paths.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"007d8bde00be0edd81338f223f0bdd8f22124674efeba3bf6d79558bd201e888","path":"packages/blocks-core/src/slots/paths.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"67d0711db5094bd73c7aed08ec8fc9c6d62f17169e2fa4b89aae1b40bd39da2c","path":"packages/blocks-core/src/slots/slots.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"25996bd4ded32e23043135efe8d08668a57ad86c20b7b9bcdc2d9d589a08d7d2","path":"packages/blocks-core/src/slots/slots.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/slots/slots.types.ts is neither tracked nor git-ignored, and no ignored slot owns it","path":"packages/blocks-core/src/slots/slots.types.ts","rule":"HFS_UNTRACKED_ROOT_ENTRY"}],"hash":"absent","path":"packages/blocks-core/src/slots/slots.types.ts","step":"hfs"}
+{"data":{},"findings":[],"hash":"3158f72cb4ac53e277654f4043433f546b32abe767f859b3644f9efd760d4e86","path":"packages/blocks-core/src/slots/slots.types.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"f2723fe97c52f55996e5fc2bb9aee72c5582ef48d75414c3a86a19f5a19f5bcf","path":"packages/blocks-core/src/views/placeholders.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"aa733838b5a0406e965951dc4dd375e3b9b48bf2a7174c898a86e76f945db52d","path":"packages/blocks-core/src/views/views.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"867a1fa29060e6ac2845fcdf52996f519d273807e76cf067da8db0e41a8a49b0","path":"packages/blocks-core/src/views/views.types.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"5b6869b501769437c9167780d2a6347ecdece63da2c4bba0554682887111dcc0","path":"packages/blocks-core/src/views/views.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"c621f9ea8ef22748a48cbc9159c582b1df1724fa2cd5905014f104ddd7acda4e","path":"packages/blocks-core/src/views/views.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"53955a7b18be88b87030c4e85da3bc2345bd748bcbe6d81795bfbca6668490db","path":"packages/blocks-core/src/views/views.types.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"749609895084d0d9679e4321bf973b6edef535c20a447cf8f04f3822aae7c6eb","path":"packages/blocks-core/src/vocabulary/data-kinds.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"42b6dc81d3622aa6aeb5c1f5458f74f391265ace7a2dffc453671cf2debf86fb","path":"packages/blocks-core/src/vocabulary/effects.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"6767986fa42989842d157d53d52aff75eaa03f3bd893b8d17dbb1f0a1d0d761b","path":"packages/blocks-core/src/vocabulary/index.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"1a0f3a73e71f19cae371324f6a6d9b42f662370016ebec8b47d9d52a31642c50","path":"packages/blocks-core/src/vocabulary/tools.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"9467e81bb22ef35383478fdc37efbd091ca0e7fc8041e6796acc5dc5fd4c1298","path":"packages/blocks-core/src/vocabulary/vocabulary.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9cc857acaa4a335a23fb989c4623112bfab90c8f43768122a182cb47c2b2a3c1","path":"packages/blocks-core/src/vocabulary/effects.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"c93f9e796ba20e95e79ea6c5bf45e8dd6915743b533237e666606061a280a023","path":"packages/blocks-core/src/vocabulary/index.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"efd8d484d2199fd2b69244efbbed1102bf67613240f12db18ad79c8549a1880c","path":"packages/blocks-core/src/vocabulary/tools.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"54f83b04c416b6e1e814972347800b22ad5487fc2becffbb79a34d8d9d616054","path":"packages/blocks-core/src/vocabulary/vocabulary.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e073dc144c9177e9691f467a521a506db87ddac1c708fe91198e8f279e1374d3","path":"packages/blocks-core/tsconfig.build.client.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"88155c1253c30fe2e918091b7dc8fd06ecf05467ca5a37d77efe062b41ff3c2f","path":"packages/blocks-core/tsconfig.build.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"97700f24f69aece26bafaddb3f20912d23cf0b06408178e009128325544b0d61","path":"packages/blocks-core/tsconfig.json","step":"file-rules"}
