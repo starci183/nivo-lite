@@ -17,8 +17,6 @@ export class VerifyTemplateLikenessHandler extends ICQRSHandler<VerifyTemplateLi
     }
 
     protected override process(command: VerifyTemplateLikenessCommand): Promise<LikenessGrantView> {
-        const pr = command.params.principal
-        const r = command.params.request
-        return this.svc.verify(pr, r.grantId)
+        return this.svc.verify(command.params.principal, command.params.request.grantId)
     }
 }

@@ -1,5 +1,7 @@
 import type { Mailer, SendMailRequest, SentMail } from "@starci/mail"
 import type { Logger } from "@modules/platform/logging"
+import { eachInOrder } from "@modules/platform/primitives"
+import type { ClosableMailer } from "./mail.decorators"
 import { MailLogEvent } from "./mail.log-events"
 import type { MailOutboxService } from "./mail-outbox.service"
 import { isSuppressed, maskAddress } from "./mail-suppress.policy"
@@ -12,9 +14,9 @@ const SUPPRESSED_ID = "suppressed"
  * (the recipient masked), kept in the development outbox when one is configured, and the send answers success so the flow goes on.
  * A message with recipients both on and off the list goes to the ones off it.
  */
-export class SuppressingMailer implements Mailer {
+export class SuppressingMailerService implements Mailer {
     constructor(
-        private readonly inner: Mailer & { onModuleDestroy(): void },
+        private readonly inner: ClosableMailer,
         private readonly patterns: ReadonlyArray<string>,
         private readonly outbox: MailOutboxService,
         private readonly logger: Logger,
@@ -24,7 +26,7 @@ export class SuppressingMailer implements Mailer {
     async send(request: SendMailRequest): Promise<SentMail> {
         const recipients = typeof request.to === "string" ? [request.to] : request.to
         const held = recipients.filter((address) => isSuppressed(this.patterns, address))
-        for (const address of held) await this.hold(address, request)
+        await eachInOrder(held, (address) => this.hold(address, request))
         const rest = recipients.filter((address) => !isSuppressed(this.patterns, address))
         if (rest.length === 0) return { messageId: SUPPRESSED_ID, accepted: [] }
         return this.inner.send({ ...request, to: rest })

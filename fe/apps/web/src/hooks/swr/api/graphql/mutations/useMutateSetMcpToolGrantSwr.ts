@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSetMcpToolGrant } from "@/modules/api/graphql/mutations/mutation-set-mcp-tool-grant"
-import type { mutateSetMcpToolGrant as MutateSetMcpToolGrantOperation } from "@/modules/api/graphql/mutations/mutation-set-mcp-tool-grant"
+import {
+    mutateSetMcpToolGrant,
+    type mutateSetMcpToolGrant as MutateSetMcpToolGrantOperation,
+} from "@/modules/api/graphql/mutations/mutation-set-mcp-tool-grant"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetMcpToolGrantMutation } from "@/modules/api"
 
 /** The SWR key of the setMcpToolGrant mutation. */
 export const MUTATE_SET_MCP_TOOL_GRANT_SWR_KEY = "MUTATE_SET_MCP_TOOL_GRANT_SWR"
 
 /** SWR mutation for {@link mutateSetMcpToolGrant}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSetMcpToolGrantSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetMcpToolGrant>["setMcpToolGrant"],
+    SetMcpToolGrantMutation["setMcpToolGrant"],
     Error,
     typeof MUTATE_SET_MCP_TOOL_GRANT_SWR_KEY,
     TriggerArg["arg"]

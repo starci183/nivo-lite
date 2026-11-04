@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRemoveShiftsCoverage } from "@/modules/api/graphql/mutations/mutation-remove-shifts-coverage"
-import type { MutateRemoveShiftsCoverageRequest } from "@/modules/api/graphql/mutations/mutation-remove-shifts-coverage"
+import {
+    mutateRemoveShiftsCoverage,
+    type MutateRemoveShiftsCoverageRequest,
+} from "@/modules/api/graphql/mutations/mutation-remove-shifts-coverage"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RemoveShiftsCoverageMutation } from "@/modules/api"
 
 /** What the removeShiftsCoverage mutation is triggered with. */
 interface RemoveShiftsCoverageArg {
@@ -16,7 +18,7 @@ export const MUTATE_REMOVE_SHIFTS_COVERAGE_SWR_KEY = "MUTATE_REMOVE_SHIFTS_COVER
 
 /** SWR mutation for {@link mutateRemoveShiftsCoverage}: `trigger(request)` answers `removeShiftsCoverage` and rejects with the back end failure. */
 export const useMutateRemoveShiftsCoverageSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRemoveShiftsCoverage>["removeShiftsCoverage"],
+    RemoveShiftsCoverageMutation["removeShiftsCoverage"],
     Error,
     typeof MUTATE_REMOVE_SHIFTS_COVERAGE_SWR_KEY,
     RemoveShiftsCoverageArg["arg"]

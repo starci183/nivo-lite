@@ -3,22 +3,33 @@ import { textOf, valueAt } from "../slots/paths"
 
 /** One row of a record list as the block draws it; an empty badge draws no badge. */
 export interface RecordRow {
+    /** The key the list draws the row under; a record without one draws no row. */
     readonly id: string
+    /** The headline of the row. */
     readonly title: string
+    /** The line of detail under the headline; empty draws none. */
     readonly description: string
+    /** The words of the mark beside the headline; empty draws no badge. */
     readonly badge: string
 }
 
 /** The dotted paths of a record that name the parts of its row. */
 export interface RowPaths {
+    /** The path of the text that identifies the record. */
     readonly idPath: string
+    /** The path of the text that heads the row. */
     readonly titlePath: string
+    /** The path of the line under the headline; absent draws none. */
     readonly descriptionPath?: string | undefined
+    /** The path of the text of the badge; absent draws none. */
     readonly badgePath?: string | undefined
 }
 
-/** The shape of a bound list: any records, read through paths. */
-export const recordsView: z.ZodType<ReadonlyArray<unknown>> = z.array(z.unknown())
+/** The most records one bound list carries; a longer one is a failed read, never a half list. */
+const RECORDS_MAX = 500
+
+/** The shape of a bound list: records of any fields, read through paths. */
+export const recordsView: z.ZodType<ReadonlyArray<unknown>> = z.array(z.looseObject({})).max(RECORDS_MAX)
 
 /** The rows a skeleton draws. */
 const PLACEHOLDER_COUNT = 3

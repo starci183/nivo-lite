@@ -1,11 +1,16 @@
 "use client"
 
-import { workspaceArgumentKey, terminalStatusOptions } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import {
+    answeredData,
+    terminalStatusOptions,
+    workspaceArgumentKey,
+    type ReadResponse,
+    type WorkspaceReadKey,
+} from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { StatusPollOptions } from "@/hooks/reuseables"
 import { queryLeadGenCommentStatus } from "@/modules/api/graphql/queries/query-lead-gen-comment-status"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { LeadGenCommentStatusQuery } from "@/modules/api"
 
 /** The SWR key of the leadGenCommentStatus query. */
 export const QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY = "QUERY_LEAD_GEN_COMMENT_STATUS_SWR"
@@ -18,13 +23,14 @@ export const useQueryLeadGenCommentStatusSwr = (
     workspaceId: string | undefined,
     workItemId: string | undefined,
     options: StatusPollOptions = {},
-): ReadResponse<OperationData<typeof queryLeadGenCommentStatus>["leadGenCommentStatus"]> =>
+): ReadResponse<LeadGenCommentStatusQuery["leadGenCommentStatus"]> =>
     useSWR(
         workspaceArgumentKey(QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, workspaceId, workItemId),
         async ([, , id]: WorkspaceReadKey<string>) => {
-            const result = await queryLeadGenCommentStatus({ request: { workItemId: id } })
-            if (!result.data) throw new Error("leadGenCommentStatus answered no data")
-            return result.data.leadGenCommentStatus
+            return answeredData(
+                await queryLeadGenCommentStatus({ request: { workItemId: id } }),
+                "leadGenCommentStatus",
+            ).leadGenCommentStatus
         },
         terminalStatusOptions(LEAD_GEN_COMMENT_STATUS_REFRESH_MS, options),
     )

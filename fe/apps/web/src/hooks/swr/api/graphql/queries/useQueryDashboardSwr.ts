@@ -1,9 +1,9 @@
 "use client"
 
-import { argumentKey } from "@/hooks/workspaceread"
+import { argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import { queryDashboard } from "@/modules/api/graphql/queries/query-dashboard"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { DashboardQuery } from "@/modules/api"
 
 /** The SWR key of the dashboard; mutations that change it call `mutate` on it. */
 export const QUERY_DASHBOARD_SWR_KEY = "QUERY_DASHBOARD_SWR"
@@ -12,9 +12,7 @@ export const QUERY_DASHBOARD_SWR_KEY = "QUERY_DASHBOARD_SWR"
 const DASHBOARD_REFRESH_MS = 60_000
 
 /** Everything the overview shows about the workspace, read again every minute (the back end `dashboard` query). */
-export const useQueryDashboardSwr = (
-    workspaceId: string | undefined,
-): ReadResponse<OperationData<typeof queryDashboard>["dashboard"]> =>
+export const useQueryDashboardSwr = (workspaceId: string | undefined): ReadResponse<DashboardQuery["dashboard"]> =>
     useSWR(
         argumentKey(QUERY_DASHBOARD_SWR_KEY, workspaceId),
         async () => {

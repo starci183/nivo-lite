@@ -1,10 +1,13 @@
 "use client"
 
-import { argumentKey, answeredData } from "@/hooks/workspaceread"
+import { answeredData, argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
-import { queryPublicHiringInterview } from "@/modules/api/graphql/queries/query-public-hiring-interview"
-import type { QueryPublicHiringInterviewRequest } from "@/modules/api/graphql/queries/query-public-hiring-interview"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { SWRResponse } from "swr"
+import {
+    queryPublicHiringInterview,
+    type QueryPublicHiringInterviewRequest,
+} from "@/modules/api/graphql/queries/query-public-hiring-interview"
+import type { PublicHiringInterviewQuery } from "@/modules/api"
 
 /** The SWR key of the `publicHiringInterview` query. */
 export const QUERY_PUBLIC_HIRING_INTERVIEW_SWR_KEY = "QUERY_PUBLIC_HIRING_INTERVIEW_SWR"
@@ -12,7 +15,7 @@ export const QUERY_PUBLIC_HIRING_INTERVIEW_SWR_KEY = "QUERY_PUBLIC_HIRING_INTERV
 /** The `publicHiringInterview` query through SWR; `undefined` suspends the read. */
 export const useQueryPublicHiringInterviewSwr = (
     request: QueryPublicHiringInterviewRequest | undefined,
-): ReadResponse<OperationData<typeof queryPublicHiringInterview>["publicHiringInterview"]> =>
+): SWRResponse<PublicHiringInterviewQuery["publicHiringInterview"], Error> =>
     useSWR(
         argumentKey(QUERY_PUBLIC_HIRING_INTERVIEW_SWR_KEY, request),
         async ([, input]: readonly [string, NonNullable<typeof request>]) =>

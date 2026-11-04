@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateRemoveBookingResource } from "@/modules/api/graphql/mutations/mutation-remove-booking-resource"
 import type { MutateRemoveBookingResourceRequest } from "@/modules/api/graphql/mutations/types/remove-booking-resource"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RemoveBookingResourceMutation } from "@/modules/api"
 
 /** The SWR key of the `removeBookingResource` mutation. */
 export const MUTATE_REMOVE_BOOKING_RESOURCE_SWR_KEY = "MUTATE_REMOVE_BOOKING_RESOURCE_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Removes a booking resource. */
 export const useMutateRemoveBookingResourceSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRemoveBookingResource>["removeBookingResource"],
+    RemoveBookingResourceMutation["removeBookingResource"],
     Error,
     typeof MUTATE_REMOVE_BOOKING_RESOURCE_SWR_KEY,
     TriggerArg["arg"]

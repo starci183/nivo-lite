@@ -3,10 +3,10 @@
 import { useRef } from "react"
 import useSWR, { useSWRConfig } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
-import { answeredData } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse } from "@/hooks/workspaceread"
 import { queryDossierReviewSummary } from "@/modules/api/graphql/queries/query-dossier-review-summary"
 import { QUERY_BRAIN_TODO_SWR_KEY } from "./useQueryBrainTodoSwr"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { DossierReviewSummaryQuery } from "@/modules/api"
 
 /** The SWR key of the review summary; a write that changes the findings revalidates the keys that lead with it. */
 export const QUERY_DOSSIER_REVIEW_SUMMARY_SWR_KEY = "QUERY_DOSSIER_REVIEW_SUMMARY_SWR"
@@ -19,9 +19,7 @@ const RUNNING_REFRESH_MS = 4_000
  * every few seconds only while a run is going. When a run that was going has ended, the count of what needs the owner is read again,
  * since the run wrote its findings.
  */
-export const useQueryDossierReviewSummarySwr = (): ReadResponse<
-    OperationData<typeof queryDossierReviewSummary>["dossierReviewSummary"]
-> => {
+export const useQueryDossierReviewSummarySwr = (): ReadResponse<DossierReviewSummaryQuery["dossierReviewSummary"]> => {
     const key = useWorkspaceKey(QUERY_DOSSIER_REVIEW_SUMMARY_SWR_KEY, [])
     const { mutate } = useSWRConfig()
     const wasRunning = useRef(false)

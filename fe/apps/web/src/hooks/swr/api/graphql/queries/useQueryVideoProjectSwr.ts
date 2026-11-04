@@ -1,11 +1,10 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import { queryVideoProject } from "@/modules/api/graphql/queries/query-video-project"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { VideoProjectQuery } from "@/modules/api"
 
 /** The SWR key of the videoProject query. */
 export const QUERY_VIDEO_PROJECT_SWR_KEY = "QUERY_VIDEO_PROJECT_SWR"
@@ -13,7 +12,7 @@ export const QUERY_VIDEO_PROJECT_SWR_KEY = "QUERY_VIDEO_PROJECT_SWR"
 /** One video project, read again while it is scripting or rendering. */
 export const useQueryVideoProjectSwr = (
     projectId: string | undefined,
-): ReadResponse<OperationData<typeof queryVideoProject>["videoProject"]> =>
+): ReadResponse<VideoProjectQuery["videoProject"]> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_PROJECT_SWR_KEY, projectId ? ([projectId] as const) : null),
         async ([, , ...input]: WorkspaceReadKey<string>) =>

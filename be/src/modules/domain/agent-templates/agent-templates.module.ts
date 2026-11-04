@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { AgentTemplateInstallerService } from "./agent-template-installer.service"
 import { AgentTemplateVersionsService } from "./agent-template-versions.service"
 import { AgentTemplatesService } from "./agent-templates.service"
+import { TemplateRecordsService } from "./template-records.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-templates.module-definition"
 
 @Module({})
@@ -14,7 +15,12 @@ export class AgentTemplatesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        const services = [AgentTemplateVersionsService, AgentTemplatesService, AgentTemplateInstallerService]
+        const services = [
+            AgentTemplateVersionsService,
+            AgentTemplatesService,
+            AgentTemplateInstallerService,
+            TemplateRecordsService,
+        ]
         return {
             ...base,
             providers: [...(base.providers ?? []), ...services],

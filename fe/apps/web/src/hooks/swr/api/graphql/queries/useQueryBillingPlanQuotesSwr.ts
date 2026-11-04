@@ -1,10 +1,12 @@
 "use client"
 
-import { workspaceArgumentKey } from "@/hooks/workspaceread"
+import { workspaceArgumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
-import { queryBillingPlanQuote } from "@/modules/api/graphql/queries/query-billing-plan-quote"
-import type { QueryBillingPlanQuoteRequest } from "@/modules/api/graphql/queries/query-billing-plan-quote"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import {
+    queryBillingPlanQuote,
+    type QueryBillingPlanQuoteRequest,
+} from "@/modules/api/graphql/queries/query-billing-plan-quote"
+import type { BillingPlanQuoteQuery } from "@/modules/api"
 
 /** Cache identity of billingPlanQuote within a workspace. */
 export const QUERY_BILLING_PLAN_QUOTES_SWR_KEY = "QUERY_BILLING_PLAN_QUOTES_SWR"
@@ -16,7 +18,7 @@ export const QUERY_BILLING_PLAN_QUOTES_SWR_KEY = "QUERY_BILLING_PLAN_QUOTES_SWR"
 export const useQueryBillingPlanQuotesSwr = (
     workspaceId: string | undefined,
     requests: ReadonlyArray<QueryBillingPlanQuoteRequest>,
-): ReadResponse<(NonNullable<OperationData<typeof queryBillingPlanQuote>["billingPlanQuote"]> | null)[]> =>
+): ReadResponse<(NonNullable<BillingPlanQuoteQuery["billingPlanQuote"]> | null)[]> =>
     useSWR(
         workspaceArgumentKey(QUERY_BILLING_PLAN_QUOTES_SWR_KEY, workspaceId, JSON.stringify(requests)),
         async () =>

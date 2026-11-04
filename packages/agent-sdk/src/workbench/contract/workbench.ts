@@ -1,6 +1,7 @@
 import { SDK_SPEC_BLOCKS } from "../spec/blocks"
 import { specRegistryOf } from "../spec/spec"
 import type { WorkbenchSpecRegistry } from "../spec/spec.types"
+import { WorkbenchError } from "./workbench-error"
 import type { WorkbenchDeclaration, WorkbenchModule, WorkbenchProblem } from "./workbench.types"
 
 /** The exposed reads and actions of a declaration that claim another module or run an operation it does not declare. */
@@ -33,7 +34,7 @@ export const workbenchProblems = (module: WorkbenchDeclaration | WorkbenchModule
 /** A workbench as the module declares it, refused at import when it has a problem: a wiring bug stops the build, never a page. */
 export const defineWorkbench = (module: WorkbenchModule): WorkbenchModule => {
     const [problem] = workbenchProblems(module)
-    if (problem !== undefined) throw new Error(`${problem.code}: ${problem.at}`)
+    if (problem !== undefined) throw new WorkbenchError(problem.code, problem.at)
     return module
 }
 
@@ -43,7 +44,7 @@ export const workbenchRegistryOf = (
 ): Readonly<Record<string, WorkbenchModule>> => {
     const registry: Record<string, WorkbenchModule> = {}
     for (const module of modules) {
-        if (registry[module.key] !== undefined) throw new Error(`WORKBENCH_KEY_DUPLICATE: ${module.key}`)
+        if (registry[module.key] !== undefined) throw new WorkbenchError("WORKBENCH_KEY_DUPLICATE", module.key)
         registry[module.key] = module
     }
     return registry

@@ -1,8 +1,7 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { putPresigned } from "@/modules/api"
-import type { putPresigned as PutPresignedOperation } from "@/modules/api"
+import { putPresigned, type putPresigned as PutPresignedOperation } from "@/modules/api"
 
 /** The transport's upload contract, including progress and cancellation. */
 type PutPresignedRequest = Parameters<typeof PutPresignedOperation>[0]

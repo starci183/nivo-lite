@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateMarkChatDelivered } from "@/modules/api/graphql/mutations/mutation-mark-chat-delivered"
-import type { MutateMarkChatDeliveredRequest } from "@/modules/api/graphql/mutations/mutation-mark-chat-delivered"
+import {
+    mutateMarkChatDelivered,
+    type MutateMarkChatDeliveredRequest,
+} from "@/modules/api/graphql/mutations/mutation-mark-chat-delivered"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { MarkChatDeliveredMutation } from "@/modules/api"
 
 /** What the MarkChatDelivered mutation is triggered with. */
 interface MarkChatDeliveredArg {
@@ -16,7 +18,7 @@ export const MUTATE_MARK_CHAT_DELIVERED_SWR_KEY = "MUTATE_MARK_CHAT_DELIVERED_SW
 
 /** SWR mutation for {@link mutateMarkChatDelivered}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateMarkChatDeliveredSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateMarkChatDelivered>["markChatDelivered"],
+    MarkChatDeliveredMutation["markChatDelivered"],
     Error,
     typeof MUTATE_MARK_CHAT_DELIVERED_SWR_KEY,
     MarkChatDeliveredArg["arg"]

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSetMyAvatar } from "@/modules/api/graphql/mutations/mutation-set-my-avatar"
-import type { MutateSetMyAvatarRequest } from "@/modules/api/graphql/mutations/mutation-set-my-avatar"
+import {
+    mutateSetMyAvatar,
+    type MutateSetMyAvatarRequest,
+} from "@/modules/api/graphql/mutations/mutation-set-my-avatar"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetMyAvatarMutation } from "@/modules/api"
 
 /** What the SetMyAvatar mutation is triggered with. */
 interface SetMyAvatarArg {
@@ -16,7 +18,7 @@ export const MUTATE_SET_MY_AVATAR_SWR_KEY = "MUTATE_SET_MY_AVATAR_SWR"
 
 /** SWR mutation for {@link mutateSetMyAvatar}: `trigger(request)` answers true and rejects with the back end failure. */
 export const useMutateSetMyAvatarSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetMyAvatar>["setMyAvatar"],
+    SetMyAvatarMutation["setMyAvatar"],
     Error,
     typeof MUTATE_SET_MY_AVATAR_SWR_KEY,
     SetMyAvatarArg["arg"]

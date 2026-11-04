@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateDecideBrainLesson } from "@/modules/api/graphql/mutations/mutation-decide-brain-lesson"
-import type { MutateDecideBrainLessonRequest } from "@/modules/api/graphql/mutations/mutation-decide-brain-lesson"
+import {
+    mutateDecideBrainLesson,
+    type MutateDecideBrainLessonRequest,
+} from "@/modules/api/graphql/mutations/mutation-decide-brain-lesson"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { DecideBrainLessonMutation } from "@/modules/api"
 
 /** What the DecideBrainLesson mutation is triggered with. */
 interface DecideBrainLessonArg {
@@ -16,7 +18,7 @@ export const MUTATE_DECIDE_BRAIN_LESSON_SWR_KEY = "MUTATE_DECIDE_BRAIN_LESSON_SW
 
 /** SWR mutation for {@link mutateDecideBrainLesson}: Activates, rejects or retires a lesson of the shared brain. `trigger(input)` rejects with the back end failure. */
 export const useMutateDecideBrainLessonSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateDecideBrainLesson>["decideBrainLesson"],
+    DecideBrainLessonMutation["decideBrainLesson"],
     Error,
     typeof MUTATE_DECIDE_BRAIN_LESSON_SWR_KEY,
     DecideBrainLessonArg["arg"]

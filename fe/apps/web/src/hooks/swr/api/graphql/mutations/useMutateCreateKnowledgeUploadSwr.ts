@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCreateKnowledgeUpload } from "@/modules/api/graphql/mutations/mutation-create-knowledge-upload"
-import type { MutateCreateKnowledgeUploadRequest } from "@/modules/api/graphql/mutations/mutation-create-knowledge-upload"
+import {
+    mutateCreateKnowledgeUpload,
+    type MutateCreateKnowledgeUploadRequest,
+} from "@/modules/api/graphql/mutations/mutation-create-knowledge-upload"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CreateKnowledgeUploadMutation } from "@/modules/api"
 
 /** What the CreateKnowledgeUpload mutation is triggered with. */
 interface CreateKnowledgeUploadArg {
@@ -16,7 +18,7 @@ export const MUTATE_CREATE_KNOWLEDGE_UPLOAD_SWR_KEY = "MUTATE_CREATE_KNOWLEDGE_U
 
 /** SWR mutation for {@link mutateCreateKnowledgeUpload}: Asks for the presigned address one document upload goes to. `trigger(input)` rejects with the back end failure. */
 export const useMutateCreateKnowledgeUploadSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCreateKnowledgeUpload>["createKnowledgeUpload"],
+    CreateKnowledgeUploadMutation["createKnowledgeUpload"],
     Error,
     typeof MUTATE_CREATE_KNOWLEDGE_UPLOAD_SWR_KEY,
     CreateKnowledgeUploadArg["arg"]

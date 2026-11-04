@@ -10,7 +10,7 @@ import { toExportAgentTemplateRequest, toExportAgentTemplateType } from "./expor
 @Resolver()
 /** GraphQL door of exportAgentTemplate. */
 export class ExportAgentTemplateResolver {
-    constructor(@InjectQueryBus() private readonly bus: QueryBus) {}
+    constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
     /** Exports one version of a template of the caller as a file of canonical JSON. */
     @Query(() => String, { name: "exportAgentTemplate" })
@@ -18,7 +18,7 @@ export class ExportAgentTemplateResolver {
         @CurrentPrincipal() principal: Principal,
         @Args("input") input: TemplateVersionRefInput,
     ): Promise<string> {
-        const result = await this.bus.execute(
+        const result = await this.queryBus.execute(
             new ExportAgentTemplateQuery({ request: toExportAgentTemplateRequest(input), principal }),
         )
         return toExportAgentTemplateType(result)

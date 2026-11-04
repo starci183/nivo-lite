@@ -1,10 +1,12 @@
 "use client"
 
-import { queryTestDatabase } from "@/modules/api/graphql/queries/query-test-database"
-import type { queryTestDatabase as QueryTestDatabaseOperation } from "@/modules/api/graphql/queries/query-test-database"
+import {
+    queryTestDatabase,
+    type queryTestDatabase as QueryTestDatabaseOperation,
+} from "@/modules/api/graphql/queries/query-test-database"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { TestDatabaseQuery } from "@/modules/api"
 
 /** The SWR key of the testDatabase query. */
 export const QUERY_TEST_DATABASE_SWR_KEY = "QUERY_TEST_DATABASE_SWR"
@@ -16,7 +18,7 @@ interface TriggerArg {
 
 /** Lazily connects read only to the owner database; `trigger(input)` answers its tables and rejects with the back end failure. */
 export const useQueryTestDatabaseSwr = (): SWRMutationResponse<
-    OperationData<typeof queryTestDatabase>["testDatabase"],
+    TestDatabaseQuery["testDatabase"],
     Error,
     typeof QUERY_TEST_DATABASE_SWR_KEY,
     TriggerArg["arg"]

@@ -13,7 +13,10 @@ import { LeadGenCommentList } from "@/components/composites/LeadGenCommentList"
 import { LeadGenRowList } from "@/components/composites/LeadGenRowList"
 
 /** The four actual Lead Gen panels and the recorded-explanation arrangement. */
-export const LEADGEN_WORKBENCH_SHAPES: readonly [...typeof LEADGEN_TABS, "explanation"] = [...LEADGEN_TABS, "explanation"]
+export const LEADGEN_WORKBENCH_SHAPES: readonly [...typeof LEADGEN_TABS, "explanation"] = [
+    ...LEADGEN_TABS,
+    "explanation",
+]
 type LeadGenWorkbenchShape = (typeof LEADGEN_WORKBENCH_SHAPES)[number]
 
 /** Plain resolved read models and atomic commands; shape never carries render trees. */

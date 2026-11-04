@@ -1,11 +1,10 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import { queryVideoProjects } from "@/modules/api/graphql/queries/query-video-projects"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { VideoProjectsQuery } from "@/modules/api"
 
 /** The SWR key of the videoProjects query. */
 export const QUERY_VIDEO_PROJECTS_SWR_KEY = "QUERY_VIDEO_PROJECTS_SWR"
@@ -14,7 +13,7 @@ export const QUERY_VIDEO_PROJECTS_SWR_KEY = "QUERY_VIDEO_PROJECTS_SWR"
 export const useQueryVideoProjectsSwr = (
     includeArchived = false,
     isActive = true,
-): ReadResponse<OperationData<typeof queryVideoProjects>["videoProjects"]> =>
+): ReadResponse<VideoProjectsQuery["videoProjects"]> =>
     useSWR(
         useWorkspaceParamsKey(QUERY_VIDEO_PROJECTS_SWR_KEY, isActive ? ([includeArchived] as const) : null),
         async ([, , ...input]: WorkspaceReadKey<NonNullable<typeof includeArchived>>) =>

@@ -50,10 +50,7 @@ const ViewerCacheBinding = () => {
 const ViewerCache = (props: LayerProps) => {
     const viewerId = useAppSelector((state) => state.viewer.viewerId)
     return (
-        <SWRConfig
-            key={viewerCacheKey(viewerId)}
-            value={viewerSwrConfig(READ_DEFAULTS)}
-        >
+        <SWRConfig key={viewerCacheKey(viewerId)} value={viewerSwrConfig(READ_DEFAULTS)}>
             <ViewerCacheBinding />
             {props.children}
         </SWRConfig>

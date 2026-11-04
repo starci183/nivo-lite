@@ -1,6 +1,7 @@
 import { previewPackage } from "../template/packager"
 import type { AgentTemplatePackage, PackageDraft, TemplateParameter } from "../template/format.types"
 import type { GraphDocument } from "../template/graph.types"
+import { FixtureError } from "./fixture-error"
 import { AMOUNT_FACT, OWNER_BRANCHES, amountIs, approverOf, branchOf, graphOf } from "./graph"
 
 /** The ids of the creator's own workspace, which must not appear anywhere in a package. */
@@ -138,7 +139,8 @@ export const packageOf = (
     draft: PackageDraft = draftOf(),
 ): AgentTemplatePackage => {
     const preview = previewPackage(graph, draft)
-    if (preview.package === null) throw new Error(`the builder graph is refused: ${preview.problems.join("; ")}`)
+    if (preview.package === null)
+        throw new FixtureError("FIXTURE_REFUSED", `the builder graph is refused: ${preview.problems.join("; ")}`)
     return preview.package
 }
 

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveShiftsStaff } from "@/modules/api/graphql/mutations/mutation-save-shifts-staff"
-import type { MutateSaveShiftsStaffRequest } from "@/modules/api/graphql/mutations/mutation-save-shifts-staff"
+import {
+    mutateSaveShiftsStaff,
+    type MutateSaveShiftsStaffRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-shifts-staff"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveShiftsStaffMutation } from "@/modules/api"
 
 /** What the saveShiftsStaff mutation is triggered with. */
 interface SaveShiftsStaffArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_SHIFTS_STAFF_SWR_KEY = "MUTATE_SAVE_SHIFTS_STAFF_SWR"
 
 /** SWR mutation for {@link mutateSaveShiftsStaff}: `trigger(request)` answers `saveShiftsStaff` and rejects with the back end failure. */
 export const useMutateSaveShiftsStaffSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveShiftsStaff>["saveShiftsStaff"],
+    SaveShiftsStaffMutation["saveShiftsStaff"],
     Error,
     typeof MUTATE_SAVE_SHIFTS_STAFF_SWR_KEY,
     SaveShiftsStaffArg["arg"]

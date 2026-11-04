@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSaveAuthorityRule } from "@/modules/api/graphql/mutations/mutation-save-authority-rule"
-import type { MutateSaveAuthorityRuleRequest } from "@/modules/api/graphql/mutations/mutation-save-authority-rule"
+import {
+    mutateSaveAuthorityRule,
+    type MutateSaveAuthorityRuleRequest,
+} from "@/modules/api/graphql/mutations/mutation-save-authority-rule"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveAuthorityRuleMutation } from "@/modules/api"
 
 /** What the SaveAuthorityRule mutation is triggered with. */
 interface SaveAuthorityRuleArg {
@@ -16,7 +18,7 @@ export const MUTATE_SAVE_AUTHORITY_RULE_SWR_KEY = "MUTATE_SAVE_AUTHORITY_RULE_SW
 
 /** SWR mutation for {@link mutateSaveAuthorityRule}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateSaveAuthorityRuleSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveAuthorityRule>["saveAuthorityRule"],
+    SaveAuthorityRuleMutation["saveAuthorityRule"],
     Error,
     typeof MUTATE_SAVE_AUTHORITY_RULE_SWR_KEY,
     SaveAuthorityRuleArg["arg"]

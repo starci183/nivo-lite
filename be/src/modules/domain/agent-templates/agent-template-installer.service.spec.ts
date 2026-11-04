@@ -11,7 +11,7 @@ import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { CREATOR, packageOf } from "@tests/fixtures/builders/agent-template.builder"
 import { AgentTemplateInstallerService } from "./agent-template-installer.service"
-import type { InstallTemplateRequest } from "./agent-template-installer.service"
+import type { ImportTemplateRequest, InstallTemplateRequest } from "./agent-template-installer.service"
 import { AgentTemplateVersionsService } from "./agent-template-versions.service"
 import type { StoredVersion } from "./agent-template-versions.service"
 import { AgentTemplatesError, AgentTemplatesErrorCode } from "./errors/agent-templates.error"
@@ -170,7 +170,9 @@ describe("AgentTemplateInstallerService.install", () => {
         ).toBe(true)
         expect(branches.some((branch) => branch.sources.length > 0)).toBe(true)
     })
+})
 
+describe("AgentTemplateInstallerService.install records", () => {
     it("turns the starter knowledge into drafts the buyer approves again, and records the install and its license", async () => {
         const { service, documents, tx, em } = await build()
 
@@ -224,7 +226,9 @@ describe("AgentTemplateInstallerService.install", () => {
             expect.objectContaining({ kind: "private", listingId: null }),
         )
     })
+})
 
+describe("AgentTemplateInstallerService.install refusals", () => {
     it("refuses a private install of a template of another account, and touches nothing", async () => {
         const { service, moduleInstall } = await build()
 
@@ -288,5 +292,48 @@ describe("AgentTemplateInstallerService.install", () => {
 
         expect(await codeOf(service.install(BUYER, REQUEST))).toBe(AgentTemplatesErrorCode.ValuesRefused)
         expect(publish.publishTemplate).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentTemplateInstallerService.importOwn", () => {
+    const IMPORT: ImportTemplateRequest = {
+        workspaceId: "ws-buyer",
+        templateKey: "spa-booking-by-linh",
+        version: 1,
+        values: { autoLimit: 8_000_000, ignored: { nested: true } },
+        locale: "en",
+    }
+
+    it("installs a template of the caller's own account as a private license, reading the values the form gave", async () => {
+        const { service, em, moduleInstall } = await build({ version: stored({ creatorAccountId: BUYER }) })
+
+        const installed = await service.importOwn(BUYER, IMPORT)
+
+        expect(installed).toMatchObject({ installationId: "inst-new", key: "spa-booking-by-linh", version: 1 })
+        expect(moduleInstall.install).toHaveBeenCalledWith(
+            BUYER,
+            expect.objectContaining({ locale: "en", name: null, newInstance: false }),
+        )
+        const recorded = em.insert.mock.calls.find((call) => call[0] === TemplateInstallEntity)?.[1]
+        expect(recorded).toMatchObject({ parameterValues: { autoLimit: 8_000_000 } })
+        expect(em.insert).toHaveBeenCalledWith(
+            TemplateLicenseEntity,
+            expect.objectContaining({ kind: "private", listingId: null }),
+        )
+    })
+
+    it("gives the agent the label the buyer chose", async () => {
+        const { service, moduleInstall } = await build({ version: stored({ creatorAccountId: BUYER }) })
+
+        await service.importOwn(BUYER, { ...IMPORT, name: "Spa Linh" })
+
+        expect(moduleInstall.install).toHaveBeenCalledWith(BUYER, expect.objectContaining({ name: "Spa Linh" }))
+    })
+
+    it("refuses a template of another account", async () => {
+        const { service, moduleInstall } = await build()
+
+        expect(await codeOf(service.importOwn(BUYER, IMPORT))).toBe(AgentTemplatesErrorCode.NotYours)
+        expect(moduleInstall.install).not.toHaveBeenCalled()
     })
 })

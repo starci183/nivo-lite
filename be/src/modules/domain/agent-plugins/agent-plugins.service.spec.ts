@@ -68,3 +68,13 @@ describe("AgentPluginsService.add vocabulary", () => {
         expect(graphVocabulary.hasProvider("viettel-post")).toBe(true)
     })
 })
+
+describe("AgentPluginsService.keys", () => {
+    it("lists the keys of the plug-ins registered so far", async () => {
+        const { service } = await build()
+        service.add({ key: "shop" })
+        service.add({ key: "shipping" })
+
+        expect(service.keys()).toEqual(["shop", "shipping"])
+    })
+})

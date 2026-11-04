@@ -1,14 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager } from "@starci/jest-preset"
 import { hashOfPackage, TEMPLATE_FORMAT } from "@nivo-lite/agent-sdk/template"
-import type { AgentTemplatePackage } from "@nivo-lite/agent-sdk/template"
 import { packageOf } from "@nivo-lite/agent-sdk/testing"
 import {
     AgentTemplateVersionsService,
     AgentTemplatesErrorCode,
-    TemplateInstallEntity,
-    TemplateLicenseEntity,
+    TemplateRecordsService,
 } from "@modules/domain/agent-templates"
 import type { StoredVersion } from "@modules/domain/agent-templates"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
@@ -22,6 +19,7 @@ import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import type { Principal } from "@modules/platform/cqrs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { firstPartyKeyOf, FirstPartyTemplatesService, NIVO_PUBLISHER_ID } from "./first-party-templates.service"
 import { TemplateListingsService } from "./template-listings.service"
@@ -85,7 +83,6 @@ interface Options {
     readonly pages?: ReadonlyArray<ReadonlyArray<InstallationRecord>>
     readonly known?: boolean
     readonly packageExists?: boolean
-    readonly licenseId?: string | undefined
     readonly notAdmin?: boolean
     readonly template?: { firstParty: boolean } | null
     readonly approved?: number
@@ -93,63 +90,47 @@ interface Options {
     readonly source?: StoredVersion
 }
 
+type SavedPackage = Parameters<AgentTemplateVersionsService["save"]>[0]
+
+const storedOf = (options: Options, version: number) =>
+    options.packageExists === false ? null : { hash: options.storedHash ?? "old", version, package: packageOf() }
+
+const templateOf = (options: Options, key: string) => {
+    if (key !== "mine-derivative") return options.template ?? null
+    return options.keyTaken === true ? { creatorAccountId: USER } : null
+}
+
+const savedRowOf = (input: SavedPackage) => ({
+    id: "row",
+    key: input.package.key,
+    version: input.package.version,
+    hash: input.package.hash,
+})
+
 const build = async (options: Options = {}) => {
-    const em: MockEntityManager = mockEntityManager({
-        findOne: [
-            TemplateInstallEntity,
-            options.known === true ? Object.assign(new TemplateInstallEntity(), {}) : null,
-        ],
-        insert: [
-            [TemplateListingEntity, {}],
-            [
-                TemplateLicenseEntity,
-                {
-                    identifiers:
-                        options.licenseId === undefined && "licenseId" in options
-                            ? []
-                            : [{ id: options.licenseId ?? "license-1" }],
-                },
-            ],
-            [TemplateInstallEntity, {}],
-        ],
+    const em = mockEntityManager({
+        insert: [TemplateListingEntity, {}],
+    })
+    const records = mock<TemplateRecordsService>({
+        installedAmong: jest.fn().mockResolvedValue(new Set(options.known === true ? ["inst-1"] : [])),
+        adopt: jest.fn().mockResolvedValue(undefined),
     })
     const modules = mock<ModulesService>({
         catalog: jest.fn().mockResolvedValue({ categories: [], modules: options.modules ?? [moduleOf()] }),
     })
     const automation = mock<AutomationTemplatesService>({ listTemplates: jest.fn().mockResolvedValue([]) })
-    const saved: Array<{ package: AgentTemplatePackage }> = []
+    const saved: Array<SavedPackage> = []
     const versions = mock<AgentTemplateVersionsService>({
         latestNumber: jest.fn().mockResolvedValue(options.latest ?? 0),
         find: jest
             .fn()
-            .mockImplementation((_key: string, version: number) =>
-                Promise.resolve(
-                    options.packageExists === false
-                        ? null
-                        : { hash: options.storedHash ?? "old", version, package: packageOf() },
-                ),
-            ),
+            .mockImplementation((_key: string, version: number) => Promise.resolve(storedOf(options, version))),
         require: jest.fn().mockResolvedValue(options.source),
-        save: jest.fn().mockImplementation((input: { package: AgentTemplatePackage }) => {
+        save: jest.fn().mockImplementation((input: SavedPackage) => {
             saved.push(input)
-            return Promise.resolve({
-                id: "row",
-                key: input.package.key,
-                version: input.package.version,
-                hash: input.package.hash,
-            })
+            return Promise.resolve(savedRowOf(input))
         }),
-        templateOf: jest
-            .fn()
-            .mockImplementation((key: string) =>
-                Promise.resolve(
-                    key === "mine-derivative"
-                        ? options.keyTaken === true
-                            ? { creatorAccountId: USER }
-                            : null
-                        : (options.template ?? null),
-                ),
-            ),
+        templateOf: jest.fn().mockImplementation((key: string) => Promise.resolve(templateOf(options, key))),
     })
     const listings = mock<TemplateListingsService>({
         latestApproved: jest.fn().mockResolvedValue(options.approved ?? 2),
@@ -162,12 +143,12 @@ const build = async (options: Options = {}) => {
         requireAdmin:
             options.notAdmin === true
                 ? jest.fn().mockImplementation(() => {
-                      throw new Error("not an admin")
+                      throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.NotYours })
                   })
                 : jest.fn().mockReturnValue({ userId: "admin-1", email: "admin@nivo.vn" }),
     })
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
-    const catalog = { get: jest.fn((key: string) => key) }
+    const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             FirstPartyTemplatesService,
@@ -176,13 +157,14 @@ const build = async (options: Options = {}) => {
             { provide: ModulesService, useValue: modules },
             { provide: AutomationTemplatesService, useValue: automation },
             { provide: AgentTemplateVersionsService, useValue: versions },
+            { provide: TemplateRecordsService, useValue: records },
             { provide: TemplateListingsService, useValue: listings },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: AdminAccessService, useValue: access },
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(FirstPartyTemplatesService), em, versions, saved, installations, members }
+    return { service: moduleRef.get(FirstPartyTemplatesService), em, records, versions, saved, installations, members }
 }
 
 const codeOf = async (work: Promise<unknown>): Promise<unknown> => {
@@ -281,7 +263,9 @@ describe("FirstPartyTemplatesService.sync", () => {
         expect(saved).toEqual([])
         expect(em.insert).not.toHaveBeenCalled()
     })
+})
 
+describe("FirstPartyTemplatesService.sync: waits, points and admins", () => {
     it("derives a wait only from a branch that asks, and words a point in English when the module gave fewer of them", async () => {
         const autoModule = moduleOf({
             points: { vi: ["Nhanh", "Gon"], en: ["Fast"] },
@@ -314,63 +298,41 @@ describe("FirstPartyTemplatesService.sync", () => {
     it("is for a platform admin alone", async () => {
         const { service, saved } = await build({ notAdmin: true })
 
-        await expect(service.sync(ADMIN)).rejects.toThrow("not an admin")
+        await expect(service.sync(ADMIN)).rejects.toBeInstanceOf(TemplateMarketplaceError)
         expect(saved).toEqual([])
     })
 })
 
 describe("FirstPartyTemplatesService.sync: the installations that already run", () => {
     it("records an installation of a built-in module as an install of version 1 of its package, with a free license, and nothing else", async () => {
-        const { service, em, installations } = await build({ pages: [[installationOf()]] })
+        const { service, records, installations } = await build({ pages: [[installationOf()]] })
 
         const report = await service.sync(ADMIN)
 
         expect(report.adopted).toBe(1)
         expect(installations.page).toHaveBeenCalledTimes(2)
-        expect(em.insert).toHaveBeenCalledWith(
-            TemplateLicenseEntity,
-            expect.objectContaining({
-                workspaceId: "ws-1",
-                templateKey: "nivo-accounting",
-                kind: "free",
-                installationId: "inst-1",
-                status: "active",
-            }),
-        )
-        expect(em.insert).toHaveBeenCalledWith(
-            TemplateInstallEntity,
-            expect.objectContaining({
-                installationId: "inst-1",
-                templateKey: "nivo-accounting",
-                version: 1,
-                parameterValues: {},
-                licenseId: "license-1",
-                installedBy: null,
-            }),
-        )
+        expect(records.adopt).toHaveBeenCalledWith(installationOf(), "nivo-accounting")
     })
 
-    it("reads the same graph before and after: it writes only licenses and installs, never a graph, a rule or an installation", async () => {
+    it("reads the same graph before and after: it writes only the listing, never a graph, a rule or an installation", async () => {
         const { service, em } = await build({ pages: [[installationOf()]] })
 
         await service.sync(ADMIN)
 
         const written = new Set(em.insert.mock.calls.map((call) => call[0]))
-        expect([...written]).toEqual([TemplateListingEntity, TemplateLicenseEntity, TemplateInstallEntity])
+        expect([...written]).toEqual([TemplateListingEntity])
         expect(em.update).not.toHaveBeenCalled()
         expect(em.save).not.toHaveBeenCalled()
         expect(em.delete).not.toHaveBeenCalled()
     })
 
-    it("leaves alone an installation that already has provenance, one of a module with no package, and records a missing license id as none", async () => {
+    it("leaves alone an installation that already has provenance and one of a module with no package", async () => {
         const known = await build({ pages: [[installationOf()]], known: true })
         const bare = await build({ pages: [[installationOf()]], packageExists: false })
-        const unlicensed = await build({ pages: [[installationOf()]], licenseId: undefined })
 
         expect((await known.service.sync(ADMIN)).adopted).toBe(0)
         expect((await bare.service.sync(ADMIN)).adopted).toBe(0)
-        expect((await unlicensed.service.sync(ADMIN)).adopted).toBe(1)
-        expect(known.em.insert).not.toHaveBeenCalledWith(TemplateInstallEntity, expect.anything())
+        expect(known.records.adopt).not.toHaveBeenCalled()
     })
 
     it("walks every page of installations", async () => {

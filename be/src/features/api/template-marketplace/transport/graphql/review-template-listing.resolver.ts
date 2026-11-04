@@ -11,7 +11,7 @@ import { toReviewTemplateListingRequest, toReviewTemplateListingType } from "./r
 @Resolver()
 /** GraphQL door of reviewTemplateListing. */
 export class ReviewTemplateListingResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** A platform reviewer approves or rejects a submitted listing. */
     @Mutation(() => ListingType, { name: "reviewTemplateListing" })
@@ -19,7 +19,7 @@ export class ReviewTemplateListingResolver {
         @CurrentPrincipal() principal: Principal,
         @Args("input") input: ReviewTemplateListingInput,
     ): Promise<ListingType> {
-        const result = await this.bus.execute(
+        const result = await this.commandBus.execute(
             new ReviewTemplateListingCommand({ request: toReviewTemplateListingRequest(input), principal }),
         )
         return toReviewTemplateListingType(result)

@@ -2,12 +2,7 @@
 
 import { useState } from "react"
 import type { QueueItem } from "@/modules/documents"
-
-/** A document this drawer handed to the queue: its id and the name it was given. */
-export interface QueuedDoc {
-    readonly id: string
-    readonly title: string
-}
+import type { QueuedDoc } from "@/hooks/knowledgeAddTypes"
 
 /** What the queued documents give the drawer. */
 interface QueuedDocs {

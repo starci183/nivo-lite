@@ -48,6 +48,15 @@ export interface IdentityAccount {
     readonly uploadedAvatarUrl: string | null
 }
 
+/** The HTTPS address of an uploaded picture, or null to drop it. */
+export type OptionalAvatarUrl = string | null
+
+/** The principal a password opened, or null for a wrong pair. */
+export type OptionalPasswordPrincipal = PasswordPrincipal | null
+
+/** The id of the person a token belongs to, or null. */
+export type OptionalUserId = string | null
+
 const httpsOf = (value: unknown): string | null =>
     typeof value === "string" && value.startsWith("https://") ? value : null
 
@@ -85,7 +94,7 @@ export class IdentityAccountsService {
     }
 
     /** Keeps the picture a person uploaded (an HTTPS address) on the account, or drops it with null. */
-    async setUploadedAvatar(userId: string, avatarUrl: string | null): Promise<Outcome<true, IdentityErrorCode>> {
+    async setUploadedAvatar(userId: string, avatarUrl: OptionalAvatarUrl): Promise<Outcome<true, IdentityErrorCode>> {
         const changed = await authDoors.setAvatar(this.entityManager, userId, avatarUrl)
         return changed ? ok(true) : refused(IdentityErrorCode.AccountNotFound)
     }
@@ -126,7 +135,7 @@ export class IdentityAccountsService {
      * Proves the password of a person and opens a session of its own, which the caller must close. Answers null for a wrong pair
      * (an unknown address, a wrong password, a disabled or unconfirmed account).
      */
-    async openPasswordPrincipal(email: string, password: string): Promise<PasswordPrincipal | null> {
+    async openPasswordPrincipal(email: string, password: string): Promise<OptionalPasswordPrincipal> {
         let subject: Awaited<ReturnType<IdentityAuthenticatorService["verifyPassword"]>>
         try {
             subject = await this.authenticator.verifyPassword(email, password)
@@ -153,7 +162,7 @@ export class IdentityAccountsService {
     }
 
     /** Verifies an access token and answers only the id of the person it belongs to, or null. */
-    async verifyUser(token: string): Promise<string | null> {
+    async verifyUser(token: string): Promise<OptionalUserId> {
         const verified = await this.verifyAccessToken(token)
         return verified.kind === "ok" ? verified.value.id : null
     }

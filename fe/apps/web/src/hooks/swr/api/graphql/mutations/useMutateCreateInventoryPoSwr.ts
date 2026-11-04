@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCreateInventoryPo } from "@/modules/api/graphql/mutations/mutation-create-inventory-po"
-import type { MutateCreateInventoryPoRequest } from "@/modules/api/graphql/mutations/mutation-create-inventory-po"
+import {
+    mutateCreateInventoryPo,
+    type MutateCreateInventoryPoRequest,
+} from "@/modules/api/graphql/mutations/mutation-create-inventory-po"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CreateInventoryPoMutation } from "@/modules/api"
 
 /** What the createInventoryPo mutation is triggered with. */
 interface CreateInventoryPoArg {
@@ -16,7 +18,7 @@ export const MUTATE_CREATE_INVENTORY_PO_SWR_KEY = "MUTATE_CREATE_INVENTORY_PO_SW
 
 /** SWR mutation for {@link mutateCreateInventoryPo}: `trigger(request)` answers `createInventoryPo` and rejects with the back end failure. */
 export const useMutateCreateInventoryPoSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCreateInventoryPo>["createInventoryPo"],
+    CreateInventoryPoMutation["createInventoryPo"],
     Error,
     typeof MUTATE_CREATE_INVENTORY_PO_SWR_KEY,
     CreateInventoryPoArg["arg"]

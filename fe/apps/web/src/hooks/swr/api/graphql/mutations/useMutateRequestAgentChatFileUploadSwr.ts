@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRequestAgentChatFileUpload } from "@/modules/api/graphql/mutations/mutation-request-agent-chat-file-upload"
-import type { MutateRequestAgentChatFileUploadRequest } from "@/modules/api/graphql/mutations/mutation-request-agent-chat-file-upload"
+import {
+    mutateRequestAgentChatFileUpload,
+    type MutateRequestAgentChatFileUploadRequest,
+} from "@/modules/api/graphql/mutations/mutation-request-agent-chat-file-upload"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestAgentChatFileUploadMutation } from "@/modules/api"
 
 /** What the RequestAgentChatFileUpload mutation is triggered with. */
 interface RequestAgentChatFileUploadArg {
@@ -18,7 +20,7 @@ export const MUTATE_REQUEST_AGENT_CHAT_FILE_UPLOAD_SWR_KEY = "MUTATE_REQUEST_AGE
 export const useMutateRequestAgentChatFileUploadSwr = (
     workspaceId: string,
 ): SWRMutationResponse<
-    OperationData<typeof mutateRequestAgentChatFileUpload>["requestAgentChatFileUpload"],
+    RequestAgentChatFileUploadMutation["requestAgentChatFileUpload"],
     Error,
     [string, string],
     RequestAgentChatFileUploadArg["arg"]

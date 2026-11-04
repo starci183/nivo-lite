@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSetSepayEnvironment } from "@/modules/api/graphql/mutations/mutation-set-sepay-environment"
-import type { mutateSetSepayEnvironment as MutateSetSepayEnvironmentOperation } from "@/modules/api/graphql/mutations/mutation-set-sepay-environment"
+import {
+    mutateSetSepayEnvironment,
+    type mutateSetSepayEnvironment as MutateSetSepayEnvironmentOperation,
+} from "@/modules/api/graphql/mutations/mutation-set-sepay-environment"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SetSepayEnvironmentMutation } from "@/modules/api"
 
 /** The SWR key of the setSepayEnvironment mutation. */
 export const MUTATE_SET_SEPAY_ENVIRONMENT_SWR_KEY = "MUTATE_SET_SEPAY_ENVIRONMENT_SWR"
 
 /** SWR mutation for {@link mutateSetSepayEnvironment}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSetSepayEnvironmentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSetSepayEnvironment>["setSepayEnvironment"],
+    SetSepayEnvironmentMutation["setSepayEnvironment"],
     Error,
     typeof MUTATE_SET_SEPAY_ENVIRONMENT_SWR_KEY,
     TriggerArg["arg"]

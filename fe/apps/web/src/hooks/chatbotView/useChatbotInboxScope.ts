@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type Dispatch, type SetStateAction, type TransitionStartFunction } from "react"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import type { InboxView } from "./useChatbotInbox"
+import type { InboxView } from "@/hooks/chatbotInboxProps"
 
 /** Drafts stay with their real conversation or escalation throughout one mounted inbox scope. */
 type InboxDrafts = Readonly<Record<string, string>>

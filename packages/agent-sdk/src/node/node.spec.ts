@@ -12,7 +12,7 @@ const node = defineNode({
     id: "sales.total",
     role: "execute",
     title: { key: "t" },
-    input: z.object({ id: z.string() }),
+    input: z.object({ id: z.string().max(100) }),
     output: z.object({ total: z.number() }),
     rights: [READ_ORDERS],
     effects: ["sales.total-read"],
@@ -48,7 +48,7 @@ describe("defineNode", () => {
             input: z.object({}),
             output: z.object({}),
             rights: [],
-            run: async () => ({}),
+            run: () => Promise.resolve({}),
             examples: [{ name: "e", input: {}, output: {}, effects: [] }],
         } as const
         expect(() => defineNode({ ...config, id: "Bad.x", effects: [] })).toThrow(SdkDefinitionError)
@@ -57,7 +57,7 @@ describe("defineNode", () => {
 })
 
 describe("fakeNodeContext", () => {
-    it("denies by default, for reads without fields, and for writes outside the grant", async () => {
+    it("denies by default, for reads without fields, and for writes outside the grant", () => {
         const context = fakeNodeContext()
         expect(() => context.data.read("order", { fields: ["id"] })).toThrow(RightsDeniedError)
         expect(() => context.data.read("order", { fields: [] })).toThrow(RightsDeniedError)

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCreateWorkThread } from "@/modules/api/graphql/mutations/mutation-create-work-thread"
-import type { MutateCreateWorkThreadRequest } from "@/modules/api/graphql/mutations/mutation-create-work-thread"
+import {
+    mutateCreateWorkThread,
+    type MutateCreateWorkThreadRequest,
+} from "@/modules/api/graphql/mutations/mutation-create-work-thread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CreateWorkThreadMutation } from "@/modules/api"
 
 /** What the CreateWorkThread mutation is triggered with. */
 interface CreateWorkThreadArg {
@@ -16,7 +18,7 @@ export const MUTATE_CREATE_WORK_THREAD_SWR_KEY = "MUTATE_CREATE_WORK_THREAD_SWR"
 
 /** SWR mutation for {@link mutateCreateWorkThread}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateCreateWorkThreadSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCreateWorkThread>["createWorkThread"],
+    CreateWorkThreadMutation["createWorkThread"],
     Error,
     typeof MUTATE_CREATE_WORK_THREAD_SWR_KEY,
     CreateWorkThreadArg["arg"]

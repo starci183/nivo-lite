@@ -1,13 +1,14 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { queryAgentGraphCoverage } from "@/modules/api/graphql/queries/query-agent-graph-coverage"
-import type { QueryAgentGraphCoverageRequest } from "@/modules/api/graphql/queries/query-agent-graph-coverage"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import {
+    queryAgentGraphCoverage,
+    type QueryAgentGraphCoverageRequest,
+} from "@/modules/api/graphql/queries/query-agent-graph-coverage"
+import type { AgentGraphCoverageQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryAgentGraphCoverageSwr}. */
 export const QUERY_AGENT_GRAPH_COVERAGE_SWR_KEY = "QUERY_AGENT_GRAPH_COVERAGE_SWR"
@@ -16,7 +17,7 @@ export const QUERY_AGENT_GRAPH_COVERAGE_SWR_KEY = "QUERY_AGENT_GRAPH_COVERAGE_SW
 export const useQueryAgentGraphCoverageSwr = (
     request: QueryAgentGraphCoverageRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryAgentGraphCoverage>["agentGraphCoverage"]> =>
+): ReadResponse<AgentGraphCoverageQuery["agentGraphCoverage"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_AGENT_GRAPH_COVERAGE_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryAgentGraphCoverageRequest>) =>

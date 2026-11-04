@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSaveContentBrand } from "@/modules/api/graphql/mutations/mutation-save-content-brand"
-import type { mutateSaveContentBrand as MutateSaveContentBrandOperation } from "@/modules/api/graphql/mutations/mutation-save-content-brand"
+import {
+    mutateSaveContentBrand,
+    type mutateSaveContentBrand as MutateSaveContentBrandOperation,
+} from "@/modules/api/graphql/mutations/mutation-save-content-brand"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SaveContentBrandMutation } from "@/modules/api"
 
 /** The SWR key of the saveContentBrand mutation. */
 export const MUTATE_SAVE_CONTENT_BRAND_SWR_KEY = "MUTATE_SAVE_CONTENT_BRAND_SWR"
 
 /** SWR mutation for {@link mutateSaveContentBrand}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSaveContentBrandSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSaveContentBrand>["saveContentBrand"],
+    SaveContentBrandMutation["saveContentBrand"],
     Error,
     typeof MUTATE_SAVE_CONTENT_BRAND_SWR_KEY,
     TriggerArg["arg"]

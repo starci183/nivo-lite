@@ -3,36 +3,10 @@ import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { CREATOR, packageOf } from "@tests/fixtures/builders/agent-template.builder"
+import { ROW_AT, templateRow, versionRow } from "@tests/fixtures/builders/template-rows.builder"
 import { AgentTemplateVersionsService } from "./agent-template-versions.service"
 import { AgentTemplatesError, AgentTemplatesErrorCode } from "./errors/agent-templates.error"
 import { AgentTemplateEntity, AgentTemplateVersionEntity } from "./persistence/entities"
-
-const AT = new Date("2026-11-03T01:00:00.000Z")
-
-const template = (over: Partial<AgentTemplateEntity> = {}): AgentTemplateEntity =>
-    Object.assign(new AgentTemplateEntity(), {
-        id: "template-1",
-        key: "spa-booking-by-linh",
-        creatorAccountId: CREATOR.accountId,
-        baseModule: "accounting",
-        name: { vi: "Dat lich spa", en: "Spa booking" },
-        firstParty: false,
-        ...over,
-    })
-
-const versionRow = (over: Partial<AgentTemplateVersionEntity> = {}): AgentTemplateVersionEntity =>
-    Object.assign(new AgentTemplateVersionEntity(), {
-        id: "row-1",
-        templateId: "template-1",
-        key: "spa-booking-by-linh",
-        version: 1,
-        package: packageOf(),
-        hash: packageOf().hash,
-        changelog: "First",
-        breaking: false,
-        createdAt: AT,
-        ...over,
-    })
 
 const build = async (em: MockEntityManager = mockEntityManager()) => {
     const tx = fakeTransaction(em)
@@ -47,7 +21,7 @@ describe("AgentTemplateVersionsService reads", () => {
         const some = await build(
             mockEntityManager({
                 findOne: [
-                    [AgentTemplateEntity, template()],
+                    [AgentTemplateEntity, templateRow()],
                     [AgentTemplateVersionEntity, versionRow({ version: 3 })],
                 ],
             }),
@@ -63,7 +37,7 @@ describe("AgentTemplateVersionsService reads", () => {
         const { service } = await build(
             mockEntityManager({
                 findOne: [
-                    [AgentTemplateEntity, template({ firstParty: true })],
+                    [AgentTemplateEntity, templateRow({ firstParty: true })],
                     [AgentTemplateVersionEntity, versionRow()],
                 ],
             }),
@@ -80,12 +54,14 @@ describe("AgentTemplateVersionsService reads", () => {
         })
         expect(found?.package.hash).toBe(packageOf().hash)
     })
+})
 
+describe("AgentTemplateVersionsService reads that find nothing", () => {
     it("answers none for a version that is missing, whose template is gone, or whose package no longer parses", async () => {
         const missing = await build(
             mockEntityManager({
                 findOne: [
-                    [AgentTemplateEntity, template()],
+                    [AgentTemplateEntity, templateRow()],
                     [AgentTemplateVersionEntity, null],
                 ],
             }),
@@ -101,7 +77,7 @@ describe("AgentTemplateVersionsService reads", () => {
         const broken = await build(
             mockEntityManager({
                 findOne: [
-                    [AgentTemplateEntity, template()],
+                    [AgentTemplateEntity, templateRow()],
                     [
                         AgentTemplateVersionEntity,
                         versionRow({ package: Object.assign({}, packageOf(), { format: 2 }) }),
@@ -118,11 +94,26 @@ describe("AgentTemplateVersionsService reads", () => {
         })
     })
 
+    it("hands a version that exists back as it is", async () => {
+        const { service } = await build(
+            mockEntityManager({
+                findOne: [
+                    [AgentTemplateEntity, templateRow()],
+                    [AgentTemplateVersionEntity, versionRow({ version: 2 })],
+                ],
+            }),
+        )
+
+        await expect(service.require("spa-booking-by-linh", 2)).resolves.toMatchObject({ version: 2 })
+    })
+})
+
+describe("AgentTemplateVersionsService.listOf", () => {
     it("lists the templates of an account with their versions, newest first", async () => {
         const { service } = await build(
             mockEntityManager({
                 find: [
-                    [AgentTemplateEntity, [template()]],
+                    [AgentTemplateEntity, [templateRow()]],
                     [AgentTemplateVersionEntity, [versionRow({ version: 2 }), versionRow({ version: 1 })]],
                 ],
             }),
@@ -132,20 +123,42 @@ describe("AgentTemplateVersionsService reads", () => {
 
         expect(listed).toHaveLength(1)
         expect(listed[0]?.versions.map((entry) => entry.version)).toEqual([2, 1])
-        expect(listed[0]?.versions[0]?.createdAt).toBe(AT.toISOString())
+        expect(listed[0]?.versions[0]?.createdAt).toBe(ROW_AT.toISOString())
+    })
+
+    it("lists a template that has no version yet with an empty list of versions", async () => {
+        const { service } = await build(
+            mockEntityManager({
+                find: [
+                    [AgentTemplateEntity, [templateRow({ id: "template-2" })]],
+                    [AgentTemplateVersionEntity, [versionRow()]],
+                ],
+            }),
+        )
+
+        const listed = await service.listOf(CREATOR.accountId)
+
+        expect(listed[0]?.versions).toEqual([])
+    })
+
+    it("lists nothing, and reads no version, for an account with no template", async () => {
+        const { service, em } = await build(mockEntityManager({ find: [AgentTemplateEntity, []] }))
+
+        await expect(service.listOf(CREATOR.accountId)).resolves.toEqual([])
+        expect(em.find).toHaveBeenCalledTimes(1)
     })
 })
 
-describe("AgentTemplateVersionsService.save", () => {
-    const pkg = packageOf()
-    const input = {
-        package: pkg,
-        creatorAccountId: CREATOR.accountId,
-        sourceWorkspaceId: "ws-1",
-        changelog: "First",
-        breaking: false,
-    }
+const pkg = packageOf()
+const input = {
+    package: pkg,
+    creatorAccountId: CREATOR.accountId,
+    sourceWorkspaceId: "ws-1",
+    changelog: "First",
+    breaking: false,
+}
 
+describe("AgentTemplateVersionsService.save", () => {
     it("creates the template with its first version in one transaction", async () => {
         const { service, em, tx } = await build(
             mockEntityManager({
@@ -175,10 +188,35 @@ describe("AgentTemplateVersionsService.save", () => {
         )
     })
 
+    it("creates a template that is neither first party nor a fork when the caller says neither", async () => {
+        const { service, em } = await build(
+            mockEntityManager({
+                findOne: [
+                    [AgentTemplateEntity, null],
+                    [AgentTemplateVersionEntity, versionRow()],
+                ],
+                insert: [
+                    [AgentTemplateEntity, { identifiers: [{ id: "template-1" }] }],
+                    [AgentTemplateVersionEntity, { identifiers: [{ id: "row-1" }] }],
+                ],
+                findOneOrFail: [AgentTemplateVersionEntity, versionRow()],
+            }),
+        )
+
+        await service.save(input)
+
+        expect(em.insert).toHaveBeenCalledWith(
+            AgentTemplateEntity,
+            expect.objectContaining({ firstParty: false, forkedFrom: null }),
+        )
+    })
+})
+
+describe("AgentTemplateVersionsService.save into an existing template", () => {
     it("adds a version to the template of the same account without making another template", async () => {
         const { service, em } = await build(
             mockEntityManager({
-                findOne: [AgentTemplateEntity, template()],
+                findOne: [AgentTemplateEntity, templateRow()],
                 insert: [AgentTemplateVersionEntity, { identifiers: [{ id: "row-1" }] }],
                 findOneOrFail: [AgentTemplateVersionEntity, versionRow()],
             }),
@@ -195,7 +233,7 @@ describe("AgentTemplateVersionsService.save", () => {
 
     it("refuses a key another account owns, and writes nothing", async () => {
         const { service, em } = await build(
-            mockEntityManager({ findOne: [AgentTemplateEntity, template({ creatorAccountId: "someone-else" })] }),
+            mockEntityManager({ findOne: [AgentTemplateEntity, templateRow({ creatorAccountId: "someone-else" })] }),
         )
 
         await expect(service.save(input)).rejects.toBeInstanceOf(AgentTemplatesError)

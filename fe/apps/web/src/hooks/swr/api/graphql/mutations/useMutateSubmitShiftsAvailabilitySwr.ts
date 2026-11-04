@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSubmitShiftsAvailability } from "@/modules/api/graphql/mutations/mutation-submit-shifts-availability"
-import type { MutateSubmitShiftsAvailabilityRequest } from "@/modules/api/graphql/mutations/mutation-submit-shifts-availability"
+import {
+    mutateSubmitShiftsAvailability,
+    type MutateSubmitShiftsAvailabilityRequest,
+} from "@/modules/api/graphql/mutations/mutation-submit-shifts-availability"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SubmitShiftsAvailabilityMutation } from "@/modules/api"
 
 /** What the submitShiftsAvailability mutation is triggered with. */
 interface SubmitShiftsAvailabilityArg {
@@ -16,7 +18,7 @@ export const MUTATE_SUBMIT_SHIFTS_AVAILABILITY_SWR_KEY = "MUTATE_SUBMIT_SHIFTS_A
 
 /** SWR mutation for {@link mutateSubmitShiftsAvailability}: `trigger(request)` answers `submitShiftsAvailability` and rejects with the back end failure. */
 export const useMutateSubmitShiftsAvailabilitySwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSubmitShiftsAvailability>["submitShiftsAvailability"],
+    SubmitShiftsAvailabilityMutation["submitShiftsAvailability"],
     Error,
     typeof MUTATE_SUBMIT_SHIFTS_AVAILABILITY_SWR_KEY,
     SubmitShiftsAvailabilityArg["arg"]

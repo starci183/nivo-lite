@@ -4,8 +4,10 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import type { ChatMarkerWire } from "@/modules/office"
-import { queryChatMarkerState } from "@/modules/api/graphql/queries/query-chat-marker-state"
-import type { QueryChatMarkerStateRequest } from "@/modules/api/graphql/queries/query-chat-marker-state"
+import {
+    queryChatMarkerState,
+    type QueryChatMarkerStateRequest,
+} from "@/modules/api/graphql/queries/query-chat-marker-state"
 import type { ReadResponse } from "@/hooks/workspaceread"
 
 /** The SWR key of {@link useQueryChatMarkerStateSwr}. */

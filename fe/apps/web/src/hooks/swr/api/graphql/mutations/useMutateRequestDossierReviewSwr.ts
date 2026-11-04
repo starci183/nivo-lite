@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRequestDossierReview } from "@/modules/api/graphql/mutations/mutation-request-dossier-review"
-import type { MutateRequestDossierReviewRequest } from "@/modules/api/graphql/mutations/mutation-request-dossier-review"
+import {
+    mutateRequestDossierReview,
+    type MutateRequestDossierReviewRequest,
+} from "@/modules/api/graphql/mutations/mutation-request-dossier-review"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestDossierReviewMutation } from "@/modules/api"
 
 /** What the RequestDossierReview mutation is triggered with. */
 interface RequestDossierReviewArg {
@@ -16,7 +18,7 @@ export const MUTATE_REQUEST_DOSSIER_REVIEW_SWR_KEY = "MUTATE_REQUEST_DOSSIER_REV
 
 /** SWR mutation for {@link mutateRequestDossierReview}: asks for a review of one dossier, or of the whole set when no dossier is named; a run already queued answers as it is. `trigger(input)` rejects with the back end failure. */
 export const useMutateRequestDossierReviewSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestDossierReview>["requestDossierReview"],
+    RequestDossierReviewMutation["requestDossierReview"],
     Error,
     typeof MUTATE_REQUEST_DOSSIER_REVIEW_SWR_KEY,
     RequestDossierReviewArg["arg"]

@@ -5,8 +5,11 @@ import { useSWRConfig } from "swr"
 import useSWRSubscription from "swr/subscription"
 import { QUERY_CHAT_MARKER_STATE_SWR_KEY } from "../../graphql/queries/useQueryChatMarkerStateSwr"
 import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
-import { streamChatTyping } from "@/modules/api/sse/office/stream-chat-typing"
-import type { ChatTypingPush, ChatTypingTarget } from "@/modules/api/sse/office/stream-chat-typing"
+import {
+    streamChatTyping,
+    type ChatTypingPush,
+    type ChatTypingTarget,
+} from "@/modules/api/sse/office/stream-chat-typing"
 import type { SWRSubscriptionResponse } from "swr/subscription"
 
 /** The signal payload of one pushed frame, as `typingSignalOf` reads it: the sender, whether they type, and the deadline. */

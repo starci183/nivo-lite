@@ -17,7 +17,6 @@ export class TemplateReviewQueueHandler extends ICQRSHandler<TemplateReviewQueue
     }
 
     protected override process(query: TemplateReviewQueueQuery): Promise<ReadonlyArray<ListingView>> {
-        const pr = query.params.principal
-        return this.svc.queue(pr)
+        return this.svc.queue(query.params.principal)
     }
 }

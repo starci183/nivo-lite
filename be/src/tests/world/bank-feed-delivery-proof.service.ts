@@ -11,7 +11,7 @@ import {
     type JobsLogEvent,
     type JobRunnerService,
     type JobClaimService,
-    type ClaimResult,
+    type JobClaimResult,
 } from "@modules/platform/jobs"
 import { BANK_FEED_DELIVERY_QUEUE } from "@modules/queues/bank-feed-delivery"
 import { BankFeedDeliveryQueueModule } from "@features/jobs/bank-feed-delivery"
@@ -54,7 +54,7 @@ type BankFeedDeliveryBuilderResultShape = {
     successorClaims: JobClaimService
     logger: MockOf<Logger>
     runner: JobRunnerService
-    claim: (worker: JobClaimService, workerId: string) => Promise<ClaimResult>
+    claim: (worker: JobClaimService, workerId: string) => Promise<JobClaimResult>
     fencedOutEvent: JobsLogEvent
 }
 

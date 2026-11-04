@@ -12,7 +12,7 @@ import { toForkFirstPartyTemplateRequest, toForkFirstPartyTemplateType } from ".
 @Resolver()
 /** GraphQL door of forkFirstPartyTemplate. */
 export class ForkFirstPartyTemplateResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Starts a template of the caller from a first-party package, keeping the provenance of its branches. */
     @Mutation(() => TemplateVersionType, { name: "forkFirstPartyTemplate" })
@@ -21,7 +21,7 @@ export class ForkFirstPartyTemplateResolver {
         @WorkspaceId() workspaceId: string,
         @Args("input") input: ForkFirstPartyTemplateInput,
     ): Promise<TemplateVersionType> {
-        const result = await this.bus.execute(
+        const result = await this.commandBus.execute(
             new ForkFirstPartyTemplateCommand({
                 request: toForkFirstPartyTemplateRequest(workspaceId, input),
                 principal,

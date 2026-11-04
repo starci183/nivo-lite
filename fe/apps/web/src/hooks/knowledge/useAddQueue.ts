@@ -13,33 +13,9 @@ import {
     sendOneOf,
     withFiles,
 } from "@/modules/documents"
-import type { BatchMeta, ChosenLink, QueueActions, QueueItem } from "@/modules/documents"
+import type { ChosenLink, QueueActions, QueueItem } from "@/modules/documents"
 import { useRef, useState } from "react"
-
-/** What was skipped in an archive: its name and how many entries could not be read. */
-interface ZipSkip {
-    readonly name: string
-    readonly count: number
-}
-
-/** What the queue gives the drawer. */
-export interface AddQueue {
-    readonly items: ReadonlyArray<QueueItem>
-    readonly isReading: boolean
-    readonly zipTruncated: boolean
-    readonly zipSkips: ReadonlyArray<ZipSkip>
-    /** Files an earlier page was uploading when it went away: those uploads stopped and must be chosen again. */
-    readonly interrupted: ReadonlyArray<string>
-    readonly dismissInterrupted: () => void
-    readonly addFiles: (all: ReadonlyArray<File>) => void
-    readonly addLinks: (urls: ReadonlyArray<string>) => ReadonlyArray<QueueItem>
-    /** Adds links the person chose in a service (a Drive file), each stored under its own name and marked with where it came from. */
-    readonly addChosenLinks: (links: ReadonlyArray<ChosenLink>, origin: string) => ReadonlyArray<QueueItem>
-    readonly removeItem: (id: string) => void
-    /** Sends every item that can be sent, a few at a time; answers how many were queued. */
-    readonly sendAll: (queue: ReadonlyArray<QueueItem>, meta: BatchMeta) => Promise<number>
-    readonly reset: () => void
-}
+import type { AddQueue, ZipSkip } from "@/hooks/knowledgeAddTypes"
 
 /** The queue of files and links of the Add documents drawer: files and archive entries are checked, then uploaded and handed to the job queue. */
 export const useAddQueue = (actions: QueueActions): AddQueue => {

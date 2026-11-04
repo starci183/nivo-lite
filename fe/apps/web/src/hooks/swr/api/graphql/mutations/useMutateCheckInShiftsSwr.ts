@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateCheckInShifts } from "@/modules/api/graphql/mutations/mutation-check-in-shifts"
-import type { MutateCheckInShiftsRequest } from "@/modules/api/graphql/mutations/mutation-check-in-shifts"
+import {
+    mutateCheckInShifts,
+    type MutateCheckInShiftsRequest,
+} from "@/modules/api/graphql/mutations/mutation-check-in-shifts"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { CheckInShiftsMutation } from "@/modules/api"
 
 /** What the checkInShifts mutation is triggered with. */
 interface CheckInShiftsArg {
@@ -16,7 +18,7 @@ export const MUTATE_CHECK_IN_SHIFTS_SWR_KEY = "MUTATE_CHECK_IN_SHIFTS_SWR"
 
 /** SWR mutation for {@link mutateCheckInShifts}: `trigger(request)` answers `checkInShifts` and rejects with the back end failure. */
 export const useMutateCheckInShiftsSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateCheckInShifts>["checkInShifts"],
+    CheckInShiftsMutation["checkInShifts"],
     Error,
     typeof MUTATE_CHECK_IN_SHIFTS_SWR_KEY,
     CheckInShiftsArg["arg"]

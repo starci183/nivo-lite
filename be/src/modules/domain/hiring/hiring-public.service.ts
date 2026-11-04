@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { OfficeLog } from "@modules/domain/module-ops"
-import { uploadContentTypeOf } from "@modules/integrations/object-storage"
+import { reportedUploadTypeOf } from "@modules/integrations/object-storage"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { CvStorage } from "./cv-storage.port"
@@ -21,7 +21,6 @@ import { HiringPostingService } from "./hiring-posting.service"
 import { HiringDataService } from "./hiring-data.service"
 import { slugify } from "./policies/text.policy"
 
-const CV_EXTENSIONS: ReadonlySet<string> = new Set(["pdf", "doc", "docx", "jpg", "jpeg", "png"])
 const CV_MIME: ReadonlyMap<string, string> = new Map([
     ["pdf", "application/pdf"],
     ["doc", "application/msword"],
@@ -110,11 +109,11 @@ export class HiringPublicService {
         const { workspaceId, job } = await this.resolve(request)
         const dot = request.fileName.lastIndexOf(".")
         const extension = dot < 0 ? "" : request.fileName.slice(dot + 1).toLowerCase()
-        if (!CV_EXTENSIONS.has(extension)) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
+        const extensionType = CV_MIME.get(extension)
+        if (extensionType === undefined) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
         const name = slugify(request.fileName.slice(0, dot), CV_NAME_MAX) || "cv"
         const path = `${workspaceId}/${job.id}/${await this.data.newToken()}/${name}.${extension}`
-        const contentType = uploadContentTypeOf(CV_MIME, request.fileName, request.contentType)
-        if (contentType === null) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
+        const contentType = reportedUploadTypeOf(CV_MIME, request.contentType) ?? extensionType
         const token = await this.storage.signedUpload(path, contentType)
         if (token === null) throw new HiringError({ code: HiringErrorCode.PublicNotFound })
         return { path, token, contentType }

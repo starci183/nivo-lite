@@ -13,20 +13,9 @@ export { AgentGraphWatchService } from "./agent-graph-watch.service"
 export type { FactSpec, FactValues, GraphContext, GraphDocument } from "./agent-graphs.contracts"
 export type { FactSubject, GraphFactReader, AgentGraphBrief } from "./agent-graphs.port"
 export { AGENT_GRAPH_BRIEF, InjectAgentGraphBrief } from "./agent-graphs.decorators"
-export { graphDocumentSchema } from "./agent-graphs.schema"
+export { graphDocumentSchema, graphRightSchema } from "./agent-graphs.schema"
 export { baseGraphOf } from "./policies/base-graph.policy"
 export type { SeedRule } from "./agent-graphs-seed.contracts"
 export { AgentGraphsService } from "./agent-graphs.service"
-export type { GraphState } from "./agent-graphs.service"
 export { AgentGraphPublishService } from "./agent-graph-publish.service"
-export type { Publisher } from "./agent-graph-publish.service"
 export { AgentGraphSeedService } from "./agent-graph-seed.service"
-export type {
-    BranchApprover,
-    Condition,
-    DecidePoint,
-    GraphBranch,
-    GraphChangeKind,
-    GraphNode,
-    GraphSource,
-} from "./agent-graphs.contracts"

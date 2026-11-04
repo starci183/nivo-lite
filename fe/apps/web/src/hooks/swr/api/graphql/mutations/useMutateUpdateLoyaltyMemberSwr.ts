@@ -4,7 +4,7 @@ import useSWRMutation from "swr/mutation"
 import { mutateUpdateLoyaltyMember } from "@/modules/api/graphql/mutations/mutation-update-loyalty-member"
 import type { MutateUpdateLoyaltyMemberRequest } from "@/modules/api/graphql/mutations/types/update-loyalty-member"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { UpdateLoyaltyMemberMutation } from "@/modules/api"
 
 /** The SWR key of the `updateLoyaltyMember` mutation. */
 export const MUTATE_UPDATE_LOYALTY_MEMBER_SWR_KEY = "MUTATE_UPDATE_LOYALTY_MEMBER_SWR"
@@ -16,7 +16,7 @@ interface TriggerArg {
 
 /** Edits the name, birthday and note of one member. */
 export const useMutateUpdateLoyaltyMemberSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateUpdateLoyaltyMember>["updateLoyaltyMember"],
+    UpdateLoyaltyMemberMutation["updateLoyaltyMember"],
     Error,
     typeof MUTATE_UPDATE_LOYALTY_MEMBER_SWR_KEY,
     TriggerArg["arg"]

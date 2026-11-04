@@ -17,8 +17,10 @@ export class OrderTemplateListingHandler extends ICQRSHandler<OrderTemplateListi
     }
 
     protected override process(command: OrderTemplateListingCommand): Promise<PayableOrder> {
-        const p = command.params.principal.id
-        const r = command.params.request
-        return this.svc.order(p, r.workspaceId, r.listingId)
+        return this.svc.order(
+            command.params.principal.id,
+            command.params.request.workspaceId,
+            command.params.request.listingId,
+        )
     }
 }

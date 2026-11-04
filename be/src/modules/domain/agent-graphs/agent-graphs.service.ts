@@ -92,6 +92,9 @@ export interface PublishInput {
 /** A graph, or null when the agent has none or it cannot be read. */
 export type OptionalGraphState = GraphState | null
 
+/** The approver of a branch, or null when the version names none. */
+export type OptionalBranchApprover = BranchApprover | null
+
 /** The hash of a graph; the same graph always has the same hash. */
 const hashOf = (document: GraphDocument): string => createHash("sha256").update(JSON.stringify(document)).digest("hex")
 
@@ -232,7 +235,7 @@ export class AgentGraphsService {
     }
 
     /** The approver the branch of a decision named in the version that decided, or null when that version no longer names one. */
-    async approverOf(decision: DecisionView): Promise<BranchApprover | null> {
+    async approverOf(decision: DecisionView): Promise<OptionalBranchApprover> {
         const document = await this.documentOf(decision.workspaceId, decision.agentId, decision.versionId)
         return branchApproverOf(document, decision.action, decision.branchKey, decision.path)
     }

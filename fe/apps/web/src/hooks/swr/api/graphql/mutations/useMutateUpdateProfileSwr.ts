@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateUpdateProfile } from "@/modules/api/graphql/mutations/mutation-update-profile"
-import type { mutateUpdateProfile as MutateUpdateProfileOperation } from "@/modules/api/graphql/mutations/mutation-update-profile"
+import {
+    mutateUpdateProfile,
+    type mutateUpdateProfile as MutateUpdateProfileOperation,
+} from "@/modules/api/graphql/mutations/mutation-update-profile"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { UpdateProfileMutation } from "@/modules/api"
 
 /** The SWR key of the updateProfile mutation. */
 export const MUTATE_UPDATE_PROFILE_SWR_KEY = "MUTATE_UPDATE_PROFILE_SWR"
 
 /** SWR mutation for {@link mutateUpdateProfile}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateUpdateProfileSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateUpdateProfile>["updateProfile"],
+    UpdateProfileMutation["updateProfile"],
     Error,
     typeof MUTATE_UPDATE_PROFILE_SWR_KEY,
     TriggerArg["arg"]

@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateMoveHiringCandidate } from "@/modules/api/graphql/mutations/mutation-move-hiring-candidate"
-import type { MutateMoveHiringCandidateRequest } from "@/modules/api/graphql/mutations/mutation-move-hiring-candidate"
+import {
+    mutateMoveHiringCandidate,
+    type MutateMoveHiringCandidateRequest,
+} from "@/modules/api/graphql/mutations/mutation-move-hiring-candidate"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { MoveHiringCandidateMutation } from "@/modules/api"
 
 /** What the moveHiringCandidate mutation is triggered with. */
 interface MoveHiringCandidateArg {
@@ -16,7 +18,7 @@ export const MUTATE_MOVE_HIRING_CANDIDATE_SWR_KEY = "MUTATE_MOVE_HIRING_CANDIDAT
 
 /** SWR mutation for {@link mutateMoveHiringCandidate}: `trigger(request)` answers `moveHiringCandidate` and rejects with the back end failure. */
 export const useMutateMoveHiringCandidateSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateMoveHiringCandidate>["moveHiringCandidate"],
+    MoveHiringCandidateMutation["moveHiringCandidate"],
     Error,
     typeof MUTATE_MOVE_HIRING_CANDIDATE_SWR_KEY,
     MoveHiringCandidateArg["arg"]

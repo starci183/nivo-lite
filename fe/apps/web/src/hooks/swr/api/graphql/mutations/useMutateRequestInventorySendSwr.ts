@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRequestInventorySend } from "@/modules/api/graphql/mutations/mutation-request-inventory-send"
-import type { MutateRequestInventorySendRequest } from "@/modules/api/graphql/mutations/mutation-request-inventory-send"
+import {
+    mutateRequestInventorySend,
+    type MutateRequestInventorySendRequest,
+} from "@/modules/api/graphql/mutations/mutation-request-inventory-send"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestInventorySendMutation } from "@/modules/api"
 
 /** What the requestInventorySend mutation is triggered with. */
 interface RequestInventorySendArg {
@@ -16,7 +18,7 @@ export const MUTATE_REQUEST_INVENTORY_SEND_SWR_KEY = "MUTATE_REQUEST_INVENTORY_S
 
 /** SWR mutation for {@link mutateRequestInventorySend}: `trigger(request)` answers `requestInventorySend` and rejects with the back end failure. */
 export const useMutateRequestInventorySendSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestInventorySend>["requestInventorySend"],
+    RequestInventorySendMutation["requestInventorySend"],
     Error,
     typeof MUTATE_REQUEST_INVENTORY_SEND_SWR_KEY,
     RequestInventorySendArg["arg"]

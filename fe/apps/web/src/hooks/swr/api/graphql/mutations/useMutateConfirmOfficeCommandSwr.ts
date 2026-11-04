@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateConfirmOfficeCommand } from "@/modules/api/graphql/mutations/mutation-confirm-office-command"
-import type { MutateConfirmOfficeCommandRequest } from "@/modules/api/graphql/mutations/mutation-confirm-office-command"
+import {
+    mutateConfirmOfficeCommand,
+    type MutateConfirmOfficeCommandRequest,
+} from "@/modules/api/graphql/mutations/mutation-confirm-office-command"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ConfirmOfficeCommandMutation } from "@/modules/api"
 
 /** What the ConfirmOfficeCommand mutation is triggered with. */
 interface ConfirmOfficeCommandArg {
@@ -16,7 +18,7 @@ export const MUTATE_CONFIRM_OFFICE_COMMAND_SWR_KEY = "MUTATE_CONFIRM_OFFICE_COMM
 
 /** SWR mutation for {@link mutateConfirmOfficeCommand}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateConfirmOfficeCommandSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateConfirmOfficeCommand>["confirmOfficeCommand"],
+    ConfirmOfficeCommandMutation["confirmOfficeCommand"],
     Error,
     typeof MUTATE_CONFIRM_OFFICE_COMMAND_SWR_KEY,
     ConfirmOfficeCommandArg["arg"]

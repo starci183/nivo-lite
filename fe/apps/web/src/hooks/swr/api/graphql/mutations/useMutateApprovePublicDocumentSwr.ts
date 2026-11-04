@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateApprovePublicDocument } from "@/modules/api/graphql/mutations/mutation-approve-public-document"
-import type { MutateApprovePublicDocumentRequest } from "@/modules/api/graphql/mutations/mutation-approve-public-document"
+import {
+    mutateApprovePublicDocument,
+    type MutateApprovePublicDocumentRequest,
+} from "@/modules/api/graphql/mutations/mutation-approve-public-document"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ApprovePublicDocumentMutation } from "@/modules/api"
 
 /** What the ApprovePublicDocument mutation is triggered with. */
 interface ApprovePublicDocumentArg {
@@ -16,7 +18,7 @@ export const MUTATE_APPROVE_PUBLIC_DOCUMENT_SWR_KEY = "MUTATE_APPROVE_PUBLIC_DOC
 
 /** SWR mutation for {@link mutateApprovePublicDocument}: The owner approves a public document, which publishes it. `trigger(input)` rejects with the back end failure. */
 export const useMutateApprovePublicDocumentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateApprovePublicDocument>["approvePublicDocument"],
+    ApprovePublicDocumentMutation["approvePublicDocument"],
     Error,
     typeof MUTATE_APPROVE_PUBLIC_DOCUMENT_SWR_KEY,
     ApprovePublicDocumentArg["arg"]

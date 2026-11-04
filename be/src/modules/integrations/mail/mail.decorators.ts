@@ -19,13 +19,19 @@ export const MAIL_OUTBOX: unique symbol = Symbol("integrations.mail.outbox")
 export const MAILER_FACTORY: unique symbol = Symbol("integrations.mail.mailer-factory")
 
 /** A mailer that holds a connection and closes it on demand. */
-export type ClosableMailer = Mailer & { onModuleDestroy(): void }
+export interface ClosableMailer extends Mailer {
+    /** Closes the connection of the mailer; the Nest module calls it at shutdown. */
+    onModuleDestroy(): void
+}
 
-/** Builds a mailer over the SMTP settings of one account. */
-export type MailerFactory = (options: MailTransportOptions) => ClosableMailer
+/** Builds mailers over the SMTP settings of an account. */
+export interface MailerFactory {
+    /** Builds one mailer over the SMTP settings of one account. */
+    create(options: MailTransportOptions): ClosableMailer
+}
 
 /** The factory the module provides: `createMailer` of `@starci/mail`. */
-export const packageMailerFactory: MailerFactory = createMailer
+export const packageMailerFactory: MailerFactory = { create: createMailer }
 
 /** Injects the mail port of `@starci/mail`. Parameter type: Mailer. */
 export const InjectMailer = (): TypedParameterDecorator<Mailer> => injector<Mailer>(MAILER)

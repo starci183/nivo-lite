@@ -9,6 +9,7 @@ import type {
     ParameterBinding,
 } from "./format.types"
 import type {
+    ApproverGroup,
     BranchApprover,
     Condition,
     DecidePoint,
@@ -19,9 +20,15 @@ import type {
 } from "./graph.types"
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-const EMAIL = /[^\s@"]+@[^\s@"]+\.[a-z]{2,}/i
-const SECRET =
-    /(sk-[A-Za-z0-9_-]{16,}|Bearer\s+[A-Za-z0-9._-]{16,}|-----BEGIN [A-Z ]*KEY|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|api[_-]?key\s*[:=]\s*\S{8,}|password\s*[:=]\s*\S+)/i
+const EMAIL = /[^\s@"]@(?:[^\s@".]+\.)+[a-z]{2,}/i
+const SECRETS: ReadonlyArray<RegExp> = [
+    /sk-[a-z0-9_-]{16,}/i,
+    /Bearer\s+[a-z0-9._-]{16,}/i,
+    /-----BEGIN [a-z ]*KEY/i,
+    /eyJ[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}/i,
+    /api[_-]?key\s*[:=]\s*\S{8,}/i,
+    /password\s*[:=]\s*\S+/i,
+]
 
 /** A counter of what was left out while the graph was rebuilt. */
 interface Tally {
@@ -30,9 +37,7 @@ interface Tally {
     people: number
 }
 
-const emptyGroup = (
-    roles: ReadonlyArray<"owner" | "manager" | "staff">,
-): { roles: typeof roles; rooms: []; members: [] } => ({
+const emptyGroup = (roles: ApproverGroup["roles"]): ApproverGroup => ({
     roles,
     rooms: [],
     members: [],
@@ -116,8 +121,11 @@ const nodeOf = (node: GraphNode, draft: PackageDraft, tally: Tally): GraphNode =
     }
 }
 
-const contractsOf = (graph: GraphDocument, tally: Tally): GraphDocument["contracts"] =>
-    graph.contracts?.map((contract) => {
+const contractsOf = (
+    contracts: NonNullable<GraphDocument["contracts"]>,
+    tally: Tally,
+): NonNullable<GraphDocument["contracts"]> =>
+    contracts.map((contract) => {
         tally.privateSources +=
             contract.sources.length + contract.limits.reduce((sum, limit) => sum + limit.sources.length, 0)
         return {
@@ -152,7 +160,7 @@ export const leakProblems = (body: unknown, forbidden: ReadonlyArray<string>): R
         const lower = text.toLowerCase()
         if (UUID.test(text)) return [`${path}: an id`]
         if (EMAIL.test(text)) return [`${path}: an email address`]
-        if (SECRET.test(text)) return [`${path}: a secret`]
+        if (SECRETS.some((secret) => secret.test(text))) return [`${path}: a secret`]
         return forbidden.some((id) => id !== "" && lower.includes(id.toLowerCase()))
             ? [`${path}: an id of the creator`]
             : []
@@ -227,7 +235,7 @@ export const previewPackage = (graph: GraphDocument, draft: PackageDraft): Packa
     const rebuilt: GraphDocument = {
         nodes: graph.nodes.map((node) => nodeOf(node, draft, tally)),
         rights: [],
-        ...(graph.contracts === undefined ? {} : { contracts: contractsOf(graph, tally) }),
+        ...(graph.contracts === undefined ? {} : { contracts: contractsOf(graph.contracts, tally) }),
     }
     const providers = [...new Set(rebuilt.nodes.flatMap((node) => node.uses.map((use) => use.provider)))].filter(
         (provider) => provider !== "brain",

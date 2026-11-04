@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRequestShiftsLeave } from "@/modules/api/graphql/mutations/mutation-request-shifts-leave"
-import type { MutateRequestShiftsLeaveRequest } from "@/modules/api/graphql/mutations/mutation-request-shifts-leave"
+import {
+    mutateRequestShiftsLeave,
+    type MutateRequestShiftsLeaveRequest,
+} from "@/modules/api/graphql/mutations/mutation-request-shifts-leave"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestShiftsLeaveMutation } from "@/modules/api"
 
 /** What the requestShiftsLeave mutation is triggered with. */
 interface RequestShiftsLeaveArg {
@@ -16,7 +18,7 @@ export const MUTATE_REQUEST_SHIFTS_LEAVE_SWR_KEY = "MUTATE_REQUEST_SHIFTS_LEAVE_
 
 /** SWR mutation for {@link mutateRequestShiftsLeave}: `trigger(request)` answers `requestShiftsLeave` and rejects with the back end failure. */
 export const useMutateRequestShiftsLeaveSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestShiftsLeave>["requestShiftsLeave"],
+    RequestShiftsLeaveMutation["requestShiftsLeave"],
     Error,
     typeof MUTATE_REQUEST_SHIFTS_LEAVE_SWR_KEY,
     RequestShiftsLeaveArg["arg"]

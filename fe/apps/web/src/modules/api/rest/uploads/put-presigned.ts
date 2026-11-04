@@ -15,7 +15,13 @@ export interface PutPresignedRequest {
 }
 
 /** Uploads a file straight to the presigned storage URL (plain axios: the storage URL takes no bearer token). */
-export const putPresigned = async ({ url, file, contentType, onProgress, signal }: PutPresignedRequest): Promise<void> => {
+export const putPresigned = async ({
+    url,
+    file,
+    contentType,
+    onProgress,
+    signal,
+}: PutPresignedRequest): Promise<void> => {
     await axios.put(url, file, {
         headers: { "Content-Type": contentType },
         ...(signal ? { signal } : {}),

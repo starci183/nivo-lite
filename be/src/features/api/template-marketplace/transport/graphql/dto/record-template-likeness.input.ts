@@ -32,7 +32,7 @@ export class RecordTemplateLikenessInput {
     @ArrayMinSize(1)
     @ArrayMaxSize(4)
     @IsIn(["name", "avatar", "voice_style", "first_person"], { each: true })
-    allowedUses!: Array<string>
+    allowedUses!: Array<"name" | "avatar" | "voice_style" | "first_person">
 
     /** The line shown to every customer. */
     @Field(() => String)
@@ -45,5 +45,6 @@ export class RecordTemplateLikenessInput {
     @NullAsAbsent()
     @IsOptional()
     @IsDateString()
+    @MaxLength(40)
     expiresAt?: string
 }

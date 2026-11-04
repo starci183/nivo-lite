@@ -1,17 +1,38 @@
 import { Test } from "@nestjs/testing"
-import { ObjectStorageError } from "@starci/object-storage"
-import { MAX_PRESIGN_SECONDS, bucketNameOf, presignSecondsOf, uploadContentTypeOf } from "./object-storage.policy"
+import { ObjectStorageError, ObjectStorageErrorCode } from "./errors/object-storage.error"
+import {
+    MAX_PRESIGN_SECONDS,
+    bucketNameOf,
+    presignSecondsOf,
+    reportedUploadTypeOf,
+    uploadContentTypeOf,
+} from "./object-storage.policy"
 import type * as policy from "./object-storage.policy"
 
 const SUBJECT = Symbol("storage.policy")
 
-type Subject = Pick<typeof policy, "bucketNameOf" | "presignSecondsOf" | "uploadContentTypeOf">
+type Subject = Pick<typeof policy, "bucketNameOf" | "presignSecondsOf" | "reportedUploadTypeOf" | "uploadContentTypeOf">
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { bucketNameOf, presignSecondsOf, uploadContentTypeOf } }],
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { bucketNameOf, presignSecondsOf, reportedUploadTypeOf, uploadContentTypeOf },
+            },
+        ],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
+}
+
+/** What a call throws, or undefined when it returns. */
+const thrownBy = (run: () => unknown): unknown => {
+    try {
+        run()
+    } catch (failure) {
+        return failure
+    }
+    return undefined
 }
 
 describe("storage policy / bucketNameOf", () => {
@@ -26,6 +47,9 @@ describe("storage policy / bucketNameOf", () => {
         const subject = await build()
 
         expect(() => subject.bucketNameOf(prefix, "media")).toThrow(ObjectStorageError)
+        expect(thrownBy(() => subject.bucketNameOf(prefix, "media"))).toMatchObject({
+            code: ObjectStorageErrorCode.BucketInvalid,
+        })
     })
 })
 
@@ -63,9 +87,25 @@ describe("storage policy / uploadContentTypeOf", () => {
         expect(subject.uploadContentTypeOf(admitted, "notes.md", "application/octet-stream")).toBe("text/markdown")
     })
 
-    it.each([["a.exe", ""], ["noextension", ""], ["a.constructor", ""]])("refuses %p with type %p", async (name, given) => {
+    it.each([
+        ["a.exe", ""],
+        ["noextension", ""],
+        ["a.constructor", ""],
+    ])("refuses %p with type %p", async (name, given) => {
         const subject = await build()
 
         expect(subject.uploadContentTypeOf(admitted, name, given)).toBeNull()
+    })
+})
+
+describe("storage policy / reportedUploadTypeOf", () => {
+    const admitted = new Map([["pdf", "application/pdf"]])
+
+    it("answers the type of the browser when the kind admits it, and none when it does not or the browser says none", async () => {
+        const subject = await build()
+
+        expect(subject.reportedUploadTypeOf(admitted, "Application/PDF; charset=x")).toBe("application/pdf")
+        expect(subject.reportedUploadTypeOf(admitted, "application/octet-stream")).toBeNull()
+        expect(subject.reportedUploadTypeOf(admitted, "")).toBeNull()
     })
 })

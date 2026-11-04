@@ -17,7 +17,6 @@ export class MyCreatorLedgerHandler extends ICQRSHandler<MyCreatorLedgerQuery, C
     }
 
     protected override process(query: MyCreatorLedgerQuery): Promise<CreatorLedgerView> {
-        const p = query.params.principal.id
-        return this.svc.mine(p)
+        return this.svc.mine(query.params.principal.id)
     }
 }

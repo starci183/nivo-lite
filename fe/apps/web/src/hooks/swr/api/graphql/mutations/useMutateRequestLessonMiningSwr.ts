@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRequestLessonMining } from "@/modules/api/graphql/mutations/mutation-request-lesson-mining"
-import type { MutateRequestLessonMiningRequest } from "@/modules/api/graphql/mutations/mutation-request-lesson-mining"
+import {
+    mutateRequestLessonMining,
+    type MutateRequestLessonMiningRequest,
+} from "@/modules/api/graphql/mutations/mutation-request-lesson-mining"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestLessonMiningMutation } from "@/modules/api"
 
 /** What the RequestLessonMining mutation is triggered with. */
 interface RequestLessonMiningArg {
@@ -16,7 +18,7 @@ export const MUTATE_REQUEST_LESSON_MINING_SWR_KEY = "MUTATE_REQUEST_LESSON_MININ
 
 /** SWR mutation for {@link mutateRequestLessonMining}: Asks the back end to study the corrections of one agent; answers the command id `lessonMiningStatus` polls. `trigger(input)` rejects with the back end failure. */
 export const useMutateRequestLessonMiningSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestLessonMining>["requestLessonMining"],
+    RequestLessonMiningMutation["requestLessonMining"],
     Error,
     typeof MUTATE_REQUEST_LESSON_MINING_SWR_KEY,
     RequestLessonMiningArg["arg"]

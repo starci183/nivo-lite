@@ -4,7 +4,7 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels, ZnsRenewalForm } from "@/modules/types"
 
 /** The fields of the form, in the order they are drawn. */
-export const ZNS_FIELDS: readonly ["templateId", "customerName", "plan", "endDate", "amount", "transferContent", "invoiceNumber"] = [
+export const ZNS_FIELDS: readonly [
     "templateId",
     "customerName",
     "plan",
@@ -12,7 +12,7 @@ export const ZNS_FIELDS: readonly ["templateId", "customerName", "plan", "endDat
     "amount",
     "transferContent",
     "invoiceNumber",
-]
+] = ["templateId", "customerName", "plan", "endDate", "amount", "transferContent", "invoiceNumber"]
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
 export const ZNS_PLACEHOLDER: ZnsRenewalForm = {

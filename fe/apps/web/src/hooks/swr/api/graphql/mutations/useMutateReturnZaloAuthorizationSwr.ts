@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateReturnZaloAuthorization } from "@/modules/api/graphql/mutations/mutation-return-zalo-authorization"
-import type { MutateReturnZaloAuthorizationRequest } from "@/modules/api/graphql/mutations/mutation-return-zalo-authorization"
+import {
+    mutateReturnZaloAuthorization,
+    type MutateReturnZaloAuthorizationRequest,
+} from "@/modules/api/graphql/mutations/mutation-return-zalo-authorization"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ReturnZaloAuthorizationMutation } from "@/modules/api"
 
 /** What the returnZaloAuthorization mutation is triggered with. */
 interface ReturnZaloAuthorizationArg {
@@ -16,7 +18,7 @@ export const MUTATE_RETURN_ZALO_AUTHORIZATION_SWR_KEY = "MUTATE_RETURN_ZALO_AUTH
 
 /** SWR mutation for {@link mutateReturnZaloAuthorization}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateReturnZaloAuthorizationSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateReturnZaloAuthorization>["returnZaloAuthorization"],
+    ReturnZaloAuthorizationMutation["returnZaloAuthorization"],
     Error,
     typeof MUTATE_RETURN_ZALO_AUTHORIZATION_SWR_KEY,
     ReturnZaloAuthorizationArg["arg"]

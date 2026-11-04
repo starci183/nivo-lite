@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentTemplateVersionsService, TemplateLicenseEntity } from "@modules/domain/agent-templates"
+import { AgentTemplateVersionsService, TemplateRecordsService } from "@modules/domain/agent-templates"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { CREATOR } from "@tests/fixtures/builders/agent-template.builder"
@@ -33,7 +33,7 @@ interface Options {
     readonly order?: PaymentOrder | null
     readonly listing?: TemplateListingEntity | null
     readonly template?: object | null
-    readonly license?: TemplateLicenseEntity | null
+    readonly licensed?: boolean
 }
 
 const build = async (options: Options = {}) => {
@@ -48,44 +48,37 @@ const build = async (options: Options = {}) => {
             ),
     })
     const em = mockEntityManager({
-        findOne: [
-            [TemplateListingEntity, options.listing === undefined ? listing : options.listing],
-            [TemplateLicenseEntity, options.license ?? null],
-        ],
-        insert: [
-            [TemplateLicenseEntity, {}],
-            [CreatorLedgerEntryEntity, {}],
-        ],
+        findOne: [[TemplateListingEntity, options.listing === undefined ? listing : options.listing]],
+        insert: [CreatorLedgerEntryEntity, {}],
+    })
+    const records = mock<TemplateRecordsService>({
+        hasLicenseForOrder: jest.fn().mockResolvedValue(options.licensed === true),
+        grantPaid: jest.fn().mockResolvedValue(undefined),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [
             TemplatePaymentsService,
             { provide: PaymentOrdersService, useValue: orders },
             { provide: AgentTemplateVersionsService, useValue: versions },
+            { provide: TemplateRecordsService, useValue: records },
         ],
     }).compile()
-    return { service: moduleRef.get(TemplatePaymentsService), em, orders }
+    return { service: moduleRef.get(TemplatePaymentsService), em, orders, records }
 }
 
 describe("TemplatePaymentsService.fulfil", () => {
     it("writes the license of the workspace and the two ledger lines of the sale from a paid order, in the transaction that settled it", async () => {
-        const { service, em, orders } = await build()
+        const { service, em, orders, records } = await build()
 
         await service.fulfil(em, "nivo8f3k2")
 
         expect(orders.findByCode).toHaveBeenCalledWith("nivo8f3k2", em)
-        expect(em.insert).toHaveBeenCalledWith(
-            TemplateLicenseEntity,
-            expect.objectContaining({
-                workspaceId: "ws-buyer",
-                templateKey: "spa-booking-by-linh",
-                kind: "paid",
-                listingId: "listing-1",
-                orderId: "order-1",
-                installationId: null,
-                status: "active",
-            }),
-        )
+        expect(records.grantPaid).toHaveBeenCalledWith(em, {
+            workspaceId: "ws-buyer",
+            templateKey: "spa-booking-by-linh",
+            listingId: "listing-1",
+            orderId: "order-1",
+        })
         expect(em.insert).toHaveBeenCalledWith(CreatorLedgerEntryEntity, [
             expect.objectContaining({
                 kind: "creator_share",
@@ -106,19 +99,19 @@ describe("TemplatePaymentsService.fulfil", () => {
 
         await service.fulfil(em, "NIVO8F3K2")
 
-        const lines = em.insert.mock.calls.find((call) => call[0] === CreatorLedgerEntryEntity)?.[1]
-        const amounts: Array<number> = []
-        if (Array.isArray(lines)) for (const line of lines) amounts.push(Number(line.amountVnd))
+        const lines: unknown = em.insert.mock.calls.find((call) => call[0] === CreatorLedgerEntryEntity)?.[1]
+        const amounts = Array.isArray(lines)
+            ? lines.map((line: CreatorLedgerEntryEntity) => Number(line.amountVnd))
+            : []
         expect(amounts.reduce((sum, amount) => sum + amount, 0)).toBe(990_000)
     })
 
     it("writes nothing twice when the delivery is processed again", async () => {
-        const { service, em } = await build({
-            license: Object.assign(new TemplateLicenseEntity(), { id: "license-1" }),
-        })
+        const { service, em, records } = await build({ licensed: true })
 
         await service.fulfil(em, "NIVO8F3K2")
 
+        expect(records.grantPaid).not.toHaveBeenCalled()
         expect(em.insert).not.toHaveBeenCalled()
     })
 

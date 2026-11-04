@@ -11,7 +11,7 @@ import { toVerifyTemplateLikenessRequest, toVerifyTemplateLikenessType } from ".
 @Resolver()
 /** GraphQL door of verifyTemplateLikeness. */
 export class VerifyTemplateLikenessResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** A platform reviewer confirms the identity of the person behind a consent record. */
     @Mutation(() => LikenessGrantType, { name: "verifyTemplateLikeness" })
@@ -19,7 +19,7 @@ export class VerifyTemplateLikenessResolver {
         @CurrentPrincipal() principal: Principal,
         @Args("input") input: LikenessGrantIdInput,
     ): Promise<LikenessGrantType> {
-        const result = await this.bus.execute(
+        const result = await this.commandBus.execute(
             new VerifyTemplateLikenessCommand({ request: toVerifyTemplateLikenessRequest(input), principal }),
         )
         return toVerifyTemplateLikenessType(result)

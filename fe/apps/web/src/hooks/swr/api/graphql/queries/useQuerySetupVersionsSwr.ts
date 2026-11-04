@@ -1,13 +1,11 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { querySetupVersions } from "@/modules/api/graphql/queries/query-setup-versions"
-import type { QuerySetupVersionsRequest } from "@/modules/api/graphql/queries/query-setup-versions"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import { querySetupVersions, type QuerySetupVersionsRequest } from "@/modules/api/graphql/queries/query-setup-versions"
+import type { SetupVersionsQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQuerySetupVersionsSwr}. */
 export const QUERY_SETUP_VERSIONS_SWR_KEY = "QUERY_SETUP_VERSIONS_SWR"
@@ -16,7 +14,7 @@ export const QUERY_SETUP_VERSIONS_SWR_KEY = "QUERY_SETUP_VERSIONS_SWR"
 export const useQuerySetupVersionsSwr = (
     request: QuerySetupVersionsRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof querySetupVersions>["setupVersions"]> =>
+): ReadResponse<SetupVersionsQuery["setupVersions"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_SETUP_VERSIONS_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QuerySetupVersionsRequest>) =>

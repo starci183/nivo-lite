@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateProposeAutomationBody } from "@/modules/api/graphql/mutations/mutation-propose-automation-body"
-import type { MutateProposeAutomationBodyRequest } from "@/modules/api/graphql/mutations/mutation-propose-automation-body"
+import {
+    mutateProposeAutomationBody,
+    type MutateProposeAutomationBodyRequest,
+} from "@/modules/api/graphql/mutations/mutation-propose-automation-body"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ProposeAutomationBodyMutation } from "@/modules/api"
 
 /** What the ProposeAutomationBody mutation is triggered with. */
 interface ProposeAutomationBodyArg {
@@ -16,7 +18,7 @@ export const MUTATE_PROPOSE_AUTOMATION_BODY_SWR_KEY = "MUTATE_PROPOSE_AUTOMATION
 
 /** SWR mutation for {@link mutateProposeAutomationBody}: `trigger({ templateKey })` answers the proposed wording. */
 export const useMutateProposeAutomationBodySwr = (): SWRMutationResponse<
-    OperationData<typeof mutateProposeAutomationBody>["proposeAutomationBody"],
+    ProposeAutomationBodyMutation["proposeAutomationBody"],
     Error,
     typeof MUTATE_PROPOSE_AUTOMATION_BODY_SWR_KEY,
     ProposeAutomationBodyArg["arg"]

@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateRequestChatAnswer } from "@/modules/api/graphql/mutations/mutation-request-chat-answer"
-import type { mutateRequestChatAnswer as MutateRequestChatAnswerOperation } from "@/modules/api/graphql/mutations/mutation-request-chat-answer"
+import {
+    mutateRequestChatAnswer,
+    type mutateRequestChatAnswer as MutateRequestChatAnswerOperation,
+} from "@/modules/api/graphql/mutations/mutation-request-chat-answer"
 import { answeredData } from "@/hooks/workspaceread"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RequestChatAnswerMutation } from "@/modules/api"
 
 /** The SWR key of the requestChatAnswer mutation. */
 export const MUTATE_REQUEST_CHAT_ANSWER_SWR_KEY = "MUTATE_REQUEST_CHAT_ANSWER_SWR"
 
 /** SWR mutation for {@link mutateRequestChatAnswer}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateRequestChatAnswerSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRequestChatAnswer>["requestChatAnswer"],
+    RequestChatAnswerMutation["requestChatAnswer"],
     Error,
     typeof MUTATE_REQUEST_CHAT_ANSWER_SWR_KEY,
     TriggerArg["arg"]

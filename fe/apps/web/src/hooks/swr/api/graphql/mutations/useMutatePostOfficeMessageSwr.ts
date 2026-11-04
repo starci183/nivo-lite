@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutatePostOfficeMessage } from "@/modules/api/graphql/mutations/mutation-post-office-message"
-import type { MutatePostOfficeMessageRequest } from "@/modules/api/graphql/mutations/mutation-post-office-message"
+import {
+    mutatePostOfficeMessage,
+    type MutatePostOfficeMessageRequest,
+} from "@/modules/api/graphql/mutations/mutation-post-office-message"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { PostOfficeMessageMutation } from "@/modules/api"
 
 /** What the PostOfficeMessage mutation is triggered with. */
 interface PostOfficeMessageArg {
@@ -16,7 +18,7 @@ export const MUTATE_POST_OFFICE_MESSAGE_SWR_KEY = "MUTATE_POST_OFFICE_MESSAGE_SW
 
 /** SWR mutation for {@link mutatePostOfficeMessage}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutatePostOfficeMessageSwr = (): SWRMutationResponse<
-    OperationData<typeof mutatePostOfficeMessage>["postOfficeMessage"],
+    PostOfficeMessageMutation["postOfficeMessage"],
     Error,
     typeof MUTATE_POST_OFFICE_MESSAGE_SWR_KEY,
     PostOfficeMessageArg["arg"]

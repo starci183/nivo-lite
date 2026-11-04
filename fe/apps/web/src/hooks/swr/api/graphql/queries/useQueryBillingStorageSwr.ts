@@ -2,8 +2,9 @@
 
 import { argumentKey } from "@/hooks/workspaceread"
 import useSWR from "swr"
+import type { SWRResponse } from "swr"
 import { queryBillingStorage } from "@/modules/api/graphql/queries/query-billing-storage"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { BillingStorageQuery } from "@/modules/api"
 
 /** Cache identity of billingStorage within a workspace. */
 export const QUERY_BILLING_STORAGE_SWR_KEY = "QUERY_BILLING_STORAGE_SWR"
@@ -11,7 +12,7 @@ export const QUERY_BILLING_STORAGE_SWR_KEY = "QUERY_BILLING_STORAGE_SWR"
 /** Reads billingStorage for the selected workspace. */
 export const useQueryBillingStorageSwr = (
     workspaceId: string | undefined,
-): ReadResponse<OperationData<typeof queryBillingStorage>["billingStorage"]> =>
+): SWRResponse<BillingStorageQuery["billingStorage"], Error> =>
     useSWR(argumentKey(QUERY_BILLING_STORAGE_SWR_KEY, workspaceId), async () => {
         const result = await queryBillingStorage()
         if (!result.data) throw new Error("billingStorage answered no data")

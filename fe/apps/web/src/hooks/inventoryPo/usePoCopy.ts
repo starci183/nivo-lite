@@ -1,34 +1,6 @@
 "use client"
 import { useTranslations } from "next-intl"
-/** The view `usePoCopy` returns. */
-export interface PoCopyView {
-    readonly approveAndSend: string
-    readonly close: string
-    readonly poCancel: string
-    readonly poCopied: string
-    readonly poCopy: string
-    readonly poExpected: string
-    readonly poExpectedHint: string
-    readonly poInvoice: string
-    readonly poInvoiceHint: string
-    readonly poItems: string
-    readonly poMessageDrafted: string
-    readonly poMessageHint: string
-    readonly poQty: string
-    readonly poReceive: string
-    readonly poReceiveCost: string
-    readonly poReceiveHint: string
-    readonly poReceiveQty: string
-    readonly poRemind: string
-    readonly poSaveDraft: string
-    readonly poSendForApproval: string
-    readonly poSentEmail: string
-    readonly poSupplier: string
-    readonly poSupplierHint: string
-    readonly poUnitCost: string
-    readonly reject: string
-}
-
+import type { PoCopyView } from "@/hooks/inventoryPoTypes"
 /** Resolves the purchase-order drawer, supplier fields and action copy at their world owner. */
 export const usePoCopy = (): PoCopyView => {
     const say = useTranslations("workbenchInventory")

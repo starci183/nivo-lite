@@ -1,11 +1,6 @@
 import type { StoredObject } from "@starci/object-storage"
 import type { Outcome } from "@modules/platform/primitives"
-import type {
-    ListedObject,
-    SignedObjectUrl,
-    SignedUpload,
-    StorageFailureCode,
-} from "./object-storage.contracts"
+import type { ListedObject, SignedObjectUrl, SignedUpload, StorageFailureCode } from "./object-storage.contracts"
 
 /** The outcome of asking storage for an upload address. */
 export type SignedUploadOutcome = Outcome<SignedUpload, StorageFailureCode>

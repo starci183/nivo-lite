@@ -4,7 +4,8 @@ import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { queryPublicBookingTimes } from "@/modules/api/graphql/queries/query-public-booking-times"
 import type { QueryPublicBookingTimesRequest } from "@/modules/api/graphql/queries/types/public-booking-times"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { ReadResponse } from "@/hooks/workspaceread"
+import type { PublicBookingTimesQuery } from "@/modules/api"
 
 /** The SWR key of the `publicBookingTimes` query. */
 export const QUERY_PUBLIC_BOOKING_TIMES_SWR_KEY = "QUERY_PUBLIC_BOOKING_TIMES_SWR"
@@ -13,7 +14,7 @@ export const QUERY_PUBLIC_BOOKING_TIMES_SWR_KEY = "QUERY_PUBLIC_BOOKING_TIMES_SW
 export const useQueryPublicBookingTimesSwr = (
     request: QueryPublicBookingTimesRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryPublicBookingTimes>["publicBookingTimes"]> =>
+): ReadResponse<PublicBookingTimesQuery["publicBookingTimes"]> =>
     useSWR(
         request === null ? null : [QUERY_PUBLIC_BOOKING_TIMES_SWR_KEY, request],
         async (key: readonly [string, QueryPublicBookingTimesRequest]) => {

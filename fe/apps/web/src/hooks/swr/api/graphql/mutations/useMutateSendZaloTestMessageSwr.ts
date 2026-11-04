@@ -1,18 +1,20 @@
 "use client"
 
-import { mutateSendZaloTestMessage } from "@/modules/api/graphql/mutations/mutation-send-zalo-test-message"
-import type { mutateSendZaloTestMessage as MutateSendZaloTestMessageOperation } from "@/modules/api/graphql/mutations/mutation-send-zalo-test-message"
+import {
+    mutateSendZaloTestMessage,
+    type mutateSendZaloTestMessage as MutateSendZaloTestMessageOperation,
+} from "@/modules/api/graphql/mutations/mutation-send-zalo-test-message"
 import useSWRMutation from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SendZaloTestMessageMutation } from "@/modules/api"
 
 /** The SWR key of the sendZaloTestMessage mutation. */
 export const MUTATE_SEND_ZALO_TEST_MESSAGE_SWR_KEY = "MUTATE_SEND_ZALO_TEST_MESSAGE_SWR_KEY"
 
 /** SWR mutation for {@link mutateSendZaloTestMessage}: `trigger(input)` answers the payload and rejects with the back end failure. */
 export const useMutateSendZaloTestMessageSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSendZaloTestMessage>["sendZaloTestMessage"],
+    SendZaloTestMessageMutation["sendZaloTestMessage"],
     Error,
     typeof MUTATE_SEND_ZALO_TEST_MESSAGE_SWR_KEY,
     TriggerArg["arg"]

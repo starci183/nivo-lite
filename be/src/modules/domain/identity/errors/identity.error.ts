@@ -21,8 +21,6 @@ export enum IdentityErrorCode {
     PasswordInvalid = "IDENTITY_PASSWORD_INVALID",
     /** Too many attempts for this address; try again later. */
     TooManyAttempts = "IDENTITY_TOO_MANY_ATTEMPTS",
-    /** Google did not vouch for the mailbox, so no account can be found or linked by it. */
-    GoogleEmailUnverified = "IDENTITY_GOOGLE_EMAIL_UNVERIFIED",
     /** The mailbox was never confirmed through the signup link. */
     EmailNotConfirmed = "IDENTITY_EMAIL_NOT_CONFIRMED",
     /** No account has that id. */
@@ -40,7 +38,6 @@ export const IDENTITY_ERROR_KINDS: Record<IdentityErrorCode, ErrorKind> = {
     [IdentityErrorCode.ResetTokenInvalid]: "invalid",
     [IdentityErrorCode.PasswordInvalid]: "invalid",
     [IdentityErrorCode.TooManyAttempts]: "rate-limited",
-    [IdentityErrorCode.GoogleEmailUnverified]: "forbidden",
     [IdentityErrorCode.EmailNotConfirmed]: "forbidden",
     [IdentityErrorCode.AccountNotFound]: "not-found",
 }

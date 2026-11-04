@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateSyncMcpConnector } from "@/modules/api/graphql/mutations/mutation-sync-mcp-connector"
-import type { MutateSyncMcpConnectorRequest } from "@/modules/api/graphql/mutations/mutation-sync-mcp-connector"
+import {
+    mutateSyncMcpConnector,
+    type MutateSyncMcpConnectorRequest,
+} from "@/modules/api/graphql/mutations/mutation-sync-mcp-connector"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { SyncMcpConnectorMutation } from "@/modules/api"
 
 /** What the SyncMcpConnector mutation is triggered with. */
 interface SyncMcpConnectorArg {
@@ -16,7 +18,7 @@ export const MUTATE_SYNC_MCP_CONNECTOR_SWR_KEY = "MUTATE_SYNC_MCP_CONNECTOR_SWR"
 
 /** SWR mutation for {@link mutateSyncMcpConnector}: `trigger(input)` reads the live tool list and answers the tool count; rejects with the back end failure. */
 export const useMutateSyncMcpConnectorSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateSyncMcpConnector>["syncMcpConnector"],
+    SyncMcpConnectorMutation["syncMcpConnector"],
     Error,
     typeof MUTATE_SYNC_MCP_CONNECTOR_SWR_KEY,
     SyncMcpConnectorArg["arg"]

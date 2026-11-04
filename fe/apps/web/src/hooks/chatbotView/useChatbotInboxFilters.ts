@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useFeatureReset } from "@/hooks/reuseables"
 import { matchesInboxFilter, isInboxFilter } from "@/hooks/chatbot"
 import type { ChatbotOverview, ChatbotConversation } from "@/modules/types"
-import type { InboxFilters } from "./useChatbotInbox"
+import type { InboxFilters } from "@/hooks/chatbotInboxProps"
 
 /** The view `useChatbotInboxFilters` returns. */
 export interface ChatbotInboxFiltersView {

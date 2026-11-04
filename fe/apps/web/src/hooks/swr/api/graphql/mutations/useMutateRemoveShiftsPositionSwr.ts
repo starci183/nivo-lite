@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRemoveShiftsPosition } from "@/modules/api/graphql/mutations/mutation-remove-shifts-position"
-import type { MutateRemoveShiftsPositionRequest } from "@/modules/api/graphql/mutations/mutation-remove-shifts-position"
+import {
+    mutateRemoveShiftsPosition,
+    type MutateRemoveShiftsPositionRequest,
+} from "@/modules/api/graphql/mutations/mutation-remove-shifts-position"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RemoveShiftsPositionMutation } from "@/modules/api"
 
 /** What the removeShiftsPosition mutation is triggered with. */
 interface RemoveShiftsPositionArg {
@@ -16,7 +18,7 @@ export const MUTATE_REMOVE_SHIFTS_POSITION_SWR_KEY = "MUTATE_REMOVE_SHIFTS_POSIT
 
 /** SWR mutation for {@link mutateRemoveShiftsPosition}: `trigger(request)` answers `removeShiftsPosition` and rejects with the back end failure. */
 export const useMutateRemoveShiftsPositionSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRemoveShiftsPosition>["removeShiftsPosition"],
+    RemoveShiftsPositionMutation["removeShiftsPosition"],
     Error,
     typeof MUTATE_REMOVE_SHIFTS_POSITION_SWR_KEY,
     RemoveShiftsPositionArg["arg"]

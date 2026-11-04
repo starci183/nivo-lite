@@ -1,11 +1,16 @@
 "use client"
 
-import { workspaceArgumentKey, jobPolling, noData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import {
+    jobPolling,
+    noData,
+    workspaceArgumentKey,
+    type ReadResponse,
+    type WorkspaceReadKey,
+} from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
 import { querySalesActionStatus } from "@/modules/api/graphql/queries/query-sales-action-status"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import type { SalesActionStatusQuery } from "@/modules/api"
 
 /** Workspace-scoped cache identity for the salesActionStatus query. */
 export const QUERY_SALES_ACTION_STATUS_SWR_KEY = "QUERY_SALES_ACTION_STATUS_SWR"
@@ -15,7 +20,7 @@ export const useQuerySalesActionStatusSwr = (
     workspaceId: string | undefined,
     id: string | undefined,
     options?: SWRConfiguration,
-): ReadResponse<NonNullable<OperationData<typeof querySalesActionStatus>["salesActionStatus"]>> =>
+): ReadResponse<NonNullable<SalesActionStatusQuery["salesActionStatus"]>> =>
     useSWR(
         workspaceArgumentKey(QUERY_SALES_ACTION_STATUS_SWR_KEY, workspaceId, id),
         async ([, , input]: WorkspaceReadKey<string>) =>

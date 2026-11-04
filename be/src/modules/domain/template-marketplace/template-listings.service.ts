@@ -56,6 +56,14 @@ export interface ReviewRequest {
     readonly revenueSharePct: number | null
 }
 
+/** One approved listing with the card a buyer reads. */
+export interface ApprovedListing {
+    /** The stored listing. */
+    readonly row: TemplateListingEntity
+    /** The card of the listing. */
+    readonly card: ListingCard
+}
+
 @Injectable()
 /**
  * The listings of the marketplace. A creator offers one saved version at a price; the automated checks run on it; a platform reviewer
@@ -181,7 +189,7 @@ export class TemplateListingsService {
     }
 
     /** One approved listing for a buyer, or the refusal. */
-    async approved(listingId: string): Promise<{ readonly row: TemplateListingEntity; readonly card: ListingCard }> {
+    async approved(listingId: string): Promise<ApprovedListing> {
         const row = await this.entityManager.findOne(TemplateListingEntity, { where: { id: listingId } })
         if (row?.status !== "approved")
             throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.NotAvailable })
@@ -226,31 +234,28 @@ export class TemplateListingsService {
     }
 
     private async viewById(listingId: string): Promise<ListingView> {
-        const [view] = await this.viewsOf([await this.requireRow(listingId)])
-        if (view === undefined)
-            throw new TemplateMarketplaceError({ code: TemplateMarketplaceErrorCode.ListingNotFound })
-        return view
+        return this.viewOf(await this.requireRow(listingId))
     }
 
-    private async viewsOf(rows: ReadonlyArray<TemplateListingEntity>): Promise<ReadonlyArray<ListingView>> {
-        return Promise.all(
-            rows.map(async (row) => {
-                const stored = await this.versions.find(row.templateKey, row.version)
-                return {
-                    id: row.id,
-                    templateKey: row.templateKey,
-                    version: row.version,
-                    status: row.status,
-                    priceVnd: row.priceVnd,
-                    revenueSharePct: row.revenueSharePct,
-                    checks: row.checks,
-                    reviewNote: row.reviewNote,
-                    firstParty: row.firstParty,
-                    name: stored?.package.listing.name ?? { vi: row.templateKey, en: row.templateKey },
-                    updatedAt: row.updatedAt.toISOString(),
-                }
-            }),
-        )
+    private viewsOf(rows: ReadonlyArray<TemplateListingEntity>): Promise<ReadonlyArray<ListingView>> {
+        return Promise.all(rows.map((row) => this.viewOf(row)))
+    }
+
+    private async viewOf(row: TemplateListingEntity): Promise<ListingView> {
+        const stored = await this.versions.find(row.templateKey, row.version)
+        return {
+            id: row.id,
+            templateKey: row.templateKey,
+            version: row.version,
+            status: row.status,
+            priceVnd: row.priceVnd,
+            revenueSharePct: row.revenueSharePct,
+            checks: row.checks,
+            reviewNote: row.reviewNote,
+            firstParty: row.firstParty,
+            name: stored?.package.listing.name ?? { vi: row.templateKey, en: row.templateKey },
+            updatedAt: row.updatedAt.toISOString(),
+        }
     }
 
     private async cardOf(row: TemplateListingEntity): Promise<ListingCard | null> {

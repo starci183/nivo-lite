@@ -1,16 +1,16 @@
-export { AUTO_RESOURCE, MOVE_ACTION, actionsOf } from "@/modules/booking-desk"
 export {
+    AUTO_RESOURCE,
     BOOKING_STATUS_TONE,
-    blankPlacementOf,
+    MOVE_ACTION,
+    actionsOf,
+    bookingRowOf,
     dayGroups,
     detailOf,
     placementLabelsOf,
-    bookingRowOf,
-} from "./bookingDesk.shared"
+} from "@/modules/booking-desk"
+export { blankPlacementOf } from "./bookingDesk.shared"
 export { useBookingActions } from "./useBookingActions"
 export { useBookingRange } from "./useBookingRange"
 export { useBookingPlacement } from "./useBookingPlacement"
 export { useBookingTransition } from "./useBookingTransition"
 export type { PlacementFields } from "./useBookingPlacement"
-export type { PlacementDraft } from "./useBookingPlacement"
-export type { DeskNotice } from "./bookingDesk.shared"

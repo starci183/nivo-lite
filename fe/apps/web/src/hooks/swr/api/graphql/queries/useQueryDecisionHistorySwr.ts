@@ -1,13 +1,14 @@
 "use client"
 
-import { answeredData } from "@/hooks/workspaceread"
-import type { WorkspaceReadKey } from "@/hooks/workspaceread"
+import { answeredData, type ReadResponse, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { queryDecisionHistory } from "@/modules/api/graphql/queries/query-decision-history"
-import type { QueryDecisionHistoryRequest } from "@/modules/api/graphql/queries/query-decision-history"
-import type { OperationData, ReadResponse } from "@/hooks/workspaceread"
+import {
+    queryDecisionHistory,
+    type QueryDecisionHistoryRequest,
+} from "@/modules/api/graphql/queries/query-decision-history"
+import type { DecisionHistoryQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryDecisionHistorySwr}. */
 export const QUERY_DECISION_HISTORY_SWR_KEY = "QUERY_DECISION_HISTORY_SWR"
@@ -16,7 +17,7 @@ export const QUERY_DECISION_HISTORY_SWR_KEY = "QUERY_DECISION_HISTORY_SWR"
 export const useQueryDecisionHistorySwr = (
     request: QueryDecisionHistoryRequest | null,
     config?: SWRConfiguration,
-): ReadResponse<OperationData<typeof queryDecisionHistory>["decisionHistory"]> =>
+): ReadResponse<DecisionHistoryQuery["decisionHistory"]> =>
     useSWR(
         useWorkspaceRequestKey(QUERY_DECISION_HISTORY_SWR_KEY, request),
         async ([, , input]: WorkspaceReadKey<QueryDecisionHistoryRequest>) =>

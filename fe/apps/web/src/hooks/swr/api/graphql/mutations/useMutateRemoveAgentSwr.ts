@@ -1,10 +1,9 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateRemoveAgent } from "@/modules/api/graphql/mutations/mutation-remove-agent"
-import type { MutateRemoveAgentRequest } from "@/modules/api/graphql/mutations/mutation-remove-agent"
+import { mutateRemoveAgent, type MutateRemoveAgentRequest } from "@/modules/api/graphql/mutations/mutation-remove-agent"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { RemoveAgentMutation } from "@/modules/api"
 
 /** What the RemoveAgent mutation is triggered with. */
 interface RemoveAgentArg {
@@ -16,7 +15,7 @@ export const MUTATE_REMOVE_AGENT_SWR_KEY = "MUTATE_REMOVE_AGENT_SWR"
 
 /** SWR mutation for {@link mutateRemoveAgent}: `trigger(request)` answers the payload and rejects with the back end failure. */
 export const useMutateRemoveAgentSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateRemoveAgent>["removeAgent"],
+    RemoveAgentMutation["removeAgent"],
     Error,
     typeof MUTATE_REMOVE_AGENT_SWR_KEY,
     RemoveAgentArg["arg"]

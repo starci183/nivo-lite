@@ -19,8 +19,8 @@ const viewerSlice = createSlice({
     },
 })
 
-/** Records the person the session now belongs to (or `null` on sign-out). */
 const dest = viewerSlice.actions
+/** Records the person the session now belongs to (or `null` on sign-out). */
 export const setViewerId: ActionCreatorWithPayload<string | null, "viewer/setViewerId"> = dest.setViewerId
 /** The reducer of the viewer identity. */
 export const viewerReducer: Reducer<ViewerSliceState> = viewerSlice.reducer

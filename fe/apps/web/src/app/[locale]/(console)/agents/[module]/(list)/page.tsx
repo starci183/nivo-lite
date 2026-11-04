@@ -3,7 +3,8 @@ import type { Metadata } from "next"
 import { AgentTypePage, agentTypeMetadata } from "@/features/pages/AgentTypePage"
 
 /** The document title of the list of the instances of a type. */
-export const generateMetadata = async (props: PageProps): Promise<Metadata> => agentTypeMetadata({ module: (await props.params).module })
+export const generateMetadata = async (props: PageProps): Promise<Metadata> =>
+    agentTypeMetadata({ module: (await props.params).module })
 
 type PageProps = {
     readonly params: Promise<{ module: string }>

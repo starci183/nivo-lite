@@ -11,7 +11,7 @@ import { toSubmitTemplateListingRequest, toSubmitTemplateListingType } from "./s
 @Resolver()
 /** GraphQL door of submitTemplateListing. */
 export class SubmitTemplateListingResolver {
-    constructor(@InjectCommandBus() private readonly bus: CommandBus) {}
+    constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
     /** Offers a saved version of a template of the caller on the marketplace; the automated checks run at once. */
     @Mutation(() => ListingType, { name: "submitTemplateListing" })
@@ -19,7 +19,7 @@ export class SubmitTemplateListingResolver {
         @CurrentPrincipal() principal: Principal,
         @Args("input") input: SubmitTemplateListingInput,
     ): Promise<ListingType> {
-        const result = await this.bus.execute(
+        const result = await this.commandBus.execute(
             new SubmitTemplateListingCommand({ request: toSubmitTemplateListingRequest(input), principal }),
         )
         return toSubmitTemplateListingType(result)

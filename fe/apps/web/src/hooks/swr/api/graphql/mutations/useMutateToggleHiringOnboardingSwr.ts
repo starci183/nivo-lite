@@ -1,10 +1,12 @@
 "use client"
 
 import useSWRMutation from "swr/mutation"
-import { mutateToggleHiringOnboarding } from "@/modules/api/graphql/mutations/mutation-toggle-hiring-onboarding"
-import type { MutateToggleHiringOnboardingRequest } from "@/modules/api/graphql/mutations/mutation-toggle-hiring-onboarding"
+import {
+    mutateToggleHiringOnboarding,
+    type MutateToggleHiringOnboardingRequest,
+} from "@/modules/api/graphql/mutations/mutation-toggle-hiring-onboarding"
 import type { SWRMutationResponse } from "swr/mutation"
-import type { OperationData } from "@/hooks/workspaceread"
+import type { ToggleHiringOnboardingMutation } from "@/modules/api"
 
 /** What the toggleHiringOnboarding mutation is triggered with. */
 interface ToggleHiringOnboardingArg {
@@ -16,7 +18,7 @@ export const MUTATE_TOGGLE_HIRING_ONBOARDING_SWR_KEY = "MUTATE_TOGGLE_HIRING_ONB
 
 /** SWR mutation for {@link mutateToggleHiringOnboarding}: `trigger(request)` answers `toggleHiringOnboarding` and rejects with the back end failure. */
 export const useMutateToggleHiringOnboardingSwr = (): SWRMutationResponse<
-    OperationData<typeof mutateToggleHiringOnboarding>["toggleHiringOnboarding"],
+    ToggleHiringOnboardingMutation["toggleHiringOnboarding"],
     Error,
     typeof MUTATE_TOGGLE_HIRING_ONBOARDING_SWR_KEY,
     ToggleHiringOnboardingArg["arg"]

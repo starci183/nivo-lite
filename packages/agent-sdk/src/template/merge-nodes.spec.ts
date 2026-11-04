@@ -1,6 +1,6 @@
 import type { GraphDocument } from "./graph.types"
 import { instantiate } from "./parameters"
-import { draftOf, leakyGraph, packageOf, withExtraBranch } from "../testing"
+import { draftOf, leakyGraph, nodeOf, packageOf, withExtraBranch } from "../testing"
 import { applyUnits, updateUnits } from "./merge"
 
 const VALUES = { autoLimit: 5_000_000, waitMinutes: 240, shop: "Spa Hoa" }
@@ -44,7 +44,7 @@ const restyle = (graph: GraphDocument, key: string): GraphDocument =>
     )
 const grown = (graph: GraphDocument): GraphDocument => ({
     ...graph,
-    nodes: [...graph.nodes, { ...graph.nodes[graph.nodes.length - 1]!, key: "extra", next: [] }],
+    nodes: [...graph.nodes, ...graph.nodes.slice(-1).map((last) => ({ ...last, key: "extra", next: [] }))],
 })
 const branchKeys = (graph: GraphDocument): ReadonlyArray<string> =>
     graph.nodes.find((node) => node.key === "decide")?.decide?.branches.map((branch) => branch.key) ?? []
@@ -93,6 +93,28 @@ describe("updateUnits: nodes and removals", () => {
 
         expect(changeOf(dropped, "branch:decide:middle")).toBe("conflict")
         expect(changeOf(both, "branch:decide:tiny")).toBe("conflict")
+    })
+})
+
+describe("updateUnits: a node that gained a decide point", () => {
+    it("offers the node as an upgrade and each of its branches as added, since the buyer never had any", () => {
+        const bare = mapNodes(v1(), (node) => (node.key === "decide" ? nodeOf({ key: "decide" }) : node))
+        const units = updateUnits({ base: bare, current: bare, next: v1() })
+
+        expect(changeOf(units, "node:decide")).toBe("upgrade")
+        expect(units.filter((unit) => unit.branchKey !== null).map((unit) => unit.change)).toEqual([
+            "added",
+            "added",
+            "added",
+        ])
+    })
+})
+
+describe("updateUnits: a node the buyer dropped", () => {
+    it("calls a branch the creator changed a conflict when the buyer dropped the whole node", () => {
+        const units = updateUnits({ base: v1(), current: dropNode(v1(), "decide"), next: restyle(v1(), "middle") })
+
+        expect(changeOf(units, "branch:decide:middle")).toBe("conflict")
     })
 })
 
@@ -151,6 +173,13 @@ describe("applyUnits: nodes and removals", () => {
                 units.map((unit) => unit.id),
             ),
         ).toEqual(v1())
+    })
+
+    it("ignores a branch unit when the version offered no longer has the node or its decide point", () => {
+        const unit = { id: "branch:end:y", nodeKey: "end", branchKey: "y", change: "upgrade" as const }
+
+        expect(applyUnits(v1(), dropNode(v1(), "end"), [unit], [unit.id])).toEqual(v1())
+        expect(applyUnits(v1(), v1(), [unit], [unit.id])).toEqual(v1())
     })
 
     it("builds from the creator second version of the process without touching the buyer other nodes", () => {

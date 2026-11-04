@@ -6,9 +6,11 @@ import {
     toPublicDocument,
     DOSSIER_STATUS_TONE,
     FINDING_FILTERS,
+    selectionOf,
     type PublicDocument,
 } from "@/modules/brain"
 import type {
+    CategoryView,
     EvidencePlaceView,
     FindingAction,
     FindingCardActionView,
@@ -176,3 +178,19 @@ export const documentCommandOf =
     ): ((request: Request, done?: string) => Promise<PublicDocument | undefined>) =>
     (request: Request, done?: string) =>
         run(async () => toPublicDocument(await send(request)), done)
+
+/** A direct dossier pane, or a map node whose dossier must be proven by the actual map read. */
+export type FindingsSelection =
+    | { readonly kind: "dossier"; readonly dossierId: string; readonly findingId: string | undefined }
+    | { readonly kind: "map"; readonly nodeId: string | undefined }
+
+/** A map node resolves to its dossier only once the categories are read: until then no dossier is selected and the pane stays hidden. */
+export const dossierIdOf = (
+    input: FindingsSelection,
+    categories: ReadonlyArray<CategoryView> | undefined,
+): string | undefined => {
+    if (input.kind === "dossier") return input.dossierId
+    if (categories === undefined) return undefined
+    const selected = selectionOf(categories, input.nodeId ?? null)
+    return selected.kind === "dossier" ? selected.dossier.id : undefined
+}

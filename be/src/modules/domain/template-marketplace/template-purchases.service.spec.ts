@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentTemplateInstallerService, TemplateLicenseEntity } from "@modules/domain/agent-templates"
+import { mock } from "@starci/jest-preset"
+import { AgentTemplateInstallerService, TemplateRecordsService } from "@modules/domain/agent-templates"
+import type { TemplateLicenseView } from "@modules/domain/agent-templates"
 import type { PayableOrder } from "@modules/domain/billing"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { CreditsService } from "@modules/domain/credits"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"
 import { TemplatePurchasesService } from "./template-purchases.service"
@@ -20,6 +20,14 @@ const listing = (priceVnd: number): TemplateListingEntity =>
         priceVnd,
     })
 
+const licenseView = (over: Partial<TemplateLicenseView>): TemplateLicenseView => ({
+    id: "license-1",
+    kind: "paid",
+    installationId: null,
+    status: "active",
+    ...over,
+})
+
 const payable = mock<PayableOrder>({ order: mock<PaymentOrder>({ id: "order-1" }) })
 const REQUEST = {
     workspaceId: "ws-buyer",
@@ -29,8 +37,8 @@ const REQUEST = {
     locale: "vi" as const,
 }
 
-const build = async (price: number, license: TemplateLicenseEntity | null = null) => {
-    const em = mockEntityManager({ findOne: [TemplateLicenseEntity, license] })
+const build = async (price: number, license: TemplateLicenseView | null = null) => {
+    const records = mock<TemplateRecordsService>({ unclaimedPaidLicense: jest.fn().mockResolvedValue(license) })
     const listings = mock<TemplateListingsService>({
         approved: jest.fn().mockResolvedValue({ row: listing(price), card: {} }),
     })
@@ -42,7 +50,7 @@ const build = async (price: number, license: TemplateLicenseEntity | null = null
     const moduleRef = await Test.createTestingModule({
         providers: [
             TemplatePurchasesService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: TemplateRecordsService, useValue: records },
             { provide: TemplateListingsService, useValue: listings },
             { provide: AgentTemplateInstallerService, useValue: installer },
             { provide: CreditsService, useValue: credits },
@@ -78,11 +86,23 @@ describe("TemplatePurchasesService.install", () => {
         )
     })
 
-    it("installs a paid listing on the license a settled order wrote, and not before", async () => {
-        const paid = await build(
-            990_000,
-            Object.assign(new TemplateLicenseEntity(), { id: "license-1", installationId: null }),
+    it("reads the values the form gave, keeps the label the buyer chose, and drops what is not a number, a text or yes or no", async () => {
+        const { service, installer } = await build(0)
+
+        await service.install(BUYER, {
+            ...REQUEST,
+            values: { autoLimit: 8_000_000, nested: { a: 1 } },
+            name: "Spa Linh",
+        })
+
+        expect(installer.install).toHaveBeenCalledWith(
+            BUYER,
+            expect.objectContaining({ values: { autoLimit: 8_000_000 }, name: "Spa Linh" }),
         )
+    })
+
+    it("installs a paid listing on the license a settled order wrote, and not before", async () => {
+        const paid = await build(990_000, licenseView({ installationId: null }))
         const unpaid = await build(990_000, null)
 
         await paid.service.install(BUYER, REQUEST)
@@ -98,10 +118,7 @@ describe("TemplatePurchasesService.install", () => {
     })
 
     it("refuses a paid license that already runs an installation, so one payment is one install", async () => {
-        const used = await build(
-            990_000,
-            Object.assign(new TemplateLicenseEntity(), { id: "license-1", installationId: "inst-9" }),
-        )
+        const used = await build(990_000, licenseView({ installationId: "inst-9" }))
 
         expect(await codeOf(used.service.install(BUYER, REQUEST))).toBe(TemplateMarketplaceErrorCode.PaymentRequired)
         expect(used.installer.install).not.toHaveBeenCalled()
