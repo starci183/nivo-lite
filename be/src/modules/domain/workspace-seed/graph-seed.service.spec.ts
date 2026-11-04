@@ -1,12 +1,16 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
-import { AgentBindingsService, AgentConnectionsError, AgentConnectionsErrorCode } from "@modules/domain/agent-connections"
+import {
+    AgentBindingsService,
+    AgentConnectionsError,
+    AgentConnectionsErrorCode,
+} from "@modules/domain/agent-connections"
 import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModulesService } from "@modules/domain/modules"
+import { ModuleTagGrantsService, ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
@@ -71,6 +75,8 @@ const build = async (scenario: Scenario = {}) => {
     const flows = mock<AgentGraphFlowService>()
     flows.publish.mockResolvedValue("created")
     const bindings = mock<AgentBindingsService>()
+    const tagGrants = mock<ModuleTagGrantsService>()
+    tagGrants.grantFor.mockResolvedValue(undefined)
     flows.holds.mockResolvedValue(scenario.holds ?? false)
     const print = jest.fn<void, [string]>()
     const moduleRef = await Test.createTestingModule({
@@ -88,12 +94,52 @@ const build = async (scenario: Scenario = {}) => {
             { provide: ProfileActivationService, useValue: activation },
             { provide: AgentGraphFlowService, useValue: flows },
             { provide: AgentBindingsService, useValue: bindings },
+            { provide: ModuleTagGrantsService, useValue: tagGrants },
         ],
     }).compile()
-    return { service: moduleRef.get(GraphSeedService), agents, installations, rules, activation, flows, print, bindings, modules }
+    return {
+        service: moduleRef.get(GraphSeedService),
+        agents,
+        installations,
+        rules,
+        activation,
+        flows,
+        print,
+        bindings,
+        modules,
+        tagGrants,
+    }
 }
 
 const failure = (code: WorkspaceSeedErrorCode) => new WorkspaceSeedError({ code })
+
+describe("GraphSeedService > tag rights", () => {
+    it("grants the tag rights of the module to the agent it seats, as the install door does", async () => {
+        const { service, tagGrants } = await build()
+
+        await service.run(TEXT, "NIVO")
+
+        expect(tagGrants.grantFor).toHaveBeenCalledWith("ws-1", "sales", "agent-1")
+    })
+
+    it("grants them on a rerun too, when the module is live and already runs the flow", async () => {
+        const { service, tagGrants, activation } = await build({ held: [record({ status: "live" })], holds: true })
+
+        await service.run(TEXT, "NIVO")
+
+        expect(activation.activate).not.toHaveBeenCalled()
+        expect(tagGrants.grantFor).toHaveBeenCalledWith("ws-1", "sales", "agent-1")
+    })
+
+    it("grants them to an agent it had to install, once the agent has its seat", async () => {
+        const { service, tagGrants, installations } = await build({ held: [null, record()] })
+
+        await service.run(TEXT, "NIVO")
+
+        expect(installations.insert).toHaveBeenCalledTimes(1)
+        expect(tagGrants.grantFor).toHaveBeenCalledWith("ws-1", "sales", "agent-1")
+    })
+})
 
 describe("GraphSeedService > run", () => {
     it("publishes the flow to the agent of the module installed in the named workspace, and prints no value", async () => {
@@ -176,7 +222,9 @@ describe("GraphSeedService > run", () => {
             agentId: "agent-1",
             operatingMode: "assist",
         })
-        expect(flows.publish).toHaveBeenCalledWith(expect.objectContaining({ agentId: "agent-1", installationId: "inst-1" }))
+        expect(flows.publish).toHaveBeenCalledWith(
+            expect.objectContaining({ agentId: "agent-1", installationId: "inst-1" }),
+        )
     })
 
     it("reads back the installation another run made when its own insert lost the race", async () => {
@@ -206,7 +254,9 @@ describe("GraphSeedService > run", () => {
         await waiting.service.run(TEXT, "NIVO")
         await silent.service.run(TEXT, "NIVO")
 
-        expect(waiting.print).toHaveBeenCalledWith("sales agent agent-1 needs_connection, graph created, 0 connections assigned")
+        expect(waiting.print).toHaveBeenCalledWith(
+            "sales agent agent-1 needs_connection, graph created, 0 connections assigned",
+        )
         expect(silent.print).toHaveBeenCalledWith("sales agent agent-1 unknown, graph created, 0 connections assigned")
     })
 
@@ -255,7 +305,11 @@ describe("GraphSeedService > connection assignment", () => {
 
     const asModule = async (key: string, scenario: Scenario = {}) => {
         const built = await build({ held: [record({ moduleKey: key })], ...scenario })
-        built.modules.find.mockResolvedValue({ ...MODULE, key, agent: { ...MODULE.agent, handle: key } } as ModuleDefinition)
+        built.modules.find.mockResolvedValue({
+            ...MODULE,
+            key,
+            agent: { ...MODULE.agent, handle: key },
+        } as ModuleDefinition)
         built.activation.activate.mockResolvedValue({ [key]: "live" } as never)
         const text = `${JSON.stringify({ documents: [{ path: `data/graphs/${key}.json`, document: { ...SPEC, moduleKey: key } }] })}
 `

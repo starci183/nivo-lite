@@ -1,13 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
-import { AgentBindingsService, AgentConnectionsError, AgentConnectionsErrorCode } from "@modules/domain/agent-connections"
+import {
+    AgentBindingsService,
+    AgentConnectionsError,
+    AgentConnectionsErrorCode,
+} from "@modules/domain/agent-connections"
 import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
 import { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModulesService, defaultRulesOf } from "@modules/domain/modules"
+import { ModuleTagGrantsService, ModulesService, defaultRulesOf } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -49,6 +53,7 @@ export class GraphSeedService {
         private readonly activation: ProfileActivationService,
         private readonly flows: AgentGraphFlowService,
         private readonly bindings: AgentBindingsService,
+        private readonly tagGrants: ModuleTagGrantsService,
     ) {}
 
     /** Seeds every graph of the envelope read from `text` into the workspace named `workspaceName`; a refused graph stops the run. */
@@ -60,6 +65,8 @@ export class GraphSeedService {
         for (const spec of specs) {
             const module = await this.modules.find(spec.moduleKey)
             const { installation, agentId } = await this.seatOf(workspaceId, module)
+            // Before the fast path: an agent seeded by an earlier run, or before tag rights existed, gets them on any rerun.
+            await this.tagGrants.grantFor(workspaceId, module.key, agentId)
             if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
                 this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
                 continue
@@ -90,7 +97,12 @@ export class GraphSeedService {
      * Assigns the agent to the connections its module is meant to serve, through the same grant the console's "assign agent to connection"
      * uses; a grant is an upsert, so a rerun changes nothing. A connection the workspace does not hold is skipped. Answers how many were assigned.
      */
-    private async bindConnections(workspaceId: string, ownerId: string, moduleKey: string, agentId: string): Promise<number> {
+    private async bindConnections(
+        workspaceId: string,
+        ownerId: string,
+        moduleKey: string,
+        agentId: string,
+    ): Promise<number> {
         const wanted = CONNECTION_BINDINGS[moduleKey] ?? []
         let assigned = 0
         await eachInOrder(wanted, async (binding) => {
@@ -104,7 +116,8 @@ export class GraphSeedService {
                 })
                 assigned += 1
             } catch (cause) {
-                const missing = cause instanceof AgentConnectionsError && cause.code === AgentConnectionsErrorCode.TargetNotFound
+                const missing =
+                    cause instanceof AgentConnectionsError && cause.code === AgentConnectionsErrorCode.TargetNotFound
                 if (!missing) throw cause
             }
         })

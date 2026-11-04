@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
-import { ModuleReadinessService, SetupChatService } from "@modules/domain/modules"
+import { ModuleReadinessService, ModuleTagGrantsService, SetupChatService } from "@modules/domain/modules"
 import type { Locale } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
@@ -28,6 +28,7 @@ export class ProfileActivationService {
         private readonly installations: InstallationRecordsService,
         private readonly setup: SetupChatService,
         private readonly readiness: ModuleReadinessService,
+        private readonly tagGrants: ModuleTagGrantsService,
     ) {}
 
     /** The installation that drives the agent, installed in `setup` when there is none yet and read back. */
@@ -43,6 +44,7 @@ export class ProfileActivationService {
         })
         const installed = await this.installations.ofAgent(workspaceId, agentId)
         if (installed === null) throw new WorkspaceSeedError({ code: WorkspaceSeedErrorCode.RowMissing })
+        await this.tagGrants.grantFor(workspaceId, agent.module, agentId)
         return installed
     }
 
