@@ -1,6 +1,6 @@
 import { builder, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { In } from "typeorm"
+import { In, IsNull, Not } from "typeorm"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentConversationReadService } from "./agent-conversation-reads.service"
 import { AgentConversationEntity } from "./persistence/entities"
@@ -76,5 +76,40 @@ describe("AgentConversationReadService", () => {
             expect.objectContaining({ where: [{ workspaceId: "ws-1", kind: "customer", leadId: In(["lead-1"]) }] }),
         )
         expect(em.find).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentConversationReadService.leadOfContact", () => {
+    it("answers the lead of the newest conversation of the channel contact that has one", async () => {
+        const em = mockEntityManager({ findOne: [AgentConversationEntity, ROW] })
+        const moduleRef = await Test.createTestingModule({
+            providers: [AgentConversationReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        }).compile()
+
+        await expect(moduleRef.get(AgentConversationReadService).leadOfContact("ws-1", "zalo", "zalo-9")).resolves.toBe(
+            "lead-1",
+        )
+        expect(em.findOne).toHaveBeenCalledWith(AgentConversationEntity, {
+            select: { id: true, leadId: true },
+            where: {
+                workspaceId: "ws-1",
+                kind: "customer",
+                channel: "zalo",
+                externalId: "zalo-9",
+                leadId: Not(IsNull()),
+            },
+            order: { createdAt: "DESC", id: "DESC" },
+        })
+    })
+
+    it("answers null for a contact no conversation tied to a lead yet", async () => {
+        const em = mockEntityManager({ findOne: [AgentConversationEntity, null] })
+        const moduleRef = await Test.createTestingModule({
+            providers: [AgentConversationReadService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        }).compile()
+
+        await expect(
+            moduleRef.get(AgentConversationReadService).leadOfContact("ws-1", "zalo", "zalo-8"),
+        ).resolves.toBeNull()
     })
 })

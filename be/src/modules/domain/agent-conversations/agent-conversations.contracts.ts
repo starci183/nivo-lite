@@ -248,3 +248,6 @@ export interface NodeConversationFilter {
     /** The conversations on one channel. */
     readonly channel?: string | undefined
 }
+
+/** The id of a lead, or null when there is none. */
+export type OptionalLeadId = string | null

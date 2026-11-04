@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
-import { In } from "typeorm"
+import { In, IsNull, Not } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { CustomerChat, CustomerChatRefs } from "./agent-conversations.contracts"
+import type { CustomerChat, CustomerChatRefs, OptionalLeadId } from "./agent-conversations.contracts"
 import { AgentConversationEntity } from "./persistence/entities"
 
 /** The most chats one reference lookup answers. */
@@ -39,5 +39,19 @@ export class AgentConversationReadService {
             handledBy: row.handledBy,
             createdAt: row.createdAt,
         }))
+    }
+
+    /**
+     * The lead of the customer a channel knows by this contact id (a Zalo user, a Telegram chat), from the newest conversation of that
+     * contact that has one; null when none does. The channel's own id is the customer's key: a display name, and above all the guest
+     * placeholder every anonymous sender shares, never is.
+     */
+    async leadOfContact(workspaceId: string, channel: string, externalId: string): Promise<OptionalLeadId> {
+        const row = await this.entityManager.findOne(AgentConversationEntity, {
+            select: { id: true, leadId: true },
+            where: { workspaceId, kind: "customer", channel, externalId, leadId: Not(IsNull()) },
+            order: { createdAt: "DESC", id: "DESC" },
+        })
+        return row?.leadId ?? null
     }
 }
