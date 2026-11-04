@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import { adminWorkspacePath } from "@/modules/routes"
-import { billingTone, healthTone, moduleTone } from "./admin.shared"
+import { billingTone, billingWord, healthTone, moduleTone, planWord } from "./admin.shared"
 import type { AdminBadgeView, AdminFormat, AdminText, AdminWorkspaceItem, AdminWorkspaceRowView } from "./admin.shared"
 import { useAdminFormat } from "./useAdminFormat"
 
@@ -32,12 +32,10 @@ const workspaceRows = (
         href: adminWorkspacePath(item.id),
         needsAttention: item.attention,
         ownerEmail: item.ownerEmail ?? text("empty"),
-        status: item.status,
+        status: billingWord(text, item.status),
         statusTone: billingTone(item.status),
         paidUntil: typeof item.paidUntil === "string" ? text("paidUntil", { date: format.date(item.paidUntil) }) : null,
-        plan: item.planCode ?? text("empty"),
-        created: format.date(item.createdAt),
-        members: item.members,
+        plan: item.planCode === null ? text("empty") : planWord(text, item.planCode),
         modules: item.modules.map((entry) => ({
             id: entry.key,
             tone: moduleTone(entry.status),

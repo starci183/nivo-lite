@@ -1,9 +1,10 @@
 "use client"
 
 import { notFound } from "next/navigation"
-import { useAdminFormat, useAdminWorkspaceList, useAdminWorkspaceRows } from "@/hooks/admin"
+import { isAdminWorkspaceFilter, useAdminFormat, useAdminWorkspaceList, useAdminWorkspaceRows } from "@/hooks/admin"
 import type { AdminWorkspaceFilter, AdminWorkspaceRowView } from "@/hooks/admin"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { navigation } from "@/modules/i18n"
 import { adminListPath } from "@/modules/routes"
 import { AdminWorkspacesBase } from "./component"
 
@@ -21,8 +22,6 @@ const PLACEHOLDER_ROWS: ReadonlyArray<AdminWorkspaceRowView> = ["first", "second
     statusTone: "neutral",
     paidUntil: id,
     plan: id,
-    created: id,
-    members: 0,
     modules: [{ id, tone: "neutral", label: id }],
     connections: [{ id, tone: "neutral", label: id }],
     connectionWarnings: [],
@@ -41,17 +40,17 @@ interface AdminWorkspacesProps {
 export const AdminWorkspaces = (props: AdminWorkspacesProps) => {
     const { text: t } = useAdminFormat()
     const slotLabels = useSlotLabels()
+    const router = navigation.useRouter()
     const { list: data, isLoading, failure, reload } = useAdminWorkspaceList(props.filter, props.query)
     const rows = useAdminWorkspaceRows(data?.items)
     if (failure.isMissing) notFound()
     const copy = {
-        eyebrow: t("workspacesEyebrow"),
         description: t("workspacesDescription"),
         searchLabel: t("searchLabel"),
-        searchField: t("searchField"),
         searchPlaceholder: t("searchPlaceholder"),
-        searchSubmit: t("searchSubmit"),
+        clearLabel: t("clearFilters"),
         filtersLabel: t("filtersLabel"),
+        moreLabel: (count: number) => t("moreFilters", { count }),
         tableLabel: t("tableLabel"),
         emptyTitle: t("emptyTitle"),
         emptyHint: t("emptyHint"),
@@ -62,8 +61,6 @@ export const AdminWorkspaces = (props: AdminWorkspacesProps) => {
             owner: t("colOwner"),
             billing: t("colBilling"),
             plan: t("colPlan"),
-            created: t("colCreated"),
-            members: t("colMembers"),
             agents: t("colAgents"),
             connections: t("colConnections"),
             lastMessage: t("colLastMessage"),
@@ -73,27 +70,26 @@ export const AdminWorkspaces = (props: AdminWorkspacesProps) => {
         query: props.query,
         filter: props.filter,
     }
-    const filterLabel = (id: AdminWorkspaceFilter, count: number) =>
-        t("filterChoice", { label: t(`filter${id.charAt(0).toUpperCase()}${id.slice(1)}`), count })
+    const filterOf = (id: AdminWorkspaceFilter, count: number) => ({
+        id,
+        label: t(`filter${id.charAt(0).toUpperCase()}${id.slice(1)}`),
+        count,
+    })
     const view =
         data === undefined
             ? undefined
             : {
                   ...copy,
                   title: t("workspacesTitle", { count: data.total }),
-                  shownTitle: t("shownTitle", { count: data.items.length }),
-                  filters: FILTER_IDS.map((id) => ({
-                      id,
-                      href: adminListPath(id, props.query),
-                      label: filterLabel(id, data.counts[id]),
-                  })),
+                  footer: t("shownFooter", { shown: data.items.length, total: data.total }),
+                  filters: FILTER_IDS.map((id) => filterOf(id, data.counts[id])),
                   rows: rows ?? [],
               }
     const placeholder = {
         ...copy,
         title: t("workspacesTitle", { count: 0 }),
-        shownTitle: t("shownTitle", { count: 0 }),
-        filters: FILTER_IDS.map((id) => ({ id, href: adminListPath(id, props.query), label: filterLabel(id, 0) })),
+        footer: t("shownFooter", { shown: 0, total: 0 }),
+        filters: FILTER_IDS.map((id) => filterOf(id, 0)),
         rows: PLACEHOLDER_ROWS,
     }
     return (
@@ -103,7 +99,12 @@ export const AdminWorkspaces = (props: AdminWorkspacesProps) => {
                 placeholder,
                 labels: { ...slotLabels(t("empty")), error: failure.message ?? t("loadFailed") },
             }}
-            on={{ retry: reload }}
+            on={{
+                retry: reload,
+                search: (query) => router.push(adminListPath(props.filter, query.trim())),
+                filter: (id) => router.push(adminListPath(isAdminWorkspaceFilter(id) ? id : "all", props.query)),
+                clear: () => router.push(adminListPath("all", "")),
+            }}
         />
     )
 }

@@ -6,7 +6,6 @@ import type { AdminCardView, DataSlot, SlotLabels } from "@/modules/types"
 /** Copy and cards the platform health page supplies. */
 export interface AdminHealthViewProps {
     readonly props: {
-        readonly eyebrow: string
         readonly title: string
         readonly description: string
         readonly cards: ReadonlyArray<AdminCardView>
@@ -41,7 +40,7 @@ export interface AdminHealthBaseProps {
 export const AdminHealthBase = (props: AdminHealthBaseProps) => {
     const words = props.props.placeholder
     return (
-        <Page measure="full" header={{ meta: words.eyebrow, title: words.title, description: words.description }}>
+        <Page measure="full" header={{ title: words.title, description: words.description }}>
             <SlotView
                 {...props.props}
                 onRetry={props.on.retry}

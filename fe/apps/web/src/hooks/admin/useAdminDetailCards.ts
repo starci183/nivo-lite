@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { badgeOf, flowTone, healthTone, moduleTone } from "./admin.shared"
+import { adminCard, badgeOf, flowTone, healthTone, moduleTone } from "./admin.shared"
 import type {
     AdminBadgeView,
     AdminCardView,
@@ -14,14 +14,6 @@ import { useAdminFormat } from "./useAdminFormat"
 
 /** The most characters of a raw error text a row shows. */
 const ERROR_CLIP = 300
-
-const card = (id: string, label: string, emptyMessage: string, rows: ReadonlyArray<AdminRowView>): AdminCardView => ({
-    id,
-    label,
-    emptyMessage,
-    rows,
-    labelBadges: [],
-})
 
 const memberRows = (
     detail: AdminWorkspaceDetail,
@@ -176,25 +168,30 @@ const errorRows = (detail: AdminWorkspaceDetail, format: AdminFormat): ReadonlyA
         badges: [],
     }))
 
-/** The list cards under the overview of one workspace, in reading order. */
+/** How one list card of a workspace reads its rows from the workspace. */
+type CardSource = (detail: AdminWorkspaceDetail, format: AdminFormat, text: AdminText) => ReadonlyArray<AdminRowView>
+
+/** The list cards under the overview of one workspace, in reading order; a workspace not read yet gives each card its label and no rows, and the logs (errors, transfers) show no count. */
 const detailCards = (
-    detail: AdminWorkspaceDetail,
+    detail: AdminWorkspaceDetail | undefined,
     format: AdminFormat,
     text: AdminText,
-): ReadonlyArray<AdminCardView> => [
-    card("members", text("cardMembers"), text("empty"), memberRows(detail, format, text)),
-    card("agents", text("cardAgents"), text("noAgents"), moduleRows(detail, format, text)),
-    card("connections", text("cardConnections"), text("noConnections"), connectionRows(detail, format, text)),
-    card("knowledge", text("cardKnowledge"), text("noKnowledge"), knowledgeRows(detail)),
-    card("orders", text("cardOrders"), text("noOrders"), orderRows(detail, format, text)),
-    card("transfers", text("cardTransfers"), text("noTransfers"), paymentRows(detail, format, text)),
-    card("errors", text("cardErrors"), text("noErrors"), errorRows(detail, format)),
-]
+): ReadonlyArray<AdminCardView> => {
+    const card = (id: string, label: string, empty: string, rows: CardSource, counts = true): AdminCardView =>
+        adminCard(id, label, empty, detail === undefined ? [] : rows(detail, format, text), counts)
+    return [
+        card("members", text("cardMembers"), text("empty"), memberRows),
+        card("agents", text("cardAgents"), text("noAgents"), moduleRows),
+        card("connections", text("cardConnections"), text("noConnections"), connectionRows),
+        card("errors", text("cardErrors"), text("noErrors"), errorRows, false),
+        card("transfers", text("cardTransfers"), text("noTransfers"), paymentRows, false),
+        card("knowledge", text("cardKnowledge"), text("noKnowledge"), knowledgeRows),
+        card("orders", text("cardOrders"), text("noOrders"), orderRows),
+    ]
+}
 
-/** The list cards under the overview of one workspace, worded and formatted in the reader's locale. */
-export const useAdminDetailCards = (
-    source: AdminWorkspaceDetail | undefined,
-): ReadonlyArray<AdminCardView> | undefined => {
+/** The list cards under the overview of one workspace, worded and formatted in the reader's locale; with no workspace yet, the same cards with no rows. */
+export const useAdminDetailCards = (source: AdminWorkspaceDetail | undefined): ReadonlyArray<AdminCardView> => {
     const { text, format } = useAdminFormat()
-    return useMemo(() => (source === undefined ? undefined : detailCards(source, format, text)), [source, format, text])
+    return useMemo(() => detailCards(source, format, text), [source, format, text])
 }
