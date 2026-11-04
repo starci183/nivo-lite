@@ -23,5 +23,13 @@ export const connectionsMetadata = async (): Promise<Metadata> => {
 export const ConnectionsPage = async (props: ConnectionsPageProps): Promise<ReactElement> => {
     const params = (await props.searchParams) ?? {}
     const tab = params[URL_PARAMS.tab]
-    return <ConnectionsPageBase props={{ tab: typeof tab === "string" ? tab : undefined }} />
+    const open = params[URL_PARAMS.open]
+    return (
+        <ConnectionsPageBase
+            props={{
+                tab: typeof tab === "string" ? tab : undefined,
+                open: typeof open === "string" ? open : undefined,
+            }}
+        />
+    )
 }

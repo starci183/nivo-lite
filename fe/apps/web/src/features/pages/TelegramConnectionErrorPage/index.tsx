@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { usePaneCopy } from "@/hooks/paneFrame"
 import { TelegramConnectionErrorPageBase } from "./component"
 
 /** What the route error boundary hands over. */
@@ -7,18 +7,17 @@ interface TelegramConnectionErrorPageProps {
     readonly onRetry: () => void
 }
 
-/** The Telegram bot connection error page: the words are settled here, the drawing is the pure half. */
+/** The Telegram connection error page: the words are settled here, the drawing is the pure half. */
 export const TelegramConnectionErrorPage = (props: TelegramConnectionErrorPageProps) => {
     const t = useTranslations("telegramConnection")
+    const pane = usePaneCopy()
     return (
         <TelegramConnectionErrorPageBase
             props={{
-                crumbs: [
-                    { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
-                    { id: "telegram", label: t("crumbTelegram") },
-                ],
-                title: t("title"),
-                message: t("loadFailed"),
+                label: t("title"),
+                title: pane.errorTitle,
+                description: pane.errorBody,
+                retryLabel: pane.retry,
             }}
             on={{ retry: props.onRetry }}
         />

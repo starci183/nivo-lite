@@ -53,6 +53,7 @@ export const AgentChat = (props: AgentChatProps) => {
                 railLabels: slotLabels(t("railEmptyHelp")),
                 header: copy.header,
                 channelTabs: copy.channelTabs,
+                hasConversation: "items" in chat.threadSlot ? chat.threadSlot.items.hasSelection : true,
                 threadSlot: chat.threadSlot,
                 threadLabels: slotLabels(t("railEmptyHelp")),
                 thread: copy.thread,

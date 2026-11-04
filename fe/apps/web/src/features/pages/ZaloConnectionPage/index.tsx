@@ -20,5 +20,15 @@ export const zaloConnectionMetadata = async (): Promise<Metadata> => {
  */
 export const ZaloConnectionPage = async (props: ZaloConnectionPageProps): Promise<ReactElement> => {
     const { id } = await props.params
-    return <ZaloConnectionPageBase props={{ connectionId: id }} />
+    const t = await getTranslations("zaloConnection")
+    return (
+        <ZaloConnectionPageBase
+            props={{
+                connectionId: id,
+                gridLabel: t("title"),
+                mainLabel: t("mainLabel"),
+                rail: { label: t("eventsTitle"), openLabel: t("eventsOpen"), closeLabel: t("eventsClose") },
+            }}
+        />
+    )
 }

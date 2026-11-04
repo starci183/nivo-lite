@@ -1,4 +1,5 @@
-import { SegmentedControl } from "@starci/grammar/common"
+import { ChoiceChips, EmptyNotice, Stack, Text } from "@starci/grammar/common"
+import { SepayConfirm } from "@/components/composites/SepayConfirm"
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SepayEnvironment, SlotLabels } from "@/modules/types"
@@ -26,9 +27,20 @@ export interface SepayEnvironmentPickerBaseProps {
         readonly slot: DataSlot<SepayEnvironmentView>
         readonly placeholder: SepayEnvironmentView
         readonly slotLabels: SlotLabels
+        /** The question asked before real money is booked: open while the owner has picked "live" and not yet answered. */
+        readonly confirm: {
+            readonly isOpen: boolean
+            readonly title: string
+            readonly description: string
+            readonly confirmLabel: string
+            readonly cancelLabel: string
+            readonly isPending: boolean
+        }
     }
     readonly on: {
         readonly change: (environment: SepayEnvironment) => void
+        readonly confirmLive: () => void
+        readonly dismiss: () => void
         readonly retry: () => void
         readonly toggle: (isOpen: boolean) => void
     }
@@ -43,20 +55,29 @@ export const SepayEnvironmentPickerBase = (props: SepayEnvironmentPickerBaseProp
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
             render={(view, isLoading) => (
-                <SegmentedControl
-                    label={props.props.label}
-                    isLabelHidden
-                    description={view.description}
-                    options={props.props.options}
-                    value={view.value}
-                    isDisabled={view.isDisabled}
-                    isLoading={isLoading}
-                    onValueChange={(value) => {
-                        const picked = props.props.options.find((option) => option.value === value)
-                        if (picked !== undefined && picked.value !== view.value) props.on.change(picked.value)
-                    }}
-                />
+                <Stack gap="row">
+                    <Text size="sm" tone="muted" isLoading={isLoading}>
+                        {view.description}
+                    </Text>
+                    <ChoiceChips
+                        label={props.props.label}
+                        isLabelHidden
+                        empty={<EmptyNotice message={props.props.slotLabels.empty} />}
+                        options={props.props.options.map((option) => ({
+                            value: option.value,
+                            label: option.label,
+                            isDisabled: view.isDisabled,
+                        }))}
+                        value={view.value}
+                        isLoading={isLoading}
+                        onValueChange={(value) => {
+                            const picked = props.props.options.find((option) => option.value === value)
+                            if (picked !== undefined && picked.value !== view.value) props.on.change(picked.value)
+                        }}
+                    />
+                </Stack>
             )}
         />
+        <SepayConfirm {...props.props.confirm} onConfirm={props.on.confirmLive} onDismiss={props.on.dismiss} />
     </ConnectionStepBand>
 )

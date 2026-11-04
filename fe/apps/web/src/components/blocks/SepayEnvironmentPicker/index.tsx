@@ -19,11 +19,13 @@ export const SepayEnvironmentPicker = (props: SepayEnvironmentPickerProps) => {
     const slotLabels = useSlotLabels()
     const setup = useSepaySetupStep(props.connectionId, "environment")
     const [isPending, setPending] = useState(false)
+    const [isAsking, setAsking] = useState(false)
     const slot = mapSlot(connection.slot, (view): SepayEnvironmentView => ({
         value: view.environment,
         description: t(view.environment === "test" ? "environmentTestNote" : "environmentLiveNote"),
         isDisabled: role !== "owner" || view.status === "disconnected" || isPending,
     }))
+    const connectionView = "items" in connection.slot ? connection.slot.items : undefined
     const refusal = useConnectionRefusal()
     if (refusal !== undefined) return null
     return (
@@ -38,14 +40,31 @@ export const SepayEnvironmentPicker = (props: SepayEnvironmentPickerProps) => {
                 slot,
                 placeholder: { value: "test", description: t("environmentTestNote"), isDisabled: true },
                 slotLabels: slotLabels(t("stepEnvironment")),
+                confirm: {
+                    isOpen: isAsking,
+                    title: t("liveConfirmTitle"),
+                    description: t("liveConfirmBody", { account: connectionView?.accountMasked ?? "" }),
+                    confirmLabel: t("liveConfirmAction"),
+                    cancelLabel: t("cancel"),
+                    isPending,
+                },
             }}
             on={{
                 toggle: setup.toggle,
                 retry: connection.retry,
                 change: (environment) => {
+                    if (environment === "live") return setAsking(true)
                     setPending(true)
                     void commands.setEnvironment(environment).then(() => setPending(false))
                 },
+                confirmLive: () => {
+                    setPending(true)
+                    void commands.setEnvironment("live").then(() => {
+                        setPending(false)
+                        setAsking(false)
+                    })
+                },
+                dismiss: () => setAsking(false),
             }}
         />
     )

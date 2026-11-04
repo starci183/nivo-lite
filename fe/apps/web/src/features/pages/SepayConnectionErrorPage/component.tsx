@@ -1,21 +1,23 @@
-import { RouteError } from "@/components/blocks/RouteError"
+import { PaneFailure } from "@/components/composites/PaneFailure"
 
-/** The trail, the heading and the words of the failure. */
+/** The words of the failure of the Sepay connection page. */
 export interface SepayConnectionErrorPageBaseProps {
     readonly props: {
-        readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
+        readonly label: string
         readonly title: string
-        readonly message: string
+        readonly description: string
+        readonly retryLabel: string
     }
     readonly on: { readonly retry: () => void }
 }
 
-/** The SePay page keeps its trail and heading when its data fails, with one Alert and a retry. */
+/** The Sepay connection page keeps the Connections frame and its list when its data fails: one notice in its pane, with a retry. */
 export const SepayConnectionErrorPageBase = (props: SepayConnectionErrorPageBaseProps) => (
-    <RouteError
-        crumbs={props.props.crumbs}
+    <PaneFailure
+        label={props.props.label}
         title={props.props.title}
-        message={props.props.message}
+        description={props.props.description}
+        retryLabel={props.props.retryLabel}
         onRetry={props.on.retry}
     />
 )

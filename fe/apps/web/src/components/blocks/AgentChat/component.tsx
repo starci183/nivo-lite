@@ -55,6 +55,8 @@ export interface AgentChatViewProps {
     readonly railLabels: SlotLabels
     readonly header: Omit<AgentChatHeaderProps, "glyph" | "module" | "seed" | "onBack" | "onTakeover" | "onOpenLead">
     readonly channelTabs: ChannelTabsView | null
+    /** A conversation is open (or the first read waits): the composer is drawn; with none open the greeting carries the one action. */
+    readonly hasConversation: boolean
     readonly threadSlot: DataSlot<ThreadView>
     readonly threadLabels: SlotLabels
     readonly thread: Omit<AgentChatThreadProps, "messages"> & { readonly label: string }
@@ -226,6 +228,11 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
                             onStart={props.on.start}
                         />
                     </PaneSection>
+                    {view.channelTabs === null ? null : (
+                        <PaneSection bleed="inline">
+                            <ChannelTabs tabs={view.channelTabs} onTab={props.on.tab} />
+                        </PaneSection>
+                    )}
                     <PaneSection scroll={{ label: view.railTitle }}>
                         <RailList view={view} onPick={onPick} onRetry={props.on.retryRail} />
                     </PaneSection>
@@ -234,24 +241,21 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
                     <PaneSection align="center">
                         <Head {...props} />
                     </PaneSection>
-                    {view.channelTabs === null ? null : (
-                        <PaneSection bleed="inline">
-                            <ChannelTabs tabs={view.channelTabs} onTab={props.on.tab} />
-                        </PaneSection>
-                    )}
                     <PaneSection scroll={{ label: view.thread.label, role: "log", tone: "background" }}>
                         <Thread {...props} />
                     </PaneSection>
-                    <PaneSection>
-                        <AgentChatComposer
-                            {...view.composer}
-                            onDraft={props.on.draft}
-                            onFile={props.on.file}
-                            onFileClear={props.on.fileClear}
-                            onPrompt={props.on.send}
-                            onSend={props.on.send}
-                        />
-                    </PaneSection>
+                    {view.hasConversation ? (
+                        <PaneSection>
+                            <AgentChatComposer
+                                {...view.composer}
+                                onDraft={props.on.draft}
+                                onFile={props.on.file}
+                                onFileClear={props.on.fileClear}
+                                onPrompt={props.on.send}
+                                onSend={props.on.send}
+                            />
+                        </PaneSection>
+                    ) : null}
                 </Pane>
             </PaneGrid>
         </Page>

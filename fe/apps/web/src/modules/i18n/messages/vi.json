@@ -1190,6 +1190,40 @@
   "connections": {
     "eyebrow": "KẾT NỐI",
     "title": "Kết nối",
+    "grantRemove": "Gỡ",
+    "grantsTitle": "Agent dùng kết nối này",
+    "grantAssign": "Giao cho agent",
+    "grantsEmpty": "Chưa có agent nào dùng kết nối này.",
+    "openLabel": "Chi tiết kết nối",
+    "zaloReturnTitle": "Kết nối Zalo OA",
+    "zaloReturningBody": "Đừng đóng trang. NIVO sẽ đưa bạn về thiết lập ngay khi Zalo trả lời.",
+    "zaloReturnFailed": "Chưa nhận được trả lời từ Zalo. Hãy thử lại hoặc mở lại thiết lập.",
+    "listLabel": "Danh sách kết nối",
+    "filterLabel": "Lọc kết nối",
+    "filter_all": "Tất cả",
+    "filter_attention": "Cần xử lý",
+    "filter_money": "Tiền về",
+    "filter_chat": "Kênh chat",
+    "filter_data": "Dữ liệu",
+    "filter_email": "Email",
+    "filter_automation": "Tự động hoá",
+    "nextTitlePending": "{name} chưa xong",
+    "nextTitleError": "{name} cần kiểm tra",
+    "continueSetup": "Tiếp tục thiết lập",
+    "overviewTitle": "Tổng quan",
+    "overviewHead": "{workspace} · {count} kết nối",
+    "figureLive": "Đang dùng",
+    "figureLiveMeta": "kết nối chạy bình thường",
+    "figureAttention": "Cần xử lý",
+    "figureAttentionMeta": "thiết lập chưa xong",
+    "figureAgents": "Agent dùng kết nối",
+    "figureAgentsMeta": "trên {count} agent đang chạy",
+    "nextTitle": "Cần bạn làm tiếp",
+    "agentsTitle": "Agent dùng kết nối nào",
+    "agentsEmpty": "Chưa có agent nào dùng kết nối.",
+    "levelLabel": "Quyền của {name}",
+    "openLibrary": "Mở thư viện",
+    "errorBody": "Hãy thử lại sau ít phút.",
     "crumbLabel": "Đường dẫn",
     "crumbHome": "Tổng quan",
     "description": "Kết nối bot Telegram, nguồn tiền về ngân hàng và Zalo OA của chính bạn. Sau đó chọn, trong Cài đặt của từng agent, agent đó dùng kết nối nào.",
@@ -2740,11 +2774,7 @@
     "office": {
       "title": "Office",
       "what": "Phòng làm việc chung: nhắn với đội và các agent AI, duyệt việc AI đề xuất.",
-      "steps": [
-        "Mở Office",
-        "Gõ @tên-agent để gọi agent",
-        "Duyệt hoặc sửa các thẻ chờ duyệt"
-      ],
+      "steps": ["Mở Office", "Gõ @tên-agent để gọi agent", "Duyệt hoặc sửa các thẻ chờ duyệt"],
       "keywords": [
         "office",
         "van phong",
@@ -2765,20 +2795,8 @@
     "overview": {
       "title": "Tổng quan",
       "what": "Bức tranh chung: kết quả, việc đang chờ, ngoại lệ cần chú ý.",
-      "steps": [
-        "Mở Tổng quan",
-        "Xem các thẻ kết quả và việc chờ"
-      ],
-      "keywords": [
-        "tong quan",
-        "dashboard",
-        "bao cao",
-        "ket qua",
-        "doanh thu",
-        "tinh hinh",
-        "overview",
-        "report"
-      ]
+      "steps": ["Mở Tổng quan", "Xem các thẻ kết quả và việc chờ"],
+      "keywords": ["tong quan", "dashboard", "bao cao", "ket qua", "doanh thu", "tinh hinh", "overview", "report"]
     },
     "authority": {
       "title": "Giao quyền",
@@ -2805,28 +2823,13 @@
     "inbox": {
       "title": "Đầu vào",
       "what": "Mọi thứ đi vào: tin nhắn khách, đơn, giao dịch ngân hàng, từ mọi kênh.",
-      "steps": [
-        "Mở Đầu vào",
-        "Lọc theo kênh hoặc loại"
-      ],
-      "keywords": [
-        "dau vao",
-        "inbox",
-        "tin nhan den",
-        "tin nhan khach",
-        "giao dich den",
-        "don moi",
-        "hop thu"
-      ]
+      "steps": ["Mở Đầu vào", "Lọc theo kênh hoặc loại"],
+      "keywords": ["dau vao", "inbox", "tin nhan den", "tin nhan khach", "giao dich den", "don moi", "hop thu"]
     },
     "leads": {
       "title": "Khách hàng",
       "what": "Danh sách khách và cơ hội bán hàng, ai phụ trách và việc tiếp theo.",
-      "steps": [
-        "Mở Khách hàng",
-        "Bấm Thêm khách hàng để thêm một khách",
-        "Mở một khách để xem lịch sử và giao việc"
-      ],
+      "steps": ["Mở Khách hàng", "Bấm Thêm khách hàng để thêm một khách", "Mở một khách để xem lịch sử và giao việc"],
       "keywords": [
         "khach hang",
         "lead",
@@ -2843,44 +2846,19 @@
     "responsibilities": {
       "title": "Trách nhiệm",
       "what": "Ai đang chịu trách nhiệm việc gì, hạn chót và bước tiếp theo.",
-      "steps": [
-        "Mở Trách nhiệm",
-        "Lọc theo người phụ trách hoặc trạng thái"
-      ],
-      "keywords": [
-        "trach nhiem",
-        "ai lam gi",
-        "viec cua ai",
-        "han chot",
-        "phu trach",
-        "responsibility",
-        "task"
-      ]
+      "steps": ["Mở Trách nhiệm", "Lọc theo người phụ trách hoặc trạng thái"],
+      "keywords": ["trach nhiem", "ai lam gi", "viec cua ai", "han chot", "phu trach", "responsibility", "task"]
     },
     "decisions": {
       "title": "Lịch sử quyết định",
       "what": "Nhật ký mọi quyết định: AI tự làm, người duyệt, người sửa, kèm lý do.",
-      "steps": [
-        "Mở Lịch sử quyết định",
-        "Lọc theo bộ phận hoặc người quyết định"
-      ],
-      "keywords": [
-        "lich su quyet dinh",
-        "quyet dinh",
-        "nhat ky",
-        "ai da duyet",
-        "decision",
-        "audit"
-      ]
+      "steps": ["Mở Lịch sử quyết định", "Lọc theo bộ phận hoặc người quyết định"],
+      "keywords": ["lich su quyet dinh", "quyet dinh", "nhat ky", "ai da duyet", "decision", "audit"]
     },
     "automations": {
       "title": "Tự động hoá",
       "what": "Quy trình tự chạy theo lịch hoặc sự kiện: nhắc nợ, báo cáo, chăm sóc khách.",
-      "steps": [
-        "Mở Tự động hoá",
-        "Chọn một mẫu có sẵn hoặc tạo mới",
-        "Bật quy trình"
-      ],
+      "steps": ["Mở Tự động hoá", "Chọn một mẫu có sẵn hoặc tạo mới", "Bật quy trình"],
       "keywords": [
         "tu dong hoa",
         "tu dong",
@@ -2896,12 +2874,7 @@
     "knowledge": {
       "title": "Tri thức",
       "what": "Dạy AI về doanh nghiệp: bảng giá, chính sách, câu hỏi thường gặp, tài liệu, link.",
-      "steps": [
-        "Mở Tri thức",
-        "Bấm Thêm nguồn",
-        "Dán nội dung, tải tệp hoặc dán link",
-        "Lưu để AI dùng khi trả lời"
-      ],
+      "steps": ["Mở Tri thức", "Bấm Thêm nguồn", "Dán nội dung, tải tệp hoặc dán link", "Lưu để AI dùng khi trả lời"],
       "keywords": [
         "tri thuc",
         "kien thuc",
@@ -2941,11 +2914,7 @@
     "modules": {
       "title": "Agent",
       "what": "Cài và cấu hình các agent: Chatbot, Bán hàng, Kế toán, Đặt lịch, Kho, Tuyển dụng…",
-      "steps": [
-        "Mở Agent",
-        "Chọn agent cần dùng và bấm Cài",
-        "Làm theo các bước thiết lập"
-      ],
+      "steps": ["Mở Agent", "Chọn agent cần dùng và bấm Cài", "Làm theo các bước thiết lập"],
       "keywords": [
         "module",
         "modules",
@@ -2964,12 +2933,7 @@
     "team": {
       "title": "Đội ngũ",
       "what": "Mời người vào workspace và chọn vai trò: Chủ sở hữu, Quản lý, Nhân viên.",
-      "steps": [
-        "Mở Đội ngũ",
-        "Bấm Mời thành viên",
-        "Nhập email và chọn vai trò",
-        "Gửi lời mời hoặc sao chép link mời"
-      ],
+      "steps": ["Mở Đội ngũ", "Bấm Mời thành viên", "Nhập email và chọn vai trò", "Gửi lời mời hoặc sao chép link mời"],
       "keywords": [
         "doi ngu",
         "moi nhan vien",
@@ -2987,17 +2951,8 @@
     "connections": {
       "title": "Kết nối",
       "what": "Nối NIVO với ngân hàng, Telegram, Zalo OA, email, Google Sheets, n8n.",
-      "steps": [
-        "Mở Kết nối",
-        "Chọn dịch vụ và bấm Thêm kết nối",
-        "Làm theo hướng dẫn từng bước"
-      ],
-      "keywords": [
-        "ket noi",
-        "tich hop",
-        "connection",
-        "integration"
-      ]
+      "steps": ["Mở Kết nối", "Chọn dịch vụ và bấm Thêm kết nối", "Làm theo hướng dẫn từng bước"],
+      "keywords": ["ket noi", "tich hop", "connection", "integration"]
     },
     "connections-sepay": {
       "title": "Kết nối SePay (tiền về)",
@@ -3053,12 +3008,7 @@
         "Dán Callback URL và Webhook URL sang Zalo, bật sự kiện tin nhắn",
         "Bấm Kết nối Zalo OA để chủ OA đồng ý"
       ],
-      "keywords": [
-        "zalo",
-        "zalo oa",
-        "official account",
-        "oa"
-      ]
+      "keywords": ["zalo", "zalo oa", "official account", "oa"]
     },
     "connections-smtp": {
       "title": "Email gửi đi",
@@ -3068,29 +3018,13 @@
         "Nhập máy chủ SMTP hoặc chọn nhà cung cấp",
         "Gửi thử một email"
       ],
-      "keywords": [
-        "email",
-        "smtp",
-        "gui email",
-        "gmail",
-        "thu dien tu"
-      ]
+      "keywords": ["email", "smtp", "gui email", "gmail", "thu dien tu"]
     },
     "connections-google": {
       "title": "Google Sheets",
       "what": "NIVO ghi đơn hàng vào bảng tính Google của bạn.",
-      "steps": [
-        "Mở Kết nối › Google (Sheets) › Thêm kết nối",
-        "Đăng nhập Google và cho phép",
-        "Chọn bảng tính"
-      ],
-      "keywords": [
-        "google sheet",
-        "google sheets",
-        "bang tinh",
-        "excel",
-        "spreadsheet"
-      ]
+      "steps": ["Mở Kết nối › Google (Sheets) › Thêm kết nối", "Đăng nhập Google và cho phép", "Chọn bảng tính"],
+      "keywords": ["google sheet", "google sheets", "bang tinh", "excel", "spreadsheet"]
     },
     "connections-webhook": {
       "title": "n8n / Webhook",
@@ -3100,29 +3034,13 @@
         "Dán URL webhook của n8n",
         "Chọn sự kiện cần gửi và gửi thử"
       ],
-      "keywords": [
-        "n8n",
-        "webhook",
-        "zapier",
-        "make.com",
-        "make"
-      ]
+      "keywords": ["n8n", "webhook", "zapier", "make.com", "make"]
     },
     "developers": {
       "title": "Nhà phát triển (API)",
       "what": "Tạo khóa API để phần mềm khác đọc và ghi dữ liệu NIVO.",
-      "steps": [
-        "Mở Nhà phát triển",
-        "Đặt tên khóa và bấm Tạo",
-        "Sao chép khóa ngay, NIVO chỉ hiện một lần"
-      ],
-      "keywords": [
-        "api",
-        "khoa api",
-        "api key",
-        "developer",
-        "lap trinh"
-      ]
+      "steps": ["Mở Nhà phát triển", "Đặt tên khóa và bấm Tạo", "Sao chép khóa ngay, NIVO chỉ hiện một lần"],
+      "keywords": ["api", "khoa api", "api key", "developer", "lap trinh"]
     },
     "billing": {
       "title": "Credit và gói",
@@ -3152,10 +3070,7 @@
     "account": {
       "title": "Tài khoản của bạn",
       "what": "Đổi tên hiển thị, email, mật khẩu và đăng xuất các thiết bị khác.",
-      "steps": [
-        "Mở menu ảnh đại diện › Tài khoản",
-        "Sửa thông tin và bấm Lưu"
-      ],
+      "steps": ["Mở menu ảnh đại diện › Tài khoản", "Sửa thông tin và bấm Lưu"],
       "keywords": [
         "tai khoan cua toi",
         "thong tin tai khoan",
@@ -7989,6 +7904,9 @@
   },
   "sepayConnection": {
     "title": "Kết nối SePay",
+    "liveConfirmTitle": "Chuyển sang Chính thức?",
+    "liveConfirmBody": "Từ giờ mọi khoản tiền vào và tiền ra thật của tài khoản {account} được ghi sổ và đối soát với hoá đơn. Trên SePay, nhớ tắt Test Mode.",
+    "liveConfirmAction": "Chuyển sang Chính thức",
     "loadFailed": "Không tải được kết nối SePay.",
     "crumbLabel": "Đường dẫn",
     "crumbHome": "Tổng quan",
