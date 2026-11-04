@@ -8,13 +8,21 @@ import {
 } from "@nivo-lite/agent-sdk/reconcile"
 import type { Arrival, Claim, Evidenced, Outcome } from "@nivo-lite/agent-sdk/reconcile"
 import { z } from "zod"
-import { ARRIVAL_DINH, ARRIVAL_MOMO, CLAIM_OF_DINH, EVIDENCED_FOR_DINH, EVIDENCED_FOR_MOMO } from "./payment.fixtures"
+import {
+    ARRIVAL_DINH,
+    ARRIVAL_MOMO,
+    CLAIM_OF_DINH,
+    CLAIM_OF_MOMO,
+    EVIDENCED_FOR_DINH,
+    EVIDENCED_FOR_MOMO,
+    EVIDENCED_FOR_MOMO_CLAIM,
+} from "./payment.fixtures"
 import { arrivalSchema, claimSchema, evidencedSchema, judgementAnswerSchema } from "./payment.schemas"
 import type { Named } from "./payment.schemas"
 
-/** What the judge reads: the transfer, the candidates with their evidence, and the open claims. */
+/** What the judge reads: the transfer (none while a claim waits for its money), the candidates with their evidence, and the open claims. */
 interface JudgeInput {
-    readonly arrival: Arrival
+    readonly arrival: Arrival | null
     readonly evidenced: ReadonlyArray<Evidenced>
     readonly claims: ReadonlyArray<Claim>
 }
@@ -28,7 +36,7 @@ interface JudgeOutput extends Named {
 type NoParams = Record<string, never>
 
 const input: z.ZodType<JudgeInput, JudgeInput> = z.object({
-    arrival: arrivalSchema,
+    arrival: arrivalSchema.nullable(),
     evidenced: z.array(evidencedSchema),
     claims: z.array(claimSchema),
 })
@@ -50,7 +58,7 @@ const INSTRUCTIONS = [
 const iso = (at: number): string => new Date(at).toISOString()
 
 /** The evidence as the model reads it: plain JSON of the transfer, the orders with their checks, and the claims. */
-const briefOf = (given: JudgeInput, signalled: ReadonlyArray<Evidenced>): unknown => ({
+const briefOf = (given: JudgeInput & { readonly arrival: Arrival }, signalled: ReadonlyArray<Evidenced>): unknown => ({
     transfer: {
         amount: given.arrival.amount,
         content: given.arrival.text,
@@ -101,13 +109,16 @@ export const paymentJudgeNode: NodeDefinition<
     rights: [],
     effects: [],
     run: async (given, context) => {
-        if (!given.evidenced.some(hasSignal)) return outputOf(outcomeWithoutEvidence(given.evidenced))
+        const { arrival } = given
+        if (arrival === null || !given.evidenced.some(hasSignal)) {
+            return outputOf(outcomeWithoutEvidence(given.evidenced))
+        }
         const signalled = given.evidenced.filter(hasSignal)
         try {
             const answer = await context.model.json(judgementAnswerSchema, {
                 purpose: "payment-judge",
                 instructions: INSTRUCTIONS,
-                input: briefOf(given, signalled),
+                input: briefOf({ ...given, arrival }, signalled),
             })
             return outputOf(
                 outcomeOfJudgement(given.evidenced, {
@@ -137,6 +148,21 @@ export const paymentJudgeNode: NodeDefinition<
                 candidateIds: ["order-dinh"],
                 reasons: ["Tên, số tiền và lời báo của khách khớp đơn SO-0001"],
             },
+            effects: [],
+        },
+        {
+            name: "the owner's 2,000 MoMo claim matches transfer 95937289 by amount but no order is for 2,000: ambiguous, the owner decides",
+            params: {},
+            input: { arrival: ARRIVAL_MOMO, evidenced: [...EVIDENCED_FOR_MOMO_CLAIM], claims: [CLAIM_OF_MOMO] },
+            model: [{ verdict: "ambiguous", candidate_id: null, reasons: ["Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ"] }],
+            output: { branch: "ambiguous", candidateIds: ["order-dinh"], reasons: ["Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ"] },
+            effects: [],
+        },
+        {
+            name: "a claim whose money has not arrived has no transfer to judge: no_match, and the model is not asked",
+            params: {},
+            input: { arrival: null, evidenced: [], claims: [CLAIM_OF_DINH] },
+            output: { branch: "no_match", candidateIds: [], reasons: ["no_evidence"] },
             effects: [],
         },
         {
