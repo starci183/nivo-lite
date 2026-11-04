@@ -6,6 +6,7 @@ export const APP_ROUTES = {
     automations: "/automations",
     chat: "/chat",
     account: "/account",
+    profile: "/profile",
     workspaceNew: "/workspaces/new",
     workspaceChannels: "/workspaces/new/channels",
     workspaceHandover: "/workspaces/new/ai",

@@ -36,31 +36,6 @@ export const pageHeadingOf = (input: PageHeadingInput): PageHeaderContent => {
     }
 }
 
-/** What the header of a console page one level under the dashboard says. */
-interface HomePageHeadingInput {
-    /** The accessible name of the trail. */
-    readonly crumbLabel: string
-    /** The first crumb: the dashboard. */
-    readonly crumbHome: string
-    /** The short line above the facts; absent when the title already says it. */
-    readonly eyebrow?: string
-    readonly title: string
-    readonly description: string
-}
-
-/** The header content (dashboard, then this page) of a console page, for the `header` of the page's `Page`. */
-export const homePageHeadingOf = (input: HomePageHeadingInput): PageHeaderContent =>
-    pageHeadingOf({
-        crumbLabel: input.crumbLabel,
-        crumbs: [
-            { id: "home", label: input.crumbHome, href: APP_ROUTES.dashboard },
-            { id: "current", label: input.title },
-        ],
-        ...(input.eyebrow !== undefined && { eyebrow: input.eyebrow }),
-        title: input.title,
-        description: input.description,
-    })
-
 /** What the header of a page under the documents says. */
 export interface KnowledgeHeadingInput {
     /** The accessible name of the trail. */
@@ -108,3 +83,30 @@ export const agentsSubpageCrumbsOf = (labels: AgentsSubpageLabels): ReadonlyArra
     { id: "agents", label: labels.agents, href: AGENTS_ROUTE },
     { id: "current", label: labels.current },
 ]
+
+/** What the header of the two personal pages (profile, account) says. */
+interface AccountHeadingInput {
+    readonly title: string
+    readonly description: string
+    /** The accessible name of the tab strip. */
+    readonly tabsLabel: string
+    readonly profileLabel: string
+    readonly accountLabel: string
+    /** The page that draws this header. */
+    readonly selected: "profile" | "account"
+}
+
+/** The header content of a personal page: title, line and the profile / account tabs (link tabs), with no trail. */
+export const accountHeadingOf = (input: AccountHeadingInput): PageHeaderContent => ({
+    title: input.title,
+    description: input.description,
+    tabs: {
+        label: input.tabsLabel,
+        selectedKey: input.selected,
+        labelVisibility: "always",
+        items: [
+            { id: "profile", label: input.profileLabel, href: APP_ROUTES.profile },
+            { id: "account", label: input.accountLabel, href: APP_ROUTES.account },
+        ],
+    },
+})
