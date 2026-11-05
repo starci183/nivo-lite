@@ -1,4 +1,8 @@
--- starci:baseline 20261025120000
+-- starci:baseline-reset nivo-reset-2026-11-05
+-- Baseline reset (owner 2026-11-05: "không migrate, reset, làm lại từ đầu"; no prod data). ONE file replaces the whole migration
+-- history: the former active chain, applied in order on a clean database, as one forward-only script. No transaction control.
+
+-- ---- from 20261026000000_baseline.sql ----
 -- Lite baseline, re-cut at the canon database standard (alpha.18): the same schema as the previous baseline chain (lite-baseline, lite-baseline-standard,
 -- job-ops-functions), whose files moved unchanged to supabase/migrations/_archive/. A database that applied that chain is marked as having applied this
 -- version (be/docs/runbooks/cutover.md) and then takes the *_contract_* migrations that follow, which close the browser doors, retire the engine objects
@@ -21908,3 +21912,8422 @@ REVOKE EXECUTE ON FUNCTION public.job_requeue_failed(integer) FROM PUBLIC, anon,
 GRANT EXECUTE ON FUNCTION public.job_failed(integer) TO app_be;
 GRANT EXECUTE ON FUNCTION public.job_open(integer) TO app_be;
 GRANT EXECUTE ON FUNCTION public.job_requeue_failed(integer) TO app_be;
+
+-- ---- from 20261026000100_browser-doors_contract_close.sql ----
+-- Closes the doors a browser could use: since the conversion every read and write goes through the back end (role app_be), the front end keeps Supabase for
+-- sign-in only (no data client, no realtime channel, no storage client: uploads and downloads use signed URLs the back end issues with the service role).
+-- Idempotent: every statement is a no-op on a database that never had the object. The policies of the app_be role stay.
+
+-- Table and sequence privileges of the browser roles.
+REVOKE ALL ON TABLE public.accounting_adjustments FROM anon, authenticated;
+REVOKE ALL ON TABLE public.agent_access_log FROM anon, authenticated;
+REVOKE ALL ON TABLE public.agent_connections FROM anon, authenticated;
+REVOKE ALL ON TABLE public.agent_conversations FROM anon, authenticated;
+REVOKE ALL ON TABLE public.agent_messages FROM anon, authenticated;
+REVOKE ALL ON TABLE public.agents FROM anon, authenticated;
+REVOKE ALL ON TABLE public.ai_generations FROM anon, authenticated;
+REVOKE ALL ON TABLE public.ai_quota_overrides FROM anon, authenticated;
+REVOKE ALL ON TABLE public.ai_usage_daily FROM anon, authenticated;
+REVOKE ALL ON TABLE public.ai_usage_events FROM anon, authenticated;
+REVOKE ALL ON TABLE public.ai_usage_notices FROM anon, authenticated;
+REVOKE ALL ON TABLE public.api_keys FROM anon, authenticated;
+REVOKE ALL ON TABLE public.app_commands FROM anon, authenticated;
+REVOKE ALL ON TABLE public.app_errors FROM anon, authenticated;
+REVOKE ALL ON TABLE public.authority FROM anon, authenticated;
+REVOKE ALL ON TABLE public.authority_actions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.authority_rules FROM anon, authenticated;
+REVOKE ALL ON TABLE public.automation_commands FROM anon, authenticated;
+REVOKE ALL ON TABLE public.automation_pipelines FROM anon, authenticated;
+REVOKE ALL ON TABLE public.automation_runs FROM anon, authenticated;
+REVOKE ALL ON TABLE public.automation_templates FROM anon, authenticated;
+REVOKE ALL ON TABLE public.billing_config FROM anon, authenticated;
+REVOKE ALL ON TABLE public.billing_events FROM anon, authenticated;
+REVOKE ALL ON TABLE public.booking_exceptions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.booking_hours FROM anon, authenticated;
+REVOKE ALL ON TABLE public.booking_reminders FROM anon, authenticated;
+REVOKE ALL ON TABLE public.booking_resources FROM anon, authenticated;
+REVOKE ALL ON TABLE public.booking_services FROM anon, authenticated;
+REVOKE ALL ON TABLE public.booking_settings FROM anon, authenticated;
+REVOKE ALL ON TABLE public.booking_waitlist FROM anon, authenticated;
+REVOKE ALL ON TABLE public.bookings FROM anon, authenticated;
+REVOKE ALL ON TABLE public.brain_commands FROM anon, authenticated;
+REVOKE ALL ON TABLE public.brain_eval_cases FROM anon, authenticated;
+REVOKE ALL ON TABLE public.brain_extractions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.brain_facts FROM anon, authenticated;
+REVOKE ALL ON TABLE public.brain_lessons FROM anon, authenticated;
+REVOKE ALL ON TABLE public.brain_source_profiles FROM anon, authenticated;
+REVOKE ALL ON TABLE public.channel_receipts FROM anon, authenticated;
+REVOKE ALL ON TABLE public.connections FROM anon, authenticated;
+REVOKE ALL ON TABLE public.connector_interest FROM anon, authenticated;
+REVOKE ALL ON TABLE public.content_cadence FROM anon, authenticated;
+REVOKE ALL ON TABLE public.content_items FROM anon, authenticated;
+REVOKE ALL ON TABLE public.content_pillars FROM anon, authenticated;
+REVOKE ALL ON TABLE public.content_plans FROM anon, authenticated;
+REVOKE ALL ON TABLE public.content_settings FROM anon, authenticated;
+REVOKE ALL ON TABLE public.contracts FROM anon, authenticated;
+REVOKE ALL ON TABLE public.credit_pack_purchases FROM anon, authenticated;
+REVOKE ALL ON TABLE public.credit_packs FROM anon, authenticated;
+REVOKE ALL ON TABLE public.credit_topup_draws FROM anon, authenticated;
+REVOKE ALL ON TABLE public.credit_topups FROM anon, authenticated;
+REVOKE ALL ON TABLE public.data_records FROM anon, authenticated;
+REVOKE ALL ON TABLE public.data_sync_runs FROM anon, authenticated;
+REVOKE ALL ON TABLE public.decisions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.email_messages FROM anon, authenticated;
+REVOKE ALL ON TABLE public.events FROM anon, authenticated;
+REVOKE ALL ON TABLE public.executions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_availability FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_candidates FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_consents FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_events FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_interviews FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_jobs FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_offers FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_onboarding FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_retention_log FROM anon, authenticated;
+REVOKE ALL ON TABLE public.hiring_settings FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inbound_events FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_items FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_locations FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_movements FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_po_lines FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_purchase_orders FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_receipts FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_recipe_lines FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_recipes FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_stock_levels FROM anon, authenticated;
+REVOKE ALL ON TABLE public.inventory_suppliers FROM anon, authenticated;
+REVOKE ALL ON TABLE public.invoices FROM anon, authenticated;
+REVOKE ALL ON TABLE public.knowledge_chunks FROM anon, authenticated;
+REVOKE ALL ON TABLE public.knowledge_gaps FROM anon, authenticated;
+REVOKE ALL ON TABLE public.knowledge_sources FROM anon, authenticated;
+REVOKE ALL ON TABLE public.knowledge_suggestion_state FROM anon, authenticated;
+REVOKE ALL ON TABLE public.lead_flows FROM anon, authenticated;
+REVOKE ALL ON TABLE public.leads FROM anon, authenticated;
+REVOKE ALL ON TABLE public.loyalty_balances FROM anon, authenticated;
+REVOKE ALL ON TABLE public.loyalty_campaigns FROM anon, authenticated;
+REVOKE ALL ON TABLE public.loyalty_customer_links FROM anon, authenticated;
+REVOKE ALL ON TABLE public.loyalty_customers FROM anon, authenticated;
+REVOKE ALL ON TABLE public.loyalty_ledger FROM anon, authenticated;
+REVOKE ALL ON TABLE public.loyalty_programs FROM anon, authenticated;
+REVOKE ALL ON TABLE public.loyalty_rewards FROM anon, authenticated;
+REVOKE ALL ON TABLE public.loyalty_sends FROM anon, authenticated;
+REVOKE ALL ON TABLE public.messages FROM anon, authenticated;
+REVOKE ALL ON TABLE public.meta_comments FROM anon, authenticated;
+REVOKE ALL ON TABLE public.meta_threads FROM anon, authenticated;
+REVOKE ALL ON TABLE public.module_context_notes FROM anon, authenticated;
+REVOKE ALL ON TABLE public.module_context_versions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.module_installations FROM anon, authenticated;
+REVOKE ALL ON TABLE public.module_setup_messages FROM anon, authenticated;
+REVOKE ALL ON TABLE public.module_setup_sessions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.module_setup_writes FROM anon, authenticated;
+REVOKE ALL ON TABLE public.modules FROM anon, authenticated;
+REVOKE ALL ON TABLE public.n8n_pipelines FROM anon, authenticated;
+REVOKE ALL ON TABLE public.n8n_runs FROM anon, authenticated;
+REVOKE ALL ON TABLE public.nivo_knowledge FROM anon, authenticated;
+REVOKE ALL ON TABLE public.office_command_candidates FROM anon, authenticated;
+REVOKE ALL ON TABLE public.openclaw_agent_sync FROM anon, authenticated;
+REVOKE ALL ON TABLE public.orders FROM anon, authenticated;
+REVOKE ALL ON TABLE public.payment_order_requests FROM anon, authenticated;
+REVOKE ALL ON TABLE public.payment_orders FROM anon, authenticated;
+REVOKE ALL ON TABLE public.plan_usage_tiers FROM anon, authenticated;
+REVOKE ALL ON TABLE public.plans FROM anon, authenticated;
+REVOKE ALL ON TABLE public.platform_audit FROM anon, authenticated;
+REVOKE ALL ON TABLE public.responsibilities FROM anon, authenticated;
+REVOKE ALL ON TABLE public.sepay_transactions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_attendance FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_availability FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_coverage FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_leave_requests FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_notifications FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_positions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_schedules FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_settings FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_shifts FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_staff FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_staff_pay FROM anon, authenticated;
+REVOKE ALL ON TABLE public.shifts_swap_requests FROM anon, authenticated;
+REVOKE ALL ON TABLE public.staff FROM anon, authenticated;
+REVOKE ALL ON TABLE public.transactions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.video_brand_kits FROM anon, authenticated;
+REVOKE ALL ON TABLE public.video_project_versions FROM anon, authenticated;
+REVOKE ALL ON TABLE public.video_projects FROM anon, authenticated;
+REVOKE ALL ON TABLE public.video_renders FROM anon, authenticated;
+REVOKE ALL ON TABLE public.work_items FROM anon, authenticated;
+REVOKE ALL ON TABLE public.workspace_invites FROM anon, authenticated;
+REVOKE ALL ON TABLE public.workspace_members FROM anon, authenticated;
+REVOKE ALL ON TABLE public.workspaces FROM anon, authenticated;
+REVOKE ALL ON SEQUENCE public.hiring_apply_hits_id_seq FROM anon, authenticated;
+
+-- Policies of the browser roles (public tables and storage.objects).
+DROP POLICY IF EXISTS accounting_adjustments_manager_insert ON public.accounting_adjustments;
+DROP POLICY IF EXISTS accounting_adjustments_member_select ON public.accounting_adjustments;
+DROP POLICY IF EXISTS agent_access_log_manager_select ON public.agent_access_log;
+DROP POLICY IF EXISTS agent_connections_member_select ON public.agent_connections;
+DROP POLICY IF EXISTS agent_connections_owner_all ON public.agent_connections;
+DROP POLICY IF EXISTS agent_conversations_member_all ON public.agent_conversations;
+DROP POLICY IF EXISTS agent_messages_member_all ON public.agent_messages;
+DROP POLICY IF EXISTS agents_manager_delete ON public.agents;
+DROP POLICY IF EXISTS agents_manager_insert ON public.agents;
+DROP POLICY IF EXISTS agents_manager_update ON public.agents;
+DROP POLICY IF EXISTS agents_member_select ON public.agents;
+DROP POLICY IF EXISTS ai_generations_member_select ON public.ai_generations;
+DROP POLICY IF EXISTS ai_quota_overrides_manager_select ON public.ai_quota_overrides;
+DROP POLICY IF EXISTS ai_quota_overrides_platform_admin_select ON public.ai_quota_overrides;
+DROP POLICY IF EXISTS ai_usage_events_member_select ON public.ai_usage_events;
+DROP POLICY IF EXISTS api_keys_authenticated_select ON public.api_keys;
+DROP POLICY IF EXISTS app_commands_requester_select ON public.app_commands;
+DROP POLICY IF EXISTS app_errors_platform_admin_select ON public.app_errors;
+DROP POLICY IF EXISTS authority_actions_authenticated_select ON public.authority_actions;
+DROP POLICY IF EXISTS authority_rules_manager_delete ON public.authority_rules;
+DROP POLICY IF EXISTS authority_rules_manager_insert ON public.authority_rules;
+DROP POLICY IF EXISTS authority_rules_manager_update ON public.authority_rules;
+DROP POLICY IF EXISTS authority_rules_member_select ON public.authority_rules;
+DROP POLICY IF EXISTS authority_manager_delete ON public.authority;
+DROP POLICY IF EXISTS authority_manager_insert ON public.authority;
+DROP POLICY IF EXISTS authority_manager_update ON public.authority;
+DROP POLICY IF EXISTS authority_member_select ON public.authority;
+DROP POLICY IF EXISTS automation_commands_manager_select ON public.automation_commands;
+DROP POLICY IF EXISTS automation_pipelines_manager_all ON public.automation_pipelines;
+DROP POLICY IF EXISTS automation_pipelines_member_select ON public.automation_pipelines;
+DROP POLICY IF EXISTS automation_runs_member_select ON public.automation_runs;
+DROP POLICY IF EXISTS automation_templates_authenticated_select ON public.automation_templates;
+DROP POLICY IF EXISTS billing_events_manager_select ON public.billing_events;
+DROP POLICY IF EXISTS billing_events_platform_admin_select ON public.billing_events;
+DROP POLICY IF EXISTS booking_exceptions_manager_all ON public.booking_exceptions;
+DROP POLICY IF EXISTS booking_exceptions_member_select ON public.booking_exceptions;
+DROP POLICY IF EXISTS booking_hours_manager_all ON public.booking_hours;
+DROP POLICY IF EXISTS booking_hours_member_select ON public.booking_hours;
+DROP POLICY IF EXISTS booking_reminders_manager_all ON public.booking_reminders;
+DROP POLICY IF EXISTS booking_reminders_member_select ON public.booking_reminders;
+DROP POLICY IF EXISTS booking_resources_manager_all ON public.booking_resources;
+DROP POLICY IF EXISTS booking_resources_member_select ON public.booking_resources;
+DROP POLICY IF EXISTS booking_services_manager_all ON public.booking_services;
+DROP POLICY IF EXISTS booking_services_member_select ON public.booking_services;
+DROP POLICY IF EXISTS booking_settings_manager_all ON public.booking_settings;
+DROP POLICY IF EXISTS booking_settings_member_select ON public.booking_settings;
+DROP POLICY IF EXISTS booking_waitlist_manager_all ON public.booking_waitlist;
+DROP POLICY IF EXISTS booking_waitlist_member_select ON public.booking_waitlist;
+DROP POLICY IF EXISTS bookings_manager_all ON public.bookings;
+DROP POLICY IF EXISTS bookings_member_select ON public.bookings;
+DROP POLICY IF EXISTS brain_commands_authenticated_select ON public.brain_commands;
+DROP POLICY IF EXISTS brain_eval_cases_manager_select ON public.brain_eval_cases;
+DROP POLICY IF EXISTS brain_extractions_manager_select ON public.brain_extractions;
+DROP POLICY IF EXISTS brain_facts_manager_select ON public.brain_facts;
+DROP POLICY IF EXISTS brain_lessons_member_select ON public.brain_lessons;
+DROP POLICY IF EXISTS brain_source_profiles_manager_select ON public.brain_source_profiles;
+DROP POLICY IF EXISTS connections_member_select ON public.connections;
+DROP POLICY IF EXISTS connections_platform_admin_select ON public.connections;
+DROP POLICY IF EXISTS connector_interest_member_select ON public.connector_interest;
+DROP POLICY IF EXISTS content_cadence_manager_all ON public.content_cadence;
+DROP POLICY IF EXISTS content_cadence_member_select ON public.content_cadence;
+DROP POLICY IF EXISTS content_items_manager_all ON public.content_items;
+DROP POLICY IF EXISTS content_items_member_select ON public.content_items;
+DROP POLICY IF EXISTS content_pillars_manager_all ON public.content_pillars;
+DROP POLICY IF EXISTS content_pillars_member_select ON public.content_pillars;
+DROP POLICY IF EXISTS content_plans_manager_all ON public.content_plans;
+DROP POLICY IF EXISTS content_plans_member_select ON public.content_plans;
+DROP POLICY IF EXISTS content_settings_manager_all ON public.content_settings;
+DROP POLICY IF EXISTS content_settings_member_select ON public.content_settings;
+DROP POLICY IF EXISTS contracts_member_insert ON public.contracts;
+DROP POLICY IF EXISTS contracts_member_select ON public.contracts;
+DROP POLICY IF EXISTS contracts_member_update ON public.contracts;
+DROP POLICY IF EXISTS credit_pack_purchases_manager_select ON public.credit_pack_purchases;
+DROP POLICY IF EXISTS credit_packs_authenticated_select ON public.credit_packs;
+DROP POLICY IF EXISTS credit_topup_draws_manager_select ON public.credit_topup_draws;
+DROP POLICY IF EXISTS credit_topups_manager_select ON public.credit_topups;
+DROP POLICY IF EXISTS data_records_manager_select ON public.data_records;
+DROP POLICY IF EXISTS data_sync_runs_manager_select ON public.data_sync_runs;
+DROP POLICY IF EXISTS decisions_member_insert ON public.decisions;
+DROP POLICY IF EXISTS decisions_member_select ON public.decisions;
+DROP POLICY IF EXISTS email_messages_member_select ON public.email_messages;
+DROP POLICY IF EXISTS events_member_insert ON public.events;
+DROP POLICY IF EXISTS events_member_select ON public.events;
+DROP POLICY IF EXISTS executions_member_all ON public.executions;
+DROP POLICY IF EXISTS hiring_availability_manager_all ON public.hiring_availability;
+DROP POLICY IF EXISTS hiring_availability_member_select ON public.hiring_availability;
+DROP POLICY IF EXISTS hiring_candidates_manager_all ON public.hiring_candidates;
+DROP POLICY IF EXISTS hiring_consents_manager_select ON public.hiring_consents;
+DROP POLICY IF EXISTS hiring_events_manager_select ON public.hiring_events;
+DROP POLICY IF EXISTS hiring_interviews_manager_all ON public.hiring_interviews;
+DROP POLICY IF EXISTS hiring_interviews_member_select ON public.hiring_interviews;
+DROP POLICY IF EXISTS hiring_jobs_manager_all ON public.hiring_jobs;
+DROP POLICY IF EXISTS hiring_jobs_member_select ON public.hiring_jobs;
+DROP POLICY IF EXISTS hiring_offers_manager_all ON public.hiring_offers;
+DROP POLICY IF EXISTS hiring_onboarding_manager_all ON public.hiring_onboarding;
+DROP POLICY IF EXISTS hiring_retention_log_manager_select ON public.hiring_retention_log;
+DROP POLICY IF EXISTS hiring_settings_manager_all ON public.hiring_settings;
+DROP POLICY IF EXISTS hiring_settings_member_select ON public.hiring_settings;
+DROP POLICY IF EXISTS inbound_events_member_all ON public.inbound_events;
+DROP POLICY IF EXISTS inbound_events_owner_all ON public.inbound_events;
+DROP POLICY IF EXISTS inventory_items_member_select ON public.inventory_items;
+DROP POLICY IF EXISTS inventory_locations_member_select ON public.inventory_locations;
+DROP POLICY IF EXISTS inventory_movements_member_select ON public.inventory_movements;
+DROP POLICY IF EXISTS inventory_po_lines_member_select ON public.inventory_po_lines;
+DROP POLICY IF EXISTS inventory_purchase_orders_member_select ON public.inventory_purchase_orders;
+DROP POLICY IF EXISTS inventory_receipts_member_select ON public.inventory_receipts;
+DROP POLICY IF EXISTS inventory_recipe_lines_member_select ON public.inventory_recipe_lines;
+DROP POLICY IF EXISTS inventory_recipes_member_select ON public.inventory_recipes;
+DROP POLICY IF EXISTS inventory_stock_levels_member_select ON public.inventory_stock_levels;
+DROP POLICY IF EXISTS inventory_suppliers_member_select ON public.inventory_suppliers;
+DROP POLICY IF EXISTS invoices_member_all ON public.invoices;
+DROP POLICY IF EXISTS knowledge_chunks_manager_all ON public.knowledge_chunks;
+DROP POLICY IF EXISTS knowledge_chunks_member_select ON public.knowledge_chunks;
+DROP POLICY IF EXISTS knowledge_gaps_manager_select ON public.knowledge_gaps;
+DROP POLICY IF EXISTS knowledge_sources_manager_all ON public.knowledge_sources;
+DROP POLICY IF EXISTS knowledge_sources_member_select ON public.knowledge_sources;
+DROP POLICY IF EXISTS knowledge_sources_platform_admin_select ON public.knowledge_sources;
+DROP POLICY IF EXISTS knowledge_suggestion_state_manager_all ON public.knowledge_suggestion_state;
+DROP POLICY IF EXISTS knowledge_suggestion_state_member_select ON public.knowledge_suggestion_state;
+DROP POLICY IF EXISTS lead_flows_manager_select ON public.lead_flows;
+DROP POLICY IF EXISTS leads_member_all ON public.leads;
+DROP POLICY IF EXISTS loyalty_campaigns_member_select ON public.loyalty_campaigns;
+DROP POLICY IF EXISTS loyalty_customer_links_member_select ON public.loyalty_customer_links;
+DROP POLICY IF EXISTS loyalty_customers_manager_update ON public.loyalty_customers;
+DROP POLICY IF EXISTS loyalty_customers_member_select ON public.loyalty_customers;
+DROP POLICY IF EXISTS loyalty_ledger_member_select ON public.loyalty_ledger;
+DROP POLICY IF EXISTS loyalty_programs_manager_insert ON public.loyalty_programs;
+DROP POLICY IF EXISTS loyalty_programs_manager_update ON public.loyalty_programs;
+DROP POLICY IF EXISTS loyalty_programs_member_select ON public.loyalty_programs;
+DROP POLICY IF EXISTS loyalty_rewards_manager_delete ON public.loyalty_rewards;
+DROP POLICY IF EXISTS loyalty_rewards_manager_insert ON public.loyalty_rewards;
+DROP POLICY IF EXISTS loyalty_rewards_manager_update ON public.loyalty_rewards;
+DROP POLICY IF EXISTS loyalty_rewards_member_select ON public.loyalty_rewards;
+DROP POLICY IF EXISTS loyalty_sends_member_select ON public.loyalty_sends;
+DROP POLICY IF EXISTS messages_member_all ON public.messages;
+DROP POLICY IF EXISTS module_context_notes_manager_all ON public.module_context_notes;
+DROP POLICY IF EXISTS module_context_versions_manager_insert ON public.module_context_versions;
+DROP POLICY IF EXISTS module_context_versions_member_select ON public.module_context_versions;
+DROP POLICY IF EXISTS module_context_versions_platform_admin_select ON public.module_context_versions;
+DROP POLICY IF EXISTS module_installations_manager_delete ON public.module_installations;
+DROP POLICY IF EXISTS module_installations_manager_insert ON public.module_installations;
+DROP POLICY IF EXISTS module_installations_manager_update ON public.module_installations;
+DROP POLICY IF EXISTS module_installations_member_select ON public.module_installations;
+DROP POLICY IF EXISTS module_installations_platform_admin_select ON public.module_installations;
+DROP POLICY IF EXISTS module_setup_messages_manager_all ON public.module_setup_messages;
+DROP POLICY IF EXISTS module_setup_sessions_manager_all ON public.module_setup_sessions;
+DROP POLICY IF EXISTS module_setup_writes_manager_all ON public.module_setup_writes;
+DROP POLICY IF EXISTS modules_authenticated_select ON public.modules;
+DROP POLICY IF EXISTS n8n_pipelines_member_select ON public.n8n_pipelines;
+DROP POLICY IF EXISTS n8n_runs_member_select ON public.n8n_runs;
+DROP POLICY IF EXISTS nivo_knowledge_authenticated_select ON public.nivo_knowledge;
+DROP POLICY IF EXISTS office_command_candidates_manager_all ON public.office_command_candidates;
+DROP POLICY IF EXISTS office_command_candidates_manager_select ON public.office_command_candidates;
+DROP POLICY IF EXISTS openclaw_agent_sync_member_select ON public.openclaw_agent_sync;
+DROP POLICY IF EXISTS openclaw_agent_sync_platform_admin_select ON public.openclaw_agent_sync;
+DROP POLICY IF EXISTS orders_member_all ON public.orders;
+DROP POLICY IF EXISTS payment_order_requests_manager_select ON public.payment_order_requests;
+DROP POLICY IF EXISTS payment_orders_member_select ON public.payment_orders;
+DROP POLICY IF EXISTS payment_orders_platform_admin_select ON public.payment_orders;
+DROP POLICY IF EXISTS plan_usage_tiers_authenticated_select ON public.plan_usage_tiers;
+DROP POLICY IF EXISTS plans_authenticated_select ON public.plans;
+DROP POLICY IF EXISTS platform_audit_platform_admin_select ON public.platform_audit;
+DROP POLICY IF EXISTS responsibilities_member_all ON public.responsibilities;
+DROP POLICY IF EXISTS sepay_transactions_manager_select ON public.sepay_transactions;
+DROP POLICY IF EXISTS sepay_transactions_platform_admin_select ON public.sepay_transactions;
+DROP POLICY IF EXISTS shifts_attendance_manager_all ON public.shifts_attendance;
+DROP POLICY IF EXISTS shifts_attendance_manager_select ON public.shifts_attendance;
+DROP POLICY IF EXISTS shifts_attendance_own_insert ON public.shifts_attendance;
+DROP POLICY IF EXISTS shifts_availability_manager_all ON public.shifts_availability;
+DROP POLICY IF EXISTS shifts_availability_manager_select ON public.shifts_availability;
+DROP POLICY IF EXISTS shifts_availability_own_insert ON public.shifts_availability;
+DROP POLICY IF EXISTS shifts_coverage_manager_all ON public.shifts_coverage;
+DROP POLICY IF EXISTS shifts_coverage_manager_select ON public.shifts_coverage;
+DROP POLICY IF EXISTS shifts_leave_requests_manager_all ON public.shifts_leave_requests;
+DROP POLICY IF EXISTS shifts_leave_requests_manager_select ON public.shifts_leave_requests;
+DROP POLICY IF EXISTS shifts_leave_requests_member_insert ON public.shifts_leave_requests;
+DROP POLICY IF EXISTS shifts_notifications_manager_select ON public.shifts_notifications;
+DROP POLICY IF EXISTS shifts_positions_manager_all ON public.shifts_positions;
+DROP POLICY IF EXISTS shifts_positions_member_select ON public.shifts_positions;
+DROP POLICY IF EXISTS shifts_schedules_manager_all ON public.shifts_schedules;
+DROP POLICY IF EXISTS shifts_schedules_manager_select ON public.shifts_schedules;
+DROP POLICY IF EXISTS shifts_settings_manager_all ON public.shifts_settings;
+DROP POLICY IF EXISTS shifts_settings_member_select ON public.shifts_settings;
+DROP POLICY IF EXISTS shifts_shifts_manager_all ON public.shifts_shifts;
+DROP POLICY IF EXISTS shifts_shifts_manager_select ON public.shifts_shifts;
+DROP POLICY IF EXISTS shifts_staff_pay_manager_all ON public.shifts_staff_pay;
+DROP POLICY IF EXISTS shifts_staff_manager_all ON public.shifts_staff;
+DROP POLICY IF EXISTS shifts_staff_member_select ON public.shifts_staff;
+DROP POLICY IF EXISTS shifts_swap_requests_manager_all ON public.shifts_swap_requests;
+DROP POLICY IF EXISTS shifts_swap_requests_manager_select ON public.shifts_swap_requests;
+DROP POLICY IF EXISTS shifts_swap_requests_member_insert ON public.shifts_swap_requests;
+DROP POLICY IF EXISTS staff_manager_delete ON public.staff;
+DROP POLICY IF EXISTS staff_manager_insert ON public.staff;
+DROP POLICY IF EXISTS staff_manager_update ON public.staff;
+DROP POLICY IF EXISTS staff_member_select ON public.staff;
+DROP POLICY IF EXISTS transactions_member_all ON public.transactions;
+DROP POLICY IF EXISTS video_brand_kits_manager_all ON public.video_brand_kits;
+DROP POLICY IF EXISTS video_brand_kits_member_select ON public.video_brand_kits;
+DROP POLICY IF EXISTS video_project_versions_manager_all ON public.video_project_versions;
+DROP POLICY IF EXISTS video_project_versions_member_select ON public.video_project_versions;
+DROP POLICY IF EXISTS video_projects_manager_all ON public.video_projects;
+DROP POLICY IF EXISTS video_projects_member_select ON public.video_projects;
+DROP POLICY IF EXISTS video_renders_member_select ON public.video_renders;
+DROP POLICY IF EXISTS work_items_manager_delete ON public.work_items;
+DROP POLICY IF EXISTS work_items_manager_update ON public.work_items;
+DROP POLICY IF EXISTS work_items_member_insert ON public.work_items;
+DROP POLICY IF EXISTS work_items_member_select ON public.work_items;
+DROP POLICY IF EXISTS workspace_invites_manager_all ON public.workspace_invites;
+DROP POLICY IF EXISTS workspace_invites_platform_admin_select ON public.workspace_invites;
+DROP POLICY IF EXISTS workspace_members_member_select ON public.workspace_members;
+DROP POLICY IF EXISTS workspace_members_owner_delete ON public.workspace_members;
+DROP POLICY IF EXISTS workspace_members_owner_insert ON public.workspace_members;
+DROP POLICY IF EXISTS workspace_members_owner_update ON public.workspace_members;
+DROP POLICY IF EXISTS workspace_members_platform_admin_select ON public.workspace_members;
+DROP POLICY IF EXISTS workspaces_member_select ON public.workspaces;
+DROP POLICY IF EXISTS workspaces_owner_delete ON public.workspaces;
+DROP POLICY IF EXISTS workspaces_owner_update ON public.workspaces;
+DROP POLICY IF EXISTS workspaces_platform_admin_select ON public.workspaces;
+DROP POLICY IF EXISTS objects_hiring_cv_manager_delete ON storage.objects;
+DROP POLICY IF EXISTS objects_hiring_cv_manager_select ON storage.objects;
+DROP POLICY IF EXISTS objects_knowledge_uploads_manager_insert ON storage.objects;
+DROP POLICY IF EXISTS objects_media_manager_delete ON storage.objects;
+DROP POLICY IF EXISTS objects_media_member_insert ON storage.objects;
+DROP POLICY IF EXISTS objects_media_member_select ON storage.objects;
+DROP POLICY IF EXISTS objects_videos_manager_delete ON storage.objects;
+DROP POLICY IF EXISTS objects_videos_member_select ON storage.objects;
+
+-- The realtime publication carried the tables of the retired browser subscriptions; it is recreated empty (the platform expects it to exist).
+
+-- Definer functions are not callable by the browser roles (the back end keeps its own grants).
+REVOKE EXECUTE ON FUNCTION public.accept_invite(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.add_lead_responsibility(uuid, uuid, text, text, text, pg_catalog.timestamptz, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_console_audit(text, uuid, jsonb) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_console_quota(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_console_signups(pg_catalog.int4) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_console_user_emails(uuid[]) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_console_workspace_stats() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_extend_subscription(uuid, pg_catalog.int4) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_plan(uuid, text, pg_catalog.int8) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_status(uuid, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.agent_chat_send(uuid, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.agent_chat_start(uuid, text, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.agent_chat_take_over(uuid, pg_catalog.bool, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.api_key_create(uuid, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.api_key_revoke(uuid, uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.assign_lead_responsibility(uuid, uuid, text, text, pg_catalog.timestamptz, text, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.automation_command_enqueue(uuid, text, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.brain_command(uuid, text, jsonb) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.brain_command_wait(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.connection_command_submit(uuid, text, jsonb) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.connection_command_take(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_free_workspace(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.display_name_of(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.invite_preview(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.is_manager(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.is_member(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.is_owner(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.is_platform_admin() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.knowledge_enqueue_source(uuid, text, text, text, text, jsonb) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.knowledge_retry_source(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.member_role(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.my_sessions() FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.my_staff_id(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.owns_workspace(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.payment_order_request(uuid, text, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.read_app_command(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.record_lead_outcome(uuid, uuid, text, text, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.request_admin_invite_resend(uuid, uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.request_agent_sync(uuid, uuid, pg_catalog.bool) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.request_execution_decision(uuid, uuid, text, text, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.request_invite_command(uuid, text, uuid, text, text, uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.request_office_confirm(uuid, uuid, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.request_office_propose(uuid, uuid, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.request_video_render(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.request_work_decision(uuid, uuid, text, jsonb, text, text, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.revoke_my_session(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.revoke_workspace_invite(uuid, uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.shifts_my_profile(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.storage_ws_manager(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.storage_ws_member(text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_my_profile(uuid, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.usage_quota_status(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.workspace_member_contacts(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.workspace_members_directory(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.zalo_authorization_return(text, text, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.zalo_wizard_begin(uuid) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.zalo_wizard_oa_secret(uuid, text) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.zalo_wizard_start(uuid, text, text, text) FROM anon, authenticated;
+
+-- The back end reaches pgmq only through the public.job_* definer functions and the grants on the tables of its own queues.
+REVOKE USAGE ON SCHEMA pgmq FROM app_be;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA pgmq FROM app_be;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA pgmq FROM app_be;
+REVOKE ALL ON TABLE pgmq.meta FROM app_be;
+
+-- ---- from 20261026000150_function-access.sql ----
+-- Function access for the back end only. Every function of the public schema that PUBLIC, anon or authenticated could still execute is closed to them (a browser holds no
+-- data door, and an invoker function would only fail on table privileges); app_be keeps an explicit grant on each function the back end calls, a policy, a default or
+-- another function uses (it used to reach them through PUBLIC). Trigger functions need no grant: a trigger does not check EXECUTE when it fires.
+
+-- The knowledge queries cast to extensions.vector.
+GRANT USAGE ON SCHEMA extensions TO app_be;
+-- ...and the vector operators (<=>) must resolve: app_be searches "$user", public by default.
+ALTER ROLE app_be SET search_path = public, extensions;
+
+REVOKE EXECUTE ON FUNCTION public.agent_connections_same_workspace() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.automations_data(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.content_items_touch() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.content_settings_touch() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.dashboard_data(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.exception_rows(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.exception_rows(uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.governance_rows(uuid, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.governance_rows(uuid, pg_catalog.timestamptz) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.knowledge_chunk_visibility_sync() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.knowledge_fold(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.knowledge_fold(text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.loyalty_ledger_immutable() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.match_knowledge(uuid, text, extensions.vector, text, pg_catalog.int4, text, text, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.module_context_versions_immutable() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.module_installations_fill() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.module_type_name(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.module_type_name(text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.office_data(uuid, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.promo_state(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.promo_state(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.resolve_installation(uuid, text, uuid, uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.responsibility_rows(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.responsibility_rows(uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.session_bootstrap() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.shell_data(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.video_renders_touch() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.video_touch() FROM PUBLIC, anon, authenticated;
+
+-- Future tables, sequences and functions of the public schema are not granted to the browser roles.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+
+-- ---- from 20261026000155_sales-action-lookup.sql ----
+-- The Sales action lookup of the back end (be/src/modules/domain/sales): the job outbox is not granted to app_be, so the two reads that answer "what became of the
+-- action I just queued" go through this definer function. Key it by the queue dedupe key (the just-enqueued action) or by the outbox id (a status poll);
+-- the caller passes exactly one. Only decisions-queue jobs and shipment ticks of the automation queue are visible, as before.
+CREATE OR REPLACE FUNCTION public.sales_action_find(p_workspace uuid, p_dedupe_key text DEFAULT NULL, p_outbox uuid DEFAULT NULL)
+RETURNS TABLE(id uuid, state text, work_item_id text, work_status text, target_found boolean)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT o.id, o.state, COALESCE(o.payload->>'workItemId', e.work_item_id::text) AS work_item_id,
+    w.status AS work_status,
+    CASE WHEN o.payload ? 'workItemId' OR e.work_item_id IS NOT NULL THEN w.id IS NOT NULL
+         WHEN o.payload ? 'executionId' THEN e.id IS NOT NULL
+         ELSE s.id IS NOT NULL END AS target_found
+  FROM public.job_outbox o
+  LEFT JOIN public.executions e ON e.id::text = o.payload->>'executionId' AND e.workspace_id = o.workspace_id
+  LEFT JOIN public.work_items w ON w.id::text = COALESCE(o.payload->>'workItemId', e.work_item_id::text) AND w.workspace_id = o.workspace_id
+  LEFT JOIN public.orders s ON s.id::text = o.payload->>'orderId' AND s.workspace_id = o.workspace_id
+  WHERE o.workspace_id = p_workspace
+    AND ((p_dedupe_key IS NOT NULL AND o.dedupe_key = p_dedupe_key) OR (p_outbox IS NOT NULL AND o.id = p_outbox))
+    AND (o.queue = 'decisions' OR (o.queue = 'automation' AND o.name = 'automation.tick' AND o.payload->>'kind' = 'shipment'))
+  LIMIT 1
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.sales_action_find(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.sales_action_find(uuid, text, uuid) TO app_be;
+
+-- ---- from 20261026000200_engine_contract_retire.sql ----
+-- Retires the schema of the old engine. Nothing in the back end or the front end reads it: the api runs its jobs on pgmq and its ticks are the cron
+-- jobs of 20261026000300_job-ticks.sql. Idempotent: on a database created from the baseline and on a database that already ran the earlier
+-- drop-engine-schema migration, every statement checks for existence first.
+--
+-- The vault secret `engine_sweep_secret` that authorised the old pg_cron -> /api/engine/sweep call is not touched here (a migration never writes
+-- to the vault): a database that still holds it has it removed by the operator, in the Supabase dashboard (Vault).
+
+-- 1. pg_cron: nothing to unschedule here. The legacy engine jobs (engine-sweep, engine-openclaw-agent-sync, engine-connection-health, zalo-refresh,
+--    nivo-automation-tick, nivo-content-tick, nivo-n8n-pipelines) were unscheduled by name in the archived migrations production already ran; the operator checks
+--    that `select jobname from cron.job` lists only jobs this repository declares (see be/docs/runbooks/cutover.md).
+
+-- 2. The engine functions and the pg_net refresh tick (the engine job functions return rows of engine_jobs, so they go first).
+DROP FUNCTION IF EXISTS public.engine_claim_jobs(text, text[], integer, integer);
+DROP FUNCTION IF EXISTS public.engine_complete_job(uuid, text, jsonb);
+DROP FUNCTION IF EXISTS public.engine_enqueue(uuid, text, jsonb, text, timestamp with time zone, integer);
+DROP FUNCTION IF EXISTS public.engine_enqueue_agent_sync(uuid, boolean);
+DROP FUNCTION IF EXISTS public.engine_enqueue_workspace_sync(uuid);
+DROP FUNCTION IF EXISTS public.engine_fail_job(uuid, text, text, integer, boolean);
+DROP FUNCTION IF EXISTS public.engine_heartbeat_job(uuid, text, integer);
+DROP FUNCTION IF EXISTS public.engine_mark_connection_health(uuid, uuid, jsonb);
+DROP FUNCTION IF EXISTS public.engine_release_job(uuid, text);
+DROP FUNCTION IF EXISTS public.engine_schedule_agent_sync();
+DROP FUNCTION IF EXISTS public.engine_schedule_connection_health();
+DROP FUNCTION IF EXISTS public.engine_status();
+DROP FUNCTION IF EXISTS public.engine_sweep_authorized(text);
+DROP FUNCTION IF EXISTS public.engine_sweep_claim();
+DROP FUNCTION IF EXISTS public.engine_worker_heartbeat(text, text, text[], jsonb);
+DROP FUNCTION IF EXISTS public.zalo_refresh_tick();
+
+-- 3. The engine tables and the cron target list (the HTTP endpoints and secret the old pg_net ticks used).
+DROP TABLE IF EXISTS public.engine_jobs;
+DROP TABLE IF EXISTS public.engine_workers;
+DROP TABLE IF EXISTS public.cron_targets;
+
+-- ---- from 20261026000300_job-ticks.sql ----
+-- The recurring ticks of the back end, declared by the migrations (a cron command is one pgmq.send to an existing queue). The message is the body the
+-- queue worker routes by `name`, the same body the back end's scheduler used to send; the jobs are upserted by name, so a database whose api already
+-- registered them at boot keeps one job each. The pruning, reaping and hiring jobs of the old baseline are not declared here: they are queue jobs of the
+-- back end (see be/docs/runbooks/cutover.md).
+
+-- ---- from 20261026000400_job-schedule_contract_drop.sql ----
+-- The back end no longer registers its ticks at boot (they are the cron jobs of 20261026000300_job-ticks.sql), so the definer function it used to
+-- ask for that, public.job_schedule, goes.
+DROP FUNCTION IF EXISTS public.job_schedule(text, text, text, text);
+
+-- ---- from 20261026000500_webhook-receipt-queues.sql ----
+-- Deferred webhook receipt queues. pgmq and job_enqueue share the receipt transaction.
+-- Workers use the existing backend-only public.job_* functions; schema/function access stays closed.
+
+SELECT pgmq.create('meta-delivery');
+REVOKE ALL ON TABLE pgmq."q_meta-delivery", pgmq."a_meta-delivery" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_meta-delivery" TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_meta-delivery" TO app_be;
+REVOKE ALL ON SEQUENCE pgmq."q_meta-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
+
+SELECT pgmq.create('telegram-delivery');
+REVOKE ALL ON TABLE pgmq."q_telegram-delivery", pgmq."a_telegram-delivery" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_telegram-delivery" TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_telegram-delivery" TO app_be;
+REVOKE ALL ON SEQUENCE pgmq."q_telegram-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
+
+SELECT pgmq.create('zalo-delivery');
+REVOKE ALL ON TABLE pgmq."q_zalo-delivery", pgmq."a_zalo-delivery" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_zalo-delivery" TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_zalo-delivery" TO app_be;
+REVOKE ALL ON SEQUENCE pgmq."q_zalo-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
+
+SELECT pgmq.create('sepay-delivery');
+REVOKE ALL ON TABLE pgmq."q_sepay-delivery", pgmq."a_sepay-delivery" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_sepay-delivery" TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_sepay-delivery" TO app_be;
+REVOKE ALL ON SEQUENCE pgmq."q_sepay-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
+
+SELECT pgmq.create('vietcombank-delivery');
+REVOKE ALL ON TABLE pgmq."q_vietcombank-delivery", pgmq."a_vietcombank-delivery" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_vietcombank-delivery" TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_vietcombank-delivery" TO app_be;
+REVOKE ALL ON SEQUENCE pgmq."q_vietcombank-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
+
+SELECT pgmq.create('bank-feed-delivery');
+REVOKE ALL ON TABLE pgmq."q_bank-feed-delivery", pgmq."a_bank-feed-delivery" FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_bank-feed-delivery" TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_bank-feed-delivery" TO app_be;
+REVOKE ALL ON SEQUENCE pgmq."q_bank-feed-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
+
+-- The provider receipts have the telegram_inbox shape, unique key and backend-only RLS.
+
+CREATE TABLE IF NOT EXISTS public.vietcombank_inbox (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    provider text NOT NULL,
+    delivery_id text NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    payload jsonb NOT NULL,
+    processed_at timestamp with time zone,
+    CONSTRAINT vietcombank_inbox_provider_check CHECK (provider = 'vietcombank'),
+    CONSTRAINT vietcombank_inbox_provider_delivery_id_key UNIQUE (provider, delivery_id)
+);
+ALTER TABLE public.vietcombank_inbox ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.vietcombank_inbox FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.vietcombank_inbox TO app_be;
+DO $policies$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+            AND tablename = 'vietcombank_inbox' AND policyname = 'vietcombank_inbox_app_be_insert'
+    ) THEN
+        CREATE POLICY vietcombank_inbox_app_be_insert ON public.vietcombank_inbox
+            FOR INSERT TO app_be WITH CHECK (provider = 'vietcombank');
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+            AND tablename = 'vietcombank_inbox' AND policyname = 'vietcombank_inbox_app_be_select'
+    ) THEN
+        CREATE POLICY vietcombank_inbox_app_be_select ON public.vietcombank_inbox
+            FOR SELECT TO app_be USING (provider = 'vietcombank');
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+            AND tablename = 'vietcombank_inbox' AND policyname = 'vietcombank_inbox_app_be_update'
+    ) THEN
+        CREATE POLICY vietcombank_inbox_app_be_update ON public.vietcombank_inbox
+            FOR UPDATE TO app_be USING (provider = 'vietcombank') WITH CHECK (provider = 'vietcombank');
+    END IF;
+END;
+$policies$;
+
+CREATE TABLE IF NOT EXISTS public.bank_feed_inbox (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    provider text NOT NULL,
+    delivery_id text NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    payload jsonb NOT NULL,
+    processed_at timestamp with time zone,
+    CONSTRAINT bank_feed_inbox_provider_check CHECK (provider IN ('casso', 'payos', 'sepay-feed')),
+    CONSTRAINT bank_feed_inbox_provider_delivery_id_key UNIQUE (provider, delivery_id)
+);
+ALTER TABLE public.bank_feed_inbox ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.bank_feed_inbox FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.bank_feed_inbox TO app_be;
+DO $policies$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+            AND tablename = 'bank_feed_inbox' AND policyname = 'bank_feed_inbox_app_be_insert'
+    ) THEN
+        CREATE POLICY bank_feed_inbox_app_be_insert ON public.bank_feed_inbox
+            FOR INSERT TO app_be WITH CHECK (provider IN ('casso', 'payos', 'sepay-feed'));
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+            AND tablename = 'bank_feed_inbox' AND policyname = 'bank_feed_inbox_app_be_select'
+    ) THEN
+        CREATE POLICY bank_feed_inbox_app_be_select ON public.bank_feed_inbox
+            FOR SELECT TO app_be USING (provider IN ('casso', 'payos', 'sepay-feed'));
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+            AND tablename = 'bank_feed_inbox' AND policyname = 'bank_feed_inbox_app_be_update'
+    ) THEN
+        CREATE POLICY bank_feed_inbox_app_be_update ON public.bank_feed_inbox
+            FOR UPDATE TO app_be USING (provider IN ('casso', 'payos', 'sepay-feed')) WITH CHECK (provider IN ('casso', 'payos', 'sepay-feed'));
+    END IF;
+END;
+$policies$;
+
+-- Standalone claims used by the shared Inbox port have only their durable composite identity.
+CREATE TABLE IF NOT EXISTS public.inbox (
+    source text NOT NULL,
+    delivery_id text NOT NULL,
+    PRIMARY KEY (source, delivery_id)
+);
+ALTER TABLE public.inbox ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.inbox FROM PUBLIC, anon, authenticated;
+GRANT INSERT, SELECT ON TABLE public.inbox TO app_be;
+DO $policies$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+            AND tablename = 'inbox' AND policyname = 'inbox_app_be_insert'
+    ) THEN
+        CREATE POLICY inbox_app_be_insert ON public.inbox
+            FOR INSERT TO app_be WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+            AND tablename = 'inbox' AND policyname = 'inbox_app_be_select'
+    ) THEN
+        CREATE POLICY inbox_app_be_select ON public.inbox
+            FOR SELECT TO app_be USING (true);
+    END IF;
+END;
+$policies$;
+
+-- ---- from 20261026000600_webhook-receipt-backfill.sql ----
+-- Restore jobs for receipts committed before deferred consumers were composed.
+-- The outbox dedupe keys make this safe to repeat alongside live intake.
+-- Legacy Telegram/Zalo rows without rawBody need operator recovery; see webhook-receipts.md.
+-- Successful/completed receipts and existing outbox jobs are preserved.
+
+SELECT public.job_enqueue(
+    NULL::uuid, 'meta-delivery', 'meta-delivery',
+    jsonb_build_object('deliveryId', delivery_id), 'meta-delivery:' || delivery_id
+)
+FROM public.meta_inbox
+WHERE processed_at IS NULL
+ORDER BY received_at, id;
+
+SELECT public.job_enqueue(
+    NULL::uuid, 'telegram-delivery', 'telegram-delivery',
+    jsonb_build_object('deliveryId', delivery_id), 'telegram-delivery:' || delivery_id
+)
+FROM public.telegram_inbox
+WHERE processed_at IS NULL
+    AND jsonb_typeof(payload -> 'rawBody') = 'string'
+    AND jsonb_typeof(payload -> 'connection') = 'string'
+    AND length(payload ->> 'connection') > 0
+ORDER BY received_at, id;
+
+SELECT public.job_enqueue(
+    NULL::uuid, 'zalo-delivery', 'zalo-delivery',
+    jsonb_build_object('deliveryId', delivery_id), 'zalo-delivery:' || delivery_id
+)
+FROM public.zalo_inbox
+WHERE processed_at IS NULL
+    AND jsonb_typeof(payload -> 'rawBody') = 'string'
+    AND jsonb_typeof(payload -> 'connection') = 'string'
+    AND length(payload ->> 'connection') > 0
+ORDER BY received_at, id;
+
+SELECT public.job_enqueue(
+    NULL::uuid, 'sepay-delivery', 'sepay-delivery',
+    jsonb_build_object('deliveryId', sepay_id::text), 'sepay-delivery:' || sepay_id::text
+)
+FROM public.sepay_transactions
+WHERE processed_at IS NULL
+ORDER BY received_at, id;
+
+SELECT public.job_enqueue(
+    NULL::uuid, 'vietcombank-delivery', 'vietcombank-delivery',
+    jsonb_build_object('deliveryId', delivery_id), 'vietcombank-delivery:' || delivery_id
+)
+FROM public.vietcombank_inbox
+WHERE processed_at IS NULL
+ORDER BY received_at, id;
+
+SELECT public.job_enqueue(
+    NULL::uuid, 'bank-feed-delivery', 'bank-feed-delivery',
+    jsonb_build_object('provider', provider, 'deliveryId', delivery_id),
+    'bank-feed-delivery:' || provider || ':' || delivery_id
+)
+FROM public.bank_feed_inbox
+WHERE processed_at IS NULL
+ORDER BY received_at, id;
+
+-- ---- from 20261026000700_video-captions-vtt.sql ----
+-- Add the renderer's WebVTT sidecar without changing other videos bucket restrictions.
+UPDATE storage.buckets
+SET allowed_mime_types = array_append(allowed_mime_types, 'text/vtt')
+WHERE id = 'videos'
+  AND allowed_mime_types IS NOT NULL
+  AND NOT ('text/vtt' = ANY (allowed_mime_types));
+
+-- ---- from 20261101000100_hub-rooms.sql ----
+-- Hub rooms and agent result cards (N17, card frame of N3/N6/N8/N11/N15).
+-- Additive only: a workspace without office_rooms keeps the single Office thread unchanged.
+
+-- 1. The room and the result card of a line. room NULL = the general Office room (which shows every line).
+ALTER TABLE public.messages ADD COLUMN room text;
+ALTER TABLE public.messages ADD COLUMN card jsonb;
+ALTER TABLE public.messages ADD CONSTRAINT messages_room_check
+    CHECK (room IS NULL OR room = ANY (ARRAY['executive', 'frontdesk', 'sales', 'marketing', 'care', 'accounting']));
+ALTER TABLE public.messages ADD CONSTRAINT messages_card_check
+    CHECK (card IS NULL OR (
+        jsonb_typeof(card) = 'object'
+        AND card->>'v' = '1'
+        AND card->>'type' = ANY (ARRAY['draft_post', 'video_ready', 'approval_request', 'schedule_confirmed',
+                                        'weekly_report', 'booking_held', 'daily_summary', 'handoff_note', 'exception'])
+        AND octet_length(card::text) <= 65536));
+CREATE INDEX messages_workspace_room_created_idx ON public.messages USING btree (workspace_id, room, created_at DESC);
+
+-- 2. The department rooms of a workspace.
+CREATE TABLE public.office_rooms (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    key text NOT NULL,
+    name text NOT NULL,
+    position integer DEFAULT 0 NOT NULL,
+    modules text[] DEFAULT '{}'::text[] NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT office_rooms_key_check
+        CHECK (key = ANY (ARRAY['executive', 'frontdesk', 'sales', 'marketing', 'care', 'accounting'])),
+    CONSTRAINT office_rooms_name_check CHECK (char_length(name) BETWEEN 1 AND 60),
+    CONSTRAINT office_rooms_workspace_key UNIQUE (workspace_id, key)
+);
+
+-- 3. Who sits in a room: people (user_id) and agents (agent_id); an agent's home room receives its lines.
+CREATE TABLE public.office_rooms_members (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    room_id uuid NOT NULL REFERENCES public.office_rooms(id) ON DELETE CASCADE,
+    agent_id uuid REFERENCES public.agents(id) ON DELETE CASCADE,
+    user_id uuid,
+    is_home boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT office_rooms_members_one_kind CHECK ((agent_id IS NULL) <> (user_id IS NULL))
+);
+CREATE UNIQUE INDEX office_rooms_members_agent ON public.office_rooms_members (room_id, agent_id) WHERE agent_id IS NOT NULL;
+CREATE UNIQUE INDEX office_rooms_members_user ON public.office_rooms_members (room_id, user_id) WHERE user_id IS NOT NULL;
+CREATE UNIQUE INDEX office_rooms_members_home ON public.office_rooms_members (agent_id) WHERE is_home;
+
+-- 4. Documents pinned in a room.
+CREATE TABLE public.office_rooms_pins (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    room_id uuid NOT NULL REFERENCES public.office_rooms(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    href text,
+    note text DEFAULT ''::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT office_rooms_pins_title_check CHECK (char_length(title) BETWEEN 1 AND 160)
+);
+
+-- 5. Where each person last read each room ('' = the Office room), for the unread counts.
+CREATE TABLE public.office_rooms_reads (
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL,
+    room text NOT NULL,
+    last_read_at timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (workspace_id, user_id, room)
+);
+
+ALTER TABLE public.office_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.office_rooms_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.office_rooms_pins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.office_rooms_reads ENABLE ROW LEVEL SECURITY;
+CREATE POLICY office_rooms_app_be_select ON public.office_rooms FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY office_rooms_app_be_insert ON public.office_rooms FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY office_rooms_app_be_update ON public.office_rooms FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY office_rooms_app_be_delete ON public.office_rooms FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY office_rooms_members_app_be_select ON public.office_rooms_members FOR SELECT TO app_be USING (room_id IS NOT NULL);
+CREATE POLICY office_rooms_members_app_be_insert ON public.office_rooms_members FOR INSERT TO app_be WITH CHECK (room_id IS NOT NULL);
+CREATE POLICY office_rooms_members_app_be_update ON public.office_rooms_members FOR UPDATE TO app_be USING (room_id IS NOT NULL) WITH CHECK (room_id IS NOT NULL);
+CREATE POLICY office_rooms_members_app_be_delete ON public.office_rooms_members FOR DELETE TO app_be USING (room_id IS NOT NULL);
+CREATE POLICY office_rooms_pins_app_be_select ON public.office_rooms_pins FOR SELECT TO app_be USING (room_id IS NOT NULL);
+CREATE POLICY office_rooms_pins_app_be_insert ON public.office_rooms_pins FOR INSERT TO app_be WITH CHECK (room_id IS NOT NULL);
+CREATE POLICY office_rooms_pins_app_be_update ON public.office_rooms_pins FOR UPDATE TO app_be USING (room_id IS NOT NULL) WITH CHECK (room_id IS NOT NULL);
+CREATE POLICY office_rooms_pins_app_be_delete ON public.office_rooms_pins FOR DELETE TO app_be USING (room_id IS NOT NULL);
+CREATE POLICY office_rooms_reads_app_be_select ON public.office_rooms_reads FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY office_rooms_reads_app_be_insert ON public.office_rooms_reads FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY office_rooms_reads_app_be_update ON public.office_rooms_reads FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY office_rooms_reads_app_be_delete ON public.office_rooms_reads FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE public.office_rooms TO app_be;
+GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE public.office_rooms_members TO app_be;
+GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE public.office_rooms_pins TO app_be;
+GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE public.office_rooms_reads TO app_be;
+
+-- 6. Creates the six department rooms of a workspace (idempotent), seats each active agent in the room of its module and
+-- answers how many rooms it opened.
+CREATE FUNCTION public.ensure_office_rooms(p_workspace uuid) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_opened integer;
+begin
+  insert into public.office_rooms (workspace_id, key, name, position, modules) values
+    (p_workspace, 'executive', 'Ban điều hành', 6, '{}'),
+    (p_workspace, 'frontdesk', 'Lễ tân', 1, '{}'),
+    (p_workspace, 'sales', 'Sales', 2, '{sales,booking}'),
+    (p_workspace, 'marketing', 'Marketing', 3, '{content,video}'),
+    (p_workspace, 'care', 'CSKH', 4, '{chatbot}'),
+    (p_workspace, 'accounting', 'Kế toán', 5, '{accounting,invoices}')
+  on conflict (workspace_id, key) do nothing;
+  get diagnostics v_opened = row_count;
+  insert into public.office_rooms_members (room_id, agent_id, is_home)
+  select r.id, a.id, not exists (select 1 from public.office_rooms_members h where h.agent_id = a.id and h.is_home)
+  from public.agents a
+  join public.office_rooms r on r.workspace_id = a.workspace_id and a.module = any (r.modules)
+  where a.workspace_id = p_workspace and a.status = 'active'
+    and not exists (select 1 from public.office_rooms_members m where m.agent_id = a.id)
+  on conflict do nothing;
+  return v_opened;
+end $$;
+REVOKE ALL ON FUNCTION public.ensure_office_rooms(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.ensure_office_rooms(uuid) TO app_be;
+
+-- 7. Routes a line whose writer left the room empty: the room of the "@agent" command that made its work item, else the
+-- speaking agent's home room, else the room of the work item's department; otherwise it stays in the Office only.
+CREATE FUNCTION public.messages_route_room() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+begin
+  if new.room is not null then
+    return new;
+  end if;
+  if new.work_item_id is not null then
+    select m.room into new.room
+    from public.office_command_candidates c
+    join public.messages m on m.id = c.message_id
+    where c.work_item_id = new.work_item_id and c.workspace_id = new.workspace_id and m.room is not null
+    limit 1;
+  end if;
+  if new.room is null and new.agent_id is not null then
+    select r.key into new.room
+    from public.office_rooms_members rm
+    join public.office_rooms r on r.id = rm.room_id
+    where rm.agent_id = new.agent_id and rm.is_home and r.workspace_id = new.workspace_id
+    limit 1;
+  end if;
+  if new.room is null and new.work_item_id is not null then
+    select r.key into new.room
+    from public.work_items w
+    join public.office_rooms r on r.workspace_id = w.workspace_id and w.department = any (r.modules)
+    where w.id = new.work_item_id and w.workspace_id = new.workspace_id
+    order by r.position
+    limit 1;
+  end if;
+  return new;
+end $$;
+
+CREATE TRIGGER messages_route_room BEFORE INSERT ON public.messages
+    FOR EACH ROW EXECUTE FUNCTION public.messages_route_room();
+
+-- 8. Records that a person read a room up to now ('' = the Office room).
+CREATE FUNCTION public.mark_office_room_read(p_workspace uuid, p_user uuid, p_room text) RETURNS void
+    LANGUAGE sql
+    SET search_path TO 'public'
+    AS $$
+    insert into public.office_rooms_reads (workspace_id, user_id, room, last_read_at)
+    values (p_workspace, p_user, p_room, now())
+    on conflict (workspace_id, user_id, room) do update set last_read_at = now()
+$$;
+REVOKE ALL ON FUNCTION public.mark_office_room_read(uuid, uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.mark_office_room_read(uuid, uuid, text) TO app_be;
+
+-- ---- from 20261101000200_marketing-brand-insights.sql ----
+-- AI Marketing (content module): the brand kit read from a guideline PDF, its confirm card, and the daily engagement the weekly
+-- report reads. Forward only; nothing existing changes meaning.
+
+ALTER TABLE public.content_settings
+    ADD COLUMN IF NOT EXISTS brand_colors jsonb DEFAULT '[]'::jsonb NOT NULL,
+    ADD COLUMN IF NOT EXISTS brand_fonts text[] DEFAULT '{}'::text[] NOT NULL,
+    ADD COLUMN IF NOT EXISTS brand_tone text DEFAULT ''::text NOT NULL,
+    ADD COLUMN IF NOT EXISTS brand_imagery text[] DEFAULT '{}'::text[] NOT NULL,
+    ADD COLUMN IF NOT EXISTS brand_source text DEFAULT ''::text NOT NULL;
+
+-- One brand kit the model read from a file the owner attached in the setup chat; written to the settings only once confirmed.
+CREATE TABLE public.content_brand_proposals (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    installation_id uuid,
+    setup_session_id uuid,
+    file_name text NOT NULL,
+    file_size integer DEFAULT 0 NOT NULL,
+    payload jsonb NOT NULL,
+    status text DEFAULT 'proposed'::text NOT NULL,
+    decided_by text,
+    decided_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT content_brand_proposals_status_check CHECK ((status = ANY (ARRAY['proposed'::text, 'applied'::text, 'rejected'::text]))),
+    CONSTRAINT content_brand_proposals_file_name_check CHECK ((char_length(file_name) BETWEEN 1 AND 255))
+);
+CREATE INDEX content_brand_proposals_workspace_idx ON public.content_brand_proposals (workspace_id, created_at DESC);
+
+-- The daily reach and engagement of each social channel of a workspace, upserted by the insights sync.
+CREATE TABLE public.content_engagement_daily (
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    channel text NOT NULL,
+    day date NOT NULL,
+    reach integer DEFAULT 0 NOT NULL,
+    engagements integer DEFAULT 0 NOT NULL,
+    messages integer DEFAULT 0 NOT NULL,
+    synced_at timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (workspace_id, channel, day),
+    CONSTRAINT content_engagement_daily_channel_check CHECK ((channel = ANY (ARRAY['facebook'::text, 'zalo'::text, 'instagram'::text, 'tiktok'::text]))),
+    CONSTRAINT content_engagement_daily_counts_check CHECK (((reach >= 0) AND (engagements >= 0) AND (messages >= 0)))
+);
+
+ALTER TABLE public.content_brand_proposals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.content_engagement_daily ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY content_brand_proposals_app_be_all ON public.content_brand_proposals TO app_be
+    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY content_engagement_daily_app_be_all ON public.content_engagement_daily TO app_be
+    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+
+REVOKE ALL ON TABLE public.content_brand_proposals FROM anon, authenticated;
+REVOKE ALL ON TABLE public.content_engagement_daily FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.content_brand_proposals TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.content_engagement_daily TO app_be;
+
+-- ---- from 20261101000300_editor-delegations.sql ----
+-- AI Editor (the video module's agent) takes scripts other agents delegate (AI Marketing's render_script command). One row per delegation:
+-- who sent it, the target channels, the project it rendered and the Hub card it posted when the render finished. The back end alone reads and writes it.
+
+CREATE TABLE public.video_delegations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    work_item_id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    source_module text NOT NULL,
+    content_item_id uuid,
+    channels text[] DEFAULT '{}'::text[] NOT NULL,
+    status text DEFAULT 'rendering'::text NOT NULL,
+    render_id uuid,
+    approval_work_item_id uuid,
+    card jsonb,
+    error text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT video_delegations_pkey PRIMARY KEY (id),
+    CONSTRAINT video_delegations_status_check CHECK ((status = ANY (ARRAY['rendering'::text, 'ready'::text, 'approved'::text, 'failed'::text]))),
+    CONSTRAINT video_delegations_source_check CHECK ((char_length(source_module) BETWEEN 1 AND 40)),
+    CONSTRAINT video_delegations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    CONSTRAINT video_delegations_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.video_projects(id) ON DELETE CASCADE,
+    CONSTRAINT video_delegations_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES public.work_items(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX video_delegations_work_item ON public.video_delegations USING btree (work_item_id);
+CREATE INDEX video_delegations_project ON public.video_delegations USING btree (project_id);
+CREATE INDEX video_delegations_content_item ON public.video_delegations USING btree (workspace_id, content_item_id) WHERE (content_item_id IS NOT NULL);
+
+ALTER TABLE public.video_delegations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY video_delegations_app_be_select ON public.video_delegations FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
+CREATE POLICY video_delegations_app_be_insert ON public.video_delegations FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY video_delegations_app_be_update ON public.video_delegations FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+
+REVOKE ALL ON TABLE public.video_delegations FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.video_delegations TO app_be;
+
+-- ---- from 20261101000400_mcp-gateway.sql ----
+-- NIVO MCP gateway: one tool surface per workspace over native adapters and remote MCP servers,
+-- per-agent grants (default deny), the audit log, identity links and the Sales <-> CSKH conversation ownership history.
+-- Additive only. Contract: be/docs/guides/mcp-gateway.md.
+
+CREATE TABLE public.mcp_connectors (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    key text NOT NULL,
+    name text NOT NULL,
+    kind text NOT NULL,
+    url text,
+    credential_ref text,
+    status text DEFAULT 'active'::text NOT NULL,
+    contract_version text DEFAULT ''::text NOT NULL,
+    timeout_ms integer DEFAULT 4000 NOT NULL,
+    tool_catalog jsonb DEFAULT '[]'::jsonb NOT NULL,
+    catalog_hash text DEFAULT ''::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT mcp_connectors_key_check CHECK ((key ~ '^[a-z][a-z0-9-]{1,30}$'::text)),
+    CONSTRAINT mcp_connectors_kind_check CHECK ((kind = ANY (ARRAY['native'::text, 'remote'::text]))),
+    CONSTRAINT mcp_connectors_status_check CHECK ((status = ANY (ARRAY['active'::text, 'disabled'::text, 'degraded'::text]))),
+    CONSTRAINT mcp_connectors_remote_url_check CHECK (((kind = 'native'::text) OR (url ~ '^https?://'::text))),
+    CONSTRAINT mcp_connectors_credential_ref_check CHECK (((credential_ref IS NULL) OR (credential_ref ~ '^[A-Z][A-Z0-9_]{2,80}$'::text))),
+    CONSTRAINT mcp_connectors_timeout_check CHECK (((timeout_ms >= 500) AND (timeout_ms <= 15000))),
+    CONSTRAINT mcp_connectors_workspace_key_unique UNIQUE (workspace_id, key)
+);
+
+CREATE TABLE public.mcp_tool_grants (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    tool text NOT NULL,
+    mode text DEFAULT 'never'::text NOT NULL,
+    limit_vnd bigint,
+    constraints jsonb DEFAULT '[]'::jsonb NOT NULL,
+    updated_by uuid,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT mcp_tool_grants_tool_check CHECK ((tool ~ '^[a-z][a-z0-9-]{1,30}\.([a-zA-Z][a-zA-Z0-9_.]{1,80}|\*)$'::text)),
+    CONSTRAINT mcp_tool_grants_mode_check CHECK ((mode = ANY (ARRAY['auto'::text, 'ask'::text, 'never'::text]))),
+    CONSTRAINT mcp_tool_grants_limit_vnd_check CHECK (((limit_vnd IS NULL) OR (limit_vnd >= 0))),
+    CONSTRAINT mcp_tool_grants_constraints_check CHECK ((jsonb_typeof(constraints) = 'array'::text)),
+    CONSTRAINT mcp_tool_grants_agent_tool_unique UNIQUE (agent_id, tool)
+);
+
+CREATE TABLE public.mcp_call_log (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    connector text NOT NULL,
+    tool text NOT NULL,
+    agent_id uuid REFERENCES public.agents(id) ON DELETE SET NULL,
+    conversation_id uuid,
+    work_item_id uuid,
+    args_masked jsonb DEFAULT '{}'::jsonb NOT NULL,
+    args_hash text DEFAULT ''::text NOT NULL,
+    outcome text NOT NULL,
+    error_code text,
+    result_summary text DEFAULT ''::text NOT NULL,
+    duration_ms integer DEFAULT 0 NOT NULL,
+    approved_by text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT mcp_call_log_outcome_check CHECK ((outcome = ANY (ARRAY['ok'::text, 'error'::text, 'refused'::text, 'approval'::text, 'timeout'::text, 'circuit_open'::text])))
+);
+CREATE INDEX mcp_call_log_ws_time ON public.mcp_call_log USING btree (workspace_id, created_at DESC);
+
+CREATE TABLE public.conversation_ownership_events (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    conversation_id uuid NOT NULL REFERENCES public.agent_conversations(id) ON DELETE CASCADE,
+    from_agent_id uuid,
+    to_agent_id uuid NOT NULL,
+    reason text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT conversation_ownership_events_reason_length CHECK ((char_length(reason) >= 1 AND char_length(reason) <= 400))
+);
+CREATE INDEX conversation_ownership_events_conversation ON public.conversation_ownership_events USING btree (conversation_id, created_at DESC);
+
+ALTER TABLE public.mcp_connectors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mcp_tool_grants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mcp_call_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversation_ownership_events ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.mcp_connectors FROM anon, authenticated;
+REVOKE ALL ON TABLE public.mcp_tool_grants FROM anon, authenticated;
+REVOKE ALL ON TABLE public.mcp_call_log FROM anon, authenticated;
+REVOKE ALL ON TABLE public.conversation_ownership_events FROM anon, authenticated;
+
+GRANT SELECT, INSERT, UPDATE ON TABLE public.mcp_connectors TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.mcp_tool_grants TO app_be;
+GRANT SELECT, INSERT ON TABLE public.mcp_call_log TO app_be;
+GRANT SELECT, INSERT ON TABLE public.conversation_ownership_events TO app_be;
+
+CREATE POLICY mcp_connectors_app_be_all ON public.mcp_connectors TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY mcp_tool_grants_app_be_all ON public.mcp_tool_grants TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY mcp_call_log_app_be_select ON public.mcp_call_log FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
+CREATE POLICY mcp_call_log_app_be_insert ON public.mcp_call_log FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY conversation_ownership_events_app_be_select ON public.conversation_ownership_events FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
+CREATE POLICY conversation_ownership_events_app_be_insert ON public.conversation_ownership_events FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
+
+-- The approval of a gated gateway call (an argument over its constraint, an amount over the limit, a tool in "ask" mode).
+INSERT INTO public.authority_actions (action, module_key, sort_order, default_mode, default_limit_vnd, default_required_fields, amount_limit, max_mode, label) VALUES
+    ('gateway_call', 'chatbot', 40, 'ask', NULL, '{}', false, NULL, '{"en": "Connector call needing approval", "vi": "Lệnh kết nối cần duyệt"}')
+ON CONFLICT DO NOTHING;
+
+-- ---- from 20261101000500_accounting-desk.sql ----
+-- AI Ke toan (HAKUEN demo, PLAN N14 / N15 / N16 / N23): the morning run of the accounting agent. One queue and one tick at 06:30
+-- Vietnam time (23:30 UTC): the agent reads the day's e-invoices and bank credits through the MCP gateway, checks them, matches
+-- folio payments, and posts the daily summary card and the due-date reminders into the Ke toan room. No table: the sources stay
+-- behind the gateway and the tax profile is Second Brain knowledge.
+SELECT pgmq.create('accounting_desk');
+
+-- ---- from 20261101000700_workspace-branding.sql ----
+-- Workspace branding read by the console header and the Hub: a display name (falls back to workspaces.name) and a logo
+-- address (app-relative path such as /brand/<file> or an https URL). Written by `cli seed-workspace profile` and owners.
+alter table public.workspaces add column if not exists display_name text;
+alter table public.workspaces add column if not exists logo_url text;
+
+do $$
+begin
+    if not exists (select 1 from pg_constraint where conname = 'workspaces_display_name_check') then
+        alter table public.workspaces add constraint workspaces_display_name_check
+            check (display_name is null or char_length(display_name) between 1 and 120);
+    end if;
+    if not exists (select 1 from pg_constraint where conname = 'workspaces_logo_url_check') then
+        alter table public.workspaces add constraint workspaces_logo_url_check
+            check (logo_url is null or (char_length(logo_url) <= 2048 and (logo_url like '/%' or logo_url like 'https://%')));
+    end if;
+end
+$$;
+
+comment on column public.workspaces.display_name is 'Brand name shown in the console; null = workspaces.name.';
+comment on column public.workspaces.logo_url is 'Brand logo: app-relative path or https URL; null = default mark.';
+
+-- ---- from 20261101000800_office-room-home.sql ----
+-- Moves the home seat of an agent to a department room. `cli seed-workspace profile` calls it after ensure_office_rooms so a
+-- workspace profile can seat an agent in a room other than the one its module maps to (a chatbot agent that cares for staying
+-- guests sits in CSKH, not Sales). It runs with the caller's rights: the app_be grants and policies of office_rooms_members apply.
+-- Answers false when the room or the agent is not of the workspace, true once the agent's home is that room.
+CREATE FUNCTION public.move_office_agent_home(p_workspace uuid, p_room text, p_agent uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY INVOKER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_room uuid;
+begin
+  select r.id into v_room from public.office_rooms r where r.workspace_id = p_workspace and r.key = p_room;
+  if v_room is null then return false; end if;
+  if not exists (select 1 from public.agents a where a.id = p_agent and a.workspace_id = p_workspace) then return false; end if;
+  if exists (select 1 from public.office_rooms_members m where m.room_id = v_room and m.agent_id = p_agent and m.is_home) then
+    return true;
+  end if;
+  delete from public.office_rooms_members m where m.agent_id = p_agent and m.is_home and m.room_id <> v_room;
+  insert into public.office_rooms_members (room_id, agent_id, is_home) values (v_room, p_agent, true)
+  on conflict (room_id, agent_id) where agent_id is not null do update set is_home = true;
+  return true;
+end $$;
+REVOKE ALL ON FUNCTION public.move_office_agent_home(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.move_office_agent_home(uuid, text, uuid) TO app_be;
+
+-- ---- from 20261101000900_mcp-connector-pinning.sql ----
+-- NIVO MCP gateway: schema pinning and health of remote connectors.
+-- tool_catalog keeps the live snapshot (each entry carries the sha256 of its name, description and input schema); approved_catalog
+-- keeps the { name, hash } pairs an owner or manager approved. A remote tool runs only while its live hash equals the approved one.
+-- checked_at is when the last health check or catalog read answered (or failed). Additive only.
+
+ALTER TABLE public.mcp_connectors
+    ADD COLUMN approved_catalog jsonb DEFAULT '[]'::jsonb NOT NULL,
+    ADD COLUMN approved_by uuid,
+    ADD COLUMN approved_at timestamp with time zone,
+    ADD COLUMN checked_at timestamp with time zone,
+    ADD CONSTRAINT mcp_connectors_approved_catalog_check CHECK ((jsonb_typeof(approved_catalog) = 'array'::text));
+
+-- ---- from 20261101000901_module-installation-status_contract_widen.sql ----
+-- Module installations: an applied agent whose module requires a connector capability role that no usable connector plays waits in
+-- `needs_connection` (it does not run) and is live again once one is connected. Kept apart from `paused`, the owner's own stop.
+
+ALTER TABLE public.module_installations DROP CONSTRAINT module_installations_status_check;
+ALTER TABLE public.module_installations
+    ADD CONSTRAINT module_installations_status_check
+    CHECK ((status = ANY (ARRAY['installing'::text, 'setup'::text, 'ready'::text, 'live'::text, 'paused'::text, 'needs_connection'::text])));
+
+-- ---- from 20261101000902_transactions-direction.sql ----
+-- Bank moves in both directions: a live SePay delivery that takes money out of the workspace's account (a supplier payment) is
+-- recorded as a debit beside the credits, so a paid supplier invoice can be told from an open one. Existing rows are credits.
+
+ALTER TABLE public.transactions
+    ADD COLUMN direction text DEFAULT 'credit'::text NOT NULL,
+    ADD CONSTRAINT transactions_direction_check CHECK ((direction = ANY (ARRAY['credit'::text, 'debit'::text])));
+
+-- ---- from 20261101000903_api-key-agent-binding.sql ----
+-- A per-agent credential for the MCP endpoint: an API key may be bound to one agent of its workspace. Such a key carries only
+-- the `tools:call` scope and names the agent the gateway serves; deleting the agent deletes its keys, so a removed agent's key
+-- stops working at once. Keys without an agent are the public API keys they always were.
+
+ALTER TABLE public.api_keys
+    ADD COLUMN agent_id uuid REFERENCES public.agents(id) ON DELETE CASCADE,
+    ADD CONSTRAINT api_keys_agent_scope_check CHECK (((agent_id IS NULL) OR (scopes = ARRAY['tools:call'::text])));
+
+CREATE INDEX api_keys_agent_id_idx ON public.api_keys USING btree (agent_id) WHERE (agent_id IS NOT NULL);
+
+-- ---- from 20261101000904_conversation-connector-party.sql ----
+-- Customer conversations remember the party a connector keeps for their customer (the answer of the `identity.find` or
+-- `identity.upsert` role), so a turn does not ask the connector again; how a customer is matched (channel identity or phone) is
+-- the workspace's own data in the installation settings, never code.
+
+ALTER TABLE public.agent_conversations
+    ADD COLUMN connector_party_id text,
+    ADD COLUMN connector_party_name text,
+    ADD COLUMN connector_party_at timestamp with time zone;
+
+ALTER TABLE public.agent_conversations
+    ADD CONSTRAINT agent_conversations_connector_party_id_length
+        CHECK ((connector_party_id IS NULL OR char_length(connector_party_id) BETWEEN 1 AND 200)),
+    ADD CONSTRAINT agent_conversations_connector_party_name_length
+        CHECK ((connector_party_name IS NULL OR char_length(connector_party_name) <= 200));
+
+-- ---- from 20261101000905_content-weekly-reports.sql ----
+-- The weekly marketing report per workspace and week: the top posts and the model's suggestion it computed (so a report read
+-- does not call the channels and the model again) and when its card was posted into the Hub (so the weekly job posts it once).
+-- Owner capability: be/src/modules/domain/content-weekly-reports.
+
+CREATE TABLE public.content_weekly_reports (
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    week_start date NOT NULL,
+    posts jsonb DEFAULT '[]'::jsonb NOT NULL,
+    post_count integer DEFAULT 0 NOT NULL,
+    suggestion jsonb,
+    computed_at timestamp with time zone,
+    posted_at timestamp with time zone,
+    PRIMARY KEY (workspace_id, week_start),
+    CONSTRAINT content_weekly_reports_post_count_check CHECK ((post_count >= 0)),
+    CONSTRAINT content_weekly_reports_posts_check CHECK ((jsonb_typeof(posts) = 'array'::text))
+);
+
+ALTER TABLE public.content_weekly_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY content_weekly_reports_app_be_all ON public.content_weekly_reports TO app_be
+    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+
+REVOKE ALL ON TABLE public.content_weekly_reports FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.content_weekly_reports TO app_be;
+
+-- The AI Marketing tick (be/src/features/jobs/run-marketing-tick): every quarter hour it publishes the Zalo OA articles whose
+-- moment has come and posts the weekly report cards that are due.
+SELECT pgmq.create('marketing_tick');
+
+-- ---- from 20261101000906_origin-columns_contract_drop.sql ----
+-- NIVO records only real input (owner ruling, 2026-10-21: production is cleaned at the v0.3.0 deploy). The rows of the retired
+-- simulator and simulated bank door are deleted, children before parents (every foreign key below cascades or sets null), and
+-- the origin columns and their checks are dropped. The functions that read or wrote origin are replaced first, so none of them
+-- names a dropped column. The retired simulated bank door leaves nothing behind either: its pending jobs, its receipt
+-- table (with its policies and grants) and its pgmq queue are removed.
+
+CREATE OR REPLACE FUNCTION public.booking_reserve(p jsonb, p_force boolean DEFAULT false) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_res uuid := (p ->> 'resource_id')::uuid;
+  v_cap int;
+  v_party int := coalesce((p ->> 'party_size')::int, 1);
+  v_id uuid;
+  v_holds boolean := coalesce((p ->> 'holds_slot')::boolean, true);
+begin
+  perform pg_advisory_xact_lock(hashtextextended(v_res::text, 0));
+  select capacity into v_cap from public.booking_resources where id = v_res and workspace_id = (p ->> 'workspace_id')::uuid;
+  if v_cap is null then raise exception 'resource not found'; end if;
+  if v_holds and not p_force
+     and public.booking_peak_load(v_res, (p ->> 'start_at')::timestamptz, (p ->> 'block_end_at')::timestamptz, null) + v_party > v_cap then
+    return null;
+  end if;
+  insert into public.bookings (workspace_id, lead_id, conversation_id, customer_name, customer_phone, customer_email, service_id, resource_id, start_at, end_at, block_end_at,
+                               party_size, status, holds_slot, source_channel, price_vnd, deposit_vnd, deposit_status, note, conflict_note, idempotency_key)
+  values ((p ->> 'workspace_id')::uuid, nullif(p ->> 'lead_id', '')::uuid, nullif(p ->> 'conversation_id', '')::uuid, coalesce(p ->> 'customer_name', ''), nullif(p ->> 'customer_phone', ''),
+          nullif(p ->> 'customer_email', ''), (p ->> 'service_id')::uuid, v_res, (p ->> 'start_at')::timestamptz, (p ->> 'end_at')::timestamptz, (p ->> 'block_end_at')::timestamptz,
+          v_party, coalesce(p ->> 'status', 'requested'), v_holds, coalesce(p ->> 'source_channel', 'manual'), nullif(p ->> 'price_vnd', '')::bigint,
+          coalesce((p ->> 'deposit_vnd')::bigint, 0), coalesce(p ->> 'deposit_status', 'none'), coalesce(p ->> 'note', ''), coalesce(p ->> 'conflict_note', ''),
+          nullif(p ->> 'idempotency_key', ''))
+  returning id into v_id;
+  return v_id;
+end $$;
+
+REVOKE EXECUTE ON FUNCTION public.booking_reserve(p jsonb, p_force boolean) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.governance_rows(ws uuid, since7 timestamp with time zone) RETURNS jsonb
+    LANGUAGE sql STABLE
+    SET search_path TO 'public'
+    AS $$
+  select jsonb_build_object(
+    'auth', (select jsonb_build_object('goal_revenue_vnd', a.goal_revenue_vnd, 'goal_new_customers', a.goal_new_customers,
+                                       'goal_first_reply_minutes', a.goal_first_reply_minutes)
+             from authority a where a.workspace_id = ws),
+    'leads', coalesce((select jsonb_agg(jsonb_build_object('id', l.id, 'contact_name', l.contact_name, 'company', l.company,
+                                                           'stage', l.stage, 'created_at', l.created_at))
+                       from (select * from leads where workspace_id = ws limit 10000) l), '[]'::jsonb),
+    'orders', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'lead_id', o.lead_id, 'order_no', o.order_no, 'items', o.items,
+                                                            'amount_vnd', o.amount_vnd, 'status', o.status))
+                        from orders o where o.workspace_id = ws and o.status in ('confirmed', 'invoiced', 'paid')), '[]'::jsonb),
+    'invoices', coalesce((select jsonb_agg(jsonb_build_object('id', i.id, 'order_id', i.order_id, 'lead_id', i.lead_id, 'invoice_no', i.invoice_no,
+                                                              'amount_vnd', i.amount_vnd, 'status', i.status))
+                          from invoices i where i.workspace_id = ws and i.status in ('issued', 'paid')), '[]'::jsonb),
+    'txs', coalesce((select jsonb_agg(jsonb_build_object('id', t.id, 'invoice_id', t.invoice_id, 'payer', t.payer, 'reference', t.reference,
+                                                         'amount_vnd', t.amount_vnd, 'status', t.status))
+                     from transactions t where t.workspace_id = ws and t.status in ('matched', 'unmatched', 'needs_review')), '[]'::jsonb),
+    'work', coalesce((select jsonb_agg(jsonb_build_object('id', w.id, 'lead_id', w.lead_id, 'department', w.department, 'status', w.status,
+                                                          'reason', w.reason, 'decided_path', w.decided_path, 'created_at', w.created_at,
+                                                          'updated_at', w.updated_at, 'completed_at', w.completed_at,
+                                                          'summary', w.proposal ->> 'summary',
+                                                          'contact', w.proposal -> 'fields' ->> 'contact_name',
+                                                          'customer', w.proposal -> 'fields' ->> 'customer') order by w.created_at desc)
+                      from (select * from work_items where workspace_id = ws order by created_at desc limit 2000) w), '[]'::jsonb),
+    'pending_without_work', (select count(*) from executions x where x.workspace_id = ws and x.status = 'pending_approval' and x.work_item_id is null),
+    'decisions7', coalesce((select jsonb_agg(jsonb_build_object('work_item_id', d.work_item_id, 'lead_id', d.lead_id, 'decider_kind', d.decider_kind,
+                                                                'outcome', d.outcome, 'created_at', d.created_at))
+                            from decisions d where d.workspace_id = ws and d.created_at >= since7), '[]'::jsonb),
+    'recent', coalesce((select jsonb_agg(to_jsonb(d) || jsonb_build_object('lead', (select jsonb_build_object('contact_name', l.contact_name)
+                                                                                 from leads l where l.id = d.lead_id)) order by d.created_at desc)
+                        from (select * from decisions where workspace_id = ws order by created_at desc limit 40) d), '[]'::jsonb)
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text DEFAULT 'vi'::text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_actor text := public.lead_actor_name(p_workspace);
+  v_en boolean := coalesce(p_locale, 'vi') = 'en';
+  v_lead record;
+  v_label text;
+  v_agent record;
+  v_handed boolean := false;
+begin
+  if p_stage not in ('new', 'qualified', 'proposal', 'won', 'lost') then
+    raise exception 'stage_invalid' using errcode = '22023';
+  end if;
+  update public.leads set stage = p_stage where workspace_id = p_workspace and id = p_lead
+  returning id, contact_name, company, channel, need, stage into v_lead;
+  if not found then
+    raise exception 'LEADS_NOT_FOUND' using errcode = 'P0002';
+  end if;
+  v_label := case p_stage
+    when 'new' then case when v_en then 'new' else 'mới' end
+    when 'qualified' then case when v_en then 'qualified' else 'đủ điều kiện' end
+    when 'proposal' then case when v_en then 'proposal' else 'đề xuất' end
+    when 'won' then case when v_en then 'won' else 'chốt được' end
+    else case when v_en then 'lost' else 'không chốt' end
+  end;
+  insert into public.events (workspace_id, lead_id, kind, actor, summary, evidence)
+  values (p_workspace, p_lead, 'outcome.recorded', v_actor,
+          case when v_en then 'Stage → ' else 'Giai đoạn → ' end || v_label, nullif(p_evidence, ''));
+  insert into public.messages (workspace_id, lead_id, author_kind, author_name, body)
+  values (p_workspace, p_lead, 'system', 'NIVO',
+          case when v_en then v_lead.contact_name || ' moved to ' || v_label || '.' else v_lead.contact_name || ' chuyển sang ' || v_label || '.' end);
+  if p_stage = 'won' then
+    select a.id, a.name into v_agent from public.agents a
+     where a.workspace_id = p_workspace and a.module = 'accounting' and a.status = 'active'
+     order by a.created_at limit 1;
+    if found then
+      insert into public.responsibilities (workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_name, next_action, due_at)
+      values (p_workspace, p_lead,
+              case when v_en then 'Prepare invoice for ' || v_lead.contact_name else 'Chuẩn bị hóa đơn cho ' || v_lead.contact_name end,
+              'agent', v_agent.id, v_agent.name,
+              case when v_en then 'Draft the invoice from the agreed scope for owner approval'
+                   else 'Soạn hóa đơn theo phạm vi đã thống nhất để chủ doanh nghiệp duyệt' end,
+              now() + interval '1 day');
+      insert into public.events (workspace_id, lead_id, kind, actor, summary)
+      values (p_workspace, p_lead, 'responsibility.assigned', 'Sales Agent',
+              case when v_en then 'Handed to ' || v_agent.name || ' · Next action: Draft the invoice from the agreed scope'
+                   else 'Đã bàn giao cho ' || v_agent.name || ' · Bước tiếp theo: Soạn hóa đơn theo phạm vi đã thống nhất' end);
+      v_handed := true;
+    end if;
+  end if;
+  return jsonb_build_object(
+    'leadId', v_lead.id, 'stage', v_lead.stage, 'contactName', v_lead.contact_name, 'company', v_lead.company,
+    'channel', v_lead.channel, 'need', v_lead.need, 'handedToAccounting', v_handed
+  );
+end;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text) FROM PUBLIC, anon, authenticated;
+
+DELETE FROM public.transactions WHERE origin <> 'live';
+DELETE FROM public.bookings WHERE origin <> 'live';
+DELETE FROM public.invoices WHERE origin <> 'live';
+DELETE FROM public.orders WHERE origin <> 'live';
+DELETE FROM public.work_items WHERE origin <> 'live';
+DELETE FROM public.inbound_events WHERE origin <> 'live';
+DELETE FROM public.leads WHERE origin <> 'live';
+
+ALTER TABLE public.transactions DROP CONSTRAINT IF EXISTS transactions_origin_check, DROP COLUMN origin;
+ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_origin_check, DROP COLUMN origin;
+ALTER TABLE public.invoices DROP CONSTRAINT IF EXISTS invoices_origin_check, DROP COLUMN origin;
+ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_origin_check, DROP COLUMN origin;
+ALTER TABLE public.work_items DROP CONSTRAINT IF EXISTS work_items_origin_check, DROP COLUMN origin;
+ALTER TABLE public.inbound_events DROP CONSTRAINT IF EXISTS inbound_events_origin_check, DROP COLUMN origin;
+ALTER TABLE public.leads DROP CONSTRAINT IF EXISTS leads_origin_check, DROP COLUMN origin;
+
+DELETE FROM public.job_outbox WHERE queue = 'vietcombank-delivery';
+DELETE FROM public.job_slots WHERE queue = 'vietcombank-delivery';
+DELETE FROM public.jobs WHERE kind = 'vietcombank-delivery';
+
+DROP TABLE IF EXISTS public.vietcombank_inbox;
+
+SELECT pgmq.drop_queue('vietcombank-delivery');
+
+-- ---- from 20261101000907_workspace-footprint.sql ----
+-- The footprint of one workspace: how many rows each table that cascades from public.workspaces (ON DELETE CASCADE on its
+-- workspace_id) holds for it. `cli cleanup-workspaces run --dry-run` reads it into the receipt the owner reviews before the
+-- operator deletes the workspaces that are not kept. It runs with the caller's rights (SECURITY INVOKER): the app_be grants and
+-- policies of each table apply, and it writes nothing.
+-- job_outbox also cascades from public.workspaces, but app_be holds no grant on it, so it is not counted here; the receipt names it
+-- as uncounted and the cascade still deletes its rows.
+-- A table added later is counted only once a new migration replaces this function.
+CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
+    LANGUAGE sql STABLE SECURITY INVOKER
+    SET search_path TO 'public'
+    AS $$
+  select
+  jsonb_build_object(
+    'accounting_adjustments', (select count(*) from public.accounting_adjustments where workspace_id = p_workspace),
+    'agent_access_log', (select count(*) from public.agent_access_log where workspace_id = p_workspace),
+    'agent_connections', (select count(*) from public.agent_connections where workspace_id = p_workspace),
+    'agent_conversations', (select count(*) from public.agent_conversations where workspace_id = p_workspace),
+    'agent_messages', (select count(*) from public.agent_messages where workspace_id = p_workspace),
+    'agents', (select count(*) from public.agents where workspace_id = p_workspace),
+    'ai_generations', (select count(*) from public.ai_generations where workspace_id = p_workspace),
+    'ai_quota_overrides', (select count(*) from public.ai_quota_overrides where workspace_id = p_workspace),
+    'ai_usage_events', (select count(*) from public.ai_usage_events where workspace_id = p_workspace),
+    'ai_usage_notices', (select count(*) from public.ai_usage_notices where workspace_id = p_workspace),
+    'api_keys', (select count(*) from public.api_keys where workspace_id = p_workspace),
+    'app_commands', (select count(*) from public.app_commands where workspace_id = p_workspace),
+    'authority', (select count(*) from public.authority where workspace_id = p_workspace),
+    'authority_rules', (select count(*) from public.authority_rules where workspace_id = p_workspace),
+    'automation_commands', (select count(*) from public.automation_commands where workspace_id = p_workspace),
+    'automation_pipelines', (select count(*) from public.automation_pipelines where workspace_id = p_workspace),
+    'automation_runs', (select count(*) from public.automation_runs where workspace_id = p_workspace),
+    'billing_events', (select count(*) from public.billing_events where workspace_id = p_workspace),
+    'booking_exceptions', (select count(*) from public.booking_exceptions where workspace_id = p_workspace),
+    'booking_hours', (select count(*) from public.booking_hours where workspace_id = p_workspace),
+    'booking_reminders', (select count(*) from public.booking_reminders where workspace_id = p_workspace),
+    'booking_resources', (select count(*) from public.booking_resources where workspace_id = p_workspace),
+    'booking_services', (select count(*) from public.booking_services where workspace_id = p_workspace),
+    'booking_settings', (select count(*) from public.booking_settings where workspace_id = p_workspace),
+    'booking_waitlist', (select count(*) from public.booking_waitlist where workspace_id = p_workspace),
+    'bookings', (select count(*) from public.bookings where workspace_id = p_workspace),
+    'brain_commands', (select count(*) from public.brain_commands where workspace_id = p_workspace),
+    'brain_eval_cases', (select count(*) from public.brain_eval_cases where workspace_id = p_workspace),
+    'brain_extractions', (select count(*) from public.brain_extractions where workspace_id = p_workspace),
+    'brain_facts', (select count(*) from public.brain_facts where workspace_id = p_workspace),
+    'brain_lessons', (select count(*) from public.brain_lessons where workspace_id = p_workspace),
+    'brain_source_profiles', (select count(*) from public.brain_source_profiles where workspace_id = p_workspace),
+    'channel_receipts', (select count(*) from public.channel_receipts where workspace_id = p_workspace),
+    'connection_commands', (select count(*) from public.connection_commands where workspace_id = p_workspace),
+    'connections', (select count(*) from public.connections where workspace_id = p_workspace),
+    'connector_interest', (select count(*) from public.connector_interest where workspace_id = p_workspace),
+    'content_brand_proposals', (select count(*) from public.content_brand_proposals where workspace_id = p_workspace),
+    'content_cadence', (select count(*) from public.content_cadence where workspace_id = p_workspace),
+    'content_engagement_daily', (select count(*) from public.content_engagement_daily where workspace_id = p_workspace),
+    'content_items', (select count(*) from public.content_items where workspace_id = p_workspace),
+    'content_pillars', (select count(*) from public.content_pillars where workspace_id = p_workspace),
+    'content_plans', (select count(*) from public.content_plans where workspace_id = p_workspace),
+    'content_settings', (select count(*) from public.content_settings where workspace_id = p_workspace),
+    'content_weekly_reports', (select count(*) from public.content_weekly_reports where workspace_id = p_workspace),
+    'contracts', (select count(*) from public.contracts where workspace_id = p_workspace),
+    'conversation_ownership_events', (select count(*) from public.conversation_ownership_events where workspace_id = p_workspace)
+  )
+  ||
+  jsonb_build_object(
+    'credit_pack_purchases', (select count(*) from public.credit_pack_purchases where workspace_id = p_workspace),
+    'credit_topup_draws', (select count(*) from public.credit_topup_draws where workspace_id = p_workspace),
+    'credit_topups', (select count(*) from public.credit_topups where workspace_id = p_workspace),
+    'data_records', (select count(*) from public.data_records where workspace_id = p_workspace),
+    'data_sync_runs', (select count(*) from public.data_sync_runs where workspace_id = p_workspace),
+    'decisions', (select count(*) from public.decisions where workspace_id = p_workspace),
+    'email_messages', (select count(*) from public.email_messages where workspace_id = p_workspace),
+    'events', (select count(*) from public.events where workspace_id = p_workspace),
+    'executions', (select count(*) from public.executions where workspace_id = p_workspace),
+    'hiring_availability', (select count(*) from public.hiring_availability where workspace_id = p_workspace),
+    'hiring_candidates', (select count(*) from public.hiring_candidates where workspace_id = p_workspace),
+    'hiring_consents', (select count(*) from public.hiring_consents where workspace_id = p_workspace),
+    'hiring_events', (select count(*) from public.hiring_events where workspace_id = p_workspace),
+    'hiring_interviews', (select count(*) from public.hiring_interviews where workspace_id = p_workspace),
+    'hiring_jobs', (select count(*) from public.hiring_jobs where workspace_id = p_workspace),
+    'hiring_offers', (select count(*) from public.hiring_offers where workspace_id = p_workspace),
+    'hiring_onboarding', (select count(*) from public.hiring_onboarding where workspace_id = p_workspace),
+    'hiring_retention_log', (select count(*) from public.hiring_retention_log where workspace_id = p_workspace),
+    'hiring_settings', (select count(*) from public.hiring_settings where workspace_id = p_workspace),
+    'inbound_events', (select count(*) from public.inbound_events where workspace_id = p_workspace),
+    'inventory_items', (select count(*) from public.inventory_items where workspace_id = p_workspace),
+    'inventory_locations', (select count(*) from public.inventory_locations where workspace_id = p_workspace),
+    'inventory_movements', (select count(*) from public.inventory_movements where workspace_id = p_workspace),
+    'inventory_po_lines', (select count(*) from public.inventory_po_lines where workspace_id = p_workspace),
+    'inventory_purchase_orders', (select count(*) from public.inventory_purchase_orders where workspace_id = p_workspace),
+    'inventory_receipts', (select count(*) from public.inventory_receipts where workspace_id = p_workspace),
+    'inventory_recipe_lines', (select count(*) from public.inventory_recipe_lines where workspace_id = p_workspace),
+    'inventory_recipes', (select count(*) from public.inventory_recipes where workspace_id = p_workspace),
+    'inventory_stock_levels', (select count(*) from public.inventory_stock_levels where workspace_id = p_workspace),
+    'inventory_suppliers', (select count(*) from public.inventory_suppliers where workspace_id = p_workspace),
+    'invoices', (select count(*) from public.invoices where workspace_id = p_workspace),
+    'knowledge_chunks', (select count(*) from public.knowledge_chunks where workspace_id = p_workspace),
+    'knowledge_gaps', (select count(*) from public.knowledge_gaps where workspace_id = p_workspace),
+    'knowledge_sources', (select count(*) from public.knowledge_sources where workspace_id = p_workspace),
+    'knowledge_suggestion_state', (select count(*) from public.knowledge_suggestion_state where workspace_id = p_workspace),
+    'lead_actions', (select count(*) from public.lead_actions where workspace_id = p_workspace),
+    'lead_flows', (select count(*) from public.lead_flows where workspace_id = p_workspace),
+    'leads', (select count(*) from public.leads where workspace_id = p_workspace),
+    'loyalty_campaigns', (select count(*) from public.loyalty_campaigns where workspace_id = p_workspace),
+    'loyalty_customer_links', (select count(*) from public.loyalty_customer_links where workspace_id = p_workspace),
+    'loyalty_customers', (select count(*) from public.loyalty_customers where workspace_id = p_workspace),
+    'loyalty_ledger', (select count(*) from public.loyalty_ledger where workspace_id = p_workspace),
+    'loyalty_otps', (select count(*) from public.loyalty_otps where workspace_id = p_workspace),
+    'loyalty_programs', (select count(*) from public.loyalty_programs where workspace_id = p_workspace),
+    'loyalty_rewards', (select count(*) from public.loyalty_rewards where workspace_id = p_workspace)
+  )
+  ||
+  jsonb_build_object(
+    'loyalty_sends', (select count(*) from public.loyalty_sends where workspace_id = p_workspace),
+    'mcp_call_log', (select count(*) from public.mcp_call_log where workspace_id = p_workspace),
+    'mcp_connectors', (select count(*) from public.mcp_connectors where workspace_id = p_workspace),
+    'mcp_tool_grants', (select count(*) from public.mcp_tool_grants where workspace_id = p_workspace),
+    'messages', (select count(*) from public.messages where workspace_id = p_workspace),
+    'module_context_notes', (select count(*) from public.module_context_notes where workspace_id = p_workspace),
+    'module_context_versions', (select count(*) from public.module_context_versions where workspace_id = p_workspace),
+    'module_installations', (select count(*) from public.module_installations where workspace_id = p_workspace),
+    'module_setup_messages', (select count(*) from public.module_setup_messages where workspace_id = p_workspace),
+    'module_setup_sessions', (select count(*) from public.module_setup_sessions where workspace_id = p_workspace),
+    'module_setup_writes', (select count(*) from public.module_setup_writes where workspace_id = p_workspace),
+    'n8n_pipelines', (select count(*) from public.n8n_pipelines where workspace_id = p_workspace),
+    'n8n_runs', (select count(*) from public.n8n_runs where workspace_id = p_workspace),
+    'office_command_candidates', (select count(*) from public.office_command_candidates where workspace_id = p_workspace),
+    'office_rooms', (select count(*) from public.office_rooms where workspace_id = p_workspace),
+    'office_rooms_reads', (select count(*) from public.office_rooms_reads where workspace_id = p_workspace),
+    'openclaw_agent_sync', (select count(*) from public.openclaw_agent_sync where workspace_id = p_workspace),
+    'orders', (select count(*) from public.orders where workspace_id = p_workspace),
+    'payment_order_requests', (select count(*) from public.payment_order_requests where workspace_id = p_workspace),
+    'payment_orders', (select count(*) from public.payment_orders where workspace_id = p_workspace),
+    'public_api', (select count(*) from public.public_api where workspace_id = p_workspace),
+    'responsibilities', (select count(*) from public.responsibilities where workspace_id = p_workspace),
+    'shifts_attendance', (select count(*) from public.shifts_attendance where workspace_id = p_workspace),
+    'shifts_availability', (select count(*) from public.shifts_availability where workspace_id = p_workspace),
+    'shifts_coverage', (select count(*) from public.shifts_coverage where workspace_id = p_workspace),
+    'shifts_leave_requests', (select count(*) from public.shifts_leave_requests where workspace_id = p_workspace),
+    'shifts_notifications', (select count(*) from public.shifts_notifications where workspace_id = p_workspace),
+    'shifts_positions', (select count(*) from public.shifts_positions where workspace_id = p_workspace),
+    'shifts_schedules', (select count(*) from public.shifts_schedules where workspace_id = p_workspace),
+    'shifts_settings', (select count(*) from public.shifts_settings where workspace_id = p_workspace),
+    'shifts_shifts', (select count(*) from public.shifts_shifts where workspace_id = p_workspace),
+    'shifts_staff', (select count(*) from public.shifts_staff where workspace_id = p_workspace),
+    'shifts_staff_pay', (select count(*) from public.shifts_staff_pay where workspace_id = p_workspace),
+    'shifts_swap_requests', (select count(*) from public.shifts_swap_requests where workspace_id = p_workspace),
+    'staff', (select count(*) from public.staff where workspace_id = p_workspace),
+    'transactions', (select count(*) from public.transactions where workspace_id = p_workspace),
+    'video_brand_kits', (select count(*) from public.video_brand_kits where workspace_id = p_workspace),
+    'video_delegations', (select count(*) from public.video_delegations where workspace_id = p_workspace),
+    'video_project_versions', (select count(*) from public.video_project_versions where workspace_id = p_workspace),
+    'video_projects', (select count(*) from public.video_projects where workspace_id = p_workspace),
+    'video_renders', (select count(*) from public.video_renders where workspace_id = p_workspace),
+    'work_items', (select count(*) from public.work_items where workspace_id = p_workspace),
+    'workspace_invites', (select count(*) from public.workspace_invites where workspace_id = p_workspace),
+    'workspace_members', (select count(*) from public.workspace_members where workspace_id = p_workspace)
+  )
+$$;
+REVOKE ALL ON FUNCTION public.workspace_footprint(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.workspace_footprint(uuid) TO app_be;
+
+-- What deleting one Auth account ($1) would do to the data that survives the workspace cleanup: the rows of the kept workspaces
+-- ($2) and the rows that belong to no workspace. `cli cleanup-workspaces run` reads it for each account no kept workspace holds,
+-- before it deletes anything. "cascade" counts the rows an ON DELETE CASCADE foreign key onto auth.users would delete with the
+-- account, "block" the rows an ON DELETE NO ACTION key would refuse the deletion for. ON DELETE SET NULL keys only clear the
+-- link and are not counted. It runs with the caller's rights (SECURITY INVOKER) and writes nothing.
+CREATE FUNCTION public.workspace_user_references(p_user uuid, p_keep uuid[]) RETURNS jsonb
+    LANGUAGE sql STABLE SECURITY INVOKER
+    SET search_path TO 'public'
+    AS $$
+  select jsonb_build_object(
+    'cascade', jsonb_build_object(
+      'app_commands.requested_by', (select count(*) from public.app_commands t
+        where t.requested_by = p_user and (t.workspace_id is null or t.workspace_id = any(p_keep))),
+      'hiring_availability.member_user_id', (select count(*) from public.hiring_availability t
+        where t.member_user_id = p_user and t.workspace_id = any(p_keep)),
+      'workspace_members.user_id', (select count(*) from public.workspace_members t
+        where t.user_id = p_user and t.workspace_id = any(p_keep)),
+      'workspaces.owner_id', (select count(*) from public.workspaces t
+        where t.owner_id = p_user and t.id = any(p_keep))
+    ),
+    'block', jsonb_build_object(
+      'lead_actions.requested_by', (select count(*) from public.lead_actions t
+        where t.requested_by = p_user and t.workspace_id = any(p_keep))
+    )
+  )
+$$;
+REVOKE ALL ON FUNCTION public.workspace_user_references(uuid, uuid[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.workspace_user_references(uuid, uuid[]) TO app_be;
+
+-- ---- from 20261101001020_work-threads.sql ----
+-- v0.3.2 "Văn phòng số": one work thread where people and agents tag each other, and the steps of the chain that thread runs.
+-- work_threads: the thread of a workspace, optionally about one lead or one order.
+-- thread_messages: what a member or an agent wrote in it; mentions is the list of {kind, id} the author tagged, never parsed from
+--   text, and approval is the snapshot of the approval card the message carries (the rule, the tagged set, the outcome).
+-- work_chains: every step of the chain (who acted, what kind, which rule, what became of it); the Chuỗi thực thi panel and
+--   its summary read only this table.
+-- Owner capabilities: be/src/modules/domain/work-threads and be/src/modules/domain/work-chains.
+
+CREATE TABLE public.work_threads (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    lead_id uuid REFERENCES public.leads(id) ON DELETE SET NULL,
+    order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL,
+    status text DEFAULT 'open'::text NOT NULL,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT work_threads_status_check CHECK ((status = ANY (ARRAY['open'::text, 'waiting'::text, 'done'::text, 'stopped'::text]))),
+    CONSTRAINT work_threads_title_check CHECK (((length(title) >= 1) AND (length(title) <= 200)))
+);
+
+CREATE INDEX work_threads_workspace_id_updated_at_idx ON public.work_threads USING btree (workspace_id, updated_at DESC);
+CREATE INDEX work_threads_lead_id_idx ON public.work_threads USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
+CREATE TABLE public.thread_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    thread_id uuid NOT NULL REFERENCES public.work_threads(id) ON DELETE CASCADE,
+    author_kind text NOT NULL,
+    author_id uuid NOT NULL,
+    body text NOT NULL,
+    quoted jsonb DEFAULT '[]'::jsonb NOT NULL,
+    mentions jsonb DEFAULT '[]'::jsonb NOT NULL,
+    approval jsonb,
+    approval_request_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT thread_messages_author_kind_check CHECK ((author_kind = ANY (ARRAY['member'::text, 'agent'::text]))),
+    CONSTRAINT thread_messages_body_check CHECK (((length(body) >= 1) AND (length(body) <= 4000))),
+    CONSTRAINT thread_messages_quoted_check CHECK ((jsonb_typeof(quoted) = 'array'::text)),
+    CONSTRAINT thread_messages_mentions_check CHECK ((jsonb_typeof(mentions) = 'array'::text)),
+    CONSTRAINT thread_messages_approval_check CHECK (((approval IS NULL) = (approval_request_id IS NULL)))
+);
+
+CREATE INDEX thread_messages_thread_id_created_at_idx ON public.thread_messages USING btree (thread_id, created_at);
+CREATE UNIQUE INDEX thread_messages_approval_request_id_key ON public.thread_messages USING btree (approval_request_id) WHERE (approval_request_id IS NOT NULL);
+
+CREATE TABLE public.work_chains (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    thread_id uuid NOT NULL REFERENCES public.work_threads(id) ON DELETE CASCADE,
+    seq integer NOT NULL,
+    actor_kind text NOT NULL,
+    actor_id uuid NOT NULL,
+    kind text NOT NULL,
+    action text NOT NULL,
+    detail text DEFAULT ''::text NOT NULL,
+    rule text,
+    target jsonb,
+    approval_request_id uuid,
+    status text DEFAULT 'done'::text NOT NULL,
+    decided_by uuid,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    finished_at timestamp with time zone,
+    CONSTRAINT work_chains_thread_seq_key UNIQUE (thread_id, seq),
+    CONSTRAINT work_chains_actor_kind_check CHECK ((actor_kind = ANY (ARRAY['member'::text, 'agent'::text]))),
+    CONSTRAINT work_chains_kind_check CHECK ((kind = ANY (ARRAY['self'::text, 'ask_approval'::text, 'hand_off'::text, 'assign'::text]))),
+    CONSTRAINT work_chains_status_check CHECK ((status = ANY (ARRAY['waiting'::text, 'done'::text, 'rejected'::text, 'expired'::text, 'stopped'::text]))),
+    CONSTRAINT work_chains_seq_check CHECK ((seq >= 1)),
+    CONSTRAINT work_chains_target_check CHECK (((target IS NULL) OR (jsonb_typeof(target) = 'object'::text)))
+);
+
+CREATE INDEX work_chains_approval_request_id_idx ON public.work_chains USING btree (approval_request_id) WHERE (approval_request_id IS NOT NULL);
+
+ALTER TABLE public.work_threads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.thread_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.work_chains ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY work_threads_app_be_all ON public.work_threads TO app_be
+    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY thread_messages_app_be_all ON public.thread_messages TO app_be
+    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY work_chains_app_be_all ON public.work_chains TO app_be
+    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+
+REVOKE ALL ON TABLE public.work_threads FROM anon, authenticated;
+REVOKE ALL ON TABLE public.thread_messages FROM anon, authenticated;
+REVOKE ALL ON TABLE public.work_chains FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.work_threads TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.thread_messages TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.work_chains TO app_be;
+
+-- ---- from 20261102000100_responsibility-member-owner.sql ----
+-- v0.3.2 step 1: the owner of a person-owned step is a concrete workspace member, never the generic "human".
+-- A responsibility owned by a person names that member (`owner_member_id`); an agent-owned one names none. Rows written before this
+-- migration (and every row a SQL function writes without naming a member) belong to the workspace owner, the default of the plan:
+-- the oldest active owner seat. A member removed from the workspace hands their steps back to that owner, so a person-owned step
+-- never loses its owner. The decision log names the member who decided next to the name it already carries.
+
+CREATE FUNCTION public.workspace_owner_member(p_workspace uuid) RETURNS uuid
+    LANGUAGE sql STABLE
+    SET search_path TO 'public'
+    AS $$
+  select m.id from public.workspace_members m
+  where m.workspace_id = p_workspace and m.role = 'owner' and m.status = 'active'
+  order by m.created_at asc, m.id asc
+  limit 1;
+$$;
+REVOKE ALL ON FUNCTION public.workspace_owner_member(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.workspace_owner_member(uuid) TO app_be;
+
+ALTER TABLE public.responsibilities
+    ADD COLUMN owner_member_id uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL;
+
+-- A person-owned step without a named member belongs to the workspace owner, and shows that member's name; an agent-owned step
+-- names no member. Fires on insert and on update, so the member a deleted seat leaves behind (ON DELETE SET NULL) is refilled.
+CREATE FUNCTION public.responsibilities_member_owner() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_member uuid;
+  v_name text;
+begin
+  if new.owner_kind = 'agent' then
+    new.owner_member_id := null;
+    return new;
+  end if;
+  if new.owner_member_id is null then
+    v_member := public.workspace_owner_member(new.workspace_id);
+    if v_member is not null then
+      select m.display_name into v_name from public.workspace_members m where m.id = v_member;
+      new.owner_member_id := v_member;
+      new.owner_name := v_name;
+    end if;
+  end if;
+  return new;
+end $$;
+
+CREATE TRIGGER responsibilities_member_owner
+    BEFORE INSERT OR UPDATE ON public.responsibilities
+    FOR EACH ROW EXECUTE FUNCTION public.responsibilities_member_owner();
+
+-- Existing "human" steps move to the workspace owner (the trigger fills the member and the name).
+UPDATE public.responsibilities SET owner_kind = owner_kind WHERE owner_kind = 'human' AND owner_member_id IS NULL;
+
+ALTER TABLE public.responsibilities
+    ADD CONSTRAINT responsibilities_owner_member_check
+    CHECK (((owner_kind = 'agent' AND owner_member_id IS NULL) OR owner_kind = 'human'));
+
+CREATE INDEX responsibilities_owner_member_idx ON public.responsibilities USING btree (owner_member_id) WHERE (owner_member_id IS NOT NULL);
+
+-- The decision log names the member who decided. Past lines keep the name they were written with; the member is linked when that
+-- name belongs to exactly one member of the workspace.
+ALTER TABLE public.decisions
+    ADD COLUMN decided_by_member_id uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL;
+
+UPDATE public.decisions d
+SET decided_by_member_id = m.id
+FROM (
+    SELECT workspace_id, display_name, (array_agg(id))[1] AS id
+    FROM public.workspace_members
+    GROUP BY workspace_id, display_name
+    HAVING count(*) = 1
+) m
+WHERE d.decider_kind IN ('owner', 'staff') AND d.decided_by_member_id IS NULL
+  AND m.workspace_id = d.workspace_id AND m.display_name = d.decided_by;
+
+CREATE INDEX decisions_decided_by_member_idx ON public.decisions USING btree (decided_by_member_id) WHERE (decided_by_member_id IS NOT NULL);
+
+-- ---- from 20261102000200_authority-rule-bands.sql ----
+-- v0.3.2 step 2: the authority rule says how much, who approves, how and by when.
+-- `unit` is what the amount of the action is counted in (VND, a percentage, a count). `auto_max` and `ask_max` are the bands:
+-- up to auto_max the action runs alone, above auto_max up to ask_max a person is asked, above ask_max it never runs
+-- (a missing bound means no such band). A rule with neither bound keeps the old behaviour: `mode` and `limit_vnd`
+-- (run alone strictly below the limit). The approver group is the union of roles, department rooms and explicit members;
+-- the default group is the old one (owner and manager). `agents` lists the agents the rule applies to; empty means all.
+
+ALTER TABLE public.authority_rules
+    ADD COLUMN unit text DEFAULT 'vnd'::text NOT NULL,
+    ADD COLUMN auto_max numeric,
+    ADD COLUMN ask_max numeric,
+    ADD COLUMN approver_roles text[] DEFAULT ARRAY['owner'::text, 'manager'::text] NOT NULL,
+    ADD COLUMN approver_rooms text[] DEFAULT '{}'::text[] NOT NULL,
+    ADD COLUMN approver_members uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    ADD COLUMN approval_policy text DEFAULT 'any'::text NOT NULL,
+    ADD COLUMN timeout_minutes integer DEFAULT 30 NOT NULL,
+    ADD COLUMN agents uuid[] DEFAULT '{}'::uuid[] NOT NULL;
+
+ALTER TABLE public.authority_rules
+    ADD CONSTRAINT authority_rules_unit_check CHECK ((unit = ANY (ARRAY['vnd'::text, 'percent'::text, 'count'::text]))),
+    ADD CONSTRAINT authority_rules_auto_max_check CHECK (((auto_max IS NULL) OR (auto_max >= (0)::numeric))),
+    ADD CONSTRAINT authority_rules_ask_max_check CHECK (((ask_max IS NULL) OR (ask_max >= (0)::numeric))),
+    ADD CONSTRAINT authority_rules_bands_order_check CHECK (((auto_max IS NULL) OR (ask_max IS NULL) OR (auto_max <= ask_max))),
+    ADD CONSTRAINT authority_rules_percent_check CHECK (((unit <> 'percent'::text) OR ((COALESCE(auto_max, (0)::numeric) <= (100)::numeric) AND (COALESCE(ask_max, (0)::numeric) <= (100)::numeric)))),
+    ADD CONSTRAINT authority_rules_approver_roles_check CHECK ((approver_roles <@ ARRAY['owner'::text, 'manager'::text, 'staff'::text])),
+    ADD CONSTRAINT authority_rules_approval_policy_check CHECK ((approval_policy = ANY (ARRAY['any'::text, 'all'::text, 'sequential'::text]))),
+    ADD CONSTRAINT authority_rules_timeout_check CHECK (((timeout_minutes >= 1) AND (timeout_minutes <= 10080)));
+
+-- ---- from 20261102000300_member-grants.sql ----
+-- v0.3.2 step 2: what each member may approve. One row per member and action: the largest amount the member may approve, counted in
+-- the unit of the action (a missing maximum means no limit). The workspace owner always may approve; everyone else needs a row.
+-- A grant dies with its member and with its action.
+
+CREATE TABLE public.member_grants (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    member_id uuid NOT NULL,
+    action text NOT NULL,
+    unit text DEFAULT 'vnd'::text NOT NULL,
+    max_amount numeric,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT member_grants_pkey PRIMARY KEY (id),
+    CONSTRAINT member_grants_member_action_key UNIQUE (member_id, action),
+    CONSTRAINT member_grants_unit_check CHECK ((unit = ANY (ARRAY['vnd'::text, 'percent'::text, 'count'::text]))),
+    CONSTRAINT member_grants_max_amount_check CHECK (((max_amount IS NULL) OR (max_amount >= (0)::numeric))),
+    CONSTRAINT member_grants_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    CONSTRAINT member_grants_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.workspace_members(id) ON DELETE CASCADE,
+    CONSTRAINT member_grants_action_fkey FOREIGN KEY (action) REFERENCES public.authority_actions(action) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX member_grants_workspace_action_idx ON public.member_grants USING btree (workspace_id, action);
+
+ALTER TABLE public.member_grants ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY member_grants_app_be_select ON public.member_grants FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
+CREATE POLICY member_grants_app_be_insert ON public.member_grants FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY member_grants_app_be_update ON public.member_grants FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY member_grants_app_be_delete ON public.member_grants FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
+
+REVOKE ALL ON TABLE public.member_grants FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.member_grants TO app_be;
+
+-- ---- from 20261102000400_approval-requests.sql ----
+-- v0.3.2 step 3: one request for approval of one chain step, with the verdicts members gave it.
+-- `approvers` and `excluded` are the snapshot taken when the request opened (the approvers in the order a sequential policy asks
+-- them); the verdict is always re-checked against the live group and grants. The request is the single row every verdict locks:
+-- under the "any" policy the first member to lock it wins. `verdicts` lists what each member answered, appended under that lock after
+-- reading it, so a member answers at most once. `chain_step_id` names a step of the execution chain; it carries no foreign key
+-- because the chain steps belong to another module. A step has at most one pending request.
+
+CREATE TABLE public.approval_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    chain_step_id uuid NOT NULL,
+    department text NOT NULL,
+    action text NOT NULL,
+    amount numeric,
+    unit text DEFAULT 'vnd'::text NOT NULL,
+    requested_by_agent_id uuid,
+    policy text NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    approvers jsonb DEFAULT '[]'::jsonb NOT NULL,
+    excluded jsonb DEFAULT '[]'::jsonb NOT NULL,
+    verdicts jsonb DEFAULT '[]'::jsonb NOT NULL,
+    timeout_minutes integer NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    reminded_at timestamp with time zone,
+    resolved_by uuid,
+    resolved_at timestamp with time zone,
+    escalated_to uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT approval_requests_pkey PRIMARY KEY (id),
+    CONSTRAINT approval_requests_unit_check CHECK ((unit = ANY (ARRAY['vnd'::text, 'percent'::text, 'count'::text]))),
+    CONSTRAINT approval_requests_policy_check CHECK ((policy = ANY (ARRAY['any'::text, 'all'::text, 'sequential'::text]))),
+    CONSTRAINT approval_requests_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text]))),
+    CONSTRAINT approval_requests_verdicts_check CHECK ((jsonb_typeof(verdicts) = 'array'::text)),
+    CONSTRAINT approval_requests_timeout_check CHECK (((timeout_minutes >= 1) AND (timeout_minutes <= 10080))),
+    CONSTRAINT approval_requests_resolved_check CHECK (((status = 'pending'::text) = (resolved_at IS NULL))),
+    CONSTRAINT approval_requests_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    CONSTRAINT approval_requests_agent_fkey FOREIGN KEY (requested_by_agent_id) REFERENCES public.agents(id) ON DELETE SET NULL,
+    CONSTRAINT approval_requests_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.workspace_members(id) ON DELETE SET NULL,
+    CONSTRAINT approval_requests_escalated_to_fkey FOREIGN KEY (escalated_to) REFERENCES public.workspace_members(id) ON DELETE SET NULL
+);
+
+CREATE UNIQUE INDEX approval_requests_pending_step_key ON public.approval_requests USING btree (chain_step_id) WHERE (status = 'pending'::text);
+CREATE INDEX approval_requests_due_idx ON public.approval_requests USING btree (expires_at) WHERE (status = 'pending'::text);
+CREATE INDEX approval_requests_workspace_idx ON public.approval_requests USING btree (workspace_id, created_at DESC);
+
+ALTER TABLE public.approval_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY approval_requests_app_be_select ON public.approval_requests FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
+CREATE POLICY approval_requests_app_be_insert ON public.approval_requests FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY approval_requests_app_be_update ON public.approval_requests FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+
+REVOKE ALL ON TABLE public.approval_requests FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.approval_requests TO app_be;
+
+-- ---- from 20261102000500_approval-expire-tick.sql ----
+-- v0.3.2 step 3: the minute tick that expires the approval requests whose time ran out (and reminds a group once, half-way). The job is a
+-- message of the decisions queue, like the work drain; the back end claims it and hands each expired request to the owner of the agent.
+
+-- ---- from 20261102003000_agent-ownership.sql ----
+-- v0.3.2 "Van phong so": every agent has a person who answers for it. owner_member_id is the workspace member (workspace_members.id)
+-- that gets the agent's stuck, rejected or expired work and edits its rules; fallback_member_id answers when the owner left or is
+-- disabled. Both default to the workspace owner, so existing agents migrate to the owner and a new agent needs no extra input.
+-- assignable_roles and assignable_rooms say who may hand the agent work (a member qualifies by role OR by a seat in a room);
+-- can_tag_agent_ids is the set of agents it may pass work to. Additive: nothing existing reads these columns yet.
+-- The member columns carry no foreign key on purpose: removing a member must not be blocked or silently null an agent's owner.
+-- The release trigger below repoints them to the workspace owner when the member row is deleted, and a disabled member is
+-- resolved at read time by AgentsService.ownerOf.
+
+ALTER TABLE public.agents
+    ADD COLUMN owner_member_id uuid,
+    ADD COLUMN fallback_member_id uuid,
+    ADD COLUMN assignable_roles text[] DEFAULT ARRAY['owner', 'manager']::text[] NOT NULL,
+    ADD COLUMN assignable_rooms text[] DEFAULT '{}'::text[] NOT NULL,
+    ADD COLUMN can_tag_agent_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    ADD CONSTRAINT agents_assignable_roles_check CHECK (assignable_roles <@ ARRAY['owner', 'manager', 'staff']::text[]),
+    ADD CONSTRAINT agents_assignable_rooms_check
+        CHECK (assignable_rooms <@ ARRAY['executive', 'frontdesk', 'sales', 'marketing', 'care', 'accounting']::text[]),
+    ADD CONSTRAINT agents_cannot_tag_itself_check CHECK (NOT (id = ANY (can_tag_agent_ids)));
+
+-- The default person in charge of an agent is public.workspace_owner_member (20261102000100): the first active owner seat.
+
+-- Fills an absent owner or fallback with the workspace owner, on insert and on update.
+CREATE FUNCTION public.agents_default_ownership() RETURNS trigger
+    LANGUAGE plpgsql SECURITY INVOKER
+    SET search_path TO 'public'
+    AS $$
+begin
+  new.owner_member_id := coalesce(new.owner_member_id, public.workspace_owner_member(new.workspace_id));
+  new.fallback_member_id := coalesce(new.fallback_member_id, public.workspace_owner_member(new.workspace_id));
+  return new;
+end;
+$$;
+
+CREATE TRIGGER agents_default_ownership BEFORE INSERT OR UPDATE ON public.agents
+    FOR EACH ROW EXECUTE FUNCTION public.agents_default_ownership();
+
+-- Existing agents belong to their workspace owner.
+UPDATE public.agents a
+SET owner_member_id = public.workspace_owner_member(a.workspace_id),
+    fallback_member_id = public.workspace_owner_member(a.workspace_id)
+WHERE a.owner_member_id IS NULL OR a.fallback_member_id IS NULL;
+
+-- Required from now on. NOT VALID keeps a legacy agent of an ownerless workspace readable until a person is named for it.
+ALTER TABLE public.agents
+    ADD CONSTRAINT agents_ownership_required_check
+    CHECK (owner_member_id IS NOT NULL AND fallback_member_id IS NOT NULL) NOT VALID;
+
+CREATE INDEX agents_owner_member_idx ON public.agents USING btree (owner_member_id);
+
+-- When a member row is deleted, the agents it answered for move to the workspace owner (when there is one).
+CREATE FUNCTION public.workspace_members_release_agents() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_owner uuid;
+begin
+  select m.id into v_owner from public.workspace_members m
+    where m.workspace_id = old.workspace_id and m.role = 'owner' and m.status = 'active' and m.id <> old.id
+    order by m.created_at, m.id limit 1;
+  if v_owner is null then return old; end if;
+  update public.agents set owner_member_id = v_owner where workspace_id = old.workspace_id and owner_member_id = old.id;
+  update public.agents set fallback_member_id = v_owner where workspace_id = old.workspace_id and fallback_member_id = old.id;
+  return old;
+end;
+$$;
+
+REVOKE ALL ON FUNCTION public.workspace_members_release_agents() FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER workspace_members_release_agents AFTER DELETE ON public.workspace_members
+    FOR EACH ROW EXECUTE FUNCTION public.workspace_members_release_agents();
+
+-- ---- from 20261102003100_seat-office-member.sql ----
+-- Seats a workspace member in a department room (the Hub rooms owner writes its own table). `cli seed-workspace office` calls it
+-- after ensure_office_rooms so the people of a story sit where the agents they may give work to are open to them. It runs with the
+-- caller's rights: the app_be grants and policies of office_rooms_members apply. Answers false when the room is not of the
+-- workspace or the user is not a member of it, true once the member sits in the room (seated already is not an error).
+CREATE FUNCTION public.seat_office_member(p_workspace uuid, p_room text, p_user uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY INVOKER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_room uuid;
+begin
+  select r.id into v_room from public.office_rooms r where r.workspace_id = p_workspace and r.key = p_room;
+  if v_room is null then return false; end if;
+  if not exists (select 1 from public.workspace_members m where m.workspace_id = p_workspace and m.user_id = p_user) then
+    return false;
+  end if;
+  insert into public.office_rooms_members (room_id, user_id) values (v_room, p_user)
+  on conflict (room_id, user_id) where user_id is not null do nothing;
+  return true;
+end $$;
+REVOKE ALL ON FUNCTION public.seat_office_member(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.seat_office_member(uuid, text, uuid) TO app_be;
+
+-- ---- from 20261102003200_give-discount-action.sql ----
+-- The discount a sales agent gives a customer, counted in percent of the price (v0.3.2 "Văn phòng số": AI Sales asks the Sales
+-- managers before a discount above its auto band). The registry row lets a workspace set a rule and member grants for it.
+INSERT INTO public.authority_actions (action, module_key, sort_order, default_mode, default_limit_vnd, default_required_fields, amount_limit, max_mode, label) VALUES
+    ('give_discount', 'sales', 5, 'ask', NULL, '{customer}', true, NULL, '{"en": "Give discount", "vi": "Giảm giá"}')
+ON CONFLICT DO NOTHING;
+
+-- ---- from 20261102003300_thread-work.sql ----
+-- v0.3.2: the work an agent does inside a work thread. One row per work item the agents' runtime started for a thread: which
+-- agent does it, where it stands in the thread (running, asked a group for approval, waiting for a member's answer, done, stopped),
+-- the approval request it waits for and, when it waits for data, the member it asked and the fields it needs. The thread-work
+-- capability is its only writer; the work item itself stays in work_items.
+
+CREATE TABLE public.thread_work (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    workspace_id uuid NOT NULL,
+    thread_id uuid NOT NULL,
+    work_item_id uuid NOT NULL,
+    agent_id uuid NOT NULL,
+    state text DEFAULT 'running'::text NOT NULL,
+    approval_request_id uuid,
+    waiting_member_id uuid,
+    missing_fields text[] DEFAULT '{}'::text[] NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT thread_work_pkey PRIMARY KEY (id),
+    CONSTRAINT thread_work_work_item_key UNIQUE (work_item_id),
+    CONSTRAINT thread_work_state_check CHECK ((state = ANY (ARRAY['running'::text, 'asked'::text, 'waiting_member'::text, 'done'::text, 'stopped'::text]))),
+    CONSTRAINT thread_work_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    CONSTRAINT thread_work_thread_id_fkey FOREIGN KEY (thread_id) REFERENCES public.work_threads(id) ON DELETE CASCADE,
+    CONSTRAINT thread_work_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES public.work_items(id) ON DELETE CASCADE,
+    CONSTRAINT thread_work_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE,
+    CONSTRAINT thread_work_waiting_member_id_fkey FOREIGN KEY (waiting_member_id) REFERENCES public.workspace_members(id) ON DELETE SET NULL
+);
+
+CREATE INDEX thread_work_thread_idx ON public.thread_work USING btree (workspace_id, thread_id);
+CREATE INDEX thread_work_asked_idx ON public.thread_work USING btree (state) WHERE (state = 'asked'::text);
+
+ALTER TABLE public.thread_work ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY thread_work_app_be_select ON public.thread_work FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
+CREATE POLICY thread_work_app_be_insert ON public.thread_work FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
+CREATE POLICY thread_work_app_be_update ON public.thread_work FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
+
+REVOKE ALL ON TABLE public.thread_work FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.thread_work TO app_be;
+
+-- ---- from 20261103000100_mcp-sealed-credential_contract_drop.sql ----
+-- v0.3.3: the credential of a remote MCP connector is sealed per workspace in the database and set from the console, the same way
+-- a channel connection's credential is (AES-256-GCM under CHANNEL_TOKEN_KEY, through the connection-secrets capability). The
+-- connector no longer names a gateway environment variable: credential_ref is dropped.
+-- credential_state: none = the server takes no credential; needed = it takes one and none is stored yet; set = credential_sealed
+-- holds it. credential_sealed is never selected into a console read.
+-- Existing rows that named a credential (credential_ref) become "needed": the gateway environment variables they named are
+-- retired with this release, so their value is not carried over; an owner or manager enters it once in the console.
+
+ALTER TABLE public.mcp_connectors
+    ADD COLUMN credential_state text DEFAULT 'none'::text NOT NULL,
+    ADD COLUMN credential_sealed text,
+    ADD COLUMN credential_set_by uuid,
+    ADD COLUMN credential_set_at timestamp with time zone;
+
+UPDATE public.mcp_connectors SET credential_state = 'needed' WHERE credential_ref IS NOT NULL;
+
+ALTER TABLE public.mcp_connectors
+    ADD CONSTRAINT mcp_connectors_credential_state_check CHECK ((credential_state = ANY (ARRAY['none'::text, 'needed'::text, 'set'::text]))),
+    ADD CONSTRAINT mcp_connectors_credential_sealed_check CHECK (((credential_state = 'set'::text) = (credential_sealed IS NOT NULL))),
+    ADD CONSTRAINT mcp_connectors_credential_remote_check CHECK (((kind = 'remote'::text) OR (credential_state = 'none'::text)));
+
+ALTER TABLE public.mcp_connectors DROP CONSTRAINT mcp_connectors_credential_ref_check;
+ALTER TABLE public.mcp_connectors DROP COLUMN credential_ref;
+
+-- ---- from 20261103000200_mcp-gateway-receipts.sql ----
+-- A write's inbox claim and sealed pending outcome commit before its connector
+-- call. Even a crash before saving the final answer cannot reissue the action.
+CREATE TABLE public.mcp_gateway_receipts (
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    operation_key text NOT NULL,
+    result_sealed text NOT NULL,
+    PRIMARY KEY (workspace_id, operation_key)
+);
+
+ALTER TABLE public.mcp_gateway_receipts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.mcp_gateway_receipts FROM PUBLIC, anon, authenticated;
+GRANT INSERT, SELECT, UPDATE ON TABLE public.mcp_gateway_receipts TO app_be;
+
+-- The dedicated backend principal must be active, including when a caller has
+-- inherited app_be's table privileges through another database role.
+CREATE POLICY mcp_gateway_receipts_app_be_insert ON public.mcp_gateway_receipts
+    FOR INSERT TO app_be WITH CHECK (current_user = 'app_be');
+CREATE POLICY mcp_gateway_receipts_app_be_select ON public.mcp_gateway_receipts
+    FOR SELECT TO app_be USING (current_user = 'app_be');
+CREATE POLICY mcp_gateway_receipts_app_be_update ON public.mcp_gateway_receipts
+    FOR UPDATE TO app_be USING (current_user = 'app_be') WITH CHECK (current_user = 'app_be');
+
+-- ---- from 20261104000100_http-rate-limit.sql ----
+-- v0.3.5: every API and MCP replica counts the same fixed windows, using PostgreSQL time.
+CREATE TABLE public.http_security (
+    bucket_key text NOT NULL,
+    hits bigint NOT NULL,
+    reset_at timestamp with time zone NOT NULL,
+    CONSTRAINT http_security_pkey PRIMARY KEY (bucket_key),
+    CONSTRAINT http_security_hits_check CHECK (hits > 0)
+);
+
+CREATE INDEX http_security_expiry_idx ON public.http_security (reset_at);
+ALTER TABLE public.http_security ENABLE ROW LEVEL SECURITY;
+CREATE POLICY http_security_app_be_select ON public.http_security
+    FOR SELECT TO app_be USING (bucket_key <> '');
+CREATE POLICY http_security_app_be_insert ON public.http_security
+    FOR INSERT TO app_be WITH CHECK (bucket_key <> '');
+CREATE POLICY http_security_app_be_update ON public.http_security
+    FOR UPDATE TO app_be USING (bucket_key <> '') WITH CHECK (bucket_key <> '');
+CREATE POLICY http_security_app_be_delete ON public.http_security
+    FOR DELETE TO app_be USING (bucket_key <> '');
+REVOKE ALL ON TABLE public.http_security FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.http_security TO app_be;
+
+-- Every consumption reclaims at most 100 idle expired windows without waiting behind another replica's increment.
+CREATE FUNCTION public.http_rate_limit_cleanup() RETURNS integer
+    LANGUAGE sql
+    SET search_path = ''
+    AS $$
+        WITH expired AS (
+            SELECT bucket_key FROM public.http_security
+            WHERE reset_at <= statement_timestamp()
+            ORDER BY reset_at
+            LIMIT 100
+            FOR UPDATE SKIP LOCKED
+        ), removed AS (
+            DELETE FROM public.http_security AS bucket
+            USING expired WHERE bucket.bucket_key = expired.bucket_key
+            RETURNING 1
+        )
+        SELECT count(*)::integer FROM removed;
+    $$;
+REVOKE EXECUTE ON FUNCTION public.http_rate_limit_cleanup() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.http_rate_limit_cleanup() TO app_be;
+
+-- The unique key serializes increments and rollover, and database time keeps all replicas on the same clock.
+CREATE FUNCTION public.http_rate_limit_consume(p_bucket_key text, p_window_ms double precision, p_limit bigint)
+    RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path = ''
+    AS $$
+    DECLARE
+        allowed boolean;
+    BEGIN
+        INSERT INTO public.http_security AS bucket (bucket_key, hits, reset_at)
+        VALUES (p_bucket_key, 1, statement_timestamp() + p_window_ms * interval '1 millisecond')
+        ON CONFLICT (bucket_key) DO UPDATE SET
+            hits = CASE WHEN bucket.reset_at <= statement_timestamp() THEN 1 ELSE bucket.hits + 1 END,
+            reset_at = CASE WHEN bucket.reset_at <= statement_timestamp()
+                THEN statement_timestamp() + p_window_ms * interval '1 millisecond' ELSE bucket.reset_at END
+        RETURNING hits <= p_limit INTO allowed;
+        PERFORM public.http_rate_limit_cleanup();
+        RETURN allowed;
+    END;
+    $$;
+REVOKE EXECUTE ON FUNCTION public.http_rate_limit_consume(text, double precision, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.http_rate_limit_consume(text, double precision, bigint) TO app_be;
+
+-- ---- from 20261104000200_list-pagination.sql ----
+-- The main list connections seek by workspace, immutable creation time and unique id.
+CREATE INDEX leads_workspace_created_id_idx
+    ON public.leads (workspace_id, created_at DESC, id DESC);
+
+CREATE INDEX orders_workspace_created_id_idx
+    ON public.orders (workspace_id, created_at DESC, id DESC);
+
+CREATE INDEX work_threads_workspace_created_id_idx
+    ON public.work_threads (workspace_id, created_at DESC, id DESC);
+
+CREATE INDEX work_threads_workspace_lead_created_id_idx
+    ON public.work_threads (workspace_id, lead_id, created_at DESC, id DESC);
+
+-- ---- from 20261104000300_messages-card-action-done_contract_widen.sql ----
+-- Customer turns emit the v1 action_done card already supported by the Hub card contract.
+-- Preserve every existing card type, shape, version and byte-size requirement.
+-- The check is added NOT VALID so the ACCESS EXCLUSIVE lock of the swap does not scan public.messages; VALIDATE then
+-- checks the existing rows under SHARE UPDATE EXCLUSIVE, which lets chat writes continue.
+ALTER TABLE public.messages DROP CONSTRAINT messages_card_check;
+ALTER TABLE public.messages ADD CONSTRAINT messages_card_check
+    CHECK (card IS NULL OR (
+        jsonb_typeof(card) = 'object'
+        AND card->>'v' = '1'
+        AND card->>'type' = ANY (ARRAY['draft_post', 'video_ready', 'approval_request', 'schedule_confirmed',
+                                        'weekly_report', 'booking_held', 'daily_summary', 'handoff_note', 'exception',
+                                        'action_done'])
+        AND octet_length(card::text) <= 65536)) NOT VALID;
+ALTER TABLE public.messages VALIDATE CONSTRAINT messages_card_check;
+
+-- ---- from 20261104000500_office-room-member-avatars.sql ----
+-- Read only the existing provider photos of active members of the selected workspace.
+-- Like be_access.user_emails, this keeps Auth tables private to their owner.
+CREATE FUNCTION be_access.workspace_member_avatars(p_workspace uuid, p_ids uuid[])
+RETURNS TABLE(id uuid, avatar_url text)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $$
+    SELECT u.id,
+           CASE WHEN jsonb_typeof(u.raw_user_meta_data -> 'avatar_url') = 'string'
+                     AND u.raw_user_meta_data ->> 'avatar_url' ~ '^https://'
+                THEN u.raw_user_meta_data ->> 'avatar_url' ELSE NULL END
+    FROM auth.users u
+    JOIN public.workspace_members m ON m.user_id = u.id
+    WHERE m.workspace_id = p_workspace AND m.status = 'active' AND u.id = ANY(p_ids);
+$$;
+
+REVOKE ALL ON FUNCTION be_access.workspace_member_avatars(uuid, uuid[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION be_access.workspace_member_avatars(uuid, uuid[]) TO app_be;
+
+-- ---- from 20261104000600_public-api-need-presence.sql ----
+-- Additive: NULL retains the historical default-text sentinel policy. Do not backfill it.
+ALTER TABLE public.public_api ADD COLUMN need_supplied boolean;
+
+COMMENT ON COLUMN public.public_api.need_supplied IS
+    'Nonempty need explicitly supplied by the API caller. NULL means historical admission; default-text need is omitted.';
+
+-- ---- from 20261104235900_queue-cutover.sql ----
+-- Expand before the BullMQ contract migration. Only job queues are drained; the event bus stays on pgmq.
+-- Keep the empty queues and redirect late legacy sends, including cron commands already executing at cutover.
+-- All adoption, fencing and deletion below commits atomically. A bad envelope or conflicting identity aborts it.
+SET LOCAL lock_timeout = '15s';
+LOCK TABLE public.job_outbox, public.job_slots, public.jobs IN ACCESS EXCLUSIVE MODE;
+ALTER TABLE public.job_outbox ADD COLUMN IF NOT EXISTS run_lease_until timestamptz;
+
+CREATE FUNCTION public.job_cutover_adopt(
+    p_queue text, p_msg_id bigint, p_enqueued_at timestamptz, p_message jsonb,
+    p_attempt integer, p_visible_at timestamptz, p_archived boolean
+) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_id uuid;
+  v_name text := coalesce(p_message->>'name', p_queue);
+  v_payload jsonb := coalesce(p_message->'payload', '{}'::jsonb);
+  v_dedupe text := coalesce(nullif(p_message->>'dedupe', ''), 'pgmq-cutover:' || p_queue || ':' || p_msg_id);
+  v_workspace uuid;
+  v_existing public.job_outbox;
+begin
+  if p_message->>'outbox_id' is not null then
+    v_id := (p_message->>'outbox_id')::uuid;
+  end if;
+  select * into v_existing from public.job_outbox o
+  where (v_id is not null and o.id = v_id) or (o.queue = p_queue and o.msg_id = p_msg_id)
+  order by (o.id = v_id) desc nulls last limit 1;
+  if v_existing.id is null then
+    select * into v_existing from public.job_outbox o where o.dedupe_key = v_dedupe;
+  end if;
+  if v_existing.id is not null then
+    if (v_id is not null and v_id <> v_existing.id)
+       or v_existing.queue <> p_queue or v_existing.name <> v_name or v_existing.payload <> v_payload then
+      raise exception 'Conflicting pgmq cutover identity in queue %, message %', p_queue, p_msg_id;
+    end if;
+    v_id := v_existing.id;
+    if not p_archived and v_existing.state in ('queued', 'running') then
+      update public.job_outbox set sent_at = null,
+        run_lease_until = greatest(run_lease_until, case when p_attempt > 0 then p_visible_at end)
+      where id = v_id;
+    end if;
+  else
+    v_id := coalesce(v_id, md5('nivo.pgmq-cutover:' || p_queue || ':' || p_msg_id)::uuid);
+    if v_payload->>'workspaceId' is not null then
+      v_workspace := (v_payload->>'workspaceId')::uuid;
+    end if;
+    insert into public.job_outbox
+      (id, workspace_id, queue, name, payload, dedupe_key, created_at, msg_id, state, attempts,
+       started_at, finished_at, last_error, run_lease_until)
+    values
+      (v_id, v_workspace, p_queue, v_name, v_payload, v_dedupe, p_enqueued_at, p_msg_id,
+       case when p_archived then 'failed' when p_attempt > 0 then 'running' else 'queued' end,
+       greatest(p_attempt, 0), case when p_attempt > 0 then p_enqueued_at end,
+       case when p_archived then now() end,
+       case when p_archived then 'Migrated pgmq dead letter; original envelope retained in pgmq archive' end,
+       case when not p_archived and p_attempt > 0 then p_visible_at end);
+  end if;
+  -- Raw ticks used queue:msg_id as their fenced key. Keep their existing claim and progress under the new delivery id.
+  if p_message->>'outbox_id' is null then
+    update public.jobs set job_key = v_id::text
+    where kind in (v_name, p_queue) and job_key = p_queue || ':' || p_msg_id;
+  end if;
+  return v_id;
+end $$;
+
+REVOKE EXECUTE ON FUNCTION public.job_cutover_adopt(text, bigint, timestamptz, jsonb, integer, timestamptz, boolean)
+FROM PUBLIC, anon, authenticated, app_be;
+
+-- Old producers switch first. The following contract migration installs this same outbox-only entry point.
+CREATE OR REPLACE FUNCTION public.job_enqueue(p_workspace uuid, p_queue text, p_name text, p_payload jsonb, p_dedupe text) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_id uuid;
+begin
+  insert into public.job_outbox (workspace_id, queue, name, payload, dedupe_key)
+  values (p_workspace, p_queue, p_name, coalesce(p_payload, '{}'::jsonb), p_dedupe)
+  on conflict (dedupe_key) do nothing returning id into v_id;
+  if v_id is null then select id into v_id from public.job_outbox where dedupe_key = p_dedupe; end if;
+  return v_id;
+end $$;
+
+-- Fence legacy consumers while their already-running fenced claims settle. They cannot ack a newly migrated delivery.
+CREATE OR REPLACE FUNCTION public.job_read(p_queue text, p_vt integer, p_qty integer, p_ws_limit integer DEFAULT 2)
+    RETURNS TABLE(msg_id bigint, attempt integer, enqueued_at timestamptz, message jsonb)
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public'
+    AS $$ select null::bigint, null::integer, null::timestamptz, null::jsonb where false $$;
+CREATE OR REPLACE FUNCTION public.job_ack(p_queue text, p_msg_id bigint) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$ select false $$;
+CREATE OR REPLACE FUNCTION public.job_touch(p_queue text, p_msg_id bigint, p_vt integer) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$ select false $$;
+CREATE OR REPLACE FUNCTION public.job_fail(p_queue text, p_msg_id bigint, p_delay_s integer, p_error text DEFAULT NULL::text) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$ select false $$;
+CREATE OR REPLACE FUNCTION public.job_archive(p_queue text, p_msg_id bigint, p_error text DEFAULT NULL::text) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$ select false $$;
+
+-- An old function already executing may still write its pgmq sent marker after the redirect trigger returns.
+CREATE FUNCTION public.job_cutover_legacy_marker() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+    AS $$
+begin
+  if new.msg_id is not null then
+    new.msg_id := null;
+    new.sent_at := null;
+  end if;
+  return new;
+end $$;
+REVOKE EXECUTE ON FUNCTION public.job_cutover_legacy_marker() FROM PUBLIC, anon, authenticated, app_be;
+CREATE TRIGGER job_cutover_legacy_marker BEFORE UPDATE OF msg_id ON public.job_outbox
+FOR EACH ROW EXECUTE FUNCTION public.job_cutover_legacy_marker();
+
+CREATE FUNCTION public.job_cutover_redirect() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+    AS $$
+begin
+  perform public.job_cutover_adopt(TG_ARGV[0], new.msg_id, new.enqueued_at, new.message, new.read_ct, new.vt, false);
+  execute format('delete from %I.%I where msg_id = $1', TG_TABLE_SCHEMA, TG_TABLE_NAME) using new.msg_id;
+  return new;
+end $$;
+REVOKE EXECUTE ON FUNCTION public.job_cutover_redirect() FROM PUBLIC, anon, authenticated, app_be;
+
+-- (a queue cutover block of the former chain: a no-op on a clean database, left out)
+
+-- The redefined entry points stay backend-only.
+REVOKE EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_read(text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_read(text, integer, integer, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_ack(text, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_ack(text, bigint) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_touch(text, bigint, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_touch(text, bigint, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_fail(text, bigint, integer, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_fail(text, bigint, integer, text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_archive(text, bigint, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_archive(text, bigint, text) TO app_be;
+
+-- ---- from 20261105000000_queue-bullmq_contract_pgmq-drop.sql ----
+-- BullMQ transports jobs; PostgreSQL remains the durable, fenced source of truth.
+-- The preceding cutover migration adopts pgmq rows before the old functions are dropped below.
+
+ALTER TABLE public.job_outbox ADD COLUMN IF NOT EXISTS run_lease_until timestamptz;
+ALTER TABLE public.job_outbox ADD COLUMN run_token uuid;
+ALTER TABLE public.job_outbox ADD COLUMN relay_lease_until timestamptz;
+ALTER TABLE public.job_outbox ADD COLUMN lease_token uuid;
+ALTER TABLE public.job_outbox ADD COLUMN retry_requested_at timestamptz;
+ALTER TABLE public.job_outbox ADD COLUMN reconcile_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.job_outbox ADD COLUMN reconcile_checks integer NOT NULL DEFAULT 0;
+
+-- Preserve old workspace slots and in-flight leases while changing their identity to the canonical outbox id.
+ALTER TABLE public.job_slots ADD COLUMN job_id uuid;
+UPDATE public.job_slots s SET job_id = o.id FROM public.job_outbox o WHERE o.queue = s.queue AND o.msg_id = s.msg_id;
+UPDATE public.job_outbox o SET run_lease_until = greatest(o.run_lease_until, s.lease_until)
+FROM public.job_slots s WHERE o.id = s.job_id;
+DELETE FROM public.job_slots WHERE job_id IS NULL AND lease_until <= now();
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM public.job_slots WHERE job_id IS NULL) THEN
+    RAISE EXCEPTION 'Queue cutover has an unmapped live workspace slot';
+  END IF;
+END $$;
+ALTER TABLE public.job_slots DROP CONSTRAINT job_slots_pkey;
+ALTER TABLE public.job_slots DROP COLUMN msg_id;
+ALTER TABLE public.job_slots ALTER COLUMN job_id SET NOT NULL;
+ALTER TABLE public.job_slots ADD CONSTRAINT job_slots_pkey PRIMARY KEY (queue, job_id);
+-- No legacy pgmq sent marker proves that Redis received the corresponding job.
+UPDATE public.job_outbox SET sent_at = NULL, msg_id = NULL WHERE state IN ('queued', 'running');
+
+CREATE OR REPLACE FUNCTION public.job_enqueue(p_workspace uuid, p_queue text, p_name text, p_payload jsonb, p_dedupe text) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+declare v_id uuid;
+begin
+  insert into public.job_outbox (workspace_id, queue, name, payload, dedupe_key)
+  values (p_workspace, p_queue, p_name, coalesce(p_payload, '{}'::jsonb), p_dedupe)
+  on conflict (dedupe_key) do nothing returning id into v_id;
+  if v_id is null then select id into v_id from public.job_outbox where dedupe_key = p_dedupe; end if;
+  return v_id;
+end $$;
+
+-- A single statement locks, leases and commits before any Redis command. Round-robin ranks bound each queue's share.
+CREATE FUNCTION public.job_relay_claim(p_limit integer, p_lease_s integer DEFAULT 60)
+    RETURNS TABLE(id uuid, queue text, name text, payload jsonb, lease_token uuid, retry_requested boolean)
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$
+  with candidates as materialized (
+    select o.id, row_number() over (partition by o.queue order by o.created_at, o.id) as position
+    from public.job_outbox o
+    where o.sent_at is null and o.state in ('queued', 'running')
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+  ), picked as (
+    select o.id from public.job_outbox o join candidates c on c.id = o.id
+    where o.sent_at is null and o.state in ('queued', 'running')
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+    order by c.position, o.created_at, o.queue, o.id
+    limit least(greatest(coalesce(p_limit, 50), 1), 500) for update of o skip locked
+  ), claimed as (
+    update public.job_outbox o set lease_token = gen_random_uuid(),
+      relay_lease_until = now() + make_interval(secs => greatest(30, p_lease_s))
+    from picked p where o.id = p.id returning o.*
+  )
+  select o.id, o.queue, o.name, o.payload, o.lease_token, o.retry_requested_at is not null from claimed o
+$$;
+
+CREATE FUNCTION public.job_relay_sent(p_id uuid, p_token uuid, p_stale_s integer DEFAULT 15) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+begin
+  update public.job_outbox o set sent_at = now(), retry_requested_at = null,
+    relay_lease_until = null, lease_token = null, reconcile_checks = 0,
+    reconcile_at = now() + make_interval(secs => greatest(5, p_stale_s))
+  where o.id = p_id and o.lease_token = p_token and o.relay_lease_until > now();
+  return found;
+end $$;
+
+CREATE FUNCTION public.job_relay_release(p_id uuid, p_token uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+begin
+  update public.job_outbox o set relay_lease_until = null, lease_token = null
+  where o.id = p_id and o.lease_token = p_token and o.relay_lease_until > now();
+  return found;
+end $$;
+
+-- Every check advances reconcile_at, including waiting/delayed/active/error rows. Replicas claim disjoint rows.
+CREATE FUNCTION public.job_reconcile(p_stale_s integer, p_running_stale_s integer, p_limit integer, p_lease_s integer DEFAULT 60)
+    RETURNS TABLE(id uuid, queue text, name text, payload jsonb, state text, attempts integer, run_token uuid, lease_token uuid, retry_requested boolean)
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$
+  with candidates as materialized (
+    select o.id, row_number() over (partition by o.queue order by o.reconcile_at, o.id) as position
+    from public.job_outbox o
+    where o.reconcile_at <= now()
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+      and ((o.state = 'queued' and o.sent_at is not null)
+        or (o.state = 'running' and coalesce(o.run_lease_until, '-infinity'::timestamptz) <= now()
+          and coalesce(o.started_at, o.sent_at, o.created_at) < now() - make_interval(secs => greatest(5, p_running_stale_s))))
+  ), picked as (
+    select o.id from public.job_outbox o join candidates c on c.id = o.id
+    where o.reconcile_at <= now() and o.state in ('queued', 'running')
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+    order by c.position, o.reconcile_at, o.queue, o.id
+    limit least(greatest(coalesce(p_limit, 50), 1), 500) for update of o skip locked
+  ), claimed as (
+    update public.job_outbox o set lease_token = gen_random_uuid(),
+      relay_lease_until = now() + make_interval(secs => greatest(30, p_lease_s)),
+      reconcile_at = now() + make_interval(secs => least(600, greatest(5, p_stale_s) * power(2, least(o.reconcile_checks, 7)))::int),
+      reconcile_checks = least(o.reconcile_checks + 1, 8)
+    from picked p where o.id = p.id returning o.*
+  )
+  select o.id, o.queue, o.name, o.payload, o.state, o.attempts, o.run_token, o.lease_token, o.retry_requested_at is not null from claimed o
+$$;
+
+-- Only done/failed are terminal. A live running lease defers; a lapsed lease admits a recovered real start.
+CREATE FUNCTION public.job_start(p_queue text, p_id uuid, p_ws_limit integer, p_lease_s integer)
+    RETURNS TABLE(outcome text, attempt integer, state text, run_token uuid)
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+declare o public.job_outbox; v_ws uuid; v_busy int; v_attempt int; v_until timestamptz; v_token uuid;
+begin
+  select * into o from public.job_outbox r where r.id = p_id and r.queue = p_queue for update;
+  if o.id is null then return query select 'missing'::text, 0, 'missing'::text, null::uuid; return; end if;
+  if o.state in ('done', 'failed') then return query select 'terminal'::text, o.attempts, o.state, o.run_token; return; end if;
+  if o.state = 'running' and o.run_lease_until > now() then
+    return query select 'busy'::text, o.attempts, o.state, o.run_token; return;
+  end if;
+  v_ws := o.workspace_id;
+  v_until := now() + make_interval(secs => greatest(5, p_lease_s));
+  if v_ws is not null then
+    perform pg_advisory_xact_lock(hashtextextended('nivo.job-ws:' || v_ws::text, 0));
+    delete from public.job_slots s where s.workspace_id = v_ws and s.lease_until < now();
+    select count(*) into v_busy from public.job_slots s where s.workspace_id = v_ws and s.job_id <> o.id;
+    if v_busy >= greatest(1, p_ws_limit) then return query select 'busy'::text, o.attempts, o.state, o.run_token; return; end if;
+    insert into public.job_slots as s (queue, job_id, workspace_id, lease_until)
+    values (o.queue, o.id, v_ws, v_until)
+    on conflict on constraint job_slots_pkey do update set lease_until = excluded.lease_until;
+  end if;
+  update public.job_outbox r set attempts = r.attempts + 1, state = 'running', started_at = now(), run_lease_until = v_until, run_token = gen_random_uuid()
+  where r.id = o.id returning r.attempts, r.run_token into v_attempt, v_token;
+  return query select 'started'::text, v_attempt, 'running'::text, v_token;
+end $$;
+
+-- Every worker settlement is fenced by a unique admission token independent of retry and handback counts; old holders cannot settle a recovered delivery.
+CREATE FUNCTION public.job_lease(p_id uuid, p_lease_s integer, p_token uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+begin
+  update public.job_outbox o set run_lease_until = now() + make_interval(secs => greatest(5, p_lease_s))
+  where o.id = p_id and o.state = 'running' and o.run_token = p_token;
+  if not found then return false; end if;
+  update public.job_slots set lease_until = now() + make_interval(secs => greatest(5, p_lease_s)) where job_id = p_id;
+  return true;
+end $$;
+
+CREATE FUNCTION public.job_done(p_id uuid, p_token uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+begin
+  update public.job_outbox o set state = 'done', finished_at = now(), last_error = null, run_lease_until = null
+  where o.id = p_id and o.state = 'running' and o.run_token = p_token;
+  if not found then return false; end if;
+  delete from public.job_slots where job_id = p_id;
+  return true;
+end $$;
+
+CREATE FUNCTION public.job_retry(p_id uuid, p_error text, p_token uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+begin
+  update public.job_outbox o set state = 'queued', last_error = left(coalesce(p_error, ''), 1000), run_lease_until = null
+  where o.id = p_id and o.state = 'running' and o.run_token = p_token;
+  if not found then return false; end if;
+  delete from public.job_slots where job_id = p_id;
+  return true;
+end $$;
+
+CREATE FUNCTION public.job_dead(p_id uuid, p_error text, p_token uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+begin
+  update public.job_outbox o set state = 'failed', finished_at = now(), last_error = left(coalesce(p_error, ''), 1000), run_lease_until = null
+  where o.id = p_id and o.state = 'running' and o.run_token = p_token;
+  if not found then return false; end if;
+  delete from public.job_slots where job_id = p_id;
+  return true;
+end $$;
+
+CREATE FUNCTION public.job_handback(p_id uuid, p_token uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+begin
+  update public.job_outbox o set state = 'queued', attempts = greatest(0, o.attempts - 1), run_lease_until = null
+  where o.id = p_id and o.state = 'running' and o.run_token = p_token;
+  if not found then return false; end if;
+  delete from public.job_slots where job_id = p_id;
+  return true;
+end $$;
+
+CREATE FUNCTION public.job_reset(p_id uuid, p_token uuid, p_run_token uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+begin
+  update public.job_outbox o set state = 'queued', run_lease_until = null
+  where o.id = p_id and o.lease_token = p_token and o.relay_lease_until > now() and o.run_token is not distinct from p_run_token
+    and o.state in ('queued', 'running') and coalesce(o.run_lease_until, '-infinity'::timestamptz) <= now();
+  if not found then return false; end if;
+  delete from public.job_slots where job_id = p_id;
+  return true;
+end $$;
+
+DROP FUNCTION public.job_requeue(uuid);
+CREATE FUNCTION public.job_reopen(p_outbox uuid) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+declare o public.job_outbox;
+begin
+  select * into o from public.job_outbox where id = p_outbox and state = 'failed' for update;
+  if o.id is null then return null; end if;
+  delete from public.job_slots where job_id = o.id;
+  update public.job_outbox set msg_id = null, sent_at = null, state = 'queued', attempts = 0, finished_at = null,
+    run_lease_until = null, relay_lease_until = null, lease_token = null,
+    retry_requested_at = now(), reconcile_at = now(), reconcile_checks = 0 where id = o.id;
+  return o.id;
+end $$;
+
+CREATE OR REPLACE FUNCTION public.job_requeue_failed(p_hours integer DEFAULT 24) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+declare r record; v_failed integer := 0; v_requeued integer := 0;
+begin
+  for r in select o.id from public.job_outbox o where o.state = 'failed'
+    and o.finished_at >= now() - make_interval(hours => least(greatest(coalesce(p_hours, 24), 1), 720)) order by o.finished_at
+  loop
+    v_failed := v_failed + 1;
+    if public.job_reopen(r.id) is not null then v_requeued := v_requeued + 1; end if;
+  end loop;
+  return jsonb_build_object('requeued', v_requeued, 'failed', v_failed);
+end $$;
+
+-- 13. The stats the operators read: the durable record says how many wait, run and failed, since pgmq's per-queue
+--     metrics no longer describe the broker.
+CREATE OR REPLACE FUNCTION public.job_stats() RETURNS jsonb
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  select jsonb_build_object(
+    'queues', coalesce((
+      select jsonb_object_agg(o.queue, jsonb_build_object(
+        'depth', o.n, 'oldestAgeSeconds', o.oldest, 'total', o.n))
+      from (select o.queue, count(*)::int as n,
+                   coalesce(extract(epoch from now() - min(o.created_at))::int, 0) as oldest
+            from public.job_outbox o
+            where o.state = 'queued'
+            group by o.queue) o), '{}'::jsonb),
+    'unsent', (select count(*) from public.job_outbox where state = 'queued' and sent_at is null),
+    'running', (select count(*) from public.job_outbox where state = 'running'),
+    'failed24h', (select count(*) from public.job_outbox where state = 'failed' and finished_at > now() - interval '24 hours'),
+    'oldestQueuedAgeSeconds', coalesce((select extract(epoch from now() - min(created_at))::int from public.job_outbox where state = 'queued'), 0),
+    'checkedAt', now()
+  );
+$$;
+
+-- Refuse the destructive contract step unless every job queue was drained and its late-send bridge is installed.
+-- (a queue cutover block of the former chain: a no-op on a clean database, left out)
+
+-- Every drained job queue leaves pgmq: the broker of a job queue is BullMQ on Redis, so the empty pgmq
+-- table and its late-send redirect go away with it. The event-bus queues are not in this list and stay.
+SELECT pgmq.drop_queue('accounting_desk');
+SELECT pgmq.drop_queue('agents');
+SELECT pgmq.drop_queue('automation');
+SELECT pgmq.drop_queue('bank_credit_received');
+SELECT pgmq.drop_queue('booking_status');
+SELECT pgmq.drop_queue('chat_turn');
+SELECT pgmq.drop_queue('connection_commands');
+SELECT pgmq.drop_queue('connection_health');
+SELECT pgmq.drop_queue('content_tick');
+SELECT pgmq.drop_queue('data_sync');
+SELECT pgmq.drop_queue('decisions');
+SELECT pgmq.drop_queue('hiring_tick');
+SELECT pgmq.drop_queue('inventory_order');
+SELECT pgmq.drop_queue('inventory_replenish');
+SELECT pgmq.drop_queue('invite_command');
+SELECT pgmq.drop_queue('knowledge');
+SELECT pgmq.drop_queue('lead_actions');
+SELECT pgmq.drop_queue('lead_gen');
+SELECT pgmq.drop_queue('marketing_tick');
+SELECT pgmq.drop_queue('meta_inbound');
+SELECT pgmq.drop_queue('n8n');
+SELECT pgmq.drop_queue('payment_order_requested');
+SELECT pgmq.drop_queue('public_api');
+SELECT pgmq.drop_queue('render_request');
+SELECT pgmq.drop_queue('shifts_alerts');
+SELECT pgmq.drop_queue('video_render');
+SELECT pgmq.drop_queue('zalo_authorization');
+SELECT pgmq.drop_queue('zalo_refresh');
+SELECT pgmq.drop_queue('zalo_wizard');
+SELECT pgmq.drop_queue('meta-delivery');
+SELECT pgmq.drop_queue('telegram-delivery');
+SELECT pgmq.drop_queue('zalo-delivery');
+SELECT pgmq.drop_queue('sepay-delivery');
+SELECT pgmq.drop_queue('vietcombank-delivery');
+SELECT pgmq.drop_queue('bank-feed-delivery');
+
+-- The cutover has drained live pgmq job tables before this contract step; event-bus pgmq functions stay.
+DROP FUNCTION public.job_read(text, integer, integer, integer);
+DROP FUNCTION public.job_touch(text, bigint, integer);
+DROP FUNCTION public.job_ack(text, bigint);
+DROP FUNCTION public.job_fail(text, bigint, integer, text);
+DROP FUNCTION public.job_archive(text, bigint, text);
+DROP FUNCTION public.job_message(text, jsonb, text, uuid);
+
+CREATE INDEX job_outbox_pending ON public.job_outbox (created_at) WHERE sent_at IS NULL AND state IN ('queued', 'running');
+CREATE INDEX job_outbox_reconcile_due ON public.job_outbox (reconcile_at, queue) WHERE state IN ('queued', 'running');
+
+-- 16. The recurring ticks write their occurrence to the outbox on the same schedules, queues and job names; the
+--     dedupe key pins one row per scheduled minute so a replayed tick cannot double-run.
+
+
+-- Backend-only definer functions.
+REVOKE EXECUTE ON FUNCTION public.job_relay_claim(integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_relay_claim(integer, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_relay_sent(uuid, uuid, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_relay_sent(uuid, uuid, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_relay_release(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_relay_release(uuid, uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_reconcile(integer, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_reconcile(integer, integer, integer, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_start(text, uuid, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_start(text, uuid, integer, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_lease(uuid, integer, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_lease(uuid, integer, uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_done(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_done(uuid, uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_retry(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_retry(uuid, text, uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_dead(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_dead(uuid, text, uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_handback(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_handback(uuid, uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_reset(uuid, uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_reset(uuid, uuid, uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_reopen(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_reopen(uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_requeue_failed(integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_requeue_failed(integer) TO app_be;
+
+REVOKE EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.job_stats() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_stats() TO app_be;
+
+-- ---- from 20261106000100_agent-avatar.sql ----
+-- v0.3.6: an agent carries an optional picture next to its display name, like a person's profile photo. Only an HTTPS address is
+-- kept, the same rule be_access.workspace_member_avatars (20261104000500) applies to people; null draws the generated avatar.
+-- Additive: existing agents keep no picture and every reader treats the column as optional.
+
+ALTER TABLE public.agents
+    ADD COLUMN avatar_url text,
+    ADD CONSTRAINT agents_avatar_url_https_check
+        CHECK (avatar_url IS NULL OR (avatar_url ~ '^https://' AND char_length(avatar_url) <= 2048));
+
+-- ---- from 20261106000110_profile-avatars.sql ----
+-- v0.3.6: profile pictures of people and agents. The bucket is public so a picture shows by its address, like a provider photo;
+-- objects are named by a fresh id in a people/ or agents/ folder, so the bucket says nothing about who they belong to. Nothing in
+-- the browser writes the bucket: the back end issues one-time upload addresses and the bucket itself bounds what lands there
+-- (PNG, JPEG or WebP of at most 2 MB). Reading is open to everyone, as the public address already is.
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('avatars_public', 'avatars_public', true, 2097152, ARRAY['image/png', 'image/jpeg', 'image/webp'])
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY objects_public_read ON storage.objects AS PERMISSIVE FOR SELECT TO anon, authenticated
+    USING (bucket_id = 'avatars_public');
+
+-- A person's uploaded picture is kept under its own metadata key (nivo_avatar_url): Auth rewrites avatar_url from the provider
+-- profile on every OAuth sign-in. The uploaded picture wins; the provider photo stays the fallback; both must be HTTPS.
+CREATE OR REPLACE FUNCTION be_access.workspace_member_avatars(p_workspace uuid, p_ids uuid[])
+RETURNS TABLE(id uuid, avatar_url text)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $$
+    SELECT u.id,
+           COALESCE(
+               CASE WHEN jsonb_typeof(u.raw_user_meta_data -> 'nivo_avatar_url') = 'string'
+                         AND u.raw_user_meta_data ->> 'nivo_avatar_url' ~ '^https://'
+                    THEN u.raw_user_meta_data ->> 'nivo_avatar_url' END,
+               CASE WHEN jsonb_typeof(u.raw_user_meta_data -> 'avatar_url') = 'string'
+                         AND u.raw_user_meta_data ->> 'avatar_url' ~ '^https://'
+                    THEN u.raw_user_meta_data ->> 'avatar_url' END)
+    FROM auth.users u
+    JOIN public.workspace_members m ON m.user_id = u.id
+    WHERE m.workspace_id = p_workspace AND m.status = 'active' AND u.id = ANY(p_ids);
+$$;
+
+REVOKE ALL ON FUNCTION be_access.workspace_member_avatars(uuid, uuid[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION be_access.workspace_member_avatars(uuid, uuid[]) TO app_be;
+
+-- ---- from 20261106000200_chat-member-states.sql ----
+-- Stable actors are additive: historical messages remain unattributed rather than guessed from names.
+ALTER TABLE public.messages ADD COLUMN author_user_id uuid;
+ALTER TABLE public.agent_messages ADD COLUMN author_user_id uuid;
+COMMENT ON COLUMN public.messages.author_user_id IS 'The proven workspace account that posted this human message; NULL for legacy or automated lines.';
+COMMENT ON COLUMN public.agent_messages.author_user_id IS 'The proven workspace account that submitted this message; NULL for customer, legacy or automated lines.';
+CREATE INDEX messages_author_cursor ON public.messages (workspace_id, author_user_id, created_at DESC, id DESC)
+    WHERE author_user_id IS NOT NULL;
+CREATE INDEX messages_room_author_cursor ON public.messages (workspace_id, room, author_user_id, created_at DESC, id DESC)
+    WHERE author_user_id IS NOT NULL;
+CREATE INDEX agent_messages_author_cursor ON public.agent_messages (workspace_id, conversation_id, author_user_id, created_at DESC, id DESC)
+    WHERE author_user_id IS NOT NULL;
+
+-- The same admission predicate serves backend markers and private realtime channel policies.
+-- Department rooms follow the existing Office APIs: all active workspace members may enter.
+CREATE FUNCTION be_access.chat_target_member(p_workspace uuid, p_user uuid, p_room text, p_conversation uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $$
+    SELECT (current_setting('role', true) = 'app_be'
+            OR (current_setting('role', true) = 'none' AND pg_has_role(session_user, 'app_be', 'USAGE'))
+            OR p_user = auth.uid())
+       AND EXISTS (SELECT 1 FROM public.workspace_members m
+                   WHERE m.workspace_id = p_workspace AND m.user_id = p_user AND m.status = 'active')
+       AND CASE WHEN p_conversation IS NOT NULL THEN
+                    p_room IS NULL AND EXISTS (SELECT 1 FROM public.agent_conversations c
+                                              WHERE c.id = p_conversation AND c.workspace_id = p_workspace)
+                ELSE p_room IS NULL OR EXISTS (SELECT 1 FROM public.office_rooms r
+                                              WHERE r.workspace_id = p_workspace AND r.key = p_room)
+           END;
+$$;
+REVOKE ALL ON FUNCTION be_access.chat_target_member(uuid, uuid, text, uuid) FROM PUBLIC, anon, authenticated;
+GRANT USAGE ON SCHEMA be_access TO authenticated;
+GRANT EXECUTE ON FUNCTION be_access.chat_target_member(uuid, uuid, text, uuid) TO app_be, authenticated;
+
+-- A fetched cursor advances only to an identified persisted message, never the current wall clock.
+-- Room reads retain office_rooms_reads as their source of truth. Conversation reads live here without calculating unread.
+CREATE TABLE public.chat_markers (
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL,
+    room text NOT NULL DEFAULT '',
+    conversation_id uuid REFERENCES public.agent_conversations(id) ON DELETE CASCADE,
+    target_key text GENERATED ALWAYS AS (COALESCE(conversation_id::text, room)) STORED,
+    delivered_at timestamptz,
+    delivered_message_id uuid,
+    read_at timestamptz,
+    read_message_id uuid,
+    muted boolean NOT NULL DEFAULT false,
+    PRIMARY KEY (workspace_id, user_id, target_key),
+    FOREIGN KEY (workspace_id, user_id) REFERENCES public.workspace_members(workspace_id, user_id) ON DELETE CASCADE,
+    CONSTRAINT chat_markers_target CHECK (
+        (conversation_id IS NOT NULL AND room = '') OR
+        (conversation_id IS NULL AND room = ANY (ARRAY['', 'executive', 'frontdesk', 'sales', 'marketing', 'care', 'accounting']))),
+    CONSTRAINT chat_markers_delivered_cursor CHECK ((delivered_at IS NULL) = (delivered_message_id IS NULL)),
+    CONSTRAINT chat_markers_read_cursor CHECK ((read_at IS NULL) = (read_message_id IS NULL))
+);
+CREATE INDEX chat_markers_delivered_cursor
+    ON public.chat_markers (workspace_id, target_key, delivered_at, delivered_message_id)
+    WHERE delivered_at IS NOT NULL;
+ALTER TABLE public.chat_markers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_markers_app_be_select ON public.chat_markers FOR SELECT TO app_be
+    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id));
+CREATE POLICY chat_markers_app_be_insert ON public.chat_markers FOR INSERT TO app_be
+    WITH CHECK (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id));
+CREATE POLICY chat_markers_app_be_update ON public.chat_markers FOR UPDATE TO app_be
+    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id))
+    WITH CHECK (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id));
+CREATE POLICY chat_markers_app_be_delete ON public.chat_markers FOR DELETE TO app_be
+    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id));
+REVOKE ALL ON public.chat_markers FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_markers TO app_be;
+
+-- ---- from 20261106000300_realtime-events.sql ----
+-- The shared realtime hub of a deploy that runs several api replicas (platform/realtime, REALTIME_HUB=postgres).
+-- realtime_events is the bounded replay table: a reconnecting SSE client sends Last-Event-ID to ANY replica and the hub reads
+-- the frames it missed here. The Redis hub (the default while Redis is declared) keeps its replay in a Redis Stream and leaves this
+-- table empty. Only the app_be connection reaches the table.
+create table public.realtime_events (
+    seq bigint generated always as identity primary key,
+    topic text not null check (length(topic) <= 256),
+    event_id text,
+    payload jsonb not null,
+    created_at timestamptz not null default now()
+);
+
+create index realtime_events_topic_seq_idx on public.realtime_events (topic, seq desc);
+create index realtime_events_event_idx on public.realtime_events (topic, event_id, seq desc) where event_id is not null;
+create index realtime_events_created_at_idx on public.realtime_events (created_at);
+
+alter table public.realtime_events enable row level security;
+alter table public.realtime_events force row level security;
+
+create policy realtime_events_app_be_select
+on public.realtime_events for select to app_be
+using (topic is not null);
+
+create policy realtime_events_app_be_insert
+on public.realtime_events for insert to app_be
+with check (topic is not null);
+
+create policy realtime_events_app_be_delete
+on public.realtime_events for delete to app_be
+using (topic is not null);
+
+revoke all on table public.realtime_events from public, anon, authenticated;
+grant select, insert, delete on table public.realtime_events to app_be;
+
+-- The retention sweep that keeps realtime_events bounded: a BullMQ queue (realtime_retention) fed by the job outbox, ticked every
+-- minute by pg_cron. The tick only enqueues one outbox row; the delete belongs to the sweep-realtime-events job the runner claims.
+-- `cli jobs tick realtime-retention-tick` sends the same tick by hand.
+
+-- ---- from 20261107000100_installation-removed_contract_widen.sql ----
+-- Soft uninstall ("Gỡ agent"): an installed agent can end in the terminal status `removed`. The row stays, so its conversations,
+-- messages, context versions and knowledge keep their history; nothing runs, and it leaves every list. Re-installing the same role
+-- makes a new installation, so the two unique indexes that guard a type (one instance of a single type, one label per type) must not
+-- count removed rows. Additive: the status check is widened, two nullable columns are added, the indexes are rebuilt as partial ones.
+-- `status` is a text column with a CHECK, not a Postgres enum, so no ADD VALUE is involved and the new value is usable at once.
+
+ALTER TABLE public.module_installations DROP CONSTRAINT module_installations_status_check;
+ALTER TABLE public.module_installations
+    ADD CONSTRAINT module_installations_status_check
+    CHECK ((status = ANY (ARRAY['installing'::text, 'setup'::text, 'ready'::text, 'live'::text, 'paused'::text, 'needs_connection'::text, 'removed'::text])));
+
+ALTER TABLE public.module_installations ADD COLUMN removed_at timestamp with time zone;
+ALTER TABLE public.module_installations ADD COLUMN removed_by text;
+ALTER TABLE public.module_installations
+    ADD CONSTRAINT module_installations_removed_check
+    CHECK (((status = 'removed'::text) = (removed_at IS NOT NULL)));
+
+DROP INDEX public.module_installations_name_unique;
+CREATE UNIQUE INDEX module_installations_name_unique
+    ON public.module_installations USING btree (workspace_id, module_key, lower(name)) WHERE (status <> 'removed'::text);
+
+DROP INDEX public.module_installations_single;
+CREATE UNIQUE INDEX module_installations_single
+    ON public.module_installations USING btree (workspace_id, module_key) WHERE ((NOT is_multi) AND (status <> 'removed'::text));
+
+-- ---- from 20261107000200_running-gate-ready-to-live.sql ----
+-- Only a running agent answers customers (owner ruling, v0.3.6): the customer-turn gate now needs status `live`, live_enabled, an
+-- applied context version and its required connections, where it used to accept `ready` as well. Today every `ready` installation
+-- with an applied version answers on any path (channel, website chat, public API), so this forward-only data step keeps exactly that
+-- set answering: every such installation becomes live and live_enabled. An agent with no bound connection is not special-cased; it
+-- behaves as it does today. Idempotent and guarded: it touches only `ready` rows with an applied version, and after one run none
+-- matches. No other data changes.
+--
+-- Count queries, to print before and after the deploy (the full count is the rows this step moves and must be 0 afterwards; the
+-- channel-scoped count is the subset that has a bound channel connection, kept for comparison):
+--   full:    select count(*) from public.module_installations i
+--            where i.status = 'ready' and i.active_context_version_id is not null;
+--   channel: select count(*) from public.module_installations i
+--            where i.status = 'ready' and i.active_context_version_id is not null
+--              and exists (select 1 from public.agent_connections ac join public.connections c on c.id = ac.connection_id
+--                          where ac.agent_id = i.agent_id and ac.purpose in ('inbound_chat', 'outbound_chat')
+--                            and c.status <> 'disconnected');
+
+update public.module_installations i
+set status = 'live', live_enabled = true
+where i.status = 'ready'
+  and i.active_context_version_id is not null;
+
+-- ---- from 20261107000300_invoice_contract_renewal.sql ----
+-- Contract renewal invoices: a renewal bills the customer for the next term of a contract, so an invoice can now name the contract
+-- it renews and the contract end date (`period_ends_on`) that this payment extends. Both columns are nullable; every existing
+-- invoice (an order invoice or a free-standing one) keeps null in both and is unchanged. Deleting a contract keeps its invoices and
+-- clears the link, as the lead and order links already do; a linked invoice must carry its period, or the index below could
+-- not tell two renewals apart. One renewal invoice per contract period: the partial unique index lets
+-- the issuer insert with ON CONFLICT DO NOTHING and read the existing invoice back, so a retried renewal never bills twice.
+-- Additive only: row-level policies and table grants on public.invoices already cover new columns, so none change here.
+
+ALTER TABLE public.invoices
+    ADD COLUMN contract_id uuid REFERENCES public.contracts(id) ON DELETE SET NULL;
+ALTER TABLE public.invoices ADD COLUMN period_ends_on date;
+ALTER TABLE public.invoices
+    ADD CONSTRAINT invoices_contract_period_check CHECK (((contract_id IS NULL) OR (period_ends_on IS NOT NULL)));
+
+CREATE UNIQUE INDEX invoices_one_per_contract_period
+    ON public.invoices USING btree (workspace_id, contract_id, period_ends_on) WHERE (contract_id IS NOT NULL);
+
+-- ---- from 20261108000200_sepay-webhook-events.sql ----
+-- SePay connection page: every delivery that reached a workspace's own SePay webhook door is remembered so the owner can follow
+-- it live (ping, credit, duplicate, refused key) and read the connection's health. Additive: one new table, no existing table changes.
+-- A row is written for a delivery whose connection exists; a refused key is recorded as `unauthorized` and carries no payload.
+-- `environment` is the connection's environment at the time, so the page can say whether a credit was only a test.
+
+CREATE TABLE public.channel_connections_sepay_events (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL,
+    connection_id uuid NOT NULL REFERENCES public.connections(id) ON DELETE CASCADE,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    outcome text NOT NULL,
+    kind text NOT NULL,
+    amount_vnd bigint,
+    provider_event_id text,
+    environment text NOT NULL,
+    CONSTRAINT channel_connections_sepay_events_outcome_check CHECK (outcome IN ('accepted', 'duplicate', 'unauthorized')),
+    CONSTRAINT channel_connections_sepay_events_kind_check CHECK (kind IN ('credit', 'debit', 'ping')),
+    CONSTRAINT channel_connections_sepay_events_environment_check CHECK (environment IN ('test', 'live'))
+);
+
+CREATE INDEX channel_connections_sepay_events_connection_received_idx
+    ON public.channel_connections_sepay_events USING btree (connection_id, received_at DESC);
+
+ALTER TABLE public.channel_connections_sepay_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.channel_connections_sepay_events FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON TABLE public.channel_connections_sepay_events TO app_be;
+
+-- The dedicated backend principal must be active, including through an inherited app_be role.
+CREATE POLICY channel_connections_sepay_events_app_be_insert ON public.channel_connections_sepay_events
+    FOR INSERT TO app_be WITH CHECK (current_user = 'app_be');
+CREATE POLICY channel_connections_sepay_events_app_be_select ON public.channel_connections_sepay_events
+    FOR SELECT TO app_be USING (current_user = 'app_be');
+
+-- ---- from 20261109000500_system-history-retention.sql ----
+-- End-of-day retention of the system history that grows every minute and nothing prunes: the finished rows of the job queue, the
+-- pg_cron run log and the pg_net response log. Additive: one function and one pg_cron tick. A tick only enqueues one outbox row
+-- (BE-QUEUES-3); the app job `system_history_retention` claims it and calls the function batch by batch until every table comes back short.
+--
+-- Deletion rules (one statement deletes at most p_batch rows per table; "finished" = the success window p_done_days, "failed" = the
+-- longer window p_failed_days so a failure can still be investigated):
+--   public.job_outbox   state done older than p_done_days by finished_at; state failed older than p_failed_days. Never queued or
+--                       running (pending relay, retryable or in flight), never a row still holding a relay lease.
+--   public.jobs         status done older than p_done_days by updated_at; status failed older than p_failed_days; never running, and
+--                       never a row whose outbox row (job_key = outbox id) is still queued or running: a failed claim is retried by
+--                       the next claim, so its fencing row must survive until the outbox row is terminal or gone.
+--   cron.job_run_details  status succeeded older than p_done_days, status failed older than p_failed_days by end_time; never a run
+--                       still starting, running, sending or connecting.
+--   net._http_response  a 2xx/3xx answer older than p_done_days; an error, a timeout or a 4xx/5xx answer older than p_failed_days.
+-- Rows are locked with SKIP LOCKED so the sweep never waits behind, or blocks, the queue.
+
+CREATE FUNCTION public.system_history_sweep(p_done_days integer DEFAULT 1, p_failed_days integer DEFAULT 7, p_batch integer DEFAULT 5000)
+    RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare
+  v_done timestamptz := now() - make_interval(days => least(greatest(coalesce(p_done_days, 1), 0), 3650));
+  v_failed timestamptz := now() - make_interval(days => least(greatest(coalesce(p_failed_days, 7), 0), 3650));
+  v_batch integer := least(greatest(coalesce(p_batch, 5000), 1), 20000);
+  v_outbox integer;
+  v_jobs integer;
+  v_cron integer;
+  v_http integer;
+begin
+  with doomed as (
+    select o.id from public.job_outbox o
+    where ((o.state = 'done' and coalesce(o.finished_at, o.created_at) < v_done)
+        or (o.state = 'failed' and coalesce(o.finished_at, o.created_at) < v_failed))
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+    order by o.created_at limit v_batch for update skip locked
+  ), gone as (delete from public.job_outbox o using doomed d where o.id = d.id returning 1)
+  select count(*) into v_outbox from gone;
+
+  with doomed as (
+    select j.id from public.jobs j
+    where ((j.status = 'done' and j.updated_at < v_done) or (j.status = 'failed' and j.updated_at < v_failed))
+      and not exists (select 1 from public.job_outbox o where o.id::text = j.job_key and o.state in ('queued', 'running'))
+    order by j.updated_at limit v_batch for update skip locked
+  ), gone as (delete from public.jobs j using doomed d where j.id = d.id returning 1)
+  select count(*) into v_jobs from gone;
+
+  with doomed as (
+    select r.runid from cron.job_run_details r
+    where ((r.status = 'succeeded' and r.end_time < v_done) or (r.status = 'failed' and r.end_time < v_failed))
+    order by r.runid limit v_batch
+  ), gone as (delete from cron.job_run_details r using doomed d where r.runid = d.runid returning 1)
+  select count(*) into v_cron from gone;
+
+  with doomed as (
+    select h.ctid as row_id from net._http_response h
+    where (h.created < v_failed)
+       or (h.created < v_done and h.error_msg is null and coalesce(h.timed_out, false) = false and h.status_code < 400)
+    order by h.created limit v_batch
+  ), gone as (delete from net._http_response h using doomed d where h.ctid = d.row_id returning 1)
+  select count(*) into v_http from gone;
+
+  return jsonb_build_object('outbox', v_outbox, 'jobs', v_jobs, 'cron', v_cron, 'http', v_http, 'batch', v_batch);
+end $$;
+
+REVOKE EXECUTE ON FUNCTION public.system_history_sweep(integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.system_history_sweep(integer, integer, integer) TO app_be;
+
+-- 23:30 Asia/Ho_Chi_Minh (UTC+7, no DST) is 16:30 on the cron clock (cron.timezone is GMT). The windows ride in the payload: change
+-- them with cron.alter_job; `cli jobs tick system-history-retention` sends the same tick by hand.
+
+-- ---- from 20261109000550_drop-cron-net-references.sql ----
+-- The lite database runs the official postgres image with pgvector only (owner ruling 2026-10-29): pg_cron's ticks move to
+-- platform/jobs in the back end and pg_net is gone, so no kept function may name the cron or net schemas. The retention sweep keeps
+-- its job and outbox pruning and answers 0 for the two logs it no longer owns (the job reads the same four counts), and the hiring
+-- status answers an empty cron list, which is what it already answered when pg_cron was unreachable.
+
+CREATE OR REPLACE FUNCTION public.system_history_sweep(p_done_days integer DEFAULT 1, p_failed_days integer DEFAULT 7, p_batch integer DEFAULT 5000)
+    RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare
+  v_done timestamptz := now() - make_interval(days => least(greatest(coalesce(p_done_days, 1), 0), 3650));
+  v_failed timestamptz := now() - make_interval(days => least(greatest(coalesce(p_failed_days, 7), 0), 3650));
+  v_batch integer := least(greatest(coalesce(p_batch, 5000), 1), 20000);
+  v_outbox integer;
+  v_jobs integer;
+begin
+  with doomed as (
+    select o.id from public.job_outbox o
+    where ((o.state = 'done' and coalesce(o.finished_at, o.created_at) < v_done)
+        or (o.state = 'failed' and coalesce(o.finished_at, o.created_at) < v_failed))
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+    order by o.created_at limit v_batch for update skip locked
+  ), gone as (delete from public.job_outbox o using doomed d where o.id = d.id returning 1)
+  select count(*) into v_outbox from gone;
+
+  with doomed as (
+    select j.id from public.jobs j
+    where ((j.status = 'done' and j.updated_at < v_done) or (j.status = 'failed' and j.updated_at < v_failed))
+      and not exists (select 1 from public.job_outbox o where o.id::text = j.job_key and o.state in ('queued', 'running'))
+    order by j.updated_at limit v_batch for update skip locked
+  ), gone as (delete from public.jobs j using doomed d where j.id = d.id returning 1)
+  select count(*) into v_jobs from gone;
+
+  return jsonb_build_object('outbox', v_outbox, 'jobs', v_jobs, 'cron', 0, 'http', 0, 'batch', v_batch);
+end $$;
+
+REVOKE EXECUTE ON FUNCTION public.system_history_sweep(integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.system_history_sweep(integer, integer, integer) TO app_be;
+
+CREATE OR REPLACE FUNCTION public.hiring_ops_status() RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare v_due int;
+begin
+  select count(*) into v_due from public.hiring_candidates c join public.hiring_settings s on s.workspace_id = c.workspace_id
+    where c.stage in ('rejected', 'withdrawn') and c.stage_changed_at < now() - make_interval(days => s.retention_days);
+  return jsonb_build_object('cron', '[]'::jsonb, 'retention_due', v_due);
+end $$;
+
+REVOKE EXECUTE ON FUNCTION public.hiring_ops_status() FROM PUBLIC, anon, authenticated;
+
+-- ---- from 20261109000552_job-ticks.sql ----
+-- The scheduler ticks of platform/jobs (R335): one row per tick holds the last UTC minute it fired. Every replica's
+-- @nestjs/schedule fires the tick; under advisoryXactLock('tick:<name>') job_tick_claim moves the row to the new minute and
+-- answers claimed, so exactly one replica enqueues the tick's job per minute and a replica that comes later answers not claimed.
+create table public.job_ticks (
+    name varchar(200) not null,
+    minute varchar(16) not null,
+    constraint job_ticks_pkey primary key (name)
+);
+
+alter table public.job_ticks enable row level security;
+alter table public.job_ticks force row level security;
+
+create policy job_ticks_app_be_select
+on public.job_ticks for select to app_be
+using (name is not null);
+
+create policy job_ticks_app_be_insert
+on public.job_ticks for insert to app_be
+with check (name is not null);
+
+create policy job_ticks_app_be_update
+on public.job_ticks for update to app_be
+using (name is not null)
+with check (name is not null);
+
+revoke all on table public.job_ticks from public, anon, authenticated;
+grant select, insert, update on table public.job_ticks to app_be;
+
+create function public.job_tick_claim(p_name varchar, p_minute varchar)
+returns table (claimed boolean)
+language sql
+as $$
+    with moved as (
+        insert into public.job_ticks as t (name, minute) values (p_name, p_minute)
+        on conflict (name) do update set minute = excluded.minute
+         where t.minute < excluded.minute
+        returning true as claimed
+    )
+    select coalesce((select m.claimed from moved as m), false)
+$$;
+
+revoke all on function public.job_tick_claim(varchar, varchar) from public, anon, authenticated;
+grant execute on function public.job_tick_claim(varchar, varchar) to app_be;
+
+-- ---- from 20261109000554_event-bus.sql ----
+-- The event bus (platform/event-bus) on pgmq, in the shape of the canon's inbox migration (hfs templates/be/inbox/platform/migration.sql.tpl).
+-- pgmq installs into its own schema pgmq (the one exception to extensions; its control file fixes the schema, so there is no WITH
+-- SCHEMA clause) and this chain needs pgmq 1.13.1 or later, which has topic routing (bind_topic, send_topic). A publish sends the
+-- typed envelope once to its topic, the event name, in the publisher's own transaction, and pgmq copies it into every consumer queue
+-- bound to that name, so a rolled-back change sends nothing. The application role holds no grant on the pgmq schema: it calls the
+-- security definer functions below through callDbFunction (R258, R334), and a read names only a queue bound to a topic.
+-- public.inbox already exists (baseline); a consumer claims (consumer, dedupeKey) there in the transaction of its effect.
+--
+-- Every consumer queue '<topic>__<consumer>' and its dead-letter queue '<topic>__<consumer>__dead' is declared here, with the topic
+-- bound to the queue, so the topic lanes add no migration for these. The pairs equal the constants of event-bus.queues.ts.
+
+create extension if not exists pgmq;
+
+create function public.event_bus_send(p_event_name text, p_envelope jsonb)
+returns integer
+language sql
+security definer
+set search_path = pg_catalog, pg_temp
+as $$
+    select pgmq.send_topic(p_event_name, p_envelope)
+$$;
+
+create function public.event_bus_read(p_queue text, p_visibility_seconds integer, p_batch integer)
+returns table (msg_id bigint, read_ct integer, message jsonb)
+language sql
+security definer
+set search_path = pg_catalog, pg_temp
+as $$
+    select m.msg_id, m.read_ct, m.message
+      from (select distinct b.queue_name from pgmq.topic_bindings as b where b.queue_name = p_queue) as bound
+     cross join lateral pgmq.read(bound.queue_name, p_visibility_seconds, p_batch) as m
+$$;
+
+create function public.event_bus_archive(p_queue text, p_msg_id bigint)
+returns boolean
+language sql
+security definer
+set search_path = pg_catalog, pg_temp
+as $$
+    select pgmq.archive(p_queue, p_msg_id)
+$$;
+
+create function public.event_bus_bury(p_queue text, p_msg_id bigint, p_read_ct integer, p_message jsonb, p_reason text)
+returns boolean
+language plpgsql
+security definer
+set search_path = pg_catalog, pg_temp
+as $$
+begin
+    if not exists (select 1 from pgmq.topic_bindings as b where b.queue_name = p_queue) then
+        raise exception 'event_bus_bury: % is no consumer queue bound to a topic', p_queue;
+    end if;
+    perform pgmq.send(p_queue || '__dead', jsonb_build_object('readCount', p_read_ct, 'reason', p_reason, 'message', p_message));
+    return pgmq.archive(p_queue, p_msg_id);
+end
+$$;
+
+create function public.event_bus_dead_letters(p_queue text, p_batch integer)
+returns table (msg_id bigint, message jsonb)
+language plpgsql
+security definer
+set search_path = pg_catalog, pg_temp
+as $$
+begin
+    if not exists (select 1 from pgmq.topic_bindings as b where b.queue_name = p_queue) then
+        raise exception 'event_bus_dead_letters: % is no consumer queue bound to a topic', p_queue;
+    end if;
+    return query execute format('select d.msg_id, d.message from pgmq.%I as d order by d.msg_id limit $1', 'q_' || p_queue || '__dead') using p_batch;
+end
+$$;
+
+create function public.event_bus_requeue(p_queue text, p_msg_id bigint)
+returns boolean
+language plpgsql
+security definer
+set search_path = pg_catalog, pg_temp
+as $$
+declare
+    v_dead jsonb;
+begin
+    if not exists (select 1 from pgmq.topic_bindings as b where b.queue_name = p_queue) then
+        raise exception 'event_bus_requeue: % is no consumer queue bound to a topic', p_queue;
+    end if;
+    execute format('delete from pgmq.%I as d where d.msg_id = $1 returning d.message', 'q_' || p_queue || '__dead') into v_dead using p_msg_id;
+    if v_dead is null then
+        return false;
+    end if;
+    perform pgmq.send(p_queue, v_dead -> 'message');
+    return true;
+end
+$$;
+
+
+-- The consumer queues, their dead-letter queues and the topic bindings are declared literally in
+-- 20261109100200_event-bus-missing-queues.sql (one pgmq.create / pgmq.bind_topic per name, as the migration shape requires).
+
+revoke execute on function public.event_bus_send(text, jsonb) from public, anon;
+grant execute on function public.event_bus_send(text, jsonb) to app_be;
+revoke execute on function public.event_bus_read(text, integer, integer) from public, anon;
+grant execute on function public.event_bus_read(text, integer, integer) to app_be;
+revoke execute on function public.event_bus_archive(text, bigint) from public, anon;
+grant execute on function public.event_bus_archive(text, bigint) to app_be;
+revoke execute on function public.event_bus_bury(text, bigint, integer, jsonb, text) from public, anon;
+grant execute on function public.event_bus_bury(text, bigint, integer, jsonb, text) to app_be;
+revoke execute on function public.event_bus_dead_letters(text, integer) from public, anon;
+grant execute on function public.event_bus_dead_letters(text, integer) to app_be;
+revoke execute on function public.event_bus_requeue(text, bigint) from public, anon;
+grant execute on function public.event_bus_requeue(text, bigint) to app_be;
+
+-- ---- from 20261109000556_booking-status-event.sql ----
+-- A booking change reaches the back end as a `booking_status_changed` event on the pgmq event bus, not as a job.
+--
+-- The AFTER trigger `bookings_notify` (INSERT, and UPDATE OF status, start_at, resource_id on public.bookings) used to enqueue the
+-- BullMQ job `apply-booking-status` through public.job_enqueue. It now sends the typed envelope with public.event_bus_send, in the
+-- transaction that writes the booking: a commit sends it, a rollback sends nothing. Nothing changes in the trigger itself (same
+-- table, same columns, same kinds of change), so no `create trigger` is repeated; only the body of the function is replaced.
+--
+-- The dedupe key is the business identity of one change: `<booking>:<kind>:<status>:<transaction id>`. It is deterministic, so two
+-- changes of one booking in one transaction with the same kind and status are one fact (the reactor reads the booking as it is
+-- now, so nothing is lost), while the same change in another transaction is a new fact. The same text is the event id and the
+-- correlation id of the envelope; it uses only the characters of a safe correlation id.
+--
+-- The function is SECURITY DEFINER and runs as the migration owner, which can execute public.event_bus_send (the application role
+-- holds that grant too), so the trigger fires for any role that writes a booking. The consumer queue
+-- booking_status_changed__booking_effects and its binding to the topic are declared by 20261109000554_event-bus.sql.
+
+create or replace function public.bookings_notify() returns trigger
+    language plpgsql security definer
+    set search_path to 'public'
+    as $$
+declare
+  v_kind text;
+  v_key text;
+begin
+  if tg_op = 'INSERT' then
+    v_kind := 'created';
+  elsif new.status is distinct from old.status then
+    v_kind := 'status';
+  elsif new.start_at is distinct from old.start_at or new.resource_id is distinct from old.resource_id then
+    v_kind := 'moved';
+  else
+    return new;
+  end if;
+  v_key := new.id::text || ':' || v_kind || ':' || new.status || ':' || txid_current()::text;
+  perform public.event_bus_send(
+    'booking_status_changed',
+    jsonb_build_object(
+      'metadata', jsonb_build_object('correlationId', v_key),
+      'eventId', v_key,
+      'eventName', 'booking_status_changed',
+      'payload', jsonb_build_object(
+        'dedupeKey', v_key,
+        'workspaceId', new.workspace_id,
+        'bookingId', new.id,
+        'kind', v_kind,
+        'status', new.status,
+        'previous', case when tg_op = 'UPDATE' then old.status else null end
+      )
+    )
+  );
+  return new;
+end $$;
+
+revoke execute on function public.bookings_notify() from public, anon;
+
+-- ---- from 20261109000700_identity-own-auth.sql ----
+-- Lite edition auth: the back end now signs people in itself (Google and email/password) instead of Supabase Auth. Additive: two new tables for
+-- rotating refresh tokens and single-use password tokens, plus SECURITY DEFINER doors over the existing auth.users / auth.identities / auth.sessions
+-- tables (kept GoTrue-compatible, so every FK, trigger and restored row stays valid). app_be gets no direct grant on the auth schema, as before.
+
+CREATE TABLE public.identity_refresh_tokens (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    session_id uuid NOT NULL REFERENCES auth.sessions(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL,
+    token_hash text NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    used_at timestamp with time zone,
+    CONSTRAINT identity_refresh_tokens_hash_key UNIQUE (token_hash)
+);
+CREATE INDEX identity_refresh_tokens_session_idx ON public.identity_refresh_tokens USING btree (session_id);
+CREATE INDEX identity_refresh_tokens_expiry_idx ON public.identity_refresh_tokens USING btree (expires_at);
+
+CREATE TABLE public.identity_password_tokens (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    token_hash text NOT NULL,
+    purpose text NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    used_at timestamp with time zone,
+    CONSTRAINT identity_password_tokens_hash_key UNIQUE (token_hash),
+    CONSTRAINT identity_password_tokens_purpose_check CHECK (purpose IN ('reset', 'invite', 'confirm'))
+);
+CREATE INDEX identity_password_tokens_user_idx ON public.identity_password_tokens USING btree (user_id, created_at DESC);
+
+ALTER TABLE public.identity_refresh_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.identity_password_tokens ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.identity_refresh_tokens FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.identity_password_tokens FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.identity_refresh_tokens TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.identity_password_tokens TO app_be;
+
+-- The dedicated backend principal must be active, including through an inherited app_be role.
+CREATE POLICY identity_refresh_tokens_app_be_all ON public.identity_refresh_tokens
+    FOR ALL TO app_be USING (current_user = 'app_be') WITH CHECK (current_user = 'app_be');
+CREATE POLICY identity_password_tokens_app_be_all ON public.identity_password_tokens
+    FOR ALL TO app_be USING (current_user = 'app_be') WITH CHECK (current_user = 'app_be');
+
+-- A person by sign-in address (lower-cased), with the stored bcrypt hash so the back end can verify it.
+CREATE FUNCTION public.be_auth_user_by_email(p_email text)
+    RETURNS TABLE(id uuid, email text, encrypted_password text, email_confirmed_at timestamp with time zone, disabled boolean)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select u.id, u.email::text, u.encrypted_password::text, u.email_confirmed_at,
+         (u.deleted_at is not null or (u.banned_until is not null and u.banned_until > now()))
+    from auth.users u
+   where lower(u.email) = p_email and u.is_anonymous = false
+   order by u.created_at asc nulls last
+   limit 1;
+$$;
+
+-- One person by id.
+CREATE FUNCTION public.be_auth_user_by_id(p_user uuid)
+    RETURNS TABLE(id uuid, email text, last_sign_in_at timestamp with time zone, meta jsonb, disabled boolean)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select u.id, u.email::text, u.last_sign_in_at, coalesce(u.raw_user_meta_data, '{}'::jsonb),
+         (u.deleted_at is not null or (u.banned_until is not null and u.banned_until > now()))
+    from auth.users u where u.id = p_user;
+$$;
+
+-- The person a Google account is linked to, if any.
+CREATE FUNCTION public.be_auth_user_by_google(p_provider_id text) RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select i.user_id from auth.identities i where i.provider = 'google' and i.provider_id = p_provider_id limit 1;
+$$;
+
+-- Creates a person; a null hash is an invited or Google-only account that has no password yet.
+CREATE FUNCTION public.be_auth_create_user(p_id uuid, p_email text, p_hash text, p_confirmed boolean, p_meta jsonb, p_now timestamp with time zone)
+    RETURNS uuid
+    LANGUAGE sql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, invited_at,
+                          raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('00000000-0000-0000-0000-000000000000', p_id, 'authenticated', 'authenticated', p_email, p_hash,
+          case when p_confirmed then p_now end, case when p_hash is null and not p_confirmed then p_now end,
+          '{"provider":"email","providers":["email"]}'::jsonb, p_meta, p_now, p_now)
+  returning id;
+$$;
+
+-- Links a Google account to a person.
+CREATE FUNCTION public.be_auth_link_google(p_user uuid, p_provider_id text, p_data jsonb, p_now timestamp with time zone) RETURNS void
+    LANGUAGE sql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  values (p_provider_id, p_user, p_data, 'google', p_now, p_now, p_now)
+  on conflict (provider_id, provider) do update set last_sign_in_at = p_now, updated_at = p_now;
+$$;
+
+-- Records a sign-in; a verified Google address also confirms the mailbox; profile keys only fill what the person has not set.
+CREATE FUNCTION public.be_auth_touch_user(p_user uuid, p_now timestamp with time zone, p_confirm boolean, p_meta jsonb) RETURNS void
+    LANGUAGE sql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  update auth.users
+     set last_sign_in_at = p_now,
+         updated_at = p_now,
+         email_confirmed_at = case when p_confirm then coalesce(email_confirmed_at, p_now) else email_confirmed_at end,
+         raw_user_meta_data = p_meta || coalesce(raw_user_meta_data, '{}'::jsonb)
+   where id = p_user;
+$$;
+
+-- Sets a new password hash; proving the mailbox through a mailed token also confirms the address.
+CREATE FUNCTION public.be_auth_set_password(p_user uuid, p_hash text, p_now timestamp with time zone) RETURNS void
+    LANGUAGE sql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  update auth.users
+     set encrypted_password = p_hash, email_confirmed_at = coalesce(email_confirmed_at, p_now), updated_at = p_now
+   where id = p_user;
+$$;
+
+-- Keeps (or with null drops) the picture the person uploaded.
+CREATE FUNCTION public.be_auth_set_avatar(p_user uuid, p_url text) RETURNS boolean
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare changed int;
+begin
+  update auth.users
+     set raw_user_meta_data = case when p_url is null then coalesce(raw_user_meta_data, '{}'::jsonb) - 'nivo_avatar_url'
+                                   else coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('nivo_avatar_url', p_url) end
+   where id = p_user;
+  get diagnostics changed = row_count;
+  return changed > 0;
+end;
+$$;
+
+-- Opens a device session; the refresh tokens hang on it, and be_revoke_session already ends it.
+CREATE FUNCTION public.be_auth_open_session(p_id uuid, p_user uuid, p_now timestamp with time zone, p_agent text, p_ip text) RETURNS void
+    LANGUAGE sql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  insert into auth.sessions (id, user_id, created_at, updated_at, refreshed_at, user_agent, ip)
+  values (p_id, p_user, p_now, p_now, (p_now at time zone 'utc'), left(p_agent, 512), p_ip::inet);
+$$;
+
+-- Marks a session active now.
+CREATE FUNCTION public.be_auth_touch_session(p_session uuid, p_now timestamp with time zone) RETURNS boolean
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare changed int;
+begin
+  update auth.sessions set updated_at = p_now, refreshed_at = (p_now at time zone 'utc') where id = p_session;
+  get diagnostics changed = row_count;
+  return changed > 0;
+end;
+$$;
+
+-- Ends a session; its refresh tokens go with it.
+CREATE FUNCTION public.be_auth_close_session(p_session uuid) RETURNS boolean
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare removed int;
+begin
+  delete from auth.sessions where id = p_session;
+  get diagnostics removed = row_count;
+  return removed > 0;
+end;
+$$;
+
+-- Confirms the mailbox of a person who spent a signup link.
+CREATE FUNCTION public.be_auth_confirm_email(p_user uuid, p_now timestamp with time zone) RETURNS void
+    LANGUAGE sql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  update auth.users set email_confirmed_at = coalesce(email_confirmed_at, p_now), updated_at = p_now where id = p_user;
+$$;
+
+-- Ends every session of a person except the one they keep (sign out of other devices).
+CREATE FUNCTION public.be_auth_close_other_sessions(p_user uuid, p_keep uuid) RETURNS integer
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare removed int;
+begin
+  delete from auth.sessions where user_id = p_user and id <> p_keep;
+  get diagnostics removed = row_count;
+  return removed;
+end;
+$$;
+
+-- Ends every session of a person (after a password reset); their refresh tokens go with them.
+CREATE FUNCTION public.be_auth_close_user_sessions(p_user uuid) RETURNS integer
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare removed int;
+begin
+  delete from auth.sessions where user_id = p_user;
+  get diagnostics removed = row_count;
+  return removed;
+end;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.be_auth_user_by_email(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_user_by_email(text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_user_by_id(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_user_by_id(uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_user_by_google(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_user_by_google(text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_create_user(uuid, text, text, boolean, jsonb, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_create_user(uuid, text, text, boolean, jsonb, timestamp with time zone) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_link_google(uuid, text, jsonb, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_link_google(uuid, text, jsonb, timestamp with time zone) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_touch_user(uuid, timestamp with time zone, boolean, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_touch_user(uuid, timestamp with time zone, boolean, jsonb) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_set_password(uuid, text, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_set_password(uuid, text, timestamp with time zone) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_set_avatar(uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_set_avatar(uuid, text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_open_session(uuid, uuid, timestamp with time zone, text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_open_session(uuid, uuid, timestamp with time zone, text, text) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_touch_session(uuid, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_touch_session(uuid, timestamp with time zone) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_close_session(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_close_session(uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_close_user_sessions(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_close_user_sessions(uuid) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_confirm_email(uuid, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_confirm_email(uuid, timestamp with time zone) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_close_other_sessions(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_close_other_sessions(uuid, uuid) TO app_be;
+
+-- ---- from 20261109000710_identity-account-doors.sql ----
+-- Operator account doors (the workspace seed and cleanup commands): list people and delete one, in the same SECURITY DEFINER style as the
+-- be_auth_* doors of the own-auth migration, so the cli needs no Supabase Auth admin client. Creating a person reuses be_auth_create_user.
+
+-- One bounded page of people, oldest first. The page starts at 1 and holds 1 to 1000 people.
+CREATE FUNCTION public.be_auth_list_users(p_page integer, p_per_page integer)
+    RETURNS TABLE(id uuid, email text, meta jsonb)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select u.id, u.email::text, coalesce(u.raw_user_meta_data, '{}'::jsonb)
+    from auth.users u
+   where u.is_anonymous = false
+   order by u.created_at asc nulls last, u.id asc
+  offset (greatest(coalesce(p_page, 1), 1) - 1) * least(greatest(coalesce(p_per_page, 50), 1), 1000)
+   limit least(greatest(coalesce(p_per_page, 50), 1), 1000);
+$$;
+
+-- Deletes a person for good; their sessions, identities and password tokens go with them. Answers whether a person was deleted.
+CREATE FUNCTION public.be_auth_delete_user(p_user uuid) RETURNS boolean
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare removed int;
+begin
+  delete from auth.users where id = p_user;
+  get diagnostics removed = row_count;
+  return removed > 0;
+end;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.be_auth_list_users(integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_list_users(integer, integer) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_delete_user(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_delete_user(uuid) TO app_be;
+
+-- ---- from 20261109100100_knowledge-chunks-installation.sql ----
+-- A passage carries the agent instance of its source, so the passage search filters by instance without reading the sources table.
+ALTER TABLE public.knowledge_chunks ADD COLUMN IF NOT EXISTS installation_id uuid;
+
+UPDATE public.knowledge_chunks c
+SET installation_id = s.installation_id
+FROM public.knowledge_sources s
+WHERE s.id = c.source_id AND s.installation_id IS NOT NULL AND c.installation_id IS DISTINCT FROM s.installation_id;
+
+CREATE INDEX IF NOT EXISTS knowledge_chunks_installation ON public.knowledge_chunks (workspace_id, installation_id)
+    WHERE installation_id IS NOT NULL;
+
+-- ---- from 20261109100200_event-bus-missing-queues.sql ----
+-- Declares the event bus consumer queues of platform/event-bus/event-bus.queue.ts with literal names: each queue, its dead-letter
+-- queue and its topic binding. Every call is idempotent (pgmq.create skips an existing queue, pgmq.bind_topic upserts the binding).
+
+select pgmq.create('bank_credit_booked__accounting');
+select pgmq.create('bank_credit_booked__accounting__dead');
+select pgmq.bind_topic('bank_credit_booked', 'bank_credit_booked__accounting');
+
+select pgmq.create('payment_reconciled__contracts');
+select pgmq.create('payment_reconciled__contracts__dead');
+select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__contracts');
+
+select pgmq.create('payment_reconciled__automations');
+select pgmq.create('payment_reconciled__automations__dead');
+select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__automations');
+
+select pgmq.create('payment_reconciled__payment_receipts');
+select pgmq.create('payment_reconciled__payment_receipts__dead');
+select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__payment_receipts');
+
+select pgmq.create('lead_captured__automations');
+select pgmq.create('lead_captured__automations__dead');
+select pgmq.bind_topic('lead_captured', 'lead_captured__automations');
+
+select pgmq.create('deal_won__automations');
+select pgmq.create('deal_won__automations__dead');
+select pgmq.bind_topic('deal_won', 'deal_won__automations');
+
+select pgmq.create('order_confirmed__automations');
+select pgmq.create('order_confirmed__automations__dead');
+select pgmq.bind_topic('order_confirmed', 'order_confirmed__automations');
+
+select pgmq.create('order_confirmed__inventory');
+select pgmq.create('order_confirmed__inventory__dead');
+select pgmq.bind_topic('order_confirmed', 'order_confirmed__inventory');
+
+select pgmq.create('order_shipped__automations');
+select pgmq.create('order_shipped__automations__dead');
+select pgmq.bind_topic('order_shipped', 'order_shipped__automations');
+
+select pgmq.create('decision_made__automations');
+select pgmq.create('decision_made__automations__dead');
+select pgmq.bind_topic('decision_made', 'decision_made__automations');
+
+select pgmq.create('approval_resolved__thread_outcomes');
+select pgmq.create('approval_resolved__thread_outcomes__dead');
+select pgmq.bind_topic('approval_resolved', 'approval_resolved__thread_outcomes');
+
+select pgmq.create('booking_status_changed__booking_effects');
+select pgmq.create('booking_status_changed__booking_effects__dead');
+select pgmq.bind_topic('booking_status_changed', 'booking_status_changed__booking_effects');
+
+select pgmq.create('ai_generation_completed__content');
+select pgmq.create('ai_generation_completed__content__dead');
+select pgmq.bind_topic('ai_generation_completed', 'ai_generation_completed__content');
+
+select pgmq.create('ai_generation_completed__video');
+select pgmq.create('ai_generation_completed__video__dead');
+select pgmq.bind_topic('ai_generation_completed', 'ai_generation_completed__video');
+
+select pgmq.create('installation_changed__agent_sync');
+select pgmq.create('installation_changed__agent_sync__dead');
+select pgmq.bind_topic('installation_changed', 'installation_changed__agent_sync');
+
+select pgmq.create('knowledge_source_indexed__brain');
+select pgmq.create('knowledge_source_indexed__brain__dead');
+select pgmq.bind_topic('knowledge_source_indexed', 'knowledge_source_indexed__brain');
+
+-- The event bus functions are called by the application role alone: browser roles hold no execute on them (the earlier migration revoked
+-- public; anon and authenticated are named here so no later grant to them goes unnoticed).
+revoke all on function public.event_bus_send(text, jsonb) from public, anon, authenticated;
+revoke all on function public.event_bus_read(text, integer, integer) from public, anon, authenticated;
+revoke all on function public.event_bus_archive(text, bigint) from public, anon, authenticated;
+revoke all on function public.event_bus_bury(text, bigint, integer, jsonb, text) from public, anon, authenticated;
+revoke all on function public.event_bus_dead_letters(text, integer) from public, anon, authenticated;
+revoke all on function public.event_bus_requeue(text, bigint) from public, anon, authenticated;
+
+-- ---- from 20261109100201_knowledge-source-size-bytes.sql ----
+-- knowledge-source-size-bytes: forward-only; immutable once on origin/main.
+-- A source records the raw bytes it holds (the uploaded file, or the pasted text) so a workspace's Second Brain can be held to its 50 MB of raw data.
+ALTER TABLE public.knowledge_sources ADD COLUMN IF NOT EXISTS size_bytes integer NOT NULL DEFAULT 0;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'knowledge_sources_size_bytes_check' AND conrelid = 'public.knowledge_sources'::regclass
+    ) THEN
+        ALTER TABLE public.knowledge_sources ADD CONSTRAINT knowledge_sources_size_bytes_check CHECK (size_bytes >= 0);
+    END IF;
+END
+$$;
+
+-- Pasted notes and Q&A lists are their own raw text; the size of an uploaded file before this column is not known and stays 0.
+UPDATE public.knowledge_sources
+SET size_bytes = octet_length(content)
+WHERE kind IN ('text', 'faq') AND size_bytes = 0;
+
+-- ---- from 20261109100202_entity-base-set-updated-at.sql ----
+-- entity-base-set-updated-at: forward-only; immutable once on origin/main.
+-- The shared updated_at trigger function behind AbstractEntity (BE-PERSISTENCE-3): a BEFORE UPDATE trigger stamps updated_at = now(),
+-- so the application never writes the column. CREATE OR REPLACE keeps it safe whichever migration of the entity-base round runs first.
+CREATE OR REPLACE FUNCTION public.set_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin new.updated_at := now(); return new; end $$;
+
+-- A trigger function is fired by the table's trigger, which does not check EXECUTE; closed to the browser roles like every other trigger function.
+REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM PUBLIC, anon, authenticated;
+
+-- Lead, loyalty, MCP, meta and module tables (l to m): created_at and updated_at as timestamptz NOT NULL DEFAULT now() with the update trigger.
+-- Left out on purpose: loyalty_ledger and module_context_versions (immutable by trigger), mcp_call_log and module_setup_messages (append-only logs).
+CREATE TRIGGER lead_actions_set_updated_at BEFORE UPDATE ON public.lead_actions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER lead_flows_set_updated_at BEFORE UPDATE ON public.lead_flows FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.leads ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER leads_set_updated_at BEFORE UPDATE ON public.leads FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.loyalty_campaigns ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER loyalty_campaigns_set_updated_at BEFORE UPDATE ON public.loyalty_campaigns FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.loyalty_customer_links ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER loyalty_customer_links_set_updated_at BEFORE UPDATE ON public.loyalty_customer_links FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER loyalty_customers_set_updated_at BEFORE UPDATE ON public.loyalty_customers FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER loyalty_programs_set_updated_at BEFORE UPDATE ON public.loyalty_programs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.loyalty_rewards ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER loyalty_rewards_set_updated_at BEFORE UPDATE ON public.loyalty_rewards FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.loyalty_sends ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER loyalty_sends_set_updated_at BEFORE UPDATE ON public.loyalty_sends FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.loyalty_otps ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER loyalty_otps_set_updated_at BEFORE UPDATE ON public.loyalty_otps FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER mcp_connectors_set_updated_at BEFORE UPDATE ON public.mcp_connectors FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.mcp_gateway_receipts ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.mcp_gateway_receipts ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER mcp_gateway_receipts_set_updated_at BEFORE UPDATE ON public.mcp_gateway_receipts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.mcp_tool_grants ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER mcp_tool_grants_set_updated_at BEFORE UPDATE ON public.mcp_tool_grants FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.member_grants ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER member_grants_set_updated_at BEFORE UPDATE ON public.member_grants FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.messages ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER messages_set_updated_at BEFORE UPDATE ON public.messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.meta_comments ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.meta_comments ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER meta_comments_set_updated_at BEFORE UPDATE ON public.meta_comments FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.meta_inbox ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.meta_inbox ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER meta_inbox_set_updated_at BEFORE UPDATE ON public.meta_inbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.meta_threads ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.meta_threads ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER meta_threads_set_updated_at BEFORE UPDATE ON public.meta_threads FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.module_context_notes ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER module_context_notes_set_updated_at BEFORE UPDATE ON public.module_context_notes FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.module_installations ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER module_installations_set_updated_at BEFORE UPDATE ON public.module_installations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.modules ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER modules_set_updated_at BEFORE UPDATE ON public.modules FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.module_setup_sessions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER module_setup_sessions_set_updated_at BEFORE UPDATE ON public.module_setup_sessions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.module_setup_writes ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER module_setup_writes_set_updated_at BEFORE UPDATE ON public.module_setup_writes FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100211_entity-base-accounting-to-booking.sql ----
+-- entity-base-accounting-to-booking: forward-only; immutable once on origin/main.
+-- Entity-base round (BE-PERSISTENCE-3), accounting_adjustments through bookings (a to k): every table the entities now map through AbstractEntity / UuidAbstractEntity
+-- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at) stamps updated_at, so the application never writes it.
+-- Left out on purpose: append-only logs, ledgers and dedupe claims, where an updated_at would be wrong (listed in the entity-base round notes).
+
+ALTER TABLE public.accounting_adjustments ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER accounting_adjustments_set_updated_at BEFORE UPDATE ON public.accounting_adjustments FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.agent_conversations ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER agent_conversations_set_updated_at BEFORE UPDATE ON public.agent_conversations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.agent_messages ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER agent_messages_set_updated_at BEFORE UPDATE ON public.agent_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.agents ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER agents_set_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.ai_generations ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER ai_generations_set_updated_at BEFORE UPDATE ON public.ai_generations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.ai_quota_overrides ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER ai_quota_overrides_set_updated_at BEFORE UPDATE ON public.ai_quota_overrides FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.api_keys ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER api_keys_set_updated_at BEFORE UPDATE ON public.api_keys FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.app_commands ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER app_commands_set_updated_at BEFORE UPDATE ON public.app_commands FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.approval_requests ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER approval_requests_set_updated_at BEFORE UPDATE ON public.approval_requests FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.authority ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER authority_set_updated_at BEFORE UPDATE ON public.authority FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.authority_actions ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.authority_actions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER authority_actions_set_updated_at BEFORE UPDATE ON public.authority_actions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.authority_rules ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER authority_rules_set_updated_at BEFORE UPDATE ON public.authority_rules FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.automation_commands ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER automation_commands_set_updated_at BEFORE UPDATE ON public.automation_commands FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER automation_pipelines_set_updated_at BEFORE UPDATE ON public.automation_pipelines FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.automation_runs ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER automation_runs_set_updated_at BEFORE UPDATE ON public.automation_runs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.automation_templates ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER automation_templates_set_updated_at BEFORE UPDATE ON public.automation_templates FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.bank_feed_inbox ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.bank_feed_inbox ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER bank_feed_inbox_set_updated_at BEFORE UPDATE ON public.bank_feed_inbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.booking_exceptions ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.booking_exceptions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER booking_exceptions_set_updated_at BEFORE UPDATE ON public.booking_exceptions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.booking_reminders ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER booking_reminders_set_updated_at BEFORE UPDATE ON public.booking_reminders FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.booking_resources ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER booking_resources_set_updated_at BEFORE UPDATE ON public.booking_resources FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.booking_services ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER booking_services_set_updated_at BEFORE UPDATE ON public.booking_services FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.booking_settings ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER booking_settings_set_updated_at BEFORE UPDATE ON public.booking_settings FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.booking_waitlist ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER booking_waitlist_set_updated_at BEFORE UPDATE ON public.booking_waitlist FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER bookings_set_updated_at BEFORE UPDATE ON public.bookings FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.plan_usage_tiers ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.plan_usage_tiers ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER plan_usage_tiers_set_updated_at BEFORE UPDATE ON public.plan_usage_tiers FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.plans ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.plans ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER plans_set_updated_at BEFORE UPDATE ON public.plans FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100212_entity-base-brain-to-connections.sql ----
+-- entity-base-brain-to-connections: forward-only; immutable once on origin/main.
+-- Entity-base round (BE-PERSISTENCE-3), brain, channel, chat and connection tables (a to k): every table the entities now map through AbstractEntity / UuidAbstractEntity
+-- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at) stamps updated_at, so the application never writes it.
+-- Left out on purpose: append-only logs, ledgers and dedupe claims, where an updated_at would be wrong (listed in the entity-base round notes).
+
+ALTER TABLE public.brain_commands ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER brain_commands_set_updated_at BEFORE UPDATE ON public.brain_commands FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.brain_extractions ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER brain_extractions_set_updated_at BEFORE UPDATE ON public.brain_extractions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.brain_facts ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER brain_facts_set_updated_at BEFORE UPDATE ON public.brain_facts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.brain_lessons ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.brain_lessons ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER brain_lessons_set_updated_at BEFORE UPDATE ON public.brain_lessons FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.chat_markers ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.chat_markers ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER chat_markers_set_updated_at BEFORE UPDATE ON public.chat_markers FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.connection_commands ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER connection_commands_set_updated_at BEFORE UPDATE ON public.connection_commands FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.connection_secrets ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.connection_secrets ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER connection_secrets_set_updated_at BEFORE UPDATE ON public.connection_secrets FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER connections_set_updated_at BEFORE UPDATE ON public.connections FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100213_entity-base-contracts-to-hiring.sql ----
+-- entity-base-contracts-to-hiring: forward-only; immutable once on origin/main.
+-- Entity-base round (BE-PERSISTENCE-3), content, contract, credit, data, decision, execution and hiring tables (a to k): every table the entities now map through AbstractEntity / UuidAbstractEntity
+-- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at) stamps updated_at, so the application never writes it.
+-- Left out on purpose: append-only logs, ledgers and dedupe claims, where an updated_at would be wrong (listed in the entity-base round notes).
+
+ALTER TABLE public.content_brand_proposals ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER content_brand_proposals_set_updated_at BEFORE UPDATE ON public.content_brand_proposals FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.content_cadence ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER content_cadence_set_updated_at BEFORE UPDATE ON public.content_cadence FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.content_engagement_daily ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.content_engagement_daily ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER content_engagement_daily_set_updated_at BEFORE UPDATE ON public.content_engagement_daily FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+
+ALTER TABLE public.content_pillars ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER content_pillars_set_updated_at BEFORE UPDATE ON public.content_pillars FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.content_settings ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+
+CREATE TRIGGER contracts_set_updated_at BEFORE UPDATE ON public.contracts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.credit_pack_purchases ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.credit_pack_purchases ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER credit_pack_purchases_set_updated_at BEFORE UPDATE ON public.credit_pack_purchases FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.credit_packs ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.credit_packs ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER credit_packs_set_updated_at BEFORE UPDATE ON public.credit_packs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.credit_topups ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.credit_topups ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER credit_topups_set_updated_at BEFORE UPDATE ON public.credit_topups FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.data_records ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.data_records ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER data_records_set_updated_at BEFORE UPDATE ON public.data_records FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.data_sync_runs ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.data_sync_runs ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER data_sync_runs_set_updated_at BEFORE UPDATE ON public.data_sync_runs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.decisions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER decisions_set_updated_at BEFORE UPDATE ON public.decisions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.executions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER executions_set_updated_at BEFORE UPDATE ON public.executions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.hiring_availability ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.hiring_availability ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER hiring_availability_set_updated_at BEFORE UPDATE ON public.hiring_availability FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.hiring_candidates ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER hiring_candidates_set_updated_at BEFORE UPDATE ON public.hiring_candidates FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.hiring_interviews ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER hiring_interviews_set_updated_at BEFORE UPDATE ON public.hiring_interviews FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER hiring_jobs_set_updated_at BEFORE UPDATE ON public.hiring_jobs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.hiring_offers ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER hiring_offers_set_updated_at BEFORE UPDATE ON public.hiring_offers FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.hiring_onboarding ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER hiring_onboarding_set_updated_at BEFORE UPDATE ON public.hiring_onboarding FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.hiring_settings ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER hiring_settings_set_updated_at BEFORE UPDATE ON public.hiring_settings FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100214_entity-base-inventory-to-platform.sql ----
+-- entity-base-inventory-to-platform: forward-only; immutable once on origin/main.
+-- Entity-base round (BE-PERSISTENCE-3), identity, inbound, inventory, invoice, job, knowledge and platform tables (a to k): every table the entities now map through AbstractEntity / UuidAbstractEntity
+-- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at) stamps updated_at, so the application never writes it.
+-- Left out on purpose: append-only logs, ledgers and dedupe claims, where an updated_at would be wrong (listed in the entity-base round notes).
+
+ALTER TABLE public.identity_password_tokens ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE public.identity_password_tokens ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER identity_password_tokens_set_updated_at BEFORE UPDATE ON public.identity_password_tokens FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.identity_refresh_tokens ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE public.identity_refresh_tokens ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER identity_refresh_tokens_set_updated_at BEFORE UPDATE ON public.identity_refresh_tokens FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.inbound_events ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER inbound_events_set_updated_at BEFORE UPDATE ON public.inbound_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER inventory_items_set_updated_at BEFORE UPDATE ON public.inventory_items FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.inventory_locations ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER inventory_locations_set_updated_at BEFORE UPDATE ON public.inventory_locations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.inventory_po_lines ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.inventory_po_lines ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER inventory_po_lines_set_updated_at BEFORE UPDATE ON public.inventory_po_lines FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER inventory_purchase_orders_set_updated_at BEFORE UPDATE ON public.inventory_purchase_orders FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.inventory_recipe_lines ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.inventory_recipe_lines ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER inventory_recipe_lines_set_updated_at BEFORE UPDATE ON public.inventory_recipe_lines FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.inventory_recipes ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER inventory_recipes_set_updated_at BEFORE UPDATE ON public.inventory_recipes FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.inventory_stock_levels ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER inventory_stock_levels_set_updated_at BEFORE UPDATE ON public.inventory_stock_levels FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.inventory_suppliers ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER inventory_suppliers_set_updated_at BEFORE UPDATE ON public.inventory_suppliers FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.invoices ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER invoices_set_updated_at BEFORE UPDATE ON public.invoices FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.job_outbox ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER job_outbox_set_updated_at BEFORE UPDATE ON public.job_outbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.jobs ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE public.jobs ALTER COLUMN updated_at SET DEFAULT now();
+CREATE TRIGGER jobs_set_updated_at BEFORE UPDATE ON public.jobs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.knowledge_chunks ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER knowledge_chunks_set_updated_at BEFORE UPDATE ON public.knowledge_chunks FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.knowledge_gaps ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER knowledge_gaps_set_updated_at BEFORE UPDATE ON public.knowledge_gaps FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER knowledge_sources_set_updated_at BEFORE UPDATE ON public.knowledge_sources FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.knowledge_suggestion_state ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.knowledge_suggestion_state ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER knowledge_suggestion_state_set_updated_at BEFORE UPDATE ON public.knowledge_suggestion_state FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100215_entity-base-timestamps-n-p.sql ----
+-- entity-base-timestamps-n-p: forward-only; immutable once on origin/main.
+-- Entity-base round (BE-PERSISTENCE-3), n8n through public_api (n to p): every table the entities now map through AbstractEntity / UuidAbstractEntity
+-- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at, created by
+-- 20261109100202_entity-base-set-updated-at) stamps updated_at, so the application never writes it.
+-- Left out on purpose: platform_audit (an append-only audit log).
+
+ALTER TABLE public.n8n_platform_config ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.n8n_platform_config ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER n8n_platform_config_set_updated_at BEFORE UPDATE ON public.n8n_platform_config FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.n8n_runs ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER n8n_runs_set_updated_at BEFORE UPDATE ON public.n8n_runs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.nivo_knowledge ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER nivo_knowledge_set_updated_at BEFORE UPDATE ON public.nivo_knowledge FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.office_command_candidates ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER office_command_candidates_set_updated_at BEFORE UPDATE ON public.office_command_candidates FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.office_rooms ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER office_rooms_set_updated_at BEFORE UPDATE ON public.office_rooms FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.office_rooms_members ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER office_rooms_members_set_updated_at BEFORE UPDATE ON public.office_rooms_members FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.office_rooms_pins ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER office_rooms_pins_set_updated_at BEFORE UPDATE ON public.office_rooms_pins FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.office_rooms_reads ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.office_rooms_reads ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER office_rooms_reads_set_updated_at BEFORE UPDATE ON public.office_rooms_reads FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.openclaw_agent_sync ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.openclaw_agent_sync ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER openclaw_agent_sync_set_updated_at BEFORE UPDATE ON public.openclaw_agent_sync FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.orders ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER orders_set_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.payment_order_requests ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER payment_order_requests_set_updated_at BEFORE UPDATE ON public.payment_order_requests FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.payment_orders ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER payment_orders_set_updated_at BEFORE UPDATE ON public.payment_orders FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.public_api ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER public_api_set_updated_at BEFORE UPDATE ON public.public_api FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100216_entity-base-timestamps-r-s.sql ----
+-- entity-base-timestamps-r-s: forward-only; immutable once on origin/main.
+-- Entity-base round (BE-PERSISTENCE-3), responsibilities through staff (r to s): every table the entities now map through AbstractEntity / UuidAbstractEntity
+-- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at, created by
+-- 20261109100202_entity-base-set-updated-at) stamps updated_at, so the application never writes it.
+
+ALTER TABLE public.responsibilities ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER responsibilities_set_updated_at BEFORE UPDATE ON public.responsibilities FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.sepay_transactions ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.sepay_transactions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER sepay_transactions_set_updated_at BEFORE UPDATE ON public.sepay_transactions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_attendance ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.shifts_attendance ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_attendance_set_updated_at BEFORE UPDATE ON public.shifts_attendance FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_availability ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_availability_set_updated_at BEFORE UPDATE ON public.shifts_availability FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_coverage ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_coverage_set_updated_at BEFORE UPDATE ON public.shifts_coverage FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_leave_requests ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_leave_requests_set_updated_at BEFORE UPDATE ON public.shifts_leave_requests FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_notifications ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_notifications_set_updated_at BEFORE UPDATE ON public.shifts_notifications FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_positions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_positions_set_updated_at BEFORE UPDATE ON public.shifts_positions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_schedules ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_schedules_set_updated_at BEFORE UPDATE ON public.shifts_schedules FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_settings ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_settings_set_updated_at BEFORE UPDATE ON public.shifts_settings FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_shifts ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_shifts_set_updated_at BEFORE UPDATE ON public.shifts_shifts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_staff_pay ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_staff_pay_set_updated_at BEFORE UPDATE ON public.shifts_staff_pay FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_staff ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_staff_set_updated_at BEFORE UPDATE ON public.shifts_staff FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.shifts_swap_requests ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER shifts_swap_requests_set_updated_at BEFORE UPDATE ON public.shifts_swap_requests FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.staff ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER staff_set_updated_at BEFORE UPDATE ON public.staff FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100217_entity-base-timestamps-t-z.sql ----
+-- entity-base-timestamps-t-z: forward-only; immutable once on origin/main.
+-- Entity-base round (BE-PERSISTENCE-3), telegram_inbox through zalo_wizard_drafts (t to z): every table the entities now map through AbstractEntity / UuidAbstractEntity
+-- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at, created by
+-- 20261109100202_entity-base-set-updated-at) stamps updated_at, so the application never writes it.
+-- Left out on purpose: video_project_versions (append-only snapshots, written once by save).
+
+ALTER TABLE public.telegram_inbox ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.telegram_inbox ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER telegram_inbox_set_updated_at BEFORE UPDATE ON public.telegram_inbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.thread_messages ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER thread_messages_set_updated_at BEFORE UPDATE ON public.thread_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER thread_work_set_updated_at BEFORE UPDATE ON public.thread_work FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.transactions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER transactions_set_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.video_brand_kits ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+
+CREATE TRIGGER video_delegations_set_updated_at BEFORE UPDATE ON public.video_delegations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.work_chains ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.work_chains ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER work_chains_set_updated_at BEFORE UPDATE ON public.work_chains FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER work_threads_set_updated_at BEFORE UPDATE ON public.work_threads FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.workspace_invites ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER workspace_invites_set_updated_at BEFORE UPDATE ON public.workspace_invites FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.workspace_members ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER workspace_members_set_updated_at BEFORE UPDATE ON public.workspace_members FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.workspaces ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER workspaces_set_updated_at BEFORE UPDATE ON public.workspaces FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.zalo_inbox ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.zalo_inbox ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER zalo_inbox_set_updated_at BEFORE UPDATE ON public.zalo_inbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.zalo_wizard_drafts ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
+CREATE TRIGGER zalo_wizard_drafts_set_updated_at BEFORE UPDATE ON public.zalo_wizard_drafts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- work_items: updated_at doubled as the claim lease (free when updated_at = created_at or older than the lease), which an updated_at stamped by the
+-- database for every change cannot be. The lease gets its own column: NULL = free, otherwise the instant a worker last held the item.
+ALTER TABLE public.work_items ADD COLUMN leased_at timestamptz;
+UPDATE public.work_items SET leased_at = updated_at WHERE updated_at <> created_at;
+CREATE TRIGGER work_items_set_updated_at BEFORE UPDATE ON public.work_items FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100218_brain-dossiers.sql ----
+-- brain-dossiers: forward-only; immutable once on origin/main.
+-- The dossiers a workspace tracks in its Second Brain (the rows of a dossier checklist workbook): each belongs to one category (the top folder
+-- of its documents), carries a status and what is still missing. Documents are matched to a dossier by category and reference, not by a key.
+CREATE TABLE public.brain_dossiers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    category text NOT NULL,
+    category_order smallint NOT NULL,
+    "position" smallint NOT NULL,
+    ref text NOT NULL,
+    name text NOT NULL,
+    status text NOT NULL,
+    existing text,
+    missing text,
+    drafts text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT brain_dossiers_workspace_ref_key UNIQUE (workspace_id, ref),
+    CONSTRAINT brain_dossiers_status_check CHECK (status IN ('present', 'partial', 'drafted', 'missing', 'template')),
+    CONSTRAINT brain_dossiers_category_order_check CHECK (category_order >= 0),
+    CONSTRAINT brain_dossiers_position_check CHECK ("position" >= 0)
+);
+CREATE INDEX brain_dossiers_category_idx ON public.brain_dossiers USING btree (workspace_id, category_order, "position");
+CREATE TRIGGER brain_dossiers_set_updated_at BEFORE UPDATE ON public.brain_dossiers FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.brain_dossiers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY brain_dossiers_app_be_select ON public.brain_dossiers FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY brain_dossiers_app_be_insert ON public.brain_dossiers FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY brain_dossiers_app_be_update ON public.brain_dossiers FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY brain_dossiers_app_be_delete ON public.brain_dossiers FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.brain_dossiers FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.brain_dossiers TO app_be;
+
+-- ---- from 20261109100219_entity-base-timestamps-logs-a-h.sql ----
+-- entity-base-timestamps-logs-a-h: forward-only; immutable once on origin/main.
+-- Owner ruling 2026-10-31: every table, logs/ledgers/audit/version tables included, carries created_at and updated_at (timestamptz NOT NULL DEFAULT now()) and its entity extends the base.
+-- Tables agent_access_log to hiring_retention_log (a to h). updated_at is stamped by public.set_updated_at() on a BEFORE UPDATE trigger; tables that refuse UPDATE through their own immutability trigger keep it, the extra trigger never fires for them.
+-- Additive and idempotent: ADD COLUMN IF NOT EXISTS, and each trigger is created only when it is missing.
+
+ALTER TABLE public.agent_access_log ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.agent_connections ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.ai_usage_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.app_errors ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.billing_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.booking_hours ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.booking_hours ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.brain_eval_cases ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.channel_connections_sepay_events ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.channel_connections_sepay_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.channel_receipts ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.connector_interest ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.content_plans ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.content_weekly_reports ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.content_weekly_reports ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.conversation_ownership_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.email_messages ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.hiring_apply_hits ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.hiring_consents ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.hiring_consents ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.hiring_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.hiring_retention_log ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.hiring_retention_log ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+DROP TRIGGER IF EXISTS agent_access_log_set_updated_at ON public.agent_access_log;
+CREATE TRIGGER agent_access_log_set_updated_at BEFORE UPDATE ON public.agent_access_log FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS agent_connections_set_updated_at ON public.agent_connections;
+CREATE TRIGGER agent_connections_set_updated_at BEFORE UPDATE ON public.agent_connections FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS ai_usage_events_set_updated_at ON public.ai_usage_events;
+CREATE TRIGGER ai_usage_events_set_updated_at BEFORE UPDATE ON public.ai_usage_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS app_errors_set_updated_at ON public.app_errors;
+CREATE TRIGGER app_errors_set_updated_at BEFORE UPDATE ON public.app_errors FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS billing_events_set_updated_at ON public.billing_events;
+CREATE TRIGGER billing_events_set_updated_at BEFORE UPDATE ON public.billing_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS booking_hours_set_updated_at ON public.booking_hours;
+CREATE TRIGGER booking_hours_set_updated_at BEFORE UPDATE ON public.booking_hours FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS brain_eval_cases_set_updated_at ON public.brain_eval_cases;
+CREATE TRIGGER brain_eval_cases_set_updated_at BEFORE UPDATE ON public.brain_eval_cases FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS channel_connections_sepay_events_set_updated_at ON public.channel_connections_sepay_events;
+CREATE TRIGGER channel_connections_sepay_events_set_updated_at BEFORE UPDATE ON public.channel_connections_sepay_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS channel_receipts_set_updated_at ON public.channel_receipts;
+CREATE TRIGGER channel_receipts_set_updated_at BEFORE UPDATE ON public.channel_receipts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS connector_interest_set_updated_at ON public.connector_interest;
+CREATE TRIGGER connector_interest_set_updated_at BEFORE UPDATE ON public.connector_interest FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS content_plans_set_updated_at ON public.content_plans;
+CREATE TRIGGER content_plans_set_updated_at BEFORE UPDATE ON public.content_plans FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS content_weekly_reports_set_updated_at ON public.content_weekly_reports;
+CREATE TRIGGER content_weekly_reports_set_updated_at BEFORE UPDATE ON public.content_weekly_reports FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS conversation_ownership_events_set_updated_at ON public.conversation_ownership_events;
+CREATE TRIGGER conversation_ownership_events_set_updated_at BEFORE UPDATE ON public.conversation_ownership_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS email_messages_set_updated_at ON public.email_messages;
+CREATE TRIGGER email_messages_set_updated_at BEFORE UPDATE ON public.email_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS events_set_updated_at ON public.events;
+CREATE TRIGGER events_set_updated_at BEFORE UPDATE ON public.events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS hiring_apply_hits_set_updated_at ON public.hiring_apply_hits;
+CREATE TRIGGER hiring_apply_hits_set_updated_at BEFORE UPDATE ON public.hiring_apply_hits FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS hiring_consents_set_updated_at ON public.hiring_consents;
+CREATE TRIGGER hiring_consents_set_updated_at BEFORE UPDATE ON public.hiring_consents FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS hiring_events_set_updated_at ON public.hiring_events;
+CREATE TRIGGER hiring_events_set_updated_at BEFORE UPDATE ON public.hiring_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS hiring_retention_log_set_updated_at ON public.hiring_retention_log;
+CREATE TRIGGER hiring_retention_log_set_updated_at BEFORE UPDATE ON public.hiring_retention_log FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100220_entity-base-timestamps-logs-i-z.sql ----
+-- entity-base-timestamps-logs-i-z: forward-only; immutable once on origin/main.
+-- Owner ruling 2026-10-31: every table, logs/ledgers/audit/version tables included, carries created_at and updated_at (timestamptz NOT NULL DEFAULT now()) and its entity extends the base.
+-- Tables inbox to video_project_versions (i to z). updated_at is stamped by public.set_updated_at() on a BEFORE UPDATE trigger; tables that refuse UPDATE through their own immutability trigger keep it, the extra trigger never fires for them.
+-- Additive and idempotent: ADD COLUMN IF NOT EXISTS, and each trigger is created only when it is missing.
+
+ALTER TABLE public.inbox ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.inbox ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.inventory_movements ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.loyalty_ledger ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.mcp_call_log ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.module_context_versions ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.module_context_versions ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.module_setup_messages ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.platform_audit ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.realtime_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.video_project_versions ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+DROP TRIGGER IF EXISTS inbox_set_updated_at ON public.inbox;
+CREATE TRIGGER inbox_set_updated_at BEFORE UPDATE ON public.inbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS inventory_movements_set_updated_at ON public.inventory_movements;
+CREATE TRIGGER inventory_movements_set_updated_at BEFORE UPDATE ON public.inventory_movements FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS loyalty_ledger_set_updated_at ON public.loyalty_ledger;
+CREATE TRIGGER loyalty_ledger_set_updated_at BEFORE UPDATE ON public.loyalty_ledger FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS mcp_call_log_set_updated_at ON public.mcp_call_log;
+CREATE TRIGGER mcp_call_log_set_updated_at BEFORE UPDATE ON public.mcp_call_log FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS module_context_versions_set_updated_at ON public.module_context_versions;
+CREATE TRIGGER module_context_versions_set_updated_at BEFORE UPDATE ON public.module_context_versions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS module_setup_messages_set_updated_at ON public.module_setup_messages;
+CREATE TRIGGER module_setup_messages_set_updated_at BEFORE UPDATE ON public.module_setup_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS platform_audit_set_updated_at ON public.platform_audit;
+CREATE TRIGGER platform_audit_set_updated_at BEFORE UPDATE ON public.platform_audit FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS realtime_events_set_updated_at ON public.realtime_events;
+CREATE TRIGGER realtime_events_set_updated_at BEFORE UPDATE ON public.realtime_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS video_project_versions_set_updated_at ON public.video_project_versions;
+CREATE TRIGGER video_project_versions_set_updated_at BEFORE UPDATE ON public.video_project_versions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100221_entity-base-timestamps-leftover-tables.sql ----
+-- entity-base-timestamps-leftover-tables: forward-only; immutable once on origin/main.
+-- Owner ruling 2026-10-31: every table has an entity extending the base, and carries created_at and updated_at (timestamptz NOT NULL DEFAULT now()).
+-- Tables platform_admins, platform_flags, inventory_receipts, ai_usage_notices, http_security. updated_at is stamped by public.set_updated_at() on a BEFORE UPDATE trigger.
+-- Additive and idempotent: ADD COLUMN IF NOT EXISTS, and each trigger is created only when it is missing.
+
+ALTER TABLE public.ai_usage_notices ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.ai_usage_notices ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.http_security ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.http_security ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.inventory_receipts ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.inventory_receipts ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.platform_admins ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.platform_admins ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.platform_flags ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.platform_flags ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+DROP TRIGGER IF EXISTS ai_usage_notices_set_updated_at ON public.ai_usage_notices;
+CREATE TRIGGER ai_usage_notices_set_updated_at BEFORE UPDATE ON public.ai_usage_notices FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS http_security_set_updated_at ON public.http_security;
+CREATE TRIGGER http_security_set_updated_at BEFORE UPDATE ON public.http_security FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS inventory_receipts_set_updated_at ON public.inventory_receipts;
+CREATE TRIGGER inventory_receipts_set_updated_at BEFORE UPDATE ON public.inventory_receipts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS platform_admins_set_updated_at ON public.platform_admins;
+CREATE TRIGGER platform_admins_set_updated_at BEFORE UPDATE ON public.platform_admins FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS platform_flags_set_updated_at ON public.platform_flags;
+CREATE TRIGGER platform_flags_set_updated_at BEFORE UPDATE ON public.platform_flags FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100222_infra-tables-entity-base.sql ----
+-- infra-tables-entity-base: forward-only; immutable once on origin/main.
+-- Owner ruling 2026-10-31: every table has an entity extending the base, and carries created_at and updated_at (timestamptz NOT NULL DEFAULT now()).
+-- Tables queue, api_rate_limits, job_slots, job_ticks. updated_at is stamped by public.set_updated_at() on a BEFORE UPDATE trigger.
+-- Additive and idempotent: ADD COLUMN IF NOT EXISTS, and each trigger is created only when it is missing.
+-- queue already had created_at without a default: it gets the default so the database stamps it, as the entity base expects.
+
+ALTER TABLE public.queue ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE public.queue ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.api_rate_limits ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.api_rate_limits ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.job_slots ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.job_slots ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.job_ticks ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.job_ticks ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+DROP TRIGGER IF EXISTS queue_set_updated_at ON public.queue;
+CREATE TRIGGER queue_set_updated_at BEFORE UPDATE ON public.queue FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS api_rate_limits_set_updated_at ON public.api_rate_limits;
+CREATE TRIGGER api_rate_limits_set_updated_at BEFORE UPDATE ON public.api_rate_limits FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS job_slots_set_updated_at ON public.job_slots;
+CREATE TRIGGER job_slots_set_updated_at BEFORE UPDATE ON public.job_slots FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS job_ticks_set_updated_at ON public.job_ticks;
+CREATE TRIGGER job_ticks_set_updated_at BEFORE UPDATE ON public.job_ticks FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100223_entity-base-billing-rate-brain-draws.sql ----
+-- entity-base-billing-rate-brain-draws: forward-only; immutable once on origin/main.
+-- Owner ruling 2026-10-31: every table has an entity extending the base, and carries created_at and updated_at (timestamptz NOT NULL DEFAULT now()).
+-- Tables billing_config, booking_rate, brain_source_profiles, credit_topup_draws. updated_at is stamped by public.set_updated_at() on a BEFORE UPDATE trigger.
+-- Additive and idempotent: ADD COLUMN IF NOT EXISTS, and each trigger is created only when it is missing.
+
+ALTER TABLE public.billing_config ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.billing_config ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.booking_rate ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.booking_rate ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.brain_source_profiles ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.brain_source_profiles ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.credit_topup_draws ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
+ALTER TABLE public.credit_topup_draws ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+DROP TRIGGER IF EXISTS billing_config_set_updated_at ON public.billing_config;
+CREATE TRIGGER billing_config_set_updated_at BEFORE UPDATE ON public.billing_config FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS booking_rate_set_updated_at ON public.booking_rate;
+CREATE TRIGGER booking_rate_set_updated_at BEFORE UPDATE ON public.booking_rate FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS brain_source_profiles_set_updated_at ON public.brain_source_profiles;
+CREATE TRIGGER brain_source_profiles_set_updated_at BEFORE UPDATE ON public.brain_source_profiles FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+DROP TRIGGER IF EXISTS credit_topup_draws_set_updated_at ON public.credit_topup_draws;
+CREATE TRIGGER credit_topup_draws_set_updated_at BEFORE UPDATE ON public.credit_topup_draws FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- ---- from 20261109100224_dossier-review.sql ----
+-- dossier-review: forward-only; immutable once on origin/main.
+-- The findings of the dossier review of a workspace's Second Brain, its runs, the status it computes per dossier and the
+-- remedy drafts NIVO writes for the owner to approve.
+CREATE TABLE public.dossier_review_runs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    scope text NOT NULL,
+    dossier_id uuid REFERENCES public.brain_dossiers(id) ON DELETE CASCADE,
+    trigger text NOT NULL,
+    trigger_ref uuid,
+    status text NOT NULL DEFAULT 'queued',
+    requested_by uuid,
+    ai_state text,
+    stats jsonb NOT NULL DEFAULT '{}'::jsonb,
+    error text,
+    started_at timestamptz,
+    finished_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT dossier_review_runs_scope_check CHECK (scope IN ('dossier', 'workspace')),
+    CONSTRAINT dossier_review_runs_scope_dossier_check CHECK ((scope = 'dossier') = (dossier_id IS NOT NULL)),
+    CONSTRAINT dossier_review_runs_trigger_check CHECK (trigger IN ('document', 'document_gone', 'request')),
+    CONSTRAINT dossier_review_runs_status_check CHECK (status IN ('queued', 'running', 'done', 'failed')),
+    CONSTRAINT dossier_review_runs_ai_state_check CHECK (ai_state IS NULL OR ai_state IN ('done', 'partial', 'skipped_unchanged', 'skipped_credits', 'skipped_budget', 'failed'))
+);
+CREATE UNIQUE INDEX dossier_review_runs_one_queued ON public.dossier_review_runs
+    (workspace_id, COALESCE(dossier_id, '00000000-0000-0000-0000-000000000000'::uuid)) WHERE status = 'queued';
+CREATE UNIQUE INDEX dossier_review_runs_one_running ON public.dossier_review_runs (workspace_id) WHERE status = 'running';
+CREATE INDEX dossier_review_runs_recent_idx ON public.dossier_review_runs USING btree (workspace_id, created_at DESC);
+
+CREATE TABLE public.dossier_findings (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    dossier_id uuid REFERENCES public.brain_dossiers(id) ON DELETE CASCADE,
+    related_dossier_ids uuid[] NOT NULL DEFAULT '{}'::uuid[],
+    kind text NOT NULL,
+    severity text NOT NULL,
+    origin text NOT NULL,
+    rule_key text NOT NULL,
+    fingerprint text NOT NULL,
+    code text,
+    params jsonb NOT NULL DEFAULT '{}'::jsonb,
+    title text NOT NULL,
+    detail text NOT NULL,
+    evidence jsonb NOT NULL,
+    evidence_hash text NOT NULL,
+    source_ids uuid[] NOT NULL DEFAULT '{}'::uuid[],
+    fact_ids uuid[] NOT NULL DEFAULT '{}'::uuid[],
+    remedy_action text NOT NULL,
+    remedy_document_type text,
+    status text NOT NULL DEFAULT 'open',
+    resolution text,
+    dismiss_reason text,
+    dismissed_evidence_hash text,
+    reopened_count smallint NOT NULL DEFAULT 0,
+    decided_by uuid,
+    decided_at timestamptz,
+    decision_note text,
+    assignee_id uuid,
+    due_at date,
+    first_seen_run_id uuid,
+    last_seen_run_id uuid,
+    first_seen_at timestamptz NOT NULL DEFAULT now(),
+    last_seen_at timestamptz NOT NULL DEFAULT now(),
+    resolved_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT dossier_findings_workspace_fingerprint_key UNIQUE (workspace_id, fingerprint),
+    CONSTRAINT dossier_findings_kind_check CHECK (kind IN ('contradiction', 'missing', 'expired', 'unsigned', 'outdated', 'unreasonable')),
+    CONSTRAINT dossier_findings_severity_check CHECK (severity IN ('critical', 'high', 'medium', 'low')),
+    CONSTRAINT dossier_findings_origin_check CHECK (origin IN ('rule', 'ai')),
+    CONSTRAINT dossier_findings_ai_severity_check CHECK (origin = 'rule' OR severity <> 'critical'),
+    CONSTRAINT dossier_findings_remedy_check CHECK (remedy_action IN ('upload', 'draft', 'decide', 'external')),
+    CONSTRAINT dossier_findings_status_check CHECK (status IN ('open', 'confirmed', 'dismissed', 'resolved')),
+    CONSTRAINT dossier_findings_resolution_check CHECK (resolution IS NULL OR resolution IN ('document', 'draft', 'not_detected', 'manual')),
+    CONSTRAINT dossier_findings_resolved_check CHECK ((status = 'resolved') = (resolution IS NOT NULL)),
+    CONSTRAINT dossier_findings_dismissed_check CHECK (status <> 'dismissed' OR dismiss_reason IS NOT NULL),
+    CONSTRAINT dossier_findings_evidence_check CHECK (jsonb_typeof(evidence) = 'array' AND jsonb_array_length(evidence) BETWEEN 1 AND 8),
+    CONSTRAINT dossier_findings_text_check CHECK (char_length(title) <= 200 AND char_length(detail) <= 1000)
+);
+CREATE INDEX dossier_findings_status_idx ON public.dossier_findings USING btree (workspace_id, status, severity);
+CREATE INDEX dossier_findings_dossier_idx ON public.dossier_findings USING btree (dossier_id, status);
+CREATE INDEX dossier_findings_sources_idx ON public.dossier_findings USING gin (source_ids);
+
+CREATE TABLE public.dossier_reviews (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    dossier_id uuid NOT NULL REFERENCES public.brain_dossiers(id) ON DELETE CASCADE,
+    status text NOT NULL,
+    open_count integer NOT NULL DEFAULT 0,
+    critical_count integer NOT NULL DEFAULT 0,
+    high_count integer NOT NULL DEFAULT 0,
+    actual_documents integer NOT NULL DEFAULT 0,
+    draft_documents integer NOT NULL DEFAULT 0,
+    template_documents integer NOT NULL DEFAULT 0,
+    inputs_fingerprint text,
+    last_run_id uuid,
+    reviewed_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT dossier_reviews_dossier_key UNIQUE (dossier_id),
+    CONSTRAINT dossier_reviews_status_check CHECK (status IN ('present', 'partial', 'drafted', 'missing', 'template'))
+);
+CREATE INDEX dossier_reviews_workspace_idx ON public.dossier_reviews USING btree (workspace_id);
+
+CREATE TABLE public.dossier_remedy_drafts (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    finding_id uuid NOT NULL REFERENCES public.dossier_findings(id) ON DELETE CASCADE,
+    dossier_id uuid REFERENCES public.brain_dossiers(id) ON DELETE CASCADE,
+    status text NOT NULL DEFAULT 'generating',
+    instructions text,
+    title text NOT NULL DEFAULT '',
+    document_type text NOT NULL DEFAULT '',
+    body text NOT NULL DEFAULT '',
+    placeholders jsonb NOT NULL DEFAULT '[]'::jsonb,
+    model text,
+    error text,
+    source_id uuid REFERENCES public.knowledge_sources(id) ON DELETE SET NULL,
+    requested_by uuid NOT NULL,
+    decided_by uuid,
+    decided_at timestamptz,
+    reject_reason text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT dossier_remedy_drafts_status_check CHECK (status IN ('generating', 'proposed', 'approved', 'rejected', 'failed')),
+    CONSTRAINT dossier_remedy_drafts_text_check CHECK (char_length(title) <= 200 AND char_length(body) <= 45000 AND (instructions IS NULL OR char_length(instructions) <= 1000))
+);
+CREATE UNIQUE INDEX dossier_remedy_drafts_one_active ON public.dossier_remedy_drafts (finding_id) WHERE status IN ('generating', 'proposed');
+CREATE INDEX dossier_remedy_drafts_workspace_idx ON public.dossier_remedy_drafts USING btree (workspace_id, status, created_at DESC);
+
+CREATE TRIGGER dossier_review_runs_set_updated_at BEFORE UPDATE ON public.dossier_review_runs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER dossier_findings_set_updated_at BEFORE UPDATE ON public.dossier_findings FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER dossier_reviews_set_updated_at BEFORE UPDATE ON public.dossier_reviews FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER dossier_remedy_drafts_set_updated_at BEFORE UPDATE ON public.dossier_remedy_drafts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.dossier_review_runs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY dossier_review_runs_app_be_select ON public.dossier_review_runs FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY dossier_review_runs_app_be_insert ON public.dossier_review_runs FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY dossier_review_runs_app_be_update ON public.dossier_review_runs FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY dossier_review_runs_app_be_delete ON public.dossier_review_runs FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.dossier_review_runs FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.dossier_review_runs TO app_be;
+
+ALTER TABLE public.dossier_findings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY dossier_findings_app_be_select ON public.dossier_findings FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY dossier_findings_app_be_insert ON public.dossier_findings FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY dossier_findings_app_be_update ON public.dossier_findings FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY dossier_findings_app_be_delete ON public.dossier_findings FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.dossier_findings FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.dossier_findings TO app_be;
+
+ALTER TABLE public.dossier_reviews ENABLE ROW LEVEL SECURITY;
+CREATE POLICY dossier_reviews_app_be_select ON public.dossier_reviews FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY dossier_reviews_app_be_insert ON public.dossier_reviews FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY dossier_reviews_app_be_update ON public.dossier_reviews FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY dossier_reviews_app_be_delete ON public.dossier_reviews FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.dossier_reviews FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.dossier_reviews TO app_be;
+
+ALTER TABLE public.dossier_remedy_drafts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY dossier_remedy_drafts_app_be_select ON public.dossier_remedy_drafts FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY dossier_remedy_drafts_app_be_insert ON public.dossier_remedy_drafts FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY dossier_remedy_drafts_app_be_update ON public.dossier_remedy_drafts FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY dossier_remedy_drafts_app_be_delete ON public.dossier_remedy_drafts FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.dossier_remedy_drafts FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.dossier_remedy_drafts TO app_be;
+
+-- ---- from 20261109100225_dead-objects_contract_drop.sql ----
+-- Contract (R259): the database objects no code reaches are dropped (owner ruling: a table or database function no code uses is
+-- deleted). Every target was checked unreferenced by be/src, be/apps, fe, the mcp app, .starcistacks, the other database
+-- functions, triggers, views and policies, and by the sources of the previous release (v0.5.6); a drop without CASCADE
+-- proves nothing else depends on it.
+--
+-- Functions: the browser-era RPCs of the Supabase baseline (admin console, shifts, hiring, booking, lead and office doors,
+-- agent chat, zalo wizard, the loyalty post, and the like). Lite has no PostgREST and no browser role door, and the api reaches
+-- the database through entities and the functions hfs.json `sides.be.dbFunctions` lists, none of which is below.
+-- Tables: booking_rate (counted only by the dropped booking_rate_hit; the booking limiter lives in the app), platform_flags (the
+-- signup switch is the WORKSPACE_SIGNUP_ENABLED setting; the one row, false, was read only by the dropped create_free_workspace)
+-- and n8n_pipelines (empty, written and read by nothing but the row count of workspace_footprint).
+-- hiring_apply_hits stays until the release after the one that removed its entity (v0.5.6 still maps it); queue (the legacy outbox,
+-- empty, read by nothing) stays because the contract check matches the name against the job_outbox.queue column its entity maps.
+-- workspace_footprint is replaced first without the n8n_pipelines count so it never names a dropped table.
+
+CREATE OR REPLACE FUNCTION public.workspace_footprint(p_workspace uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public'
+AS $function$
+  select
+  jsonb_build_object(
+    'accounting_adjustments', (select count(*) from public.accounting_adjustments where workspace_id = p_workspace),
+    'agent_access_log', (select count(*) from public.agent_access_log where workspace_id = p_workspace),
+    'agent_connections', (select count(*) from public.agent_connections where workspace_id = p_workspace),
+    'agent_conversations', (select count(*) from public.agent_conversations where workspace_id = p_workspace),
+    'agent_messages', (select count(*) from public.agent_messages where workspace_id = p_workspace),
+    'agents', (select count(*) from public.agents where workspace_id = p_workspace),
+    'ai_generations', (select count(*) from public.ai_generations where workspace_id = p_workspace),
+    'ai_quota_overrides', (select count(*) from public.ai_quota_overrides where workspace_id = p_workspace),
+    'ai_usage_events', (select count(*) from public.ai_usage_events where workspace_id = p_workspace),
+    'ai_usage_notices', (select count(*) from public.ai_usage_notices where workspace_id = p_workspace),
+    'api_keys', (select count(*) from public.api_keys where workspace_id = p_workspace),
+    'app_commands', (select count(*) from public.app_commands where workspace_id = p_workspace),
+    'authority', (select count(*) from public.authority where workspace_id = p_workspace),
+    'authority_rules', (select count(*) from public.authority_rules where workspace_id = p_workspace),
+    'automation_commands', (select count(*) from public.automation_commands where workspace_id = p_workspace),
+    'automation_pipelines', (select count(*) from public.automation_pipelines where workspace_id = p_workspace),
+    'automation_runs', (select count(*) from public.automation_runs where workspace_id = p_workspace),
+    'billing_events', (select count(*) from public.billing_events where workspace_id = p_workspace),
+    'booking_exceptions', (select count(*) from public.booking_exceptions where workspace_id = p_workspace),
+    'booking_hours', (select count(*) from public.booking_hours where workspace_id = p_workspace),
+    'booking_reminders', (select count(*) from public.booking_reminders where workspace_id = p_workspace),
+    'booking_resources', (select count(*) from public.booking_resources where workspace_id = p_workspace),
+    'booking_services', (select count(*) from public.booking_services where workspace_id = p_workspace),
+    'booking_settings', (select count(*) from public.booking_settings where workspace_id = p_workspace),
+    'booking_waitlist', (select count(*) from public.booking_waitlist where workspace_id = p_workspace),
+    'bookings', (select count(*) from public.bookings where workspace_id = p_workspace),
+    'brain_commands', (select count(*) from public.brain_commands where workspace_id = p_workspace),
+    'brain_eval_cases', (select count(*) from public.brain_eval_cases where workspace_id = p_workspace),
+    'brain_extractions', (select count(*) from public.brain_extractions where workspace_id = p_workspace),
+    'brain_facts', (select count(*) from public.brain_facts where workspace_id = p_workspace),
+    'brain_lessons', (select count(*) from public.brain_lessons where workspace_id = p_workspace),
+    'brain_source_profiles', (select count(*) from public.brain_source_profiles where workspace_id = p_workspace),
+    'channel_receipts', (select count(*) from public.channel_receipts where workspace_id = p_workspace),
+    'connection_commands', (select count(*) from public.connection_commands where workspace_id = p_workspace),
+    'connections', (select count(*) from public.connections where workspace_id = p_workspace),
+    'connector_interest', (select count(*) from public.connector_interest where workspace_id = p_workspace),
+    'content_brand_proposals', (select count(*) from public.content_brand_proposals where workspace_id = p_workspace),
+    'content_cadence', (select count(*) from public.content_cadence where workspace_id = p_workspace),
+    'content_engagement_daily', (select count(*) from public.content_engagement_daily where workspace_id = p_workspace),
+    'content_items', (select count(*) from public.content_items where workspace_id = p_workspace),
+    'content_pillars', (select count(*) from public.content_pillars where workspace_id = p_workspace),
+    'content_plans', (select count(*) from public.content_plans where workspace_id = p_workspace),
+    'content_settings', (select count(*) from public.content_settings where workspace_id = p_workspace),
+    'content_weekly_reports', (select count(*) from public.content_weekly_reports where workspace_id = p_workspace),
+    'contracts', (select count(*) from public.contracts where workspace_id = p_workspace),
+    'conversation_ownership_events', (select count(*) from public.conversation_ownership_events where workspace_id = p_workspace)
+  )
+  ||
+  jsonb_build_object(
+    'credit_pack_purchases', (select count(*) from public.credit_pack_purchases where workspace_id = p_workspace),
+    'credit_topup_draws', (select count(*) from public.credit_topup_draws where workspace_id = p_workspace),
+    'credit_topups', (select count(*) from public.credit_topups where workspace_id = p_workspace),
+    'data_records', (select count(*) from public.data_records where workspace_id = p_workspace),
+    'data_sync_runs', (select count(*) from public.data_sync_runs where workspace_id = p_workspace),
+    'decisions', (select count(*) from public.decisions where workspace_id = p_workspace),
+    'email_messages', (select count(*) from public.email_messages where workspace_id = p_workspace),
+    'events', (select count(*) from public.events where workspace_id = p_workspace),
+    'executions', (select count(*) from public.executions where workspace_id = p_workspace),
+    'hiring_availability', (select count(*) from public.hiring_availability where workspace_id = p_workspace),
+    'hiring_candidates', (select count(*) from public.hiring_candidates where workspace_id = p_workspace),
+    'hiring_consents', (select count(*) from public.hiring_consents where workspace_id = p_workspace),
+    'hiring_events', (select count(*) from public.hiring_events where workspace_id = p_workspace),
+    'hiring_interviews', (select count(*) from public.hiring_interviews where workspace_id = p_workspace),
+    'hiring_jobs', (select count(*) from public.hiring_jobs where workspace_id = p_workspace),
+    'hiring_offers', (select count(*) from public.hiring_offers where workspace_id = p_workspace),
+    'hiring_onboarding', (select count(*) from public.hiring_onboarding where workspace_id = p_workspace),
+    'hiring_retention_log', (select count(*) from public.hiring_retention_log where workspace_id = p_workspace),
+    'hiring_settings', (select count(*) from public.hiring_settings where workspace_id = p_workspace),
+    'inbound_events', (select count(*) from public.inbound_events where workspace_id = p_workspace),
+    'inventory_items', (select count(*) from public.inventory_items where workspace_id = p_workspace),
+    'inventory_locations', (select count(*) from public.inventory_locations where workspace_id = p_workspace),
+    'inventory_movements', (select count(*) from public.inventory_movements where workspace_id = p_workspace),
+    'inventory_po_lines', (select count(*) from public.inventory_po_lines where workspace_id = p_workspace),
+    'inventory_purchase_orders', (select count(*) from public.inventory_purchase_orders where workspace_id = p_workspace),
+    'inventory_receipts', (select count(*) from public.inventory_receipts where workspace_id = p_workspace),
+    'inventory_recipe_lines', (select count(*) from public.inventory_recipe_lines where workspace_id = p_workspace),
+    'inventory_recipes', (select count(*) from public.inventory_recipes where workspace_id = p_workspace),
+    'inventory_stock_levels', (select count(*) from public.inventory_stock_levels where workspace_id = p_workspace),
+    'inventory_suppliers', (select count(*) from public.inventory_suppliers where workspace_id = p_workspace),
+    'invoices', (select count(*) from public.invoices where workspace_id = p_workspace),
+    'knowledge_chunks', (select count(*) from public.knowledge_chunks where workspace_id = p_workspace),
+    'knowledge_gaps', (select count(*) from public.knowledge_gaps where workspace_id = p_workspace),
+    'knowledge_sources', (select count(*) from public.knowledge_sources where workspace_id = p_workspace),
+    'knowledge_suggestion_state', (select count(*) from public.knowledge_suggestion_state where workspace_id = p_workspace),
+    'lead_actions', (select count(*) from public.lead_actions where workspace_id = p_workspace),
+    'lead_flows', (select count(*) from public.lead_flows where workspace_id = p_workspace),
+    'leads', (select count(*) from public.leads where workspace_id = p_workspace),
+    'loyalty_campaigns', (select count(*) from public.loyalty_campaigns where workspace_id = p_workspace),
+    'loyalty_customer_links', (select count(*) from public.loyalty_customer_links where workspace_id = p_workspace),
+    'loyalty_customers', (select count(*) from public.loyalty_customers where workspace_id = p_workspace),
+    'loyalty_ledger', (select count(*) from public.loyalty_ledger where workspace_id = p_workspace),
+    'loyalty_otps', (select count(*) from public.loyalty_otps where workspace_id = p_workspace),
+    'loyalty_programs', (select count(*) from public.loyalty_programs where workspace_id = p_workspace),
+    'loyalty_rewards', (select count(*) from public.loyalty_rewards where workspace_id = p_workspace)
+  )
+  ||
+  jsonb_build_object(
+    'loyalty_sends', (select count(*) from public.loyalty_sends where workspace_id = p_workspace),
+    'mcp_call_log', (select count(*) from public.mcp_call_log where workspace_id = p_workspace),
+    'mcp_connectors', (select count(*) from public.mcp_connectors where workspace_id = p_workspace),
+    'mcp_tool_grants', (select count(*) from public.mcp_tool_grants where workspace_id = p_workspace),
+    'messages', (select count(*) from public.messages where workspace_id = p_workspace),
+    'module_context_notes', (select count(*) from public.module_context_notes where workspace_id = p_workspace),
+    'module_context_versions', (select count(*) from public.module_context_versions where workspace_id = p_workspace),
+    'module_installations', (select count(*) from public.module_installations where workspace_id = p_workspace),
+    'module_setup_messages', (select count(*) from public.module_setup_messages where workspace_id = p_workspace),
+    'module_setup_sessions', (select count(*) from public.module_setup_sessions where workspace_id = p_workspace),
+    'module_setup_writes', (select count(*) from public.module_setup_writes where workspace_id = p_workspace),
+    'n8n_runs', (select count(*) from public.n8n_runs where workspace_id = p_workspace),
+    'office_command_candidates', (select count(*) from public.office_command_candidates where workspace_id = p_workspace),
+    'office_rooms', (select count(*) from public.office_rooms where workspace_id = p_workspace),
+    'office_rooms_reads', (select count(*) from public.office_rooms_reads where workspace_id = p_workspace),
+    'openclaw_agent_sync', (select count(*) from public.openclaw_agent_sync where workspace_id = p_workspace),
+    'orders', (select count(*) from public.orders where workspace_id = p_workspace),
+    'payment_order_requests', (select count(*) from public.payment_order_requests where workspace_id = p_workspace),
+    'payment_orders', (select count(*) from public.payment_orders where workspace_id = p_workspace),
+    'public_api', (select count(*) from public.public_api where workspace_id = p_workspace),
+    'responsibilities', (select count(*) from public.responsibilities where workspace_id = p_workspace),
+    'shifts_attendance', (select count(*) from public.shifts_attendance where workspace_id = p_workspace),
+    'shifts_availability', (select count(*) from public.shifts_availability where workspace_id = p_workspace),
+    'shifts_coverage', (select count(*) from public.shifts_coverage where workspace_id = p_workspace),
+    'shifts_leave_requests', (select count(*) from public.shifts_leave_requests where workspace_id = p_workspace),
+    'shifts_notifications', (select count(*) from public.shifts_notifications where workspace_id = p_workspace),
+    'shifts_positions', (select count(*) from public.shifts_positions where workspace_id = p_workspace),
+    'shifts_schedules', (select count(*) from public.shifts_schedules where workspace_id = p_workspace),
+    'shifts_settings', (select count(*) from public.shifts_settings where workspace_id = p_workspace),
+    'shifts_shifts', (select count(*) from public.shifts_shifts where workspace_id = p_workspace),
+    'shifts_staff', (select count(*) from public.shifts_staff where workspace_id = p_workspace),
+    'shifts_staff_pay', (select count(*) from public.shifts_staff_pay where workspace_id = p_workspace),
+    'shifts_swap_requests', (select count(*) from public.shifts_swap_requests where workspace_id = p_workspace),
+    'staff', (select count(*) from public.staff where workspace_id = p_workspace),
+    'transactions', (select count(*) from public.transactions where workspace_id = p_workspace),
+    'video_brand_kits', (select count(*) from public.video_brand_kits where workspace_id = p_workspace),
+    'video_delegations', (select count(*) from public.video_delegations where workspace_id = p_workspace),
+    'video_project_versions', (select count(*) from public.video_project_versions where workspace_id = p_workspace),
+    'video_projects', (select count(*) from public.video_projects where workspace_id = p_workspace),
+    'video_renders', (select count(*) from public.video_renders where workspace_id = p_workspace),
+    'work_items', (select count(*) from public.work_items where workspace_id = p_workspace),
+    'workspace_invites', (select count(*) from public.workspace_invites where workspace_id = p_workspace),
+    'workspace_members', (select count(*) from public.workspace_members where workspace_id = p_workspace)
+  )
+$function$;
+
+
+-- Functions, by exact signature.
+DROP FUNCTION IF EXISTS public.accept_invite(text);
+DROP FUNCTION IF EXISTS public.add_lead_responsibility(uuid,uuid,text,text,text,timestamp with time zone,text);
+DROP FUNCTION IF EXISTS public.admin_console_audit(text,uuid,jsonb);
+DROP FUNCTION IF EXISTS public.admin_console_quota(uuid);
+DROP FUNCTION IF EXISTS public.admin_console_signups(integer);
+DROP FUNCTION IF EXISTS public.admin_console_user_emails(uuid[]);
+DROP FUNCTION IF EXISTS public.admin_console_workspace_stats();
+DROP FUNCTION IF EXISTS public.admin_extend_subscription(uuid,integer);
+DROP FUNCTION IF EXISTS public.admin_set_workspace_plan(uuid,text,bigint);
+DROP FUNCTION IF EXISTS public.admin_set_workspace_status(uuid,text);
+DROP FUNCTION IF EXISTS public.agent_chat_send(uuid,text);
+DROP FUNCTION IF EXISTS public.agent_chat_start(uuid,text,text);
+DROP FUNCTION IF EXISTS public.agent_chat_take_over(uuid,boolean,text);
+DROP FUNCTION IF EXISTS public.api_key_create(uuid,text);
+DROP FUNCTION IF EXISTS public.api_key_revoke(uuid,uuid);
+DROP FUNCTION IF EXISTS public.assign_lead_responsibility(uuid,uuid,text,text,timestamp with time zone,text,text);
+DROP FUNCTION IF EXISTS public.automation_command_enqueue(uuid,text,text);
+DROP FUNCTION IF EXISTS public.booking_peak_load(uuid,timestamp with time zone,timestamp with time zone,uuid);
+DROP FUNCTION IF EXISTS public.booking_rate_hit(text,integer,integer);
+DROP FUNCTION IF EXISTS public.booking_relocate(uuid,uuid,timestamp with time zone,timestamp with time zone,timestamp with time zone,boolean);
+DROP FUNCTION IF EXISTS public.booking_reserve(jsonb,boolean);
+DROP FUNCTION IF EXISTS public.brain_command(uuid,text,jsonb);
+DROP FUNCTION IF EXISTS public.brain_command_wait(uuid);
+DROP FUNCTION IF EXISTS public.connection_command_take(uuid);
+DROP FUNCTION IF EXISTS public.create_free_workspace(text);
+DROP FUNCTION IF EXISTS public.dashboard_data(uuid,timestamp with time zone,timestamp with time zone,timestamp with time zone);
+DROP FUNCTION IF EXISTS public.exception_rows(uuid);
+DROP FUNCTION IF EXISTS public.governance_rows(uuid,timestamp with time zone);
+DROP FUNCTION IF EXISTS public.hiring_new_token();
+DROP FUNCTION IF EXISTS public.hiring_ops_status();
+DROP FUNCTION IF EXISTS public.invite_preview(text);
+DROP FUNCTION IF EXISTS public.is_owner(uuid);
+DROP FUNCTION IF EXISTS public.job_cutover_adopt(text,bigint,timestamp with time zone,jsonb,integer,timestamp with time zone,boolean);
+DROP FUNCTION IF EXISTS public.job_cutover_redirect();
+DROP FUNCTION IF EXISTS public.lead_actor_name(uuid);
+DROP FUNCTION IF EXISTS public.lead_step_json(responsibilities);
+DROP FUNCTION IF EXISTS public.lead_step_owner(uuid,text,text);
+DROP FUNCTION IF EXISTS public.loyalty_post(uuid,uuid,text,integer,text,text,bigint,uuid,uuid,uuid,uuid,text,timestamp with time zone,timestamp with time zone);
+DROP FUNCTION IF EXISTS public.match_knowledge(uuid,text,extensions.vector,text,integer,text,text,uuid);
+DROP FUNCTION IF EXISTS public.my_sessions();
+DROP FUNCTION IF EXISTS public.my_staff_id(uuid);
+DROP FUNCTION IF EXISTS public.office_data(uuid,timestamp with time zone);
+DROP FUNCTION IF EXISTS public.owns_workspace(uuid);
+DROP FUNCTION IF EXISTS public.payment_order_request(uuid,text,text);
+DROP FUNCTION IF EXISTS public.read_app_command(uuid);
+DROP FUNCTION IF EXISTS public.record_lead_outcome(uuid,uuid,text,text,text);
+DROP FUNCTION IF EXISTS public.request_agent_sync(uuid,uuid,boolean);
+DROP FUNCTION IF EXISTS public.request_execution_decision(uuid,uuid,text,text,text);
+DROP FUNCTION IF EXISTS public.request_office_confirm(uuid,uuid,text);
+DROP FUNCTION IF EXISTS public.request_office_propose(uuid,uuid,text);
+DROP FUNCTION IF EXISTS public.request_work_decision(uuid,uuid,text,jsonb,text,text,text);
+DROP FUNCTION IF EXISTS public.responsibility_rows(uuid);
+DROP FUNCTION IF EXISTS public.revoke_my_session(uuid);
+DROP FUNCTION IF EXISTS public.revoke_workspace_invite(uuid,uuid);
+DROP FUNCTION IF EXISTS public.session_bootstrap();
+DROP FUNCTION IF EXISTS public.shifts_add_availability(uuid,uuid,smallint,date,time without time zone,time without time zone,boolean,text,text,text);
+DROP FUNCTION IF EXISTS public.shifts_check_in(uuid,uuid,uuid);
+DROP FUNCTION IF EXISTS public.shifts_decide_availability(uuid,uuid,text,text);
+DROP FUNCTION IF EXISTS public.shifts_link_leave(uuid,uuid,uuid);
+DROP FUNCTION IF EXISTS public.shifts_link_schedule(uuid,uuid,uuid);
+DROP FUNCTION IF EXISTS public.shifts_link_swap(uuid,uuid,jsonb,uuid);
+DROP FUNCTION IF EXISTS public.shifts_my_profile(uuid);
+DROP FUNCTION IF EXISTS public.shifts_record_notice(uuid,uuid,uuid,uuid,text,text,text,text,text);
+DROP FUNCTION IF EXISTS public.shifts_record_notification(uuid,uuid,uuid,uuid,text,text,text,text);
+DROP FUNCTION IF EXISTS public.shifts_remove_availability(uuid,uuid);
+DROP FUNCTION IF EXISTS public.shifts_remove_coverage(uuid,uuid);
+DROP FUNCTION IF EXISTS public.shifts_remove_position(uuid,uuid);
+DROP FUNCTION IF EXISTS public.shifts_remove_shift(uuid,uuid);
+DROP FUNCTION IF EXISTS public.shifts_save_coverage(uuid,uuid,smallint[],time without time zone,time without time zone,uuid,integer,integer,boolean);
+DROP FUNCTION IF EXISTS public.shifts_save_pay(uuid,uuid,integer);
+DROP FUNCTION IF EXISTS public.shifts_save_position(uuid,uuid,text,text);
+DROP FUNCTION IF EXISTS public.shifts_save_settings(uuid,jsonb,integer,integer,integer,integer,numeric);
+DROP FUNCTION IF EXISTS public.shifts_save_staff(uuid,uuid,jsonb);
+DROP FUNCTION IF EXISTS public.shifts_set_explanation(uuid,uuid,text,jsonb);
+DROP FUNCTION IF EXISTS public.storage_ws_manager(text);
+DROP FUNCTION IF EXISTS public.storage_ws_member(text);
+DROP FUNCTION IF EXISTS public.update_my_profile(uuid,text);
+DROP FUNCTION IF EXISTS public.usage_quota_status(uuid);
+DROP FUNCTION IF EXISTS public.video_renders_reap();
+DROP FUNCTION IF EXISTS public.workspace_member_contacts(uuid);
+DROP FUNCTION IF EXISTS public.workspace_members_directory(uuid);
+DROP FUNCTION IF EXISTS public.zalo_wizard_begin(uuid);
+DROP FUNCTION IF EXISTS public.zalo_wizard_oa_secret(uuid,text);
+DROP FUNCTION IF EXISTS public.zalo_wizard_start(uuid,text,text,text);
+
+-- Tables (their policies, triggers and indexes go with them).
+DROP TABLE IF EXISTS public.booking_rate;
+DROP TABLE IF EXISTS public.n8n_pipelines;
+DROP TABLE IF EXISTS public.platform_flags;
+
+-- ---- from 20261109100300_knowledge-source-stage.sql ----
+-- knowledge-source-stage: forward-only; immutable once on origin/main. Expand step: columns only, nothing is dropped or tightened.
+-- A source records the stage its worker is on (read, chunk, embed, store, facts) and, for the embed stage, how many passages have their vector of how many, so the Knowledge page shows the work live and a reload converges on the same state.
+ALTER TABLE public.knowledge_sources ADD COLUMN IF NOT EXISTS stage text;
+ALTER TABLE public.knowledge_sources ADD COLUMN IF NOT EXISTS stage_done integer;
+ALTER TABLE public.knowledge_sources ADD COLUMN IF NOT EXISTS stage_total integer;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'knowledge_sources_stage_check' AND conrelid = 'public.knowledge_sources'::regclass
+    ) THEN
+        ALTER TABLE public.knowledge_sources ADD CONSTRAINT knowledge_sources_stage_check
+            CHECK (stage IS NULL OR stage IN ('read', 'chunk', 'embed', 'store', 'facts'));
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'knowledge_sources_stage_counts_check' AND conrelid = 'public.knowledge_sources'::regclass
+    ) THEN
+        ALTER TABLE public.knowledge_sources ADD CONSTRAINT knowledge_sources_stage_counts_check
+            CHECK ((stage_done IS NULL OR stage_done >= 0) AND (stage_total IS NULL OR stage_total >= 0));
+    END IF;
+END
+$$;
+
+-- ---- from 20261110000100_agent-work-core.sql ----
+-- agent-work-core: forward-only; immutable once on origin/main. Expand only: new tables and functions, nothing existing altered.
+-- An agent is data. A wake says why it must act (a customer message, a tag, an internal event, a schedule), a turn is one run of
+-- it, goals and tasks are what the agent keeps, triggers are when it wakes by itself. The lock is a lease, one row per scope:
+-- a customer conversation locks by itself (scope 'conversation:<id>'), every other wake locks the whole agent (scope 'agent'), so one
+-- conversation never has two turns at once while several customers of one agent are answered in parallel. The functions below are
+-- the whole of the concurrency story; the back end calls them and never touches the lease rows.
+
+CREATE TABLE public.agent_work_settings (
+    workspace_id uuid NOT NULL PRIMARY KEY REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    work_enabled boolean NOT NULL DEFAULT true,
+    road text NOT NULL DEFAULT 'core',
+    background_daily_cap integer NOT NULL DEFAULT 200,
+    paused_by uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL,
+    paused_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_work_settings_road_check CHECK (road IN ('legacy', 'core')),
+    CONSTRAINT agent_work_settings_cap_check CHECK (background_daily_cap BETWEEN 0 AND 10000)
+);
+
+CREATE TABLE public.agent_work_state (
+    agent_id uuid NOT NULL PRIMARY KEY REFERENCES public.agents(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    work_enabled boolean NOT NULL DEFAULT true,
+    paused_by uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL,
+    paused_at timestamptz,
+    failures integer NOT NULL DEFAULT 0,
+    breaker_until timestamptz,
+    last_turn_at timestamptz,
+    background_day date,
+    background_turns integer NOT NULL DEFAULT 0,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX agent_work_state_workspace_idx ON public.agent_work_state USING btree (workspace_id);
+
+CREATE TABLE public.agent_work_leases (
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    scope_key text NOT NULL,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    fence bigint NOT NULL DEFAULT 0,
+    lease_owner text,
+    lease_until timestamptz,
+    running_turn_id uuid,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_work_leases_pkey PRIMARY KEY (agent_id, scope_key),
+    CONSTRAINT agent_work_leases_scope_check CHECK (scope_key = 'agent' OR scope_key LIKE 'conversation:%')
+);
+CREATE INDEX agent_work_leases_running_idx ON public.agent_work_leases USING btree (lease_until) WHERE running_turn_id IS NOT NULL;
+
+CREATE TABLE public.agent_goals (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    detail text NOT NULL DEFAULT '',
+    status text NOT NULL DEFAULT 'active',
+    source text NOT NULL DEFAULT 'owner',
+    created_by_member uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL,
+    due_at timestamptz,
+    reviewed_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_goals_status_check CHECK (status IN ('active', 'paused', 'done', 'dropped')),
+    CONSTRAINT agent_goals_source_check CHECK (source IN ('owner', 'module', 'agent')),
+    CONSTRAINT agent_goals_text_check CHECK (char_length(title) BETWEEN 1 AND 200 AND char_length(detail) <= 2000)
+);
+CREATE INDEX agent_goals_agent_idx ON public.agent_goals USING btree (agent_id, status);
+
+CREATE TABLE public.agent_wakes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    source text NOT NULL,
+    event_key text NOT NULL,
+    scope_key text NOT NULL DEFAULT 'agent',
+    priority smallint NOT NULL,
+    max_attempts smallint NOT NULL DEFAULT 3,
+    context jsonb NOT NULL DEFAULT '{}'::jsonb,
+    actor_member_id uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL,
+    status text NOT NULL DEFAULT 'pending',
+    reason text,
+    attempts smallint NOT NULL DEFAULT 0,
+    not_before timestamptz NOT NULL DEFAULT now(),
+    started_at timestamptz,
+    finished_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_wakes_fact_key UNIQUE (agent_id, source, event_key),
+    CONSTRAINT agent_wakes_source_check CHECK (source IN ('customer', 'tag', 'internal', 'schedule')),
+    CONSTRAINT agent_wakes_status_check CHECK (status IN ('pending', 'running', 'done', 'skipped', 'held', 'failed', 'dead')),
+    CONSTRAINT agent_wakes_scope_check CHECK (scope_key = 'agent' OR scope_key LIKE 'conversation:%'),
+    CONSTRAINT agent_wakes_context_check CHECK (jsonb_typeof(context) = 'object')
+);
+CREATE INDEX agent_wakes_pending_idx ON public.agent_wakes USING btree (agent_id, scope_key, priority, created_at) WHERE status = 'pending';
+CREATE INDEX agent_wakes_due_idx ON public.agent_wakes USING btree (not_before) WHERE status = 'pending';
+CREATE INDEX agent_wakes_held_idx ON public.agent_wakes USING btree (agent_id) WHERE status = 'held';
+
+CREATE TABLE public.agent_tasks (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    goal_id uuid REFERENCES public.agent_goals(id) ON DELETE SET NULL,
+    dedupe_key text NOT NULL,
+    title text NOT NULL,
+    detail text NOT NULL DEFAULT '',
+    status text NOT NULL DEFAULT 'open',
+    waiting_on text,
+    next_action_at timestamptz,
+    work_item_id uuid REFERENCES public.work_items(id) ON DELETE SET NULL,
+    origin_wake_id uuid REFERENCES public.agent_wakes(id) ON DELETE SET NULL,
+    done_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_tasks_dedupe_key UNIQUE (agent_id, dedupe_key),
+    CONSTRAINT agent_tasks_status_check CHECK (status IN ('open', 'waiting', 'done', 'dropped')),
+    CONSTRAINT agent_tasks_waiting_check CHECK (waiting_on IS NULL OR waiting_on IN ('approval', 'member', 'event')),
+    CONSTRAINT agent_tasks_text_check CHECK (char_length(title) BETWEEN 1 AND 200 AND char_length(detail) <= 2000)
+);
+CREATE INDEX agent_tasks_agent_idx ON public.agent_tasks USING btree (agent_id, status);
+CREATE INDEX agent_tasks_due_idx ON public.agent_tasks USING btree (next_action_at) WHERE status = 'open';
+
+CREATE TABLE public.agent_triggers (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    kind text NOT NULL,
+    preset text,
+    at_time time,
+    time_zone text NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',
+    event_name text,
+    probe_key text,
+    enabled boolean NOT NULL DEFAULT true,
+    next_run_at timestamptz,
+    last_fired_at timestamptz,
+    reconciled_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_triggers_kind_check CHECK (kind IN ('schedule', 'event')),
+    CONSTRAINT agent_triggers_preset_check CHECK (preset IS NULL OR preset IN ('every_15m', 'hourly', 'daily_at', 'weekdays_at')),
+    CONSTRAINT agent_triggers_shape_check CHECK (
+        (kind = 'schedule' AND preset IS NOT NULL AND event_name IS NULL AND (preset IN ('every_15m', 'hourly') OR at_time IS NOT NULL))
+        OR (kind = 'event' AND event_name IS NOT NULL AND preset IS NULL)
+    )
+);
+CREATE INDEX agent_triggers_agent_idx ON public.agent_triggers USING btree (agent_id);
+CREATE INDEX agent_triggers_next_idx ON public.agent_triggers USING btree (next_run_at) WHERE enabled;
+CREATE INDEX agent_triggers_event_idx ON public.agent_triggers USING btree (event_name) WHERE enabled AND kind = 'event';
+
+CREATE TABLE public.agent_turns (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    wake_id uuid NOT NULL REFERENCES public.agent_wakes(id) ON DELETE CASCADE,
+    fence bigint NOT NULL,
+    runner text NOT NULL DEFAULT 'openclaw',
+    runtime_agent_id text,
+    thread_key text,
+    status text NOT NULL DEFAULT 'running',
+    proposal jsonb,
+    outcome jsonb,
+    model text,
+    prompt_tokens integer,
+    completion_tokens integer,
+    cost numeric(14, 6),
+    duration_ms integer,
+    error_code text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_turns_wake_fence_key UNIQUE (wake_id, fence),
+    CONSTRAINT agent_turns_status_check CHECK (status IN ('running', 'proposed', 'settled', 'failed', 'abandoned'))
+);
+CREATE INDEX agent_turns_agent_idx ON public.agent_turns USING btree (agent_id, created_at DESC);
+CREATE INDEX agent_turns_running_idx ON public.agent_turns USING btree (runtime_agent_id, thread_key) WHERE status = 'running';
+
+CREATE TRIGGER agent_work_settings_set_updated_at BEFORE UPDATE ON public.agent_work_settings FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_work_state_set_updated_at BEFORE UPDATE ON public.agent_work_state FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_work_leases_set_updated_at BEFORE UPDATE ON public.agent_work_leases FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_goals_set_updated_at BEFORE UPDATE ON public.agent_goals FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_wakes_set_updated_at BEFORE UPDATE ON public.agent_wakes FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_tasks_set_updated_at BEFORE UPDATE ON public.agent_tasks FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_triggers_set_updated_at BEFORE UPDATE ON public.agent_triggers FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_turns_set_updated_at BEFORE UPDATE ON public.agent_turns FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.agent_work_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_work_settings_app_be_select ON public.agent_work_settings FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_work_settings_app_be_insert ON public.agent_work_settings FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_work_settings_app_be_update ON public.agent_work_settings FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_work_settings FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.agent_work_settings TO app_be;
+
+ALTER TABLE public.agent_work_state ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_work_state_app_be_select ON public.agent_work_state FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_work_state_app_be_insert ON public.agent_work_state FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_work_state_app_be_update ON public.agent_work_state FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_work_state FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.agent_work_state TO app_be;
+
+ALTER TABLE public.agent_work_leases ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_work_leases_app_be_select ON public.agent_work_leases FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_work_leases FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE public.agent_work_leases TO app_be;
+
+ALTER TABLE public.agent_goals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_goals_app_be_select ON public.agent_goals FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_goals_app_be_insert ON public.agent_goals FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_goals_app_be_update ON public.agent_goals FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_goals_app_be_delete ON public.agent_goals FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_goals FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.agent_goals TO app_be;
+
+ALTER TABLE public.agent_wakes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_wakes_app_be_select ON public.agent_wakes FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_wakes_app_be_insert ON public.agent_wakes FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_wakes_app_be_update ON public.agent_wakes FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_wakes_app_be_delete ON public.agent_wakes FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_wakes FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.agent_wakes TO app_be;
+
+ALTER TABLE public.agent_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_tasks_app_be_select ON public.agent_tasks FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_tasks_app_be_insert ON public.agent_tasks FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_tasks_app_be_update ON public.agent_tasks FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_tasks_app_be_delete ON public.agent_tasks FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_tasks FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.agent_tasks TO app_be;
+
+ALTER TABLE public.agent_triggers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_triggers_app_be_select ON public.agent_triggers FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_triggers_app_be_insert ON public.agent_triggers FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_triggers_app_be_update ON public.agent_triggers FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_triggers_app_be_delete ON public.agent_triggers FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_triggers FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.agent_triggers TO app_be;
+
+ALTER TABLE public.agent_turns ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_turns_app_be_select ON public.agent_turns FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_turns_app_be_insert ON public.agent_turns FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_turns_app_be_update ON public.agent_turns FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_turns_app_be_delete ON public.agent_turns FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_turns FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.agent_turns TO app_be;
+
+-- Whether work is switched off for the agent or for its whole workspace. A workspace without a settings row is on.
+CREATE FUNCTION public.agent_work_is_off(p_agent uuid, p_workspace uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  SELECT COALESCE((SELECT NOT s.work_enabled FROM public.agent_work_state s WHERE s.agent_id = p_agent), false)
+      OR COALESCE((SELECT NOT w.work_enabled FROM public.agent_work_settings w WHERE w.workspace_id = p_workspace), false);
+$$;
+
+-- Whether the agent belongs to the workspace: the guard of every write that names both, so a caller's workspace id is never a permission.
+CREATE FUNCTION public.agent_work_has_agent(p_workspace uuid, p_agent uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  SELECT EXISTS (SELECT 1 FROM public.agents a WHERE a.id = p_agent AND a.workspace_id = p_workspace);
+$$;
+
+-- Switches work on or off for one agent of the workspace; false when the agent is not the workspace's.
+CREATE FUNCTION public.agent_work_switch(p_workspace uuid, p_agent uuid, p_enabled boolean, p_member uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  INSERT INTO public.agent_work_state (agent_id, workspace_id, work_enabled, paused_by, paused_at)
+    SELECT a.id, a.workspace_id, p_enabled, CASE WHEN p_enabled THEN NULL ELSE p_member END, CASE WHEN p_enabled THEN NULL ELSE now() END
+      FROM public.agents a WHERE a.id = p_agent AND a.workspace_id = p_workspace
+    ON CONFLICT (agent_id) DO UPDATE SET
+      work_enabled = EXCLUDED.work_enabled, paused_by = EXCLUDED.paused_by, paused_at = EXCLUDED.paused_at;
+  RETURN FOUND;
+END;
+$$;
+
+-- A wake that ended inside begin with no turn to hand a handler, as the JSON the back end reads: its state ('held' by a switch or 'dead'
+-- past its budget) and the ids and flags its handler needs to say the holding line or tell the owner.
+CREATE FUNCTION public.agent_wake_ended(w public.agent_wakes, p_state text) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE
+    SET search_path TO 'public'
+    AS $$
+  SELECT jsonb_build_object(
+    'state', p_state,
+    'workspaceId', w.workspace_id,
+    'wakeId', w.id,
+    'source', w.source,
+    'eventKey', w.event_key,
+    'context', w.context,
+    'actorMemberId', w.actor_member_id,
+    'attempts', w.attempts,
+    'maxAttempts', w.max_attempts,
+    'wakeCreatedAt', w.created_at
+  );
+$$;
+
+-- Starts one turn of an agent in one scope. Answers {result: 'killed' | 'busy' | 'idle'} or, for 'begun', the fence, the turn, the wake and
+-- the proposal a previous attempt stored (null when none). The lease row of the scope is the lock: a held lease answers busy, a lapsed
+-- one is taken over and its turn abandoned. A wake past its attempt budget is dead before any model call; attempts rise here. Every
+-- answer carries 'ended': the wakes this call held (a switch is off) or dead (budget spent), each once, so the drain can say the
+-- holding line to the customer or the owner's line for a wake that has no turn.
+CREATE FUNCTION public.agent_turn_begin(p_agent uuid, p_scope text, p_owner text, p_lease_s integer) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_workspace uuid;
+  v_lease public.agent_work_leases%ROWTYPE;
+  v_wake public.agent_wakes%ROWTYPE;
+  v_turn_id uuid;
+  v_proposal jsonb;
+  v_fence bigint;
+  v_ended jsonb := '[]'::jsonb;
+BEGIN
+  SELECT a.workspace_id INTO v_workspace FROM public.agents a WHERE a.id = p_agent;
+  IF v_workspace IS NULL THEN
+    RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
+  END IF;
+  INSERT INTO public.agent_work_state (agent_id, workspace_id) VALUES (p_agent, v_workspace) ON CONFLICT (agent_id) DO NOTHING;
+  IF public.agent_work_is_off(p_agent, v_workspace) THEN
+    WITH held AS (
+      UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+       WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' RETURNING w.*
+    )
+    SELECT COALESCE(jsonb_agg(public.agent_wake_ended(ROW(h.*)::public.agent_wakes, 'held')), '[]'::jsonb) INTO v_ended FROM held h;
+    -- A turn whose worker crashed before the switch is taken over here too, or its lease would lapse for the sweep to drain again every minute.
+    SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+    IF FOUND AND v_lease.running_turn_id IS NOT NULL AND v_lease.lease_until <= now() THEN
+      UPDATE public.agent_turns t SET status = 'abandoned' WHERE t.id = v_lease.running_turn_id AND t.status IN ('running', 'proposed');
+      WITH crashed AS (
+        UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+         WHERE w.status = 'running' AND w.id = (SELECT t.wake_id FROM public.agent_turns t WHERE t.id = v_lease.running_turn_id) RETURNING w.*
+      )
+      SELECT v_ended || COALESCE(jsonb_agg(public.agent_wake_ended(ROW(c.*)::public.agent_wakes, 'held')), '[]'::jsonb) INTO v_ended FROM crashed c;
+      UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+       WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+    END IF;
+    RETURN jsonb_build_object('result', 'killed', 'ended', v_ended);
+  END IF;
+  INSERT INTO public.agent_work_leases (agent_id, scope_key, workspace_id) VALUES (p_agent, p_scope, v_workspace)
+    ON CONFLICT (agent_id, scope_key) DO NOTHING;
+  SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+  IF v_lease.running_turn_id IS NOT NULL AND v_lease.lease_until > now() THEN
+    RETURN jsonb_build_object('result', 'busy');
+  END IF;
+  IF v_lease.running_turn_id IS NOT NULL THEN
+    UPDATE public.agent_turns t SET status = 'abandoned' WHERE t.id = v_lease.running_turn_id AND t.status = 'running';
+    UPDATE public.agent_wakes w SET status = 'pending', not_before = now()
+     WHERE w.status = 'running' AND w.id = (SELECT t.wake_id FROM public.agent_turns t WHERE t.id = v_lease.running_turn_id);
+  END IF;
+  LOOP
+    SELECT * INTO v_wake FROM public.agent_wakes w
+     WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' AND w.not_before <= now()
+     ORDER BY w.priority, w.created_at LIMIT 1 FOR UPDATE;
+    IF NOT FOUND THEN
+      UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+       WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+      RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
+    END IF;
+    EXIT WHEN v_wake.attempts < v_wake.max_attempts;
+    UPDATE public.agent_wakes w SET status = 'dead', reason = 'attempts', finished_at = now() WHERE w.id = v_wake.id;
+    v_ended := v_ended || jsonb_build_array(public.agent_wake_ended(v_wake, 'dead'));
+  END LOOP;
+  UPDATE public.agent_wakes w SET status = 'running', attempts = w.attempts + 1, started_at = COALESCE(w.started_at, now())
+   WHERE w.id = v_wake.id;
+  v_fence := v_lease.fence + 1;
+  SELECT t.id, t.proposal INTO v_turn_id, v_proposal FROM public.agent_turns t
+   WHERE t.wake_id = v_wake.id AND t.status = 'proposed' ORDER BY t.fence DESC LIMIT 1;
+  IF v_turn_id IS NULL THEN
+    INSERT INTO public.agent_turns (workspace_id, agent_id, wake_id, fence, status)
+      VALUES (v_workspace, p_agent, v_wake.id, v_fence, 'running') RETURNING id INTO v_turn_id;
+  ELSE
+    UPDATE public.agent_turns t SET fence = v_fence WHERE t.id = v_turn_id;
+  END IF;
+  UPDATE public.agent_work_leases l
+     SET fence = v_fence, lease_owner = p_owner, lease_until = now() + make_interval(secs => p_lease_s), running_turn_id = v_turn_id
+   WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+  RETURN jsonb_build_object(
+    'result', 'begun',
+    'workspaceId', v_workspace,
+    'fence', v_fence,
+    'turnId', v_turn_id,
+    'wakeId', v_wake.id,
+    'source', v_wake.source,
+    'eventKey', v_wake.event_key,
+    'context', v_wake.context,
+    'actorMemberId', v_wake.actor_member_id,
+    'attempts', v_wake.attempts + 1,
+    'maxAttempts', v_wake.max_attempts,
+    'wakeCreatedAt', v_wake.created_at,
+    'proposal', v_proposal,
+    'ended', v_ended
+  );
+END;
+$$;
+
+-- Extends the lease under the fence; false means another worker holds the scope now and this one must stop.
+CREATE FUNCTION public.agent_turn_touch(p_agent uuid, p_scope text, p_fence bigint, p_lease_s integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  UPDATE public.agent_work_leases l SET lease_until = now() + make_interval(secs => p_lease_s)
+   WHERE l.agent_id = p_agent AND l.scope_key = p_scope AND l.fence = p_fence AND l.running_turn_id IS NOT NULL;
+  RETURN FOUND;
+END;
+$$;
+
+-- Stores the proposal under the fence. Answers 'stored', 'fenced' (the lease moved on) or 'killed' (work was switched off while the turn ran).
+CREATE FUNCTION public.agent_turn_propose(p_turn uuid, p_agent uuid, p_scope text, p_fence bigint, p_proposal jsonb) RETURNS text
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_lease public.agent_work_leases%ROWTYPE;
+BEGIN
+  SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+  IF NOT FOUND OR v_lease.fence <> p_fence OR v_lease.running_turn_id IS DISTINCT FROM p_turn THEN
+    RETURN 'fenced';
+  END IF;
+  IF public.agent_work_is_off(p_agent, v_lease.workspace_id) THEN
+    RETURN 'killed';
+  END IF;
+  UPDATE public.agent_turns t SET proposal = p_proposal, status = 'proposed' WHERE t.id = p_turn AND t.status IN ('running', 'proposed');
+  IF NOT FOUND THEN
+    RETURN 'fenced';
+  END IF;
+  RETURN 'stored';
+END;
+$$;
+
+-- Ends the turn under the fence. p_status is the end of the wake: 'done', 'skipped', 'held' or 'failed' (retried after p_retry_wait_s
+-- until its budget is spent, then dead). A failure counts toward the breaker: p_breaker_after failures in a row hold the agent's
+-- background work for p_breaker_s; a done turn closes the breaker only when the model answered. A done or failed background turn counts toward the day's cap. Releases the lease and answers {fenced, more}:
+-- more says a wake of the same scope is due now, so the caller enqueues the next drain.
+CREATE FUNCTION public.agent_turn_finish(
+    p_agent uuid, p_scope text, p_fence bigint, p_turn uuid, p_status text, p_reason text, p_outcome jsonb, p_error_code text,
+    p_usage jsonb, p_retry_wait_s integer, p_breaker_after integer, p_breaker_s integer
+) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_lease public.agent_work_leases%ROWTYPE;
+  v_turn public.agent_turns%ROWTYPE;
+  v_wake public.agent_wakes%ROWTYPE;
+  v_wake_status text;
+  v_turn_status text;
+  v_today date := (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+  v_more boolean;
+  v_failed boolean;
+  v_answered boolean;
+  v_spends boolean;
+BEGIN
+  SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+  IF NOT FOUND OR v_lease.fence <> p_fence OR v_lease.running_turn_id IS DISTINCT FROM p_turn THEN
+    RETURN jsonb_build_object('fenced', true, 'more', false);
+  END IF;
+  SELECT * INTO v_turn FROM public.agent_turns t WHERE t.id = p_turn FOR UPDATE;
+  SELECT * INTO v_wake FROM public.agent_wakes w WHERE w.id = v_turn.wake_id FOR UPDATE;
+  IF p_status = 'failed' THEN
+    v_wake_status := CASE WHEN v_wake.attempts >= v_wake.max_attempts THEN 'dead' ELSE 'pending' END;
+  ELSE
+    v_wake_status := p_status;
+  END IF;
+  v_turn_status := CASE
+    WHEN p_status <> 'failed' THEN 'settled'
+    WHEN v_wake_status = 'pending' AND v_turn.proposal IS NOT NULL THEN 'proposed'
+    ELSE 'failed'
+  END;
+  UPDATE public.agent_turns t SET
+      status = v_turn_status,
+      outcome = p_outcome,
+      error_code = p_error_code,
+      model = p_usage ->> 'model',
+      prompt_tokens = (p_usage ->> 'promptTokens')::integer,
+      completion_tokens = (p_usage ->> 'completionTokens')::integer,
+      cost = (p_usage ->> 'cost')::numeric,
+      duration_ms = (p_usage ->> 'durationMs')::integer
+   WHERE t.id = p_turn;
+  UPDATE public.agent_wakes w SET
+      status = v_wake_status,
+      reason = p_reason,
+      not_before = CASE WHEN v_wake_status = 'pending' THEN now() + make_interval(secs => p_retry_wait_s) ELSE w.not_before END,
+      finished_at = CASE WHEN v_wake_status = 'pending' THEN NULL ELSE now() END
+   WHERE w.id = v_wake.id;
+  -- A failure is a failed turn, or a customer's wake ended by the holding line after an error (p_error_code set). The breaker closes only on a
+  -- turn the model really answered (a stored proposal): a hold-over, a skip or a turn with no model run says nothing about the runtime. A
+  -- background turn spends the day's cap whether it was done or failed, since the model may have run either way.
+  v_failed := p_status = 'failed' OR p_error_code IS NOT NULL;
+  v_answered := p_status = 'done' AND p_error_code IS NULL AND v_turn.proposal IS NOT NULL;
+  v_spends := v_wake.source IN ('internal', 'schedule') AND (v_failed OR p_status = 'done');
+  UPDATE public.agent_work_state s SET
+      failures = CASE WHEN v_failed THEN s.failures + 1 WHEN v_answered THEN 0 ELSE s.failures END,
+      breaker_until = CASE
+        WHEN v_failed AND s.failures + 1 >= p_breaker_after THEN now() + make_interval(secs => p_breaker_s)
+        WHEN v_answered THEN NULL
+        ELSE s.breaker_until END,
+      last_turn_at = now(),
+      background_turns = CASE
+        WHEN NOT v_spends THEN s.background_turns
+        WHEN s.background_day = v_today THEN s.background_turns + 1
+        ELSE 1 END,
+      background_day = CASE WHEN v_spends THEN v_today ELSE s.background_day END
+   WHERE s.agent_id = p_agent;
+  -- A task wake that was skipped (quota, cap) must not end the task: the wake cleared the task's time, so it is armed again for an hour on.
+  IF p_status = 'skipped' AND v_wake.context ->> 'taskId' IS NOT NULL THEN
+    UPDATE public.agent_tasks t SET next_action_at = now() + interval '1 hour'
+     WHERE t.id = (v_wake.context ->> 'taskId')::uuid AND t.status = 'open' AND t.next_action_at IS NULL;
+  END IF;
+  UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+   WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+  SELECT EXISTS (
+    SELECT 1 FROM public.agent_wakes w
+     WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' AND w.not_before <= now()
+  ) INTO v_more;
+  RETURN jsonb_build_object('fenced', false, 'more', v_more);
+END;
+$$;
+
+-- What the minute sweep must look at, at most p_limit of each kind: scopes to drain (a lapsed lease, or a due wake with no job in sight),
+-- open tasks that are due, and schedule triggers that are overdue or not reconciled with the scheduler for an hour.
+CREATE FUNCTION public.agent_work_due(p_limit integer)
+    RETURNS TABLE (due_kind text, due_agent uuid, due_workspace uuid, due_scope text, due_subject uuid, due_at timestamptz)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  (SELECT 'lease'::text, l.agent_id, l.workspace_id, l.scope_key, l.running_turn_id, l.lease_until
+     FROM public.agent_work_leases l
+    WHERE l.running_turn_id IS NOT NULL AND l.lease_until < now()
+    ORDER BY l.lease_until LIMIT p_limit)
+  UNION ALL
+  (SELECT 'wake'::text, w.agent_id, w.workspace_id, w.scope_key, NULL::uuid, min(w.created_at)
+     FROM public.agent_wakes w
+    WHERE w.status = 'pending' AND w.not_before <= now() AND (w.created_at < now() - interval '1 minute' OR w.attempts > 0)
+      AND NOT EXISTS (
+        SELECT 1 FROM public.agent_work_leases l
+         WHERE l.agent_id = w.agent_id AND l.scope_key = w.scope_key AND l.running_turn_id IS NOT NULL AND l.lease_until >= now())
+    GROUP BY w.agent_id, w.workspace_id, w.scope_key
+    ORDER BY min(w.created_at) LIMIT p_limit)
+  UNION ALL
+  (SELECT 'task'::text, t.agent_id, t.workspace_id, 'agent'::text, t.id, t.next_action_at
+     FROM public.agent_tasks t
+    WHERE t.status = 'open' AND t.next_action_at <= now()
+    ORDER BY t.next_action_at LIMIT p_limit)
+  UNION ALL
+  (SELECT 'trigger'::text, g.agent_id, g.workspace_id, 'agent'::text, g.id, g.next_run_at
+     FROM public.agent_triggers g
+    WHERE g.enabled AND g.kind = 'schedule'
+      AND (g.next_run_at < now() - interval '2 minutes' OR g.reconciled_at IS NULL OR g.reconciled_at < now() - interval '1 hour')
+    ORDER BY g.next_run_at NULLS FIRST LIMIT p_limit);
+$$;
+
+REVOKE ALL ON FUNCTION public.agent_work_is_off(uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_work_has_agent(uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_work_switch(uuid, uuid, boolean, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_wake_ended(public.agent_wakes, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_turn_touch(uuid, text, bigint, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_turn_propose(uuid, uuid, text, bigint, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_turn_finish(uuid, text, bigint, uuid, text, text, jsonb, text, jsonb, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_work_due(integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_work_is_off(uuid, uuid) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_work_has_agent(uuid, uuid) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_work_switch(uuid, uuid, boolean, uuid) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_wake_ended(public.agent_wakes, text) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_turn_touch(uuid, text, bigint, integer) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_turn_propose(uuid, uuid, text, bigint, jsonb) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_turn_finish(uuid, text, bigint, uuid, text, text, jsonb, text, jsonb, integer, integer, integer) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_work_due(integer) TO app_be;
+
+-- ---- from 20261110000150_agent-trigger-seed-key.sql ----
+-- A module seeds the triggers of its agent by a stable key, so installing or applying the module again finds the row it wrote instead of
+-- adding a second one, and a base graph can name the trigger by that key. A trigger the owner wrote has no key.
+ALTER TABLE public.agent_triggers ADD COLUMN seed_key text;
+CREATE UNIQUE INDEX agent_triggers_seed_key_idx ON public.agent_triggers USING btree (agent_id, seed_key) WHERE seed_key IS NOT NULL;
+
+-- ---- from 20261110000200_usage-kind-agent-work_contract_widen.sql ----
+-- agent-work: a tag or background turn of an agent is metered under the new usage kind `agent_work` (a customer turn on the core road
+-- keeps `chat_reply`). Additive: the kind check is widened by one value; no row changes. `kind` is a text column with a CHECK, not a
+-- Postgres enum, so the new value is usable at once, and the quota function already sums every kind but `guide` into tokens and credits.
+
+ALTER TABLE public.ai_usage_events DROP CONSTRAINT ai_usage_events_kind_check;
+ALTER TABLE public.ai_usage_events
+    ADD CONSTRAINT ai_usage_events_kind_check
+    CHECK ((kind = ANY (ARRAY['chat_reply'::text, 'setup'::text, 'owner_chat'::text, 'relay'::text, 'embedding'::text, 'engine'::text, 'guide'::text, 'brain'::text, 'office_command'::text, 'agent_work'::text])));
+
+-- ---- from 20261110000300_agent-wake-event-queues.sql ----
+-- The consumer queues of the agent_wakes reactor (be/src/features/reactors/agent-wakes): three internal events that wake the agents which
+-- asked for them, and installation_changed, which seeds the triggers a module declares. Each queue, its dead-letter queue and its topic
+-- binding follow event-bus.queue.ts. Every call is idempotent (pgmq.create skips an existing queue, pgmq.bind_topic upserts the binding).
+
+select pgmq.create('bank_credit_booked__agent_wakes');
+select pgmq.create('bank_credit_booked__agent_wakes__dead');
+select pgmq.bind_topic('bank_credit_booked', 'bank_credit_booked__agent_wakes');
+
+select pgmq.create('payment_reconciled__agent_wakes');
+select pgmq.create('payment_reconciled__agent_wakes__dead');
+select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__agent_wakes');
+
+select pgmq.create('knowledge_source_indexed__agent_wakes');
+select pgmq.create('knowledge_source_indexed__agent_wakes__dead');
+select pgmq.bind_topic('knowledge_source_indexed', 'knowledge_source_indexed__agent_wakes');
+
+select pgmq.create('installation_changed__agent_wakes');
+select pgmq.create('installation_changed__agent_wakes__dead');
+select pgmq.bind_topic('installation_changed', 'installation_changed__agent_wakes');
+
+-- ---- from 20261110000400_agent-graphs.sql ----
+-- agent-graphs: forward-only; immutable once on origin/main. Expand only: new tables, nothing existing altered.
+-- Each agent is a flow the owner can read and change. The draft lives on agent_graphs and takes a draft_rev check so two managers
+-- cannot overwrite each other; publishing freezes a row of agent_graph_versions, which app_be may only SELECT and INSERT, so the
+-- database itself refuses a change to a version. A decision keeps the version that decided, the path, the facts as read and the
+-- branch. turn_id and wake_id carry no foreign key: turns go at 30 days and a decision stays as the audit.
+
+CREATE TABLE public.agent_graphs (
+    agent_id uuid NOT NULL PRIMARY KEY REFERENCES public.agents(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    installation_id uuid NOT NULL UNIQUE REFERENCES public.module_installations(id) ON DELETE CASCADE,
+    draft jsonb NOT NULL,
+    draft_rev integer NOT NULL DEFAULT 1,
+    active_version_id uuid,
+    mode text NOT NULL DEFAULT 'shadow',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_graphs_mode_check CHECK (mode IN ('shadow', 'enforced')),
+    CONSTRAINT agent_graphs_draft_check CHECK (jsonb_typeof(draft) = 'object')
+);
+CREATE INDEX agent_graphs_workspace_idx ON public.agent_graphs USING btree (workspace_id);
+
+CREATE TABLE public.agent_graph_versions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    version integer NOT NULL,
+    document jsonb NOT NULL,
+    document_hash text NOT NULL,
+    context_version_id uuid,
+    change_kind text NOT NULL,
+    note text NOT NULL DEFAULT '',
+    published_by uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL,
+    published_at timestamptz NOT NULL DEFAULT now(),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_graph_versions_version_key UNIQUE (agent_id, version),
+    CONSTRAINT agent_graph_versions_kind_check CHECK (change_kind IN ('seed', 'chat', 'edit', 'conflict', 'learned', 'template', 'rollback')),
+    CONSTRAINT agent_graph_versions_document_check CHECK (jsonb_typeof(document) = 'object')
+);
+
+CREATE TABLE public.agent_graph_sources (
+    version_id uuid NOT NULL REFERENCES public.agent_graph_versions(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    node_key text NOT NULL,
+    branch_key text NOT NULL DEFAULT '',
+    kind text NOT NULL,
+    ref text NOT NULL,
+    value_hash text NOT NULL DEFAULT '',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_graph_sources_pkey PRIMARY KEY (version_id, node_key, branch_key, kind, ref)
+);
+CREATE INDEX agent_graph_sources_brain_idx ON public.agent_graph_sources USING btree (agent_id, ref) WHERE kind = 'brain';
+
+CREATE TABLE public.agent_graph_proposals (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    dedupe_key text NOT NULL,
+    kind text NOT NULL,
+    status text NOT NULL DEFAULT 'open',
+    base_version_id uuid REFERENCES public.agent_graph_versions(id) ON DELETE SET NULL,
+    node_key text,
+    branch_key text,
+    patch jsonb NOT NULL DEFAULT '{}'::jsonb,
+    widens boolean NOT NULL DEFAULT false,
+    evidence jsonb NOT NULL DEFAULT '[]'::jsonb,
+    decided_by uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL,
+    decided_at timestamptz,
+    result_version_id uuid REFERENCES public.agent_graph_versions(id) ON DELETE SET NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_graph_proposals_dedupe_key UNIQUE (agent_id, dedupe_key),
+    CONSTRAINT agent_graph_proposals_kind_check CHECK (kind IN ('conflict', 'learned', 'template_update')),
+    CONSTRAINT agent_graph_proposals_status_check CHECK (status IN ('open', 'confirmed', 'declined', 'superseded'))
+);
+CREATE INDEX agent_graph_proposals_open_idx ON public.agent_graph_proposals USING btree (agent_id, created_at DESC) WHERE status = 'open';
+
+CREATE TABLE public.agent_graph_decisions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    work_item_id uuid NOT NULL REFERENCES public.work_items(id) ON DELETE CASCADE,
+    version_id uuid NOT NULL REFERENCES public.agent_graph_versions(id),
+    turn_id uuid,
+    wake_id uuid,
+    action text NOT NULL,
+    path jsonb NOT NULL DEFAULT '[]'::jsonb,
+    facts jsonb NOT NULL DEFAULT '{}'::jsonb,
+    branch_key text NOT NULL,
+    outcome text NOT NULL,
+    approval_request_id uuid,
+    closed_as text,
+    shadow_diff boolean NOT NULL DEFAULT false,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_graph_decisions_work_item_key UNIQUE (work_item_id),
+    CONSTRAINT agent_graph_decisions_outcome_check CHECK (outcome IN ('auto', 'ask', 'stop')),
+    CONSTRAINT agent_graph_decisions_closed_check CHECK (closed_as IS NULL OR closed_as IN ('done', 'approved', 'edited', 'rejected', 'expired'))
+);
+CREATE INDEX agent_graph_decisions_branch_idx ON public.agent_graph_decisions USING btree (agent_id, branch_key, created_at) WHERE closed_as IS NOT NULL;
+
+ALTER TABLE public.agent_graphs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_graphs_app_be_select ON public.agent_graphs FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_graphs_app_be_insert ON public.agent_graphs FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_graphs_app_be_update ON public.agent_graphs FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+GRANT SELECT, INSERT, UPDATE ON TABLE public.agent_graphs TO app_be;
+
+ALTER TABLE public.agent_graph_versions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_graph_versions_app_be_select ON public.agent_graph_versions FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_graph_versions_app_be_insert ON public.agent_graph_versions FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+GRANT SELECT, INSERT ON TABLE public.agent_graph_versions TO app_be;
+
+ALTER TABLE public.agent_graph_sources ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_graph_sources_app_be_select ON public.agent_graph_sources FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_graph_sources_app_be_insert ON public.agent_graph_sources FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+GRANT SELECT, INSERT ON TABLE public.agent_graph_sources TO app_be;
+
+ALTER TABLE public.agent_graph_proposals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_graph_proposals_app_be_select ON public.agent_graph_proposals FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_graph_proposals_app_be_insert ON public.agent_graph_proposals FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_graph_proposals_app_be_update ON public.agent_graph_proposals FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+GRANT SELECT, INSERT, UPDATE ON TABLE public.agent_graph_proposals TO app_be;
+
+ALTER TABLE public.agent_graph_decisions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_graph_decisions_app_be_select ON public.agent_graph_decisions FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_graph_decisions_app_be_insert ON public.agent_graph_decisions FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_graph_decisions_app_be_update ON public.agent_graph_decisions FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+GRANT SELECT, INSERT, UPDATE ON TABLE public.agent_graph_decisions TO app_be;
+
+-- ---- from 20261110000500_work-item-reason-branch_contract_widen.sql ----
+-- work-items: an ask that a branch of the action graph raised is recorded under the new reason `branch_ask`, so "send by itself" in
+-- the automation gate (which waves through only `over_authority`) cannot wave a named approver through. Additive: the check is
+-- widened by one value; no row changes.
+
+ALTER TABLE public.work_items DROP CONSTRAINT work_items_reason_check;
+ALTER TABLE public.work_items
+    ADD CONSTRAINT work_items_reason_check
+    CHECK ((reason = ANY (ARRAY['routine'::text, 'missing_data'::text, 'over_authority'::text, 'unclear_outcome'::text, 'not_allowed'::text, 'branch_ask'::text])));
+
+-- ---- from 20261110000600_agent-graph-approvals.sql ----
+-- agent-graph-approvals: a branch ask names its own approver, so the request keeps the group it asked: eligibleFor prefers it to the
+-- rule's live group. Expand only: one nullable column and the queue the agent-graphs consumer of approval_resolved reads.
+
+ALTER TABLE public.approval_requests ADD COLUMN approver_group jsonb;
+ALTER TABLE public.approval_requests
+    ADD CONSTRAINT approval_requests_approver_group_check CHECK (approver_group IS NULL OR jsonb_typeof(approver_group) = 'object');
+
+select pgmq.create('approval_resolved__agent_graphs');
+select pgmq.create('approval_resolved__agent_graphs__dead');
+select pgmq.bind_topic('approval_resolved', 'approval_resolved__agent_graphs');
+
+-- ---- from 20261110000700_setup-write-branch_contract_widen.sql ----
+-- module-setup-writes: the setup chat proposes a third kind of confirm card, `branch`: where the amount bands of an action meet, and who
+-- is asked above the line. Additive: the check is widened by one value; no row changes.
+
+ALTER TABLE public.module_setup_writes DROP CONSTRAINT module_setup_writes_kind_check;
+ALTER TABLE public.module_setup_writes
+    ADD CONSTRAINT module_setup_writes_kind_check CHECK ((kind = ANY (ARRAY['fact'::text, 'rule'::text, 'branch'::text])));
+
+-- ---- from 20261110000800_supplier-payables.sql ----
+-- supplier-payables: the shop's supplier invoices as a record. Expand only: one new table, nothing existing altered.
+-- Each morning the accounting desk lists the supplier invoices through the gateway and keeps each one here as open; an outgoing
+-- payment that settles one (alone, or approved by a person) marks the row paid, and a paid row is an expense line of the ledger.
+-- The workbench reads this table and never the gateway, so a page load writes nothing.
+
+CREATE TABLE public.supplier_payables (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    supplier text NOT NULL DEFAULT '',
+    seller_tax_code text NOT NULL,
+    invoice_no text NOT NULL,
+    amount_vnd bigint NOT NULL,
+    issued_on date NOT NULL,
+    due_on date NOT NULL,
+    status text NOT NULL DEFAULT 'open',
+    debit_ref text,
+    paid_at timestamptz,
+    work_item_id uuid REFERENCES public.work_items(id) ON DELETE SET NULL,
+    first_seen_at timestamptz NOT NULL DEFAULT now(),
+    decided_by text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT supplier_payables_status_check CHECK (status IN ('open', 'paid')),
+    CONSTRAINT supplier_payables_amount_check CHECK (amount_vnd >= 0),
+    CONSTRAINT supplier_payables_paid_check CHECK (status = 'open' OR (paid_at IS NOT NULL AND debit_ref IS NOT NULL)),
+    CONSTRAINT supplier_payables_invoice_key UNIQUE (workspace_id, seller_tax_code, invoice_no)
+);
+CREATE INDEX supplier_payables_open_idx ON public.supplier_payables USING btree (workspace_id, due_on) WHERE status = 'open';
+CREATE INDEX supplier_payables_paid_idx ON public.supplier_payables USING btree (workspace_id, paid_at DESC) WHERE status = 'paid';
+
+CREATE TRIGGER supplier_payables_set_updated_at BEFORE UPDATE ON public.supplier_payables FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.supplier_payables ENABLE ROW LEVEL SECURITY;
+CREATE POLICY supplier_payables_app_be_select ON public.supplier_payables FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY supplier_payables_app_be_insert ON public.supplier_payables FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY supplier_payables_app_be_update ON public.supplier_payables FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.supplier_payables FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.supplier_payables TO app_be;
+
+-- ---- from 20261110100100_knowledge-source-content-hash.sql ----
+-- knowledge-source-content-hash: forward-only; immutable once on origin/main. Expand step: one nullable column, nothing is dropped or tightened.
+-- A source records the SHA-256 of the extracted text whose passages and facts are complete, so the same text never pays for that work twice. The column is null while the work on a text is unfinished.
+ALTER TABLE public.knowledge_sources ADD COLUMN IF NOT EXISTS content_hash text;
+
+-- A source that went all the way already: the worker stores the text trimmed, so the hash of the stored text is the hash the worker computes. A note, a failure or a reading that did not finish leaves it null, and such a source goes through the full work once.
+UPDATE public.knowledge_sources AS s
+SET content_hash = encode(sha256(convert_to(s.content, 'UTF8')), 'hex')
+WHERE s.content_hash IS NULL
+    AND s.status = 'ready'
+    AND s.error IS NULL
+    AND s.content <> ''
+    AND EXISTS (SELECT 1 FROM public.brain_extractions AS e WHERE e.source_id = s.id AND e.status = 'done');
+
+-- ---- from 20261110100200_knowledge-chunk-content-hash.sql ----
+-- knowledge-chunk-content-hash: forward-only; immutable once on origin/main. Expand step: one nullable column, nothing is dropped or tightened.
+-- A passage records the SHA-256 of its normalised text and the model of its vector, so a passage that moved in its source keeps its vector and nothing is charged. A passage with no vector has no hash; a null hash behaves as before the column.
+ALTER TABLE public.knowledge_chunks ADD COLUMN IF NOT EXISTS content_hash text;
+
+-- Computed from the stored text, which the worker stored normalised; no vector is touched and nothing is embedded. Same value as passageHashOf.
+UPDATE public.knowledge_chunks
+SET content_hash = encode(sha256(convert_to(content || E'\n' || embedding_model, 'UTF8')), 'hex')
+WHERE content_hash IS NULL
+    AND embedding IS NOT NULL
+    AND embedding_model IS NOT NULL;
+
+-- ---- from 20261110100300_brain-extraction-passages.sql ----
+-- brain-extraction-passages: forward-only; immutable once on origin/main. Expand step: two columns with defaults, nothing is dropped or tightened.
+-- A reading records the hashes of the passages it finished, so an edited document is read for its changed passages only; a row with no hashes is read whole, as before. It also records that the facts changed before a retry, so the dossier review is requested once the reading ends.
+ALTER TABLE public.brain_extractions ADD COLUMN IF NOT EXISTS passage_hashes text[] NOT NULL DEFAULT '{}'::text[];
+ALTER TABLE public.brain_extractions ADD COLUMN IF NOT EXISTS facts_changed boolean NOT NULL DEFAULT false;
+
+-- ---- from 20261110100400_conversation-front-agent.sql ----
+-- One customer, two agents: a conversation remembers the agent that opened the door (`front_agent_id`) while `agent_id` stays the
+-- agent that speaks. The first hand-over fills it (COALESCE keeps the first front agent on a second hand-over); a hand-back after a won
+-- deal returns the conversation to it. Expand only: the column is nullable, no row changes, an old reader never selects it.
+
+ALTER TABLE public.agent_conversations
+    ADD COLUMN front_agent_id uuid;
+
+ALTER TABLE ONLY public.agent_conversations
+    ADD CONSTRAINT agent_conversations_front_agent_id_fkey FOREIGN KEY (front_agent_id) REFERENCES public.agents(id) ON DELETE SET NULL;
+
+CREATE INDEX agent_conversations_front_agent
+    ON public.agent_conversations USING btree (workspace_id, front_agent_id)
+    WHERE (front_agent_id IS NOT NULL);
+
+-- The consumer queue of the conversation_handback reactor (be/src/features/reactors/conversation-handback): a won deal returns the
+-- conversation to the agent that opened it. The queue, its dead-letter queue and its topic binding follow event-bus.queue.ts; every
+-- call is idempotent.
+
+select pgmq.create('deal_won__conversation_handback');
+select pgmq.create('deal_won__conversation_handback__dead');
+select pgmq.bind_topic('deal_won', 'deal_won__conversation_handback');
+
+-- ---- from 20261110100500_agent-serial.sql ----
+-- An agent is named by its role and a generated id ("Agent Chatbot #23233"), and the owner renames it freely. The id is stored next to the
+-- name so two agents of a workspace never draw the same one: five digits, unique inside the workspace. Expand only: the column is nullable,
+-- no row changes, an agent named before it existed keeps its name and stays without an id, and an old reader never selects the column.
+
+ALTER TABLE public.agents
+    ADD COLUMN serial integer,
+    ADD CONSTRAINT agents_serial_range_check CHECK (serial IS NULL OR serial BETWEEN 10000 AND 99999);
+
+CREATE UNIQUE INDEX agents_workspace_serial_key
+    ON public.agents USING btree (workspace_id, serial)
+    WHERE (serial IS NOT NULL);
+
+-- ---- from 20261110100600_knowledge-chunk-place.sql ----
+-- knowledge-chunk-place: forward-only; immutable once on origin/main. Expand step: two nullable columns, nothing is dropped or tightened, no row is rewritten, and the row-level security of the table is untouched.
+-- A passage records where in its document it sits when the file says so: the page of a PDF, the slide of a presentation or the sheet of a workbook, so a quote can name its page. A passage stored before the columns has neither and shows no place.
+ALTER TABLE public.knowledge_chunks ADD COLUMN IF NOT EXISTS place_kind text;
+ALTER TABLE public.knowledge_chunks ADD COLUMN IF NOT EXISTS place_label text;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'knowledge_chunks_place_check' AND conrelid = 'public.knowledge_chunks'::regclass
+    ) THEN
+        ALTER TABLE public.knowledge_chunks ADD CONSTRAINT knowledge_chunks_place_check
+            CHECK (
+                (place_kind IS NULL AND place_label IS NULL)
+                OR (place_kind IN ('page', 'slide', 'sheet') AND place_label IS NOT NULL AND char_length(place_label) BETWEEN 1 AND 120)
+            );
+    END IF;
+END
+$$;
+
+-- ---- from 20261110100610_knowledge-source-stage-critic_contract_widen.sql ----
+-- knowledge-sources: a document whose facts are read stays `ready` while the critic checks its dossier, and wears the stage `critic` meanwhile so the fourth step of taking a document in lights up. Additive: the check is widened by one value; no row changes.
+
+ALTER TABLE public.knowledge_sources DROP CONSTRAINT knowledge_sources_stage_check;
+ALTER TABLE public.knowledge_sources
+    ADD CONSTRAINT knowledge_sources_stage_check
+    CHECK (stage IS NULL OR stage IN ('read', 'chunk', 'embed', 'store', 'facts', 'critic'));
+
+-- ---- from 20261110100700_chat-files.sql ----
+-- chat-files: a file sent with a message, by a customer in a conversation or by a member in the Office (a transfer screenshot, a PDF).
+-- Expand only: one new table, nothing existing altered. message_id names a row of agent_messages or, with no conversation, of messages,
+-- so it carries no foreign key; a conversation or a workspace takes its rows with it.
+-- The bytes sit in the private store under <workspace>/chat/<conversation or office>/, read through short-lived addresses; a row exists only for
+-- an object whose bytes were checked when the message was sent, so an upload nobody sent leaves no row.
+
+CREATE TABLE public.agent_message_attachments (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    conversation_id uuid REFERENCES public.agent_conversations(id) ON DELETE CASCADE,
+    message_id uuid NOT NULL,
+    path text NOT NULL,
+    name text NOT NULL,
+    content_type text NOT NULL,
+    size_bytes integer NOT NULL,
+    read jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_message_attachments_path_key UNIQUE (path),
+    CONSTRAINT agent_message_attachments_type_check CHECK (content_type IN ('image/jpeg', 'image/png', 'image/webp', 'application/pdf')),
+    CONSTRAINT agent_message_attachments_size_check CHECK (size_bytes > 0 AND size_bytes <= 10485760)
+);
+CREATE INDEX agent_message_attachments_message_idx ON public.agent_message_attachments USING btree (workspace_id, message_id);
+
+CREATE TRIGGER agent_message_attachments_set_updated_at BEFORE UPDATE ON public.agent_message_attachments FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.agent_message_attachments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_message_attachments_app_be_select ON public.agent_message_attachments FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_message_attachments_app_be_insert ON public.agent_message_attachments FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_message_attachments_app_be_update ON public.agent_message_attachments FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_message_attachments FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.agent_message_attachments TO app_be;
+
+-- ---- from 20261110100800_agent-runs.sql ----
+-- agent-runs: forward-only; immutable once on origin/main. Expand only: new tables and functions, nothing existing altered.
+-- The durable run of one wake. A run is one row per wake; its steps are the saga: each step is a row with a status, a fence, an attempt
+-- count and the result it stored, so a crash at any boundary resumes from the rows. Every state change of a step commits through a
+-- function that checks the fence of the claim, so a write under an old fence changes nothing. The back end calls the functions and writes the
+-- tables only to insert a run and to read. Run rows lock before step rows in every function, so two functions never wait on each other.
+
+CREATE TABLE public.agent_runs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    wake_id uuid NOT NULL REFERENCES public.agent_wakes(id) ON DELETE CASCADE,
+    trigger text NOT NULL,
+    version_id uuid,
+    status text NOT NULL DEFAULT 'running',
+    context jsonb NOT NULL DEFAULT '{}'::jsonb,
+    step_seq integer NOT NULL DEFAULT 0,
+    error_code text,
+    dead_lettered_at timestamptz,
+    finished_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_runs_wake_key UNIQUE (wake_id),
+    CONSTRAINT agent_runs_status_check CHECK (status IN ('running', 'waiting', 'done', 'failed', 'dead', 'compensating', 'compensated')),
+    CONSTRAINT agent_runs_trigger_check CHECK (char_length(trigger) BETWEEN 1 AND 100),
+    CONSTRAINT agent_runs_context_check CHECK (jsonb_typeof(context) = 'object' AND octet_length(context::text) <= 65536)
+);
+CREATE INDEX agent_runs_agent_idx ON public.agent_runs USING btree (agent_id, created_at DESC);
+CREATE INDEX agent_runs_unspoken_idx ON public.agent_runs USING btree (updated_at)
+    WHERE status IN ('dead', 'compensated') AND dead_lettered_at IS NULL;
+
+CREATE TABLE public.agent_run_steps (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    run_id uuid NOT NULL REFERENCES public.agent_runs(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    seq integer NOT NULL,
+    step_key text NOT NULL,
+    node_key text NOT NULL,
+    kind text NOT NULL,
+    effect jsonb NOT NULL,
+    input jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'pending',
+    attempt smallint NOT NULL DEFAULT 0,
+    max_attempts smallint NOT NULL DEFAULT 3,
+    comp_attempts smallint NOT NULL DEFAULT 0,
+    deadline_ms integer NOT NULL,
+    fence bigint NOT NULL DEFAULT 0,
+    not_before timestamptz NOT NULL DEFAULT now(),
+    claim_until timestamptz,
+    wait_item_id uuid,
+    result jsonb,
+    error_code text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_run_steps_key UNIQUE (run_id, step_key),
+    CONSTRAINT agent_run_steps_seq_key UNIQUE (run_id, seq),
+    CONSTRAINT agent_run_steps_status_check CHECK (status IN ('pending', 'running', 'done', 'failed', 'compensating', 'compensated')),
+    CONSTRAINT agent_run_steps_text_check CHECK (char_length(step_key) BETWEEN 1 AND 200 AND char_length(node_key) BETWEEN 1 AND 200 AND char_length(kind) BETWEEN 1 AND 100),
+    CONSTRAINT agent_run_steps_effect_check CHECK (jsonb_typeof(effect) = 'object'),
+    CONSTRAINT agent_run_steps_json_check CHECK (
+        jsonb_typeof(input) = 'object' AND octet_length(input::text) <= 65536
+        AND (result IS NULL OR (jsonb_typeof(result) = 'object' AND octet_length(result::text) <= 65536))
+    ),
+    CONSTRAINT agent_run_steps_budget_check CHECK (max_attempts BETWEEN 1 AND 10 AND deadline_ms BETWEEN 1000 AND 3600000)
+);
+CREATE INDEX agent_run_steps_open_idx ON public.agent_run_steps USING btree (run_id, seq) WHERE status IN ('pending', 'running', 'failed', 'compensating');
+CREATE INDEX agent_run_steps_claim_idx ON public.agent_run_steps USING btree (claim_until) WHERE status IN ('running', 'compensating');
+CREATE INDEX agent_run_steps_pending_idx ON public.agent_run_steps USING btree (not_before) WHERE status = 'pending';
+CREATE INDEX agent_run_steps_wait_idx ON public.agent_run_steps USING btree (wait_item_id) WHERE wait_item_id IS NOT NULL;
+
+CREATE TRIGGER agent_runs_set_updated_at BEFORE UPDATE ON public.agent_runs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_run_steps_set_updated_at BEFORE UPDATE ON public.agent_run_steps FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.agent_runs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_runs_app_be_select ON public.agent_runs FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_runs_app_be_insert ON public.agent_runs FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_runs_app_be_delete ON public.agent_runs FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_runs FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, DELETE ON TABLE public.agent_runs TO app_be;
+
+ALTER TABLE public.agent_run_steps ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_run_steps_app_be_select ON public.agent_run_steps FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_run_steps_app_be_delete ON public.agent_run_steps FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_run_steps FROM PUBLIC, anon, authenticated;
+GRANT SELECT, DELETE ON TABLE public.agent_run_steps TO app_be;
+
+-- A step as the back end reads it from a function: the row, plus the results of the steps done before it, by step key.
+CREATE FUNCTION public.agent_run_step_json(s public.agent_run_steps) RETURNS jsonb
+    LANGUAGE sql STABLE
+    SET search_path TO 'public'
+    AS $$
+  SELECT jsonb_build_object(
+    'stepId', s.id, 'runId', s.run_id, 'workspaceId', s.workspace_id, 'agentId', s.agent_id, 'seq', s.seq,
+    'stepKey', s.step_key, 'nodeKey', s.node_key, 'kind', s.kind, 'effect', s.effect, 'input', s.input,
+    'status', s.status, 'attempt', s.attempt, 'maxAttempts', s.max_attempts, 'deadlineMs', s.deadline_ms,
+    'fence', s.fence, 'result', s.result, 'errorCode', s.error_code, 'waitItemId', s.wait_item_id,
+    'earlier', COALESCE((SELECT jsonb_object_agg(e.step_key, e.result) FROM public.agent_run_steps e
+                          WHERE e.run_id = s.run_id AND e.status = 'done' AND e.seq < s.seq AND e.result IS NOT NULL), '{}'::jsonb)
+  );
+$$;
+
+-- Where a run stands after one of its steps changed: done when nothing is open and no step follows, going while any step can run, waiting only
+-- when nothing can run and a wait is open. A wait parks its own branch, not the run.
+CREATE FUNCTION public.agent_run_status_after(p_run uuid, p_more boolean) RETURNS text
+    LANGUAGE sql STABLE
+    SET search_path TO 'public'
+    AS $$
+  SELECT CASE
+    WHEN p_more THEN 'running'
+    WHEN NOT EXISTS (SELECT 1 FROM public.agent_run_steps o WHERE o.run_id = p_run AND o.status <> 'done') THEN 'done'
+    WHEN EXISTS (SELECT 1 FROM public.agent_run_steps o WHERE o.run_id = p_run
+                  AND (o.status IN ('pending', 'failed') OR (o.status = 'running' AND o.wait_item_id IS NULL))) THEN 'running'
+    ELSE 'waiting'
+  END;
+$$;
+
+-- Writes steps behind the last one of a run, once: a step key already there is left as it is, so a replay writes nothing twice. Answers how many
+-- rows were written; a run that has ended takes none.
+CREATE FUNCTION public.agent_run_append(p_run uuid, p_specs jsonb) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_run public.agent_runs%ROWTYPE;
+  v_count integer;
+  v_total integer;
+BEGIN
+  SELECT * INTO v_run FROM public.agent_runs r WHERE r.id = p_run FOR UPDATE;
+  IF NOT FOUND OR v_run.status IN ('done', 'failed', 'dead', 'compensating', 'compensated') THEN
+    RETURN 0;
+  END IF;
+  v_total := jsonb_array_length(p_specs);
+  WITH written AS (
+    INSERT INTO public.agent_run_steps (run_id, workspace_id, agent_id, seq, step_key, node_key, kind, effect, input, max_attempts, deadline_ms)
+      SELECT v_run.id, v_run.workspace_id, v_run.agent_id, v_run.step_seq + x.ord::integer, x.spec ->> 'stepKey', x.spec ->> 'nodeKey',
+             x.spec ->> 'kind', x.spec -> 'effect', COALESCE(x.spec -> 'input', '{}'::jsonb),
+             (x.spec ->> 'maxAttempts')::smallint, (x.spec ->> 'deadlineMs')::integer
+        FROM jsonb_array_elements(p_specs) WITH ORDINALITY AS x(spec, ord)
+      ON CONFLICT DO NOTHING
+      RETURNING 1
+  )
+  SELECT count(*) INTO v_count FROM written;
+  UPDATE public.agent_runs r SET step_seq = r.step_seq + v_total,
+         status = CASE WHEN v_count > 0 AND r.status = 'waiting' THEN 'running' ELSE r.status END WHERE r.id = v_run.id;
+  RETURN v_count;
+END;
+$$;
+
+-- Claims one step under a new fence. With a step key it claims that step alone (a tool called from inside the turn); without one it claims the
+-- first step still open, and only when nothing else of the run runs. Answers {result}: 'claimed' (with the step), 'done' (the stored answer),
+-- 'busy' (a live claim holds it), 'later' (not before the backoff), 'waiting_expired' (a wait past its deadline: the sweeper's), 'exhausted' (the
+-- tries are spent: the engine routes the failure), 'closed' (the run or step has ended), 'idle' (nothing open) or 'gone'.
+CREATE FUNCTION public.agent_step_claim(p_run uuid, p_step_key text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_run public.agent_runs%ROWTYPE;
+  v_step public.agent_run_steps%ROWTYPE;
+BEGIN
+  SELECT * INTO v_run FROM public.agent_runs r WHERE r.id = p_run FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('result', 'gone');
+  END IF;
+  IF v_run.status IN ('done', 'failed', 'dead', 'compensating', 'compensated') THEN
+    RETURN jsonb_build_object('result', 'closed', 'runStatus', v_run.status);
+  END IF;
+  IF p_step_key IS NULL THEN
+    SELECT * INTO v_step FROM public.agent_run_steps s
+     WHERE s.run_id = p_run AND (s.status IN ('pending', 'failed') OR (s.status = 'running' AND s.wait_item_id IS NULL))
+     ORDER BY s.seq LIMIT 1 FOR UPDATE;
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('result', 'idle');
+    END IF;
+  ELSE
+    SELECT * INTO v_step FROM public.agent_run_steps s WHERE s.run_id = p_run AND s.step_key = p_step_key FOR UPDATE;
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('result', 'gone');
+    END IF;
+  END IF;
+  IF v_step.status = 'done' THEN
+    RETURN jsonb_build_object('result', 'done', 'answer', v_step.result, 'step', public.agent_run_step_json(v_step));
+  END IF;
+  IF v_step.status IN ('failed', 'compensating', 'compensated') THEN
+    RETURN jsonb_build_object('result', 'closed', 'runStatus', v_run.status, 'step', public.agent_run_step_json(v_step));
+  END IF;
+  IF v_step.status = 'running' AND v_step.claim_until > now() THEN
+    RETURN jsonb_build_object('result', 'busy');
+  END IF;
+  IF v_step.status = 'running' AND v_step.wait_item_id IS NOT NULL THEN
+    RETURN jsonb_build_object('result', 'waiting_expired', 'step', public.agent_run_step_json(v_step));
+  END IF;
+  IF v_step.status = 'pending' AND v_step.not_before > now() THEN
+    RETURN jsonb_build_object('result', 'later', 'retryAfterMs', ceil(extract(epoch FROM (v_step.not_before - now())) * 1000)::integer);
+  END IF;
+  IF v_step.attempt >= v_step.max_attempts THEN
+    RETURN jsonb_build_object('result', 'exhausted', 'step', public.agent_run_step_json(v_step));
+  END IF;
+  UPDATE public.agent_run_steps s
+     SET status = 'running', attempt = s.attempt + 1, fence = s.fence + 1,
+         claim_until = now() + make_interval(secs => s.deadline_ms / 1000.0)
+   WHERE s.id = v_step.id RETURNING * INTO v_step;
+  UPDATE public.agent_runs r SET status = 'running' WHERE r.id = p_run AND r.status = 'waiting';
+  RETURN jsonb_build_object('result', 'claimed', 'step', public.agent_run_step_json(v_step));
+END;
+$$;
+
+-- Commits what a claimed step did, under its fence: 'fenced' when the claim moved on, changing nothing. p_outcome is 'done' (the result is stored;
+-- the run is done when nothing else is open and p_more says no step follows), 'wait' (the step stays claimed until p_deadline, for the work item),
+-- 'retry' (pending again after p_retry_s seconds) or 'failed' (stopped; the engine routes it).
+CREATE FUNCTION public.agent_step_commit(
+    p_run uuid, p_step_key text, p_fence bigint, p_outcome text, p_result jsonb, p_error text, p_retry_s integer, p_wait_item uuid, p_deadline timestamptz,
+    p_more boolean
+) RETURNS text
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_run_id uuid := p_run;
+  v_step public.agent_run_steps%ROWTYPE;
+BEGIN
+  PERFORM 1 FROM public.agent_runs r WHERE r.id = v_run_id FOR UPDATE;
+  SELECT * INTO v_step FROM public.agent_run_steps s WHERE s.run_id = p_run AND s.step_key = p_step_key FOR UPDATE;
+  IF NOT FOUND OR v_step.fence <> p_fence OR v_step.status <> 'running' THEN
+    RETURN 'fenced';
+  END IF;
+  IF p_outcome = 'done' THEN
+    UPDATE public.agent_run_steps s SET status = 'done', result = p_result, error_code = NULL, claim_until = NULL, wait_item_id = NULL WHERE s.id = v_step.id;
+    UPDATE public.agent_runs r SET status = public.agent_run_status_after(v_run_id, p_more),
+        finished_at = CASE WHEN public.agent_run_status_after(v_run_id, p_more) = 'done' THEN now() ELSE r.finished_at END
+     WHERE r.id = v_run_id;
+  ELSIF p_outcome = 'wait' THEN
+    UPDATE public.agent_run_steps s SET wait_item_id = p_wait_item, claim_until = p_deadline WHERE s.id = v_step.id;
+    UPDATE public.agent_runs r SET status = public.agent_run_status_after(v_run_id, false) WHERE r.id = v_run_id;
+  ELSIF p_outcome = 'retry' THEN
+    UPDATE public.agent_run_steps s SET status = 'pending', error_code = p_error, claim_until = NULL, wait_item_id = NULL,
+           not_before = now() + make_interval(secs => p_retry_s) WHERE s.id = v_step.id;
+    UPDATE public.agent_runs r SET status = 'running' WHERE r.id = v_run_id;
+  ELSE
+    UPDATE public.agent_run_steps s SET status = 'failed', error_code = p_error, claim_until = NULL, wait_item_id = NULL WHERE s.id = v_step.id;
+    UPDATE public.agent_runs r SET status = 'running' WHERE r.id = v_run_id;
+  END IF;
+  RETURN 'ok';
+END;
+$$;
+
+-- A person's answer to the work item a step waits on, in the transaction of the decision: finishes the wait step and bumps its fence, so the
+-- handler that began the wait can no longer write. Answers {result: 'resumed', runId} or {result: 'none'} when no step waits on the item.
+CREATE FUNCTION public.agent_step_resume(p_item uuid, p_result jsonb, p_more boolean) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_run_id uuid;
+  v_step public.agent_run_steps%ROWTYPE;
+BEGIN
+  SELECT s.run_id INTO v_run_id FROM public.agent_run_steps s WHERE s.wait_item_id = p_item AND s.status = 'running' LIMIT 1;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('result', 'none');
+  END IF;
+  PERFORM 1 FROM public.agent_runs r WHERE r.id = v_run_id FOR UPDATE;
+  SELECT * INTO v_step FROM public.agent_run_steps s WHERE s.run_id = v_run_id AND s.wait_item_id = p_item AND s.status = 'running' FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('result', 'none');
+  END IF;
+  UPDATE public.agent_run_steps s SET status = 'done', result = p_result, error_code = NULL, claim_until = NULL, wait_item_id = NULL, fence = s.fence + 1
+   WHERE s.id = v_step.id;
+  UPDATE public.agent_runs r SET status = public.agent_run_status_after(v_run_id, p_more),
+        finished_at = CASE WHEN public.agent_run_status_after(v_run_id, p_more) = 'done' THEN now() ELSE r.finished_at END
+     WHERE r.id = v_run_id;
+  RETURN jsonb_build_object('result', 'resumed', 'runId', v_run_id, 'stepKey', v_step.step_key);
+END;
+$$;
+
+-- Moves the run from the status the caller read to the one it decided, once. The done steps named in p_compensate become 'compensating'. Answers
+-- false when the run was no longer in p_from: another path decided first.
+CREATE FUNCTION public.agent_run_route(p_run uuid, p_from text, p_to text, p_error text, p_compensate text[]) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  UPDATE public.agent_runs r SET status = p_to, error_code = p_error,
+         finished_at = CASE WHEN p_to IN ('dead', 'failed') THEN now() ELSE r.finished_at END
+   WHERE r.id = p_run AND r.status = p_from;
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+  UPDATE public.agent_run_steps s SET status = 'compensating', claim_until = NULL
+   WHERE s.run_id = p_run AND s.status = 'done' AND s.step_key = ANY (p_compensate);
+  RETURN true;
+END;
+$$;
+
+-- Claims the last step still to compensate (reverse order of the work). Answers {result: 'claimed', step}, 'busy', or 'finished' once none is left,
+-- which ends the run as 'compensated'.
+CREATE FUNCTION public.agent_comp_claim(p_run uuid, p_lease_s integer) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_run public.agent_runs%ROWTYPE;
+  v_step public.agent_run_steps%ROWTYPE;
+BEGIN
+  SELECT * INTO v_run FROM public.agent_runs r WHERE r.id = p_run FOR UPDATE;
+  IF NOT FOUND OR v_run.status <> 'compensating' THEN
+    RETURN jsonb_build_object('result', 'closed');
+  END IF;
+  SELECT * INTO v_step FROM public.agent_run_steps s WHERE s.run_id = p_run AND s.status = 'compensating' ORDER BY s.seq DESC LIMIT 1 FOR UPDATE;
+  IF NOT FOUND THEN
+    UPDATE public.agent_runs r SET status = 'compensated', finished_at = now() WHERE r.id = p_run;
+    RETURN jsonb_build_object('result', 'finished');
+  END IF;
+  IF v_step.claim_until IS NOT NULL AND v_step.claim_until > now() THEN
+    RETURN jsonb_build_object('result', 'busy');
+  END IF;
+  UPDATE public.agent_run_steps s SET fence = s.fence + 1, claim_until = now() + make_interval(secs => p_lease_s)
+   WHERE s.id = v_step.id RETURNING * INTO v_step;
+  RETURN jsonb_build_object('result', 'claimed', 'step', public.agent_run_step_json(v_step));
+END;
+$$;
+
+-- Commits a compensation under its fence. p_ok marks the step 'compensated'; a failure keeps it 'compensating' for another try after p_retry_s
+-- seconds, and past p_max tries the run is 'dead' for a person. Answers 'ok', 'dead' or 'fenced'.
+CREATE FUNCTION public.agent_comp_commit(p_run uuid, p_step_key text, p_fence bigint, p_ok boolean, p_error text, p_retry_s integer, p_max integer) RETURNS text
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_run_id uuid := p_run;
+  v_step public.agent_run_steps%ROWTYPE;
+BEGIN
+  PERFORM 1 FROM public.agent_runs r WHERE r.id = v_run_id FOR UPDATE;
+  SELECT * INTO v_step FROM public.agent_run_steps s WHERE s.run_id = p_run AND s.step_key = p_step_key FOR UPDATE;
+  IF NOT FOUND OR v_step.fence <> p_fence OR v_step.status <> 'compensating' THEN
+    RETURN 'fenced';
+  END IF;
+  IF p_ok THEN
+    UPDATE public.agent_run_steps s SET status = 'compensated', claim_until = NULL, error_code = NULL WHERE s.id = v_step.id;
+    RETURN 'ok';
+  END IF;
+  UPDATE public.agent_run_steps s SET comp_attempts = s.comp_attempts + 1, error_code = p_error,
+         claim_until = now() + make_interval(secs => p_retry_s) WHERE s.id = v_step.id;
+  IF v_step.comp_attempts + 1 >= p_max THEN
+    UPDATE public.agent_runs r SET status = 'dead', error_code = 'compensation_failed', finished_at = now() WHERE r.id = v_run_id;
+    RETURN 'dead';
+  END IF;
+  RETURN 'ok';
+END;
+$$;
+
+-- Gives a claim back at once, for a worker that is shutting down: the step stays running under its fence but its claim has run out, so the sweep
+-- or the next boot takes it without waiting for the deadline. A claim that moved on, or a wait, is left alone. Answers whether it was released.
+CREATE FUNCTION public.agent_step_release(p_run uuid, p_step_key text, p_fence bigint) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  UPDATE public.agent_run_steps s SET claim_until = now() - interval '1 second'
+   WHERE s.run_id = p_run AND s.step_key = p_step_key AND s.fence = p_fence AND s.status = 'running' AND s.wait_item_id IS NULL;
+  RETURN FOUND;
+END;
+$$;
+
+-- Marks that a person was told about a run that stopped; false when it was already marked, so the handler's deadLetter is called once.
+CREATE FUNCTION public.agent_run_spoken(p_run uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  UPDATE public.agent_runs r SET dead_lettered_at = now()
+   WHERE r.id = p_run AND r.dead_lettered_at IS NULL AND r.status IN ('dead', 'compensated');
+  RETURN FOUND;
+END;
+$$;
+
+-- What the minute sweep must look at, at most p_limit of each kind: steps past their deadline (a crashed claim, or a wait whose time ran out),
+-- pending steps that are ready and that no job picked up, compensations to continue, and stopped runs nobody was told about.
+CREATE FUNCTION public.agent_run_due(p_limit integer)
+    RETURNS TABLE (due_kind text, due_run uuid, due_workspace uuid, due_agent uuid, due_step text, due_fence bigint, due_at timestamptz)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  (SELECT 'expired'::text, s.run_id, s.workspace_id, s.agent_id, s.step_key, s.fence, s.claim_until
+     FROM public.agent_run_steps s
+     JOIN public.agent_runs r ON r.id = s.run_id
+    WHERE s.status = 'running' AND s.claim_until < now() AND r.status IN ('running', 'waiting')
+    ORDER BY s.claim_until LIMIT p_limit)
+  UNION ALL
+  (SELECT 'ready'::text, s.run_id, s.workspace_id, s.agent_id, s.step_key, s.fence, s.not_before
+     FROM public.agent_run_steps s
+     JOIN public.agent_runs r ON r.id = s.run_id
+    WHERE s.status = 'pending' AND s.not_before < now() - interval '1 minute' AND r.status = 'running'
+      AND NOT EXISTS (SELECT 1 FROM public.agent_run_steps e WHERE e.run_id = s.run_id AND e.seq < s.seq AND (e.status IN ('pending', 'failed') OR (e.status = 'running' AND e.wait_item_id IS NULL)))
+    ORDER BY s.not_before LIMIT p_limit)
+  UNION ALL
+  (SELECT 'compensating'::text, s.run_id, s.workspace_id, s.agent_id, s.step_key, s.fence, COALESCE(s.claim_until, s.updated_at)
+     FROM public.agent_run_steps s
+     JOIN public.agent_runs r ON r.id = s.run_id
+    WHERE s.status = 'compensating' AND r.status = 'compensating' AND (s.claim_until IS NULL OR s.claim_until < now())
+      AND s.updated_at < now() - interval '1 minute'
+    ORDER BY s.updated_at LIMIT p_limit)
+  UNION ALL
+  (SELECT 'unspoken'::text, r.id, r.workspace_id, r.agent_id, ''::text, 0::bigint, r.updated_at
+     FROM public.agent_runs r
+    WHERE r.status IN ('dead', 'compensated') AND r.dead_lettered_at IS NULL AND r.updated_at < now() - interval '1 minute'
+    ORDER BY r.updated_at LIMIT p_limit);
+$$;
+
+REVOKE ALL ON FUNCTION public.agent_run_status_after(uuid, boolean) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_run_step_json(public.agent_run_steps) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_run_append(uuid, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_step_claim(uuid, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_step_commit(uuid, text, bigint, text, jsonb, text, integer, uuid, timestamptz, boolean) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_step_resume(uuid, jsonb, boolean) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_run_route(uuid, text, text, text, text[]) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_comp_claim(uuid, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_comp_commit(uuid, text, bigint, boolean, text, integer, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_step_release(uuid, text, bigint) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_run_spoken(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_run_due(integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_run_status_after(uuid, boolean) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_run_step_json(public.agent_run_steps) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_run_append(uuid, jsonb) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_step_claim(uuid, text) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_step_commit(uuid, text, bigint, text, jsonb, text, integer, uuid, timestamptz, boolean) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_step_resume(uuid, jsonb, boolean) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_run_route(uuid, text, text, text, text[]) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_comp_claim(uuid, integer) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_comp_commit(uuid, text, bigint, boolean, text, integer, integer) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_step_release(uuid, text, bigint) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_run_spoken(uuid) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_run_due(integer) TO app_be;
+
+-- ---- from 20261110100900_agent-graph-proposal-kinds_contract_widen.sql ----
+-- agent-graphs: a proposal can be a `gap` (work no intent of the published graph fits, raised for the owner to decline or turn into a
+-- contract) or a `contract` (the task and business limits of an intent that NIVO inferred from the Second Brain at setup, for the owner to
+-- approve into a new version). Widening only: the old kinds stay allowed and no row changes.
+
+ALTER TABLE public.agent_graph_proposals DROP CONSTRAINT agent_graph_proposals_kind_check;
+ALTER TABLE public.agent_graph_proposals
+    ADD CONSTRAINT agent_graph_proposals_kind_check CHECK (kind IN ('conflict', 'learned', 'template_update', 'gap', 'contract'));
+
+-- ---- from 20261110100950_agent-graph-enforced_contract_widen.sql ----
+-- agent-graphs: a graph is enforced from its seed and only the owner sets one back to shadow, so the default moves to `enforced`, every
+-- agent moves with it (none was enforced on purpose before this, so no owner choice is overwritten), and the graph keeps who set the
+-- mode and when. Each walk of a graph now writes one run, on every road an agent acts by: a work item, a reply, a write tool or a
+-- hand-over. A run of the last three leaves no work item, so `work_item_id` opens and `dedupe_key` holds the once. A run keeps the
+-- road, the mode it ran in, the gate's answer, the facts it could not read and why it could not be judged. `divert` is the outcome of a
+-- branch that leads to another action and `stopped` how work ends on a stop. Widening only: no column is dropped and no check tightens.
+
+ALTER TABLE public.agent_graphs ALTER COLUMN mode SET DEFAULT 'enforced';
+UPDATE public.agent_graphs SET mode = 'enforced' WHERE mode = 'shadow';
+ALTER TABLE public.agent_graphs
+    ADD COLUMN mode_set_by uuid,
+    ADD COLUMN mode_set_at timestamptz;
+
+ALTER TABLE public.agent_graph_decisions ALTER COLUMN work_item_id DROP NOT NULL;
+ALTER TABLE public.agent_graph_decisions
+    ADD COLUMN dedupe_key text,
+    ADD COLUMN road text NOT NULL DEFAULT 'work',
+    ADD COLUMN mode text NOT NULL DEFAULT 'shadow',
+    ADD COLUMN gate_verdict text,
+    ADD COLUMN unread jsonb NOT NULL DEFAULT '[]'::jsonb,
+    ADD COLUMN unjudged text,
+    ADD COLUMN subject_type text,
+    ADD COLUMN subject_id text;
+
+ALTER TABLE public.agent_graph_decisions
+    ADD CONSTRAINT agent_graph_decisions_road_check CHECK (road IN ('work', 'reply', 'tool', 'handover')),
+    ADD CONSTRAINT agent_graph_decisions_mode_check CHECK (mode IN ('shadow', 'enforced')),
+    ADD CONSTRAINT agent_graph_decisions_gate_check CHECK (gate_verdict IS NULL OR gate_verdict IN ('auto', 'ask')),
+    ADD CONSTRAINT agent_graph_decisions_once_check CHECK (work_item_id IS NOT NULL OR dedupe_key IS NOT NULL);
+
+ALTER TABLE public.agent_graph_decisions DROP CONSTRAINT agent_graph_decisions_outcome_check;
+ALTER TABLE public.agent_graph_decisions
+    ADD CONSTRAINT agent_graph_decisions_outcome_check CHECK (outcome IN ('auto', 'ask', 'stop', 'divert'));
+
+ALTER TABLE public.agent_graph_decisions DROP CONSTRAINT agent_graph_decisions_closed_check;
+ALTER TABLE public.agent_graph_decisions
+    ADD CONSTRAINT agent_graph_decisions_closed_check
+    CHECK (closed_as IS NULL OR closed_as IN ('done', 'approved', 'edited', 'rejected', 'expired', 'stopped'));
+
+CREATE UNIQUE INDEX agent_graph_decisions_dedupe_key ON public.agent_graph_decisions USING btree (dedupe_key) WHERE dedupe_key IS NOT NULL;
+CREATE INDEX agent_graph_decisions_runs_idx ON public.agent_graph_decisions USING btree (workspace_id, agent_id, created_at DESC);
+
+-- ---- from 20261110101000_agent-inbound-sources_contract_widen.sql ----
+-- agent-inbound: a wake's source is the key of the adapter that normalized the fact, so the closed list of four sources becomes a key
+-- shape. What a source means to the work core (priority, attempts, background) is declared by the adapter and stored on the wake: a wake
+-- carries `background` so the day's cap no longer reads a source name. An event trigger may name the sources it answers to; none answers
+-- to every source. Widening only: the four old sources stay valid, no wake changes its source, and the two old background sources keep
+-- spending the cap whether or not a writer set the new column.
+
+ALTER TABLE public.agent_wakes DROP CONSTRAINT agent_wakes_source_check;
+ALTER TABLE public.agent_wakes
+    ADD CONSTRAINT agent_wakes_source_check CHECK (source ~ '^[a-z][a-z0-9_]{0,39}$');
+
+ALTER TABLE public.agent_wakes ADD COLUMN background boolean NOT NULL DEFAULT false;
+UPDATE public.agent_wakes SET background = true WHERE source IN ('internal', 'schedule');
+
+ALTER TABLE public.agent_triggers ADD COLUMN sources text[] NOT NULL DEFAULT '{}'::text[];
+
+-- The same function as before; the only change is that a background turn is read from the wake's own flag.
+CREATE OR REPLACE FUNCTION public.agent_turn_finish(
+    p_agent uuid, p_scope text, p_fence bigint, p_turn uuid, p_status text, p_reason text, p_outcome jsonb, p_error_code text,
+    p_usage jsonb, p_retry_wait_s integer, p_breaker_after integer, p_breaker_s integer
+) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_lease public.agent_work_leases%ROWTYPE;
+  v_turn public.agent_turns%ROWTYPE;
+  v_wake public.agent_wakes%ROWTYPE;
+  v_wake_status text;
+  v_turn_status text;
+  v_today date := (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+  v_more boolean;
+  v_failed boolean;
+  v_answered boolean;
+  v_spends boolean;
+BEGIN
+  SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+  IF NOT FOUND OR v_lease.fence <> p_fence OR v_lease.running_turn_id IS DISTINCT FROM p_turn THEN
+    RETURN jsonb_build_object('fenced', true, 'more', false);
+  END IF;
+  SELECT * INTO v_turn FROM public.agent_turns t WHERE t.id = p_turn FOR UPDATE;
+  SELECT * INTO v_wake FROM public.agent_wakes w WHERE w.id = v_turn.wake_id FOR UPDATE;
+  IF p_status = 'failed' THEN
+    v_wake_status := CASE WHEN v_wake.attempts >= v_wake.max_attempts THEN 'dead' ELSE 'pending' END;
+  ELSE
+    v_wake_status := p_status;
+  END IF;
+  v_turn_status := CASE
+    WHEN p_status <> 'failed' THEN 'settled'
+    WHEN v_wake_status = 'pending' AND v_turn.proposal IS NOT NULL THEN 'proposed'
+    ELSE 'failed'
+  END;
+  UPDATE public.agent_turns t SET
+      status = v_turn_status,
+      outcome = p_outcome,
+      error_code = p_error_code,
+      model = p_usage ->> 'model',
+      prompt_tokens = (p_usage ->> 'promptTokens')::integer,
+      completion_tokens = (p_usage ->> 'completionTokens')::integer,
+      cost = (p_usage ->> 'cost')::numeric,
+      duration_ms = (p_usage ->> 'durationMs')::integer
+   WHERE t.id = p_turn;
+  UPDATE public.agent_wakes w SET
+      status = v_wake_status,
+      reason = p_reason,
+      not_before = CASE WHEN v_wake_status = 'pending' THEN now() + make_interval(secs => p_retry_wait_s) ELSE w.not_before END,
+      finished_at = CASE WHEN v_wake_status = 'pending' THEN NULL ELSE now() END
+   WHERE w.id = v_wake.id;
+  -- A failure is a failed turn, or a customer's wake ended by the holding line after an error (p_error_code set). The breaker closes only on a
+  -- turn the model really answered (a stored proposal): a hold-over, a skip or a turn with no model run says nothing about the runtime. A
+  -- background turn spends the day's cap whether it was done or failed, since the model may have run either way.
+  v_failed := p_status = 'failed' OR p_error_code IS NOT NULL;
+  v_answered := p_status = 'done' AND p_error_code IS NULL AND v_turn.proposal IS NOT NULL;
+  v_spends := (v_wake.background OR v_wake.source IN ('internal', 'schedule')) AND (v_failed OR p_status = 'done');
+  UPDATE public.agent_work_state s SET
+      failures = CASE WHEN v_failed THEN s.failures + 1 WHEN v_answered THEN 0 ELSE s.failures END,
+      breaker_until = CASE
+        WHEN v_failed AND s.failures + 1 >= p_breaker_after THEN now() + make_interval(secs => p_breaker_s)
+        WHEN v_answered THEN NULL
+        ELSE s.breaker_until END,
+      last_turn_at = now(),
+      background_turns = CASE
+        WHEN NOT v_spends THEN s.background_turns
+        WHEN s.background_day = v_today THEN s.background_turns + 1
+        ELSE 1 END,
+      background_day = CASE WHEN v_spends THEN v_today ELSE s.background_day END
+   WHERE s.agent_id = p_agent;
+  -- A task wake that was skipped (quota, cap) must not end the task: the wake cleared the task's time, so it is armed again for an hour on.
+  IF p_status = 'skipped' AND v_wake.context ->> 'taskId' IS NOT NULL THEN
+    UPDATE public.agent_tasks t SET next_action_at = now() + interval '1 hour'
+     WHERE t.id = (v_wake.context ->> 'taskId')::uuid AND t.status = 'open' AND t.next_action_at IS NULL;
+  END IF;
+  UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+   WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+  SELECT EXISTS (
+    SELECT 1 FROM public.agent_wakes w
+     WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' AND w.not_before <= now()
+  ) INTO v_more;
+  RETURN jsonb_build_object('fenced', false, 'more', v_more);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.agent_turn_finish(uuid, text, bigint, uuid, text, text, jsonb, text, jsonb, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_turn_finish(uuid, text, bigint, uuid, text, text, jsonb, text, jsonb, integer, integer, integer) TO app_be;
+
+-- ---- from 20261110101100_knowledge-chunk-place-check.sql ----
+-- A place is absent as a pair, or has both a kind and a label. The earlier place check keeps the allowed kinds and label lengths.
+-- Its kind comparison can evaluate to NULL when only a label is present, which a CHECK accepts. These presence tests are always boolean.
+-- Keep the committed check and its history unchanged. Validation deliberately refuses any existing partial pair instead of rewriting it.
+ALTER TABLE public.knowledge_chunks
+    ADD CONSTRAINT knowledge_chunks_place_pair_check
+    CHECK (
+        (place_kind IS NULL AND place_label IS NULL)
+        OR (place_kind IS NOT NULL AND place_label IS NOT NULL)
+    );
+
+-- ---- from 20261110101200_public-documents.sql ----
+-- public-documents: what customers may read is written apart from what the team knows. Expand only: two new tables, nothing existing altered.
+-- A public document is its own text. NIVO drafts it from internal documents while no customer is present, lists what it left out, and the
+-- owner approves; only then does a knowledge_sources row with visibility 'public' exist for it (origin 'public_document'). The document
+-- records who approved, when, and the internal sources with the hash each had when it was drafted, so a change of a source is seen later.
+-- public_document_sources.source_id carries no foreign key: a deleted source must stay visible as a source that changed.
+-- gap_id is unique: one customer question gets at most one proposal.
+
+CREATE TABLE public.public_documents (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    body text NOT NULL DEFAULT '',
+    published_body text,
+    published_revision integer,
+    kind text NOT NULL DEFAULT 'written',
+    status text NOT NULL DEFAULT 'draft',
+    draft_revision integer NOT NULL DEFAULT 0,
+    question text,
+    gap_id uuid REFERENCES public.knowledge_gaps(id) ON DELETE SET NULL,
+    instructions text,
+    left_out jsonb NOT NULL DEFAULT '[]'::jsonb,
+    failure_code text,
+    approved_by uuid,
+    approved_by_name text,
+    approved_at timestamptz,
+    published_source_id uuid,
+    created_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT public_documents_kind_check CHECK (kind IN ('drafted', 'written', 'answer')),
+    CONSTRAINT public_documents_status_check CHECK (status IN ('drafting', 'draft', 'published', 'archived', 'failed')),
+    CONSTRAINT public_documents_revision_check CHECK (draft_revision >= 0),
+    CONSTRAINT public_documents_left_out_check CHECK (jsonb_typeof(left_out) = 'array'),
+    CONSTRAINT public_documents_published_check CHECK (status <> 'published' OR (published_body IS NOT NULL AND published_revision IS NOT NULL AND approved_at IS NOT NULL AND approved_by IS NOT NULL))
+);
+CREATE INDEX public_documents_workspace_idx ON public.public_documents USING btree (workspace_id, updated_at DESC) WHERE status <> 'archived';
+CREATE UNIQUE INDEX public_documents_gap_key ON public.public_documents USING btree (gap_id) WHERE gap_id IS NOT NULL;
+
+CREATE TABLE public.public_document_sources (
+    document_id uuid NOT NULL REFERENCES public.public_documents(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    source_id uuid NOT NULL,
+    source_title text NOT NULL,
+    content_hash text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT public_document_sources_pkey PRIMARY KEY (document_id, source_id)
+);
+CREATE INDEX public_document_sources_source_idx ON public.public_document_sources USING btree (workspace_id, source_id);
+
+-- Approval history is append-only for the application role. An individual document with approvals cannot be deleted; whole-workspace
+-- cleanup removes both through their workspace foreign keys. Deferred no-action references avoid cascade-order dependence in that cleanup.
+CREATE TABLE public.public_document_approvals (
+    document_id uuid NOT NULL REFERENCES public.public_documents(id) ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+    draft_revision integer NOT NULL CHECK (draft_revision >= 0),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    body text NOT NULL,
+    draft_sources jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(draft_sources) = 'array'),
+    reviewed_sources jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(reviewed_sources) = 'array'),
+    approved_by uuid NOT NULL,
+    approved_by_name text,
+    approved_at timestamptz NOT NULL,
+    CONSTRAINT public_document_approvals_pkey PRIMARY KEY (document_id, draft_revision)
+);
+ALTER TABLE public.public_documents ADD CONSTRAINT public_documents_approved_revision_fkey
+    FOREIGN KEY (id, published_revision) REFERENCES public.public_document_approvals(document_id, draft_revision) DEFERRABLE INITIALLY DEFERRED;
+
+CREATE TRIGGER public_documents_set_updated_at BEFORE UPDATE ON public.public_documents FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER public_document_sources_set_updated_at BEFORE UPDATE ON public.public_document_sources FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.public_documents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY public_documents_app_be_select ON public.public_documents FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY public_documents_app_be_insert ON public.public_documents FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY public_documents_app_be_update ON public.public_documents FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY public_documents_app_be_delete ON public.public_documents FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.public_documents FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.public_documents TO app_be;
+
+ALTER TABLE public.public_document_sources ENABLE ROW LEVEL SECURITY;
+CREATE POLICY public_document_sources_app_be_select ON public.public_document_sources FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY public_document_sources_app_be_insert ON public.public_document_sources FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY public_document_sources_app_be_update ON public.public_document_sources FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY public_document_sources_app_be_delete ON public.public_document_sources FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.public_document_sources FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.public_document_sources TO app_be;
+
+ALTER TABLE public.public_document_approvals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY public_document_approvals_app_be_select ON public.public_document_approvals FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY public_document_approvals_app_be_insert ON public.public_document_approvals FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.public_document_approvals FROM PUBLIC, anon, authenticated, app_be;
+GRANT SELECT, INSERT ON TABLE public.public_document_approvals TO app_be;
+
+-- ---- from 20261110101201_identity-refresh-raced-successors.sql ----
+-- identity-refresh-raced-successors: forward-only; immutable once on origin/main.
+-- A refresh token presented again within the grace window after its rotation (a racing request, or a browser whose earlier Set-Cookie
+-- never arrived) now gets a successor of its own, set as the cookie, instead of an access token that leaves the browser on a spent token.
+-- raced_count bounds how many such successors one rotated token may obtain; beyond it the replay is reuse and ends the session.
+-- Expand only: one column with a default, nothing existing altered.
+
+ALTER TABLE public.identity_refresh_tokens ADD COLUMN raced_count integer NOT NULL DEFAULT 0;
+
+-- ---- from 20261110101300_identity-sessions-package.sql ----
+-- Sign-in moves to the @starci/auth package, which owns the device-session and refresh-token tables (public.identity_sessions,
+-- public.identity_refresh_tokens). The refresh tokens keep their rows and columns; their sessions move out of GoTrue's auth.sessions into
+-- public.identity_sessions, so every live session and every refresh token stays valid: the signing key, issuer, claims, key id and cookie
+-- names do not change, and a session id keeps its value.
+--
+-- The tables of the package. Text of @starci/auth migrations/identity-sessions.sql (identity_sessions part; identity_refresh_tokens exists and
+-- is kept below; the sign-in counter is the shared rate-limit store, so identity_attempts is not created).
+CREATE TABLE public.identity_sessions (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    refreshed_at timestamptz NOT NULL DEFAULT now(),
+    user_agent text,
+    ip text
+);
+
+CREATE INDEX identity_sessions_user_idx ON public.identity_sessions (user_id);
+
+ALTER TABLE public.identity_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.identity_sessions FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.identity_sessions FROM PUBLIC;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.identity_sessions TO app_be;
+CREATE POLICY identity_sessions_app_be_all ON public.identity_sessions
+    FOR ALL TO app_be USING (current_user = 'app_be') WITH CHECK (current_user = 'app_be');
+
+-- Nobody opens a token while the sessions move.
+LOCK TABLE public.identity_refresh_tokens IN SHARE ROW EXCLUSIVE MODE;
+
+-- Backfill: the session of every refresh token (the live sign-ins). GoTrue sessions that no refresh token hangs on cannot sign anyone in and stay
+-- in auth.sessions, untouched.
+INSERT INTO public.identity_sessions (id, user_id, created_at, refreshed_at, user_agent, ip)
+SELECT s.id,
+       s.user_id,
+       coalesce(s.created_at, now()),
+       coalesce(s.refreshed_at AT TIME ZONE 'utc', s.updated_at, s.created_at, now()),
+       s.user_agent,
+       host(s.ip)
+  FROM auth.sessions s
+ WHERE s.id IN (SELECT t.session_id FROM public.identity_refresh_tokens t);
+
+-- The refresh tokens now hang on the package's sessions (a closed session still takes its tokens with it).
+ALTER TABLE public.identity_refresh_tokens DROP CONSTRAINT IF EXISTS identity_refresh_tokens_session_id_fkey;
+
+ALTER TABLE public.identity_refresh_tokens
+    ADD CONSTRAINT identity_refresh_tokens_session_id_fkey
+    FOREIGN KEY (session_id) REFERENCES public.identity_sessions (id) ON DELETE CASCADE;
+
+-- The account area lists and revokes the person's own sessions from the package table. The tables force row level security for app_be only, so
+-- these run as the caller (app_be) instead of as their owner.
+CREATE OR REPLACE FUNCTION public.be_account_sessions(p_user uuid)
+    RETURNS TABLE(id uuid, created_at timestamp with time zone, last_active_at timestamp with time zone, user_agent text, ip text)
+    LANGUAGE sql STABLE SECURITY INVOKER
+    SET search_path TO ''
+    AS $$
+  select s.id, s.created_at, s.refreshed_at as last_active_at, s.user_agent, s.ip
+    from public.identity_sessions s
+   where s.user_id = p_user
+   order by 3 desc nulls last
+   limit 100;
+$$;
+
+CREATE OR REPLACE FUNCTION public.be_revoke_session(p_user uuid, p_session uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY INVOKER
+    SET search_path TO ''
+    AS $$
+declare removed int;
+begin
+  delete from public.identity_sessions s where s.id = p_session and s.user_id = p_user;
+  get diagnostics removed = row_count;
+  return removed > 0;
+end;
+$$;
+
+-- The back end writes the package tables itself now; the doors over auth.sessions have no caller left.
+DROP FUNCTION public.be_auth_open_session(uuid, uuid, timestamp with time zone, text, text);
+DROP FUNCTION public.be_auth_touch_session(uuid, timestamp with time zone);
+DROP FUNCTION public.be_auth_close_session(uuid);
+DROP FUNCTION public.be_auth_close_other_sessions(uuid, uuid);
+DROP FUNCTION public.be_auth_close_user_sessions(uuid);
+
+-- ---- from 20261111100000_agent-templates.sql ----
+-- agent-templates: the process of an agent packaged as data, so it can be installed again in another workspace and updated without
+-- overwriting what the buyer changed. Expand only: four new tables, nothing existing altered.
+-- agent_template_versions is immutable (app_be may only select and insert), like agent_graph_versions: a packaged version never changes.
+-- template_installs keeps what an update needs to be merged three ways: the version installed and the values the buyer gave.
+-- template_licenses is the record of the right to run a template in a workspace, one per install.
+
+CREATE TABLE public.agent_templates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    key text NOT NULL,
+    creator_account_id uuid NOT NULL,
+    base_module text NOT NULL,
+    name jsonb NOT NULL,
+    source_workspace_id uuid REFERENCES public.workspaces(id) ON DELETE SET NULL,
+    first_party boolean NOT NULL DEFAULT false,
+    forked_from text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_templates_key_key UNIQUE (key),
+    CONSTRAINT agent_templates_key_check CHECK (key ~ '^[a-z][a-z0-9-]{2,59}$'),
+    CONSTRAINT agent_templates_name_check CHECK (jsonb_typeof(name) = 'object')
+);
+CREATE INDEX agent_templates_creator_idx ON public.agent_templates USING btree (creator_account_id, created_at DESC);
+
+CREATE TABLE public.agent_template_versions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    template_id uuid NOT NULL REFERENCES public.agent_templates(id) ON DELETE CASCADE,
+    key text NOT NULL,
+    version integer NOT NULL,
+    package jsonb NOT NULL,
+    hash text NOT NULL,
+    changelog text NOT NULL DEFAULT '',
+    breaking boolean NOT NULL DEFAULT false,
+    created_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_template_versions_version_key UNIQUE (key, version),
+    CONSTRAINT agent_template_versions_version_check CHECK (version >= 1),
+    CONSTRAINT agent_template_versions_package_check CHECK (jsonb_typeof(package) = 'object')
+);
+
+CREATE TABLE public.template_licenses (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    template_key text NOT NULL,
+    kind text NOT NULL,
+    listing_id uuid,
+    order_id uuid,
+    installation_id uuid,
+    status text NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT template_licenses_kind_check CHECK (kind IN ('private', 'free', 'paid')),
+    CONSTRAINT template_licenses_status_check CHECK (status IN ('pending', 'active', 'expired', 'revoked'))
+);
+CREATE UNIQUE INDEX template_licenses_order_key ON public.template_licenses USING btree (order_id) WHERE order_id IS NOT NULL;
+CREATE INDEX template_licenses_workspace_idx ON public.template_licenses USING btree (workspace_id, template_key);
+
+CREATE TABLE public.template_installs (
+    installation_id uuid NOT NULL PRIMARY KEY REFERENCES public.module_installations(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    template_key text NOT NULL,
+    version integer NOT NULL,
+    parameter_values jsonb NOT NULL DEFAULT '{}'::jsonb,
+    license_id uuid REFERENCES public.template_licenses(id) ON DELETE SET NULL,
+    installed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT template_installs_values_check CHECK (jsonb_typeof(parameter_values) = 'object')
+);
+CREATE INDEX template_installs_template_idx ON public.template_installs USING btree (template_key, version);
+CREATE INDEX template_installs_workspace_idx ON public.template_installs USING btree (workspace_id);
+
+CREATE TRIGGER agent_templates_set_updated_at BEFORE UPDATE ON public.agent_templates FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER agent_template_versions_set_updated_at BEFORE UPDATE ON public.agent_template_versions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER template_licenses_set_updated_at BEFORE UPDATE ON public.template_licenses FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER template_installs_set_updated_at BEFORE UPDATE ON public.template_installs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.agent_templates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_templates_app_be_select ON public.agent_templates FOR SELECT TO app_be USING (id IS NOT NULL);
+CREATE POLICY agent_templates_app_be_insert ON public.agent_templates FOR INSERT TO app_be WITH CHECK (id IS NOT NULL);
+CREATE POLICY agent_templates_app_be_update ON public.agent_templates FOR UPDATE TO app_be USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_templates FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.agent_templates TO app_be;
+
+ALTER TABLE public.agent_template_versions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_template_versions_app_be_select ON public.agent_template_versions FOR SELECT TO app_be USING (id IS NOT NULL);
+CREATE POLICY agent_template_versions_app_be_insert ON public.agent_template_versions FOR INSERT TO app_be WITH CHECK (id IS NOT NULL);
+REVOKE ALL ON TABLE public.agent_template_versions FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON TABLE public.agent_template_versions TO app_be;
+
+ALTER TABLE public.template_licenses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY template_licenses_app_be_select ON public.template_licenses FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY template_licenses_app_be_insert ON public.template_licenses FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY template_licenses_app_be_update ON public.template_licenses FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.template_licenses FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.template_licenses TO app_be;
+
+ALTER TABLE public.template_installs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY template_installs_app_be_select ON public.template_installs FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY template_installs_app_be_insert ON public.template_installs FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY template_installs_app_be_update ON public.template_installs FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.template_installs FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.template_installs TO app_be;
+
+-- ---- from 20261111100100_template-marketplace.sql ----
+-- template-marketplace: listings of agent templates with a review state, the consent of a real person to a persona, and the ledger of
+-- what a creator is owed. Expand only: three new tables, nothing existing altered.
+-- A listing is one template version offered to others: draft, submitted, approved or rejected. The automated checks of the review
+-- are kept on the row. The ledger is append-only (app_be may only select and insert); a sale writes the creator share and the fee
+-- of the platform from one paid order, and payouts are made by hand outside the app for now.
+
+CREATE TABLE public.template_listings (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    template_key text NOT NULL,
+    version integer NOT NULL,
+    status text NOT NULL DEFAULT 'draft',
+    price_vnd bigint NOT NULL DEFAULT 0,
+    revenue_share_pct integer NOT NULL DEFAULT 70,
+    checks jsonb NOT NULL DEFAULT '[]'::jsonb,
+    review_note text NOT NULL DEFAULT '',
+    first_party boolean NOT NULL DEFAULT false,
+    submitted_by uuid,
+    reviewed_by uuid,
+    reviewed_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT template_listings_version_key UNIQUE (template_key, version),
+    CONSTRAINT template_listings_status_check CHECK (status IN ('draft', 'submitted', 'approved', 'rejected')),
+    CONSTRAINT template_listings_price_check CHECK (price_vnd >= 0),
+    CONSTRAINT template_listings_share_check CHECK (revenue_share_pct BETWEEN 0 AND 100),
+    CONSTRAINT template_listings_checks_check CHECK (jsonb_typeof(checks) = 'array')
+);
+CREATE INDEX template_listings_status_idx ON public.template_listings USING btree (status, updated_at DESC);
+
+CREATE TABLE public.template_likeness_grants (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    template_key text NOT NULL,
+    person_name text NOT NULL,
+    allowed_uses jsonb NOT NULL,
+    disclosure text NOT NULL,
+    granted_by uuid NOT NULL,
+    verified_by uuid,
+    verified_at timestamptz,
+    expires_at timestamptz,
+    revoked_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT template_likeness_grants_uses_check CHECK (jsonb_typeof(allowed_uses) = 'array')
+);
+CREATE INDEX template_likeness_grants_template_idx ON public.template_likeness_grants USING btree (template_key, person_name);
+
+CREATE TABLE public.creator_ledger_entries (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    creator_account_id uuid NOT NULL,
+    template_key text NOT NULL,
+    listing_id uuid,
+    order_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    kind text NOT NULL,
+    amount_vnd bigint NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT creator_ledger_entries_order_kind_key UNIQUE (order_id, kind),
+    CONSTRAINT creator_ledger_entries_kind_check CHECK (kind IN ('creator_share', 'platform_fee')),
+    CONSTRAINT creator_ledger_entries_amount_check CHECK (amount_vnd >= 0)
+);
+CREATE INDEX creator_ledger_entries_creator_idx ON public.creator_ledger_entries USING btree (creator_account_id, created_at DESC);
+
+CREATE TRIGGER template_listings_set_updated_at BEFORE UPDATE ON public.template_listings FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER template_likeness_grants_set_updated_at BEFORE UPDATE ON public.template_likeness_grants FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER creator_ledger_entries_set_updated_at BEFORE UPDATE ON public.creator_ledger_entries FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.template_listings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY template_listings_app_be_select ON public.template_listings FOR SELECT TO app_be USING (id IS NOT NULL);
+CREATE POLICY template_listings_app_be_insert ON public.template_listings FOR INSERT TO app_be WITH CHECK (id IS NOT NULL);
+CREATE POLICY template_listings_app_be_update ON public.template_listings FOR UPDATE TO app_be USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
+REVOKE ALL ON TABLE public.template_listings FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.template_listings TO app_be;
+
+ALTER TABLE public.template_likeness_grants ENABLE ROW LEVEL SECURITY;
+CREATE POLICY template_likeness_grants_app_be_select ON public.template_likeness_grants FOR SELECT TO app_be USING (id IS NOT NULL);
+CREATE POLICY template_likeness_grants_app_be_insert ON public.template_likeness_grants FOR INSERT TO app_be WITH CHECK (id IS NOT NULL);
+CREATE POLICY template_likeness_grants_app_be_update ON public.template_likeness_grants FOR UPDATE TO app_be USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
+REVOKE ALL ON TABLE public.template_likeness_grants FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.template_likeness_grants TO app_be;
+
+ALTER TABLE public.creator_ledger_entries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY creator_ledger_entries_app_be_select ON public.creator_ledger_entries FOR SELECT TO app_be USING (id IS NOT NULL);
+CREATE POLICY creator_ledger_entries_app_be_insert ON public.creator_ledger_entries FOR INSERT TO app_be WITH CHECK (id IS NOT NULL);
+REVOKE ALL ON TABLE public.creator_ledger_entries FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON TABLE public.creator_ledger_entries TO app_be;
+
+-- ---- from 20261111100200_payment-orders-agent-template_contract_widen.sql ----
+-- payment-orders: an order can now buy an agent template (kind 'agent_template'). Widening only: the old kinds stay allowed and no row changes.
+-- The settlement function marks such an order paid like the others; the license and the ledger entries of the creator are written by the
+-- back end in the same transaction, from the paid order.
+
+ALTER TABLE public.payment_orders DROP CONSTRAINT payment_orders_kind_check;
+ALTER TABLE public.payment_orders
+    ADD CONSTRAINT payment_orders_kind_check CHECK (kind IN ('plan', 'upgrade', 'topup', 'credit_pack', 'agent_template'));
+
+-- ---- from 20261111100201_account-doors.sql ----
+-- The account doors of a lite app: the only way app_be reaches auth.users and auth.identities (it holds no grant on schema auth). Eight
+-- SECURITY DEFINER functions with a pinned search_path, EXECUTE revoked from public and the browser roles and granted to app_be alone: an
+-- account comes back only for an exact address or id, a hash only for an exact address, and no door writes role or app metadata; the hash
+-- is written only by a new account and by be_auth_set_password.
+-- The text is the canon owner of the doors (templates/app/auth-doors.sql.partial); the back end calls them through persistence/account-doors.port.ts.
+
+-- Looks up an address in lower case; the bootstrap index serves email as written, not lower(email).
+create index if not exists users_email_lower_idx on auth.users (lower(email)) where is_anonymous = false;
+
+-- Stamps the confirmation of a mailbox (a spent confirmation link); a mailbox that is already confirmed keeps its date and the sign-in record is untouched.
+CREATE FUNCTION public.be_auth_confirm_user(p_user uuid, p_now timestamp with time zone) RETURNS void
+    LANGUAGE sql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  update auth.users set email_confirmed_at = coalesce(email_confirmed_at, p_now), updated_at = p_now where id = p_user;
+$$;
+
+-- Sets a new password hash; when p_confirm is true (a spent reset link proved the mailbox) the address is confirmed too.
+CREATE FUNCTION public.be_auth_set_password(p_user uuid, p_hash text, p_confirm boolean, p_now timestamp with time zone) RETURNS void
+    LANGUAGE sql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  update auth.users
+     set encrypted_password = p_hash,
+         email_confirmed_at = case when p_confirm then coalesce(email_confirmed_at, p_now) else email_confirmed_at end,
+         updated_at = p_now
+   where id = p_user;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.be_auth_confirm_user(uuid, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_confirm_user(uuid, timestamp with time zone) TO app_be;
+REVOKE EXECUTE ON FUNCTION public.be_auth_set_password(uuid, text, boolean, timestamp with time zone) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_set_password(uuid, text, boolean, timestamp with time zone) TO app_be;
+
+-- ---- from 20261111100300_first-party-adoption.sql ----
+-- first-party-adoption: every installation that already runs a built-in module is recorded as an install of the first-party package of that
+-- module, version 1 (key 'nivo-<module>'), with a free license, so built-in and creator agents update through the one mechanism.
+-- Expand only and inert: it inserts rows into template_licenses and template_installs and touches nothing else. No agent graph, version,
+-- draft, authority rule or installation row is read for writing here, so every existing agent reads the same graph and behaves the same
+-- after as before. The package itself is made by the platform sync (it needs the catalogue); until it exists an install offers no update.
+-- Rerunning it adds nothing: an installation that has a template_installs row is skipped.
+
+WITH adopted AS (
+    SELECT i.id AS installation_id, i.workspace_id, 'nivo-' || i.module_key AS template_key, gen_random_uuid() AS license_id
+    FROM public.module_installations i
+    JOIN public.modules m ON m.key = i.module_key
+    WHERE NOT EXISTS (SELECT 1 FROM public.template_installs t WHERE t.installation_id = i.id)
+),
+licensed AS (
+    INSERT INTO public.template_licenses (id, workspace_id, template_key, kind, installation_id, status)
+    SELECT license_id, workspace_id, template_key, 'free', installation_id, 'active' FROM adopted
+    RETURNING id
+)
+INSERT INTO public.template_installs (installation_id, workspace_id, template_key, version, parameter_values, license_id)
+SELECT a.installation_id, a.workspace_id, a.template_key, 1, '{}'::jsonb, a.license_id
+FROM adopted a
+JOIN licensed l ON l.id = a.license_id;
+
+-- ---- from 20261111100310_identity-email-doors.sql ----
+-- The email doors of sign-in move to the hfs 5.3.0 template glue (domain/identity IdentityEmailService over @starci/mail): sign up,
+-- confirm the mailbox, resend, forgot and reset password. Expand step: two tables are added, nothing is dropped, so the release before
+-- this one keeps working against the same database.
+--
+-- public.identity_email_tokens replaces public.identity_password_tokens: the single-use links of a confirmation and of a password
+-- reset, stored by their sha256 only. An invitation link is a reset link with a longer lifetime, so a live 'invite' token becomes a
+-- 'reset' token here. public.identity_password_tokens is dropped by a later contract migration once this release is the only one running.
+--
+-- public.identity_attempts is the sign-in counter of @starci/auth (migrations/identity-sessions.sql): the failures of one address in one
+-- window, shared by every replica. The counter used to live in the shared rate-limit store.
+
+create table public.identity_email_tokens (
+    id uuid primary key,
+    user_id uuid not null references auth.users (id) on delete cascade,
+    purpose varchar(16) not null check (purpose in ('confirm', 'reset')),
+    token_hash varchar(64) not null,
+    expires_at timestamptz not null,
+    used_at timestamptz,
+    created_at timestamptz not null,
+    constraint identity_email_tokens_hash_key unique (token_hash)
+);
+
+create index identity_email_tokens_user_idx on public.identity_email_tokens (user_id, purpose);
+
+alter table public.identity_email_tokens enable row level security;
+alter table public.identity_email_tokens force row level security;
+revoke all on table public.identity_email_tokens from public;
+grant select, insert, update, delete on table public.identity_email_tokens to app_be;
+create policy identity_email_tokens_app_be_all on public.identity_email_tokens
+    for all to app_be using (current_user = 'app_be') with check (current_user = 'app_be');
+
+-- The links still waiting to be spent keep working: a person who was mailed a link before the release can still follow it.
+insert into public.identity_email_tokens (id, user_id, purpose, token_hash, expires_at, used_at, created_at)
+select t.id,
+       t.user_id,
+       case when t.purpose = 'confirm' then 'confirm' else 'reset' end,
+       t.token_hash,
+       t.expires_at,
+       t.used_at,
+       t.created_at
+  from public.identity_password_tokens t
+ where t.used_at is null
+   and t.expires_at > now()
+   and length(t.token_hash) = 64;
+
+create table public.identity_attempts (
+    key varchar(128) primary key,
+    hits integer not null,
+    reset_at timestamptz not null
+);
+
+create index identity_attempts_reset_idx on public.identity_attempts (reset_at);
+
+alter table public.identity_attempts enable row level security;
+alter table public.identity_attempts force row level security;
+revoke all on table public.identity_attempts from public;
+grant select, insert, update, delete on table public.identity_attempts to app_be;
+create policy identity_attempts_app_be_all on public.identity_attempts
+    for all to app_be using (current_user = 'app_be') with check (current_user = 'app_be');
+
+-- ---- from 20261111100400_signup-name-door.sql ----
+-- Sign-up keeps the full name the person typed (the template sign-up door takes the address and the password only). Right after the
+-- sign-up door answered, the web form calls the public setSignupName mutation, which reaches this door: it writes the profile key
+-- full_name of an account whose mailbox is still unconfirmed and that has no name yet, and answers whether it did. It never touches a
+-- confirmed account, a name already set or any other key, so it cannot rename a person who exists; the caller always answers the same.
+CREATE FUNCTION public.be_auth_set_signup_name(p_email text, p_name text) RETURNS boolean
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare changed int;
+begin
+  update auth.users u
+     set raw_user_meta_data = coalesce(u.raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('full_name', p_name),
+         updated_at = now()
+   where lower(u.email) = p_email
+     and u.is_anonymous = false
+     and u.email_confirmed_at is null
+     and coalesce(u.raw_user_meta_data ->> 'full_name', '') = '';
+  get diagnostics changed = row_count;
+  return changed > 0;
+end;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.be_auth_set_signup_name(text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.be_auth_set_signup_name(text, text) TO app_be;
+
+-- ---- from 20261111100500_agent-runs-plan-binding.sql ----
+-- A planned turn binds its plan to the run of its wake (AgentRunStoreService.open with planning: the intent pipeline of an agent whose
+-- published version holds contracts): it locks the run row (SELECT ... FOR UPDATE) and writes its version and context. The run table
+-- granted app_be SELECT, INSERT and DELETE only, so every such customer turn failed with "permission denied for table agent_runs" and
+-- the customer got the holding line. app_be may update those two columns only, of a row that belongs to a workspace.
+GRANT UPDATE (version_id, context) ON TABLE public.agent_runs TO app_be;
+CREATE POLICY agent_runs_app_be_update ON public.agent_runs FOR UPDATE TO app_be
+    USING (workspace_id IS NOT NULL)
+    WITH CHECK (workspace_id IS NOT NULL);
+
+-- ---- from 20261111100600_contract_drop-signup-name-door.sql ----
+-- contract_drop-signup-name-door: forward-only; the contract step of 20261111100400_signup-name-door.
+-- The managed sign-up door of @starci/auth 0.3.0 takes the person's name itself, so Nivo's own door has no caller left. Applied after
+-- the release that stopped calling it is accepted (expand before deploy, contract after accept).
+DROP FUNCTION public.be_auth_set_signup_name(text, text);
+
+-- ---- from 20261111100700_connection-secrets-api-token.sql ----
+-- A connection may hold a second sealed secret: the API token NIVO sends TO the provider to read its data (a bank feed poll), beside the
+-- credential the provider sends to NIVO. It is sealed with the same connection key as the credential, so there is one key and one cipher.
+-- connection_secrets already grants app_be SELECT, INSERT, UPDATE and DELETE on the table and has its row policies, so the new column
+-- needs no further grant or policy.
+ALTER TABLE public.connection_secrets ADD COLUMN IF NOT EXISTS api_token_ciphertext text;
+
+-- ---- from 20261111100800_connection-ready-event-queue.sql ----
+-- The consumer queue of the bank_feed_poll reactor (be/src/features/reactors/bank-feed-poll): connection_ready tells it that a connection
+-- can be read back from its provider, so it enqueues the first poll at once. The queue, its dead-letter queue and its topic binding follow
+-- event-bus.queue.ts. Every call is idempotent (pgmq.create skips an existing queue, pgmq.bind_topic upserts the binding).
+
+select pgmq.create('connection_ready__bank_feed_poll');
+select pgmq.create('connection_ready__bank_feed_poll__dead');
+select pgmq.bind_topic('connection_ready', 'connection_ready__bank_feed_poll');
+
+-- ---- from 20261111100900_zalo-inbox-state.sql ----
+-- Where each Zalo inbox row stands, so NIVO can list the customer messages nobody answered. `received` is stored and owed an answer; `handled` is
+-- handed to the agent turn of its conversation or to the person who owns it (or is an event nothing is owed on); `failed` is the last
+-- processing attempt that threw (the queue retries it and a success turns it `handled`); `expired` is a polled message past the reply window or the
+-- stale age, kept for the owner and never answered by an agent. A row processed before this column existed was handled by the flow that processed it.
+ALTER TABLE public.zalo_inbox ADD COLUMN state text NOT NULL DEFAULT 'received';
+UPDATE public.zalo_inbox SET state = 'handled' WHERE processed_at IS NOT NULL;
+ALTER TABLE public.zalo_inbox ADD CONSTRAINT zalo_inbox_state_check CHECK (state IN ('received', 'handled', 'failed', 'expired'));
+CREATE INDEX zalo_inbox_unanswered_idx ON public.zalo_inbox (received_at) WHERE state <> 'handled';
+
+-- ---- from 20261111101000_connection-ready-zalo-inbox-poll-queue.sql ----
+-- The consumer queue of the zalo_inbox_poll reactor (be/src/features/reactors/zalo-inbox-poll): connection_ready tells it that a Zalo OA
+-- connection holds a fresh OAuth token, so it enqueues the first reconcile at once. The queue, its dead-letter queue and its topic binding follow
+-- event-bus.queue.ts. Every call is idempotent (pgmq.create skips an existing queue, pgmq.bind_topic upserts the binding).
+
+select pgmq.create('connection_ready__zalo_inbox_poll');
+select pgmq.create('connection_ready__zalo_inbox_poll__dead');
+select pgmq.bind_topic('connection_ready', 'connection_ready__zalo_inbox_poll');
+
+-- ---- from 20261111101100_agent-tag-grants-backfill.sql ----
+-- agent-tag-grants-backfill: installing an agent now grants the tag rights its module lists (chatbot tags sales and accounting, sales tags
+-- accounting). A workspace that installed those agents before holds none, so a hand-off by tag stalls on "not granted". This writes the same
+-- rights for the installations that exist.
+-- Expand only and inert: it appends agent ids to agents.can_tag_agent_ids and touches nothing else. A right already held is kept, an agent
+-- never gets itself, and rerunning it adds nothing.
+
+WITH wanted(from_module, to_module) AS (
+    VALUES ('chatbot', 'sales'), ('chatbot', 'accounting'), ('sales', 'accounting')
+),
+pairs AS (
+    SELECT a.id AS from_agent, b.id AS to_agent
+    FROM wanted w
+    JOIN public.module_installations fi ON fi.module_key = w.from_module AND fi.agent_id IS NOT NULL
+    JOIN public.module_installations ti ON ti.module_key = w.to_module AND ti.agent_id IS NOT NULL AND ti.workspace_id = fi.workspace_id
+    JOIN public.agents a ON a.id = fi.agent_id AND a.workspace_id = fi.workspace_id
+    JOIN public.agents b ON b.id = ti.agent_id AND b.workspace_id = ti.workspace_id
+    WHERE a.id <> b.id
+),
+merged AS (
+    SELECT p.from_agent, array_agg(DISTINCT p.to_agent) AS added
+    FROM pairs p
+    GROUP BY p.from_agent
+)
+UPDATE public.agents ag
+SET can_tag_agent_ids = ARRAY(SELECT DISTINCT unnest(ag.can_tag_agent_ids || m.added))
+FROM merged m
+WHERE ag.id = m.from_agent
+  AND NOT (m.added <@ ag.can_tag_agent_ids);
+
+-- ---- from 20261111101150_workspace-governance-defaults.sql ----
+-- workspace-governance-defaults: every workspace starts with its authority sheet and the default authority rules of the stable modules,
+-- whichever door created it (the sign-up, the first sign-in, the seed CLI), as the API's create-workspace door already did in code. Without
+-- them a stable module that is not installed yet, such as the Chatbot hand-off of a customer chat, is default-denied ("not granted").
+-- Expand only. The function is the one place that writes them: the sheet first, then the rules only when this call made the sheet, so a rule
+-- the owner removed later never comes back and a rule already set is never overwritten. A trigger runs it for each new workspace, and the
+-- last statement runs it once for each workspace that has no sheet yet. Rerunning it adds nothing.
+
+CREATE OR REPLACE FUNCTION public.ensure_workspace_governance(p_workspace uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  made integer;
+begin
+  insert into public.authority (workspace_id, updated_by) values (p_workspace, 'NIVO') on conflict (workspace_id) do nothing;
+  get diagnostics made = row_count;
+  if made = 0 then
+    return false;
+  end if;
+  insert into public.authority_rules (workspace_id, department, action, mode, limit_vnd, required_fields)
+  select p_workspace, a.module_key, a.action, a.default_mode, a.default_limit_vnd, a.default_required_fields
+  from public.authority_actions a
+  join public.modules m on m.key = a.module_key and m.status = 'stable'
+  on conflict (workspace_id, department, action) do nothing;
+  return true;
+end;
+$$;
+
+CREATE OR REPLACE FUNCTION public.workspaces_add_governance() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+begin
+  perform public.ensure_workspace_governance(new.id);
+  return new;
+end;
+$$;
+
+CREATE TRIGGER workspaces_add_governance AFTER INSERT ON public.workspaces
+    FOR EACH ROW EXECUTE FUNCTION public.workspaces_add_governance();
+
+-- Only the trigger and this migration call them: no role executes them directly.
+REVOKE ALL ON FUNCTION public.ensure_workspace_governance(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.workspaces_add_governance() FROM PUBLIC, anon, authenticated;
+
+SELECT public.ensure_workspace_governance(w.id) FROM public.workspaces w
+WHERE NOT EXISTS (SELECT 1 FROM public.authority s WHERE s.workspace_id = w.id);
+
+-- ---- from 20261111101200_order-payment-reconcile.sql ----
+-- order-payment-reconcile: Accounting matches a bank credit to the sales order it pays, and keeps the customer's word that they paid until the money is seen.
+-- Expand only: one nullable column and one new table, nothing existing changes.
+-- transactions.order_id: the sales order a bank credit paid. One transaction pays one order and one order is paid by one transaction (the partial unique index).
+-- payment_claims: the ledger of what a customer said ("I transferred 5k, name X") before any matching credit was seen. A claim waits as `open`; an arriving credit
+-- that matches settles it (`settled`); one that waited past the configured timeout is given to the owner (`escalated`); one a failed run recorded and then undid is `withdrawn`. dedupe_key makes a repeated message one claim.
+
+ALTER TABLE public.transactions
+    ADD COLUMN order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL;
+CREATE UNIQUE INDEX transactions_order_id_key ON public.transactions USING btree (order_id) WHERE order_id IS NOT NULL;
+
+CREATE TABLE public.payment_claims (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    lead_id uuid NOT NULL REFERENCES public.leads(id) ON DELETE CASCADE,
+    conversation_id uuid,
+    amount_vnd bigint,
+    names text[] NOT NULL DEFAULT '{}'::text[],
+    body text NOT NULL,
+    claimed_at timestamptz NOT NULL DEFAULT now(),
+    status text NOT NULL DEFAULT 'open',
+    settled_transaction_id uuid REFERENCES public.transactions(id) ON DELETE SET NULL,
+    dedupe_key text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT payment_claims_status_check CHECK (status IN ('open', 'settled', 'escalated', 'withdrawn')),
+    CONSTRAINT payment_claims_amount_check CHECK (amount_vnd IS NULL OR amount_vnd > 0)
+);
+CREATE UNIQUE INDEX payment_claims_dedupe_key ON public.payment_claims USING btree (workspace_id, dedupe_key);
+CREATE INDEX payment_claims_open_idx ON public.payment_claims USING btree (workspace_id, claimed_at) WHERE status = 'open';
+
+CREATE TRIGGER payment_claims_set_updated_at BEFORE UPDATE ON public.payment_claims FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.payment_claims ENABLE ROW LEVEL SECURITY;
+CREATE POLICY payment_claims_app_be_select ON public.payment_claims FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY payment_claims_app_be_insert ON public.payment_claims FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY payment_claims_app_be_update ON public.payment_claims FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.payment_claims FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.payment_claims TO app_be;
+
+-- ---- from 20261111101300_graph-node-effects.sql ----
+-- graph-node-effects: the ledger of the effects graph nodes run, so a node's effect acts once. Expand only: one new table.
+-- ledger_key is `call:<run step key>:<order>` (a retried step) or `dedupe:<business key>` (the node said once per workspace, across runs);
+-- a repeat of a key in the workspace answers the subject the first run touched and acts no more. Rows are only ever inserted and read.
+
+CREATE TABLE public.graph_node_effects (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    ledger_key text NOT NULL,
+    effect text NOT NULL,
+    subject_kind text NOT NULL,
+    subject_id text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT graph_node_effects_ledger_key_key UNIQUE (workspace_id, ledger_key),
+    CONSTRAINT graph_node_effects_ledger_key_check CHECK (ledger_key ~ '^(call|dedupe):.+$' AND length(ledger_key) <= 400)
+);
+
+CREATE TRIGGER graph_node_effects_set_updated_at BEFORE UPDATE ON public.graph_node_effects FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.graph_node_effects ENABLE ROW LEVEL SECURITY;
+CREATE POLICY graph_node_effects_app_be_select ON public.graph_node_effects FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY graph_node_effects_app_be_insert ON public.graph_node_effects FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.graph_node_effects FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON TABLE public.graph_node_effects TO app_be;
+
+-- ---- from 20261111101400_connection-poll-schedule.sql ----
+-- The poll plan of every polled connection, one row each, so a tick wakes only the connections that are due instead of scanning all of them.
+-- `next_poll_at` is when the connection is read next (the planner adds random jitter, so tenants never poll in step); the scheduler claims due rows
+-- with FOR UPDATE SKIP LOCKED, so replicas never poll the same connection. `interval_ms` is the interval it was last planned with: the adaptive
+-- choice between healthy webhooks (long), silent or failing ones (short) and hot (shortest, until `hot_until`). `failures` and `breaker_state`
+-- are the circuit breaker: an open breaker waits out a cool-down and then lets one probe through (`half_open`); `needs_reauth` parks a
+-- connection whose provider refused the credential until the owner connects again. `backfill_to` and `backfill_newest` carry a first-connect
+-- backfill from one chunk to the next. The table is written by the backend only, like every poll state.
+CREATE TABLE public.connection_poll_schedule (
+    connection_id uuid PRIMARY KEY REFERENCES public.connections (id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL,
+    provider text NOT NULL,
+    next_poll_at timestamptz NOT NULL DEFAULT now(),
+    interval_ms integer NOT NULL,
+    failures integer NOT NULL DEFAULT 0,
+    breaker_state text NOT NULL DEFAULT 'closed',
+    breaker_opened_at timestamptz,
+    needs_reauth boolean NOT NULL DEFAULT false,
+    hot_until timestamptz,
+    hot_reason text,
+    last_success_at timestamptz,
+    last_webhook_at timestamptz,
+    backfill_to timestamptz,
+    backfill_newest timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT connection_poll_schedule_breaker_check CHECK (breaker_state IN ('closed', 'open', 'half_open')),
+    CONSTRAINT connection_poll_schedule_interval_check CHECK (interval_ms > 0),
+    CONSTRAINT connection_poll_schedule_failures_check CHECK (failures >= 0)
+);
+
+CREATE INDEX connection_poll_schedule_due_idx ON public.connection_poll_schedule (next_poll_at) WHERE needs_reauth = false;
+CREATE INDEX connection_poll_schedule_workspace_idx ON public.connection_poll_schedule (workspace_id);
+
+CREATE TRIGGER connection_poll_schedule_set_updated_at BEFORE UPDATE ON public.connection_poll_schedule FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.connection_poll_schedule ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.connection_poll_schedule FROM anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.connection_poll_schedule TO app_be;
+
+CREATE POLICY connection_poll_schedule_app_be_select ON public.connection_poll_schedule FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY connection_poll_schedule_app_be_insert ON public.connection_poll_schedule FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY connection_poll_schedule_app_be_update ON public.connection_poll_schedule FOR UPDATE TO app_be
+    USING (workspace_id IS NOT NULL)
+    WITH CHECK (workspace_id IS NOT NULL);
+
+-- ---- from 20261111101500_order-note-failed-system.sql ----
+-- order-note-failed-system: the delivery address and notes of an order get their own column. Expand only: one new column with a default.
+-- The `failed_system` status of an order a system failure cut short is widened in its own contract migration, 20261111102510. Table
+-- grants and row level security of public.orders already cover the column (grants are per table, the policies read workspace_id).
+
+ALTER TABLE public.orders ADD COLUMN note text NOT NULL DEFAULT '';
+
+COMMENT ON COLUMN public.orders.note IS
+    'The delivery address and the notes the customer gave with the order; empty when there are none.';
+
+-- ---- from 20261111101600_connection-poll-unavailable.sql ----
+-- A connection whose provider plan lacks the capability the poll needs (the OA plan does not allow reading old messages) is no failure: it stays connected
+-- and its webhook keeps feeding the inbox. The poll marks the reason here, stops polling it at the normal interval and tries it again rarely.
+ALTER TABLE public.connection_poll_schedule ADD COLUMN unavailable_reason text;
+ALTER TABLE public.connection_poll_schedule ADD CONSTRAINT connection_poll_schedule_unavailable_check CHECK (unavailable_reason IS NULL OR unavailable_reason IN ('plan'));
+
+-- ---- from 20261111101700_agent-message-attachments-source.sql ----
+-- Where an attachment a channel brought in came from, so the same file is stored once: `source_url` is the address the channel gave (or the local
+-- path of a manual import) and `source_ref` is the channel's own id of the message. A file a person uploads in the web chat has neither.
+ALTER TABLE public.agent_message_attachments ADD COLUMN source_url text;
+ALTER TABLE public.agent_message_attachments ADD COLUMN source_ref text;
+CREATE UNIQUE INDEX agent_message_attachments_source_key ON public.agent_message_attachments (workspace_id, source_ref, source_url) WHERE source_url IS NOT NULL;
+
+-- ---- from 20261111101900_sliding-burst-window.sql ----
+-- sliding-burst-window: every new message of a conversation extends the wait by the window, up to a longest wait counted from the first
+-- message of the burst. agent_turn_begin gains p_max_ms: a wake waits while a newer wake of its scope is inside the window and the wake itself
+-- is younger than the longest wait; past it the turn runs and takes every pending wake of the scope. The five-argument function keeps its
+-- signature and uses a longest wait of 20 seconds (never below its window); the four-argument one still has no window. Expand only.
+
+CREATE FUNCTION public.agent_turn_begin(p_agent uuid, p_scope text, p_owner text, p_lease_s integer, p_window_ms integer, p_max_ms integer) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_workspace uuid;
+  v_lease public.agent_work_leases%ROWTYPE;
+  v_wake public.agent_wakes%ROWTYPE;
+  v_turn_id uuid;
+  v_proposal jsonb;
+  v_fence bigint;
+  v_ended jsonb := '[]'::jsonb;
+  v_merged text;
+  v_context jsonb;
+BEGIN
+  SELECT a.workspace_id INTO v_workspace FROM public.agents a WHERE a.id = p_agent;
+  IF v_workspace IS NULL THEN
+    RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
+  END IF;
+  INSERT INTO public.agent_work_state (agent_id, workspace_id) VALUES (p_agent, v_workspace) ON CONFLICT (agent_id) DO NOTHING;
+  IF public.agent_work_is_off(p_agent, v_workspace) THEN
+    WITH held AS (
+      UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+       WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' RETURNING w.*
+    )
+    SELECT COALESCE(jsonb_agg(public.agent_wake_ended(ROW(h.*)::public.agent_wakes, 'held')), '[]'::jsonb) INTO v_ended FROM held h;
+    -- A turn whose worker crashed before the switch is taken over here too, or its lease would lapse for the sweep to drain again every minute.
+    SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+    IF FOUND AND v_lease.running_turn_id IS NOT NULL AND v_lease.lease_until <= now() THEN
+      UPDATE public.agent_turns t SET status = 'abandoned' WHERE t.id = v_lease.running_turn_id AND t.status IN ('running', 'proposed');
+      WITH crashed AS (
+        UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+         WHERE w.status = 'running' AND w.id = (SELECT t.wake_id FROM public.agent_turns t WHERE t.id = v_lease.running_turn_id) RETURNING w.*
+      )
+      SELECT v_ended || COALESCE(jsonb_agg(public.agent_wake_ended(ROW(c.*)::public.agent_wakes, 'held')), '[]'::jsonb) INTO v_ended FROM crashed c;
+      UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+       WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+    END IF;
+    RETURN jsonb_build_object('result', 'killed', 'ended', v_ended);
+  END IF;
+  INSERT INTO public.agent_work_leases (agent_id, scope_key, workspace_id) VALUES (p_agent, p_scope, v_workspace)
+    ON CONFLICT (agent_id, scope_key) DO NOTHING;
+  SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+  IF v_lease.running_turn_id IS NOT NULL AND v_lease.lease_until > now() THEN
+    RETURN jsonb_build_object('result', 'busy');
+  END IF;
+  IF v_lease.running_turn_id IS NOT NULL THEN
+    UPDATE public.agent_turns t SET status = 'abandoned' WHERE t.id = v_lease.running_turn_id AND t.status = 'running';
+    UPDATE public.agent_wakes w SET status = 'pending', not_before = now()
+     WHERE w.status = 'running' AND w.id = (SELECT t.wake_id FROM public.agent_turns t WHERE t.id = v_lease.running_turn_id);
+  END IF;
+  LOOP
+    SELECT * INTO v_wake FROM public.agent_wakes w
+     WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' AND w.not_before <= now()
+     ORDER BY w.priority, w.created_at LIMIT 1 FOR UPDATE;
+    IF NOT FOUND THEN
+      UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+       WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+      RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
+    END IF;
+    EXIT WHEN v_wake.attempts < v_wake.max_attempts;
+    UPDATE public.agent_wakes w SET status = 'dead', reason = 'attempts', finished_at = now() WHERE w.id = v_wake.id;
+    v_ended := v_ended || jsonb_build_array(public.agent_wake_ended(v_wake, 'dead'));
+  END LOOP;
+  -- The sliding burst window: a wake of a conversation scope with a newer wake of the scope inside the window waits (the newer wake has its own
+  -- delayed drain, a little earlier than the window to absorb clock skew), so every new message extends the wait by the window; a burst whose
+  -- first message is older than p_max_ms stops waiting. When the turn runs it takes every pending wake of the scope into one.
+  IF p_window_ms > 0 AND p_scope LIKE 'conversation:%' THEN
+    IF EXISTS (
+      SELECT 1 FROM public.agent_wakes w
+       WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending'
+         AND w.created_at > now() - make_interval(secs => greatest(p_window_ms - 500, 0) / 1000.0)
+    ) AND v_wake.created_at > now() - make_interval(secs => greatest(p_max_ms, p_window_ms) / 1000.0) THEN
+      RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
+    END IF;
+    WITH merged AS (
+      UPDATE public.agent_wakes w SET status = 'skipped', reason = 'coalesced', finished_at = now()
+       WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending'
+         AND w.id <> v_wake.id AND w.not_before <= now()
+       RETURNING w.created_at, w.context ->> 'messageId' AS message_id
+    )
+    SELECT string_agg(m.message_id, ',' ORDER BY m.created_at) INTO v_merged FROM merged m WHERE m.message_id IS NOT NULL;
+    IF v_merged IS NOT NULL THEN
+      UPDATE public.agent_wakes w SET context = w.context || jsonb_build_object('mergedMessageIds', v_merged)
+        WHERE w.id = v_wake.id RETURNING w.context INTO v_context;
+    END IF;
+  END IF;
+  UPDATE public.agent_wakes w SET status = 'running', attempts = w.attempts + 1, started_at = COALESCE(w.started_at, now())
+   WHERE w.id = v_wake.id;
+  v_fence := v_lease.fence + 1;
+  SELECT t.id, t.proposal INTO v_turn_id, v_proposal FROM public.agent_turns t
+   WHERE t.wake_id = v_wake.id AND t.status = 'proposed' ORDER BY t.fence DESC LIMIT 1;
+  IF v_turn_id IS NULL THEN
+    INSERT INTO public.agent_turns (workspace_id, agent_id, wake_id, fence, status)
+      VALUES (v_workspace, p_agent, v_wake.id, v_fence, 'running') RETURNING id INTO v_turn_id;
+  ELSE
+    UPDATE public.agent_turns t SET fence = v_fence WHERE t.id = v_turn_id;
+  END IF;
+  UPDATE public.agent_work_leases l
+     SET fence = v_fence, lease_owner = p_owner, lease_until = now() + make_interval(secs => p_lease_s), running_turn_id = v_turn_id
+   WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+  RETURN jsonb_build_object(
+    'result', 'begun',
+    'workspaceId', v_workspace,
+    'fence', v_fence,
+    'turnId', v_turn_id,
+    'wakeId', v_wake.id,
+    'source', v_wake.source,
+    'eventKey', v_wake.event_key,
+    'context', coalesce(v_context, v_wake.context),
+    'actorMemberId', v_wake.actor_member_id,
+    'attempts', v_wake.attempts + 1,
+    'maxAttempts', v_wake.max_attempts,
+    'wakeCreatedAt', v_wake.created_at,
+    'proposal', v_proposal,
+    'ended', v_ended
+  );
+END;
+$$;
+REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer, integer) TO app_be;
+
+-- The five-argument door: the longest wait is 20 seconds, or the window when that is longer.
+CREATE OR REPLACE FUNCTION public.agent_turn_begin(p_agent uuid, p_scope text, p_owner text, p_lease_s integer, p_window_ms integer) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  RETURN public.agent_turn_begin(p_agent, p_scope, p_owner, p_lease_s, p_window_ms, greatest(p_window_ms, 20000));
+END;
+$$;
+REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer) TO app_be;
+
+-- ---- from 20261111102000_payment-claim-lead-optional.sql ----
+-- payment-claim-lead-optional: a payment claim belongs to the conversation it was said in; the customer may not be a lead yet.
+-- Expand only: the lead column accepts null, nothing existing changes.
+
+ALTER TABLE public.payment_claims ALTER COLUMN lead_id DROP NOT NULL;
+
+-- ---- from 20261111102010_trigger-burst.sql ----
+-- trigger-burst: the flow of an agent sets the burst of its conversations. The window and the longest wait a wake takes are resolved once,
+-- when the wake is written (from the trigger of the agent's live flow, else the app's defaults), and kept on the wake; agent_turn_begin reads
+-- them from the wake it is about to run and falls back to its arguments for a wake that carries none. Expand only.
+
+ALTER TABLE public.agent_wakes ADD COLUMN burst_window_ms integer CHECK (burst_window_ms IS NULL OR burst_window_ms >= 0);
+ALTER TABLE public.agent_wakes ADD COLUMN burst_max_ms integer CHECK (burst_max_ms IS NULL OR burst_max_ms >= 0);
+
+CREATE OR REPLACE FUNCTION public.agent_turn_begin(p_agent uuid, p_scope text, p_owner text, p_lease_s integer, p_window_ms integer, p_max_ms integer) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_workspace uuid;
+  v_lease public.agent_work_leases%ROWTYPE;
+  v_wake public.agent_wakes%ROWTYPE;
+  v_turn_id uuid;
+  v_proposal jsonb;
+  v_fence bigint;
+  v_ended jsonb := '[]'::jsonb;
+  v_merged text;
+  v_context jsonb;
+  v_window integer;
+  v_max integer;
+BEGIN
+  SELECT a.workspace_id INTO v_workspace FROM public.agents a WHERE a.id = p_agent;
+  IF v_workspace IS NULL THEN
+    RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
+  END IF;
+  INSERT INTO public.agent_work_state (agent_id, workspace_id) VALUES (p_agent, v_workspace) ON CONFLICT (agent_id) DO NOTHING;
+  IF public.agent_work_is_off(p_agent, v_workspace) THEN
+    WITH held AS (
+      UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+       WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' RETURNING w.*
+    )
+    SELECT COALESCE(jsonb_agg(public.agent_wake_ended(ROW(h.*)::public.agent_wakes, 'held')), '[]'::jsonb) INTO v_ended FROM held h;
+    -- A turn whose worker crashed before the switch is taken over here too, or its lease would lapse for the sweep to drain again every minute.
+    SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+    IF FOUND AND v_lease.running_turn_id IS NOT NULL AND v_lease.lease_until <= now() THEN
+      UPDATE public.agent_turns t SET status = 'abandoned' WHERE t.id = v_lease.running_turn_id AND t.status IN ('running', 'proposed');
+      WITH crashed AS (
+        UPDATE public.agent_wakes w SET status = 'held', reason = 'killed'
+         WHERE w.status = 'running' AND w.id = (SELECT t.wake_id FROM public.agent_turns t WHERE t.id = v_lease.running_turn_id) RETURNING w.*
+      )
+      SELECT v_ended || COALESCE(jsonb_agg(public.agent_wake_ended(ROW(c.*)::public.agent_wakes, 'held')), '[]'::jsonb) INTO v_ended FROM crashed c;
+      UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+       WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+    END IF;
+    RETURN jsonb_build_object('result', 'killed', 'ended', v_ended);
+  END IF;
+  INSERT INTO public.agent_work_leases (agent_id, scope_key, workspace_id) VALUES (p_agent, p_scope, v_workspace)
+    ON CONFLICT (agent_id, scope_key) DO NOTHING;
+  SELECT * INTO v_lease FROM public.agent_work_leases l WHERE l.agent_id = p_agent AND l.scope_key = p_scope FOR UPDATE;
+  IF v_lease.running_turn_id IS NOT NULL AND v_lease.lease_until > now() THEN
+    RETURN jsonb_build_object('result', 'busy');
+  END IF;
+  IF v_lease.running_turn_id IS NOT NULL THEN
+    UPDATE public.agent_turns t SET status = 'abandoned' WHERE t.id = v_lease.running_turn_id AND t.status = 'running';
+    UPDATE public.agent_wakes w SET status = 'pending', not_before = now()
+     WHERE w.status = 'running' AND w.id = (SELECT t.wake_id FROM public.agent_turns t WHERE t.id = v_lease.running_turn_id);
+  END IF;
+  LOOP
+    SELECT * INTO v_wake FROM public.agent_wakes w
+     WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending' AND w.not_before <= now()
+     ORDER BY w.priority, w.created_at LIMIT 1 FOR UPDATE;
+    IF NOT FOUND THEN
+      UPDATE public.agent_work_leases l SET running_turn_id = NULL, lease_until = NULL, lease_owner = NULL
+       WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+      RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
+    END IF;
+    EXIT WHEN v_wake.attempts < v_wake.max_attempts;
+    UPDATE public.agent_wakes w SET status = 'dead', reason = 'attempts', finished_at = now() WHERE w.id = v_wake.id;
+    v_ended := v_ended || jsonb_build_array(public.agent_wake_ended(v_wake, 'dead'));
+  END LOOP;
+  -- The sliding burst window: a wake of a conversation scope with a newer wake of the scope inside the window waits (the newer wake has its own
+  -- delayed drain, a little earlier than the window to absorb clock skew), so every new message extends the wait by the window; a burst whose
+  -- first message is older than p_max_ms stops waiting. When the turn runs it takes every pending wake of the scope into one.
+  v_window := COALESCE(v_wake.burst_window_ms, p_window_ms);
+  v_max := COALESCE(v_wake.burst_max_ms, p_max_ms);
+  IF v_window > 0 AND p_scope LIKE 'conversation:%' THEN
+    IF EXISTS (
+      SELECT 1 FROM public.agent_wakes w
+       WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending'
+         AND w.created_at > now() - make_interval(secs => greatest(v_window - 500, 0) / 1000.0)
+    ) AND v_wake.created_at > now() - make_interval(secs => greatest(v_max, v_window) / 1000.0) THEN
+      RETURN jsonb_build_object('result', 'idle', 'ended', v_ended);
+    END IF;
+    WITH merged AS (
+      UPDATE public.agent_wakes w SET status = 'skipped', reason = 'coalesced', finished_at = now()
+       WHERE w.agent_id = p_agent AND w.scope_key = p_scope AND w.status = 'pending'
+         AND w.id <> v_wake.id AND w.not_before <= now()
+       RETURNING w.created_at, w.context ->> 'messageId' AS message_id
+    )
+    SELECT string_agg(m.message_id, ',' ORDER BY m.created_at) INTO v_merged FROM merged m WHERE m.message_id IS NOT NULL;
+    IF v_merged IS NOT NULL THEN
+      UPDATE public.agent_wakes w SET context = w.context || jsonb_build_object('mergedMessageIds', v_merged)
+        WHERE w.id = v_wake.id RETURNING w.context INTO v_context;
+    END IF;
+  END IF;
+  UPDATE public.agent_wakes w SET status = 'running', attempts = w.attempts + 1, started_at = COALESCE(w.started_at, now())
+   WHERE w.id = v_wake.id;
+  v_fence := v_lease.fence + 1;
+  SELECT t.id, t.proposal INTO v_turn_id, v_proposal FROM public.agent_turns t
+   WHERE t.wake_id = v_wake.id AND t.status = 'proposed' ORDER BY t.fence DESC LIMIT 1;
+  IF v_turn_id IS NULL THEN
+    INSERT INTO public.agent_turns (workspace_id, agent_id, wake_id, fence, status)
+      VALUES (v_workspace, p_agent, v_wake.id, v_fence, 'running') RETURNING id INTO v_turn_id;
+  ELSE
+    UPDATE public.agent_turns t SET fence = v_fence WHERE t.id = v_turn_id;
+  END IF;
+  UPDATE public.agent_work_leases l
+     SET fence = v_fence, lease_owner = p_owner, lease_until = now() + make_interval(secs => p_lease_s), running_turn_id = v_turn_id
+   WHERE l.agent_id = p_agent AND l.scope_key = p_scope;
+  RETURN jsonb_build_object(
+    'result', 'begun',
+    'workspaceId', v_workspace,
+    'fence', v_fence,
+    'turnId', v_turn_id,
+    'wakeId', v_wake.id,
+    'source', v_wake.source,
+    'eventKey', v_wake.event_key,
+    'context', coalesce(v_context, v_wake.context),
+    'actorMemberId', v_wake.actor_member_id,
+    'attempts', v_wake.attempts + 1,
+    'maxAttempts', v_wake.max_attempts,
+    'wakeCreatedAt', v_wake.created_at,
+    'proposal', v_proposal,
+    'ended', v_ended
+  );
+END;
+$$;
+REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer, integer) TO app_be;
+
+-- ---- from 20261111102200_agent-run-resume.sql ----
+-- agent-run-resume: forward-only; immutable once on origin/main. Expand only: new columns and functions, nothing existing altered.
+-- A run that stopped on a failed step is parked, not forgotten: it keeps its done steps, their results and the failed step, and it can run
+-- again from that step, by a person, by a new build or by the sweep. "Parked" is the existing 'dead' status with a failed step; the columns
+-- below say under which build it parked, who resumed it, why, and how many times the machine tried on its own.
+
+ALTER TABLE public.agent_runs
+    ADD COLUMN parked_build text,
+    ADD COLUMN resume_attempts smallint NOT NULL DEFAULT 0,
+    ADD COLUMN resume_not_before timestamptz,
+    ADD COLUMN resumed_at timestamptz,
+    ADD COLUMN resumed_by text,
+    ADD COLUMN resume_reason text;
+
+-- Records the build a run parked under, so a new build can tell which parked runs it may try again. False when the run is not parked.
+CREATE FUNCTION public.agent_run_park_mark(p_run uuid, p_build text) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  UPDATE public.agent_runs r SET parked_build = p_build WHERE r.id = p_run AND r.status = 'dead';
+  RETURN FOUND;
+END;
+$$;
+
+-- Runs a parked run again from its failed step. The failed step goes back to 'pending' with a new fence and no tries spent (its input is
+-- replaced when p_input is given); every done step keeps its result and is never claimed again, so a pivot that was done is never repeated.
+-- A machine resume (p_auto) is bounded by p_max tries and spaced by p_backoff_s doubling with each one. Answers {result: 'resumed', stepKey,
+-- workspaceId, errorCode, at} or {result: <why not>}: 'not_found', 'compensated' (a compensated run is triggered again, never resumed), 'not_parked',
+-- 'no_failed_step', 'exhausted'.
+CREATE FUNCTION public.agent_run_resume(
+    p_run uuid, p_actor text, p_reason text, p_input jsonb, p_auto boolean, p_max integer, p_backoff_s integer
+) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_run public.agent_runs%ROWTYPE;
+  v_step public.agent_run_steps%ROWTYPE;
+BEGIN
+  SELECT * INTO v_run FROM public.agent_runs r WHERE r.id = p_run FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('result', 'not_found');
+  END IF;
+  IF v_run.status = 'compensated' OR v_run.status = 'compensating' THEN
+    RETURN jsonb_build_object('result', 'compensated');
+  END IF;
+  IF v_run.status <> 'dead' THEN
+    RETURN jsonb_build_object('result', 'not_parked');
+  END IF;
+  SELECT * INTO v_step FROM public.agent_run_steps s WHERE s.run_id = p_run AND s.status = 'failed' ORDER BY s.seq LIMIT 1 FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('result', 'no_failed_step');
+  END IF;
+  IF p_auto AND v_run.resume_attempts >= p_max THEN
+    RETURN jsonb_build_object('result', 'exhausted');
+  END IF;
+  UPDATE public.agent_run_steps s SET status = 'pending', attempt = 0, error_code = NULL, claim_until = NULL, wait_item_id = NULL,
+         not_before = now(), fence = s.fence + 1, input = COALESCE(p_input, s.input)
+   WHERE s.id = v_step.id;
+  UPDATE public.agent_runs r SET status = 'running', error_code = NULL, finished_at = NULL, dead_lettered_at = NULL,
+         resumed_at = now(), resumed_by = p_actor, resume_reason = p_reason,
+         resume_attempts = CASE WHEN p_auto THEN r.resume_attempts + 1 ELSE r.resume_attempts END,
+         resume_not_before = CASE WHEN p_auto THEN now() + make_interval(secs => p_backoff_s * (2 ^ r.resume_attempts)::integer) ELSE r.resume_not_before END
+   WHERE r.id = p_run;
+  RETURN jsonb_build_object('result', 'resumed', 'stepKey', v_step.step_key, 'workspaceId', v_run.workspace_id, 'errorCode', v_step.error_code,
+                            'at', (extract(epoch FROM clock_timestamp()) * 1000)::bigint);
+END;
+$$;
+
+-- The parked runs a machine may try again, oldest first: not compensated, with a failed step whose code is not one that must stay with a
+-- person (p_exclude), under the tries cap, past their spacing and parked at least p_min_age_s ago. With p_by_build only those parked under
+-- another build than p_build.
+CREATE FUNCTION public.agent_run_parked(p_limit integer, p_build text, p_by_build boolean, p_min_age_s integer, p_max integer, p_exclude text[])
+    RETURNS TABLE (parked_run uuid, parked_workspace uuid)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  SELECT r.id, r.workspace_id
+    FROM public.agent_runs r
+   WHERE r.status = 'dead'
+     AND r.resume_attempts < p_max
+     AND (r.resume_not_before IS NULL OR r.resume_not_before < now())
+     AND (r.finished_at IS NULL OR r.finished_at < now() - make_interval(secs => p_min_age_s))
+     AND (NOT p_by_build OR r.parked_build IS DISTINCT FROM p_build)
+     AND EXISTS (SELECT 1 FROM public.agent_run_steps s WHERE s.run_id = r.id AND s.status = 'failed' AND NOT (COALESCE(s.error_code, '') = ANY (p_exclude)))
+   ORDER BY r.finished_at NULLS FIRST
+   LIMIT p_limit;
+$$;
+
+REVOKE ALL ON FUNCTION public.agent_run_park_mark(uuid, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_run_resume(uuid, text, text, jsonb, boolean, integer, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.agent_run_parked(integer, text, boolean, integer, integer, text[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_run_park_mark(uuid, text) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_run_resume(uuid, text, text, jsonb, boolean, integer, integer) TO app_be;
+GRANT EXECUTE ON FUNCTION public.agent_run_parked(integer, text, boolean, integer, integer, text[]) TO app_be;
+
+-- ---- from 20261111102300_agent-message-channel-ref.sql ----
+-- agent-message-channel-ref: forward-only; immutable once on origin/main. Expand only: one new nullable column and its index, nothing existing altered.
+-- A customer message keeps the channel's own id of the message it came from (`zalo:<message id>`, `tg:<chat>:<message>`, `meta:<event>`), so
+-- the same message heard twice in one conversation - a webhook and the poll that reconciles it, a manual import, a replayed inbound event - is
+-- stored once. Rows written before this column, and lines no channel brought in, carry none.
+ALTER TABLE public.agent_messages ADD COLUMN channel_ref text;
+COMMENT ON COLUMN public.agent_messages.channel_ref IS 'The channel''s own id of the customer message this row stores; NULL for lines no channel brought in and for rows written before it.';
+CREATE UNIQUE INDEX agent_messages_channel_ref_key ON public.agent_messages (conversation_id, channel_ref)
+    WHERE channel_ref IS NOT NULL;
+
+-- ---- from 20261111102400_agent-speaker-queue.sql ----
+-- agent-speaker-queue: forward-only; immutable once on origin/main. Expand only: one new table, nothing existing altered.
+-- One agent speaks to the customer of a conversation at a time: the holder (agent_conversations.agent_id). A hand-off passes the right
+-- to speak to the agent it tags; a second hand-off while another agent holds the conversation waits here, in order, and is written as
+-- that agent's wake only when the holder hands the conversation on. When the holder's work is done and nobody waits, the conversation
+-- returns to the agent that opened the door.
+CREATE TABLE public.agent_speaker_queue (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    conversation_id uuid NOT NULL REFERENCES public.agent_conversations(id) ON DELETE CASCADE,
+    to_agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
+    event_key text NOT NULL,
+    request jsonb NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT agent_speaker_queue_event_key UNIQUE (conversation_id, event_key)
+);
+CREATE INDEX agent_speaker_queue_conversation_idx ON public.agent_speaker_queue USING btree (conversation_id, created_at, id);
+CREATE TRIGGER agent_speaker_queue_set_updated_at BEFORE UPDATE ON public.agent_speaker_queue FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+ALTER TABLE public.agent_speaker_queue ENABLE ROW LEVEL SECURITY;
+CREATE POLICY agent_speaker_queue_app_be_select ON public.agent_speaker_queue FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY agent_speaker_queue_app_be_insert ON public.agent_speaker_queue FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY agent_speaker_queue_app_be_delete ON public.agent_speaker_queue FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+GRANT SELECT, INSERT, DELETE ON TABLE public.agent_speaker_queue TO app_be;
+
+-- ---- from 20261111102500_delayed-jobs-and-turn-debounce.sql ----
+-- delayed-jobs-and-turn-debounce: a job can wait before the broker runs it. Expand only. job_outbox gets run_after (null means now);
+-- job_enqueue gains an overload with a delay in milliseconds, written only when the row is first inserted so a repeat of the same dedupe key
+-- never moves it; the relay and the reconciler read the remaining delay (delay_ms), which the broker honours as its own delay, through
+-- job_relay_claim_with_delay and job_reconcile_with_delay: new doors beside the old ones, so the release before this one keeps calling
+-- job_relay_claim and job_reconcile unchanged until a contract migration drops them. The four-argument agent_turn_begin becomes the door
+-- of the debounced turn with no window; the windowed turn itself is 20261111101900 and 20261111102010 (stamped after them: this
+-- migration was first written with the invalid stamp 20261111101160 and never ran on a shared database).
+
+ALTER TABLE public.job_outbox ADD COLUMN IF NOT EXISTS run_after timestamptz;
+
+CREATE FUNCTION public.job_enqueue(p_workspace uuid, p_queue text, p_name text, p_payload jsonb, p_dedupe text, p_delay_ms integer) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
+declare v_id uuid;
+begin
+  insert into public.job_outbox (workspace_id, queue, name, payload, dedupe_key, run_after)
+  values (p_workspace, p_queue, p_name, coalesce(p_payload, '{}'::jsonb), p_dedupe,
+          case when coalesce(p_delay_ms, 0) > 0 then now() + make_interval(secs => p_delay_ms / 1000.0) end)
+  on conflict (dedupe_key) do nothing returning id into v_id;
+  if v_id is null then select id into v_id from public.job_outbox where dedupe_key = p_dedupe; end if;
+  return v_id;
+end $$;
+REVOKE EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text, integer) TO app_be;
+
+CREATE FUNCTION public.job_relay_claim_with_delay(p_limit integer, p_lease_s integer DEFAULT 60)
+    RETURNS TABLE(id uuid, queue text, name text, payload jsonb, lease_token uuid, retry_requested boolean, delay_ms integer)
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$
+  with candidates as materialized (
+    select o.id, row_number() over (partition by o.queue order by o.created_at, o.id) as position
+    from public.job_outbox o
+    where o.sent_at is null and o.state in ('queued', 'running')
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+  ), picked as (
+    select o.id from public.job_outbox o join candidates c on c.id = o.id
+    where o.sent_at is null and o.state in ('queued', 'running')
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+    order by c.position, o.created_at, o.queue, o.id
+    limit least(greatest(coalesce(p_limit, 50), 1), 500) for update of o skip locked
+  ), claimed as (
+    update public.job_outbox o set lease_token = gen_random_uuid(),
+      relay_lease_until = now() + make_interval(secs => greatest(30, p_lease_s))
+    from picked p where o.id = p.id returning o.*
+  )
+  select o.id, o.queue, o.name, o.payload, o.lease_token, o.retry_requested_at is not null, greatest(0, ceil(extract(epoch from (coalesce(o.run_after, now()) - now())) * 1000))::integer from claimed o
+$$;
+REVOKE EXECUTE ON FUNCTION public.job_relay_claim_with_delay(integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_relay_claim_with_delay(integer, integer) TO app_be;
+
+CREATE FUNCTION public.job_reconcile_with_delay(p_stale_s integer, p_running_stale_s integer, p_limit integer, p_lease_s integer DEFAULT 60)
+    RETURNS TABLE(id uuid, queue text, name text, payload jsonb, state text, attempts integer, run_token uuid, lease_token uuid, retry_requested boolean, delay_ms integer)
+    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$
+  with candidates as materialized (
+    select o.id, row_number() over (partition by o.queue order by o.reconcile_at, o.id) as position
+    from public.job_outbox o
+    where o.reconcile_at <= now()
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+      and ((o.state = 'queued' and o.sent_at is not null)
+        or (o.state = 'running' and coalesce(o.run_lease_until, '-infinity'::timestamptz) <= now()
+          and coalesce(o.started_at, o.sent_at, o.created_at) < now() - make_interval(secs => greatest(5, p_running_stale_s))))
+  ), picked as (
+    select o.id from public.job_outbox o join candidates c on c.id = o.id
+    where o.reconcile_at <= now() and o.state in ('queued', 'running')
+      and coalesce(o.relay_lease_until, '-infinity'::timestamptz) <= now()
+    order by c.position, o.reconcile_at, o.queue, o.id
+    limit least(greatest(coalesce(p_limit, 50), 1), 500) for update of o skip locked
+  ), claimed as (
+    update public.job_outbox o set lease_token = gen_random_uuid(),
+      relay_lease_until = now() + make_interval(secs => greatest(30, p_lease_s)),
+      reconcile_at = now() + make_interval(secs => least(600, greatest(5, p_stale_s) * power(2, least(o.reconcile_checks, 7)))::int),
+      reconcile_checks = least(o.reconcile_checks + 1, 8)
+    from picked p where o.id = p.id returning o.*
+  )
+  select o.id, o.queue, o.name, o.payload, o.state, o.attempts, o.run_token, o.lease_token, o.retry_requested_at is not null, greatest(0, ceil(extract(epoch from (coalesce(o.run_after, now()) - now())) * 1000))::integer from claimed o
+$$;
+REVOKE EXECUTE ON FUNCTION public.job_reconcile_with_delay(integer, integer, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.job_reconcile_with_delay(integer, integer, integer, integer) TO app_be;
+
+-- The four-argument door keeps answering as before: no window.
+CREATE OR REPLACE FUNCTION public.agent_turn_begin(p_agent uuid, p_scope text, p_owner text, p_lease_s integer) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  RETURN public.agent_turn_begin(p_agent, p_scope, p_owner, p_lease_s, 0);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer) TO app_be;
+
+-- ---- from 20261111102510_order-status-failed-system_contract_widen.sql ----
+-- order-status-failed-system: an order a system failure cut short gets its own status, `failed_system`. Widening only: the old statuses
+-- stay allowed and no row changes. Table grants and row level security of public.orders already cover it.
+
+ALTER TABLE public.orders DROP CONSTRAINT orders_status_check;
+ALTER TABLE public.orders ADD CONSTRAINT orders_status_check CHECK (
+    status = ANY (ARRAY['draft'::text, 'confirmed'::text, 'invoiced'::text, 'paid'::text, 'cancelled'::text, 'failed_system'::text])
+);
+
+-- ---- from 20261111102520_agent-graph-spec-versions_contract_widen.sql ----
+-- agent-graph-spec-versions: a version a graph spec published (the node graph the seed or a member put on an agent) is its own change
+-- kind, `spec`, so the rules-derived refresh of a `seed` version never takes it for its own and replaces it without its flow.
+-- Expand only: the kind check admits one more value; every existing row stays valid.
+ALTER TABLE public.agent_graph_versions DROP CONSTRAINT agent_graph_versions_kind_check;
+ALTER TABLE public.agent_graph_versions ADD CONSTRAINT agent_graph_versions_kind_check
+    CHECK (change_kind IN ('seed', 'chat', 'edit', 'conflict', 'learned', 'template', 'rollback', 'spec'));
+
+-- ---- from 20261111103000_brain-dossiers-owner-due.sql ----
+-- brain-dossiers-owner-due: forward-only; immutable once on origin/main.
+-- A dossier gets an owner (a membership id of its workspace, as a finding's assignee is) and a due date. Both stay empty until somebody
+-- sets them; a checklist import never writes them. Table grants and row level security of public.brain_dossiers already cover the columns.
+ALTER TABLE public.brain_dossiers ADD COLUMN assignee_id uuid;
+ALTER TABLE public.brain_dossiers ADD COLUMN due_at date;
+
+-- ---- from 20261111103100_connection-poll-functions.sql ----
+-- The two writes of the poll schedule that start from `public.connections`, which the poll capability does not own: put every connection of some
+-- providers into the schedule, and make one connection hot. Each is an INSERT ... SELECT with ON CONFLICT, which an entity cannot express, so the
+-- backend calls them as database functions (callDbFunction) instead of holding the statement text.
+
+-- Gives every connection of the providers that has no row a row, spread at random over the interval so tenants never poll in step; answers how many
+-- rows it added.
+CREATE FUNCTION public.connection_poll_enroll(p_providers text[], p_interval_ms integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  enrolled integer;
+BEGIN
+  INSERT INTO public.connection_poll_schedule (connection_id, workspace_id, provider, next_poll_at, interval_ms)
+    SELECT c.id, c.workspace_id, c.provider, now() + make_interval(secs => random() * p_interval_ms::double precision / 1000), p_interval_ms
+      FROM public.connections c
+     WHERE c.provider = ANY(p_providers) AND c.status <> 'disconnected'
+    ON CONFLICT (connection_id) DO NOTHING;
+  GET DIAGNOSTICS enrolled = ROW_COUNT;
+  RETURN enrolled;
+END;
+$$;
+
+-- Puts a connection in the schedule, hot, or makes its existing row hot and due sooner; a row that needs the owner stays parked. A connection that
+-- is disconnected or missing adds nothing.
+CREATE FUNCTION public.connection_poll_mark_hot(p_connection uuid, p_interval_ms integer, p_ttl_ms double precision, p_reason text) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  INSERT INTO public.connection_poll_schedule (connection_id, workspace_id, provider, next_poll_at, interval_ms, hot_until, hot_reason)
+    SELECT c.id, c.workspace_id, c.provider, now(), p_interval_ms, now() + make_interval(secs => p_ttl_ms / 1000), p_reason
+      FROM public.connections c
+     WHERE c.id = p_connection AND c.status <> 'disconnected'
+    ON CONFLICT (connection_id) DO UPDATE SET
+      hot_until = GREATEST(connection_poll_schedule.hot_until, EXCLUDED.hot_until),
+      hot_reason = EXCLUDED.hot_reason,
+      next_poll_at = CASE
+        WHEN connection_poll_schedule.needs_reauth THEN connection_poll_schedule.next_poll_at
+        ELSE LEAST(connection_poll_schedule.next_poll_at, now() + make_interval(secs => p_interval_ms::double precision / 1000))
+      END;
+$$;
+
+REVOKE ALL ON FUNCTION public.connection_poll_enroll(text[], integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.connection_poll_mark_hot(uuid, integer, double precision, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.connection_poll_enroll(text[], integer) TO app_be;
+GRANT EXECUTE ON FUNCTION public.connection_poll_mark_hot(uuid, integer, double precision, text) TO app_be;
+
+-- ---- from 20261112000100_entity-engine-records.sql ----
+-- entity-engine-records: forward-only; immutable once on origin/main.
+-- The base of the generic entity engine (ENTITY-ENGINE-PLAN section 11, DELTA-V2): one logical table of records partitioned by entity,
+-- the links between records, the per-workspace counters and the strong row-level isolation of the engine role. A clean database is assumed
+-- (no data to preserve). Per-entity partitions, their CHECKs, indexes and views are generated by the planner, never written here: there is
+-- no DEFAULT partition, so an insert for an undeclared entity fails.
+--
+-- Isolation: the engine opens every transaction with public.engine_scope_enter(workspace), which sets the transaction-local setting
+-- nivo.workspace_id and switches the transaction to the NOLOGIN role app_engine. The policies compare workspace_id with
+-- public.engine_workspace(). Both settings are transaction-local: nothing survives COMMIT or ROLLBACK on a pooled connection.
+-- app_be holds no grant on these tables (fail closed): without a scope it reaches nothing.
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_engine') THEN
+        CREATE ROLE app_engine NOLOGIN NOINHERIT NOBYPASSRLS;
+    END IF;
+END
+$$;
+
+-- Membership gives app_be the SET option only (a NOINHERIT grantee never inherits the privileges).
+GRANT app_engine TO app_be;
+
+GRANT USAGE ON SCHEMA public TO app_engine;
+GRANT USAGE ON SCHEMA extensions TO app_engine;
+
+CREATE FUNCTION public.engine_workspace() RETURNS uuid
+    LANGUAGE sql STABLE
+    SET search_path = ''
+    AS $$ SELECT nullif(pg_catalog.current_setting('nivo.workspace_id', true), '')::uuid $$;
+
+CREATE FUNCTION public.engine_scope_enter(ws uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY INVOKER
+    SET search_path = ''
+    AS $$
+BEGIN
+    IF ws IS NULL THEN
+        RAISE EXCEPTION 'engine scope needs a workspace' USING ERRCODE = '22004';
+    END IF;
+    PERFORM pg_catalog.set_config('nivo.workspace_id', ws::text, true);
+    PERFORM pg_catalog.set_config('role', 'app_engine', true);
+END
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.engine_workspace() FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.engine_workspace() TO app_engine;
+REVOKE EXECUTE ON FUNCTION public.engine_scope_enter(uuid) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.engine_scope_enter(uuid) TO app_be;
+
+-- The search predicate of the engine (knowledge_fold(expr) LIKE knowledge_fold(:q)) runs as app_engine.
+GRANT EXECUTE ON FUNCTION public.knowledge_fold(text) TO app_engine;
+
+-- records: declared fields live in data; id, workspace, version and the stamps are columns. Partitioned by entity.
+CREATE TABLE public.records (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    entity text NOT NULL,
+    data jsonb NOT NULL DEFAULT '{}'::jsonb,
+    version bigint NOT NULL DEFAULT 1,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (entity, id),
+    -- A link can only join two records of one workspace: its foreign keys name the workspace too.
+    UNIQUE (entity, id, workspace_id),
+    CONSTRAINT records_entity_check CHECK (char_length(entity) <= 120),
+    CONSTRAINT records_version_check CHECK (version >= 1),
+    CONSTRAINT records_data_check CHECK (jsonb_typeof(data) = 'object')
+) PARTITION BY LIST (entity);
+
+CREATE INDEX records_workspace_recent_idx ON public.records USING btree (workspace_id, entity, updated_at DESC, id DESC);
+CREATE TRIGGER records_set_updated_at BEFORE UPDATE ON public.records FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+-- record_links: relations between records. Deletion is RESTRICT on the table; the engine deletes the links of a record first.
+CREATE TABLE public.record_links (
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    from_entity text NOT NULL,
+    from_id uuid NOT NULL,
+    relation text NOT NULL,
+    to_entity text NOT NULL,
+    to_id uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (from_entity, from_id, relation, to_entity, to_id),
+    CONSTRAINT record_links_from_fkey FOREIGN KEY (from_entity, from_id, workspace_id) REFERENCES public.records (entity, id, workspace_id) ON DELETE RESTRICT,
+    CONSTRAINT record_links_to_fkey FOREIGN KEY (to_entity, to_id, workspace_id) REFERENCES public.records (entity, id, workspace_id) ON DELETE RESTRICT,
+    CONSTRAINT record_links_relation_check CHECK (char_length(relation) BETWEEN 1 AND 120),
+    CONSTRAINT record_links_entity_check CHECK (char_length(from_entity) <= 120 AND char_length(to_entity) <= 120)
+);
+
+CREATE INDEX record_links_to_idx ON public.record_links USING btree (workspace_id, to_entity, to_id, relation);
+
+-- entity_sequences: per-workspace counters behind the `sequence` field kind; period is '' (never resets) or a day, month or year key.
+CREATE TABLE public.entity_sequences (
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    entity text NOT NULL,
+    field text NOT NULL,
+    period text NOT NULL DEFAULT '',
+    value bigint NOT NULL DEFAULT 0,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (workspace_id, entity, field, period),
+    CONSTRAINT entity_sequences_entity_check CHECK (char_length(entity) <= 120),
+    CONSTRAINT entity_sequences_field_check CHECK (char_length(field) <= 60),
+    CONSTRAINT entity_sequences_period_check CHECK (char_length(period) <= 10),
+    CONSTRAINT entity_sequences_value_check CHECK (value >= 0)
+);
+
+CREATE TRIGGER entity_sequences_set_updated_at BEFORE UPDATE ON public.entity_sequences FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.record_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.entity_sequences ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.records, public.record_links, public.entity_sequences FROM PUBLIC, anon, authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.records TO app_engine;
+CREATE POLICY records_app_engine_select ON public.records FOR SELECT TO app_engine USING (workspace_id = public.engine_workspace());
+CREATE POLICY records_app_engine_insert ON public.records FOR INSERT TO app_engine WITH CHECK (workspace_id = public.engine_workspace());
+CREATE POLICY records_app_engine_update ON public.records FOR UPDATE TO app_engine USING (workspace_id = public.engine_workspace()) WITH CHECK (workspace_id = public.engine_workspace());
+CREATE POLICY records_app_engine_delete ON public.records FOR DELETE TO app_engine USING (workspace_id = public.engine_workspace());
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.record_links TO app_engine;
+CREATE POLICY record_links_app_engine_select ON public.record_links FOR SELECT TO app_engine USING (workspace_id = public.engine_workspace());
+CREATE POLICY record_links_app_engine_insert ON public.record_links FOR INSERT TO app_engine WITH CHECK (workspace_id = public.engine_workspace());
+CREATE POLICY record_links_app_engine_update ON public.record_links FOR UPDATE TO app_engine USING (workspace_id = public.engine_workspace()) WITH CHECK (workspace_id = public.engine_workspace());
+CREATE POLICY record_links_app_engine_delete ON public.record_links FOR DELETE TO app_engine USING (workspace_id = public.engine_workspace());
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.entity_sequences TO app_engine;
+CREATE POLICY entity_sequences_app_engine_select ON public.entity_sequences FOR SELECT TO app_engine USING (workspace_id = public.engine_workspace());
+CREATE POLICY entity_sequences_app_engine_insert ON public.entity_sequences FOR INSERT TO app_engine WITH CHECK (workspace_id = public.engine_workspace());
+CREATE POLICY entity_sequences_app_engine_update ON public.entity_sequences FOR UPDATE TO app_engine USING (workspace_id = public.engine_workspace()) WITH CHECK (workspace_id = public.engine_workspace());
+CREATE POLICY entity_sequences_app_engine_delete ON public.entity_sequences FOR DELETE TO app_engine USING (workspace_id = public.engine_workspace());
+
+-- ---- from 20261112000200_entity-engine-catalog.sql ----
+-- entity-engine-catalog: forward-only; immutable once on origin/main.
+-- The read side of the entity planner (ENTITY-ENGINE-PLAN sections 2.8 and 11): public.engine_catalog() returns, as one jsonb document,
+-- what `cli entities plan|check` diffs the entity declarations against: the base tables of the records model, the partitions of
+-- public.records with their local constraints and own indexes, the typed views v_records_*, and the installed extensions.
+-- It reads pg_catalog only and runs as the caller (SECURITY INVOKER). Shape: packages/agent-sdk/src/entity/catalog.types.ts (CatalogSnapshot).
+--
+-- public.engine_ts(text) is the immutable ISO-timestamp reader the generated EXCLUDE constraints and partial indexes use; the generated
+-- CHECKs of a timestamptz field only let ISO text with an explicit offset through, so the value is deterministic.
+
+CREATE FUNCTION public.engine_ts(t text) RETURNS timestamptz
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    SET search_path = ''
+    AS $$ SELECT t::timestamptz $$;
+
+REVOKE EXECUTE ON FUNCTION public.engine_ts(text) FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.engine_ts(text) TO app_engine, app_be;
+
+CREATE FUNCTION public.engine_catalog() RETURNS jsonb
+    LANGUAGE sql STABLE SECURITY INVOKER
+    SET search_path = ''
+    AS $$
+    SELECT pg_catalog.jsonb_build_object(
+        'extensions', COALESCE((SELECT pg_catalog.jsonb_agg(e.extname ORDER BY e.extname) FROM pg_catalog.pg_extension e), '[]'::pg_catalog.jsonb),
+        'bases', COALESCE((
+            SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                'name', c.relname,
+                'rlsEnabled', c.relrowsecurity,
+                'rlsForced', c.relforcerowsecurity,
+                'policies', COALESCE((
+                    SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                        'name', p.polname,
+                        'roles', COALESCE((
+                            SELECT pg_catalog.jsonb_agg(CASE WHEN r.oid = 0 THEN 'public' ELSE (SELECT o.rolname FROM pg_catalog.pg_roles o WHERE o.oid = r.oid)::text END)
+                            FROM pg_catalog.unnest(p.polroles) AS r(oid)
+                        ), '[]'::pg_catalog.jsonb),
+                        'command', CASE p.polcmd WHEN 'r' THEN 'select' WHEN 'a' THEN 'insert' WHEN 'w' THEN 'update' WHEN 'd' THEN 'delete' ELSE 'all' END,
+                        'permissive', p.polpermissive,
+                        'qual', pg_catalog.pg_get_expr(p.polqual, p.polrelid),
+                        'check', pg_catalog.pg_get_expr(p.polwithcheck, p.polrelid)
+                    ) ORDER BY p.polname)
+                    FROM pg_catalog.pg_policy p WHERE p.polrelid = c.oid
+                ), '[]'::pg_catalog.jsonb),
+                'grants', COALESCE((
+                    SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('role', g.role, 'privileges', g.privileges) ORDER BY g.role)
+                    FROM (
+                        SELECT CASE WHEN a.grantee = 0 THEN 'public' ELSE (SELECT o.rolname FROM pg_catalog.pg_roles o WHERE o.oid = a.grantee)::text END AS role,
+                               pg_catalog.jsonb_agg(pg_catalog.lower(a.privilege_type) ORDER BY a.privilege_type) AS privileges
+                        FROM pg_catalog.aclexplode(c.relacl) a
+                        GROUP BY a.grantee
+                    ) g
+                ), '[]'::pg_catalog.jsonb)
+            ) ORDER BY c.relname)
+            FROM pg_catalog.pg_class c
+            WHERE c.relnamespace = 'public'::pg_catalog.regnamespace
+              AND c.relname IN ('records', 'record_links', 'entity_sequences')
+              AND c.relkind IN ('r', 'p')
+        ), '[]'::pg_catalog.jsonb),
+        'partitions', COALESCE((
+            SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                'name', t.relname,
+                'bound', pg_catalog.replace(
+                    (pg_catalog.regexp_match(pg_catalog.pg_get_expr(t.relpartbound, t.oid), '^FOR VALUES IN \(''(.*)''\)$'))[1],
+                    '''''', ''''),
+                'constraints', COALESCE((
+                    SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                        'name', k.conname,
+                        'kind', CASE k.contype WHEN 'p' THEN 'primary' WHEN 'u' THEN 'unique' WHEN 'c' THEN 'check' WHEN 'f' THEN 'foreign' ELSE 'exclude' END,
+                        'definition', pg_catalog.pg_get_constraintdef(k.oid),
+                        'validated', k.convalidated
+                    ) ORDER BY k.conname)
+                    FROM pg_catalog.pg_constraint k
+                    WHERE k.conrelid = t.oid AND k.conislocal AND k.contype IN ('p', 'u', 'c', 'f', 'x')
+                ), '[]'::pg_catalog.jsonb),
+                'indexes', COALESCE((
+                    SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                        'name', ic.relname,
+                        'columns', (
+                            SELECT pg_catalog.jsonb_agg(
+                                pg_catalog.pg_get_indexdef(i.indexrelid, s.k, true) || CASE WHEN (i.indoption[s.k - 1] & 1) = 1 THEN ' DESC' ELSE '' END
+                                ORDER BY s.k)
+                            FROM pg_catalog.generate_series(1, i.indnkeyatts::int) AS s(k)
+                        ),
+                        'unique', i.indisunique,
+                        'method', am.amname,
+                        'predicate', pg_catalog.pg_get_expr(i.indpred, i.indrelid)
+                    ) ORDER BY ic.relname)
+                    FROM pg_catalog.pg_index i
+                    JOIN pg_catalog.pg_class ic ON ic.oid = i.indexrelid
+                    JOIN pg_catalog.pg_am am ON am.oid = ic.relam
+                    WHERE i.indrelid = t.oid
+                      AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_inherits ih WHERE ih.inhrelid = i.indexrelid)
+                ), '[]'::pg_catalog.jsonb)
+            ) ORDER BY t.relname)
+            FROM pg_catalog.pg_inherits h
+            JOIN pg_catalog.pg_class t ON t.oid = h.inhrelid
+            WHERE h.inhparent = 'public.records'::pg_catalog.regclass
+        ), '[]'::pg_catalog.jsonb),
+        'views', COALESCE((
+            SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                'name', v.relname,
+                'columns', (
+                    SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('name', a.attname, 'type', pg_catalog.format_type(a.atttypid, a.atttypmod)) ORDER BY a.attnum)
+                    FROM pg_catalog.pg_attribute a WHERE a.attrelid = v.oid AND a.attnum > 0 AND NOT a.attisdropped
+                )
+            ) ORDER BY v.relname)
+            FROM pg_catalog.pg_class v
+            WHERE v.relnamespace = 'public'::pg_catalog.regnamespace
+              AND v.relkind = 'v'
+              AND v.relname LIKE 'v\_records\_%'
+        ), '[]'::pg_catalog.jsonb)
+    )
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.engine_catalog() FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.engine_catalog() TO app_be;
+
+-- ---- from 20261112000300_entity-engine-partitions.sql ----
+-- entity-engine partitions: generated by `cli entities plan --write`; forward-only; immutable once on origin/main.
+-- Reviewed like a hand-written migration. No transaction control.
+
+-- create_partition public.records_sales_lead: records for values in ('sales.lead')
+CREATE TABLE public."records_sales_lead" PARTITION OF public.records FOR VALUES IN ('sales.lead');
+-- add_check public.records_sales_lead:constraint:records_sales_lead_contact_name_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_lead" ADD CONSTRAINT "records_sales_lead_contact_name_chk" CHECK ((data->>'contactName') IS NOT NULL AND (jsonb_typeof(data->'contactName') = 'string' AND char_length((data->>'contactName')) <= 500)) NOT VALID;
+ALTER TABLE public."records_sales_lead" VALIDATE CONSTRAINT "records_sales_lead_contact_name_chk";
+-- add_check public.records_sales_lead:constraint:records_sales_lead_company_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_lead" ADD CONSTRAINT "records_sales_lead_company_chk" CHECK ((data->>'company') IS NULL OR (jsonb_typeof(data->'company') = 'string' AND char_length((data->>'company')) <= 500)) NOT VALID;
+ALTER TABLE public."records_sales_lead" VALIDATE CONSTRAINT "records_sales_lead_company_chk";
+-- add_check public.records_sales_lead:constraint:records_sales_lead_channel_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_lead" ADD CONSTRAINT "records_sales_lead_channel_chk" CHECK ((data->>'channel') IS NOT NULL AND ((data->>'channel') IN ('telegram', 'zalo', 'facebook', 'instagram', 'website'))) NOT VALID;
+ALTER TABLE public."records_sales_lead" VALIDATE CONSTRAINT "records_sales_lead_channel_chk";
+-- add_check public.records_sales_lead:constraint:records_sales_lead_need_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_lead" ADD CONSTRAINT "records_sales_lead_need_chk" CHECK ((data->>'need') IS NULL OR (jsonb_typeof(data->'need') = 'string' AND char_length((data->>'need')) <= 20000)) NOT VALID;
+ALTER TABLE public."records_sales_lead" VALIDATE CONSTRAINT "records_sales_lead_need_chk";
+-- add_check public.records_sales_lead:constraint:records_sales_lead_stage_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_lead" ADD CONSTRAINT "records_sales_lead_stage_chk" CHECK ((data->>'stage') IS NOT NULL AND ((data->>'stage') IN ('new', 'qualified', 'proposal', 'won', 'lost'))) NOT VALID;
+ALTER TABLE public."records_sales_lead" VALIDATE CONSTRAINT "records_sales_lead_stage_chk";
+-- add_check public.records_sales_lead:constraint:records_sales_lead_context_summary_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_lead" ADD CONSTRAINT "records_sales_lead_context_summary_chk" CHECK ((data->>'contextSummary') IS NULL OR (jsonb_typeof(data->'contextSummary') = 'string' AND char_length((data->>'contextSummary')) <= 20000)) NOT VALID;
+ALTER TABLE public."records_sales_lead" VALIDATE CONSTRAINT "records_sales_lead_context_summary_chk";
+-- add_check public.records_sales_lead:constraint:records_sales_lead_phone_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_lead" ADD CONSTRAINT "records_sales_lead_phone_chk" CHECK ((data->>'phone') IS NULL OR (jsonb_typeof(data->'phone') = 'string' AND char_length((data->>'phone')) <= 30)) NOT VALID;
+ALTER TABLE public."records_sales_lead" VALIDATE CONSTRAINT "records_sales_lead_phone_chk";
+-- add_check public.records_sales_lead:constraint:records_sales_lead_email_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_lead" ADD CONSTRAINT "records_sales_lead_email_chk" CHECK ((data->>'email') IS NULL OR (jsonb_typeof(data->'email') = 'string' AND char_length((data->>'email')) <= 500)) NOT VALID;
+ALTER TABLE public."records_sales_lead" VALIDATE CONSTRAINT "records_sales_lead_email_chk";
+-- create_index public.records_sales_lead:index:records_sales_lead_recent: on workspace_id, updated_atdesc, iddesc using btree
+CREATE INDEX "records_sales_lead_recent" ON public."records_sales_lead" USING btree (workspace_id, updated_at DESC, id DESC);
+-- create_index public.records_sales_lead:index:records_sales_lead_stage_recent: on workspace_id, data->>'stage', updated_atdesc, iddesc using btree
+CREATE INDEX "records_sales_lead_stage_recent" ON public."records_sales_lead" USING btree (workspace_id, (data->>'stage'), updated_at DESC, id DESC);
+-- add_unique public.records_sales_lead:index:records_sales_lead_phone_key: on workspace_id, data->>'phone' using btree
+CREATE UNIQUE INDEX "records_sales_lead_phone_key" ON public."records_sales_lead" USING btree (workspace_id, (data->>'phone')) WHERE (data->>'phone') IS NOT NULL;
+-- add_unique public.records_sales_lead:index:records_sales_lead_email_key: on workspace_id, data->>'email' using btree
+CREATE UNIQUE INDEX "records_sales_lead_email_key" ON public."records_sales_lead" USING btree (workspace_id, (data->>'email')) WHERE (data->>'email') IS NOT NULL;
+-- create_index public.records_sales_lead:index:records_sales_lead_contact_name_trgm_idx: on knowledge_folddata->>'contactname' using gin
+CREATE INDEX "records_sales_lead_contact_name_trgm_idx" ON public."records_sales_lead" USING gin (public.knowledge_fold((data->>'contactName')) extensions.gin_trgm_ops);
+-- create_index public.records_sales_lead:index:records_sales_lead_company_trgm_idx: on knowledge_folddata->>'company' using gin
+CREATE INDEX "records_sales_lead_company_trgm_idx" ON public."records_sales_lead" USING gin (public.knowledge_fold((data->>'company')) extensions.gin_trgm_ops);
+-- create_index public.records_sales_lead:index:records_sales_lead_phone_trgm_idx: on knowledge_folddata->>'phone' using gin
+CREATE INDEX "records_sales_lead_phone_trgm_idx" ON public."records_sales_lead" USING gin (public.knowledge_fold((data->>'phone')) extensions.gin_trgm_ops);
+-- create_index public.records_sales_lead:index:records_sales_lead_email_trgm_idx: on knowledge_folddata->>'email' using gin
+CREATE INDEX "records_sales_lead_email_trgm_idx" ON public."records_sales_lead" USING gin (public.knowledge_fold((data->>'email')) extensions.gin_trgm_ops);
+-- create_partition public.records_sales_order: records for values in ('sales.order')
+CREATE TABLE public."records_sales_order" PARTITION OF public.records FOR VALUES IN ('sales.order');
+-- add_check public.records_sales_order:constraint:records_sales_order_order_no_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_order_no_chk" CHECK ((data->>'orderNo') IS NOT NULL AND (jsonb_typeof(data->'orderNo') = 'string')) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_order_no_chk";
+-- add_check public.records_sales_order:constraint:records_sales_order_items_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_items_chk" CHECK ((data->>'items') IS NOT NULL AND (jsonb_typeof(data->'items') = 'object')) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_items_chk";
+-- add_check public.records_sales_order:constraint:records_sales_order_note_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_note_chk" CHECK ((data->>'note') IS NOT NULL AND (jsonb_typeof(data->'note') = 'string' AND char_length((data->>'note')) <= 20000)) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_note_chk";
+-- add_check public.records_sales_order:constraint:records_sales_order_amount_vnd_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_amount_vnd_chk" CHECK ((data->>'amountVnd') IS NULL OR (jsonb_typeof(data->'amountVnd') = 'number' AND (data->>'amountVnd') ~ '^-?[0-9]{1,19}$')) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_amount_vnd_chk";
+-- add_check public.records_sales_order:constraint:records_sales_order_status_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_status_chk" CHECK ((data->>'status') IS NOT NULL AND ((data->>'status') IN ('draft', 'confirmed', 'invoiced', 'paid', 'cancelled'))) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_status_chk";
+-- add_check public.records_sales_order:constraint:records_sales_order_confirmed_by_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_confirmed_by_chk" CHECK ((data->>'confirmedBy') IS NULL OR (jsonb_typeof(data->'confirmedBy') = 'string' AND char_length((data->>'confirmedBy')) <= 500)) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_confirmed_by_chk";
+-- add_check public.records_sales_order:constraint:records_sales_order_confirmed_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_confirmed_at_chk" CHECK ((data->>'confirmedAt') IS NULL OR ((data->>'confirmedAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_confirmed_at_chk";
+-- add_check public.records_sales_order:constraint:records_sales_order_amount_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_amount_chk" CHECK ((((data->>'amountVnd')::bigint) IS NULL OR ((data->>'amountVnd')::bigint) >= 0)) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_amount_chk";
+-- create_index public.records_sales_order:index:records_sales_order_recent: on workspace_id, created_atdesc, iddesc using btree
+CREATE INDEX "records_sales_order_recent" ON public."records_sales_order" USING btree (workspace_id, created_at DESC, id DESC);
+-- create_index public.records_sales_order:index:records_sales_order_status_recent: on workspace_id, data->>'status', created_atdesc, iddesc using btree
+CREATE INDEX "records_sales_order_status_recent" ON public."records_sales_order" USING btree (workspace_id, (data->>'status'), created_at DESC, id DESC);
+-- add_unique public.records_sales_order:index:records_sales_order_order_no_key: on workspace_id, data->>'orderno' using btree
+CREATE UNIQUE INDEX "records_sales_order_order_no_key" ON public."records_sales_order" USING btree (workspace_id, (data->>'orderNo'));
+-- create_partition public.records_chat_conversation: records for values in ('chat.conversation')
+CREATE TABLE public."records_chat_conversation" PARTITION OF public.records FOR VALUES IN ('chat.conversation');
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_kind_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_kind_chk" CHECK ((data->>'kind') IS NOT NULL AND ((data->>'kind') IN ('customer', 'test'))) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_kind_chk";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_channel_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_channel_chk" CHECK ((data->>'channel') IS NOT NULL AND ((data->>'channel') IN ('telegram', 'zalo', 'facebook', 'instagram', 'website'))) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_channel_chk";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_external_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_external_id_chk" CHECK ((data->>'externalId') IS NULL OR (jsonb_typeof(data->'externalId') = 'string' AND char_length((data->>'externalId')) <= 200)) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_external_id_chk";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_visitor_name_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_visitor_name_chk" CHECK ((data->>'visitorName') IS NULL OR (jsonb_typeof(data->'visitorName') = 'string' AND char_length((data->>'visitorName')) <= 500)) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_visitor_name_chk";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_status_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_status_chk" CHECK ((data->>'status') IS NOT NULL AND ((data->>'status') IN ('open', 'handled'))) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_status_chk";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_handled_by_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_handled_by_chk" CHECK ((data->>'handledBy') IS NULL OR (jsonb_typeof(data->'handledBy') = 'string' AND char_length((data->>'handledBy')) <= 500)) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_handled_by_chk";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_handled_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_handled_at_chk" CHECK ((data->>'handledAt') IS NULL OR ((data->>'handledAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_handled_at_chk";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_agent_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_agent_id_chk" CHECK ((data->>'agentId') IS NULL OR ((data->>'agentId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_agent_id_chk";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_front_agent_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_front_agent_id_chk" CHECK ((data->>'frontAgentId') IS NULL OR ((data->>'frontAgentId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_front_agent_id_chk";
+-- create_index public.records_chat_conversation:index:records_chat_conversation_recent: on workspace_id, updated_atdesc, iddesc using btree
+CREATE INDEX "records_chat_conversation_recent" ON public."records_chat_conversation" USING btree (workspace_id, updated_at DESC, id DESC);
+-- create_index public.records_chat_conversation:index:records_chat_conversation_channel_recent: on workspace_id, data->>'channel', updated_atdesc, iddesc using btree
+CREATE INDEX "records_chat_conversation_channel_recent" ON public."records_chat_conversation" USING btree (workspace_id, (data->>'channel'), updated_at DESC, id DESC);
+-- create_index public.records_chat_conversation:index:records_chat_conversation_status_recent: on workspace_id, data->>'status', updated_atdesc, iddesc using btree
+CREATE INDEX "records_chat_conversation_status_recent" ON public."records_chat_conversation" USING btree (workspace_id, (data->>'status'), updated_at DESC, id DESC);
+-- add_unique public.records_chat_conversation:index:records_chat_conversation_channel_external_key: on workspace_id, data->>'channel', data->>'externalid' using btree
+CREATE UNIQUE INDEX "records_chat_conversation_channel_external_key" ON public."records_chat_conversation" USING btree (workspace_id, (data->>'channel'), (data->>'externalId')) WHERE (data->>'externalId') IS NOT NULL;
+-- create_index public.records_chat_conversation:index:records_chat_conversation_visitor_name_trgm_idx: on knowledge_folddata->>'visitorname' using gin
+CREATE INDEX "records_chat_conversation_visitor_name_trgm_idx" ON public."records_chat_conversation" USING gin (public.knowledge_fold((data->>'visitorName')) extensions.gin_trgm_ops);
+-- create_partition public.records_chat_message: records for values in ('chat.message')
+CREATE TABLE public."records_chat_message" PARTITION OF public.records FOR VALUES IN ('chat.message');
+-- add_check public.records_chat_message:constraint:records_chat_message_conversation_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_conversation_id_chk" CHECK ((data->>'conversationId') IS NOT NULL AND ((data->>'conversationId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_conversation_id_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_role_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_role_chk" CHECK ((data->>'role') IS NOT NULL AND ((data->>'role') IN ('user', 'agent', 'system'))) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_role_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_text_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_text_chk" CHECK ((data->>'text') IS NOT NULL AND (jsonb_typeof(data->'text') = 'string' AND char_length((data->>'text')) <= 20000)) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_text_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_sent_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_sent_at_chk" CHECK ((data->>'sentAt') IS NOT NULL AND ((data->>'sentAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_sent_at_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_author_kind_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_author_kind_chk" CHECK ((data->>'authorKind') IS NULL OR ((data->>'authorKind') IN ('ai', 'human'))) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_author_kind_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_author_name_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_author_name_chk" CHECK ((data->>'authorName') IS NULL OR (jsonb_typeof(data->'authorName') = 'string' AND char_length((data->>'authorName')) <= 500)) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_author_name_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_author_user_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_author_user_id_chk" CHECK ((data->>'authorUserId') IS NULL OR ((data->>'authorUserId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_author_user_id_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_delivery_status_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_delivery_status_chk" CHECK ((data->>'deliveryStatus') IS NULL OR ((data->>'deliveryStatus') IN ('sent', 'failed'))) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_delivery_status_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_delivery_error_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_delivery_error_chk" CHECK ((data->>'deliveryError') IS NULL OR (jsonb_typeof(data->'deliveryError') = 'string' AND char_length((data->>'deliveryError')) <= 1000)) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_delivery_error_chk";
+-- add_check public.records_chat_message:constraint:records_chat_message_channel_ref_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_channel_ref_chk" CHECK ((data->>'channelRef') IS NULL OR (jsonb_typeof(data->'channelRef') = 'string' AND char_length((data->>'channelRef')) <= 200)) NOT VALID;
+ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_channel_ref_chk";
+-- create_index public.records_chat_message:index:records_chat_message_conversation_sent: on workspace_id, data->>'conversationid', data->>'sentat'desc, iddesc using btree
+CREATE INDEX "records_chat_message_conversation_sent" ON public."records_chat_message" USING btree (workspace_id, ((data->>'conversationId')::uuid), (data->>'sentAt') DESC, id DESC);
+-- add_unique public.records_chat_message:index:records_chat_message_channel_ref_key: on workspace_id, data->>'channelref' using btree
+CREATE UNIQUE INDEX "records_chat_message_channel_ref_key" ON public."records_chat_message" USING btree (workspace_id, (data->>'channelRef')) WHERE (data->>'channelRef') IS NOT NULL;
+-- create_partition public.records_payment_transaction: records for values in ('payment.transaction')
+CREATE TABLE public."records_payment_transaction" PARTITION OF public.records FOR VALUES IN ('payment.transaction');
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_channel_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_channel_chk" CHECK ((data->>'channel') IS NOT NULL AND ((data->>'channel') IN ('bank', 'cash', 'card', 'ewallet'))) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_channel_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_direction_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_direction_chk" CHECK ((data->>'direction') IS NOT NULL AND ((data->>'direction') IN ('credit', 'debit'))) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_direction_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_amount_vnd_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_amount_vnd_chk" CHECK ((data->>'amountVnd') IS NOT NULL AND (jsonb_typeof(data->'amountVnd') = 'number' AND (data->>'amountVnd') ~ '^-?[0-9]{1,19}$')) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_amount_vnd_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_reference_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_reference_chk" CHECK ((data->>'reference') IS NULL OR (jsonb_typeof(data->'reference') = 'string' AND char_length((data->>'reference')) <= 500)) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_reference_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_payer_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_payer_chk" CHECK ((data->>'payer') IS NULL OR (jsonb_typeof(data->'payer') = 'string' AND char_length((data->>'payer')) <= 500)) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_payer_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_order_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_order_id_chk" CHECK ((data->>'orderId') IS NULL OR ((data->>'orderId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_order_id_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_external_ref_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_external_ref_chk" CHECK ((data->>'externalRef') IS NULL OR (jsonb_typeof(data->'externalRef') = 'string' AND char_length((data->>'externalRef')) <= 200)) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_external_ref_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_occurred_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_occurred_at_chk" CHECK ((data->>'occurredAt') IS NOT NULL AND ((data->>'occurredAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_occurred_at_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_status_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_status_chk" CHECK ((data->>'status') IS NOT NULL AND ((data->>'status') IN ('unmatched', 'matched', 'needs_review'))) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_status_chk";
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_amount_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_amount_chk" CHECK (((data->>'amountVnd')::bigint) >= 0) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_amount_chk";
+-- create_index public.records_payment_transaction:index:records_payment_transaction_occurred: on workspace_id, data->>'occurredat'desc, iddesc using btree
+CREATE INDEX "records_payment_transaction_occurred" ON public."records_payment_transaction" USING btree (workspace_id, (data->>'occurredAt') DESC, id DESC);
+-- create_index public.records_payment_transaction:index:records_payment_transaction_status_occurred: on workspace_id, data->>'status', data->>'occurredat'desc, iddesc using btree
+CREATE INDEX "records_payment_transaction_status_occurred" ON public."records_payment_transaction" USING btree (workspace_id, (data->>'status'), (data->>'occurredAt') DESC, id DESC);
+-- add_unique public.records_payment_transaction:index:records_payment_transaction_order_key: on workspace_id, data->>'orderid' using btree
+CREATE UNIQUE INDEX "records_payment_transaction_order_key" ON public."records_payment_transaction" USING btree (workspace_id, ((data->>'orderId')::uuid)) WHERE ((data->>'orderId')::uuid) IS NOT NULL;
+-- add_unique public.records_payment_transaction:index:records_payment_transaction_external_ref_key: on workspace_id, data->>'externalref' using btree
+CREATE UNIQUE INDEX "records_payment_transaction_external_ref_key" ON public."records_payment_transaction" USING btree (workspace_id, (data->>'externalRef')) WHERE (data->>'externalRef') IS NOT NULL;
+-- create_partition public.records_payment_claim: records for values in ('payment.claim')
+CREATE TABLE public."records_payment_claim" PARTITION OF public.records FOR VALUES IN ('payment.claim');
+-- add_check public.records_payment_claim:constraint:records_payment_claim_code_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_code_chk" CHECK ((data->>'code') IS NULL OR (jsonb_typeof(data->'code') = 'string' AND char_length((data->>'code')) <= 200)) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_code_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_amount_vnd_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_amount_vnd_chk" CHECK ((data->>'amountVnd') IS NULL OR (jsonb_typeof(data->'amountVnd') = 'number' AND (data->>'amountVnd') ~ '^-?[0-9]{1,19}$')) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_amount_vnd_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_names_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_names_chk" CHECK ((data->>'names') IS NOT NULL AND (jsonb_typeof(data->'names') = 'object')) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_names_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_body_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_body_chk" CHECK ((data->>'body') IS NOT NULL AND (jsonb_typeof(data->'body') = 'string' AND char_length((data->>'body')) <= 20000)) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_body_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_status_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_status_chk" CHECK ((data->>'status') IS NOT NULL AND ((data->>'status') IN ('open', 'settled', 'escalated', 'withdrawn'))) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_status_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_claimed_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_claimed_at_chk" CHECK ((data->>'claimedAt') IS NOT NULL AND ((data->>'claimedAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_claimed_at_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_settled_transaction_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_settled_transaction_id_chk" CHECK ((data->>'settledTransactionId') IS NULL OR ((data->>'settledTransactionId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_settled_transaction_id_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_dedupe_key_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_dedupe_key_chk" CHECK ((data->>'dedupeKey') IS NOT NULL AND (jsonb_typeof(data->'dedupeKey') = 'string' AND char_length((data->>'dedupeKey')) <= 200)) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_dedupe_key_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_amount_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_amount_chk" CHECK ((((data->>'amountVnd')::bigint) IS NULL OR ((data->>'amountVnd')::bigint) > 0)) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_amount_chk";
+-- create_index public.records_payment_claim:index:records_payment_claim_status_claimed: on workspace_id, data->>'status', data->>'claimedat'desc, iddesc using btree
+CREATE INDEX "records_payment_claim_status_claimed" ON public."records_payment_claim" USING btree (workspace_id, (data->>'status'), (data->>'claimedAt') DESC, id DESC);
+-- add_unique public.records_payment_claim:index:records_payment_claim_dedupe_key: on workspace_id, data->>'dedupekey' using btree
+CREATE UNIQUE INDEX "records_payment_claim_dedupe_key" ON public."records_payment_claim" USING btree (workspace_id, (data->>'dedupeKey'));
+-- add_unique public.records_payment_claim:index:records_payment_claim_settled_transaction_key: on workspace_id, data->>'settledtransactionid' using btree
+CREATE UNIQUE INDEX "records_payment_claim_settled_transaction_key" ON public."records_payment_claim" USING btree (workspace_id, ((data->>'settledTransactionId')::uuid)) WHERE ((data->>'settledTransactionId')::uuid) IS NOT NULL;
+-- create_partition public.records_accounting_invoice: records for values in ('accounting.invoice')
+CREATE TABLE public."records_accounting_invoice" PARTITION OF public.records FOR VALUES IN ('accounting.invoice');
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_invoice_no_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_invoice_no_chk" CHECK ((data->>'invoiceNo') IS NOT NULL AND (jsonb_typeof(data->'invoiceNo') = 'string')) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_invoice_no_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_order_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_order_id_chk" CHECK ((data->>'orderId') IS NULL OR ((data->>'orderId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_order_id_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_amount_vnd_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_amount_vnd_chk" CHECK ((data->>'amountVnd') IS NOT NULL AND (jsonb_typeof(data->'amountVnd') = 'number' AND (data->>'amountVnd') ~ '^-?[0-9]{1,19}$')) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_amount_vnd_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_status_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_status_chk" CHECK ((data->>'status') IS NOT NULL AND ((data->>'status') IN ('draft', 'issued', 'paid', 'void'))) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_status_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_due_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_due_at_chk" CHECK ((data->>'dueAt') IS NULL OR ((data->>'dueAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_due_at_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_issued_by_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_issued_by_chk" CHECK ((data->>'issuedBy') IS NULL OR (jsonb_typeof(data->'issuedBy') = 'string' AND char_length((data->>'issuedBy')) <= 500)) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_issued_by_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_issued_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_issued_at_chk" CHECK ((data->>'issuedAt') IS NULL OR ((data->>'issuedAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_issued_at_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_paid_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_paid_at_chk" CHECK ((data->>'paidAt') IS NULL OR ((data->>'paidAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_paid_at_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_contract_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_contract_id_chk" CHECK ((data->>'contractId') IS NULL OR ((data->>'contractId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_contract_id_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_period_ends_on_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_period_ends_on_chk" CHECK ((data->>'periodEndsOn') IS NULL OR ((data->>'periodEndsOn') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_period_ends_on_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_amount_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_amount_chk" CHECK (((data->>'amountVnd')::bigint) >= 0) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_amount_chk";
+-- add_check public.records_accounting_invoice:constraint:records_accounting_invoice_contract_period_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_invoice" ADD CONSTRAINT "records_accounting_invoice_contract_period_chk" CHECK ((((data->>'contractId')::uuid) IS NULL OR (data->>'periodEndsOn') IS NOT NULL)) NOT VALID;
+ALTER TABLE public."records_accounting_invoice" VALIDATE CONSTRAINT "records_accounting_invoice_contract_period_chk";
+-- create_index public.records_accounting_invoice:index:records_accounting_invoice_recent: on workspace_id, created_atdesc, iddesc using btree
+CREATE INDEX "records_accounting_invoice_recent" ON public."records_accounting_invoice" USING btree (workspace_id, created_at DESC, id DESC);
+-- create_index public.records_accounting_invoice:index:records_accounting_invoice_status_recent: on workspace_id, data->>'status', created_atdesc, iddesc using btree
+CREATE INDEX "records_accounting_invoice_status_recent" ON public."records_accounting_invoice" USING btree (workspace_id, (data->>'status'), created_at DESC, id DESC);
+-- add_unique public.records_accounting_invoice:index:records_accounting_invoice_order_key: on workspace_id, data->>'orderid' using btree
+CREATE UNIQUE INDEX "records_accounting_invoice_order_key" ON public."records_accounting_invoice" USING btree (workspace_id, ((data->>'orderId')::uuid)) WHERE ((data->>'orderId')::uuid) IS NOT NULL;
+-- add_unique public.records_accounting_invoice:index:records_accounting_invoice_invoice_no_key: on workspace_id, data->>'invoiceno' using btree
+CREATE UNIQUE INDEX "records_accounting_invoice_invoice_no_key" ON public."records_accounting_invoice" USING btree (workspace_id, (data->>'invoiceNo'));
+-- add_unique public.records_accounting_invoice:index:records_accounting_invoice_contract_period_key: on workspace_id, data->>'contractid', data->>'periodendson' using btree
+CREATE UNIQUE INDEX "records_accounting_invoice_contract_period_key" ON public."records_accounting_invoice" USING btree (workspace_id, ((data->>'contractId')::uuid), (data->>'periodEndsOn')) WHERE ((data->>'contractId')::uuid) IS NOT NULL;
+-- create_partition public.records_accounting_adjustment: records for values in ('accounting.adjustment')
+CREATE TABLE public."records_accounting_adjustment" PARTITION OF public.records FOR VALUES IN ('accounting.adjustment');
+-- add_check public.records_accounting_adjustment:constraint:records_accounting_adjustment_target_type_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_adjustment" ADD CONSTRAINT "records_accounting_adjustment_target_type_chk" CHECK ((data->>'targetType') IS NOT NULL AND ((data->>'targetType') IN ('invoice', 'transaction'))) NOT VALID;
+ALTER TABLE public."records_accounting_adjustment" VALIDATE CONSTRAINT "records_accounting_adjustment_target_type_chk";
+-- add_check public.records_accounting_adjustment:constraint:records_accounting_adjustment_target_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_adjustment" ADD CONSTRAINT "records_accounting_adjustment_target_id_chk" CHECK ((data->>'targetId') IS NOT NULL AND ((data->>'targetId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_accounting_adjustment" VALIDATE CONSTRAINT "records_accounting_adjustment_target_id_chk";
+-- add_check public.records_accounting_adjustment:constraint:records_accounting_adjustment_note_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_adjustment" ADD CONSTRAINT "records_accounting_adjustment_note_chk" CHECK ((data->>'note') IS NOT NULL AND (jsonb_typeof(data->'note') = 'string' AND char_length((data->>'note')) <= 2000)) NOT VALID;
+ALTER TABLE public."records_accounting_adjustment" VALIDATE CONSTRAINT "records_accounting_adjustment_note_chk";
+-- add_check public.records_accounting_adjustment:constraint:records_accounting_adjustment_corrected_amount_vnd_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_adjustment" ADD CONSTRAINT "records_accounting_adjustment_corrected_amount_vnd_chk" CHECK ((data->>'correctedAmountVnd') IS NULL OR (jsonb_typeof(data->'correctedAmountVnd') = 'number' AND (data->>'correctedAmountVnd') ~ '^-?[0-9]{1,19}$')) NOT VALID;
+ALTER TABLE public."records_accounting_adjustment" VALIDATE CONSTRAINT "records_accounting_adjustment_corrected_amount_vnd_chk";
+-- add_check public.records_accounting_adjustment:constraint:records_accounting_adjustment_created_by_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_adjustment" ADD CONSTRAINT "records_accounting_adjustment_created_by_chk" CHECK ((data->>'createdBy') IS NOT NULL AND (jsonb_typeof(data->'createdBy') = 'string' AND char_length((data->>'createdBy')) <= 500)) NOT VALID;
+ALTER TABLE public."records_accounting_adjustment" VALIDATE CONSTRAINT "records_accounting_adjustment_created_by_chk";
+-- add_check public.records_accounting_adjustment:constraint:records_accounting_adjustment_created_by_user_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_adjustment" ADD CONSTRAINT "records_accounting_adjustment_created_by_user_chk" CHECK ((data->>'createdByUser') IS NULL OR ((data->>'createdByUser') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_accounting_adjustment" VALIDATE CONSTRAINT "records_accounting_adjustment_created_by_user_chk";
+-- add_check public.records_accounting_adjustment:constraint:records_accounting_adjustment_corrected_amount_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_adjustment" ADD CONSTRAINT "records_accounting_adjustment_corrected_amount_chk" CHECK ((((data->>'correctedAmountVnd')::bigint) IS NULL OR ((data->>'correctedAmountVnd')::bigint) >= 0)) NOT VALID;
+ALTER TABLE public."records_accounting_adjustment" VALIDATE CONSTRAINT "records_accounting_adjustment_corrected_amount_chk";
+-- create_index public.records_accounting_adjustment:index:records_accounting_adjustment_target: on workspace_id, data->>'targettype', data->>'targetid', created_atdesc using btree
+CREATE INDEX "records_accounting_adjustment_target" ON public."records_accounting_adjustment" USING btree (workspace_id, (data->>'targetType'), ((data->>'targetId')::uuid), created_at DESC);
+-- create_index public.records_accounting_adjustment:index:records_accounting_adjustment_recent: on workspace_id, created_atdesc, iddesc using btree
+CREATE INDEX "records_accounting_adjustment_recent" ON public."records_accounting_adjustment" USING btree (workspace_id, created_at DESC, id DESC);
+-- create_partition public.records_accounting_book_entry: records for values in ('accounting.book-entry')
+CREATE TABLE public."records_accounting_book_entry" PARTITION OF public.records FOR VALUES IN ('accounting.book-entry');
+-- add_check public.records_accounting_book_entry:constraint:records_accounting_book_entry_kind_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_book_entry" ADD CONSTRAINT "records_accounting_book_entry_kind_chk" CHECK ((data->>'kind') IS NOT NULL AND ((data->>'kind') IN ('income', 'invoice', 'adjustment'))) NOT VALID;
+ALTER TABLE public."records_accounting_book_entry" VALIDATE CONSTRAINT "records_accounting_book_entry_kind_chk";
+-- add_check public.records_accounting_book_entry:constraint:records_accounting_book_entry_source_entity_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_book_entry" ADD CONSTRAINT "records_accounting_book_entry_source_entity_chk" CHECK ((data->>'sourceEntity') IS NOT NULL AND (jsonb_typeof(data->'sourceEntity') = 'string' AND char_length((data->>'sourceEntity')) <= 120)) NOT VALID;
+ALTER TABLE public."records_accounting_book_entry" VALIDATE CONSTRAINT "records_accounting_book_entry_source_entity_chk";
+-- add_check public.records_accounting_book_entry:constraint:records_accounting_book_entry_source_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_book_entry" ADD CONSTRAINT "records_accounting_book_entry_source_id_chk" CHECK ((data->>'sourceId') IS NOT NULL AND ((data->>'sourceId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_accounting_book_entry" VALIDATE CONSTRAINT "records_accounting_book_entry_source_id_chk";
+-- add_check public.records_accounting_book_entry:constraint:records_accounting_book_entry_entry_date_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_book_entry" ADD CONSTRAINT "records_accounting_book_entry_entry_date_chk" CHECK ((data->>'entryDate') IS NOT NULL AND ((data->>'entryDate') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')) NOT VALID;
+ALTER TABLE public."records_accounting_book_entry" VALIDATE CONSTRAINT "records_accounting_book_entry_entry_date_chk";
+-- add_check public.records_accounting_book_entry:constraint:records_accounting_book_entry_amount_vnd_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_book_entry" ADD CONSTRAINT "records_accounting_book_entry_amount_vnd_chk" CHECK ((data->>'amountVnd') IS NOT NULL AND (jsonb_typeof(data->'amountVnd') = 'number' AND (data->>'amountVnd') ~ '^-?[0-9]{1,19}$')) NOT VALID;
+ALTER TABLE public."records_accounting_book_entry" VALIDATE CONSTRAINT "records_accounting_book_entry_amount_vnd_chk";
+-- add_check public.records_accounting_book_entry:constraint:records_accounting_book_entry_note_chk: added NOT VALID, then validated
+ALTER TABLE public."records_accounting_book_entry" ADD CONSTRAINT "records_accounting_book_entry_note_chk" CHECK ((data->>'note') IS NULL OR (jsonb_typeof(data->'note') = 'string' AND char_length((data->>'note')) <= 2000)) NOT VALID;
+ALTER TABLE public."records_accounting_book_entry" VALIDATE CONSTRAINT "records_accounting_book_entry_note_chk";
+-- create_index public.records_accounting_book_entry:index:records_accounting_book_entry_date: on workspace_id, data->>'entrydate'desc, iddesc using btree
+CREATE INDEX "records_accounting_book_entry_date" ON public."records_accounting_book_entry" USING btree (workspace_id, (data->>'entryDate') DESC, id DESC);
+-- create_index public.records_accounting_book_entry:index:records_accounting_book_entry_kind_date: on workspace_id, data->>'kind', data->>'entrydate'desc, iddesc using btree
+CREATE INDEX "records_accounting_book_entry_kind_date" ON public."records_accounting_book_entry" USING btree (workspace_id, (data->>'kind'), (data->>'entryDate') DESC, id DESC);
+-- add_unique public.records_accounting_book_entry:index:records_accounting_book_entry_source_key: on workspace_id, data->>'sourceentity', data->>'sourceid', data->>'kind' using btree
+CREATE UNIQUE INDEX "records_accounting_book_entry_source_key" ON public."records_accounting_book_entry" USING btree (workspace_id, (data->>'sourceEntity'), ((data->>'sourceId')::uuid), (data->>'kind'));
+-- create_index public.records_accounting_book_entry:index:records_accounting_book_entry_note_trgm_idx: on knowledge_folddata->>'note' using gin
+CREATE INDEX "records_accounting_book_entry_note_trgm_idx" ON public."records_accounting_book_entry" USING gin (public.knowledge_fold((data->>'note')) extensions.gin_trgm_ops);
+-- create_view public.v_records_accounting_book_entry: typed view with 11 columns
+CREATE VIEW public."v_records_accounting_book_entry" WITH (security_invoker = true) AS SELECT id, workspace_id, version, created_at, updated_at, (data->>'kind') AS "kind", (data->>'sourceEntity') AS "source_entity", ((data->>'sourceId')::uuid) AS "source_id", ((data->>'entryDate')::date) AS "entry_date", ((data->>'amountVnd')::bigint) AS "amount_vnd", (data->>'note') AS "note" FROM public.records WHERE entity = 'accounting.book-entry';
+GRANT SELECT ON TABLE public."v_records_accounting_book_entry" TO app_engine;
+-- create_partition public.records_agent_turn: records for values in ('agent.turn')
+CREATE TABLE public."records_agent_turn" PARTITION OF public.records FOR VALUES IN ('agent.turn');
+-- add_check public.records_agent_turn:constraint:records_agent_turn_agent_key_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_turn" ADD CONSTRAINT "records_agent_turn_agent_key_chk" CHECK ((data->>'agentKey') IS NOT NULL AND (jsonb_typeof(data->'agentKey') = 'string' AND char_length((data->>'agentKey')) <= 200)) NOT VALID;
+ALTER TABLE public."records_agent_turn" VALIDATE CONSTRAINT "records_agent_turn_agent_key_chk";
+-- add_check public.records_agent_turn:constraint:records_agent_turn_session_key_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_turn" ADD CONSTRAINT "records_agent_turn_session_key_chk" CHECK ((data->>'sessionKey') IS NOT NULL AND (jsonb_typeof(data->'sessionKey') = 'string' AND char_length((data->>'sessionKey')) <= 200)) NOT VALID;
+ALTER TABLE public."records_agent_turn" VALIDATE CONSTRAINT "records_agent_turn_session_key_chk";
+-- add_check public.records_agent_turn:constraint:records_agent_turn_turn_index_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_turn" ADD CONSTRAINT "records_agent_turn_turn_index_chk" CHECK ((data->>'turnIndex') IS NOT NULL AND (jsonb_typeof(data->'turnIndex') = 'number' AND (data->>'turnIndex') ~ '^-?[0-9]{1,10}$')) NOT VALID;
+ALTER TABLE public."records_agent_turn" VALIDATE CONSTRAINT "records_agent_turn_turn_index_chk";
+-- add_check public.records_agent_turn:constraint:records_agent_turn_role_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_turn" ADD CONSTRAINT "records_agent_turn_role_chk" CHECK ((data->>'role') IS NOT NULL AND ((data->>'role') IN ('user', 'assistant', 'tool', 'system'))) NOT VALID;
+ALTER TABLE public."records_agent_turn" VALIDATE CONSTRAINT "records_agent_turn_role_chk";
+-- add_check public.records_agent_turn:constraint:records_agent_turn_text_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_turn" ADD CONSTRAINT "records_agent_turn_text_chk" CHECK ((data->>'text') IS NOT NULL AND (jsonb_typeof(data->'text') = 'string' AND char_length((data->>'text')) <= 20000)) NOT VALID;
+ALTER TABLE public."records_agent_turn" VALIDATE CONSTRAINT "records_agent_turn_text_chk";
+-- add_check public.records_agent_turn:constraint:records_agent_turn_tool_calls_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_turn" ADD CONSTRAINT "records_agent_turn_tool_calls_chk" CHECK ((data->>'toolCalls') IS NOT NULL AND (jsonb_typeof(data->'toolCalls') = 'object')) NOT VALID;
+ALTER TABLE public."records_agent_turn" VALIDATE CONSTRAINT "records_agent_turn_tool_calls_chk";
+-- add_check public.records_agent_turn:constraint:records_agent_turn_at_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_turn" ADD CONSTRAINT "records_agent_turn_at_chk" CHECK ((data->>'at') IS NOT NULL AND ((data->>'at') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_agent_turn" VALIDATE CONSTRAINT "records_agent_turn_at_chk";
+-- create_index public.records_agent_turn:index:records_agent_turn_recent: on workspace_id, data->>'at'desc, iddesc using btree
+CREATE INDEX "records_agent_turn_recent" ON public."records_agent_turn" USING btree (workspace_id, (data->>'at') DESC, id DESC);
+-- add_unique public.records_agent_turn:index:records_agent_turn_session_turn_key: on workspace_id, data->>'sessionkey', data->>'turnindex' using btree
+CREATE UNIQUE INDEX "records_agent_turn_session_turn_key" ON public."records_agent_turn" USING btree (workspace_id, (data->>'sessionKey'), ((data->>'turnIndex')::integer));
+
+-- ---- from 20261112000400_job-park-resume.sql ----
+-- job-park-resume: forward-only; immutable once on origin/main.
+-- A job a retry cannot fix is parked (status failed_awaiting_fix) with the class and reason of its failure, the build that ran it and the
+-- queue to resume it on, raises one alert (alerted_at) and is handed back to its queue by ParkedJobResumerService (resume_count).
+ALTER TABLE public.jobs ALTER COLUMN status TYPE character varying(32);
+ALTER TABLE public.jobs DROP CONSTRAINT jobs_status_check;
+ALTER TABLE public.jobs ADD CONSTRAINT jobs_status_check
+    CHECK (status::text = ANY (ARRAY['running', 'failed', 'done', 'failed_awaiting_fix']::text[]));
+ALTER TABLE public.jobs
+    ADD COLUMN failure_class character varying(16),
+    ADD COLUMN queue character varying(200),
+    ADD COLUMN parked_build character varying(200),
+    ADD COLUMN parked_at timestamp with time zone,
+    ADD COLUMN alerted_at timestamp with time zone,
+    ADD COLUMN resume_count integer DEFAULT 0 NOT NULL;
+ALTER TABLE public.jobs ADD CONSTRAINT jobs_failure_class_check
+    CHECK (failure_class IS NULL OR failure_class IN ('transient', 'input', 'code', 'config'));
+ALTER TABLE public.jobs ADD CONSTRAINT jobs_parked_check
+    CHECK ((status = 'failed_awaiting_fix') = (parked_at IS NOT NULL));
+CREATE INDEX jobs_parked_idx ON public.jobs (parked_at) WHERE status = 'failed_awaiting_fix';
