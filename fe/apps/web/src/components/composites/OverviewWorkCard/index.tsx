@@ -13,11 +13,11 @@ interface OverviewWorkCardProps {
 }
 
 /** One open responsibility as a row: the holder mark, the customer, the due words and where it stands. */
-const rowOf = (row: OverviewPaneReady["work"]["rows"][number]): ListRowData => ({
+const rowOf = (row: OverviewPaneReady["work"]["rows"][number], onGo: (href: string) => void): ListRowData => ({
     id: row.id,
     title: row.title,
     description: row.line,
-    href: row.href,
+    onPress: () => onGo(row.href),
     leading: {
         avatar: {
             name: row.ownerName,
@@ -29,13 +29,7 @@ const rowOf = (row: OverviewPaneReady["work"]["rows"][number]): ListRowData => (
     badges: [{ label: row.status.label, tone: row.status.tone, isDot: true }],
     ...(row.due === null
         ? {}
-        : {
-              detail: (
-                  <Text size="xs" tone={row.isOverdue ? "default" : "muted"} isStrong={row.isOverdue}>
-                      {row.due}
-                  </Text>
-              ),
-          }),
+        : { meta: { text: row.due, tone: row.isOverdue ? ("danger" as const) : ("muted" as const) } }),
 })
 
 /** The open work as one flat list that names each holder, with the way to all of it; an empty list invites the next step. */
@@ -62,6 +56,6 @@ export const OverviewWorkCard = (props: OverviewWorkCardProps) => (
                 iconSource={nivoIconSource("review", "leading")}
             />
         }
-        items={props.data.rows.map(rowOf)}
+        items={props.data.rows.map((row) => rowOf(row, props.onGo))}
     />
 )

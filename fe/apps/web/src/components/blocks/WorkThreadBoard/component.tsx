@@ -172,8 +172,8 @@ export const WorkThreadBoardBase = (props: WorkThreadBoardBaseProps) => {
                         scroll
                         label={view.chain.title}
                         collapse="drawer"
+                        trigger="none"
                         collapseLabel={view.chain.title}
-                        openLabel={view.labels.chainOpen}
                         closeLabel={view.labels.chainClose}
                         isOpen={view.isChainDrawerOpen}
                         onOpenChange={props.on.chainDrawerOpenChange}

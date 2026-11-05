@@ -45,8 +45,6 @@ export interface DecisionsBoardCopy {
     readonly openLead: string
     readonly kindLabel: string
     readonly deptLabel: string
-    readonly filterSearch: string
-    readonly filterNoMatch: string
     readonly detail: DecisionDetailCopy
 }
 
@@ -74,8 +72,6 @@ export interface DecisionsBoardBaseProps {
         readonly select: (id: string) => void
         readonly back: () => void
         readonly go: (href: string) => void
-        /** The words of the "+N" overflow of the filter row. */
-        readonly moreFilters: (count: number) => string
     }
 }
 
@@ -140,9 +136,6 @@ const ListBody = (props: Props) => {
                             options: props.props.kinds.map((kind) => ({ value: kind.id, label: kind.label })),
                             value: props.props.kindKey,
                             onChange: props.on.kind,
-                            moreLabel: props.on.moreFilters,
-                            searchLabel: copy.filterSearch,
-                            emptyLabel: copy.filterNoMatch,
                         }}
                         isLoading={isLoading}
                     />

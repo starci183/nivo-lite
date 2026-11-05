@@ -50,7 +50,6 @@ const railOf = ({ t, slotLabels, board, form, actions }: RailContext): WorkThrea
 /** The words of the page frame: the back control, the chain controls and the notices of each region. */
 const labelsOf = (t: Translate, back: string): WorkThreadBoardView["labels"] => ({
     back,
-    chainOpen: t("chainOpen"),
     chainClose: t("chainClose"),
     chainToggle: t("chainToggle"),
     pendingApprovals: (count: number) => t("pendingApprovals", { count }),

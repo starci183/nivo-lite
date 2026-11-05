@@ -85,8 +85,6 @@ export interface ResponsibilitiesBoardCopy {
     readonly searchLabel: string
     readonly searchPlaceholder: string
     readonly clearSearch: string
-    readonly filterSearch: string
-    readonly filterNoMatch: string
     readonly draft: string
     readonly drafting: string
     readonly menuCopy: string

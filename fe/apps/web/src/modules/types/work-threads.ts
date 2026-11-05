@@ -140,7 +140,6 @@ export interface WorkThreadBoardView {
     readonly grid: PaneGridLayout
     readonly labels: {
         readonly back: string
-        readonly chainOpen: string
         readonly chainClose: string
         readonly chainToggle: string
         readonly pendingApprovals: (count: number) => string

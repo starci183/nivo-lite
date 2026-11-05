@@ -5,7 +5,7 @@ import { useFormatter, useTranslations } from "next-intl"
 import {
     ALL_OWNERS,
     DUES,
-    ownerRoleOf,
+    openedGroupsOf,
     ROW_STATUSES,
     rowDueOf,
     rowStatusOf,
@@ -17,12 +17,7 @@ import type { DueKey, InitialFilters, RowStatus } from "@/hooks/responsibilities
 import { useAgentPictures } from "@/hooks/installations"
 import { paneGridOf, usePaneCopy, usePanePhone } from "@/hooks/paneFrame"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import type {
-    OwnerGroupView,
-    ResponsibilityRowView,
-    ResponsibilitiesBoardCopy,
-    ResponsibilityOpenedView,
-} from "@/modules/types"
+import type { ResponsibilitiesBoardCopy } from "@/modules/types"
 import { ResponsibilitiesBoardBase } from "./component"
 import type { ResponsibilityChoiceView } from "./component"
 
@@ -58,9 +53,12 @@ const STATUS_KEYS: Record<RowStatus, string> = {
 type Translate = ReturnType<typeof useTranslations<"responsibilities">>
 
 /** The status tabs with the counts of the read that settled; no count while it waits. */
-const tabsOf = (t: Translate, countOf: (key: RowStatus | "all") => string): ReadonlyArray<ResponsibilityChoiceView> => [
-    { id: ALL, label: `${t("tabAll")}${countOf("all")}` },
-    ...ROW_STATUSES.map((status) => ({ id: status, label: `${t(STATUS_KEYS[status])}${countOf(status)}` })),
+const tabsOf = (
+    t: Translate,
+    countOf: (key: RowStatus | "all") => { readonly count?: number },
+): ReadonlyArray<ResponsibilityChoiceView> => [
+    { id: ALL, label: t("tabAll"), ...countOf("all") },
+    ...ROW_STATUSES.map((status) => ({ id: status, label: t(STATUS_KEYS[status]), ...countOf(status) })),
 ]
 
 /** What the words of the board depend on besides the catalog: the time of the read and how many rows it let through. */
@@ -91,8 +89,6 @@ const copyOf = (t: Translate, pane: ReturnType<typeof usePaneCopy>, facts: Board
     searchLabel: t("searchLabel"),
     searchPlaceholder: t("searchPlaceholder"),
     clearSearch: pane.clearSearch,
-    filterSearch: pane.filterSearch,
-    filterNoMatch: pane.filterNoMatch,
     draft: t("menuDraft"),
     drafting: t("drafting"),
     menuCopy: t("menuCopy"),
@@ -130,19 +126,11 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
     const [isFiltersOpen, setFiltersOpen] = useState(false)
     const hasCounts = "items" in slot || "isEmpty" in slot
     const verified = format.dateTime(new Date(), { hour: "2-digit", minute: "2-digit" })
-    const openedOf = (group: OwnerGroupView, row: ResponsibilityRowView): ResponsibilityOpenedView => ({
-        row,
-        avatarUrl: group.kind === "agent" ? pictureOf({ handle: group.handle, name: group.name }) : null,
-        ownerRole: ownerRoleOf(t, group),
-        dueDate:
-            row.dueAt === null
-                ? null
-                : format.dateTime(new Date(row.dueAt), { day: "2-digit", month: "2-digit", year: "numeric" }),
-        canDraft: row.status === "open",
-    })
-    const opened = filters.groups.flatMap((group) => group.rows.map((row) => openedOf(group, row)))
+    const groups = openedGroupsOf({ t, format, pictureOf }, filters.groups)
+    const opened = groups.flatMap((group) => group.rows)
     const selectedId = opened.some((entry) => entry.row.id === chosen) ? chosen : (opened[0]?.row.id ?? null)
-    const countOf = (key: RowStatus | "all"): string => (hasCounts ? ` ${filters.counts[key]}` : "")
+    const countOf = (key: RowStatus | "all"): { readonly count?: number } =>
+        hasCounts ? { count: filters.counts[key] } : {}
     return (
         <ResponsibilitiesBoardBase
             props={{
@@ -164,7 +152,7 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
                 sort: filters.sort,
                 isFiltered: filters.isFiltered,
                 isFiltersOpen,
-                slot: mapSlot("isEmpty" in slot ? { items: [] } : slot, () => ({ rows: opened })),
+                slot: mapSlot("isEmpty" in slot ? { items: [] } : slot, () => ({ groups })),
                 isWaiting: "isLoading" in slot,
                 labels: {
                     ...slotLabels(filters.isFiltered ? t("emptyFiltered") : t(EMPTY_KEYS[filters.status])),
@@ -191,7 +179,6 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
                 retry: reload,
                 draft: actions.draft,
                 copy: actions.copy,
-                moreFilters: pane.moreFilters,
             }}
         />
     )

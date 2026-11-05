@@ -3,14 +3,15 @@ import type { ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneBlank } from "@/components/composites/PaneBlank"
 import { PaneHead } from "@/components/composites/PaneHead"
+import type { PanePrimary } from "@/components/composites/PaneHead"
 import { ResponsibilityDetail } from "@/components/composites/ResponsibilityDetail"
-import { RowTrailing } from "@/components/composites/RowTrailing"
 import { PaneBody } from "@/components/frames/PaneBody"
 import { PaneList } from "@/components/frames/PaneList"
+import { RowTrailing } from "@/components/composites/RowTrailing"
 import { ResponsibilityListHead } from "@/components/frames/ResponsibilityListHead"
 import { ResponsibilityMainHead } from "@/components/frames/ResponsibilityMainHead"
-import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { nivoIconSource } from "@/components/leaves/Icon"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import { leadHref } from "@/modules/routes"
 import type {
     DataSlot,
@@ -21,11 +22,8 @@ import type {
     SlotLabels,
 } from "@/modules/types"
 
-/** One choice of a select or one tab. */
-export interface ResponsibilityChoiceView {
-    readonly id: string
-    readonly label: string
-}
+/** One choice of a select or one tab, with how many rows it holds once the read settled. */
+export type ResponsibilityChoiceView = { readonly id: string; readonly label: string; readonly count?: number }
 
 /** Copy, values and state of the responsibility board. */
 export interface ResponsibilitiesBoardBaseProps {
@@ -42,7 +40,13 @@ export interface ResponsibilitiesBoardBaseProps {
         readonly sort: string
         readonly isFiltered: boolean
         readonly isFiltersOpen: boolean
-        readonly slot: DataSlot<{ readonly rows: ReadonlyArray<ResponsibilityOpenedView> }>
+        readonly slot: DataSlot<{
+            readonly groups: ReadonlyArray<{
+                readonly id: string
+                readonly label: string
+                readonly rows: ReadonlyArray<ResponsibilityOpenedView>
+            }>
+        }>
         /** The first read has no data yet. */
         readonly isWaiting: boolean
         readonly labels: SlotLabels
@@ -64,8 +68,6 @@ export interface ResponsibilitiesBoardBaseProps {
         readonly retry: () => void
         readonly draft: (responsibilityId: string) => void
         readonly copy: (responsibilityId: string, leadId: string) => void
-        /** The words of the "+N" overflow of the filter row. */
-        readonly moreFilters: (count: number) => string
     }
 }
 
@@ -120,7 +122,7 @@ const itemOf = (opened: ResponsibilityOpenedView, nextLabel: (action: string) =>
 /** The opened responsibility: the one chosen (the first when none was), a skeleton row while waiting, none when there is none. */
 const openedOf = (view: Props["props"]): ResponsibilityOpenedView | null => {
     if (view.isWaiting) return PLACEHOLDER_ROWS[0] ?? null
-    const rows = "items" in view.slot ? view.slot.items.rows : []
+    const rows = "items" in view.slot ? view.slot.items.groups.flatMap((group) => group.rows) : []
     return rows.find((opened) => opened.row.id === view.selectedId) ?? null
 }
 
@@ -130,7 +132,7 @@ const ListBody = (props: Props) => {
     return (
         <SlotView
             slot={props.props.slot}
-            placeholder={{ rows: PLACEHOLDER_ROWS }}
+            placeholder={{ groups: [{ id: "waiting", label: "", rows: PLACEHOLDER_ROWS }] }}
             labels={props.props.labels}
             errorDescription={copy.errorBody}
             onRetry={props.on.retry}
@@ -146,14 +148,19 @@ const ListBody = (props: Props) => {
                     }}
                     choice={{
                         label: copy.tabsLabel,
-                        options: props.props.tabs.map((tab) => ({ value: tab.id, label: tab.label })),
+                        options: props.props.tabs.map((tab) => ({
+                            value: tab.id,
+                            label: tab.label,
+                            ...(tab.count === undefined ? {} : { count: tab.count }),
+                        })),
                         value: props.props.status,
                         onChange: props.on.status,
-                        moreLabel: props.on.moreFilters,
-                        searchLabel: copy.filterSearch,
-                        emptyLabel: copy.filterNoMatch,
                     }}
-                    items={list.rows.map((opened) => itemOf(opened, copy.detail.nextOf))}
+                    sections={list.groups.map((group) => ({
+                        id: group.id,
+                        label: group.label,
+                        items: group.rows.map((opened) => itemOf(opened, copy.detail.nextOf)),
+                    }))}
                     selectedId={props.props.selectedId}
                     onSelect={props.on.select}
                     empty={{
@@ -167,6 +174,17 @@ const ListBody = (props: Props) => {
             )}
         />
     )
+}
+
+/** The one filled command of the opened responsibility: the follow-up draft, when one can be asked for. */
+const draftCommandOf = (props: Props, opened: ResponsibilityOpenedView | null): PanePrimary | undefined => {
+    if (opened?.canDraft !== true) return undefined
+    const isDrafting = props.props.draftingId === opened.row.id
+    return {
+        label: isDrafting ? props.props.copy.drafting : props.props.copy.draft,
+        isPending: isDrafting,
+        onPress: () => props.on.draft(opened.row.id),
+    }
 }
 
 /** The head of the opened responsibility (or of the page while none is open), with the draft command when one can be asked. */
@@ -184,7 +202,6 @@ const MainHead = (props: Props) => {
         )
     }
     const { row } = opened
-    const isDrafting = view.draftingId === row.id
     return (
         <ResponsibilityMainHead
             title={row.title}
@@ -202,15 +219,7 @@ const MainHead = (props: Props) => {
                 copyLink: view.copy.menuCopy,
             }}
             onCopy={() => props.on.copy(row.id, row.leadId)}
-            primary={
-                opened.canDraft
-                    ? {
-                          label: isDrafting ? view.copy.drafting : view.copy.draft,
-                          isPending: isDrafting,
-                          onPress: () => props.on.draft(row.id),
-                      }
-                    : undefined
-            }
+            primary={draftCommandOf(props, opened)}
         />
     )
 }
@@ -220,15 +229,7 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
     const view = props.props
     const { copy } = view
     const opened = openedOf(view)
-    const isDrafting = opened !== null && view.draftingId === opened.row.id
-    const primary =
-        opened?.canDraft !== true
-            ? undefined
-            : {
-                  label: isDrafting ? copy.drafting : copy.draft,
-                  isPending: isDrafting,
-                  onPress: () => props.on.draft(opened.row.id),
-              }
+    const primary = draftCommandOf(props, opened)
     return (
         <Page chrome="panes">
             <PaneGrid label={copy.grid} areas={view.grid.areas} columns={view.grid.columns} rows={view.grid.rows}>

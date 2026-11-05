@@ -12,6 +12,14 @@ import type { PanePrimary } from "@/components/composites/PaneHead"
 import { PaneBody } from "@/components/frames/PaneBody"
 import { Icon } from "@/components/leaves/Icon"
 import { CONSOLE_ROUTES } from "@/modules/routes"
+import {
+    DEPARTMENTS_ORDER_CLASS_NAME,
+    DRAWER_OPENER_CLASS_NAME,
+    RESULTS_ORDER_CLASS_NAME,
+    SETUP_ORDER_CLASS_NAME,
+    WEEK_ORDER_CLASS_NAME,
+    WORK_ORDER_CLASS_NAME,
+} from "./classNames"
 import type { DataSlot, PaneGridLayout, SlotLabels, OverviewPaneCopy, OverviewPaneReady } from "@/modules/types"
 
 /** Props for {@link OverviewPaneBase}. */
@@ -67,23 +75,33 @@ const MainSections = (props: MainSectionsProps) => {
     const { data, isLoading } = props
     return (
         <>
-            <OverviewSetupCard
-                data={data.setup}
-                copy={copy}
-                isOpen={isSetupOpen}
-                onToggle={props.view.on.toggleSetup}
-                isLoading={isLoading}
-            />
-            <OverviewWeekCard data={data.week} copy={copy} isLoading={isLoading} />
-            <OverviewWorkCard data={data.work} copy={copy} onGo={props.view.on.go} isLoading={isLoading} />
-            <OverviewDepartments data={data.departments} copy={copy} isLoading={isLoading} />
-            <OverviewResultsCard
-                data={data.results}
-                copy={copy}
-                isOpen={isResultsOpen}
-                onToggle={props.view.on.toggleResults}
-                isLoading={isLoading}
-            />
+            <div className={SETUP_ORDER_CLASS_NAME}>
+                <OverviewSetupCard
+                    data={data.setup}
+                    copy={copy}
+                    isOpen={isSetupOpen}
+                    onToggle={props.view.on.toggleSetup}
+                    isLoading={isLoading}
+                />
+            </div>
+            <div className={WEEK_ORDER_CLASS_NAME}>
+                <OverviewWeekCard data={data.week} copy={copy} isLoading={isLoading} />
+            </div>
+            <div className={WORK_ORDER_CLASS_NAME}>
+                <OverviewWorkCard data={data.work} copy={copy} onGo={props.view.on.go} isLoading={isLoading} />
+            </div>
+            <div className={DEPARTMENTS_ORDER_CLASS_NAME}>
+                <OverviewDepartments data={data.departments} copy={copy} isLoading={isLoading} />
+            </div>
+            <div className={RESULTS_ORDER_CLASS_NAME}>
+                <OverviewResultsCard
+                    data={data.results}
+                    copy={copy}
+                    isOpen={isResultsOpen}
+                    onToggle={props.view.on.toggleResults}
+                    isLoading={isLoading}
+                />
+            </div>
         </>
     )
 }
@@ -105,17 +123,21 @@ const Head = (props: HeadProps) => {
             headingLevel={1}
             {...("isError" in view.slot ? {} : { description: shown.head.description })}
             actions={
-                <Button
-                    intent="alternative"
-                    size="sm"
-                    {...(commands.other.label === view.copy.newLead
-                        ? { startContent: <Icon props={{ name: "add", usage: "leading" }} /> }
-                        : {})}
-                    onPress={commands.other.onPress}
-                >
-                    {commands.other.label}
-                </Button>
+                <div className={DRAWER_OPENER_CLASS_NAME}>
+                    <Button
+                        intent="alternative"
+                        size="sm"
+                        onPress={() => props.view.on.asideOpenChange(true)}
+                    >{`${view.copy.asideOpen} (${props.ready?.pending ?? 0})`}</Button>
+                </div>
             }
+            secondary={{
+                label: commands.other.label,
+                onPress: commands.other.onPress,
+                ...(commands.other.label === view.copy.newLead
+                    ? { startContent: <Icon props={{ name: "add", usage: "leading" }} /> }
+                    : {}),
+            }}
             {...(commands.primary === undefined ? {} : { primary: commands.primary })}
         />
     )
@@ -157,8 +179,8 @@ export const OverviewPaneBase = (props: OverviewPaneBaseProps) => {
                     scroll
                     label={copy.asideTitle}
                     collapse="drawer"
+                    trigger="none"
                     collapseLabel={copy.asideTitle}
-                    openLabel={`${copy.asideOpen} (${ready === null ? 0 : ready.pending})`}
                     closeLabel={copy.asideClose}
                     isOpen={view.isAsideOpen}
                     onOpenChange={props.on.asideOpenChange}
@@ -174,7 +196,12 @@ export const OverviewPaneBase = (props: OverviewPaneBaseProps) => {
                                 render={(data, loading) => (
                                     <>
                                         <OverviewAsideWaiting data={data} copy={copy} isLoading={loading} />
-                                        <OverviewAsideLists data={data} copy={copy} isLoading={loading} />
+                                        <OverviewAsideLists
+                                            data={data}
+                                            copy={copy}
+                                            onGo={props.on.go}
+                                            isLoading={loading}
+                                        />
                                     </>
                                 )}
                             />

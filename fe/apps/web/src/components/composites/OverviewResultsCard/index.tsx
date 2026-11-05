@@ -35,15 +35,11 @@ const Notes = (props: NotesProps) => (
 )
 
 /** One status row: what it is and what it rests on, then its figure. */
-const rowOf = (row: OverviewPaneReady["results"]["rows"][number], isLoading: boolean): ListRowData => ({
+const rowOf = (row: OverviewPaneReady["results"]["rows"][number]): ListRowData => ({
     id: row.id,
     title: row.label,
     ...(row.count === null ? {} : { description: row.count }),
-    detail: (
-        <Text isStrong isLoading={isLoading}>
-            {row.value}
-        </Text>
-    ),
+    meta: { text: row.value },
 })
 
 /** The results by status with the goals under them; the toggle folds the list away and keeps the notes. */
@@ -74,7 +70,7 @@ export const OverviewResultsCard = (props: OverviewResultsCardProps) => {
             isLoading={props.isLoading}
             footer={<Notes goals={props.data.goals} copy={props.copy} />}
             empty={<EmptyNotice message={props.copy.resultsTitle} />}
-            items={props.data.rows.map((row) => rowOf(row, props.isLoading))}
+            items={props.data.rows.map(rowOf)}
         />
     )
 }

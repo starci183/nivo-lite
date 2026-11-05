@@ -35,7 +35,7 @@ const approverItemOf = (person: ThreadApprovalCardView["approvers"][number]): Li
     id: person.id,
     label: person.name,
     description: person.roleLabel,
-    leading: <PersonAvatar name={person.name} size="md" />,
+    leading: <PersonAvatar name={person.name} size="sm" />,
     trailing: <Badge tone={person.tone}>{person.statusLabel}</Badge>,
 })
 
@@ -62,7 +62,12 @@ export const ThreadApprovalCard = (props: ThreadApprovalCardProps) => {
                 <Text size="sm">{card.policyLabel}</Text>
                 <ApprovalCountdown expiry={card.expiry} />
             </Cluster>
-            <ListBox label={props.labels.cardLabel} selectionMode="none" items={card.approvers.map(approverItemOf)} />
+            <ListBox
+                label={props.labels.cardLabel}
+                size="sm"
+                selectionMode="none"
+                items={card.approvers.map(approverItemOf)}
+            />
             {card.excluded.map((left) => (
                 <Text key={left.id} size="xs" tone="muted">
                     {left.line}

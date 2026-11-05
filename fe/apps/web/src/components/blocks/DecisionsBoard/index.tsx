@@ -53,8 +53,6 @@ const copyOf = (t: Translate, pane: ReturnType<typeof usePaneCopy>): DecisionsBo
     openLead: t("openLead"),
     kindLabel: t("kindLabel"),
     deptLabel: t("deptLabel"),
-    filterSearch: pane.filterSearch,
-    filterNoMatch: pane.filterNoMatch,
     detail: {
         decisionTitle: t("decisionTitle"),
         whyTitle: t("whyTitle"),
@@ -130,7 +128,6 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
                 },
                 back: phone.showList,
                 go: (href) => router.push(href),
-                moreFilters: pane.moreFilters,
             }}
         />
     )
