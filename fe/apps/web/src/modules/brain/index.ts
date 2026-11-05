@@ -88,7 +88,7 @@ export {
     sourceTitlesOf,
     toPublicDocument,
 } from "./public-docs"
-export type { PublicBadge, PublicDocument } from "./public-docs"
+export type { PublicDocument } from "./public-docs"
 export { askAgentOptionOf, askGridOf, askPassageOf, askSeesOf } from "./ask-view"
 export {
     PUBLIC_DRAFT_PLACEHOLDER,

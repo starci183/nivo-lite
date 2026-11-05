@@ -8,6 +8,8 @@ interface PaneCopy {
     readonly refresh: string
     readonly moreActions: string
     readonly closeAside: string
+    /** The "+n" menu name of a filter row, with `{count}` where the number goes. */
+    readonly moreFilters: string
     readonly clearFilters: string
     readonly clearSearch: string
     readonly noMatchTitle: string
@@ -26,6 +28,7 @@ export const usePaneCopy = (): PaneCopy => {
         refresh: t("refresh"),
         moreActions: t("moreActions"),
         closeAside: t("closeAside"),
+        moreFilters: String(t.raw("moreFilters")),
         clearFilters: t("clearFilters"),
         clearSearch: t("clearSearch"),
         noMatchTitle: t("noMatchTitle"),

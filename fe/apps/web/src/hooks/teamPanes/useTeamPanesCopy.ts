@@ -37,8 +37,6 @@ export const useTeamPanesCopy = (counts: TeamCounts): TeamPanesCopy => {
         filterAll: t("filterAll"),
         filterMembers: t("filterMembers"),
         filterInvites: t("filterInvites"),
-        filterSearch: pane.filterSearch,
-        filterNoMatch: pane.filterNoMatch,
         sectionMembers: t("membersTitle"),
         sectionInvites: t("invitesTitle"),
         youLabel: t("you"),

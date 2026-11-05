@@ -79,8 +79,6 @@ export const TeamPeopleList = (props: TeamPeopleListProps) => (
                 value: props.filter,
                 onChange: props.on.setFilter,
                 moreLabel: props.on.moreFilters,
-                searchLabel: props.copy.filterSearch,
-                emptyLabel: props.copy.filterNoMatch,
             }}
         />
         <Text size="xs" tone="muted" isLoading={props.isLoading}>

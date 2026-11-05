@@ -44,6 +44,8 @@ const ACTION_GLYPH: Readonly<Partial<Record<string, IconName>>> = { upload: "upl
 /** The evidence of a finding, folded: each piece and the documents it comes from. */
 const Evidence = (props: Pick<CardView<string>, "evidenceTitle" | "evidence" | "sources">) => (
     <Disclosure
+        kind="quiet"
+        chevron="start"
         title={props.evidenceTitle}
         headingLevel={4}
         body={

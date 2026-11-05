@@ -75,8 +75,6 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
                     value: filter,
                     onChange: setFilter,
                     moreLabel: pane.moreFilters,
-                    searchLabel: pane.filterSearch,
-                    emptyLabel: pane.filterNoMatch,
                 },
                 rows,
                 openId: list.openId,

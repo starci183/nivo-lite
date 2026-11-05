@@ -154,14 +154,13 @@ describe("GoogleConnectionsService / consentFor and stateWithLedger", () => {
             email: "shop@example.test",
             sheetId: "sheet-1",
             sheetUrl: "https://sheet.test/1",
+            sheetTitle: "",
+            lastRowAt: "",
         }
         sheets.grant.mockResolvedValue(ledger)
 
-        await expect(service.stateWithLedger(actor)).resolves.toEqual({
-            configured: true,
-            consentNeeded: false,
-            ledger,
-        })
+        const setup = { configured: true, consentNeeded: false, ledger }
+        await expect(service.stateWithLedger(actor)).resolves.toEqual(setup)
         expect(sheets.grant).toHaveBeenCalledWith(actor)
         expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner", "manager"])
     })

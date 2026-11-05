@@ -26,7 +26,7 @@ interface Handling {
     readonly interaction: ReturnType<typeof useInviteInteraction>
     readonly phone: ReturnType<typeof usePanePhone>
     readonly router: ReturnType<typeof navigation.useRouter>
-    readonly moreFilters: (count: number) => string
+    readonly moreFilters: string
     /** An invitation waits for its withdrawal to be confirmed, not a person's access. */
     readonly isRevoking: boolean
 }

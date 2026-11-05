@@ -159,8 +159,6 @@ interface TeamPanesCopy {
     readonly filterAll: string
     readonly filterMembers: string
     readonly filterInvites: string
-    readonly filterSearch: string
-    readonly filterNoMatch: string
     readonly sectionMembers: string
     readonly sectionInvites: string
     readonly youLabel: string
@@ -207,7 +205,7 @@ export interface TeamPanesBaseProps {
         readonly retry: () => void
         readonly setQuery: (value: string) => void
         readonly setFilter: (value: string) => void
-        readonly moreFilters: (count: number) => string
+        readonly moreFilters: string
         readonly select: (id: string) => void
         readonly back: () => void
         readonly openInvite: () => void

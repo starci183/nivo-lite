@@ -81,9 +81,25 @@ export type { ConnectionRefusalView, ConnectionNotice, ConnectionTilesView, Conn
 export type { ConnectorCategory, ConnectorGlyph, ConnectorStatus, FirstEvent, FirstEventState } from "./connections"
 export type { WebhookTestVerdict, MetaCheckSummary, SepayKeys, LibraryCard, LibraryCategory } from "./connections"
 export type { InboxRowView } from "./inbox"
-export type { OverviewPaneCopy, OverviewPaneReady, PaneGridLayout, WorkbenchAsideActions, WorkbenchAsideView } from "./panes"
-export type { ConnectionAgentRow, ConnectionFilterChoice, ConnectionGrantsView, ConnectionListRow } from "./connections-panes"
-export type { ConnectionNextStep, ConnectionPaneTone, ConnectionsListView, ConnectionsOverviewView } from "./connections-panes"
+export type {
+    OverviewPaneCopy,
+    OverviewPaneReady,
+    PaneGridLayout,
+    WorkbenchAsideActions,
+    WorkbenchAsideView,
+} from "./panes"
+export type {
+    ConnectionAgentRow,
+    ConnectionFilterChoice,
+    ConnectionGrantsView,
+    ConnectionListRow,
+} from "./connections-panes"
+export type {
+    ConnectionNextStep,
+    ConnectionPaneTone,
+    ConnectionsListView,
+    ConnectionsOverviewView,
+} from "./connections-panes"
 export type {
     AccessAgentView,
     AccessView,
@@ -148,7 +164,14 @@ export type {
     TemplateExecutor,
     TemplatePack,
 } from "./automations"
-export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason, DecisionHistoryRowView } from "./decisions"
+export type {
+    DeciderKind,
+    DecisionKind,
+    DecisionOutcome,
+    DecisionRecord,
+    GateReason,
+    DecisionHistoryRowView,
+} from "./decisions"
 export type { AttentionKind, AttentionRow, AttentionItemView, ActivityItemView } from "./sales"
 export type { SalesContract, SalesContractStatus, ContractItemView } from "./sales"
 export type { SalesDeal, DealView, LaneView, MoveDialogView, HandoffRow, HandoffItemView, SalesShipping } from "./sales"
@@ -364,7 +387,6 @@ export type { InviteAction, InviteRowView, TeamPanesBaseProps } from "./team"
 export type { ContractImportDialogEvents, ContractImportDialogView, ContractImportRowView } from "./contract-import"
 export type { AccountSignInView, SessionRowView } from "./account"
 export type {
-    ZaloAgentRowView,
     ZaloCheckLineView,
     ZaloEventLineView,
     ZaloFactView,
@@ -377,7 +399,6 @@ export type {
 } from "./zalo-connection"
 export type {
     SepayAccountForm,
-    SepayAgentView,
     SepayConnectionView,
     SepayEnvironment,
     SepayStepId,
@@ -419,8 +440,7 @@ export type { InventoryWorkbenchDataView, InventoryWorkbenchActions } from "./in
 export type { InventoryItemFormData, InventoryItemEditorData, InventoryAdjustmentEditorData } from "./inventory-editors"
 export type { InventoryNewPoEditorData, InventoryPoEditorData, InventorySupplierEditorData } from "./inventory-editors"
 export type { InventoryRecipeEditorData } from "./inventory-editors"
-export type { WorkbenchFigureData, WorkbenchWaitingRegionView, WorkbenchDoneRegionView } from "./workbench-dashboard"
-export type { WorkbenchConnectionsRegionView, WorkbenchKnowledgeRegionView, WorkbenchExplanationView } from "./workbench-dashboard"
+export type { WorkbenchFigureData, WorkbenchWaitingRegionView, WorkbenchExplanationView } from "./workbench-dashboard"
 export type { WorkbenchDashboardRegions, WorkbenchFigureRegion, WorkbenchWhyLabels } from "./workbench-dashboard"
 export type { ChatbotCustomerWords, CustomerFilter, CustomerRowView } from "./chatbot-workbench"
 export type { ChatbotGapRow, ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "./chatbot-workbench"
