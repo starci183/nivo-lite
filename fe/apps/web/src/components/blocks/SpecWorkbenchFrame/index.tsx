@@ -1,6 +1,6 @@
 "use client"
 
-import { coreBlocks } from "@nivo-lite/blocks-core/client"
+import { useEnabledModules } from "@nivo-lite/agent-sdk/client"
 import type { StoredSpec } from "@nivo-lite/agent-sdk/spec"
 import { useWorkbenchDeclaration } from "@/hooks/workbenchSpec"
 import { SpecWorkbenchFrameBase } from "./component"
@@ -15,17 +15,17 @@ type SpecWorkbenchFrameProps = {
     readonly tab: string | null
 }
 
-/** The connected workbench: finds the declaration of the module, whose reads and actions the spec binds, and draws the spec. */
+/** The connected workbench: finds the declaration of the module, whose reads and actions the spec binds, and draws the spec when the module is enabled for the workspace. */
 export const SpecWorkbenchFrame = (props: SpecWorkbenchFrameProps) => {
     const declaration = useWorkbenchDeclaration(props.module)
-    if (declaration === null) return null
+    const enabled = useEnabledModules()
+    if (declaration === null || !enabled.includes(props.module)) return null
     return (
         <SpecWorkbenchFrameBase
             props={{
                 title: props.title,
                 spec: props.spec,
                 fallback: props.fallback,
-                renderers: coreBlocks,
                 reads: declaration.reads,
                 actions: declaration.actions,
                 permissions: declaration.permissions,

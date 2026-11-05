@@ -5760,7 +5760,9 @@
   "workbenchHost": {
     "failed": "That did not go through. Try again.",
     "forbidden": "You are not allowed to do this.",
-    "unreadable": "The answer could not be read."
+    "unreadable": "The answer could not be read.",
+    "stale": "A new version is out, reload",
+    "reload": "Reload"
   },
   "slot": {
     "forbidden": "You do not have access to this section.",

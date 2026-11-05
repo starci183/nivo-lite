@@ -1,4 +1,3 @@
-import type { BlockRenderer } from "@nivo-lite/agent-sdk/client"
 import { SpecWorkbench } from "@nivo-lite/agent-sdk/client"
 import { Page } from "@starci/grammar/common"
 import type { ActionDefinition, ReadDefinition } from "@nivo-lite/agent-sdk/block"
@@ -10,7 +9,6 @@ export interface SpecWorkbenchFrameBaseProps {
         readonly title: string
         readonly spec: StoredSpec
         readonly fallback: StoredSpec | null
-        readonly renderers: ReadonlyArray<BlockRenderer>
         readonly reads: ReadonlyArray<ReadDefinition>
         readonly actions: ReadonlyArray<ActionDefinition>
         readonly permissions: ReadonlyArray<string>
@@ -21,13 +19,12 @@ export interface SpecWorkbenchFrameBaseProps {
     }
 }
 
-/** The page of a workbench: its heading over the spec drawn with the installed blocks; the host mounted at the app root serves every port. */
+/** The page of a workbench: its heading over the spec drawn with the blocks the host mounted at the app root installed, which also serves every port. */
 export const SpecWorkbenchFrameBase = (props: SpecWorkbenchFrameBaseProps) => (
     <Page header={{ title: props.props.title }}>
         <SpecWorkbench
             spec={props.props.spec}
             fallback={props.props.fallback}
-            renderers={props.props.renderers}
             reads={props.props.reads}
             actions={props.props.actions}
             permissions={props.props.permissions}
