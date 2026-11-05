@@ -1,0 +1,46 @@
+import { defineAction } from "@nivo-lite/agent-sdk/block"
+import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { z } from "zod"
+import { MAX_ID } from "../../../bounds"
+import { LEAD_STAGES, MAX_REASON_CHARS, planMove } from "../../../rules/sales/stage"
+import { SALES_MANAGE } from "../constants"
+import { salesLeadStore } from "../ports"
+import { CONFLICT, refusedWith } from "../refusals"
+
+const input: z.ZodObject<{
+    id: z.ZodString
+    to: z.ZodEnum<{ readonly [K in (typeof LEAD_STAGES)[number]]: K }>
+    reason: z.ZodOptional<z.ZodNullable<z.ZodString>>
+}> = z.object({
+    id: z.string().min(1).max(MAX_ID),
+    to: z.enum(LEAD_STAGES),
+    reason: z.string().max(MAX_REASON_CHARS).nullable().optional(),
+})
+
+/**
+ * `sales.move-stage`: moves a deal to another stage. Closing it (won or lost) takes a reason, which the lead keeps; the move is
+ * refused as data when the flow does not allow it. Written under the version the lead was read at, so two people never overwrite
+ * each other.
+ */
+export const moveStageAction: ActionDefinition = defineAction({
+    id: "sales.move-stage",
+    permission: SALES_MANAGE,
+    label: { key: "action_move_stage" },
+    input,
+    ports: { leads: salesLeadStore },
+    transactional: true,
+    run: async ({ leads }, { id, to, reason }) => {
+        const lead = await leads.get(id)
+        if (lead === null) return refusedWith("missing")
+        const plan = planMove(lead.stage, to, reason ?? null)
+        if (plan.kind === "refused") return refusedWith(plan.reason)
+        const written = await leads.update(lead.id, lead.version, {
+            stage: plan.stage,
+            closedReason: plan.closedReason,
+        })
+        if (written.ok) return { ok: true, data: { stage: written.row.stage } }
+        return written.reason === "missing" ? refusedWith("missing") : CONFLICT
+    },
+    refreshes: ["sales.leads", "sales.lead-counts", "sales.lead"],
+    optimistic: true,
+})
