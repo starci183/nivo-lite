@@ -12,10 +12,10 @@
   "entries_empty_search": "Không có bút toán nào khớp tìm kiếm.",
   "search": "Tìm bút toán",
   "filter_all": "Tất cả",
-  "kind_income": "Thu",
+  "kind_income": "Thu nhập",
   "kind_invoice": "Hóa đơn",
   "kind_adjustment": "Điều chỉnh",
-  "kind_expense": "Chi",
+  "kind_expense": "Chi phí",
   "kind_reversal": "Hoàn bút toán",
   "entry": "Chi tiết bút toán",
   "entry_idle": "Chọn một bút toán để xem chi tiết.",
@@ -54,5 +54,9 @@
   "settings_post_unmatched": "Ghi tiền thu vào thành khoản thu trước khi đối soát",
   "settings_void_mode": "Hóa đơn đã ghi sổ bị hủy",
   "void_reversal": "Được ghi một bút toán hoàn",
-  "void_none": "Giữ nguyên sổ"
+  "void_none": "Giữ nguyên sổ",
+  "col_date": "Ngày",
+  "col_entry": "Chứng từ",
+  "col_amount": "Số tiền",
+  "col_status": "Tình trạng"
 }

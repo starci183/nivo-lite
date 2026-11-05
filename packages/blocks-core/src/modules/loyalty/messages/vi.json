@@ -201,5 +201,13 @@
   "tiers_label": "Hạng hội viên",
   "trigger_order": "Đơn được xác nhận",
   "trigger_payment": "Thanh toán",
-  "waiting_owner": "Đang chờ bạn"
+  "waiting_owner": "Đang chờ bạn",
+  "ledger_earn": "Tích điểm",
+  "ledger_redeem": "Đổi quà",
+  "ledger_expire": "Hết hạn",
+  "ledger_adjust": "Điều chỉnh",
+  "state_active": "Đang mở",
+  "state_paused": "Tạm dừng",
+  "command_approve": "Duyệt",
+  "command_reject": "Từ chối"
 }

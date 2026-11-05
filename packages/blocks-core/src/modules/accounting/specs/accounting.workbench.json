@@ -2,78 +2,244 @@
   "schema": "nivo/workbench-spec@1",
   "module": "accounting",
   "params": {
-    "q": { "type": "string", "url": "q", "default": "" },
-    "kind": { "type": "enum", "of": "accounting.entries.kind", "url": "kind", "default": "all" },
-    "sort": { "type": "enum", "of": "accounting.entries.sort", "url": "sort", "default": "recent" },
-    "selected": { "type": "string", "url": "entry" },
-    "period": { "type": "enum", "of": ["this", "last"], "url": "period", "default": "this" }
+    "q": {
+      "type": "string",
+      "url": "q",
+      "default": ""
+    },
+    "kind": {
+      "type": "enum",
+      "of": "accounting.entries.kind",
+      "url": "kind",
+      "default": "all"
+    },
+    "sort": {
+      "type": "enum",
+      "of": "accounting.entries.sort",
+      "url": "sort",
+      "default": "recent"
+    },
+    "selected": {
+      "type": "string",
+      "url": "entry"
+    },
+    "period": {
+      "type": "enum",
+      "of": ["this", "last"],
+      "url": "period",
+      "default": "this"
+    }
   },
   "head": [
     {
       "id": "figures",
       "block": "core.figures",
       "props": {
-        "label": { "key": "figures" },
+        "label": {
+          "key": "figures"
+        },
         "items": [
-          { "term": { "key": "fig_income" }, "path": "income.vnd" },
-          { "term": { "key": "fig_invoiced" }, "path": "invoiced.vnd" },
-          { "term": { "key": "fig_adjustments" }, "path": "adjustments.vnd" },
-          { "term": { "key": "fig_unmatched" }, "path": "unmatched.vnd" },
-          { "term": { "key": "fig_receivable" }, "path": "receivable.vnd" }
-        ]
+          {
+            "term": {
+              "key": "fig_income"
+            },
+            "path": "income.vnd",
+            "format": "money"
+          },
+          {
+            "term": {
+              "key": "fig_invoiced"
+            },
+            "path": "invoiced.vnd",
+            "format": "money"
+          },
+          {
+            "term": {
+              "key": "fig_adjustments"
+            },
+            "path": "adjustments.vnd",
+            "format": "money"
+          },
+          {
+            "term": {
+              "key": "fig_unmatched"
+            },
+            "path": "unmatched.vnd",
+            "format": "money"
+          },
+          {
+            "term": {
+              "key": "fig_receivable"
+            },
+            "path": "receivable.vnd",
+            "format": "money"
+          }
+        ],
+        "currency": "VND"
       },
-      "bind": { "data": { "read": "accounting.figures", "variables": { "period": "$period" } } },
-      "when": { "permission": "accounting.view" }
+      "bind": {
+        "data": {
+          "read": "accounting.figures",
+          "variables": {
+            "period": "$period"
+          }
+        }
+      },
+      "when": {
+        "permission": "accounting.view"
+      }
     }
   ],
   "views": [
     {
       "id": "book",
-      "label": { "key": "tab_book" },
+      "label": {
+        "key": "tab_book"
+      },
       "root": {
         "id": "root",
         "block": "core.master-detail",
-        "props": { "emptyTitle": { "key": "entry_empty_title" }, "emptyBody": { "key": "entry_empty_body" } },
+        "props": {
+          "emptyTitle": {
+            "key": "entry_empty_title"
+          },
+          "emptyBody": {
+            "key": "entry_empty_body"
+          }
+        },
         "children": [
           {
             "id": "pane",
             "block": "core.list-pane",
-            "props": { "search": true, "searchParam": "q", "searchLabel": { "key": "search" } },
+            "props": {
+              "search": true,
+              "searchParam": "q",
+              "searchLabel": {
+                "key": "search"
+              }
+            },
             "children": [
               {
                 "id": "tabs",
                 "block": "core.filter-tabs",
                 "props": {
                   "param": "kind",
-                  "all": { "key": "filter_all" },
+                  "all": {
+                    "key": "filter_all"
+                  },
                   "items": [
-                    { "value": "income", "label": { "key": "kind_income" } },
-                    { "value": "expense", "label": { "key": "kind_expense" } },
-                    { "value": "invoice", "label": { "key": "kind_invoice" } },
-                    { "value": "reversal", "label": { "key": "kind_reversal" } },
-                    { "value": "adjustment", "label": { "key": "kind_adjustment" } }
+                    {
+                      "value": "income",
+                      "label": {
+                        "key": "kind_income"
+                      }
+                    },
+                    {
+                      "value": "expense",
+                      "label": {
+                        "key": "kind_expense"
+                      }
+                    },
+                    {
+                      "value": "invoice",
+                      "label": {
+                        "key": "kind_invoice"
+                      }
+                    },
+                    {
+                      "value": "reversal",
+                      "label": {
+                        "key": "kind_reversal"
+                      }
+                    },
+                    {
+                      "value": "adjustment",
+                      "label": {
+                        "key": "kind_adjustment"
+                      }
+                    }
                   ]
                 },
-                "bind": { "counts": { "read": "accounting.entry-counts", "variables": { "q": "$q" } } }
+                "bind": {
+                  "counts": {
+                    "read": "accounting.entry-counts",
+                    "variables": {
+                      "q": "$q"
+                    }
+                  }
+                }
               },
               {
                 "id": "rows",
-                "block": "core.record-list",
+                "block": "core.table",
                 "props": {
-                  "label": { "key": "entries" },
-                  "empty": { "key": "entries_empty" },
-                  "emptySearch": { "key": "entries_empty_search" },
+                  "label": {
+                    "key": "entries"
+                  },
+                  "empty": {
+                    "key": "entries_empty"
+                  },
                   "idPath": "id",
-                  "titlePath": "title",
-                  "descriptionPath": "entryDate",
-                  "badgePath": "kind",
+                  "currency": "VND",
+                  "labels": {
+                    "kind": {
+                      "income": {
+                        "key": "kind_income"
+                      },
+                      "expense": {
+                        "key": "kind_expense"
+                      },
+                      "invoice": {
+                        "key": "kind_invoice"
+                      },
+                      "reversal": {
+                        "key": "kind_reversal"
+                      },
+                      "adjustment": {
+                        "key": "kind_adjustment"
+                      }
+                    }
+                  },
                   "selectParam": "selected",
-                  "searchParam": "q"
+                  "columns": [
+                    {
+                      "term": {
+                        "key": "col_date"
+                      },
+                      "path": "entryDate",
+                      "format": "date"
+                    },
+                    {
+                      "term": {
+                        "key": "col_entry"
+                      },
+                      "path": "title"
+                    },
+                    {
+                      "term": {
+                        "key": "col_amount"
+                      },
+                      "path": "amountVnd",
+                      "format": "money",
+                      "align": "end"
+                    },
+                    {
+                      "term": {
+                        "key": "col_status"
+                      },
+                      "path": "kind",
+                      "format": "badge"
+                    }
+                  ]
                 },
                 "bind": {
                   "rows": {
                     "read": "accounting.entries",
-                    "variables": { "q": "$q", "kind": "$kind", "sort": "$sort" }
+                    "variables": {
+                      "q": "$q",
+                      "kind": "$kind",
+                      "sort": "$sort"
+                    }
                   }
                 }
               }
@@ -82,42 +248,129 @@
           {
             "id": "side",
             "block": "core.stack",
-            "props": { "gap": "section" },
+            "props": {
+              "gap": "section"
+            },
             "children": [
               {
                 "id": "detail",
                 "block": "core.detail",
                 "props": {
-                  "label": { "key": "entry" },
-                  "idle": { "key": "entry_idle" },
+                  "label": {
+                    "key": "entry"
+                  },
+                  "idle": {
+                    "key": "entry_idle"
+                  },
                   "idPath": "id",
                   "currency": "VND",
                   "items": [
-                    { "term": { "key": "fact_date" }, "path": "entryDate", "format": "date" },
-                    { "term": { "key": "fact_kind" }, "path": "kind", "format": "badge" },
-                    { "term": { "key": "fact_amount" }, "path": "amountVnd", "format": "money" },
-                    { "term": { "key": "fact_note" }, "path": "note", "format": "text" },
-                    { "term": { "key": "fact_source" }, "path": "sourceEntity", "format": "text" }
-                  ]
+                    {
+                      "term": {
+                        "key": "fact_date"
+                      },
+                      "path": "entryDate",
+                      "format": "date"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_kind"
+                      },
+                      "path": "kind",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_amount"
+                      },
+                      "path": "amountVnd",
+                      "format": "money"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_note"
+                      },
+                      "path": "note",
+                      "format": "text"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_source"
+                      },
+                      "path": "sourceEntity",
+                      "format": "text"
+                    }
+                  ],
+                  "labels": {
+                    "kind": {
+                      "income": {
+                        "key": "kind_income"
+                      },
+                      "expense": {
+                        "key": "kind_expense"
+                      },
+                      "invoice": {
+                        "key": "kind_invoice"
+                      },
+                      "reversal": {
+                        "key": "kind_reversal"
+                      },
+                      "adjustment": {
+                        "key": "kind_adjustment"
+                      }
+                    }
+                  }
                 },
-                "bind": { "record": { "read": "accounting.entry", "variables": { "id": "$selected" } } }
+                "bind": {
+                  "record": {
+                    "read": "accounting.entry",
+                    "variables": {
+                      "id": "$selected"
+                    }
+                  }
+                }
               },
               {
                 "id": "lineage",
                 "block": "core.record-list",
                 "props": {
-                  "label": { "key": "lineage" },
-                  "empty": { "key": "lineage_empty" },
+                  "label": {
+                    "key": "lineage"
+                  },
+                  "empty": {
+                    "key": "lineage_empty"
+                  },
                   "idPath": "id",
                   "titlePath": "title",
                   "descriptionPath": "detail",
-                  "badgePath": "kind"
+                  "badgePath": "kind",
+                  "labels": {
+                    "kind": {
+                      "income": {
+                        "key": "kind_income"
+                      },
+                      "expense": {
+                        "key": "kind_expense"
+                      },
+                      "invoice": {
+                        "key": "kind_invoice"
+                      },
+                      "reversal": {
+                        "key": "kind_reversal"
+                      },
+                      "adjustment": {
+                        "key": "kind_adjustment"
+                      }
+                    }
+                  }
                 },
                 "bind": {
                   "rows": {
                     "read": "accounting.entry",
                     "path": "lineage",
-                    "variables": { "id": "$selected" }
+                    "variables": {
+                      "id": "$selected"
+                    }
                   }
                 }
               }
@@ -128,34 +381,78 @@
     },
     {
       "id": "settings",
-      "label": { "key": "tab_settings" },
+      "label": {
+        "key": "tab_settings"
+      },
       "root": {
         "id": "settings-root",
         "block": "core.form",
         "props": {
-          "label": { "key": "settings_title" },
-          "submitLabel": { "key": "settings_submit" },
-          "successNotice": { "key": "settings_done" },
+          "label": {
+            "key": "settings_title"
+          },
+          "submitLabel": {
+            "key": "settings_submit"
+          },
+          "successNotice": {
+            "key": "settings_done"
+          },
           "fields": [
-            { "name": "postExpenses", "label": { "key": "settings_post_expenses" }, "kind": "switch" },
-            { "name": "postOutgoing", "label": { "key": "settings_post_outgoing" }, "kind": "switch" },
-            { "name": "postUnmatched", "label": { "key": "settings_post_unmatched" }, "kind": "switch" },
+            {
+              "name": "postExpenses",
+              "label": {
+                "key": "settings_post_expenses"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "postOutgoing",
+              "label": {
+                "key": "settings_post_outgoing"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "postUnmatched",
+              "label": {
+                "key": "settings_post_unmatched"
+              },
+              "kind": "switch"
+            },
             {
               "name": "voidMode",
-              "label": { "key": "settings_void_mode" },
+              "label": {
+                "key": "settings_void_mode"
+              },
               "kind": "choice",
               "options": [
-                { "value": "reversal", "label": { "key": "void_reversal" } },
-                { "value": "none", "label": { "key": "void_none" } }
+                {
+                  "value": "reversal",
+                  "label": {
+                    "key": "void_reversal"
+                  }
+                },
+                {
+                  "value": "none",
+                  "label": {
+                    "key": "void_none"
+                  }
+                }
               ]
             }
           ]
         },
         "bind": {
-          "record": { "read": "accounting.settings" },
-          "submit": { "action": "accounting.save-settings" }
+          "record": {
+            "read": "accounting.settings"
+          },
+          "submit": {
+            "action": "accounting.save-settings"
+          }
         },
-        "when": { "permission": "accounting.manage" }
+        "when": {
+          "permission": "accounting.manage"
+        }
       }
     }
   ]

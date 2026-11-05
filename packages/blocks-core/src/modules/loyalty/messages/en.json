@@ -201,5 +201,13 @@
   "tiers_label": "Membership tiers",
   "trigger_order": "A confirmed order",
   "trigger_payment": "A payment",
-  "waiting_owner": "Waiting for you"
+  "waiting_owner": "Waiting for you",
+  "ledger_earn": "Earned",
+  "ledger_redeem": "Redeemed",
+  "ledger_expire": "Expired",
+  "ledger_adjust": "Adjusted",
+  "state_active": "Open",
+  "state_paused": "Paused",
+  "command_approve": "Approve",
+  "command_reject": "Reject"
 }

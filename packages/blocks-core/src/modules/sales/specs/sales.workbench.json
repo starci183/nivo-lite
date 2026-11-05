@@ -2,64 +2,256 @@
   "schema": "nivo/workbench-spec@1",
   "module": "sales",
   "params": {
-    "q": { "type": "string", "url": "q", "default": "" },
-    "stage": { "type": "enum", "of": "sales.leads.stage", "url": "stage", "default": "all" },
-    "sort": { "type": "enum", "of": "sales.leads.sort", "url": "sort", "default": "recent" },
-    "selected": { "type": "string", "url": "lead" },
-    "orderQ": { "type": "string", "url": "oq", "default": "" },
-    "status": { "type": "enum", "of": "sales.orders.status", "url": "status", "default": "all" },
-    "orderSort": { "type": "enum", "of": "sales.orders.sort", "url": "osort", "default": "recent" },
-    "order": { "type": "string", "url": "order" }
+    "q": {
+      "type": "string",
+      "url": "q",
+      "default": ""
+    },
+    "stage": {
+      "type": "enum",
+      "of": "sales.leads.stage",
+      "url": "stage",
+      "default": "all"
+    },
+    "sort": {
+      "type": "enum",
+      "of": "sales.leads.sort",
+      "url": "sort",
+      "default": "recent"
+    },
+    "selected": {
+      "type": "string",
+      "url": "lead"
+    },
+    "orderQ": {
+      "type": "string",
+      "url": "oq",
+      "default": ""
+    },
+    "status": {
+      "type": "enum",
+      "of": "sales.orders.status",
+      "url": "status",
+      "default": "all"
+    },
+    "orderSort": {
+      "type": "enum",
+      "of": "sales.orders.sort",
+      "url": "osort",
+      "default": "recent"
+    },
+    "order": {
+      "type": "string",
+      "url": "order"
+    }
   },
   "views": [
     {
+      "id": "attention",
+      "label": {
+        "key": "tab_attention"
+      },
+      "root": {
+        "id": "attention-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "attention-waiting",
+            "block": "core.waiting",
+            "props": {
+              "label": {
+                "key": "waiting_owner"
+              }
+            },
+            "bind": {
+              "region": {
+                "read": "sales.orders-waiting"
+              }
+            }
+          },
+          {
+            "id": "attention-orders",
+            "block": "core.record-list",
+            "props": {
+              "label": {
+                "key": "attention_orders"
+              },
+              "empty": {
+                "key": "attention_empty"
+              },
+              "idPath": "id",
+              "titlePath": "orderNo",
+              "descriptionPath": "items",
+              "badgePath": "status",
+              "labels": {
+                "status": {
+                  "draft": {
+                    "key": "status_draft"
+                  },
+                  "confirmed": {
+                    "key": "status_confirmed"
+                  },
+                  "invoiced": {
+                    "key": "status_invoiced"
+                  },
+                  "paid": {
+                    "key": "status_paid"
+                  },
+                  "cancelled": {
+                    "key": "status_cancelled"
+                  },
+                  "failed_system": {
+                    "key": "status_failed_system"
+                  }
+                }
+              },
+              "selectParam": "order"
+            },
+            "bind": {
+              "rows": {
+                "read": "sales.orders",
+                "variables": {
+                  "q": "",
+                  "status": "draft",
+                  "sort": "recent"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "pipeline",
-      "label": { "key": "tab_pipeline" },
+      "label": {
+        "key": "tab_pipeline"
+      },
       "root": {
         "id": "pipeline-root",
         "block": "core.master-detail",
-        "props": { "emptyTitle": { "key": "lead_idle_title" }, "emptyBody": { "key": "lead_idle_body" } },
+        "props": {
+          "emptyTitle": {
+            "key": "lead_idle_title"
+          },
+          "emptyBody": {
+            "key": "lead_idle_body"
+          }
+        },
         "children": [
           {
             "id": "lead-pane",
             "block": "core.list-pane",
-            "props": { "search": true, "searchParam": "q", "searchLabel": { "key": "search_leads" } },
+            "props": {
+              "search": true,
+              "searchParam": "q",
+              "searchLabel": {
+                "key": "search_leads"
+              }
+            },
             "children": [
               {
                 "id": "lead-tabs",
                 "block": "core.filter-tabs",
                 "props": {
                   "param": "stage",
-                  "label": { "key": "stage_label" },
-                  "all": { "key": "filter_all" },
+                  "label": {
+                    "key": "stage_label"
+                  },
+                  "all": {
+                    "key": "filter_all"
+                  },
                   "items": [
-                    { "value": "new", "label": { "key": "stage_new" } },
-                    { "value": "qualified", "label": { "key": "stage_qualified" } },
-                    { "value": "proposal", "label": { "key": "stage_proposal" } },
-                    { "value": "won", "label": { "key": "stage_won" } },
-                    { "value": "lost", "label": { "key": "stage_lost" } }
+                    {
+                      "value": "new",
+                      "label": {
+                        "key": "stage_new"
+                      }
+                    },
+                    {
+                      "value": "qualified",
+                      "label": {
+                        "key": "stage_qualified"
+                      }
+                    },
+                    {
+                      "value": "proposal",
+                      "label": {
+                        "key": "stage_proposal"
+                      }
+                    },
+                    {
+                      "value": "won",
+                      "label": {
+                        "key": "stage_won"
+                      }
+                    },
+                    {
+                      "value": "lost",
+                      "label": {
+                        "key": "stage_lost"
+                      }
+                    }
                   ]
                 },
-                "bind": { "counts": { "read": "sales.lead-counts", "variables": { "q": "$q" } } }
+                "bind": {
+                  "counts": {
+                    "read": "sales.lead-counts",
+                    "variables": {
+                      "q": "$q"
+                    }
+                  }
+                }
               },
               {
                 "id": "lead-rows",
                 "block": "core.record-list",
                 "props": {
-                  "label": { "key": "leads" },
-                  "empty": { "key": "leads_empty" },
-                  "emptySearch": { "key": "leads_empty_search" },
+                  "label": {
+                    "key": "leads"
+                  },
+                  "empty": {
+                    "key": "leads_empty"
+                  },
+                  "emptySearch": {
+                    "key": "leads_empty_search"
+                  },
                   "idPath": "id",
                   "titlePath": "contactName",
                   "descriptionPath": "need",
                   "badgePath": "stage",
                   "selectParam": "selected",
-                  "searchParam": "q"
+                  "searchParam": "q",
+                  "labels": {
+                    "stage": {
+                      "new": {
+                        "key": "stage_new"
+                      },
+                      "qualified": {
+                        "key": "stage_qualified"
+                      },
+                      "proposal": {
+                        "key": "stage_proposal"
+                      },
+                      "won": {
+                        "key": "stage_won"
+                      },
+                      "lost": {
+                        "key": "stage_lost"
+                      }
+                    }
+                  }
                 },
                 "bind": {
                   "rows": {
                     "read": "sales.leads",
-                    "variables": { "q": "$q", "stage": "$stage", "sort": "$sort" }
+                    "variables": {
+                      "q": "$q",
+                      "stage": "$stage",
+                      "sort": "$sort"
+                    }
                   }
                 }
               }
@@ -68,85 +260,243 @@
           {
             "id": "lead-side",
             "block": "core.stack",
-            "props": { "gap": "region" },
+            "props": {
+              "gap": "region"
+            },
             "children": [
               {
                 "id": "lead-detail",
                 "block": "core.detail",
                 "props": {
-                  "label": { "key": "lead_detail" },
-                  "idle": { "key": "lead_idle_body" },
+                  "label": {
+                    "key": "lead_detail"
+                  },
+                  "idle": {
+                    "key": "lead_idle_body"
+                  },
                   "currency": "VND",
                   "items": [
-                    { "term": { "key": "fact_name" }, "path": "contactName" },
-                    { "term": { "key": "fact_company" }, "path": "company" },
-                    { "term": { "key": "fact_stage" }, "path": "stage", "format": "badge" },
-                    { "term": { "key": "fact_channel" }, "path": "channel" },
-                    { "term": { "key": "fact_need" }, "path": "need" }
+                    {
+                      "term": {
+                        "key": "fact_name"
+                      },
+                      "path": "contactName"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_company"
+                      },
+                      "path": "company"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_stage"
+                      },
+                      "path": "stage",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_channel"
+                      },
+                      "path": "channel"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_need"
+                      },
+                      "path": "need"
+                    }
                   ],
                   "sections": [
                     {
-                      "title": { "key": "section_contact" },
+                      "title": {
+                        "key": "section_contact"
+                      },
                       "items": [
-                        { "term": { "key": "fact_phone" }, "path": "phone" },
-                        { "term": { "key": "fact_email" }, "path": "email" }
+                        {
+                          "term": {
+                            "key": "fact_phone"
+                          },
+                          "path": "phone"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_email"
+                          },
+                          "path": "email"
+                        }
                       ]
                     },
                     {
-                      "title": { "key": "section_orders" },
+                      "title": {
+                        "key": "section_orders"
+                      },
                       "items": [
-                        { "term": { "key": "fact_order_count" }, "path": "orderCount", "format": "number" },
-                        { "term": { "key": "fact_confirmed" }, "path": "confirmedVnd", "format": "money" },
-                        { "term": { "key": "fact_latest_order" }, "path": "latestOrderNo" },
-                        { "term": { "key": "fact_latest_amount" }, "path": "latestOrderAmountVnd", "format": "money" }
+                        {
+                          "term": {
+                            "key": "fact_order_count"
+                          },
+                          "path": "orderCount",
+                          "format": "number"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_confirmed"
+                          },
+                          "path": "confirmedVnd",
+                          "format": "money"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_latest_order"
+                          },
+                          "path": "latestOrderNo"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_latest_amount"
+                          },
+                          "path": "latestOrderAmountVnd",
+                          "format": "money"
+                        }
                       ]
                     },
                     {
-                      "title": { "key": "section_outcome" },
+                      "title": {
+                        "key": "section_outcome"
+                      },
                       "items": [
-                        { "term": { "key": "fact_closed_reason" }, "path": "closedReason" },
-                        { "term": { "key": "fact_created" }, "path": "createdAt", "format": "dateTime" }
+                        {
+                          "term": {
+                            "key": "fact_closed_reason"
+                          },
+                          "path": "closedReason"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_created"
+                          },
+                          "path": "createdAt",
+                          "format": "dateTime"
+                        }
                       ]
                     }
-                  ]
+                  ],
+                  "labels": {
+                    "stage": {
+                      "new": {
+                        "key": "stage_new"
+                      },
+                      "qualified": {
+                        "key": "stage_qualified"
+                      },
+                      "proposal": {
+                        "key": "stage_proposal"
+                      },
+                      "won": {
+                        "key": "stage_won"
+                      },
+                      "lost": {
+                        "key": "stage_lost"
+                      }
+                    }
+                  }
                 },
-                "bind": { "record": { "read": "sales.lead", "variables": { "id": "$selected" } } }
+                "bind": {
+                  "record": {
+                    "read": "sales.lead",
+                    "variables": {
+                      "id": "$selected"
+                    }
+                  }
+                }
               },
               {
                 "id": "lead-move",
                 "block": "core.form",
                 "props": {
-                  "label": { "key": "move_title" },
-                  "submitLabel": { "key": "move_submit" },
-                  "successNotice": { "key": "move_done" },
+                  "label": {
+                    "key": "move_title"
+                  },
+                  "submitLabel": {
+                    "key": "move_submit"
+                  },
+                  "successNotice": {
+                    "key": "move_done"
+                  },
                   "fields": [
                     {
                       "name": "to",
-                      "label": { "key": "move_to" },
+                      "label": {
+                        "key": "move_to"
+                      },
                       "kind": "choice",
                       "required": true,
                       "options": [
-                        { "value": "new", "label": { "key": "stage_new" } },
-                        { "value": "qualified", "label": { "key": "stage_qualified" } },
-                        { "value": "proposal", "label": { "key": "stage_proposal" } },
-                        { "value": "won", "label": { "key": "stage_won" } },
-                        { "value": "lost", "label": { "key": "stage_lost" } }
+                        {
+                          "value": "new",
+                          "label": {
+                            "key": "stage_new"
+                          }
+                        },
+                        {
+                          "value": "qualified",
+                          "label": {
+                            "key": "stage_qualified"
+                          }
+                        },
+                        {
+                          "value": "proposal",
+                          "label": {
+                            "key": "stage_proposal"
+                          }
+                        },
+                        {
+                          "value": "won",
+                          "label": {
+                            "key": "stage_won"
+                          }
+                        },
+                        {
+                          "value": "lost",
+                          "label": {
+                            "key": "stage_lost"
+                          }
+                        }
                       ]
                     },
                     {
                       "name": "reason",
-                      "label": { "key": "move_reason" },
-                      "hint": { "key": "move_reason_hint" },
+                      "label": {
+                        "key": "move_reason"
+                      },
+                      "hint": {
+                        "key": "move_reason_hint"
+                      },
                       "kind": "textarea",
                       "max": 500
                     }
-                  ]
+                  ],
+                  "requireRecord": true,
+                  "idle": {
+                    "key": "lead_idle_body"
+                  }
                 },
                 "bind": {
-                  "record": { "read": "sales.lead", "variables": { "id": "$selected" } },
-                  "submit": { "action": "sales.move-stage" }
+                  "record": {
+                    "read": "sales.lead",
+                    "variables": {
+                      "id": "$selected"
+                    }
+                  },
+                  "submit": {
+                    "action": "sales.move-stage"
+                  }
                 },
-                "when": { "permission": "sales.manage" }
+                "when": {
+                  "permission": "sales.manage"
+                }
               }
             ]
           }
@@ -155,64 +505,163 @@
     },
     {
       "id": "orders",
-      "label": { "key": "tab_orders" },
+      "label": {
+        "key": "tab_orders"
+      },
       "root": {
         "id": "orders-root",
         "block": "core.stack",
-        "props": { "gap": "region" },
+        "props": {
+          "gap": "region"
+        },
         "children": [
           {
             "id": "orders-waiting",
             "block": "core.waiting",
-            "props": { "label": { "key": "waiting_owner" } },
-            "bind": { "region": { "read": "sales.orders-waiting" } }
+            "props": {
+              "label": {
+                "key": "waiting_owner"
+              }
+            },
+            "bind": {
+              "region": {
+                "read": "sales.orders-waiting"
+              }
+            }
           },
           {
             "id": "orders-master",
             "block": "core.master-detail",
-            "props": { "emptyTitle": { "key": "order_idle_title" }, "emptyBody": { "key": "order_idle_body" } },
+            "props": {
+              "emptyTitle": {
+                "key": "order_idle_title"
+              },
+              "emptyBody": {
+                "key": "order_idle_body"
+              }
+            },
             "children": [
               {
                 "id": "order-pane",
                 "block": "core.list-pane",
-                "props": { "search": true, "searchParam": "orderQ", "searchLabel": { "key": "search_orders" } },
+                "props": {
+                  "search": true,
+                  "searchParam": "orderQ",
+                  "searchLabel": {
+                    "key": "search_orders"
+                  }
+                },
                 "children": [
                   {
                     "id": "order-tabs",
                     "block": "core.filter-tabs",
                     "props": {
                       "param": "status",
-                      "label": { "key": "status_label" },
-                      "all": { "key": "filter_all" },
+                      "label": {
+                        "key": "status_label"
+                      },
+                      "all": {
+                        "key": "filter_all"
+                      },
                       "items": [
-                        { "value": "draft", "label": { "key": "status_draft" }, "attention": true },
-                        { "value": "confirmed", "label": { "key": "status_confirmed" } },
-                        { "value": "invoiced", "label": { "key": "status_invoiced" } },
-                        { "value": "paid", "label": { "key": "status_paid" } },
-                        { "value": "cancelled", "label": { "key": "status_cancelled" } },
-                        { "value": "failed_system", "label": { "key": "status_failed_system" } }
+                        {
+                          "value": "draft",
+                          "label": {
+                            "key": "status_draft"
+                          },
+                          "attention": true
+                        },
+                        {
+                          "value": "confirmed",
+                          "label": {
+                            "key": "status_confirmed"
+                          }
+                        },
+                        {
+                          "value": "invoiced",
+                          "label": {
+                            "key": "status_invoiced"
+                          }
+                        },
+                        {
+                          "value": "paid",
+                          "label": {
+                            "key": "status_paid"
+                          }
+                        },
+                        {
+                          "value": "cancelled",
+                          "label": {
+                            "key": "status_cancelled"
+                          }
+                        },
+                        {
+                          "value": "failed_system",
+                          "label": {
+                            "key": "status_failed_system"
+                          }
+                        }
                       ]
                     },
-                    "bind": { "counts": { "read": "sales.order-counts", "variables": { "q": "$orderQ" } } }
+                    "bind": {
+                      "counts": {
+                        "read": "sales.order-counts",
+                        "variables": {
+                          "q": "$orderQ"
+                        }
+                      }
+                    }
                   },
                   {
                     "id": "order-rows",
                     "block": "core.record-list",
                     "props": {
-                      "label": { "key": "orders" },
-                      "empty": { "key": "orders_empty" },
-                      "emptySearch": { "key": "orders_empty_search" },
+                      "label": {
+                        "key": "orders"
+                      },
+                      "empty": {
+                        "key": "orders_empty"
+                      },
+                      "emptySearch": {
+                        "key": "orders_empty_search"
+                      },
                       "idPath": "id",
                       "titlePath": "orderNo",
                       "descriptionPath": "items",
                       "badgePath": "status",
                       "selectParam": "order",
-                      "searchParam": "orderQ"
+                      "searchParam": "orderQ",
+                      "labels": {
+                        "status": {
+                          "draft": {
+                            "key": "status_draft"
+                          },
+                          "confirmed": {
+                            "key": "status_confirmed"
+                          },
+                          "invoiced": {
+                            "key": "status_invoiced"
+                          },
+                          "paid": {
+                            "key": "status_paid"
+                          },
+                          "cancelled": {
+                            "key": "status_cancelled"
+                          },
+                          "failed_system": {
+                            "key": "status_failed_system"
+                          }
+                        }
+                      }
                     },
                     "bind": {
                       "rows": {
                         "read": "sales.orders",
-                        "variables": { "q": "$orderQ", "status": "$status", "sort": "$orderSort" }
+                        "variables": {
+                          "q": "$orderQ",
+                          "status": "$status",
+                          "sort": "$orderSort"
+                        }
                       }
                     }
                   }
@@ -222,39 +671,150 @@
                 "id": "order-detail",
                 "block": "core.detail",
                 "props": {
-                  "label": { "key": "order_detail" },
-                  "idle": { "key": "order_idle_body" },
+                  "label": {
+                    "key": "order_detail"
+                  },
+                  "idle": {
+                    "key": "order_idle_body"
+                  },
                   "currency": "VND",
                   "items": [
-                    { "term": { "key": "fact_order_no" }, "path": "orderNo" },
-                    { "term": { "key": "fact_customer" }, "path": "customer" },
-                    { "term": { "key": "fact_items" }, "path": "items" },
-                    { "term": { "key": "fact_status" }, "path": "status", "format": "badge" },
-                    { "term": { "key": "fact_approval" }, "path": "approval", "format": "badge" }
+                    {
+                      "term": {
+                        "key": "fact_order_no"
+                      },
+                      "path": "orderNo"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_customer"
+                      },
+                      "path": "customer"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_items"
+                      },
+                      "path": "items"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_status"
+                      },
+                      "path": "status",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_approval"
+                      },
+                      "path": "approval",
+                      "format": "badge"
+                    }
                   ],
                   "sections": [
                     {
-                      "title": { "key": "section_payment" },
+                      "title": {
+                        "key": "section_payment"
+                      },
                       "items": [
-                        { "term": { "key": "fact_amount" }, "path": "amountVnd", "format": "money" },
-                        { "term": { "key": "fact_threshold" }, "path": "thresholdVnd", "format": "money" }
+                        {
+                          "term": {
+                            "key": "fact_amount"
+                          },
+                          "path": "amountVnd",
+                          "format": "money"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_threshold"
+                          },
+                          "path": "thresholdVnd",
+                          "format": "money"
+                        }
                       ]
                     },
                     {
-                      "title": { "key": "section_history" },
+                      "title": {
+                        "key": "section_history"
+                      },
                       "items": [
-                        { "term": { "key": "fact_created" }, "path": "createdAt", "format": "dateTime" },
-                        { "term": { "key": "fact_confirmed_at" }, "path": "confirmedAt", "format": "dateTime" },
-                        { "term": { "key": "fact_confirmed_by" }, "path": "confirmedBy" },
-                        { "term": { "key": "fact_note" }, "path": "note" }
+                        {
+                          "term": {
+                            "key": "fact_created"
+                          },
+                          "path": "createdAt",
+                          "format": "dateTime"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_confirmed_at"
+                          },
+                          "path": "confirmedAt",
+                          "format": "dateTime"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_confirmed_by"
+                          },
+                          "path": "confirmedBy"
+                        },
+                        {
+                          "term": {
+                            "key": "fact_note"
+                          },
+                          "path": "note"
+                        }
                       ]
                     }
-                  ]
+                  ],
+                  "labels": {
+                    "status": {
+                      "draft": {
+                        "key": "status_draft"
+                      },
+                      "confirmed": {
+                        "key": "status_confirmed"
+                      },
+                      "invoiced": {
+                        "key": "status_invoiced"
+                      },
+                      "paid": {
+                        "key": "status_paid"
+                      },
+                      "cancelled": {
+                        "key": "status_cancelled"
+                      },
+                      "failed_system": {
+                        "key": "status_failed_system"
+                      }
+                    },
+                    "approval": {
+                      "shop": {
+                        "key": "approval_shop"
+                      },
+                      "owner": {
+                        "key": "approval_owner"
+                      },
+                      "done": {
+                        "key": "approval_done"
+                      }
+                    }
+                  }
                 },
                 "bind": {
-                  "record": { "read": "sales.order", "variables": { "id": "$order" } },
-                  "primary": { "action": "sales.confirm-order" },
-                  "secondary": { "action": "sales.cancel-order" }
+                  "record": {
+                    "read": "sales.order",
+                    "variables": {
+                      "id": "$order"
+                    }
+                  },
+                  "primary": {
+                    "action": "sales.confirm-order"
+                  },
+                  "secondary": {
+                    "action": "sales.cancel-order"
+                  }
                 }
               }
             ]
@@ -264,36 +824,68 @@
     },
     {
       "id": "settings",
-      "label": { "key": "tab_settings" },
+      "label": {
+        "key": "tab_settings"
+      },
       "root": {
         "id": "settings-root",
         "block": "core.form",
         "props": {
-          "label": { "key": "settings_title" },
-          "submitLabel": { "key": "settings_submit" },
-          "successNotice": { "key": "settings_done" },
+          "label": {
+            "key": "settings_title"
+          },
+          "submitLabel": {
+            "key": "settings_submit"
+          },
+          "successNotice": {
+            "key": "settings_done"
+          },
           "currency": "VND",
           "fields": [
             {
               "name": "approvalThresholdVnd",
-              "label": { "key": "settings_threshold" },
-              "hint": { "key": "settings_threshold_hint" },
+              "label": {
+                "key": "settings_threshold"
+              },
+              "hint": {
+                "key": "settings_threshold_hint"
+              },
               "kind": "money"
             },
             {
               "name": "draftWithoutTotalNeedsApproval",
-              "label": { "key": "settings_draft_without_total" },
+              "label": {
+                "key": "settings_draft_without_total"
+              },
               "kind": "switch"
             },
-            { "name": "closedDealsCanFlip", "label": { "key": "settings_closed_flip" }, "kind": "switch" },
-            { "name": "reopenNeedsApproval", "label": { "key": "settings_reopen" }, "kind": "switch" }
+            {
+              "name": "closedDealsCanFlip",
+              "label": {
+                "key": "settings_closed_flip"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "reopenNeedsApproval",
+              "label": {
+                "key": "settings_reopen"
+              },
+              "kind": "switch"
+            }
           ]
         },
         "bind": {
-          "record": { "read": "sales.settings" },
-          "submit": { "action": "sales.save-settings" }
+          "record": {
+            "read": "sales.settings"
+          },
+          "submit": {
+            "action": "sales.save-settings"
+          }
         },
-        "when": { "permission": "sales.manage" }
+        "when": {
+          "permission": "sales.manage"
+        }
       }
     }
   ]

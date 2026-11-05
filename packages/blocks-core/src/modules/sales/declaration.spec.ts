@@ -52,9 +52,14 @@ describe("the Sales module declaration", () => {
         expect(salesModule.actions.every((action) => action.permission === "sales.manage")).toBe(true)
     })
 
-    it("seeds one spec with the customers, the orders and the settings views", () => {
+    it("seeds one spec with the attention, customers, orders and settings views", () => {
         expect(salesModule.specs).toEqual([SALES_WORKBENCH_SPEC])
-        expect(SALES_WORKBENCH_SPEC.views.map((view) => view.id)).toEqual(["pipeline", "orders", "settings"])
+        expect(SALES_WORKBENCH_SPEC.views.map((view) => view.id)).toEqual([
+            "attention",
+            "pipeline",
+            "orders",
+            "settings",
+        ])
     })
 
     it("has no tool, so nothing leaves the system from a transactional action", () => {
