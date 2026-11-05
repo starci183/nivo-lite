@@ -113,7 +113,7 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
                             kind="main-rail"
                             railPosition="leading"
                             collapsedOrder="rail-first"
-                            railWidth="wide"
+                            railWidth="medium"
                             align="start"
                             rail={<ShopIdentity page={page} isLoading={isLoading} intro={copy.intro} />}
                             primary={

@@ -68,6 +68,7 @@ export const PublicBookingContact = (props: PublicBookingContactProps) => {
             <Input
                 id="booking-public-note"
                 name="note"
+                span="full"
                 label={p.labels.note}
                 placeholder={p.labels.notePlaceholder}
                 value={p.fields.note}

@@ -2,7 +2,7 @@ import {
     Alert,
     Button,
     Checkbox,
-    CheckboxGroup,
+    ChoiceChips,
     FileDropzone,
     Form,
     Grid,
@@ -147,7 +147,7 @@ export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => (
 )
 
 /** Contact details and availability supplied with an application. */
-const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
+const ApplicantDetails = (props: ApplyBodyProps) => {
     const p = props.props
     const { say, values, isBusy } = p
     const { on } = props
@@ -182,16 +182,17 @@ const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
                 onValueChange={(email) => on.text("email", email)}
             />
             {p.availabilityChoices.length > 0 ? (
-                <CheckboxGroup
+                <ChoiceChips
                     label={say("applyAvailability")}
-                    name="availability"
+                    selectionMode="multiple"
+                    isLoading={props.isSkeleton}
                     options={p.availabilityChoices.map((choice) => ({
                         value: choice,
                         label: choice,
                     }))}
-                    value={values.availability}
-                    isDisabled={isBusy}
-                    onValueChange={(choices) => on.list("availability", choices)}
+                    values={values.availability}
+                    onValuesChange={(choices) => on.list("availability", [...choices])}
+                    empty={null}
                 />
             ) : (
                 <Input
@@ -208,7 +209,7 @@ const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
 }
 
 /** Questions, CV, consent and submission feedback. */
-const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
+const ApplicationSubmission = (props: ApplyBodyProps) => {
     const p = props.props
     const { say, values, isBusy } = p
     const { on } = props
@@ -245,6 +246,7 @@ const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
             </div>
             <Checkbox
                 name="consent"
+                isLoading={props.isSkeleton}
                 label={p.consentText}
                 isRequired
                 isSelected={values.consent}
@@ -253,7 +255,7 @@ const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
             />
             {p.submitError === null ? null : <Alert tone="negative" title={p.submitError} />}
             {p.missing === null ? null : <Alert tone="negative" title={p.missing} />}
-            <Button type="submit" intent="commit" isPending={isBusy}>
+            <Button type="submit" intent="commit" width="fill-narrow" isPending={isBusy}>
                 {say("applySubmit")}
             </Button>
             <Text size="xs" tone="muted">

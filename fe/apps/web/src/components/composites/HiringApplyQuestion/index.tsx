@@ -1,4 +1,4 @@
-import { Input, RadioGroup, Textarea } from "@starci/grammar/common"
+import { ChoiceChips, Input, RadioGroup, Textarea } from "@starci/grammar/common"
 import type { ApplyValues, HiringSay, PublicQuestionView } from "@/modules/types"
 
 /** What one screening question draws and reports. */
@@ -18,17 +18,16 @@ export const HiringApplyQuestion = (props: HiringApplyQuestionProps) => {
     const set = (value: string) => props.onAnswer(question.id, value)
     if (question.type === "yesno") {
         return (
-            <RadioGroup
+            <ChoiceChips
                 key={question.id}
-                {...common}
-                name={`q_${question.id}`}
-                orientation="horizontal"
+                label={question.text}
                 options={[
                     { value: say("yes"), label: say("yes") },
                     { value: say("no"), label: say("no") },
                 ]}
-                value={answer === "" ? null : answer}
+                {...(answer === "" ? {} : { value: answer })}
                 onValueChange={set}
+                empty={null}
             />
         )
     }

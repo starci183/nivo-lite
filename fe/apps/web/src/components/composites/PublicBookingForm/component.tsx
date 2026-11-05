@@ -115,6 +115,7 @@ const timeBand = (props: PublicBookingFormProps): Band => {
             <Stack gap="row">
                 <Calendar
                     label={p.labels.step2}
+                    width="fill"
                     locale={p.calendarLocale}
                     isLoading={props.isLoading === true}
                     previousLabel={p.labels.previousMonth}
@@ -159,7 +160,7 @@ const sendBand = (props: PublicBookingFormProps): Band => {
                     <Text size="sm" tone={p.need === "" ? "muted" : "default"} live="polite">
                         {p.need === "" ? p.summary : p.need}
                     </Text>
-                    <Button type="submit" intent="commit" isPending={p.isBusy}>
+                    <Button type="submit" intent="commit" width="fill-narrow" isPending={p.isBusy}>
                         {p.labels.submit}
                     </Button>
                 </Cluster>

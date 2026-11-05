@@ -53,7 +53,9 @@ export const HiringJobPost = (props: HiringJobPostProps) => {
                 <Stack gap="section">
                     {description === "" ? null : (
                         <div className={PRE_WRAP_CLASS_NAME}>
-                            <Text size="sm">{description}</Text>
+                            <Text size="sm" isLoading={isLoading}>
+                                {description}
+                            </Text>
                         </div>
                     )}
                     {lists
@@ -68,7 +70,7 @@ export const HiringJobPost = (props: HiringJobPostProps) => {
                                 empty={<EmptyNotice message={list.title} />}
                             />
                         ))}
-                    {experience === null ? null : <Text>{experience}</Text>}
+                    {experience === null ? null : <Text isLoading={isLoading}>{experience}</Text>}
                 </Stack>
             </SurfaceCard>
         </Stack>
