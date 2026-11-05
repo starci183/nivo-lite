@@ -294,7 +294,6 @@
   "agentDashboard": {
     "tabsLabel": "Workbench areas",
     "ribbonAria": "Key figures",
-    "regionFailed": "This section could not be loaded",
     "waitingTitle": "Needs your approval",
     "waitingEmpty": "Nothing is waiting for you",
     "waitingEmptyBody": "When the agent needs a decision from you, it shows up here.",
@@ -1230,7 +1229,6 @@
     "tOther": "Other",
     "loadFailed": "The Second Brain could not be loaded. Your documents and facts are safe; try again.",
     "gapsTitle": "Customer questions with no answer",
-    "gapsIntro": "The agent could not answer these from what it knows. Add the answer and every agent can use it.",
     "gapsEmpty": "Nothing is waiting: every question customers asked so far was answered.",
     "gapAsked": "Asked {n} times · last {when}",
     "gapAskedOnce": "Asked once · {when}",
@@ -1276,7 +1274,6 @@
     "open": "Open",
     "more": "More",
     "updated": "Updated {time}",
-    "aiChip": "AI",
     "brandLogo": "NIVO",
     "brandLogoOs": "NIVO OS"
   },
@@ -3451,7 +3448,6 @@
     "listTitle": "Documents taken in",
     "emptyTitle": "Nothing added yet",
     "filterModule": "Show",
-    "filterAll": "All sources",
     "kind_text": "Text",
     "kind_faq": "Q&A",
     "kind_file": "File",

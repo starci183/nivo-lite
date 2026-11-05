@@ -294,7 +294,6 @@
   "agentDashboard": {
     "tabsLabel": "Khu làm việc",
     "ribbonAria": "Chỉ số chính",
-    "regionFailed": "Không tải được mục này",
     "waitingTitle": "Cần bạn duyệt",
     "waitingEmpty": "Không có gì đang chờ bạn",
     "waitingEmptyBody": "Khi agent cần bạn quyết định, việc đó hiện ở đây.",
@@ -1230,7 +1229,6 @@
     "tOther": "Khác",
     "loadFailed": "Chưa tải được Second Brain. Tài liệu và sự thật vẫn an toàn; thử lại nhé.",
     "gapsTitle": "Khách hỏi chưa đáp",
-    "gapsIntro": "Agent chưa trả lời được những câu này từ những gì đã biết. Thêm câu trả lời để mọi agent dùng được.",
     "gapsEmpty": "Không có câu nào đang chờ: mọi câu khách hỏi đều đã có câu trả lời.",
     "gapAsked": "Hỏi {n} lần · gần nhất {when}",
     "gapAskedOnce": "Hỏi 1 lần · {when}",
@@ -1276,7 +1274,6 @@
     "open": "Mở",
     "more": "Thêm",
     "updated": "Cập nhật {time}",
-    "aiChip": "AI",
     "brandLogo": "NIVO",
     "brandLogoOs": "NIVO OS"
   },
@@ -3456,7 +3453,6 @@
     "listTitle": "Tài liệu đã nạp",
     "emptyTitle": "Chưa có tài liệu nào",
     "filterModule": "Hiển thị",
-    "filterAll": "Tất cả nguồn",
     "kind_text": "Văn bản",
     "kind_faq": "Hỏi–đáp",
     "kind_file": "Tệp",
