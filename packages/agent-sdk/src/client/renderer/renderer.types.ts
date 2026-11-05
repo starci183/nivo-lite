@@ -1,5 +1,6 @@
 import type { ActionDefinition, ParamHandle, ReadDefinition } from "../../block/block.types"
 import type { BlockRenderer } from "./define-renderer"
+import type { Pane } from "./view-chrome"
 
 /** What every node of one drawn spec shares. */
 export interface SpecContext {
@@ -15,4 +16,6 @@ export interface SpecContext {
     readonly installationId: string
     /** The spec params of the drawn spec: what the reads take as `$name` variables and what the blocks read and write. */
     readonly params: ParamHandle
+    /** The pane a phone shows when the spec declares a `pane` param; null when it declares none. */
+    readonly pane: Pane | null
 }

@@ -50,6 +50,12 @@ export interface SpecNode {
     readonly forbidden?: SpecForbidden | undefined
 }
 
+/** The count a view shows as a chip on its tab: a read of the view's size, narrowed by a path to a number. */
+export interface SpecViewCount extends SpecReadBinding {
+    /** Whether a count above zero reads in the attention tone (something waits for the viewer). */
+    readonly isAttention?: boolean | undefined
+}
+
 /** One tab of the workbench and the block tree it draws. */
 export interface SpecView {
     /** The id of the view, which a deep link names; unique within the document. */
@@ -62,6 +68,10 @@ export interface SpecView {
     readonly hidden?: boolean | undefined
     /** The route query key that selects the view when it is present. */
     readonly openBy?: string | undefined
+    /** The count shown as a chip on the tab of the view, from a counts read; absent shows the tab with no chip. */
+    readonly count?: SpecViewCount | undefined
+    /** The primary command of the view, drawn as the page's primary button beside the tabs; it runs with no record. */
+    readonly command?: SpecActionBinding | undefined
 }
 
 /** One param of a spec: a value of the screen that lives in the URL, which bindings take as a `$name` variable. */

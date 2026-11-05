@@ -2,17 +2,21 @@
 
 import { useMemo } from "react"
 import type { ReactNode } from "react"
-import { Alert, EmptyNotice, Stack, Tabs } from "@starci/grammar/common"
+import { Alert, EmptyNotice, Stack } from "@starci/grammar/common"
 import type { ActionDefinition, ReadDefinition } from "../../block/block.types"
-import { wordsOf } from "../../schema/namespaced"
 import type { PlanNode, RenderPlan } from "../../spec/render-plan"
 import { renderPlan, viewOf } from "../../spec/render-plan"
 import { paramHandleOf } from "../../spec/spec-param"
 import type { SpecProblem, StoredSpec } from "../../spec/spec.types"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
 import type { BlockRenderer } from "./define-renderer"
+import { PageFrame } from "./PageFrame"
+import { PrimaryCommand } from "./PrimaryCommand"
 import type { SpecContext } from "./renderer.types"
 import { SpecNode } from "./SpecNode"
+import { chromeOf, paneOf } from "./view-chrome"
+import type { ViewChrome } from "./view-chrome"
+import { ViewGate } from "./ViewGate"
 
 /** What the route gives the workbench. */
 export interface WorkbenchRoute {
@@ -40,9 +44,10 @@ export interface SpecWorkbenchProps {
     readonly canManage: boolean
 }
 
-/** The plan to draw and the problems of the published spec. */
+/** The plan to draw, what its views declare beyond their trees, and the problems of the published spec. */
 interface Chosen {
     readonly plan: RenderPlan
+    readonly chrome: ReadonlyArray<ViewChrome>
     readonly problems: ReadonlyArray<SpecProblem>
 }
 
@@ -57,9 +62,16 @@ const codesOf = (problems: ReadonlyArray<SpecProblem>): string =>
     problems.map((problem) => `${problem.code} @ ${problem.at}`).join(", ")
 
 /** The plan to draw: the spec when sound, else the fallback when sound, else the spec problems. */
-const chooseOf = (primary: RenderPlan, fallback: RenderPlan | null): Chosen => {
-    if (primary.ok) return { plan: primary, problems: [] }
-    return { plan: fallback?.ok === true ? fallback : primary, problems: primary.problems }
+const chooseOf = (
+    spec: StoredSpec,
+    primary: RenderPlan,
+    fallback: StoredSpec | null,
+    backup: RenderPlan | null,
+): Chosen => {
+    if (primary.ok) return { plan: primary, chrome: chromeOf(spec), problems: [] }
+    if (fallback !== null && backup?.ok === true)
+        return { plan: backup, chrome: chromeOf(fallback), problems: primary.problems }
+    return { plan: primary, chrome: [], problems: primary.problems }
 }
 
 /**
@@ -69,57 +81,72 @@ const chooseOf = (primary: RenderPlan, fallback: RenderPlan | null): Chosen => {
 export const SpecWorkbench = (props: SpecWorkbenchProps): ReactNode => {
     const host = useWorkbenchHost()
     const text = host.block.text("blocks")
-    const owner = host.block.text(props.namespace)
     const { renderers, reads, actions, permissions } = props
-    const { plan, problems } = useMemo(() => {
+    const { plan, chrome, problems } = useMemo(() => {
         const blocks = renderers.map((renderer) => renderer.block)
         const bindings = { reads, actions, permissions }
         return chooseOf(
+            props.spec,
             renderPlan(props.spec, blocks, bindings),
+            props.fallback,
             props.fallback === null ? null : renderPlan(props.fallback, blocks, bindings),
         )
     }, [props.spec, props.fallback, renderers, reads, actions, permissions])
     if (!plan.ok) return <EmptyNotice message={text({ key: "renderer.noView" })} description={codesOf(plan.problems)} />
     const navigation = host.block.navigation
+    const params = paramHandleOf({
+        params: plan.params,
+        reads,
+        queryValue: navigation.queryValue,
+        setQueryValues: navigation.setQueryValues,
+    })
     const context: SpecContext = {
         renderers: new Map(renderers.map((renderer) => [renderer.id, renderer])),
         reads,
         actions,
         namespace: props.namespace,
         installationId: props.route.installationId,
-        params: paramHandleOf({
-            params: plan.params,
-            reads,
-            queryValue: navigation.queryValue,
-            setQueryValues: navigation.setQueryValues,
-        }),
+        params,
+        pane: "pane" in plan.params ? paneOf(params.value("pane")) : null,
     }
-    const view = viewOf(plan.views, props.route.tab, navigation.queryValue)
-    const locale = host.block.locale()
+    const view = viewOf(plan.views, navigation.queryValue("tab") ?? props.route.tab, navigation.queryValue)
     return (
-        <Stack gap="region">
-            {problems.length > 0 && props.canManage ? (
-                <Alert tone="cautionary" title={text({ key: "renderer.problems" })} description={codesOf(problems)} />
-            ) : null}
-            <Nodes nodes={plan.head} context={context} />
-            <Tabs
-                label={text({ key: "renderer.tabs" })}
-                {...(view === undefined ? {} : { selectedKey: view.id })}
-                inset="none"
-                labelVisibility="always"
-                items={plan.views
-                    .filter((candidate) => !candidate.hidden)
-                    .map((candidate) => ({
-                        id: candidate.id,
-                        label: wordsOf(candidate.label, (key) => owner({ key }), locale),
-                    }))}
-                panelId={panelId}
-                onSelect={(key) => navigation.setQueryValue("tab", key)}
-            />
-            <div role="tabpanel" id={panelId(view?.id ?? "none")}>
-                {view === undefined ? null : <SpecNode node={view.root} context={context} />}
-            </div>
-            <Nodes nodes={plan.foot} context={context} />
-        </Stack>
+        <PageFrame
+            views={plan.views}
+            chrome={chrome}
+            reads={reads}
+            namespace={props.namespace}
+            installationId={props.route.installationId}
+            params={params}
+            selected={view?.id}
+            panelId={panelId}
+            onSelect={(key) => navigation.setQueryValue("tab", key)}
+            actions={
+                <PrimaryCommand
+                    command={chrome.find((candidate) => candidate.id === view?.id)?.command}
+                    actions={actions}
+                    namespace={props.namespace}
+                />
+            }
+        >
+            <Stack gap="region">
+                {problems.length > 0 && props.canManage ? (
+                    <Alert
+                        tone="cautionary"
+                        title={text({ key: "renderer.problems" })}
+                        description={codesOf(problems)}
+                    />
+                ) : null}
+                <Nodes nodes={plan.head} context={context} />
+                <div role="tabpanel" id={panelId(view?.id ?? "none")}>
+                    {view === undefined ? null : (
+                        <ViewGate key={view.id}>
+                            <SpecNode node={view.root} context={context} />
+                        </ViewGate>
+                    )}
+                </div>
+                <Nodes nodes={plan.foot} context={context} />
+            </Stack>
+        </PageFrame>
     )
 }

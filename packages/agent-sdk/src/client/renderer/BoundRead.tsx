@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useLayoutEffect, useState } from "react"
 import type { ReactNode } from "react"
 import type { ParamHandle, ReadDefinition, ReadHandle, ReadVariables } from "../../block/block.types"
 import type { SpecReadBinding } from "../../spec/spec.types"
@@ -9,6 +9,8 @@ import type { HostRead } from "../../host/host.types"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
 import type { FoldedRead } from "./host-slot"
 import { foldRead } from "./host-slot"
+import { useViewGate } from "./ViewGate"
+import { gatedSlot, isAnswered } from "./view-gate"
 
 /** What a bound read takes. */
 export interface BoundReadProps {
@@ -33,6 +35,7 @@ const foldBound = (allowed: boolean, isWaiting: boolean, read: HostRead, path: s
  * One read of one node: resolves the `$param` variables, runs the host operation under the viewer rights (not while a param it needs
  * has no value), folds it into a slot of its own (loading, error with retry, forbidden, idle) and hands the block a handle. The
  * block may set variables; they are kept here, per read. A list read hands its rows (path `rows`) unless the binding narrows it.
+ * On the first load of the view every read draws its skeleton until all of them have answered once (the view gate).
  */
 export const BoundRead = (props: BoundReadProps): ReactNode => {
     const host = useWorkbenchHost()
@@ -48,8 +51,15 @@ export const BoundRead = (props: BoundReadProps): ReactNode => {
     useEffect(() => {
         if (folded.isDefect) report("READ_PATH_MISSING", props.at)
     }, [folded.isDefect, report, props.at])
+    const gate = useViewGate()
+    const answered = isAnswered(folded.slot)
+    const { report: reportAnswer, forget } = gate
+    useLayoutEffect(() => {
+        reportAnswer(props.at, answered)
+    }, [reportAnswer, props.at, answered])
+    useLayoutEffect(() => () => forget(props.at), [forget, props.at])
     return props.children({
-        slot: folded.slot,
+        slot: gatedSlot(gate.isGated, folded.slot),
         retry: read.reload,
         variables,
         setVariables: setChosen,
