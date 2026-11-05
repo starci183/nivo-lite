@@ -3,10 +3,10 @@ import {
     Grid,
     Alert,
     CheckboxGroup,
+    ChoiceChips,
     Drawer,
     Form,
     Input,
-    RadioGroup,
     Select,
     Text,
     Textarea,
@@ -44,16 +44,30 @@ export const FactFormDrawer = (props: FactFormDrawerProps) => (
         <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
             <Stack gap="section">
                 {props.props.question === undefined ? null : <Text isStrong>{props.props.question}</Text>}
-                {renderFactSubjectFields(props)}
-                <RadioGroup
-                    label={props.props.scopeLabel}
-                    name="scope"
-                    orientation="vertical"
-                    options={props.props.scopeOptions.map((one) => ({ value: one.id, label: one.label }))}
-                    value={props.props.scope}
+                {props.props.context === undefined ? null : <Text tone="muted">{props.props.context}</Text>}
+                {props.props.isEditing ? null : renderFactSubjectFields(props)}
+                <Textarea
+                    id="brain-fact-value"
+                    name="value"
+                    label={props.props.valueLabel}
+                    rows={props.props.isEditing ? 2 : 3}
+                    isRequired
+                    value={props.props.value}
                     isDisabled={props.props.isPending}
-                    onValueChange={props.on.setScope}
+                    onValueChange={props.on.setValue}
                 />
+                <Stack gap="row">
+                    <ChoiceChips
+                        label={props.props.scopeLabel}
+                        options={props.props.scopeOptions.map((one) => ({ value: one.id, label: one.label }))}
+                        value={props.props.scope}
+                        empty={null}
+                        onValueChange={props.on.setScope}
+                    />
+                    <Text size="xs" tone="muted">
+                        {props.props.scopeHint}
+                    </Text>
+                </Stack>
                 {props.props.scope === "restricted" ? (
                     <CheckboxGroup
                         label={props.props.modulesLabel}
@@ -69,6 +83,7 @@ export const FactFormDrawer = (props: FactFormDrawerProps) => (
                     id="brain-fact-note"
                     name="note"
                     label={props.props.noteLabel}
+                    placeholder={props.props.notePlaceholder}
                     value={props.props.note}
                     isDisabled={props.props.isPending}
                     onValueChange={props.on.setNote}
@@ -81,7 +96,7 @@ export const FactFormDrawer = (props: FactFormDrawerProps) => (
     </Drawer>
 )
 
-/** Draws the div section of the BrainFactForm view. */
+/** Draws the two days the value holds between. */
 const renderFactValidityFields = (props: FactFormDrawerProps) => (
     <Grid kind="form" columns={2}>
         <Input
@@ -97,7 +112,7 @@ const renderFactValidityFields = (props: FactFormDrawerProps) => (
             id="brain-fact-to"
             name="validTo"
             label={props.props.toLabel}
-            placeholder="2026-12-31"
+            placeholder={props.props.toPlaceholder}
             value={props.props.validTo}
             isDisabled={props.props.isPending}
             onValueChange={props.on.setTo}
@@ -105,7 +120,7 @@ const renderFactValidityFields = (props: FactFormDrawerProps) => (
     </Grid>
 )
 
-/** Draws the subject, attribute and value being recorded. */
+/** Draws what the fact is about: its type, its subject and the attribute being recorded. */
 const renderFactSubjectFields = (props: FactFormDrawerProps) => (
     <>
         <Select
@@ -136,16 +151,6 @@ const renderFactSubjectFields = (props: FactFormDrawerProps) => (
             value={props.props.attribute}
             isDisabled={props.props.isPending}
             onValueChange={props.on.setAttribute}
-        />
-        <Textarea
-            id="brain-fact-value"
-            name="value"
-            label={props.props.valueLabel}
-            rows={3}
-            isRequired
-            value={props.props.value}
-            isDisabled={props.props.isPending}
-            onValueChange={props.on.setValue}
         />
     </>
 )

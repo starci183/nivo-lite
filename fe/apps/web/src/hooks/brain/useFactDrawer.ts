@@ -25,12 +25,20 @@ interface FactDrawerAddress {
 
 const SCOPES: ReadonlyArray<FactScope> = ["public", "internal", "restricted"]
 
+/** The catalog key (`brainFacts` namespace) of the line that says what a scope means. */
+const SCOPE_HINT_KEY = {
+    public: "scopeHintPublic",
+    internal: "scopeHintInternal",
+    restricted: "scopeHintRestricted",
+} as const satisfies Readonly<Record<FactScope, string>>
+
 const subjectTypeOf = (value: string | null, fallback: FactSubjectType): FactSubjectType =>
     FACT_SUBJECT_TYPES.find((type) => type === value) ?? fallback
 
 const scopeOf = (value: string, fallback: FactScope): FactScope => SCOPES.find((scope) => scope === value) ?? fallback
 
 type Translate = ReturnType<typeof useTranslations<"brain">>
+type FactsTranslate = ReturnType<typeof useTranslations<"brainFacts">>
 type Words = Pick<
     FactDrawerView["props"],
     | "closeLabel"
@@ -51,10 +59,12 @@ type Words = Pick<
     | "fromLabel"
     | "toLabel"
     | "noteLabel"
+    | "toPlaceholder"
+    | "notePlaceholder"
 >
 
 /** The words of the drawer: its labels, hints and choices. */
-const wordsOf = (t: Translate): Words => ({
+const wordsOf = (t: Translate, f: FactsTranslate): Words => ({
     closeLabel: t("cancel"),
     cancelLabel: t("cancel"),
     saveLabel: t("save"),
@@ -73,6 +83,8 @@ const wordsOf = (t: Translate): Words => ({
     fromLabel: t("fValidFrom"),
     toLabel: t("fValidTo"),
     noteLabel: t("fNote"),
+    toPlaceholder: f("toPlaceholder"),
+    notePlaceholder: f("notePlaceholder"),
 })
 
 /**
@@ -82,6 +94,7 @@ const wordsOf = (t: Translate): Words => ({
  */
 export const useFactDrawer = (input: FactDrawerAddress): FactDrawerView | null => {
     const t = useTranslations("brain")
+    const f = useTranslations("brainFacts")
     const failed = useFailureToast()
     const router = navigation.useRouter()
     const address = useBrainForm(input)
@@ -100,7 +113,7 @@ export const useFactDrawer = (input: FactDrawerAddress): FactDrawerView | null =
     const question = address.preset?.question
     return {
         props: {
-            ...wordsOf(t),
+            ...wordsOf(t, f),
             title:
                 editing === null
                     ? t("formTitleNew")
@@ -108,6 +121,15 @@ export const useFactDrawer = (input: FactDrawerAddress): FactDrawerView | null =
             isOpen: address.isOpen,
             isPending: command.isPending,
             question: question === undefined ? undefined : t("gapAnswerFor", { question }),
+            context:
+                editing === null
+                    ? undefined
+                    : f("drawerContext", {
+                          title: `${editing.subjectLabel} · ${editing.attributeLabel}`,
+                          value: editing.unit === null ? editing.value : `${editing.value} ${editing.unit}`,
+                      }),
+            isEditing: editing !== null,
+            scopeHint: f(SCOPE_HINT_KEY[state.scope]),
             moduleOptions: address.lenses.map((lens) => ({ id: lens.module, label: lens.name })),
             subjectType: state.subjectType,
             subject: state.subjectLabel,

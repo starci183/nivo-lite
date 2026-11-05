@@ -53,6 +53,10 @@ export interface FactDrawerView {
         readonly isPending: boolean
         /** The customer question the fact answers, kept in view while it is written. */
         readonly question?: string | undefined
+        /** The fact being given a new value and the value in force, kept in view while the new one is written. */
+        readonly context?: string | undefined
+        /** The drawer gives a new value to a fact in force: what the fact is about is fixed, so its fields are not asked. */
+        readonly isEditing: boolean
         readonly typeLabel: string
         readonly selectPlaceholder: string
         readonly typeOptions: ReadonlyArray<FactChoiceView>
@@ -63,11 +67,14 @@ export interface FactDrawerView {
         readonly valueLabel: string
         readonly scopeLabel: string
         readonly scopeOptions: ReadonlyArray<FactChoiceView>
+        readonly scopeHint: string
         readonly modulesLabel: string
         readonly moduleOptions: ReadonlyArray<FactChoiceView>
         readonly fromLabel: string
         readonly toLabel: string
         readonly noteLabel: string
+        readonly toPlaceholder: string
+        readonly notePlaceholder: string
         readonly subjectType: string
         readonly subject: string
         readonly attribute: string
