@@ -33,6 +33,7 @@ import { parseRedisConfig } from "@modules/integrations/redis"
 import { parseRemoteFilesConfig } from "@modules/integrations/remote-files"
 import { parseAiTasksConfig } from "@modules/domain/ai-tasks"
 import { parseAgentRunsConfig } from "@modules/domain/agent-runs"
+import { parseEntityEngineConfig } from "@modules/domain/entity-engine"
 import { parseAgentTurnsConfig } from "@modules/domain/agent-turns"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
@@ -84,6 +85,7 @@ export interface ApiOptions {
     readonly openclaw: ReturnType<typeof parseOpenclawConfig>
     /** The running build and how often a parked run is run again. */
     readonly agentRuns?: ReturnType<typeof parseAgentRunsConfig>
+    /** The key that signs entity-engine cursors. */ readonly entityEngine: ReturnType<typeof parseEntityEngineConfig>
     /** The secret that signs the calls of the OpenClaw bridge plugin. */
     readonly agentTurns: ReturnType<typeof parseAgentTurnsConfig>
     /** The prompt library tunables and the AI endpoint it calls. */
@@ -145,7 +147,6 @@ export interface ApiOptions {
     /** Where the video renderer finds its assets and how it runs ffmpeg. */
     readonly video: ReturnType<typeof parseVideoConfig>
 }
-
 /** Reads the API environment; missing or invalid values fail boot and secret readers prefer mounted files. */
 export const readApiEnv = (env: EnvSource): ApiOptions => ({
     server: parseServerConfig(env),
@@ -166,6 +167,7 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     remoteFiles: parseRemoteFilesConfig(env),
     openclaw: parseOpenclawConfig(env),
     agentRuns: parseAgentRunsConfig(env),
+    entityEngine: parseEntityEngineConfig(env),
     agentTurns: parseAgentTurnsConfig(env),
     aiTasks: parseAiTasksConfig(env, parseAiConfig(env)),
     connectionSecrets: parseConnectionSecretsConfig(env),

@@ -63,6 +63,14 @@
       ],
       "dbFunctions": [
         {
+          "name": "public.engine_scope_enter",
+          "reason": "enters the workspace scope of the entity engine for one transaction: sets the workspace setting and switches to the app_engine role, which TypeORM cannot express"
+        },
+        {
+          "name": "public.engine_workspace",
+          "reason": "reads the workspace the engine scope was entered for; the one expression of the row-level security policies of the records tables"
+        },
+        {
           "name": "public.agent_turn_begin",
           "reason": "starts one turn of an agent in one scope: takes the scope lease, bumps the fence and marks the next wake running"
         },
