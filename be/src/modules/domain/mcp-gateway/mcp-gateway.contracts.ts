@@ -46,6 +46,8 @@ export interface GatewayToolSpec {
     readonly idempotencyArg?: string | undefined
     /** The NIVO capability this tool plays, when it declares one (see `CapabilityRole`). */
     readonly role?: CapabilityRole
+    /** The domain tool `<group>.<action>` (`chat.send`) this tool plays for the door, when it plays one: the door resolves a domain tool to the first usable tool declaring it. */
+    readonly domain?: string
     /**
      * True for a tool no customer conversation and no customer-facing agent may run: with a conversation or a customer audience on the caller it is hidden from search and describe,
      * and a call is refused `internal_only`, audited, before any adapter runs.
@@ -99,6 +101,9 @@ export interface RoleReadiness {
      */
     readonly providers: Readonly<Record<CapabilityRole, ReadonlyArray<string>>>
 }
+
+/** A full tool name `<connector>.<tool>`, or null when none plays what was asked. */
+export type OptionalToolName = string | null
 
 /** The tool of a role, or the typed answer that the workspace has none (no installed, approved tool declares it). */
 export type RoleResolution =

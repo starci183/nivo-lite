@@ -41,3 +41,17 @@ export interface InstallationSource {
     /** The registry and the workspace's enabled modules, as they are now. */
     readonly current: () => Promise<InstallationFacts>
 }
+
+/** What a module asks of a seat of the workspace: the name it is shown under and whether it may act on what others hold. */
+export interface MemberFacts {
+    /** The name the member is shown under. */
+    readonly displayName: string
+    /** Whether the member is an owner or a manager. */
+    readonly isManager: boolean
+}
+
+/** The seats of the workspace, as far as a module's actions care. */
+export interface MemberDirectory {
+    /** The active member by seat id; null when the workspace has none. */
+    readonly get: (memberId: string) => Promise<MemberFacts | null>
+}

@@ -2,9 +2,10 @@ import { Injectable } from "@nestjs/common"
 import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
 import type { ListPage, ListSource } from "@nivo-lite/agent-sdk/block"
-import type { InstallationSource } from "@nivo-lite/blocks-core/modules"
+import type { InstallationSource, MemberDirectory } from "@nivo-lite/blocks-core/modules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
+import { MemberLookupService } from "@modules/domain/workspace-members"
 import type { RunIn } from "@modules/domain/entity-engine"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { portKindOf } from "./door-port-kind.policy"
@@ -35,7 +36,7 @@ const rowOf = (record: RecordRow): Readonly<Record<string, unknown>> => ({
 
 @Injectable()
 /**
- * The ports a screen's read or action receives: the engine's data and outbox ports, the installation (the registry and the workspace's enabled modules), and a module's list source as the generic one over
+ * The ports a screen's read or action receives: the engine's data and outbox ports, the installation (the registry and the workspace's enabled modules), the workspace's active seats, and a module's list source as the generic one over
  * the entity of the read's data kind. Every other port is `unprovided`, which the run reports as a failure.
  */
 export class DoorPortsService {
@@ -45,6 +46,7 @@ export class DoorPortsService {
         private readonly engine: EntityEngineService,
         private readonly ports: EntityPortsService,
         private readonly lists: ListSourceService,
+        private readonly seats: MemberLookupService,
     ) {}
 
     /** The provider of the ports of one run. */
@@ -55,9 +57,14 @@ export class DoorPortsService {
     private implementationOf(run: DoorRun, port: PortDefinition<unknown>): unknown {
         const kind = portKindOf(port.id)
         if (kind === "installation") return this.installationSource(run.workspaceId)
+        if (kind === "members") return this.memberDirectory(run.workspaceId)
         if (kind === "engine") return this.ports.portsFor(run.runIn, "action", { port })["port"]
         const entity = [...this.engine.catalog.values()].find((declared) => declared.dataKind === run.dataKind)
         return kind === "list" && entity !== undefined ? this.listSource(run, entity.name) : unprovided(port)
+    }
+
+    private memberDirectory(workspaceId: string): MemberDirectory {
+        return { get: (memberId) => this.seats.activeSeatById(workspaceId, memberId) }
     }
 
     private installationSource(workspaceId: string): InstallationSource {

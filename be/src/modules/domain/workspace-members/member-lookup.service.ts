@@ -2,7 +2,8 @@ import { Injectable } from "@nestjs/common"
 import { Raw } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { OptionalNamedMember, OwnerMemberRef } from "./member-lookup.contracts"
+import type { OptionalNamedMember, OptionalSeatFacts, OwnerMemberRef } from "./member-lookup.contracts"
+import { isManagerRole } from "./role.policy"
 import { WorkspaceMemberEntity } from "./persistence/entities"
 
 const REF_COLUMNS = { id: true, displayName: true } as const
@@ -31,6 +32,15 @@ export class MemberLookupService {
             where: { workspaceId, id: memberId, status: "active" },
         })
         return row === null ? null : { id: row.id, displayName: row.displayName }
+    }
+
+    /** The facts of the active seat of the workspace with this membership id; null when there is none. */
+    async activeSeatById(workspaceId: string, memberId: string): Promise<OptionalSeatFacts> {
+        const row = await this.entityManager.findOne(WorkspaceMemberEntity, {
+            select: { displayName: true, role: true },
+            where: { workspaceId, id: memberId, status: "active" },
+        })
+        return row === null ? null : { displayName: row.displayName, isManager: isManagerRole(row.role) }
     }
 
     /** The member with this membership id, active or not; null when there is none. */

@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { McpGatewayService, argsHashOf } from "@modules/domain/mcp-gateway"
-import type { GatewayCallResult } from "@modules/domain/mcp-gateway"
+import type { GatewayCallResult, WorkspaceConnector } from "@modules/domain/mcp-gateway"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import type { DoorApi, DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorTool } from "@nivo-lite/agent-sdk/mutation"
 import { agentIdFor } from "@modules/integrations/openclaw"
 import { ENTITY_ENGINE_DOOR_OPTIONS } from "./entity-engine-door.decorators"
 import type { DoorBinding } from "./entity-engine-door.contracts"
@@ -16,9 +16,13 @@ const binding = (scopeOpen = false): DoorBinding => ({
     scopeOpen: () => scopeOpen,
 })
 
-const build = async (result: GatewayCallResult = { ok: true, value: { sent: true } }) => {
+const build = async (
+    result: GatewayCallResult = { ok: true, value: { sent: true } },
+    connectors: ReadonlyArray<WorkspaceConnector> = [],
+) => {
     const gateway = mock<McpGatewayService>()
     gateway.call.mockResolvedValue(result)
+    gateway.connectorsOf.mockResolvedValue(connectors)
     const moduleRef = await Test.createTestingModule({
         providers: [
             EngineDoorService,
@@ -31,10 +35,6 @@ const build = async (result: GatewayCallResult = { ok: true, value: { sent: true
     }).compile()
     return { door: moduleRef.get(EngineDoorService), gateway }
 }
-
-/** The call of a door handle taking any text, as a declared job whose tool name is a plain string makes it. */
-const looseCall = (api: DoorApi): ((tool: string, input: Record<string, JsonValue>) => Promise<DoorCallResult>) =>
-    api.call
 
 /** Arguments nested past what the gateway reads. */
 const deepArgs = (): Record<string, JsonValue> => {
@@ -81,17 +81,14 @@ describe("EngineDoorService", () => {
 
     it("answers forbidden for a tool the internal agent does not hold, and never reaches the gateway", async () => {
         const { door, gateway } = await build()
-        const call = looseCall(door.doorApi(binding()))
-        for (const tool of ["chat.zalo.send", "ai.agent.delete", "Chat.zalo.send"]) {
-            expect(await call(tool, {})).toEqual({ ok: false, reason: "forbidden", message: "not_granted" })
+        const denied: ReadonlyArray<DoorTool> = ["chat.zalo.send", "ai.agent.delete", "Chat.zalo.send"]
+        for (const tool of denied) {
+            expect(await door.doorApi(binding()).call(tool, {})).toEqual({
+                ok: false,
+                reason: "forbidden",
+                message: "not_granted",
+            })
         }
-        expect(gateway.call).not.toHaveBeenCalled()
-    })
-
-    it("answers invalid for a granted tool name that is not <group>.<provider>.<action>", async () => {
-        const { door, gateway } = await build()
-        const result = await looseCall(door.doorApi(binding()))("ledger.status", {})
-        expect(result).toEqual({ ok: false, reason: "invalid", message: "tool_malformed" })
         expect(gateway.call).not.toHaveBeenCalled()
     })
 
@@ -100,5 +97,63 @@ describe("EngineDoorService", () => {
         const result = await door.doorApi(binding()).call("ai.agent.turn", { nested: deepArgs() })
         expect(result).toEqual({ ok: false, reason: "invalid", message: "invalid_arguments" })
         expect(gateway.call).not.toHaveBeenCalled()
+    })
+})
+
+/** A connector of the workspace whose tool `send` plays the domain tool `chat.send`. */
+const CHANNEL = builder<WorkspaceConnector>({
+    manifest: {
+        key: "zalo",
+        name: "Zalo",
+        kind: "native",
+        contractVersion: "zalo@1",
+        tools: [
+            {
+                name: "send",
+                description: "Send",
+                scope: "write",
+                defaultMode: "auto",
+                inputSchema: {},
+                domain: "chat.send",
+            },
+        ],
+    },
+    status: "active",
+    url: null,
+    credentialState: "none",
+    credentialSetAt: null,
+    timeoutMs: 4000,
+    approvedTools: null,
+    approvedAt: null,
+    checkedAt: null,
+})()
+
+describe("EngineDoorService domain tools", () => {
+    it("resolves a domain tool to the tool of the workspace's own connection that plays it", async () => {
+        const { door, gateway } = await build({ ok: true, value: { sent: true } }, [CHANNEL])
+        const result = await door.doorApi(binding()).call("chat.send", { key: "m1" })
+        expect(result).toEqual({ ok: true, output: { sent: true } })
+        expect(gateway.connectorsOf).toHaveBeenCalledWith("ws-1")
+        expect(gateway.call).toHaveBeenCalledWith(
+            expect.objectContaining({ workspaceId: "ws-1", opKey: `job-1:chat.send:${argsHashOf({ key: "m1" })}` }),
+            "zalo.send",
+            { key: "m1" },
+        )
+    })
+
+    it("answers unknown_tool for a domain tool no connection of the workspace plays, and calls nothing", async () => {
+        const { door, gateway } = await build()
+        expect(await door.doorApi(binding()).call("chat.send", {})).toEqual({
+            ok: false,
+            reason: "unknown_tool",
+            message: "no_provider",
+        })
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it("does not look a provider up for a tool that names one", async () => {
+        const { door, gateway } = await build()
+        await door.doorApi(binding()).call("ai.agent.turn", {})
+        expect(gateway.connectorsOf).not.toHaveBeenCalled()
     })
 })

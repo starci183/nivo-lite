@@ -1,9 +1,9 @@
-import { installationPort } from "@nivo-lite/blocks-core/modules"
+import { installationPort, membersPort } from "@nivo-lite/blocks-core/modules"
 import { DOOR_PORT_ID, OUTBOX_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
 import { ENTITIES_PORT_ID, ENTITY_PORT_PREFIX } from "@nivo-lite/agent-sdk/entity/port"
 
-/** Which provider serves a port id: the engine's data and outbox ports, a module's list source, the installation, the door (declared, never given to a screen), or none. */
-export type DoorPortKind = "engine" | "list" | "installation" | "door" | "none"
+/** Which provider serves a port id: the engine's data and outbox ports, a module's list source, the installation, the workspace's members, the door (declared, never given to a screen), or none. */
+export type DoorPortKind = "engine" | "list" | "installation" | "members" | "door" | "none"
 
 const LIST_SUFFIX = "-list"
 
@@ -16,12 +16,13 @@ export const entityOfPortId = (id: string): string | null =>
 /**
  * The provider of a port id. The engine serves `engine.entities`, `engine.entity.<name>` and `engine.outbox`; a module's list source
  * (`<module>.<thing>-list`) is the generic one over the engine; `platform.installation` is the installed registry with the workspace's
- * enabled modules. The door port may be declared (a job uses it) but a screen's run is never
+ * enabled modules; `platform.members` is the active seats of the workspace. The door port may be declared (a job uses it) but a screen's run is never
  * given it; anything else is not provided at all.
  */
 export const portKindOf = (id: string): DoorPortKind => {
     if (id === DOOR_PORT_ID) return "door"
     if (id === installationPort.id) return "installation"
+    if (id === membersPort.id) return "members"
     if (id === ENTITIES_PORT_ID || id === OUTBOX_PORT_ID || entityOfPortId(id) !== null) return "engine"
     return id.endsWith(LIST_SUFFIX) ? "list" : "none"
 }

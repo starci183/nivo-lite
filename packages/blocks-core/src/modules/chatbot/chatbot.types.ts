@@ -22,12 +22,7 @@ export interface ThreadRow extends ConversationState {
     readonly unanswered: boolean
     /** When a person took the conversation over, as ISO 8601; null while the AI answers. */
     readonly handledAt: string | null
-    /** The customer record behind the conversation; null while the customer was not captured. */
-    readonly leadId: string | null
 }
-
-/** The fields an update of a conversation may set. */
-export type ThreadPatch = Partial<Omit<ThreadRow, "id" | "version">>
 
 /** One stored line of a conversation (the `chat.message` record). */
 export interface MessageRecord {
@@ -61,19 +56,7 @@ export type NewMessage = Pick<
     "conversationId" | "role" | "text" | "sentAt" | "authorKind" | "authorName" | "authorUserId"
 >
 
-/** The fields an update of a line may set: the outcome of its push. */
-export interface MessagePatch {
-    /** The state of the push to the channel. */
-    readonly deliveryStatus: "sent" | "failed"
-    /** Why the push failed; null on success. */
-    readonly deliveryError: string | null
-}
-
-/** What an update of a record answers: the record as it is now, or why nothing changed. */
-export type UpdateOutcome<T> =
-    { readonly ok: true; readonly row: T } | { readonly ok: false; readonly reason: "conflict" | "missing" }
-
-/** The customer facts beside a conversation (the `sales.lead` record). */
+/** The customer facts beside a conversation (the `sales.lead` record the conversation links to). */
 export interface LeadFacts {
     /** The name of the contact. */
     readonly contactName: string
@@ -112,17 +95,3 @@ export interface ThreadView {
     /** The email of the customer. */
     readonly email: string
 }
-
-/** What the door asks the channel to send. */
-export interface ChatSendInput {
-    /** The conversation the text goes to. */
-    readonly conversationId: string
-    /** The text. */
-    readonly text: string
-    /** The key that makes a retry of the same send one send: the id of the stored line. */
-    readonly key: string
-}
-
-/** What the channel answered: sent, or refused with a stable code and whether trying again may work. */
-export type ChatSendResult =
-    { readonly ok: true } | { readonly ok: false; readonly failure: string; readonly transient: boolean }

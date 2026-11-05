@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { McpGatewayService, argsHashOf, gatewayArgumentsSchema } from "@modules/domain/mcp-gateway"
+import { McpGatewayService, argsHashOf, domainNameIn, gatewayArgumentsSchema } from "@modules/domain/mcp-gateway"
 import type { GatewayCaller } from "@modules/domain/mcp-gateway"
 import { agentIdFor } from "@modules/integrations/openclaw"
-import { isDoorTool } from "@nivo-lite/agent-sdk/mutation"
+import { isDomainTool } from "@nivo-lite/agent-sdk/mutation"
 import type { DoorApi, DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
 import { doorResultOf, gatewayNameOf, opKeyOf } from "./door-call.policy"
 import { NOT_GRANTED, isDoorGranted } from "./door-grants.policy"
@@ -14,6 +14,9 @@ import { EntityEngineDoorError, EntityEngineDoorErrorCode } from "./errors/entit
 /** The answer for a call the door cannot even send. */
 const invalid = (message: string): DoorCallResult => ({ ok: false, reason: "invalid", message })
 
+/** The answer for a domain tool no connection of the workspace plays. */
+const NO_PROVIDER: DoorCallResult = { ok: false, reason: "unknown_tool", message: "no_provider" }
+
 @Injectable()
 /**
  * The provider of the `engine.door` port: a declared job calls a door tool (`<group>.<provider>.<action>`) and the call goes through
@@ -21,7 +24,8 @@ const invalid = (message: string): DoorCallResult => ({ ok: false, reason: "inva
  * it, exactly as for an agent; the internal agent holds only the tools of `DOOR_GRANTS` (default deny, answered `forbidden` before the
  * gateway is reached). The call is never made while an engine scope is open (no transaction spans an external call,
  * BE-PERSISTENCE-6), and its replay key is the job's effect key joined to the hash of the arguments, so a retried job never repeats
- * an effect.
+ * an effect. A domain tool (`<group>.<action>`, `chat.send`) names no provider: the door resolves it to the tool of the workspace's own
+ * connection that plays it (`domainNameIn` over the connectors of the workspace), and answers `unknown_tool` when the workspace has none.
  */
 export class EngineDoorService {
     constructor(
@@ -36,7 +40,6 @@ export class EngineDoorService {
                 if (binding.scopeOpen())
                     throw new EntityEngineDoorError({ code: EntityEngineDoorErrorCode.InScope, params: { tool } })
                 if (!isDoorGranted(tool)) return NOT_GRANTED
-                if (!isDoorTool(tool)) return invalid("tool_malformed")
                 const args = gatewayArgumentsSchema.safeParse(input)
                 if (!args.success) return invalid("invalid_arguments")
                 const caller: GatewayCaller = {
@@ -47,7 +50,11 @@ export class EngineDoorService {
                     audience: "internal",
                     opKey: opKeyOf(binding.effectKey, tool, argsHashOf(args.data)),
                 }
-                return doorResultOf(await this.gateway.call(caller, gatewayNameOf(tool), args.data))
+                const name = isDomainTool(tool)
+                    ? domainNameIn(await this.gateway.connectorsOf(binding.workspaceId), tool)
+                    : gatewayNameOf(tool)
+                if (name === null) return NO_PROVIDER
+                return doorResultOf(await this.gateway.call(caller, name, args.data))
             },
         }
     }
