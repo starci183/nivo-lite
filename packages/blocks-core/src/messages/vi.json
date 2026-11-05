@@ -119,5 +119,19 @@
   "listTooFew": "Hãy thêm dòng trước khi lưu",
   "listEditorEmpty": "Chưa có dòng nào",
   "formIdle": "Chọn một mục để sửa",
-  "alertDismiss": "Đóng"
+  "alertDismiss": "Đóng",
+  "blockGraph": "Sơ đồ luồng",
+  "blockRunTimeline": "Các bước của lần chạy",
+  "runStateRunning": "Đang chạy",
+  "runStateWaiting": "Chờ duyệt",
+  "runStateParked": "Tạm dừng",
+  "runStateFailed": "Lỗi",
+  "runStateDone": "Xong",
+  "runStepInput": "Đầu vào",
+  "runStepOutput": "Kết quả",
+  "runStepEffectKey": "Khoá hiệu ứng",
+  "runCallOk": "Thành công",
+  "runCallFailed": "Thất bại",
+  "runStepApproval": "Xem yêu cầu duyệt",
+  "runTimelineIdle": "Chọn một lần chạy để xem các bước"
 }

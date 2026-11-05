@@ -119,5 +119,19 @@
   "listTooFew": "Add more rows before saving",
   "listEditorEmpty": "No rows yet",
   "formIdle": "Choose a record to edit it",
-  "alertDismiss": "Dismiss"
+  "alertDismiss": "Dismiss",
+  "blockGraph": "Flow graph",
+  "blockRunTimeline": "Run timeline",
+  "runStateRunning": "Running",
+  "runStateWaiting": "Waiting for approval",
+  "runStateParked": "Parked",
+  "runStateFailed": "Failed",
+  "runStateDone": "Done",
+  "runStepInput": "Input",
+  "runStepOutput": "Output",
+  "runStepEffectKey": "Effect key",
+  "runCallOk": "Succeeded",
+  "runCallFailed": "Failed",
+  "runStepApproval": "Open the approval",
+  "runTimelineIdle": "Choose a run to see its steps"
 }

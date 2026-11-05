@@ -17,6 +17,8 @@ import { sectionBlock } from "./section.block"
 import { stackBlock } from "./stack.block"
 import { tabbedPanelBlock } from "./tabbed-panel.block"
 import { tableBlock } from "./table.block"
+import { graphBlock } from "./graph.block"
+import { runTimelineBlock } from "./run-timeline.block"
 import { waitingBlock } from "./waiting.block"
 
 /** The definitions of every core block, React-free so the back end validates specs against them without loading React. */
@@ -40,4 +42,6 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     dashboardCardsBlock,
     masterDetailBlock,
     explanationBlock,
+    graphBlock,
+    runTimelineBlock,
 ]
