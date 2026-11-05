@@ -22,7 +22,7 @@ export const ConnectionPageLoading = (props: ConnectionPageLoadingProps) => (
     <ConnectionPaneFrame
         gridLabel={props.props.title}
         mainLabel={props.props.mainLabel}
-        rail={{ label: props.props.railLabel, openLabel: props.props.railLabel, closeLabel: props.props.railLabel }}
+        rail={{ label: props.props.railLabel, closeLabel: props.props.railLabel }}
         head={<PaneHead title={props.props.title} headingLevel={1} isLoading />}
         aside={
             <PaneSection isLoading>

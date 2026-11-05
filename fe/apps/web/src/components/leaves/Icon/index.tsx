@@ -107,6 +107,7 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     google: cuts(GoogleMark, GoogleMark),
     muted: cuts(Outline.BellSlashIcon, Solid.BellSlashIcon),
     unmuted: cuts(Outline.BellIcon, Solid.BellIcon),
+    history: cuts(Outline.ClockIcon, Solid.ClockIcon),
     messageSending: cuts(Outline.ClockIcon, Solid.ClockIcon),
     messageSent: cuts(Outline.CheckIcon, Solid.CheckIcon),
     messageDelivered: cuts(Outline.CheckCircleIcon, Outline.CheckCircleIcon),

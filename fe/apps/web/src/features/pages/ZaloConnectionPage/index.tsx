@@ -27,7 +27,7 @@ export const ZaloConnectionPage = async (props: ZaloConnectionPageProps): Promis
                 connectionId: id,
                 gridLabel: t("title"),
                 mainLabel: t("mainLabel"),
-                rail: { label: t("eventsTitle"), openLabel: t("eventsOpen"), closeLabel: t("eventsClose") },
+                rail: { label: t("eventsTitle"), closeLabel: t("eventsClose") },
             }}
         />
     )

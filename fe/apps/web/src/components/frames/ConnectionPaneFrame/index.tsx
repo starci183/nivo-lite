@@ -1,4 +1,3 @@
-import { useState } from "react"
 import type { ReactNode } from "react"
 import { Pane, PaneGrid } from "@starci/grammar/common"
 
@@ -12,7 +11,7 @@ interface ConnectionPaneFrameProps {
     readonly aside: ReactNode
     readonly gridLabel: string
     readonly mainLabel: string
-    readonly rail: { readonly label: string; readonly openLabel: string; readonly closeLabel: string }
+    readonly rail: { readonly label: string; readonly closeLabel: string }
 }
 
 /**
@@ -20,7 +19,6 @@ interface ConnectionPaneFrameProps {
  * pane, with the live rail as a third column from 70rem and a drawer below it. The connected head and rail blocks fill their panes.
  */
 export const ConnectionPaneFrame = (props: ConnectionPaneFrameProps) => {
-    const [isRailOpen, setRailOpen] = useState(false)
     return (
         <PaneGrid
             label={props.gridLabel}
@@ -44,11 +42,9 @@ export const ConnectionPaneFrame = (props: ConnectionPaneFrameProps) => {
                 scroll
                 label={props.rail.label}
                 collapse="drawer"
+                trigger="head"
                 collapseLabel={props.rail.label}
-                openLabel={props.rail.openLabel}
                 closeLabel={props.rail.closeLabel}
-                isOpen={isRailOpen}
-                onOpenChange={setRailOpen}
             >
                 {props.aside}
             </Pane>

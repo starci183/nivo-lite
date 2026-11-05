@@ -20,6 +20,8 @@ export interface ConnectionPageHeadBaseProps {
         /** The words of the phone back control and of the "more" menu. */
         readonly backLabel: string
         readonly moreLabel: string
+        /** The name of the button that opens the live rail drawer. */
+        readonly railLabel: string
     }
     readonly on: {
         readonly act: () => void
@@ -53,6 +55,7 @@ export const ConnectionPageHeadBase = (props: ConnectionPageHeadBaseProps) => {
             back={{ label: p.backLabel, onPress: props.on.back }}
             {...(action === undefined || p.head === undefined ? {} : { action: { ...action, onPress: props.on.act } })}
             menu={{ label: p.moreLabel, entries: menuOf(props) }}
+            railLabel={p.railLabel}
             question={
                 <ConnectionDisconnectDialog
                     confirm={p.confirm}

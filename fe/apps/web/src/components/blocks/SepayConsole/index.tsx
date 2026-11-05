@@ -57,6 +57,7 @@ export const SepayConsole = (props: SepayConsoleProps) => {
                 ...(refusal === undefined ? {} : { refusal }),
                 backLabel: pane.backToList,
                 moreLabel: pane.moreActions,
+                railLabel: t("eventsOpen"),
                 ...(canDisconnect
                     ? {
                           disconnect: {

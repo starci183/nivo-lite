@@ -11,7 +11,7 @@ export interface DriveConnectionPageBaseProps {
     readonly props: {
         readonly gridLabel: string
         readonly mainLabel: string
-        readonly rail: { readonly label: string; readonly openLabel: string; readonly closeLabel: string }
+        readonly rail: { readonly label: string; readonly closeLabel: string }
     }
 }
 

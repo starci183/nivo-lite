@@ -32,6 +32,8 @@ interface ConnectionHeadBandProps {
     }
     /** The commands beyond the one visible one, behind the "more" button. */
     readonly menu?: { readonly label: string; readonly entries: ReadonlyArray<DropdownMenuEntry> }
+    /** The name of the button that opens the live rail drawer below the width where the rail stands beside the page. */
+    readonly railLabel?: string
     /** A question the band's commands open (disconnect asks first); drawn in a portal, so it takes no room in the band. */
     readonly question?: ReactNode
 }
@@ -54,6 +56,9 @@ export const ConnectionHeadBand = (props: ConnectionHeadBandProps) => (
         }
         isLoading={props.isLoading}
         back={props.back}
+        {...(props.railLabel === undefined
+            ? {}
+            : { drawerOpener: { pane: "aside", icon: nivoIconSource("history", "leading"), label: props.railLabel } })}
         actions={
             <>
                 {props.action === undefined ? null : (

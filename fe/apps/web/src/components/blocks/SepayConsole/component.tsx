@@ -35,6 +35,8 @@ export interface SepayConsoleBaseProps {
         /** The words of the phone back control and of the "more" menu. */
         readonly backLabel: string
         readonly moreLabel: string
+        /** The name of the button that opens the live rail drawer. */
+        readonly railLabel: string
         /** Disconnect belongs to the workspace owner; absent for everyone else, whom the back end refuses. */
         readonly disconnect?: { readonly title: string; readonly description: string; readonly label: string }
         readonly isPending: boolean
@@ -81,6 +83,7 @@ export const SepayConsoleBase = (props: SepayConsoleBaseProps) => {
             isLoading={p.refusal === undefined && p.isLoading}
             back={{ label: p.backLabel, onPress: props.on.back }}
             menu={{ label: p.moreLabel, entries: menuOf(props) }}
+            railLabel={p.railLabel}
             question={
                 <SepayConfirm
                     {...p.confirm}

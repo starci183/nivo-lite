@@ -81,6 +81,7 @@ export type IconName =
     | "google"
     | "muted"
     | "unmuted"
+    | "history"
     | "messageSending"
     | "messageSent"
     | "messageDelivered"

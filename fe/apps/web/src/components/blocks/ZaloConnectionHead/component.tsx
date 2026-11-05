@@ -27,6 +27,8 @@ export interface ZaloConnectionHeadBaseProps {
         /** The words of the phone back control and of the "more" menu. */
         readonly backLabel: string
         readonly moreLabel: string
+        /** The name of the button that opens the live rail drawer. */
+        readonly railLabel: string
         readonly recheckLabel: string
         readonly isRechecking: boolean
         /** Disconnect belongs to the workspace owner; absent for everyone else, whom the back end refuses. */
@@ -64,6 +66,7 @@ export const ZaloConnectionHeadBase = (props: ZaloConnectionHeadBaseProps) => {
             back={{ label: p.backLabel, onPress: props.on.back }}
             action={{ label: p.recheckLabel, intent: "neutral", isPending: p.isRechecking, onPress: props.on.recheck }}
             menu={{ label: p.moreLabel, entries: menuOf(props) }}
+            railLabel={p.railLabel}
             question={
                 <ConnectionDisconnectDialog
                     confirm={p.confirm}

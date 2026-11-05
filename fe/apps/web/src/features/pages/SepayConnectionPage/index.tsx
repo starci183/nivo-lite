@@ -25,7 +25,7 @@ export const SepayConnectionPage = async (props: SepayConnectionPageProps): Prom
                 hubHref: CONSOLE_ROUTES.connections,
                 gridLabel: t("title"),
                 mainLabel: t("mainLabel"),
-                rail: { label: t("eventsTitle"), openLabel: t("eventsOpen"), closeLabel: t("eventsClose") },
+                rail: { label: t("eventsTitle"), closeLabel: t("eventsClose") },
             }}
         />
     )

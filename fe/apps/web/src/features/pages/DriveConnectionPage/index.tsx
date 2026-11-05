@@ -20,7 +20,7 @@ export const DriveConnectionPage = async (): Promise<ReactElement> => {
             props={{
                 gridLabel: t("title"),
                 mainLabel: t("mainLabel"),
-                rail: { label: t("progressTitle"), openLabel: t("progressOpen"), closeLabel: t("progressClose") },
+                rail: { label: t("progressTitle"), closeLabel: t("progressClose") },
             }}
         />
     )
