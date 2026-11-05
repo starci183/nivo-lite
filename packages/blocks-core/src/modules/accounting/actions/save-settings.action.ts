@@ -34,7 +34,15 @@ export const saveSettingsAction: ActionDefinition = defineAction({
     input,
     ports: { settings: accountingSettingsPort },
     transactional: true,
-    refreshes: ["accounting.settings", "accounting.entries", "accounting.entry-counts", "accounting.figures"],
+    refreshes: [
+        "accounting.settings",
+        "accounting.entries",
+        "accounting.entry-counts",
+        "accounting.status-counts",
+        "accounting.weekly",
+        "accounting.decisions",
+        "accounting.figures",
+    ],
     run: async ({ settings }, given) => {
         const saved = await settingsOf(settings)
         await settings.save({

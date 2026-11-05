@@ -1,6 +1,7 @@
 import type { ListShape, ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { countsRead, listRead } from "@nivo-lite/agent-sdk/module"
 import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
+import { ENTRY_STATUSES } from "../../../rules/accounting/entry-status"
 import { entriesSourcePort } from "../ports"
 
 /** The kinds of book entry a filter takes. */
@@ -18,7 +19,10 @@ export const ENTRY_KINDS: readonly ["income", "expense", "invoice", "reversal", 
  */
 export const ENTRIES_SHAPE: ListShape = {
     search: { fields: ["note"] },
-    filters: { kind: { field: "kind", op: "eq", of: ENTRY_KINDS } },
+    filters: {
+        kind: { field: "kind", op: "eq", of: ENTRY_KINDS },
+        status: { field: "status", op: "eq", of: ENTRY_STATUSES },
+    },
     sort: {
         recent: [
             ["entryDate", "desc"],
@@ -38,7 +42,7 @@ export const entriesRead: ListReadDefinition = listRead({
     id: "accounting.entries",
     dataKind: "book-entry",
     permission: "accounting.view",
-    fields: ["id", "title", "entryDate", "kind", "amountVnd"],
+    fields: ["id", "title", "entryDate", "kind", "amountVnd", "status"],
     list: ENTRIES_SHAPE,
     source: entriesSourcePort,
 })
@@ -48,4 +52,11 @@ export const entryCountsRead: ReadDefinition = countsRead({
     id: "accounting.entry-counts",
     of: entriesRead,
     by: "kind",
+})
+
+/** `accounting.status-counts`: how many entries each status holds under the same search. */
+export const entryStatusCountsRead: ReadDefinition = countsRead({
+    id: "accounting.status-counts",
+    of: entriesRead,
+    by: "status",
 })

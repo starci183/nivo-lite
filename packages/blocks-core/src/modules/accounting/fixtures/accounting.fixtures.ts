@@ -1,8 +1,12 @@
 import type { CountsResult } from "@nivo-lite/agent-sdk/block"
 import { ADJUSTMENT, INVOICE, ORDER, TRANSACTION, transactionOf } from "../../../rules/accounting/accounting.fixtures"
+import { unmatchedQueueOf } from "../../../rules/accounting/decisions"
+import { entryStatusOf } from "../../../rules/accounting/entry-status"
 import { figuresOf } from "../../../rules/accounting/figures"
 import { lineageOf } from "../../../rules/accounting/lineage"
 import { closeVerdict, periodOf } from "../../../rules/accounting/period"
+import { weeklyIncomeOf } from "../../../rules/accounting/weekly"
+import type { WeeklyIncome } from "../../../rules/accounting/weekly"
 import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../../rules/accounting/settings"
 import type { ModuleFixtures } from "../../module-fixtures"
 import type { EntryRow } from "../accounting.types"
@@ -23,6 +27,7 @@ export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
         entryDate: "2026-11-04",
         kind: "income",
         amountVnd: 5_000_000,
+        status: entryStatusOf("income"),
     },
     {
         id: "00000000-0000-4000-8000-0000000001a2",
@@ -30,6 +35,7 @@ export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
         entryDate: "2026-11-02",
         kind: "adjustment",
         amountVnd: 1_800_000,
+        status: entryStatusOf("adjustment"),
     },
     {
         id: "00000000-0000-4000-8000-0000000001a3",
@@ -37,6 +43,7 @@ export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
         entryDate: "2026-11-01",
         kind: "invoice",
         amountVnd: 2_000_000,
+        status: entryStatusOf("invoice"),
     },
 ]
 
@@ -45,6 +52,34 @@ export const ENTRY_COUNTS: CountsResult = { counts: { income: 1, invoice: 1, adj
 
 /** The counts under a search that matched nothing. */
 export const ENTRY_COUNTS_NONE: CountsResult = { counts: { income: 0, invoice: 0, adjustment: 0 }, total: 0 }
+
+/** The counts of the entries by status, as the status counts read yields them. */
+export const ENTRY_STATUS_COUNTS: CountsResult = { counts: { paid: 1, open: 1, expense: 0, review: 1 }, total: 3 }
+
+/** The status counts under a search that matched nothing. */
+export const ENTRY_STATUS_COUNTS_NONE: CountsResult = {
+    counts: { paid: 0, open: 0, expense: 0, review: 0 },
+    total: 0,
+}
+
+/** The income of this month by week. */
+export const WEEKLY_VIEW: WeeklyIncome = weeklyIncomeOf(
+    ENTRY_ROWS.filter((row) => row.kind === "income"),
+    "2026-11-01",
+    "2026-12-01",
+)
+
+/** The income of a month with no entry. */
+export const WEEKLY_NONE: WeeklyIncome = weeklyIncomeOf([], "2026-11-01", "2026-12-01")
+
+/** The payment nobody tied to an invoice. */
+export const UNMATCHED_PAYMENT = {
+    id: "00000000-0000-4000-8000-0000000001c1",
+    amountVnd: 300_000,
+    reference: "CK HOA SEN SPA",
+    payer: "Hoa Sen Spa",
+    occurredAt: "2026-11-04T02:12:00.000Z",
+}
 
 /** The detail of the income entry: the payment, the order it paid and the correction on it. */
 export const ENTRY_DETAIL: EntryDetail = {
@@ -136,6 +171,9 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
             empty: { rows: [], cursor: null },
         },
         "accounting.entry-counts": { ready: ENTRY_COUNTS, empty: ENTRY_COUNTS_NONE },
+        "accounting.status-counts": { ready: ENTRY_STATUS_COUNTS, empty: ENTRY_STATUS_COUNTS_NONE },
+        "accounting.weekly": { ready: WEEKLY_VIEW, empty: WEEKLY_NONE },
+        "accounting.decisions": { ready: unmatchedQueueOf([UNMATCHED_PAYMENT], 1), empty: unmatchedQueueOf([], 0) },
         "accounting.entry": { ready: ENTRY_DETAIL, empty: null },
         "accounting.figures": { ready: FIGURES_VIEW, empty: FIGURES_NONE },
         "accounting.settings": { ready: ACCOUNTING_SETTINGS_DEFAULTS, empty: null },

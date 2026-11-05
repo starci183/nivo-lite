@@ -33,6 +33,7 @@ describe("accounting fixtures", () => {
         expect(ENTRY_ROWS.map((row) => row.kind)).toEqual(["income", "adjustment", "invoice"])
         expect(ENTRY_COUNTS.total).toBe(ENTRY_ROWS.length)
         expect(ENTRY_COUNTS_NONE.total).toBe(0)
+        expect(ENTRY_ROWS.map((row) => row.status)).toEqual(["paid", "review", "open"])
         expect(ENTRY_DETAIL.lineage.map((step) => step.kind)).toEqual(["order", "payment", "adjustment"])
         expect(FIGURES_VIEW.income).toEqual({ vnd: 5_000_000, count: 1 })
         expect(FIGURES_VIEW.ageing.d0.vnd).toBe(2_000_000)

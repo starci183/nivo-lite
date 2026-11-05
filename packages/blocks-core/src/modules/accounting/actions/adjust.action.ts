@@ -35,7 +35,15 @@ export const adjustAction: ActionDefinition = defineAction({
     input,
     ports,
     transactional: true,
-    refreshes: ["accounting.entries", "accounting.entry-counts", "accounting.figures", "accounting.entry"],
+    refreshes: [
+        "accounting.entries",
+        "accounting.entry-counts",
+        "accounting.status-counts",
+        "accounting.weekly",
+        "accounting.decisions",
+        "accounting.figures",
+        "accounting.entry",
+    ],
     run: async ({ adjustments, outbox }, given, context): Promise<ActionResult> => {
         const verdict = normalizeAdjustment(given)
         if (!verdict.ok) {

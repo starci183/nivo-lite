@@ -7,12 +7,6 @@
       "url": "q",
       "default": ""
     },
-    "kind": {
-      "type": "enum",
-      "of": "accounting.entries.kind",
-      "url": "kind",
-      "default": "all"
-    },
     "sort": {
       "type": "enum",
       "of": "accounting.entries.sort",
@@ -28,6 +22,12 @@
       "of": ["this", "last"],
       "url": "period",
       "default": "this"
+    },
+    "status": {
+      "type": "enum",
+      "of": "accounting.entries.status",
+      "url": "status",
+      "default": "all"
     }
   },
   "head": [
@@ -92,6 +92,147 @@
   ],
   "views": [
     {
+      "id": "overview",
+      "label": {
+        "key": "tab_overview"
+      },
+      "root": {
+        "id": "overview-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "weekly",
+            "block": "core.figures",
+            "props": {
+              "label": {
+                "key": "weekly_label"
+              },
+              "kind": "bars",
+              "currency": "VND",
+              "items": [
+                {
+                  "term": {
+                    "key": "week_w1"
+                  },
+                  "path": "w1",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "week_w2"
+                  },
+                  "path": "w2",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "week_w3"
+                  },
+                  "path": "w3",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "week_w4"
+                  },
+                  "path": "w4",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "week_w5"
+                  },
+                  "path": "w5",
+                  "format": "money"
+                }
+              ]
+            },
+            "bind": {
+              "data": {
+                "read": "accounting.weekly",
+                "variables": {
+                  "period": "$period"
+                }
+              }
+            }
+          },
+          {
+            "id": "ageing",
+            "block": "core.figures",
+            "props": {
+              "label": {
+                "key": "ageing_label"
+              },
+              "kind": "proportion",
+              "currency": "VND",
+              "items": [
+                {
+                  "term": {
+                    "key": "ageing_d0"
+                  },
+                  "path": "ageing.d0.count",
+                  "format": "count"
+                },
+                {
+                  "term": {
+                    "key": "ageing_d30"
+                  },
+                  "path": "ageing.d30.count",
+                  "format": "count"
+                },
+                {
+                  "term": {
+                    "key": "ageing_d60"
+                  },
+                  "path": "ageing.d60.count",
+                  "format": "count"
+                }
+              ]
+            },
+            "bind": {
+              "data": {
+                "read": "accounting.figures",
+                "variables": {
+                  "period": "$period"
+                }
+              }
+            }
+          },
+          {
+            "id": "decisions",
+            "block": "core.decision-queue",
+            "props": {
+              "surface": "section",
+              "label": {
+                "key": "decisions_label"
+              },
+              "emptyTitle": {
+                "key": "decisions_empty_title"
+              },
+              "emptyBody": {
+                "key": "decisions_empty_body"
+              },
+              "seeWhy": {
+                "key": "decisions_see_why"
+              },
+              "moreMenu": {
+                "key": "decisions_more"
+              },
+              "currency": "VND"
+            },
+            "bind": {
+              "queue": {
+                "read": "accounting.decisions"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "book",
       "label": {
         "key": "tab_book"
@@ -123,46 +264,40 @@
                 "id": "tabs",
                 "block": "core.filter-tabs",
                 "props": {
-                  "param": "kind",
+                  "param": "status",
                   "all": {
                     "key": "filter_all"
                   },
                   "items": [
                     {
-                      "value": "income",
+                      "value": "paid",
                       "label": {
-                        "key": "kind_income"
+                        "key": "tab_paid"
+                      }
+                    },
+                    {
+                      "value": "open",
+                      "label": {
+                        "key": "tab_open"
                       }
                     },
                     {
                       "value": "expense",
                       "label": {
-                        "key": "kind_expense"
+                        "key": "tab_expense"
                       }
                     },
                     {
-                      "value": "invoice",
+                      "value": "review",
                       "label": {
-                        "key": "kind_invoice"
-                      }
-                    },
-                    {
-                      "value": "reversal",
-                      "label": {
-                        "key": "kind_reversal"
-                      }
-                    },
-                    {
-                      "value": "adjustment",
-                      "label": {
-                        "key": "kind_adjustment"
+                        "key": "tab_review"
                       }
                     }
                   ]
                 },
                 "bind": {
                   "counts": {
-                    "read": "accounting.entry-counts",
+                    "read": "accounting.status-counts",
                     "variables": {
                       "q": "$q"
                     }
@@ -182,21 +317,18 @@
                   "idPath": "id",
                   "currency": "VND",
                   "labels": {
-                    "kind": {
-                      "income": {
-                        "key": "kind_income"
+                    "status": {
+                      "paid": {
+                        "key": "status_paid"
+                      },
+                      "open": {
+                        "key": "status_open"
                       },
                       "expense": {
-                        "key": "kind_expense"
+                        "key": "status_expense"
                       },
-                      "invoice": {
-                        "key": "kind_invoice"
-                      },
-                      "reversal": {
-                        "key": "kind_reversal"
-                      },
-                      "adjustment": {
-                        "key": "kind_adjustment"
+                      "review": {
+                        "key": "status_review"
                       }
                     }
                   },
@@ -227,7 +359,7 @@
                       "term": {
                         "key": "col_status"
                       },
-                      "path": "kind",
+                      "path": "status",
                       "format": "badge"
                     }
                   ]
@@ -237,7 +369,7 @@
                     "read": "accounting.entries",
                     "variables": {
                       "q": "$q",
-                      "kind": "$kind",
+                      "status": "$status",
                       "sort": "$sort"
                     }
                   }

@@ -1,4 +1,6 @@
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
+import type { UnmatchedPayment } from "../../rules/accounting/decisions"
+import type { EntryStatus } from "../../rules/accounting/entry-status"
 import type {
     AdjustmentRecord,
     AdjustmentTarget,
@@ -138,6 +140,14 @@ export interface EntryRow {
     readonly kind: BookEntryKind
     /** The amount, in VND. */
     readonly amountVnd: number
+    /** Where the entry stands for the reader: paid, open, expense or review. */
+    readonly status: EntryStatus
+}
+
+/** The payments nobody tied to an invoice, for the decision queue. */
+export interface UnmatchedList {
+    /** The first payments of the range that are unmatched or wait for review, oldest first, at most `limit`. */
+    readonly waiting: (range: InstantRange, limit: number) => Promise<ReadonlyArray<UnmatchedPayment>>
 }
 
 /** The enqueue options of a declared job. */
