@@ -64,6 +64,7 @@ const FormBody = (body: FormBodyProps): ReactNode => {
             </Grid>
             <Button
                 type="submit"
+                intent="commit"
                 width="fill-narrow"
                 isPending={submit.isRunning}
                 isLoading={body.isLoading}
