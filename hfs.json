@@ -63,6 +63,14 @@
       ],
       "dbFunctions": [
         {
+          "name": "public.engine_scope_enter",
+          "reason": "enters the workspace scope of the entity engine for one transaction: sets the workspace setting and switches to the app_engine role, which TypeORM cannot express"
+        },
+        {
+          "name": "public.engine_workspace",
+          "reason": "reads the workspace the engine scope was entered for; the one expression of the row-level security policies of the records tables"
+        },
+        {
           "name": "public.agent_turn_begin",
           "reason": "starts one turn of an agent in one scope: takes the scope lease, bumps the fence and marks the next wake running"
         },
@@ -737,14 +745,6 @@
         {
           "name": "public.connection_poll_mark_hot",
           "reason": "puts a connection into the poll schedule hot, or makes its row hot: an upsert that starts from connections, which an entity cannot express"
-        },
-        {
-          "name": "public.engine_scope_enter",
-          "reason": "enters the entity engine scope of one workspace for the current transaction: sets nivo.workspace_id and switches to the NOBYPASSRLS role app_engine (both transaction-local); TypeORM cannot set a role"
-        },
-        {
-          "name": "public.engine_workspace",
-          "reason": "the workspace of the current engine scope (null outside one), read by the app_engine RLS policies"
         }
       ],
       "engineOwned": {
@@ -752,7 +752,7 @@
         "tables": ["records", "record_links", "entity_sequences"],
         "partitionsOf": "records",
         "views": "v_*",
-        "manifest": ".starciwork/entities.manifest.json"
+        "manifest": "db/entities.manifest.json"
       },
       "ddlRenderers": [
         {

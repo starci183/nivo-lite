@@ -32,6 +32,18 @@
       "types": "./dist/node/vocabulary.d.ts",
       "default": "./dist/node/vocabulary.js"
     },
+    "./entity": {
+      "types": "./dist/entity/index.d.ts",
+      "default": "./dist/entity/index.js"
+    },
+    "./query": {
+      "types": "./dist/query/index.d.ts",
+      "default": "./dist/query/index.js"
+    },
+    "./mutation": {
+      "types": "./dist/mutation/index.d.ts",
+      "default": "./dist/mutation/index.js"
+    },
     "./graph": {
       "types": "./dist/graph/index.d.ts",
       "default": "./dist/graph/index.js"
