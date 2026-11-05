@@ -1,4 +1,4 @@
-import type { PresentationState } from "@starci/grammar/common"
+import type { PresentationState } from "@starci/grammar/common" with { "resolution-mode": "import" }
 import { formatValue } from "./cell-format"
 import type { CellContext } from "./cell-format"
 import { runStateLook } from "./run-state"

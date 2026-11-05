@@ -1,5 +1,5 @@
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
-import type { FlowGraphEdge, FlowGraphNode } from "@starci/grammar/common"
+import type { FlowGraphEdge, FlowGraphNode } from "@starci/grammar/common" with { "resolution-mode": "import" }
 import { runPathView } from "./graph-view"
 import type { GraphNodeKind, GraphNodeView, GraphView, RunPath } from "./graph-view"
 import { runStateLook } from "./run-state"

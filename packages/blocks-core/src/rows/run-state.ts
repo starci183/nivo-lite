@@ -1,4 +1,4 @@
-import type { PresentationState } from "@starci/grammar/common"
+import type { PresentationState } from "@starci/grammar/common" with { "resolution-mode": "import" }
 
 /** The states a run, or one of its steps, is in once it has started. */
 export const RUN_STATES = ["running", "waiting", "parked", "failed", "done"] as const
