@@ -3171,7 +3171,6 @@
 {"data":{},"findings":[],"hash":"5863e6a9c596d2cfc6ff1bad86676f292550f02bf0b6e96e959c01effde98955","path":"fe/apps/web/src/modules/agentWork/agentWork.wire.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"b271e5b36739b2a441100fd56df501be4b259ec8c60aea6836297c102df1fb45","path":"fe/apps/web/src/modules/agentWork/agentWork.words.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d62b381bb302b89da2cab4a2a0d2ee6d70fd48cbecf3114abe4785ab7db189c6","path":"fe/apps/web/src/modules/agentWork/index.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"fe/apps/web/src/modules/api/graphql/__generated__ records a different schema digest from the contract snapshots; run `npm run codegen` so its wire types and .schema-sha256 match the schema","path":"fe/apps/web/src/modules/api/graphql/__generated__","rule":"FE_WIRE_GENERATED"}],"hash":"absent","path":"fe/apps/web/src/modules/api/graphql/__generated__","step":"hfs"}
 {"data":{},"findings":[],"hash":"07ab2dd3f7475f815b4013d6b39bb42c58e0c1d5e2d9c7b46cabed367ab97916","path":"fe/apps/web/src/modules/api/graphql/clients/clients/auth.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a9a511a5af2df2d3aa6a2fe7a4424b354751dbe488095d337f143e7704b07aa6","path":"fe/apps/web/src/modules/api/graphql/clients/clients/index.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"ba9c5e957e5fcb0f1014efd10def34f7416dd14dcc13ddc46dd6ee2a648c15d7","path":"fe/apps/web/src/modules/api/graphql/clients/clients/no-auth.ts","step":"file-rules"}
