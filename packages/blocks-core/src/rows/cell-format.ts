@@ -1,4 +1,5 @@
 import { textOf } from "../slots/paths"
+import type { Relabel } from "./value-labels"
 
 /** The formats a column or a fact may draw its value in. */
 export const CELL_FORMATS = ["text", "number", "money", "date", "dateTime", "badge"] as const
@@ -14,15 +15,18 @@ export interface CellContext {
     readonly currency: string
     /** The time zone a date-time is drawn in; absent draws it in the viewer's own. */
     readonly timeZone?: string | undefined
+    /** The words of the raw values a text or badge cell holds; absent draws them as they are. */
+    readonly label?: Relabel | undefined
 }
 
 /** The money a block draws when its spec names none. */
 export const DEFAULT_CURRENCY = "VND"
 
-/** The context of a block: the viewer's language and the currency its spec names, or the default. */
-export const cellContextOf = (locale: string, currency: string | undefined): CellContext => ({
+/** The context of a block: the viewer's language, the currency its spec names (or the default) and the words of its raw values. */
+export const cellContextOf = (locale: string, currency: string | undefined, label?: Relabel): CellContext => ({
     locale,
     currency: currency ?? DEFAULT_CURRENCY,
+    ...(label === undefined ? {} : { label }),
 })
 
 /** A date without a time: it names a day, so it is drawn in that day and never shifted by a zone. */
@@ -80,4 +84,16 @@ export const formatValue = (value: unknown, format: CellFormat | undefined, cont
         case undefined:
             return textOf(value)
     }
+}
+
+/** The text of the value at a path: as `formatValue` draws it, with the words the context gives a raw text or badge value. */
+export const cellTextOf = (
+    value: unknown,
+    format: CellFormat | undefined,
+    path: string,
+    context: CellContext,
+): string => {
+    const text = formatValue(value, format, context)
+    const isRaw = format === undefined || format === "text" || format === "badge"
+    return isRaw && context.label !== undefined ? context.label(path, text) : text
 }

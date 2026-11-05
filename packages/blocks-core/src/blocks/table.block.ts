@@ -6,6 +6,8 @@ import { CELL_FORMATS } from "../rows/cell-format"
 import type { CellFormat } from "../rows/cell-format"
 import { PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
+import { labelsProp } from "./labels-prop"
+import type { LabelsSchema } from "./labels-prop"
 import { paramName } from "./param-name"
 import type { EnumSchema, OptionalAction, RequiredRead, TextSchema } from "./schema-types"
 
@@ -40,6 +42,7 @@ const props: z.ZodObject<{
     idPath: z.ZodString
     columns: z.ZodArray<ColumnSchema>
     currency: z.ZodOptional<z.ZodString>
+    labels: z.ZodOptional<LabelsSchema>
     selectParam: z.ZodOptional<z.ZodString>
 }> = z.object({
     label: specText,
@@ -47,6 +50,7 @@ const props: z.ZodObject<{
     idPath: z.string().max(PATH_MAX),
     columns: z.array(column).min(1).max(TABLE_COLUMNS_MAX),
     currency: currencyCode.optional(),
+    labels: labelsProp.optional(),
     selectParam: paramName.optional(),
 })
 /** The slots of the table block: the rows read and the action a row may run. */

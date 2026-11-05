@@ -7,9 +7,6 @@ export type TextSchema = z.ZodType<SpecText>
 /** The zod type of an enum prop over the given values. */
 export type EnumSchema<V extends string> = z.ZodEnum<{ readonly [K in V]: K }>
 
-/** The zod type of a list of term and path pairs. */
-export type TermPathsSchema = z.ZodArray<z.ZodObject<{ term: TextSchema; path: z.ZodString }>>
-
 /** A required read slot of the given shape. */
 export interface RequiredRead<S extends "record" | "list"> {
     /** Marks the slot as one a spec binds to a read. */

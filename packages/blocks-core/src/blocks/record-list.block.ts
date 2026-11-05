@@ -3,6 +3,8 @@ import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { PATH_MAX } from "./bounds"
+import { labelsProp } from "./labels-prop"
+import type { LabelsSchema } from "./labels-prop"
 import { paramName } from "./param-name"
 import type { ParamNameSchema } from "./param-name"
 import type { TextSchema, RequiredRead, OptionalAction } from "./schema-types"
@@ -14,6 +16,7 @@ const props: z.ZodObject<{
     titlePath: z.ZodString
     descriptionPath: z.ZodOptional<z.ZodString>
     badgePath: z.ZodOptional<z.ZodString>
+    labels: z.ZodOptional<LabelsSchema>
     emptySearch: z.ZodOptional<TextSchema>
     selectParam: z.ZodOptional<ParamNameSchema>
     searchParam: z.ZodOptional<ParamNameSchema>
@@ -24,6 +27,7 @@ const props: z.ZodObject<{
     titlePath: z.string().max(PATH_MAX),
     descriptionPath: z.string().max(PATH_MAX).optional(),
     badgePath: z.string().max(PATH_MAX).optional(),
+    labels: labelsProp.optional(),
     emptySearch: specText.optional(),
     selectParam: paramName.optional(),
     searchParam: paramName.optional(),

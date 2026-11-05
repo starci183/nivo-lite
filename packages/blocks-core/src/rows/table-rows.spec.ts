@@ -37,6 +37,15 @@ describe("tableRowsOf", () => {
         expect(tableRowsOf([{ name: "No id" }, { id: "b", name: "B" }], SPEC)?.map((row) => row.id)).toEqual(["b"])
     })
 
+    it("draws a badge or text cell in the words its path is given", () => {
+        const label = (path: string, raw: string): string => (path === "state" && raw === "paid" ? "Da tra" : raw)
+        const rows = tableRowsOf([{ id: "a", name: "First", state: "paid", owner: { name: "paid" } }], {
+            ...SPEC,
+            context: { ...CONTEXT, label },
+        })
+        expect(rows).toEqual([{ id: "a", cells: { c0: "First", c1: "", c2: "Da tra", c3: "paid" } }])
+    })
+
     it("is null when no row can be drawn", () => {
         expect(tableRowsOf([], SPEC)).toBeNull()
         expect(tableRowsOf([{ name: "No id" }], SPEC)).toBeNull()
