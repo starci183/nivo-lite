@@ -44,6 +44,10 @@
       "types": "./dist/mutation/index.d.ts",
       "default": "./dist/mutation/index.js"
     },
+    "./invoke": {
+      "types": "./dist/invoke/index.d.ts",
+      "default": "./dist/invoke/index.js"
+    },
     "./graph": {
       "types": "./dist/graph/index.d.ts",
       "default": "./dist/graph/index.js"
@@ -55,18 +59,6 @@
     "./module": {
       "types": "./dist/module/index.d.ts",
       "default": "./dist/module/index.js"
-    },
-    "./entity": {
-      "types": "./dist/entity/index.d.ts",
-      "default": "./dist/entity/index.js"
-    },
-    "./query": {
-      "types": "./dist/query/index.d.ts",
-      "default": "./dist/query/index.js"
-    },
-    "./mutation": {
-      "types": "./dist/mutation/index.d.ts",
-      "default": "./dist/mutation/index.js"
     },
     "./port": {
       "types": "./dist/port/index.d.ts",

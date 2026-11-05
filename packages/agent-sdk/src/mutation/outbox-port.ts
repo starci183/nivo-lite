@@ -1,7 +1,8 @@
 import { z } from "../schema/zod-entry"
 import { keyText } from "../schema/bounded.schema"
 import type { JobRef } from "./job"
-import type { PortShape } from "./port-shape.mirror.types"
+import { definePort } from "../port/port"
+import type { PortDefinition } from "../port/port.types"
 
 /** The port id of the outbox: enqueueing a declared job in the transaction of the write that causes it (BE-PERSISTENCE-5, BE-QUEUES-1). */
 export const OUTBOX_PORT_ID = "engine.outbox"
@@ -30,4 +31,4 @@ export interface OutboxApi {
 }
 
 /** The outbox port declaration a job or an action lists in its ports. */
-export const outboxPort: PortShape<OutboxApi> = { entry: "port", id: OUTBOX_PORT_ID }
+export const outboxPort: PortDefinition<OutboxApi> = definePort<OutboxApi>(OUTBOX_PORT_ID)

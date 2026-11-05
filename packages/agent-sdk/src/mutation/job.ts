@@ -2,7 +2,7 @@ import { z } from "zod"
 import { KEY_MAX } from "../schema/bounds"
 import { isNamespaced } from "../schema/namespaced"
 import { JobDefinitionError, type JobProblemCode } from "./job-definition-error"
-import type { PortMap, PortsOf } from "./port-shape.mirror.types"
+import type { PortMap, PortsOf } from "../port/port.types"
 
 /** The most attempts a job declares (the queue's backoff policy decides the spacing). */
 export const JOB_ATTEMPTS_MAX = 20

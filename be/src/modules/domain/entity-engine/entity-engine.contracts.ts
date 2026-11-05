@@ -1,4 +1,5 @@
-import type { MutationResult, MutationValue, PortShape } from "@nivo-lite/agent-sdk/mutation"
+import type { MutationResult, MutationValue } from "@nivo-lite/agent-sdk/mutation"
+import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import type { Aggregate, Query } from "@nivo-lite/agent-sdk/query"
 import type { AggregateRow } from "./policies/aggregate-records.policy"
 import type { RecordRow } from "./policies/compiler.contracts"
@@ -50,7 +51,7 @@ export interface EntityAggregate extends Omit<Aggregate, "from"> {
 /** The ports a job or action asks for, by the name it calls them. */
 export interface DeclaredPorts {
     /** The declaration of one port. */
-    readonly [name: string]: PortShape
+    readonly [name: string]: PortDefinition<unknown>
 }
 
 /** The handles a job or action receives, by the name it called its ports. */
