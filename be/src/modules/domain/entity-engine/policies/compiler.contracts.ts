@@ -4,25 +4,6 @@ import type { SortDirection } from "@nivo-lite/agent-sdk/query"
 /** The entity declarations the compiler resolves names against, by entity name. */
 export type EntityCatalog = ReadonlyMap<string, EntityDefinition>
 
-/** The record as the engine returns it: the system fields (times as ISO text, `version` as decimal text) and the declared fields in `data`. */
-export interface RecordRow {
-    /** The record id. */
-    readonly id: string
-    /** The owning workspace. */
-    readonly workspaceId: string
-    /** The version token. */
-    readonly version: string
-    /** Creation time, ISO text. */
-    readonly createdAt: string
-    /** Last write time, ISO text. */
-    readonly updatedAt: string
-    /** The declared fields. */
-    readonly data: Readonly<Record<string, unknown>>
-}
-
-/** A position in an order: the text of each ordered expression of the last row of a page (null for SQL null). */
-export type KeysetPosition = ReadonlyArray<string | null>
-
 /** The ordered fields a keyset compares, in order. */
 export type KeysetOrder = ReadonlyArray<readonly [string, SortDirection]>
 

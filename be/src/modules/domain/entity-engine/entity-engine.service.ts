@@ -3,21 +3,27 @@ import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { deriveStateKey, eachInOrder } from "@modules/platform/primitives"
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
+import type {
+    AggregateRow,
+    KeysetPosition,
+    ListPage,
+    ListedRecord,
+    OptionalRecordRow,
+    RecordRow,
+} from "@nivo-lite/agent-sdk/entity/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
 import type { Aggregate, Query } from "@nivo-lite/agent-sdk/query"
 import { readCursor, signCursor } from "./cursor.policy"
 import { EngineFailureService } from "./engine-failure.service"
 import { InjectEntityEngineOptions } from "./entity-engine.decorators"
 import type { EntityEngineOptions } from "./entity-engine.options"
-import type { ListPage, OptionalRecordRow, ScopedWork } from "./entity-engine.contracts"
+import type { ScopedWork } from "./entity-engine.contracts"
 import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
 import { aggregateRecords } from "./policies/aggregate-records.policy"
-import type { AggregateRow } from "./policies/aggregate-records.policy"
-import type { EntityCatalog, KeysetPosition, RecordRow } from "./policies/compiler.contracts"
+import type { EntityCatalog } from "./policies/compiler.contracts"
 import { getRecord } from "./policies/get-record.policy"
 import { includeRecords } from "./policies/include-records.policy"
 import { listRecords } from "./policies/list-records.policy"
-import type { ListedRecord } from "./policies/list-records.policy"
 import { mintScopedTx } from "./policies/scoped-tx.policy"
 import type { ScopedTx } from "./policies/scoped-tx.contracts"
 

@@ -1,6 +1,6 @@
 import { cursorScopeOf } from "@nivo-lite/agent-sdk/query"
 import type { Query } from "@nivo-lite/agent-sdk/query"
-import type { EntitiesApi, EntityApi } from "./entity-engine.contracts"
+import type { EntitiesApi, EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 
 /**
  * The scope a generic list's cursor is bound to: the entity, the condition and the order, so a cursor minted for one list is refused on

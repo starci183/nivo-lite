@@ -1,5 +1,5 @@
 import { DOOR_PORT_ID, OUTBOX_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
-import { ENTITIES_PORT_ID, ENTITY_PORT_PREFIX } from "@modules/domain/entity-engine"
+import { ENTITIES_PORT_ID, ENTITY_PORT_PREFIX } from "@nivo-lite/agent-sdk/entity/port"
 
 /** Which provider serves a port id: the engine's data and outbox ports, a module's list source, the door (declared, never given to a screen), or none. */
 export type DoorPortKind = "engine" | "list" | "door" | "none"

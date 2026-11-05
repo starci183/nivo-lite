@@ -1,6 +1,7 @@
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
+import type { KeysetPosition } from "@nivo-lite/agent-sdk/entity/port"
 import { EntityEngineError, EntityEngineErrorCode } from "../errors/entity-engine.error"
-import type { KeysetOrder, KeysetPosition } from "./compiler.contracts"
+import type { KeysetOrder } from "./compiler.contracts"
 import { fieldExpression } from "./field-access.policy"
 import type { ParamBag } from "./param-bag.policy"
 

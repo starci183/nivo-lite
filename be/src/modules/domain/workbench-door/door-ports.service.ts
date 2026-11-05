@@ -3,7 +3,8 @@ import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
 import type { ListPage, ListSource } from "@nivo-lite/agent-sdk/block"
 import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
-import type { RecordRow, RunIn } from "@modules/domain/entity-engine"
+import type { RunIn } from "@modules/domain/entity-engine"
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { portKindOf } from "./door-port-kind.policy"
 
 /** What the ports of one run are bound to. */

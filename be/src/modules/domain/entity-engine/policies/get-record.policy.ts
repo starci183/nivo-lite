@@ -1,5 +1,5 @@
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { RecordEntity } from "../persistence/entities"
-import type { RecordRow } from "./compiler.contracts"
 import { recordRowOfEntity } from "./record-row.policy"
 import type { ScopedTx } from "./scoped-tx.contracts"
 

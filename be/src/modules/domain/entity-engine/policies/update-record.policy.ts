@@ -1,6 +1,7 @@
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { RecordEntity } from "../persistence/entities"
 import { entityOf } from "./catalog-access.policy"
-import type { EntityCatalog, RecordRow } from "./compiler.contracts"
+import type { EntityCatalog } from "./compiler.contracts"
 import { getRecord } from "./get-record.policy"
 import { dataOf } from "./record-data.policy"
 import { RECORD_RETURNING, recordRowsOf } from "./record-row.policy"

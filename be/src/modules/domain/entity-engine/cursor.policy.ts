@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { isRecord, parseJsonText } from "@modules/platform/primitives"
-import type { KeysetPosition } from "./policies/compiler.contracts"
+import type { KeysetPosition } from "@nivo-lite/agent-sdk/entity/port"
 
 /** The longest cursor text the engine reads (the query bound is 2000). */
 export const CURSOR_TEXT_MAX = 2000

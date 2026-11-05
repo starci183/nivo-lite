@@ -1,9 +1,10 @@
 import { returnedRows } from "@modules/platform/database"
 import { fieldTextOrNullOf, isRecord } from "@modules/platform/primitives"
+import type { JoinedRecord, KeysetPosition, ListedRecord } from "@nivo-lite/agent-sdk/entity/port"
 import type { Query } from "@nivo-lite/agent-sdk/query"
 import { RecordEntity, RecordLinkEntity } from "../persistence/entities"
 import { entityOf, relationOf } from "./catalog-access.policy"
-import type { EntityCatalog, KeysetPosition, RecordRow } from "./compiler.contracts"
+import type { EntityCatalog } from "./compiler.contracts"
 import { fieldExpression } from "./field-access.policy"
 import { filterFragment } from "./filter.policy"
 import type { FilterScope } from "./filter.policy"
@@ -18,24 +19,6 @@ export interface ListRequest {
     readonly query: Query
     /** The position after which the page starts; null for the first page. */
     readonly after: KeysetPosition | null
-}
-
-/** The record a toOne join found: its id and the selected fields. */
-export interface JoinedRecord {
-    /** The joined record id. */
-    readonly id: string
-    /** The selected fields. */
-    readonly data: Readonly<Record<string, unknown>>
-}
-
-/** One row of a page with its joins and its position in the order. */
-export interface ListedRecord {
-    /** The record, its `data` limited to the query's select. */
-    readonly row: RecordRow
-    /** The toOne joins by relation name; null when the record has no link. */
-    readonly joined: Readonly<Record<string, JoinedRecord | null>>
-    /** The text of each ordered expression, to build the cursor of the next page. */
-    readonly position: KeysetPosition
 }
 
 const joinedOf = (

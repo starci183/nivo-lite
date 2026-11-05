@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { cursorScopeOf } from "@nivo-lite/agent-sdk/query"
 import type { Query } from "@nivo-lite/agent-sdk/query"
-import type { EntitiesApi } from "./entity-engine.contracts"
+import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
 import { entityApiOf, listScopeOf } from "./entity-port.policy"
 
 const ENTITY_PORT: unique symbol = Symbol("entity-engine.entity-port")

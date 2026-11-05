@@ -1,8 +1,8 @@
 import { returnedRows, rowShape } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { RecordEntity } from "../persistence/entities"
 import { EntityEngineError, EntityEngineErrorCode } from "../errors/entity-engine.error"
-import type { RecordRow } from "./compiler.contracts"
 
 /** The columns a statement returns for a record, as the database names them. */
 export const RECORD_RETURNING = "id, workspace_id, version, created_at, updated_at, data"
