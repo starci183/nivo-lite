@@ -15,6 +15,10 @@ describe("tableBlock", () => {
         expect(Object.keys(tableBlock.propsJson).length).toBeGreaterThan(0)
     })
 
+    it("lists selectParam as the prop that names a spec param", () => {
+        expect(tableBlock.params).toEqual(["selectParam"])
+    })
+
     it("names a required rows read of a list and an optional open action", () => {
         expect(tableBlock.slots).toEqual({
             rows: { kind: "read", shape: "list", required: true },

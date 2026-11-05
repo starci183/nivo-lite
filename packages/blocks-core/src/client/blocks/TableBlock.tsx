@@ -6,7 +6,15 @@ import { Alert, Badge, Button, DataTable, EmptyNotice, Stack } from "@starci/gra
 import type { tableBlock } from "../../blocks/table.block"
 import { cellContextOf } from "../../rows/cell-format"
 import { recordsView } from "../../rows/rows"
-import { alignOf, cellOf, columnIdOf, tablePlaceholder, tableRowsOf } from "../../rows/table-rows"
+import {
+    alignOf,
+    cellOf,
+    chosenIdOf,
+    columnIdOf,
+    selectedIdsOf,
+    tablePlaceholder,
+    tableRowsOf,
+} from "../../rows/table-rows"
 import type { TableRow } from "../../rows/table-rows"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -41,7 +49,7 @@ export const TableBlock = (props: RenderOf<typeof tableBlock>): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
     const labels = useSlotLabels(props.props.empty)
-    const { columns, idPath } = props.props
+    const { columns, idPath, selectParam } = props.props
     const read = props.slots.rows
     const open = props.slots.open
     const context = cellContextOf(host.locale(), props.props.currency)
@@ -81,6 +89,14 @@ export const TableBlock = (props: RenderOf<typeof tableBlock>): ReactNode => {
                         isLoading={isLoading}
                         emptyContent={<EmptyNotice message={labels.empty} />}
                         {...(open.isAllowed ? { onRowAction: openRow } : {})}
+                        {...(selectParam === undefined
+                            ? {}
+                            : {
+                                  selectionMode: "single" as const,
+                                  selectedIds: selectedIdsOf(props.params.value(selectParam)),
+                                  onSelectionChange: (ids: ReadonlyArray<string> | "all") =>
+                                      props.params.set(selectParam, chosenIdOf(ids)),
+                              })}
                     />
                     {read.page === null || isLoading ? null : (
                         <MoreRows page={read.page} loadMoreLabel={words({ key: "tableLoadMore" })} labels={labels} />

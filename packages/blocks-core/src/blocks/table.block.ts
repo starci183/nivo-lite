@@ -66,4 +66,5 @@ export const tableBlock: BlockDefinition<typeof props, typeof slots> = defineBlo
     props,
     slots,
     children: false,
+    params: ["selectParam"],
 })

@@ -33,4 +33,5 @@ export const tabbedPanelBlock: BlockDefinition<typeof props, typeof slots> = def
     props,
     slots,
     children: { max: TABS_MAX },
+    params: ["param"],
 })

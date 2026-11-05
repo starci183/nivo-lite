@@ -13,6 +13,10 @@ describe("tabbedPanelBlock", () => {
         expect(Object.keys(tabbedPanelBlock.propsJson).length).toBeGreaterThan(0)
     })
 
+    it("lists param as the prop that names a spec param", () => {
+        expect(tabbedPanelBlock.params).toEqual(["param"])
+    })
+
     it("takes a label, the tabs and the param that holds the chosen tab", () => {
         expect(accepts(PANEL)).toBe(true)
         expect(accepts({ ...PANEL, tabs: [TAB, { id: "history", label: { vi: "Lich su", en: "History" } }] })).toBe(
