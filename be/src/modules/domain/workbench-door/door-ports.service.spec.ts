@@ -8,8 +8,11 @@ import { OUTBOX_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
 import type { RunIn, ScopedTx } from "@modules/domain/entity-engine"
+import { InstallationRecordsService } from "@modules/domain/module-installations"
+import type { InstallationRecord } from "@modules/domain/module-installations"
 import { DoorPortsService } from "./door-ports.service"
 import type { DoorRun } from "./door-ports.service"
+import { WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
 
 const SHAPE: ListShape = {
     sort: { recent: [["updatedAt", "desc"]] },
@@ -34,17 +37,20 @@ const build = async () => {
     const ports = mock<EntityPortsService>()
     const lists = mock<ListSourceService>()
     const tx = mock<ScopedTx>()
+    const installations = mock<InstallationRecordsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             DoorPortsService,
+            { provide: WORKBENCH_DOOR_OPTIONS, useValue: { modules: [], entities: [], registryHash: "hash-1" } },
+            { provide: InstallationRecordsService, useValue: installations },
             { provide: EntityEngineService, useValue: engine },
             { provide: EntityPortsService, useValue: ports },
             { provide: ListSourceService, useValue: lists },
         ],
     }).compile()
     const runIn: RunIn = (use) => use(tx)
-    const run: DoorRun = { runIn, name: "sales.leads", dataKind: "lead" }
-    return { service: moduleRef.get(DoorPortsService), ports, lists, tx, runIn, run }
+    const run: DoorRun = { workspaceId: "ws-1", runIn, name: "sales.leads", dataKind: "lead" }
+    return { service: moduleRef.get(DoorPortsService), ports, lists, tx, runIn, run, installations }
 }
 
 type PortId = `${string}.${string}`
@@ -113,6 +119,20 @@ describe("DoorPortsService", () => {
         expect(counts).toEqual({ new: 2, won: 3 })
     })
 
+    it("gives the installation port the registry hash and the modules the workspace has installed", async () => {
+        const { service, installations, run } = await build()
+        installations.list.mockResolvedValue([
+            mock<InstallationRecord>({ moduleKey: "sales" }),
+            mock<InstallationRecord>({ moduleKey: "loyalty" }),
+        ])
+
+        const source = service.providerFor(run).implementationOf(portOf("platform.installation"))
+        const facts = await (isInstallationSource(source) ? source.current() : Promise.reject(new Error("no source")))
+
+        expect(installations.list).toHaveBeenCalledWith("ws-1")
+        expect(facts).toEqual({ registryHash: "hash-1", modules: [], enabled: ["sales", "loyalty"] })
+    })
+
     it.each(UNPROVIDED)("reports %s as unprovided", async (_label, id, dataKind) => {
         const { service, run } = await build()
 
@@ -130,3 +150,7 @@ const isListSource = (
     readonly page: (shape: ListShape, query: typeof QUERY) => Promise<unknown>
     readonly counts: (shape: ListShape, by: string, query: typeof QUERY) => Promise<unknown>
 } => typeof value === "object" && value !== null && "page" in value && "counts" in value
+
+/** Narrows the implementation of the installation port to its one method. */
+const isInstallationSource = (value: unknown): value is { readonly current: () => Promise<unknown> } =>
+    typeof value === "object" && value !== null && "current" in value

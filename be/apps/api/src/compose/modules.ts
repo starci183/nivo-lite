@@ -15,6 +15,8 @@ import {
     WORKBENCH_DOOR_MESSAGES,
     WorkbenchDoorModule,
 } from "@modules/domain/workbench-door"
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
+import { installed } from "@nivo-lite/plugin-registry"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The modules area of the API, in registration order. */
@@ -39,7 +41,12 @@ export const modulesModules = (): Array<DynamicModule> => [
     OverviewModule.register({ isGlobal: true }),
     PublicApiModule.register({ isGlobal: true }),
     WorkbenchGraphqlModule.register({}),
-    WorkbenchDoorModule.register({ isGlobal: true, modules: [], entities: [], registryHash: "" }),
+    WorkbenchDoorModule.register({
+        isGlobal: true,
+        modules: installed.modules,
+        entities: FLOW_F_ENTITIES,
+        registryHash: installed.registryHash,
+    }),
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */
