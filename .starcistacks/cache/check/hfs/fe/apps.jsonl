@@ -1,6 +1,6 @@
 {"data":{},"findings":[],"hash":"b744b3a65ce181af1a96a2aaf7e22a0317a7f2bf0abf526b931f7c81d42d4ba3","path":"fe/apps/landing/Dockerfile","step":"file-rules"}
 {"data":{},"findings":[],"hash":"11ad9feb31182aacc9f1fc327b620d9c9242cd9310b3c1fdee6cd46ebc93d7bb","path":"fe/apps/landing/next.config.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"4b387511a376bc3f1836c98d7997737104c25d99c621c2b7e1802658832d16f5","path":"fe/apps/landing/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"798aa22948d27734cafe0614db429324ebf960a1507fd33cb95a689bd24145f5","path":"fe/apps/landing/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"67c36240f174ebdb86140723ac03a6d30038a1fbf387969b6de6c5e0efb44415","path":"fe/apps/landing/postcss.config.mjs","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2d014d26d95f4d30235efdc4889a6a395aaf5b0173127cb3590ca86fd3b48425","path":"fe/apps/landing/public/brand/nivo-logo.png","step":"file-rules"}
 {"data":{},"findings":[],"hash":"ae7739588fa9c02cc58232f900e61da774721d81fa6f8db4860349c11d187828","path":"fe/apps/landing/public/brand/nivo-mark.png","step":"file-rules"}
@@ -106,7 +106,7 @@
 {"data":{},"findings":[],"hash":"c4d0bde180a45fec3e92f7ef63291d271b859a33a214bee2c0c5e80bde4d34d1","path":"fe/apps/landing/tsconfig.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2f8c2f85f20ff5e378518449e82789f4c0e33dbcfe945bd3396586b74ee865f9","path":"fe/apps/web/Dockerfile","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e9bbbd9f784f87b0a1b29d1d1b93ea7b350a4e507d8b3716c86e3935fa580621","path":"fe/apps/web/next.config.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"71eb473e94bc2b8757c6b7c46169ba6d247cb0a41d4c3fee20c9ce216e0e56e3","path":"fe/apps/web/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9726604a6a87384d2a4a5d2f7158d63c1e6aa75e0823218aa21d8a2871e15f2c","path":"fe/apps/web/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"67c36240f174ebdb86140723ac03a6d30038a1fbf387969b6de6c5e0efb44415","path":"fe/apps/web/postcss.config.mjs","step":"file-rules"}
 {"data":{},"findings":[],"hash":"29a3f2dc86a1f6cea4043c6caf5822940c948bb7d23adc11ab46eedf542f11c0","path":"fe/apps/web/public/brand/google-mark.svg","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5b25afba86f79051974d04b62f741f18e1eb337a0f69968163fbfd1c314ccd58","path":"fe/apps/web/public/brand/hakuen-logo.jpg","step":"file-rules"}

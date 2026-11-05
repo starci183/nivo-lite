@@ -5023,8 +5023,8 @@
 {"findings":[],"hash":"cc5210f4f0f38db1212e6211788186f9bd5f0a4b50d7543f7ebc97eb87d8081d","path":"be/src/modules/domain/workspace-seed/errors/workspace-seed.error.ts","step":"prettier"}
 {"findings":[],"hash":"cdac113d38c8b5e69db069ad55aea282025b0052ba577f164b3919440e70c36a","path":"be/src/modules/domain/workspace-seed/graph-seed.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"83eca9e4c5300eaf09a527ab617e60c86ae9be60b6ae76ed5af07b5be42b5b27","path":"be/src/modules/domain/workspace-seed/graph-seed.policy.ts","step":"prettier"}
-{"findings":[],"hash":"94345046cf3dbc6aa3a8b96e88e763ab06f668a99bf6f8029473af8f3211fb14","path":"be/src/modules/domain/workspace-seed/graph-seed.service.spec.ts","step":"prettier"}
-{"findings":[],"hash":"94cbadaaa8b4d3f14bb203d759630a3264d902bba573938a2f1328714178c4c1","path":"be/src/modules/domain/workspace-seed/graph-seed.service.ts","step":"prettier"}
+{"findings":[],"hash":"88d2e2e430f5f8996148cef3aa769cebad558a9dde51b7a40289d33321706eb6","path":"be/src/modules/domain/workspace-seed/graph-seed.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"01af5924a2341f662c606e7295c816427687d55e5cb7e21e6bbb08cded827e9d","path":"be/src/modules/domain/workspace-seed/graph-seed.service.ts","step":"prettier"}
 {"findings":[],"hash":"ada02d21b2ceb33bbdf34c6da473c3f44357fa46362677503451aec5d7422ec8","path":"be/src/modules/domain/workspace-seed/index.ts","step":"prettier"}
 {"findings":[],"hash":"7ac363c4664d4bf1d04f0d423cdcc635314454d13d2961fe24ac2a818939b475","path":"be/src/modules/domain/workspace-seed/messages/workspace-seed.messages.ts","step":"prettier"}
 {"findings":[],"hash":"cea3d7b8018e45d8fb5e50a72bd7cc06233c2a7c4c14e78834349f80406aec7e","path":"be/src/modules/domain/workspace-seed/office-seed.contracts.ts","step":"prettier"}

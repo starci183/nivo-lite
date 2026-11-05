@@ -1,6 +1,6 @@
 {"findings":[],"hash":"5235f79a28f7bf558e1189c7c630c254e9930a102cf896ffb807a442f9881b55","path":"fe/apps/landing/Dockerfile","step":"prettier"}
 {"findings":[],"hash":"c35e3e8a51308c64ec5f65b5c4e6b1f044924d612f5a5dba6cbfa67ecca7d964","path":"fe/apps/landing/next.config.ts","step":"prettier"}
-{"findings":[],"hash":"9e15122930bc90d051bbcfed36efdd9d2be6b70a13a3ddb819bde954468d5c70","path":"fe/apps/landing/package.json","step":"prettier"}
+{"findings":[],"hash":"4d44316553736be509c5d901b396633da90cc413e7653cc683ee3f713338d7a2","path":"fe/apps/landing/package.json","step":"prettier"}
 {"findings":[],"hash":"ebd8daf9a019ed1c44a94dea9e6766759ccaf6959c7311be0d57678c90044b12","path":"fe/apps/landing/postcss.config.mjs","step":"prettier"}
 {"findings":[],"hash":"a47964331b9f3b6dc393603f55b00e2b5f0e38f19b1595914fd9ae7aa69b5b27","path":"fe/apps/landing/public/brand/nivo-logo.png","step":"prettier"}
 {"findings":[],"hash":"e204355c78ff5882364ded731d2644b8f76d066d4254e5538b64e398e12396c3","path":"fe/apps/landing/public/brand/nivo-mark.png","step":"prettier"}

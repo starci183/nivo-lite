@@ -1,6 +1,6 @@
 {"findings":[],"hash":"ac140c92854e799e94c20444f0dad44f02008919922cdc2422dbd23ff6bcd21d","path":"fe/apps/web/Dockerfile","step":"prettier"}
 {"findings":[],"hash":"5676c710ffec30281f6a8c8378baad272a4f0f8db3a3e3989da10b9ef9d860d3","path":"fe/apps/web/next.config.ts","step":"prettier"}
-{"findings":[],"hash":"f1456129d19e735a7a2773c879f6e56666cc9a4b2dbc22096c710f0599eb43b8","path":"fe/apps/web/package.json","step":"prettier"}
+{"findings":[],"hash":"441248286612be97a6259f183cb5514b6f55c9d8856a883ce6e9a5c229d823f2","path":"fe/apps/web/package.json","step":"prettier"}
 {"findings":[],"hash":"ebd8daf9a019ed1c44a94dea9e6766759ccaf6959c7311be0d57678c90044b12","path":"fe/apps/web/postcss.config.mjs","step":"prettier"}
 {"findings":[],"hash":"81e0e1ee00d4e1810556376955d416f8c78605751a080996ae3a8e078d60e7da","path":"fe/apps/web/public/brand/google-mark.svg","step":"prettier"}
 {"findings":[],"hash":"8c9258f89c9d187e6fd5b4be2af53a28416578b3ce77113f056cac36fdb082ea","path":"fe/apps/web/public/brand/hakuen-logo.jpg","step":"prettier"}

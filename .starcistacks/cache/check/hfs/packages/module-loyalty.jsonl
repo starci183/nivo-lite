@@ -1,4 +1,4 @@
-{"data":{},"findings":[],"hash":"d471ffe634389803d57535573de3dadb5b856b2f04140c05e9cdbbd3b6bd1160","path":"packages/module-loyalty/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"7b1bb7951c924c1adc564e9d605f9b324fea019271d646441b9ad1466595fa65","path":"packages/module-loyalty/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e3b16173da7ddd98ec54f9fd30de50ad289dcf622e1e3cd9719fdb0806c6604d","path":"packages/module-loyalty/src/index.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e5b6222b9b45b1d5cfd7377c7066b7c44a9ff342e6d474dc5a36ce65efdc8d88","path":"packages/module-loyalty/src/manifest/declaration.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"771891351a138ff84ca68b7e993b5c323d5cdf396529b3c91cb06522e6181d9e","path":"packages/module-loyalty/src/manifest/declaration.ts","step":"file-rules"}
