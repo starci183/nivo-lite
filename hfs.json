@@ -803,6 +803,12 @@
         "reason": "NOLOGIN NOINHERIT NOBYPASSRLS role the entity engine switches to after engine_scope_enter; its policies compare workspace_id with the transaction-local nivo.workspace_id"
       }
     ],
-    "scopeColumns": ["workspace_id"]
+    "scopeColumns": ["workspace_id"],
+    "baselineReset": {
+      "baseline": "db/migrations/20261112000700_baseline.sql",
+      "ruling": "nivo-reset-2026-11-05",
+      "date": "2026-11-05",
+      "reason": "owner: không migrate, reset, làm lại từ đầu (no prod data)"
+    }
   }
 }
