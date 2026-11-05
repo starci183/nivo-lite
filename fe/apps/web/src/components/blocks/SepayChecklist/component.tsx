@@ -46,7 +46,7 @@ interface Waiting {
 
 const descriptionOf = (note: string, isWaiting: boolean, waiting: Waiting) => {
     if (isWaiting) {
-        return <Alert tone="pending" appearance="soft" title={waiting.text} />
+        return <Alert tone="pending" title={waiting.text} />
     }
     if (note === "") return undefined
     return (

@@ -109,7 +109,7 @@ export const AgentSetupChecklist = (props: AgentSetupChecklistProps) => {
                     title={props.view.unmet.title}
                     description={props.view.unmet.body}
                     tone="cautionary"
-                    appearance="soft"
+
                     action={{
                         label: props.view.unmet.actionLabel,
                         onAction: () => props.on.open(props.view.unmet?.href ?? ""),

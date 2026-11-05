@@ -71,8 +71,6 @@ export const ZaloTestSend = (props: ZaloTestSendProps) => (
                 {props.props.view.blocked}
             </Text>
         )}
-        {props.props.note === "" ? null : (
-            <Alert tone={props.props.noteTone} appearance="soft" title={props.props.note} />
-        )}
+        {props.props.note === "" ? null : <Alert tone={props.props.noteTone} title={props.props.note} />}
     </Fieldset>
 )

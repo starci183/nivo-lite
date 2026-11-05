@@ -37,7 +37,7 @@ export const AgentWorkStatus = (props: AgentWorkStatusProps) => (
             ))}
         </Cluster>
         {props.status.stopNotice === "" ? null : (
-            <Alert title={props.status.stopNotice} tone={ALERT_TONE[props.status.tone]} appearance="soft" />
+            <Alert title={props.status.stopNotice} tone={ALERT_TONE[props.status.tone]} />
         )}
     </>
 )

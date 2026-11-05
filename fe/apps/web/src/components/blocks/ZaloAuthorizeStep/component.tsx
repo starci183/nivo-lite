@@ -47,7 +47,7 @@ export const ZaloAuthorizeStepBase = (props: ZaloAuthorizeStepBaseProps) => {
                 )
             }
         >
-            {notice === "" ? null : <Alert tone="negative" appearance="soft" title={notice} />}
+            {notice === "" ? null : <Alert tone="negative" title={notice} />}
         </ConnectionStepBand>
     )
 }

@@ -103,9 +103,7 @@ export const ZaloConnectionZnsBase = (props: ZaloConnectionZnsBaseProps): ReactE
                                         />
                                     ))}
                                 </Grid>
-                                {view.note === "" ? null : (
-                                    <Alert tone="negative" appearance="soft" title={view.note} />
-                                )}
+                                {view.note === "" ? null : <Alert tone="negative" title={view.note} />}
                             </Fieldset>
                         )}
                     />

@@ -73,7 +73,7 @@ export const DriveFileChooser = (props: DriveFileChooserProps) => {
                 <Alert
                     {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
                     tone="negative"
-                    appearance="soft"
+
                     title={props.props.error}
                 />
             )}
@@ -81,7 +81,7 @@ export const DriveFileChooser = (props: DriveFileChooserProps) => {
                 <Alert
                     {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
                     tone="affirmative"
-                    appearance="soft"
+
                     title={props.props.added}
                 />
             )}

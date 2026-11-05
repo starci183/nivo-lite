@@ -87,7 +87,6 @@ export const AgentGraphDetail = (props: AgentGraphDetailProps) => (
                     </Stack>
                 }
                 tone="cautionary"
-                appearance="soft"
             />
         )}
         <DescriptionList

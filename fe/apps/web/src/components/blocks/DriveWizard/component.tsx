@@ -87,7 +87,7 @@ const renderDriveWizard = (props: DriveWizardBaseProps, isLoading: boolean) => {
             ) : null}
             {view.index === 1 ? (
                 <Stack gap="row">
-                    <Alert tone="affirmative" appearance="soft" title={text.connected} isLoading={isLoading} />
+                    <Alert tone="affirmative" title={text.connected} isLoading={isLoading} />
                     <DriveFileChooser props={{ ...view.chooser, isLoading: isLoading }} on={props.on} />
                 </Stack>
             ) : null}

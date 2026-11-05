@@ -48,7 +48,7 @@ export const AgentWorkWorkspaceSwitchBase = (props: AgentWorkWorkspaceSwitchBase
                     <Text size="sm" isLoading={isLoading}>
                         {view.countsLabel}
                     </Text>
-                    {view.isOn ? null : <Alert title={props.props.offNotice} tone="negative" appearance="soft" />}
+                    {view.isOn ? null : <Alert title={props.props.offNotice} tone="negative" />}
                     {view.canChange ? null : (
                         <Text size="sm" tone="muted">
                             {props.props.ownerOnly}
