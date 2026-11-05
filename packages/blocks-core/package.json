@@ -16,6 +16,10 @@
       "types": "./dist/modules/loyalty/index.d.ts",
       "default": "./dist/modules/loyalty/index.js"
     },
+    "./fixtures": {
+      "types": "./dist/fixtures.d.ts",
+      "default": "./dist/fixtures.js"
+    },
     "./client": {
       "types": "./dist/esm/client/index.d.ts",
       "default": "./dist/esm/client/index.js"

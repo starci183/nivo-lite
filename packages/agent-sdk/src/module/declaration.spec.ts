@@ -43,7 +43,7 @@ const CONFIG: ModuleDeclarationConfig = {
     permissions: ["sales.view", "sales.manage", "sales.read", "sales.write"],
     reads: [LEADS, LEAD_COUNTS, ORDERS],
     actions: [MOVE, OPEN],
-    tools: ["crm.zalo.send"],
+    tools: ["chat.send"],
     specs: [],
 }
 

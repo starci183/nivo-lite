@@ -13,8 +13,11 @@ export interface ModuleDeclarationConfig {
     readonly reads: ReadonlyArray<ReadDefinition>
     /** The actions of the module. */
     readonly actions: ReadonlyArray<ActionDefinition>
-    /** The tools the module's graph nodes may call, as `<group>.<provider>.<action>`. */
-    readonly tools?: ReadonlyArray<`${string}.${string}.${string}`>
+    /**
+     * The door tools the module's jobs and nodes call, by DOMAIN name `<group>.<action>` (`chat.send`, `ledger.append`); the door
+     * resolves the workspace's provider, so a module never names one.
+     */
+    readonly tools?: ReadonlyArray<`${string}.${string}`>
     /** The seed specs of the module. */
     readonly specs: ReadonlyArray<StoredSpec>
 }
