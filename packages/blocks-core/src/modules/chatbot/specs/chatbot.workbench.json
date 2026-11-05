@@ -1,0 +1,156 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "chatbot",
+  "params": {
+    "q": { "type": "string", "url": "q" },
+    "status": { "type": "enum", "of": "chatbot.threads.status", "url": "status", "default": "all" },
+    "channel": { "type": "enum", "of": "chatbot.threads.channel", "url": "channel", "default": "all" },
+    "selected": { "type": "string", "url": "thread" }
+  },
+  "views": [
+    {
+      "id": "inbox",
+      "label": { "key": "tab_inbox" },
+      "root": {
+        "id": "inbox",
+        "block": "core.master-detail",
+        "props": { "emptyTitle": { "key": "master_empty_title" }, "emptyBody": { "key": "master_empty_body" } },
+        "children": [
+          {
+            "id": "left",
+            "block": "core.stack",
+            "props": { "gap": "row" },
+            "children": [
+              {
+                "id": "channels",
+                "block": "core.filter-tabs",
+                "props": {
+                  "param": "channel",
+                  "label": { "key": "channel_filter_label" },
+                  "all": { "key": "filter_all" },
+                  "items": [
+                    { "value": "zalo", "label": { "key": "channel_zalo" } },
+                    { "value": "telegram", "label": { "key": "channel_telegram" } },
+                    { "value": "facebook", "label": { "key": "channel_facebook" } },
+                    { "value": "instagram", "label": { "key": "channel_instagram" } },
+                    { "value": "website", "label": { "key": "channel_website" } }
+                  ]
+                },
+                "bind": {
+                  "counts": { "read": "chatbot.channel-counts", "variables": { "q": "$q", "status": "$status" } }
+                }
+              },
+              {
+                "id": "pane",
+                "block": "core.list-pane",
+                "props": { "search": true, "searchParam": "q", "searchLabel": { "key": "search_label" } },
+                "children": [
+                  {
+                    "id": "statuses",
+                    "block": "core.filter-tabs",
+                    "props": {
+                      "param": "status",
+                      "label": { "key": "status_filter_label" },
+                      "all": { "key": "filter_all" },
+                      "items": [
+                        { "value": "needs", "label": { "key": "status_needs" }, "attention": true },
+                        { "value": "handled", "label": { "key": "status_handled" } },
+                        { "value": "ai", "label": { "key": "status_ai" } }
+                      ]
+                    },
+                    "bind": {
+                      "counts": {
+                        "read": "chatbot.thread-counts",
+                        "variables": { "q": "$q", "channel": "$channel" }
+                      }
+                    }
+                  },
+                  {
+                    "id": "threads",
+                    "block": "core.record-list",
+                    "props": {
+                      "label": { "key": "list_label" },
+                      "empty": { "key": "list_empty" },
+                      "emptySearch": { "key": "list_empty_search" },
+                      "idPath": "id",
+                      "titlePath": "name",
+                      "descriptionPath": "lastText",
+                      "selectParam": "selected",
+                      "searchParam": "q"
+                    },
+                    "bind": {
+                      "rows": {
+                        "read": "chatbot.threads",
+                        "path": "rows",
+                        "variables": { "q": "$q", "status": "$status", "channel": "$channel" }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "thread-side",
+            "block": "core.aside-detail",
+            "props": { "width": "medium" },
+            "children": [
+              {
+                "id": "thread",
+                "block": "core.conversation",
+                "props": {
+                  "label": { "key": "thread_label" },
+                  "empty": { "key": "thread_empty" },
+                  "pick": { "key": "thread_pick" },
+                  "idPath": "id",
+                  "textPath": "text",
+                  "authorPath": "who",
+                  "timePath": "at",
+                  "statusPath": "state",
+                  "sidePath": "side",
+                  "markPath": "mark",
+                  "composer": true,
+                  "selectParam": "selected",
+                  "maxLength": 4000
+                },
+                "bind": {
+                  "messages": {
+                    "read": "chatbot.messages",
+                    "path": "rows",
+                    "variables": { "threadId": "$selected" }
+                  },
+                  "send": { "action": "chatbot.reply" },
+                  "handoff": { "action": "chatbot.handoff" }
+                }
+              },
+              {
+                "id": "customer",
+                "block": "core.detail",
+                "props": {
+                  "label": { "key": "customer_label" },
+                  "idle": { "key": "customer_idle" },
+                  "idPath": "id",
+                  "items": [
+                    { "term": { "key": "fact_name" }, "path": "name" },
+                    { "term": { "key": "fact_channel" }, "path": "channelName" },
+                    { "term": { "key": "fact_handled_by" }, "path": "handledBy" },
+                    { "term": { "key": "fact_stage" }, "path": "stage" },
+                    { "term": { "key": "fact_need" }, "path": "need" },
+                    { "term": { "key": "fact_company" }, "path": "company" },
+                    { "term": { "key": "fact_phone" }, "path": "phone" },
+                    { "term": { "key": "fact_email" }, "path": "email" }
+                  ]
+                },
+                "bind": {
+                  "record": { "read": "chatbot.thread", "variables": { "id": "$selected" } },
+                  "primary": { "action": "chatbot.handoff" },
+                  "secondary": { "action": "chatbot.release" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
