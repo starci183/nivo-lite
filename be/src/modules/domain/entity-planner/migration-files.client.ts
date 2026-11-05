@@ -1,5 +1,5 @@
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { Injectable } from "@nestjs/common"
 import { InjectEntityPlannerOptions } from "./entity-planner.port"
 import type { EntityPlannerOptions } from "./entity-planner.options"
@@ -8,7 +8,7 @@ import type { EntityPlannerOptions } from "./entity-planner.options"
 export const MIGRATIONS_DIRECTORY: string = join("db", "migrations")
 
 /** The entities manifest the harness drift check compares, relative to the app root. */
-export const MANIFEST_FILE: string = join(".starciwork", "entities.manifest.json")
+export const MANIFEST_FILE: string = join("db", "entities.manifest.json")
 
 const missing = (error: unknown): boolean =>
     typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT"
@@ -50,7 +50,7 @@ export class MigrationFilesClient {
 
     /** Writes the manifest, creating its folder. */
     async writeManifest(text: string): Promise<void> {
-        await mkdir(join(this.root, ".starciwork"), { recursive: true })
+        await mkdir(join(this.root, dirname(MANIFEST_FILE)), { recursive: true })
         await writeFile(join(this.root, MANIFEST_FILE), text, "utf8")
     }
 }

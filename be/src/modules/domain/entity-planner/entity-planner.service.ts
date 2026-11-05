@@ -10,6 +10,7 @@ import {
 import type { CatalogSnapshot, EntityManifest, PlanOp } from "@nivo-lite/agent-sdk/entity"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
+import { parseJsonText } from "@modules/platform/primitives"
 import { InjectEntityPlannerOptions } from "./entity-planner.port"
 import type { EntityPlannerOptions } from "./entity-planner.options"
 import { EntityPlannerError, EntityPlannerErrorCode } from "./errors/entity-planner.error"
@@ -35,6 +36,16 @@ const nextStampOf = (names: ReadonlyArray<string>): string => {
 /** The text of the manifest file: stable JSON with a closing newline. */
 const manifestTextOf = (manifest: EntityManifest): string => `${JSON.stringify(manifest, null, 2)}
 `
+
+/**
+ * Whether the manifest file says what the declarations say. The file is compared as JSON, not as text: the commit hook formats it
+ * with prettier, which folds short arrays, so the bytes the planner wrote and the bytes committed may differ.
+ */
+const manifestMatches = (text: string | null, expected: EntityManifest): boolean => {
+    if (text === null) return false
+    const read = parseJsonText(text)
+    return read.ok && JSON.stringify(read.value) === JSON.stringify(expected)
+}
 
 /** Where the planner prints: `process.stdout` in the cli. */
 export interface EntityPlanOutput {
@@ -79,8 +90,7 @@ export class EntityPlannerService {
         if (ops.length > 0) {
             throw new EntityPlannerError({ code: EntityPlannerErrorCode.PlanNotEmpty, params: { steps: ops.length } })
         }
-        const expected = manifestTextOf(manifestOf(this.options.entities))
-        if ((await this.files.manifest()) !== expected) {
+        if (!manifestMatches(await this.files.manifest(), manifestOf(this.options.entities))) {
             throw new EntityPlannerError({ code: EntityPlannerErrorCode.ManifestMismatch })
         }
     }

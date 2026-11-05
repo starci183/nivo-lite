@@ -191,6 +191,22 @@ describe("EntityPlannerService.check", () => {
         await expect(service.check(out)).resolves.toBeUndefined()
     })
 
+    it("passes when the manifest is the same document in another layout, as the commit hook's prettier writes it", async () => {
+        const { service, out, files } = await build([], matching)
+        files.manifest.mockResolvedValue('{ "version": 1, "entities": [] }')
+
+        await expect(service.check(out)).resolves.toBeUndefined()
+    })
+
+    it("fails when the manifest is not JSON or says something else", async () => {
+        const { service, out, files } = await build([], matching)
+        files.manifest.mockResolvedValue("not json")
+        await expect(service.check(out)).rejects.toMatchObject({ code: EntityPlannerErrorCode.ManifestMismatch })
+
+        files.manifest.mockResolvedValue('{ "version": 1, "entities": [{ "entity": "x", "partition": "y" }] }')
+        await expect(service.check(out)).rejects.toMatchObject({ code: EntityPlannerErrorCode.ManifestMismatch })
+    })
+
     it("fails on a non-empty plan", async () => {
         const { service, out } = await build([lead], matching)
 

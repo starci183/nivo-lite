@@ -1,0 +1,197 @@
+{
+  "version": 1,
+  "entities": [
+    {
+      "entity": "accounting.adjustment",
+      "partition": "records_accounting_adjustment",
+      "checks": [
+        "records_accounting_adjustment_corrected_amount_chk",
+        "records_accounting_adjustment_corrected_amount_vnd_chk",
+        "records_accounting_adjustment_created_by_chk",
+        "records_accounting_adjustment_created_by_user_chk",
+        "records_accounting_adjustment_note_chk",
+        "records_accounting_adjustment_target_id_chk",
+        "records_accounting_adjustment_target_type_chk"
+      ],
+      "indexes": ["records_accounting_adjustment_recent", "records_accounting_adjustment_target"]
+    },
+    {
+      "entity": "accounting.book-entry",
+      "partition": "records_accounting_book_entry",
+      "view": "v_records_accounting_book_entry",
+      "checks": [
+        "records_accounting_book_entry_amount_vnd_chk",
+        "records_accounting_book_entry_entry_date_chk",
+        "records_accounting_book_entry_kind_chk",
+        "records_accounting_book_entry_note_chk",
+        "records_accounting_book_entry_source_entity_chk",
+        "records_accounting_book_entry_source_id_chk"
+      ],
+      "indexes": [
+        "records_accounting_book_entry_date",
+        "records_accounting_book_entry_kind_date",
+        "records_accounting_book_entry_note_trgm_idx",
+        "records_accounting_book_entry_source_key"
+      ]
+    },
+    {
+      "entity": "accounting.invoice",
+      "partition": "records_accounting_invoice",
+      "checks": [
+        "records_accounting_invoice_amount_chk",
+        "records_accounting_invoice_amount_vnd_chk",
+        "records_accounting_invoice_contract_id_chk",
+        "records_accounting_invoice_contract_period_chk",
+        "records_accounting_invoice_due_at_chk",
+        "records_accounting_invoice_invoice_no_chk",
+        "records_accounting_invoice_issued_at_chk",
+        "records_accounting_invoice_issued_by_chk",
+        "records_accounting_invoice_order_id_chk",
+        "records_accounting_invoice_paid_at_chk",
+        "records_accounting_invoice_period_ends_on_chk",
+        "records_accounting_invoice_status_chk"
+      ],
+      "indexes": [
+        "records_accounting_invoice_contract_period_key",
+        "records_accounting_invoice_invoice_no_key",
+        "records_accounting_invoice_order_key",
+        "records_accounting_invoice_recent",
+        "records_accounting_invoice_status_recent"
+      ]
+    },
+    {
+      "entity": "agent.turn",
+      "partition": "records_agent_turn",
+      "checks": [
+        "records_agent_turn_agent_key_chk",
+        "records_agent_turn_at_chk",
+        "records_agent_turn_role_chk",
+        "records_agent_turn_session_key_chk",
+        "records_agent_turn_text_chk",
+        "records_agent_turn_tool_calls_chk",
+        "records_agent_turn_turn_index_chk"
+      ],
+      "indexes": ["records_agent_turn_recent", "records_agent_turn_session_turn_key"]
+    },
+    {
+      "entity": "chat.conversation",
+      "partition": "records_chat_conversation",
+      "checks": [
+        "records_chat_conversation_agent_id_chk",
+        "records_chat_conversation_channel_chk",
+        "records_chat_conversation_external_id_chk",
+        "records_chat_conversation_front_agent_id_chk",
+        "records_chat_conversation_handled_at_chk",
+        "records_chat_conversation_handled_by_chk",
+        "records_chat_conversation_kind_chk",
+        "records_chat_conversation_status_chk",
+        "records_chat_conversation_visitor_name_chk"
+      ],
+      "indexes": [
+        "records_chat_conversation_channel_external_key",
+        "records_chat_conversation_channel_recent",
+        "records_chat_conversation_recent",
+        "records_chat_conversation_status_recent",
+        "records_chat_conversation_visitor_name_trgm_idx"
+      ]
+    },
+    {
+      "entity": "chat.message",
+      "partition": "records_chat_message",
+      "checks": [
+        "records_chat_message_author_kind_chk",
+        "records_chat_message_author_name_chk",
+        "records_chat_message_author_user_id_chk",
+        "records_chat_message_channel_ref_chk",
+        "records_chat_message_conversation_id_chk",
+        "records_chat_message_delivery_error_chk",
+        "records_chat_message_delivery_status_chk",
+        "records_chat_message_role_chk",
+        "records_chat_message_sent_at_chk",
+        "records_chat_message_text_chk"
+      ],
+      "indexes": ["records_chat_message_channel_ref_key", "records_chat_message_conversation_sent"]
+    },
+    {
+      "entity": "payment.claim",
+      "partition": "records_payment_claim",
+      "checks": [
+        "records_payment_claim_amount_chk",
+        "records_payment_claim_amount_vnd_chk",
+        "records_payment_claim_body_chk",
+        "records_payment_claim_claimed_at_chk",
+        "records_payment_claim_code_chk",
+        "records_payment_claim_dedupe_key_chk",
+        "records_payment_claim_names_chk",
+        "records_payment_claim_settled_transaction_id_chk",
+        "records_payment_claim_status_chk"
+      ],
+      "indexes": [
+        "records_payment_claim_dedupe_key",
+        "records_payment_claim_settled_transaction_key",
+        "records_payment_claim_status_claimed"
+      ]
+    },
+    {
+      "entity": "payment.transaction",
+      "partition": "records_payment_transaction",
+      "checks": [
+        "records_payment_transaction_amount_chk",
+        "records_payment_transaction_amount_vnd_chk",
+        "records_payment_transaction_channel_chk",
+        "records_payment_transaction_direction_chk",
+        "records_payment_transaction_external_ref_chk",
+        "records_payment_transaction_occurred_at_chk",
+        "records_payment_transaction_order_id_chk",
+        "records_payment_transaction_payer_chk",
+        "records_payment_transaction_reference_chk",
+        "records_payment_transaction_status_chk"
+      ],
+      "indexes": [
+        "records_payment_transaction_external_ref_key",
+        "records_payment_transaction_occurred",
+        "records_payment_transaction_order_key",
+        "records_payment_transaction_status_occurred"
+      ]
+    },
+    {
+      "entity": "sales.lead",
+      "partition": "records_sales_lead",
+      "checks": [
+        "records_sales_lead_channel_chk",
+        "records_sales_lead_company_chk",
+        "records_sales_lead_contact_name_chk",
+        "records_sales_lead_context_summary_chk",
+        "records_sales_lead_email_chk",
+        "records_sales_lead_need_chk",
+        "records_sales_lead_phone_chk",
+        "records_sales_lead_stage_chk"
+      ],
+      "indexes": [
+        "records_sales_lead_company_trgm_idx",
+        "records_sales_lead_contact_name_trgm_idx",
+        "records_sales_lead_email_key",
+        "records_sales_lead_email_trgm_idx",
+        "records_sales_lead_phone_key",
+        "records_sales_lead_phone_trgm_idx",
+        "records_sales_lead_recent",
+        "records_sales_lead_stage_recent"
+      ]
+    },
+    {
+      "entity": "sales.order",
+      "partition": "records_sales_order",
+      "checks": [
+        "records_sales_order_amount_chk",
+        "records_sales_order_amount_vnd_chk",
+        "records_sales_order_confirmed_at_chk",
+        "records_sales_order_confirmed_by_chk",
+        "records_sales_order_items_chk",
+        "records_sales_order_note_chk",
+        "records_sales_order_order_no_chk",
+        "records_sales_order_status_chk"
+      ],
+      "indexes": ["records_sales_order_order_no_key", "records_sales_order_recent", "records_sales_order_status_recent"]
+    }
+  ]
+}

@@ -17,7 +17,7 @@ export class PlanCli extends CommandRunner {
         await this.planner.plan(options, process.stdout)
     }
 
-    /** Write the next migration file and `.starciwork/entities.manifest.json`. */
+    /** Write the next migration file and `db/entities.manifest.json`. */
     @Option({ flags: "--write", description: "Write the migration and the entities manifest" })
     parseWrite(): true {
         return true
