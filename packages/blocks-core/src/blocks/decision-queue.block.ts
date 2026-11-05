@@ -12,6 +12,9 @@ import type { TextSchema, EnumSchema, RequiredRead, OptionalAction } from "./sch
 /** Where a queue stands: a card on a card page, or a section in a pane. */
 export const QUEUE_SURFACES = ["card", "section"] as const
 
+/** How large the commands of a row are: small in a list of many, regular where one decision is the whole point. */
+export const QUEUE_COMMAND_SIZES = ["sm", "md"] as const
+
 /** The most commands one queue gives words to. */
 export const QUEUE_COMMANDS_MAX = 8
 
@@ -43,6 +46,7 @@ const edit: EditSchema = z.object({
 
 const props: z.ZodObject<{
     surface: EnumSchema<(typeof QUEUE_SURFACES)[number]>
+    commandSize: z.ZodOptional<EnumSchema<(typeof QUEUE_COMMAND_SIZES)[number]>>
     label: TextSchema
     emptyTitle: TextSchema
     emptyBody: TextSchema
@@ -53,6 +57,7 @@ const props: z.ZodObject<{
     edit: z.ZodOptional<EditSchema>
 }> = z.object({
     surface: z.enum(QUEUE_SURFACES),
+    commandSize: z.enum(QUEUE_COMMAND_SIZES).optional(),
     label: specText,
     emptyTitle: specText,
     emptyBody: specText,

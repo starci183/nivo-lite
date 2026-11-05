@@ -120,6 +120,8 @@ export interface CommandView {
     readonly disabledReason?: string | undefined
     /** Whether choosing it cannot be taken back, which the control shows in the danger tone. */
     readonly isDanger?: boolean | undefined
+    /** The look of the control when it is not a danger: the one that decides, an alternative, a dismissal or a plain one. */
+    readonly intent?: "commit" | "alternative" | "dismiss" | "neutral" | undefined
 }
 
 /** One state or age mark on a row. */
@@ -138,6 +140,8 @@ export interface DecisionRowView {
     readonly title: string
     /** The line of detail under the headline. */
     readonly description: string
+    /** The name whose initials lead the row (the agent that asked); absent draws no mark. */
+    readonly leading?: string | undefined
     /** The state and age marks beside the headline. */
     readonly badges: ReadonlyArray<BadgeView>
     /** Why the agent stopped for a person; null when it gave none. */

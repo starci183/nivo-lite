@@ -64,6 +64,7 @@ export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): 
             render={(view, isLoading) => (
                 <DecisionList
                     surface={spec.surface}
+                    commandSize={spec.commandSize ?? "sm"}
                     queue={view}
                     isLoading={isLoading}
                     edit={edit}

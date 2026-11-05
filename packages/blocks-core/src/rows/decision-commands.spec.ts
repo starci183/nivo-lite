@@ -52,6 +52,20 @@ describe("declaredQueue", () => {
         expect(first?.menu.map((entry) => entry.isDanger)).toEqual([false, true])
     })
 
+    it("carries the decided, alternative and dismissing looks to the command", () => {
+        const source = queue([row({ primary: command("a"), edit: command("b"), menu: [command("c")] })])
+        const declared = [
+            { id: "a", label: { key: "A" }, intent: "commit" as const },
+            { id: "b", label: { key: "B" }, intent: "alternative" as const },
+            { id: "c", label: { key: "C" }, intent: "dismiss" as const },
+        ]
+        const [first] = declaredQueue(source, declared, undefined, words).rows
+        expect(first?.primary?.intent).toBe("commit")
+        expect(first?.edit?.intent).toBe("alternative")
+        expect(first?.menu[0]?.intent).toBe("dismiss")
+        expect(first?.primary?.isDanger).toBe(false)
+    })
+
     it("keeps the state of the command and every other field of the row and the queue", () => {
         const pending = command("approve", { isPending: true, isDisabled: true, disabledReason: "why" })
         const source = queue([row({ primary: pending, title: "Keep" })])
@@ -98,9 +112,9 @@ describe("editAnswerOf", () => {
 })
 
 describe("the edit constants", () => {
-    it("name the edit command, the two looks of a command and the failure of a run", () => {
+    it("name the edit command, the looks of a command and the failure of a run", () => {
         expect(EDIT_COMMAND).toBe("edit")
-        expect(COMMAND_INTENTS).toEqual(["neutral", "danger"])
+        expect(COMMAND_INTENTS).toEqual(["commit", "alternative", "dismiss", "neutral", "danger"])
         expect(editFailure).toEqual({ isDone: false, fields: {}, notice: { key: "slotError" } })
     })
 })

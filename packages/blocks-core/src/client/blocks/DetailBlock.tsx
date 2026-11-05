@@ -96,18 +96,18 @@ export const DetailBlock = (props: RenderOf<typeof detailBlock>): ReactNode => {
                                 </Stack>
                             ))}
                             {isLoading || !hasActions ? null : (
-                                <Cluster gap="inline" justify="end">
-                                    <RowAction
-                                        action={props.slots.secondary}
-                                        intent="alternative"
-                                        isDisabled={id === ""}
-                                        onRun={() => run(props.slots.secondary, id)}
-                                    />
+                                <Cluster gap="inline" justify="start">
                                     <RowAction
                                         action={props.slots.primary}
                                         intent="commit"
                                         isDisabled={id === ""}
                                         onRun={() => run(props.slots.primary, id)}
+                                    />
+                                    <RowAction
+                                        action={props.slots.secondary}
+                                        intent="alternative"
+                                        isDisabled={id === ""}
+                                        onRun={() => run(props.slots.secondary, id)}
                                     />
                                 </Cluster>
                             )}

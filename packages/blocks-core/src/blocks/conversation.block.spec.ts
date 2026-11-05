@@ -52,12 +52,36 @@ describe("conversationBlock", () => {
         expect(conversationBlock.props.safeParse({ ...BASE, maxLength: MAX_LENGTH_CEILING + 1 }).success).toBe(false)
     })
 
-    it("binds the messages as a required list and leaves send, hand-off and close optional", () => {
+    it("takes a head over the thread and a proposed reply, and refuses either one without its paths", () => {
+        const head = { titlePath: "name", subtitlePath: "channel" }
+        const proposal = {
+            title: WORD,
+            idPath: "id",
+            textPath: "text",
+            askedPath: "asked",
+            notePath: "note",
+            saveLabel: WORD,
+            cancelLabel: WORD,
+        }
+        expect(conversationBlock.props.safeParse({ ...BASE, head: { titlePath: "name" }, proposal }).success).toBe(true)
+        expect(conversationBlock.props.safeParse({ ...BASE, head, proposal }).success).toBe(true)
+        expect(conversationBlock.props.safeParse({ ...BASE, head: { subtitlePath: "channel" } }).success).toBe(false)
+        expect(
+            conversationBlock.props.safeParse({ ...BASE, proposal: { ...proposal, textPath: undefined } }).success,
+        ).toBe(false)
+    })
+
+    it("binds the messages as a required list and leaves every other slot optional", () => {
         expect(conversationBlock.slots).toEqual({
             messages: { kind: "read", shape: "list", required: true },
+            thread: { kind: "read", shape: "record", required: false },
+            proposal: { kind: "read", shape: "record", required: false },
             send: { kind: "action", required: false },
             handoff: { kind: "action", required: false },
             close: { kind: "action", required: false },
+            approve: { kind: "action", required: false },
+            edit: { kind: "action", required: false },
+            reject: { kind: "action", required: false },
         })
     })
 })
