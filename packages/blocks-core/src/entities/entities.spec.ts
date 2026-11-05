@@ -8,7 +8,7 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the ten entities once each", () => {
+    it("declares the thirteen entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
@@ -20,6 +20,9 @@ describe("flow F entity declarations", () => {
             "accounting.adjustment",
             "accounting.book-entry",
             "agent.turn",
+            "agent.run",
+            "agent.run-step",
+            "agent.node-effect",
         ])
         expect(catalog.size).toBe(FLOW_F_ENTITIES.length)
         expect(new Set(FLOW_F_ENTITIES.map((entity) => entity.dataKind)).size).toBe(FLOW_F_ENTITIES.length)
@@ -97,6 +100,34 @@ describe("flow F entity declarations", () => {
                 refusal: "turn-already-synced",
             },
         ])
+    })
+
+    it("opens one run per wake and planning flag, and one step per run and step key", () => {
+        expect(entityNamed("agent.run")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["wakeId", "planning"], refusal: "run-already-open" }),
+        )
+        expect(entityNamed("agent.run-step")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["runId", "stepKey"], refusal: "step-already-written" }),
+        )
+        expect(entityNamed("agent.run-step")?.relations?.["run"]).toMatchObject({ kind: "toOne", required: true })
+    })
+
+    it("keeps the effect ledger unique per key and never deletable", () => {
+        const ledger = entityNamed("agent.node-effect")
+        expect(ledger?.constraints).toContainEqual(expect.objectContaining({ on: ["effectKey"] }))
+        expect(ledger?.deletable).toBeUndefined()
+    })
+
+    it("parses the step effect and door call shapes", () => {
+        const step = entityNamed("agent.run-step")
+        expect(step?.fields["effect"]?.shape?.parse({ kind: "compensable", compensation: "undo" })).toEqual({
+            kind: "compensable",
+            compensation: "undo",
+        })
+        expect(step?.fields["effect"]?.shape?.safeParse({ kind: "other" }).success).toBe(false)
+        expect(
+            step?.fields["doorCalls"]?.shape?.parse({ calls: [{ tool: "chat.send", ok: true, effectKey: "k" }] }),
+        ).toEqual({ calls: [{ tool: "chat.send", ok: true, effectKey: "k" }] })
     })
 
     it("indexes the messages of a conversation and keeps one transaction and one invoice per order", () => {
