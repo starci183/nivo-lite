@@ -57,7 +57,7 @@ describe("tableBlock", () => {
         expect(accepts({ ...TABLE, currency: "usd" })).toBe(false)
         expect(accepts({ ...TABLE, selectParam: "9lives" })).toBe(false)
         expect(accepts({ ...TABLE, selectParam: "a b" })).toBe(false)
-        expect(accepts({ ...TABLE, selectParam: "p".repeat(33) })).toBe(false)
+        expect(accepts({ ...TABLE, selectParam: "p".repeat(65) })).toBe(false)
     })
 })
 

@@ -1,6 +1,8 @@
-import { moduleListProblems } from "@nivo-lite/agent-sdk/module"
+import { moduleListProblems, seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import { specProblems } from "@nivo-lite/agent-sdk/workbench/spec"
 import type { WorkbenchSpecDocument } from "@nivo-lite/agent-sdk/workbench/spec"
+import { coreBlocks } from "../blocks/core-blocks"
+import { MODULE_DECLARATIONS } from "./module-declarations"
 import { REGISTERED_MODULE_KEYS } from "./registered-module-keys"
 import { MODULE_SERVERS } from "./module-servers"
 import { MODULE_WORKBENCHES } from "./module-workbenches"
@@ -90,5 +92,16 @@ describe("SPEC_REGISTRY", () => {
                       ],
         }
         expect(specProblems(document, SPEC_REGISTRY)).toEqual([{ code: "SPEC_BINDING_UNKNOWN", at: "overview/x.data" }])
+    })
+})
+
+describe("MODULE_DECLARATIONS", () => {
+    it("holds declarations whose seed specs draw with the core blocks and their own reads and actions", () => {
+        expect(MODULE_DECLARATIONS.flatMap((declaration) => seedSpecProblems(declaration, coreBlocks))).toEqual([])
+    })
+
+    it("holds each module key once", () => {
+        const keys = MODULE_DECLARATIONS.map((declaration) => declaration.key)
+        expect(new Set(keys).size).toBe(keys.length)
     })
 })

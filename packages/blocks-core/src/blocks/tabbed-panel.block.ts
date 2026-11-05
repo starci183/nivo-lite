@@ -2,7 +2,7 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import { paramName } from "./selection-param"
+import { paramName } from "./param-name"
 import type { TextSchema } from "./schema-types"
 
 /** The most tabs one panel holds. */

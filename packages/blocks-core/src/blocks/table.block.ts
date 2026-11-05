@@ -6,7 +6,7 @@ import { CELL_FORMATS } from "../rows/cell-format"
 import type { CellFormat } from "../rows/cell-format"
 import { PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
-import { paramName } from "./selection-param"
+import { paramName } from "./param-name"
 import type { EnumSchema, OptionalAction, RequiredRead, TextSchema } from "./schema-types"
 
 /** Where the cells of a column line up. */

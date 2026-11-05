@@ -39,7 +39,14 @@ export type {
     WorkItemRaisePayload,
 } from "./vocabulary"
 
+export { asideDetailBlock } from "./blocks/aside-detail.block"
 export { cardGridBlock } from "./blocks/card-grid.block"
+export { conversationBlock } from "./blocks/conversation.block"
+export { filterTabsBlock } from "./blocks/filter-tabs.block"
+export { formBlock } from "./blocks/form.block"
+export { listPaneBlock } from "./blocks/list-pane.block"
+export { tabbedPanelBlock } from "./blocks/tabbed-panel.block"
+export { tableBlock } from "./blocks/table.block"
 export { dashboardCardsBlock } from "./blocks/dashboard-cards.block"
 export { decisionQueueBlock } from "./blocks/decision-queue.block"
 export { detailBlock } from "./blocks/detail.block"

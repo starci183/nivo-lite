@@ -3,13 +3,11 @@ import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { PATH_MAX } from "./bounds"
+import { paramName } from "./param-name"
 import type { TextSchema, RequiredRead, OptionalAction } from "./schema-types"
 
 /** The longest message a spec may allow. */
 export const MAX_LENGTH_CEILING = 10_000
-
-/** The longest name of a spec param. */
-const PARAM_NAME_MAX = 60
 
 const props: z.ZodObject<{
     label: TextSchema
@@ -37,7 +35,7 @@ const props: z.ZodObject<{
     sidePath: z.string().max(PATH_MAX).optional(),
     markPath: z.string().max(PATH_MAX).optional(),
     composer: z.boolean(),
-    selectParam: z.string().min(1).max(PARAM_NAME_MAX),
+    selectParam: paramName,
     maxLength: z.number().int().min(1).max(MAX_LENGTH_CEILING).optional(),
 })
 

@@ -1,3 +1,4 @@
+export { MODULE_DECLARATIONS } from "./module-declarations"
 export { MODULE_SERVERS } from "./module-servers"
 export { MODULE_WORKBENCHES } from "./module-workbenches"
 export { REGISTERED_MODULE_KEYS } from "./registered-module-keys"
