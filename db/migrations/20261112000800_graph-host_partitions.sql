@@ -66,14 +66,14 @@ ALTER TABLE public."records_agent_run" VALIDATE CONSTRAINT "records_agent_run_st
 -- add_check public.records_agent_run:constraint:records_agent_run_ended_at_chk: added NOT VALID, then validated
 ALTER TABLE public."records_agent_run" ADD CONSTRAINT "records_agent_run_ended_at_chk" CHECK ((data->>'endedAt') IS NULL OR ((data->>'endedAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
 ALTER TABLE public."records_agent_run" VALIDATE CONSTRAINT "records_agent_run_ended_at_chk";
+-- create_index public.records_agent_run:index:records_agent_run_wake: on workspace_id, data->>'wakeid', id using btree
+CREATE INDEX "records_agent_run_wake" ON public."records_agent_run" USING btree (workspace_id, ((data->>'wakeId')::uuid), id);
 -- create_index public.records_agent_run:index:records_agent_run_agent_started: on workspace_id, data->>'agentid', data->>'startedat'desc, iddesc using btree
 CREATE INDEX "records_agent_run_agent_started" ON public."records_agent_run" USING btree (workspace_id, ((data->>'agentId')::uuid), (data->>'startedAt') DESC, id DESC);
--- create_index public.records_agent_run:index:records_agent_run_status_resume: on workspace_id, data->>'status', data->>'resumenotbefore' using btree
-CREATE INDEX "records_agent_run_status_resume" ON public."records_agent_run" USING btree (workspace_id, (data->>'status'), (data->>'resumeNotBefore'));
--- create_index public.records_agent_run:index:records_agent_run_status_dead_lettered: on workspace_id, data->>'status', data->>'deadletteredat' using btree
-CREATE INDEX "records_agent_run_status_dead_lettered" ON public."records_agent_run" USING btree (workspace_id, (data->>'status'), (data->>'deadLetteredAt'));
--- create_index public.records_agent_run:index:records_agent_run_wait_item: on workspace_id, data->>'waitworkitemid' using btree
-CREATE INDEX "records_agent_run_wait_item" ON public."records_agent_run" USING btree (workspace_id, ((data->>'waitWorkItemId')::uuid)) WHERE ((data->>'waitWorkItemId')::uuid) IS NOT NULL;
+-- create_index public.records_agent_run:index:records_agent_run_status_resume: on workspace_id, data->>'status', data->>'resumenotbefore', id using btree
+CREATE INDEX "records_agent_run_status_resume" ON public."records_agent_run" USING btree (workspace_id, (data->>'status'), (data->>'resumeNotBefore'), id);
+-- create_index public.records_agent_run:index:records_agent_run_status_dead_lettered: on workspace_id, data->>'status', data->>'deadletteredat', id using btree
+CREATE INDEX "records_agent_run_status_dead_lettered" ON public."records_agent_run" USING btree (workspace_id, (data->>'status'), (data->>'deadLetteredAt'), id);
 -- add_unique public.records_agent_run:index:records_agent_run_wake_planning_key: on workspace_id, data->>'wakeid', data->>'planning' using btree
 CREATE UNIQUE INDEX "records_agent_run_wake_planning_key" ON public."records_agent_run" USING btree (workspace_id, ((data->>'wakeId')::uuid), ((data->>'planning')::boolean));
 -- create_view public.v_records_agent_run: typed view with 26 columns
@@ -153,16 +153,16 @@ ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_r
 -- add_check public.records_agent_run_step:constraint:records_agent_run_step_error_chk: added NOT VALID, then validated
 ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_step_error_chk" CHECK ((data->>'error') IS NULL OR (jsonb_typeof(data->'error') = 'object')) NOT VALID;
 ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_error_chk";
--- create_index public.records_agent_run_step:index:records_agent_run_step_run_ordinal: on workspace_id, data->>'runid', data->>'ordinal' using btree
-CREATE INDEX "records_agent_run_step_run_ordinal" ON public."records_agent_run_step" USING btree (workspace_id, ((data->>'runId')::uuid), ((data->>'ordinal')::integer));
--- create_index public.records_agent_run_step:index:records_agent_run_step_status_claimed: on workspace_id, data->>'status', data->>'claimeduntil' using btree
-CREATE INDEX "records_agent_run_step_status_claimed" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'status'), (data->>'claimedUntil'));
--- create_index public.records_agent_run_step:index:records_agent_run_step_status_not_before: on workspace_id, data->>'status', data->>'notbefore' using btree
-CREATE INDEX "records_agent_run_step_status_not_before" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'status'), (data->>'notBefore'));
--- create_index public.records_agent_run_step:index:records_agent_run_step_wait_item: on workspace_id, data->>'waititemid' using btree
-CREATE INDEX "records_agent_run_step_wait_item" ON public."records_agent_run_step" USING btree (workspace_id, ((data->>'waitItemId')::uuid)) WHERE ((data->>'waitItemId')::uuid) IS NOT NULL;
--- create_index public.records_agent_run_step:index:records_agent_run_step_kind_work_item: on workspace_id, data->>'kind', data->>'workitemid' using btree
-CREATE INDEX "records_agent_run_step_kind_work_item" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'kind'), ((data->>'workItemId')::uuid));
+-- create_index public.records_agent_run_step:index:records_agent_run_step_run_ordinal: on workspace_id, data->>'runid', data->>'ordinal', id using btree
+CREATE INDEX "records_agent_run_step_run_ordinal" ON public."records_agent_run_step" USING btree (workspace_id, ((data->>'runId')::uuid), ((data->>'ordinal')::integer), id);
+-- create_index public.records_agent_run_step:index:records_agent_run_step_status_claimed: on workspace_id, data->>'status', data->>'claimeduntil', id using btree
+CREATE INDEX "records_agent_run_step_status_claimed" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'status'), (data->>'claimedUntil'), id);
+-- create_index public.records_agent_run_step:index:records_agent_run_step_status_not_before: on workspace_id, data->>'status', data->>'notbefore', id using btree
+CREATE INDEX "records_agent_run_step_status_not_before" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'status'), (data->>'notBefore'), id);
+-- create_index public.records_agent_run_step:index:records_agent_run_step_wait_item: on workspace_id, data->>'waititemid', id using btree
+CREATE INDEX "records_agent_run_step_wait_item" ON public."records_agent_run_step" USING btree (workspace_id, ((data->>'waitItemId')::uuid), id);
+-- create_index public.records_agent_run_step:index:records_agent_run_step_kind_work_item: on workspace_id, data->>'kind', data->>'workitemid', id using btree
+CREATE INDEX "records_agent_run_step_kind_work_item" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'kind'), ((data->>'workItemId')::uuid), id);
 -- add_unique public.records_agent_run_step:index:records_agent_run_step_run_step_key: on workspace_id, data->>'runid', data->>'stepkey' using btree
 CREATE UNIQUE INDEX "records_agent_run_step_run_step_key" ON public."records_agent_run_step" USING btree (workspace_id, ((data->>'runId')::uuid), (data->>'stepKey'));
 -- create_view public.v_records_agent_run_step: typed view with 29 columns

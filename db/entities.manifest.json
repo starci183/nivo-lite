@@ -102,7 +102,7 @@
         "records_agent_run_agent_started",
         "records_agent_run_status_dead_lettered",
         "records_agent_run_status_resume",
-        "records_agent_run_wait_item",
+        "records_agent_run_wake",
         "records_agent_run_wake_planning_key"
       ]
     },
