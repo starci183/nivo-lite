@@ -27,11 +27,11 @@ type LeadFields = {
 }
 
 const leadFields: LeadFields = {
-    contactName: field.text({ nullable: false, maxLength: MAX_LINE, searchable: true }),
+    contactName: field.text({ maxLength: MAX_LINE, searchable: true }),
     company: field.text({ maxLength: MAX_LINE, searchable: true, nullable: true }),
-    channel: field.enum({ nullable: false, of: LEAD_CHANNELS, default: { literal: "website" } }),
+    channel: field.enum({ of: LEAD_CHANNELS, default: { literal: "website" } }),
     need: field.text({ maxLength: MAX_BODY, nullable: true }),
-    stage: field.enum({ nullable: false, of: LEAD_STAGES, default: { literal: "new" } }),
+    stage: field.enum({ of: LEAD_STAGES, default: { literal: "new" } }),
     contextSummary: field.text({ maxLength: MAX_BODY, nullable: true }),
     phone: field.text({ maxLength: 30, searchable: true, nullable: true }),
     email: field.text({ maxLength: MAX_LINE, searchable: true, nullable: true }),

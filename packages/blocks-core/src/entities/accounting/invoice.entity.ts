@@ -23,7 +23,7 @@ const invoiceFields: InvoiceFields = {
     invoiceNo: field.sequence({ format: "HD-{yyyy}{mm}-{n:4}", resets: "month" }),
     orderId: field.uuid({ nullable: true }),
     amountVnd: field.moneyVnd(),
-    status: field.enum({ nullable: false, of: INVOICE_STATUSES, default: { literal: "draft" } }),
+    status: field.enum({ of: INVOICE_STATUSES, default: { literal: "draft" } }),
     dueAt: field.timestamptz({ nullable: true }),
     issuedBy: field.text({ maxLength: MAX_LINE, nullable: true }),
     issuedAt: field.timestamptz({ nullable: true }),

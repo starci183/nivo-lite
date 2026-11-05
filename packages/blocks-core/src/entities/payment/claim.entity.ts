@@ -32,12 +32,12 @@ type ClaimFields = {
 const claimFields: ClaimFields = {
     code: field.text({ maxLength: MAX_ID, nullable: true }),
     amountVnd: field.moneyVnd({ nullable: true }),
-    names: field.jsonb({ nullable: false, shape: claimNamesShape }),
-    body: field.text({ nullable: false, maxLength: MAX_BODY }),
-    status: field.enum({ nullable: false, of: CLAIM_STATUSES, default: { literal: "open" } }),
-    claimedAt: field.timestamptz({ nullable: false, default: "now" }),
+    names: field.jsonb({ shape: claimNamesShape }),
+    body: field.text({ maxLength: MAX_BODY }),
+    status: field.enum({ of: CLAIM_STATUSES, default: { literal: "open" } }),
+    claimedAt: field.timestamptz({ default: "now" }),
     settledTransactionId: field.uuid({ nullable: true }),
-    dedupeKey: field.text({ nullable: false, maxLength: MAX_ID }),
+    dedupeKey: field.text({ maxLength: MAX_ID }),
 }
 
 /** What a customer said about paying an order. Graph node kind `payment-claim`. */

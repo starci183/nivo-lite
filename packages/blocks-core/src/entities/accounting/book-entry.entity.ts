@@ -17,8 +17,8 @@ type BookEntryFields = {
 }
 
 const bookEntryFields: BookEntryFields = {
-    kind: field.enum({ nullable: false, of: BOOK_ENTRY_KINDS }),
-    sourceEntity: field.text({ nullable: false, maxLength: 120 }),
+    kind: field.enum({ of: BOOK_ENTRY_KINDS }),
+    sourceEntity: field.text({ maxLength: 120 }),
     sourceId: field.uuid(),
     entryDate: field.date(),
     amountVnd: field.moneyVnd(),

@@ -26,12 +26,12 @@ type TurnFields = {
 }
 
 const turnFields: TurnFields = {
-    agentKey: field.text({ nullable: false, maxLength: MAX_ID }),
-    sessionKey: field.text({ nullable: false, maxLength: MAX_ID }),
+    agentKey: field.text({ maxLength: MAX_ID }),
+    sessionKey: field.text({ maxLength: MAX_ID }),
     turnIndex: field.int(),
-    role: field.enum({ nullable: false, of: ["user", "assistant", "tool", "system"] }),
-    text: field.text({ nullable: false, maxLength: MAX_BODY }),
-    toolCalls: field.jsonb({ nullable: false, shape: turnToolCallsShape }),
+    role: field.enum({ of: ["user", "assistant", "tool", "system"] }),
+    text: field.text({ maxLength: MAX_BODY }),
+    toolCalls: field.jsonb({ shape: turnToolCallsShape }),
     at: field.timestamptz(),
 }
 
