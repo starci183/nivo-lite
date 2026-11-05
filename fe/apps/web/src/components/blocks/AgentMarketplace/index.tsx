@@ -2,12 +2,11 @@
 
 import { useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
-import { useMarketplace } from "@/hooks/templates"
+import { kindOf, parameterErrorOf, useMarketplace } from "@/hooks/templates"
+import type { ParameterRule, ParameterWords } from "@/hooks/templates"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentMarketplaceBase } from "./component"
 import type { AgentMarketplaceBaseProps } from "./component"
-import { kindOf, parameterErrorOf } from "./parameters"
-import type { ParameterRule, ParameterWords } from "./parameters"
 
 /** The shape of a listing while the first read loads: the skeleton reuses the ready tree. */
 const PLACEHOLDER: AgentMarketplaceBaseProps["props"]["placeholder"] = [
