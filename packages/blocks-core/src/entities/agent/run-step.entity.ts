@@ -74,6 +74,11 @@ type RunStepFields = {
     readonly attempt: FieldDef<"int", false>
     readonly maxAttempts: FieldDef<"int", false>
     readonly deadlineMs: FieldDef<"int", true>
+    readonly notBefore: FieldDef<"timestamptz", true>
+    readonly waitItemId: FieldDef<"uuid", true>
+    readonly workItemId: FieldDef<"uuid", true>
+    readonly compAttempts: FieldDef<"int", false>
+    readonly errorCode: FieldDef<"text", true>
     readonly claimedUntil: FieldDef<"timestamptz", true>
     readonly startedAt: FieldDef<"timestamptz", true>
     readonly endedAt: FieldDef<"timestamptz", true>
@@ -96,6 +101,11 @@ const runStepFields: RunStepFields = {
     attempt: field.int({ default: { literal: 0 } }),
     maxAttempts: field.int({ default: { literal: 3 } }),
     deadlineMs: field.int({ nullable: true }),
+    notBefore: field.timestamptz({ nullable: true }),
+    waitItemId: field.uuid({ nullable: true }),
+    workItemId: field.uuid({ nullable: true }),
+    compAttempts: field.int({ default: { literal: 0 } }),
+    errorCode: field.text({ maxLength: 120, nullable: true }),
     claimedUntil: field.timestamptz({ nullable: true }),
     startedAt: field.timestamptz({ nullable: true }),
     endedAt: field.timestamptz({ nullable: true }),
@@ -114,7 +124,13 @@ export const agentRunStepEntity: EntityDefinition<RunStepFields> = defineEntity(
     dataKind: "agent-run-step",
     fields: runStepFields,
     relations: { run: { kind: "toOne", target: "agent.run", required: true, onDelete: "cascade" } },
-    indexes: [{ name: "run_ordinal", on: ["runId", "ordinal"] }],
+    indexes: [
+        { name: "run_ordinal", on: ["runId", "ordinal"] },
+        { name: "status_claimed", on: ["status", "claimedUntil"] },
+        { name: "status_not_before", on: ["status", "notBefore"] },
+        { name: "wait_item", on: ["waitItemId"], where: { op: "notNull", field: "waitItemId" } },
+        { name: "kind_work_item", on: ["kind", "workItemId"] },
+    ],
     constraints: [{ kind: "unique", name: "run_step_key", on: ["runId", "stepKey"], refusal: "step-already-written" }],
     view: true,
 })

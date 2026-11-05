@@ -40,6 +40,7 @@ type RunFields = {
     readonly resumeReason: FieldDef<"text", true>
     readonly waitWorkItemId: FieldDef<"uuid", true>
     readonly waitDeadlineAt: FieldDef<"timestamptz", true>
+    readonly stepSeq: FieldDef<"int", false>
     readonly startedAt: FieldDef<"timestamptz", false>
     readonly endedAt: FieldDef<"timestamptz", true>
 }
@@ -63,6 +64,7 @@ const runFields: RunFields = {
     resumeReason: field.text({ maxLength: MAX_BODY, nullable: true }),
     waitWorkItemId: field.uuid({ nullable: true }),
     waitDeadlineAt: field.timestamptz({ nullable: true }),
+    stepSeq: field.int({ default: { literal: 0 } }),
     startedAt: field.timestamptz({ default: "now" }),
     endedAt: field.timestamptz({ nullable: true }),
 }
@@ -78,6 +80,7 @@ export const agentRunEntity: EntityDefinition<RunFields> = defineEntity({
     indexes: [
         { name: "agent_started", on: ["agentId", { desc: "startedAt" }, { desc: "id" }] },
         { name: "status_resume", on: ["status", "resumeNotBefore"] },
+        { name: "status_dead_lettered", on: ["status", "deadLetteredAt"] },
         { name: "wait_item", on: ["waitWorkItemId"], where: { op: "notNull", field: "waitWorkItemId" } },
     ],
     constraints: [

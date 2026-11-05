@@ -57,6 +57,9 @@ ALTER TABLE public."records_agent_run" VALIDATE CONSTRAINT "records_agent_run_wa
 -- add_check public.records_agent_run:constraint:records_agent_run_wait_deadline_at_chk: added NOT VALID, then validated
 ALTER TABLE public."records_agent_run" ADD CONSTRAINT "records_agent_run_wait_deadline_at_chk" CHECK ((data->>'waitDeadlineAt') IS NULL OR ((data->>'waitDeadlineAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
 ALTER TABLE public."records_agent_run" VALIDATE CONSTRAINT "records_agent_run_wait_deadline_at_chk";
+-- add_check public.records_agent_run:constraint:records_agent_run_step_seq_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_run" ADD CONSTRAINT "records_agent_run_step_seq_chk" CHECK ((data->>'stepSeq') IS NOT NULL AND (jsonb_typeof(data->'stepSeq') = 'number' AND (data->>'stepSeq') ~ '^-?[0-9]{1,10}$')) NOT VALID;
+ALTER TABLE public."records_agent_run" VALIDATE CONSTRAINT "records_agent_run_step_seq_chk";
 -- add_check public.records_agent_run:constraint:records_agent_run_started_at_chk: added NOT VALID, then validated
 ALTER TABLE public."records_agent_run" ADD CONSTRAINT "records_agent_run_started_at_chk" CHECK ((data->>'startedAt') IS NOT NULL AND ((data->>'startedAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
 ALTER TABLE public."records_agent_run" VALIDATE CONSTRAINT "records_agent_run_started_at_chk";
@@ -67,12 +70,14 @@ ALTER TABLE public."records_agent_run" VALIDATE CONSTRAINT "records_agent_run_en
 CREATE INDEX "records_agent_run_agent_started" ON public."records_agent_run" USING btree (workspace_id, ((data->>'agentId')::uuid), (data->>'startedAt') DESC, id DESC);
 -- create_index public.records_agent_run:index:records_agent_run_status_resume: on workspace_id, data->>'status', data->>'resumenotbefore' using btree
 CREATE INDEX "records_agent_run_status_resume" ON public."records_agent_run" USING btree (workspace_id, (data->>'status'), (data->>'resumeNotBefore'));
+-- create_index public.records_agent_run:index:records_agent_run_status_dead_lettered: on workspace_id, data->>'status', data->>'deadletteredat' using btree
+CREATE INDEX "records_agent_run_status_dead_lettered" ON public."records_agent_run" USING btree (workspace_id, (data->>'status'), (data->>'deadLetteredAt'));
 -- create_index public.records_agent_run:index:records_agent_run_wait_item: on workspace_id, data->>'waitworkitemid' using btree
 CREATE INDEX "records_agent_run_wait_item" ON public."records_agent_run" USING btree (workspace_id, ((data->>'waitWorkItemId')::uuid)) WHERE ((data->>'waitWorkItemId')::uuid) IS NOT NULL;
 -- add_unique public.records_agent_run:index:records_agent_run_wake_planning_key: on workspace_id, data->>'wakeid', data->>'planning' using btree
 CREATE UNIQUE INDEX "records_agent_run_wake_planning_key" ON public."records_agent_run" USING btree (workspace_id, ((data->>'wakeId')::uuid), ((data->>'planning')::boolean));
--- create_view public.v_records_agent_run: typed view with 25 columns
-CREATE VIEW public."v_records_agent_run" WITH (security_invoker = true) AS SELECT id, workspace_id, version, created_at, updated_at, ((data->>'agentId')::uuid) AS "agent_id", ((data->>'wakeId')::uuid) AS "wake_id", (data->>'trigger') AS "trigger", ((data->>'graphVersionId')::uuid) AS "graph_version_id", ((data->>'planning')::boolean) AS "planning", (data->>'status') AS "status", (data->'context') AS "context", (data->'error') AS "error", ((data->>'deadLetteredAt')::timestamptz) AS "dead_lettered_at", (data->>'parkedBuild') AS "parked_build", (data->>'parkReason') AS "park_reason", ((data->>'resumeAttempts')::integer) AS "resume_attempts", ((data->>'resumeNotBefore')::timestamptz) AS "resume_not_before", ((data->>'resumedAt')::timestamptz) AS "resumed_at", (data->>'resumedBy') AS "resumed_by", (data->>'resumeReason') AS "resume_reason", ((data->>'waitWorkItemId')::uuid) AS "wait_work_item_id", ((data->>'waitDeadlineAt')::timestamptz) AS "wait_deadline_at", ((data->>'startedAt')::timestamptz) AS "started_at", ((data->>'endedAt')::timestamptz) AS "ended_at" FROM public.records WHERE entity = 'agent.run';
+-- create_view public.v_records_agent_run: typed view with 26 columns
+CREATE VIEW public."v_records_agent_run" WITH (security_invoker = true) AS SELECT id, workspace_id, version, created_at, updated_at, ((data->>'agentId')::uuid) AS "agent_id", ((data->>'wakeId')::uuid) AS "wake_id", (data->>'trigger') AS "trigger", ((data->>'graphVersionId')::uuid) AS "graph_version_id", ((data->>'planning')::boolean) AS "planning", (data->>'status') AS "status", (data->'context') AS "context", (data->'error') AS "error", ((data->>'deadLetteredAt')::timestamptz) AS "dead_lettered_at", (data->>'parkedBuild') AS "parked_build", (data->>'parkReason') AS "park_reason", ((data->>'resumeAttempts')::integer) AS "resume_attempts", ((data->>'resumeNotBefore')::timestamptz) AS "resume_not_before", ((data->>'resumedAt')::timestamptz) AS "resumed_at", (data->>'resumedBy') AS "resumed_by", (data->>'resumeReason') AS "resume_reason", ((data->>'waitWorkItemId')::uuid) AS "wait_work_item_id", ((data->>'waitDeadlineAt')::timestamptz) AS "wait_deadline_at", ((data->>'stepSeq')::integer) AS "step_seq", ((data->>'startedAt')::timestamptz) AS "started_at", ((data->>'endedAt')::timestamptz) AS "ended_at" FROM public.records WHERE entity = 'agent.run';
 GRANT SELECT ON TABLE public."v_records_agent_run" TO app_engine;
 -- create_partition public.records_agent_run_step: records for values in ('agent.run-step')
 CREATE TABLE public."records_agent_run_step" PARTITION OF public.records FOR VALUES IN ('agent.run-step');
@@ -112,6 +117,21 @@ ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_r
 -- add_check public.records_agent_run_step:constraint:records_agent_run_step_deadline_ms_chk: added NOT VALID, then validated
 ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_step_deadline_ms_chk" CHECK ((data->>'deadlineMs') IS NULL OR (jsonb_typeof(data->'deadlineMs') = 'number' AND (data->>'deadlineMs') ~ '^-?[0-9]{1,10}$')) NOT VALID;
 ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_deadline_ms_chk";
+-- add_check public.records_agent_run_step:constraint:records_agent_run_step_not_before_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_step_not_before_chk" CHECK ((data->>'notBefore') IS NULL OR ((data->>'notBefore') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
+ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_not_before_chk";
+-- add_check public.records_agent_run_step:constraint:records_agent_run_step_wait_item_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_step_wait_item_id_chk" CHECK ((data->>'waitItemId') IS NULL OR ((data->>'waitItemId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_wait_item_id_chk";
+-- add_check public.records_agent_run_step:constraint:records_agent_run_step_work_item_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_step_work_item_id_chk" CHECK ((data->>'workItemId') IS NULL OR ((data->>'workItemId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_work_item_id_chk";
+-- add_check public.records_agent_run_step:constraint:records_agent_run_step_comp_attempts_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_step_comp_attempts_chk" CHECK ((data->>'compAttempts') IS NOT NULL AND (jsonb_typeof(data->'compAttempts') = 'number' AND (data->>'compAttempts') ~ '^-?[0-9]{1,10}$')) NOT VALID;
+ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_comp_attempts_chk";
+-- add_check public.records_agent_run_step:constraint:records_agent_run_step_error_code_chk: added NOT VALID, then validated
+ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_step_error_code_chk" CHECK ((data->>'errorCode') IS NULL OR (jsonb_typeof(data->'errorCode') = 'string' AND char_length((data->>'errorCode')) <= 120)) NOT VALID;
+ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_error_code_chk";
 -- add_check public.records_agent_run_step:constraint:records_agent_run_step_claimed_until_chk: added NOT VALID, then validated
 ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_step_claimed_until_chk" CHECK ((data->>'claimedUntil') IS NULL OR ((data->>'claimedUntil') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
 ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_claimed_until_chk";
@@ -135,10 +155,18 @@ ALTER TABLE public."records_agent_run_step" ADD CONSTRAINT "records_agent_run_st
 ALTER TABLE public."records_agent_run_step" VALIDATE CONSTRAINT "records_agent_run_step_error_chk";
 -- create_index public.records_agent_run_step:index:records_agent_run_step_run_ordinal: on workspace_id, data->>'runid', data->>'ordinal' using btree
 CREATE INDEX "records_agent_run_step_run_ordinal" ON public."records_agent_run_step" USING btree (workspace_id, ((data->>'runId')::uuid), ((data->>'ordinal')::integer));
+-- create_index public.records_agent_run_step:index:records_agent_run_step_status_claimed: on workspace_id, data->>'status', data->>'claimeduntil' using btree
+CREATE INDEX "records_agent_run_step_status_claimed" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'status'), (data->>'claimedUntil'));
+-- create_index public.records_agent_run_step:index:records_agent_run_step_status_not_before: on workspace_id, data->>'status', data->>'notbefore' using btree
+CREATE INDEX "records_agent_run_step_status_not_before" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'status'), (data->>'notBefore'));
+-- create_index public.records_agent_run_step:index:records_agent_run_step_wait_item: on workspace_id, data->>'waititemid' using btree
+CREATE INDEX "records_agent_run_step_wait_item" ON public."records_agent_run_step" USING btree (workspace_id, ((data->>'waitItemId')::uuid)) WHERE ((data->>'waitItemId')::uuid) IS NOT NULL;
+-- create_index public.records_agent_run_step:index:records_agent_run_step_kind_work_item: on workspace_id, data->>'kind', data->>'workitemid' using btree
+CREATE INDEX "records_agent_run_step_kind_work_item" ON public."records_agent_run_step" USING btree (workspace_id, (data->>'kind'), ((data->>'workItemId')::uuid));
 -- add_unique public.records_agent_run_step:index:records_agent_run_step_run_step_key: on workspace_id, data->>'runid', data->>'stepkey' using btree
 CREATE UNIQUE INDEX "records_agent_run_step_run_step_key" ON public."records_agent_run_step" USING btree (workspace_id, ((data->>'runId')::uuid), (data->>'stepKey'));
--- create_view public.v_records_agent_run_step: typed view with 24 columns
-CREATE VIEW public."v_records_agent_run_step" WITH (security_invoker = true) AS SELECT id, workspace_id, version, created_at, updated_at, ((data->>'runId')::uuid) AS "run_id", ((data->>'ordinal')::integer) AS "ordinal", (data->>'stepKey') AS "step_key", (data->>'nodeKey') AS "node_key", (data->>'kind') AS "kind", (data->'effect') AS "effect", (data->'input') AS "input", (data->'result') AS "result", (data->>'status') AS "status", ((data->>'attempt')::integer) AS "attempt", ((data->>'maxAttempts')::integer) AS "max_attempts", ((data->>'deadlineMs')::integer) AS "deadline_ms", ((data->>'claimedUntil')::timestamptz) AS "claimed_until", ((data->>'startedAt')::timestamptz) AS "started_at", ((data->>'endedAt')::timestamptz) AS "ended_at", ((data->>'durationMs')::integer) AS "duration_ms", (data->'doorCalls') AS "door_calls", (data->>'effectKey') AS "effect_key", (data->'error') AS "error" FROM public.records WHERE entity = 'agent.run-step';
+-- create_view public.v_records_agent_run_step: typed view with 29 columns
+CREATE VIEW public."v_records_agent_run_step" WITH (security_invoker = true) AS SELECT id, workspace_id, version, created_at, updated_at, ((data->>'runId')::uuid) AS "run_id", ((data->>'ordinal')::integer) AS "ordinal", (data->>'stepKey') AS "step_key", (data->>'nodeKey') AS "node_key", (data->>'kind') AS "kind", (data->'effect') AS "effect", (data->'input') AS "input", (data->'result') AS "result", (data->>'status') AS "status", ((data->>'attempt')::integer) AS "attempt", ((data->>'maxAttempts')::integer) AS "max_attempts", ((data->>'deadlineMs')::integer) AS "deadline_ms", ((data->>'notBefore')::timestamptz) AS "not_before", ((data->>'waitItemId')::uuid) AS "wait_item_id", ((data->>'workItemId')::uuid) AS "work_item_id", ((data->>'compAttempts')::integer) AS "comp_attempts", (data->>'errorCode') AS "error_code", ((data->>'claimedUntil')::timestamptz) AS "claimed_until", ((data->>'startedAt')::timestamptz) AS "started_at", ((data->>'endedAt')::timestamptz) AS "ended_at", ((data->>'durationMs')::integer) AS "duration_ms", (data->'doorCalls') AS "door_calls", (data->>'effectKey') AS "effect_key", (data->'error') AS "error" FROM public.records WHERE entity = 'agent.run-step';
 GRANT SELECT ON TABLE public."v_records_agent_run_step" TO app_engine;
 -- create_partition public.records_agent_node_effect: records for values in ('agent.node-effect')
 CREATE TABLE public."records_agent_node_effect" PARTITION OF public.records FOR VALUES IN ('agent.node-effect');
