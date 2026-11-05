@@ -1,0 +1,128 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "accounting",
+  "params": {
+    "q": { "type": "string", "url": "q", "default": "" },
+    "kind": { "type": "enum", "of": "accounting.entries.kind", "url": "kind", "default": "all" },
+    "sort": { "type": "enum", "of": "accounting.entries.sort", "url": "sort", "default": "recent" },
+    "selected": { "type": "string", "url": "entry" },
+    "period": { "type": "enum", "of": ["this", "last"], "url": "period", "default": "this" }
+  },
+  "head": [
+    {
+      "id": "figures",
+      "block": "core.figures",
+      "props": {
+        "label": { "key": "figures" },
+        "items": [
+          { "term": { "key": "fig_income" }, "path": "income.vnd" },
+          { "term": { "key": "fig_invoiced" }, "path": "invoiced.vnd" },
+          { "term": { "key": "fig_adjustments" }, "path": "adjustments.vnd" },
+          { "term": { "key": "fig_unmatched" }, "path": "unmatched.vnd" },
+          { "term": { "key": "fig_receivable" }, "path": "receivable.vnd" }
+        ]
+      },
+      "bind": { "data": { "read": "accounting.figures", "variables": { "period": "$period" } } },
+      "when": { "permission": "accounting.view" }
+    }
+  ],
+  "views": [
+    {
+      "id": "book",
+      "label": { "key": "tab_book" },
+      "root": {
+        "id": "root",
+        "block": "core.master-detail",
+        "props": { "emptyTitle": { "key": "entry_empty_title" }, "emptyBody": { "key": "entry_empty_body" } },
+        "children": [
+          {
+            "id": "pane",
+            "block": "core.list-pane",
+            "props": { "search": true, "searchParam": "q", "searchLabel": { "key": "search" } },
+            "children": [
+              {
+                "id": "tabs",
+                "block": "core.filter-tabs",
+                "props": {
+                  "param": "kind",
+                  "all": { "key": "filter_all" },
+                  "items": [
+                    { "value": "income", "label": { "key": "kind_income" } },
+                    { "value": "invoice", "label": { "key": "kind_invoice" } },
+                    { "value": "adjustment", "label": { "key": "kind_adjustment" } }
+                  ]
+                },
+                "bind": { "counts": { "read": "accounting.entry-counts", "variables": { "q": "$q" } } }
+              },
+              {
+                "id": "rows",
+                "block": "core.record-list",
+                "props": {
+                  "label": { "key": "entries" },
+                  "empty": { "key": "entries_empty" },
+                  "emptySearch": { "key": "entries_empty_search" },
+                  "idPath": "id",
+                  "titlePath": "title",
+                  "descriptionPath": "entryDate",
+                  "badgePath": "kind",
+                  "selectParam": "selected",
+                  "searchParam": "q"
+                },
+                "bind": {
+                  "rows": {
+                    "read": "accounting.entries",
+                    "variables": { "q": "$q", "kind": "$kind", "sort": "$sort" }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "side",
+            "block": "core.stack",
+            "props": { "gap": "section" },
+            "children": [
+              {
+                "id": "detail",
+                "block": "core.detail",
+                "props": {
+                  "label": { "key": "entry" },
+                  "idle": { "key": "entry_idle" },
+                  "idPath": "id",
+                  "currency": "VND",
+                  "items": [
+                    { "term": { "key": "fact_date" }, "path": "entryDate", "format": "date" },
+                    { "term": { "key": "fact_kind" }, "path": "kind", "format": "badge" },
+                    { "term": { "key": "fact_amount" }, "path": "amountVnd", "format": "money" },
+                    { "term": { "key": "fact_note" }, "path": "note", "format": "text" },
+                    { "term": { "key": "fact_source" }, "path": "sourceEntity", "format": "text" }
+                  ]
+                },
+                "bind": { "record": { "read": "accounting.entry", "variables": { "id": "$selected" } } }
+              },
+              {
+                "id": "lineage",
+                "block": "core.record-list",
+                "props": {
+                  "label": { "key": "lineage" },
+                  "empty": { "key": "lineage_empty" },
+                  "idPath": "id",
+                  "titlePath": "title",
+                  "descriptionPath": "detail",
+                  "badgePath": "kind"
+                },
+                "bind": {
+                  "rows": {
+                    "read": "accounting.entry",
+                    "path": "lineage",
+                    "variables": { "id": "$selected" }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
