@@ -10,6 +10,8 @@ const DOC_GLYPH: Readonly<Record<DocGlyph, IconName>> = {
     faq: "chat",
     url: "link",
     nivo: "talents",
+    public: "view",
+    search: "search",
 }
 
 /** What the mark of a document draws. */

@@ -141,6 +141,7 @@ export class WorkspaceMembersService {
                     avatarUrl: storedAvatarAddress(avatarOf.get(row.userId) ?? null),
                     email: known?.email ?? "",
                     lastSignInAt: known?.lastSignInAt ?? null,
+                    joinedAt: row.createdAt.toISOString(),
                 }
             }),
         )

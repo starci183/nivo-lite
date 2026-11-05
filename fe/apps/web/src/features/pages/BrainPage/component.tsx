@@ -1,9 +1,8 @@
 import type { BrainPageHeading } from "@/modules/types"
+import { BrainAsk } from "@/components/blocks/BrainAsk"
 import { BrainDossiers } from "@/components/blocks/BrainDossiers"
-import { BrainAgentView } from "@/components/blocks/BrainAgentView"
 import { BrainFactForm } from "@/components/blocks/BrainFactForm"
 import { BrainFacts } from "@/components/blocks/BrainFacts"
-import { BrainGaps } from "@/components/blocks/BrainGaps"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
 import { BrainMap } from "@/components/blocks/BrainMap"
 import { BrainTodo } from "@/components/blocks/BrainTodo"
@@ -11,12 +10,8 @@ import { DossierFindings } from "@/components/blocks/DossierFindings"
 import { DossierFindingsDrawer } from "@/components/blocks/DossierFindingsDrawer"
 import { DossierRemedyDraft } from "@/components/blocks/DossierRemedyDraft"
 import { BrainPageFrame } from "@/components/blocks/BrainPageFrame"
-import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
 import { KnowledgeDocs } from "@/components/blocks/KnowledgeDocs"
-import { PublicDocDraft } from "@/components/blocks/PublicDocDraft"
-import { PublicDocs } from "@/components/blocks/PublicDocs"
-import { PublicDraftPicker } from "@/components/blocks/PublicDraftPicker"
-import { PublicWriteForm } from "@/components/blocks/PublicWriteForm"
+import { PublicBrain } from "@/components/blocks/PublicBrain"
 import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import type { BrainTab } from "@/modules/routes"
 import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
@@ -50,14 +45,6 @@ export interface BrainPageBaseProps {
 /** Draws the open tab of the Second Brain. */
 const Panel = (props: BrainPageBaseProps) => {
     const page = props.props
-    if (page.tab === "todo") {
-        return (
-            <>
-                <BrainTodo />
-                <BrainFactForm tab="todo" fact={page.fact} edit={page.edit} answer={page.answer} />
-            </>
-        )
-    }
     if (page.tab === "dossiers") {
         return (
             <>
@@ -78,30 +65,6 @@ const Panel = (props: BrainPageBaseProps) => {
         )
     }
     if (page.tab === "lessons") return <BrainLessons />
-    if (page.tab === "publicDocs") {
-        return (
-            <>
-                <PublicDocs />
-                <PublicDraftPicker isOpen={page.compose === "pick"} />
-                <PublicWriteForm
-                    key={`write:${page.composeTitle}`}
-                    isOpen={page.compose === "write"}
-                    initialTitle={page.composeTitle}
-                />
-                <PublicDocDraft key={page.publicDoc} docId={page.publicDoc} />
-            </>
-        )
-    }
-    if (page.tab === "publicAsks") return <BrainGaps answer="public" />
-    if (page.tab === "publicTry") return <KnowledgeAsk fixedAudience="customer" />
-    if (page.tab === "agents") {
-        return (
-            <>
-                <BrainAgentView />
-                <KnowledgeAsk />
-            </>
-        )
-    }
     return null
 }
 
@@ -112,7 +75,22 @@ const Panel = (props: BrainPageBaseProps) => {
  */
 export const BrainPageBase = (props: BrainPageBaseProps) => {
     const page = props.props
+    if (page.tab === "publicDocs" || page.tab === "publicAsks") {
+        return (
+            <PublicBrain
+                key={page.composeTitle}
+                heading={page.header}
+                doc={page.publicDoc}
+                compose={page.compose}
+                composeTitle={page.composeTitle}
+            />
+        )
+    }
+    if (page.tab === "publicTry" || page.tab === "agents") return <BrainAsk heading={page.header} />
     if (page.tab === "sources") return <KnowledgeDocs heading={page.header} selection={{ kind: "none" }} />
+    if (page.tab === "todo") {
+        return <BrainTodo header={page.header} fact={page.fact} edit={page.edit} answer={page.answer} />
+    }
     if (page.tab === "map") {
         return (
             <BrainMap header={page.header} node={page.node}>

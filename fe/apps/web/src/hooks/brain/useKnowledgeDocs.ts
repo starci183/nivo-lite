@@ -3,8 +3,8 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { useDocsAddress, useKnowledgeDocIdeas, useKnowledgeSources, useNivoKnowledge } from "@/hooks/knowledge"
-import { spanAsideGridOf } from "@/hooks/paneFrame"
 import { isWaitingOf, loadingSlot } from "@/hooks/slot"
+import { brainGridOf } from "@/modules/brain"
 import { docsCopyOf, docsMainViewOf, docsNivoSlotOf, docsTrailOf, nivoOpenedOf } from "@/modules/documents"
 import { brainTabHref } from "@/modules/routes"
 import type { BrainPageHeading, DocsSelection, KnowledgeDocsView } from "@/modules/types"
@@ -42,7 +42,6 @@ export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView =
     const selection = input.selection
     const doc = useOpenedDoc(selection.kind === "doc" ? selection.id : undefined, row)
     const [isRemoveOpen, setIsRemoveOpen] = useState(false)
-    const [isAsideOpen, setIsAsideOpen] = useState(false)
     const [hiddenFor, setHiddenFor] = useState<string | null>(null)
     const { list, chosen, selectedId } = useDocsList({ selection, row, sources, nivo })
     const nivoOpened = docsNivoSlotOf(nivo.slot, chosen === undefined ? undefined : nivoOpenedOf(t, format, chosen))
@@ -61,13 +60,13 @@ export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView =
     const on = useKnowledgeDocsCommands({
         selection,
         selectTab: header.on.selectTab,
+        reviewAll: header.on.reviewAll,
         reloads: [sources.reload, nivo.reload, doc.reload],
         doc: { reindex: doc.commands.reindex, remove: doc.commands.remove, row: row.dispatch },
         ideas: { idea: ideas.decide, moreIdeas: ideas.toggleMore },
         overlays: {
             openRemove: () => setIsRemoveOpen(true),
             setRemoveOpen: setIsRemoveOpen,
-            setAsideOpen: setIsAsideOpen,
         },
         hideAside: () => setHiddenFor(selectedKey),
     })
@@ -75,14 +74,13 @@ export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView =
         props: {
             header: header.props,
             copy: docsCopyOf(t, tp),
-            grid: spanAsideGridOf({ hasAside, phone }),
+            grid: brainGridOf({ hasAside, phone, isWhole: false }),
             list,
             main,
             ideas: ideas.view,
             nextReview,
             isWaiting: isWaitingOf(list.slot, ...(main.kind === "none" ? [] : [main.slot])),
             hasAside,
-            isAsideOpen,
             isRemoveOpen,
             canAdd: row.member.canWrite,
             addHref: brainTabHref("sources", { ...address.carried, add: "upload" }),

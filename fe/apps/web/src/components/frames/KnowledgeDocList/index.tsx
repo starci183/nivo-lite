@@ -2,7 +2,7 @@ import { Badge, EmptyNotice, ListBox, SearchField, Select, Stack, Tabs } from "@
 import type { ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { KnowledgeDocMark } from "@/components/composites/KnowledgeDocMark"
-import type { DocListView, DocRowView, DocsCopy } from "@/modules/types"
+import type { DocListCopy, DocListFace, DocRowView } from "@/modules/types"
 
 /** The same row geometry while the first read has no data: a name, a line and a chip. */
 const DOC_ROWS_PLACEHOLDER: ReadonlyArray<DocRowView> = [1, 2, 3, 4, 5].map((n) => ({
@@ -15,14 +15,14 @@ const DOC_ROWS_PLACEHOLDER: ReadonlyArray<DocRowView> = [1, 2, 3, 4, 5].map((n) 
 
 /** What the list pane draws and calls. */
 interface KnowledgeDocListProps {
-    readonly list: DocListView
-    readonly copy: DocsCopy
+    readonly list: DocListFace
+    readonly copy: DocListCopy
     /** The page's first read has no data yet: every control and row draws its skeleton at once. */
     readonly isWaiting: boolean
     readonly onSelect: (id: string) => void
     readonly onSearch: (value: string) => void
     readonly onTab: (id: string) => void
-    readonly onModule: (value: string | null) => void
+    readonly onModule?: (value: string | null) => void
     readonly onClear: () => void
     /** The way to add the first document; absent where adding is not offered (the base knowledge, a reader who may not write). */
     readonly onAdd?: () => void
@@ -72,16 +72,20 @@ export const KnowledgeDocList = (props: KnowledgeDocListProps) => {
                 }))}
                 onSelect={props.onTab}
             />
-            <Select
-                label={copy.moduleLabel}
-                isLabelHidden
-                name="module"
-                isLoading={isWaiting}
-                options={list.moduleOptions}
-                placeholder={copy.modulePlaceholder}
-                value={list.module}
-                onValueChange={props.onModule}
-            />
+            {list.moduleOptions === undefined ||
+            copy.moduleLabel === undefined ||
+            props.onModule === undefined ? null : (
+                <Select
+                    label={copy.moduleLabel}
+                    isLabelHidden
+                    name="module"
+                    isLoading={isWaiting}
+                    options={list.moduleOptions}
+                    placeholder={copy.modulePlaceholder ?? ""}
+                    value={list.module ?? ""}
+                    onValueChange={props.onModule}
+                />
+            )}
             <SlotView
                 slot={list.slot}
                 placeholder={DOC_ROWS_PLACEHOLDER}

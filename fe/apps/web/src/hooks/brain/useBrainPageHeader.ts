@@ -1,8 +1,8 @@
 import { useTranslations } from "next-intl"
-import { BRAIN_PANEL_PREFIX, brainPartOf } from "@/modules/brain"
+import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { BRAIN_PART_TABS, brainTabHref } from "@/modules/routes"
-import type { BrainTab } from "@/modules/routes"
+import { BRAIN_STRIP_TABS, brainStripTabOf, brainTabHref } from "@/modules/routes"
+import type { BrainStripTab, BrainTab } from "@/modules/routes"
 import type { BrainPageHeading, BrainPageHeaderView } from "@/modules/types"
 import { useBrain } from "./useBrain"
 import { useBrainTodoCount } from "./useBrainTodoCount"
@@ -19,20 +19,19 @@ export interface BrainPageHeaderViewShape {
 }
 
 /**
- * The Second Brain's page header with the tabs of the part that is open: the selected tab lives in the address. The queue of what needs doing carries
+ * The Second Brain's page header with its one tab strip: the selected tab lives in the address (the map lights the dossiers, the customer questions the public documents, the customer chat the agents' view). The queue of what needs doing carries
  * its count once there is something in it (a count of zero is no label); it is the number the rail shows too. The customer questions
- * nobody answered carry theirs on the public part.
+ * nobody answered carry theirs on the public tab.
  */
 export const useBrainPageHeader = (selected: BrainTab, heading: BrainPageHeading): BrainPageHeaderViewShape => {
     const t = useTranslations("secondBrain")
     const router = navigation.useRouter()
     const todo = useBrainTodoCount()
     const asks = useBrain().brain?.gapsOpen ?? 0
-    const part = brainPartOf(selected)
     const actions = useBrainPageActions(selected)
-    const labelOf = (tab: BrainTab): string => {
+    const labelOf = (tab: BrainStripTab): string => {
         if (tab === "todo" && todo > 0) return t("tab_todo_count", { n: todo })
-        if (tab === "publicAsks" && asks > 0) return t("tab_publicAsks_count", { n: asks })
+        if (tab === "publicDocs" && asks > 0) return t("tab_publicDocs_count", { n: asks })
         return t(`tab_${tab}`)
     }
     const props: BrainPageHeaderView = {
@@ -40,9 +39,9 @@ export const useBrainPageHeader = (selected: BrainTab, heading: BrainPageHeading
         actions: actions.props,
         tabs: {
             label: t("tabsLabel"),
-            selectedKey: selected,
+            selectedKey: brainStripTabOf(selected),
             panelPrefix: BRAIN_PANEL_PREFIX,
-            items: BRAIN_PART_TABS[part].map((tab) => ({ id: tab, label: labelOf(tab) })),
+            items: BRAIN_STRIP_TABS.map((tab) => ({ id: tab, label: labelOf(tab) })),
         },
     }
     return {
@@ -50,7 +49,7 @@ export const useBrainPageHeader = (selected: BrainTab, heading: BrainPageHeading
         on: {
             ...actions.on,
             selectTab: (id: string) => {
-                const next = BRAIN_PART_TABS[part].find((tab) => tab === id)
+                const next = BRAIN_STRIP_TABS.find((tab) => tab === id)
                 if (next !== undefined) router.replace(brainTabHref(next))
             },
         },

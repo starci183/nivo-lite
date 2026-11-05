@@ -10,6 +10,7 @@ import type { DocsSelection, KnowledgeDocsView } from "@/modules/types"
 interface DocsCommandsInput {
     readonly selection: DocsSelection
     readonly selectTab: (id: string) => void
+    readonly reviewAll: () => void
     /** Reads again every read the screen is made of. */
     readonly reloads: ReadonlyArray<() => void>
     /** What the open document can do: read again, delete, and the commands of its row. */
@@ -19,11 +20,10 @@ interface DocsCommandsInput {
         readonly row: (sourceId: string, actionId: string) => void
     }
     readonly ideas: Pick<KnowledgeDocsView["on"], "idea" | "moreIdeas">
-    /** The overlays of the screen: the delete confirmation and the side pane when it is a drawer. */
+    /** The overlays of the screen: the delete confirmation. */
     readonly overlays: {
         readonly openRemove: () => void
         readonly setRemoveOpen: (isOpen: boolean) => void
-        readonly setAsideOpen: (isOpen: boolean) => void
     }
     readonly hideAside: () => void
 }
@@ -36,6 +36,7 @@ export const useKnowledgeDocsCommands = (input: DocsCommandsInput): KnowledgeDoc
     const carried = address.carried
     return {
         selectTab: input.selectTab,
+        reviewAll: input.reviewAll,
         select: (id) =>
             router.push(
                 selection.kind === "nivo"
@@ -69,7 +70,6 @@ export const useKnowledgeDocsCommands = (input: DocsCommandsInput): KnowledgeDoc
         },
         removeOpenChange: input.overlays.setRemoveOpen,
         remove: input.doc.remove,
-        asideOpenChange: input.overlays.setAsideOpen,
         closeAside: input.hideAside,
         idea: input.ideas.idea,
         moreIdeas: input.ideas.moreIdeas,

@@ -137,6 +137,8 @@ export type RowActionView = {
 export interface RowPartView {
     readonly id: string
     readonly title: string
+    /** The bare value the part proposes, when it proposes one (the title says it in a sentence). */
+    readonly value?: string
     readonly lines?: readonly string[]
     readonly actions?: readonly RowActionView[]
 }
@@ -145,6 +147,8 @@ export interface RowPartView {
 export interface KnowledgeRowView {
     readonly id: string
     readonly title: string
+    /** The bare value in force that the row's parts would replace; absent when none is. */
+    readonly current?: string
     readonly lines?: readonly string[]
     readonly badges?: readonly {
         readonly label: string

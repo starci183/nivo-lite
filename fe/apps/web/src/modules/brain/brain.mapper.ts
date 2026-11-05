@@ -38,6 +38,7 @@ export const toBrainEvidence = (row: BrainEvidenceType): BrainEvidence => ({
     label: row.label,
     ...(row.quote === null ? {} : { quote: row.quote }),
     ...(row.at === null ? {} : { at: row.at }),
+    ...(row.sourceTitle === null ? {} : { sourceTitle: row.sourceTitle }),
 })
 
 /** The fact a `brain` fact item stands for. */

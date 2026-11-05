@@ -195,6 +195,7 @@ describe("toFindingRecord", () => {
         const record = subject.toFindingRecord(findingOf(RESOLVED), {
             dossier: { ref: "2", name: "Charter" },
             draft: LIVE_DRAFT,
+            inUse: { value: "450.000", sourceTitle: "Price list" },
             text: { title: "Rendered", detail: "Rendered detail" },
         })
 
@@ -226,6 +227,7 @@ describe("toFindingRecord", () => {
             dueAt: null,
             draftId: "dr1",
             draftStatus: "proposed",
+            inUse: { value: "450.000", sourceTitle: "Price list" },
             firstSeenAt: "2026-10-01T08:00:00.000Z",
             lastSeenAt: "2026-10-31T10:00:00.000Z",
             resolvedAt: "2026-10-31T10:00:00.000Z",
@@ -248,6 +250,7 @@ describe("toFindingRecord", () => {
             dossierName: null,
             draftId: null,
             draftStatus: null,
+            inUse: null,
             resolvedAt: null,
             decidedAt: null,
         })

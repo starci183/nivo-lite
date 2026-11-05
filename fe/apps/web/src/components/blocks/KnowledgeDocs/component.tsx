@@ -1,5 +1,6 @@
 import { Button, IconButton, Page, Pane, PaneGrid } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { BrainHeaderActions, brainHeaderTabs } from "@/components/composites/BrainHeaderActions"
 import { KnowledgeDocAside } from "@/components/composites/KnowledgeDocAside"
 import { KnowledgeDocBody, KnowledgeNivoBody } from "@/components/composites/KnowledgeDocBody"
 import { KnowledgeDocHead } from "@/components/frames/KnowledgeDocHead"
@@ -128,6 +129,7 @@ const HeadOf = (props: Props) => {
             head={found.opened.head}
             backLabel={copy.back}
             moreLabel={copy.moreActions}
+            detailsLabel={props.props.hasAside ? copy.asideTitle : null}
             isLoading={isWaiting || found.isLoading}
             isRemoveOpen={props.props.isRemoveOpen}
             onBack={props.on.back}
@@ -162,7 +164,15 @@ const MainBody = (props: Props) => {
                     errorDescription={copy.errorBody}
                     errorLayout="band"
                     onRetry={props.on.retry}
-                    render={(opened, isLoading) => <KnowledgeDocBody body={opened.body} isLoading={isLoading} />}
+                    render={(opened, isLoading) => (
+                        <KnowledgeDocBody
+                            body={opened.body}
+                            chips={opened.head.chips}
+                            reindex={opened.head.reindex}
+                            isLoading={isLoading}
+                            onReindex={props.on.reindex}
+                        />
+                    )}
                 />
             ) : (
                 <SlotView
@@ -220,15 +230,17 @@ export const KnowledgeDocsBase = (props: KnowledgeDocsBaseProps) => {
             chrome="panes"
             header={{
                 ...view.header.heading,
-                actions: <AddAction view={view} />,
-                tabs: {
-                    label: view.header.tabs.label,
-                    items: view.header.tabs.items,
-                    selectedKey: view.header.tabs.selectedKey,
-                    labelVisibility: "always",
-                    panelId: (key) => `${view.header.tabs.panelPrefix}${key}`,
-                    onSelect: props.on.selectTab,
-                },
+                actions: (
+                    <>
+                        <AddAction view={view} />
+                        <BrainHeaderActions
+                            review={view.header.actions.review}
+                            add={null}
+                            onReview={props.on.reviewAll}
+                        />
+                    </>
+                ),
+                tabs: brainHeaderTabs({ tabs: view.header.tabs, onSelect: props.on.selectTab }),
             }}
             measure="product"
         >
@@ -269,11 +281,9 @@ export const KnowledgeDocsBase = (props: KnowledgeDocsBaseProps) => {
                         scroll
                         label={view.copy.asideTitle}
                         collapse="drawer"
+                        trigger="head"
                         collapseLabel={view.copy.asideTitle}
-                        openLabel={view.copy.asideTitle}
                         closeLabel={view.copy.closeAside}
-                        isOpen={view.isAsideOpen}
-                        onOpenChange={props.on.asideOpenChange}
                     >
                         <AsideBody props={props.props} on={props.on} />
                     </Pane>

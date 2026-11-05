@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { DossierFindingInUseService } from "./dossier-finding-in-use.service"
 import { DossierFindingsService } from "./dossier-findings.service"
 import { DossierRemedyDraftsService } from "./dossier-remedy-drafts.service"
 import { DOSSIER_REASONER, REMEDY_WRITER } from "./dossier-review.decorators"
@@ -18,7 +19,12 @@ export class DossierReviewModule extends ConfigurableModuleClass {
         if (options.readOnly === true) {
             return {
                 ...base,
-                providers: [...(base.providers ?? []), ReviewInputsService, DossierFindingsService],
+                providers: [
+                    ...(base.providers ?? []),
+                    ReviewInputsService,
+                    DossierFindingInUseService,
+                    DossierFindingsService,
+                ],
                 exports: [DossierFindingsService],
             }
         }
@@ -32,6 +38,7 @@ export class DossierReviewModule extends ConfigurableModuleClass {
                 ReviewCriticService,
                 DossierReviewRunsService,
                 DossierReviewRunnerService,
+                DossierFindingInUseService,
                 DossierFindingsService,
                 DossierRemedyDraftsService,
             ],

@@ -29,6 +29,7 @@ const leadOf = builder<LeadView>({
     need: "A quote",
     stage: "new",
     context_summary: null,
+    phone: null,
     installation_id: "inst-1",
     created_at: "2026-10-12T10:00:00.000Z",
 })

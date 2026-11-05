@@ -10,7 +10,7 @@ export type DocsSelection =
     { readonly kind: "none" } | { readonly kind: "doc"; readonly id: string | undefined } | { readonly kind: "nivo" }
 
 /** The mark of a row: what the document is (a file, a note, a Q&A list, a link) or the base knowledge of NIVO. */
-export type DocGlyph = "file" | "text" | "faq" | "url" | "nivo"
+export type DocGlyph = "file" | "text" | "faq" | "url" | "nivo" | "public" | "search"
 
 /** A small settled word on a row or a head: where a document stands, who may read it. */
 export interface DocChipView {
@@ -146,6 +146,24 @@ export interface DocsCopy {
     readonly errorBody: string
 }
 
+/** The words every list pane of the Second Brain shares; the agent choice has none where the list has no such choice. */
+export type DocListCopy = Pick<
+    DocsCopy,
+    | "listLabel"
+    | "searchLabel"
+    | "searchPlaceholder"
+    | "clearSearch"
+    | "tabsLabel"
+    | "moreFilters"
+    | "noMatchTitle"
+    | "noMatchBody"
+    | "clearFilters"
+    | "emptyBody"
+    | "emptyAction"
+    | "errorBody"
+> &
+    Partial<Pick<DocsCopy, "moduleLabel" | "modulePlaceholder">>
+
 /** One tab of the filter row: its words and how many rows it holds. */
 export interface DocTabView {
     readonly id: DocTabId
@@ -153,16 +171,32 @@ export interface DocTabView {
     readonly count: number | undefined
 }
 
-/** What the list pane draws and which row is open. */
-export interface DocListView {
+/** One tab of any list pane of the Second Brain: its words and how many rows it holds. */
+export interface DocListTabView {
+    readonly id: string
+    readonly label: string
+    readonly count: number | undefined
+}
+
+/** What every list pane of the Second Brain (documents, public documents) draws: the rows, the search, the filter tabs and the open row. */
+export interface DocListFace {
     readonly slot: DataSlot<ReadonlyArray<DocRowView>>
     readonly slotLabels: SlotLabels
     readonly query: string
+    readonly tab: string
+    readonly tabs: ReadonlyArray<DocListTabView>
+    readonly selectedId: string | null
+    /** The agent the rows are for, as a choice above the rows; absent where the list has no such choice. */
+    readonly module?: string
+    readonly moduleOptions?: ReadonlyArray<{ readonly id: string; readonly label: string }>
+}
+
+/** What the list pane of the documents draws and which row is open. */
+export interface DocListView extends DocListFace {
     readonly tab: DocTabId
     readonly tabs: ReadonlyArray<DocTabView>
     readonly module: string
     readonly moduleOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    readonly selectedId: string | null
     readonly isFiltered: boolean
 }
 
@@ -187,7 +221,6 @@ export interface KnowledgeDocsView {
         /** The page's first read has no data yet: every region draws its skeleton at once. */
         readonly isWaiting: boolean
         readonly hasAside: boolean
-        readonly isAsideOpen: boolean
         readonly isRemoveOpen: boolean
         readonly canAdd: boolean
         readonly addHref: string
@@ -195,6 +228,7 @@ export interface KnowledgeDocsView {
     }
     readonly on: {
         readonly selectTab: (id: string) => void
+        readonly reviewAll: () => void
         readonly select: (id: string) => void
         readonly search: (value: string) => void
         readonly setTab: (id: string) => void
@@ -207,7 +241,6 @@ export interface KnowledgeDocsView {
         readonly menu: (id: string) => void
         readonly removeOpenChange: (isOpen: boolean) => void
         readonly remove: () => Promise<void>
-        readonly asideOpenChange: (isOpen: boolean) => void
         readonly closeAside: () => void
         readonly idea: (ideaId: string, menuId: string) => void
         readonly moreIdeas: () => void

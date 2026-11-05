@@ -20,6 +20,8 @@ export interface FindingExtras {
     readonly draft: Pick<DossierRemedyDraftEntity, "id" | "status"> | undefined
     /** The title and detail people read. */
     readonly text: Pick<FindingRecord, "title" | "detail">
+    /** The value agents read now, for a contradiction. */
+    readonly inUse?: FindingRecord["inUse"] | undefined
 }
 
 /** A finding as the doors read it. */
@@ -50,6 +52,7 @@ export const toFindingRecord = (row: DossierFindingEntity, extras: FindingExtras
     dueAt: row.dueAt,
     draftId: extras.draft?.id ?? null,
     draftStatus: extras.draft?.status ?? null,
+    inUse: extras.inUse ?? null,
     firstSeenAt: row.firstSeenAt.toISOString(),
     lastSeenAt: row.lastSeenAt.toISOString(),
     resolvedAt: iso(row.resolvedAt),

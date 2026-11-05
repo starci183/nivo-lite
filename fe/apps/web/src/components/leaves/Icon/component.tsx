@@ -96,6 +96,8 @@ export type IconName =
     | "failure"
     | "warning"
     | "info"
+    | "view"
+    | "sparkle"
 
 /** What Google's mark takes: the SVG props a glyph source receives. */
 type GoogleMarkProps = SVGProps<SVGSVGElement>

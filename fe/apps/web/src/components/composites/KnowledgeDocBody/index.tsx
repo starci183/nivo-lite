@@ -1,10 +1,27 @@
-import { Alert, Disclosure, EmptyNotice, Section, Stepper, Text } from "@starci/grammar/common"
-import type { DocBodyView, NivoBodyView } from "@/modules/types"
+import {
+    Alert,
+    Badge,
+    Button,
+    Cluster,
+    Disclosure,
+    EmptyNotice,
+    Section,
+    Stack,
+    Stepper,
+    Text,
+} from "@starci/grammar/common"
+import { Icon } from "@/components/leaves/Icon"
+import type { DocBodyView, DocHeadView, NivoBodyView } from "@/modules/types"
+import { PHONE_ONLY_CLASS_NAME } from "./classNames"
 
 /** What the body of an opened document draws. */
 interface KnowledgeDocBodyProps {
     readonly body: DocBodyView
+    /** The chips and the read-again command of the head band, which a phone draws here under the head. */
+    readonly chips: DocHeadView["chips"]
+    readonly reindex: DocHeadView["reindex"]
     readonly isLoading: boolean
+    readonly onReindex: () => void
 }
 
 /**
@@ -15,6 +32,33 @@ export const KnowledgeDocBody = (props: KnowledgeDocBodyProps) => {
     const { body } = props
     return (
         <>
+            {props.chips.length === 0 && props.reindex === null ? null : (
+                <div className={PHONE_ONLY_CLASS_NAME}>
+                    <Stack gap="row">
+                        {props.chips.length === 0 ? null : (
+                            <Cluster gap="inline">
+                                {props.chips.map((chip) => (
+                                    <Badge key={chip.label} tone={chip.tone}>
+                                        {chip.label}
+                                    </Badge>
+                                ))}
+                            </Cluster>
+                        )}
+                        {props.reindex === null ? null : (
+                            <Button
+                                intent="neutral"
+                                width="fill"
+                                startContent={<Icon props={{ name: "retry", usage: "leading" }} />}
+                                isPending={props.reindex.isPending}
+                                isDisabled={props.reindex.isDisabled}
+                                onPress={props.onReindex}
+                            >
+                                {props.reindex.label}
+                            </Button>
+                        )}
+                    </Stack>
+                </div>
+            )}
             {body.note === null ? null : <Alert tone={body.note.tone} title={body.note.text} />}
             {body.stage === null ? null : (
                 <Stepper

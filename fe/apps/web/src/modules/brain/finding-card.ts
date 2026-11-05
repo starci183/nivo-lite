@@ -37,6 +37,8 @@ export interface FindingCardView {
     /** What was decided on it and who has it, as one muted line; null when nothing was. */
     readonly meta: string | null
     readonly quotes: ReadonlyArray<FindingQuoteView>
+    /** The value in use now and where it comes from, for a contradiction with one active side; null otherwise. */
+    readonly inUse: { readonly value: string; readonly sourceTitle: string | null } | null
     readonly actions: ReadonlyArray<FindingCardActionView>
 }
 

@@ -1,0 +1,8 @@
+{"findings":[],"hash":"2daac04293bbaa9bb98fe1b7da9dd9a947cb9d1ff456fc0eb227cf850028dbfd","path":"packages/modules/src/index.ts","step":"prettier"}
+{"findings":[],"hash":"8b3315e0620e09de3d148ef063f1d4b2af85d14f5998ec060f96425443a426b5","path":"packages/modules/src/manifest/index.ts","step":"prettier"}
+{"findings":[],"hash":"4ef7018dbc7bf32c518d16635ff213aec544d2bbf343cbd46631fdfa35be3d59","path":"packages/modules/src/manifest/module-workbenches.ts","step":"prettier"}
+{"findings":[],"hash":"adbaae4222039ff6b5645eb1b0d843776450f6d6c7f43a851a5f0581bb00edab","path":"packages/modules/src/manifest/spec-registry.ts","step":"prettier"}
+{"findings":[],"hash":"2c65b65afc9175f278e1c7cbdbc0a3fe704d60c540de9d3b40e1fe465ad3f18e","path":"packages/modules/src/registered-module-keys.ts","step":"prettier"}
+{"findings":[],"hash":"35fa9670b5d09c37ae712112fc1328c78924f7ad660b1e6d0dadf54b5ef66be5","path":"packages/modules/src/registry.spec.ts","step":"prettier"}
+{"findings":[],"hash":"ad98a9cfc98c8ec1c865d65797764350ce950f5cafdf4730a7d1256e223a4d9e","path":"packages/modules/src/template/index.ts","step":"prettier"}
+{"findings":[],"hash":"c1f16d4df0c19fac6f0c0cf1d78fdd0f3bac4a2f69300cb8dc03aba5b31c6dd2","path":"packages/modules/src/template/module-servers.ts","step":"prettier"}
