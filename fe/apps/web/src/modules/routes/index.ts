@@ -41,6 +41,7 @@ export {
     agentChatHref,
     agentProfileHref,
     agentSetupHref,
+    authoritySectionPath,
     leadFlowHref,
     leadHref,
     responsibilitiesHref,

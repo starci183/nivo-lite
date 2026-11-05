@@ -15,6 +15,9 @@ export const CONSOLE_ROUTES = {
     newChatbot: "/modules/new?module=chatbot",
 } as const
 
+/** One section of the authority page. */
+export const authoritySectionPath = (section: string): string => `/authority/${section}`
+
 /** The detail page of one lead. */
 export const leadHref = (leadId: string): string => `/leads/${leadId}`
 

@@ -1,6 +1,5 @@
 "use client"
 
-import { workspaceBillingPath } from "@/modules/routes"
 import type { CreditsData, CreditsOverviewView, PlanView } from "@/modules/types"
 import { creditsSummaryOf } from "@/modules/utils"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
@@ -9,14 +8,10 @@ import { useFormatter, useLocale, useTranslations } from "next-intl"
 export interface CreditsView {
     view: CreditsOverviewView
     labels: {
-        plansHref: string
         loading: string
         emptyPacks: string
         upgrade: string
-        plans: string
-        plansLabel: string
         buy: string
-        plansCta: string
         balance: string
         topups: string
         topupFact: string
@@ -49,7 +44,6 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null): C
         topups: data && data.addOns.length > 0 ? t("addOnTitle") : t("topupTitle"),
         topupFact: data && data.addOns.length > 0 ? t("addOnFact") : t("topupFact"),
         ...labelsOf(t),
-        plansHref: data ? workspaceBillingPath(data.workspaceId) : "",
         loading: t("loading"),
         emptyPacks: t("packsEmpty"),
     }
@@ -90,10 +84,7 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null): C
 /** Resolves the action labels for the current locale. */
 const labelsOf = (t: ReturnType<typeof useTranslations<"credits">>) => ({
     upgrade: t("upgradeTitle"),
-    plans: t("allPlans"),
-    plansLabel: t("allPlansLabel"),
     buy: t("buy"),
-    plansCta: t("plansCta"),
 })
 
 /** Resolves the data-slot labels for the current locale. */

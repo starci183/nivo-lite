@@ -720,10 +720,9 @@
     "errGeneric": "Có lỗi xảy ra. Hãy thử lại."
   },
   "authority": {
-    "crumbLabel": "Đường dẫn",
     "crumbHome": "Tổng quan",
     "title": "Giao quyền",
-    "description": "Cho NIVO biết bạn muốn gì, nói thay doanh nghiệp thế nào và được tự làm những việc gì. Còn lại, NIVO sẽ hỏi bạn.",
+    "description": "Cho NIVO biết bạn muốn gì, nói thay doanh nghiệp thế nào và được tự làm gì. Còn lại, NIVO sẽ hỏi bạn.",
     "saveLabel": "Lưu",
     "saved": "Đã lưu",
     "saveFailTitle": "Chưa lưu được",
@@ -766,7 +765,16 @@
     "loadFailTitle": "Chưa tải được phần giao quyền",
     "loadFailBody": "Cài đặt giao quyền chưa sẵn sàng. Hãy thử lại sau ít phút.",
     "errNumber": "Nhập một số nguyên từ 0 trở lên.",
-    "staffReadOnly": "Danh sách nhân viên. Thêm hoặc ngừng nhân viên chưa dùng được."
+    "staffReadOnly": "Danh sách nhân viên. Thêm hoặc ngừng nhân viên chưa dùng được.",
+    "gridLabel": "Giao quyền",
+    "listTitle": "Phần cài đặt",
+    "listLabel": "Các phần cài đặt giao quyền",
+    "detailLabel": "Chi tiết phần cài đặt",
+    "goalsLine": "Doanh thu, khách mới, tốc độ phản hồi",
+    "policiesLine": "Quy tắc kinh doanh, cách trả lời khách",
+    "scopeLine": "Việc mỗi bộ phận AI được tự làm",
+    "limitsLine": "Việc phải hỏi bạn, dữ kiện bắt buộc",
+    "staffLine": "Người duyệt và tiếp quản hội thoại"
   },
   "automations": {
     "crumbLabel": "Đường dẫn",
@@ -967,7 +975,9 @@
     "packsFact": "Tùy chọn · cộng vào credit của tháng này · mua lại bất cứ lúc nào",
     "packsRow": "{credits} credit mua thêm",
     "packsBuy": "Mua",
-    "packsEmpty": "Gói hiện tại chưa có gói credit mua thêm."
+    "packsEmpty": "Gói hiện tại chưa có gói credit mua thêm.",
+    "comparePlans": "So sánh các gói",
+    "closeDrawer": "Đóng"
   },
   "brain": {
     "crumbLabel": "Đường dẫn",
@@ -2187,7 +2197,6 @@
     "crumbHome": "Tổng quan",
     "title": "Credit & gói",
     "description": "Mỗi lần AI làm việc trừ credit theo đúng chi phí model.",
-    "historyAction": "Lịch sử thanh toán",
     "staffNote": "Chỉ chủ sở hữu và quản lý mới mua được credit hoặc đổi gói. Bạn xem được số dư và lịch sử ở đây.",
     "balanceLabel": "Credit tháng này",
     "balanceFigure": "{used} / {limit} credit · gói {plan}",
@@ -2224,8 +2233,6 @@
     "contactTitle": "Enterprise",
     "contactText": "Số ghế và credit AI theo hợp đồng, có đội triển khai riêng.",
     "contactCta": "Liên hệ NIVO",
-    "allPlans": "Xem tất cả gói",
-    "allPlansLabel": "Các gói",
     "planRow": "{price} · {credits} credit mỗi tháng · {who}",
     "planPriceMonth": "{price}/tháng",
     "planPriceSeat": "từ {price}/ghế/tháng",
@@ -2233,7 +2240,6 @@
     "planRowContract": "Số ghế, credit và giá theo hợp đồng",
     "whoOne": "1 người dùng",
     "whoTeam": "tính theo ghế, mời được cả nhóm",
-    "plansCta": "So sánh các gói và thanh toán",
     "currentPlan": "Gói hiện tại",
     "paymentsTitle": "Lịch sử thanh toán",
     "paymentsEmpty": "Chưa có thanh toán nào.",

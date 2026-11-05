@@ -14,6 +14,8 @@ export interface BillingOverviewBaseProps {
     readonly props: {
         /** The renewal order is being requested: the renew button is pending. */
         readonly isRenewing: boolean
+        /** The payment history is drawn here (the credits page draws its own). */
+        readonly withOrders: boolean
         readonly planLabel: string
         readonly statusLabel: string
         readonly paidUntilLabel: string
@@ -93,18 +95,20 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
                 />
             )}
         />
-        <SlotView
-            slot={props.props.orders}
-            placeholder={ROWS_PLACEHOLDER}
-            labels={props.props.ordersSlotLabels}
-            forbidden="hide"
-            onRetry={props.on.retryOrders}
-            render={(orders) => (
-                <BillingHistoryList
-                    props={{ title: props.props.historyTitle, empty: props.props.historyEmpty, rows: orders }}
-                />
-            )}
-        />
+        {props.props.withOrders ? (
+            <SlotView
+                slot={props.props.orders}
+                placeholder={ROWS_PLACEHOLDER}
+                labels={props.props.ordersSlotLabels}
+                forbidden="hide"
+                onRetry={props.on.retryOrders}
+                render={(orders) => (
+                    <BillingHistoryList
+                        props={{ title: props.props.historyTitle, empty: props.props.historyEmpty, rows: orders }}
+                    />
+                )}
+            />
+        ) : null}
         <SlotView
             slot={props.props.review}
             placeholder={ROWS_PLACEHOLDER}

@@ -3,12 +3,16 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import type { PlanCardView, PlanGroupView } from "@/modules/types"
 import { usePlanChoices } from "@/hooks/billing"
+import { useMember } from "@/hooks/member"
 import { planCatalogCardOf } from "@/hooks/billingPlans"
 import { BillingPlansBase } from "./component"
 
 interface BillingPlansProps {
-    readonly workspaceId: string
+    /** The workspace to bill; the signed-in workspace when none is named. */
+    readonly workspaceId?: string
     readonly contactHref: string
+    /** Draw the catalogue in a drawer opened by its own command, as the credits page does. */
+    readonly inDrawer?: boolean
 }
 
 const BYTES_PER_GB = 1024 ** 3
@@ -71,7 +75,8 @@ export const BillingPlans = (props: BillingPlansProps) => {
     const t = useTranslations("billing")
     const locale = useLocale()
     const format = useFormatter()
-    const choices = usePlanChoices(props.workspaceId)
+    const member = useMember()
+    const choices = usePlanChoices(props.workspaceId ?? member?.workspaceId ?? "")
 
     const connected = buildBillingPlansState(choices, format, t, locale, props)
     if (connected === null) return null
@@ -90,6 +95,10 @@ export const BillingPlans = (props: BillingPlansProps) => {
                 notice: canBuy || !role ? undefined : t("needsRole"),
                 storage: storageNote ? `${t("storageTitle")}: ${storageNote}` : undefined,
                 groups,
+                drawer:
+                    props.inDrawer === true
+                        ? { triggerLabel: t("comparePlans"), closeLabel: t("closeDrawer") }
+                        : undefined,
             }}
             on={{
                 setCycle: (value) => choices.setCycle(value === "annual" ? "annual" : "monthly"),

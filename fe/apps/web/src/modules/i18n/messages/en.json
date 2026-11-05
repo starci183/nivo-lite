@@ -720,10 +720,9 @@
     "errGeneric": "Something went wrong. Please try again."
   },
   "authority": {
-    "crumbLabel": "Breadcrumb",
     "crumbHome": "Overview",
     "title": "Grant authority",
-    "description": "Tell NIVO what you want, how to speak for your business, and what it may do alone. Everything else, it asks you.",
+    "description": "Tell NIVO what you want, how to speak for the business and what it may do alone. For the rest, NIVO asks you.",
     "saveLabel": "Save",
     "saved": "Saved",
     "saveFailTitle": "Could not save",
@@ -766,7 +765,16 @@
     "loadFailTitle": "Could not load authority",
     "loadFailBody": "The authority settings are not available yet. Try again in a moment.",
     "errNumber": "Enter a whole number, zero or more.",
-    "staffReadOnly": "Staff are listed here. Adding or deactivating staff is not available yet."
+    "staffReadOnly": "Staff are listed here. Adding or deactivating staff is not available yet.",
+    "gridLabel": "Authority",
+    "listTitle": "Settings",
+    "listLabel": "Authority settings",
+    "detailLabel": "Setting details",
+    "goalsLine": "Revenue, new customers, reply speed",
+    "policiesLine": "Business rules, how to answer customers",
+    "scopeLine": "What each AI department may do alone",
+    "limitsLine": "What needs your say, required facts",
+    "staffLine": "People who approve and take over chats"
   },
   "automations": {
     "crumbLabel": "Breadcrumb",
@@ -967,7 +975,9 @@
     "packsFact": "Optional · added to this month's credits · you can buy again any time",
     "packsRow": "{credits} extra credits",
     "packsBuy": "Buy",
-    "packsEmpty": "No credit packs are on sale for your plan."
+    "packsEmpty": "No credit packs are on sale for your plan.",
+    "comparePlans": "Compare plans",
+    "closeDrawer": "Close"
   },
   "brain": {
     "crumbLabel": "Breadcrumb",
@@ -2187,7 +2197,6 @@
     "crumbHome": "Overview",
     "title": "Credits & plan",
     "description": "Every time the AI works, it spends credits at the model's real cost.",
-    "historyAction": "Payment history",
     "staffNote": "Only the owner and managers can buy credits or change the plan. You can see the balance and the history here.",
     "balanceLabel": "Credits this month",
     "balanceFigure": "{used} / {limit} credit · {plan} plan",
@@ -2224,8 +2233,6 @@
     "contactTitle": "Enterprise",
     "contactText": "Seats and AI credits by contract, with dedicated onboarding.",
     "contactCta": "Contact NIVO",
-    "allPlans": "See all plans",
-    "allPlansLabel": "Plans",
     "planRow": "{price} · {credits} credits a month · {who}",
     "planPriceMonth": "{price} a month",
     "planPriceSeat": "from {price} per seat a month",
@@ -2233,7 +2240,6 @@
     "planRowContract": "Seats, credits and price by contract",
     "whoOne": "1 person",
     "whoTeam": "per seat, invite your team",
-    "plansCta": "Compare plans and pay",
     "currentPlan": "Current plan",
     "paymentsTitle": "Payment history",
     "paymentsEmpty": "No payments yet.",

@@ -12,11 +12,7 @@ interface CreditsOverviewLabels {
     readonly topups: string
     readonly topupFact: string
     readonly upgrade: string
-    readonly plans: string
-    readonly plansLabel: string
     readonly buy: string
-    readonly plansCta: string
-    readonly plansHref: string
     readonly loading: string
     readonly emptyPacks: string
 }
@@ -63,10 +59,6 @@ export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
                                 props={{
                                     view,
                                     title: copy.labels.upgrade,
-                                    plansTitle: copy.labels.plans,
-                                    plansLabel: copy.labels.plansLabel,
-                                    plansCta: copy.labels.plansCta,
-                                    plansHref: copy.labels.plansHref,
                                     loading: copy.labels.loading,
                                     isLoading: isLoading,
                                 }}
