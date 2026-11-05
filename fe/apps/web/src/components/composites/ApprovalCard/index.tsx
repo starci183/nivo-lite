@@ -1,16 +1,7 @@
 import type { ModuleIconName } from "@/modules/types"
-import {
-    Badge,
-    Button,
-    Cluster,
-    Quote,
-    Stack,
-    SurfaceCard,
-    Text,
-    Textarea,
-    type BadgeTone,
-} from "@starci/grammar/common"
+import { Badge, Cluster, Quote, Stack, SurfaceCard, Text, Textarea, type BadgeTone } from "@starci/grammar/common"
 
+import { DecisionButtons } from "@/components/leaves/DecisionButtons"
 import { Icon } from "@/components/leaves/Icon"
 import { CopyTextButton } from "@/components/branches/CopyTextButton"
 
@@ -100,6 +91,12 @@ export const ApprovalCard = (props: ApprovalCardProps) => {
     )
 }
 
+/** The command being sent, in the words of the decision group. */
+const pendingOf = (decision: "approved" | "rejected" | null): "approve" | "reject" | null => {
+    if (decision === null) return null
+    return decision === "approved" ? "approve" : "reject"
+}
+
 /** Renders the ApprovalCard draft, its note and the decision. */
 const renderApprovalCardDraft = (
     view: NonNullable<ApprovalCardProps["view"]>,
@@ -137,32 +134,20 @@ const renderApprovalCardDraft = (
             </Text>
         ) : null}
         {view.isWaiting && view.canDecide ? (
-            <Cluster gap="row">
-                <Button
-                    intent="dismiss"
-                    isPending={view.pendingDecision === "rejected"}
-                    isDisabled={isBusy}
-                    onPress={() => on.decide("rejected")}
-                >
-                    {labels.reject}
-                </Button>
-                <Button
-                    intent="alternative"
-                    isDisabled={isBusy}
-                    startContent={<Icon props={{ name: "edit", usage: "leading" }} />}
-                    onPress={on.toggleEdit}
-                >
-                    {view.isEditing ? labels.discardEdits : labels.edit}
-                </Button>
-                <Button
-                    intent="commit"
-                    isPending={view.pendingDecision === "approved"}
-                    isDisabled={isBusy || (view.isEditing && view.editText.trim().length === 0)}
-                    onPress={() => on.decide("approved")}
-                >
-                    {labels.approveSend}
-                </Button>
-            </Cluster>
+            <DecisionButtons
+                pending={pendingOf(view.pendingDecision)}
+                reject={{ label: labels.reject, onPress: () => on.decide("rejected") }}
+                edit={{
+                    label: view.isEditing ? labels.discardEdits : labels.edit,
+                    onPress: on.toggleEdit,
+                    icon: <Icon props={{ name: "edit", usage: "leading" }} />,
+                }}
+                approve={{
+                    label: labels.approveSend,
+                    onPress: () => on.decide("approved"),
+                    isDisabled: view.isEditing && view.editText.trim().length === 0,
+                }}
+            />
         ) : null}
         {view.isWaiting ? null : (
             <Text size="sm" tone="muted">

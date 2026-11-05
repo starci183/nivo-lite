@@ -9,10 +9,28 @@ interface LeadApprovalSectionProps {
     readonly on: Pick<LeadPanesOn, "approvalToggleEdit" | "approvalEditChange" | "approvalDecide">
 }
 
+/** One resting card: the loading section draws the approval card in the shape of a ready one. */
 const PLACEHOLDER: LeadApprovalView = {
     explanation: "",
     canDraft: false,
-    waiting: null,
+    waiting: {
+        id: "resting",
+        view: {
+            nextAction: "",
+            willSend: "",
+            agent: { name: "", glyph: "moduleSales", avatarUrl: null },
+            status: { label: "", tone: "neutral" },
+            draft: "",
+            characters: "",
+            settledLabel: "",
+            isWaiting: true,
+            canDecide: true,
+            isEditing: false,
+            editText: "",
+            pendingDecision: null,
+            error: null,
+        },
+    },
     earlier: [],
 }
 

@@ -1,5 +1,6 @@
 import { Avatar, Badge, DropdownMenu, IconButton } from "@starci/grammar/common"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
+import { OFFICE_WIDE_CLASS_NAME } from "./classNames"
 import { PaneHead } from "@/components/composites/PaneHead"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { LeadHeadLabels, LeadHeadPane, LeadPanesOn } from "@/modules/types"
@@ -50,19 +51,25 @@ export const LeadHeadBand = (props: LeadHeadBandProps) => {
             title={view?.name ?? labels.fallbackTitle}
             headingLevel={1}
             {...(view === null ? {} : { description: view.meta })}
-            mark={<Avatar name={view?.name ?? labels.fallbackTitle} size="sm" isLoading={isLoading} />}
+            mark={
+                <div className={OFFICE_WIDE_CLASS_NAME}>
+                    <Avatar name={view?.name ?? labels.fallbackTitle} size="sm" isLoading={isLoading} />
+                </div>
+            }
             {...(view === null ? {} : { status: <Badge tone={view.stageTone}>{view.stageLabel}</Badge> })}
             isLoading={isLoading}
             back={{ label: props.backLabel, onPress: on.back }}
             {...(primary === undefined ? {} : { primary })}
             actions={
                 <>
-                    <IconButton
-                        intent="neutral"
-                        source={nivoIconSource("chat", "leading")}
-                        label={labels.office}
-                        href={labels.officeHref}
-                    />
+                    <div className={OFFICE_WIDE_CLASS_NAME}>
+                        <IconButton
+                            intent="neutral"
+                            source={nivoIconSource("chat", "leading")}
+                            label={labels.office}
+                            href={labels.officeHref}
+                        />
+                    </div>
                     <DropdownMenu
                         placement="bottom end"
                         entries={entriesOf(props)}

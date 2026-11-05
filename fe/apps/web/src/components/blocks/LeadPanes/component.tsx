@@ -273,8 +273,8 @@ export const LeadPanesBase = (props: LeadPanesBaseProps) => {
                         scroll
                         label={detail.copy.infoTitle}
                         collapse="drawer"
+                        trigger="none"
                         collapseLabel={detail.copy.infoTitle}
-                        openLabel={detail.headLabels.infoOpen}
                         closeLabel={detail.copy.infoClose}
                         isOpen={detail.isDrawerOpen}
                         onOpenChange={on.drawer}
