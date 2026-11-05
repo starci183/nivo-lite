@@ -116,13 +116,10 @@ describe("sanitizeReward", () => {
 
 describe("presetEdits", () => {
     it("writes the name and the note of each starter reward with the words given", () => {
-        const edits = presetEdits((key) => `[${key}]`)
+        const edits = presetEdits({ preset_voucher_name: "Voucher", preset_voucher_note: "Off the next order" })
         expect(edits).toHaveLength(REWARD_PRESETS.length)
-        expect(edits[0]).toMatchObject({
-            key: "voucher-50k",
-            name: "[preset_voucher_name]",
-            note: "[preset_voucher_note]",
-        })
+        expect(edits[0]).toMatchObject({ key: "voucher-50k", name: "Voucher", note: "Off the next order" })
+        expect(edits[1]).toMatchObject({ key: "giam-10", name: "preset_percent_name", note: "preset_percent_note" })
         expect(edits.every((edit) => !("nameKey" in edit))).toBe(true)
     })
 })

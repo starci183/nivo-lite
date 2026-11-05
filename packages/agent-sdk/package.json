@@ -62,14 +62,6 @@
     },
     "./client/messages/vi.json": "./dist/esm/client/messages/vi.json",
     "./client/messages/en.json": "./dist/esm/client/messages/en.json",
-    "./workbench/contract": {
-      "types": "./dist/workbench/contract/index.d.ts",
-      "default": "./dist/workbench/contract/index.js"
-    },
-    "./workbench/spec": {
-      "types": "./dist/workbench/spec/index.d.ts",
-      "default": "./dist/workbench/spec/index.js"
-    },
     "./workbench/view": {
       "types": "./dist/workbench/view/index.d.ts",
       "default": "./dist/workbench/view/index.js"

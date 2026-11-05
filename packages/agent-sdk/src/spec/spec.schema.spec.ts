@@ -5,7 +5,7 @@ const node = { id: "root", block: "test.stack", props: { gap: "row", nested: [1,
 describe("specDocumentSchema", () => {
     it("parses a whole document with every optional member", () => {
         const document = {
-            schema: "nivo/workbench-spec@2",
+            schema: "nivo/workbench-spec@1",
             module: "sales",
             params: {
                 q: { type: "string", url: "q" },
@@ -42,15 +42,15 @@ describe("specDocumentSchema", () => {
     })
 
     it("refuses another schema id, an unknown member and a block that is not namespaced", () => {
-        const base = { schema: "nivo/workbench-spec@2", module: "m", views: [] }
-        expect(specDocumentSchema.safeParse({ ...base, schema: "nivo/workbench-spec@1" }).success).toBe(false)
+        const base = { schema: "nivo/workbench-spec@1", module: "m", views: [] }
+        expect(specDocumentSchema.safeParse({ ...base, schema: "nivo/workbench-spec@9" }).success).toBe(false)
         expect(specDocumentSchema.safeParse({ ...base, extra: 1 }).success).toBe(false)
         const view = { id: "v", label: { key: "k" }, root: { id: "r", block: "plain" } }
         expect(specDocumentSchema.safeParse({ ...base, views: [view] }).success).toBe(false)
     })
 
     it("refuses a param that is not well formed", () => {
-        const base = { schema: "nivo/workbench-spec@2", module: "m", views: [] }
+        const base = { schema: "nivo/workbench-spec@1", module: "m", views: [] }
         const refused = (param: unknown): boolean =>
             specDocumentSchema.safeParse({ ...base, params: { a: param } }).success === false
         expect(refused({ type: "number", url: "a" })).toBe(true)
@@ -66,7 +66,7 @@ describe("specDocumentSchema", () => {
         const view = { id: "v", label: { key: "k" }, root: { id: "r", block: "test.stack" } }
         const refused = (extra: object): boolean =>
             specDocumentSchema.safeParse({
-                schema: "nivo/workbench-spec@2",
+                schema: "nivo/workbench-spec@1",
                 module: "m",
                 views: [{ ...view, ...extra }],
             }).success === false

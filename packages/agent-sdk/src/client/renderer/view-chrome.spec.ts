@@ -5,7 +5,7 @@ describe("chromeOf", () => {
     it("lists the count and command of each view", () => {
         const node = { id: "r", block: "core.stack" as const }
         const spec: StoredSpec = {
-            schema: "nivo/workbench-spec@2",
+            schema: "nivo/workbench-spec@1",
             module: "m",
             views: [
                 { id: "a", label: { key: "a" }, root: node, count: { read: "m.counts", path: "total" } },

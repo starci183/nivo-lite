@@ -95,7 +95,7 @@ export const listNode = (id: string, extra: Partial<SpecNode> = {}): SpecNode =>
 
 /** A spec document with one view `main` rooted at `root`. */
 export const docOf = (root: SpecNode, extra: Partial<SpecDocument> = {}): SpecDocument => ({
-    schema: "nivo/workbench-spec@2",
+    schema: "nivo/workbench-spec@1",
     module: "sales",
     views: [{ id: "main", label: { vi: "Chinh", en: "Main" }, root }],
     ...extra,

@@ -74,10 +74,10 @@ export const REWARD_PRESETS: ReadonlyArray<RewardPreset> = [
     },
 ]
 
-/** The starter rewards with their names and notes written by `words`, a lookup of the module's messages. */
-export const presetEdits = (words: (key: string) => string): ReadonlyArray<RewardEdit> =>
+/** The starter rewards with their names and notes taken from `words`, the module's messages; a key it lacks stands for itself. */
+export const presetEdits = (words: Readonly<Record<string, string>>): ReadonlyArray<RewardEdit> =>
     REWARD_PRESETS.map(({ nameKey, noteKey, ...reward }): RewardEdit => ({
         ...reward,
-        name: words(nameKey),
-        note: words(noteKey),
+        name: words[nameKey] ?? nameKey,
+        note: words[noteKey] ?? noteKey,
     }))
