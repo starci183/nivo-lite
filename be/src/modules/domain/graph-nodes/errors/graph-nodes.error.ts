@@ -23,6 +23,8 @@ export enum GraphNodesErrorCode {
     ToolTokenInvalid = "GRAPH_NODES_TOOL_TOKEN_INVALID",
     /** The NIVO MCP door refused or failed a node tool call (the reason rides in the params). */
     ToolFailed = "GRAPH_NODES_TOOL_FAILED",
+    /** An effect ran but its ledger record could not be written or found, so a repeat could not tell it ran. */
+    EffectNotRecorded = "GRAPH_NODES_EFFECT_NOT_RECORDED",
 }
 
 /** How each graph-nodes code travels. */
@@ -37,6 +39,7 @@ export const GRAPH_NODES_ERROR_KINDS: Record<GraphNodesErrorCode, ErrorKind> = {
     [GraphNodesErrorCode.ToolApprovalRequired]: "forbidden",
     [GraphNodesErrorCode.ToolTokenInvalid]: "forbidden",
     [GraphNodesErrorCode.ToolFailed]: "unavailable",
+    [GraphNodesErrorCode.EffectNotRecorded]: "internal",
 }
 
 /** The one error class of the graph-nodes capability. */
