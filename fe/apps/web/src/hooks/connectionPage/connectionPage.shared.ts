@@ -74,34 +74,3 @@ export const connectionCrumbsOf = (
     { id: "connections", label: connectionsLabel, href: CONSOLE_ROUTES.connections },
     current,
 ]
-
-/** One setup step as a reader sees it, with the id that picks it among the steps of a connection. */
-interface SetupStepSource<Id extends string> {
-    readonly id: Id
-    readonly ordinal: number
-    readonly title: string
-    readonly summary: string
-    readonly hint: string
-    readonly isOpen: boolean
-}
-
-/** The step of the given id (the first when none matches), with every word empty while the steps are not read yet. */
-export const setupStepViewOf = <Id extends string>(
-    steps: ReadonlyArray<SetupStepSource<Id>>,
-    id: Id,
-): {
-    ordinal: number
-    title: string
-    summary: string
-    hint: string
-    isOpen: boolean
-} => {
-    const step = steps.find((candidate) => candidate.id === id) ?? steps[0]
-    return {
-        ordinal: step?.ordinal ?? 1,
-        title: step?.title ?? "",
-        summary: step?.summary ?? "",
-        hint: step?.hint ?? "",
-        isOpen: step?.isOpen ?? false,
-    }
-}

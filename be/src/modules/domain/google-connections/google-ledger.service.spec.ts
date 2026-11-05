@@ -78,6 +78,26 @@ describe("GoogleLedgerService > ready", () => {
     })
 })
 
+describe("GoogleLedgerService > append, once the header is there", () => {
+    it("writes only the row once the header is there, and changes no cell", async () => {
+        const { service, google, connections } = await build([ledgerRow({ ledgerHeader: "written" })])
+
+        await service.append("ws-1", ENTRY)
+
+        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, [ROW])
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
+            meta: {
+                email: "shop@example.test",
+                sheets: "granted",
+                ledgerSheet: SHEET,
+                ledgerHeader: "written",
+                ledgerLastRowAt: new Date(NOW).toISOString(),
+            },
+        })
+        expect(google.readValues).not.toHaveBeenCalled()
+    })
+})
+
 describe("GoogleLedgerService > append", () => {
     it("writes the header with the first entry, once, and marks the sheet headed", async () => {
         const { service, google, connections } = await build()
@@ -86,18 +106,14 @@ describe("GoogleLedgerService > append", () => {
 
         expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, [LEDGER_HEADER, ROW])
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
-            meta: { email: "shop@example.test", sheets: "granted", ledgerSheet: SHEET, ledgerHeader: "written" },
+            meta: {
+                email: "shop@example.test",
+                sheets: "granted",
+                ledgerSheet: SHEET,
+                ledgerHeader: "written",
+                ledgerLastRowAt: new Date(NOW).toISOString(),
+            },
         })
-    })
-
-    it("writes only the row once the header is there, and changes no cell", async () => {
-        const { service, google, connections } = await build([ledgerRow({ ledgerHeader: "written" })])
-
-        await service.append("ws-1", ENTRY)
-
-        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, [ROW])
-        expect(connections.patch).not.toHaveBeenCalled()
-        expect(google.readValues).not.toHaveBeenCalled()
     })
 
     it("answers the sheet itself when Google names no range", async () => {

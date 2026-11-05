@@ -18,6 +18,14 @@ export class GoogleLedgerType {
     /** The address of the ledger spreadsheet, blank until named. */
     @Field(() => String)
     sheetUrl!: string
+
+    /** The title of the ledger spreadsheet as Google named it, blank until known. */
+    @Field(() => String)
+    sheetTitle!: string
+
+    /** When the last row was written to the ledger spreadsheet (ISO 8601), blank until the first row. */
+    @Field(() => String)
+    lastRowAt!: string
 }
 
 @ObjectType()

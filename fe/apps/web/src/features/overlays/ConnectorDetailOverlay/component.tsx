@@ -2,6 +2,7 @@ import { Alert, Badge, Button, Cluster, Drawer, EmptyNotice, Section, Stack, Tex
 import { ConnectionInterestButton } from "@/components/blocks/ConnectionInterestButton"
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
+import type { ReactNode } from "react"
 import type { AgentOption, Connection, ConnectorGlyph, Provider } from "@/modules/types"
 import { connectorDetailClassNames as classNames } from "./classNames"
 
@@ -181,3 +182,12 @@ export const ConnectorDetailOverlayBase = (props: ConnectorDetailOverlayBaseProp
         </Drawer>
     )
 }
+
+/** The feature host supplies the drawers and whether the workspace reads have made them usable. */
+interface OverlayHostProps {
+    readonly active: boolean
+    readonly candidate: ReactNode
+}
+
+/** A pure host for the connection drawers; the feature owns their registration and lifecycle. */
+export const OverlayHost = (props: OverlayHostProps) => <>{props.active ? props.candidate : null}</>

@@ -2,33 +2,23 @@
 
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
-import type { ComponentProps, ReactNode } from "react"
-import { ConnectionAttention } from "@/components/blocks/ConnectionAttention"
-import { ConnectionLibrary } from "@/components/blocks/ConnectionLibrary"
-import { ConnectionRow } from "@/components/blocks/ConnectionRow"
-import { ConnectionsOverview, OverlayHost } from "@/components/blocks/ConnectionsOverview"
-import type { ConnectionsBoard } from "@/components/blocks/ConnectionsOverview"
-import { McpGatewaySection } from "@/components/blocks/McpGatewaySection"
+import type { ReactNode } from "react"
 import { useQueryAuthUserSwr } from "@/hooks/auth"
 import { catalogKey, entryById } from "@/hooks/connection-catalog"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import {
-    attentionConnections,
-    CONNECTION_ROUTES,
     isLocalOnly,
-    liveConnections,
     mayConnect,
     sortRows,
     URL_PARAMS,
     useConnectionOverlays,
     useConnectionsData,
     useConnectionsRole,
-    boardSlotOf,
 } from "@/hooks/connections"
 import { webSiteOrigin } from "@/modules/config"
-import { slotOfReads, slotOfSwr, useSlotLabels } from "@/hooks/slot"
+import { slotOfReads } from "@/hooks/slot"
 import type { AgentOption, Connection } from "@/modules/types"
-import { ConnectorDetailOverlayBase, detailRowsOf } from "./component"
+import { ConnectorDetailOverlayBase, OverlayHost, detailRowsOf } from "./component"
 import type { DetailEntry } from "./component"
 
 /** Workspace inputs supplied by a caller, or read by the drawer when its server page registers it without inputs. */
@@ -43,84 +33,20 @@ type ConnectorDetailOverlayProps = {
     readonly canManage?: boolean
 }
 
-const renderAttention = (props: ComponentProps<typeof ConnectionAttention>) => <ConnectionAttention {...props} />
-const renderLibrary = (props: ComponentProps<typeof ConnectionLibrary>) => <ConnectionLibrary {...props} />
-const renderRow = (props: ComponentProps<typeof ConnectionRow>) => <ConnectionRow {...props} />
-const RenderGateway = (props: ComponentProps<typeof McpGatewaySection>) => <McpGatewaySection {...props} />
 const STATUS_KEYS = { official: "statusOfficial", early: "statusEarly", soon: "statusSoon" } as const
 
 /** The server page registers the URL-selected drawers as rendered nodes. */
 interface ConnectionsOverlayHostProps {
     readonly candidate: ReactNode
-    readonly tab?: string | undefined
 }
 
-/** Mount the connection drawers only when the overview has a readable, loaded workspace. */
+/** Mount the connection drawers only when the workspace reads are in and the viewer may manage connections. */
 export const ConnectionsOverlayHost = (props: ConnectionsOverlayHostProps) => {
-    const t = useTranslations("connections")
-    const slotLabelsOf = useSlotLabels()
     const access = useConnectionsRole()
-    const { role } = access
-    // The signed-in person only prefills the SMTP test recipient: the board never waits on it.
-    const user = slotOfSwr(useQueryAuthUserSwr())
     const data = useConnectionsData()
-    const manager = role === "owner" || role === "manager"
-    const live = liveConnections(data.items)
-    const attention = attentionConnections(data.items)
-    const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
-    const namesOf = (connection: Connection) =>
-        connection.agentIds.map((id) => data.agentNames[id]).filter((name): name is string => name !== undefined)
-    const board: ConnectionsBoard = {
-        view: showsLibrary ? "library" : "connected",
-        ownerEmail: ("items" in user ? user.items?.email : undefined) ?? "",
-        canManage: role === "owner",
-        localOnly: isLocalOnly(webSiteOrigin()),
-        items: data.items,
-        agents: data.activeAgents,
-        agentNames: data.agentNames,
-        liveCount: live.length,
-        attentions: attention.map((connection) => ({ connection, agentNames: namesOf(connection) })),
-        rows: sortRows(live).map((connection) => ({ connection, agentNames: namesOf(connection) })),
-    }
-    const readSlot = slotOfReads([access.read, ...data.reads], () => board)
-    // Read status is already settled before the access-only decision is folded.
-    const slot =
-        "items" in readSlot
-            ? boardSlotOf({ isLoading: false, isManager: manager, isFailed: false }, readSlot.items)
-            : readSlot
-    const isReady = "items" in slot
-    const retry = () => {
-        access.retry()
-        data.retry()
-    }
-    return (
-        <>
-            <ConnectionsOverview
-                props={{
-                    words: {
-                        ownerOnly: t("ownerOnly"),
-                        emptyTitle: t("connectedEmpty"),
-                        emptyHint: t("connectedEmptyHint"),
-                        automationsLink: t("automationsLink"),
-                        automationsHref: CONNECTION_ROUTES.automations,
-                        backLabel: t("crumbHome"),
-                        backHref: CONNECTION_ROUTES.dashboard,
-                        inUseTitle: t("inUseTitle"),
-                        inUseOrder: t("inUseOrder"),
-                    },
-                    board: slot,
-                    slotLabels: slotLabelsOf(t("connectedEmpty")),
-                    placeholderView: props.tab === "library" ? "library" : "connected",
-                    gateway: <RenderGateway isEnabled={isReady && manager} />,
-                }}
-                on={{ retry }}
-                renderAttention={renderAttention}
-                renderLibrary={renderLibrary}
-                renderRow={renderRow}
-            />
-            <OverlayHost active={isReady} candidate={props.candidate} />
-        </>
-    )
+    const manager = access.role === "owner" || access.role === "manager"
+    const slot = slotOfReads([access.read, ...data.reads], () => true)
+    return <OverlayHost active={"items" in slot && manager} candidate={props.candidate} />
 }
 
 /** The connector detail drawer; the URL says which connector is open. */

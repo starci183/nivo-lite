@@ -3711,7 +3711,9 @@ input GetZaloPageInput {
 
 type GoogleLedgerType {
   email: String!
+  lastRowAt: String!
   sheetId: String!
+  sheetTitle: String!
   sheetUrl: String!
   state: String!
 }

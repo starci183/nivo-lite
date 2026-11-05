@@ -111,6 +111,7 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     upload: cuts(Outline.ArrowUpTrayIcon, Solid.ArrowUpTrayIcon),
     muted: cuts(Outline.BellSlashIcon, Solid.BellSlashIcon),
     unmuted: cuts(Outline.BellIcon, Solid.BellIcon),
+    history: cuts(Outline.ClockIcon, Solid.ClockIcon),
     messageSending: cuts(Outline.ClockIcon, Solid.ClockIcon),
     messageSent: cuts(Outline.CheckIcon, Solid.CheckIcon),
     messageDelivered: cuts(Outline.CheckCircleIcon, Outline.CheckCircleIcon),
@@ -118,14 +119,13 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     failure: cuts(Outline.XCircleIcon, Solid.XCircleIcon),
     warning: cuts(Outline.ExclamationTriangleIcon, Solid.ExclamationTriangleIcon),
     info: cuts(Outline.InformationCircleIcon, Solid.InformationCircleIcon),
-    device: cuts(Outline.ComputerDesktopIcon, Solid.ComputerDesktopIcon),
-    phone: cuts(Outline.DevicePhoneMobileIcon, Solid.DevicePhoneMobileIcon),
-    upload: cuts(Outline.ArrowUpTrayIcon, Solid.ArrowUpTrayIcon),
     document: cuts(Outline.DocumentTextIcon, Solid.DocumentTextIcon),
     clock: cuts(Outline.ClockIcon, Solid.ClockIcon),
     remove: cuts(Outline.MinusIcon, Solid.MinusIcon),
     link: cuts(Outline.LinkIcon, Solid.LinkIcon),
     textNote: cuts(Outline.Bars3BottomLeftIcon, Solid.Bars3BottomLeftIcon),
+    sparkle: cuts(Outline.SparklesIcon, Solid.SparklesIcon),
+    handRaised: cuts(Outline.HandRaisedIcon, Solid.HandRaisedIcon),
 }
 
 /** Resolve an app-owned semantic icon name to the glyph cut Grammar's Icon asks for in a given usage. */

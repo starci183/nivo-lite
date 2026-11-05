@@ -73,11 +73,13 @@ export class GoogleLedgerService implements LedgerPort {
         const rows = headed ? [line] : [LEDGER_HEADER, line]
         try {
             const range = await this.appended(row, sheetId, rows)
-            if (!headed) {
-                await this.connections.patch(workspaceId, row.id, {
-                    meta: { ...row.meta, ledgerHeader: HEADER_WRITTEN },
-                })
-            }
+            await this.connections.patch(workspaceId, row.id, {
+                meta: {
+                    ...row.meta,
+                    ...(headed ? {} : { ledgerHeader: HEADER_WRITTEN }),
+                    ledgerLastRowAt: this.clock.now().toISOString(),
+                },
+            })
             return range === "" ? sheetId : range
         } catch (cause) {
             if (isRefusedLedger(cause)) throw refusedLedger(cause)

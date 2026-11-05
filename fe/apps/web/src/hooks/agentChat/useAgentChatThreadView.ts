@@ -1,6 +1,8 @@
 "use client"
 
 import { roleOf, conversationRowMapper } from "./agentChat.shared"
+import { daysAgoOf } from "@/modules/agent-chat"
+import type { ChatThreadMessage } from "@/modules/agent-chat"
 import { useCallback, useMemo } from "react"
 import type { useFormatter, useTranslations } from "next-intl"
 import type { useQueryAgentChatConversationsSwr, useQueryAgentChatMessagesSwr } from "@/hooks/swr"
@@ -30,18 +32,7 @@ export interface AgentChatThreadView {
         description: string
         isSelected: boolean
     }[]
-    thread: {
-        id: string
-        role: "user" | "system" | "agent"
-        body: string
-        timeLabel: string
-        files: {
-            id: string
-            name: string
-            contentType: string
-            url: string
-        }[]
-    }[]
+    thread: ChatThreadMessage[]
     changeTab: (next: ChatTab) => void
     isLoadingList: boolean
     isLoadingThread: boolean
@@ -68,27 +59,50 @@ export const useAgentChatThreadView = ({
         navigate(next, selected[next])
     }
 
-    const timeOf = useCallback(
-        (iso: string) =>
-            format.dateTime(new Date(iso), { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }),
+    /** The time of day of a message, and when a row was started: the time today, "yesterday", else the date. */
+    const hourOf = useCallback(
+        (iso: string) => format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit", hour12: false }),
         [format],
+    )
+    const whenOf = useCallback(
+        (iso: string) => {
+            const daysAgo = daysAgoOf(iso, new Date())
+            if (daysAgo <= 0) return hourOf(iso)
+            if (daysAgo === 1) return t("whenYesterday")
+            return format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit" })
+        },
+        [format, hourOf, t],
+    )
+    const dayOf = useCallback(
+        (iso: string) => {
+            const daysAgo = daysAgoOf(iso, new Date())
+            if (daysAgo <= 0) return t("dayToday")
+            if (daysAgo === 1) return t("dayYesterday")
+            return format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", year: "numeric" })
+        },
+        [format, t],
     )
 
     const rows = useMemo(
-        () => (history.data ?? []).map(conversationRowMapper(t, timeOf, selectedId)),
-        [history.data, selectedId, t, timeOf],
+        () => (history.data ?? []).map(conversationRowMapper(t, whenOf, selectedId)),
+        [history.data, selectedId, t, whenOf],
     )
 
     const thread = useMemo(
         () =>
-            (messages.data ?? []).map((item) => ({
-                id: item.id,
-                role: roleOf(item.role),
-                body: item.body,
-                timeLabel: timeOf(item.createdAt),
-                files: item.files,
-            })),
-        [messages.data, timeOf],
+            (messages.data ?? []).map((item, index, all): ChatThreadMessage => {
+                const day = dayOf(item.createdAt)
+                const previous = all[index - 1]
+                return {
+                    id: item.id,
+                    role: roleOf(item.role),
+                    body: item.body,
+                    timeLabel: hourOf(item.createdAt),
+                    dayLabel: previous !== undefined && dayOf(previous.createdAt) === day ? null : day,
+                    files: item.files,
+                }
+            }),
+        [messages.data, dayOf, hourOf],
     )
     return { rows, thread, changeTab, isLoadingList: history.isLoading, isLoadingThread: messages.isLoading }
 }

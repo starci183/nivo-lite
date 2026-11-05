@@ -1,25 +1,25 @@
-import { RouteError } from "@/components/blocks/RouteError"
+import { PaneFailure } from "@/components/composites/PaneFailure"
 
-/** The trail, heading and retry of the failed Connections route. */
+/** The words of the failure of the Connections overview. */
 export interface ConnectionsErrorPageBaseProps {
     readonly props: {
+        readonly label: string
         readonly title: string
-        readonly crumbHome: string
-        readonly homeHref: string
+        readonly description: string
+        readonly retryLabel: string
     }
     readonly on: {
         readonly retry: () => void
     }
 }
 
-/** STATE-8: Connections keep their trail and heading when the data fails, with one Alert and a retry. */
+/** The Connections overview keeps the frame and its list when its data fails: one notice in its pane, with a retry. */
 export const ConnectionsErrorPageBase = (props: ConnectionsErrorPageBaseProps) => (
-    <RouteError
-        crumbs={[
-            { id: "home", label: props.props.crumbHome, href: props.props.homeHref },
-            { id: "connections", label: props.props.title },
-        ]}
+    <PaneFailure
+        label={props.props.label}
         title={props.props.title}
+        description={props.props.description}
+        retryLabel={props.props.retryLabel}
         onRetry={props.on.retry}
     />
 )

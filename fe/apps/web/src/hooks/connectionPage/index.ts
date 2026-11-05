@@ -4,5 +4,4 @@ export {
     connectionPageOf,
     pollConnectionPage,
     readFailureNotice,
-    setupStepViewOf,
 } from "./connectionPage.shared"

@@ -14,6 +14,7 @@ type UseTelegramStepsResult = {
         hint: string
         summary: string
         isOpen: boolean
+        isDone: boolean
     }[]
     toggle: (id: string, isOpen: boolean) => void
 }
@@ -56,12 +57,13 @@ export const useTelegramSteps = (connectionId: string): UseTelegramStepsResult =
     } as const satisfies Readonly<
         Record<TelegramStepId, { readonly title: string; readonly hint: string; readonly summary: string }>
     >
-    const steps = done.map(([id]) => ({
+    const steps = done.map(([id, isDone]) => ({
         id,
         title: wording[id].title,
         hint: wording[id].hint,
         summary: page === undefined ? "" : wording[id].summary,
         isOpen: toggled[id] ?? id === opensOn,
+        isDone,
     }))
     return {
         steps,

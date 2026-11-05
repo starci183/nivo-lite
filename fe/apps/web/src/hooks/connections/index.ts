@@ -2,7 +2,6 @@ export {
     attentionConnections,
     boardSlotOf,
     connectionPageHref,
-    CONNECTION_ROUTES,
     isLocalOnly,
     liveConnections,
     mayConnect,
@@ -18,8 +17,10 @@ export { useConnectionAgentRows } from "./useConnectionAgentRows"
 export { useConnectionOverlays } from "./useConnectionOverlays"
 export { useDisconnectConnection } from "./useDisconnectConnection"
 export { useConnectionRowView } from "./useConnectionRowView"
+export type { ConnectionRowHandlers } from "./useConnectionRowView"
 export { useConnectionsRefresh } from "./useConnectionsRefresh"
 export { useSetConnectionAgents } from "./useSetConnectionAgents"
+export { useSetConnectionGrant } from "./useSetConnectionGrant"
 export { useSyncNow } from "./useSyncNow"
 export { useWantConnector } from "./useWantConnector"
 export { useAuthorizeGoogle } from "./useAuthorizeGoogle"

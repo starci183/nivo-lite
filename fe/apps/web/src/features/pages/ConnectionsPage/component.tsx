@@ -1,4 +1,7 @@
-import { ConnectionsFrame } from "@/components/blocks/ConnectionsFrame"
+import { ConnectionLibrary } from "@/components/blocks/ConnectionLibrary"
+import { ConnectionOpen } from "@/components/blocks/ConnectionOpen"
+import { ConnectionsHome } from "@/components/blocks/ConnectionsHome"
+import { McpGatewaySection } from "@/components/blocks/McpGatewaySection"
 import { ConnectionWizardOverlay } from "@/features/overlays/ConnectionWizardOverlay"
 import { ConnectionsOverlayHost, ConnectorDetailOverlay } from "@/features/overlays/ConnectorDetailOverlay"
 
@@ -6,14 +9,32 @@ import { ConnectionsOverlayHost, ConnectorDetailOverlay } from "@/features/overl
 export interface ConnectionsPageBaseProps {
     readonly props: {
         readonly tab: string | undefined
+        /** The connection without a page of its own that the address opens. */
+        readonly open: string | undefined
     }
 }
 
-/** Draws the Connections page: the frame's `Page` around the board, with the wizard and connector detail drawers inside it. */
+/**
+ * Draws the page beside the list of connections: the overview, or the connector library with the MCP gateway under it, and the
+ * wizard and connector drawers the address opens.
+ */
 export const ConnectionsPageBase = (props: ConnectionsPageBaseProps) => (
-    <ConnectionsFrame tab={props.props.tab}>
+    <>
+        {props.props.tab === "library" ? (
+            <>
+                <ConnectionLibrary />
+                <McpGatewaySection isEnabled />
+            </>
+        ) : (
+            <>
+                {props.props.open === undefined ? (
+                    <ConnectionsHome />
+                ) : (
+                    <ConnectionOpen connectionId={props.props.open} />
+                )}
+            </>
+        )}
         <ConnectionsOverlayHost
-            tab={props.props.tab}
             candidate={
                 <>
                     <ConnectionWizardOverlay />
@@ -21,5 +42,5 @@ export const ConnectionsPageBase = (props: ConnectionsPageBaseProps) => (
                 </>
             }
         />
-    </ConnectionsFrame>
+    </>
 )

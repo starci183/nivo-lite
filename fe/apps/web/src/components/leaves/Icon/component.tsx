@@ -93,6 +93,7 @@ export type IconName =
     | "upload"
     | "muted"
     | "unmuted"
+    | "history"
     | "messageSending"
     | "messageSent"
     | "messageDelivered"
@@ -100,6 +101,8 @@ export type IconName =
     | "failure"
     | "warning"
     | "info"
+    | "sparkle"
+    | "handRaised"
 
 /** What Google's mark takes: the SVG props a glyph source receives. */
 type GoogleMarkProps = SVGProps<SVGSVGElement>

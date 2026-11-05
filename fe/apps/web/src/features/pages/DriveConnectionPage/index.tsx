@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { DriveConnectionPageBase } from "./component"
@@ -12,4 +13,15 @@ export const driveConnectionMetadata = async (): Promise<Metadata> => {
  * The page of the workspace's Google Drive grant (owner | manager): a server shell. The header, the health tiles, the steps and the
  * progress of the files each read their own data in the browser.
  */
-export const DriveConnectionPage = () => <DriveConnectionPageBase />
+export const DriveConnectionPage = async (): Promise<ReactElement> => {
+    const t = await getTranslations("driveConnection")
+    return (
+        <DriveConnectionPageBase
+            props={{
+                gridLabel: t("title"),
+                mainLabel: t("mainLabel"),
+                rail: { label: t("progressTitle"), closeLabel: t("progressClose") },
+            }}
+        />
+    )
+}

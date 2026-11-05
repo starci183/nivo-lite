@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { usePaneCopy } from "@/hooks/paneFrame"
 import { ZaloConnectionErrorPageBase } from "./component"
 
 /** What the route error boundary hands over. */
@@ -7,18 +7,17 @@ interface ZaloConnectionErrorPageProps {
     readonly onRetry: () => void
 }
 
-/** The Zalo OA connection error page: the words are settled here, the drawing is the pure half. */
+/** The Zalo connection error page: the words are settled here, the drawing is the pure half. */
 export const ZaloConnectionErrorPage = (props: ZaloConnectionErrorPageProps) => {
     const t = useTranslations("zaloConnection")
+    const pane = usePaneCopy()
     return (
         <ZaloConnectionErrorPageBase
             props={{
-                crumbs: [
-                    { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
-                    { id: "zalo", label: t("crumbZalo") },
-                ],
-                title: t("title"),
-                message: t("loadFailed"),
+                label: t("title"),
+                title: pane.errorTitle,
+                description: pane.errorBody,
+                retryLabel: pane.retry,
             }}
             on={{ retry: props.onRetry }}
         />
