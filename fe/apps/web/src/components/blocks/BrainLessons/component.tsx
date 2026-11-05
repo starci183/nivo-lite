@@ -1,139 +1,184 @@
-import { Button, Disclosure, Form, Input, Select, Textarea, Cluster, Stack } from "@starci/grammar/common"
-import {
-    KNOWLEDGE_ROWS_PLACEHOLDER,
-    KnowledgeRowList,
-    KnowledgeRowsSection,
-    rowListPropsOf,
-} from "@/components/composites/KnowledgeRows"
-import type { KnowledgeListView } from "@/modules/types"
+import { Alert, Button, Cluster, Icon, IconTile, Select, Stack } from "@starci/grammar/common"
+import type { ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { LessonDetail } from "@/components/composites/LessonDetail"
+import { RowTrailing } from "@/components/composites/RowTrailing"
+import { BrainPanes } from "@/components/frames/BrainPanes"
+import { LessonFormDrawer } from "@/components/frames/LessonFormDrawer"
+import { filterChoiceOf } from "@/components/composites/FilterGroup"
+import { PaneBody } from "@/components/frames/PaneBody"
+import { PaneList } from "@/components/frames/PaneList"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { BrainPageHeaderView, LessonDrawerView, LessonEntryView, LessonsView } from "@/modules/types"
 
-/** The words and values of the part that studies corrections and writes a lesson by hand. */
-interface WriteView {
-    readonly agentLabel: string
-    readonly agentOptions: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    readonly agent: string
-    readonly agentPlaceholder: string
-    readonly mineLabel: string
-    readonly addTitle: string
-    readonly titleLabel: string
-    readonly bodyLabel: string
-    readonly whenLabel: string
-    readonly saveLabel: string
-    readonly lessonTitle: string
-    readonly lessonBody: string
-    readonly lessonWhen: string
-    readonly isPending: boolean
+/** The words of the lessons page. */
+interface LessonsCopy {
+    readonly grid: string
+    readonly listLabel: string
+    readonly detailLabel: string
+    readonly filterLabel: string
+    readonly moreFilters: string
+    readonly pickTitle: string
+    readonly pickBody: string
+    readonly noMatchTitle: string
+    readonly noMatchBody: string
+    readonly clearFilters: string
+    readonly emptyBody: string
+    readonly emptyAction: string
+    readonly errorBody: string
+    readonly back: string
 }
 
-/** The list and the writing part the connected lessons supply. */
+/** Props for {@link BrainLessonsBase}. */
 export interface BrainLessonsBaseProps {
     readonly props: {
-        readonly list: KnowledgeListView
-        /** Owners and managers only; nothing is drawn for it while undefined. */
-        readonly write?: WriteView | undefined
+        readonly header: BrainPageHeaderView
+        readonly panelId: string
+        readonly copy: LessonsCopy
+        readonly lessons: LessonsView
+        /** The drawer that writes a lesson by hand, which the address may open over the list. */
+        readonly drawer: LessonDrawerView | null
     }
     readonly on: {
+        readonly reviewAll: () => void
+        readonly selectTab: (id: string) => void
+        readonly setFilter: (id: string) => void
         readonly setAgent: (value: string | null) => void
-        readonly setLessonTitle: (value: string) => void
-        readonly setLessonBody: (value: string) => void
-        readonly setLessonWhen: (value: string) => void
         readonly mine: () => void
-        readonly save: () => void
+        readonly select: (id: string) => void
+        readonly back: () => void
         readonly retry: () => void
-        readonly action: (rowId: string, actionId: string) => void
+        readonly add: () => void
+        readonly act: (entryId: string, actionId: string) => void
     }
 }
 
-/** What the writing part draws and calls. */
-interface WritePartProps {
-    readonly view: WriteView
-    readonly on: BrainLessonsBaseProps["on"]
-}
+/** The list rows: the lesson and what it asks for, its status at the end. */
+const itemsOf = (entries: ReadonlyArray<LessonEntryView>): ReadonlyArray<ListBoxItem> =>
+    entries.map((entry) => ({
+        id: entry.id,
+        label: entry.title,
+        description: entry.line,
+        leading: <IconTile source={nivoIconSource("talents", "leading")} tone="neutral" />,
+        trailing: <RowTrailing badge={entry.badge} />,
+    }))
 
-/** Draws the choice of an agent, the button that studies its corrections and the form that writes a lesson by hand. */
-const WritePart = (props: WritePartProps) => (
-    <>
-        <Cluster gap="row" align="end">
+/** The agent the list is about, and the command that studies its corrections. */
+const AgentRow = (props: BrainLessonsBaseProps) => {
+    const agent = props.props.lessons.agent
+    return (
+        <Cluster gap="inline" align="center" wrap={false}>
             <Select
-                label={props.view.agentLabel}
-                name="agent"
-                options={props.view.agentOptions}
-                value={props.view.agent === "" ? null : props.view.agent}
-                placeholder={props.view.agentPlaceholder}
-                isDisabled={props.view.isPending}
+                label={agent.label}
+                appearance="pill"
+                options={agent.options}
+                value={agent.value}
                 onValueChange={props.on.setAgent}
             />
-            <Button intent="neutral" isPending={props.view.isPending} onPress={props.on.mine}>
-                {props.view.mineLabel}
-            </Button>
+            {agent.canMine ? (
+                <Button
+                    intent="neutral"
+                    size="sm"
+                    isPending={agent.isMining}
+                    startContent={<Icon source={nivoIconSource("talents", "leading")} usage="leading" />}
+                    onPress={props.on.mine}
+                >
+                    {agent.mineLabel}
+                </Button>
+            ) : null}
         </Cluster>
-        <Disclosure
-            title={props.view.addTitle}
-            body={
-                <Form label={props.view.addTitle} onSubmit={props.on.save} isPending={props.view.isPending}>
-                    <Stack gap="section">
-                        <Input
-                            id="brain-lesson-title"
-                            name="title"
-                            label={props.view.titleLabel}
-                            isRequired
-                            value={props.view.lessonTitle}
-                            isDisabled={props.view.isPending}
-                            onValueChange={props.on.setLessonTitle}
-                        />
-                        <Textarea
-                            id="brain-lesson-body"
-                            name="body"
-                            label={props.view.bodyLabel}
-                            rows={3}
-                            isRequired
-                            value={props.view.lessonBody}
-                            isDisabled={props.view.isPending}
-                            onValueChange={props.on.setLessonBody}
-                        />
-                        <Input
-                            id="brain-lesson-when"
-                            name="appliesWhen"
-                            label={props.view.whenLabel}
-                            value={props.view.lessonWhen}
-                            isDisabled={props.view.isPending}
-                            onValueChange={props.on.setLessonWhen}
-                        />
-                        <Button intent="commit" type="submit" isPending={props.view.isPending}>
-                            {props.view.saveLabel}
-                        </Button>
-                    </Stack>
-                </Form>
-            }
+    )
+}
+
+/** The list pane: the agent and the study command, the status tabs, then the rows. */
+const ListBody = (props: BrainLessonsBaseProps) => {
+    const { copy, lessons } = props.props
+    return (
+        <SlotView
+            slot={lessons.slot}
+            placeholder={lessons.placeholder}
+            labels={lessons.slotLabels}
+            errorDescription={copy.errorBody}
+            emptyDescription={copy.emptyBody}
+            onRetry={props.on.retry}
+            render={(entries, isLoading) => (
+                <Stack gap="row">
+                    {lessons.notice === null ? null : <Alert tone="informative" title={lessons.notice} />}
+                    <AgentRow {...props} />
+                    <PaneList
+                        label={copy.listLabel}
+                        choice={filterChoiceOf(
+                            lessons.filters,
+                            lessons.filter,
+                            { label: copy.filterLabel, moreLabel: copy.moreFilters },
+                            props.on.setFilter,
+                        )}
+                        items={itemsOf(entries)}
+                        selectedId={lessons.selectedId}
+                        onSelect={props.on.select}
+                        empty={{
+                            message: copy.noMatchTitle,
+                            description: copy.noMatchBody,
+                            actionLabel: copy.clearFilters,
+                            onAction: () => props.on.setFilter("all"),
+                        }}
+                        isLoading={isLoading}
+                    />
+                </Stack>
+            )}
         />
-    </>
+    )
+}
+
+/** What the opened lesson draws. */
+interface OpenedProps {
+    readonly entry: LessonEntryView
+    readonly isWaiting: boolean
+    readonly onAction: (entryId: string, actionId: string) => void
+}
+
+/** The opened lesson under its head band. */
+const DetailOf = (props: OpenedProps) => (
+    <PaneBody isWaiting={props.isWaiting}>
+        <LessonDetail
+            detail={props.entry.detail}
+            isLoading={props.isWaiting}
+            onAction={(actionId) => props.onAction(props.entry.id, actionId)}
+        />
+    </PaneBody>
 )
 
-/** Draws how each agent should work: the lessons in use, the proposed ones to approve, and what lets the owner add more. */
+/**
+ * Draws the lessons of the Second Brain as the page of its tab: the header with its tab strip, then the panes (the lessons narrowed
+ * by agent and status, and the opened lesson with the corrections it stands on and the decision about it). A phone shows the list,
+ * or the opened lesson with a way back. A settled read with no lessons, or one that failed, is one notice across the page.
+ */
 export const BrainLessonsBase = (props: BrainLessonsBaseProps) => {
-    const list = props.props.list
+    const { copy, lessons, header, drawer } = props.props
     return (
-        <KnowledgeRowsSection
-            isHeadingInCard
-            section={list.section}
-            before={props.props.write === undefined ? null : <WritePart view={props.props.write} on={props.on} />}
-            body={
-                <SlotView
-                    slot={list.slot}
-                    placeholder={KNOWLEDGE_ROWS_PLACEHOLDER}
-                    labels={list.slotLabels}
-                    onRetry={props.on.retry}
-                    render={(rows, isSkeleton) => (
-                        <KnowledgeRowList
-                            {...rowListPropsOf(list)}
-                            rows={rows}
-                            isLoading={isSkeleton}
-                            onAction={props.on.action}
-                        />
-                    )}
-                />
+        <BrainPanes
+            header={header}
+            panelId={props.props.panelId}
+            copy={{ ...copy, list: copy.listLabel, detail: copy.detailLabel }}
+            grid={lessons.grid}
+            slot={lessons.slot}
+            placeholder={lessons.placeholder}
+            slotLabels={lessons.slotLabels}
+            selectedId={lessons.selectedId}
+            isFiltered={lessons.isFiltered}
+            glyph="talents"
+            on={props.on}
+            list={
+                <PaneBody
+                    isWaiting={"isLoading" in lessons.slot}
+                    overlay={drawer === null ? null : <LessonFormDrawer {...drawer} />}
+                >
+                    <ListBody {...props} />
+                </PaneBody>
             }
+            renderDetail={(entry, isWaiting) => (
+                <DetailOf entry={entry} isWaiting={isWaiting} onAction={props.on.act} />
+            )}
         />
     )
 }

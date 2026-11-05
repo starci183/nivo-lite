@@ -21,6 +21,7 @@ interface BrainPageProps {
     readonly fact: string | undefined
     readonly edit: string | undefined
     readonly answer: string | undefined
+    readonly lesson: string | undefined
     readonly add: string | undefined
     readonly topic: string | undefined
     readonly tag: string | undefined
@@ -107,6 +108,7 @@ export const BrainPage = async (props: BrainPageProps): Promise<ReactElement> =>
                 fact: props.fact,
                 edit: props.edit,
                 answer: props.answer,
+                lesson: props.lesson,
                 dossier: props.dossier,
                 finding: props.finding,
                 draft: props.draft,
@@ -137,6 +139,7 @@ export const BrainLoadingPage = async (): Promise<ReactElement> => {
                 fact: undefined,
                 edit: undefined,
                 answer: undefined,
+                lesson: undefined,
                 dossier: undefined,
                 finding: undefined,
                 draft: undefined,

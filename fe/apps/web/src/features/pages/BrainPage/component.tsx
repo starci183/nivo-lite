@@ -2,7 +2,6 @@ import { Text, Link } from "@starci/grammar/common"
 import type { BrainPageHeading } from "@/modules/types"
 import { BrainDossiers } from "@/components/blocks/BrainDossiers"
 import { BrainAgentView } from "@/components/blocks/BrainAgentView"
-import { BrainFactForm } from "@/components/blocks/BrainFactForm"
 import { BrainFacts } from "@/components/blocks/BrainFacts"
 import { BrainGaps } from "@/components/blocks/BrainGaps"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
@@ -48,6 +47,8 @@ export interface BrainPageBaseProps {
         readonly fact: string | undefined
         readonly edit: string | undefined
         readonly answer: string | undefined
+        /** The lesson form the address asks for: `new` opens the drawer that writes a lesson. */
+        readonly lesson: string | undefined
         /** The dossier open in the dossiers tab, the finding in view and the draft in the drawer. */
         readonly dossier: string | undefined
         readonly finding: string | undefined
@@ -82,15 +83,6 @@ const Panel = (props: BrainPageBaseProps) => {
             </>
         )
     }
-    if (page.tab === "facts") {
-        return (
-            <>
-                <BrainFacts />
-                <BrainFactForm tab="facts" fact={page.fact} edit={page.edit} answer={page.answer} />
-            </>
-        )
-    }
-    if (page.tab === "lessons") return <BrainLessons />
     if (page.tab === "publicDocs") {
         return (
             <>
@@ -136,13 +128,17 @@ const Panel = (props: BrainPageBaseProps) => {
 
 /**
  * Draws the Second Brain: its tabs on the header band, then the tab the address asks for. The map is a panes page (its grid
- * attaches flush under the tab line); every other tab sits in the page measure.
+ * attaches flush under the tab line), as are the queue, the facts and the lessons; every other tab sits in the page measure.
  */
 export const BrainPageBase = (props: BrainPageBaseProps) => {
     const page = props.props
     if (page.tab === "todo") {
         return <BrainTodo header={page.header} fact={page.fact} edit={page.edit} answer={page.answer} />
     }
+    if (page.tab === "facts") {
+        return <BrainFacts header={page.header} fact={page.fact} edit={page.edit} answer={page.answer} />
+    }
+    if (page.tab === "lessons") return <BrainLessons header={page.header} lesson={page.lesson} />
     if (page.tab === "map") {
         return (
             <BrainMap header={page.header} node={page.node}>

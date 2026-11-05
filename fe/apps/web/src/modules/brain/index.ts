@@ -6,7 +6,7 @@ export { BRAIN_PANEL_PREFIX, brainPartOf, brainTabOf, firstTabOf, legacyBrainHre
 export { LENS_LANES, toAgentLens } from "./lenses"
 export type { AgentLens } from "./lenses"
 export { sameValue } from "./keys"
-export { SCOPE_KEY, SCOPE_TONE, FACT_SOURCE_KEY, TYPE_KEY } from "./labels"
+export { SCOPE_KEY, TYPE_KEY } from "./labels"
 export { currentTime, dayInstant, mineOutcomeOf, needsMaintenance } from "./maintenance"
 export type { MineOutcome } from "./maintenance"
 export type { FactPreset } from "./preset"
@@ -73,5 +73,9 @@ export {
     toPublicDocument,
 } from "./public-docs"
 export type { PublicBadge, PublicDocument } from "./public-docs"
+export { entriesSlotOf } from "./entries"
+export { factEntriesOf, factFilterTabsOf, factPlaceholderOf } from "./fact-entries"
+export { lessonEntriesOf, lessonFilterTabsOf, lessonPlaceholderOf } from "./lesson-entries"
 export { reviewRowsOf } from "./review-rows"
 export type { ReviewRowsContext } from "./review-rows"
+export { factWordsOf, headerWithAdd, lessonWordsOf } from "./list-words"

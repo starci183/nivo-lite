@@ -7,13 +7,6 @@ export const SCOPE_KEY: Readonly<Record<FactScope, "scopePublic" | "scopeInterna
     restricted: "scopeRestricted",
 }
 
-/** The tone of the badge of each scope. */
-export const SCOPE_TONE: Readonly<Record<FactScope, "success" | "neutral" | "warning">> = {
-    public: "success",
-    internal: "neutral",
-    restricted: "warning",
-}
-
 /** The catalog key of each source label. */
 export const FACT_SOURCE_KEY: Readonly<
     Record<FactSource, "srcOwner" | "srcManager" | "srcDocument" | "srcSystem" | "srcStaff" | "srcCustomer" | "srcAi">
