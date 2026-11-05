@@ -78,10 +78,10 @@ export const agentRunEntity: EntityDefinition<RunFields> = defineEntity({
     dataKind: "agent-run",
     fields: runFields,
     indexes: [
+        { name: "wake", on: ["wakeId", "id"] },
         { name: "agent_started", on: ["agentId", { desc: "startedAt" }, { desc: "id" }] },
-        { name: "status_resume", on: ["status", "resumeNotBefore"] },
-        { name: "status_dead_lettered", on: ["status", "deadLetteredAt"] },
-        { name: "wait_item", on: ["waitWorkItemId"], where: { op: "notNull", field: "waitWorkItemId" } },
+        { name: "status_resume", on: ["status", "resumeNotBefore", "id"] },
+        { name: "status_dead_lettered", on: ["status", "deadLetteredAt", "id"] },
     ],
     constraints: [
         { kind: "unique", name: "wake_planning_key", on: ["wakeId", "planning"], refusal: "run-already-open" },
