@@ -1,5 +1,5 @@
 import { Page } from "@starci/grammar/common"
-import type { BreadcrumbItem } from "@starci/grammar/common"
+import type { BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
 import { AgentCatalog } from "@/components/blocks/AgentCatalog"
 import { AgentCreateAction } from "@/components/blocks/AgentCreateAction"
 import { AgentWorkWorkspaceSwitch } from "@/components/blocks/AgentWorkWorkspaceSwitch"
@@ -11,6 +11,8 @@ export interface AgentsCatalogPageBaseProps {
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
         readonly title: string
         readonly description: string
+        /** The tab line of the Agent page: running agents, marketplace, my templates. */
+        readonly tabs: NonNullable<PageHeaderContent["tabs"]>
     }
 }
 
@@ -23,6 +25,7 @@ export const AgentsCatalogPageBase = (props: AgentsCatalogPageBaseProps) => (
             description: props.props.description,
             breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
             actions: <AgentCreateAction />,
+            tabs: props.props.tabs,
         }}
     >
         <AgentCatalog />

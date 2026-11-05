@@ -1,5 +1,5 @@
 import { Page } from "@starci/grammar/common"
-import type { BreadcrumbItem } from "@starci/grammar/common"
+import type { BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
 import type { ReactElement } from "react"
 import { AgentMarketplace } from "@/components/blocks/AgentMarketplace"
 import { AgentTemplatePackage } from "@/components/blocks/AgentTemplatePackage"
@@ -18,6 +18,8 @@ export interface AgentTemplatesPageBaseProps {
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
         readonly title: string
         readonly description: string
+        /** The tab line of the two list views (marketplace, my templates); null for the packaging view. */
+        readonly tabs: NonNullable<PageHeaderContent["tabs"]> | null
     }
 }
 
@@ -36,6 +38,7 @@ export const AgentTemplatesPageBase = (props: AgentTemplatesPageBaseProps): Reac
             title: props.props.title,
             description: props.props.description,
             breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
+            ...(props.props.tabs === null ? {} : { tabs: props.props.tabs }),
         }}
     >
         <BodyOf {...props.props} />

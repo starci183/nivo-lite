@@ -13,6 +13,7 @@ import {
     agentListHref,
     agentLifecycleTone,
     foldText,
+    isSetupPending,
     instancesOf,
 } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
@@ -134,7 +135,7 @@ export const useCatalogEntries = (): {
             roleName: copy === undefined ? "" : pickCopy(copy.name, locale),
             lifecycle,
             tone: agentLifecycleTone(lifecycle),
-            href: agentHref(installation.moduleKey, installation.id),
+            href: agentHref(installation.moduleKey, installation.id, isSetupPending(lifecycle) ? "setup" : "workbench"),
             channels: channelsOf(installation.agentId),
             setupProgress: installation.setupProgress,
         }
