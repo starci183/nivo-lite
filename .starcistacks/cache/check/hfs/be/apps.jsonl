@@ -1,6 +1,6 @@
 {"data":{},"findings":[],"hash":"99d801562e56621fc569ef2df22ac4652de6f1d210ab0b204a39facd30d5ddc8","path":"be/apps/api/Dockerfile","step":"file-rules"}
-{"data":{},"findings":[],"hash":"fcc18f4d34687291d96448f64596d93713fa2b028b5da9afc3ca193bdc4575b2","path":"be/apps/api/src/api.env.ts","step":"file-rules"}
-{"findings":[],"hash":"847838dcfef38e4b297a5695926d195c69f9decd62e6d46dcac0dc9421a6ea74","path":"be/apps/api/src/api.env.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"bfc22514539b45a69ed8bf6bd1eec1abd2ace7cf85421d80b63af07ba4c8212a","path":"be/apps/api/src/api.env.ts","step":"file-rules"}
+{"findings":[],"hash":"44897ae2dca40b3a5a17ef7dc3e4d788144c4b589218c6d1b0ca47c43bb2e8ec","path":"be/apps/api/src/api.env.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"452ba0497225dc26a6a3783517f337420d12b86835046a7ecbeedd0db5c7d8b3","path":"be/apps/api/src/api.options.ts","step":"file-rules"}
 {"findings":[],"hash":"d6b3e24bb5f221018bef786b557e25ba1824a44242e06793a6079337bee7c78b","path":"be/apps/api/src/api.options.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"f555a999fb9396c723c4b8100a309b7f60a464d3f9e3bb21366680a72665bcad","path":"be/apps/api/src/app.module.ts","step":"file-rules"}
@@ -15,8 +15,8 @@
 {"findings":[],"hash":"1780624fd0e560b2a357fe8d8b9ceff013e6085c4f3f57a4fe52fc7a33fa057b","path":"be/apps/api/src/compose/agent-graphs.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"4129cac2f7e97f6e4fda1838d5c5afeac5c2e4436642930a6c7c3c484de56355","path":"be/apps/api/src/compose/agent-work.ts","step":"file-rules"}
 {"findings":[],"hash":"aa2229d37e7867385fb331a94fbc948c1cf8a92f5b91f7f38174edebae3cf448","path":"be/apps/api/src/compose/agent-work.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"06bb8c86d1f8a54c058dc3c32be653aab136773de5fc822c7d4a0e850eb63649","path":"be/apps/api/src/compose/agents.ts","step":"file-rules"}
-{"findings":[],"hash":"9b09f76c0fe97c662b27b6d9e6eead26d7721d30e9acbacd6eb312263d11cc99","path":"be/apps/api/src/compose/agents.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"c505d3e98efbf9d07a6f607e1ffc8da412e71f86300cd5789c45c472628a7dae","path":"be/apps/api/src/compose/agents.ts","step":"file-rules"}
+{"findings":[],"hash":"edff4384a8b16d0dc3fc867e9673fd1496df52ffcc41dad46473db0a76828988","path":"be/apps/api/src/compose/agents.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"b26d56943902b645f228af492f18799b891b3744f4b831957ec5caf8fa91f62d","path":"be/apps/api/src/compose/api.ts","step":"file-rules"}
 {"findings":[],"hash":"3c5e3a2dbb41d2b20e66e35af538eb1f0bb7a7bda8886ccbe0bb8992dda3e7c6","path":"be/apps/api/src/compose/api.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"a2822b6040fcb47194d1f065760130fea9c420f682b8f239e9e88c93cca4d4d9","path":"be/apps/api/src/compose/authentication.ts","step":"file-rules"}

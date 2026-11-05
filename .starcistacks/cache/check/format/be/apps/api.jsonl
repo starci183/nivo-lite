@@ -1,5 +1,5 @@
 {"findings":[],"hash":"1f08d4ed8b6552c460880c1729a0be6428021b77ca5920aedd5b1ed5a7770dc0","path":"be/apps/api/Dockerfile","step":"prettier"}
-{"findings":[],"hash":"cb16c82369c6063c61b0ad2ce244b2476754312d99f4610bd8b70dd259105166","path":"be/apps/api/src/api.env.ts","step":"prettier"}
+{"findings":[],"hash":"6579444b676c7888e7dd59e105e9d8ff495e5894ab1cd2f3c8aabf032b3f5270","path":"be/apps/api/src/api.env.ts","step":"prettier"}
 {"findings":[],"hash":"dbe9680877feb42f9faf2e9867b744704ebe761ec6fe35f59dde83270ee46e9a","path":"be/apps/api/src/api.options.ts","step":"prettier"}
 {"findings":[],"hash":"35dd6877b9266363975c956c52c0f66acfb055fb277d66b33be3f4e5f66b23e3","path":"be/apps/api/src/app.module.ts","step":"prettier"}
 {"findings":[],"hash":"87528b3d6ebae664ad42a590007dcab48623b12e54760207e97bf55718b8a97b","path":"be/apps/api/src/compose/accounting.ts","step":"prettier"}
@@ -7,7 +7,7 @@
 {"findings":[],"hash":"5463950a366cf684339249b881fb2fc8916339fe5bd1e2855be3d073be245c80","path":"be/apps/api/src/compose/agent-api.ts","step":"prettier"}
 {"findings":[],"hash":"69edb3ce9ac91b1f570a71da52a295689d811b7a39c69100373003a161cce3ad","path":"be/apps/api/src/compose/agent-graphs.ts","step":"prettier"}
 {"findings":[],"hash":"4cb03b96c717a9a472bb7495b03657456736923e738c599879bf1a5906631776","path":"be/apps/api/src/compose/agent-work.ts","step":"prettier"}
-{"findings":[],"hash":"a5763b407181ecb9967abf6ce27c7ae16b519dc0c7003dc03f287bca0fa87d83","path":"be/apps/api/src/compose/agents.ts","step":"prettier"}
+{"findings":[],"hash":"bfa1f8d2982c5b5503b46b27235b85a9db0d9daa81686980b049649f2b26f29f","path":"be/apps/api/src/compose/agents.ts","step":"prettier"}
 {"findings":[],"hash":"503ae0beb40f8afef25c8e7cf8cc672511c6831f0149476a1c2d490cbf242536","path":"be/apps/api/src/compose/api.ts","step":"prettier"}
 {"findings":[],"hash":"0dfd9e56ff7fd2a3498fcbb88310e61122dc142db81c8d8c3347bb4d7f7f273d","path":"be/apps/api/src/compose/authentication.ts","step":"prettier"}
 {"findings":[],"hash":"2659dda5ff02b8f138ca5131a4ca4c8b8a372cb349521891c834ecab7a161601","path":"be/apps/api/src/compose/automations.ts","step":"prettier"}

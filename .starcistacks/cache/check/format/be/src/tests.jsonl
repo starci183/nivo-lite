@@ -8,6 +8,7 @@
 {"findings":[],"hash":"9a1a01cf84bde503b02794a590554515b9033356469247d9a79157944abc831b","path":"be/src/tests/contract/chat-files/chat-files-module.contract-spec.ts","step":"prettier"}
 {"findings":[],"hash":"c29e43535de23e708db9bb6a60b4b9e43e1502ccca485540b0d4b5bc95e3df7f","path":"be/src/tests/contract/connection-poll/connection-poll-config.contract-spec.ts","step":"prettier"}
 {"findings":[],"hash":"e252516a41a6414cf50e74a2d1dd71585c6956d3781c612e597e298af2eb8ab3","path":"be/src/tests/contract/events/connection-ready.contract-spec.ts","step":"prettier"}
+{"findings":[],"hash":"21a8780109a8b5ac165428a6368aa2445d8d847c0e7ec041e6f3945fe9277553","path":"be/src/tests/contract/remote-files/remote-files-config.contract-spec.ts","step":"prettier"}
 {"findings":[],"hash":"c4f9dad49f643eaa9892d18ff80d2875d770fcb224f6fb99c032597c64f0c2c3","path":"be/src/tests/contract/zalo-provider/zalo-provider-config.contract-spec.ts","step":"prettier"}
 {"findings":[],"hash":"c1ff2eb054ea7e474c983e5a046e6636ff1ea7aae5590eb283ce3b26d1febf74","path":"be/src/tests/fixtures/builders/advisory-lock.builder.ts","step":"prettier"}
 {"findings":[],"hash":"efd4673a55682addcac719dc3584f40197cb032a79cc458c0e840ed95c13dcca","path":"be/src/tests/fixtures/builders/agent-chat-turn.builder.ts","step":"prettier"}
@@ -35,7 +36,7 @@
 {"findings":[],"hash":"ff0cd1c2770409e6144b6d604008a087d312445be14643e36fe9b42234e524bb","path":"be/src/tests/fixtures/builders/api-keys-seats.builder.ts","step":"prettier"}
 {"findings":[],"hash":"2b92f917941bb04ff0f1f072585fd06c973d07100bf87931ebded16989491ec8","path":"be/src/tests/fixtures/builders/api-keys.builder.ts","step":"prettier"}
 {"findings":[],"hash":"83acbbbc2a6e454f11b62704a6a8128d1ff509c894cb62f513c80d86fb6d5d37","path":"be/src/tests/fixtures/builders/api-shapes.builder.ts","step":"prettier"}
-{"findings":[],"hash":"499e2b7cf89cb42df46fddbe8f075ac50f2c9e8a6165abd343d50e45c1260de7","path":"be/src/tests/fixtures/builders/api.builder.ts","step":"prettier"}
+{"findings":[],"hash":"81c623d310c8b3e46abd58d7d5e1069788d143e96c5cfba460f387817c224e8f","path":"be/src/tests/fixtures/builders/api.builder.ts","step":"prettier"}
 {"findings":[],"hash":"d78a2ca6a65cf7696637123c71aee501d5820de59f0d2cec9ff99c5f1e00a38c","path":"be/src/tests/fixtures/builders/app-commands.builder.ts","step":"prettier"}
 {"findings":[],"hash":"d9d754c42a6435ce4ce5da52bcf80b82d8b9262dc9c2a9bd7bcdc2b00561ad2d","path":"be/src/tests/fixtures/builders/approval-requests.builder.ts","step":"prettier"}
 {"findings":[],"hash":"78a405f57633c66155e00a833f89ee544dcec38b3ba24b515c5001b40f22afd3","path":"be/src/tests/fixtures/builders/authority-rules.builder.ts","step":"prettier"}
@@ -319,8 +320,8 @@
 {"findings":[],"hash":"f17f662ccff5bb91dbeae32e7100d466819cf63f15878b8dd495be2055bed928","path":"be/src/tests/world/agent-work-capabilities.options.ts","step":"prettier"}
 {"findings":[],"hash":"5ec76fd8673a7ae130cad06819a312f27b5ba9e0e850d59d21be363598b1a1de","path":"be/src/tests/world/agent-work-customer.options.ts","step":"prettier"}
 {"findings":[],"hash":"46aad0e6ca1036d1053a5a5af39adc9bf3536c20c8478f7d244240675011e3e7","path":"be/src/tests/world/agent-work-database.service.ts","step":"prettier"}
-{"findings":[],"hash":"eedbb241030a25b07b8034bc0edc45a8d61fa79efad9ba9dfbdb50e53dbb79ef","path":"be/src/tests/world/agent-work-tag.options.ts","step":"prettier"}
-{"findings":[],"hash":"d9c657de7374b629152a51caf3ac9453d32cd30c2d5444b66367be98234443d3","path":"be/src/tests/world/api-app.options.ts","step":"prettier"}
+{"findings":[],"hash":"2455a0d7fea20030e1fbebc4d93853081ed2c44e2330ec791000f423c0064189","path":"be/src/tests/world/agent-work-tag.options.ts","step":"prettier"}
+{"findings":[],"hash":"124f983d6f928a0207a7199ba839f9df13769480a49352b4f199ba9d64c60352","path":"be/src/tests/world/api-app.options.ts","step":"prettier"}
 {"findings":[],"hash":"b7cba1fd5598562cd6708b55b8be3d48942a00d9dd66aaba7d107d251e197e99","path":"be/src/tests/world/avatars-database.service.ts","step":"prettier"}
 {"findings":[],"hash":"3ea22d3f6cec6b2cde2f50409409d28457c470b160022f826910e7505bd9ad3a","path":"be/src/tests/world/backbone-engine.service.ts","step":"prettier"}
 {"findings":[],"hash":"a8a9b6b957e55f6688854aa918a4ea9098e9ebe443110e31306efc1e94fef31a","path":"be/src/tests/world/backbone-failures.service.ts","step":"prettier"}
