@@ -17,6 +17,7 @@ const summaryOf = builder<SourceSummary>({
     error: null,
     chunkCount: 10,
     sizeBytes: 1000,
+    origin: null,
     progress: 100,
     stage: null,
     stageDone: null,

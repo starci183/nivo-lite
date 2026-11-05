@@ -11,12 +11,10 @@ const ALERT_TONE: Readonly<Record<AgentWorkStatusView["tone"], PresentationState
     neutral: "informative",
     info: "informative",
     accent: "informative",
-    info: "informative",
     success: "affirmative",
     warning: "cautionary",
     danger: "negative",
     muted: "informative",
-    info: "informative",
 }
 
 /** The facts beside the status that have words; one with none is left out. */

@@ -144,6 +144,8 @@ export interface WorkbenchDoneRegionView {
 
 /** What the connections region shows once read. */
 export interface WorkbenchConnectionsRegionView {
+    /** The one short chip at the end of the region's row: how many connections work. */
+    readonly summary: string
     readonly manageLabel: string
     readonly manageHref: string
     readonly rows: ReadonlyArray<{
@@ -177,6 +179,8 @@ export interface WorkbenchKnowledgeGapsView {
 
 /** What the knowledge region shows once read. */
 export interface WorkbenchKnowledgeRegionView {
+    /** The one short chip at the end of the region's row: what the agent may read, and how many documents. */
+    readonly summary: string
     readonly openLabel: string
     readonly openHref: string
     readonly footer: string

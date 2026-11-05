@@ -13,10 +13,9 @@ export type { AgentGraphAdderView, AgentGraphBranchesView } from "./agentGraphVi
 export type { AgentGraphAnswerView, AgentGraphDecideEditorView, AgentGraphOptionView } from "./agentGraphView"
 export type { AgentGraphDetailView, AgentGraphHeadView, AgentGraphProblemsView } from "./agentGraphView"
 export type { AgentGraphProposalView, AgentGraphProposalsView } from "./agentGraphView"
-export type { AgentGraphRowView, AgentGraphTermView } from "./agentGraphView"
-export type { AgentGraphRunView, AgentGraphVersionsView } from "./agentGraphView"
-export type { AgentRecord, EventRecord, ExecutionRecord, ResponsibilityRecord, LeadRecord } from "./leads"
-export type { LeadListItem, LeadIcon, LeadJourney, LeadStageId, LeadPrimaryAction } from "./leads"
+export type { AgentGraphRowView, AgentGraphTermView, AgentGraphRunView, AgentGraphVersionsView } from "./agentGraphView"
+export type { AgentRecord, EventRecord, ExecutionRecord, ResponsibilityRecord } from "./leads"
+export type { LeadRecord, LeadListItem, LeadIcon, LeadJourney, LeadStageId, LeadPrimaryAction } from "./leads"
 export type { LeadStepMode, LeadStepValues, StepFormView, StepStatus, FlowEntryView, FlowView } from "./leads"
 export type { LeadApprovalPane } from "./lead-panes"
 export type { LeadApprovalView, LeadContextPane, LeadContextView, LeadCreateDialogProps } from "./lead-panes"
@@ -82,7 +81,7 @@ export type { ConnectionRefusalView, ConnectionNotice, ConnectionTilesView, Conn
 export type { ConnectorCategory, ConnectorGlyph, ConnectorStatus, FirstEvent, FirstEventState } from "./connections"
 export type { WebhookTestVerdict, MetaCheckSummary, SepayKeys, LibraryCard, LibraryCategory } from "./connections"
 export type { InboxRowView } from "./inbox"
-export type { OverviewPaneCopy, OverviewPaneReady, PaneGridLayout } from "./panes"
+export type { OverviewPaneCopy, OverviewPaneReady, PaneGridLayout, WorkbenchAsideActions, WorkbenchAsideView } from "./panes"
 export type { ConnectionAgentRow, ConnectionFilterChoice, ConnectionGrantsView, ConnectionListRow } from "./connections-panes"
 export type { ConnectionNextStep, ConnectionPaneTone, ConnectionsListView, ConnectionsOverviewView } from "./connections-panes"
 export type {
@@ -103,8 +102,8 @@ export type { MoneyProvider, ProviderKeysResult, MoneyAccountView, MoneyEnvironm
 export type { MoneyGuideView, MoneyWizardCopy } from "./connection-wizard"
 export type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText, TelegramConnected } from "./connection-wizard"
 export type { TelegramUserChatsView, TelegramUserLoginView, TelegramUserWizardCopy } from "./connection-wizard"
-export type { WebhookView, WizardConnection, WizardNote, WizardResume } from "./connection-wizard"
-export type { ZaloWizardConnection, MetaCheck, MetaWizardConnection } from "./connection-wizard"
+export type { WebhookView, WizardConnection, WizardNote, WizardResume, ZaloWizardConnection } from "./connection-wizard"
+export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
 export type { DataSlot, SlotLabels, SlotPanelProps, SlotRead } from "./slot"
 export type { InventoryWorkbenchData, InventorySay, InventoryTemplateChoice } from "./inventory"
 export type { ItemView, LocationView, RecipeView, PendingView, PoStatus, PoView, StockStatus } from "./inventory"
@@ -152,8 +151,7 @@ export type {
 export type { DeciderKind, DecisionKind, DecisionOutcome, DecisionRecord, GateReason, DecisionHistoryRowView } from "./decisions"
 export type { AttentionKind, AttentionRow, AttentionItemView, ActivityItemView } from "./sales"
 export type { SalesContract, SalesContractStatus, ContractItemView } from "./sales"
-export type { SalesDeal, DealView, LaneView, MoveDialogView } from "./sales"
-export type { HandoffRow, HandoffItemView, SalesShipping } from "./sales"
+export type { SalesDeal, DealView, LaneView, MoveDialogView, HandoffRow, HandoffItemView, SalesShipping } from "./sales"
 export type { SalesDecision, DecisionRowView, DecisionRowLabels, DecisionRowActions } from "./sales"
 export type { SalesConversion, SalesMetrics, SalesOrderRowView, SalesWorkbenchData } from "./sales"
 export type {
@@ -189,21 +187,19 @@ export type {
     FactSubjectType,
 } from "./brain"
 export { FACT_SCOPES, FACT_SUBJECT_TYPES } from "./brain"
-export type {
-    DocumentPassage,
-    KnowledgeDocument,
-    KnowledgeDocumentDetail,
-    NivoEntry,
-    NivoItemKind,
-    DocumentKind,
-    DocumentStatus,
-    IdeaDecision,
-    BatchBytesView,
-    LinkRowView,
-    QueueRowView,
-    StoppedUploadsView,
-} from "./knowledge"
-export type { RowActionView, RowPartView, KnowledgeRowView, KnowledgeListView } from "./knowledge"
+export type { DocumentPassage, KnowledgeDocument, KnowledgeDocumentDetail, NivoEntry } from "./knowledge"
+export type { NivoItemKind, DocumentKind, DocumentStatus, IdeaDecision, BatchBytesView } from "./knowledge"
+export type { LinkRowView, QueueRowView, StoppedUploadsView, RowActionView, RowPartView } from "./knowledge"
+export type { KnowledgeRowView, KnowledgeListView } from "./knowledge"
+export type { DocBodyView, DocChipView, DocFactView, DocGlyph, DocHeadView, DocIdeaView } from "./knowledge-docs"
+export type { DocIdeasView, DocListView, DocMainView, DocMenuItemView, DocOpenedView } from "./knowledge-docs"
+export type { DocListCopy, DocListFace, DocListTabView } from "./knowledge-docs"
+export type { DocRowView, DocTabId, DocTabView, DocsCopy, DocsSelection, KnowledgeDocsView } from "./knowledge-docs"
+export type { NivoBodyView } from "./knowledge-docs"
+export type { KnowledgeAddDrawerView } from "./knowledge-add"
+export type { AskAgentOption, AskPassageView, AskSeesLane, AskSeesView, BrainAskCopy, BrainAskView } from "./brain-ask"
+export type { PublicAskView, PublicBrainCopy, PublicBrainView, PublicDraftView } from "./brain-public"
+export type { PublicFormView, PublicPickerDrawerView, PublicWriteDrawerView } from "./brain-public"
 export type {
     ShiftsAvailRowView,
     ShiftsAvailView,
@@ -393,11 +389,11 @@ export type {
 export type { AgentWorkGoalView, AgentWorkPreset, AgentWorkStatusView, AgentWorkSwitchView } from "./agentWork"
 export type { AgentWorkTaskView, AgentWorkTriggerView, AgentWorkTurnView, AgentWorkTurnsView } from "./agentWork"
 export type { AgentWorkView, WorkspaceAgentWorkView } from "./agentWork"
-export type { WorkbenchRowView, WorkbenchCommandView } from "./workbench"
-export type { WorkbenchSurface, WorkbenchTraceView, WorkbenchWhyView } from "./workbench"
-
+export type { WorkbenchRowView, WorkbenchCommandView, WorkbenchSurface, WorkbenchWhyView } from "./workbench"
 export type { WorkbenchCommandData, WorkbenchRowData } from "./workbench"
-export type { BrainPageHeading, BrainPageHeaderView } from "./brain-page"
+export type { BrainPageHeading, BrainPageHeaderView, FactDrawerView } from "./brain-page"
+export type { QueueActionView, QueueAsideView, QueueDetailView, QueueEntryView, QueueFilterView } from "./brain-queue"
+export type { QueueGlyph, QueueQuoteView, QueueSource, QueueTileView, QueueView } from "./brain-queue"
 export type { AccountingWorkbenchDataView, AccountingWorkbenchActions } from "./accounting-workbench"
 export type { LeadGenWorkbenchDataView, LeadGenWorkbenchActions } from "./leadgen-workbench"
 export type { BookingDetailFact, BookingDeskData, BookingDeskActions } from "./booking-workbench"
@@ -417,12 +413,11 @@ export type { InventoryHistoryData, InventoryHistoryActions } from "./inventory-
 export type { InventoryCountData, InventoryCountActions } from "./inventory-workbench"
 export type { InventoryImportData, InventoryImportActions } from "./inventory-workbench"
 export type { InventoryWorkbenchDataView, InventoryWorkbenchActions } from "./inventory-workbench"
-export type { InventoryItemFormData, InventoryItemEditorData } from "./inventory-editors"
-export type { InventoryAdjustmentEditorData, InventoryNewPoEditorData } from "./inventory-editors"
-export type { InventoryPoEditorData, InventorySupplierEditorData } from "./inventory-editors"
+export type { InventoryItemFormData, InventoryItemEditorData, InventoryAdjustmentEditorData } from "./inventory-editors"
+export type { InventoryNewPoEditorData, InventoryPoEditorData, InventorySupplierEditorData } from "./inventory-editors"
 export type { InventoryRecipeEditorData } from "./inventory-editors"
 export type { WorkbenchFigureData, WorkbenchWaitingRegionView, WorkbenchDoneRegionView } from "./workbench-dashboard"
-export type { WorkbenchConnectionsRegionView, WorkbenchKnowledgeRegionView } from "./workbench-dashboard"
+export type { WorkbenchConnectionsRegionView, WorkbenchKnowledgeRegionView, WorkbenchExplanationView } from "./workbench-dashboard"
 export type { WorkbenchDashboardRegions, WorkbenchFigureRegion, WorkbenchWhyLabels } from "./workbench-dashboard"
 export type { ChatbotCustomerWords, CustomerFilter, CustomerRowView } from "./chatbot-workbench"
 export type { ChatbotGapRow, ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "./chatbot-workbench"
@@ -438,9 +433,8 @@ export type { SalesHandoffsView, SalesShipmentDrawerView, SalesPipelineView } fr
 export type { SalesWorkbenchViewData } from "./sales-workbench"
 export { SALES_WORKBENCH_TABS } from "./sales-workbench"
 export type { SalesAttentionActions, SalesContractCommonActions } from "./sales-workbench-actions"
-export type { SalesContractEditorActions, SalesHandoffsActions } from "./sales-workbench-actions"
-export type { SalesPipelineActions, SalesShipmentDrawerActions } from "./sales-workbench-actions"
-export type { SalesWorkbenchActions } from "./sales-workbench-actions"
+export type { SalesContractEditorActions, SalesHandoffsActions, SalesPipelineActions } from "./sales-workbench-actions"
+export type { SalesShipmentDrawerActions, SalesWorkbenchActions } from "./sales-workbench-actions"
 export type { ShiftsWeekViews, ShiftsWeekActions } from "./shifts-workbench-week"
 export type { ShiftsSetupViews, ShiftsSetupActions } from "./shifts-workbench-setup"
 export type { ShiftsRequestViews, ShiftsRequestActions } from "./shifts-workbench-requests"

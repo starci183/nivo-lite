@@ -241,6 +241,8 @@ export interface SourceSummary {
     readonly chunkCount: number
     /** The raw bytes it holds: the uploaded file, or the pasted text. */
     readonly sizeBytes: number
+    /** Where it came from when it was not typed or uploaded by hand (`google_drive`, a seed or a public document), or null. */
+    readonly origin: string | null
     /** 0-100 while a worker is on it. */
     readonly progress: number
     /** The stage the document is at (read, chunk, embed, store, facts, or critic while the critic checks its dossier), or null when none is. */

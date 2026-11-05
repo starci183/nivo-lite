@@ -88,9 +88,6 @@ export type IconName =
     | "expand"
     | "collapseRail"
     | "google"
-    | "device"
-    | "phone"
-    | "upload"
     | "muted"
     | "unmuted"
     | "history"
@@ -101,6 +98,7 @@ export type IconName =
     | "failure"
     | "warning"
     | "info"
+    | "view"
     | "sparkle"
     | "handRaised"
 

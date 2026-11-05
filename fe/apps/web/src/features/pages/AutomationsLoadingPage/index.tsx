@@ -1,22 +1,10 @@
 import type { ReactElement } from "react"
-import { getTranslations } from "next-intl/server"
 import { AutomationsBoard } from "@/components/blocks/AutomationsBoard"
 import { AutomationsHeading } from "@/components/blocks/AutomationsHeading"
-import { AutomationsPageLayout } from "@/components/composites/AutomationsPageLayout"
-import { AUTOMATION_ROUTES } from "@/modules/routes"
 
-/** The automations page with no data yet: the same heading and links, the cards as skeleton cards. */
-export const AutomationsLoadingPage = async (): Promise<ReactElement> => {
-    const t = await getTranslations("automations")
-    return (
-        <AutomationsHeading>
-            <>
-                <AutomationsPageLayout
-                    board={<AutomationsBoard layout="page" />}
-                    advancedLabel={t("advanced")}
-                    advancedHref={AUTOMATION_ROUTES.developers}
-                />
-            </>
-        </AutomationsHeading>
-    )
-}
+/** The automations page with no data yet: the same heading and link, the panes as skeletons. */
+export const AutomationsLoadingPage = (): ReactElement => (
+    <AutomationsHeading>
+        <AutomationsBoard layout="page" />
+    </AutomationsHeading>
+)

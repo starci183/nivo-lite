@@ -1,9 +1,8 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { knowledgeHeadingOf } from "@/modules/page-header"
-import type { KnowledgeHeadingInput } from "@/modules/page-header"
-import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { brainHeadingOf } from "@/modules/brain"
+import { CONSOLE_ROUTES } from "@/modules/routes"
 import { KnowledgeNivoPageBase } from "./component"
 
 /** The document title of the page. */
@@ -12,30 +11,24 @@ export const knowledgeNivoMetadata = async (): Promise<Metadata> => {
     return { title: t("nivoTitle") }
 }
 
-type Translate = Awaited<ReturnType<typeof getTranslations<"knowledge">>>
-
-/** The words of the page that do not depend on its data. */
-const copyOf = (t: Translate): KnowledgeHeadingInput => ({
-    crumbLabel: t("crumbLabel"),
-    crumbHome: t("crumbHome"),
-    homeHref: CONSOLE_ROUTES.dashboard,
-    crumbBrain: t("crumbBrain"),
-    brainHref: KNOWLEDGE_ROUTES.brain,
-    crumbDocuments: t("title"),
-    documentsHref: KNOWLEDGE_ROUTES.library,
-    eyebrow: t("crumbBrain"),
-    title: t("nivoTitle"),
-    description: t("nivoDescription"),
-})
-
-/** The base knowledge of NIVO per module: the connected body reads it through GraphQL; read-only for every member. */
-export const KnowledgeNivoPage = async (): Promise<ReactElement> => {
-    const t = await getTranslations("knowledge")
-    return <KnowledgeNivoPageBase props={{ header: knowledgeHeadingOf(copyOf(t)) }} />
+/** The words of the heading: they do not depend on the data. */
+const headingOf = async () => {
+    const [t, brain] = await Promise.all([getTranslations("brain"), getTranslations("secondBrain")])
+    return brainHeadingOf({
+        crumbLabel: t("crumbLabel"),
+        crumbHome: t("crumbHome"),
+        homeHref: CONSOLE_ROUTES.dashboard,
+        title: t("title"),
+        description: brain("intro"),
+    })
 }
+
+/** The base knowledge of NIVO per module: the connected screen reads it through GraphQL; read-only for every member. */
+export const KnowledgeNivoPage = async (): Promise<ReactElement> => (
+    <KnowledgeNivoPageBase props={{ heading: await headingOf() }} />
+)
 
 /** The same page while its data loads. */
-export const KnowledgeNivoLoadingPage = async (): Promise<ReactElement> => {
-    const t = await getTranslations("knowledge")
-    return <KnowledgeNivoPageBase props={{ header: knowledgeHeadingOf(copyOf(t)) }} />
-}
+export const KnowledgeNivoLoadingPage = async (): Promise<ReactElement> => (
+    <KnowledgeNivoPageBase props={{ heading: await headingOf() }} />
+)

@@ -26,6 +26,8 @@ const query1: TypedDocumentNode<QueryBrainResponse> = gql`
                     label
                     quote
                     ref
+                    sourceId
+                    sourceTitle
                 }
                 id
                 installationId
@@ -70,6 +72,8 @@ const query1: TypedDocumentNode<QueryBrainResponse> = gql`
                     label
                     quote
                     ref
+                    sourceId
+                    sourceTitle
                 }
                 id
                 module

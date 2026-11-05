@@ -22,8 +22,10 @@ const query1: TypedDocumentNode<QueryKnowledgeSourceResponse, InputVariables<Que
                 installationId
                 kind
                 module
+                origin
                 partCount
                 progress
+                sizeBytes
                 stage
                 stageDone
                 stageTotal

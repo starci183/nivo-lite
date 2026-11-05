@@ -94,6 +94,7 @@ interface BlankConnectionRow extends DashboardListRow {
 
 /** The body of the connections region. */
 interface ConnectionsBody extends EmptyWords {
+    summary: string
     manageLabel: string
     manageHref: "/connections"
     rows: ConnectionRowView[]

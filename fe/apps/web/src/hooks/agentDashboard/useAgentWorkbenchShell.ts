@@ -1,6 +1,8 @@
 "use client"
 
 import type { ModuleKey } from "@/hooks/installations"
+import { useWorkbenchAside } from "@/hooks/workbench"
+import type { WorkbenchAsideActions, WorkbenchAsideView } from "@/modules/types"
 import { useAgentDashboardFrame, type AgentDashboardFrameView } from "./useAgentDashboardFrame"
 import { useAgentWorkbenchTabs } from "./useAgentWorkbenchTabs"
 
@@ -18,6 +20,8 @@ export interface AgentWorkbenchFrame<T extends string> extends Pick<
     AgentDashboardFrameView,
     "why" | "regions" | "tabsLabel"
 > {
+    /** The side pane's arrangement and words. */
+    aside: WorkbenchAsideView
     selectedTab: T
     tabs: {
         id: T
@@ -32,6 +36,8 @@ export interface AgentWorkbenchShell<T extends string> {
         select: (id: string) => void
     }
     dashboard: AgentDashboardFrameView
+    /** The commands that open and close the side pane. */
+    asideOn: WorkbenchAsideActions
     isNormal: boolean
     frameOf: (labels: Readonly<Record<T, string>>) => AgentWorkbenchFrame<T>
 }
@@ -50,12 +56,15 @@ export const useAgentWorkbenchShell = <T extends string>(
         installationId: input.installationId,
         hasOwnGaps: false,
     })
+    const aside = useWorkbenchAside(dashboard.why.workItemId !== null)
     return {
         tabs,
         dashboard,
+        asideOn: aside.on,
         isNormal: dashboard.why.workItemId === null,
         /** The frame of the view: the explanation of a decision, the dashboard regions and the strip of tabs with the chosen one. */
         frameOf: (labels: Readonly<Record<T, string>>) => ({
+            aside: aside.view,
             why: dashboard.why,
             regions: dashboard.regions,
             tabsLabel: dashboard.tabsLabel,

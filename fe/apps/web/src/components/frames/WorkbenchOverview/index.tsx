@@ -1,17 +1,30 @@
 import type { ReactNode } from "react"
-import { Grid, Stack, Tabs } from "@starci/grammar/common"
+import { Cluster, Pane, PaneGrid, PaneSection, Tabs } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { ConnectionsRegion } from "@/components/composites/ConnectionsRegion"
-import { DoneRegion } from "@/components/composites/DoneRegion"
 import { FiguresStrip } from "@/components/composites/FiguresStrip"
-import { KnowledgeRegion } from "@/components/composites/KnowledgeRegion"
 import { WaitingRegion } from "@/components/composites/WaitingRegion"
-import type { WorkbenchDashboardRegions, WorkbenchFigureRegion } from "@/modules/types"
+import {
+    FIXED_ASIDE,
+    WorkbenchAsideBand,
+    WorkbenchAsideTop,
+    type AsideState,
+} from "@/components/composites/WorkbenchAsideTop"
+import { WorkbenchRegions } from "@/components/composites/WorkbenchRegions"
+import { WorkbenchWhy } from "@/components/composites/WorkbenchWhy"
+import { WorkbenchWhyDecision } from "@/components/composites/WorkbenchWhyDecision"
+import type {
+    DataSlot,
+    WorkbenchDashboardRegions,
+    WorkbenchExplanationView,
+    WorkbenchFigureRegion,
+    WorkbenchRowData,
+} from "@/modules/types"
 
 const panelId = (id: string): string => `agent-dashboard-panel-${id}`
 
-/** What the overview of a workbench reads: its regions, figures and tabs. */
+/** What the workbench reads: the explanation of a decision, its regions and tabs. */
 interface WorkbenchOverviewView {
+    readonly why: WorkbenchExplanationView
     readonly regions: WorkbenchDashboardRegions
     readonly tabsLabel: string
     readonly selectedTab: string
@@ -20,66 +33,40 @@ interface WorkbenchOverviewView {
     readonly loadFailedBody?: string
 }
 
-/** The commands of the overview: ask again for the regions and the figures, and choose a tab. */
 interface WorkbenchOverviewActions {
     readonly retryDashboard: () => void
     readonly retryRibbon: () => void
     readonly selectTab: (key: string) => void
+    readonly closeWhy: () => void
 }
 
-/** The overview of a workbench and the parts a module draws its own way. */
+/** The workbench of an agent and the parts a module draws its own way. */
 interface WorkbenchOverviewProps {
     readonly view: WorkbenchOverviewView
     readonly on: WorkbenchOverviewActions
-    /** How a forbidden read of the figures is drawn; the slot's own default when absent. */
+    /** The side pane's arrangement and commands; a workbench not yet wired to them shows both panes at the wide width only. */
+    readonly aside?: AsideState
     readonly forbidden?: "hide" | "notice" | undefined
-    /** The standard ribbon of figures; absent when the module draws its own. */
     readonly ribbon?: WorkbenchFigureRegion | undefined
-    /** The module's own waiting card; the standard waiting region when absent. */
+    /** The module's own rows of waiting decisions, drawn without a card; the standard waiting region when absent. */
     readonly waiting?: ReactNode
-    /** The module's own figures; the standard ribbon when absent. */
     readonly figures?: ReactNode
+    /** The waiting rows and their command: the explained decision's buttons (the commit, the edit, the rest) come from its row. */
+    readonly decisions?: {
+        readonly slot: DataSlot<ReadonlyArray<WorkbenchRowData>>
+        readonly onCommand: (rowId: string, commandId: string) => void
+    }
+    /** The workbench's own commands at the end of the tabs band (its one primary command and the "..." menu). */
+    readonly headEnd?: ReactNode
+    /** A record opened from the work (a candidate, a post): its head and body take the side pane in place of the decisions. */
+    readonly detail?: { readonly head: ReactNode; readonly body: ReactNode }
     /** The panel of the chosen tab. */
     readonly children: ReactNode
-    /** Drawn under the dashboard cards. */
+    /** Drawn under the panel, inside the work. */
     readonly after?: ReactNode
 }
 
-/** The dashboard regions and the command that asks for them again. */
-interface DashboardCardsProps {
-    readonly regions: WorkbenchDashboardRegions
-    readonly onRetry: () => void
-}
-
-const DashboardCards = (props: DashboardCardsProps) => {
-    const regions = props.regions
-    return (
-        <Grid kind="cards" columns={3}>
-            <SlotView
-                {...regions.done}
-                onRetry={props.onRetry}
-                render={(done, isLoading) => (
-                    <DoneRegion label={regions.done.label} view={done} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.connections}
-                onRetry={props.onRetry}
-                render={(connections, isLoading) => (
-                    <ConnectionsRegion label={regions.connections.label} view={connections} isLoading={isLoading} />
-                )}
-            />
-            <SlotView
-                {...regions.knowledge}
-                onRetry={props.onRetry}
-                render={(knowledge, isLoading) => (
-                    <KnowledgeRegion label={regions.knowledge.label} view={knowledge} isLoading={isLoading} />
-                )}
-            />
-        </Grid>
-    )
-}
-
+/** The standard waiting region, headless: its rows and its empty notice. */
 const Waiting = (props: Pick<WorkbenchOverviewProps, "view" | "on">) => (
     <SlotView
         {...props.view.regions.waiting}
@@ -105,27 +92,109 @@ const Figures = (props: FiguresProps) => (
     />
 )
 
-/** The overview of a workbench: waiting decisions, figures, the tabs with the panel of the chosen one, and the dashboard cards. */
-export const WorkbenchOverview = (props: WorkbenchOverviewProps) => (
-    <Stack gap="region">
-        {props.waiting ?? <Waiting view={props.view} on={props.on} />}
-        {props.figures ??
-            (props.ribbon === undefined ? null : (
-                <Figures ribbon={props.ribbon} view={props.view} on={props.on} forbidden={props.forbidden} />
-            ))}
-        <Tabs
-            label={props.view.tabsLabel}
-            selectedKey={props.view.selectedTab}
-            inset="none"
-            labelVisibility="always"
-            items={props.view.tabs}
-            panelId={panelId}
-            onSelect={props.on.selectTab}
-        />
-        <div role="tabpanel" id={panelId(props.view.selectedTab)}>
-            {props.children}
-        </div>
-        <DashboardCards regions={props.view.regions} onRetry={props.on.retryDashboard} />
-        {props.after}
-    </Stack>
-)
+/** The body of the side pane: an opened record, else the explanation of a decision, else the decisions with the three collapsed rows. */
+interface AsideBodyProps {
+    readonly view: WorkbenchOverviewView
+    readonly on: WorkbenchOverviewActions
+    readonly detail: WorkbenchOverviewProps["detail"] | undefined
+    readonly decisions: WorkbenchOverviewProps["decisions"] | undefined
+    readonly waiting: ReactNode | undefined
+}
+
+const AsideBody = (props: AsideBodyProps) => {
+    const { view } = props
+    if (props.detail !== undefined) return <>{props.detail.body}</>
+    if (view.why.workItemId !== null) {
+        return (
+            <WorkbenchWhy
+                view={view.why.view}
+                labels={view.why.labels}
+                decision={
+                    props.decisions === undefined ? null : (
+                        <WorkbenchWhyDecision
+                            slot={props.decisions.slot}
+                            workItemId={view.why.workItemId}
+                            onCommand={props.decisions.onCommand}
+                        />
+                    )
+                }
+                isLoading={false}
+            />
+        )
+    }
+    return (
+        <>
+            <PaneSection scroll={{ label: view.regions.waiting.label }} gap="section">
+                {props.waiting ?? <Waiting view={view} on={props.on} />}
+            </PaneSection>
+            <PaneSection gap="inline">
+                <WorkbenchRegions regions={view.regions} onRetry={props.on.retryDashboard} />
+            </PaneSection>
+        </>
+    )
+}
+
+/**
+ * The workbench of an agent as panes (pane-grid.choose.frame): the tabs band over the work, with the figures and the chosen tab's
+ * panel, and beside them the side pane: what waits for the owner, decided in place, over three collapsed rows (finished work,
+ * connections, knowledge); an explanation of one decision replaces the waiting rows in the same pane and leaves the work in place. A
+ * phone shows one pane, the work with a band that opens the decisions.
+ */
+export const WorkbenchOverview = (props: WorkbenchOverviewProps) => {
+    const { view } = props
+    const aside = props.aside ?? FIXED_ASIDE
+    return (
+        <PaneGrid
+            label={props.aside === undefined ? view.tabsLabel : aside.view.copy.grid}
+            areas={aside.view.grid.areas}
+            columns={aside.view.grid.columns}
+            rows={aside.view.grid.rows}
+        >
+            <Pane area="head" surface>
+                <PaneSection align="center">
+                    <Cluster gap="inline" justify="between" wrap={false}>
+                        <Tabs
+                            label={view.tabsLabel}
+                            selectedKey={view.selectedTab}
+                            inset="none"
+                            labelVisibility="always"
+                            items={view.tabs}
+                            panelId={panelId}
+                            onSelect={props.on.selectTab}
+                        />
+                        {props.headEnd}
+                    </Cluster>
+                </PaneSection>
+            </Pane>
+            <Pane area="main" scroll label={view.tabsLabel}>
+                <PaneSection gap="section">
+                    <WorkbenchAsideBand regions={view.regions} openLabel={view.why.openLabel} aside={props.aside} />
+                    {props.figures ??
+                        (props.ribbon === undefined ? null : (
+                            <Figures ribbon={props.ribbon} view={view} on={props.on} forbidden={props.forbidden} />
+                        ))}
+                    <div role="tabpanel" id={panelId(view.selectedTab)}>
+                        {props.children}
+                    </div>
+                    {props.after}
+                </PaneSection>
+            </Pane>
+            <Pane area="asideHead" surface>
+                {props.detail === undefined ? (
+                    <WorkbenchAsideTop view={view} onCloseWhy={props.on.closeWhy} aside={aside} />
+                ) : (
+                    props.detail.head
+                )}
+            </Pane>
+            <Pane area="aside" surface label={view.regions.waiting.label}>
+                <AsideBody
+                    view={view}
+                    on={props.on}
+                    detail={props.detail}
+                    decisions={props.decisions}
+                    waiting={props.waiting}
+                />
+            </Pane>
+        </PaneGrid>
+    )
+}

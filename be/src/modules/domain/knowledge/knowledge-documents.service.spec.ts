@@ -20,6 +20,7 @@ const sourceOf = builder<SourceDetail>({
     error: null,
     chunkCount: 1,
     sizeBytes: 12,
+    origin: null,
     progress: 100,
     stage: null,
     stageDone: null,

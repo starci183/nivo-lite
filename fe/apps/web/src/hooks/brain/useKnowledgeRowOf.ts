@@ -134,7 +134,7 @@ export const useKnowledgeRowOf = (live: Readonly<Record<string, LiveProgress>>):
         const parts = [
             t(`kind_${source.kind}`),
             ...(source.topic === null ? [] : [source.topic]),
-            format.dateTime(new Date(source.createdAt), { dateStyle: "medium" }),
+            format.dateTime(new Date(source.createdAt), { day: "2-digit", month: "2-digit" }),
             ...(source.partCount > 1 ? [t("docParts", { count: source.partCount })] : []),
         ]
         const reading = board.extractions.find((one) => one.sourceId === source.id)?.status

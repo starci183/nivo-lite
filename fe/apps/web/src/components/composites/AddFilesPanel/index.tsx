@@ -1,18 +1,21 @@
+import type { ReactNode } from "react"
 import { Button, Cluster, FileDropzone, Input, Progress, Stack, Text } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
+import { Icon } from "@/components/leaves/Icon"
 import type { BatchBytesView, LinkRowView, QueueRowView, StoppedUploadsView } from "@/modules/types"
 
 /** The words, values and state of the files and links panel. */
 type AddFilesPanelProps = {
     readonly dropPrompt: string
     readonly dropHint: string
-    readonly linksLabel: string
     readonly linksHint: string
     readonly linkPlaceholder: string
     readonly linkRemoveLabel: string
     readonly addLinkLabel: string
     readonly links: ReadonlyArray<LinkRowView>
     readonly note?: string | undefined
+    /** What sits between the drop zone and the links (the way in from Google Drive). */
+    readonly afterDrop?: ReactNode
     readonly batch?: BatchBytesView | undefined
     readonly stopped?: StoppedUploadsView | undefined
     readonly isBusy: boolean
@@ -131,10 +134,7 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
             isDisabled={props.isBusy}
             onFilesChange={props.onFiles}
         />
-        <Text isStrong>{props.linksLabel}</Text>
-        <Text size="sm" tone="muted">
-            {props.linksHint}
-        </Text>
+        {props.afterDrop}
         <LinkRows
             links={props.links}
             linkPlaceholder={props.linkPlaceholder}
@@ -144,9 +144,20 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
             onCheckLink={props.onCheckLink}
             onRemoveLink={props.onRemoveLink}
         />
-        <Button intent="neutral" isDisabled={props.isBusy} onPress={props.onAddLink}>
-            {props.addLinkLabel}
-        </Button>
+        <Text size="sm" tone="muted">
+            {props.linksHint}
+        </Text>
+        <div>
+            <Button
+                intent="neutral"
+                size="sm"
+                startContent={<Icon props={{ name: "add", usage: "leading" }} />}
+                isDisabled={props.isBusy}
+                onPress={props.onAddLink}
+            >
+                {props.addLinkLabel}
+            </Button>
+        </div>
         {props.note === undefined ? null : (
             <Text size="sm" tone="muted" live="polite">
                 {props.note}

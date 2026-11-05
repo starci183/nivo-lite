@@ -78,12 +78,10 @@ interface WorkbenchDecisionItemProps {
 /** The collection owns native row metadata; the branch owns the decision detail. */
 const workbenchDecisionItemOf = (props: WorkbenchDecisionItemProps): ListRowData => {
     const row = props.row
-    const [first, second] = row.badges
     return {
         id: row.id,
         title: row.title,
         description: row.description,
-        ...(first === undefined ? {} : { badges: second === undefined ? [first] : [first, second] }),
         detail: <WorkbenchDecisionRow {...props} />,
     }
 }

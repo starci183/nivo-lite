@@ -15,15 +15,15 @@ import { useSalesContractsView } from "@/hooks/salescontracts"
 import { useSalesDecisionsView } from "@/hooks/salesdecisions"
 import { useSalesPipelineView } from "@/hooks/salesPipeline"
 import { useSalesWaiting } from "@/hooks/salesWaiting"
-import { workbenchWaitingDataOf } from "@/hooks/workbench"
+import { useWorkbenchAside, workbenchWaitingDataOf } from "@/hooks/workbench"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useSalesOrdersView } from "./useSalesOrdersView"
-import { SALES_INBOX_TABS, salesShapeOf } from "./salesworkbench.shared"
+import { SALES_INBOX_TABS, type SalesArea } from "./salesworkbench.shared"
 import { useSalesProps, type SalesWorkbenchViewInput } from "./useSalesProps"
-import type { SalesWorkbenchActions, SalesWorkbenchViewData } from "@/modules/types"
+import type { SalesWorkbenchActions, SalesWorkbenchViewData, WorkbenchAsideActions } from "@/modules/types"
 
 type UseSalesWorkbenchViewResult = {
-    shape: ReturnType<typeof salesShapeOf>
+    shape: SalesArea
     props: SalesWorkbenchViewData
     on: SalesWorkbenchActions
 }
@@ -39,9 +39,8 @@ export const useSalesWorkbenchView = (input: SalesWorkbenchViewInput): UseSalesW
         scope,
     })
     const frame = useAgentDashboardFrame({ module: "sales", installationId: input.installationId, hasOwnGaps: false })
-    const isOverview = frame.why.workItemId === null
-    const workbench = useSalesWorkbench(isOverview)
-    const ready = isOverview && "items" in workbench.slot
+    const workbench = useSalesWorkbench(true)
+    const ready = "items" in workbench.slot
     const attention = useSalesAttentionView(workbench.data, ready && tabs.selected === "attention", scope)
     const pipeline = useSalesPipelineView(workbench.data, ready && tabs.selected === "pipeline", scope)
     const decisions = useSalesDecisionsView(workbench.data, ready && tabs.selected === "decisions", scope, input.focus)
@@ -49,13 +48,14 @@ export const useSalesWorkbenchView = (input: SalesWorkbenchViewInput): UseSalesW
     const orders = useSalesOrdersView(ready && tabs.selected === "handoff")
     const contracts = useSalesContractsView(workbench, ready && tabs.selected === "contracts", scope)
     const activity = useSalesActivityView(workbench.data)
-    const inboxIsActive = isOverview && tabs.selected === "conversation" && input.conversation !== null
+    const inboxIsActive = tabs.selected === "conversation" && input.conversation !== null
     const inboxRead = useChatbotWorkbench(null, input.conversation, inboxIsActive)
     const inbox = useChatbotInbox(inboxRead, inboxIsActive, scope)
-    const waiting = useSalesWaiting(isOverview, scope)
+    const waiting = useSalesWaiting(true, scope)
     const waitingData = workbenchWaitingDataOf(waiting.slot)
+    const aside = useWorkbenchAside(frame.why.workItemId !== null)
     return {
-        shape: salesShapeOf(tabs.selected, isOverview),
+        shape: tabs.selected,
         props: useSalesProps({
             input,
             frame,
@@ -72,6 +72,7 @@ export const useSalesWorkbenchView = (input: SalesWorkbenchViewInput): UseSalesW
             inbox,
             waiting,
             waitingData,
+            aside: aside.view,
         }),
         on: salesOnShape({
             tabs,
@@ -87,6 +88,7 @@ export const useSalesWorkbenchView = (input: SalesWorkbenchViewInput): UseSalesW
             contracts,
             inbox,
             inboxRead,
+            aside: aside.on,
         }),
     }
 }
@@ -105,6 +107,7 @@ interface SalesOnInput {
     readonly contracts: ReturnType<typeof useSalesContractsView>
     readonly inbox: ReturnType<typeof useChatbotInbox>
     readonly inboxRead: ReturnType<typeof useChatbotWorkbench>
+    readonly aside: WorkbenchAsideActions
 }
 
 /** The commands of the desk: every panel's own commands under the name of its panel. */
@@ -122,7 +125,9 @@ const salesOnShape = ({
     contracts,
     inbox,
     inboxRead,
+    aside,
 }: SalesOnInput): SalesWorkbenchActions => ({
+    aside,
     selectTab: tabs.select,
     closeWhy: frame.closeWhy,
     retryDashboard: frame.reload,

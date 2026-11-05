@@ -12,6 +12,9 @@ export interface QuickStartExample {
 export interface ApiQuickStartBaseProps {
     readonly props: {
         readonly title: string
+        /** What the collapsed row lists, so the owner knows whether to open it. */
+        readonly meta: string
+        readonly isOpen: boolean
         readonly intro: string
         readonly examples: ReadonlyArray<QuickStartExample>
         readonly n8n: {
@@ -20,7 +23,10 @@ export interface ApiQuickStartBaseProps {
             readonly examples: ReadonlyArray<QuickStartExample>
         }
     }
-    readonly on: { readonly copy: (id: string, code: string) => void }
+    readonly on: {
+        readonly copy: (id: string, code: string) => void
+        readonly toggle: (isOpen: boolean) => void
+    }
 }
 
 const example = (item: QuickStartExample, copy: (id: string, code: string) => void) => (
@@ -42,21 +48,34 @@ const example = (item: QuickStartExample, copy: (id: string, code: string) => vo
     </Stack>
 )
 
-/** Draws the quick start: base address, auth, limits, then copyable curl and n8n examples. */
+/** Draws the quick start as one collapsed row: base address, auth, limits, then copyable curl and n8n examples when opened. */
 export const ApiQuickStartBase = (props: ApiQuickStartBaseProps) => (
-    <SurfaceCard label={props.props.title} headingLevel={2}>
-        <Stack gap="section">
-            <Text size="sm" tone="muted">
-                {props.props.intro}
-            </Text>
-            {props.props.examples.map((item) => example(item, props.on.copy))}
-            <Stack gap="inline">
-                <Heading level={3}>{props.props.n8n.title}</Heading>
-                <Text size="sm" tone="muted">
-                    {props.props.n8n.steps}
-                </Text>
-                {props.props.n8n.examples.map((item) => example(item, props.on.copy))}
-            </Stack>
-        </Stack>
-    </SurfaceCard>
+    <SurfaceCard
+        kind="accordion"
+        ariaLabel={props.props.title}
+        onItemOpenChange={(_, isOpen) => props.on.toggle(isOpen)}
+        items={[
+            {
+                id: "guide",
+                title: props.props.title,
+                meta: props.props.meta,
+                isOpen: props.props.isOpen,
+                body: (
+                    <Stack gap="section">
+                        <Text size="sm" tone="muted">
+                            {props.props.intro}
+                        </Text>
+                        {props.props.examples.map((item) => example(item, props.on.copy))}
+                        <Stack gap="inline">
+                            <Heading level={3}>{props.props.n8n.title}</Heading>
+                            <Text size="sm" tone="muted">
+                                {props.props.n8n.steps}
+                            </Text>
+                            {props.props.n8n.examples.map((item) => example(item, props.on.copy))}
+                        </Stack>
+                    </Stack>
+                ),
+            },
+        ]}
+    />
 )

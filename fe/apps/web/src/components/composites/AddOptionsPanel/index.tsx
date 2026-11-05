@@ -1,7 +1,7 @@
 import { Stack, Disclosure, Input, Select } from "@starci/grammar/common"
 
 /** One choice of a select or a radio group. */
-export interface ChoiceView {
+interface ChoiceView {
     readonly id: string
     readonly label: string
 }
@@ -18,6 +18,8 @@ type AddOptionsPanelProps = {
     readonly tags: string
     readonly module: string
     readonly moduleOptions: ReadonlyArray<ChoiceView>
+    /** The muted line at the end of the trigger: what the batch is filed under now. */
+    readonly summary?: string
     readonly isBusy: boolean
     readonly onTopic: (value: string) => void
     readonly onTags: (value: string) => void
@@ -28,6 +30,7 @@ type AddOptionsPanelProps = {
 export const AddOptionsPanel = (props: AddOptionsPanelProps) => (
     <Disclosure
         title={props.title}
+        {...(props.summary === undefined ? {} : { summary: props.summary })}
         body={
             <Stack gap="section">
                 <Input

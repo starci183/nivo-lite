@@ -1,4 +1,4 @@
-import { Alert, EmptyNotice, Section, Text } from "@starci/grammar/common"
+import { Alert, EmptyNotice, Section, Stack, Text } from "@starci/grammar/common"
 
 /** The offer to let an automation send by itself. */
 type AutomationTrustOffer = {
@@ -13,7 +13,6 @@ type AutomationGateProps = {
     readonly sectionLabel: string
     /** The heading and lines about the message under the owner's authority; absent when the template sends nothing to a customer. */
     readonly authority?: {
-        readonly title: string
         readonly gateLine?: string
         readonly alwaysAskLine?: string
         readonly autoSendLine?: string
@@ -27,7 +26,7 @@ type AutomationGateProps = {
 export const AutomationGate = (props: AutomationGateProps) => (
     <Section title={props.sectionLabel} headingLevel={3}>
         {props.authority === undefined ? null : (
-            <Section title={props.authority.title} headingLevel={4}>
+            <Stack gap="inline">
                 {props.authority.gateLine === undefined ? null : <Text size="sm">{props.authority.gateLine}</Text>}
                 {props.authority.alwaysAskLine === undefined ? null : (
                     <Text size="sm">{props.authority.alwaysAskLine}</Text>
@@ -37,7 +36,7 @@ export const AutomationGate = (props: AutomationGateProps) => (
                         {props.authority.autoSendLine}
                     </Text>
                 )}
-            </Section>
+            </Stack>
         )}
         {props.modeLine === undefined ? null : (
             <Text size="sm" tone="muted">

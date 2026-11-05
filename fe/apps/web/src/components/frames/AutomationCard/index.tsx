@@ -1,4 +1,5 @@
 import { Cluster, Stack, Badge, Icon, IconTile, Link, Switch, Text, TextAction } from "@starci/grammar/common"
+import type { IconSource } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
@@ -37,6 +38,10 @@ const ICONS: Record<AutomationIconWord, IconName> = {
     receipt: "wallet",
     ledger: "saved",
 }
+
+/** The glyph of an automation's template, for the places that draw its mark. */
+export const automationIconOf = (word: AutomationIconWord): IconSource =>
+    nivoIconSource(ICONS[word] ?? "apps", "leading")
 
 /** The tone of a status badge. */
 type CardTone = "success" | "neutral" | "warning" | "danger"

@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
 import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
-import { APP_ROUTES, CONSOLE_ROUTES } from "@/modules/routes"
+import { APP_ROUTES, AUTOMATION_ROUTES, CONSOLE_ROUTES } from "@/modules/routes"
 import { AutomationsHeadingBase } from "./component"
 
 /** The body the page draws under the heading. */
@@ -32,6 +32,8 @@ export const AutomationsHeading = (props: AutomationsHeadingProps) => {
                 leadLink: t("leadLink"),
                 leadHref: CONSOLE_ROUTES.authority,
                 leadAfter: t("leadAfter"),
+                advancedLabel: t("advancedShort"),
+                advancedHref: AUTOMATION_ROUTES.developers,
                 isLoading: status === "loading",
             }}
         />

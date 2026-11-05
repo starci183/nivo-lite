@@ -1,25 +1,21 @@
 "use client"
 
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
-import { useMutateAuthorizeGoogleSwr } from "@/hooks/swr"
 import { slotOfReads } from "@/hooks/slot"
 import { noData } from "@/hooks/workspaceread"
 import {
     automationBoardOf,
     automationFiltersFor,
     automationScopeOf,
-    matchesAutomationFilter,
     visibleAutomations,
+    hiddenAutomations,
 } from "@/modules/automations"
-import type { AutomationStatus } from "@/modules/automations"
 import { pickCopy } from "@/modules/catalog"
-import { navigation } from "@/modules/i18n"
-import { automationFocusPath } from "@/modules/routes"
-import { useGraphQLWithToast } from "@/modules/toast"
-import type { AutomationCardView, AutomationsBoardView, DataSlot } from "@/modules/types"
+import type { AutomationsBoardView, DataSlot } from "@/modules/types"
 import { useState } from "react"
-import { automationBoardActionsOf, automationBoardInputOf, CONNECTION_ROUTE } from "./automations.shared"
+import { automationBoardActionsOf, automationBoardInputOf, automationShownOf } from "./automations.shared"
 import type { AutomationPatch, AutomationsBoardActions, AutomationsBoardInput } from "./automations.shared"
+import { useAutomationConnect } from "./useAutomationConnect"
 import { useAutomationSelection } from "./useAutomationSelection"
 import { useAutomations } from "./useAutomations"
 
@@ -33,9 +29,7 @@ export interface AutomationsBoardState {
 /** The board of automations: the gallery from the back end through SWR, and every change the owner can make. */
 export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBoardState => {
     const { t, locale } = input
-    const router = navigation.useRouter()
-    const runGraphQL = useGraphQLWithToast()
-    const authorize = useMutateAuthorizeGoogleSwr()
+    const connect = useAutomationConnect()
     const automations = useAutomations()
     const catalog = useModuleCatalog()
     const moduleNames = Object.fromEntries(
@@ -47,20 +41,18 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
 
     const scoped = cards.filter((card) => (input.moduleKey ? automationScopeOf(card.def) === input.moduleKey : true))
     const visible = visibleAutomations(scoped)
-    const shown = visible.filter((card) => matchesAutomationFilter(card, filter))
+    const hiddenCards = hiddenAutomations(scoped)
+    const shown = automationShownOf(visible, hiddenCards, filter)
     const change = (key: string, patch: AutomationPatch) => automations.apply(key, patch)
 
-    const connect = async (card: AutomationCardView, status: AutomationStatus) => {
-        const route = CONNECTION_ROUTE[status]
-        if (route !== undefined) return router.push(route)
-        const started = await runGraphQL(() => authorize.trigger({ returnTo: automationFocusPath(card.key) }), {
-            showSuccessToast: false,
-        })
-        if (started !== undefined) window.location.assign(started.url)
-    }
-
     const { selected, awaiting, current, detail, select, toggle, saveBody, enable, saveSettings, setSelected } =
-        useAutomationSelection({ focus: input.focus ?? null, cards, visible, change, connect })
+        useAutomationSelection({
+            focus: input.focus ?? null,
+            cards,
+            visible: [...visible, ...hiddenCards],
+            change,
+            connect,
+        })
 
     const slot = slotOfReads([automations.reads.overview, automations.reads.accounts, catalog.read], () => {
         const data = automations.data ?? noData("automations")

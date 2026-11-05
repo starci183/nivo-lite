@@ -23,6 +23,7 @@ interface KnowledgeGaps {
 
 /** The body of the knowledge region. */
 export interface KnowledgeBody {
+    summary: string
     openLabel: string
     openHref: string
     footer: string
@@ -45,7 +46,11 @@ const knowledgeOf = (
     const restricted = dashboard.knowledge.facts.restricted
     const counts = (kind: "public" | "internal") =>
         t("knowCounts", { docs: dashboard.knowledge.documents[kind], facts: dashboard.knowledge.facts[kind] })
+    const documents = dashboard.knowledge.documents
     return {
+        summary: isInternal
+            ? t("knowSummaryInternal", { n: documents.public + documents.internal })
+            : t("knowSummaryPublic", { n: documents.public }),
         openLabel: t("knowOpen"),
         openHref: KNOWLEDGE_ROUTES.library,
         footer: isInternal ? t("knowAudienceInternal") : t("knowAudienceCustomer"),

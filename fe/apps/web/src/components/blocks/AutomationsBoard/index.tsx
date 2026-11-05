@@ -1,11 +1,25 @@
 "use client"
 
 import { useFormatter, useLocale, useTranslations } from "next-intl"
+import { useSearchParams } from "next/navigation"
 import { useAutomationsBoard } from "@/hooks/automations"
 
 import { useSlotLabels } from "@/hooks/slot"
 import { CONSOLE_ROUTES } from "@/modules/routes"
+import { usePaneCopy } from "@/hooks/paneFrame"
 import { AutomationsBoardBase } from "./component"
+
+/** The query key of the search text: the address is the one place the screen keeps it. */
+const SEARCH_KEY = "q"
+
+/** Replaces the search key of the address without leaving the page. */
+const writeSearch = (value: string): void => {
+    const query = new URLSearchParams(window.location.search)
+    if (value === "") query.delete(SEARCH_KEY)
+    else query.set(SEARCH_KEY, value)
+    const rest = query.toString()
+    window.history.replaceState(null, "", rest === "" ? window.location.pathname : `?${rest}`)
+}
 
 /** What the pages tell the board. */
 interface AutomationsBoardProps {
@@ -25,6 +39,9 @@ export const AutomationsBoard = (props: AutomationsBoardProps) => {
     const locale = useLocale() === "en" ? "en" : "vi"
     const format = useFormatter()
     const slotLabels = useSlotLabels()
+    const pane = usePaneCopy()
+    const tp = useTranslations("pane")
+    const query = useSearchParams().get(SEARCH_KEY) ?? ""
     const board = useAutomationsBoard({
         layout: props.layout,
         t,
@@ -48,8 +65,25 @@ export const AutomationsBoard = (props: AutomationsBoardProps) => {
                     status: t("statusOff"),
                     select: t("selectHint"),
                 },
+                panes: {
+                    query,
+                    copy: {
+                        grid: t("title"),
+                        list: t("filtersLabel"),
+                        search: t("searchLabel"),
+                        searchPlaceholder: t("searchPlaceholder"),
+                        clearSearch: pane.clearSearch,
+                        back: pane.backToList,
+                        moreActions: pane.moreActions,
+                        runsTitle: t("runsTitle"),
+                        moreFilters: (count: number): string => tp("moreFilters", { count }),
+                        pickTitle: t("pickTitle"),
+                        pickBody: t("pickBody"),
+                        emptyFiltered: t("emptyFiltered"),
+                    },
+                },
             }}
-            on={{ ...board.on, retry: board.retry }}
+            on={{ ...board.on, retry: board.retry, search: writeSearch }}
         />
     )
 }

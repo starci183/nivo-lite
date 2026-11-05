@@ -2,10 +2,10 @@ import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getTranslations } from "next-intl/server"
-import { knowledgeHeadingOf } from "@/modules/page-header"
-import type { KnowledgeHeadingInput } from "@/modules/page-header"
+import { brainHeadingOf } from "@/modules/brain"
 import { isKnowledgeId } from "@/modules/documents"
-import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES } from "@/modules/routes"
+import type { BrainPageHeading } from "@/modules/types"
 import { KnowledgeSourcePageBase } from "./component"
 
 /** The document title of the page. */
@@ -19,34 +19,25 @@ interface KnowledgeSourcePageProps {
     readonly sourceId: string
 }
 
-type Translate = Awaited<ReturnType<typeof getTranslations<"knowledge">>>
+/** The words of the heading that do not depend on its data. */
+const headingOf = async (): Promise<BrainPageHeading> => {
+    const [t, brain] = await Promise.all([getTranslations("brain"), getTranslations("secondBrain")])
+    return brainHeadingOf({
+        crumbLabel: t("crumbLabel"),
+        crumbHome: t("crumbHome"),
+        homeHref: CONSOLE_ROUTES.dashboard,
+        title: t("title"),
+        description: brain("intro"),
+    })
+}
 
-/** The props of the connected body: the localized copy and the title the skeleton carries. */
-type ClientCopy = KnowledgeHeadingInput
-
-/** The words of the page that do not depend on its data. */
-const copyOf = (t: Translate): ClientCopy => ({
-    crumbLabel: t("crumbLabel"),
-    crumbHome: t("crumbHome"),
-    homeHref: CONSOLE_ROUTES.dashboard,
-    crumbBrain: t("crumbBrain"),
-    brainHref: KNOWLEDGE_ROUTES.brain,
-    crumbDocuments: t("title"),
-    documentsHref: KNOWLEDGE_ROUTES.library,
-    eyebrow: t("crumbBrain"),
-    description: t("passagesHint"),
-    title: t("title"),
-})
-
-/** One document with its passages: the connected body reads it through GraphQL; a bad id is not found. */
+/** One document with its passages: the connected screen reads it through GraphQL; a bad id is not found. */
 export const KnowledgeSourcePage = async (props: KnowledgeSourcePageProps): Promise<ReactElement> => {
-    const t = await getTranslations("knowledge")
     if (!isKnowledgeId(props.sourceId)) notFound()
-    return <KnowledgeSourcePageBase props={{ header: knowledgeHeadingOf(copyOf(t)), sourceId: props.sourceId }} />
+    return <KnowledgeSourcePageBase props={{ heading: await headingOf(), sourceId: props.sourceId }} />
 }
 
-/** The same page while it loads: the overview draws its own skeleton. */
-export const KnowledgeSourceLoadingPage = async (): Promise<ReactElement> => {
-    const t = await getTranslations("knowledge")
-    return <KnowledgeSourcePageBase props={{ header: knowledgeHeadingOf(copyOf(t)), sourceId: undefined }} />
-}
+/** The same page while it loads: the screen draws its own skeleton. */
+export const KnowledgeSourceLoadingPage = async (): Promise<ReactElement> => (
+    <KnowledgeSourcePageBase props={{ heading: await headingOf(), sourceId: undefined }} />
+)

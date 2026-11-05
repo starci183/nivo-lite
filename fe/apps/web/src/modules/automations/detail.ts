@@ -146,7 +146,6 @@ const gateOf = (card: AutomationCardView, ctx: DetailContext): GateView | undefi
         ...(hasAuthority
             ? {
                   authority: {
-                      title: t("gateTitle"),
                       ...(line === null ? {} : { gateLine: t(line) }),
                       ...(def.authority.alwaysAsk === true ? { alwaysAskLine: t("alwaysAsk") } : {}),
                       ...(card.trust.autoSend ? { autoSendLine: t("autoSendOn") } : {}),
@@ -202,6 +201,8 @@ export const automationDetailOf = (input: DetailInput, ctx: DetailContext): Deta
             description: automationText(card.def.description, ctx.locale),
             closeLabel: t("detailClose"),
             dismissLabel: t("dismiss"),
+            isHidden: card.dismissed,
+            restoreLabel: t("restore"),
             ...(input.isAwaiting ? { awaitingText: t("needsMessage") } : {}),
             ...(input.errorText === undefined ? {} : { errorText: input.errorText }),
             isBusy: input.isBusy,

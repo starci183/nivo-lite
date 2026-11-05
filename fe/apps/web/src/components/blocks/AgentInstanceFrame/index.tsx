@@ -16,7 +16,6 @@ import {
 } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
-import { useWorkbenchWhyKey } from "@/hooks/workbench"
 import { AGENT_ROLES_HREF, AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
 import { AgentInstanceFrameBase } from "./component"
 import type { InstanceHeaderView, InstanceSwitch } from "./component"
@@ -44,7 +43,7 @@ interface AgentInstanceFrameProps {
 }
 
 /** The tabs whose body is panes, attached flush under the tab line; the other tabs are card bodies. */
-const PANES_TABS: ReadonlySet<string> = new Set(["setup", "work", "inbox"])
+const PANES_TABS: ReadonlySet<string> = new Set(["setup", "work", "inbox", "workbench"])
 
 /** The agents the header's menu can open: every installed agent, the open one checked, and the way to add one for a person who may. */
 const switcherOf = (
@@ -81,12 +80,11 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
     const needs = useConnectionNeedsCopy()
     const rail = useInstanceRail(props.installationId)
     const member = useMember()
-    const why = useWorkbenchWhyKey()
     return (
         <AgentInstanceFrameBase
             children={props.children}
             props={{
-                hasPanes: PANES_TABS.has(selected) || (selected === "workbench" && why.workItemId !== null),
+                hasPanes: PANES_TABS.has(selected),
                 ariaLabel: header.name === "" ? header.typeName : header.name,
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [

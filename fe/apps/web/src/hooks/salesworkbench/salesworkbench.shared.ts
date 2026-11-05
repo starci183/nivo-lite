@@ -13,7 +13,3 @@ export const SALES_INBOX_TABS: readonly [
 
 /** One area of the Sales desk, named by its tab id. */
 export type SalesArea = (typeof SALES_INBOX_TABS)[number]
-
-/** The optional conversation and explanation remain actual product drawings, not data-status shapes. */
-export const salesShapeOf = (tab: SalesArea, isOverview: boolean): SalesArea | "explanation" =>
-    isOverview ? tab : "explanation"

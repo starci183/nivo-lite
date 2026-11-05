@@ -13,6 +13,7 @@ import type {
 import type { ContractImportDialogView } from "./contract-import"
 import type { ChatbotConversationView } from "./chatbot-inbox"
 import type { DataSlot, SlotLabels, SlotPanelProps } from "./slot"
+import type { WorkbenchAsideView } from "./panes"
 import type {
     WorkbenchDashboardRegions,
     WorkbenchExplanationView,
@@ -171,6 +172,7 @@ export interface SalesOrdersView extends SlotPanelProps<ReadonlyArray<SalesOrder
 }
 /** Resolved read models for the Sales drawing; command protocols are separate. */
 export interface SalesWorkbenchViewData {
+    readonly aside: WorkbenchAsideView
     readonly why: WorkbenchExplanationView
     readonly regions: WorkbenchDashboardRegions
     readonly selectedTab: (typeof SALES_WORKBENCH_TABS)[number] | "conversation"

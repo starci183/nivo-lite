@@ -1,6 +1,7 @@
 import type { AccountingQuestionsView, AccountingQuestionsActions } from "./accounting-question-card"
 import type { WorkbenchDashboardRegions, WorkbenchExplanationView, WorkbenchFigureRegion } from "./workbench-dashboard"
 import type { SlotPanelProps } from "./slot"
+import type { WorkbenchAsideActions, WorkbenchAsideView } from "./panes"
 /** AccountingRecordData resolved data. */
 export interface AccountingRecordData {
     readonly id: string
@@ -233,6 +234,7 @@ export interface AccountingUpcomingData {
 }
 /** AccountingWorkbenchDataView resolved data. */
 export interface AccountingWorkbenchDataView {
+    readonly aside: WorkbenchAsideView
     readonly why: WorkbenchExplanationView
     readonly regions: WorkbenchDashboardRegions
     readonly tabsLabel: string
@@ -248,6 +250,7 @@ export interface AccountingWorkbenchDataView {
 }
 /** AccountingWorkbenchActions resolved data. */
 export interface AccountingWorkbenchActions {
+    readonly aside: WorkbenchAsideActions
     readonly selectTab: (key: string) => void
     readonly closeWhy: () => void
     readonly retryDashboard: () => void
