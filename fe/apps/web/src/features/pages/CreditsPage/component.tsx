@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
-import { Page, Stack } from "@starci/grammar/common"
+import { Button, Page, Stack } from "@starci/grammar/common"
 import type { PageHeaderContent } from "@starci/grammar/common"
-import { BillingOverview } from "@/components/blocks/BillingOverview"
+import { BillingOverview, BillingOverviewSkeleton } from "@/components/blocks/BillingOverview"
 import { BillingPlans } from "@/components/blocks/BillingPlans"
 import { PayDrawer } from "@/components/blocks/PayDrawer"
 import { CreditsHistory, CreditsHistorySkeleton } from "@/components/blocks/CreditsHistory"
@@ -39,16 +39,20 @@ export const CreditsPageBase = (props: CreditsPageBaseProps) => (
     </Page>
 )
 
-/** What the loading Page is told: the header words alone. */
+/** What the loading Page is told: the header words and the word of the plans command. */
 export interface CreditsLoadingPageBaseProps {
-    readonly props: Pick<CreditsPageBaseProps["props"], "header">
+    readonly props: Pick<CreditsPageBaseProps["props"], "header"> & { readonly plansLabel: string }
 }
 
-/** Draws the same Page while the route loads: the real header words and the placeholders of the two slots. */
+/** Draws the same Page while the route loads: the real header words and the skeleton of every region, in the ready order. */
 export const CreditsLoadingPageBase = (props: CreditsLoadingPageBaseProps) => (
     <Page header={props.props.header} measure="product" isLoading>
         <CreditsBody>
             <CreditsOverviewSkeleton />
+            <BillingOverviewSkeleton withOrders={false} />
+            <Button intent="alternative" isLoading>
+                {props.props.plansLabel}
+            </Button>
             <CreditsHistorySkeleton />
         </CreditsBody>
     </Page>

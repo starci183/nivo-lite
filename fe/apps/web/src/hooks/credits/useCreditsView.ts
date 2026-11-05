@@ -133,7 +133,7 @@ const viewOf = ({
     allowance,
 }: CreditsViewInput): CreditsOverviewView => {
     return {
-        canBuy: data?.canBuy ?? false,
+        canBuy: data?.canBuy ?? true,
         staffNote: t("staffNote"),
         balance: {
             figure,

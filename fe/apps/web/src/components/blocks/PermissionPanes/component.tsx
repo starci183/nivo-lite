@@ -1,4 +1,4 @@
-import { Badge, Page, Pane, PaneGrid, Text } from "@starci/grammar/common"
+import { Badge, Button, Page, Pane, PaneGrid, Text } from "@starci/grammar/common"
 import type { BadgeTone, ListBoxSection } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PermissionGrantsFields } from "@/components/branches/PermissionGrantsFields"
@@ -10,6 +10,7 @@ import { PaneHead } from "@/components/composites/PaneHead"
 import { PermissionRuleForm } from "@/components/composites/PermissionRuleForm"
 import type { PermissionRuleFormProps } from "@/components/composites/PermissionRuleForm"
 import { PaneBody } from "@/components/frames/PaneBody"
+import { Icon } from "@/components/leaves/Icon"
 import type { DataSlot, PaneGridLayout, SlotLabels } from "@/modules/types"
 
 /** One rule of the list, every word already resolved. */
@@ -32,6 +33,7 @@ export interface PermissionPanesCopy {
     readonly tabsLabel: string
     readonly membersTab: string
     readonly permissionsTab: string
+    readonly inviteAction: string
     readonly listTitle: string
     readonly listLabel: string
     readonly detailLabel: string
@@ -65,6 +67,7 @@ export interface PermissionPanesBaseProps {
     }
     readonly on: PermissionRuleFormProps["on"] & {
         readonly setQuery: (value: string) => void
+        readonly openInvite: () => void
         readonly open: (id: string) => void
         readonly retry: () => void
         readonly retryGrants: () => void
@@ -162,26 +165,38 @@ const MainBody = (props: Props) => {
     )
 }
 
-/** The page header: the team's title and line with the Members / Permissions tabs. */
-const headerOf = (copy: PermissionPanesCopy) => ({
-    title: copy.title,
-    description: copy.description,
-    tabs: {
-        label: copy.tabsLabel,
-        selectedKey: "permissions",
-        labelVisibility: "always" as const,
-        items: [
-            { id: "members", label: copy.membersTab, href: "/team" },
-            { id: "permissions", label: copy.permissionsTab, href: "/permissions" },
-        ],
-    },
-})
+/** The page header: the team's title and line, the Members / Permissions tabs and the one command that invites. */
+const headerOf = (props: Props) => {
+    const { copy } = props.props
+    return {
+        title: copy.title,
+        description: copy.description,
+        actions: (
+            <Button
+                intent="commit"
+                startContent={<Icon props={{ name: "add", usage: "leading" }} />}
+                onPress={props.on.openInvite}
+            >
+                {copy.inviteAction}
+            </Button>
+        ),
+        tabs: {
+            label: copy.tabsLabel,
+            selectedKey: "permissions",
+            labelVisibility: "always" as const,
+            items: [
+                { id: "members", label: copy.membersTab, href: "/team" },
+                { id: "permissions", label: copy.permissionsTab, href: "/permissions" },
+            ],
+        },
+    }
+}
 
 /** Draws the permissions as the chat pattern: the rules by department beside the open rule's form; a phone shows one pane. */
 export const PermissionPanesBase = (props: PermissionPanesBaseProps) => {
     const { copy, grid } = props.props
     return (
-        <Page chrome="panes" header={headerOf(copy)}>
+        <Page chrome="panes" header={headerOf(props)}>
             <PaneGrid label={copy.grid} areas={grid.areas} columns={grid.columns} rows={grid.rows}>
                 <Pane area="listHead" surface>
                     <PaneHead title={copy.listTitle} />

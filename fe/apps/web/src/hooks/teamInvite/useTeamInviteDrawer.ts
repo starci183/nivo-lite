@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 import { useInviteForm } from "@/hooks/rhf"
 import { NO_STAFF, useInviteCommands } from "@/hooks/team"
 import type { InviteSentView } from "@/hooks/team"
@@ -22,9 +23,14 @@ export interface TeamInviteDrawerState {
 export const useTeamInviteDrawer = (): TeamInviteDrawerState => {
     const commands = useInviteCommands()
     const form = useInviteForm()
-    const [isOpen, setOpen] = useState(false)
+    const params = useSearchParams()
+    const staffParam = params.get("invite_staff")
+    const [isOpen, setOpen] = useState(() => params.has("invite") || staffParam !== null)
     const [sent, setSent] = useState<InviteSentView>()
     const [isCopied, setCopied] = useState(false)
+    useEffect(() => {
+        if (staffParam !== null) form.setValue("staffId", staffParam)
+    }, [form, staffParam])
     const send = form.handleSubmit(async (values) => {
         setCopied(false)
         const result = await commands.create({

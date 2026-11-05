@@ -13,7 +13,7 @@ interface AvatarUploadState {
 /** The view `useAvatarEditorView` returns. */
 export interface AvatarEditorView {
     label: string
-    prompt: string
+    pickLabel: string
     hint: string
     accept: string
     error: string | undefined
@@ -27,7 +27,7 @@ export const useAvatarEditorView = (upload: AvatarUploadState, canRemove: boolea
     const t = useTranslations("avatarEditor")
     return {
         label: t("label"),
-        prompt: t("prompt"),
+        pickLabel: t("change"),
         hint: t("hint"),
         accept: AVATAR_ACCEPT,
         error: upload.problem === null ? undefined : t(`error_${upload.problem}`),

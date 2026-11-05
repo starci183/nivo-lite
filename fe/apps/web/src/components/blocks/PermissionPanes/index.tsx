@@ -5,6 +5,8 @@ import { useState } from "react"
 import { paneGridOf, usePaneCopy } from "@/hooks/paneFrame"
 import { usePermissionBoard, usePermissionDrawer } from "@/hooks/permissions"
 import { useSlotLabels } from "@/hooks/slot"
+import { navigation } from "@/modules/i18n"
+import { CONSOLE_ROUTES } from "@/modules/routes"
 import { PermissionPanesBase } from "./component"
 import type { PermissionPanesCopy } from "./component"
 
@@ -20,6 +22,7 @@ const copyOf = (
     tabsLabel: t("tabsLabel"),
     membersTab: t("tabMembers"),
     permissionsTab: t("tabPermissions"),
+    inviteAction: team("formTitle"),
     listTitle: t("tableTitle"),
     listLabel: t("listLabel"),
     detailLabel: t("detailLabel"),
@@ -42,6 +45,7 @@ export const PermissionPanes = () => {
     const team = useTranslations("team")
     const pane = usePaneCopy()
     const slotLabels = useSlotLabels()
+    const router = navigation.useRouter()
     const board = usePermissionBoard()
     const drawer = usePermissionDrawer(board)
     const [query, setQuery] = useState("")
@@ -68,7 +72,14 @@ export const PermissionPanes = () => {
                         ? drawer.grantsLabels
                         : { ...drawer.grantsLabels, empty: drawer.props.copy.ownerAlways },
             }}
-            on={{ ...drawer.on, setQuery, open, retry: board.reload, retryGrants: drawer.retryGrants }}
+            on={{
+                ...drawer.on,
+                setQuery,
+                openInvite: () => router.push(CONSOLE_ROUTES.teamInvite),
+                open,
+                retry: board.reload,
+                retryGrants: drawer.retryGrants,
+            }}
         />
     )
 }

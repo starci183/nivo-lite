@@ -1,14 +1,15 @@
-import { Button, Cluster, FileDropzone, Stack } from "@starci/grammar/common"
+import { Button, Cluster, FileButton, Stack, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { CONTROLS_CLASS_NAME } from "./classNames"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** What the picture editor draws and does. */
 type AvatarEditorProps = {
     /** The live preview: the chosen picture while it uploads, else the saved one or the generated avatar. */
     readonly preview: ReactNode
-    readonly id: string
+    /** The accessible name of the picker. */
     readonly label: string
-    readonly prompt: string
+    /** The visible word of the picker ("Change picture"). */
+    readonly pickLabel: string
     readonly hint: string
     readonly accept: string
     /** Why the chosen picture was refused, or undefined. */
@@ -17,37 +18,47 @@ type AvatarEditorProps = {
     /** False when there is no uploaded picture to remove. */
     readonly canRemove: boolean
     readonly isBusy: boolean
+    /** The account read has no data yet: the pills draw as geometry (the remove pill keeps its place). */
+    readonly isLoading: boolean
     readonly onPick: (files: Array<File>) => void
     readonly onRemove: () => void
 }
 
-/** A profile picture editor: the live preview, a picker that uploads at once, and the action that removes the picture. */
+/**
+ * A profile picture editor: the live preview, the picker pill that uploads at once, the pill that removes the picture and the
+ * line of what is accepted (the refusal replaces it). The pills are geometry while the account loads.
+ */
 export const AvatarEditor = (props: AvatarEditorProps) => (
     <Cluster gap="section" align="start">
         {props.preview}
-        <div className={CONTROLS_CLASS_NAME}>
-            <Stack gap="inline">
-                <FileDropzone
-                    id={props.id}
-                    name={props.id}
+        <Stack gap="inline">
+            <Cluster gap="inline">
+                <FileButton
                     label={props.label}
-                    description={props.hint}
-                    prompt={props.prompt}
+                    source={nivoIconSource("upload", "leading")}
+                    text={props.pickLabel}
                     accept={props.accept}
-                    hideFileList
                     isDisabled={props.isBusy}
-                    isInvalid={props.error !== undefined}
-                    errorMessage={props.error}
+                    isLoading={props.isLoading}
+                    {...(props.error === undefined ? {} : { errorMessage: props.error })}
                     onFilesChange={props.onPick}
                 />
-                {props.canRemove ? (
-                    <Cluster gap="inline">
-                        <Button intent="alternative" size="sm" isDisabled={props.isBusy} onPress={props.onRemove}>
-                            {props.removeLabel}
-                        </Button>
-                    </Cluster>
+                {props.canRemove || props.isLoading ? (
+                    <Button
+                        intent="alternative"
+                        isDisabled={props.isBusy}
+                        isLoading={props.isLoading}
+                        onPress={props.onRemove}
+                    >
+                        {props.removeLabel}
+                    </Button>
                 ) : null}
-            </Stack>
-        </div>
+            </Cluster>
+            {props.error === undefined ? (
+                <Text size="xs" tone="muted">
+                    {props.hint}
+                </Text>
+            ) : null}
+        </Stack>
     </Cluster>
 )

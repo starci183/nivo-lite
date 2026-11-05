@@ -73,7 +73,7 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
             labels={props.props.planSlotLabels}
             forbidden="notice"
             onRetry={props.on.retryPlan}
-            render={(plan) => renderCurrentBillingPlan(props, plan)}
+            render={(plan, isLoading) => renderCurrentBillingPlan(props, plan, isLoading)}
         />
         <SlotView
             slot={props.props.usage}
@@ -115,13 +115,14 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
             labels={props.props.reviewSlotLabels}
             forbidden="hide"
             onRetry={props.on.retryReview}
-            render={(review) => (
+            render={(review, isLoading) => (
                 <BillingHistoryList
                     props={{
                         title: props.props.reviewTitle,
                         description: props.props.reviewDescription,
                         empty: props.props.reviewEmpty,
                         rows: review,
+                        isLoading,
                     }}
                 />
             )}
@@ -130,23 +131,28 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
 )
 
 /** Draws the SurfaceCard section of the BillingOverview view. */
-const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: BillingPlanView) => (
-    <SurfaceCard label={props.props.planLabel} headingLevel={2}>
+const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: BillingPlanView, isLoading: boolean) => (
+    <SurfaceCard label={props.props.planLabel} headingLevel={2} isLoading={isLoading}>
         <Stack gap="section">
             <DescriptionList
                 layout="columns"
                 isDivided
+                isLoading={isLoading}
                 items={[
                     {
                         id: "plan",
                         term: props.props.planLabel,
-                        description: <Text isStrong>{plan.planName}</Text>,
+                        description: (
+                            <Text isStrong isLoading={isLoading}>
+                                {plan.planName}
+                            </Text>
+                        ),
                     },
                     {
                         id: "status",
                         term: props.props.statusLabel,
                         description: (
-                            <Badge tone={plan.statusTone} isDot>
+                            <Badge tone={plan.statusTone} isDot isLoading={isLoading}>
                                 {plan.status}
                             </Badge>
                         ),
@@ -154,7 +160,11 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: Billing
                     {
                         id: "paidUntil",
                         term: props.props.paidUntilLabel,
-                        description: <Text isStrong>{plan.paidUntil}</Text>,
+                        description: (
+                            <Text isStrong isLoading={isLoading}>
+                                {plan.paidUntil}
+                            </Text>
+                        ),
                     },
                 ]}
             />

@@ -873,11 +873,11 @@
   },
   "avatarEditor": {
     "label": "Ảnh đại diện",
-    "prompt": "Kéo ảnh vào đây hoặc bấm để chọn",
-    "hint": "PNG, JPEG hoặc WebP, tối đa 2 MB. Ảnh hiện ngay khi chọn; chưa có ảnh thì NIVO tạo ảnh đại diện riêng.",
+    "hint": "PNG, JPEG hoặc WebP, tối đa 2 MB.",
     "error_type": "Chỉ nhận ảnh PNG, JPEG hoặc WebP.",
     "error_size": "Ảnh tối đa 2 MB.",
-    "remove": "Gỡ ảnh"
+    "remove": "Gỡ ảnh",
+    "change": "Đổi ảnh"
   },
   "billing": {
     "allWorkspaces": "Tất cả workspace",

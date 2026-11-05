@@ -13,12 +13,13 @@ export const creditsMetadata = async (): Promise<Metadata> => {
 /** The words of the header band, resolved on the server so the page and its loading state say the same. */
 const creditsHeader = async () => {
     const t = await getTranslations("credits")
-    return { header: { title: t("title"), description: t("description") } }
+    const b = await getTranslations("billing")
+    return { header: { title: t("title"), description: t("description") }, plansLabel: b("comparePlans") }
 }
 
 /** Credits and plan; its connected block reads workspace data in the browser. */
 export const CreditsPage = async (): Promise<ReactElement> => (
-    <CreditsPageBase props={{ ...(await creditsHeader()), contactHref: creditsContactHref() }} />
+    <CreditsPageBase props={{ header: (await creditsHeader()).header, contactHref: creditsContactHref() }} />
 )
 
 /** The same Page and slot placeholders during route loading. */

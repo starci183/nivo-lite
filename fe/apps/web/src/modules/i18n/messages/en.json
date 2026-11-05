@@ -873,11 +873,11 @@
   },
   "avatarEditor": {
     "label": "Profile picture",
-    "prompt": "Drop a picture here or click to choose one",
-    "hint": "PNG, JPEG or WebP, up to 2 MB. It shows as soon as you choose it; without one NIVO draws an avatar of its own.",
+    "hint": "PNG, JPEG or WebP, up to 2 MB.",
     "error_type": "Only PNG, JPEG or WebP pictures.",
     "error_size": "The picture can be 2 MB at most.",
-    "remove": "Remove picture"
+    "remove": "Remove picture",
+    "change": "Change picture"
   },
   "billing": {
     "allWorkspaces": "All workspaces",

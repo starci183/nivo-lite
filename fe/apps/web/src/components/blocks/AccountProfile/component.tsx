@@ -14,7 +14,7 @@ export interface AccountProfileBaseProps {
         readonly picture: string | null
         readonly avatar: {
             readonly label: string
-            readonly prompt: string
+            readonly pickLabel: string
             readonly hint: string
             readonly accept: string
             readonly error?: string | undefined
@@ -49,7 +49,6 @@ type BandProps = AccountProfileBaseProps & { readonly isSkeleton: boolean }
 /** The first band: the picture with its preview while the read waits as geometry. */
 const PictureBand = (props: BandProps) => (
     <AvatarEditor
-        id="account-avatar"
         preview={
             <PersonAvatar
                 name={props.isSkeleton ? "" : props.props.name}
@@ -60,6 +59,7 @@ const PictureBand = (props: BandProps) => (
             />
         }
         {...props.props.avatar}
+        isLoading={props.isSkeleton}
         onPick={props.on.pick}
         onRemove={props.on.remove}
     />
