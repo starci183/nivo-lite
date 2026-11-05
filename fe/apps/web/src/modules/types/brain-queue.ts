@@ -46,6 +46,8 @@ export interface QueueDetailView {
     readonly lines: ReadonlyArray<string>
     readonly quotes: ReadonlyArray<QueueQuoteView>
     readonly tiles: ReadonlyArray<QueueTileView>
+    /** What is in use now, in a quiet notice; null when the item has no such fact. */
+    readonly notice: { readonly title: string; readonly description: string } | null
     /** The commands that answer the item, side by side. */
     readonly actions: ReadonlyArray<QueueActionView>
     /** The commands that are rarely used: the item's menu. */

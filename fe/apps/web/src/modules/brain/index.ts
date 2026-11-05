@@ -54,7 +54,7 @@ export { FINDING_FILTERS, SEVERITY_TONE, filterOfStatus, queryOfDossier, queryOf
 export type { FindingFilter, FindingsQuery } from "./findings"
 export { brainGridOf } from "./grid"
 export { todoFiltersOf } from "./todo"
-export { queueAsideOfDossier, queueEntryOfFinding, queueEntryOfRow } from "./queue"
+export { queueAsideOfDossier, queueAsideOfFact, queueEntryOfFinding, queueEntryOfRow } from "./queue"
 export type { QueueWords } from "./queue"
 export type { TodoFilter } from "./todo"
 export { MAP_ROOT_ID, MAP_STATUS_FILTERS, dossierOfFile, mapFilesOf, mapGraphOf, selectionOf } from "./map"

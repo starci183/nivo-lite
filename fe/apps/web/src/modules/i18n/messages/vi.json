@@ -987,6 +987,8 @@
     "loadMore": "Xem thêm",
     "choiceTitle": "Tài liệu nào đúng?",
     "currentLabel": "Đang dùng",
+    "inUseTitle": "Đang dùng: {value}",
+    "inUseSource": "Theo {source}",
     "proposedLabel": "Đề xuất",
     "factFootnote": "Sự thật chỉ dùng được sau khi bạn áp dụng.",
     "kindFact": "Sự thật",

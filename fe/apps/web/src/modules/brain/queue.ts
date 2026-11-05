@@ -2,6 +2,7 @@ import type { FindingCardActionView, FindingCardView } from "./finding-card"
 import type { RowTone } from "./findings"
 import type { TodoFilter } from "./todo"
 import type {
+    BrainFact,
     KnowledgeRowView,
     QueueActionView,
     QueueAsideView,
@@ -16,6 +17,8 @@ import type {
 export interface QueueWords {
     readonly choiceTitle: string
     readonly currentLabel: string
+    readonly inUseTitle: (value: string) => string
+    readonly inUseSource: (source: string) => string
     readonly proposedLabel: string
     readonly factFootnote: string
     readonly factKind: string
@@ -107,6 +110,13 @@ export const queueEntryOfFinding = (
             lines: card.meta === null ? [] : [card.meta],
             quotes: card.quotes,
             tiles: [],
+            notice:
+                card.inUse === null
+                    ? null
+                    : {
+                          title: words.inUseTitle(card.inUse.value),
+                          description: card.inUse.sourceTitle === null ? "" : words.inUseSource(card.inUse.sourceTitle),
+                      },
             actions: card.actions.filter((action) => !MENU_ACTIONS.has(action.id)).map(actionOfCard),
             menu: card.actions.filter((action) => MENU_ACTIONS.has(action.id)).map(actionOfCard),
             footnote: null,
@@ -172,6 +182,7 @@ export const queueEntryOfRow = (
             lines: source === "review" ? [] : lines,
             quotes: [],
             tiles: [...currentTile, ...tiles],
+            notice: null,
             actions: (row.actions ?? []).map((action) => actionOfRow(action)),
             menu: [],
             footnote: source === "review" ? words.factFootnote : null,
@@ -195,3 +206,18 @@ export const queueAsideOfDossier = (
               quotesTitle: words.sourceQuotes,
               action: { label: words.openDossier, href: card.dossier.href },
           }
+
+/** The side pane of a waiting fact: the words of the documents it comes from, when its evidence has any; null otherwise. */
+export const queueAsideOfFact = (
+    facts: ReadonlyArray<BrainFact>,
+    factId: string,
+    words: QueueWords,
+): QueueAsideView | null => {
+    const quotes = (facts.find((fact) => fact.id === factId)?.evidence ?? []).flatMap((one, index) =>
+        one.quote === undefined
+            ? []
+            : [{ id: `${factId}-${index}`, source: one.sourceTitle ?? one.label, byline: undefined, text: one.quote }],
+    )
+    if (quotes.length === 0) return null
+    return { title: words.sourceQuotes, terms: [], quotes, quotesTitle: words.sourceQuotes, action: null }
+}

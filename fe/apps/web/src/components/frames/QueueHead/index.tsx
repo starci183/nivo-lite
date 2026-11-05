@@ -28,7 +28,17 @@ export const QUEUE_PLACEHOLDER: ReadonlyArray<QueueEntryView> = ["a", "b", "c", 
     line: "",
     badge: { label: "", tone: "neutral" },
     head: { title: "", description: "" },
-    detail: { heading: null, body: "", lines: [], quotes: [], tiles: [], actions: [], menu: [], footnote: null },
+    detail: {
+        heading: null,
+        body: "",
+        lines: [],
+        quotes: [],
+        tiles: [],
+        notice: null,
+        actions: [],
+        menu: [],
+        footnote: null,
+    },
     aside: null,
 }))
 

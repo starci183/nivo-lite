@@ -987,6 +987,8 @@
     "loadMore": "Show more",
     "choiceTitle": "Which document is right?",
     "currentLabel": "In use",
+    "inUseTitle": "In use: {value}",
+    "inUseSource": "From {source}",
     "proposedLabel": "Proposed",
     "factFootnote": "A fact is only used once you apply it.",
     "kindFact": "Fact",

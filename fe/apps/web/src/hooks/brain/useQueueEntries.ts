@@ -5,6 +5,7 @@ import {
     DOSSIER_STATUS_ORDER,
     queryOfQueue,
     queueAsideOfDossier,
+    queueAsideOfFact,
     queueEntryOfFinding,
     queueEntryOfRow,
     reviewBoardOf,
@@ -61,6 +62,8 @@ export const useQueueEntries = (): QueueEntries => {
     const words: QueueWords = {
         choiceTitle: q("choiceTitle"),
         currentLabel: q("currentLabel"),
+        inUseTitle: (value) => q("inUseTitle", { value }),
+        inUseSource: (source) => q("inUseSource", { source }),
         proposedLabel: q("proposedLabel"),
         factFootnote: q("factFootnote"),
         factKind: q("kindFact"),
@@ -79,7 +82,14 @@ export const useQueueEntries = (): QueueEntries => {
         return queueEntryOfFinding(card, one.kind, words, queueAsideOfDossier(card, status, words))
     })
     const regionRows = (region: KnowledgeListView, source: "review" | "gaps" | "proposals") =>
-        rowsOf(region).map((row) => queueEntryOfRow(row, source, words, null))
+        rowsOf(region).map((row) =>
+            queueEntryOfRow(
+                row,
+                source,
+                words,
+                source === "review" ? queueAsideOfFact(board.facts, row.id, words) : null,
+            ),
+        )
     entries.push(
         ...regionRows(review.list, "review"),
         ...regionRows(proposals.list, "proposals"),

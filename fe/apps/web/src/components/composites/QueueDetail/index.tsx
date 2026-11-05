@@ -1,4 +1,4 @@
-import { Button, Cluster, Grid, Heading, Quote, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Grid, Heading, Quote, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { QueueActionView, QueueDetailView, QueueQuoteView, QueueTileView } from "@/modules/types"
 
 /** What the opened item draws. */
@@ -123,6 +123,13 @@ export const QueueDetail = (props: QueueDetailProps) => {
             {detail.tiles.map((tile) => (
                 <Tile key={tile.id} tile={tile} onAction={props.onAction} isLoading={props.isLoading} />
             ))}
+            {detail.notice === null ? null : (
+                <Alert
+                    title={detail.notice.title}
+                    {...(detail.notice.description === "" ? {} : { description: detail.notice.description })}
+                    tone="informative"
+                />
+            )}
             {detail.actions.length === 0 ? null : (
                 <Cluster gap="inline" justify="end">
                     {detail.actions.map((action) => (

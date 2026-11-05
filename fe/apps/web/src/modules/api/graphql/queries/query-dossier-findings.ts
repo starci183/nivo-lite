@@ -31,6 +31,10 @@ const query1: Document = gql`
                     placeKind
                     placeLabel
                 }
+                inUse {
+                    value
+                    sourceTitle
+                }
                 remedyAction
                 remedyDocumentType
                 status
