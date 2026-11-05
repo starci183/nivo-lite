@@ -6,6 +6,8 @@ import { listEditorBlock } from "./list-editor.block"
 import { listPaneBlock } from "./list-pane.block"
 import { tabbedPanelBlock } from "./tabbed-panel.block"
 import { tableBlock } from "./table.block"
+import { graphBlock } from "./graph.block"
+import { runTimelineBlock } from "./run-timeline.block"
 import { cardGridBlock } from "./card-grid.block"
 import { coreBlocks } from "./core-blocks"
 import { dashboardCardsBlock } from "./dashboard-cards.block"
@@ -41,7 +43,7 @@ const EXPLANATION_WORDS = [
 describe("coreBlocks", () => {
     it("lists every core block once, under an id of the core namespace", () => {
         const ids = coreBlocks.map((block) => block.id)
-        expect(new Set(ids).size).toBe(19)
+        expect(new Set(ids).size).toBe(21)
         expect(ids.every((id) => id.startsWith("core."))).toBe(true)
     })
 
@@ -70,6 +72,8 @@ describe("coreBlocks", () => {
             dashboardCardsBlock,
             masterDetailBlock,
             explanationBlock,
+            graphBlock,
+            runTimelineBlock,
         ])
     })
 })

@@ -21,6 +21,8 @@ import {
     stackBlock,
     waitingBlock,
 } from "../index"
+import { graphBlock } from "../blocks/graph.block"
+import { runTimelineBlock } from "../blocks/run-timeline.block"
 import { AsideDetailBlock } from "./blocks/AsideDetailBlock"
 import { CardGridBlock } from "./blocks/CardGridBlock"
 import { ConversationBlock } from "./blocks/ConversationBlock"
@@ -30,6 +32,8 @@ import { ListEditorBlock } from "./blocks/ListEditorBlock"
 import { ListPaneBlock } from "./blocks/ListPaneBlock"
 import { TabbedPanelBlock } from "./blocks/TabbedPanelBlock"
 import { TableBlock } from "./blocks/TableBlock"
+import { GraphBlock } from "./blocks/GraphBlock"
+import { RunTimelineBlock } from "./blocks/RunTimelineBlock"
 import { DashboardCardsBlock } from "./blocks/DashboardCardsBlock"
 import { DecisionQueueBlock } from "./blocks/DecisionQueueBlock"
 import { DetailBlock } from "./blocks/DetailBlock"
@@ -62,4 +66,6 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(dashboardCardsBlock, DashboardCardsBlock),
     defineRenderer(masterDetailBlock, MasterDetailBlock),
     defineRenderer(explanationBlock, ExplanationBlock),
+    defineRenderer(graphBlock, GraphBlock),
+    defineRenderer(runTimelineBlock, RunTimelineBlock),
 ]
