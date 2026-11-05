@@ -146,7 +146,6 @@ const gateOf = (card: AutomationCardView, ctx: DetailContext): GateView | undefi
         ...(hasAuthority
             ? {
                   authority: {
-                      title: t("gateTitle"),
                       ...(line === null ? {} : { gateLine: t(line) }),
                       ...(def.authority.alwaysAsk === true ? { alwaysAskLine: t("alwaysAsk") } : {}),
                       ...(card.trust.autoSend ? { autoSendLine: t("autoSendOn") } : {}),

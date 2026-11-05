@@ -124,7 +124,6 @@ const freshKeyBandsOf = (props: ApiKeysSectionBaseProps): ReadonlyArray<Band> =>
         : [
               {
                   kind: "body" as const,
-                  label: view.fresh.title,
                   children: (
                       <Stack gap="section">
                           <Alert tone="cautionary" title={view.fresh.warning} />
@@ -165,6 +164,7 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => {
                         kind: "list",
                         items: view.items.map((item) => ({
                             id: item.id,
+                            leading: { icon: nivoIconSource("password", "leading") },
                             title: item.name,
                             description: `${item.prefixText} · ${item.datesText}`,
                             badges: [

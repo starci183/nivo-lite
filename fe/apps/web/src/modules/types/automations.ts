@@ -96,7 +96,6 @@ export interface MessageView {
 export interface GateView {
     readonly sectionLabel: string
     readonly authority?: {
-        readonly title: string
         readonly gateLine?: string
         readonly alwaysAskLine?: string
         readonly autoSendLine?: string

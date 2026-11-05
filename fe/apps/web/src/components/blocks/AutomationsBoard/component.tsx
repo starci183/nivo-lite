@@ -62,8 +62,12 @@ const PLACEHOLDER_KEYS = ["a", "b", "c"] as const
 
 /** Fake board of the same shape as the ready one: the skeleton reuses the ready tree, three cards wide. */
 const placeholderOf = (labels: AutomationsBoardLabels): AutomationsBoardView => ({
-    filters: { label: "", items: [], selectedId: "" },
-    cards: PLACEHOLDER_KEYS.map((key): CardView => ({
+    filters: {
+        label: labels.loading,
+        items: PLACEHOLDER_KEYS.map((key) => ({ id: key, label: labels.loading })),
+        selectedId: PLACEHOLDER_KEYS[0],
+    },
+    cards: PLACEHOLDER_KEYS.map((key, index): CardView => ({
         dataKey: key,
         name: labels.loading,
         description: labels.loading,
@@ -74,10 +78,59 @@ const placeholderOf = (labels: AutomationsBoardLabels): AutomationsBoardView => 
         selectLabel: labels.select,
         switchLabel: labels.loading,
         switchName: key,
-        isSelected: false,
+        isSelected: index === 0,
         isEnabled: false,
         isSwitchDisabled: true,
     })),
+    detail: {
+        frame: {
+            name: labels.loading,
+            description: labels.loading,
+            closeLabel: labels.loading,
+            dismissLabel: labels.loading,
+            isHidden: false,
+            restoreLabel: labels.loading,
+            isBusy: false,
+            isNested: false,
+        },
+        settings: { sectionLabel: labels.loading, fields: [], saveLabel: labels.loading, isBusy: false },
+        message: {
+            sectionLabel: labels.loading,
+            title: labels.loading,
+            help: labels.loading,
+            bodyId: "loading-body",
+            bodyLabel: labels.loading,
+            bodyValue: labels.loading,
+            maxLength: 600,
+            variablesTitle: labels.loading,
+            variables: [labels.loading],
+            saveLabel: labels.loading,
+            composeLabel: labels.loading,
+            previewTitle: labels.loading,
+            previewText: labels.loading,
+            isBusy: false,
+            isComposing: false,
+            canEnable: false,
+            canSave: false,
+            isFirstApproval: false,
+        },
+        gate: { sectionLabel: labels.loading, authority: { gateLine: labels.loading } },
+        runs: {
+            title: labels.loading,
+            emptyText: labels.loading,
+            decisionsLabel: labels.loading,
+            moreLabel: labels.loading,
+            messageLabel: labels.loading,
+            evidenceLabel: labels.loading,
+            rows: PLACEHOLDER_KEYS.map((key) => ({
+                id: key,
+                statusLabel: labels.loading,
+                tone: "neutral" as const,
+                whenText: labels.loading,
+                summary: labels.loading,
+            })),
+        },
+    },
     hidden: { title: "", restoreLabel: "", items: [] },
 })
 

@@ -26,6 +26,8 @@ type AutomationRunsProps = {
     readonly messageLabel: string
     readonly evidenceLabel: string
     readonly rows: ReadonlyArray<AutomationRunRow>
+    /** The pane that holds the runs already carries the title: the list is named for assistive technology only. */
+    readonly isHeadless?: boolean
 }
 
 /** A labelled block of text whose line breaks stay. */
@@ -45,11 +47,12 @@ const Note = (props: NoteProps) => (
 /** The recent runs of one automation: when, what happened, the message, and why. */
 export const AutomationRuns = (props: AutomationRunsProps) => (
     <>
-        <Divider semantics="presentation" />
+        {props.isHeadless === true ? null : <Divider semantics="presentation" />}
         <Section
             kind="list"
-            title={props.title}
-            headingLevel={3}
+            {...(props.isHeadless === true
+                ? { ariaLabel: props.title }
+                : { title: props.title, headingLevel: 3 as const })}
             items={props.rows.map((row) => ({
                 id: row.id,
                 title: row.summary,

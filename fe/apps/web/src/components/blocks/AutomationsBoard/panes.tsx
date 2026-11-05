@@ -5,6 +5,7 @@ import {
     EmptyNotice,
     IconButton,
     IconTile,
+    Link,
     ListBox,
     PaneSection,
     SearchField,
@@ -33,6 +34,7 @@ export interface AutomationsPanesCopy {
     readonly clearSearch: string
     readonly back: string
     readonly moreActions: string
+    readonly runsTitle: string
     readonly moreFilters: (count: number) => string
     readonly pickTitle: string
     readonly pickBody: string
@@ -173,6 +175,15 @@ const DetailBody = (props: OpenedProps) => {
                 <Alert title={open.frame.awaitingText} tone="informative" />
             )}
             {open.frame.errorText === undefined ? null : <Alert title={open.frame.errorText} tone="negative" />}
+            {card.note === undefined ? null : (
+                <Alert
+                    tone="cautionary"
+                    title={card.note.text}
+                    {...(card.note.link === undefined
+                        ? {}
+                        : { description: <Link href={card.note.link.href}>{card.note.link.label}</Link> })}
+                />
+            )}
             {open.message === undefined ? null : (
                 <AutomationMessage
                     {...open.message}
@@ -265,13 +276,13 @@ export const AutomationsPanesDrawing = (props: AutomationsPanesDrawingProps) => 
                         <EmptyNotice message={panes.copy.pickTitle} description={panes.copy.pickBody} />
                     </PaneSection>
                 ) : (
-                    <PaneSection gap="section">
+                    <PaneSection gap="section" isLoading={props.isLoading}>
                         <DetailBody {...props} card={card} />
                     </PaneSection>
                 )
             }
-            runsHead={<PaneHead title={open?.runs.title ?? panes.copy.list} />}
-            runs={<PaneSection>{open === undefined ? null : <AutomationRuns {...open.runs} />}</PaneSection>}
+            runsHead={<PaneHead title={panes.copy.runsTitle} />}
+            runs={<PaneSection>{open === undefined ? null : <AutomationRuns {...open.runs} isHeadless />}</PaneSection>}
         />
     )
 }
