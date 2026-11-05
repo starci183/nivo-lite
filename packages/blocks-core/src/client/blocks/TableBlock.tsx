@@ -21,12 +21,15 @@ import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
-/** What the table draws under its rows when the read has more: the way to load them, or the way to try again. */
-const MoreRows = (props: {
+/** What the paging control of the table takes. */
+interface MoreRowsProps {
     readonly page: ReadPage
     readonly loadMoreLabel: string
     readonly labels: SlotLabels
-}): ReactNode => {
+}
+
+/** What the table draws under its rows when the read has more: the way to load them, or the way to try again. */
+const MoreRows = (props: MoreRowsProps): ReactNode => {
     const { page } = props
     if (page.failure) {
         return (

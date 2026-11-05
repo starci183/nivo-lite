@@ -38,8 +38,14 @@ const itemOf = (row: RecordRow): ListBoxItem => ({
     ...(row.badge === "" ? {} : { trailing: <Badge tone="neutral">{row.badge}</Badge> }),
 })
 
+/** What the paging control takes. */
+interface LoadMoreProps {
+    readonly page: ReadPage
+    readonly words: SelectableRowsWords
+}
+
 /** The control under the rows that loads the next page, with the line and the retry of a failed load. */
-const LoadMore = (props: { readonly page: ReadPage; readonly words: SelectableRowsWords }): ReactNode => {
+const LoadMore = (props: LoadMoreProps): ReactNode => {
     const state = moreStateOf(props.page)
     if (state === "none") return null
     return (
