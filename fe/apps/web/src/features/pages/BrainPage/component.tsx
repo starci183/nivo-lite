@@ -71,14 +71,6 @@ export interface BrainPageBaseProps {
 /** Draws the open tab of the Second Brain. */
 const Panel = (props: BrainPageBaseProps) => {
     const page = props.props
-    if (page.tab === "todo") {
-        return (
-            <>
-                <BrainTodo />
-                <BrainFactForm tab="todo" fact={page.fact} edit={page.edit} answer={page.answer} />
-            </>
-        )
-    }
     if (page.tab === "dossiers") {
         return (
             <>
@@ -148,6 +140,9 @@ const Panel = (props: BrainPageBaseProps) => {
  */
 export const BrainPageBase = (props: BrainPageBaseProps) => {
     const page = props.props
+    if (page.tab === "todo") {
+        return <BrainTodo header={page.header} fact={page.fact} edit={page.edit} answer={page.answer} />
+    }
     if (page.tab === "map") {
         return (
             <BrainMap header={page.header} node={page.node}>

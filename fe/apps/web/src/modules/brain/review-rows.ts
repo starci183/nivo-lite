@@ -64,6 +64,7 @@ const singleFactRow = (single: ReviewSingle, context: ReviewRowsContext, retire:
     const part: RowPartView = {
         id: single.p.id,
         title: retire ? (single.current?.value ?? single.p.value) : t("newValue", { value: single.p.value }),
+        ...(retire ? {} : { value: single.p.value }),
         lines: retire
             ? [factByLine(single.p, context)]
             : [factByLine(single.p, context), `${t("suggestion")}: ${t(advice.reasonKey, advice.params)}`],
@@ -72,6 +73,7 @@ const singleFactRow = (single: ReviewSingle, context: ReviewRowsContext, retire:
     return {
         id: single.p.id,
         title: `${single.p.subjectLabel} · ${single.p.attributeLabel}`,
+        ...(single.current === null ? {} : { current: single.current.value }),
         lines: retire ? [t("retireBody", { value: single.current?.value ?? single.p.value })] : currentLines,
         badges: retire ? [{ label: t("retireBadge"), tone: "warning" }] : currentBadges,
         parts: [part],
@@ -84,6 +86,7 @@ const conflictFactRow = (group: ReviewConflict, context: ReviewRowsContext): Kno
     return {
         id: group.key,
         title: `${group.subjectLabel} · ${group.attributeLabel}`,
+        ...(group.current === null ? {} : { current: group.current.value }),
         lines: [
             t("conflictGroupHint", { n: group.options.length }),
             ...(group.current === null ? [] : [t("currentValue", { value: group.current.value })]),
@@ -105,6 +108,7 @@ const conflictFactRow = (group: ReviewConflict, context: ReviewRowsContext): Kno
         parts: group.options.map((fact, index) => ({
             id: fact.id,
             title: fact.value,
+            value: fact.value,
             lines: [`${t("conflictOption", { n: index + 1 })} · ${factByLine(fact, context)}`],
             actions: factActions(fact, context, true),
         })),

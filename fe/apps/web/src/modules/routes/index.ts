@@ -51,13 +51,15 @@ export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automat
 export {
     BRAIN_PARTS,
     BRAIN_PART_TABS,
+    BRAIN_STRIP_TABS,
     BRAIN_TABS,
     DEFAULT_BRAIN_TAB,
     KNOWLEDGE_ROUTES,
     LEGACY_BRAIN_TABS,
     brainDossierHref,
+    brainStripTabOf,
     brainTabHref,
     brainUploadHref,
     knowledgeSourceHref,
 } from "./knowledge-routes"
-export type { BrainPart, BrainTab } from "./knowledge-routes"
+export type { BrainPart, BrainStripTab, BrainTab } from "./knowledge-routes"
