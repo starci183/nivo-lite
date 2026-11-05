@@ -18,6 +18,7 @@ coverage:
           - "be/src/modules/projections/*/**"
           - "packages/agent-sdk/src/**"
           - "packages/blocks-core/src/**"
+          - "packages/plugin-registry/src/**"
     patch:
       default:
         target: 100%
@@ -29,6 +30,7 @@ coverage:
           - "be/src/modules/projections/*/**"
           - "packages/agent-sdk/src/**"
           - "packages/blocks-core/src/**"
+          - "packages/plugin-registry/src/**"
 component_management:
   default_rules:
     statuses:
@@ -385,3 +387,9 @@ ignore:
   - "packages/blocks-core/src/**/index.ts"
   - "packages/blocks-core/src/**/*.types.ts"
   - "packages/blocks-core/src/**/*-types.ts"
+  - "packages/plugin-registry/src/workbench/**"
+  - "packages/plugin-registry/src/public/**"
+  - "packages/plugin-registry/src/client/**"
+  - "packages/plugin-registry/src/**/index.ts"
+  - "packages/plugin-registry/src/**/*.types.ts"
+  - "packages/plugin-registry/src/**/*-types.ts"

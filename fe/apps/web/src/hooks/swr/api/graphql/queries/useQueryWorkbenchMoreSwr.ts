@@ -4,6 +4,7 @@ import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
 import type { ReadVariables } from "@nivo-lite/agent-sdk/block"
 import { answeredData } from "@/hooks/workspaceread"
+import { valueOfJsonText } from "@/modules/workbench-host"
 import { queryWorkbenchRead } from "@/modules/api"
 
 /** The SWR key of the next-page read of a paged workbench read. */
@@ -21,8 +22,6 @@ export const useQueryWorkbenchMoreSwr = (): SWRMutationResponse<
     typeof QUERY_WORKBENCH_MORE_SWR_KEY,
     TriggerArg["arg"]
 > =>
-    useSWRMutation(
-        QUERY_WORKBENCH_MORE_SWR_KEY,
-        async (_key: string, { arg }: TriggerArg) =>
-            answeredData(await queryWorkbenchRead(arg), arg.name).workbenchRead,
+    useSWRMutation(QUERY_WORKBENCH_MORE_SWR_KEY, async (_key: string, { arg }: TriggerArg) =>
+        valueOfJsonText(answeredData(await queryWorkbenchRead(arg), arg.name).workbenchRead.data),
     )

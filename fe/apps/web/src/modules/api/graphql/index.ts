@@ -46,7 +46,6 @@ import type {
     LeadFlowQuery,
     LeadJourneyQuery,
     LessonMiningStatusQuery,
-    LoyaltyBoardQuery,
     ModuleInstallationsQuery,
     NivoKnowledgeQuery,
     PublicBookingPageQuery,
@@ -58,7 +57,6 @@ import type {
     ReturnZaloAuthorizationMutation,
     SalesWorkbenchQuery,
     SaveHiringSettingsMutation,
-    SaveLoyaltyRewardMutation,
     SaveVideoBrandMutation,
     ShiftsMineQuery,
     ShiftsWorkbenchQuery,
@@ -267,16 +265,6 @@ export type LeadRecordType = LeadJourneyQuery["leadJourney"]["lead"]
 export type LessonMiningStatusType = LessonMiningStatusQuery["lessonMiningStatus"]
 /** The `LocalizedTextType` object of the back end contract, as the operations of this app select it. */
 export type LocalizedTextType = UpdateAutomationPipelineMutation["updateAutomationPipeline"]["missing"][number]["label"]
-/** The `LoyaltyBoardType` object of the back end contract, as the operations of this app select it. */
-export type LoyaltyBoardType = LoyaltyBoardQuery["loyaltyBoard"]
-/** The `LoyaltyConfigType` object of the back end contract, as the operations of this app select it. */
-export type LoyaltyConfigType = LoyaltyBoardQuery["loyaltyBoard"]["config"]
-/** The `LoyaltyMemberType` object of the back end contract, as the operations of this app select it. */
-export type LoyaltyMemberType = LoyaltyBoardQuery["loyaltyBoard"]["members"][number]
-/** The `LoyaltyRewardType` object of the back end contract, as the operations of this app select it. */
-export type LoyaltyRewardType = SaveLoyaltyRewardMutation["saveLoyaltyReward"]
-/** The `LoyaltyTierType` object of the back end contract, as the operations of this app select it. */
-export type LoyaltyTierType = LoyaltyBoardQuery["loyaltyBoard"]["config"]["tiers"][number]
 /** The `MetaAppObjectType` object of the back end contract, as the operations of this app select it. */
 export type MetaAppObjectType = NonNullable<CheckMetaMutation["checkMeta"]["appPage"]>
 /** The `MetaCheckType` object of the back end contract, as the operations of this app select it. */

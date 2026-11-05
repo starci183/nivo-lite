@@ -1,0 +1,47 @@
+import { defineRead } from "@nivo-lite/agent-sdk/block"
+import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { figuresOf } from "../../../rules/accounting/figures"
+import type { AccountingFigures } from "../../../rules/accounting/figures"
+import { periodOf } from "../../../rules/accounting/period"
+import type { PeriodKey } from "../../../rules/accounting/period"
+import { bookEntriesPort, invoicesPort, transactionsPort } from "../ports"
+import { periodVariables as variables } from "./period-variables"
+
+/** The most open invoices the receivable and the ageing add up. */
+export const OPEN_INVOICES_MAX = 1_000
+
+/** The figures of one period with the days it spans. */
+export interface FiguresView extends AccountingFigures {
+    /** Which period the figures are for. */
+    readonly periodKey: PeriodKey
+    /** The first day of the period, `YYYY-MM-DD`. */
+    readonly fromDay: string
+    /** The first day after the period, `YYYY-MM-DD`. */
+    readonly toDay: string
+}
+
+/** `accounting.figures`: money received, invoiced, corrected and still owed in a period, with the unmatched payments and the ageing. */
+export const figuresRead: ReadDefinition = defineRead({
+    id: "accounting.figures",
+    dataKind: "accounting-figures",
+    shape: "record",
+    fields: ["periodKey", "fromDay", "toDay", "income", "invoiced", "adjustments", "unmatched", "receivable", "ageing"],
+    paths: {},
+    variables,
+    permission: "accounting.view",
+    ports: { book: bookEntriesPort, transactions: transactionsPort, invoices: invoicesPort },
+    run: async ({ book, transactions, invoices }, given, context): Promise<FiguresView> => {
+        const period = periodOf(context.now, given.period ?? "this")
+        const [totals, unmatched, openInvoices] = await Promise.all([
+            book.totals(period),
+            transactions.unmatchedIn(period),
+            invoices.open(OPEN_INVOICES_MAX),
+        ])
+        return {
+            periodKey: period.key,
+            fromDay: period.fromDay,
+            toDay: period.toDay,
+            ...figuresOf({ totals, unmatched, openInvoices, now: context.now }),
+        }
+    },
+})

@@ -1,0 +1,631 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "loyalty",
+  "params": {
+    "q": { "type": "string", "url": "q", "default": "" },
+    "activity": { "type": "enum", "of": "loyalty.members.activity", "url": "activity", "default": "all" },
+    "sort": { "type": "enum", "of": "loyalty.members.sort", "url": "sort", "default": "recent" },
+    "member": { "type": "string", "url": "member" },
+    "memberTab": { "type": "enum", "of": ["redeem", "history", "adjust", "profile"], "url": "mt", "default": "redeem" },
+    "reward": { "type": "string", "url": "reward" }
+  },
+  "views": [
+    {
+      "id": "overview",
+      "label": { "key": "tab_overview" },
+      "command": { "action": "loyalty.sync-members" },
+      "root": {
+        "id": "overview-root",
+        "block": "core.stack",
+        "props": { "gap": "region" },
+        "children": [
+          {
+            "id": "overview-waiting",
+            "block": "core.waiting",
+            "props": { "label": { "key": "waiting_owner" } },
+            "bind": { "region": { "read": "loyalty.pending-waiting" } },
+            "forbidden": "hide"
+          },
+          {
+            "id": "overview-figures",
+            "block": "core.figures",
+            "props": {
+              "label": { "key": "figures_label" },
+              "items": [
+                { "term": { "key": "fig_members" }, "path": "members" },
+                { "term": { "key": "fig_active" }, "path": "activeMembers" },
+                { "term": { "key": "fig_issued" }, "path": "pointsIssued30d" },
+                { "term": { "key": "fig_redemptions" }, "path": "redemptions30d" },
+                { "term": { "key": "fig_redeemed" }, "path": "pointsRedeemed30d" },
+                { "term": { "key": "fig_at_risk" }, "path": "atRisk" }
+              ]
+            },
+            "bind": { "data": { "read": "loyalty.figures" } }
+          },
+          {
+            "id": "overview-grid",
+            "block": "core.card-grid",
+            "children": [
+              {
+                "id": "overview-stats",
+                "block": "core.detail",
+                "props": {
+                  "label": { "key": "stats_title" },
+                  "currency": "VND",
+                  "items": [
+                    { "term": { "key": "stat_points_outstanding" }, "path": "pointsOutstanding", "format": "number" },
+                    { "term": { "key": "stat_earned" }, "path": "earned30d", "format": "number" },
+                    { "term": { "key": "stat_redeemed" }, "path": "redeemed30d", "format": "number" },
+                    { "term": { "key": "stat_expired" }, "path": "expired30d", "format": "number" },
+                    { "term": { "key": "stat_spend" }, "path": "spend30d", "format": "money" },
+                    { "term": { "key": "stat_reward_value" }, "path": "rewardValue30d", "format": "money" },
+                    { "term": { "key": "stat_promos" }, "path": "promosSent30d", "format": "number" },
+                    { "term": { "key": "stat_birthdays" }, "path": "birthdaysThisMonth", "format": "number" }
+                  ]
+                },
+                "bind": { "record": { "read": "loyalty.stats" } }
+              },
+              {
+                "id": "overview-link",
+                "block": "core.detail",
+                "props": {
+                  "label": { "key": "link_title" },
+                  "items": [
+                    { "term": { "key": "fact_program" }, "path": "name" },
+                    { "term": { "key": "fact_enabled" }, "path": "enabled", "format": "badge" },
+                    { "term": { "key": "fact_link" }, "path": "publicPath" }
+                  ]
+                },
+                "bind": { "record": { "read": "loyalty.program" } }
+              }
+            ]
+          },
+          {
+            "id": "overview-tiers",
+            "block": "core.table",
+            "props": {
+              "label": { "key": "tiers_label" },
+              "empty": { "key": "tiers_empty" },
+              "idPath": "key",
+              "currency": "VND",
+              "columns": [
+                { "term": { "key": "col_tier" }, "path": "name" },
+                { "term": { "key": "col_members" }, "path": "count", "format": "number", "align": "end" },
+                { "term": { "key": "col_min_spend" }, "path": "minSpendVnd", "format": "money", "align": "end" },
+                { "term": { "key": "col_multiplier" }, "path": "multiplier", "format": "number", "align": "end" },
+                { "term": { "key": "col_benefit" }, "path": "benefit", "priority": "low" }
+              ]
+            },
+            "bind": { "rows": { "read": "loyalty.tiers", "path": "rows" } }
+          }
+        ]
+      }
+    },
+    {
+      "id": "members",
+      "label": { "key": "tab_members" },
+      "root": {
+        "id": "members-root",
+        "block": "core.master-detail",
+        "props": { "emptyTitle": { "key": "member_idle_title" }, "emptyBody": { "key": "member_idle_body" } },
+        "children": [
+          {
+            "id": "member-pane",
+            "block": "core.list-pane",
+            "props": { "search": true, "searchParam": "q", "searchLabel": { "key": "search_members" } },
+            "children": [
+              {
+                "id": "member-tabs",
+                "block": "core.filter-tabs",
+                "props": {
+                  "param": "activity",
+                  "label": { "key": "activity_label" },
+                  "all": { "key": "filter_all" },
+                  "items": [
+                    { "value": "active", "label": { "key": "activity_active" } },
+                    { "value": "at_risk", "label": { "key": "activity_at_risk" } },
+                    { "value": "new", "label": { "key": "activity_new" } }
+                  ]
+                },
+                "bind": { "counts": { "read": "loyalty.member-counts", "variables": { "q": "$q" } } }
+              },
+              {
+                "id": "member-rows",
+                "block": "core.record-list",
+                "props": {
+                  "label": { "key": "members_label" },
+                  "empty": { "key": "members_empty" },
+                  "emptySearch": { "key": "members_empty_search" },
+                  "idPath": "id",
+                  "titlePath": "name",
+                  "descriptionPath": "contact",
+                  "badgePath": "tier",
+                  "selectParam": "member",
+                  "searchParam": "q"
+                },
+                "bind": {
+                  "rows": {
+                    "read": "loyalty.members",
+                    "variables": { "q": "$q", "activity": "$activity", "sort": "$sort" }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "member-side",
+            "block": "core.stack",
+            "props": { "gap": "region" },
+            "children": [
+              {
+                "id": "member-detail",
+                "block": "core.detail",
+                "props": {
+                  "label": { "key": "member_detail" },
+                  "idle": { "key": "member_idle_body" },
+                  "currency": "VND",
+                  "items": [
+                    { "term": { "key": "fact_name" }, "path": "name" },
+                    { "term": { "key": "fact_tier" }, "path": "tier", "format": "badge" },
+                    { "term": { "key": "fact_points" }, "path": "points", "format": "number" },
+                    { "term": { "key": "fact_next_tier" }, "path": "nextTier" },
+                    { "term": { "key": "fact_missing" }, "path": "missingVnd", "format": "money" }
+                  ],
+                  "sections": [
+                    {
+                      "title": { "key": "section_contact" },
+                      "items": [
+                        { "term": { "key": "fact_phone" }, "path": "phone" },
+                        { "term": { "key": "fact_email" }, "path": "email" },
+                        { "term": { "key": "fact_birthday" }, "path": "birthday", "format": "date" }
+                      ]
+                    },
+                    {
+                      "title": { "key": "section_activity" },
+                      "items": [
+                        { "term": { "key": "fact_spent" }, "path": "lifetimeSpendVnd", "format": "money" },
+                        { "term": { "key": "fact_visits" }, "path": "visits", "format": "number" },
+                        { "term": { "key": "fact_last_visit" }, "path": "lastVisitAt", "format": "dateTime" },
+                        { "term": { "key": "fact_joined" }, "path": "joinedAt", "format": "dateTime" },
+                        { "term": { "key": "fact_expiring" }, "path": "expiringPoints", "format": "number" },
+                        { "term": { "key": "fact_expiring_at" }, "path": "expiringAt", "format": "dateTime" }
+                      ]
+                    }
+                  ]
+                },
+                "bind": { "record": { "read": "loyalty.member", "variables": { "id": "$member" } } }
+              },
+              {
+                "id": "member-panel",
+                "block": "core.tabbed-panel",
+                "props": {
+                  "label": { "key": "panel_label" },
+                  "param": "memberTab",
+                  "tabs": [
+                    { "id": "redeem", "label": { "key": "tab_redeem" } },
+                    { "id": "history", "label": { "key": "tab_history" } },
+                    { "id": "adjust", "label": { "key": "tab_adjust" } },
+                    { "id": "profile", "label": { "key": "tab_profile" } }
+                  ]
+                },
+                "children": [
+                  {
+                    "id": "member-redeem",
+                    "block": "core.table",
+                    "props": {
+                      "label": { "key": "redeem_label" },
+                      "empty": { "key": "redeem_empty" },
+                      "idPath": "id",
+                      "currency": "VND",
+                      "columns": [
+                        { "term": { "key": "col_reward" }, "path": "name" },
+                        { "term": { "key": "col_cost" }, "path": "pointsCost", "format": "number", "align": "end" },
+                        { "term": { "key": "col_value" }, "path": "valueVnd", "format": "money", "align": "end" }
+                      ]
+                    },
+                    "bind": {
+                      "rows": {
+                        "read": "loyalty.member-rewards",
+                        "path": "rows",
+                        "variables": { "id": "$member" }
+                      },
+                      "open": { "action": "loyalty.redeem-reward" }
+                    }
+                  },
+                  {
+                    "id": "member-ledger",
+                    "block": "core.table",
+                    "props": {
+                      "label": { "key": "ledger_label" },
+                      "empty": { "key": "ledger_empty" },
+                      "idPath": "id",
+                      "currency": "VND",
+                      "columns": [
+                        { "term": { "key": "col_when" }, "path": "occurredAt", "format": "dateTime" },
+                        { "term": { "key": "col_kind" }, "path": "kind", "format": "badge" },
+                        { "term": { "key": "col_points" }, "path": "points", "format": "number", "align": "end" },
+                        {
+                          "term": { "key": "col_amount" },
+                          "path": "amountVnd",
+                          "format": "money",
+                          "align": "end",
+                          "priority": "low"
+                        },
+                        { "term": { "key": "col_evidence" }, "path": "evidence", "priority": "low" },
+                        { "term": { "key": "col_by" }, "path": "by", "priority": "low" }
+                      ]
+                    },
+                    "bind": {
+                      "rows": {
+                        "read": "loyalty.member-ledger",
+                        "path": "rows",
+                        "variables": { "id": "$member" }
+                      }
+                    }
+                  },
+                  {
+                    "id": "member-adjust",
+                    "block": "core.form",
+                    "props": {
+                      "label": { "key": "adjust_title" },
+                      "submitLabel": { "key": "adjust_submit" },
+                      "successNotice": { "key": "adjust_done" },
+                      "fields": [
+                        {
+                          "name": "points",
+                          "label": { "key": "adjust_points" },
+                          "hint": { "key": "adjust_points_hint" },
+                          "kind": "number",
+                          "required": true
+                        },
+                        {
+                          "name": "reason",
+                          "label": { "key": "adjust_reason" },
+                          "kind": "textarea",
+                          "required": true,
+                          "max": 300
+                        }
+                      ]
+                    },
+                    "bind": {
+                      "record": { "read": "loyalty.member", "variables": { "id": "$member" } },
+                      "submit": { "action": "loyalty.adjust-points" }
+                    },
+                    "when": { "permission": "loyalty.manage" }
+                  },
+                  {
+                    "id": "member-profile",
+                    "block": "core.form",
+                    "props": {
+                      "label": { "key": "profile_title" },
+                      "submitLabel": { "key": "profile_submit" },
+                      "successNotice": { "key": "profile_done" },
+                      "fields": [
+                        {
+                          "name": "name",
+                          "label": { "key": "profile_name" },
+                          "kind": "text",
+                          "required": true,
+                          "max": 500
+                        },
+                        {
+                          "name": "birthday",
+                          "label": { "key": "profile_birthday" },
+                          "hint": { "key": "profile_birthday_hint" },
+                          "kind": "date"
+                        },
+                        { "name": "note", "label": { "key": "profile_note" }, "kind": "textarea", "max": 500 }
+                      ]
+                    },
+                    "bind": {
+                      "record": { "read": "loyalty.member", "variables": { "id": "$member" } },
+                      "submit": { "action": "loyalty.update-member" }
+                    },
+                    "when": { "permission": "loyalty.manage" }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "rewards",
+      "label": { "key": "tab_rewards" },
+      "command": { "action": "loyalty.add-preset-rewards" },
+      "root": {
+        "id": "rewards-root",
+        "block": "core.master-detail",
+        "props": { "emptyTitle": { "key": "reward_idle_title" }, "emptyBody": { "key": "reward_idle_body" } },
+        "children": [
+          {
+            "id": "reward-rows",
+            "block": "core.record-list",
+            "props": {
+              "label": { "key": "rewards_label" },
+              "empty": { "key": "rewards_empty" },
+              "idPath": "id",
+              "titlePath": "name",
+              "descriptionPath": "note",
+              "badgePath": "state",
+              "selectParam": "reward"
+            },
+            "bind": { "rows": { "read": "loyalty.rewards", "path": "rows" } }
+          },
+          {
+            "id": "reward-side",
+            "block": "core.stack",
+            "props": { "gap": "region" },
+            "children": [
+              {
+                "id": "reward-detail",
+                "block": "core.detail",
+                "props": {
+                  "label": { "key": "reward_detail" },
+                  "idle": { "key": "reward_idle_body" },
+                  "currency": "VND",
+                  "items": [
+                    { "term": { "key": "reward_name" }, "path": "name" },
+                    { "term": { "key": "reward_kind" }, "path": "kind", "format": "badge" },
+                    { "term": { "key": "reward_cost" }, "path": "pointsCost", "format": "number" },
+                    { "term": { "key": "reward_value" }, "path": "valueVnd", "format": "money" },
+                    { "term": { "key": "reward_stock" }, "path": "stock", "format": "number" },
+                    { "term": { "key": "reward_limit" }, "path": "perCustomerLimit", "format": "number" },
+                    { "term": { "key": "reward_state" }, "path": "state", "format": "badge" }
+                  ]
+                },
+                "bind": {
+                  "record": { "read": "loyalty.reward", "variables": { "id": "$reward" } },
+                  "secondary": { "action": "loyalty.remove-reward" }
+                }
+              },
+              {
+                "id": "reward-form",
+                "block": "core.form",
+                "props": {
+                  "label": { "key": "reward_form_title" },
+                  "submitLabel": { "key": "reward_submit" },
+                  "successNotice": { "key": "reward_done" },
+                  "currency": "VND",
+                  "fields": [
+                    { "name": "name", "label": { "key": "reward_name" }, "kind": "text", "required": true, "max": 200 },
+                    {
+                      "name": "kind",
+                      "label": { "key": "reward_kind" },
+                      "kind": "choice",
+                      "required": true,
+                      "options": [
+                        { "value": "voucher", "label": { "key": "kind_voucher" } },
+                        { "value": "item", "label": { "key": "kind_item" } },
+                        { "value": "percent", "label": { "key": "kind_percent" } }
+                      ]
+                    },
+                    { "name": "pointsCost", "label": { "key": "reward_cost" }, "kind": "number", "required": true },
+                    { "name": "valueVnd", "label": { "key": "reward_value" }, "kind": "money" },
+                    { "name": "percent", "label": { "key": "reward_percent" }, "kind": "number", "max": 100 },
+                    {
+                      "name": "stock",
+                      "label": { "key": "reward_stock" },
+                      "hint": { "key": "reward_stock_hint" },
+                      "kind": "number"
+                    },
+                    {
+                      "name": "perCustomerLimit",
+                      "label": { "key": "reward_limit" },
+                      "hint": { "key": "reward_limit_hint" },
+                      "kind": "number"
+                    },
+                    {
+                      "name": "minTierKey",
+                      "label": { "key": "reward_tier" },
+                      "hint": { "key": "reward_tier_hint" },
+                      "kind": "text",
+                      "max": 80
+                    },
+                    { "name": "note", "label": { "key": "reward_note" }, "kind": "textarea", "max": 200 },
+                    { "name": "active", "label": { "key": "reward_active" }, "kind": "switch" }
+                  ]
+                },
+                "bind": {
+                  "record": { "read": "loyalty.reward", "variables": { "id": "$reward" } },
+                  "submit": { "action": "loyalty.save-reward" }
+                },
+                "when": { "permission": "loyalty.manage" }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "promo",
+      "label": { "key": "tab_promo" },
+      "root": {
+        "id": "promo-root",
+        "block": "core.stack",
+        "props": { "gap": "region" },
+        "children": [
+          {
+            "id": "promo-form",
+            "block": "core.form",
+            "props": {
+              "label": { "key": "promo_title" },
+              "submitLabel": { "key": "promo_submit" },
+              "successNotice": { "key": "promo_done" },
+              "currency": "VND",
+              "fields": [
+                {
+                  "name": "name",
+                  "label": { "key": "promo_name" },
+                  "hint": { "key": "promo_name_hint" },
+                  "kind": "text",
+                  "max": 500
+                },
+                {
+                  "name": "brief",
+                  "label": { "key": "promo_brief" },
+                  "hint": { "key": "promo_brief_hint" },
+                  "kind": "textarea",
+                  "max": 500
+                },
+                {
+                  "name": "inactiveDays",
+                  "label": { "key": "promo_inactive" },
+                  "hint": { "key": "promo_inactive_hint" },
+                  "kind": "number"
+                },
+                {
+                  "name": "minSpendVnd",
+                  "label": { "key": "promo_spend" },
+                  "hint": { "key": "promo_spend_hint" },
+                  "kind": "money"
+                },
+                { "name": "birthdayThisMonth", "label": { "key": "promo_birthday" }, "kind": "switch" }
+              ]
+            },
+            "bind": { "submit": { "action": "loyalty.draft-campaign" } },
+            "when": { "permission": "loyalty.manage" }
+          },
+          {
+            "id": "promo-campaigns",
+            "block": "core.table",
+            "props": {
+              "label": { "key": "campaigns_label" },
+              "empty": { "key": "campaigns_empty" },
+              "idPath": "id",
+              "columns": [
+                { "term": { "key": "col_campaign" }, "path": "name" },
+                { "term": { "key": "col_status" }, "path": "status", "format": "badge" },
+                { "term": { "key": "col_recipients" }, "path": "recipients", "format": "number", "align": "end" },
+                {
+                  "term": { "key": "col_sent" },
+                  "path": "sent",
+                  "format": "number",
+                  "align": "end",
+                  "priority": "low"
+                },
+                {
+                  "term": { "key": "col_failed" },
+                  "path": "failed",
+                  "format": "number",
+                  "align": "end",
+                  "priority": "low"
+                },
+                { "term": { "key": "col_created" }, "path": "createdAt", "format": "dateTime", "priority": "low" }
+              ]
+            },
+            "bind": { "rows": { "read": "loyalty.campaigns", "path": "rows" } }
+          }
+        ]
+      }
+    },
+    {
+      "id": "pending",
+      "label": { "key": "tab_pending" },
+      "count": { "read": "loyalty.pending-count", "path": "count", "isAttention": true },
+      "root": {
+        "id": "pending-root",
+        "block": "core.decision-queue",
+        "props": {
+          "surface": "section",
+          "label": { "key": "pending_label" },
+          "emptyTitle": { "key": "pending_empty_title" },
+          "emptyBody": { "key": "pending_empty_body" },
+          "seeWhy": { "key": "pending_see_why" },
+          "moreMenu": { "key": "pending_more" }
+        },
+        "bind": {
+          "queue": { "read": "loyalty.pending" },
+          "command": { "action": "loyalty.decide" }
+        }
+      }
+    },
+    {
+      "id": "program",
+      "label": { "key": "tab_program" },
+      "root": {
+        "id": "program-root",
+        "block": "core.form",
+        "props": {
+          "label": { "key": "program_title" },
+          "submitLabel": { "key": "program_submit" },
+          "successNotice": { "key": "program_done" },
+          "currency": "VND",
+          "fields": [
+            { "name": "name", "label": { "key": "program_name" }, "kind": "text", "required": true, "max": 500 },
+            { "name": "enabled", "label": { "key": "program_enabled" }, "kind": "switch" },
+            {
+              "name": "perThousandVnd",
+              "label": { "key": "program_per_thousand" },
+              "hint": { "key": "program_per_thousand_hint" },
+              "kind": "number",
+              "max": 1000
+            },
+            { "name": "perVisit", "label": { "key": "program_per_visit" }, "kind": "number", "max": 100000 },
+            {
+              "name": "minOrderVnd",
+              "label": { "key": "program_min_order" },
+              "hint": { "key": "program_min_order_hint" },
+              "kind": "money"
+            },
+            {
+              "name": "trigger",
+              "label": { "key": "program_trigger" },
+              "hint": { "key": "program_trigger_hint" },
+              "kind": "choice",
+              "options": [
+                { "value": "payment", "label": { "key": "trigger_payment" } },
+                { "value": "order", "label": { "key": "trigger_order" } }
+              ]
+            },
+            {
+              "name": "expiryMonths",
+              "label": { "key": "program_expiry_months" },
+              "hint": { "key": "program_expiry_months_hint" },
+              "kind": "number",
+              "max": 120
+            },
+            {
+              "name": "warnDays",
+              "label": { "key": "program_warn_days" },
+              "hint": { "key": "program_warn_days_hint" },
+              "kind": "number",
+              "max": 180
+            },
+            { "name": "birthdayOn", "label": { "key": "program_birthday_on" }, "kind": "switch" },
+            {
+              "name": "birthdayPoints",
+              "label": { "key": "program_birthday_points" },
+              "kind": "number",
+              "max": 1000000
+            },
+            { "name": "birthdayReward", "label": { "key": "program_birthday_reward" }, "kind": "text", "max": 40 },
+            { "name": "birthdayNote", "label": { "key": "program_birthday_note" }, "kind": "textarea", "max": 200 },
+            {
+              "name": "maxPerMonth",
+              "label": { "key": "program_max_per_month" },
+              "hint": { "key": "program_max_per_month_hint" },
+              "kind": "number",
+              "max": 60
+            },
+            { "name": "hourFrom", "label": { "key": "program_hour_from" }, "kind": "text", "max": 5 },
+            { "name": "hourTo", "label": { "key": "program_hour_to" }, "kind": "text", "max": 5 },
+            {
+              "name": "batch",
+              "label": { "key": "program_batch" },
+              "hint": { "key": "program_batch_hint" },
+              "kind": "number",
+              "max": 200
+            }
+          ]
+        },
+        "bind": {
+          "record": { "read": "loyalty.program" },
+          "submit": { "action": "loyalty.save-program" }
+        },
+        "when": { "permission": "loyalty.manage" }
+      }
+    }
+  ]
+}

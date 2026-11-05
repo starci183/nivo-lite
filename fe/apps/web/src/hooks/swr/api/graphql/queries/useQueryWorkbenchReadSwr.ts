@@ -6,7 +6,7 @@ import type { SWRResponse } from "swr"
 import type { ReadVariables } from "@nivo-lite/agent-sdk/block"
 import { answeredData } from "@/hooks/workspaceread"
 import { queryWorkbenchRead } from "@/modules/api"
-import { WORKBENCH_READ_KEY } from "@/modules/workbench-host"
+import { WORKBENCH_READ_KEY, valueOfJsonText } from "@/modules/workbench-host"
 import { useAppSelector } from "@/redux"
 
 /** One named read of the back end generic door, in the active workspace: `[name, workspace, operation, variables]`; null variables do not fetch. */
@@ -16,9 +16,7 @@ export const useQueryWorkbenchReadSwr = (
 ): SWRResponse<unknown, Error> => {
     const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
     const key = tenantParamsKey(WORKBENCH_READ_KEY, workspaceId, variables === null ? null : [operation, variables])
-    return useSWR(
-        key,
-        async ([, , name, bound]) =>
-            answeredData(await queryWorkbenchRead({ name, variables: bound }), name).workbenchRead,
+    return useSWR(key, async ([, , name, bound]) =>
+        valueOfJsonText(answeredData(await queryWorkbenchRead({ name, variables: bound }), name).workbenchRead.data),
     )
 }

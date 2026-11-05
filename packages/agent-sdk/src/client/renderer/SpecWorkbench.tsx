@@ -8,8 +8,7 @@ import type { PlanNode, RenderPlan } from "../../spec/render-plan"
 import { renderPlan, viewOf } from "../../spec/render-plan"
 import { paramHandleOf } from "../../spec/spec-param"
 import type { SpecProblem, StoredSpec } from "../../spec/spec.types"
-import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
-import type { BlockRenderer } from "./define-renderer"
+import { useInstalledBlocks, useRegistryCheck, useWorkbenchHost } from "../host/WorkbenchHostProvider"
 import { PageFrame } from "./PageFrame"
 import { PrimaryCommand } from "./PrimaryCommand"
 import type { SpecContext } from "./renderer.types"
@@ -31,8 +30,6 @@ export interface SpecWorkbenchProps {
     readonly spec: StoredSpec
     /** The module seeded default, drawn when `spec` is no longer valid against the installed blocks. */
     readonly fallback: StoredSpec | null
-    /** The installed blocks with their components: `[...coreRenderers, ...]`. */
-    readonly renderers: ReadonlyArray<BlockRenderer>
     readonly reads: ReadonlyArray<ReadDefinition>
     readonly actions: ReadonlyArray<ActionDefinition>
     /** The permissions the module declares. */
@@ -74,14 +71,12 @@ const chooseOf = (
     return { plan: primary, chrome: [], problems: primary.problems }
 }
 
-/**
- * Draws a workbench from a spec: the head, the tabs of the visible views with the chosen view tree, and the foot. An invalid spec
- * falls back to the seeded default with an alert for those who manage it; with no valid default it says so, never a blank page.
- */
-export const SpecWorkbench = (props: SpecWorkbenchProps): ReactNode => {
+/** The workbench of a spec, once the bundle is known to be the back end's. */
+const DrawnWorkbench = (props: SpecWorkbenchProps): ReactNode => {
     const host = useWorkbenchHost()
     const text = host.block.text("blocks")
-    const { renderers, reads, actions, permissions } = props
+    const renderers = useInstalledBlocks()
+    const { reads, actions, permissions } = props
     const { plan, chrome, problems } = useMemo(() => {
         const blocks = renderers.map((renderer) => renderer.block)
         const bindings = { reads, actions, permissions }
@@ -149,4 +144,17 @@ export const SpecWorkbench = (props: SpecWorkbenchProps): ReactNode => {
             </Stack>
         </PageFrame>
     )
+}
+
+/**
+ * Draws a workbench from a spec: the head, the tabs of the visible views with the chosen view tree, and the foot, with the blocks
+ * the host provider installed. An invalid spec falls back to the seeded default with an alert for those who manage it; with no
+ * valid default it says so, never a blank page. When the back end serves another registry hash than the one this bundle was built
+ * with, nothing is drawn: a notice offers to reload.
+ */
+export const SpecWorkbench = (props: SpecWorkbenchProps): ReactNode => {
+    const registry = useRegistryCheck()
+    if (registry !== null && registry.built !== registry.served)
+        return <EmptyNotice message={registry.message} actionLabel={registry.reloadLabel} onAction={registry.reload} />
+    return <DrawnWorkbench {...props} />
 }

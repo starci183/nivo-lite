@@ -3,15 +3,15 @@ import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { createAuthApolloClient } from "../../clients"
 import type { GraphQLOperationContext } from "../../types"
 
-/** What the generic action operation answers: the `ActionResult` of the named action, as JSON. */
+/** What the generic action operation answers: the `ActionResult` of the named action, as JSON text. */
 interface WorkbenchActionData {
-    readonly workbenchAction: unknown
+    readonly workbenchAction: { readonly data: string }
 }
 
-/** The variables of the generic action operation: the action name and its flat input. */
+/** The variables of the generic action operation: the action name and its flat input, as JSON text. */
 interface WorkbenchActionVariables {
     readonly name: string
-    readonly input: JsonValue
+    readonly input: string
 }
 
 /**
@@ -19,8 +19,10 @@ interface WorkbenchActionVariables {
  * viewer rights. Hand-written and outside `mutations/` for the reason `query-workbench-read.ts` gives.
  */
 const mutation1: TypedDocumentNode<WorkbenchActionData, WorkbenchActionVariables> = gql`
-    mutation WorkbenchAction($name: String!, $input: JSON!) {
-        workbenchAction(name: $name, input: $input)
+    mutation WorkbenchAction($name: String!, $input: String!) {
+        workbenchAction(name: $name, input: $input) {
+            data
+        }
     }
 `
 
@@ -39,5 +41,5 @@ export const mutateWorkbenchAction = async ({
     signal,
 }: MutateWorkbenchActionParams): Promise<ApolloClient.MutateResult<WorkbenchActionData>> => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate({ mutation: mutation1, variables: { name, input } })
+    return apollo.mutate({ mutation: mutation1, variables: { name, input: JSON.stringify(input) } })
 }

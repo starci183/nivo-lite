@@ -3,10 +3,18 @@ export { loadingSlot, mapSlot, slotOfRead, slotOfReads } from "../slot/slot"
 export type { SlotViewProps } from "./SlotView"
 export { SlotView } from "./SlotView"
 export type { HostAction, HostActionOptions, HostRead, HostReadOptions, WorkbenchHost } from "../host/host.types"
-export type { WorkbenchHostProviderProps } from "./host/WorkbenchHostProvider"
-export { WorkbenchHostProvider, useBlockHost, useWorkbenchHost } from "./host/WorkbenchHostProvider"
+export type { RegistryCheck, WorkbenchHostProviderProps } from "./host/WorkbenchHostProvider"
+export {
+    WorkbenchHostProvider,
+    useBlockHost,
+    useEnabledModules,
+    useInstalledBlocks,
+    useRegistryCheck,
+    useWorkbenchHost,
+} from "./host/WorkbenchHostProvider"
 export type { BlockComponent, BlockRenderProps, BlockRenderer, ErasedRenderProps } from "./renderer/define-renderer"
 export { defineRenderer } from "./renderer/define-renderer"
+export { lazyRenderer } from "./renderer/lazy-renderer"
 export type { SpecWorkbenchProps, WorkbenchRoute } from "./renderer/SpecWorkbench"
 export { SpecWorkbench } from "./renderer/SpecWorkbench"
 export type { SpecContext } from "./renderer/renderer.types"
