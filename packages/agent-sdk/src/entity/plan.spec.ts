@@ -46,7 +46,7 @@ const P = "records_sales_lead"
 const baseOf = (name: string, privileges: ReadonlyArray<string>): CatalogBase => ({
     name,
     rlsEnabled: true,
-    rlsForced: true,
+    rlsForced: false,
     policies: COMMANDS.map((command) => ({
         name: `${name}_app_engine_${command}`,
         roles: ["app_engine"],
@@ -58,10 +58,12 @@ const baseOf = (name: string, privileges: ReadonlyArray<string>): CatalogBase =>
     grants: [{ role: "app_engine", privileges }],
 })
 
+const ALL = ["select", "insert", "update", "delete"]
+
 const bases = (): ReadonlyArray<CatalogBase> => [
-    baseOf("records", ["select", "insert", "update"]),
-    baseOf("record_links", ["select", "insert", "update", "delete"]),
-    baseOf("entity_sequences", ["select", "insert", "update"]),
+    baseOf("records", ALL),
+    baseOf("record_links", ALL),
+    baseOf("entity_sequences", ALL),
 ]
 
 const index = (
@@ -228,15 +230,12 @@ describe("planOf: base tables", () => {
     const only = (name: string, change: Partial<CatalogBase>) =>
         plan({ bases: bases().map((base) => (base.name === name ? { ...base, ...change } : base)) })
 
-    it("enables and forces RLS when off", () => {
-        expect(only("records", { rlsEnabled: false, rlsForced: false })).toEqual([
-            "enable_rls public.records",
-            "force_rls public.records",
-        ])
+    it("enables RLS when off, and leaves FORCE to the base migration", () => {
+        expect(only("records", { rlsEnabled: false, rlsForced: false })).toEqual(["enable_rls public.records"])
     })
 
     it("creates missing policies and refuses a policy with another definition", () => {
-        const base = baseOf("records", ["select", "insert", "update"])
+        const base = baseOf("records", ALL)
         expect(only("records", { policies: base.policies.filter((policy) => policy.command !== "delete") })).toEqual([
             "create_policy public.records:policy:records_app_engine_delete",
         ])
@@ -259,8 +258,13 @@ describe("planOf: base tables", () => {
     it("grants what is missing and revokes what the engine does not use", () => {
         expect(only("records", { grants: [] })).toEqual(["grant public.records:grant:app_engine"])
         expect(
-            only("records", { grants: [{ role: "app_engine", privileges: ["SELECT", "INSERT", "UPDATE", "DELETE"] }] }),
+            only("records", {
+                grants: [{ role: "app_engine", privileges: ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"] }],
+            }),
         ).toEqual(["revoke! public.records:grant:app_engine"])
+        expect(
+            only("records", { grants: [{ role: "app_engine", privileges: ["SELECT", "INSERT", "UPDATE", "DELETE"] }] }),
+        ).toEqual([])
         expect(
             only("entity_sequences", { grants: [{ role: "app_engine", privileges: ["select", "truncate"] }] }),
         ).toEqual([
@@ -270,11 +274,6 @@ describe("planOf: base tables", () => {
         expect(
             only("record_links", { grants: [{ role: "app_engine", privileges: ["select", "insert", "update"] }] }),
         ).toEqual(["grant public.record_links:grant:app_engine"])
-    })
-
-    it("grants delete on records only when an entity is deletable", () => {
-        const deletable: EntityDefinition = { ...lead, deletable: true }
-        expect(plan({}, [deletable])).toEqual(["grant public.records:grant:app_engine"])
     })
 })
 

@@ -197,13 +197,8 @@ export const expectedPolicies = (table: string): ReadonlyArray<ExpectedPolicy> =
         check: command === "insert" || command === "update" ? WORKSPACE_PREDICATE : null,
     }))
 
-/** The table privileges app_engine gets on a base table: delete on records only when an entity is deletable; never on sequences. */
-export const expectedPrivileges = (table: string, entities: ReadonlyArray<EntityDefinition>): ReadonlyArray<string> => {
-    const base = ["select", "insert", "update"]
-    if (table === "entity_sequences") return base
-    if (table === "records" && !entities.some((entity) => entity.deletable === true)) return base
-    return [...base, "delete"]
-}
+/** The table privileges app_engine gets on every base table; which rows it may delete is the policy's and the engine's business. */
+export const expectedPrivileges: ReadonlyArray<string> = ["select", "insert", "update", "delete"]
 
 /** Whether any field asks for a trigram index (the pg_trgm extension). */
 export const needsTrigram = (entity: EntityDefinition): boolean =>

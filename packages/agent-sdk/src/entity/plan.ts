@@ -59,16 +59,12 @@ const policyMatches = (have: CatalogPolicy, want: ExpectedPolicy): boolean =>
     (want.check === null || (have.check !== null && normalizeSql(have.check) === want.check))
 
 /** Row level security, policies and grants of a base table (the policies sit on the parent, never on a partition). */
-const baseOps = (
-    name: string,
-    base: CatalogBase | undefined,
-    entities: ReadonlyArray<EntityDefinition>,
-): ReadonlyArray<PlanOp> => {
+const baseOps = (name: string, base: CatalogBase | undefined): ReadonlyArray<PlanOp> => {
     if (base === undefined) {
         return [op("base_missing", tableId(name), false, `${name} does not exist: the base migration has not run`)]
     }
     const object = tableId(name)
-    const wanted = expectedPrivileges(name, entities)
+    const wanted = expectedPrivileges
     const have = (base.grants.find((grant) => grant.role === ENGINE_ROLE)?.privileges ?? []).map((item) =>
         item.toLowerCase(),
     )
@@ -76,7 +72,6 @@ const baseOps = (
     const extra = have.filter((privilege) => !wanted.includes(privilege))
     return [
         ...(base.rlsEnabled ? [] : [op("enable_rls", object, true, "row level security on")]),
-        ...(base.rlsForced ? [] : [op("force_rls", object, true, "forced for the table owner (R255)")]),
         ...expectedPolicies(name).flatMap((want) => {
             const policy = base.policies.find((candidate) => candidate.name === want.name)
             const id = partId(name, "policy", want.name)
@@ -286,7 +281,6 @@ export const planOf = (entities: ReadonlyArray<EntityDefinition>, snapshot: Cata
             baseOps(
                 table,
                 snapshot.bases.find((base) => base.name === table),
-                entities,
             ),
         ),
         ...entities.flatMap((entity) => entityOps(entity, snapshot)),

@@ -57,6 +57,7 @@ describe("normalizeSql", () => {
         expect(normalizeSql('"Col"::timestamp with time zone')).toBe("col")
         expect(normalizeSql("x::character varying")).toBe("x")
         expect(normalizeSql("x::text[]")).toBe("x")
+        expect(normalizeSql("extensions.knowledge_fold(x)")).toBe("knowledge_foldx")
     })
 })
 
@@ -64,6 +65,7 @@ describe("check definitions", () => {
     it("reads the literals of a CHECK", () => {
         expect(literalsOf("CHECK ((x = ANY (ARRAY['new'::text, 'won'::text])))")).toEqual(["new", "won"])
         expect(literalsOf("CHECK ((length(note) >= 5))")).toEqual([])
+        expect(literalsOf("CHECK (x = ANY (ARRAY['won''s'::text]))")).toEqual(["won's"])
     })
 
     it("reads the length bound of a CHECK", () => {

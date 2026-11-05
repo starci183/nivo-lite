@@ -142,12 +142,8 @@ describe("expectedPolicies and expectedPrivileges", () => {
         ])
     })
 
-    it("grants delete on records only for a deletable entity, never on sequences", () => {
-        const basic = ["select", "insert", "update"]
-        expect(expectedPrivileges("records", [lead])).toEqual(basic)
-        expect(expectedPrivileges("records", [{ ...lead, deletable: true }])).toEqual([...basic, "delete"])
-        expect(expectedPrivileges("record_links", [])).toEqual([...basic, "delete"])
-        expect(expectedPrivileges("entity_sequences", [{ ...lead, deletable: true }])).toEqual(basic)
+    it("grants the four table privileges", () => {
+        expect(expectedPrivileges).toEqual(["select", "insert", "update", "delete"])
     })
 })
 

@@ -75,7 +75,7 @@ const OPCLASS = /\s(?:gin_trgm_ops|gist_trgm_ops|jsonb_path_ops|jsonb_ops|text_p
 export const normalizeSql = (text: string): string =>
     text
         .toLowerCase()
-        .replace(/public\./g, "")
+        .replace(/(?:public|extensions)\./g, "")
         .replace(CAST, "")
         .replace(CAST_WORDS, "")
         .replace(/\[\]/g, "")
@@ -84,7 +84,7 @@ export const normalizeSql = (text: string): string =>
 
 /** The quoted literals of a CHECK definition: the values an enum field may take. */
 export const literalsOf = (definition: string): ReadonlyArray<string> =>
-    (definition.match(/'[^']*'/g) ?? []).map((quoted) => quoted.slice(1, -1))
+    (definition.match(/'(?:[^']|'')*'/g) ?? []).map((quoted) => quoted.slice(1, -1).replace(/''/g, "'"))
 
 /** The `<= n` bound of a CHECK definition (a text length), or null. */
 export const limitOf = (definition: string): number | null => {
