@@ -44,6 +44,10 @@
       "types": "./dist/module/index.d.ts",
       "default": "./dist/module/index.js"
     },
+    "./entity": {
+      "types": "./dist/entity/index.d.ts",
+      "default": "./dist/entity/index.js"
+    },
     "./template": {
       "types": "./dist/template/index.d.ts",
       "default": "./dist/template/index.js"

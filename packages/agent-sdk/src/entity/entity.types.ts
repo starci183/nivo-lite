@@ -3,9 +3,8 @@ import type { Namespaced } from "../schema/schema.types"
 import type { FilterExpr } from "../query/query.types"
 
 /*
- * PINNED v2 by the CORE-BE lead (2026-11-05, plan section 11: one `records` table, no legacy mapping). Copied verbatim into
- * every wave-2 stream; only E1 (and the lead) change it, announced in D:/starci-tmp/claude-20261105/lanes/CORE-BE.log.md first.
- * Every record has the system fields of `SYSTEM_FIELDS` (record columns, never in `data`); declared fields live in `data`.
+ * The entity declarations of the records model: every record has the system fields of `SYSTEM_FIELDS` (record columns, never in
+ * `data`); declared fields live in `data`.
  */
 
 /** The record columns every entity has; their names are reserved and never declared as fields. */

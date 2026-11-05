@@ -729,6 +729,35 @@
         {
           "name": "public.connection_poll_mark_hot",
           "reason": "puts a connection into the poll schedule hot, or makes its row hot: an upsert that starts from connections, which an entity cannot express"
+        },
+        {
+          "name": "public.engine_scope_enter",
+          "reason": "enters the entity engine scope of one workspace for the current transaction: sets nivo.workspace_id and switches to the NOBYPASSRLS role app_engine (both transaction-local); TypeORM cannot set a role"
+        },
+        {
+          "name": "public.engine_workspace",
+          "reason": "the workspace of the current engine scope (null outside one), read by the app_engine RLS policies"
+        },
+        {
+          "name": "public.engine_catalog",
+          "reason": "the pg_catalog snapshot of the records partitions, constraints, indexes, views, policies and grants that cli entities plan diffs against; TypeORM cannot read the catalog"
+        },
+        {
+          "name": "public.engine_ts",
+          "reason": "immutable ISO text to timestamptz reader the generated EXCLUDE constraints and partial indexes on records.data need"
+        }
+      ],
+      "engineOwned": {
+        "capability": "entity-engine",
+        "tables": ["records", "record_links", "entity_sequences"],
+        "partitionsOf": "records",
+        "views": "v_*",
+        "manifest": ".starciwork/entities.manifest.json"
+      },
+      "ddlRenderers": [
+        {
+          "path": "packages/agent-sdk/src/entity/render*.ts",
+          "reason": "DDL rendered into new migration files by cli entities plan --write (owner Q1)"
         }
       ]
     },
@@ -765,5 +794,15 @@
         }
       ]
     }
+  },
+  "db": {
+    "scopeSettings": ["nivo.workspace_id"],
+    "scopeRoles": [
+      {
+        "role": "app_engine",
+        "reason": "NOLOGIN NOINHERIT NOBYPASSRLS role the entity engine switches to after engine_scope_enter; its policies compare workspace_id with the transaction-local nivo.workspace_id"
+      }
+    ],
+    "scopeColumns": ["workspace_id"]
   }
 }
