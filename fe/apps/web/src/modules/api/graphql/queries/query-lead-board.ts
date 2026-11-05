@@ -28,6 +28,7 @@ const query1: Document = gql`
                 installationId
                 need
                 nextAction
+                phone
                 ownerName
                 stage
             }

@@ -14,7 +14,7 @@ interface ApprovalAgentView {
 }
 
 /** One drafted message with every word resolved and the state of its controls. */
-export interface ApprovalCardView {
+interface ApprovalCardView {
     readonly nextAction: string
     readonly willSend: string
     /** The agent that drafted it; null for a message a person wrote. */
@@ -34,7 +34,7 @@ export interface ApprovalCardView {
 }
 
 /** The words of the card. */
-export interface ApprovalCardLabels {
+interface ApprovalCardLabels {
     readonly draft: string
     readonly copy: string
     readonly copied: string

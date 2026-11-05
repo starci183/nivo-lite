@@ -6,7 +6,7 @@ import type { LeadJourneyType } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import type { DataSlot, LeadJourney } from "@/modules/types"
 import { useTranslations } from "next-intl"
-import { leadRecordOf } from "./leads.shared"
+import { channelLabelOf, leadRecordOf } from "./leads.shared"
 
 const journeyOf = (detail: LeadJourneyType): LeadJourney => ({
     lead: leadRecordOf(detail.lead),
@@ -61,20 +61,6 @@ export const useLeadJourney = (leadId: string | undefined): LeadJourneyView => {
     const t = useTranslations("leads")
     const detail = query.data === undefined ? null : journeyOf(query.data)
     const slot: DataSlot<LeadJourney> = leadId === undefined ? loadingSlot() : mapSlot(slotOfSwr(query), journeyOf)
-    const channel = detail?.lead.channel ?? ""
-    const channels: Readonly<Record<string, string>> = {
-        zalo: "channelZalo",
-        "website chat": "channelWebsiteChat",
-        website_chat: "channelWebsiteChat",
-        "website form": "channelWebsiteForm",
-        website_form: "channelWebsiteForm",
-        phone: "channelPhone",
-        email: "channelEmail",
-        referral: "channelReferral",
-    }
-    const normalizedChannel = channel.trim().toLowerCase().normalize("NFC")
-    const channelKey =
-        channels[normalizedChannel] ??
-        Object.values(channels).find((key) => t(key).toLowerCase().normalize("NFC") === normalizedChannel)
-    return { detail, slot, channelLabel: channelKey === undefined ? channel : t(channelKey), ...query }
+    const channelLabel = channelLabelOf(detail?.lead.channel ?? "", t)
+    return { detail, slot, channelLabel, ...query }
 }
