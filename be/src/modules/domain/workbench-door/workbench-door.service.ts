@@ -15,18 +15,18 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { amountVndOf, authorityDecisionOf } from "./door-authority.policy"
+import { authorityDecisionOf } from "./door-authority.policy"
 import { actionFailureOf } from "./door-failure.policy"
 import { parsePayload } from "./door-payload.policy"
 import { holdsPermission } from "./door-permission.policy"
 import { DoorPortsService } from "./door-ports.service"
+import { servableModulesOf } from "./door-servable.policy"
 import { registryOf } from "./door-registry.policy"
-import { InjectWorkbenchApprovals, InjectWorkbenchDoorOptions } from "./workbench-door.decorators"
+import { InjectWorkbenchDoorOptions } from "./workbench-door.decorators"
 import { WorkbenchDoorError, WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
 import type { ActionAnswered, DoorAction, DoorAnswer, DoorCall, DoorRegistry } from "./workbench-door.contracts"
 import { WorkbenchDoorLogEvent } from "./workbench-door.log-events"
 import type { WorkbenchDoorOptions } from "./workbench-door.options"
-import type { WorkbenchApprovals } from "./workbench-door.port"
 
 /** The proven caller of a call. */
 interface Caller {
@@ -42,7 +42,7 @@ const issuesOf = (problems: ReadonlyArray<{ readonly code: string; readonly at: 
 
 @Injectable()
 /**
- * The one door every screen read and action goes through. The registry of reads and actions is built from the installation at boot. A
+ * The one door every screen read and action goes through. The registry of reads and actions is built from the installation at boot, from the modules whose ports the door provides. A
  * call proves membership first, then the declared permission; an action then passes the authority rules (run, refuse, or ask a
  * person); the run itself is `invokeRead` or `invokeAction`, the path the graph host shares, in the engine workspace scope, on the ports
  * the engine provides, and the answer is the JSON text of the data or of the `ActionResult`. The workspace is the proven one, never one
@@ -53,7 +53,6 @@ export class WorkbenchDoorService {
 
     constructor(
         @InjectWorkbenchDoorOptions() options: WorkbenchDoorOptions,
-        @InjectWorkbenchApprovals() private readonly approvals: WorkbenchApprovals,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
@@ -63,7 +62,7 @@ export class WorkbenchDoorService {
         private readonly engine: EntityEngineService,
         private readonly ports: DoorPortsService,
     ) {
-        this.registry = registryOf(options.modules, options.entities)
+        this.registry = registryOf(servableModulesOf(options.modules, options.entities), options.entities)
     }
 
     /** Runs a read for a member and answers its data as JSON text. */
@@ -82,7 +81,12 @@ export class WorkbenchDoorService {
         const result = await this.engine.scoped(call.workspaceId, (tx) =>
             invokeRead(
                 read.definition,
-                this.ports.providerFor({ runIn: (use) => use(tx), name: call.name, dataKind: read.dataKind }),
+                this.ports.providerFor({
+                    workspaceId: call.workspaceId,
+                    runIn: (use) => use(tx),
+                    name: call.name,
+                    dataKind: read.dataKind,
+                }),
                 parsed.value,
                 context,
             ),
@@ -114,15 +118,8 @@ export class WorkbenchDoorService {
         const rule = await this.rules.ownerRuleFor({ workspaceId: call.workspaceId }, action.id)
         const decision = authorityDecisionOf(rule, action.id, parsed.value)
         if (decision === "deny") return this.failure("forbidden", WorkbenchDoorErrorCode.PermissionDenied)
-        if (decision === "ask") {
-            const approvalId = await this.approvals.open({
-                workspaceId: call.workspaceId,
-                memberId: caller.memberId,
-                action: action.id,
-                amountVnd: amountVndOf(parsed.value),
-            })
-            return this.failure("refused", WorkbenchDoorErrorCode.ActionRefused, { approvalId })
-        }
+        if (decision === "ask")
+            return this.failure("refused", WorkbenchDoorErrorCode.ActionRefused, { approvalRequired: true })
         return await this.run(call, caller, action, parsed.value)
     }
 
@@ -133,7 +130,7 @@ export class WorkbenchDoorService {
      */
     private async run(call: DoorCall, caller: Caller, action: DoorAction, input: unknown): Promise<ActionResult> {
         const context = this.contextOf(call, caller)
-        const run = { name: action.id, dataKind: null }
+        const run = { workspaceId: call.workspaceId, name: action.id, dataKind: null }
         const answered: ActionAnswered = {}
         try {
             if (action.transactional !== true) {

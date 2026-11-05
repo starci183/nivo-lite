@@ -32,11 +32,10 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DoorPortsService } from "./door-ports.service"
 import type { DoorRun } from "./door-ports.service"
-import { WORKBENCH_APPROVALS, WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
+import { WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
 import { WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
 import type { DoorAnswer, DoorCall } from "./workbench-door.contracts"
 import { WorkbenchDoorLogEvent } from "./workbench-door.log-events"
-import type { WorkbenchApprovals } from "./workbench-door.port"
 import { WorkbenchDoorService } from "./workbench-door.service"
 
 class StandInError extends DomainError<string> {}
@@ -144,8 +143,6 @@ const build = async ({
     const provider = mock<PortProvider>()
     const ports = mock<DoorPortsService>()
     ports.providerFor.mockReturnValue(provider)
-    const approvals = mock<WorkbenchApprovals>()
-    approvals.open.mockResolvedValue("approval-1")
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, _params: unknown, locale: string) => `${locale}:${key}`),
     })
@@ -157,7 +154,6 @@ const build = async ({
                 provide: WORKBENCH_DOOR_OPTIONS,
                 useValue: { modules: [declaration], entities: [lead], registryHash: "hash-1" },
             },
-            { provide: WORKBENCH_APPROVALS, useValue: approvals },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
@@ -176,7 +172,6 @@ const build = async ({
         engine,
         ports,
         provider,
-        approvals,
         logger,
         tx,
     }
@@ -303,6 +298,14 @@ describe("WorkbenchDoorService.read refusals", () => {
     })
 })
 
+const FAILURE_REASONS: ReadonlyArray<"conflict" | "invalid" | "failed" | "forbidden" | "refused"> = [
+    "conflict",
+    "invalid",
+    "failed",
+    "forbidden",
+    "refused",
+]
+
 describe("WorkbenchDoorService.act", () => {
     it("runs an action that is not transactional with a transaction of its own per port call", async () => {
         const act = jest.fn(() => Promise.resolve(ACTION_OK))
@@ -337,29 +340,45 @@ describe("WorkbenchDoorService.act", () => {
         expect(engine.scoped).toHaveBeenCalledTimes(1)
     })
 
-    it("rolls a transactional action back when it answers a refusal, and answers the refusal", async () => {
-        const refusal: ActionResult = {
-            ok: false,
-            reason: "refused",
-            message: { vi: "Taken already", en: "Taken" },
-            data: { nearest: ["09:00"] },
-        }
-        const { door, engine } = await build({ transactionalAct: () => Promise.resolve(refusal) })
-
-        const answer = await door.act(USER, callOf("sales.settle"))
-
-        expect(parsed(answer)).toEqual(refusal)
-        await expect(engine.scoped.mock.results[0]?.value).rejects.toMatchObject({
-            code: WorkbenchDoorErrorCode.ActionRefused,
-        })
-    })
-
     it("answers a refusal of an action that is not transactional as it is", async () => {
         const refusal: ActionResult = { ok: false, reason: "conflict", message: { key: "sales.stale" } }
         const { door } = await build({ act: () => Promise.resolve(refusal) })
 
         expect(parsed(await door.act(USER, callOf("sales.move-stage")))).toEqual(refusal)
     })
+})
+
+describe("WorkbenchDoorService.act rollback", () => {
+    it.each(FAILURE_REASONS)(
+        "rolls a transactional action back after its write when it answers %s, so no row stays",
+        async (reason) => {
+            const rows: Array<string> = []
+            const answered: ActionResult = { ok: false, reason, message: { key: "sales.stale" } }
+            const { door, engine } = await build({
+                transactionalAct: () => {
+                    rows.push("order")
+                    return Promise.resolve(answered)
+                },
+            })
+            engine.scoped.mockImplementation(async (_workspace, work) => {
+                const before = rows.length
+                try {
+                    return await work(mock<ScopedTx>())
+                } catch (cause) {
+                    rows.length = before
+                    throw cause
+                }
+            })
+
+            const answer = await door.act(USER, callOf("sales.settle"))
+
+            expect(parsed(answer)).toEqual(answered)
+            expect(rows).toEqual([])
+            await expect(engine.scoped.mock.results[0]?.value).rejects.toMatchObject({
+                code: WorkbenchDoorErrorCode.ActionRefused,
+            })
+        },
+    )
 })
 
 describe("WorkbenchDoorService.act refusals", () => {
@@ -405,41 +424,33 @@ describe("WorkbenchDoorService.act refusals", () => {
 describe("WorkbenchDoorService.act authority and failures", () => {
     it("answers forbidden when the owner rule says never, and never runs the action", async () => {
         const act = jest.fn()
-        const { door, approvals } = await build({ rule: ruleOf({ mode: "never" }), act })
+        const { door } = await build({ rule: ruleOf({ mode: "never" }), act })
 
         const answer = await door.act(USER, callOf("sales.move-stage"))
 
         expect(parsed(answer)).toEqual(failure("forbidden", WorkbenchDoorErrorCode.PermissionDenied))
         expect(act).not.toHaveBeenCalled()
-        expect(approvals.open).not.toHaveBeenCalled()
     })
 
-    it("opens an approval when the owner rule asks, and answers refused with its id instead of running the action", async () => {
+    it("answers refused with approvalRequired when the owner rule asks, and never runs the action", async () => {
         const act = jest.fn()
-        const { door, approvals } = await build({ rule: ruleOf({ mode: "ask" }), act })
+        const { door } = await build({ rule: ruleOf({ mode: "ask" }), act })
 
         const answer = await door.act(USER, callOf("sales.move-stage", '{"amount_vnd":1500000}'))
 
         expect(parsed(answer)).toEqual(
-            failure("refused", WorkbenchDoorErrorCode.ActionRefused, { approvalId: "approval-1" }),
+            failure("refused", WorkbenchDoorErrorCode.ActionRefused, { approvalRequired: true }),
         )
-        expect(approvals.open).toHaveBeenCalledWith({
-            workspaceId: WORKSPACE,
-            memberId: "member-1",
-            action: "sales.move-stage",
-            amountVnd: 1_500_000,
-        })
         expect(act).not.toHaveBeenCalled()
     })
 
     it("runs the action when the owner rule lets it run alone", async () => {
         const act = jest.fn(() => Promise.resolve(ACTION_OK))
-        const { door, approvals } = await build({ rule: ruleOf(), act })
+        const { door } = await build({ rule: ruleOf(), act })
 
         await door.act(USER, callOf("sales.move-stage"))
 
         expect(act).toHaveBeenCalledTimes(1)
-        expect(approvals.open).not.toHaveBeenCalled()
     })
 
     it.each([

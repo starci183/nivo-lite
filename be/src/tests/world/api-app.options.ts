@@ -149,6 +149,7 @@ const localApiOptions = (): ApiOptions => ({
     },
     ...pollOptions(),
     ...providerOptions(),
+    entityEngine: { cursorKey: TOKEN_KEY },
     realtime: { hub: "memory" as const },
     queue: {
         enabled: false,

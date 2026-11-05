@@ -14,7 +14,7 @@ const fieldsOf = (input: Readonly<Record<string, unknown>>): Readonly<Record<str
     )
 
 /** The money an action names in its input (`amount_vnd`), or null. */
-export const amountVndOf = (input: Readonly<Record<string, unknown>>): number | null => {
+const amountVndOf = (input: Readonly<Record<string, unknown>>): number | null => {
     const amount = input.amount_vnd
     return typeof amount === "number" ? amount : null
 }

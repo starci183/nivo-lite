@@ -1,11 +1,10 @@
 import { Test } from "@nestjs/testing"
 import type { AuthorityRule } from "@modules/domain/authority-rules"
-import { amountVndOf as realAmountVndOf, authorityDecisionOf as realAuthorityDecisionOf } from "./door-authority.policy"
+import { authorityDecisionOf as realAuthorityDecisionOf } from "./door-authority.policy"
 
 const SUBJECT = Symbol("door-authority.policy")
 
 interface Subject {
-    readonly amountVndOf: typeof realAmountVndOf
     readonly authorityDecisionOf: typeof realAuthorityDecisionOf
 }
 
@@ -14,7 +13,7 @@ const build = async (): Promise<Subject> => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { amountVndOf: realAmountVndOf, authorityDecisionOf: realAuthorityDecisionOf },
+                useValue: { authorityDecisionOf: realAuthorityDecisionOf },
             },
         ],
     }).compile()
@@ -32,22 +31,6 @@ const ruleOf = (overrides: Partial<AuthorityRule> = {}): AuthorityRule => ({
 })
 
 const ACTION = "sales.moveStage"
-
-describe("amountVndOf", () => {
-    let amountVndOf: Subject["amountVndOf"]
-
-    beforeAll(async () => {
-        ;({ amountVndOf } = await build())
-    })
-
-    it("reads the money an input names", () => {
-        expect(amountVndOf({ amount_vnd: 250_000 })).toBe(250_000)
-    })
-
-    it.each([[{}], [{ amount_vnd: "250000" }], [{ amount_vnd: null }]])("is null for %j", (input) => {
-        expect(amountVndOf(input)).toBeNull()
-    })
-})
 
 describe("authorityDecisionOf", () => {
     let authorityDecisionOf: Subject["authorityDecisionOf"]
@@ -77,6 +60,13 @@ describe("authorityDecisionOf", () => {
 
         expect(authorityDecisionOf(rule, ACTION, { amount_vnd: 999_999 })).toBe("allow")
         expect(authorityDecisionOf(rule, ACTION, { amount_vnd: 1_000_000 })).toBe("ask")
+    })
+
+    it("does not read an amount that is not a number", () => {
+        const rule = ruleOf({ limit_vnd: 1_000_000 })
+
+        expect(authorityDecisionOf(rule, ACTION, { amount_vnd: "2000000" })).toBe("allow")
+        expect(authorityDecisionOf(rule, ACTION, { amount_vnd: null })).toBe("allow")
     })
 
     it("asks a person while a required field is missing, and counts a text or a number as present", () => {

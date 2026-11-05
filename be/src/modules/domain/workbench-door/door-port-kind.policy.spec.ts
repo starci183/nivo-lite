@@ -27,6 +27,7 @@ describe("portKindOf", () => {
         ["engine.outbox", "engine"],
         ["sales.leads-list", "list"],
         ["inventory.items-list", "list"],
+        ["platform.installation", "installation"],
         ["engine.door", "door"],
         ["sales.pricing", "none"],
         ["engine.entity.", "none"],
