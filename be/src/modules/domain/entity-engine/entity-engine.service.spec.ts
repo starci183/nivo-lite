@@ -131,6 +131,39 @@ describe("EntityEngineService scoped", () => {
     })
 })
 
+describe("EntityEngineService within", () => {
+    const LEAVE_SQL = 'SELECT * FROM "public"."engine_scope_leave"()'
+
+    it("enters the scope on the caller's manager, runs the work and leaves the scope", async () => {
+        const { engine, em } = await build(mockEntityManager({ query: [SCOPE_SQL, []] }))
+        em.query.mockResolvedValue([])
+
+        const seen = await engine.within(em, WS, (tx) => Promise.resolve([tx.manager === em, tx.workspaceId]))
+
+        expect(seen).toEqual([true, WS])
+        expect(em.query.mock.calls.map((call) => call[0])).toEqual([SCOPE_SQL, LEAVE_SQL])
+        expect(em.transaction).not.toHaveBeenCalled()
+    })
+
+    it("leaves the scope when the work throws", async () => {
+        const { engine, em } = await build(mockEntityManager({ query: [SCOPE_SQL, []] }))
+        em.query.mockResolvedValue([])
+
+        await expect(engine.within(em, WS, () => Promise.reject(new Error("boom")))).rejects.toThrow("boom")
+
+        expect(em.query.mock.calls.map((call) => call[0])).toEqual([SCOPE_SQL, LEAVE_SQL])
+    })
+
+    it("refuses a workspace that is not a uuid before any statement", async () => {
+        const { engine, em } = await build(mockEntityManager())
+
+        await expect(engine.within(em, "nope", () => Promise.resolve(1))).rejects.toMatchObject({
+            code: EntityEngineErrorCode.ScopeInvalid,
+        })
+        expect(em.query).not.toHaveBeenCalled()
+    })
+})
+
 describe("EntityEngineService definition and get", () => {
     it("answers the declaration of a catalog entity and refuses a name the catalog does not hold", async () => {
         const { engine } = await build(mockEntityManager())
