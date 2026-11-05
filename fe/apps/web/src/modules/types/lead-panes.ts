@@ -128,7 +128,7 @@ export interface LeadApprovalCardView {
 
 /** The words of an approval card. */
 export interface LeadApprovalCardLabels {
-    readonly aiChip: string
+    readonly note: string
     readonly draft: string
     readonly copy: string
     readonly copied: string

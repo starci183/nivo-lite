@@ -17,6 +17,8 @@ export type DraftStatus = "pending_approval" | "approved" | "rejected"
 export interface LeadRecord {
     readonly id: string
     readonly contact_name: string
+    /** The stored phone of the contact; null when none is known. */
+    readonly phone: string | null
     readonly company: string
     readonly channel: string
     readonly need: string

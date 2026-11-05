@@ -31,6 +31,10 @@ export class LeadRecordType {
     @Field(() => String, { nullable: true })
     contextSummary!: string | null
 
+    /** The contact's phone, as stored on the lead; null when the lead has none. */
+    @Field(() => String, { nullable: true })
+    phone!: string | null
+
     /** The module installation that owns the lead, when assigned. */
     @Field(() => ID, { nullable: true })
     installationId!: string | null

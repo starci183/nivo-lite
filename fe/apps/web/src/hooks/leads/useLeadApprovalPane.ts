@@ -30,7 +30,6 @@ export interface LeadApprovalPaneView {
 const useApprovalLabels = (earlierCount: number): LeadApprovalPane["labels"] => {
     const t = useTranslations("lead")
     const a = useTranslations("approval")
-    const common = useTranslations("common")
     const slotLabels = useSlotLabels()
     return {
         waitingTitle: t("waitingTitle"),
@@ -40,7 +39,7 @@ const useApprovalLabels = (earlierCount: number): LeadApprovalPane["labels"] => 
         earlierMeta: t("decidedCount", { count: earlierCount }),
         slot: slotLabels(t("noOpenNext")),
         approval: {
-            aiChip: common("aiChip"),
+            note: a("note"),
             draft: a("draftLabel"),
             copy: a("copy"),
             copied: a("copied"),

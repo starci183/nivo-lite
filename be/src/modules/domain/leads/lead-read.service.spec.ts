@@ -33,6 +33,7 @@ const LEAD: LeadView = {
     need: "price",
     stage: "new",
     context_summary: null,
+    phone: null,
     installation_id: null,
     created_at: "2026-10-12T03:00:00.000Z",
 }
@@ -132,6 +133,7 @@ describe("LeadReadService", () => {
 
         expect(em.createQueryBuilder).toHaveBeenCalledWith(LeadEntity, "l")
         expect(fakes[0]?.callsOf("addSelect")).toContainEqual(["to_json(l.created_at) #>> '{}'", "created_at"])
+        expect(fakes[0]?.callsOf("addSelect")).toContainEqual(["l.phone", "phone"])
         expect(fakes[0]?.callsOf("limit")).toEqual([[500]])
     })
 

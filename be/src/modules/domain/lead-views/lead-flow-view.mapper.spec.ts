@@ -58,6 +58,7 @@ const RECORDS: LeadFlowRecords = {
         need: "menu",
         stage: "won",
         context_summary: null,
+        phone: null,
         installation_id: "installation-1",
         created_at: "2026-10-12T00:00:00.000Z",
     },

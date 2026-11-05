@@ -226,6 +226,7 @@ export class LeadReadService {
             .addSelect("l.need", "need")
             .addSelect("l.stage", "stage")
             .addSelect("l.contextSummary", "context_summary")
+            .addSelect("l.phone", "phone")
             .addSelect("l.installationId", "installation_id")
             .addSelect("to_json(l.created_at) #>> '{}'", "created_at")
             .where("l.workspaceId = :workspaceId", { workspaceId })

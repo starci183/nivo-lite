@@ -40,6 +40,7 @@ export const listingOf: (overrides?: Partial<MemberListing>) => MemberListing = 
     avatarUrl: null,
     email: "chu@example.test",
     lastSignInAt: null,
+    joinedAt: "2026-10-01T00:00:00.000Z",
 })
 /** Shared L2 service proof fixture. */
 export const accountOf = () => ({

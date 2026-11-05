@@ -123,6 +123,7 @@ export const leadRecordOf = (lead: LeadRecordType): LeadRecord => {
     return {
         id,
         contact_name: lead.contactName,
+        phone: lead.phone ?? null,
         company,
         channel,
         need,

@@ -33,7 +33,7 @@ export const useLeadContextPane = (leadId: string | undefined): LeadContextPaneV
             .filter((event) => event.kind === "context.summarised")
             .sort((a, b) => b.created_at.localeCompare(a.created_at))[0]?.created_at
         return {
-            contact: loaded.lead.contact_name,
+            contact: [loaded.lead.contact_name, loaded.lead.phone].filter((part) => part !== null).join(" · "),
             company: loaded.lead.company,
             channel: query.channelLabel,
             captured: stamp(loaded.lead.created_at),
