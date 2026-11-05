@@ -4,7 +4,7 @@ export { QUERY_AGENT_CHAT_MESSAGES_SWR_KEY, QUERY_AGENT_DASHBOARD_SWR_KEY, QUERY
 export { QUERY_AUTOMATIONS_SWR_KEY, QUERY_BOOKING_BOARD_SWR_KEY, QUERY_BRAIN_SWR_KEY } from "./api"
 export { QUERY_BRAIN_TODO_SWR_KEY, useQueryBrainTodoSwr } from "./api"
 export { QUERY_CHATBOT_GAPS_SWR_KEY, QUERY_CHAT_ANSWER_STATUS_SWR_KEY, QUERY_CHAT_REPLY_STATUS_SWR_KEY } from "./api"
-export { QUERY_CONNECTIONS_SWR_KEY, QUERY_DASHBOARD_SWR_KEY, QUERY_HIRING_CANDIDATE_DETAIL_SWR_KEY } from "./api"
+export { QUERY_CONNECTIONS_SWR_KEY, QUERY_HIRING_CANDIDATE_DETAIL_SWR_KEY } from "./api"
 export { QUERY_HIRING_WORKBENCH_SWR_KEY, QUERY_INVENTORY_WORKBENCH_SWR_KEY } from "./api"
 export { QUERY_KNOWLEDGE_SOURCES_SWR_KEY, QUERY_KNOWLEDGE_USAGE_SWR_KEY, useQueryKnowledgeUsageSwr } from "./api"
 export { QUERY_BRAIN_DOSSIERS_SWR_KEY, QUERY_KNOWLEDGE_CATEGORIES_SWR_KEY, useQueryBrainDossiersSwr } from "./api"
@@ -314,3 +314,4 @@ export {
     useMutateAcceptTemplateUpdateSwr,
     useMutateSubmitTemplateListingSwr,
 } from "./api"
+export { useMutateWorkbenchActionSwr, useQueryWorkbenchMoreSwr, useQueryWorkbenchReadSwr } from "./api"

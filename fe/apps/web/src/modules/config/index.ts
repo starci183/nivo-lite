@@ -64,6 +64,12 @@ export const landingUrl = (): string => {
     return value.slice(0, end)
 }
 
+/**
+ * Whether this build is a prototype: the workbench renderer then answers from fixtures instead of the back end (dev and preview
+ * builds). The mode is read once, at the app root, by the provider that picks the data port; nothing else branches on it.
+ */
+export const isPrototypeMode = (): boolean => process.env.NEXT_PUBLIC_NIVO_PROTOTYPE === "1"
+
 /** The public origin of the site (providers call back to it); `undefined` when it is not set. */
 export const webSiteOrigin = (): string | undefined => process.env.NEXT_PUBLIC_SITE_URL
 
