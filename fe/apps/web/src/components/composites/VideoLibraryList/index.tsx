@@ -38,7 +38,7 @@ const cardOf = (props: VideoLibraryListProps, entry: VideoLibraryEntry) => (
                   }
         }
         badges={[
-            { label: entry.statusLabel, tone: entry.statusTone },
+            { label: entry.statusLabel, tone: entry.statusTone, isDot: true },
             { label: entry.goalLabel, tone: "neutral" },
             { label: entry.aspectLabel, tone: "neutral" },
         ]}

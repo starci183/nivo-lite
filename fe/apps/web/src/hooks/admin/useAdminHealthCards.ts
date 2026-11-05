@@ -128,10 +128,20 @@ const healthCards = (
     ]
 }
 
-/** The list cards of the platform health page, worded and formatted in the reader's locale. */
-export const useAdminHealthCards = (
-    source: AdminPlatformHealth | undefined,
-): ReadonlyArray<AdminCardView> | undefined => {
+/** What the cards read before the page is: nothing, so the cards keep their labels and draw no rows. */
+const NO_HEALTH: AdminPlatformHealth = {
+    signups: [],
+    transfers: [],
+    transferCounts: [],
+    billingEvents: [],
+    errors: [],
+    errorScopes: [],
+    audits: [],
+    workspaceNames: [],
+}
+
+/** The list cards of the platform health page, worded and formatted in the reader's locale; with no page yet, the same cards with no rows. */
+export const useAdminHealthCards = (source: AdminPlatformHealth | undefined): ReadonlyArray<AdminCardView> => {
     const { text, format } = useAdminFormat()
-    return useMemo(() => (source === undefined ? undefined : healthCards(source, format, text)), [source, format, text])
+    return useMemo(() => healthCards(source ?? NO_HEALTH, format, text), [source, format, text])
 }

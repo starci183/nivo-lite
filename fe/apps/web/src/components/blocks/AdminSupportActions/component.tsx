@@ -1,4 +1,4 @@
-import { Stack, Cluster, AlertDialog, Button, Input, Select, SurfaceCard, Text } from "@starci/grammar/common"
+import { Stack, Cluster, AlertDialog, Button, Drawer, Input, Select } from "@starci/grammar/common"
 
 import type { AdminInviteRef } from "@/modules/types"
 
@@ -39,8 +39,11 @@ export interface AdminSupportActionsBaseProps {
         /** The confirmation question, or undefined while no action waits for a yes. */
         readonly question?: string | undefined
         readonly isQuestionDangerous: boolean
+        /** Whether the drawer that holds the actions is open. */
+        readonly isOpen: boolean
     }
     readonly on: {
+        readonly setOpen: (isOpen: boolean) => void
         readonly setDays: (value: string) => void
         readonly setPlan: (value: string | null) => void
         readonly setCredits: (value: string) => void
@@ -94,7 +97,14 @@ const Action = (props: ActionProps) => (
 /** Draws the support actions of one workspace; each one asks for a confirmation in a dialog first. */
 export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
     props.props.isReady ? (
-        <SurfaceCard label={props.props.title} headingLevel={2}>
+        <Drawer
+            isOpen={props.props.isOpen}
+            onOpenChange={props.on.setOpen}
+            title={props.props.title}
+            description={props.props.hint}
+            closeLabel={props.props.cancelLabel}
+            placement="right"
+        >
             <Stack gap="section">
                 <Stack gap="row">
                     <Cluster gap="row" align="end">
@@ -144,9 +154,6 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                         </Cluster>
                     ) : null}
                 </Stack>
-                <Text size="sm" tone="muted">
-                    {props.props.hint}
-                </Text>
                 <AlertDialog
                     isOpen={props.props.question !== undefined}
                     onOpenChange={(open) => {
@@ -161,7 +168,7 @@ export const AdminSupportActionsBase = (props: AdminSupportActionsBaseProps) =>
                     onCancel={props.on.dismiss}
                 />
             </Stack>
-        </SurfaceCard>
+        </Drawer>
     ) : null
 
 /** Draws the div section of the AdminSupportActions view. */

@@ -60,7 +60,7 @@ export const useInventoryStockView = (input: InventoryPanelInput): InventoryStoc
             stockMatchesFilter(filter, item.status) &&
             includesText(`${item.name} ${item.sku} ${item.category}`, query),
     )
-    const detailOf = (item: ItemView): string => stockDetailOf(item, { board, format, t })
+    const detailOf = (item: ItemView) => stockDetailOf(item, { board, format })
     const quick = (id: string, sign: 1 | -1) => {
         const item = board.items.find((entry) => entry.id === id)
         if (item === undefined) return

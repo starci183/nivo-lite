@@ -17,10 +17,5 @@ export const adminWorkspaceMetadata = async (): Promise<Metadata> => {
 /** The /admin/[id] screen body: the read-only overview of one workspace and the confirmed support actions, read in the browser. */
 export const AdminWorkspacePage = async (props: AdminWorkspacePageProps): Promise<ReactElement> => {
     const { id } = await props.params
-    const t = await getTranslations("admin")
-    return (
-        <AdminWorkspacePageBase
-            props={{ workspaceId: id, eyebrow: t("workspaceEyebrow"), allWorkspacesLabel: t("allWorkspaces") }}
-        />
-    )
+    return <AdminWorkspacePageBase props={{ workspaceId: id }} />
 }

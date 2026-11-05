@@ -6,7 +6,6 @@ import type { AdminCardView, DataSlot, SlotLabels } from "@/modules/types"
 /** Copy and cards the platform health page supplies. */
 export interface AdminHealthViewProps {
     readonly props: {
-        readonly eyebrow: string
         readonly title: string
         readonly description: string
         readonly cards: ReadonlyArray<AdminCardView>
@@ -31,6 +30,8 @@ export interface AdminHealthBaseProps {
         readonly slot: DataSlot<AdminHealthViewProps["props"]>
         readonly placeholder: AdminHealthViewProps["props"]
         readonly labels: SlotLabels
+        /** The line under the failure: what to do about it. */
+        readonly errorHint: string
     }
     readonly on: {
         readonly retry: () => void
@@ -41,9 +42,13 @@ export interface AdminHealthBaseProps {
 export const AdminHealthBase = (props: AdminHealthBaseProps) => {
     const words = props.props.placeholder
     return (
-        <Page measure="full" header={{ meta: words.eyebrow, title: words.title, description: words.description }}>
+        <Page measure="full" header={{ title: words.title, description: words.description }}>
             <SlotView
-                {...props.props}
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.labels}
+                errorDescription={props.props.errorHint}
+                errorLayout="band"
                 onRetry={props.on.retry}
                 render={(view, isLoading) => <AdminHealthView props={view} isLoading={isLoading} />}
             />

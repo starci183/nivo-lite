@@ -18,6 +18,13 @@ export interface InventoryStockData {
     readonly clearLabel: string
     readonly filterLabel: string
     readonly listLabel: string
+    readonly columns: {
+        readonly item: string
+        readonly onHand: string
+        readonly minimum: string
+        readonly status: string
+        readonly cost: string
+    }
     readonly emptyTitle: string
     readonly emptyBody: string
     readonly adjustLabel: string
@@ -34,7 +41,9 @@ export interface InventoryStockData {
         readonly statusLabel: string
         readonly statusTone: BadgeTone
         readonly onOrderLabel: string | null
-        readonly detail: string
+        readonly identity: string
+        readonly minimum: string
+        readonly cost: string
         readonly total: string
         readonly stepLabel: string
         readonly lessLabel: string

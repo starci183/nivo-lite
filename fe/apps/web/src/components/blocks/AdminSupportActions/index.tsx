@@ -2,7 +2,15 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { PLAN_CODES, parseCredits, parseDays, useAdminCommands } from "@/hooks/admin"
+import {
+    PLAN_CODES,
+    billingWord,
+    parseCredits,
+    parseDays,
+    planWord,
+    useAdminCommands,
+    useAdminSupportDrawer,
+} from "@/hooks/admin"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryAdminWorkspaceSwr } from "@/hooks/swr"
 import { AdminSupportActionsBase } from "./component"
@@ -65,11 +73,11 @@ const buildAdminSupportActionsState = ({
     const question = (() => {
         if (pending === null) return undefined
         if (pending.kind === "extend") return t("askExtend", { days: pending.days })
-        if (pending.kind === "status") return t("askStatus", { status: pending.to })
+        if (pending.kind === "status") return t("askStatus", { status: billingWord(t, pending.to) })
         if (pending.kind === "invite") return t("askInvite", { email: pending.email })
         return pending.credits === null
-            ? t("askPlan", { plan: pending.code })
-            : t("askPlanOwn", { plan: pending.code, credits: pending.credits })
+            ? t("askPlan", { plan: planWord(t, pending.code) })
+            : t("askPlanOwn", { plan: planWord(t, pending.code), credits: pending.credits })
     })()
     return {
         setDays,
@@ -94,6 +102,7 @@ const buildAdminSupportActionsState = ({
 /** Draws the connected view from its current state. */
 export const AdminSupportActions = (props: AdminSupportActionsProps) => {
     const t = useTranslations("admin")
+    const drawer = useAdminSupportDrawer()
     const commands = useAdminCommands(props.workspaceId)
     const workspace = slotOfSwr(useQueryAdminWorkspaceSwr({ workspaceId: props.workspaceId }))
     const data = "items" in workspace ? workspace.items : undefined
@@ -118,8 +127,9 @@ export const AdminSupportActions = (props: AdminSupportActionsProps) => {
     const { parsedDays, plan, parsedCredits, invitations, confirm } = connected
     return (
         <AdminSupportActionsBase
-            props={adminSupportActionsProps(connected)}
+            props={adminSupportActionsProps(connected, drawer.isOpen)}
             on={{
+                setOpen: drawer.setOpen,
                 setDays,
                 setPlan: setTypedPlan,
                 setCredits: setTypedCredits,
@@ -144,6 +154,7 @@ export const AdminSupportActions = (props: AdminSupportActionsProps) => {
 /** Builds the props supplied to AdminSupportActionsBase. */
 const adminSupportActionsProps = (
     connected: NonNullable<ReturnType<typeof buildAdminSupportActionsState>>,
+    isOpen: boolean,
 ): Parameters<typeof AdminSupportActionsBase>[0]["props"] => {
     const { t, days, plan, credits, parsedDays, parsedCredits, data, invitations, commands, question, pending } =
         connected
@@ -180,5 +191,6 @@ const adminSupportActionsProps = (
         isPending: commands.isPending,
         question,
         isQuestionDangerous: pending?.kind === "status" && pending.to === "past_due",
+        isOpen,
     }
 }
