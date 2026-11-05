@@ -1,13 +1,16 @@
 import { z } from "zod"
 import { EntityDefinitionError } from "./entity-error"
 import type { AnyEntityDefinition } from "./entity-any.types"
-import type { FieldDef } from "./entity.types"
+import type { FieldDef, SystemField } from "./entity.types"
 
 /** The longest sequence display value a reader accepts. */
 const SEQUENCE_TEXT_MAX = 100
 
 /** A bigint travels as a decimal string of at most 19 digits (Q4: no number precision loss). */
 const BIGINT_TEXT = /^-?\d{1,19}$/
+
+/** A version is a bigint counter in decimal text. */
+const VERSION_TEXT = /^\d{1,19}$/
 
 const INT_MIN = -2147483648
 const INT_MAX = 2147483647
@@ -44,13 +47,23 @@ const valueSchemaOf = (entity: AnyEntityDefinition, name: string, field: FieldDe
     }
 }
 
+/** The system fields of every row: ids, the version as decimal text, times as ISO text. */
+const SYSTEM_SHAPE: Readonly<Record<SystemField, z.ZodType>> = {
+    id: z.guid(),
+    workspaceId: z.guid(),
+    version: z.string().max(20).regex(VERSION_TEXT),
+    createdAt: z.iso.datetime({ offset: true }).max(40),
+    updatedAt: z.iso.datetime({ offset: true }).max(40),
+}
+
 /**
- * The strict zod object of a row of the entity (`RowOf`): every string and collection bounded (R305), enums closed, jsonb through
- * its declared shape, a nullable field `nullable`. A selected subset is `rowSchemaOf(entity).pick({ id: true })`. Throws
- * `EntityDefinitionError` for a text without a bound, an enum without values or a jsonb without a shape.
+ * The strict zod object of a row of the entity (`RowOf`): the system fields (`version` as decimal text), then every declared field
+ * bounded (R305), enums closed, jsonb through its declared shape, a nullable field `nullable`. A selected subset is
+ * `rowSchemaOf(entity).pick({ id: true })`. Throws `EntityDefinitionError` for a text without a bound, an enum without values or a
+ * jsonb without a shape.
  */
 export const rowSchemaOf = (entity: AnyEntityDefinition): z.ZodObject<Record<string, z.ZodType>> => {
-    const shape: Record<string, z.ZodType> = {}
+    const shape: Record<string, z.ZodType> = { ...SYSTEM_SHAPE }
     for (const [name, field] of Object.entries(entity.fields)) {
         const value = valueSchemaOf(entity, name, field)
         shape[name] = field.nullable ? value.nullable() : value

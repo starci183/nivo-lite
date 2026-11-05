@@ -1,106 +1,67 @@
 import { z } from "zod"
-import { defineEntity, field } from "./entity"
-import { entityLocalProblems, entityProblems, filterFieldsOf } from "./entity-problems"
 import type { Namespaced } from "../schema/schema.types"
+import { defineEntity, field } from "./entity"
 import type { AnyEntityDefinition } from "./entity-any.types"
+import { entityLocalProblems, entityProblems, filterFieldsOf } from "./entity-problems"
 import type { EntityProblemCode, FieldDef, RelationDef } from "./entity.types"
 
 const base = defineEntity({
     name: "sales.lead",
     dataKind: "sales-lead",
-    table: { schema: "public", name: "leads" },
-    ownership: { workspace: "workspaceId" },
-    key: "id",
     fields: {
-        id: field.uuid({ column: "id" }),
-        workspaceId: field.uuid({ column: "workspace_id" }),
-        orderId: field.uuid({ column: "order_id", nullable: true }),
-        phone: field.text({ column: "phone", maxLength: 30, nullable: true }),
-        data: field.jsonb({ column: "data", shape: z.object({}), keys: { tier: { kind: "text", filter: true } } }),
-        updatedAt: field.timestamptz({ column: "updated_at" }),
+        phone: field.text({ maxLength: 30, nullable: true }),
+        data: field.jsonb({ shape: z.object({}), keys: { tier: { kind: "text", filter: true } } }),
     },
 })
 
-const order = defineEntity({
-    name: "sales.order",
-    dataKind: "order",
-    table: { schema: "public", name: "orders" },
-    ownership: { workspace: "workspaceId" },
-    key: "id",
-    fields: {
-        id: field.uuid({ column: "id" }),
-        workspaceId: field.uuid({ column: "workspace_id" }),
-        leadId: field.uuid({ column: "lead_id" }),
-        updatedAt: field.timestamptz({ column: "updated_at" }),
-    },
-})
+const order = defineEntity({ name: "sales.order", dataKind: "order", fields: { code: field.text({ maxLength: 10 }) } })
 
-const catalog = new Map<string, AnyEntityDefinition>([[order.name, order]])
-
-const codesIn = (
-    entity: AnyEntityDefinition,
-    known: ReadonlyMap<string, AnyEntityDefinition>,
-): ReadonlyArray<EntityProblemCode> => entityProblems(entity, known).map((problem) => problem.code)
+const catalog = new Map<string, AnyEntityDefinition>([
+    [base.name, base],
+    [order.name, order],
+])
 
 /** The codes of the problems of `base` patched with `patch`. */
-const codes = (patch: Partial<AnyEntityDefinition>): ReadonlyArray<EntityProblemCode> =>
-    codesIn({ ...base, ...patch }, catalog)
+const codes = (patch: Partial<AnyEntityDefinition>, known = catalog): ReadonlyArray<EntityProblemCode> =>
+    entityProblems({ ...base, ...patch }, known).map((problem) => problem.code)
 
 const withField = (name: string, declared: FieldDef): Partial<AnyEntityDefinition> => ({
     fields: { ...base.fields, [name]: declared },
 })
 
-const toOne = (target: Namespaced, via: string): Record<string, RelationDef> => ({ x: { kind: "toOne", target, via } })
+const toOne = (target: Namespaced): Record<string, RelationDef> => ({ x: { kind: "toOne", target } })
 
 describe("entityProblems", () => {
-    it("accepts a sound declaration and relations inside one workspace", () => {
+    it("accepts a sound declaration, relations to known targets and a self relation", () => {
         expect(entityProblems(base, catalog)).toEqual([])
         expect(
             codes({
                 relations: {
-                    order: { kind: "toOne", target: "sales.order", via: "orderId" },
-                    orders: { kind: "toMany", target: "sales.order", via: "leadId" },
-                    self: { kind: "toOne", target: "sales.lead", via: "orderId" },
+                    order: { kind: "toOne", target: "sales.order", required: true },
+                    self: { kind: "toMany", target: "sales.lead" },
                 },
                 projection: { sources: ["sales.order", "sales.lead"] },
             }),
         ).toEqual([])
     })
 
-    it("reports a missing workspace, key and version field", () => {
-        const rest = Object.fromEntries(Object.entries(base.fields).filter(([name]) => name === "phone"))
-        expect(codes({ fields: rest })).toEqual([
-            "ENTITY_WORKSPACE_FIELD_MISSING",
-            "ENTITY_KEY_FIELD_MISSING",
-            "ENTITY_VERSION_FIELD_MISSING",
-        ])
+    it("reports an invalid entity name", () => {
+        expect(codes({ name: "Sales.Lead" })).toEqual(["ENTITY_NAME_INVALID"])
     })
 
-    it("reports an unknown relation target and an unknown via field", () => {
-        expect(codes({ relations: toOne("sales.ghost", "orderId") })).toEqual(["ENTITY_RELATION_TARGET_UNKNOWN"])
-        expect(codes({ relations: toOne("sales.order", "ghost") })).toEqual(["ENTITY_RELATION_TARGET_UNKNOWN"])
-        expect(codes({ relations: { x: { kind: "toMany", target: "sales.order", via: "ghost" } } })).toEqual([
-            "ENTITY_RELATION_TARGET_UNKNOWN",
-        ])
+    it("reports reserved and malformed field names", () => {
+        expect(codes(withField("version", field.int()))).toEqual(["ENTITY_FIELD_RESERVED"])
+        expect(codes(withField("id", field.int()))).toEqual(["ENTITY_FIELD_RESERVED"])
+        expect(codes(withField("Bad_name", field.int()))).toEqual(["ENTITY_FIELD_NAME_INVALID"])
+        expect(codes(withField("goodName2", field.int()))).toEqual([])
     })
 
-    it("reports a toOne not joined inside one workspace", () => {
-        expect(codes({ relations: toOne("sales.order", "workspaceId") })).toEqual([
-            "ENTITY_RELATION_NOT_WORKSPACE_JOINED",
-        ])
-        const text = field.text({ column: "workspace_id", maxLength: 40 })
-        expect(codes({ ...withField("workspaceId", text), relations: toOne("sales.order", "orderId") })).toEqual([
-            "ENTITY_RELATION_NOT_WORKSPACE_JOINED",
-        ])
-        const foreign = new Map<string, AnyEntityDefinition>([
-            [order.name, { ...order, fields: { ...order.fields, workspaceId: text } }],
-        ])
-        expect(codesIn({ ...base, relations: toOne("sales.order", "orderId") }, foreign)).toEqual([
-            "ENTITY_RELATION_NOT_WORKSPACE_JOINED",
-        ])
+    it("reports an unknown relation target", () => {
+        expect(codes({ relations: toOne("sales.ghost") })).toEqual(["ENTITY_RELATION_TARGET_UNKNOWN"])
+        expect(codes({ relations: toOne("sales.order") })).toEqual([])
     })
 
-    it("reports indexes on unknown fields, partial filters and custom keys", () => {
+    it("reports indexes on unknown fields, partial filters and nested keys, and accepts system fields", () => {
         expect(codes({ indexes: [{ name: "a", on: ["ghost"] }] })).toEqual(["ENTITY_INDEX_FIELD_UNKNOWN"])
         expect(codes({ indexes: [{ name: "a", on: [{ fold: "ghost" }, { desc: "ghost" }] }] })).toEqual([
             "ENTITY_INDEX_FIELD_UNKNOWN",
@@ -120,7 +81,7 @@ describe("entityProblems", () => {
                 indexes: [
                     {
                         name: "a",
-                        on: [{ key: ["data", "tier"] }, "phone"],
+                        on: [{ key: ["data", "tier"] }, "phone", { desc: "updatedAt" }, { desc: "id" }],
                         where: { op: "notNull", field: "data.tier" },
                     },
                 ],
@@ -153,7 +114,7 @@ describe("entityProblems", () => {
                         kind: "noOverlap",
                         name: "n",
                         equal: ["ghost"],
-                        range: ["phone", "updatedAt"],
+                        range: ["phone", "createdAt"],
                         where: { op: "notNull", field: "phone" },
                         refusal: "r",
                     },
@@ -163,29 +124,22 @@ describe("entityProblems", () => {
         expect(
             codes({
                 constraints: [
-                    { kind: "noOverlap", name: "n", equal: ["phone"], range: ["phone", "updatedAt"], refusal: "r" },
+                    { kind: "noOverlap", name: "n", equal: ["phone"], range: ["phone", "createdAt"], refusal: "r" },
                 ],
             }),
         ).toEqual([])
         expect(codes({ matchKeys: [{ name: "m", on: ["ghost"] }] })).toEqual(["ENTITY_MATCH_KEY_FIELD_UNKNOWN"])
         expect(codes({ matchKeys: [{ name: "m", on: ["data.tier"] }] })).toEqual([])
         expect(codes({ matchKeys: [{ name: "m", on: ["ghost.tier"] }] })).toEqual(["ENTITY_MATCH_KEY_FIELD_UNKNOWN"])
-        const bare = field.jsonb({ column: "b", shape: z.object({}) })
+        const bare = field.jsonb({ shape: z.object({}) })
         expect(codes({ ...withField("bare", bare), matchKeys: [{ name: "m", on: ["bare.tier"] }] })).toEqual([
             "ENTITY_MATCH_KEY_FIELD_UNKNOWN",
-        ])
-    })
-
-    it("reports a duplicate column", () => {
-        expect(codes(withField("other", field.text({ column: "phone", maxLength: 5 })))).toEqual([
-            "ENTITY_COLUMN_DUPLICATE",
         ])
     })
 
     it("reports text without a usable bound", () => {
         const text = (maxLength?: number): FieldDef => ({
             kind: "text",
-            column: "t",
             nullable: false,
             ...(maxLength === undefined ? {} : { maxLength }),
         })
@@ -195,34 +149,43 @@ describe("entityProblems", () => {
     })
 
     it("reports an enum without values", () => {
-        expect(codes(withField("e", { kind: "enum", column: "e", nullable: false }))).toEqual(["ENTITY_ENUM_EMPTY"])
+        expect(codes(withField("e", { kind: "enum", nullable: false }))).toEqual(["ENTITY_ENUM_EMPTY"])
     })
 
-    it("reports a sequence format that is absent or invalid", () => {
-        expect(codes(withField("s", field.sequence({ column: "s", format: "DH" })))).toEqual([
+    it("reports a sequence declaration that is absent, unparsable or inconsistent with its reset", () => {
+        expect(codes(withField("s", field.sequence({ format: "DH" })))).toEqual(["ENTITY_SEQUENCE_FORMAT_INVALID"])
+        expect(codes(withField("s", { kind: "sequence", nullable: false }))).toEqual(["ENTITY_SEQUENCE_FORMAT_INVALID"])
+        expect(codes(withField("s", field.sequence({ format: "DH-{n:4}", resets: "day" })))).toEqual([
             "ENTITY_SEQUENCE_FORMAT_INVALID",
         ])
-        expect(codes(withField("s", { kind: "sequence", column: "s", nullable: false }))).toEqual([
-            "ENTITY_SEQUENCE_FORMAT_INVALID",
-        ])
+        expect(codes(withField("s", field.sequence({ format: "DH-{yyyy}{mm}{dd}-{n:4}", resets: "day" })))).toEqual([])
     })
 
-    it("reports jsonb without a shape and custom keys that are invalid", () => {
-        const json = field.jsonb({ column: "j", shape: z.object({}) })
-        expect(codes(withField("j", { kind: "jsonb", column: "j", nullable: false }))).toEqual([
-            "ENTITY_JSONB_SHAPE_MISSING",
-        ])
+    it("reports jsonb without a shape and nested keys that are invalid", () => {
+        const json = field.jsonb({ shape: z.object({}) })
+        expect(codes(withField("j", { kind: "jsonb", nullable: false }))).toEqual(["ENTITY_JSONB_SHAPE_MISSING"])
         expect(codes(withField("j", { ...json, keys: { "bad key": { kind: "text" } } }))).toEqual([
             "ENTITY_CUSTOM_KEY_INVALID",
         ])
         expect(codes(withField("j", { ...json, keys: { good: { kind: "int", sort: true } } }))).toEqual([])
-        const text = field.text({ column: "t", maxLength: 5 })
+        const text = field.text({ maxLength: 5 })
         expect(codes(withField("t", { ...text, keys: { a: { kind: "text" } } }))).toEqual(["ENTITY_CUSTOM_KEY_INVALID"])
         expect(codes(withField("t", { ...text, freeKeys: true }))).toEqual(["ENTITY_CUSTOM_KEY_INVALID"])
     })
 
     it("reports a projection source outside the catalog", () => {
         expect(codes({ projection: { sources: ["sales.ghost"] } })).toEqual(["ENTITY_PROJECTION_SOURCE_UNKNOWN"])
+    })
+
+    it("reports a partition name another entity already maps to", () => {
+        const first: AnyEntityDefinition = { ...base, name: "a-b.c" }
+        const second: AnyEntityDefinition = { ...base, name: "a.b-c" }
+        const both = new Map<string, AnyEntityDefinition>([
+            [first.name, first],
+            [second.name, second],
+        ])
+        expect(entityProblems(second, both).map((problem) => problem.code)).toEqual(["ENTITY_PARTITION_NAME_TAKEN"])
+        expect(entityProblems(first, new Map([[first.name, first]]))).toEqual([])
     })
 
     it("names the entity and the place of each problem", () => {
@@ -233,14 +196,17 @@ describe("entityProblems", () => {
 })
 
 describe("entityLocalProblems", () => {
-    it("leaves the relations and projection to the catalog", () => {
+    it("leaves the relations, projection and partition names to the catalog", () => {
         const loose: AnyEntityDefinition = {
             ...base,
-            relations: toOne("sales.ghost", "orderId"),
+            relations: toOne("sales.ghost"),
             projection: { sources: ["sales.ghost"] },
         }
         expect(entityLocalProblems(loose)).toEqual([])
-        expect(codesIn(loose, catalog)).toEqual(["ENTITY_RELATION_TARGET_UNKNOWN", "ENTITY_PROJECTION_SOURCE_UNKNOWN"])
+        expect(entityProblems(loose, catalog).map((problem) => problem.code)).toEqual([
+            "ENTITY_RELATION_TARGET_UNKNOWN",
+            "ENTITY_PROJECTION_SOURCE_UNKNOWN",
+        ])
     })
 })
 
