@@ -16,6 +16,7 @@ export type {
     BlockSlot,
     BlockSlots,
     InputProblem,
+    ParamHandle,
     ReadConfig,
     ReadDefinition,
     ReadHandle,

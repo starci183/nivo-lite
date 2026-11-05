@@ -53,6 +53,8 @@ export interface BlockConfig<P extends PropsSchema, S extends BlockSlots> {
     readonly slots: S
     /** Whether the block holds child blocks, and how many of which ids. */
     readonly children: BlockChildren
+    /** The names of the props whose string value names a spec param (`searchParam`, `selectParam`); a spec is refused when one names no param. */
+    readonly params?: ReadonlyArray<string>
 }
 
 /** A block definition: React-free data and a zod schema. Its component is registered apart, on the client side. */
@@ -299,6 +301,20 @@ export interface BlockNavigation {
     readonly queryValue: (key: string) => string | null
     /** Sets a key of the route's query, or removes it with null. */
     readonly setQueryValue: (key: string, value: string | null) => void
+    /**
+     * Sets several keys of the route's query in one step (replace, no scroll), or removes a key with null. A write that changes more
+     * than one key (a new search and the cursor reset) uses this, because two `setQueryValue` calls in a row would each start from
+     * the query as it was and the second would undo the first.
+     */
+    readonly setQueryValues: (entries: Readonly<Record<string, string | null>>) => void
+}
+
+/** The spec params of the drawn spec, by param name (not URL key): the URL is the single source of truth of what the screen shows. */
+export interface ParamHandle {
+    /** The URL value of the param when it allows it, else its default, else null. */
+    readonly value: (name: string) => string | null
+    /** Writes the URL key of the param (replace, no scroll); null removes it. It also resets the `cursor` param when the spec has one. */
+    readonly set: (name: string, value: string | null) => void
 }
 
 /** The ports a block may use; the renderer's provider implements them. */

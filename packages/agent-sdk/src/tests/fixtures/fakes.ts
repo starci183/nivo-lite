@@ -2,6 +2,7 @@ import type {
     ActionHandle,
     ActionOutcome,
     BlockHost,
+    ParamHandle,
     ReadHandle,
     ReadVariables,
     SlotValues,
@@ -95,6 +96,24 @@ export function sampleSlots(
     return handles
 }
 
+/** A param handle for a block test, with the writes recorded. */
+export interface SampleParamHandle extends ParamHandle {
+    /** The writes the block made, as `[name, value]` in order. */
+    readonly writes: () => ReadonlyArray<readonly [string, string | null]>
+}
+
+/** A param handle for a block test: the given values by param name (null for a param without one), recording every write. */
+export const sampleParamHandle = (values: Readonly<Record<string, string | null>> = {}): SampleParamHandle => {
+    const writes: Array<readonly [string, string | null]> = []
+    return {
+        value: (name) => values[name] ?? null,
+        set: (name, value) => {
+            writes.push([name, value])
+        },
+        writes: () => writes,
+    }
+}
+
 /** A block host for a block test: keys come back as themselves, owner words in the locale, notifications and reports recorded. */
 export interface SampleBlockHost extends BlockHost {
     /** The messages the block notified, in order. */
@@ -111,6 +130,10 @@ export const sampleBlockHost = (overrides: Partial<BlockHost> = {}): SampleBlock
     const notices: Array<string> = []
     const reports: Array<string> = []
     const query = new Map<string, string>()
+    const setQuery = (key: string, value: string | null): void => {
+        if (value === null) query.delete(key)
+        else query.set(key, value)
+    }
     const locale = overrides.locale ?? englishLocale
     const translate = (text: SpecText): string => ("key" in text ? text.key : text[locale()])
     return {
@@ -119,9 +142,9 @@ export const sampleBlockHost = (overrides: Partial<BlockHost> = {}): SampleBlock
         navigation: {
             href: (path) => path,
             queryValue: (key) => query.get(key) ?? null,
-            setQueryValue: (key, value) => {
-                if (value === null) query.delete(key)
-                else query.set(key, value)
+            setQueryValue: setQuery,
+            setQueryValues: (entries) => {
+                for (const [key, value] of Object.entries(entries)) setQuery(key, value)
             },
         },
         notify: (_tone, message) => {

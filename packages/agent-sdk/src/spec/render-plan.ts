@@ -7,6 +7,7 @@ import type {
     SpecActionBinding,
     SpecForbidden,
     SpecNode,
+    SpecParam,
     SpecProblem,
     SpecReadBinding,
     SpecWhen,
@@ -52,6 +53,8 @@ export type RenderPlan =
     | {
           /** The spec is valid. */
           readonly ok: true
+          /** The params of the screen by name; none when the spec declares none. */
+          readonly params: Readonly<Record<string, SpecParam>>
           /** The blocks drawn above the tabs on every view. */
           readonly head: ReadonlyArray<PlanNode>
           /** The blocks drawn below the tabs on every view. */
@@ -104,6 +107,7 @@ export const renderPlan = (
     const index = blockIndex(blocks)
     return {
         ok: true,
+        params: spec.params ?? {},
         head: (spec.head ?? []).map((node) => planNode(index, node)),
         foot: (spec.foot ?? []).map((node) => planNode(index, node)),
         views: spec.views.map((view) => ({

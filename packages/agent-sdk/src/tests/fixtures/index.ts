@@ -1,6 +1,7 @@
 export type {
     SampleActionHandle,
     SampleBlockHost,
+    SampleParamHandle,
     SampleReadHandle,
     SampleWorkbenchHost,
     SampleWorkbenchOptions,
@@ -9,6 +10,7 @@ export {
     sampleActionHandle,
     sampleBlockHost,
     sampleHostRead,
+    sampleParamHandle,
     sampleReadHandle,
     sampleSlots,
     sampleWorkbenchHost,

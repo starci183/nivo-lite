@@ -3,6 +3,7 @@ import { SPEC_MAX_DEPTH, specProblems } from "./spec"
 import type { SpecNode } from "./spec.types"
 
 const BINDINGS = { reads: [ORDERS, PEOPLE], actions: [OPEN], permissions: ["sales.read"] }
+const PARAMS = { q: { type: "string", url: "q" } } as const
 const stack = (id: string, children: ReadonlyArray<SpecNode>): SpecNode => ({
     id,
     block: "test.stack",
@@ -117,5 +118,55 @@ describe("specProblems", () => {
         expect(specProblems(docOf(node), BLOCKS)).toEqual([])
         const known: SpecNode = { ...guarded, when: { permission: "sales.read" } }
         expect(specProblems(docOf(known), BLOCKS, BINDINGS)).toEqual([])
+    })
+})
+
+describe("specProblems params", () => {
+    const withVariables = (variables: Readonly<Record<string, string | number | boolean | null>>): SpecNode =>
+        listNode("l", { bind: { rows: { read: "sales.orders", variables } } })
+
+    it("accepts a $param variable, the installation variable and a prop that names a param", () => {
+        const root = stack("root", [
+            withVariables({ q: "$q" }),
+            { id: "s", block: "test.search", props: { searchParam: "q" } },
+        ])
+        expect(specProblems(docOf(root, { params: PARAMS }), BLOCKS, BINDINGS)).toEqual([])
+        expect(specProblems(docOf(withVariables({ q: "$installationId" })), BLOCKS, BINDINGS)).toEqual([])
+        const unset: SpecNode = { id: "s", block: "test.search" }
+        expect(specProblems(docOf(unset), BLOCKS, BINDINGS)).toEqual([])
+    })
+
+    it("refuses a $name variable that names no param, even when the reads are not known", () => {
+        const spec = docOf(withVariables({ q: "$gone" }), { params: PARAMS })
+        expect(specProblems(spec, BLOCKS, BINDINGS)).toEqual([{ code: "SPEC_PARAM_UNKNOWN", at: "main/l.rows.q" }])
+        expect(specProblems(spec, BLOCKS)).toEqual([{ code: "SPEC_PARAM_UNKNOWN", at: "main/l.rows.q" }])
+        expect(specProblems(docOf(withVariables({ q: "$q" })), BLOCKS)).toEqual([
+            { code: "SPEC_PARAM_UNKNOWN", at: "main/l.rows.q" },
+        ])
+    })
+
+    it("refuses a prop that names no param", () => {
+        const node: SpecNode = { id: "s", block: "test.search", props: { searchParam: "gone" } }
+        expect(specProblems(docOf(node, { params: PARAMS }), BLOCKS, BINDINGS)).toEqual([
+            { code: "SPEC_PARAM_UNKNOWN", at: "main/s.searchParam" },
+        ])
+        expect(specProblems(docOf(node), BLOCKS, BINDINGS)).toEqual([
+            { code: "SPEC_PARAM_UNKNOWN", at: "main/s.searchParam" },
+        ])
+    })
+
+    it("refuses a variable the read does not declare, only when the read is known", () => {
+        const spec = docOf(withVariables({ nope: "x", q: "y" }))
+        expect(specProblems(spec, BLOCKS, BINDINGS)).toEqual([{ code: "SPEC_VAR_UNKNOWN", at: "main/l.rows.nope" }])
+        expect(specProblems(spec, BLOCKS)).toEqual([])
+        const unknownRead = listNode("l", { bind: { rows: { read: "sales.nope", variables: { nope: "x" } } } })
+        expect(specProblems(docOf(unknownRead), BLOCKS, BINDINGS).map((problem) => problem.code)).toEqual([
+            "SPEC_BINDING_UNKNOWN",
+        ])
+    })
+
+    it("reports the unsound params of the document", () => {
+        const spec = docOf(stack("root", []), { params: { stage: { type: "enum", url: "stage" } } })
+        expect(specProblems(spec, BLOCKS, BINDINGS)).toEqual([{ code: "SPEC_PARAM_INVALID", at: "params.stage" }])
     })
 })

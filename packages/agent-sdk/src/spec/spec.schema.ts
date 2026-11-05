@@ -3,7 +3,7 @@ import { KEY_MAX, LIST_MAX, NODES_MAX, RECORD_MAX, TEXT_MAX, VIEWS_MAX } from ".
 import { isNamespaced } from "../schema/namespaced"
 import type { JsonValue } from "../schema/schema.types"
 import { specText } from "../schema/spec-text.schema"
-import type { SpecDocument, SpecNode, SpecView } from "./spec.types"
+import type { SpecDocument, SpecNode, SpecParam, SpecView } from "./spec.types"
 
 const variable = z.union([z.string().max(TEXT_MAX), z.number(), z.boolean(), z.null()])
 const binding = z.union([
@@ -66,11 +66,24 @@ const viewSchema: z.ZodType<SpecView> = z
     })
     .strict()
 
+const paramSchema: z.ZodType<SpecParam> = z
+    .object({
+        type: z.enum(["string", "enum"]),
+        url: z.string().min(1).max(KEY_MAX),
+        of: z.union([z.array(z.string().max(KEY_MAX)).max(LIST_MAX), z.string().max(KEY_MAX)]).optional(),
+        default: z.string().max(KEY_MAX).optional(),
+    })
+    .strict()
+
 /** The zod schema of a spec document: the structure only; blocks, props and bindings are judged by `specProblems`. */
 export const specDocumentSchema: z.ZodType<SpecDocument> = z
     .object({
         schema: z.literal("nivo/workbench-spec@2"),
         module: z.string().min(1).max(KEY_MAX),
+        params: z
+            .record(z.string().max(KEY_MAX), paramSchema)
+            .refine((entries) => Object.keys(entries).length <= RECORD_MAX)
+            .optional(),
         head: z.array(specNodeSchema).max(NODES_MAX).optional(),
         foot: z.array(specNodeSchema).max(NODES_MAX).optional(),
         views: z.array(viewSchema).max(VIEWS_MAX),

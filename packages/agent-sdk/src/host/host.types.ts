@@ -23,6 +23,23 @@ export interface HostAction {
     readonly isRunning: boolean
 }
 
+/** What the host may need to know about a read beyond its operation name. */
+export interface HostReadOptions {
+    /**
+     * Whether the read is a list read: its data is `{ rows, cursor }`, and the host pages it: `loadMore` reads the next page with the
+     * cursor and appends its rows, `hasMore` is whether a cursor is left.
+     */
+    readonly isPaged: boolean
+}
+
+/** What the host may need to know about an action beyond its operation name. */
+export interface HostActionOptions {
+    /** The operations (read ids) to read again when the action succeeds. */
+    readonly refreshes: ReadonlyArray<string>
+    /** Whether to show the effect before the answer and take it back when the action is refused. */
+    readonly optimistic: boolean
+}
+
 /**
  * The host the renderer draws against: the ports a block reaches (`block`) and the data ports only the renderer uses. The app
  * implements it over its transport, router and translations; `./testing` has a double.
@@ -31,9 +48,9 @@ export interface WorkbenchHost {
     /** The ports a block reaches: words, navigation, toasts and defect reports. */
     readonly block: BlockHost
     /** A hook: one read by operation name; null variables do not fetch. */
-    readonly useRead: (operation: string, variables: ReadVariables | null) => HostRead
+    readonly useRead: (operation: string, variables: ReadVariables | null, options?: HostReadOptions) => HostRead
     /** A hook: one action by operation name. */
-    readonly useAction: (operation: string) => HostAction
+    readonly useAction: (operation: string, options?: HostActionOptions) => HostAction
     /** A hook: whether the viewer holds a permission; true for null. */
     readonly useCan: (permission: string | null) => boolean
     /** A hook: the words of the data-status recipe, with the empty sentence of one region. */
