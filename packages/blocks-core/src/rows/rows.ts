@@ -1,3 +1,4 @@
+import type { ReadPage } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { textOf, valueAt } from "../slots/paths"
 
@@ -68,4 +69,21 @@ const rowOf = (record: unknown, paths: RowPaths): ReadonlyArray<RecordRow> => {
 export const rowsOf = (records: ReadonlyArray<unknown>, paths: RowPaths): ReadonlyArray<RecordRow> | null => {
     const rows = records.flatMap((record) => rowOf(record, paths))
     return rows.length === 0 ? null : rows
+}
+
+/** The ids a selectable list marks as chosen: the row the selection param names, or none. */
+export const selectionOf = (selected: string | null): ReadonlyArray<string> => (selected === null ? [] : [selected])
+
+/** The row a selection change chooses; a change that chooses nothing (the chosen row pressed again) keeps the choice. */
+export const chosenRow = (ids: ReadonlyArray<string>): string | null => ids[0] ?? null
+
+/** Where the "load more" control of a list stands. */
+export type MoreState = "none" | "idle" | "loading" | "failed"
+
+/** The state of the control that loads the next page of a paged list; a list that is not paged has none. */
+export const moreStateOf = (page: ReadPage | null): MoreState => {
+    if (page === null) return "none"
+    if (page.isLoadingMore) return "loading"
+    if (page.failure) return "failed"
+    return page.hasMore ? "idle" : "none"
 }
