@@ -1,5 +1,6 @@
 import { returnedRows } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
+import type { AggregateRow, MeasureValue } from "@nivo-lite/agent-sdk/entity/port"
 import type { Aggregate, MeasureKind } from "@nivo-lite/agent-sdk/query"
 import { RecordEntity } from "../persistence/entities"
 import { entityOf } from "./catalog-access.policy"
@@ -10,17 +11,6 @@ import { filterFragment } from "./filter.policy"
 import type { FilterScope } from "./filter.policy"
 import { paramBag } from "./param-bag.policy"
 import type { ScopedTx } from "./scoped-tx.contracts"
-
-/** One group of an aggregate: the group values as text by field name and the measures by name. */
-export interface AggregateRow {
-    /** The text of each grouped expression (the bucket start for a bucket); null for SQL null. */
-    readonly groups: Readonly<Record<string, string | null>>
-    /** Counts, sums and averages are numbers; min and max are the text of the value. */
-    readonly measures: Readonly<Record<string, MeasureValue>>
-}
-
-/** One measure of a group: a number for count, sum and average, else the text of the min or max. */
-type MeasureValue = string | number | null
 
 /** The SQL function of each measure kind. */
 const MEASURE_FUNCTIONS: Readonly<Record<MeasureKind, string>> = {

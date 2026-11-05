@@ -44,6 +44,10 @@
       "types": "./dist/entity/index.d.ts",
       "default": "./dist/entity/index.js"
     },
+    "./entity/port": {
+      "types": "./dist/entity/port/index.d.ts",
+      "default": "./dist/entity/port/index.js"
+    },
     "./query": {
       "types": "./dist/query/index.d.ts",
       "default": "./dist/query/index.js"

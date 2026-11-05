@@ -2,8 +2,8 @@ import { Injectable } from "@nestjs/common"
 import { fieldNumberOf } from "@modules/platform/primitives"
 import { cursorScopeOf, countsOf, listQueryOf } from "@nivo-lite/agent-sdk/query"
 import type { ListQuery, ListShape } from "@nivo-lite/agent-sdk/query"
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { EntityEngineService } from "./entity-engine.service"
-import type { RecordRow } from "./policies/compiler.contracts"
 import type { ScopedTx } from "./policies/scoped-tx.contracts"
 
 /** One page of a named list read. */

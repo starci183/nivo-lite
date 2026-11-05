@@ -17,14 +17,15 @@ import type {
     Update,
     Upsert,
 } from "@nivo-lite/agent-sdk/mutation"
+import type { EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { EngineFailureService } from "./engine-failure.service"
 import { InjectEntityEngineOptions } from "./entity-engine.decorators"
 import type { EntityEngineOptions } from "./entity-engine.options"
-import type { EngineResult, ScopedWork } from "./entity-engine.contracts"
+import type { ScopedWork } from "./entity-engine.contracts"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
 import { declaredConstraintsOf, pgFailureOf } from "./pg-failure.policy"
-import type { InsertStamp, RecordRow } from "./policies/compiler.contracts"
+import type { InsertStamp } from "./policies/compiler.contracts"
 import { deleteRecord } from "./policies/delete-record.policy"
 import { ensureRecord } from "./policies/ensure-record.policy"
 import type { Ensured } from "./policies/ensure-record.policy"

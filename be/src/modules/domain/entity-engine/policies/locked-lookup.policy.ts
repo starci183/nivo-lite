@@ -1,7 +1,8 @@
 import { advisoryXactLock } from "@modules/platform/database"
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { Scalar } from "@nivo-lite/agent-sdk/query"
-import type { EntityCatalog, RecordRow } from "./compiler.contracts"
+import type { EntityCatalog } from "./compiler.contracts"
 import { findRecordByFields } from "./find-by-fields.policy"
 import type { ScopedTx } from "./scoped-tx.contracts"
 

@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { DatabaseErrorCode } from "@modules/platform/database"
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { RecordEntity } from "../persistence/entities"
 import { EntityEngineErrorCode } from "../errors/entity-engine.error"
-import type { RecordRow } from "./compiler.contracts"
 import {
     onlyRecord,
     pickFields,
