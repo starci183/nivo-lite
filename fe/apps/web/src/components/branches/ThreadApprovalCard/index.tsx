@@ -1,4 +1,4 @@
-import { Badge, Button, Cluster, ListBox, Stack, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, Inset, ListBox, Stack, Text } from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
 import { ApprovalCountdown } from "@/components/leaves/ApprovalCountdown"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
@@ -62,12 +62,14 @@ export const ThreadApprovalCard = (props: ThreadApprovalCardProps) => {
                 <Text size="sm">{card.policyLabel}</Text>
                 <ApprovalCountdown expiry={card.expiry} />
             </Cluster>
-            <ListBox
-                label={props.labels.cardLabel}
-                size="sm"
-                selectionMode="none"
-                items={card.approvers.map(approverItemOf)}
-            />
+            <Inset>
+                <ListBox
+                    label={props.labels.cardLabel}
+                    size="sm"
+                    selectionMode="none"
+                    items={card.approvers.map(approverItemOf)}
+                />
+            </Inset>
             {card.excluded.map((left) => (
                 <Text key={left.id} size="xs" tone="muted">
                     {left.line}
