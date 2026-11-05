@@ -14,6 +14,7 @@ export interface DriveStepsView {
         hint: string
         summary: string
         isOpen: boolean
+        isDone: boolean
     }[]
     standing: DriveGrantStanding | undefined
     toggle: (id: string, isOpen: boolean) => void
@@ -48,6 +49,7 @@ export const useDriveSteps = (): DriveStepsView => {
         Record<DriveStepId, { readonly title: string; readonly hint: string; readonly summary: string }>
     >
     const opensOn: DriveStepId = isGranted ? "choose" : "grant"
+    const doneOf: Readonly<Record<DriveStepId, boolean>> = { grant: isGranted, choose: count > 0, brain: false }
     const order: ReadonlyArray<DriveStepId> = ["grant", "choose", "brain"]
     const steps = order.map((id) => ({
         id,
@@ -55,6 +57,7 @@ export const useDriveSteps = (): DriveStepsView => {
         hint: wording[id].hint,
         summary: page === undefined ? "" : wording[id].summary,
         isOpen: toggled[id] ?? (page !== undefined && id === opensOn),
+        isDone: doneOf[id],
     }))
     return {
         steps,

@@ -6,10 +6,8 @@ import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
-import { useState, useTransition } from "react"
 import { providerKey } from "@/hooks/connection-providers"
-import { useAuthorizeGoogle } from "@/hooks/connections"
-import { useMutateSetLedgerSheetSwr, useQueryGoogleStateSwr } from "@/hooks/swr"
+import { useGoogleLedger } from "@/hooks/googleLedger"
 import { GoogleWizardBase } from "./component"
 
 /** The reasons the callback puts in the return address. */
@@ -39,12 +37,15 @@ const isGoogleFailure = (value: string): value is GoogleFailure => GOOGLE_FAILUR
 const googleFailureMessage = (reason: string): GoogleFailureMessage =>
     isGoogleFailure(reason) ? FAILURE_KEYS[reason] : "failGeneric"
 
-/** Where the ledger kept in a Google spreadsheet stands: no access, access without a sheet, working, or the access was withdrawn. */
-type LedgerState = "none" | "granted" | "ready" | "lost"
-
-/** The ledger state the back end names; a word it does not know reads as no access. */
-const ledgerStateOf = (value: string): LedgerState =>
-    value === "granted" || value === "ready" || value === "lost" ? value : "none"
+/** What the last ledger step ended as: the sheet was saved, the access was just given, or nothing to say. */
+const ledgerNoteOf = (
+    saved: boolean,
+    accessGiven: boolean,
+    t: (key: "ledgerSaved" | "ledgerAccessOk") => string,
+): string | null => {
+    if (saved) return t("ledgerSaved")
+    return accessGiven ? t("ledgerAccessOk") : null
+}
 
 /** What the board hands the Google wizard. */
 interface GoogleWizardProps {
@@ -61,44 +62,18 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
     const tw = useTranslations("connectionWizard")
     const tc = useTranslations("connections")
     const params = useSearchParams()
-    const authorize = useAuthorizeGoogle()
-    const read = useQueryGoogleStateSwr()
-    const setSheet = useMutateSetLedgerSheetSwr()
+    const ledger = useGoogleLedger()
     const result = params.get("google")
     const sheets = params.get("sheets")
     const reason = params.get("reason") ?? ""
-    const [error, setError] = useState<string | null>(null)
-    const [sheet, setSheetText] = useState("")
-    const [saved, setSaved] = useState(false)
-    const [isPending, startTransition] = useTransition()
-    const ask = (purpose: "sheets" | undefined) =>
-        startTransition(async () => {
-            setError(null)
-            const answer = await authorize("/connections", purpose)
-            if (answer.kind !== "ok") return setError(answer.message)
-            window.location.assign(answer.value)
-        })
-    const saveSheet = () =>
-        startTransition(async () => {
-            setError(null)
-            try {
-                await setSheet.trigger({ sheet })
-                setSaved(true)
-                await read.mutate()
-            } catch (cause) {
-                setError(cause instanceof Error ? cause.message : t("failGeneric"))
-            }
-        })
-    const ledger = read.data?.ledger
-    const ledgerState = ledgerStateOf(ledger?.state ?? "none")
-    const email = ledger?.email ?? ""
+    const { email } = ledger
     const ledgerStatus = {
         none: t("ledgerNone"),
         granted: t("ledgerGranted", { email }),
         ready: t("ledgerReady", { email }),
         lost: t("ledgerLost"),
-    } satisfies Record<LedgerState, string>
-    const ledgerNote = saved ? t("ledgerSaved") : sheets === "ok" ? t("ledgerAccessOk") : null
+    } satisfies Record<typeof ledger.state, string>
+    const ledgerNote = ledgerNoteOf(ledger.saved, sheets === "ok", t)
     const failure = result === "error" || sheets === "error" ? t(googleFailureMessage(reason)) : null
     const steps = [t("stepConnect"), t("stepDone")]
     const index = result === "ok" ? 1 : 0
@@ -112,16 +87,16 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
                 steps,
                 index,
                 refusal: failure,
-                error,
-                isPending,
-                consentNeeded: read.data?.consentNeeded === true ? t("consentNeeded") : null,
+                error: ledger.error,
+                isPending: ledger.isPending,
+                consentNeeded: ledger.read.data?.consentNeeded === true ? t("consentNeeded") : null,
                 ledger: {
-                    status: ledgerStatus[ledgerState],
-                    mustAllow: ledgerState === "none" || ledgerState === "lost",
-                    canName: ledgerState === "granted" || ledgerState === "ready",
-                    sheet: sheet === "" ? (ledger?.sheetUrl ?? "") : sheet,
+                    status: ledgerStatus[ledger.state],
+                    mustAllow: ledger.state === "none" || ledger.state === "lost",
+                    canName: ledger.state === "granted" || ledger.state === "ready",
+                    sheet: ledger.sheet,
                     note: ledgerNote,
-                    sheetUrl: ledger?.sheetUrl ?? "",
+                    sheetUrl: ledger.sheetUrl,
                     text: {
                         title: t("ledgerTitle"),
                         body: t("ledgerBody"),
@@ -145,10 +120,10 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
                 },
             }}
             on={{
-                connect: () => ask(undefined),
-                allowSheets: () => ask("sheets"),
-                sheet: setSheetText,
-                saveSheet,
+                connect: () => ledger.allow(undefined, "/connections"),
+                allowSheets: () => ledger.allow("sheets", "/connections"),
+                sheet: ledger.setSheet,
+                saveSheet: () => ledger.save(t("failGeneric")),
                 close: props.onClose,
             }}
         />

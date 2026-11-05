@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useConnectionRefusal, wizardQuery } from "@/hooks/connections"
-import { useSepayConnection } from "@/hooks/sepayConnection"
+import { useSepayConnection, useSepayLiveSwitch } from "@/hooks/sepayConnection"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { SepayNoticesBase } from "./component"
 
@@ -17,6 +17,7 @@ export const SepayNotices = (props: SepayNoticesProps) => {
     const t = useTranslations("sepayConnection")
     const slotLabels = useSlotLabels()
     const { slot, retry } = useSepayConnection(props.connectionId)
+    const liveSwitch = useSepayLiveSwitch(props.connectionId)
     const refusal = useConnectionRefusal()
     const connection = "items" in slot ? slot.items : undefined
     return (
@@ -26,6 +27,23 @@ export const SepayNotices = (props: SepayNoticesProps) => {
                 labels: slotLabels(t("loadFailed")),
                 errorTitle: t("lastErrorTitle"),
                 ...(refusal === undefined ? {} : { refusal }),
+                ...(liveSwitch.isOffered
+                    ? {
+                          live: {
+                              title: t("liveOfferTitle"),
+                              description: t("liveOfferBody"),
+                              label: t("liveConfirmAction"),
+                          },
+                      }
+                    : {}),
+                confirm: {
+                    isOpen: liveSwitch.isAsking,
+                    title: t("liveConfirmTitle"),
+                    description: t("liveConfirmBody", { account: liveSwitch.accountMasked }),
+                    confirmLabel: t("liveConfirmAction"),
+                    cancelLabel: t("cancel"),
+                    isPending: liveSwitch.isPending,
+                },
                 ...(connection?.status === "disconnected"
                     ? {
                           reconnect: {
@@ -37,7 +55,7 @@ export const SepayNotices = (props: SepayNoticesProps) => {
                       }
                     : {}),
             }}
-            on={{ retry }}
+            on={{ retry, askLive: liveSwitch.ask, confirmLive: liveSwitch.confirm, dismiss: liveSwitch.dismiss }}
         />
     )
 }

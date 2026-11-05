@@ -4,7 +4,8 @@ import { useTranslations } from "next-intl"
 import { useConnectionRefusal } from "@/hooks/connections"
 import { useCopyLabels } from "@/hooks/connection-wizard"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { useTelegramAgents, useTelegramChecks, useTelegramPage, useTelegramSteps } from "@/hooks/telegramConnection"
+import { useConnectionGrantsBand } from "@/hooks/connectionsPanes"
+import { useTelegramChecks, useTelegramPage, useTelegramSteps } from "@/hooks/telegramConnection"
 import { TelegramConnectionStepsBase } from "./component"
 
 /** What the page hands the steps: the connection of the url. */
@@ -20,7 +21,7 @@ export const TelegramConnectionSteps = (props: TelegramConnectionStepsProps) => 
     const { steps, toggle } = useTelegramSteps(props.connectionId)
     const { slot, reload } = useTelegramPage(props.connectionId)
     const { lines } = useTelegramChecks(props.connectionId)
-    const agents = useTelegramAgents(props.connectionId)
+    const grants = useConnectionGrantsBand(props.connectionId)
     const refusal = useConnectionRefusal()
     if (refusal !== undefined) return null
     return (
@@ -38,21 +39,15 @@ export const TelegramConnectionSteps = (props: TelegramConnectionStepsProps) => 
                     copyErrorLabel: t("copyFailed"),
                 },
                 checks: { title: t("checksTitle"), lines, slotLabels: slotLabels(t("checksEmpty")) },
-                agents: {
-                    title: t("agentsTitle"),
-                    agents: agents.slot,
-                    slotLabels: slotLabels(t("agentsEmpty")),
-                    switchLabel: t("agentsSwitch"),
-                    onLabel: t("agentsOn"),
-                    canToggle: agents.isOwner,
-                },
+                grants: grants.props,
             }}
             on={{
                 toggle,
                 retryWebhook: reload,
                 retryChecks: reload,
-                retryAgents: agents.reload,
-                toggleAgent: (agentId, isOn) => void agents.toggle(agentId, isOn),
+                pickGrant: grants.on.pick,
+                assignGrant: grants.on.assign,
+                retryGrants: grants.on.retry,
             }}
         />
     )

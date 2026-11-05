@@ -41,14 +41,14 @@ interface PickerInput {
     readonly onPick: ConnectionGrantRowsProps["onPick"]
 }
 
-/** The list rows of the pairs, each with its level picker under the copy. */
+/** The list rows of the pairs, each with its level picker at the end of the row. */
 const rowsOf = (rows: ReadonlyArray<ConnectionGrantRowData>, input: PickerInput): ReadonlyArray<ListRowData> =>
     rows.map((row) => ({
         id: row.id,
         title: row.title,
         ...(row.description === undefined ? {} : { description: row.description }),
         leading: row.leading,
-        detail: (
+        control: (
             <Select
                 label={row.levelLabel}
                 isLabelHidden

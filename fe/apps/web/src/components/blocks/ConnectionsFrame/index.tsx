@@ -80,6 +80,7 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
                 },
                 rows,
                 openId: list.openId,
+                isRecordOpen: !list.isRoot,
                 grid: connectionsGridOf({ hasList: view === undefined || view.liveCount > 0, isRoot: list.isRoot }),
             }}
             on={{

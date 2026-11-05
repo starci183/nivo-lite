@@ -1,13 +1,8 @@
-import { ConnectionGrants } from "@/components/blocks/ConnectionGrants"
-import { SepayAgents } from "@/components/blocks/SepayAgents"
-import { SepayChecklist } from "@/components/blocks/SepayChecklist"
+import { SepayConnectionSteps } from "@/components/blocks/SepayConnectionSteps"
 import { SepayConsole } from "@/components/blocks/SepayConsole"
-import { SepayEnvironmentPicker } from "@/components/blocks/SepayEnvironmentPicker"
 import { SepayHealth } from "@/components/blocks/SepayHealth"
 import { SepayNotices } from "@/components/blocks/SepayNotices"
 import { SepayRail } from "@/components/blocks/SepayRail"
-import { SepaySetup } from "@/components/blocks/SepaySetup"
-import { SepaySetupSteps } from "@/components/blocks/SepaySetupSteps"
 import { ConnectionPaneFrame } from "@/components/frames/ConnectionPaneFrame"
 
 /** What the SePay connection page supplies: the connection of the url, where the back control leads, and the words of its panes. */
@@ -38,13 +33,7 @@ export const SepayConnectionPageBase = (props: SepayConnectionPageBaseProps) => 
         >
             <SepayNotices connectionId={id} hubHref={props.props.hubHref} />
             <SepayHealth connectionId={id} />
-            <SepaySetupSteps connectionId={id} />
-            <SepayEnvironmentPicker connectionId={id} />
-            <SepaySetup connectionId={id} part="account" />
-            <SepaySetup connectionId={id} part="paste" />
-            <SepayChecklist connectionId={id} />
-            <SepayAgents connectionId={id} />
-            <ConnectionGrants connectionId={id} />
+            <SepayConnectionSteps connectionId={id} />
         </ConnectionPaneFrame>
     )
 }

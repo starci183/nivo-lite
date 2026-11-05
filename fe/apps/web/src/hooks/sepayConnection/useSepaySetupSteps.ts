@@ -24,6 +24,7 @@ type UseSepaySetupStepsResult = {
         id: SepayStepId
         summary: string
         isOpen: boolean
+        isDone: boolean
     }[]
     openSepay: {
         label: string
@@ -47,8 +48,8 @@ export const useSepaySetupSteps = (connectionId: string): UseSepaySetupStepsResu
     }
     const drawn =
         steps.length === 0
-            ? SEPAY_STEP_IDS.map((id) => ({ id, summary: "", isOpen: false }))
-            : steps.map((step) => ({ id: step.id, summary: step.summary, isOpen: step.isOpen }))
+            ? SEPAY_STEP_IDS.map((id) => ({ id, summary: "", isOpen: false, isDone: false }))
+            : steps.map((step) => ({ id: step.id, summary: step.summary, isOpen: step.isOpen, isDone: step.isDone }))
     const dashboard = PROVIDERS.sepay.dashboard
     return {
         stepsLabel: t("stepsLabel"),

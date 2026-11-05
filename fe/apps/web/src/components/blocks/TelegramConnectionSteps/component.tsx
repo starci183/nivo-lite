@@ -1,10 +1,11 @@
 import { CopyField } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { ConnectionAgentSwitches } from "@/components/composites/ConnectionAgentSwitches"
 import { CONNECTION_LINES_PLACEHOLDER, ConnectionLines } from "@/components/composites/ConnectionLines"
 import { ConnectionSteps } from "@/components/composites/ConnectionSteps"
+import { ConnectionGrantsBand } from "@/components/frames/ConnectionGrantsBand"
+import type { ConnectionGrantsBandProps } from "@/components/frames/ConnectionGrantsBand"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { ConnectionAgentRowView, ConnectionLineView, DataSlot, SlotLabels } from "@/modules/types"
+import type { ConnectionLineView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** One setup step as it is worded: its title, the summary beside it, the guidance under it, and whether it is open. */
 interface TelegramSetupStepView {
@@ -13,16 +14,11 @@ interface TelegramSetupStepView {
     readonly summary: string
     readonly hint: string
     readonly isOpen: boolean
+    readonly isDone: boolean
 }
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
 const WEBHOOK_PLACEHOLDER = "https://example.invalid/api/telegram/00000000"
-
-/** Fake rows of the same shape: the skeleton reuses the ready tree. */
-const AGENTS_PLACEHOLDER: ReadonlyArray<ConnectionAgentRowView> = [
-    { id: "one", name: "-", isOn: false },
-    { id: "two", name: "-", isOn: false },
-]
 
 /** Props for {@link TelegramConnectionStepsBase}. */
 export interface TelegramConnectionStepsBaseProps {
@@ -45,23 +41,16 @@ export interface TelegramConnectionStepsBaseProps {
             readonly lines: DataSlot<ReadonlyArray<ConnectionLineView>>
             readonly slotLabels: SlotLabels
         }
-        /** The agents step: every agent that can work through the bot, with a switch. */
-        readonly agents: {
-            readonly title: string
-            readonly agents: DataSlot<ReadonlyArray<ConnectionAgentRowView>>
-            readonly slotLabels: SlotLabels
-            readonly switchLabel: string
-            readonly onLabel: string
-            /** Only the owner may change which agents work through the bot. */
-            readonly canToggle: boolean
-        }
+        /** The agents step: every agent that works through the bot, with its level. */
+        readonly grants: ConnectionGrantsBandProps["props"]
     }
     readonly on: {
         readonly toggle: (id: string, isOpen: boolean) => void
         readonly retryWebhook: () => void
         readonly retryChecks: () => void
-        readonly retryAgents: () => void
-        readonly toggleAgent: (agentId: string, isOn: boolean) => void
+        readonly pickGrant: (agentId: string, level: string) => void
+        readonly assignGrant: (agentId: string) => void
+        readonly retryGrants: () => void
     }
 }
 
@@ -101,25 +90,11 @@ const ChecksBody = (props: StepBodyProps) => (
     />
 )
 
-/** Draws the body of the last step: every agent that can work through a Telegram bot, with a switch for whether it does. */
+/** Draws the body of the last step: every agent that works through a Telegram bot with its level, and the control that gives it to another. */
 const AgentsBody = (props: StepBodyProps) => (
-    <SlotView
-        slot={props.props.agents.agents}
-        placeholder={AGENTS_PLACEHOLDER}
-        labels={props.props.agents.slotLabels}
-        forbidden="notice"
-        onRetry={props.on.retryAgents}
-        render={(agents, isSkeleton) => (
-            <ConnectionAgentSwitches
-                title={props.props.agents.title}
-                agents={agents}
-                isLoading={isSkeleton}
-                switchLabel={props.props.agents.switchLabel}
-                onLabel={props.props.agents.onLabel}
-                canToggle={props.props.agents.canToggle}
-                onToggle={props.on.toggleAgent}
-            />
-        )}
+    <ConnectionGrantsBand
+        props={props.props.grants}
+        on={{ pick: props.on.pickGrant, assign: props.on.assignGrant, retry: props.on.retryGrants }}
     />
 )
 

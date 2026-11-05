@@ -97,6 +97,7 @@ const nextRowsOf = (on: On, view: ConnectionsOverviewView): ReadonlyArray<ListRo
                     ...(next.logo.src === undefined ? {} : { src: next.logo.src }),
                     shape: "square",
                 },
+                size: "md",
             },
             badges: [{ label: next.status.label, tone: next.status.tone, isDot: next.status.isDot }],
             detail:

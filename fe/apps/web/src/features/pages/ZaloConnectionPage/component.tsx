@@ -1,15 +1,9 @@
-import { ConnectionGrants } from "@/components/blocks/ConnectionGrants"
 import { ConnectionPageRail } from "@/components/blocks/ConnectionPageRail"
-import { ZaloAppStep } from "@/components/blocks/ZaloAppStep"
-import { ZaloAuthorizeStep } from "@/components/blocks/ZaloAuthorizeStep"
-import { ZaloConnectionAgents } from "@/components/blocks/ZaloConnectionAgents"
-import { ZaloConnectionChecks } from "@/components/blocks/ZaloConnectionChecks"
 import { ZaloConnectionFacts } from "@/components/blocks/ZaloConnectionFacts"
 import { ZaloConnectionHead } from "@/components/blocks/ZaloConnectionHead"
 import { ZaloConnectionNotices } from "@/components/blocks/ZaloConnectionNotices"
-import { ZaloConnectionPaste } from "@/components/blocks/ZaloConnectionPaste"
 import { ZaloConnectionZns } from "@/components/blocks/ZaloConnectionZns"
-import { ZaloSetupSteps } from "@/components/blocks/ZaloSetupSteps"
+import { ZaloConnectionSteps } from "@/components/blocks/ZaloConnectionSteps"
 import { ConnectionPaneFrame } from "@/components/frames/ConnectionPaneFrame"
 
 /** What the page owner supplies: the connection of the url and the words of its panes. */
@@ -39,13 +33,7 @@ export const ZaloConnectionPageBase = (props: ZaloConnectionPageBaseProps) => {
         >
             <ZaloConnectionNotices connectionId={connectionId} />
             <ZaloConnectionFacts connectionId={connectionId} />
-            <ZaloSetupSteps connectionId={connectionId} />
-            <ZaloAppStep connectionId={connectionId} />
-            <ZaloConnectionPaste connectionId={connectionId} />
-            <ZaloAuthorizeStep connectionId={connectionId} />
-            <ZaloConnectionChecks connectionId={connectionId} />
-            <ZaloConnectionAgents connectionId={connectionId} />
-            <ConnectionGrants connectionId={connectionId} />
+            <ZaloConnectionSteps connectionId={connectionId} />
             <ZaloConnectionZns connectionId={connectionId} />
         </ConnectionPaneFrame>
     )

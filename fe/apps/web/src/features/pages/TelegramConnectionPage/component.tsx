@@ -1,4 +1,3 @@
-import { ConnectionGrants } from "@/components/blocks/ConnectionGrants"
 import { ConnectionHealthTiles } from "@/components/blocks/ConnectionHealthTiles"
 import { ConnectionPageHead } from "@/components/blocks/ConnectionPageHead"
 import { ConnectionPageNotices } from "@/components/blocks/ConnectionPageNotices"
@@ -18,7 +17,7 @@ export interface TelegramConnectionPageBaseProps {
 
 /**
  * Draws the page of one Telegram bot connection inside the Connections frame: the head band, the health tiles, the four steps in back
- * end order (the bot and its token, the webhook, the check, the agents) and the agents with their levels; the live Telegram events
+ * end order (the bot and its token, the webhook, the check, the agents) ; the live Telegram events
  * stand in the rail beside it.
  */
 export const TelegramConnectionPageBase = (props: TelegramConnectionPageBaseProps) => {
@@ -34,7 +33,6 @@ export const TelegramConnectionPageBase = (props: TelegramConnectionPageBaseProp
             <ConnectionPageNotices kind="telegram" connectionId={connectionId} />
             <ConnectionHealthTiles kind="telegram" connectionId={connectionId} />
             <TelegramConnectionSteps connectionId={connectionId} />
-            <ConnectionGrants connectionId={connectionId} />
         </ConnectionPaneFrame>
     )
 }

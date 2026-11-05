@@ -162,6 +162,8 @@ describe("SheetsGrantService > setLedgerSheet", () => {
             email: "shop@example.test",
             sheetId: SHEET,
             sheetUrl: `https://docs.google.com/spreadsheets/d/${SHEET}/edit`,
+            sheetTitle: "",
+            lastRowAt: "",
         })
         expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner"])
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
@@ -208,14 +210,49 @@ describe("SheetsGrantService > setLedgerSheet", () => {
     })
 })
 
+describe("SheetsGrantService > setLedgerSheet, the title of the sheet", () => {
+    const withAccess = () => record({ meta: { email: "shop@example.test", sheets: "granted" } })
+
+    it("keeps the title Google gives the sheet, and still names the sheet when the title cannot be read", async () => {
+        const { service, connections, google } = await build()
+        connections.listByProvider.mockResolvedValue([withAccess()])
+        google.spreadsheetTitle.mockResolvedValueOnce("So cai May Bakery 2026")
+
+        await service.setLedgerSheet(actor, SHEET)
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
+            meta: {
+                email: "shop@example.test",
+                sheets: "granted",
+                ledgerSheet: SHEET,
+                ledgerSheetTitle: "So cai May Bakery 2026",
+            },
+        })
+
+        connections.patch.mockClear()
+        google.spreadsheetTitle.mockRejectedValueOnce(new Error("refused"))
+        await service.setLedgerSheet(actor, "1ZyXwVuTsRqPoNmLkJiHgFeDcBa9876543210")
+        expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
+            meta: {
+                email: "shop@example.test",
+                sheets: "granted",
+                ledgerSheet: "1ZyXwVuTsRqPoNmLkJiHgFeDcBa9876543210",
+            },
+        })
+    })
+})
+
 describe("SheetsGrantService > grant", () => {
     it.each([
-        ["no connection", [], { state: "none", email: "", sheetId: "", sheetUrl: "" }],
-        ["a connection without the access", [record()], { state: "none", email: "", sheetId: "", sheetUrl: "" }],
+        ["no connection", [], { state: "none", email: "", sheetId: "", sheetUrl: "", sheetTitle: "", lastRowAt: "" }],
+        [
+            "a connection without the access",
+            [record()],
+            { state: "none", email: "", sheetId: "", sheetUrl: "", sheetTitle: "", lastRowAt: "" },
+        ],
         [
             "the access without a sheet",
             [record({ meta: { email: "shop@example.test", sheets: "granted" } })],
-            { state: "granted", email: "shop@example.test", sheetId: "", sheetUrl: "" },
+            { state: "granted", email: "shop@example.test", sheetId: "", sheetUrl: "", sheetTitle: "", lastRowAt: "" },
         ],
         [
             "a lost grant",
@@ -231,6 +268,8 @@ describe("SheetsGrantService > grant", () => {
                 email: "shop@example.test",
                 sheetId: SHEET,
                 sheetUrl: `https://docs.google.com/spreadsheets/d/${SHEET}/edit`,
+                sheetTitle: "",
+                lastRowAt: "",
             },
         ],
     ])("reads %s", async (_name, rows, expected) => {
@@ -239,5 +278,28 @@ describe("SheetsGrantService > grant", () => {
 
         await expect(service.grant(actor)).resolves.toEqual(expected)
         expect(connections.authorize).toHaveBeenCalledWith(actor, ["owner", "manager"])
+    })
+})
+
+describe("SheetsGrantService > grant, the sheet it writes to", () => {
+    it("tells the title of the sheet and when the last row was written", async () => {
+        const { service, connections } = await build()
+        connections.listByProvider.mockResolvedValue([
+            record({
+                meta: {
+                    email: "shop@example.test",
+                    sheets: "granted",
+                    ledgerSheet: SHEET,
+                    ledgerSheetTitle: "So cai May Bakery 2026",
+                    ledgerLastRowAt: "2026-11-01T11:40:00.000Z",
+                },
+            }),
+        ])
+
+        await expect(service.grant(actor)).resolves.toMatchObject({
+            state: "ready",
+            sheetTitle: "So cai May Bakery 2026",
+            lastRowAt: "2026-11-01T11:40:00.000Z",
+        })
     })
 })

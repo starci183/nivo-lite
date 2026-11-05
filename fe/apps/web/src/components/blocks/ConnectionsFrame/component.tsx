@@ -39,6 +39,8 @@ export interface ConnectionsFrameBaseProps {
         /** The rows the search and the filter leave. */
         readonly rows: ReadonlyArray<ConnectionListRow>
         readonly openId: string | null
+        /** A connection page is open: a phone shows it alone, without the page band. */
+        readonly isRecordOpen: boolean
         /** The areas and tracks of the pane grid, for the pane a phone shows. */
         readonly grid: PaneGridLayout
     }
@@ -180,7 +182,13 @@ export const ConnectionsFrameBase = (props: ConnectionsFrameBaseProps) => {
     }
     const { grid } = props.props
     return (
-        <Page chrome="panes" header={header} measure="product" isLoading={view === undefined}>
+        <Page
+            chrome="panes"
+            header={header}
+            measure="product"
+            isLoading={view === undefined}
+            {...(props.props.isRecordOpen ? { headerCollapse: "narrow" as const } : {})}
+        >
             <PaneGrid label={copy.grid} areas={grid.areas} columns={grid.columns} rows={grid.rows}>
                 {isEmptyList(slot) ? null : (
                     <Pane area="list" surface scroll label={copy.listLabel}>
