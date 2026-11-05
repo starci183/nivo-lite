@@ -21,8 +21,6 @@ interface WordsInput {
 export interface DrawerWordsView {
     title: string
     copy: {
-        drawerDesc: string
-        close: string
         agentsLabel: string
         agentsHint: string
         strategyLabel: string
@@ -117,7 +115,7 @@ export const usePermissionDrawerWords = (): UsePermissionDrawerWordsResult => {
 
     const viewOf = (input: WordsInput): DrawerWordsView => ({
         title: actionWordOf(g, input.rule.action),
-        copy: copyOf(input.rule, input.draft, input.isOwner),
+        copy: copyOf(input.draft, input.isOwner),
         legend: legendOf(input.draft),
         sliderMax: SLIDER_MAX[input.draft.unit],
         strategyOptions: [

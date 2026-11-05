@@ -1,21 +1,27 @@
-import { RouteError } from "@/components/blocks/RouteError"
+import { Alert, Page } from "@starci/grammar/common"
+import type { PageHeaderContent } from "@starci/grammar/common"
 
-/** Copy and retry the failed account route supplies. */
+/** Copy and retry the failed personal route supplies. */
 export interface AccountErrorPageBaseProps {
     readonly props: {
-        readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
-        readonly title: string
+        /** The page's own header with its personal tabs: it stays real when the data fails. */
+        readonly header: PageHeaderContent
+        readonly measure: "reading" | "product"
+        readonly alertTitle: string
         readonly message: string
+        readonly retryLabel: string
     }
     readonly on: { readonly retry: () => void }
 }
 
-/** Draws the account page's trail and heading with one alert and a retry. */
+/** Draws a personal page whose data failed: the header and tabs stay, the body is one alert that says what happened, with the retry. */
 export const AccountErrorPageBase = (props: AccountErrorPageBaseProps) => (
-    <RouteError
-        crumbs={props.props.crumbs}
-        title={props.props.title}
-        message={props.props.message}
-        onRetry={props.on.retry}
-    />
+    <Page header={props.props.header} measure={props.props.measure}>
+        <Alert
+            tone="negative"
+            title={props.props.alertTitle}
+            description={props.props.message}
+            action={{ label: props.props.retryLabel, onAction: props.on.retry }}
+        />
+    </Page>
 )

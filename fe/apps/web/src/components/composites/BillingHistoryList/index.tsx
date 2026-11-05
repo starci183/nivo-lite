@@ -16,6 +16,8 @@ interface BillingHistoryListProps {
         readonly description?: string
         readonly empty: string
         readonly rows: ReadonlyArray<BillingHistoryRow>
+        /** The read has no data yet: the rows draw as geometry. */
+        readonly isLoading?: boolean
     }
 }
 
@@ -25,6 +27,7 @@ export const BillingHistoryList = (props: BillingHistoryListProps) => (
         kind="list"
         label={props.props.title}
         headingLevel={2}
+        isLoading={props.props.isLoading === true}
         empty={<EmptyNotice message={props.props.empty} />}
         {...(props.props.description === undefined
             ? {}

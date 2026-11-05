@@ -1,7 +1,7 @@
 export { NAME_MAX, NAME_MIN, PASSWORD_MAX, PASSWORD_MIN } from "./account.shared"
 export { useAccountAvatar } from "./useAccountAvatar"
 export { useAccountCommands } from "./useAccountCommands"
-export { useAccountMethods } from "./useAccountMethods"
+export { useAccountSignIn } from "./useAccountSignIn"
 export { useAccountSessions } from "./useAccountSessions"
 export { useChangePassword } from "./useChangePassword"
 export { useSignOutOthers } from "./useSignOutOthers"

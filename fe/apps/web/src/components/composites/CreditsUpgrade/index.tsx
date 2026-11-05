@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Button, Disclosure, EmptyNotice, Stack, SurfaceCard, type ListRowData } from "@starci/grammar/common"
+import { Button, EmptyNotice, Stack, SurfaceCard } from "@starci/grammar/common"
 
 import type { CreditsOverviewView, PayTarget } from "@/modules/types"
 
@@ -7,10 +7,6 @@ interface CreditsUpgradeProps {
     readonly props: {
         readonly view: CreditsOverviewView
         readonly title: string
-        readonly plansLabel: string
-        readonly plansTitle: string
-        readonly plansCta: string
-        readonly plansHref: string
         readonly loading: string
         readonly isLoading: boolean
     }
@@ -45,37 +41,7 @@ export const CreditsUpgrade = (props: CreditsUpgradeProps) => {
                 ]}
             />
         )
-    const items: ReadonlyArray<ListRowData> = copy.view.plans.map((plan) => ({
-        id: plan.id,
-        title: plan.title,
-        description: plan.description,
-        ...(plan.badge ? { badges: [{ label: plan.badge, tone: "neutral" }] } : {}),
-    }))
-    return (
-        <Stack gap="section">
-            {offer}
-            <Disclosure
-                title={copy.plansTitle}
-                headingLevel={3}
-                body={
-                    <>
-                        <SurfaceCard
-                            kind="list"
-                            ariaLabel={copy.plansLabel}
-                            isLoading={copy.isLoading}
-                            items={items}
-                            empty={<EmptyNotice message={copy.plansTitle} />}
-                        />
-                        {copy.view.canBuy ? (
-                            <Button intent="neutral" size="sm" href={copy.plansHref} isLoading={copy.isLoading}>
-                                {copy.plansCta}
-                            </Button>
-                        ) : null}
-                    </>
-                }
-            />
-        </Stack>
-    )
+    return <Stack gap="section">{offer}</Stack>
 }
 
 /** Renders the CreditsUpgrade recommendation section. */

@@ -21,7 +21,7 @@ export interface AgentProfileIdentityBaseProps {
         readonly seed: string
         readonly avatar: {
             readonly label: string
-            readonly prompt: string
+            readonly pickLabel: string
             readonly hint: string
             readonly accept: string
             readonly error?: string | undefined
@@ -60,11 +60,11 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                 render={(identity, isLoading) => (
                     <Stack gap="region">
                         <AvatarEditor
-                            id="agent-avatar"
                             preview={
                                 <AgentMark label={identity.name} seed={view.seed} src={identity.picture} size="lg" />
                             }
                             {...view.avatar}
+                            isLoading={isLoading}
                             onPick={props.on.pick}
                             onRemove={props.on.remove}
                         />

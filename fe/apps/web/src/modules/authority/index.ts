@@ -1,4 +1,6 @@
 export { toAuthoritySheet } from "./sheet"
+export { AUTHORITY_SECTIONS, authoritySectionOf } from "./sections"
+export type { AuthoritySectionId } from "./sections"
 export {
     APPROVER_ROLES,
     EMPTY_PROFILE,
