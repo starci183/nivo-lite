@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
-import { Badge, Button, Cluster, ListBox, Stack, Text } from "@starci/grammar/common"
+import { Avatar, Badge, Button, Cluster, ListBox, Stack, Text } from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
 import { chosenRow, moreStateOf, selectionOf } from "../../rows/rows"
 import type { RecordRow } from "../../rows/rows"
@@ -30,12 +30,25 @@ interface SelectableRowsProps {
     readonly onChoose: (id: string) => void
 }
 
-/** The row of the Grammar list for one record: its title, its line and its badge. */
+/** The end of a row: its short fact and its badge, one over the other. */
+const trailingOf = (row: RecordRow): ReactNode => (
+    <Stack gap="inline" align="end">
+        {row.meta === "" ? null : (
+            <Text size="sm" tone="muted">
+                {row.meta}
+            </Text>
+        )}
+        {row.badge === "" ? null : <Badge tone="neutral">{row.badge}</Badge>}
+    </Stack>
+)
+
+/** The row of the Grammar list for one record: its mark, its title, its line, its short fact and its badge. */
 const itemOf = (row: RecordRow): ListBoxItem => ({
     id: row.id,
     label: row.title,
+    leading: <Avatar name={row.title} isDecorative />,
     ...(row.description === "" ? {} : { description: row.description }),
-    ...(row.badge === "" ? {} : { trailing: <Badge tone="neutral">{row.badge}</Badge> }),
+    ...(row.meta === "" && row.badge === "" ? {} : { trailing: trailingOf(row) }),
 })
 
 /** What the paging control takes. */

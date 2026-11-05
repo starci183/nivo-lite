@@ -118,9 +118,10 @@ describe("the props of the list blocks", () => {
 
     it("take the paths of a record list, the description and badge paths being optional", () => {
         expect(recordListBlock.props.safeParse(LIST).success).toBe(true)
-        expect(recordListBlock.props.safeParse({ ...LIST, descriptionPath: "note", badgePath: "state" }).success).toBe(
-            true,
-        )
+        expect(
+            recordListBlock.props.safeParse({ ...LIST, descriptionPath: "note", badgePath: "state", metaPath: "when" })
+                .success,
+        ).toBe(true)
     })
 
     it("refuse a record list path past its bound", () => {

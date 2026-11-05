@@ -16,6 +16,7 @@ const props: z.ZodObject<{
     titlePath: z.ZodString
     descriptionPath: z.ZodOptional<z.ZodString>
     badgePath: z.ZodOptional<z.ZodString>
+    metaPath: z.ZodOptional<z.ZodString>
     labels: z.ZodOptional<LabelsSchema>
     emptySearch: z.ZodOptional<TextSchema>
     selectParam: z.ZodOptional<ParamNameSchema>
@@ -27,6 +28,7 @@ const props: z.ZodObject<{
     titlePath: z.string().max(PATH_MAX),
     descriptionPath: z.string().max(PATH_MAX).optional(),
     badgePath: z.string().max(PATH_MAX).optional(),
+    metaPath: z.string().max(PATH_MAX).optional(),
     labels: labelsProp.optional(),
     emptySearch: specText.optional(),
     selectParam: paramName.optional(),

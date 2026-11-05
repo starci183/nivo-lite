@@ -1,4 +1,4 @@
-import { FIGURE_FORMATS } from "../rows/figure-format"
+import { FIGURE_FORMATS, FIGURE_KINDS } from "../rows/figure-format"
 import { figuresBlock } from "./figures.block"
 
 const WORD = { key: "word" }
@@ -26,5 +26,9 @@ describe("figuresBlock", () => {
     it("takes the currency of its money and refuses one that is no ISO code", () => {
         expect(accepts({ ...FIGURES, currency: "USD" })).toBe(true)
         expect(accepts({ ...FIGURES, currency: "dong" })).toBe(false)
+    })
+    it("takes every kind and refuses another", () => {
+        expect(FIGURE_KINDS.every((kind) => accepts({ ...FIGURES, kind }))).toBe(true)
+        expect(accepts({ ...FIGURES, kind: "pie" })).toBe(false)
     })
 })
