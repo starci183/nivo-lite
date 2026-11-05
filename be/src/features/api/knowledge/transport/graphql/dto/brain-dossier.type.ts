@@ -46,4 +46,12 @@ export class BrainDossierType {
     /** How many documents of its category name its reference. */
     @Field(() => Int)
     documentCount!: number
+
+    /** The member who owns it (a membership id), or null. */
+    @Field(() => ID, { nullable: true })
+    assigneeId?: string | null
+
+    /** The date it should be settled by as YYYY-MM-DD, or null. */
+    @Field(() => String, { nullable: true })
+    dueAt?: string | null
 }

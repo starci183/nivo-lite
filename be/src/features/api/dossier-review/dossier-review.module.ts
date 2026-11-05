@@ -7,6 +7,7 @@ import { ConfirmDossierFindingHandler } from "./application/confirm-dossier-find
 import { DismissDossierFindingHandler } from "./application/dismiss-dossier-finding.handler"
 import { ReopenDossierFindingHandler } from "./application/reopen-dossier-finding.handler"
 import { ResolveDossierFindingHandler } from "./application/resolve-dossier-finding.handler"
+import { AssignBrainDossierHandler } from "./application/assign-brain-dossier.handler"
 import { AssignDossierFindingHandler } from "./application/assign-dossier-finding.handler"
 import { RequestDossierRemedyDraftHandler } from "./application/request-dossier-remedy-draft.handler"
 import { SaveDossierRemedyDraftHandler } from "./application/save-dossier-remedy-draft.handler"
@@ -24,6 +25,7 @@ import { ConfigurableModuleClass } from "./dossier-review.module-definition"
         DismissDossierFindingHandler,
         ReopenDossierFindingHandler,
         ResolveDossierFindingHandler,
+        AssignBrainDossierHandler,
         AssignDossierFindingHandler,
         RequestDossierRemedyDraftHandler,
         SaveDossierRemedyDraftHandler,

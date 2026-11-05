@@ -41,6 +41,20 @@ export interface DossierRecord extends DossierInput {
     readonly id: string
     /** How many documents of its category name its reference. */
     readonly documentCount: number
+    /** The member who owns it (a membership id), or null. */
+    readonly assigneeId: string | null
+    /** The date it should be settled by as YYYY-MM-DD, or null. */
+    readonly dueAt: string | null
+}
+
+/** Who owns a dossier and by when; null clears the value. */
+export interface AssignDossierInput {
+    /** The dossier. */
+    readonly dossierId: string
+    /** The membership id of an active member of the workspace, or null to leave it with nobody. */
+    readonly assigneeId: string | null
+    /** The due date as YYYY-MM-DD, or null. */
+    readonly dueAt: string | null
 }
 
 /** The columns of the checklist tab, by their position in a row; an optional column that is absent is -1. */

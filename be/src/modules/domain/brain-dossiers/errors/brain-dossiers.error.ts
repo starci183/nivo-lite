@@ -9,6 +9,10 @@ export enum BrainDossiersErrorCode {
     ChecklistEmpty = "BRAIN_DOSSIERS_EMPTY",
     /** The checklist tab holds more dossiers than one workspace may track. */
     TooMany = "BRAIN_DOSSIERS_TOO_MANY",
+    /** The dossier named is not one of the workspace. */
+    NotFound = "BRAIN_DOSSIERS_NOT_FOUND",
+    /** The member named to own a dossier is not an active member of the workspace. */
+    OwnerNotMember = "BRAIN_DOSSIERS_OWNER_NOT_MEMBER",
 }
 
 /** How each brain-dossiers code travels. */
@@ -16,6 +20,8 @@ export const BRAIN_DOSSIERS_ERROR_KINDS: Record<BrainDossiersErrorCode, ErrorKin
     [BrainDossiersErrorCode.ColumnsMissing]: "invalid",
     [BrainDossiersErrorCode.ChecklistEmpty]: "invalid",
     [BrainDossiersErrorCode.TooMany]: "invalid",
+    [BrainDossiersErrorCode.NotFound]: "not-found",
+    [BrainDossiersErrorCode.OwnerNotMember]: "invalid",
 }
 
 /** The one error class of the brain-dossiers capability. */

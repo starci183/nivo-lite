@@ -25,4 +25,6 @@ export const toDossierRecord = (row: BrainDossierEntity, documentCount: number):
     missing: row.missing,
     drafts: row.drafts,
     documentCount,
+    assigneeId: row.assigneeId,
+    dueAt: row.dueAt,
 })

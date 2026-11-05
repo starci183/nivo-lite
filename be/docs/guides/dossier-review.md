@@ -786,7 +786,7 @@ D:/.claude/contexts/code/fe/{README,architecture,boundaries,folder,data,form,i18
 D:/.claude/contexts/code/shared/{test,typing,naming,comment}.md, D:/.claude/contexts/ui/{README,composition,presentation}.md and
 D:/.claude/contexts/ui/components/{pane-grid,list-table,dialog-drawer,segmented-control,select,text-field,toast-alert,empty-state,button,chip}.md,
 D:/.claude/contexts/grammars/core.md (or the grammar hfs.json names). Templates:
-fe/apps/web/src/components/blocks/BrainDossiers/, fe/apps/web/src/components/blocks/DossierFindings/, fe/apps/web/src/components/blocks/BrainGaps/,
+fe/apps/web/src/components/blocks/BrainDossiers/, fe/apps/web/src/components/blocks/BrainGaps/,
 fe/apps/web/src/components/blocks/KnowledgeAdd/, fe/apps/web/src/features/pages/BrainPage/, fe/apps/web/src/components/blocks/BrainPageFrame/,
 fe/apps/web/src/hooks/brain/, fe/apps/web/src/hooks/swr/api/graphql/, fe/apps/web/src/modules/api/graphql/queries/, fe/apps/web/src/modules/api/graphql/mutations/,
 fe/apps/web/src/modules/brain/, fe/apps/web/src/modules/routes/knowledge-routes.ts, fe/apps/web/src/app/[locale]/(console)/brain/page.tsx,
@@ -806,9 +806,9 @@ Files you create (names without extension, under the folders named):
   domain command hook; each write toasts through useGraphQLWithToast and revalidates exactly the findings, summary,
   draft and, after an approval, the dossiers and knowledge reads), useDossierRemedyDraft.
 - In fe/apps/web/src/modules/brain/: findings (severity, kind and status tones and order, filter values, view mappers; pure functions).
-- Under fe/apps/web/src/components/blocks/: DossierFindings (index, component, classNames: the detail pane of one dossier),
-  DossierTodo (the "To do" tab), DossierRemedyDraft (the draft drawer); under fe/apps/web/src/components/composites/:
-  DossierFindingRows (rows shared by both lists), DossierFindingDialogs (dismiss, assign, mark done: Dialog with a form,
+- Under fe/apps/web/src/components/blocks/: BrainDossiers (the dossiers tab and its map view: list, findings of the open dossier,
+  side pane); the draft drawer is the frame components/frames/DossierRemedyDrawer fed by hooks/brain/useDossierRemedyDrawer; under
+  fe/apps/web/src/components/composites/: DossierFindingBoard (the findings of one dossier), DossierFindingDialogs (dismiss, assign, mark done: Dialog with a form,
   footer commit type="submit" form=<id>).
 - Edits: fe/apps/web/src/components/blocks/BrainDossiers/ (component, index, classNames: selectable dossier rows, the
   recomputed status badge with the checklist status beside it when they differ, the worst-severity count badge, the
