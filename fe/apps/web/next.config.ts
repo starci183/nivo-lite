@@ -28,6 +28,9 @@ const nextConfig: NextConfig = {
             { source: "/agents/chatbot/:installation/workbench", destination: "/w/chatbot", permanent: false },
             { source: "/agents/chatbot/:installation/inbox", destination: "/w/chatbot", permanent: false },
             { source: "/agents/chatbot/workbench", destination: "/w/chatbot", permanent: false },
+            // The Accounting workbench is drawn from its spec on the one workbench route.
+            { source: "/agents/accounting/:installation/workbench", destination: "/w/accounting", permanent: false },
+            { source: "/agents/accounting/workbench", destination: "/w/accounting", permanent: false },
         ]
     },
     // The runtime stage of the Dockerfile ships the standalone output.

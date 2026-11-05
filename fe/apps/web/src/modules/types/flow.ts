@@ -7,16 +7,6 @@ export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclea
 export type FlowWorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"
 /** How far the proof of a finished piece of work has come. */
 type FlowEvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
-/** A staff row of the workspace. */
-export type FlowStaff = {
-    id: string
-    workspace_id: string
-    name: string
-    role: string
-    email: string | null
-    active: boolean
-    created_at: string
-}
 /** What an agent proposes for a piece of work. */
 type Proposal = {
     summary: string
@@ -59,16 +49,6 @@ export type WorkItem = {
     completed_at: string | null
     /** the agent instance that handles it (one branch's Chatbot); set by the database (resolve_installation) when the writer does not say */
     installation_id?: string | null
-}
-/** A piece of work with the lead, the assignee and its link resolved for display. */
-export type FlowWorkItemView = WorkItem & {
-    lead: { id: string; contact_name: string; company: string; channel: string } | null
-    assignedStaffName: string | null
-    /** true when a legacy execution approval card already renders this item (Office must not render it twice) */
-    hasApprovalCard: boolean
-    href: string
-    /** who made the latest decision on this item: only set by `listWorkItems({ withDecider: true })` (embedded in the same request) */
-    decidedBy?: string | null
 }
 /** The edits a person makes before approving a piece of work. */
 export type FlowWorkEdits = {

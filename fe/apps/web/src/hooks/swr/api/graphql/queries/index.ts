@@ -1,4 +1,3 @@
-export * from "./useQueryAccountingWorkbenchSwr"
 export * from "./useQueryAdminHealthSwr"
 export * from "./useQueryAdminSessionSwr"
 export * from "./useQueryAdminWorkspaceSwr"

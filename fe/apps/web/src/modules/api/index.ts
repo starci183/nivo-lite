@@ -75,10 +75,6 @@ export type {
 } from "./graphql/index"
 export type { DecideSalesDraftRequest } from "./graphql/index"
 export type {
-    AccountingLedgerEntryType,
-    AccountingProposalType,
-    AccountingQuestionWorkType,
-    AccountingWorkbenchType,
     AgentChatTurnStatusType,
     AgentGenerationStatusType,
     AgentKnowledgeLensType,
@@ -213,7 +209,7 @@ export type { ConfirmOfficeCommandMutation, ConnectTelegramMutation } from "./gr
 export type { ConnectionAgentsQuery, ConnectionFirstEventQuery } from "./graphql/__generated__/graphql"
 export type { ConnectionsQuery, ContentAiStatusQuery, ContentConfigurationQuery } from "./graphql/__generated__/graphql"
 export type { ContentMediaQuery, ContentWorkbenchQuery, CopyInviteLinkMutation } from "./graphql/__generated__/graphql"
-export type { CreateAccountingAdjustmentMutation, CreateApiKeyMutation } from "./graphql/__generated__/graphql"
+export type { CreateApiKeyMutation } from "./graphql/__generated__/graphql"
 export type { CreateContentItemMutation, CreateHiringCvUploadMutation } from "./graphql/__generated__/graphql"
 export type { CreateInventoryPoMutation, CreateInviteMutation } from "./graphql/__generated__/graphql"
 export type { CreateKnowledgeUploadMutation, CreateLeadMutation } from "./graphql/__generated__/graphql"
@@ -284,7 +280,7 @@ export type { PublicDocumentsQuery, PublicHiringInterviewQuery } from "./graphql
 export type { PublicHiringJobQuery, PublicHiringOfferQuery } from "./graphql/__generated__/graphql"
 export type { PublishAgentGraphMutation } from "./graphql/__generated__/graphql"
 export type { ReassignShiftsShiftMutation, ReceiveInventoryPoMutation } from "./graphql/__generated__/graphql"
-export type { RecheckZaloConnectionMutation, RecordManualEvidenceMutation } from "./graphql/__generated__/graphql"
+export type { RecheckZaloConnectionMutation } from "./graphql/__generated__/graphql"
 export type { RecordOutcomeMutation } from "./graphql/__generated__/graphql"
 export type { RedraftPublicDocumentMutation, RefreshLeadContextMutation } from "./graphql/__generated__/graphql"
 export type { RegisterMcpConnectorMutation, ReindexKnowledgeSourceMutation } from "./graphql/__generated__/graphql"

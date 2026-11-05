@@ -4,7 +4,6 @@ import type {
     AgentGenerationStatusQuery,
     AgentKnowledgeLensesQuery,
     CreditPacksBoughtQuery,
-    AccountingWorkbenchQuery,
     AgentChatTurnStatusQuery,
     VideoProjectQuery,
     AskKnowledgeQuery,
@@ -92,15 +91,6 @@ import type { WireInput } from "./types"
 export type AgentGenerationStatusType = AgentGenerationStatusQuery["agentGenerationStatus"]
 /** The `CreditPackPurchaseType` object of the back end contract, as the operations of this app select it. */
 export type CreditPackPurchaseType = CreditPacksBoughtQuery["creditPacksBought"][number]
-/** The `AccountingLedgerEntryType` object of the back end contract, as the operations of this app select it. */
-export type AccountingLedgerEntryType = AccountingWorkbenchQuery["accountingWorkbench"]["ledger"][number]
-/** The `AccountingProposalType` object of the back end contract, as the operations of this app select it. */
-export type AccountingProposalType =
-    AccountingWorkbenchQuery["accountingWorkbench"]["questions"][number]["item"]["proposal"]
-/** The `AccountingQuestionWorkType` object of the back end contract, as the operations of this app select it. */
-export type AccountingQuestionWorkType = AccountingWorkbenchQuery["accountingWorkbench"]["questions"][number]["item"]
-/** The `AccountingWorkbenchType` object of the back end contract, as the operations of this app select it. */
-export type AccountingWorkbenchType = AccountingWorkbenchQuery["accountingWorkbench"]
 /** The `AgentChatTurnStatusType` object of the back end contract, as the operations of this app select it. */
 export type AgentChatTurnStatusType = AgentChatTurnStatusQuery["agentChatTurnStatus"]
 /** The `AutomationCardType` object of the back end contract, as the operations of this app select it. */
