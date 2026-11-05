@@ -59,7 +59,7 @@ const itemsOf = (entries: ReadonlyArray<LessonEntryView>): ReadonlyArray<ListBox
         id: entry.id,
         label: entry.title,
         description: entry.line,
-        leading: <IconTile source={nivoIconSource("talents", "leading")} tone="neutral" />,
+        leading: <IconTile source={nivoIconSource("sparkle", "leading")} tone="neutral" />,
         trailing: <RowTrailing badge={entry.badge} />,
     }))
 
@@ -81,7 +81,7 @@ const AgentRow = (props: BrainLessonsBaseProps) => {
                     intent="neutral"
                     size="sm"
                     isPending={agent.isMining}
-                    startContent={<Icon source={nivoIconSource("talents", "leading")} usage="leading" />}
+                    startContent={<Icon source={nivoIconSource("sparkle", "leading")} usage="leading" />}
                     onPress={props.on.mine}
                 >
                     {agent.mineLabel}
@@ -167,7 +167,7 @@ export const BrainLessonsBase = (props: BrainLessonsBaseProps) => {
             slotLabels={lessons.slotLabels}
             selectedId={lessons.selectedId}
             isFiltered={lessons.isFiltered}
-            glyph="talents"
+            glyph="sparkle"
             on={props.on}
             list={
                 <PaneBody

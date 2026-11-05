@@ -111,7 +111,11 @@ const ListBody = (props: Props) => {
                         }}
                         choice={{
                             label: copy.filterLabel,
-                            options: queue.filters.map((one) => ({ value: one.id, label: one.label })),
+                            options: queue.filters.map((one) => ({
+                                value: one.id,
+                                label: one.label,
+                                ...(one.count === undefined ? {} : { count: one.count }),
+                            })),
                             value: queue.filter,
                             onChange: props.on.setFilter,
                         }}

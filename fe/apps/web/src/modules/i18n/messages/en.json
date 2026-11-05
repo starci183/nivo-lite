@@ -2636,7 +2636,6 @@
     "unassigned": "Unassigned",
     "upload": "Upload the document",
     "viewDraft": "View draft",
-    "filterWithCount": "{label} {n}",
     "filterFacts": "Facts",
     "filterAsk": "Customer questions",
     "cardConfirmSide": "{source} is right",

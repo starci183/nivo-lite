@@ -83,10 +83,11 @@ export interface QueueEntryView {
     readonly aside: QueueAsideView | null
 }
 
-/** One filter chip of the queue: its label already carries its count. */
+/** One filter tab of the queue: its words and, when known, how many rows it holds. */
 export interface QueueFilterView {
     readonly id: string
     readonly label: string
+    readonly count?: number
 }
 
 /** What the queue draws: the entries as one slot, the controls over it, and the opened item. */

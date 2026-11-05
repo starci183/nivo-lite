@@ -45,7 +45,7 @@ const entriesOf = (props: LeadHeadBandProps): ReadonlyArray<DropdownMenuEntry> =
             id: "reassign",
             label: labels.menuReassign,
             onAction: () => on.stepOpen("reassign"),
-            iconSource: nivoIconSource("account", "leading"),
+            iconSource: nivoIconSource("handRaised", "leading"),
         },
         {
             id: "due",

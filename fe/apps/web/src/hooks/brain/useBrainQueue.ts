@@ -78,7 +78,8 @@ export const useBrainQueue = (): BrainQueue => {
         ? (["all", "contradiction", "facts"] as const).map((id) => ({ id, label: labelOf(id) }))
         : data.filters.map((one) => ({
               id: one.id,
-              label: t("filterWithCount", { label: labelOf(one.id), n: one.count }),
+              label: labelOf(one.id),
+              count: one.count,
           }))
     const slot = slotOf(data.regions, data.entries, shown)
     const view: QueueView = {
