@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { echo, emptyPing as ping, record } from "@tests/fixtures/builders/graph-node-probe.builder"
+import { EntityNodePortsService } from "@modules/domain/entity-engine"
+import type { EntityNodePort } from "@modules/domain/entity-engine"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
@@ -10,13 +12,16 @@ import type { NodeDataPort, NodeEffectExecutor, NodeInstall } from "./graph-node
 
 const INSTALL: NodeInstall = { nodes: [echo], effects: [ping], tools: [], dataKinds: [record] }
 
-const build = async () => {
+const build = async (engine: ReadonlyArray<EntityNodePort> = []) => {
     const logger = mock<Logger>()
+    const entityPorts = mock<EntityNodePortsService>()
+    entityPorts.ports.mockReturnValue(engine)
     const moduleRef = await Test.createTestingModule({
         providers: [
             GraphNodeRegistryService,
             { provide: GRAPH_NODES_OPTIONS, useValue: { install: INSTALL } },
             { provide: LOGGER, useValue: logger },
+            { provide: EntityNodePortsService, useValue: entityPorts },
         ],
     }).compile()
     return { registry: moduleRef.get(GraphNodeRegistryService), logger }
@@ -62,6 +67,16 @@ describe("GraphNodeRegistryService", () => {
         expect(registry.optionalExecutorOf("core.ping")).toBe(executor)
         expect(registry.optionalExecutorOf("core.ghost")).toBeUndefined()
         expect(registry.installed().effects.get("core.ping")).toBe(ping)
+    })
+
+    it("serves the data kind of every engine entity, and refuses a module that registers a port for the same kind", async () => {
+        const engined: EntityNodePort = { kind: "record", read: () => Promise.resolve([]) }
+        const { registry, logger } = await build([engined])
+        registry.onApplicationBootstrap()
+
+        expect(registry.portOf("record")).toBe(engined)
+        expect(logger.info.mock.calls).toEqual([["graph_nodes.unserved", { at: "core.ping" }]])
+        expect(thrownBy(() => registry.addDataPort(port))).toMatchObject({ code: GraphNodesErrorCode.PortDuplicate })
     })
 
     it("keeps the subject resolvers in the order modules registered them", async () => {

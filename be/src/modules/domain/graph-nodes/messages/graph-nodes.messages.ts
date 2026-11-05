@@ -14,6 +14,7 @@ export const GRAPH_NODES_MESSAGES: MessageBundle = {
         "errors.GRAPH_NODES_TOOL_APPROVAL_REQUIRED": "Công cụ {{tool}} cần chủ workspace duyệt trước khi chạy.",
         "errors.GRAPH_NODES_TOOL_TOKEN_INVALID": "Lệnh gọi {{tool}} không có thẻ phiên chạy hợp lệ.",
         "errors.GRAPH_NODES_TOOL_FAILED": "Công cụ {{tool}} không chạy được: {{reason}}.",
+        "errors.GRAPH_NODES_EFFECT_NOT_RECORDED": "Việc {{effect}} đã chạy nhưng chưa ghi được vào sổ.",
     },
     en: {
         "errors.GRAPH_NODES_NODE_UNKNOWN": "The step {{node}} is not installed.",
@@ -27,5 +28,6 @@ export const GRAPH_NODES_MESSAGES: MessageBundle = {
         "errors.GRAPH_NODES_TOOL_APPROVAL_REQUIRED": "The tool {{tool}} needs the owner's approval before it runs.",
         "errors.GRAPH_NODES_TOOL_TOKEN_INVALID": "The call of {{tool}} carries no valid run token.",
         "errors.GRAPH_NODES_TOOL_FAILED": "The tool {{tool}} could not run: {{reason}}.",
+        "errors.GRAPH_NODES_EFFECT_NOT_RECORDED": "The effect {{effect}} ran but could not be written to the ledger.",
     },
 }
