@@ -3,11 +3,14 @@
 import { I18nProvider, ToastProvider } from "@heroui/react"
 import { GrammarRoot } from "@starci/grammar/common"
 import { viewerCacheKey, viewerSwrConfig } from "@starci/next-data"
+import dynamic from "next/dynamic"
 import { NextIntlClientProvider } from "next-intl"
 import { ThemeProvider } from "next-themes"
 import { SWRConfig, useSWRConfig } from "swr"
 import type { ReactNode } from "react"
 import { SideEffectsLayout } from "@/features/layouts/SideEffectsLayout"
+import { WorkbenchHostLayout } from "@/features/layouts/WorkbenchHostLayout"
+import { isPrototypeMode } from "@/modules/config"
 import { i18n, navigation } from "@/modules/i18n"
 import { viewerCache } from "@/modules/viewer-cache"
 import { ReduxProvider, useAppSelector } from "@/redux"
@@ -57,6 +60,16 @@ const ViewerCache = (props: LayerProps) => {
     )
 }
 
+/**
+ * The data port of the workbench renderer, chosen once here: fixtures in a prototype build (a chunk loaded only then), the back end
+ * generic operations otherwise. No page, block or hook branches on the mode.
+ */
+const WorkbenchHostLayer = isPrototypeMode()
+    ? dynamic(() =>
+          import("@/features/layouts/WorkbenchPrototypeLayout").then((loaded) => loaded.WorkbenchPrototypeLayout),
+      )
+    : WorkbenchHostLayout
+
 /** The copy, theme, React Aria and auth-refresh contexts above every route. */
 export const Providers = (props: ProvidersProps) => (
     <NextIntlClientProvider locale={props.locale} messages={props.messages} timeZone={props.timeZone}>
@@ -65,7 +78,7 @@ export const Providers = (props: ProvidersProps) => (
                 <GrammarRouting>
                     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
                         <ViewerCache>
-                            {props.children}
+                            <WorkbenchHostLayer>{props.children}</WorkbenchHostLayer>
                             <ToastProvider />
                             <SideEffectsLayout />
                         </ViewerCache>

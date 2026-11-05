@@ -10,7 +10,7 @@ export interface SpecReadBinding {
     readonly read: string
     /** A dotted path into the read's data (`stats.members`); the data itself when absent. */
     readonly path?: string | undefined
-    /** Literal variables of the read; `$installationId` is the route's installation. */
+    /** Variables of the read: literals, `$installationId` (the route's installation) or `"$<param>"` (the value of a spec param). */
     readonly variables?: ReadVariables | undefined
 }
 
@@ -50,6 +50,12 @@ export interface SpecNode {
     readonly forbidden?: SpecForbidden | undefined
 }
 
+/** The count a view shows as a chip on its tab: a read of the view's size, narrowed by a path to a number. */
+export interface SpecViewCount extends SpecReadBinding {
+    /** Whether a count above zero reads in the attention tone (something waits for the viewer). */
+    readonly isAttention?: boolean | undefined
+}
+
 /** One tab of the workbench and the block tree it draws. */
 export interface SpecView {
     /** The id of the view, which a deep link names; unique within the document. */
@@ -62,6 +68,22 @@ export interface SpecView {
     readonly hidden?: boolean | undefined
     /** The route query key that selects the view when it is present. */
     readonly openBy?: string | undefined
+    /** The count shown as a chip on the tab of the view, from a counts read; absent shows the tab with no chip. */
+    readonly count?: SpecViewCount | undefined
+    /** The primary command of the view, drawn as the page's primary button beside the tabs; it runs with no record. */
+    readonly command?: SpecActionBinding | undefined
+}
+
+/** One param of a spec: a value of the screen that lives in the URL, which bindings take as a `$name` variable. */
+export interface SpecParam {
+    /** `string`: any text (a search); `enum`: one of the values of `of`. */
+    readonly type: "string" | "enum"
+    /** The URL query key that holds the value: the URL is the single source of truth of what the screen shows. */
+    readonly url: string
+    /** enum only: the allowed values, or `"<read id>.<filter name>"` / `"<read id>.sort"` naming a list read's declared values. */
+    readonly of?: ReadonlyArray<string> | string | undefined
+    /** The value when the URL holds none (or none that is allowed); absent means no value. */
+    readonly default?: string | undefined
 }
 
 /** A whole spec document, as one version of it is stored. */
@@ -70,6 +92,8 @@ export interface SpecDocument {
     readonly schema: SpecSchemaId
     /** The module whose workbench this spec draws. */
     readonly module: string
+    /** The params of the screen by name; a binding variable `"$name"` and a block prop that names a param refer to them. */
+    readonly params?: Readonly<Record<string, SpecParam>> | undefined
     /** Blocks drawn above the tabs on every view. */
     readonly head?: ReadonlyArray<SpecNode> | undefined
     /** Blocks drawn below the tabs on every view. */
@@ -102,8 +126,14 @@ export type SpecProblemCode =
     | "SPEC_CHILDREN_REFUSED"
     | "SPEC_CHILD_NOT_ACCEPTED"
     | "SPEC_WHEN_UNKNOWN"
+    | "SPEC_PARAM_INVALID"
+    | "SPEC_PARAM_UNKNOWN"
+    | "SPEC_VAR_UNKNOWN"
 
-/** Why a spec was refused, and where: `<view>/<node id>[.<prop path or slot>]`, `head/<id>` or `foot/<id>`. */
+/**
+ * Why a spec was refused, and where: `<view>/<node id>[.<prop path or slot>[.<variable>]]`, `head/<id>` or `foot/<id>`; for a param
+ * `params.<name>`.
+ */
 export interface SpecProblem {
     /** Which rule the spec broke. */
     readonly code: SpecProblemCode

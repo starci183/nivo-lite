@@ -1,5 +1,5 @@
 import { useAgentWorkbenchShell, type AgentWorkbenchFrame } from "@/hooks/agentDashboard"
-import { LOYALTY_VIEW_IDS } from "@nivo-lite/module-loyalty/manifest"
+import { LOYALTY_VIEW_IDS } from "@nivo-lite/blocks-core/modules/loyalty"
 import type { LoyaltyTab, LoyaltyPanelInput } from "@/hooks/loyalty"
 import { useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import { useActiveWorkspace } from "@/hooks/workspaces"

@@ -1,0 +1,23 @@
+{
+  "paneProps": {
+    "search": true,
+    "searchParam": "q",
+    "searchLabel": { "vi": "Tìm theo tên, số điện thoại", "en": "Search by name or phone" }
+  },
+  "rowsProps": {
+    "label": { "vi": "Khách hàng", "en": "Customers" },
+    "empty": { "vi": "Chưa có khách hàng nào", "en": "No customers yet" },
+    "emptySearch": { "vi": "Không có khách hàng khớp với tìm kiếm", "en": "No customer matches the search" },
+    "idPath": "id",
+    "titlePath": "name",
+    "descriptionPath": "note",
+    "badgePath": "stage",
+    "selectParam": "selected",
+    "searchParam": "q"
+  },
+  "rows": [
+    { "id": "c1", "name": "Nguyễn Văn An", "note": "Hỏi giá gói 3 tháng", "stage": "new" },
+    { "id": "c2", "name": "Trần Thị Bình", "note": "Hẹn gọi lại chiều mai", "stage": "contacted" },
+    { "id": "c3", "name": "Lê Minh Châu", "note": "Đã chuyển khoản cọc", "stage": "won" }
+  ]
+}

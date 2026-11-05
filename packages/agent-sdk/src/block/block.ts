@@ -1,17 +1,27 @@
 import { z } from "zod"
+import { portsOf } from "../port/port"
+import type { PortMap } from "../port/port.types"
 import { isNamespaced } from "../schema/namespaced"
-import type { JsonSchema, Namespaced, PropsSchema } from "../schema/schema.types"
+import type { JsonSchema, Namespaced, PropsSchema, SpecText } from "../schema/schema.types"
 import type {
     ActionConfig,
     ActionDefinition,
+    ActionResult,
     BlockConfig,
     BlockDefinition,
     BlockSlots,
+    InputProblem,
     ReadConfig,
     ReadDefinition,
+    RunActionConfig,
+    RunReadConfig,
 } from "./block.types"
 import type { DefinitionErrorCode } from "./definition-error"
 import { SdkDefinitionError } from "./definition-error"
+import { parseStrict } from "./input"
+
+/** The words of a form field, or of an action, whose value the schema refused: a key of the SDK message catalogue. */
+const INVALID: SpecText = { key: "renderer.invalid" }
 
 /** Refuses a malformed id. */
 export const assertNamespaced = (id: string): void => {
@@ -27,6 +37,14 @@ const jsonOf = (schema: PropsSchema, code: DefinitionErrorCode, id: Namespaced):
     }
 }
 
+/** The result of an action whose payload the input schema refused: invalid, with each broken field named. */
+const invalidResult = (problems: ReadonlyArray<InputProblem>): ActionResult => ({
+    ok: false,
+    reason: "invalid",
+    message: INVALID,
+    fields: Object.fromEntries(problems.map((problem) => [problem.at, INVALID])),
+})
+
 /**
  * Defines a block: React-free data and a zod schema of its literal props. Throws `SdkDefinitionError` (`ID_MALFORMED`,
  * `BLOCK_PROPS_UNSERIALIZABLE`) at module load.
@@ -38,15 +56,53 @@ export const defineBlock = <P extends PropsSchema, S extends BlockSlots>(
     return { ...config, entry: "block", propsJson: jsonOf(config.props, "BLOCK_PROPS_UNSERIALIZABLE", config.id) }
 }
 
-/** Defines a read a spec may bind. Throws `SdkDefinitionError` for a malformed id or variables that do not convert. */
-export const defineRead = <V extends PropsSchema>(config: ReadConfig<V>): ReadDefinition<V> => {
+/**
+ * Defines a read a spec may bind. With `operation` it is a host-operation read. With `ports` and `run` it runs in the package:
+ * `operation` is the read id (the front end sends the id to the one generic door), and `execute` parses the variables (an unknown
+ * key is refused), builds the ports from the provider and calls `run`. Throws `SdkDefinitionError` for a malformed id or
+ * variables that do not convert.
+ */
+export const defineRead = <V extends PropsSchema, P extends PortMap, R>(
+    config: ReadConfig<V> | RunReadConfig<V, P, R>,
+): ReadDefinition<V> => {
     assertNamespaced(config.id)
     jsonOf(config.variables, "READ_VARIABLES_UNSERIALIZABLE", config.id)
-    return { ...config, entry: "read" }
+    if (!("run" in config)) return { ...config, entry: "read" }
+    const { run, ...rest } = config
+    return {
+        ...rest,
+        operation: config.id,
+        entry: "read",
+        execute: async (provider, raw, context) => {
+            const parsed = parseStrict(config.variables, raw)
+            if (!parsed.ok) return parsed
+            return { ok: true, data: await run(portsOf(provider, config.ports), parsed.value, context) }
+        },
+    }
 }
 
-/** Defines an action a spec may bind. Throws `SdkDefinitionError` for a malformed id. */
-export const defineAction = (config: ActionConfig): ActionDefinition => {
+/**
+ * Defines an action a spec may bind. With `operation` it is a host-operation action. With `input`, `ports` and `run` it runs in
+ * the package: `operation` is the action id, and `execute` parses the payload (an unknown key makes the result `invalid`), builds
+ * the ports from the provider and calls `run`. Throws `SdkDefinitionError` for a malformed id.
+ */
+export const defineAction = <I extends PropsSchema, P extends PortMap>(
+    config: ActionConfig | RunActionConfig<I, P>,
+): ActionDefinition => {
     assertNamespaced(config.id)
-    return { ...config, entry: "action" }
+    if (!("run" in config)) return { ...config, entry: "action" }
+    const { run, ...rest } = config
+    return {
+        ...rest,
+        operation: config.id,
+        entry: "action",
+        transactional: config.transactional ?? false,
+        optimistic: config.optimistic ?? false,
+        execute: async (provider, raw, context) => {
+            const parsed = parseStrict(config.input, raw)
+            if (!parsed.ok) return invalidResult(parsed.problems)
+            const result = await run(portsOf(provider, config.ports), parsed.value, context)
+            return result
+        },
+    }
 }

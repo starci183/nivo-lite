@@ -2,7 +2,7 @@
   "name": "@nivo-lite/blocks-core",
   "version": "0.1.0",
   "private": true,
-  "description": "The basic blocks the Sales and Chatbot workbenches are composed from, each made with defineBlock of @nivo-lite/agent-sdk. The root export holds the React-free definitions; ./client holds their Grammar-only components.",
+  "description": "All of Nivo's business on the agent SDK: the generic blocks and graph nodes, each module's declaration and template (./modules/<module>) and the registry that lists them (./modules), every one made with defineBlock, defineNode or the module types of @nivo-lite/agent-sdk. The root export and ./modules are React-free for the back end; ./client holds the Grammar-only block components and ./client/loyalty the Loyalty workbench until its spec draws it.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -12,9 +12,25 @@
       "types": "./dist/entities/index.d.ts",
       "default": "./dist/entities/index.js"
     },
+    "./modules": {
+      "types": "./dist/modules/index.d.ts",
+      "default": "./dist/modules/index.js"
+    },
+    "./modules/loyalty": {
+      "types": "./dist/modules/loyalty/index.d.ts",
+      "default": "./dist/modules/loyalty/index.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures.d.ts",
+      "default": "./dist/fixtures.js"
+    },
     "./client": {
       "types": "./dist/esm/client/index.d.ts",
       "default": "./dist/esm/client/index.js"
+    },
+    "./client/loyalty": {
+      "types": "./dist/esm/client/loyalty/index.d.ts",
+      "default": "./dist/esm/client/loyalty/index.js"
     }
   },
   "scripts": {

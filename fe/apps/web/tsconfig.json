@@ -11,8 +11,7 @@
       "@/*": ["./src/*"],
       "@nivo-lite/agent-sdk": ["../../../packages/agent-sdk/src/index.ts"],
       "@nivo-lite/agent-sdk/*": ["../../../packages/agent-sdk/src/*"],
-      "@nivo-lite/module-loyalty/*": ["../../../packages/module-loyalty/src/*"],
-      "@nivo-lite/modules/*": ["../../../packages/modules/src/*"]
+      "@nivo-lite/blocks-core/*": ["../../../packages/blocks-core/src/*"]
     }
   },
   "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts"],

@@ -22,6 +22,42 @@ export const textOf = (value: unknown): string => {
     return ""
 }
 
+/** The name of the param a variable value `"$<name>"` refers to; null for any other value, `$installationId` included. */
+export const paramNameOf = (value: unknown): string | null =>
+    typeof value === "string" && value.startsWith("$") && value !== INSTALLATION_VARIABLE ? value.slice(1) : null
+
+/** The variables of a read after resolution, and the names of those whose param has no value. */
+export interface ResolvedVariables {
+    /** Every variable; one whose param has no value is null. */
+    readonly variables: ReadVariables
+    /** The variables that are null because their param has no value: the read must not run while there are any. */
+    readonly pending: ReadonlyArray<string>
+}
+
+/**
+ * The variables of a read with the route installation put in and each `"$<param>"` replaced by the param's value (the URL value,
+ * else its default). A param with no value leaves its variable null and lists it as pending, so the read waits.
+ */
+export const resolveVariables = (
+    variables: ReadVariables | undefined,
+    installationId: string,
+    paramValue: (name: string) => string | null,
+): ResolvedVariables => {
+    const resolved: Record<string, string | number | boolean | null> = {}
+    const pending: Array<string> = []
+    for (const [name, value] of Object.entries(variables ?? {})) {
+        const param = paramNameOf(value)
+        if (param === null) {
+            resolved[name] = value === INSTALLATION_VARIABLE ? installationId : value
+            continue
+        }
+        const text = paramValue(param)
+        if (text === null) pending.push(name)
+        resolved[name] = text
+    }
+    return { variables: resolved, pending }
+}
+
 /** The variables of a read with the route installation put in. */
 export const variablesOf = (variables: ReadVariables | undefined, installationId: string): ReadVariables =>
     Object.fromEntries(

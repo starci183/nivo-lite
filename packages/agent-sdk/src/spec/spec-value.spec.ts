@@ -1,4 +1,4 @@
-import { INSTALLATION_VARIABLE, textOf, valueAt, variablesOf } from "./spec-value"
+import { INSTALLATION_VARIABLE, paramNameOf, resolveVariables, textOf, valueAt, variablesOf } from "./spec-value"
 
 describe("valueAt", () => {
     it("is the value itself for an absent or empty path", () => {
@@ -33,5 +33,42 @@ describe("variablesOf", () => {
             n: null,
         })
         expect(variablesOf(undefined, "inst-1")).toEqual({})
+    })
+})
+
+describe("paramNameOf", () => {
+    it("is the name after the dollar of a text value, and null for anything else", () => {
+        expect(paramNameOf("$q")).toBe("q")
+        expect(paramNameOf("$")).toBe("")
+        expect(paramNameOf(INSTALLATION_VARIABLE)).toBeNull()
+        expect(paramNameOf("plain")).toBeNull()
+        expect(paramNameOf(4)).toBeNull()
+        expect(paramNameOf(null)).toBeNull()
+    })
+})
+
+describe("resolveVariables", () => {
+    const values: Readonly<Record<string, string | null>> = { q: "an", stage: "won" }
+    const paramValue = (name: string): string | null => values[name] ?? null
+
+    it("fills the installation and each param, and keeps other literals", () => {
+        expect(
+            resolveVariables(
+                { id: INSTALLATION_VARIABLE, q: "$q", stage: "$stage", n: 3, flag: true },
+                "inst-1",
+                paramValue,
+            ),
+        ).toEqual({ variables: { id: "inst-1", q: "an", stage: "won", n: 3, flag: true }, pending: [] })
+    })
+
+    it("leaves a variable null and names it pending when its param has no value", () => {
+        expect(resolveVariables({ id: "$selected", q: "$q" }, "inst-1", paramValue)).toEqual({
+            variables: { id: null, q: "an" },
+            pending: ["id"],
+        })
+    })
+
+    it("is empty for a binding without variables", () => {
+        expect(resolveVariables(undefined, "inst-1", paramValue)).toEqual({ variables: {}, pending: [] })
     })
 })

@@ -1,3 +1,10 @@
+import { asideDetailBlock } from "./aside-detail.block"
+import { conversationBlock } from "./conversation.block"
+import { filterTabsBlock } from "./filter-tabs.block"
+import { formBlock } from "./form.block"
+import { listPaneBlock } from "./list-pane.block"
+import { tabbedPanelBlock } from "./tabbed-panel.block"
+import { tableBlock } from "./table.block"
 import { cardGridBlock } from "./card-grid.block"
 import { coreBlocks } from "./core-blocks"
 import { dashboardCardsBlock } from "./dashboard-cards.block"
@@ -33,7 +40,7 @@ const EXPLANATION_WORDS = [
 describe("coreBlocks", () => {
     it("lists every core block once, under an id of the core namespace", () => {
         const ids = coreBlocks.map((block) => block.id)
-        expect(new Set(ids).size).toBe(11)
+        expect(new Set(ids).size).toBe(18)
         expect(ids.every((id) => id.startsWith("core."))).toBe(true)
     })
 
@@ -49,6 +56,13 @@ describe("coreBlocks", () => {
             figuresBlock,
             detailBlock,
             recordListBlock,
+            listPaneBlock,
+            filterTabsBlock,
+            tableBlock,
+            formBlock,
+            tabbedPanelBlock,
+            asideDetailBlock,
+            conversationBlock,
             waitingBlock,
             decisionQueueBlock,
             dashboardCardsBlock,

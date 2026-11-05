@@ -1,5 +1,5 @@
-import { LoyaltyProgramSettingsView } from "@nivo-lite/module-loyalty/workbench"
-import type { LoyaltyProgramSettingsViewProps } from "@nivo-lite/module-loyalty/workbench"
+import { LoyaltyProgramSettingsView } from "@nivo-lite/blocks-core/client/loyalty"
+import type { LoyaltyProgramSettingsViewProps } from "@nivo-lite/blocks-core/client/loyalty"
 
 /** Resolved read models and atomic commands of the loyalty programme form. */
 export type LoyaltyProgramSettingsBaseProps = LoyaltyProgramSettingsViewProps

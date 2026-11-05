@@ -56,6 +56,10 @@
       "types": "./dist/mutation/index.d.ts",
       "default": "./dist/mutation/index.js"
     },
+    "./port": {
+      "types": "./dist/port/index.d.ts",
+      "default": "./dist/port/index.js"
+    },
     "./template": {
       "types": "./dist/template/index.d.ts",
       "default": "./dist/template/index.js"

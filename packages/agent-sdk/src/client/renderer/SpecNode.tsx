@@ -51,6 +51,7 @@ const SlotChain = (props: SlotChainProps): ReactNode => {
                 read={read}
                 binding={binding}
                 installationId={props.context.installationId}
+                params={props.context.params}
                 at={`${props.node.id}.${entry.name}`}
             >
                 {next}
@@ -88,7 +89,12 @@ export const SpecNode = (props: SpecNodeProps): ReactNode => {
     if (!canSee || renderer === undefined) return null
     const draw = (values: SlotValues): ReactNode =>
         props.node.forbidden === "hide" && hasForbidden(values) ? null : (
-            <renderer.Component props={props.node.props} slots={values} nodeId={props.node.id}>
+            <renderer.Component
+                props={props.node.props}
+                slots={values}
+                nodeId={props.node.id}
+                params={props.context.params}
+            >
                 {props.node.children.map((child) => (
                     <SpecNode key={child.id} node={child} context={props.context} />
                 ))}

@@ -38,12 +38,8 @@ module.exports = require("@starci/jest-preset").starciJestConfig({
         ],
     },
     packages: {
-        folders: ["packages/agent-sdk", "packages/blocks-core", "packages/module-loyalty"],
-        files: [
-            "packages/agent-sdk/src/**/*.ts",
-            "packages/blocks-core/src/**/*.ts",
-            "packages/module-loyalty/src/**/*.ts",
-        ],
+        folders: ["packages/agent-sdk", "packages/blocks-core"],
+        files: ["packages/agent-sdk/src/**/*.ts", "packages/blocks-core/src/**/*.ts"],
         excludes: [
             "packages/agent-sdk/src/workbench/**",
             "packages/agent-sdk/src/public/**",
@@ -57,12 +53,6 @@ module.exports = require("@starci/jest-preset").starciJestConfig({
             "packages/blocks-core/src/**/index.ts",
             "packages/blocks-core/src/**/*.types.ts",
             "packages/blocks-core/src/**/*-types.ts",
-            "packages/module-loyalty/src/workbench/**",
-            "packages/module-loyalty/src/public/**",
-            "packages/module-loyalty/src/client/**",
-            "packages/module-loyalty/src/**/index.ts",
-            "packages/module-loyalty/src/**/*.types.ts",
-            "packages/module-loyalty/src/**/*-types.ts",
         ],
     },
 })

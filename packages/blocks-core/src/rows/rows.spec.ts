@@ -1,4 +1,5 @@
-import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "./rows"
+import type { ReadPage } from "@nivo-lite/agent-sdk/block"
+import { chosenRow, moreStateOf, RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf, selectionOf } from "./rows"
 
 const PATHS = { idPath: "id", titlePath: "title", descriptionPath: "note", badgePath: "state" }
 
@@ -52,5 +53,44 @@ describe("RECORD_ROWS_PLACEHOLDER", () => {
             "placeholder-2",
         ])
         expect(RECORD_ROWS_PLACEHOLDER.every((row) => row.badge === "")).toBe(true)
+    })
+})
+
+describe("selectionOf and chosenRow", () => {
+    it("marks the row the param names, or none", () => {
+        expect(selectionOf("c2")).toEqual(["c2"])
+        expect(selectionOf(null)).toEqual([])
+    })
+
+    it("chooses the first id a change names and nothing for an empty change", () => {
+        expect(chosenRow(["c3", "c4"])).toBe("c3")
+        expect(chosenRow([])).toBeNull()
+    })
+})
+
+describe("moreStateOf", () => {
+    const page = (change: Partial<ReadPage>): ReadPage => ({
+        hasMore: false,
+        isLoadingMore: false,
+        failure: false,
+        loadMore: () => undefined,
+        ...change,
+    })
+
+    it("has no control for a list that is not paged or has no more rows", () => {
+        expect(moreStateOf(null)).toBe("none")
+        expect(moreStateOf(page({}))).toBe("none")
+    })
+
+    it("offers the next page when there is one", () => {
+        expect(moreStateOf(page({ hasMore: true }))).toBe("idle")
+    })
+
+    it("shows the load in flight, which wins over a stale failure", () => {
+        expect(moreStateOf(page({ hasMore: true, isLoadingMore: true, failure: true }))).toBe("loading")
+    })
+
+    it("offers to try again after a failed load", () => {
+        expect(moreStateOf(page({ hasMore: true, failure: true }))).toBe("failed")
     })
 })

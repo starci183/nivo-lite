@@ -35,6 +35,13 @@ describe("renderPlan", () => {
         expect(plan.foot.map((node) => node.id)).toEqual(["f"])
     })
 
+    it("carries the params of the document, none when it declares none", () => {
+        const params = { q: { type: "string", url: "q" } } as const
+        const plan = renderPlan(docOf(root, { params }), BLOCKS)
+        expect(plan.ok && plan.params).toEqual(params)
+        expect(renderPlan(docOf(root), BLOCKS)).toMatchObject({ ok: true, params: {} })
+    })
+
     it("plans a node given without props", () => {
         const plan = renderPlan(docOf({ id: "free", block: "test.free" }), BLOCKS)
         expect(plan.ok && plan.views[0]?.root.props).toEqual({})

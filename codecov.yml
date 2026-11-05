@@ -18,7 +18,6 @@ coverage:
           - "be/src/modules/projections/*/**"
           - "packages/agent-sdk/src/**"
           - "packages/blocks-core/src/**"
-          - "packages/module-loyalty/src/**"
     patch:
       default:
         target: 100%
@@ -30,7 +29,6 @@ coverage:
           - "be/src/modules/projections/*/**"
           - "packages/agent-sdk/src/**"
           - "packages/blocks-core/src/**"
-          - "packages/module-loyalty/src/**"
 component_management:
   default_rules:
     statuses:
@@ -384,9 +382,3 @@ ignore:
   - "packages/blocks-core/src/**/index.ts"
   - "packages/blocks-core/src/**/*.types.ts"
   - "packages/blocks-core/src/**/*-types.ts"
-  - "packages/module-loyalty/src/workbench/**"
-  - "packages/module-loyalty/src/public/**"
-  - "packages/module-loyalty/src/client/**"
-  - "packages/module-loyalty/src/**/index.ts"
-  - "packages/module-loyalty/src/**/*.types.ts"
-  - "packages/module-loyalty/src/**/*-types.ts"

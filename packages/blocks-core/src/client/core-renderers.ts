@@ -1,7 +1,14 @@
 import { defineRenderer } from "@nivo-lite/agent-sdk/client"
 import type { BlockRenderer } from "@nivo-lite/agent-sdk/client"
 import {
+    asideDetailBlock,
     cardGridBlock,
+    conversationBlock,
+    filterTabsBlock,
+    formBlock,
+    listPaneBlock,
+    tabbedPanelBlock,
+    tableBlock,
     dashboardCardsBlock,
     decisionQueueBlock,
     detailBlock,
@@ -13,7 +20,14 @@ import {
     stackBlock,
     waitingBlock,
 } from "../index"
+import { AsideDetailBlock } from "./blocks/AsideDetailBlock"
 import { CardGridBlock } from "./blocks/CardGridBlock"
+import { ConversationBlock } from "./blocks/ConversationBlock"
+import { FilterTabsBlock } from "./blocks/FilterTabsBlock"
+import { FormBlock } from "./blocks/FormBlock"
+import { ListPaneBlock } from "./blocks/ListPaneBlock"
+import { TabbedPanelBlock } from "./blocks/TabbedPanelBlock"
+import { TableBlock } from "./blocks/TableBlock"
 import { DashboardCardsBlock } from "./blocks/DashboardCardsBlock"
 import { DecisionQueueBlock } from "./blocks/DecisionQueueBlock"
 import { DetailBlock } from "./blocks/DetailBlock"
@@ -33,6 +47,13 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(figuresBlock, FiguresBlock),
     defineRenderer(detailBlock, DetailBlock),
     defineRenderer(recordListBlock, RecordListBlock),
+    defineRenderer(listPaneBlock, ListPaneBlock),
+    defineRenderer(filterTabsBlock, FilterTabsBlock),
+    defineRenderer(tableBlock, TableBlock),
+    defineRenderer(formBlock, FormBlock),
+    defineRenderer(tabbedPanelBlock, TabbedPanelBlock),
+    defineRenderer(asideDetailBlock, AsideDetailBlock),
+    defineRenderer(conversationBlock, ConversationBlock),
     defineRenderer(waitingBlock, WaitingBlock),
     defineRenderer(decisionQueueBlock, DecisionQueueBlock),
     defineRenderer(dashboardCardsBlock, DashboardCardsBlock),

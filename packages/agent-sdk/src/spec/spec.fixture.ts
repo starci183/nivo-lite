@@ -9,7 +9,7 @@ export const STACK: BlockDefinition = defineBlock({
     title: { key: "stack" },
     props: z.object({ gap: z.enum(["row", "section"]) }).strict(),
     slots: {},
-    children: { max: 3, accepts: ["test.stack", "test.list"] },
+    children: { max: 3, accepts: ["test.stack", "test.list", "test.search"] },
 })
 
 /** A leaf block with a required list slot of `order` data, an optional action slot and nested props. */
@@ -37,6 +37,16 @@ export const FREE: BlockDefinition = defineBlock({
     props: z.object({}),
     slots: { any: { kind: "read", shape: "record", required: false } },
     children: {},
+})
+
+/** A leaf block whose `searchParam` prop names a spec param. */
+export const SEARCH: BlockDefinition = defineBlock({
+    id: "test.search",
+    title: { key: "search" },
+    props: z.object({ searchParam: z.string().max(40).optional() }),
+    slots: { rows: { kind: "read", shape: "list", required: false } },
+    children: false,
+    params: ["searchParam"],
 })
 
 /** A read of the orders, narrowed by a search term. */
@@ -72,7 +82,7 @@ export const OPEN: ActionDefinition = defineAction({
 })
 
 /** The blocks of the spec specs. */
-export const BLOCKS: ReadonlyArray<BlockDefinition> = [STACK, LIST, FREE]
+export const BLOCKS: ReadonlyArray<BlockDefinition> = [STACK, LIST, FREE, SEARCH]
 
 /** A node of the list block bound to the orders read. */
 export const listNode = (id: string, extra: Partial<SpecNode> = {}): SpecNode => ({

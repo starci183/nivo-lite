@@ -1,5 +1,5 @@
 import { templatesOf } from "@nivo-lite/agent-sdk/module"
-import { MODULE_SERVERS } from "@nivo-lite/modules/template"
+import { MODULE_SERVERS } from "@nivo-lite/blocks-core/modules"
 import type { ModuleDefinition } from "./modules.contracts"
 import { CHATBOT_MODULE } from "./chatbot.contracts"
 import { LEAD_GEN_MODULE } from "./lead-gen.contracts"

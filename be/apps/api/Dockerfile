@@ -22,7 +22,7 @@ WORKDIR /app
 COPY --from=manifests /app ./
 RUN npm ci --ignore-scripts
 
-# The back end imports the root packages (@nivo-lite/agent-sdk, @nivo-lite/modules, ...): `build:be` builds them first, through turbo.
+# The back end imports the root packages (@nivo-lite/agent-sdk, @nivo-lite/blocks-core): `build:be` builds them first, through turbo.
 COPY turbo.json ./
 COPY packages packages
 COPY be/tsconfig.json be/tsconfig.build.json be/

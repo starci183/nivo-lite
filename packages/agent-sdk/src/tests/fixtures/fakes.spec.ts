@@ -2,6 +2,7 @@ import {
     sampleActionHandle,
     sampleBlockHost,
     sampleHostRead,
+    sampleParamHandle,
     sampleReadHandle,
     sampleSlots,
     sampleWorkbenchHost,
@@ -60,10 +61,30 @@ describe("sampleBlockHost", () => {
         expect(host.navigation.queryValue("tab")).toBe("a")
         host.navigation.setQueryValue("tab", null)
         expect(host.navigation.queryValue("tab")).toBeNull()
+        host.navigation.setQueryValues({ q: "an", cursor: "c" })
+        host.navigation.setQueryValues({ cursor: null })
+        expect(host.navigation.queryValue("q")).toBe("an")
+        expect(host.navigation.queryValue("cursor")).toBeNull()
         host.notify("danger", "boom")
         host.report("CODE", "at")
         expect(host.notices()).toEqual(["boom"])
         expect(host.reports()).toEqual(["CODE @ at"])
+    })
+})
+
+describe("sampleParamHandle", () => {
+    it("serves the given values, null for the rest, and records the writes", () => {
+        const handle = sampleParamHandle({ q: "an", stage: null })
+        expect(handle.value("q")).toBe("an")
+        expect(handle.value("stage")).toBeNull()
+        expect(handle.value("nope")).toBeNull()
+        handle.set("q", "b")
+        handle.set("q", null)
+        expect(handle.writes()).toEqual([
+            ["q", "b"],
+            ["q", null],
+        ])
+        expect(sampleParamHandle().value("q")).toBeNull()
     })
 })
 

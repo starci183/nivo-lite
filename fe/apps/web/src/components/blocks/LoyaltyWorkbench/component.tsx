@@ -1,5 +1,5 @@
-import { LoyaltyWorkbenchView } from "@nivo-lite/module-loyalty/workbench"
-import type { LoyaltyWorkbenchViewProps } from "@nivo-lite/module-loyalty/workbench"
+import { LoyaltyWorkbenchView } from "@nivo-lite/blocks-core/client/loyalty"
+import type { LoyaltyWorkbenchViewProps } from "@nivo-lite/blocks-core/client/loyalty"
 
 /** Resolved atoms of the Loyalty world: the shape, the read models and the actions. */
 export type LoyaltyWorkbenchBaseProps = LoyaltyWorkbenchViewProps
