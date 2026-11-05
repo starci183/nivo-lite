@@ -7,6 +7,7 @@ import { LandingFlow } from "@/components/blocks/LandingFlow"
 import { LandingFooter } from "@/components/blocks/LandingFooter"
 import { LandingHero } from "@/components/blocks/LandingHero"
 import { LandingNavActions } from "@/components/blocks/LandingNavActions"
+import { LandingNavDrawer } from "@/components/blocks/LandingNavDrawer"
 import { LandingNavBrand } from "@/components/blocks/LandingNavBrand"
 import { LandingNavLinks } from "@/components/blocks/LandingNavLinks"
 import { LandingOffer } from "@/components/blocks/LandingOffer"
@@ -28,7 +29,12 @@ export const LandingPageBase = (props: LandingPageBaseProps) => (
         mainId="top"
         brand={<LandingNavBrand />}
         navigation={<LandingNavLinks anchorBase="" />}
-        actions={<LandingNavActions />}
+        actions={
+            <>
+                <LandingNavActions />
+                <LandingNavDrawer anchorBase="" />
+            </>
+        }
         body={
             <>
                 <Page measure="product">

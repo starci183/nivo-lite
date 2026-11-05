@@ -44,11 +44,14 @@ interface PublicBookingLabels {
     readonly email: string
     readonly party: string
     readonly note: string
+    readonly notePlaceholder: string
     readonly website: string
     readonly submit: string
     readonly footnote: string
     readonly again: string
     readonly alternatives: string
+    readonly previousMonth: string
+    readonly nextMonth: string
 }
 
 /** A server answer displayed with alternative times. */
@@ -65,6 +68,8 @@ interface PublicBookingDone extends PublicBookingFeedback {
 /** Resolved form values and display state. */
 interface PublicBookingView {
     readonly formLabel: string
+    /** The BCP 47 locale the calendar writes months and weekdays in, and starts its week by. */
+    readonly calendarLocale: string
     readonly fields: PublicBookingFieldValues
     readonly services: ReadonlyArray<PublicBookingServiceOption>
     readonly noServicesText: string
@@ -73,6 +78,10 @@ interface PublicBookingView {
     readonly times: ReadonlyArray<PublicBookingOption> | null
     readonly labels: PublicBookingLabels
     readonly isBusy: boolean
+    /** What the visitor chose, in one line; empty until a time is chosen. */
+    readonly summary: string
+    /** What a send without a choice asks for; empty when nothing is missing. */
+    readonly need: string
     readonly done?: PublicBookingDone
     /** The answer that turned the booking down, with nearby free times. */
     readonly refusal?: PublicBookingFeedback
@@ -89,5 +98,7 @@ interface PublicBookingActions {
 /** Props for {@link PublicBookingForm}. */
 export interface PublicBookingFormProps {
     readonly props: PublicBookingView
+    /** The shop is still being read: the card draws its ready bands as geometry. */
+    readonly isLoading?: boolean
     readonly on: PublicBookingActions
 }

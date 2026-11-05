@@ -1,2 +1,2 @@
-export { errorKeyOf } from "./publicLoyalty.shared"
+export { errorKeyOf, isLoyaltyPageClosed } from "./publicLoyalty.shared"
 export { usePublicLoyalty } from "./usePublicLoyalty"

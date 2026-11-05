@@ -1,9 +1,18 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
-import { pageDays, resultKey } from "./publicBooking.shared"
+import { useFormatter, useLocale, useTranslations } from "next-intl"
+import { useState } from "react"
+import {
+    calendarLocaleOf,
+    lackOf,
+    pageDays,
+    publicBookingLabels,
+    resultKey,
+    serviceOptionsOf,
+    summaryOf,
+} from "./publicBooking.shared"
 import { usePublicBooking } from "./usePublicBooking"
-import { wallClockText, wallDate, wallMinutes } from "@/modules/i18n"
+import { shortDayText, wallClockText, wallDate, wallMinutes } from "@/modules/i18n"
 import type { PublicBookingPageData } from "@/modules/types"
 import type { PublicBookingFields } from "./usePublicBooking"
 
@@ -27,6 +36,7 @@ type UsePublicBookingFormResult = {
             }[]
         }
         formLabel: string
+        calendarLocale: string
         fields: PublicBookingFields
         services: {
             value: string
@@ -61,8 +71,15 @@ type UsePublicBookingFormResult = {
             footnote: string
             again: string
             alternatives: string
+            notePlaceholder: string
+            previousMonth: string
+            nextMonth: string
         }
         isBusy: boolean
+        /** What the visitor chose, in one line: the service, the day and time, the price. Empty until a time is chosen. */
+        summary: string
+        /** What a send without a choice asks for; empty when nothing is missing. */
+        need: string
     }
     on: {
         change: (patch: Partial<PublicBookingFields>) => void
@@ -75,20 +92,17 @@ type UsePublicBookingFormResult = {
 /** The connected public booking form: free times follow the service and the day through the `publicBookingTimes` query, and a send goes through `requestPublicBooking`. */
 export const usePublicBookingForm = (page: PublicBookingPageData | null | undefined): UsePublicBookingFormResult => {
     const t = useTranslations("workbenchBooking")
+    const pub = useTranslations("publicPages")
     const format = useFormatter()
+    const locale = useLocale()
     const booking = usePublicBooking(page)
+    const [missing, setMissing] = useState<"" | "service" | "time">("")
     const { today } = booking
     const zone = page?.timezone ?? "UTC"
     const money = (value: number) =>
         format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
     const clock = (iso: string) => wallClockText(wallMinutes(Date.parse(iso), zone))
-    const dayText = (date: string) =>
-        format.dateTime(new Date(`${date}T12:00:00Z`), {
-            weekday: "short",
-            day: "2-digit",
-            month: "2-digit",
-            timeZone: "UTC",
-        })
+    const dayText = (date: string) => shortDayText(new Date(`${date}T12:00:00Z`), "UTC", locale)
     const whenText = (iso: string) => `${clock(iso)} ${dayText(wallDate(Date.parse(iso), zone))}`
     const { result } = booking
     const answer = result?.kind === "answered" ? result.answer : null
@@ -105,9 +119,22 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
         date: wallDate(Date.parse(iso), zone),
     }))
     const succeeded = answer?.ok === true
+    const summary = summaryOf(page, booking.fields, {
+        at: t("publicAt"),
+        day: dayText,
+        clock,
+        money,
+    })
+    const submit = (): void => {
+        const lacking = lackOf(booking.fields)
+        setMissing(lacking)
+        if (lacking === "") booking.submit()
+    }
+    const needText = missing === "" ? "" : pub(missing === "service" ? "bookingNeedService" : "bookingNeedTime")
     return {
         props: {
             formLabel: t("publicFormLabel"),
+            calendarLocale: calendarLocaleOf(locale),
             fields: booking.fields,
             services: serviceOptionsOf(page, t, money),
             noServicesText: t("publicNoServices"),
@@ -115,6 +142,8 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
             times: booking.times === null ? null : booking.times.map((iso) => ({ value: iso, label: clock(iso) })),
             labels: publicBookingLabels(t),
             isBusy: booking.isBusy,
+            summary,
+            need: lackOf(booking.fields) === "" ? "" : needText,
             ...(succeeded
                 ? {
                       done: {
@@ -128,49 +157,9 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
         },
         on: {
             change: booking.change,
-            submit: booking.submit,
+            submit,
             again: booking.again,
             pickAlternative: booking.pick,
         },
     }
 }
-
-/** Resolves the labels for this form. */
-const publicBookingLabels = (t: ReturnType<typeof useTranslations<"workbenchBooking">>) => {
-    return {
-        step1: t("publicStep1"),
-        step2: t("publicStep2"),
-        step3: t("publicStep3"),
-        finding: t("publicFinding"),
-        noTimes: t("publicNoTimes"),
-        pickTime: t("publicPickTime"),
-        name: t("publicName"),
-        phone: t("publicPhone"),
-        email: t("publicEmail"),
-        party: t("publicParty"),
-        note: t("publicNote"),
-        website: t("publicWebsite"),
-        submit: t("publicSubmit"),
-        footnote: t("publicFootnote"),
-        again: t("publicAgain"),
-        alternatives: t("publicAlternatives"),
-    }
-}
-
-/** Resolves service descriptions and formatted prices for the pure form. */
-const serviceOptionsOf = (
-    page: PublicBookingPageData | null | undefined,
-    t: ReturnType<typeof useTranslations<"workbenchBooking">>,
-    money: (value: number) => string,
-) =>
-    (page?.services ?? []).map((service) => ({
-        value: service.id,
-        label: service.name,
-        description: [
-            t("publicServiceLine", { minutes: service.durationMin }),
-            service.priceVnd === null || service.priceVnd === 0 ? "" : money(service.priceVnd),
-            service.description,
-        ]
-            .filter((part) => part !== "")
-            .join(" \u00b7 "),
-    }))

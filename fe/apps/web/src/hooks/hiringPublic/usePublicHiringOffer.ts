@@ -2,13 +2,15 @@
 
 import { useMemo } from "react"
 import { useQueryPublicHiringOfferSwr } from "@/hooks/swr"
-import { toPublicOffer, type PublicOfferView } from "./hiringPublic.shared"
+import { toPublicOffer, type PublicOfferView, failureFlagsOf } from "./hiringPublic.shared"
 
 /** The view `usePublicHiringOffer` returns. */
 export interface PublicHiringOfferView {
     view: PublicOfferView | undefined
     isLoading: boolean
     isMissing: boolean
+    /** The read failed for a reason other than a missing link (the network, the server). */
+    isFailed: boolean
     reload: () => void
 }
 
@@ -19,5 +21,10 @@ export const usePublicHiringOffer = (token: string): PublicHiringOfferView => {
     const reload = () => {
         void read.mutate()
     }
-    return { view, isLoading: read.isLoading, isMissing: read.error !== undefined, reload }
+    return {
+        view,
+        isLoading: read.isLoading,
+        ...failureFlagsOf(read.error),
+        reload,
+    }
 }

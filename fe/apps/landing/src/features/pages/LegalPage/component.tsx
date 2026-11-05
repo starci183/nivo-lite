@@ -1,6 +1,7 @@
 import { Alert, Page, Stack } from "@starci/grammar/common"
 import { LandingFooter } from "@/components/blocks/LandingFooter"
 import { LandingNavActions } from "@/components/blocks/LandingNavActions"
+import { LandingNavDrawer } from "@/components/blocks/LandingNavDrawer"
 import { LandingNavBrand } from "@/components/blocks/LandingNavBrand"
 import { LandingNavLinks } from "@/components/blocks/LandingNavLinks"
 import { LegalSectionView } from "@/components/composites/LegalSectionView"
@@ -42,7 +43,12 @@ export const LegalPageBase = (props: LegalPageBaseProps) => (
         mainLabel={props.props.mainLabel}
         brand={<LandingNavBrand />}
         navigation={<LandingNavLinks anchorBase="/" />}
-        actions={<LandingNavActions />}
+        actions={
+            <>
+                <LandingNavActions />
+                <LandingNavDrawer anchorBase="/" />
+            </>
+        }
         body={
             <>
                 <Page measure="reading" header={{ title: props.props.title, description: props.props.intro }}>

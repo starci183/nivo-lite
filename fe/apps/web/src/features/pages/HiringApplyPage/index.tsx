@@ -11,7 +11,7 @@ interface HiringApplyPageProps {
 /** The document title of the page. */
 export const hiringApplyMetadata = async (): Promise<Metadata> => {
     const t = await getTranslations("hiring")
-    return { title: t("applyPageTitle") }
+    return { title: t("applyPageTitle"), robots: { index: false, follow: false } }
 }
 
 /**
@@ -20,6 +20,5 @@ export const hiringApplyMetadata = async (): Promise<Metadata> => {
  */
 export const HiringApplyPage = async (props: HiringApplyPageProps): Promise<ReactElement> => {
     const { ws, job } = await props.params
-    const t = await getTranslations("hiring")
-    return <HiringApplyPageBase props={{ ws, job, label: t("applyPageTitle") }} />
+    return <HiringApplyPageBase props={{ ws, job }} />
 }

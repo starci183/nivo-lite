@@ -1,6 +1,8 @@
-import { Alert, Button, Heading, Text, Stack } from "@starci/grammar/common"
-import { HiringReplyCard } from "@/components/frames/HiringReplyCard"
+import { Alert, AlertDialog, Button, Cluster, Heading, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import type { Band } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { HiringReplyOutcome } from "@/components/composites/HiringReplyOutcome"
+import { PublicShell } from "@/components/frames/PublicShell"
 import type { DataSlot, HiringSay, SlotLabels } from "@/modules/types"
 import { PRE_WRAP_CLASS_NAME } from "./classNames"
 
@@ -18,13 +20,16 @@ export interface HiringOfferLetterView {
     readonly acceptedTitle: string
 }
 
+/** Unseen text that gives a skeleton line the width of a real one. */
+const GHOST = "M".repeat(28)
+
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
 const LETTER_PLACEHOLDER: HiringOfferLetterView = {
-    shop: "",
-    heading: "",
-    letter: "",
-    validUntil: null,
-    acceptedTitle: "",
+    shop: GHOST,
+    heading: GHOST,
+    letter: GHOST.repeat(6),
+    validUntil: GHOST,
+    acceptedTitle: GHOST,
 }
 
 /** What the connected block settled for the candidate's offer link. */
@@ -36,10 +41,18 @@ export interface HiringOfferReplyBaseProps {
         readonly slotLabels: SlotLabels
         readonly outcome: { readonly isOk: boolean; readonly text: string } | null
         readonly isBusy: boolean
+        readonly language: {
+            readonly label: string
+            readonly locale: string
+            readonly isPending: boolean
+            readonly options: ReadonlyArray<{ readonly value: string; readonly label: string; readonly name: string }>
+        }
+        readonly failedBody: string
     }
     readonly on: {
         readonly answer: (accept: boolean) => void
         readonly retry: () => void
+        readonly chooseLanguage: (locale: string) => void
     }
 }
 
@@ -49,79 +62,132 @@ interface OfferCardProps extends HiringOfferReplyBaseProps {
     readonly isSkeleton: boolean
 }
 
-/** What follows the letter: the answer given, or the buttons to give one. */
-const OfferAnswer = (props: OfferCardProps) => {
-    const { say, outcome, isBusy } = props.props
+/** The one decision group: the way out first, then the primary. Both ask before they send, because neither can be taken back here. */
+const OfferDecision = (props: Pick<OfferCardProps, "props" | "on" | "isSkeleton">) => {
+    const { say, isBusy } = props.props
     const { on } = props
-    switch (props.shape) {
-        case "accepted":
-            return <Alert tone="affirmative" title={props.view.acceptedTitle} description={say("replyAcceptedBody")} />
-        case "declined":
-            return <Alert tone="informative" title={say("replyDeclinedTitle")} />
-        case "expired":
-            return <Alert tone="cautionary" title={say("replyExpired")} description={say("replyExpiredBody")} />
-        case "open":
-            if (outcome !== null) return <Alert tone={outcome.isOk ? "affirmative" : "negative"} title={outcome.text} />
-            return (
-                <Stack gap="inline">
-                    <Button
-                        intent="commit"
-                        width="fill"
-                        isDisabled={isBusy}
-                        isPending={isBusy}
-                        isLoading={props.isSkeleton}
-                        onPress={() => on.answer(true)}
-                    >
-                        {say("replyAccept")}
-                    </Button>
-                    <Button
-                        intent="alternative"
-                        width="fill"
-                        isDisabled={isBusy}
-                        isLoading={props.isSkeleton}
-                        onPress={() => on.answer(false)}
-                    >
+    return (
+        <Cluster gap="row" justify="end">
+            <AlertDialog
+                title={say("replyDeclineTitle")}
+                description={say("replyDeclineBody")}
+                tone="negative"
+                confirmLabel={say("replyDeclineConfirm")}
+                cancelLabel={say("replyBack")}
+                onConfirm={() => on.answer(false)}
+                trigger={
+                    <Button intent="alternative" isLoading={props.isSkeleton} isPending={isBusy}>
                         {say("replyDecline")}
                     </Button>
-                </Stack>
-            )
-    }
+                }
+            />
+            <AlertDialog
+                title={say("replyAcceptTitle")}
+                description={say("replyAcceptBody")}
+                tone="informative"
+                confirmLabel={say("replyAcceptConfirm")}
+                cancelLabel={say("replyBack")}
+                onConfirm={() => on.answer(true)}
+                trigger={
+                    <Button intent="commit" isLoading={props.isSkeleton} isPending={isBusy}>
+                        {say("replyAccept")}
+                    </Button>
+                }
+            />
+        </Cluster>
+    )
 }
 
-/** Draws the candidate's own offer link: the letter, then the answer buttons (or the answer already given). */
-export const HiringOfferReplyBase = (props: HiringOfferReplyBaseProps) => (
-    <SlotView
-        slot={props.props.slot}
-        placeholder={LETTER_PLACEHOLDER}
-        labels={props.props.slotLabels}
-        onRetry={props.on.retry}
-        render={(view, isSkeleton) => (
-            <HiringReplyCard
-                say={props.props.say}
-                ariaKey="replyOfferTitle"
-                shop={
+/** What follows the letter: the answer given, or the decision to give one. */
+const OfferAnswer = (props: OfferCardProps) => {
+    const { say, outcome } = props.props
+    if (props.shape === "accepted")
+        return <Alert tone="affirmative" title={props.view.acceptedTitle} description={say("replyAcceptedBody")} />
+    if (props.shape === "declined")
+        return <Alert tone="informative" title={say("replyDeclinedTitle")} description={say("replyDeclinedBody")} />
+    if (props.shape === "expired")
+        return <Alert tone="cautionary" title={say("replyExpired")} description={say("replyExpiredBody")} />
+    return outcome === null ? <OfferDecision {...props} /> : <HiringReplyOutcome outcome={outcome} />
+}
+
+/** The letter: the business and the heading, then the words, then how long it holds (only while it still holds). */
+const offerBands = (props: OfferCardProps): [Band, Band, Band] => {
+    const { view, isSkeleton } = props
+    return [
+        {
+            kind: "body",
+            children: (
+                <Stack gap="row">
                     <Text size="sm" tone="muted" isLoading={isSkeleton}>
                         {view.shop}
                     </Text>
-                }
-                heading={
                     <Heading level={1} isLoading={isSkeleton}>
                         {view.heading}
                     </Heading>
-                }
-            >
-                <div className={PRE_WRAP_CLASS_NAME}>
-                    <Text size="sm" isLoading={isSkeleton}>
-                        {view.letter}
-                    </Text>
-                </div>
-                {view.validUntil === null ? null : (
-                    <Text size="sm" tone="muted">
-                        {view.validUntil}
-                    </Text>
-                )}
-                <OfferAnswer {...props} view={view} isSkeleton={isSkeleton} />
-            </HiringReplyCard>
-        )}
-    />
-)
+                </Stack>
+            ),
+        },
+        {
+            kind: "body",
+            children: (
+                <Stack gap="row">
+                    <div className={PRE_WRAP_CLASS_NAME}>
+                        <Text isLoading={isSkeleton}>{view.letter}</Text>
+                    </div>
+                    {view.validUntil === null || props.shape === "expired" ? null : (
+                        <Text size="xs" tone="muted" isLoading={isSkeleton}>
+                            {view.validUntil}
+                        </Text>
+                    )}
+                </Stack>
+            ),
+        },
+        { kind: "body", children: <OfferAnswer {...props} /> },
+    ]
+}
+
+/** The bar, the language menu and the foot line around the offer card. */
+const offerShellOf = (props: HiringOfferReplyBaseProps) => ({
+    label: props.props.say("replyOfferTitle"),
+    foot: props.props.say("replyFoot"),
+    measure: "reading" as const,
+    brand: {
+        name: "items" in props.props.slot ? props.props.slot.items.shop : null,
+        isLoading: "isLoading" in props.props.slot,
+        fallbackLabel: props.props.say("brandFallback"),
+    },
+    language: props.props.language,
+    onChooseLanguage: props.on.chooseLanguage,
+})
+
+/** The read of the offer link, the way the slot draws it. */
+const offerSlotOf = (props: HiringOfferReplyBaseProps) => ({
+    slot: props.props.slot,
+    placeholder: LETTER_PLACEHOLDER,
+    labels: props.props.slotLabels,
+    errorDescription: props.props.failedBody,
+    onRetry: props.on.retry,
+})
+
+/** Draws the candidate's own offer link: one card with the letter, then the decision (or the answer already given). */
+export const HiringOfferReplyBase = (props: HiringOfferReplyBaseProps) => {
+    return (
+        <Page chrome="bleed" minHeight="none">
+            <PublicShell {...offerShellOf(props)}>
+                <SlotView
+                    {...offerSlotOf(props)}
+                    render={(view, isSkeleton) => (
+                        <Stack gap="region" measure="form">
+                            <SurfaceCard
+                                kind="bands"
+                                ariaLabel={props.props.say("replyOfferTitle")}
+                                isLoading={isSkeleton}
+                                bands={offerBands({ ...props, view, isSkeleton })}
+                            />
+                        </Stack>
+                    )}
+                />
+            </PublicShell>
+        </Page>
+    )
+}
