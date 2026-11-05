@@ -57,7 +57,7 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                 <Alert
                     title={view.failedTitle}
                     description={view.error}
-                    tone="negative"
+                    tone={view.canResend ? "cautionary" : "negative"}
                     {...(view.canResend && { action: { label: view.resendLabel, onAction: props.on.resend } })}
                 />
             )}

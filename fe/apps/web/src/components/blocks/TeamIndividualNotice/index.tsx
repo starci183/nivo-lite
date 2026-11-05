@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useIndividualPlan } from "@/hooks/billing"
 import { useMember } from "@/hooks/member"
 import { isTeamManager } from "@/hooks/team"
-import { workspaceBillingPath } from "@/modules/routes"
+import { creditsPath } from "@/modules/routes"
 import { TeamIndividualNoticeBase } from "./component"
 
 /** Tells an owner or manager on an individual plan why nobody can be invited, and where the Team plan is. */
@@ -19,7 +19,7 @@ export const TeamIndividualNotice = () => {
                 title: t("individualTitle"),
                 body: t("individualText"),
                 ctaLabel: t("individualCta"),
-                ctaHref: workspaceBillingPath(member.workspaceId),
+                ctaHref: creditsPath(),
             }}
         />
     )

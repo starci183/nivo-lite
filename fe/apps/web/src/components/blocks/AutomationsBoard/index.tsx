@@ -40,6 +40,7 @@ export const AutomationsBoard = (props: AutomationsBoardProps) => {
     const format = useFormatter()
     const slotLabels = useSlotLabels()
     const pane = usePaneCopy()
+    const tp = useTranslations("pane")
     const query = useSearchParams().get(SEARCH_KEY) ?? ""
     const board = useAutomationsBoard({
         layout: props.layout,
@@ -75,7 +76,7 @@ export const AutomationsBoard = (props: AutomationsBoardProps) => {
                         back: pane.backToList,
                         moreActions: pane.moreActions,
                         runsTitle: t("runsTitle"),
-                        moreFilters: pane.moreFilters,
+                        moreFilters: (count: number): string => tp("moreFilters", { count }),
                         pickTitle: t("pickTitle"),
                         pickBody: t("pickBody"),
                         emptyFiltered: t("emptyFiltered"),

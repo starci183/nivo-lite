@@ -1,5 +1,5 @@
-import { EmptyNotice, ListBox, Stack, Text } from "@starci/grammar/common"
-import type { ErrorData, IconSource, ListBoxItem } from "@starci/grammar/common"
+import { Button, EmptyNotice, ListBox, Stack, Text } from "@starci/grammar/common"
+import type { ErrorData, IconSource, ListBoxItem, ListBoxSection } from "@starci/grammar/common"
 import { FilterGroup } from "@/components/composites/FilterGroup"
 import type { FilterGroupChoice, FilterGroupSearch } from "@/components/composites/FilterGroup"
 
@@ -20,7 +20,9 @@ interface PaneListProps {
     readonly summary?: string
     readonly search?: FilterGroupSearch
     readonly choice?: FilterGroupChoice
-    readonly items: ReadonlyArray<ListBoxItem>
+    /** The rows, flat; or `sections` for rows grouped under captions. */
+    readonly items?: ReadonlyArray<ListBoxItem>
+    readonly sections?: ReadonlyArray<ListBoxSection>
     readonly selectedId: string | null
     readonly onSelect: (id: string) => void
     /** What shows when no row remains, whether the list is empty or a filter matched nothing. */
@@ -31,6 +33,13 @@ interface PaneListProps {
     readonly isLoading?: boolean
     /** A muted line under the rows (how many are shown, for example). */
     readonly footer?: string
+    /** Loads more rows: the neutral small command under the closing line, with the failed-load line and its retry. */
+    readonly footerAction?: {
+        readonly label: string
+        readonly onPress: () => void
+        readonly isPending?: boolean
+        readonly error?: string
+    }
 }
 
 /** The empty notice of a list, with its one action when it has one. */
@@ -79,12 +88,29 @@ export const PaneList = (props: PaneListProps) => {
                 isLoading={isLoading}
                 {...(props.error === undefined ? {} : { error: props.error })}
                 emptyContent={emptyNoticeOf(props.empty)}
-                items={props.items}
+                {...(props.sections === undefined ? { items: props.items ?? [] } : { sections: props.sections })}
             />
             {props.footer === undefined || isLoading ? null : (
                 <Text size="xs" tone="muted">
                     {props.footer}
                 </Text>
+            )}
+            {props.footerAction === undefined || isLoading ? null : (
+                <>
+                    {props.footerAction.error === undefined ? null : (
+                        <Text size="xs" tone="muted">
+                            {props.footerAction.error}
+                        </Text>
+                    )}
+                    <Button
+                        intent="neutral"
+                        size="sm"
+                        isPending={props.footerAction.isPending === true}
+                        onPress={props.footerAction.onPress}
+                    >
+                        {props.footerAction.label}
+                    </Button>
+                </>
             )}
         </Stack>
     )
