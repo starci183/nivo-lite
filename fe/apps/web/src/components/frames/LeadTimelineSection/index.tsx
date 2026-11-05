@@ -1,4 +1,4 @@
-import { Stack, SurfaceCard, Text, Timeline } from "@starci/grammar/common"
+import { Disclosure, Stack, SurfaceCard, Text, Timeline } from "@starci/grammar/common"
 import type { TimelineItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { LeadMark } from "@/components/composites/LeadMark"
@@ -45,22 +45,16 @@ const itemOf = (entry: LeadTimelineEntryView, props: LeadTimelineSectionProps): 
                 {entry.summary}
             </Text>
             {entry.evidence === null || entry.evidence === "" ? null : (
-                <SurfaceCard
-                    kind="accordion"
-                    ariaLabel={props.labels.evidenceLabel}
-                    items={[
-                        {
-                            id: entry.id,
-                            title: props.labels.evidenceLabel,
-                            isOpen: entry.isOpen,
-                            body: (
-                                <Text as="p" size="sm">
-                                    {entry.evidence}
-                                </Text>
-                            ),
-                        },
-                    ]}
-                    onItemOpenChange={props.on.timelineToggle}
+                <Disclosure
+                    title={props.labels.evidenceLabel}
+                    headingLevel={3}
+                    isExpanded={entry.isOpen}
+                    onExpandedChange={(isOpen) => props.on.timelineToggle(entry.id, isOpen)}
+                    body={
+                        <Text as="p" size="sm">
+                            {entry.evidence}
+                        </Text>
+                    }
                 />
             )}
         </Stack>
