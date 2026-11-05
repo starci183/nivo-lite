@@ -43,3 +43,10 @@ export {
     sequencePeriodOf,
 } from "./sequence-format"
 export { SYSTEM_FIELDS } from "./system-fields"
+export type { CatalogSnapshot, PlanOp, PlanOpKind } from "./catalog.types"
+export { parseCatalogSnapshot } from "./catalog-snapshot.policy"
+export { planOf } from "./plan"
+export { ENTITY_PLAN_DESTRUCTIVE, destructiveOps } from "./plan-problems"
+export { manifestOf } from "./manifest"
+export type { EntityManifest } from "./manifest"
+export { renderMigration } from "./render"

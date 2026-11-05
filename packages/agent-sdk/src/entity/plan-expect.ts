@@ -5,11 +5,11 @@ import {
     POLICY_COMMANDS,
     identOf,
     normalizeSql,
-    partitionNameOf,
     policyNameOf,
     snakeOf,
     viewNameOf,
 } from "./plan-names"
+import { partitionNameOf } from "./partition-name"
 
 /** An index the declaration implies, parts already normalized. */
 export interface ExpectedIndex {

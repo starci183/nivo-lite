@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./cli.module-definition"
 import { CleanupWorkspacesModule } from "./cleanup-workspaces/cleanup-workspaces.module"
+import { EntitySchemaModule } from "./entity-schema/entity-schema.module"
 import { CreateOwnerModule } from "./create-owner/create-owner.module"
 import { ConnectChannelModule } from "./connect-channel/connect-channel.module"
 import { CliJobsModule } from "./jobs/jobs.module"
@@ -25,6 +26,7 @@ import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
         CleanupWorkspacesModule.register({}),
         ConnectChannelModule.register({}),
         CreateOwnerModule.register({}),
+        EntitySchemaModule.register({}),
         CliJobsModule.register({}),
         MailCliModule.register({}),
         MigrateModule.register({}),

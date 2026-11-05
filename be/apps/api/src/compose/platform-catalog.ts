@@ -4,6 +4,7 @@ import { DATABASE_ERROR_KINDS } from "@modules/platform/database"
 import { EVENT_BUS_ERROR_KINDS, EVENT_BUS_MESSAGES } from "@modules/platform/event-bus"
 import { QUEUE_ERROR_KINDS, QUEUE_MESSAGES } from "@modules/platform/queue"
 import { JOBS_ERROR_KINDS, JOBS_MESSAGES } from "@modules/platform/jobs"
+import { ENTITY_PLANNER_ERROR_KINDS } from "@modules/domain/entity-planner"
 import { JOB_OPS_ERROR_KINDS } from "@modules/domain/job-ops"
 import { FLOW_ENGINE_ERROR_KINDS, FLOW_ENGINE_MESSAGES } from "@modules/domain/flow-engine"
 import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
@@ -22,6 +23,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** The error kinds of the capabilities this group registers, in registration order. */
 export const platformErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     JOB_OPS_ERROR_KINDS,
+    ENTITY_PLANNER_ERROR_KINDS,
     FLOW_ENGINE_ERROR_KINDS,
     AUTHORITY_ERROR_KINDS,
     AUTHORITY_RULES_ERROR_KINDS,

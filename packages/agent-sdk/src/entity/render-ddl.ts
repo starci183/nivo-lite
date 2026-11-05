@@ -1,5 +1,6 @@
 import type { EntityDefinition, FieldDef, IndexPart } from "./entity.types"
-import { identOf, partitionNameOf, snakeOf, viewNameOf } from "./plan-names"
+import { identOf, snakeOf, viewNameOf } from "./plan-names"
+import { partitionNameOf } from "./partition-name"
 import { EntityRenderError } from "./render-error"
 import { exprOf, filterSql, jsonOf, keyExprOf, quoteIdent, quoteLiteral, textOf } from "./render-sql"
 

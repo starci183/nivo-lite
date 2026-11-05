@@ -1,6 +1,6 @@
 import type { EntityDefinition } from "./entity.types"
 import { expectedChecks, expectedExcludes, expectedIndexes, expectedView } from "./plan-expect"
-import { partitionNameOf } from "./plan-names"
+import { partitionNameOf } from "./partition-name"
 
 /**
  * One entity of `.starciwork/entities.manifest.json`, the file harness drift (R333) compares with the database.

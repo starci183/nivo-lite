@@ -23,17 +23,8 @@ import {
     needsGist,
     needsTrigram,
 } from "./plan-expect"
-import {
-    BASE_TABLES,
-    baseTypeOf,
-    ENGINE_ROLE,
-    limitOf,
-    literalsOf,
-    normalizeSql,
-    partId,
-    partitionNameOf,
-    tableId,
-} from "./plan-names"
+import { BASE_TABLES, baseTypeOf, ENGINE_ROLE, limitOf, literalsOf, normalizeSql, partId, tableId } from "./plan-names"
+import { partitionNameOf } from "./partition-name"
 
 const op = (kind: PlanOpKind, object: string, additive: boolean, reason: string): PlanOp => ({
     kind,

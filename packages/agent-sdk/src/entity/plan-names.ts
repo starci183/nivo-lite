@@ -19,12 +19,6 @@ export const snakeOf = (text: string): string =>
         .replace(/[^a-zA-Z0-9]+/g, "_")
         .toLowerCase()
 
-/**
- * The partition table of an entity: `records_<snake>`, cut at 63 bytes.
- * Mirrors E1's `partitionNameOf` until it lands on the entity branch; switch the import then.
- */
-export const partitionNameOf = (entity: string): string => identOf(`records_${snakeOf(entity)}`)
-
 /** The typed view of a partition: `v_<partition>`. */
 export const viewNameOf = (partition: string): string => identOf(`v_${partition}`)
 

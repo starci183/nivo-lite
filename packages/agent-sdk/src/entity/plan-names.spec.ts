@@ -4,7 +4,6 @@ import {
     literalsOf,
     normalizeSql,
     partId,
-    partitionNameOf,
     policyNameOf,
     snakeOf,
     tableId,
@@ -16,13 +15,11 @@ describe("names", () => {
     it("builds snake case, partition and view names", () => {
         expect(snakeOf("sales.lead")).toBe("sales_lead")
         expect(snakeOf("updatedAt")).toBe("updated_at")
-        expect(partitionNameOf("sales.lead-capture")).toBe("records_sales_lead_capture")
         expect(viewNameOf("records_sales_lead")).toBe("v_records_sales_lead")
     })
 
     it("cuts a long identifier at 63 characters like postgres", () => {
         expect(identOf("x".repeat(70))).toHaveLength(63)
-        expect(partitionNameOf(`a.${"b".repeat(80)}`)).toHaveLength(63)
         expect(policyNameOf("t".repeat(70), "delete")).toHaveLength(63)
         expect(policyNameOf("records", "select")).toBe("records_app_engine_select")
     })
