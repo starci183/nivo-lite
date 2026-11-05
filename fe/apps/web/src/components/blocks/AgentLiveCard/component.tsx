@@ -1,15 +1,11 @@
 import type { SwitchStatusProps } from "@/components/composites/SwitchStatus"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { SwitchStatus } from "@/components/composites/SwitchStatus"
-import { SwitchStatusCard } from "@/components/frames/SwitchStatusCard"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** What the card draws once the installation arrived, every word resolved. */
 export interface LiveView {
     readonly isLive: boolean
-    /** The one state of the agent in words: the label every other screen shows for it. */
-    readonly statusLabel: string
-    readonly statusTone: SwitchStatusProps["tone"]
     /** Why the agent cannot go live yet; empty when it can. */
     readonly blocker: string
     /** The step that clears the blocker, as a button to Setup; null when nothing blocks. */
@@ -41,8 +37,6 @@ const switchOf = (base: AgentLiveCardBaseProps) => (view: LiveView, isLoading: b
         isLoading={isLoading}
         isDisabled={base.props.isDisabled}
         onChange={base.on.live}
-        tone={view.statusTone}
-        statusLabel={view.statusLabel}
         help={base.props.help}
         blocker={view.blocker}
         blockerAction={view.blockerAction}
@@ -50,9 +44,7 @@ const switchOf = (base: AgentLiveCardBaseProps) => (view: LiveView, isLoading: b
     />
 )
 
-/** Draws the live card: the switch with its label kept readable beside it even while the switch is off-limits, the status badge and what it needs before it can go live. */
+/** Draws the live switch (a band of the Activity card): the switch with its label kept readable beside it even while the switch is off-limits, the status badge and what it needs before it can go live. */
 export const AgentLiveCardBase = (props: AgentLiveCardBaseProps) => (
-    <SwitchStatusCard title={props.props.title}>
-        <SlotView {...props.props.read} onRetry={props.on.retry} render={switchOf(props)} />
-    </SwitchStatusCard>
+    <SlotView {...props.props.read} onRetry={props.on.retry} render={switchOf(props)} />
 )

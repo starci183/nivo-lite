@@ -1,4 +1,4 @@
-import { SegmentedControl, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { ChoiceChips, Stack, Text } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -27,36 +27,37 @@ export interface AgentModeCardBaseProps {
     readonly on: { readonly mode: (value: string) => void; readonly retry: () => void }
 }
 
-/** Draws the operating mode card: assist or autopilot, and what each means. */
+/** Draws the operating mode band of the Activity card: its name, assist or autopilot as chips, and what each means. */
 export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
     <SlotView
         {...props.props.read}
         onRetry={props.on.retry}
-        render={(view, isSkeleton) => (
-            <SurfaceCard label={props.props.title} headingLevel={2} isLoading={isSkeleton}>
-                <Stack gap="section">
-                    <SegmentedControl
-                        label={props.props.title}
-                        isLabelHidden
-                        options={props.props.options}
-                        value={view.mode}
-                        isLoading={isSkeleton}
-                        isDisabled={props.props.isDisabled}
-                        onValueChange={props.on.mode}
-                    />
-                    <Text size="sm" isLoading={isSkeleton}>
-                        {view.help}
-                    </Text>
-                    <Text size="xs" tone="muted">
-                        {props.props.note}
-                    </Text>
-                    {view.sharedNote === "" ? null : (
-                        <Text size="xs" tone="muted">
-                            {view.sharedNote}
+        render={(view, isLoading) => (
+            <Stack gap="row">
+                <ChoiceChips
+                    label={props.props.title}
+                    options={props.props.options.map((option) => ({ ...option, isDisabled: props.props.isDisabled }))}
+                    value={view.mode}
+                    empty={
+                        <Text size="sm" tone="muted">
+                            {props.props.title}
                         </Text>
-                    )}
-                </Stack>
-            </SurfaceCard>
+                    }
+                    isLoading={isLoading}
+                    onValueChange={props.on.mode}
+                />
+                <Text size="sm" tone="muted" isLoading={isLoading}>
+                    {view.help}
+                </Text>
+                <Text size="xs" tone="muted">
+                    {props.props.note}
+                </Text>
+                {view.sharedNote === "" ? null : (
+                    <Text size="xs" tone="muted">
+                        {view.sharedNote}
+                    </Text>
+                )}
+            </Stack>
         )}
     />
 )
