@@ -1,6 +1,6 @@
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { valueAt } from "../slots/paths"
-import { formatValue } from "./cell-format"
+import { cellTextOf } from "./cell-format"
 import type { CellContext, CellFormat } from "./cell-format"
 
 /** One fact of a record: the words of its term, the path of its value and how the value is drawn. */
@@ -54,7 +54,7 @@ const itemsOf = (record: unknown, facts: ReadonlyArray<DetailFact>, context: Cel
     facts.map((fact, index) => ({
         id: `${index}:${fact.path}`,
         term: fact.term,
-        text: formatValue(valueAt(record, fact.path), fact.format, context),
+        text: cellTextOf(valueAt(record, fact.path), fact.format, fact.path, context),
     }))
 
 /** The groups of a record: the first without a heading when it has facts, then each titled group. */

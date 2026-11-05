@@ -1,6 +1,7 @@
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { textOf, valueAt } from "../slots/paths"
+import type { Relabel } from "./value-labels"
 
 /** One row of a record list as the block draws it; an empty badge draws no badge. */
 export interface RecordRow {
@@ -47,27 +48,31 @@ export const RECORD_ROWS_PLACEHOLDER: ReadonlyArray<RecordRow> = Array.from(
     }),
 )
 
-/** The text at an optional path of a record; nothing without a path. */
-const textAt = (record: unknown, path: string | undefined): string =>
-    path === undefined ? "" : textOf(valueAt(record, path))
+/** The text at an optional path of a record, in the words the labels give it; nothing without a path. */
+const textAt = (record: unknown, path: string | undefined, relabel: Relabel): string =>
+    path === undefined ? "" : relabel(path, textOf(valueAt(record, path)))
 
 /** The row of one record; a record without a text id draws no row. */
-const rowOf = (record: unknown, paths: RowPaths): ReadonlyArray<RecordRow> => {
+const rowOf = (record: unknown, paths: RowPaths, relabel: Relabel): ReadonlyArray<RecordRow> => {
     const id = textOf(valueAt(record, paths.idPath))
     if (id === "") return []
     return [
         {
             id,
-            title: textOf(valueAt(record, paths.titlePath)),
-            description: textAt(record, paths.descriptionPath),
-            badge: textAt(record, paths.badgePath),
+            title: relabel(paths.titlePath, textOf(valueAt(record, paths.titlePath))),
+            description: textAt(record, paths.descriptionPath, relabel),
+            badge: textAt(record, paths.badgePath, relabel),
         },
     ]
 }
 
 /** The rows of a bound list, or null when none can be drawn, which the block reads as an empty slot. */
-export const rowsOf = (records: ReadonlyArray<unknown>, paths: RowPaths): ReadonlyArray<RecordRow> | null => {
-    const rows = records.flatMap((record) => rowOf(record, paths))
+export const rowsOf = (
+    records: ReadonlyArray<unknown>,
+    paths: RowPaths,
+    relabel: Relabel,
+): ReadonlyArray<RecordRow> | null => {
+    const rows = records.flatMap((record) => rowOf(record, paths, relabel))
     return rows.length === 0 ? null : rows
 }
 

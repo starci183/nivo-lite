@@ -113,5 +113,10 @@
   "filtersOverflow": "More",
   "listSearchEmpty": "Nothing matches the search",
   "listLoadMore": "Load more",
-  "listLoadFailed": "Could not load more"
+  "listLoadFailed": "Could not load more",
+  "blockListEditor": "List editor",
+  "listTooFew": "Add more rows before saving",
+  "listEditorEmpty": "No rows yet",
+  "formIdle": "Choose a record to edit it",
+  "alertDismiss": "Dismiss"
 }

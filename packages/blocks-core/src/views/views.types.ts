@@ -156,6 +156,8 @@ export interface DecisionRowView {
     readonly edit: CommandView | null
     /** The other commands, shown in the row's menu. */
     readonly menu: ReadonlyArray<CommandView>
+    /** The values the edit form of the block starts from, by field name; absent starts every field empty. */
+    readonly draft?: Readonly<Record<string, string | number | boolean | null>> | undefined
     /** The person the decision waits for when it is not the viewer; null otherwise. */
     readonly waitingFor: string | null
 }

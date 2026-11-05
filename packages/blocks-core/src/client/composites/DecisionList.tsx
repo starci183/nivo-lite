@@ -3,6 +3,7 @@ import { EmptyNotice, Link, Section, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import type { DecisionQueueView, DecisionRowView } from "../../views/views.types"
 import { DecisionRow } from "./DecisionRow"
+import type { DecisionEdit } from "./DecisionRow"
 
 /** Where a list of waiting rows stands: a card on a card page, or a section in a pane. */
 type DecisionListSurface = "card" | "section"
@@ -22,6 +23,8 @@ interface DecisionListProps {
     readonly words: DecisionListWords
     readonly queue: DecisionQueueView
     readonly isLoading: boolean
+    /** The inline edit form the spec declares; null when it declares none. */
+    readonly edit: DecisionEdit | null
     readonly onCommand: (rowId: string, commandId: string) => void
 }
 
@@ -38,6 +41,7 @@ const listRowOf = (row: DecisionRowView, props: DecisionListProps): ListRowData 
                 row={row}
                 seeWhyLabel={props.words.seeWhyLabel}
                 moreLabel={props.words.moreLabel}
+                edit={props.edit}
                 onCommand={props.onCommand}
             />
         ),

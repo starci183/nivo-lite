@@ -1,4 +1,4 @@
-import { cellContextOf, CELL_FORMATS, DEFAULT_CURRENCY, formatValue, numberOf } from "./cell-format"
+import { cellContextOf, cellTextOf, CELL_FORMATS, DEFAULT_CURRENCY, formatValue, numberOf } from "./cell-format"
 
 const EN = { locale: "en", currency: "USD", timeZone: "UTC" }
 const VI = { locale: "vi", currency: "VND", timeZone: "UTC" }
@@ -73,5 +73,28 @@ describe("cellContextOf", () => {
         expect(cellContextOf("vi", "USD")).toEqual({ locale: "vi", currency: "USD" })
         expect(cellContextOf("en", undefined)).toEqual({ locale: "en", currency: DEFAULT_CURRENCY })
         expect(DEFAULT_CURRENCY).toBe("VND")
+    })
+})
+
+describe("cellTextOf", () => {
+    const label = (path: string, raw: string): string => `${path}:${raw}`
+    const labelled = { ...EN, label }
+
+    it("gives a text, badge or unformatted value the words of its path", () => {
+        expect(cellTextOf("won", "badge", "stage", labelled)).toBe("stage:won")
+        expect(cellTextOf("won", "text", "stage", labelled)).toBe("stage:won")
+        expect(cellTextOf("won", undefined, "stage", labelled)).toBe("stage:won")
+    })
+
+    it("draws other formats as formatValue does, and a value as it is without labels", () => {
+        expect(cellTextOf(1500, "money", "total", labelled)).toBe("$1,500.00")
+        expect(cellTextOf("won", "badge", "stage", EN)).toBe("won")
+    })
+})
+
+describe("cellContextOf with labels", () => {
+    it("carries the relabel of the block", () => {
+        const label = (_path: string, raw: string): string => raw
+        expect(cellContextOf("en", "USD", label)).toEqual({ locale: "en", currency: "USD", label })
     })
 })

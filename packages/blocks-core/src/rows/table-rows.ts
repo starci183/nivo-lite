@@ -1,5 +1,5 @@
 import { textOf, valueAt } from "../slots/paths"
-import { formatValue } from "./cell-format"
+import { cellTextOf } from "./cell-format"
 import type { CellContext, CellFormat } from "./cell-format"
 
 /** The paths and format that make one column of a table. */
@@ -56,7 +56,7 @@ const rowOf = (record: unknown, spec: TableRowsSpec): ReadonlyArray<TableRow> =>
     if (id === "") return []
     const cells = spec.columns.map((column, index): [string, string] => [
         columnIdOf(index),
-        formatValue(valueAt(record, column.path), column.format, spec.context),
+        cellTextOf(valueAt(record, column.path), column.format, column.path, spec.context),
     ])
     return [{ id, cells: Object.fromEntries(cells) }]
 }

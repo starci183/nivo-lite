@@ -2,6 +2,7 @@ import { asideDetailBlock } from "./aside-detail.block"
 import { conversationBlock } from "./conversation.block"
 import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
+import { listEditorBlock } from "./list-editor.block"
 import { listPaneBlock } from "./list-pane.block"
 import { tabbedPanelBlock } from "./tabbed-panel.block"
 import { tableBlock } from "./table.block"
@@ -40,7 +41,7 @@ const EXPLANATION_WORDS = [
 describe("coreBlocks", () => {
     it("lists every core block once, under an id of the core namespace", () => {
         const ids = coreBlocks.map((block) => block.id)
-        expect(new Set(ids).size).toBe(18)
+        expect(new Set(ids).size).toBe(19)
         expect(ids.every((id) => id.startsWith("core."))).toBe(true)
     })
 
@@ -60,6 +61,7 @@ describe("coreBlocks", () => {
             filterTabsBlock,
             tableBlock,
             formBlock,
+            listEditorBlock,
             tabbedPanelBlock,
             asideDetailBlock,
             conversationBlock,

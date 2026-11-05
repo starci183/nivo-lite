@@ -1,4 +1,5 @@
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
+import { keepRaw, relabeller } from "./value-labels"
 import { chosenRow, moreStateOf, RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf, selectionOf } from "./rows"
 
 const PATHS = { idPath: "id", titlePath: "title", descriptionPath: "note", badgePath: "state" }
@@ -9,27 +10,38 @@ describe("rowsOf", () => {
             { id: "a", title: "First", note: "n1", state: "open" },
             { id: 2, title: "Second" },
         ]
-        expect(rowsOf(records, PATHS)).toEqual([
+        expect(rowsOf(records, PATHS, keepRaw)).toEqual([
             { id: "a", title: "First", description: "n1", badge: "open" },
             { id: "2", title: "Second", description: "", badge: "" },
         ])
     })
 
     it("draws no description or badge when their paths are absent", () => {
-        expect(rowsOf([{ id: "a", title: "T", note: "n" }], { idPath: "id", titlePath: "title" })).toEqual([
+        expect(rowsOf([{ id: "a", title: "T", note: "n" }], { idPath: "id", titlePath: "title" }, keepRaw)).toEqual([
             { id: "a", title: "T", description: "", badge: "" },
         ])
     })
 
     it("skips a record without a text id", () => {
-        expect(rowsOf([{ title: "No id" }, { id: "b", title: "B" }], PATHS)).toEqual([
+        expect(rowsOf([{ title: "No id" }, { id: "b", title: "B" }], PATHS, keepRaw)).toEqual([
             { id: "b", title: "B", description: "", badge: "" },
         ])
     })
 
+    it("draws the badge in the words the labels give its value, and a value with none as it is", () => {
+        const relabel = relabeller({ state: { open: { key: "Dang mo" } } }, (text) =>
+            "key" in text ? text.key : text.en,
+        )
+        const records = [
+            { id: "a", title: "First", state: "open" },
+            { id: "b", title: "Second", state: "closed" },
+        ]
+        expect(rowsOf(records, PATHS, relabel)?.map((row) => row.badge)).toEqual(["Dang mo", "closed"])
+    })
+
     it("is null when no row can be drawn", () => {
-        expect(rowsOf([], PATHS)).toBeNull()
-        expect(rowsOf([{ title: "No id" }], PATHS)).toBeNull()
+        expect(rowsOf([], PATHS, keepRaw)).toBeNull()
+        expect(rowsOf([{ title: "No id" }], PATHS, keepRaw)).toBeNull()
     })
 })
 

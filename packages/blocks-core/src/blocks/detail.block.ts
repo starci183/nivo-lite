@@ -6,6 +6,8 @@ import { CELL_FORMATS } from "../rows/cell-format"
 import type { CellFormat } from "../rows/cell-format"
 import { ITEMS_MAX, PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
+import { labelsProp } from "./labels-prop"
+import type { LabelsSchema } from "./labels-prop"
 import type { EnumSchema, OptionalAction, RequiredRead, TextSchema } from "./schema-types"
 
 /** The most titled groups of facts one detail holds. */
@@ -31,6 +33,7 @@ const props: z.ZodObject<{
     idle: z.ZodOptional<TextSchema>
     idPath: z.ZodOptional<z.ZodString>
     currency: z.ZodOptional<z.ZodString>
+    labels: z.ZodOptional<LabelsSchema>
     items: z.ZodArray<FactSchema>
     sections: z.ZodOptional<z.ZodArray<SectionSchema>>
 }> = z.object({
@@ -38,6 +41,7 @@ const props: z.ZodObject<{
     idle: specText.optional(),
     idPath: z.string().max(PATH_MAX).optional(),
     currency: currencyCode.optional(),
+    labels: labelsProp.optional(),
     items: z.array(fact).max(ITEMS_MAX),
     sections: z.array(section).max(DETAIL_SECTIONS_MAX).optional(),
 })

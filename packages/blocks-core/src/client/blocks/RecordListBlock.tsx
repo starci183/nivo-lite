@@ -4,6 +4,7 @@ import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { recordListBlock } from "../../blocks/record-list.block"
 import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
+import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { SelectableRows } from "../composites/SelectableRows"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -20,7 +21,9 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
     )
     const read = props.slots.rows
     const open = props.slots.open
-    const rows = derivedSlot(parsedSlot(read.slot, recordsView), (records) => rowsOf(records, props.props))
+    const rows = derivedSlot(parsedSlot(read.slot, recordsView), (records) =>
+        rowsOf(records, props.props, relabeller(props.props.labels, words)),
+    )
     const openRow = (id: string): void => {
         open.run({ id })
             .then((outcome) => {

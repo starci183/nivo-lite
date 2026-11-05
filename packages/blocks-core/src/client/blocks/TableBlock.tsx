@@ -16,6 +16,7 @@ import {
     tableRowsOf,
 } from "../../rows/table-rows"
 import type { TableRow } from "../../rows/table-rows"
+import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
@@ -52,7 +53,7 @@ export const TableBlock = (props: RenderOf<typeof tableBlock>): ReactNode => {
     const { columns, idPath, selectParam } = props.props
     const read = props.slots.rows
     const open = props.slots.open
-    const context = cellContextOf(host.locale(), props.props.currency)
+    const context = cellContextOf(host.locale(), props.props.currency, relabeller(props.props.labels, words))
     const rows = derivedSlot(parsedSlot(read.slot, recordsView), (records) =>
         tableRowsOf(records, { idPath, columns, context }),
     )

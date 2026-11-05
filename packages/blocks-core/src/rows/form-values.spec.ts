@@ -151,10 +151,16 @@ describe("withoutError and mergedErrors", () => {
 
 describe("formRecordSlot", () => {
     it("turns an empty slot into a record to fill and leaves every other status", () => {
-        expect(formRecordSlot({ isEmpty: true })).toEqual({ items: {} })
-        expect(formRecordSlot({ isLoading: true })).toEqual({ isLoading: true })
-        expect(formRecordSlot({ isError: true })).toEqual({ isError: true })
-        expect(formRecordSlot({ items: { id: "a" } })).toEqual({ items: { id: "a" } })
+        expect(formRecordSlot({ isEmpty: true }, false)).toEqual({ items: {} })
+        expect(formRecordSlot({ isLoading: true }, false)).toEqual({ isLoading: true })
+        expect(formRecordSlot({ isError: true }, false)).toEqual({ isError: true })
+        expect(formRecordSlot({ items: { id: "a" } }, false)).toEqual({ items: { id: "a" } })
+    })
+
+    it("keeps an empty slot empty for a form that requires a record, and every other status as it is", () => {
+        expect(formRecordSlot({ isEmpty: true }, true)).toEqual({ isEmpty: true })
+        expect(formRecordSlot({ isLoading: true }, true)).toEqual({ isLoading: true })
+        expect(formRecordSlot({ items: { id: "a" } }, true)).toEqual({ items: { id: "a" } })
     })
 })
 
