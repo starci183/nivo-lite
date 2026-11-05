@@ -7644,6 +7644,7 @@
     "constraintsCount": "{count, plural, =1 {1 constraint} other {# constraints}}"
   },
   "workThreads": {
+    "threadFacts": "{people} people · {agents} agents · {count} messages",
     "cardPending": "To approve",
     "listEmptyBody": "Open a thread to bring people and agents together.",
     "feedEmptyTitle": "Nothing written yet",

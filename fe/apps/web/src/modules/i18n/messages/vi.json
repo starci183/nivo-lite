@@ -7649,6 +7649,7 @@
     "constraintsCount": "{count, plural, =1 {1 ràng buộc} other {# ràng buộc}}"
   },
   "workThreads": {
+    "threadFacts": "{people} người · {agents} agent · {count} tin nhắn",
     "cardPending": "Cần duyệt",
     "listEmptyBody": "Mở một luồng để đưa người và agent làm việc cùng nhau.",
     "feedEmptyTitle": "Chưa có gì",

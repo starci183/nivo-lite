@@ -98,7 +98,11 @@ export const useWorkThreadBoard = (selectedId: string | null): WorkThreadBoardDa
             ? undefined
             : {
                   title: thread.data.thread.title,
-                  subtitle: `${t(statusWordOf(thread.data.thread.status))} · ${t("messageCount", { count: messages.length })}`,
+                  subtitle: t("threadFacts", {
+                      people: thread.data.participants.people,
+                      agents: thread.data.participants.agents,
+                      count: messages.length,
+                  }),
                   pendingCount: messages.filter((message) => message.approval?.isPending === true).length,
                   messages,
               }

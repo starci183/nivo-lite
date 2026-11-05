@@ -12,6 +12,10 @@ type QueryWorkThreadResponse = WorkThreadQuery
 const query1: TypedDocumentNode<QueryWorkThreadResponse, InputVariables<QueryWorkThreadRequest>> = gql`
     query WorkThread($input: WorkThreadIdInput!) {
         workThread(input: $input) {
+            participants {
+                people
+                agents
+            }
             thread {
                 id
                 title
