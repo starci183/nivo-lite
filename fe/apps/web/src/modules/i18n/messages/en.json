@@ -3728,6 +3728,8 @@
     "noAccount": "New to NIVO OS?",
     "signUpLink": "Create an account",
     "resendConfirm": "Resend confirmation email",
+    "unconfirmedTitle": "This email has not been confirmed yet",
+    "unconfirmedBody": "Check your inbox or resend the confirmation email.",
     "confirmSent": "Confirmation email sent. Check your inbox.",
     "noticeReset": "Password updated. Sign in with your new password.",
     "noticeConfirmed": "Email confirmed. Sign in to continue.",

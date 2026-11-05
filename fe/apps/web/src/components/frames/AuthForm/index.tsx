@@ -16,11 +16,18 @@ interface AuthFormProps {
 }
 
 /**
- * One auth form step: a labelled form, the submit error (when there is one) above the fields. The native fallback is a POST: a submit
+ * One auth form step: a labelled form, the submit error (when there is one) above the fields. The browser's own bubble would stop an empty
+ * submit before the form hook runs, so validation is `aria`: the submit goes through and each field shows its own message. The native fallback is a POST: a submit
  * before hydration would otherwise be a GET that puts the email and password in the URL, the server log and the browser history.
  */
 export const AuthForm = (props: AuthFormProps) => (
-    <Form label={props.label} method="post" onSubmit={props.onSubmit} isPending={props.isPending}>
+    <Form
+        label={props.label}
+        method="post"
+        validationBehavior="aria"
+        onSubmit={props.onSubmit}
+        isPending={props.isPending}
+    >
         <Stack gap="section">
             {props.error === undefined ? null : (
                 <Alert title={props.error.title} description={props.error.text} tone="negative" />

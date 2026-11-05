@@ -3733,6 +3733,8 @@
     "noAccount": "Chưa có tài khoản NIVO OS?",
     "signUpLink": "Tạo tài khoản",
     "resendConfirm": "Gửi lại email xác nhận",
+    "unconfirmedTitle": "Email này chưa được xác nhận",
+    "unconfirmedBody": "Hãy kiểm tra hộp thư hoặc gửi lại email xác nhận.",
     "confirmSent": "Đã gửi email xác nhận. Hãy kiểm tra hộp thư.",
     "noticeReset": "Đã đổi mật khẩu. Hãy đăng nhập bằng mật khẩu mới.",
     "noticeConfirmed": "Đã xác nhận email. Hãy đăng nhập để tiếp tục.",

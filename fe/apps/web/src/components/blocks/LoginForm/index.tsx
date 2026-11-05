@@ -26,12 +26,19 @@ type Feedback = {
 }
 
 /** The sentences for a failure a finished /auth route left in the URL. */
-type InitialErrors = { readonly expired: string; readonly missing: string; readonly generic: string }
+type InitialErrors = {
+    readonly expired: string
+    readonly missing: string
+    readonly unconfirmed: string
+    readonly generic: string
+}
 
-const initialError = (code: string | undefined, texts: InitialErrors): string | undefined => {
-    if (code === undefined) return undefined
-    if (code === "link_expired") return texts.expired
-    return code === "missing_code" ? texts.missing : texts.generic
+/** The sentence for a code left in the URL; an unconfirmed address also offers the resend link. */
+const initialFeedback = (code: string | undefined, texts: InitialErrors): Pick<Feedback, "error" | "canResend"> => {
+    if (code === undefined) return { error: undefined, canResend: false }
+    if (code === "email_not_confirmed") return { error: texts.unconfirmed, canResend: true }
+    if (code === "link_expired") return { error: texts.expired, canResend: false }
+    return { error: code === "missing_code" ? texts.missing : texts.generic, canResend: false }
 }
 
 const initialInfo = (notice: string | undefined, reset: string, confirmed: string): string | undefined => {
@@ -47,10 +54,10 @@ export const LoginForm = (props: LoginFormProps) => {
     const router = navigation.useRouter()
     const form = useLoginForm()
     const [feedback, setFeedback] = useState<Feedback>(() => ({
-        canResend: false,
-        error: initialError(props.errorCode, {
+        ...initialFeedback(props.errorCode, {
             expired: t("errLinkExpired"),
             missing: t("errMissingCode"),
+            unconfirmed: a("errEmailNotConfirmed"),
             generic: a("errGeneric"),
         }),
         info: initialInfo(props.notice, t("noticeReset"), t("noticeConfirmed")),
@@ -141,6 +148,8 @@ const buildLoginFormView = ({
         title: t("signInTitle"),
         text: t("signInText"),
         failedTitle: t("failedTitle"),
+        unconfirmedTitle: t("unconfirmedTitle"),
+        unconfirmedBody: t("unconfirmedBody"),
         resendLabel: t("resendConfirm"),
         googleLabel: t("google"),
         orLabel: t("or"),

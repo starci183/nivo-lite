@@ -11,6 +11,9 @@ export interface LoginFormBaseProps {
         readonly title: string
         readonly text: string
         readonly failedTitle: string
+        /** The title and the line of the unconfirmed-address warning, which carries the resend link. */
+        readonly unconfirmedTitle: string
+        readonly unconfirmedBody: string
         readonly resendLabel: string
         readonly googleLabel: string
         readonly orLabel: string
@@ -55,8 +58,8 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
             {view.notice === undefined ? null : <Alert title={view.notice} tone="affirmative" />}
             {view.error === undefined ? null : (
                 <Alert
-                    title={view.failedTitle}
-                    description={view.error}
+                    title={view.canResend ? view.unconfirmedTitle : view.failedTitle}
+                    description={view.canResend ? view.unconfirmedBody : view.error}
                     tone={view.canResend ? "cautionary" : "negative"}
                     {...(view.canResend && { action: { label: view.resendLabel, onAction: props.on.resend } })}
                 />
