@@ -5,8 +5,9 @@ import { IsNull } from "typeorm"
 import { ZaloWebhookGateService } from "@modules/domain/channels"
 import { ConversationsService } from "@modules/domain/conversations"
 import { InboundEventsService } from "@modules/domain/inbound-events"
+import { zaloInboxOf, zaloInboxWith, ZALO_TEXT_BODY } from "@tests/fixtures/builders/zalo-inbox.builder"
 import { stampedValues } from "@tests/fixtures/builders/entity-row.builder"
-import { receiptBodyOf } from "@tests/fixtures/builders/zalo-inbox.builder"
+import { parseJsonText } from "@modules/platform/primitives"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { LOGGER } from "@modules/platform/logging"
@@ -17,15 +18,8 @@ import { ZALO_DELIVERY_QUEUE } from "./zalo-inbox.contracts"
 import { ZaloInboxEntity } from "./persistence/entities"
 import { ZaloInboxLogEvent } from "./zalo-inbox.log-events"
 
-const body = Buffer.from(
-    JSON.stringify({
-        app_id: "app-1",
-        event_name: "user_send_text",
-        sender: { id: "user-1" },
-        message: { msg_id: "m-1", text: "Hello" },
-    }),
-)
-const payload = { connection: "c-1", rawBody: body.toString("utf8") }
+const body = Buffer.from(ZALO_TEXT_BODY)
+const payload = { connection: "c-1", rawBody: ZALO_TEXT_BODY }
 
 /** The value the deferred `processedAt` of an update stamps. */
 const stamped = (set: unknown): unknown => {
@@ -33,11 +27,7 @@ const stamped = (set: unknown): unknown => {
     return typeof processedAt === "function" ? Reflect.apply(processedAt, undefined, []) : undefined
 }
 
-const build = async (
-    pending: ZaloInboxEntity | null = receiptBodyOf(body.toString("utf8")),
-    claimed = true,
-    keyed = true,
-) => {
+const build = async (pending: ZaloInboxEntity | null = zaloInboxOf(), claimed = true, keyed = true) => {
     const tx = fakeTransaction(
         mockEntityManager({
             findOne: [ZaloInboxEntity, pending],
@@ -119,11 +109,7 @@ describe("ZaloInboxService receipt delivery", () => {
     })
 
     it("closes the receipt of a connection that holds no OA secret key yet, publishing nothing", async () => {
-        const { service, outbox, tx, conversations, gate } = await build(
-            receiptBodyOf(body.toString("utf8")),
-            true,
-            false,
-        )
+        const { service, outbox, tx, conversations, gate } = await build(zaloInboxOf(), true, false)
         await service.acceptZaloDelivery(body, "c-1")
         expect(gate.holdsProofKey).toHaveBeenCalledWith("c-1")
         expect(outbox.jobs).toEqual([])
@@ -183,7 +169,7 @@ describe("ZaloInboxService deferred effects", () => {
 
 describe("ZaloInboxService consumer recovery", () => {
     it("completes an ignored decoded message without a conversation effect, and logs that it was dropped", async () => {
-        const { service, conversations, tx, logger } = await build(receiptBodyOf("{}"))
+        const { service, conversations, tx, logger } = await build(zaloInboxWith("{}"))
         await service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
         expect(conversations.acceptZalo).not.toHaveBeenCalled()
         expect(tx.em.update).toHaveBeenCalledTimes(1)
@@ -196,7 +182,7 @@ describe("ZaloInboxService consumer recovery", () => {
 
     it("names the event it ignored, an image for one, and logs nothing for the text it answers", async () => {
         const image = JSON.stringify({ event_name: "user_send_image", sender: { id: "u" }, message: { msg_id: "m" } })
-        const ignored = await build(receiptBodyOf(image))
+        const ignored = await build(zaloInboxWith(image))
         await ignored.service.processRecordedDelivery({ deliveryId: "c-1:m-1" })
         expect(ignored.logger.info).toHaveBeenCalledWith(
             "zalo_inbox.event_ignored",
@@ -243,15 +229,13 @@ describe("ZaloInboxService polled messages", () => {
             deliveryId: "c-1:m-1",
             payload: { connection: "c-1", source: "poll" },
         })
-        expect(inbox.receipts[0]?.row).toMatchObject({
-            payload: {
-                rawBody: JSON.stringify({
-                    event_name: "user_send_text",
-                    timestamp: "1762192200000",
-                    sender: { id: "user-1" },
-                    message: { msg_id: "m-1", text: "Hello" },
-                }),
-            },
+        const stored: unknown = Reflect.get(Object(Reflect.get(Object(inbox.receipts[0]?.row), "payload")), "rawBody")
+        const read = parseJsonText(typeof stored === "string" ? stored : "")
+        expect(read.ok ? read.value : undefined).toEqual({
+            event_name: "user_send_text",
+            timestamp: "1762192200000",
+            sender: { id: "user-1" },
+            message: { msg_id: "m-1", text: "Hello" },
         })
         expect(write).toHaveBeenCalledWith(
             expect.anything(),
@@ -301,27 +285,27 @@ describe("ZaloInboxService non-text events", () => {
     })
 })
 
-describe("ZaloInboxService pictures and files", () => {
-    const picture = Buffer.from(
-        JSON.stringify({
-            app_id: "app-1",
-            event_name: "user_send_image",
-            sender: { id: "user-1" },
-            message: {
-                msg_id: "m-9",
-                text: "Em chuyen khoan roi",
-                attachments: [{ type: "image", payload: { url: "https://cdn.test/a.jpg" } }],
-            },
-        }),
-    )
-    const pictureOf = (source?: "poll" | "manual_import") => receiptBodyOf(picture.toString("utf8"), source)
-    const file = {
-        bytes: new Uint8Array([1]),
-        contentType: "image/png",
-        name: "a.png",
-        sourceUrl: "https://cdn.test/a.jpg",
-    }
+const picture = Buffer.from(
+    JSON.stringify({
+        app_id: "app-1",
+        event_name: "user_send_image",
+        sender: { id: "user-1" },
+        message: {
+            msg_id: "m-9",
+            text: "Em chuyen khoan roi",
+            attachments: [{ type: "image", payload: { url: "https://cdn.test/a.jpg" } }],
+        },
+    }),
+)
+const pictureOf = (source?: "poll" | "manual_import") => zaloInboxWith(picture.toString("utf8"), source)
+const file = {
+    bytes: new Uint8Array([1]),
+    contentType: "image/png",
+    name: "a.png",
+    sourceUrl: "https://cdn.test/a.jpg",
+}
 
+describe("ZaloInboxService pictures and files", () => {
     it("reads the pictures before the transaction and hands them to the conversation with the message", async () => {
         const { service, conversations, tx } = await build(pictureOf())
         conversations.readFiles.mockResolvedValue([file])
@@ -342,7 +326,9 @@ describe("ZaloInboxService pictures and files", () => {
         expect(tx.em.findOne).toHaveBeenCalledTimes(2)
         expect(tx.em.findOne.mock.calls[0]?.[1]).not.toHaveProperty("lock")
     })
+})
 
+describe("ZaloInboxService pictures it cannot read", () => {
     it("lets a manual import name local files, and no other source", async () => {
         const imported = Buffer.from(
             JSON.stringify({
@@ -351,7 +337,7 @@ describe("ZaloInboxService pictures and files", () => {
                 message: { msg_id: "m-9", attachments: [{ type: "image", localPath: "receipts/a.jpg", payload: {} }] },
             }),
         )
-        const { service, conversations } = await build(receiptBodyOf(imported.toString("utf8"), "manual_import"))
+        const { service, conversations } = await build(zaloInboxWith(imported.toString("utf8"), "manual_import"))
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
 
@@ -361,29 +347,28 @@ describe("ZaloInboxService pictures and files", () => {
             "m-9",
         )
     })
-})
-
-describe("ZaloInboxService unreadable pictures", () => {
-    const picture = Buffer.from(
-        JSON.stringify({
-            app_id: "app-1",
-            event_name: "user_send_image",
-            sender: { id: "user-1" },
-            message: {
-                msg_id: "m-9",
-                text: "Em chuyen khoan roi",
-                attachments: [{ type: "image", payload: { url: "https://cdn.test/a.jpg" } }],
-            },
-        }),
-    )
 
     it("still delivers the message when the pictures cannot be read", async () => {
-        const { service, conversations } = await build(receiptBodyOf(picture.toString("utf8")))
+        const { service, conversations } = await build(pictureOf())
         conversations.readFiles.mockRejectedValue(new Error("storage down"))
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
 
         expect(conversations.acceptZalo).toHaveBeenCalledWith("c-1", expect.anything(), expect.anything(), [])
+    })
+
+    it("logs the name of the error, or the kind of what was thrown, when the pictures cannot be read", async () => {
+        const { service, conversations, logger } = await build(pictureOf())
+        conversations.readFiles.mockRejectedValueOnce(new TypeError("storage down"))
+        conversations.readFiles.mockRejectedValueOnce("storage down")
+
+        await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
+        await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
+
+        expect(logger.warn.mock.calls).toEqual([
+            [ZaloInboxLogEvent.FilesUnread, { deliveryId: "c-1:m-9", error: "TypeError" }],
+            [ZaloInboxLogEvent.FilesUnread, { deliveryId: "c-1:m-9", error: "string" }],
+        ])
     })
 
     it("reads nothing for a receipt that is already processed", async () => {
@@ -402,7 +387,7 @@ describe("ZaloInboxService unreadable pictures", () => {
                 message: { msg_id: "m-9", attachments: [{ kind: "x" }] },
             }),
         )
-        const { service, logger } = await build(receiptBodyOf(unreadable.toString("utf8")))
+        const { service, logger } = await build(zaloInboxWith(unreadable.toString("utf8")))
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
@@ -414,7 +399,7 @@ describe("ZaloInboxService unreadable pictures", () => {
     })
 
     it("does not log a shape for an event that is not a picture or a file", async () => {
-        const { service, logger } = await build(receiptBodyOf("{}"))
+        const { service, logger } = await build(zaloInboxWith("{}"))
 
         await service.processRecordedDelivery({ deliveryId: "c-1:m-9" })
 

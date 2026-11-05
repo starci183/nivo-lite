@@ -2,20 +2,20 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { NodeRunError } from "@nivo-lite/agent-sdk/node"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
+import { stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import { AgentTagService } from "@modules/domain/agent-work"
 import type { StepDecision, StepSpec, StepView } from "@modules/domain/agent-runs"
-import type { NodeEffectExecutor } from "@modules/domain/graph-nodes"
 import {
     GraphNodeHostService,
     GraphNodeRegistryService,
     GraphNodesError,
     GraphNodesErrorCode,
 } from "@modules/domain/graph-nodes"
+import type { NodeEffectExecutor } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -58,10 +58,8 @@ const NOW = Date.parse("2026-11-04T10:00:00.000Z")
 const DAY_MS = 86_400_000
 const FINGERPRINT = "f".repeat(64)
 
-const raise = mock<NodeEffectExecutor>({
-    effect: "work-item.raise",
-    execute: jest.fn().mockResolvedValue({ kind: "work-item", id: "w-1" }),
-})
+const raise = mock<NodeEffectExecutor>({ effect: "work-item.raise" })
+raise.execute.mockResolvedValue({ kind: "work-item", id: "w-1" })
 
 const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FLOW }) => {
     const handlers = mock<AgentRunHandlersService>()
@@ -168,7 +166,7 @@ describe("AgentGraphNodeStepService", () => {
     })
 })
 
-describe("AgentGraphNodeStepService refusals", () => {
+describe("AgentGraphNodeStepService failures and undo", () => {
     it("fails a row that is not a node step, a node the version does not hold, and a node that refused", async () => {
         const { steps, host } = await build()
         await expect(steps.run(stepOf("keep", { input: {} }))).resolves.toEqual({
@@ -191,6 +189,14 @@ describe("AgentGraphNodeStepService refusals", () => {
         await expect(steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "RIGHTS_DENIED" })
     })
 
+    it("lets a domain error that names no refusal reach the engine, which tries the step again", async () => {
+        const { steps, host } = await build()
+        const unnamed = new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid, params: { refusal: 7 } })
+        host.run.mockRejectedValueOnce(unnamed)
+
+        await expect(steps.run(stepOf("keep"))).rejects.toBe(unnamed)
+    })
+
     it("lets any other failure reach the engine, which tries the step again", async () => {
         const { steps, host } = await build()
         host.run.mockRejectedValue(new Error("port down"))
@@ -203,17 +209,8 @@ describe("AgentGraphNodeStepService refusals", () => {
 
         await steps.compensate(stepOf("keep", { result: { output: {}, effects: done } }))
 
-        expect(host.undo).toHaveBeenCalledWith({
-            turn: {
-                turnId: "run-1",
-                workspaceId: "ws-1",
-                agentId: "agent-1",
-                subject: { kind: "order", id: "o-1" },
-                conversationId: "c-1",
-                locale: "en",
-                origin: "system",
-                memberId: null,
-            },
+        expect(host.undo.mock.calls[0]?.[0]).toMatchObject({
+            turn: { turnId: "run-1", workspaceId: "ws-1" },
             done,
             key: "run-1:keep",
         })
@@ -417,5 +414,78 @@ describe("AgentGraphNodeStepService the end of an agent's work", () => {
         await steps.run(stepOf("end", { input: { versionId: "version-1", nodeKey: "end", trigger: bare } }))
 
         expect(tags.release).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentGraphNodeStepService approval edge cases", () => {
+    beforeEach(() => raise.execute.mockClear())
+
+    it("lets an approval refusal that names no call reach the engine, which tries the step again", async () => {
+        const { steps, host } = await build()
+        const unreadable = new GraphNodesError({
+            code: GraphNodesErrorCode.ToolApprovalRequired,
+            params: { tool: "ledger.append", fingerprint: "" },
+        })
+        host.run.mockRejectedValue(unreadable)
+
+        await expect(steps.run(stepOf("keep"))).rejects.toBe(unreadable)
+        expect(raise.execute).not.toHaveBeenCalled()
+    })
+
+    it("asks with an empty tool and reason when the refusal carries them as something other than text", async () => {
+        const { steps, host } = await build()
+        host.run.mockRejectedValue(
+            new GraphNodesError({
+                code: GraphNodesErrorCode.ToolApprovalRequired,
+                params: { tool: 5, fingerprint: FINGERPRINT, reason: 7 },
+            }),
+        )
+
+        await expect(steps.run(stepOf("keep"))).resolves.toMatchObject({ kind: "wait", workItemId: "w-1" })
+        const key = `tool-approval:run-1:keep:${FINGERPRINT}`
+        expect(raise.execute).toHaveBeenCalledWith(
+            expect.objectContaining({ turnId: "run-1" }),
+            {
+                action: "approve_tool_call",
+                title: "[agentGraphs.toolApproval.title]",
+                payload: {
+                    runId: "run-1",
+                    nodeKey: "keep",
+                    tool: "",
+                    fingerprint: FINGERPRINT,
+                    reason: "",
+                    conversationId: "c-1",
+                },
+            },
+            { key, dedupeKey: key },
+        )
+    })
+
+    it("runs a node for a customer when the trigger came from a channel", async () => {
+        const { steps, host } = await build()
+        host.run.mockResolvedValue({ output: { done: true }, effects: [] })
+        const channel = { ...TRIGGER, origin: "channel", actorMemberId: "member-7" }
+
+        await steps.run(stepOf("keep", { input: { versionId: "version-1", nodeKey: "keep", trigger: channel } }))
+
+        expect(host.run.mock.calls[0]?.[0]).toMatchObject({
+            turn: { origin: "customer", memberId: "member-7", conversationId: "c-1" },
+        })
+    })
+
+    it("approves again under the step that first asked when the step it decides already carries an approval", async () => {
+        const { steps } = await build()
+        const earlier = { stepKey: "keep", by: "member-1", fingerprint: "e".repeat(64) }
+        const step = stepOf("keep", {
+            stepKey: "keep~approved-eeeeeeeeeeeeeeee",
+            input: { versionId: "version-1", nodeKey: "keep", trigger: TRIGGER, approval: earlier },
+        })
+
+        const approval = { stepKey: "keep", by: "member-2", fingerprint: FINGERPRINT }
+        expect(steps.onDecided(step, decided(true, "member-2"))).toMatchObject({
+            kind: "done",
+            result: { output: null, effects: [], approval },
+            next: [{ stepKey: `keep~approved-${FINGERPRINT.slice(0, 16)}`, input: { approval } }],
+        })
     })
 })

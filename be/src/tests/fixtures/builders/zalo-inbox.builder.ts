@@ -1,15 +1,26 @@
 import { zaloInboxEntities } from "@modules/domain/zalo-inbox"
+import { entityOf } from "./entity.builder"
 
 const ZaloInboxEntity: (typeof zaloInboxEntities)[0] = zaloInboxEntities[0]
 type ZaloInboxEntity = InstanceType<typeof ZaloInboxEntity>
 
-/** The connection every receipt of the Zalo inbox specs belongs to. */
-export const ZALO_CONNECTION = "c-1"
+/** The text message of user-1 the receipt holds unless a spec names another body. */
+export const ZALO_TEXT_BODY: string = JSON.stringify({
+    app_id: "app-1",
+    event_name: "user_send_text",
+    sender: { id: "user-1" },
+    message: { msg_id: "m-1", text: "Hello" },
+})
 
-/** A pending Zalo inbox receipt holding the raw delivery `rawBody`, as a webhook or, when `source` is given, a poll or an import stored it. */
-export const receiptBodyOf = (rawBody: string, source?: "poll" | "manual_import"): ZaloInboxEntity =>
-    Object.assign(new ZaloInboxEntity(), {
-        id: "receipt-1",
-        provider: "zalo",
-        payload: { connection: ZALO_CONNECTION, rawBody, ...(source === undefined ? {} : { source }) },
+/** A Zalo receipt not processed yet, of connection c-1, holding the text message. */
+export const zaloInboxOf: (overrides?: Partial<ZaloInboxEntity>) => ZaloInboxEntity = entityOf(ZaloInboxEntity, {
+    id: "receipt-1",
+    provider: "zalo",
+    payload: { connection: "c-1", rawBody: ZALO_TEXT_BODY },
+})
+
+/** A receipt of connection c-1 holding the given raw body, from the given source when it is not the webhook. */
+export const zaloInboxWith = (rawBody: string, source?: "poll" | "manual_import"): ZaloInboxEntity =>
+    zaloInboxOf({
+        payload: source === undefined ? { connection: "c-1", rawBody } : { connection: "c-1", rawBody, source },
     })

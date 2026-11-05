@@ -52,15 +52,16 @@ export class AgentTagService {
      */
     release(workspaceId: string, conversationId: string, agentId: string): Promise<void> {
         return this.entityManager.transaction(async (tx) => {
-            if (this.visibility === null) return
-            if ((await this.visibility.holderOf(workspaceId, conversationId)) !== agentId) return
+            const visibility = this.visibility
+            if (visibility === null) return
+            if ((await visibility.holderOf(workspaceId, conversationId)) !== agentId) return
             const next = await this.queue.takeNext(workspaceId, conversationId, tx)
             if (next === null) {
-                await this.visibility.handBack(workspaceId, conversationId, agentId)
+                await visibility.handBack(workspaceId, conversationId, agentId)
                 return
             }
             await this.wake(next, tx)
-            await this.passTo({ ...this.noticeOf(next), fromAgentId: agentId }, next, tx)
+            await this.passTo(visibility, { ...this.noticeOf(next), fromAgentId: agentId }, next, tx)
         })
     }
 
@@ -113,10 +114,14 @@ export class AgentTagService {
     }
 
     /** Passes the right to speak to the hand-off that waited, with its line when it shows in the chat. */
-    private async passTo(notice: AgentTagNotice, tag: QueuedTag, tx: EntityManager): Promise<void> {
-        if (this.visibility === null) return
-        if (tag.visibility !== "redirect") await this.visibility.announce(notice, tx)
-        await this.visibility.redirect(notice)
+    private async passTo(
+        visibility: AgentTagVisibilityPort,
+        notice: AgentTagNotice,
+        tag: QueuedTag,
+        tx: EntityManager,
+    ): Promise<void> {
+        if (tag.visibility !== "redirect") await visibility.announce(notice, tx)
+        await visibility.redirect(notice)
     }
 
     private noticeOf(request: (AgentTagRequest | QueuedTag) & { readonly conversationId: string }): AgentTagNotice {

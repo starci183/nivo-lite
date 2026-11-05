@@ -13,7 +13,7 @@ import {
     HEADER_WRITTEN,
     isRefusedLedger,
     LEDGER_HEADER,
-    ledgerConnectionOf,
+    ledgerKeeperOf,
     ledgerRowOf,
     voidRowOf,
 } from "./policies/ledger-sheet.policy"
@@ -51,7 +51,7 @@ export class GoogleLedgerService implements LedgerPort {
 
     /** True when a Google connection of the workspace gave the spreadsheets access and holds the ledger sheet. */
     async ready(workspaceId: string): Promise<boolean> {
-        return (await this.rowOf(workspaceId)) !== undefined
+        return (await this.keeperOf(workspaceId)) !== undefined
     }
 
     /** Appends the row of one entry. */
@@ -65,10 +65,10 @@ export class GoogleLedgerService implements LedgerPort {
     }
 
     private async write(workspaceId: string, line: ReadonlyArray<SheetCell>): Promise<string | undefined> {
-        const row = await this.rowOf(workspaceId)
-        if (row === undefined) return undefined
+        const keeper = await this.keeperOf(workspaceId)
+        if (keeper === undefined) return undefined
         if (!this.google.isConfigured()) throw refusedLedger()
-        const sheetId = row.meta.ledgerSheet ?? ""
+        const { row, sheetId } = keeper
         const headed = row.meta.ledgerHeader === HEADER_WRITTEN
         const rows = headed ? [line] : [LEDGER_HEADER, line]
         try {
@@ -97,8 +97,8 @@ export class GoogleLedgerService implements LedgerPort {
         )
     }
 
-    private async rowOf(workspaceId: string): Promise<ConnectionRecord | undefined> {
+    private async keeperOf(workspaceId: string): Promise<ReturnType<typeof ledgerKeeperOf>> {
         const rows = await this.connections.listByProvider(workspaceId, "google", { includeDisconnected: false })
-        return ledgerConnectionOf(rows)
+        return ledgerKeeperOf(rows)
     }
 }

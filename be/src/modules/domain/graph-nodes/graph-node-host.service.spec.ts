@@ -1,17 +1,18 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import type { MockOf } from "@starci/jest-preset"
-import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import {
-    look,
-    lost,
-    ping,
-    probe,
-    READ,
-    swallow,
-    unping,
-    WRITE,
-} from "@tests/fixtures/builders/graph-node-probe.builder"
+    PROBE_READ,
+    PROBE_WRITE,
+    flatEffect,
+    lookTool,
+    lostEffect,
+    pingEffect,
+    probeNode,
+    swallowNode,
+    unflatEffect,
+    unpingEffect,
+} from "@nivo-lite/agent-sdk/testing"
+import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import { CLOCK } from "@modules/platform/clock"
 import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
@@ -28,6 +29,13 @@ import type {
     NodeToolDoor,
 } from "./graph-nodes.contracts"
 
+const INSTALL = nodeIndexOf({
+    nodes: [probeNode, swallowNode],
+    effects: [pingEffect, unpingEffect, lostEffect, flatEffect, unflatEffect],
+    tools: [lookTool],
+    dataKinds: [],
+})
+
 /** The refusal of a door for a call that waits for a person. */
 const askOf = (): GraphNodesError =>
     new GraphNodesError({
@@ -40,23 +48,16 @@ const INPUT: NodeRunInput = {
     params: {},
     input: { write: false },
     turn: { turnId: "t-1", workspaceId: "ws-1", agentId: "a-1", subject: null, conversationId: "c-1", locale: "vi" },
-    grant: { rights: [READ, WRITE], tools: ["core.look"] },
+    grant: { rights: [PROBE_READ, PROBE_WRITE], tools: ["core.look"] },
     key: "run-1:node",
 }
 
-const READING: NodeDataPort = { kind: "record", read: () => Promise.resolve([]) }
-
-const build = async (
-    port: NodeDataPort = READING,
-    resolvers: ReadonlyArray<NodeSubjectResolver> = [],
-    doorBound: boolean = true,
-) => {
+/** The host with every port bound; `port` is what the registry answers for the `record` kind. */
+const build = async (port: NodeDataPort, resolvers: ReadonlyArray<NodeSubjectResolver> = []) => {
     const registry = mock<GraphNodeRegistryService>()
-    registry.installed.mockReturnValue(
-        nodeIndexOf({ nodes: [probe], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),
-    )
+    registry.installed.mockReturnValue(INSTALL)
     registry.subjectResolvers.mockReturnValue(resolvers)
-    registry.nodeOf.mockReturnValue(probe)
+    registry.nodeOf.mockReturnValue(probeNode)
     registry.portOf.mockReturnValue(port)
     const executor = mock<NodeEffectExecutor>({ effect: "core.ping" })
     executor.execute.mockResolvedValue({ kind: "record", id: "e-1" })
@@ -70,64 +71,97 @@ const build = async (
     tokens.mint.mockReturnValue("token-1")
     const tools = mock<NodeToolDoor>()
     tools.call.mockResolvedValue({ seen: true })
-    const clock = new FakeClock("2026-11-04T10:00:00.000Z")
-    const moduleRef = doorBound
-        ? await Test.createTestingModule({
-              providers: [
-                  GraphNodeHostService,
-                  { provide: GraphNodeRunTokensService, useValue: tokens },
-                  { provide: CLOCK, useValue: clock },
-                  { provide: GraphNodeRegistryService, useValue: registry },
-                  { provide: GraphNodeEffectsService, useValue: effects },
-                  { provide: GRAPH_NODE_MODEL, useValue: ai },
-                  { provide: GRAPH_NODE_TOOL_DOOR, useValue: tools },
-              ],
-          }).compile()
-        : await Test.createTestingModule({
-              providers: [
-                  GraphNodeHostService,
-                  { provide: GraphNodeRunTokensService, useValue: tokens },
-                  { provide: CLOCK, useValue: clock },
-                  { provide: GraphNodeRegistryService, useValue: registry },
-                  { provide: GraphNodeEffectsService, useValue: effects },
-                  { provide: GRAPH_NODE_MODEL, useValue: ai },
-              ],
-          }).compile()
-    return { host: moduleRef.get(GraphNodeHostService), tools, registry, executor, effects, ai, tokens }
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            GraphNodeHostService,
+            { provide: GraphNodeRunTokensService, useValue: tokens },
+            { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:00:00.000Z") },
+            { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: GraphNodeEffectsService, useValue: effects },
+            { provide: GRAPH_NODE_MODEL, useValue: ai },
+            { provide: GRAPH_NODE_TOOL_DOOR, useValue: tools },
+        ],
+    }).compile()
+    return { host: moduleRef.get(GraphNodeHostService), executor, effects, ai, tokens, registry, tools }
 }
 
-/** A port that answers no rows and records its reads. */
-const emptyPort = (): NodeDataPort => {
-    const port = mock<NodeDataPort>({ kind: "record" })
-    port.read.mockResolvedValue([])
-    return port
+/** The host where no tool door is bound. */
+const buildWithoutDoor = async (port: NodeDataPort) => {
+    const registry = mock<GraphNodeRegistryService>()
+    registry.installed.mockReturnValue(INSTALL)
+    registry.subjectResolvers.mockReturnValue([])
+    registry.nodeOf.mockReturnValue(probeNode)
+    registry.portOf.mockReturnValue(port)
+    const executor = mock<NodeEffectExecutor>({ effect: "core.ping" })
+    executor.execute.mockResolvedValue({ kind: "record", id: "e-1" })
+    registry.executorOf.mockReturnValue(executor)
+    const effects = mock<GraphNodeEffectsService>()
+    effects.once.mockImplementation((_workspace, _effect, _call, act) => act())
+    const ai = mock<NodeModelDoor>()
+    ai.nodeText.mockResolvedValue("hi")
+    ai.nodeJson.mockResolvedValue({ n: 2 })
+    const tokens = mock<GraphNodeRunTokensService>()
+    tokens.mint.mockReturnValue("token-1")
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            GraphNodeHostService,
+            { provide: GraphNodeRunTokensService, useValue: tokens },
+            { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:00:00.000Z") },
+            { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: GraphNodeEffectsService, useValue: effects },
+            { provide: GRAPH_NODE_MODEL, useValue: ai },
+        ],
+    }).compile()
+    return moduleRef.get(GraphNodeHostService)
 }
 
-/** Makes the swallowing node the one the registry serves. */
-const serveSwallow = (registry: MockOf<GraphNodeRegistryService>): void => {
-    registry.nodeOf.mockReturnValue(swallow)
-    registry.installed.mockReturnValue(
-        nodeIndexOf({ nodes: [probe, swallow], effects: [ping, unping, lost], tools: [look], dataKinds: [] }),
-    )
+/** The host where no run token service is bound. */
+const buildWithoutTokens = async (port: NodeDataPort) => {
+    const registry = mock<GraphNodeRegistryService>()
+    registry.installed.mockReturnValue(INSTALL)
+    registry.subjectResolvers.mockReturnValue([])
+    registry.nodeOf.mockReturnValue(probeNode)
+    registry.portOf.mockReturnValue(port)
+    const executor = mock<NodeEffectExecutor>({ effect: "core.ping" })
+    executor.execute.mockResolvedValue({ kind: "record", id: "e-1" })
+    registry.executorOf.mockReturnValue(executor)
+    const effects = mock<GraphNodeEffectsService>()
+    effects.once.mockImplementation((_workspace, _effect, _call, act) => act())
+    const ai = mock<NodeModelDoor>()
+    ai.nodeText.mockResolvedValue("hi")
+    ai.nodeJson.mockResolvedValue({ n: 2 })
+    const tools = mock<NodeToolDoor>()
+    tools.call.mockResolvedValue({ seen: true })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            GraphNodeHostService,
+            { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:00:00.000Z") },
+            { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: GraphNodeEffectsService, useValue: effects },
+            { provide: GRAPH_NODE_MODEL, useValue: ai },
+            { provide: GRAPH_NODE_TOOL_DOOR, useValue: tools },
+        ],
+    }).compile()
+    return { host: moduleRef.get(GraphNodeHostService), tools }
 }
+
+/** A data port that reads no rows and has no write. */
+const readingPort = (): NodeDataPort => ({ kind: "record", read: () => Promise.resolve([]) })
 
 describe("GraphNodeHostService", () => {
     it("runs a node through the registered port, the ledgered executor, the model and the tool door", async () => {
         const port = mock<NodeDataPort>({ kind: "record" })
         port.read.mockResolvedValue([{ id: "1" }])
-        const { host, tools, executor, effects, ai } = await build(port)
+        const { host, executor, effects, ai, tools } = await build(port)
 
         await expect(host.run(INPUT)).resolves.toEqual({
             output: { rows: 1, ref: "e-1", text: "hi", n: 2, seen: true, at: 1 },
             effects: [{ id: "core.ping", subject: { kind: "record", id: "e-1" } }],
         })
         expect(port.read).toHaveBeenCalledWith(INPUT.turn, { fields: ["id"] }, "turn")
-        expect(effects.once).toHaveBeenCalledWith(
-            "ws-1",
-            "core.ping",
-            { key: "run-1:node:0", dedupeKey: null },
-            expect.any(Function),
-        )
+        expect(effects.once.mock.calls.map((call) => [call[0], call[1], call[2]])).toEqual([
+            ["ws-1", "core.ping", { key: "run-1:node:0", dedupeKey: null }],
+        ])
         expect(executor.execute).toHaveBeenCalledWith(INPUT.turn, { n: 1 }, { key: "run-1:node:0", dedupeKey: null })
         expect(ai.nodeText).toHaveBeenCalledWith(
             { workspaceId: "ws-1", locale: "vi" },
@@ -143,29 +177,27 @@ describe("GraphNodeHostService", () => {
     })
 
     it("stops the node at a call that waits for a person, even when the node catches its tool's failures", async () => {
-        const { host, tools, registry, executor } = await build()
+        const { host, registry, executor, tools } = await build(readingPort())
         const ask = askOf()
         tools.call.mockRejectedValue(ask)
-        serveSwallow(registry)
+        registry.nodeOf.mockReturnValue(swallowNode)
 
         await expect(host.run({ ...INPUT, nodeId: "core.swallow", input: {} })).rejects.toBe(ask)
         expect(executor.execute).not.toHaveBeenCalled()
     })
 
     it("lets a node handle any other failure of its tool", async () => {
-        const { host, tools, registry } = await build()
+        const { host, registry, tools } = await build(readingPort())
         tools.call.mockRejectedValue(new GraphNodesError({ code: GraphNodesErrorCode.ToolNotConnected }))
-        serveSwallow(registry)
+        registry.nodeOf.mockReturnValue(swallowNode)
 
         await expect(host.run({ ...INPUT, nodeId: "core.swallow", input: {} })).resolves.toMatchObject({
             output: { fell: true },
         })
     })
-})
 
-describe("GraphNodeHostService tool door and ports", () => {
     it("answers the ask, not the node's own error, when a node throws after its call was refused for a person", async () => {
-        const { host, tools } = await build()
+        const { host, tools } = await build(readingPort())
         const ask = askOf()
         tools.call.mockRejectedValue(ask)
 
@@ -173,33 +205,55 @@ describe("GraphNodeHostService tool door and ports", () => {
     })
 
     it("hands the tool door the run token and the approval the step carries", async () => {
-        const { host, tools, tokens } = await build()
+        const { host, tokens, tools } = await build(readingPort())
         const approval = { by: "member-1", fingerprint: "f-1" }
 
         await host.run({ ...INPUT, approval })
 
         expect(tokens.mint).toHaveBeenCalledWith(INPUT.turn)
-        expect(tools.call).toHaveBeenCalledWith(expect.objectContaining({ token: "token-1", approval }))
+        expect(tools.call.mock.calls[0]?.[0]).toMatchObject({ token: "token-1", approval })
     })
+})
 
+describe("GraphNodeHostService ports", () => {
     it("writes through a port that writes, and refuses a kind whose port does not", async () => {
-        const port = mock<NodeDataPort>({ kind: "record" })
-        port.read.mockResolvedValue([])
-        port.write = jest.fn().mockResolvedValue({ kind: "record", id: "w-1" })
-        const writing = await build(port)
+        const write = jest.fn().mockResolvedValue({ kind: "record", id: "w-1" })
+        const writing = await build({ kind: "record", read: () => Promise.resolve([]), write })
         await expect(writing.host.run({ ...INPUT, input: { write: true } })).resolves.toMatchObject({
             output: { ref: "w-1" },
         })
-        expect(port.write).toHaveBeenCalledWith(INPUT.turn, { id: "r" })
+        expect(write).toHaveBeenCalledWith(INPUT.turn, { id: "r" })
 
-        const readOnly = await build(READING)
+        const readOnly = await build(readingPort())
         await expect(readOnly.host.run({ ...INPUT, input: { write: true } })).rejects.toMatchObject({
             code: GraphNodesErrorCode.PortMissing,
         })
     })
 
+    it.each([
+        ["returns without touching a port again", "none"],
+        ["writes a record", "write"],
+    ] as const)("answers the ask when a node catches the refusal of its tool and then %s", async (_name, after) => {
+        const write = jest.fn().mockResolvedValue({ kind: "record", id: "w-1" })
+        const { host, registry, tools } = await build({ kind: "record", read: () => Promise.resolve([]), write })
+        const ask = askOf()
+        tools.call.mockRejectedValue(ask)
+        registry.nodeOf.mockReturnValue(swallowNode)
+
+        await expect(host.run({ ...INPUT, nodeId: "core.swallow", input: { after } })).rejects.toBe(ask)
+        expect(write).not.toHaveBeenCalled()
+    })
+
+    it("calls the tool door with an empty run token when no run token service is bound", async () => {
+        const { host, tools } = await buildWithoutTokens(readingPort())
+
+        await host.run(INPUT)
+
+        expect(tools.call.mock.calls[0]?.[0]).toMatchObject({ token: "", tool: "core.look" })
+    })
+
     it("refuses a tool call while no NIVO MCP door is bound", async () => {
-        const { host } = await build(READING, [], false)
+        const host = await buildWithoutDoor(readingPort())
         await expect(host.run(INPUT)).rejects.toMatchObject({ code: GraphNodesErrorCode.ToolDoorMissing })
     })
 })
@@ -210,32 +264,33 @@ describe("GraphNodeHostService subjects and undo", () => {
         none.subjectOf.mockResolvedValue(null)
         const lead = mock<NodeSubjectResolver>()
         lead.subjectOf.mockResolvedValue({ kind: "sales-lead", id: "l-1" })
-        const port = emptyPort()
+        const port = mock<NodeDataPort>({ kind: "record" })
+        port.read.mockResolvedValue([])
         const { host } = await build(port, [none, lead])
 
         await host.run(INPUT)
-        expect(port.read).toHaveBeenNthCalledWith(
-            1,
-            { ...INPUT.turn, subject: { kind: "sales-lead", id: "l-1" } },
-            { fields: ["id"] },
-            "turn",
-        )
+        expect(port.read.mock.calls[0]?.[0].subject).toEqual({ kind: "sales-lead", id: "l-1" })
 
         const named = { ...INPUT.turn, subject: { kind: "order", id: "o-1" } }
         await host.run({ ...INPUT, turn: named })
-        expect(port.read).toHaveBeenNthCalledWith(2, named, { fields: ["id"] }, "turn")
+        expect(port.read.mock.calls[1]?.[0].subject).toEqual({ kind: "order", id: "o-1" })
         expect(none.subjectOf).toHaveBeenCalledTimes(1)
     })
 
     it("runs a turn on no subject when no resolver knows one", async () => {
-        const port = emptyPort()
-        const { host } = await build(port, [{ subjectOf: () => Promise.resolve(null) }])
+        const none = mock<NodeSubjectResolver>()
+        none.subjectOf.mockResolvedValue(null)
+        const port = mock<NodeDataPort>({ kind: "record" })
+        port.read.mockResolvedValue([])
+        const { host } = await build(port, [none])
+
         await host.run(INPUT)
-        expect(port.read).toHaveBeenCalledWith(INPUT.turn, { fields: ["id"] }, "turn")
+
+        expect(port.read.mock.calls[0]?.[0].subject).toBeNull()
     })
 
     it("undoes each effect with a compensation, last first, keyed by its place, and skips one with none", async () => {
-        const { host, executor, effects } = await build()
+        const { host, executor, effects } = await build(readingPort())
         const done = [
             { id: "core.ping", subject: { kind: "record", id: "a" } },
             { id: "core.other", subject: { kind: "record", id: "b" } },
@@ -250,5 +305,15 @@ describe("GraphNodeHostService subjects and undo", () => {
             ["core.unping", { key: "run-1:node:undo:0", dedupeKey: null }],
         ])
         expect(executor.execute.mock.calls.map((call) => call[1])).toEqual([{ id: "d" }, { id: "a" }])
+    })
+
+    it("skips the undo of an effect whose compensation payload is not a record, running nothing", async () => {
+        const { host, executor, effects } = await build(readingPort())
+        const done = [{ id: "core.flat", subject: { kind: "record", id: "a" } }]
+
+        await host.undo({ turn: INPUT.turn, done, key: "run-1:node" })
+
+        expect(effects.once).not.toHaveBeenCalled()
+        expect(executor.execute).not.toHaveBeenCalled()
     })
 })

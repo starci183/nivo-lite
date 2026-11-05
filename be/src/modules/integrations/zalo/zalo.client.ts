@@ -56,7 +56,7 @@ const BODY_LOG_LIMIT = 500
 const SECRET_KEY = /token|secret|password|authorization|code_verifier/iu
 
 /** The path of a call without its query: the query names a customer or a page, and the path alone says which endpoint failed. */
-const pathOf = (path: string): string => path.split("?")[0] ?? path
+const pathOf = (path: string): string => path.split("?", 1).join("")
 
 /** An error answer of Zalo as short text for the log, with every credential-looking field blanked, so the next failure says exactly what Zalo answered. */
 const bodyTextOf = (body: unknown): string =>
