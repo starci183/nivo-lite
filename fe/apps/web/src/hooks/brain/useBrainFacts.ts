@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { usePanePhone } from "@/hooks/paneFrame"
 import { useSlotLabels } from "@/hooks/slot"
@@ -78,7 +78,7 @@ export const useBrainFacts = (input: BrainFactsInput): BrainFactsPage => {
     const drawer = useFactDrawer({ tab: "facts", fact: input.fact, edit: input.edit, answer: input.answer })
     const retire = useFactRetire(board.canWrite)
     const [query, setQuery] = useState("")
-    const words = factWordsOf(t, f, useFormatter())
+    const words = factWordsOf(t, f)
     const facts = { facts: board.facts, lenses: board.lenses, canWrite: board.canWrite, pending: retire.pending, words }
     const entries = factEntriesOf(facts)
     const isWaiting = "isLoading" in board.slot

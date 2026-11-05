@@ -70,6 +70,7 @@ const AgentRow = (props: BrainLessonsBaseProps) => {
         <Cluster gap="inline" align="center" wrap={false}>
             <Select
                 label={agent.label}
+                isLabelHidden
                 appearance="pill"
                 options={agent.options}
                 value={agent.value}

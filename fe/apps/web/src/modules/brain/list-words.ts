@@ -1,4 +1,4 @@
-import type { useFormatter, useTranslations } from "next-intl"
+import type { useTranslations } from "next-intl"
 import { SCOPE_KEY, TYPE_KEY } from "./labels"
 import type { FactWords } from "./fact-entries"
 import type { LessonFilter, LessonWords } from "./lesson-entries"
@@ -7,7 +7,13 @@ import type { BrainPageHeaderView, FactScope, FactSource } from "@/modules/types
 type Brain = ReturnType<typeof useTranslations<"brain">>
 type Facts = ReturnType<typeof useTranslations<"brainFacts">>
 type Lessons = ReturnType<typeof useTranslations<"brainLessons">>
-type Formatter = ReturnType<typeof useFormatter>
+
+/** A day as `dd/MM` (or `dd/MM/yyyy`), the way the shop writes it, in the viewer's time zone. */
+const dayOf = (iso: string, withYear: boolean): string => {
+    const date = new Date(iso)
+    const day = `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`
+    return withYear ? `${day}/${date.getFullYear()}` : day
+}
 
 /** The catalog key (`brainFacts` namespace) of the line that says who sees a fact in each scope. */
 const SCOPE_LINE_KEY = {
@@ -28,7 +34,7 @@ const SOURCE_KEY = {
 } as const satisfies Readonly<Record<FactSource, string>>
 
 /** The words and day formats the facts list is made of, resolved once for the viewer's language. */
-export const factWordsOf = (t: Brain, f: Facts, format: Formatter): FactWords => ({
+export const factWordsOf = (t: Brain, f: Facts): FactWords => ({
     typeOf: (type) => t(TYPE_KEY[type]),
     scopeOf: (scope) => t(SCOPE_KEY[scope]),
     scopeLineOf: (scope, agents) =>
@@ -56,8 +62,8 @@ export const factWordsOf = (t: Brain, f: Facts, format: Formatter): FactWords =>
     historyReplaced: f("historyReplaced"),
     historyExpired: f("historyExpired"),
     historyScheduled: f("historyScheduled"),
-    day: (iso) => format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", year: "numeric" }),
-    dayShort: (iso) => format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit" }),
+    day: (iso) => dayOf(iso, true),
+    dayShort: (iso) => dayOf(iso, false),
 })
 
 /** The catalog key (`brainLessons` namespace) of the word for each status a lesson is filed under. */
@@ -75,7 +81,7 @@ const headLine = (l: Lessons, filter: LessonFilter, corrections: number, agent: 
 }
 
 /** The words and the day format the lessons list is made of, resolved once for the viewer's language. */
-export const lessonWordsOf = (l: Lessons, format: Formatter): LessonWords => ({
+export const lessonWordsOf = (l: Lessons): LessonWords => ({
     allAgents: l("allAgents"),
     statusOf: (filter) => l(STATUS_KEY[filter]),
     headOf: (filter, corrections, agent) => headLine(l, filter, corrections, agent),
@@ -90,7 +96,7 @@ export const lessonWordsOf = (l: Lessons, format: Formatter): LessonWords => ({
     applyLabel: l("apply"),
     skipLabel: l("skip"),
     retireLabel: l("retire"),
-    day: (iso) => format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit" }),
+    day: (iso) => dayOf(iso, false),
 })
 
 /** The add command a list tab puts in the header: its words, its address and who may use it. */

@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { usePanePhone } from "@/hooks/paneFrame"
 import { useSlotLabels } from "@/hooks/slot"
@@ -116,7 +116,7 @@ export const useBrainLessons = (input: BrainLessonsInput): BrainLessonsPage => {
     const header = useBrainPageHeader("lessons", input.heading)
     const [agent, setAgent] = useState(ALL_AGENTS)
     const [pending, setPending] = useState<string | undefined>()
-    const words = lessonWordsOf(l, useFormatter())
+    const words = lessonWordsOf(l)
     const lessons = board.lessons.filter((one) => agent === ALL_AGENTS || one.module === null || one.module === agent)
     const entries = lessonEntriesOf({ lessons, lenses: board.lenses, canWrite: board.canWrite, pending, words })
     const isWaiting = "isLoading" in board.slot
