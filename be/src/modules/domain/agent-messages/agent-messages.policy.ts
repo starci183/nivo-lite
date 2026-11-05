@@ -8,7 +8,7 @@ const TIE_SLOTS = 1000
 
 /** A number from a text that is the same for the same text: FNV-1a over its code points. */
 const hashOf = (text: string): number =>
-    [...text].reduce((hash, char) => Math.imul(hash ^ (char.codePointAt(0) ?? 0), 16_777_619) >>> 0, 2_166_136_261)
+    [...text].reduce((hash, char) => Math.imul(hash ^ Number(char.codePointAt(0)), 16_777_619) >>> 0, 2_166_136_261)
 
 /**
  * When a message the channel timed itself happened: that time, but never later than `now` (a clock that runs ahead must not put a message in the

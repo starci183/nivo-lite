@@ -62,4 +62,12 @@ describe("NodeImagesService", () => {
         expect(logger.warn).toHaveBeenCalledWith("ai_tasks.image_unreadable", { error: "Error" })
         expect(logger.warn).toHaveBeenCalledWith("ai_tasks.images_dropped", { dropped: 6, sent: 1 })
     })
+
+    it("names the kind of a rejection that is not an error when it logs an unreadable picture", async () => {
+        const { service, files, logger } = await build()
+        files.read.mockRejectedValueOnce("refused")
+
+        await expect(service.inline(["1"])).resolves.toEqual({ images: [], dropped: 1 })
+        expect(logger.warn).toHaveBeenCalledWith("ai_tasks.image_unreadable", { error: "string" })
+    })
 })
