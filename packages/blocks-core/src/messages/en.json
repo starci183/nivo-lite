@@ -133,5 +133,6 @@
   "runCallOk": "Succeeded",
   "runCallFailed": "Failed",
   "runStepApproval": "Open the approval",
-  "runTimelineIdle": "Choose a run to see its steps"
+  "runTimelineIdle": "Choose a run to see its steps",
+  "conversationProposalMore": "More"
 }

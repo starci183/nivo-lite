@@ -133,5 +133,6 @@
   "runCallOk": "Thành công",
   "runCallFailed": "Thất bại",
   "runStepApproval": "Xem yêu cầu duyệt",
-  "runTimelineIdle": "Chọn một lần chạy để xem các bước"
+  "runTimelineIdle": "Chọn một lần chạy để xem các bước",
+  "conversationProposalMore": "Thêm"
 }
