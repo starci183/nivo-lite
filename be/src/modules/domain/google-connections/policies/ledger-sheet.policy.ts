@@ -72,9 +72,20 @@ export const voidRowOf = (transactionId: string, day: string): ReadonlyArray<She
 const isLedgerGrant = (row: ConnectionRecord): boolean =>
     row.meta.sheets === SHEETS_GRANTED && row.status !== "disconnected" && row.status !== "pending"
 
+/** The connection that keeps the ledger and the sheet it was told: one that gave the spreadsheets access and was told a sheet; oldest first. */
+export const ledgerKeeperOf = (
+    rows: ReadonlyArray<ConnectionRecord>,
+): { readonly row: ConnectionRecord; readonly sheetId: string } | undefined => {
+    for (const row of rows) {
+        const sheetId = row.meta.ledgerSheet ?? ""
+        if (sheetId !== "" && isLedgerGrant(row)) return { row, sheetId }
+    }
+    return undefined
+}
+
 /** The connection that keeps the ledger: one that gave the spreadsheets access and was told a sheet; oldest first. */
 export const ledgerConnectionOf = (rows: ReadonlyArray<ConnectionRecord>): ConnectionRecord | undefined =>
-    rows.find((row) => isLedgerGrant(row) && (row.meta.ledgerSheet ?? "") !== "")
+    ledgerKeeperOf(rows)?.row
 
 /** The connection to tell the ledger sheet: the one that already keeps it, else the oldest that gave the access and works. */
 export const grantRowOf = (rows: ReadonlyArray<ConnectionRecord>): ConnectionRecord | undefined =>

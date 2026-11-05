@@ -49,6 +49,22 @@ const build = async (claims: NodeRunClaims | null = CLAIMS, result: GatewayCallR
     return { door: moduleRef.get(NodeToolDoorService), gateway, tokens, members }
 }
 
+/** The door where no workspace members service is bound. */
+const buildWithoutMembers = async (claims: NodeRunClaims) => {
+    const gateway = mock<McpGatewayService>()
+    gateway.call.mockResolvedValue({ ok: true, value: {} })
+    const tokens = mock<GraphNodeRunTokensService>()
+    tokens.verify.mockReturnValue(claims)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            NodeToolDoorService,
+            { provide: McpGatewayService, useValue: gateway },
+            { provide: GraphNodeRunTokensService, useValue: tokens },
+        ],
+    }).compile()
+    return { door: moduleRef.get(NodeToolDoorService), gateway }
+}
+
 describe("NodeToolDoorService who calls", () => {
     it("calls as the run its token names, under the replay key, and answers the value", async () => {
         const value = { provider: "sepay", qrUrl: "https://qr.example/img" }
@@ -102,6 +118,20 @@ describe("NodeToolDoorService who calls", () => {
         })
         await expect(staff.door.call(callOf({ approval }))).resolves.toEqual({})
         expect(owner.members.firstStewards).toHaveBeenCalledWith("ws-1", 50)
+    })
+})
+
+describe("NodeToolDoorService without the workspace members", () => {
+    it("refuses the turn of a member, since nobody can say who owns the workspace, and still lets a run no person stands behind call", async () => {
+        const member = await buildWithoutMembers({ ...CLAIMS, origin: "owner", memberId: "member-owner" })
+        const system = await buildWithoutMembers(CLAIMS)
+
+        await expect(member.door.call(callOf())).rejects.toMatchObject({
+            code: GraphNodesErrorCode.ToolFailed,
+            params: { reason: "member_not_allowed" },
+        })
+        expect(member.gateway.call).not.toHaveBeenCalled()
+        await expect(system.door.call(callOf())).resolves.toEqual({})
     })
 })
 

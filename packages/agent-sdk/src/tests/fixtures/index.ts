@@ -19,4 +19,16 @@ export { CREATOR, PARAMETERS, SECRET_IN_ENV, draftOf, leakyGraph, packageOf, wit
 export { sampleVocabulary } from "./vocabulary"
 export type { FakeExecuted, FakeNodePorts, FakeNodePortsOptions, FakeToolCall, FakeWrite } from "./node-ports"
 export { scriptedNodePorts as fakeNodePorts } from "./node-ports"
+export {
+    PROBE_READ,
+    PROBE_WRITE,
+    flatEffect,
+    lookTool,
+    lostEffect,
+    pingEffect,
+    probeNode,
+    swallowNode,
+    unflatEffect,
+    unpingEffect,
+} from "./probe-nodes"
 export { EXAMPLE_TURN, nodeExampleMismatches, nodeListMismatches } from "./node-examples"
