@@ -1,4 +1,5 @@
 import { waitsForOwner } from "../../rules/sales/order-confirm"
+import type { SalesSettings } from "../../rules/sales/settings"
 import type { OrderSummary } from "../../rules/sales/lead-orders"
 import type { LeadDetail, LeadRow, OrderApproval, OrderDetail, OrderRow } from "./sales.types"
 
@@ -24,13 +25,13 @@ export const leadDetailOf = (lead: LeadRow, orders: OrderSummary): LeadDetail =>
 })
 
 /** Who confirms the order: the owner while it waits for them, the shop for a small draft, nobody once it is no draft. */
-const approvalOf = (order: OrderRow, thresholdVnd: number): OrderApproval => {
+const approvalOf = (order: OrderRow, settings: SalesSettings): OrderApproval => {
     if (order.status !== "draft") return "done"
-    return waitsForOwner(order, thresholdVnd) ? "owner" : "shop"
+    return waitsForOwner(order, settings) ? "owner" : "shop"
 }
 
 /** The order with its customer's name and who confirms it, flat for a detail block. */
-export const orderDetailOf = (order: OrderRow, customer: string | null, thresholdVnd: number): OrderDetail => ({
+export const orderDetailOf = (order: OrderRow, customer: string | null, settings: SalesSettings): OrderDetail => ({
     id: order.id,
     orderNo: order.orderNo,
     leadId: order.leadId,
@@ -39,8 +40,8 @@ export const orderDetailOf = (order: OrderRow, customer: string | null, threshol
     note: order.note,
     amountVnd: order.amountVnd,
     status: order.status,
-    approval: approvalOf(order, thresholdVnd),
-    thresholdVnd,
+    approval: approvalOf(order, settings),
+    thresholdVnd: settings.approvalThresholdVnd,
     confirmedBy: order.confirmedBy,
     confirmedAt: order.confirmedAt,
     createdAt: order.createdAt,

@@ -12,8 +12,12 @@ describe("accounting module", () => {
             "accounting.entry",
             "accounting.figures",
             "accounting.close-check",
+            "accounting.settings",
         ])
-        expect(accountingModule.actions.map((action) => action.id)).toEqual(["accounting.adjust"])
+        expect(accountingModule.actions.map((action) => action.id)).toEqual([
+            "accounting.adjust",
+            "accounting.save-settings",
+        ])
         expect(accountingModule.permissions).toEqual(["accounting.view", "accounting.manage"])
     })
 
@@ -30,8 +34,9 @@ describe("accounting module", () => {
         expect(seedSpecProblems(paymentModule, coreBlocks)).toEqual([])
     })
 
-    it("draws a head of figures and one book view bound to the list, its counts and the detail", () => {
+    it("draws a head of figures, a book view bound to the list, its counts and the detail, and a settings form", () => {
         const [view] = accountingSpecDocument.views
+        expect(accountingSpecDocument.views.map((each) => each.id)).toEqual(["book", "settings"])
         expect(view?.id).toBe("book")
         expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual(["q", "kind", "sort", "selected", "period"])
         expect(accountingSpecDocument.head?.map((node) => node.block)).toEqual(["core.figures"])

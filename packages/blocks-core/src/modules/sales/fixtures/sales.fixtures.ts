@@ -1,8 +1,8 @@
 import type { CountsResult, ListPage } from "@nivo-lite/agent-sdk/block"
-import { DEFAULT_THRESHOLD_VND } from "../../../nodes/order/needs-approval.node"
 import { orderSummaryOf } from "../../../rules/sales/lead-orders"
 import { waitsForOwner } from "../../../rules/sales/order-confirm"
 import { ORDER_STATUSES } from "../../../rules/sales/order-status"
+import { SALES_SETTINGS_DEFAULTS } from "../../../rules/sales/settings"
 import { LEAD_STAGES } from "../../../rules/sales/stage"
 import { waitingViewOf } from "../../../rules/sales/waiting"
 import type { WaitingView } from "../../../rules/sales/waiting"
@@ -26,7 +26,7 @@ const NAMES: Readonly<Record<string, string>> = Object.fromEntries(
 export const customerOf = (order: OrderRow): string | null =>
     order.leadId === null ? null : (NAMES[order.leadId] ?? null)
 
-const waitingOrders = SAMPLE_ORDERS.filter((order) => waitsForOwner(order, DEFAULT_THRESHOLD_VND))
+const waitingOrders = SAMPLE_ORDERS.filter((order) => waitsForOwner(order, SALES_SETTINGS_DEFAULTS))
 
 /** The names of the stages and statuses with zero rows, for the counts of nothing. */
 const zeroCounts = (keys: ReadonlyArray<string>): CountsResult => ({
@@ -79,15 +79,17 @@ export const SALES_FIXTURES: ModuleFixtures = {
             empty: zeroCounts(ORDER_STATUSES),
         },
         "sales.order": {
-            ready: orderDetailOf(ORDER_CONFIRMED, customerOf(ORDER_CONFIRMED), DEFAULT_THRESHOLD_VND),
+            ready: orderDetailOf(ORDER_CONFIRMED, customerOf(ORDER_CONFIRMED), SALES_SETTINGS_DEFAULTS),
             empty: null,
-            waiting: orderDetailOf(ORDER_WAITING, customerOf(ORDER_WAITING), DEFAULT_THRESHOLD_VND),
+            waiting: orderDetailOf(ORDER_WAITING, customerOf(ORDER_WAITING), SALES_SETTINGS_DEFAULTS),
         },
+        "sales.settings": { ready: SALES_SETTINGS_DEFAULTS, empty: null },
         "sales.orders-waiting": { ready: WAITING_VIEW, empty: waitingViewOf([], 0, WAITING_SHOWN, waitingHrefOf) },
     },
     actions: {
         "sales.move-stage": { ok: true, data: { stage: "qualified" } },
         "sales.confirm-order": { ok: true, data: { changed: true } },
         "sales.cancel-order": { ok: true },
+        "sales.save-settings": { ok: true },
     },
 }

@@ -1,8 +1,9 @@
 import type { ListFilter, ListQuery, ListShape, ListSource } from "@nivo-lite/agent-sdk/block"
 import { definePort, portsOf } from "@nivo-lite/agent-sdk/port"
+import { SALES_SETTINGS_DEFAULTS } from "../../rules/sales/settings"
 import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "./fixtures/sales.data"
 import { memoryProvider } from "./memory"
-import { salesLeadStore, salesLeadsList, salesOrderStore, salesOrdersList, salesRights } from "./ports"
+import { salesLeadStore, salesLeadsList, salesOrderStore, salesOrdersList, salesRights, salesSettings } from "./ports"
 import { LEADS_LIST } from "./reads/leads.read"
 import { ORDERS_LIST } from "./reads/orders.read"
 import type { LeadRow, OrderRow } from "./sales.types"
@@ -135,8 +136,13 @@ describe("the in-memory stores", () => {
     it("lists the orders of a customer newest first and the orders that wait for the owner oldest first", async () => {
         const { orders } = portsOf(memoryProvider(sampleState([])), { orders: salesOrderStore })
         expect((await orders.ofLead("lead-4", 10)).map((order) => order.id)).toEqual(["order-1"])
-        expect(await orders.waiting(5_000_000, 10)).toMatchObject({ total: 1, rows: [{ id: "order-1" }] })
-        expect(await orders.waiting(300_000, 1)).toMatchObject({ total: 2 })
+        expect(await orders.waiting(SALES_SETTINGS_DEFAULTS, 10)).toMatchObject({
+            total: 1,
+            rows: [{ id: "order-1" }],
+        })
+        expect(await orders.waiting({ ...SALES_SETTINGS_DEFAULTS, approvalThresholdVnd: 300_000 }, 1)).toMatchObject({
+            total: 2,
+        })
         expect((await orders.get("order-2"))?.orderNo).toBe("DH-20261104-0002")
         expect(await orders.get("order-404")).toBeNull()
         expect(await orders.update("order-2", "1", { status: "cancelled" })).toMatchObject({ ok: true })
@@ -147,6 +153,14 @@ describe("the in-memory stores", () => {
         state.orders.push({ ...ORDER_WAITING, id: "order-9", leadId: "lead-4", createdAt: "2026-11-05T01:00:00.000Z" })
         const { orders } = portsOf(memoryProvider(state), { orders: salesOrderStore })
         expect((await orders.ofLead("lead-4", 10)).map((order) => order.id)).toEqual(["order-9", "order-1"])
+    })
+
+    it("keeps the settings a save wrote, and none before the first save", async () => {
+        const { settings } = portsOf(memoryProvider(sampleState([])), { settings: salesSettings })
+        expect(await settings.get()).toBeNull()
+        const saved = { ...SALES_SETTINGS_DEFAULTS, closedDealsCanFlip: false }
+        expect(await settings.save(saved)).toEqual(saved)
+        expect(await settings.get()).toEqual(saved)
     })
 
     it("grants rights to the listed members only, never to the agent", async () => {

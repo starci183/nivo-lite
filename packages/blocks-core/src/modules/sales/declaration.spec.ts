@@ -36,11 +36,13 @@ describe("the Sales module declaration", () => {
             "sales.order-counts",
             "sales.order",
             "sales.orders-waiting",
+            "sales.settings",
         ])
         expect(salesModule.actions.map((action) => action.id)).toEqual([
             "sales.move-stage",
             "sales.confirm-order",
             "sales.cancel-order",
+            "sales.save-settings",
         ])
     })
 
@@ -50,9 +52,9 @@ describe("the Sales module declaration", () => {
         expect(salesModule.actions.every((action) => action.permission === "sales.manage")).toBe(true)
     })
 
-    it("seeds one spec with the customers and the orders views", () => {
+    it("seeds one spec with the customers, the orders and the settings views", () => {
         expect(salesModule.specs).toEqual([SALES_WORKBENCH_SPEC])
-        expect(SALES_WORKBENCH_SPEC.views.map((view) => view.id)).toEqual(["pipeline", "orders"])
+        expect(SALES_WORKBENCH_SPEC.views.map((view) => view.id)).toEqual(["pipeline", "orders", "settings"])
     })
 
     it("has no tool, so nothing leaves the system from a transactional action", () => {
@@ -94,6 +96,7 @@ describe("the messages of the Sales module", () => {
         "missing",
         "same_stage",
         "stage_not_allowed",
+        "reopen_needs_owner",
         "reason_required",
         "order_not_confirmable",
         "order_not_cancellable",

@@ -4,7 +4,13 @@ import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
 import { entriesSourcePort } from "../ports"
 
 /** The kinds of book entry a filter takes. */
-export const ENTRY_KINDS: readonly ["income", "invoice", "adjustment"] = ["income", "invoice", "adjustment"]
+export const ENTRY_KINDS: readonly ["income", "expense", "invoice", "reversal", "adjustment"] = [
+    "income",
+    "expense",
+    "invoice",
+    "reversal",
+    "adjustment",
+]
 
 /**
  * What the entries list accepts: search over the note, a filter by kind, newest-first or largest-first, and 30 entries a page. The

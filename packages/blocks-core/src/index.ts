@@ -61,5 +61,5 @@ export { coreBlocks } from "./blocks/core-blocks"
 
 export { coreNodes } from "./nodes/core-nodes"
 export { paymentNodes } from "./nodes/payment/payment-nodes"
-export { DEFAULT_THRESHOLD_VND } from "./nodes/order/needs-approval.node"
+export { DEFAULT_THRESHOLD_VND } from "./rules/sales/settings"
 export { transferContentOf } from "./nodes/payment/payment-request.policy"

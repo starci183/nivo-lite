@@ -1,3 +1,5 @@
+import type { SalesSettings } from "./settings"
+
 /** The stages of a lead, in the order of the pipeline. */
 export const LEAD_STAGES: readonly ["new", "qualified", "proposal", "won", "lost"] = [
     "new",
@@ -19,15 +21,6 @@ export const MIN_REASON_CHARS = 5
 /** The most characters the reason of a closed deal keeps. */
 export const MAX_REASON_CHARS = 500
 
-/** Where a deal may go from each stage: an open deal to any other stage, a closed one only to the other closed outcome. */
-export const STAGE_FLOW: Readonly<Record<LeadStage, ReadonlyArray<LeadStage>>> = {
-    new: ["qualified", "proposal", "won", "lost"],
-    qualified: ["new", "proposal", "won", "lost"],
-    proposal: ["new", "qualified", "won", "lost"],
-    won: ["lost"],
-    lost: ["won"],
-}
-
 const KNOWN_STAGES: ReadonlyArray<string> = LEAD_STAGES
 
 /** Whether a text names a stage. */
@@ -36,11 +29,8 @@ export const isLeadStage = (value: string): value is LeadStage => KNOWN_STAGES.i
 /** Whether a deal in this stage is still open. */
 export const isOpenStage = (stage: LeadStage): boolean => OPEN_STAGES.includes(stage)
 
-/** Whether a deal may go from one stage to another. */
-export const canMove = (from: LeadStage, to: LeadStage): boolean => STAGE_FLOW[from].includes(to)
-
 /** Why a move was refused. */
-export type MoveRefusal = "same_stage" | "stage_not_allowed" | "reason_required"
+export type MoveRefusal = "same_stage" | "stage_not_allowed" | "reopen_needs_owner" | "reason_required"
 
 /** The outcome of asking to move a deal: the stage and closing reason to write, or why not. */
 export type MovePlan =
@@ -48,12 +38,24 @@ export type MovePlan =
     | { readonly kind: "refused"; readonly reason: MoveRefusal }
 
 /**
- * Plans a move of a deal. Closing it (won or lost) takes a reason of at least `MIN_REASON_CHARS` characters, which is kept; a
- * deal that stays open keeps none.
+ * Plans a move of a deal. An open deal goes to any other stage. A closed one switches to the other closed outcome only when the
+ * settings let closed deals flip, and goes back to an open stage only with the owner's right when the settings ask for it.
+ * Closing a deal (won or lost) takes a reason of at least `MIN_REASON_CHARS` characters, which is kept; a deal that stays open
+ * keeps none.
  */
-export const planMove = (from: LeadStage, to: LeadStage, reason: string | null): MovePlan => {
+export const planMove = (
+    from: LeadStage,
+    to: LeadStage,
+    reason: string | null,
+    settings: SalesSettings,
+    byOwner: boolean,
+): MovePlan => {
     if (from === to) return { kind: "refused", reason: "same_stage" }
-    if (!canMove(from, to)) return { kind: "refused", reason: "stage_not_allowed" }
+    if (!isOpenStage(from)) {
+        if (isOpenStage(to) && settings.reopenNeedsApproval && !byOwner)
+            return { kind: "refused", reason: "reopen_needs_owner" }
+        if (!isOpenStage(to) && !settings.closedDealsCanFlip) return { kind: "refused", reason: "stage_not_allowed" }
+    }
     if (isOpenStage(to)) return { kind: "move", stage: to, closedReason: null }
     const closedReason = (reason ?? "").trim()
     if (closedReason.length < MIN_REASON_CHARS) return { kind: "refused", reason: "reason_required" }

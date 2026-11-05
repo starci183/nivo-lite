@@ -1,6 +1,7 @@
 import type { ReadDefinition, ReadRunResult } from "@nivo-lite/agent-sdk/block"
 import type { RunContext } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
+import { SALES_SETTINGS_DEFAULTS } from "../../../rules/sales/settings"
 import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
 import { memoryProvider } from "../memory"
 import type { MemoryState } from "../memory"
@@ -9,6 +10,7 @@ import { leadCountsRead, leadsRead } from "./leads.read"
 import { orderRead } from "./order.read"
 import { orderCountsRead, ordersRead } from "./orders.read"
 import { ordersWaitingRead, waitingHrefOf } from "./orders-waiting.read"
+import { settingsRead } from "./settings.read"
 
 const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date(SAMPLE_NOW) }
 
@@ -123,6 +125,17 @@ describe("sales.order", () => {
         })
     })
 
+    it("follows the threshold the workspace saved", async () => {
+        const state: MemoryState = {
+            ...sampleState([]),
+            settings: { ...SALES_SETTINGS_DEFAULTS, approvalThresholdVnd: 300_000 },
+        }
+        expect(await dataOf(orderRead, { id: "order-2" }, state)).toMatchObject({
+            approval: "owner",
+            thresholdVnd: 300_000,
+        })
+    })
+
     it("says the shop decides a small draft and that a confirmed order is done", async () => {
         expect(await dataOf(orderRead, { id: "order-2" })).toMatchObject({ approval: "shop" })
         expect(await dataOf(orderRead, { id: "order-3" })).toMatchObject({ approval: "done" })
@@ -185,7 +198,26 @@ describe("sales.orders-waiting", () => {
         })
     })
 
+    it("lists no order below the threshold the workspace saved", async () => {
+        const state: MemoryState = {
+            ...sampleState([]),
+            settings: { ...SALES_SETTINGS_DEFAULTS, approvalThresholdVnd: 7_000_000 },
+        }
+        expect(await dataOf(ordersWaitingRead, {}, state)).toMatchObject({ count: null, rows: [] })
+    })
+
     it("encodes the id in the link", () => {
         expect(waitingHrefOf("a b")).toBe("?tab=orders&order=a%20b")
+    })
+})
+
+describe("sales.settings", () => {
+    it("gives the defaults before the first save", async () => {
+        expect(await dataOf(settingsRead, {})).toEqual(SALES_SETTINGS_DEFAULTS)
+    })
+
+    it("gives what the workspace saved", async () => {
+        const saved = { ...SALES_SETTINGS_DEFAULTS, reopenNeedsApproval: false }
+        expect(await dataOf(settingsRead, {}, { ...sampleState([]), settings: saved })).toEqual(saved)
     })
 })

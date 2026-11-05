@@ -5,6 +5,7 @@ export type SalesRefusal =
     | "missing"
     | "same_stage"
     | "stage_not_allowed"
+    | "reopen_needs_owner"
     | "reason_required"
     | "order_not_confirmable"
     | "order_not_cancellable"
