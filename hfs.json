@@ -760,7 +760,7 @@
     },
     "destructiveRulings": [
       {
-        "migration": "db/migrations/20261112000600_graph-host_contract_drop.sql",
+        "migration": "db/migrations/20261112000900_graph-host_contract_drop.sql",
         "objects": [
           "public.agent_run_steps",
           "public.agent_runs",

@@ -40,6 +40,7 @@ type RunFields = {
     readonly resumeReason: FieldDef<"text", true>
     readonly waitWorkItemId: FieldDef<"uuid", true>
     readonly waitDeadlineAt: FieldDef<"timestamptz", true>
+    readonly stepSeq: FieldDef<"int", false>
     readonly startedAt: FieldDef<"timestamptz", false>
     readonly endedAt: FieldDef<"timestamptz", true>
 }
@@ -63,6 +64,7 @@ const runFields: RunFields = {
     resumeReason: field.text({ maxLength: MAX_BODY, nullable: true }),
     waitWorkItemId: field.uuid({ nullable: true }),
     waitDeadlineAt: field.timestamptz({ nullable: true }),
+    stepSeq: field.int({ default: { literal: 0 } }),
     startedAt: field.timestamptz({ default: "now" }),
     endedAt: field.timestamptz({ nullable: true }),
 }
@@ -76,9 +78,10 @@ export const agentRunEntity: EntityDefinition<RunFields> = defineEntity({
     dataKind: "agent-run",
     fields: runFields,
     indexes: [
+        { name: "wake", on: ["wakeId", "id"] },
         { name: "agent_started", on: ["agentId", { desc: "startedAt" }, { desc: "id" }] },
-        { name: "status_resume", on: ["status", "resumeNotBefore"] },
-        { name: "wait_item", on: ["waitWorkItemId"], where: { op: "notNull", field: "waitWorkItemId" } },
+        { name: "status_resume", on: ["status", "resumeNotBefore", "id"] },
+        { name: "status_dead_lettered", on: ["status", "deadLetteredAt", "id"] },
     ],
     constraints: [
         { kind: "unique", name: "wake_planning_key", on: ["wakeId", "planning"], refusal: "run-already-open" },
