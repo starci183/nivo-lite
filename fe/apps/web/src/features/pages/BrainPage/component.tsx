@@ -6,11 +6,7 @@ import { BrainFactForm } from "@/components/blocks/BrainFactForm"
 import { BrainFacts } from "@/components/blocks/BrainFacts"
 import { BrainGaps } from "@/components/blocks/BrainGaps"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
-import { BrainMap } from "@/components/blocks/BrainMap"
 import { BrainTodo } from "@/components/blocks/BrainTodo"
-import { DossierFindings } from "@/components/blocks/DossierFindings"
-import { DossierFindingsDrawer } from "@/components/blocks/DossierFindingsDrawer"
-import { DossierRemedyDraft } from "@/components/blocks/DossierRemedyDraft"
 import { BrainPageFrame } from "@/components/blocks/BrainPageFrame"
 import { KnowledgeAdd } from "@/components/blocks/KnowledgeAdd"
 import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
@@ -71,17 +67,6 @@ export interface BrainPageBaseProps {
 /** Draws the open tab of the Second Brain. */
 const Panel = (props: BrainPageBaseProps) => {
     const page = props.props
-    if (page.tab === "dossiers") {
-        return (
-            <>
-                <BrainDossiers dossier={page.dossier} />
-                {page.dossier === undefined ? null : (
-                    <DossierFindingsDrawer dossierId={page.dossier} findingId={page.finding} />
-                )}
-                <DossierRemedyDraft draftId={page.draft} dossierId={page.dossier} findingId={page.finding} />
-            </>
-        )
-    }
     if (page.tab === "facts") {
         return (
             <>
@@ -143,11 +128,28 @@ export const BrainPageBase = (props: BrainPageBaseProps) => {
     if (page.tab === "todo") {
         return <BrainTodo header={page.header} fact={page.fact} edit={page.edit} answer={page.answer} />
     }
+    if (page.tab === "dossiers") {
+        return (
+            <BrainDossiers
+                header={page.header}
+                mode="list"
+                node={undefined}
+                dossier={page.dossier}
+                finding={page.finding}
+                draft={page.draft}
+            />
+        )
+    }
     if (page.tab === "map") {
         return (
-            <BrainMap header={page.header} node={page.node}>
-                <DossierFindings selection={{ kind: "map", nodeId: page.node }} />
-            </BrainMap>
+            <BrainDossiers
+                header={page.header}
+                mode="map"
+                node={page.node}
+                dossier={undefined}
+                finding={undefined}
+                draft={undefined}
+            />
         )
     }
     return (

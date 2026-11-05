@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { SEVERITY_TONE, findingActionsOf } from "@/modules/brain"
+import { SEVERITY_TONE, findingActionsOf, splitActionsOf } from "@/modules/brain"
 import type { FindingActionView, FindingRowView, FindingView, MemberOption } from "@/modules/brain"
 import { brainDossierHref, brainUploadHref, knowledgeSourceHref } from "@/modules/routes"
 import { ownerPartOf, placeWordsOf, statusPartOf } from "./brain.shared"
@@ -47,6 +47,19 @@ export const useFindingRows = (): FindingRowsView => {
         for (const one of finding.evidence) {
             if (one.sourceId !== null && one.sourceTitle !== null) sources.set(one.sourceId, one.sourceTitle)
         }
+        const actions = findingActionsOf(finding, context.canWrite).flatMap(
+            (action): ReadonlyArray<FindingActionView> => {
+                if (action !== "upload") return [{ id: action, label: t(action), href: null }]
+                if (context.upload === null) return []
+                return [
+                    {
+                        id: action,
+                        label: t(action),
+                        href: brainUploadHref(context.upload.category, context.upload.tag),
+                    },
+                ]
+            },
+        )
         return {
             id: finding.id,
             title: finding.title,
@@ -79,17 +92,8 @@ export const useFindingRows = (): FindingRowsView => {
                 label: t("evidenceFrom", { title }),
                 href: knowledgeSourceHref(id),
             })),
-            actions: findingActionsOf(finding, context.canWrite).flatMap((action): ReadonlyArray<FindingActionView> => {
-                if (action !== "upload") return [{ id: action, label: t(action), href: null }]
-                if (context.upload === null) return []
-                return [
-                    {
-                        id: action,
-                        label: t(action),
-                        href: brainUploadHref(context.upload.category, context.upload.tag),
-                    },
-                ]
-            }),
+            actions,
+            ...splitActionsOf(actions),
         }
     }
     return { rowOf }
