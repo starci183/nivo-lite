@@ -95,6 +95,26 @@ describe("ZaloInboxPollService reconcileFromJob", () => {
         expect(connections.find).not.toHaveBeenCalled()
     })
 
+    it.each([
+        ["a string", "reconcile"],
+        ["null", null],
+        ["a payload naming a workspace only", { workspaceId: "ws-1" }],
+    ])("polls nothing for %s", async (_name, payload) => {
+        const { service, connections, poller } = await build()
+
+        await expect(service.reconcileFromJob(payload)).resolves.toEqual({
+            connections: 0,
+            fetched: 0,
+            recorded: 0,
+            skipped: 0,
+            failed: 0,
+        })
+
+        expect(connections.healthBatch).not.toHaveBeenCalled()
+        expect(connections.find).not.toHaveBeenCalled()
+        expect(poller.fetch).not.toHaveBeenCalled()
+    })
+
     it("polls the one connection the payload names", async () => {
         const { service, connections, poller } = await build()
         connections.find.mockResolvedValue(recordOf("zalo-1"))
