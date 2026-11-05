@@ -1,11 +1,11 @@
 import {
     Alert,
     Button,
+    ChoiceChips,
     Cluster,
     Form,
     Stack,
     Section,
-    SegmentedControl,
     SurfaceCard,
     Select,
     Grid,
@@ -115,9 +115,9 @@ const RowCard = (props: RowProps) => {
                         </Button>
                     </Cluster>
                 ) : null}
-                <SegmentedControl
+                <ChoiceChips
                     label={view.labels.then}
-                    width="fill"
+                    empty={view.labels.then}
                     options={thenOptionsOf(props)}
                     value={row.then}
                     isLoading={props.isLoading}
@@ -134,7 +134,7 @@ const RowCard = (props: RowProps) => {
                     />
                 ) : null}
                 {row.problems.map((problem) => (
-                    <Alert key={problem} title={problem} tone="cautionary" appearance="soft" />
+                    <Alert key={problem} title={problem} tone="cautionary" />
                 ))}
                 <AgentGraphRowActions
                     row={row}

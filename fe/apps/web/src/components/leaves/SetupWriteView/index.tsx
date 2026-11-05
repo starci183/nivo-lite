@@ -7,7 +7,7 @@ import {
     Input,
     NumberField,
     RadioGroup,
-    SegmentedControl,
+    ChoiceChips,
     Stack,
     SurfaceCard,
     Text,
@@ -45,15 +45,17 @@ const FactFields = (props: SetupWriteViewProps) => (
             value={props.props.proposal.value}
             onValueChange={props.on.value}
         />
-        <SegmentedControl
+        <ChoiceChips
             label={props.props.proposal.scopeLabel}
+            empty={props.props.proposal.scopeLabel}
             value={props.props.proposal.scope}
             onValueChange={props.on.scope}
             options={props.props.proposal.scopeOptions}
         />
         {props.props.proposal.forOptions.length === 0 ? null : (
-            <SegmentedControl
+            <ChoiceChips
                 label={props.props.proposal.forLabel}
+                empty={props.props.proposal.forLabel}
                 value={props.props.proposal.forValue}
                 onValueChange={props.on.forWho}
                 options={props.props.proposal.forOptions}
@@ -64,8 +66,9 @@ const FactFields = (props: SetupWriteViewProps) => (
 
 const RuleFields = (props: SetupWriteViewProps) => (
     <>
-        <SegmentedControl
+        <ChoiceChips
             label={props.props.proposal.modeLabel}
+            empty={props.props.proposal.modeLabel}
             value={props.props.proposal.mode}
             onValueChange={props.on.mode}
             options={props.props.proposal.modeOptions}

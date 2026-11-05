@@ -3,7 +3,7 @@ import {
     Button,
     Cluster,
     EmptyNotice,
-    FilterButtonGroup,
+    Tabs,
     SearchField,
     Stack,
     Section,
@@ -160,11 +160,12 @@ const renderLeadRows = ({ view, isSkeleton, l, on, p }: RenderLeadRowsContext) =
                     </div>
                     {view.isFiltered ? <TextAction onPress={on.clear}>{l.clearLabel}</TextAction> : null}
                 </Cluster>
-                <FilterButtonGroup
+                <Tabs
+                    kind="filter"
                     label={l.tabsLabel}
-                    value={p.selectedTab}
-                    onValueChange={on.select}
-                    options={view.tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+                    selectedKey={p.selectedTab}
+                    onSelect={on.select}
+                    items={view.tabs.map((tab) => ({ id: tab.id, label: tab.label }))}
                 />
             </Stack>
         }

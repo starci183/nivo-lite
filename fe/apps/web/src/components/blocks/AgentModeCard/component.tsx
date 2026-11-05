@@ -1,4 +1,4 @@
-import { SegmentedControl, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { ChoiceChips, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -35,13 +35,16 @@ export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
         render={(view, isSkeleton) => (
             <SurfaceCard label={props.props.title} headingLevel={2} isLoading={isSkeleton}>
                 <Stack gap="section">
-                    <SegmentedControl
+                    <ChoiceChips
                         label={props.props.title}
                         isLabelHidden
-                        options={props.props.options}
+                        options={props.props.options.map((option) => ({
+                            ...option,
+                            isDisabled: props.props.isDisabled,
+                        }))}
                         value={view.mode}
+                        empty={props.props.title}
                         isLoading={isSkeleton}
-                        isDisabled={props.props.isDisabled}
                         onValueChange={props.on.mode}
                     />
                     <Text size="sm" isLoading={isSkeleton}>

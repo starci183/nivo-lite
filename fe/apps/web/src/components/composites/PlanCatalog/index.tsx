@@ -7,7 +7,7 @@ import {
     EmptyNotice,
     Section,
     Stack,
-    SegmentedControl,
+    ChoiceChips,
     Select,
     Text,
 } from "@starci/grammar/common"
@@ -44,8 +44,9 @@ export const PlanCatalog = (props: PlanCatalogProps) => {
                     {view.storage}
                 </Text>
             ) : null}
-            <SegmentedControl
+            <ChoiceChips
                 label={view.cycleLabel}
+                empty={view.cycleLabel}
                 options={view.cycleOptions}
                 value={view.cycle}
                 onValueChange={props.on.setCycle}

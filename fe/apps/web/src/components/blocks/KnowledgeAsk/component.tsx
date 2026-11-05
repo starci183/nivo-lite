@@ -1,14 +1,4 @@
-import {
-    Form,
-    SegmentedControl,
-    Select,
-    SurfaceCard,
-    Text,
-    Textarea,
-    Cluster,
-    Stack,
-    Grid,
-} from "@starci/grammar/common"
+import { ChoiceChips, Form, Select, SurfaceCard, Text, Textarea, Cluster, Stack, Grid } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { FormActions } from "@/components/composites/FormActions"
 import { KNOWLEDGE_ROWS_PLACEHOLDER, KnowledgeRowList } from "@/components/composites/KnowledgeRows"
@@ -142,13 +132,16 @@ const AskForm = (props: AskFormProps) => {
                         isDisabled={panel.isPending}
                         onValueChange={on.setAgent}
                     />
-                    <SegmentedControl
+                    <ChoiceChips
                         label={panel.audienceLabel}
-                        name="audience"
-                        options={panel.audienceOptions.map((one) => ({ value: one.id, label: one.label }))}
+                        options={panel.audienceOptions.map((one) => ({
+                            value: one.id,
+                            label: one.label,
+                            isDisabled: panel.isPending || !panel.canPickAudience,
+                        }))}
                         value={panel.audience}
+                        empty={panel.audienceLabel}
                         isLoading={isSkeleton}
-                        isDisabled={panel.isPending || !panel.canPickAudience}
                         onValueChange={on.setAudience}
                     />
                 </Grid>

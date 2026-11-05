@@ -1,4 +1,4 @@
-import { CheckboxGroup, SearchField, SegmentedControl, Text } from "@starci/grammar/common"
+import { CheckboxGroup, ChoiceChips, SearchField, Text } from "@starci/grammar/common"
 
 /** One chat of the picker. */
 type TelegramChatOption = {
@@ -59,9 +59,10 @@ export const TelegramUserChats = (props: TelegramUserChatsProps) => (
                 onValueChange={(ids) => props.onChange(ids)}
             />
         )}
-        <SegmentedControl
+        <ChoiceChips
             isLoading={props.isLoading === true}
             label={props.text.since}
+            empty={props.text.since}
             value={props.sinceDays}
             options={[
                 { value: "7", label: props.text.since7 },

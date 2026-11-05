@@ -6,7 +6,7 @@ import {
     EmptyNotice,
     HorizontalScrollRegion,
     Link,
-    SegmentedControl,
+    ChoiceChips,
     Stack,
     SurfaceCard,
     Text,
@@ -52,11 +52,11 @@ export const SalesPipelineBoard = (props: SalesPipelineBoardProps) => {
             >
                 {dialog === null ? null : (
                     <Stack gap="row">
-                        <SegmentedControl
+                        <ChoiceChips
                             label={dialog.title}
-                            options={dialog.options}
+                            empty={dialog.title}
+                            options={dialog.options.map((option) => ({ ...option, isDisabled: props.isPending }))}
                             value={dialog.target}
-                            isDisabled={props.isPending}
                             onValueChange={on.target}
                         />
                         {dialog.reasonLabel === null ? null : (

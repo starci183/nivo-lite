@@ -4,7 +4,7 @@ type ContentPostListProps = ContentViews["listFields"] & {
     readonly on: ContentActions["listActions"]
     readonly isLoading: boolean
 }
-import { EmptyNotice, FilterButtonGroup, ListBox, Stack, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, ListBox, Stack, SurfaceCard, Tabs } from "@starci/grammar/common"
 import { ContentPostFacts } from "@/components/leaves/ContentPostFacts"
 import { ContentStatusBadge } from "@/components/leaves/ContentStatusBadge"
 
@@ -13,12 +13,12 @@ export const ContentPostList = (props: ContentPostListProps) => {
     const { copy } = props
     return (
         <Stack gap="row">
-            <FilterButtonGroup
-                isLoading={props.isLoading}
+            <Tabs
+                kind="filter"
                 label={copy.filterLabel}
-                options={props.filters.map((filter) => ({ value: filter.id, label: filter.label }))}
-                value={props.filter}
-                onValueChange={props.on.filter}
+                items={props.filters.map((filter) => ({ id: filter.id, label: filter.label }))}
+                selectedKey={props.filter}
+                onSelect={props.on.filter}
             />
             <SurfaceCard isLoading={props.isLoading} ariaLabel={copy.tabList}>
                 {props.isEmpty ? (

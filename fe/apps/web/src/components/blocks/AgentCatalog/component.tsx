@@ -1,5 +1,5 @@
 import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
-import { FilterButtonGroup, EmptyNotice, Grid, SearchField, SurfaceCard, Section } from "@starci/grammar/common"
+import { EmptyNotice, Grid, SearchField, SurfaceCard, Section, Tabs } from "@starci/grammar/common"
 import type { BadgeTone, ListRowData } from "@starci/grammar/common"
 import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
 import { AgentTeamRow } from "@/components/composites/AgentTeamRow"
@@ -135,12 +135,12 @@ const Roles = (props: CatalogSectionProps) => (
         }
         id={props.props.addId}
     >
-        <FilterButtonGroup
+        <Tabs
+            kind="filter"
             label={props.props.categoryLabel}
-            isLoading={props.isLoading}
-            options={props.props.categoryOptions.map((option) => ({ value: option.value, label: option.label }))}
-            value={props.props.category}
-            onValueChange={props.on.category}
+            items={props.props.categoryOptions.map((option) => ({ id: option.value, label: option.label }))}
+            selectedKey={props.props.category}
+            onSelect={props.on.category}
         />
         {props.data.roles.length === 0 ? (
             <EmptyNotice

@@ -1,4 +1,4 @@
-import { FilterButtonGroup } from "@starci/grammar/common"
+import { Tabs } from "@starci/grammar/common"
 
 /** One filter: what it is called and how many items it keeps. */
 export interface FilterButtonView {
@@ -16,13 +16,13 @@ interface FilterButtonsProps {
     readonly onValueChange: (id: string) => void
 }
 
-/** Adapts the app's filter identities to the grammar's one-row, keyboard-controlled filter group. */
+/** Adapts the app's filter identities to the grammar's filter tabs. */
 export const FilterButtons = (props: FilterButtonsProps) => (
-    <FilterButtonGroup
+    <Tabs
+        kind="filter"
         label={props.label}
-        options={props.options.map((option) => ({ value: option.id, label: option.label }))}
-        value={props.value}
-        onValueChange={props.onValueChange}
-        searchLabel={props.label}
+        items={props.options.map((option) => ({ id: option.id, label: option.label }))}
+        selectedKey={props.value}
+        onSelect={props.onValueChange}
     />
 )

@@ -1,4 +1,4 @@
-import { Button, CheckboxGroup, Cluster, Drawer, SegmentedControl, Stack } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Cluster, Drawer, ChoiceChips, Stack } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { PermissionBandsFields } from "@/components/branches/PermissionBandsFields"
 import type { PermissionBandsFieldsProps } from "@/components/branches/PermissionBandsFields"
@@ -138,9 +138,9 @@ export const PermissionRuleDrawer = (props: PermissionRuleDrawerProps) => {
                     value={draft.agents}
                     onValueChange={on.agents}
                 />
-                <SegmentedControl
+                <ChoiceChips
                     label={p.copy.strategyLabel}
-                    width="fill"
+                    empty={p.copy.strategyLabel}
                     options={optionsOf(p.strategyOptions)}
                     value={draft.strategy}
                     onValueChange={on.strategy}

@@ -1,4 +1,4 @@
-import { Button, Grid, NumberField, Section, SegmentedControl, Text } from "@starci/grammar/common"
+import { Button, ChoiceChips, Grid, NumberField, Section, Text } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/frames/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -85,10 +85,11 @@ export const AuthorityScopeBase = (props: AuthorityScopeBaseProps) => {
                             {group.rows.map((row) => (
                                 <Section key={row.key} title={row.name} headingLevel={4}>
                                     <Grid kind="form" columns={2}>
-                                        <SegmentedControl
+                                        <ChoiceChips
                                             label={row.modeLabel}
                                             isLoading={isSkeleton}
                                             isLabelHidden
+                                            empty={row.modeLabel}
                                             options={row.modes}
                                             value={row.mode}
                                             onValueChange={(value) => props.on.mode(row.key, value)}

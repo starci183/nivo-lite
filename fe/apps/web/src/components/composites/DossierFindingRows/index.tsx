@@ -9,7 +9,7 @@ import {
     Text,
     Stack,
     Cluster,
-    FilterButtonGroup,
+    Tabs,
 } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import type { FindingAction, FindingRowView } from "@/hooks/brain"
@@ -126,11 +126,12 @@ export const DossierFindingRows = (props: DossierFindingRowsProps) => (
         kind="list"
         title={props.label}
         filter={
-            <FilterButtonGroup
+            <Tabs
+                kind="filter"
                 label={props.filterLabel}
-                options={props.filters}
-                value={props.filter}
-                onValueChange={props.onFilterChange}
+                items={props.filters.map((filter) => ({ id: filter.value, label: filter.label }))}
+                selectedKey={props.filter}
+                onSelect={props.onFilterChange}
             />
         }
         isLoading={props.isSkeleton}

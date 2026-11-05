@@ -1,4 +1,4 @@
-import { EmptyNotice, Fieldset, FilterButtonGroup, Grid, SearchField, Section, Stack } from "@starci/grammar/common"
+import { EmptyNotice, Fieldset, Grid, SearchField, Section, Stack, Tabs } from "@starci/grammar/common"
 import { ConnectionLibraryTile } from "@/components/composites/ConnectionLibraryTile"
 import type { LibraryCard, LibraryCategory } from "@/modules/types"
 
@@ -86,15 +86,16 @@ export const ConnectionLibraryBase = (props: ConnectionLibraryBaseProps) => (
                 onClear={() => props.on.text("")}
                 clearLabel={props.props.clearLabel}
             />
-            <FilterButtonGroup
+            <Tabs
+                kind="filter"
                 label={props.props.filterLabel}
-                options={props.props.categories.map((category) => ({
-                    value: category.id,
+                items={props.props.categories.map((category) => ({
+                    id: category.id,
                     label: category.label,
                     count: category.count,
                 }))}
-                value={props.props.category}
-                onValueChange={props.on.category}
+                selectedKey={props.props.category}
+                onSelect={props.on.category}
             />
         </Fieldset>
         {props.props.cards.length === 0 ? (

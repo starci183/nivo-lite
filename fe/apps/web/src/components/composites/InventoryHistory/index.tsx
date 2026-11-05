@@ -6,7 +6,7 @@ type InventoryHistoryProps = InventoryHistoryData & {
     readonly onQuery: InventoryHistoryActions["onQuery"]
     readonly onKind: InventoryHistoryActions["onKind"]
 }
-import { EmptyNotice, FilterButtonGroup, SearchField, Section, Stack, Text } from "@starci/grammar/common"
+import { EmptyNotice, SearchField, Section, Stack, Tabs, Text } from "@starci/grammar/common"
 
 /** The searchable movement history, with its peer filter and evidence in each row's detail. */
 export const InventoryHistory = (props: InventoryHistoryProps) => {
@@ -28,12 +28,12 @@ export const InventoryHistory = (props: InventoryHistoryProps) => {
                         onValueChange={on.query}
                         onClear={() => on.query("")}
                     />
-                    <FilterButtonGroup
-                        isLoading={props.isLoading}
+                    <Tabs
+                        kind="filter"
                         label={props.kindLabel}
-                        options={props.kinds}
-                        value={props.kind}
-                        onValueChange={on.kind}
+                        items={props.kinds.map((kind) => ({ id: kind.value, label: kind.label }))}
+                        selectedKey={props.kind}
+                        onSelect={on.kind}
                     />
                 </Stack>
             }
