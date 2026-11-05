@@ -2,8 +2,8 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import { FIGURE_FORMATS } from "../rows/figure-format"
-import type { FigureFormat } from "../rows/figure-format"
+import { FIGURE_FORMATS, FIGURE_KINDS } from "../rows/figure-format"
+import type { FigureFormat, FigureKind } from "../rows/figure-format"
 import { ITEMS_MAX, PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
 import type { EnumSchema, TextSchema, RequiredRead } from "./schema-types"
@@ -23,10 +23,12 @@ const item: ItemSchema = z.object({
 const props: z.ZodObject<{
     label: TextSchema
     currency: z.ZodOptional<z.ZodString>
+    kind: z.ZodOptional<EnumSchema<FigureKind>>
     items: z.ZodArray<ItemSchema>
 }> = z.object({
     label: specText,
     currency: currencyCode.optional(),
+    kind: z.enum(FIGURE_KINDS).optional(),
     items: z.array(item).max(ITEMS_MAX),
 })
 /** The slots of the figures block. */
@@ -35,7 +37,10 @@ type Slots = {
 }
 const slots: Slots = { data: { kind: "read", shape: "record", required: true } }
 
-/** A ribbon of figures in one card: each item names its term, the path of its value in the bound record and how the value is drawn. */
+/**
+ * A ribbon of figures in one card (kind `tiles`, the default), bars on one scale (`bars`) or one gauge per item sharing the total
+ * (`proportion`): each item names its term, the path of its value in the bound record and how the value is drawn.
+ */
 export const figuresBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.figures",
     title: { key: "blockFigures" },

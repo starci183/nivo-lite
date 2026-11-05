@@ -1,4 +1,4 @@
-import { figureTextOf, FIGURE_FORMATS } from "./figure-format"
+import { chartPointOf, figureTextOf, FIGURE_FORMATS, FIGURE_KINDS, proportionTotal } from "./figure-format"
 
 const EN = { locale: "en", currency: "USD" }
 const VI = { locale: "vi", currency: "VND" }
@@ -34,5 +34,25 @@ describe("figureTextOf", () => {
         expect(figureTextOf("n/a", "percent", EN)).toBe("")
         expect(figureTextOf(null, "count", EN)).toBe("")
         expect(figureTextOf(undefined, "money", EN)).toBe("")
+    })
+})
+
+describe("figure charts", () => {
+    it("lists the three kinds", () => {
+        expect(FIGURE_KINDS).toEqual(["tiles", "bars", "proportion"])
+    })
+
+    it("makes a point from a number, from numeric text, and from a value that is no number or is negative", () => {
+        expect(chartPointOf("a", "A", 12, "12")).toEqual({ id: "a", label: "A", value: 12, valueLabel: "12" })
+        expect(chartPointOf("a", "A", "7", "7").value).toBe(7)
+        expect(chartPointOf("a", "A", undefined, "").value).toBe(0)
+        expect(chartPointOf("a", "A", -3, "-3").value).toBe(0)
+    })
+
+    it("shares one scale: the sum of the items, and one when they are all empty", () => {
+        const points = [chartPointOf("a", "A", 2, "2"), chartPointOf("b", "B", 3, "3")]
+        expect(proportionTotal(points)).toBe(5)
+        expect(proportionTotal([chartPointOf("a", "A", 0, "0")])).toBe(1)
+        expect(proportionTotal([])).toBe(1)
     })
 })

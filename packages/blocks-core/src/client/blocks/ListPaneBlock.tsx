@@ -24,7 +24,9 @@ const useSearchText = (current: string | null, write: (value: string | null) => 
     const [text, setText] = useState(current ?? "")
     const seen = useRef(queryOf(current))
     const writer = useRef(write)
-    writer.current = write
+    useEffect(() => {
+        writer.current = write
+    })
     useEffect(() => {
         const next = queryOf(current)
         if (next === seen.current) return

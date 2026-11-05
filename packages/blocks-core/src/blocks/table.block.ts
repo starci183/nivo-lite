@@ -9,6 +9,7 @@ import { currencyCode } from "./currency-prop"
 import { labelsProp } from "./labels-prop"
 import type { LabelsSchema } from "./labels-prop"
 import { paramName } from "./param-name"
+import type { ParamNameSchema } from "./param-name"
 import type { EnumSchema, OptionalAction, RequiredRead, TextSchema } from "./schema-types"
 
 /** Where the cells of a column line up. */
@@ -43,7 +44,9 @@ const props: z.ZodObject<{
     columns: z.ZodArray<ColumnSchema>
     currency: z.ZodOptional<z.ZodString>
     labels: z.ZodOptional<LabelsSchema>
-    selectParam: z.ZodOptional<z.ZodString>
+    selectParam: z.ZodOptional<ParamNameSchema>
+    searchParam: z.ZodOptional<ParamNameSchema>
+    emptySearch: z.ZodOptional<TextSchema>
 }> = z.object({
     label: specText,
     empty: specText,
@@ -52,6 +55,8 @@ const props: z.ZodObject<{
     currency: currencyCode.optional(),
     labels: labelsProp.optional(),
     selectParam: paramName.optional(),
+    searchParam: paramName.optional(),
+    emptySearch: specText.optional(),
 })
 /** The slots of the table block: the rows read and the action a row may run. */
 type Slots = {
@@ -63,12 +68,15 @@ const slots: Slots = {
     open: { kind: "action", required: false },
 }
 
-/** Records compared across columns: each column names its term, the path of its value and how the value is drawn. */
+/**
+ * Records compared across columns: each column names its term, the path of its value and how the value is drawn. With a
+ * `searchParam` its empty state says the search found nothing and offers to clear it.
+ */
 export const tableBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.table",
     title: { key: "blockTable" },
     props,
     slots,
     children: false,
-    params: ["selectParam"],
+    params: ["selectParam", "searchParam"],
 })

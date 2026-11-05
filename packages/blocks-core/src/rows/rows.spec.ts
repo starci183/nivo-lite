@@ -11,20 +11,27 @@ describe("rowsOf", () => {
             { id: 2, title: "Second" },
         ]
         expect(rowsOf(records, PATHS, keepRaw)).toEqual([
-            { id: "a", title: "First", description: "n1", badge: "open" },
-            { id: "2", title: "Second", description: "", badge: "" },
+            { id: "a", title: "First", description: "n1", badge: "open", meta: "" },
+            { id: "2", title: "Second", description: "", badge: "", meta: "" },
         ])
     })
 
     it("draws no description or badge when their paths are absent", () => {
         expect(rowsOf([{ id: "a", title: "T", note: "n" }], { idPath: "id", titlePath: "title" }, keepRaw)).toEqual([
-            { id: "a", title: "T", description: "", badge: "" },
+            { id: "a", title: "T", description: "", badge: "", meta: "" },
+        ])
+    })
+
+    it("draws the short fact its path names", () => {
+        const paths = { idPath: "id", titlePath: "title", metaPath: "when" }
+        expect(rowsOf([{ id: "a", title: "T", when: "2 min" }], paths, keepRaw)?.map((row) => row.meta)).toEqual([
+            "2 min",
         ])
     })
 
     it("skips a record without a text id", () => {
         expect(rowsOf([{ title: "No id" }, { id: "b", title: "B" }], PATHS, keepRaw)).toEqual([
-            { id: "b", title: "B", description: "", badge: "" },
+            { id: "b", title: "B", description: "", badge: "", meta: "" },
         ])
     })
 
@@ -64,7 +71,7 @@ describe("RECORD_ROWS_PLACEHOLDER", () => {
             "placeholder-1",
             "placeholder-2",
         ])
-        expect(RECORD_ROWS_PLACEHOLDER.every((row) => row.badge === "")).toBe(true)
+        expect(RECORD_ROWS_PLACEHOLDER.every((row) => row.badge === "" && row.meta === "")).toBe(true)
     })
 })
 

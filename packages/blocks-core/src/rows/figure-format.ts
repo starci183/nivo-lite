@@ -37,3 +37,36 @@ export const figureTextOf = (value: unknown, format: FigureFormat | undefined, c
             return textOf(value)
     }
 }
+
+/** How a figures block draws its items: tiles in one card, bars on one scale, or one proportional gauge per item. */
+export const FIGURE_KINDS = ["tiles", "bars", "proportion"] as const
+
+/** One kind of figures block. */
+export type FigureKind = (typeof FIGURE_KINDS)[number]
+
+/** One measured item of a chart: its label, its number and how the number reads. */
+export interface ChartPoint {
+    /** The key the chart draws the item under. */
+    readonly id: string
+    /** What the item is, drawn with it. */
+    readonly label: string
+    /** The measured amount, never negative. */
+    readonly value: number
+    /** How the amount reads, in the viewer's language. */
+    readonly valueLabel: string
+}
+
+/** The point a chart draws for one item: a value that is no number draws as zero, with the text the format made. */
+export const chartPointOf = (id: string, label: string, raw: unknown, valueLabel: string): ChartPoint => ({
+    id,
+    label,
+    value: Math.max(numberOf(raw) ?? 0, 0),
+    valueLabel,
+})
+
+/** The scale the gauges of a proportion share: the sum of the items, never less than one so the gauge keeps a range. */
+export const proportionTotal = (points: ReadonlyArray<ChartPoint>): number =>
+    Math.max(
+        points.reduce((sum, point) => sum + point.value, 0),
+        1,
+    )

@@ -15,8 +15,13 @@ describe("tableBlock", () => {
         expect(Object.keys(tableBlock.propsJson).length).toBeGreaterThan(0)
     })
 
-    it("lists selectParam as the prop that names a spec param", () => {
-        expect(tableBlock.params).toEqual(["selectParam"])
+    it("lists selectParam and searchParam as the props that name a spec param", () => {
+        expect(tableBlock.params).toEqual(["selectParam", "searchParam"])
+    })
+
+    it("takes a search param and the words of an empty search", () => {
+        expect(accepts({ ...tableFixtureProps, searchParam: "q", emptySearch: { key: "none" } })).toBe(true)
+        expect(accepts({ ...tableFixtureProps, searchParam: "not a param" })).toBe(false)
     })
 
     it("names a required rows read of a list and an optional open action", () => {

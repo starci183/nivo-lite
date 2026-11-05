@@ -108,6 +108,7 @@
   "blockFilterTabs": "Thẻ lọc",
   "searchLabel": "Tìm kiếm",
   "searchClear": "Xoá tìm kiếm",
+  "fieldDatePlaceholder": "NNNN-TT-NN",
   "filtersLabel": "Bộ lọc",
   "filtersMore": "{count} bộ lọc khác",
   "filtersOverflow": "Khác",

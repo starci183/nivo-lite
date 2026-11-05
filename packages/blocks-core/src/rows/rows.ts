@@ -13,6 +13,8 @@ export interface RecordRow {
     readonly description: string
     /** The words of the mark beside the headline; empty draws no badge. */
     readonly badge: string
+    /** The short fact at the end of the headline line (a time, an amount); empty draws none. */
+    readonly meta: string
 }
 
 /** The dotted paths of a record that name the parts of its row. */
@@ -25,6 +27,8 @@ export interface RowPaths {
     readonly descriptionPath?: string | undefined
     /** The path of the text of the badge; absent draws none. */
     readonly badgePath?: string | undefined
+    /** The path of the short fact at the end of the headline line; absent draws none. */
+    readonly metaPath?: string | undefined
 }
 
 /** The most records one bound list carries; a longer one is a failed read, never a half list. */
@@ -45,6 +49,7 @@ export const RECORD_ROWS_PLACEHOLDER: ReadonlyArray<RecordRow> = Array.from(
         title: BLANK,
         description: BLANK,
         badge: "",
+        meta: "",
     }),
 )
 
@@ -62,6 +67,7 @@ const rowOf = (record: unknown, paths: RowPaths, relabel: Relabel): ReadonlyArra
             title: relabel(paths.titlePath, textOf(valueAt(record, paths.titlePath))),
             description: textAt(record, paths.descriptionPath, relabel),
             badge: textAt(record, paths.badgePath, relabel),
+            meta: textAt(record, paths.metaPath, relabel),
         },
     ]
 }

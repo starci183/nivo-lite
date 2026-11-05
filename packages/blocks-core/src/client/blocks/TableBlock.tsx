@@ -16,17 +16,21 @@ import {
     tableRowsOf,
 } from "../../rows/table-rows"
 import type { TableRow } from "../../rows/table-rows"
+import { queryOf } from "../../rows/search"
 import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
-/** What the table draws under its rows when the read has more: the way to load them, or the way to try again. */
-const MoreRows = (props: {
+/** What the paging control of the table takes. */
+interface MoreRowsProps {
     readonly page: ReadPage
     readonly loadMoreLabel: string
     readonly labels: SlotLabels
-}): ReactNode => {
+}
+
+/** What the table draws under its rows when the read has more: the way to load them, or the way to try again. */
+const MoreRows = (props: MoreRowsProps): ReactNode => {
     const { page } = props
     if (page.failure) {
         return (
@@ -49,8 +53,11 @@ const MoreRows = (props: {
 export const TableBlock = (props: RenderOf<typeof tableBlock>): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
-    const labels = useSlotLabels(props.props.empty)
-    const { columns, idPath, selectParam } = props.props
+    const { columns, idPath, selectParam, searchParam } = props.props
+    const searched = searchParam === undefined ? null : queryOf(props.params.value(searchParam))
+    const labels = useSlotLabels(
+        searched === null ? props.props.empty : (props.props.emptySearch ?? { key: "listSearchEmpty" }),
+    )
     const read = props.slots.rows
     const open = props.slots.open
     const context = cellContextOf(host.locale(), props.props.currency, relabeller(props.props.labels, words))
@@ -64,6 +71,15 @@ export const TableBlock = (props: RenderOf<typeof tableBlock>): ReactNode => {
             })
             .catch(() => host.notify("danger", labels.error))
     }
+    const clearSearch =
+        searchParam === undefined || searched === null
+            ? {}
+            : {
+                  emptyAction: {
+                      label: words({ key: "searchClear" }),
+                      onAction: () => props.params.set(searchParam, null),
+                  },
+              }
     const renderCell = (row: TableRow, columnId: string): ReactNode => {
         const cell = cellOf(columns, row, columnId)
         return cell.isBadge ? <Badge tone="neutral">{cell.text}</Badge> : cell.text
@@ -74,6 +90,7 @@ export const TableBlock = (props: RenderOf<typeof tableBlock>): ReactNode => {
             labels={labels}
             placeholder={tablePlaceholder(columns.length)}
             onRetry={read.retry}
+            {...clearSearch}
             render={(items, isLoading) => (
                 <Stack gap="row">
                     <DataTable

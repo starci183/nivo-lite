@@ -108,6 +108,7 @@
   "blockFilterTabs": "Filter tabs",
   "searchLabel": "Search",
   "searchClear": "Clear search",
+  "fieldDatePlaceholder": "YYYY-MM-DD",
   "filtersLabel": "Filters",
   "filtersMore": "{count} more filters",
   "filtersOverflow": "More",
