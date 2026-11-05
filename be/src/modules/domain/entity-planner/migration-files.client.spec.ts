@@ -58,7 +58,7 @@ describe("MigrationFilesClient", () => {
 
     it("lets another read failure through", () =>
         inTempRoot(async (files, root) => {
-            await mkdir(join(root, ".starciwork", "entities.manifest.json"), { recursive: true })
+            await mkdir(join(root, "db", "entities.manifest.json"), { recursive: true })
 
             await expect(files.manifest()).rejects.toMatchObject({ code: "EISDIR" })
         }))

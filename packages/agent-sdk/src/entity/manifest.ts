@@ -3,7 +3,7 @@ import { expectedChecks, expectedExcludes, expectedIndexes, expectedView } from 
 import { partitionNameOf } from "./partition-name"
 
 /**
- * One entity of `.starciwork/entities.manifest.json`, the file harness drift (R333) compares with the database.
+ * One entity of `db/entities.manifest.json`, the file harness drift (R333) compares with the database.
  *
  * Shape (version 1):
  *   { "version": 1, "entities": [ { "entity": "sales.lead", "partition": "records_sales_lead",

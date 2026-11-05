@@ -5,6 +5,7 @@ import { agentIdFor } from "@modules/integrations/openclaw"
 import { isDoorTool } from "@nivo-lite/agent-sdk/mutation"
 import type { DoorApi, DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
 import { doorResultOf, gatewayNameOf, opKeyOf } from "./door-call.policy"
+import { NOT_GRANTED, isDoorGranted } from "./door-grants.policy"
 import type { DoorBinding } from "./entity-engine-door.contracts"
 import { InjectEntityEngineDoorOptions } from "./entity-engine-door.decorators"
 import type { EntityEngineDoorOptions } from "./entity-engine-door.options"
@@ -17,7 +18,8 @@ const invalid = (message: string): DoorCallResult => ({ ok: false, reason: "inva
 /**
  * The provider of the `engine.door` port: a declared job calls a door tool (`<group>.<provider>.<action>`) and the call goes through
  * the NIVO MCP gateway, so the agent grant, the data rights, the approval rule and the credentials of the workspace connection decide
- * it, exactly as for an agent. The call is never made while an engine scope is open (no transaction spans an external call,
+ * it, exactly as for an agent; the internal agent holds only the tools of `DOOR_GRANTS` (default deny, answered `forbidden` before the
+ * gateway is reached). The call is never made while an engine scope is open (no transaction spans an external call,
  * BE-PERSISTENCE-6), and its replay key is the job's effect key joined to the hash of the arguments, so a retried job never repeats
  * an effect.
  */
@@ -33,6 +35,7 @@ export class EngineDoorService {
             call: async (tool, input) => {
                 if (binding.scopeOpen())
                     throw new EntityEngineDoorError({ code: EntityEngineDoorErrorCode.InScope, params: { tool } })
+                if (!isDoorGranted(tool)) return NOT_GRANTED
                 if (!isDoorTool(tool)) return invalid("tool_malformed")
                 const args = gatewayArgumentsSchema.safeParse(input)
                 if (!args.success) return invalid("invalid_arguments")
