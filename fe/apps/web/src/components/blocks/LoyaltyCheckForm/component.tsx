@@ -1,5 +1,19 @@
-import { Alert, Button, EmptyNotice, Form, Heading, Input, SurfaceCard, Text, Stack } from "@starci/grammar/common"
+import {
+    Alert,
+    Button,
+    Cluster,
+    EmptyNotice,
+    Form,
+    Heading,
+    Input,
+    Page,
+    Stack,
+    SurfaceCard,
+    Text,
+    TextAction,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { PublicShell } from "@/components/frames/PublicShell"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** The drawn shapes of the public points check, in the order the visitor meets them. */
@@ -9,11 +23,15 @@ export type LoyaltyCheckShape = (typeof LOYALTY_CHECK_SHAPES)[number]
 
 /** What the shop page tells the check: the lead line under the title. */
 export interface LoyaltyCheckShop {
+    readonly shop: string
     readonly lead: string
 }
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
-const SHOP_PLACEHOLDER: LoyaltyCheckShop = { lead: "" }
+/** Unseen text that gives a skeleton line the width of a real one. */
+const GHOST = "M".repeat(24)
+
+const SHOP_PLACEHOLDER: LoyaltyCheckShop = { shop: GHOST, lead: GHOST }
 
 /** One reward the shop lists. */
 export interface LoyaltyCheckReward {
@@ -46,6 +64,18 @@ export interface LoyaltyCheckFormBaseProps {
         readonly slot: DataSlot<LoyaltyCheckShop>
         readonly slotLabels: SlotLabels
         readonly title: string
+        readonly shell: {
+            readonly label: string
+            readonly brandFallback: string
+            readonly foot: string
+            readonly failedBody: string
+        }
+        readonly language: {
+            readonly label: string
+            readonly locale: string
+            readonly isPending: boolean
+            readonly options: ReadonlyArray<{ readonly value: string; readonly label: string; readonly name: string }>
+        }
         readonly phone: {
             readonly label: string
             readonly placeholder: string
@@ -72,6 +102,7 @@ export interface LoyaltyCheckFormBaseProps {
         readonly check: () => void
         readonly back: () => void
         readonly retry: () => void
+        readonly chooseLanguage: (locale: string) => void
     }
 }
 
@@ -116,7 +147,7 @@ const CheckStep = (props: CheckBodyProps) => {
     const { title, error } = props.props
     if (props.shape === "result") return renderGreeting(props)
     return (
-        <SurfaceCard ariaLabel={title}>
+        <SurfaceCard ariaLabel={title} measure="form">
             <Stack gap="section">
                 <Heading level={1} scale="standard" isLoading={props.isSkeleton}>
                     {title}
@@ -130,15 +161,36 @@ const CheckStep = (props: CheckBodyProps) => {
 
 /** Draws the public points check: phone, then the code sent to the customer's own chat, then their points. Shows nothing about a number before the code is right. */
 export const LoyaltyCheckFormBase = (props: LoyaltyCheckFormBaseProps) => (
-    <SlotView
-        slot={props.props.slot}
-        placeholder={SHOP_PLACEHOLDER}
-        labels={props.props.slotLabels}
-        onRetry={props.on.retry}
-        render={(shop, isSkeleton) => (
-            <CheckStep {...props} shape={props.shape} lead={shop.lead} isSkeleton={isSkeleton} />
-        )}
-    />
+    <Page chrome="bleed" minHeight="none">
+        <PublicShell
+            label={props.props.shell.label}
+            foot={props.props.shell.foot}
+            measure="reading"
+            brand={{
+                name: "items" in props.props.slot ? props.props.slot.items.shop : null,
+                isLoading: "isLoading" in props.props.slot,
+                fallbackLabel: props.props.shell.brandFallback,
+            }}
+            language={{
+                label: props.props.language.label,
+                locale: props.props.language.locale,
+                isPending: props.props.language.isPending,
+                options: props.props.language.options,
+            }}
+            onChooseLanguage={props.on.chooseLanguage}
+        >
+            <SlotView
+                slot={props.props.slot}
+                placeholder={SHOP_PLACEHOLDER}
+                labels={props.props.slotLabels}
+                errorDescription={props.props.shell.failedBody}
+                onRetry={props.on.retry}
+                render={(shop, isSkeleton) => (
+                    <CheckStep {...props} shape={props.shape} lead={shop.lead} isSkeleton={isSkeleton} />
+                )}
+            />
+        </PublicShell>
+    </Page>
 )
 
 /** Draws the greeting section of the current view. */
@@ -148,10 +200,10 @@ const renderGreeting = (props: Pick<LoyaltyCheckFormBaseProps, "props" | "on">) 
     if (result === undefined) return null
     return (
         <Stack gap="section">
+            <Heading level={1}>{result.greeting}</Heading>
             <SurfaceCard
                 kind="figures"
-                label={result.greeting}
-                headingLevel={2}
+                ariaLabel={result.greeting}
                 items={[
                     { id: "tier", term: result.tierLabel, value: result.tierName },
                     { id: "points", term: result.pointsLabel, value: result.points },
@@ -178,14 +230,16 @@ const renderGreeting = (props: Pick<LoyaltyCheckFormBaseProps, "props" | "on">) 
             <Text size="sm" tone="muted">
                 {result.redeemHint}
             </Text>
-            <Button intent="neutral" onPress={on.back}>
-                {props.props.back}
-            </Button>
+            <Cluster gap="inline" justify="center">
+                <TextAction size="sm" onPress={on.back}>
+                    {props.props.back}
+                </TextAction>
+            </Cluster>
         </Stack>
     )
 }
 
-/** Draws the LoyaltyCheckFormContent section of the current view. */
+/** Draws the code step: where the code went, the code field with its one primary command, and the two quiet ways back. */
 const renderVerificationCode = (props: Pick<LoyaltyCheckFormBaseProps, "props" | "on">) => {
     const { isBusy } = props.props
     const on = props.on
@@ -209,12 +263,14 @@ const renderVerificationCode = (props: Pick<LoyaltyCheckFormBaseProps, "props" |
                     </Button>
                 </Stack>
             </Form>
-            <Button intent="neutral" isDisabled={isBusy} onPress={on.sendCode}>
-                {props.props.code.resend}
-            </Button>
-            <Button intent="dismiss" isDisabled={isBusy} onPress={on.back}>
-                {props.props.back}
-            </Button>
+            <Cluster gap="section" justify="center">
+                <TextAction size="sm" onPress={on.back}>
+                    {props.props.back}
+                </TextAction>
+                <TextAction size="sm" onPress={on.sendCode}>
+                    {props.props.code.resend}
+                </TextAction>
+            </Cluster>
         </>
     )
 }

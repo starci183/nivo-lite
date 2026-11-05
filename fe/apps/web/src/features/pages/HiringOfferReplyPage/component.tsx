@@ -1,21 +1,13 @@
-import { Page } from "@starci/grammar/common"
 import { HiringOfferReply } from "@/components/blocks/HiringOfferReply"
-import { HiringPublicShell } from "@/components/frames/HiringPublicShell"
 
 /** Props for {@link HiringOfferReplyPageBase}. */
 export interface HiringOfferReplyPageBaseProps {
     readonly props: {
         readonly token: string
-        readonly label: string
-        readonly foot: string
     }
 }
 
-/** Draws the candidate's offer link: the connected letter in a reading column, with the foot line under it. */
+/** Draws the candidate's own offer link: the connected block draws its own shell with the business in the bar. */
 export const HiringOfferReplyPageBase = (props: HiringOfferReplyPageBaseProps) => (
-    <HiringPublicShell label={props.props.label} foot={props.props.foot}>
-        <Page measure="reading">
-            <HiringOfferReply token={props.props.token} />
-        </Page>
-    </HiringPublicShell>
+    <HiringOfferReply token={props.props.token} />
 )

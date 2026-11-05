@@ -1,3 +1,4 @@
+import { isNotFoundFailure } from "@/modules/failure"
 import type { RequirementsView } from "@/hooks/hiringWire"
 import type {
     PublicInterviewType,
@@ -168,3 +169,9 @@ export const answerGroups = (
     questionId: string
     answer: string
 }[] => job.questions.map((question) => ({ questionId: question.id, answer: values.answers[question.id] ?? "" }))
+
+/** How a public read failed: the link or job is not there (`isMissing`), or the network or server failed (`isFailed`). */
+export const failureFlagsOf = (error: unknown): { readonly isMissing: boolean; readonly isFailed: boolean } => {
+    const isMissing = isNotFoundFailure(error)
+    return { isMissing, isFailed: error !== undefined && !isMissing }
+}

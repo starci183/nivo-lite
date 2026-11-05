@@ -127,7 +127,6 @@
     "chForm": "Form trên web",
     "chFormText": "Form gửi về cùng danh sách khách hàng.",
     "connectNote": "Hiện chỉ có Chatbot. Các kênh khác nằm trong lộ trình và chưa có ngày cụ thể.",
-    "connectCta": "Dùng thử NIVO OS",
     "flowAiMark": "AI",
     "connectEmpty": "Chưa có kết nối để hiển thị.",
     "flowEmpty": "Chưa có bước nào để hiển thị."
@@ -172,7 +171,7 @@
     "ctaAria": "Dùng thử NIVO OS",
     "ctaTitle": "Bắt đầu với một việc cụ thể.",
     "ctaText": "Chọn một việc có người phụ trách, phạm vi rõ và kết quả có thể xác nhận. Dùng thử NIVO OS và xem cách nó vận hành.",
-    "ctaButton": "Dùng thử NIVO OS",
+    "ctaButton": "Xem sản phẩm",
     "ctaNote": "Đăng nhập và khám phá một workspace đã sẵn sàng. Điều kiện dùng thử do đội ngũ NIVO xác nhận.",
     "faqAria": "Câu hỏi thường gặp",
     "faqEyebrow": "Hỏi & đáp",

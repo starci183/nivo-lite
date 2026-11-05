@@ -1,21 +1,14 @@
-import { Page } from "@starci/grammar/common"
 import { HiringApplyForm } from "@/components/blocks/HiringApplyForm"
-import { HiringPublicShell } from "@/components/frames/HiringPublicShell"
 
 /** Props for {@link HiringApplyPageBase}. */
 export interface HiringApplyPageBaseProps {
     readonly props: {
         readonly ws: string
         readonly job: string
-        readonly label: string
     }
 }
 
-/** Draws the public job page: the connected post and apply form in a reading column, inside one Page. */
+/** Draws the public job page: the connected post and apply form, which draw their own shell with the company in the bar. */
 export const HiringApplyPageBase = (props: HiringApplyPageBaseProps) => (
-    <HiringPublicShell label={props.props.label} foot={null}>
-        <Page measure="reading">
-            <HiringApplyForm ws={props.props.ws} job={props.props.job} />
-        </Page>
-    </HiringPublicShell>
+    <HiringApplyForm ws={props.props.ws} job={props.props.job} />
 )

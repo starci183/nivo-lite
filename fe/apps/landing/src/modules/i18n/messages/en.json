@@ -127,7 +127,6 @@
     "chForm": "Web form",
     "chFormText": "Form submissions arrive in the same lead list.",
     "connectNote": "Only the Chatbot is available today. Other channels are on the roadmap and have no date yet.",
-    "connectCta": "Try NIVO OS",
     "flowAiMark": "AI",
     "connectEmpty": "No connections to show yet.",
     "flowEmpty": "No steps to show yet."
@@ -172,7 +171,7 @@
     "ctaAria": "Try NIVO OS",
     "ctaTitle": "Start with one specific task.",
     "ctaText": "Choose a task with a clear owner, a clear scope and a result you can confirm. Try NIVO OS and see how it runs.",
-    "ctaButton": "Try NIVO OS",
+    "ctaButton": "See the product",
     "ctaNote": "Sign in and explore a ready-made workspace. Trial terms are confirmed by the NIVO team.",
     "faqAria": "Frequently asked questions",
     "faqEyebrow": "Questions and answers",

@@ -1,9 +1,6 @@
-import { Avatar, Cluster, Grid, Heading, Stack, Text } from "@starci/grammar/common"
+import { Avatar, Cluster, Grid, Heading, Page, Stack, Text } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 
-import { NivoLogo } from "@/components/leaves/NivoLogo"
-import { LanguageMenu } from "@/components/composites/LanguageMenu"
-import { PublicBrand } from "@/components/composites/PublicBrand"
 import { PublicBookingForm } from "@/components/composites/PublicBookingForm"
 import type { PublicBookingFormProps } from "@/components/composites/PublicBookingForm"
 import { PublicShell } from "@/components/frames/PublicShell"
@@ -87,58 +84,45 @@ const ShopIdentity = (props: ShopIdentityProps) => (
     </Stack>
 )
 
-/** What the bar's brand draws. */
-interface ShopBrandProps {
-    readonly slot: DataSlot<PublicBookingPageData>
-    readonly fallback: string
-}
-
-/** The shop in the bar once it is known, its geometry while it loads, the platform's own mark when there is no shop to show. */
-const ShopBrand = (props: ShopBrandProps) => {
-    const { slot } = props
-    if ("items" in slot) return <PublicBrand name={slot.items.shop} />
-    if ("isLoading" in slot) return <PublicBrand name={GHOST} isLoading />
-    return <NivoLogo label={props.fallback} />
-}
-
 /** Draws the public booking page: the shop beside one card that books. */
 export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) => {
     const { slot, copy, form } = props.props
     return (
-        <PublicShell
-            label={copy.title}
-            actions={
-                <LanguageMenu
-                    label={props.props.language.label}
-                    value={props.props.language.locale}
-                    options={props.props.language.options}
-                    isDisabled={props.props.language.isPending}
-                    onChange={props.on.chooseLanguage}
+        <Page chrome="bleed" minHeight="none">
+            <PublicShell
+                label={copy.title}
+                foot={copy.foot}
+                measure="product"
+                brand={{
+                    name: "items" in slot ? slot.items.shop : null,
+                    isLoading: "isLoading" in slot,
+                    fallbackLabel: copy.brandFallback,
+                }}
+                language={props.props.language}
+                onChooseLanguage={props.on.chooseLanguage}
+            >
+                <SlotView
+                    slot={slot}
+                    placeholder={SHOP_PLACEHOLDER}
+                    labels={props.props.labels}
+                    errorDescription={copy.failedBody}
+                    emptyDescription={copy.notFoundBody}
+                    onRetry={props.on.retry}
+                    render={(page, isLoading) => (
+                        <Grid
+                            kind="main-rail"
+                            railPosition="leading"
+                            collapsedOrder="rail-first"
+                            railWidth="wide"
+                            align="start"
+                            rail={<ShopIdentity page={page} isLoading={isLoading} intro={copy.intro} />}
+                            primary={
+                                <PublicBookingForm key={page.slug} props={form} on={props.on} isLoading={isLoading} />
+                            }
+                        />
+                    )}
                 />
-            }
-            foot={copy.foot}
-            measure="product"
-            brand={<ShopBrand slot={slot} fallback={copy.brandFallback} />}
-        >
-            <SlotView
-                slot={slot}
-                placeholder={SHOP_PLACEHOLDER}
-                labels={props.props.labels}
-                errorDescription={copy.failedBody}
-                emptyDescription={copy.notFoundBody}
-                onRetry={props.on.retry}
-                render={(page, isLoading) => (
-                    <Grid
-                        kind="main-rail"
-                        railPosition="leading"
-                        collapsedOrder="rail-first"
-                        railWidth="wide"
-                        align="start"
-                        rail={<ShopIdentity page={page} isLoading={isLoading} intro={copy.intro} />}
-                        primary={<PublicBookingForm key={page.slug} props={form} on={props.on} isLoading={isLoading} />}
-                    />
-                )}
-            />
-        </PublicShell>
+            </PublicShell>
+        </Page>
     )
 }

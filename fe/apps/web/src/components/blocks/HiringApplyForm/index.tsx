@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
 import { CV_ACCEPT, useHiringApply, usePublicHiringJob } from "@/hooks/hiringPublic"
 import type { PublicJobView } from "@/hooks/hiringPublic"
+import { useLocaleSwitch } from "@/hooks/locale"
 import { useHiringApplyForm } from "@/hooks/rhf"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { HiringApplyFormBase } from "./component"
@@ -46,6 +47,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
     const say = useHiringSay()
     const format = useHiringFormat()
     const slotLabels = useSlotLabels()
+    const language = useLocaleSwitch()
     const read = usePublicHiringJob(props.ws, props.job)
     const form = useHiringApplyForm()
     const apply = useHiringApply(form, read.view, props)
@@ -57,12 +59,21 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
         <HiringApplyFormBase
             props={{
                 say,
-                slot: slotOfSwr({
-                    data: job === undefined ? undefined : (true as const),
-                    error: read.isMissing ? say("applyMissing") : undefined,
-                    isLoading: read.isLoading,
-                }),
-                slotLabels: { ...slotLabels(say("applyMissing")), error: say("applyMissing") },
+                slot: read.isMissing
+                    ? { isEmpty: true }
+                    : slotOfSwr({
+                          data: job === undefined ? undefined : (true as const),
+                          error: read.isFailed ? true : undefined,
+                          isLoading: read.isLoading,
+                      }),
+                slotLabels: { ...slotLabels(say("applyMissing")), error: say("applyLoadFailed") },
+                failedBody: say("applyLoadFailedBody"),
+                language: {
+                    label: language.label,
+                    locale: language.locale,
+                    isPending: language.isPending,
+                    options: language.options,
+                },
                 post: {
                     company: job?.company ?? "",
                     title: job?.title ?? "",
@@ -84,7 +95,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                 },
                 company: job?.company ?? "",
                 isOpen: job?.open ?? false,
-                consentText: job?.consentText ?? "",
+                consentText: job?.consentText ?? say("applyConsentDefault", { company: job?.company ?? "" }),
                 questions: job?.questions ?? [],
                 availabilityChoices: requirements?.availability ?? [],
                 values: apply.values,
@@ -103,6 +114,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                 cv: apply.setCv,
                 submit: apply.submit,
                 retry: read.reload,
+                chooseLanguage: language.choose,
             }}
         />
     )

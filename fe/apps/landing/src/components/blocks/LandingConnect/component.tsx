@@ -1,4 +1,4 @@
-import { Button, EmptyNotice, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
 
 /** One channel of the list: its words and whether it works today. */
 interface LandingConnectChannel {
@@ -15,8 +15,6 @@ interface LandingConnectBaseProps {
         readonly eyebrow: string
         readonly title: string
         readonly lead: string
-        readonly ctaLabel: string
-        readonly ctaHref: string
         readonly liveLabel: string
         readonly roadmapLabel: string
         readonly note: string
@@ -40,14 +38,7 @@ export const LandingConnectBase = (props: LandingConnectBaseProps) => (
             bands={[
                 {
                     kind: "body",
-                    children: (
-                        <Stack gap="row" align="start">
-                            <Text>{props.props.lead}</Text>
-                            <Button intent="commit" size="lg" href={props.props.ctaHref}>
-                                {props.props.ctaLabel}
-                            </Button>
-                        </Stack>
-                    ),
+                    children: <Text>{props.props.lead}</Text>,
                 },
                 {
                     kind: "list",
