@@ -3,7 +3,7 @@ export { QUERY_ADMIN_WORKSPACE_SWR_KEY, QUERY_AGENT_CHAT_CONVERSATIONS_SWR_KEY }
 export { QUERY_AGENT_CHAT_MESSAGES_SWR_KEY, QUERY_AGENT_DASHBOARD_SWR_KEY, QUERY_AUTHORITY_SWR_KEY } from "./api"
 export { QUERY_AUTOMATIONS_SWR_KEY, QUERY_BOOKING_BOARD_SWR_KEY, QUERY_BRAIN_SWR_KEY } from "./api"
 export { QUERY_BRAIN_TODO_SWR_KEY, useQueryBrainTodoSwr } from "./api"
-export { QUERY_CHATBOT_GAPS_SWR_KEY, QUERY_CHAT_ANSWER_STATUS_SWR_KEY, QUERY_CHAT_REPLY_STATUS_SWR_KEY } from "./api"
+
 export { QUERY_CONNECTIONS_SWR_KEY, QUERY_HIRING_CANDIDATE_DETAIL_SWR_KEY } from "./api"
 export { QUERY_HIRING_WORKBENCH_SWR_KEY, QUERY_INVENTORY_WORKBENCH_SWR_KEY } from "./api"
 export { QUERY_KNOWLEDGE_SOURCES_SWR_KEY, QUERY_KNOWLEDGE_USAGE_SWR_KEY, useQueryKnowledgeUsageSwr } from "./api"
@@ -54,7 +54,7 @@ export { useMutateAuthorizeGoogleSwr, useMutateAuthorizeMetaSwr, useMutateAuthor
 export { useMutateCancelBookingSwr, useMutateCancelHiringOfferSwr, useMutateCancelInventoryPoSwr } from "./api"
 export { useMutateCancelOfficeCommandSwr, useMutateCancelTelegramLoginSwr, useMutateChangeMemberRoleSwr } from "./api"
 export { useMutateChangePasswordSwr, useMutateChangeSmtpPasswordSwr, useMutateLogoutOtherSessionsSwr } from "./api"
-export { useMutateChatbotDismissKnowledgeGapSwr, useMutateCheckConnectionSwr } from "./api"
+export { useMutateCheckConnectionSwr } from "./api"
 export { useMutateCheckInBookingSwr, useMutateCheckInShiftsSwr, useMutateCheckMcpConnectorSwr } from "./api"
 export { useMutateRegisterMcpConnectorSwr, useMutateSetMcpConnectorCredentialSwr } from "./api"
 export { useMutateSetMcpToolGrantSwr, useMutateCheckTelegramConnectionSwr } from "./api"
@@ -97,8 +97,8 @@ export { useMutateRemoveShiftsAvailabilitySwr, useMutateRemoveShiftsCoverageSwr 
 export { useMutateRemoveShiftsPositionSwr, useMutateRenameInstallationAgentSwr } from "./api"
 export { useMutateRequestAgentSyncSwr, useMutateRenameAgentSwr } from "./api"
 export { useMutateRequestAgentAvatarUploadSwr, useMutateSetAgentAvatarSwr } from "./api"
-export { useMutateRequestMyAvatarUploadSwr, useMutateSetMyAvatarSwr, useMutateRequestChatAnswerSwr } from "./api"
-export { useMutateRequestChatReplySwr, useMutateRequestContentDraftSwr } from "./api"
+export { useMutateRequestMyAvatarUploadSwr, useMutateSetMyAvatarSwr } from "./api"
+export { useMutateRequestContentDraftSwr } from "./api"
 export {
     useMutateRequestAgentChatFileUploadSwr,
     useMutateRequestContentMediaUploadSwr,
@@ -131,7 +131,7 @@ export { useMutateSaveOpenApiConnectionSwr, useMutateSaveProviderKeysSwr, useMut
 export { useMutateSaveShiftsCoverageSwr, useMutateSaveShiftsPositionSwr, useMutateSaveShiftsSettingsSwr } from "./api"
 export { useMutateSaveShiftsStaffSwr, useMutateSaveTelegramUserSetupSwr, useMutateSaveVideoBrandSwr } from "./api"
 export { useMutateSaveZaloOaSecretSwr, useMutateSendAgentChatMessageSwr, useMutateSendSmtpTestSwr } from "./api"
-export { useMutateSetChatHandlingSwr, useMutateSetConnectionAgentsSwr, useMutateSetConnectionGrantSwr } from "./api"
+export { useMutateSetConnectionAgentsSwr, useMutateSetConnectionGrantSwr } from "./api"
 export { useMutateSetContentAutomationSwr, useMutateSetDefaultSmtpSwr } from "./api"
 export { useMutateSetHiringInterviewStatusSwr, useMutateSetHiringJobStatusSwr } from "./api"
 export { useMutateSetInventoryItemActiveSwr, useMutateSetKnowledgeSuggestionStateSwr } from "./api"
@@ -159,8 +159,8 @@ export { useQueryAuthoritySwr, useQueryAutomationGoogleAccountsSwr, useQueryAuto
 export { useQueryBillingPlanQuotesSwr, useQueryBillingPlanSwr, useQueryBillingPlansSwr } from "./api"
 export { useQueryBillingReviewTransactionsSwr, useQueryBillingStorageSwr, useQueryBillingWorkspaceSwr } from "./api"
 export { useQueryBillingWorkspacesSwr, useQueryBookingBoardSwr, useQueryBrainSwr } from "./api"
-export { useQueryChatAnswerStatusSwr, useQueryChatReplyStatusSwr, useQueryChatbotGapsSwr } from "./api"
-export { useQueryChatbotOverviewSwr, useQueryChatbotThreadSwr, useQueryConnectionAgentsSwr } from "./api"
+
+export { useQueryConnectionAgentsSwr } from "./api"
 export { useQueryConnectionFirstEventSwr, useQueryConnectionsSwr, useQueryContentAiStatusSwr } from "./api"
 export { useQueryContentConfigurationSwr, useQueryContentMediaSwr, useQueryContentWorkbenchSwr } from "./api"
 export { useQueryCreditPacksBoughtSwr, useQueryCreditPacksSwr, useQueryCreditQuotaStatusSwr } from "./api"

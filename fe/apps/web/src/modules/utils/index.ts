@@ -31,7 +31,7 @@ export {
 export { isWorkspaceSwitchSwrKey, matchesSwrKey } from "./swr-key"
 export { maskPhones } from "./phone"
 export { newIdempotencyToken } from "./token"
-export { isLeadStage, leadStageLabel, leadStageOf, leadStageSteps } from "./leadStage"
+
 export { toLeadGenWorkbenchData } from "./leadgen"
 export { DB_DEFAULT_PORT, DB_ENGINES } from "./database-engines"
 export { accountingPlaceholderOf, accountingQuestionsPlaceholderOf } from "./accounting-placeholder"

@@ -18,7 +18,7 @@ export type FlowStaff = {
     created_at: string
 }
 /** What an agent proposes for a piece of work. */
-export type Proposal = {
+type Proposal = {
     summary: string
     draft?: string
     amount_vnd?: number | null

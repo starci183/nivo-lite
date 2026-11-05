@@ -49,18 +49,7 @@ export type {
     AccountingUpcomingDue,
     AccountingWorkbenchData,
 } from "./accounting"
-export type {
-    ChatbotChannel,
-    ChatbotConversation,
-    ChatbotLead,
-    ChatbotMessage,
-    ChatbotMetrics,
-    ChatbotOverview,
-    ChatbotRespondent,
-    ChatbotRole,
-    ChatbotThread,
-    ChatbotWaitingReply,
-} from "./chatbot"
+
 export type {
     BookingAction,
     BookingAgendaRowView,
@@ -120,7 +109,7 @@ export type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText, TelegramConn
 export type { TelegramUserChatsView, TelegramUserLoginView, TelegramUserWizardCopy } from "./connection-wizard"
 export type { WebhookView, WizardConnection, WizardNote, WizardResume, ZaloWizardConnection } from "./connection-wizard"
 export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
-export type { DataSlot, SlotLabels, SlotPanelProps, SlotRead } from "./slot"
+export type { DataSlot, SlotLabels, SlotRead } from "./slot"
 export type { InventoryWorkbenchData, InventorySay, InventoryTemplateChoice } from "./inventory"
 export type { ItemView, LocationView, RecipeView, PendingView, PoStatus, PoView, StockStatus } from "./inventory"
 export type { SupplierChannel, SupplierFormField, SupplierFormValues, SupplierView } from "./inventory"
@@ -388,8 +377,8 @@ export type {
 export type { AgentWorkGoalView, AgentWorkPreset, AgentWorkStatusView, AgentWorkSwitchView } from "./agentWork"
 export type { AgentWorkTaskView, AgentWorkTriggerView, AgentWorkTurnView, AgentWorkTurnsView } from "./agentWork"
 export type { AgentWorkView, WorkspaceAgentWorkView } from "./agentWork"
-export type { WorkbenchRowView, WorkbenchCommandView, WorkbenchSurface, WorkbenchWhyView } from "./workbench"
-export type { WorkbenchCommandData, WorkbenchRowData } from "./workbench"
+export type { WorkbenchWhyView } from "./workbench"
+export type { WorkbenchRowData } from "./workbench"
 export type { BrainPageHeading, BrainPageHeaderView, FactDrawerView } from "./brain-page"
 export type { QueueActionView, QueueAsideView, QueueDetailView, QueueEntryView, QueueFilterView } from "./brain-queue"
 export type { QueueGlyph, QueueQuoteView, QueueSource, QueueTileView, QueueView } from "./brain-queue"
@@ -420,14 +409,8 @@ export type { InventoryNewPoEditorData, InventoryPoEditorData, InventorySupplier
 export type { InventoryRecipeEditorData } from "./inventory-editors"
 export type { WorkbenchFigureData, WorkbenchWaitingRegionView, WorkbenchExplanationView } from "./workbench-dashboard"
 export type { WorkbenchDashboardRegions, WorkbenchFigureRegion, WorkbenchWhyLabels } from "./workbench-dashboard"
-export type { ChatbotCustomerWords, CustomerFilter, CustomerRowView } from "./chatbot-workbench"
-export type { ChatbotGapRow, ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "./chatbot-workbench"
 
-export { CHATBOT_CUSTOMER_FILTERS, CHATBOT_WORKBENCH_TABS } from "./chatbot-workbench"
-export type { ChatbotConversationListView, ChatbotConversationView, ChatbotListItem } from "./chatbot-inbox"
-export type { ChatbotSidePanelView, ChatbotStageStepsView, ChatbotThreadViewData } from "./chatbot-inbox"
 export type { ChatMessageFile } from "./chatbot-inbox"
-export type { ChatbotInboxActions } from "./chatbot-inbox-actions"
 
 export type { ShiftsWeekViews, ShiftsWeekActions } from "./shifts-workbench-week"
 export type { ShiftsSetupViews, ShiftsSetupActions } from "./shifts-workbench-setup"

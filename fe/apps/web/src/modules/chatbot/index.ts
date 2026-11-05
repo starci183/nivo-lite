@@ -1,1 +1,0 @@
-export { chatbotFiguresOf } from "./figures"

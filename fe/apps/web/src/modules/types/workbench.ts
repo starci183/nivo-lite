@@ -2,14 +2,10 @@
 export type {
     WorkbenchApproverView,
     WorkbenchBadgeView,
-    WorkbenchCommandData,
-    WorkbenchCommandView,
     WorkbenchFactView,
     WorkbenchPathStepView,
     WorkbenchRowData,
-    WorkbenchRowView,
     WorkbenchSourceView,
-    WorkbenchSurface,
     WorkbenchTraceView,
     WorkbenchWhyView,
 } from "@nivo-lite/agent-sdk/workbench/view"
