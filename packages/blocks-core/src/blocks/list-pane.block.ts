@@ -29,4 +29,5 @@ export const listPaneBlock: BlockDefinition<typeof props, typeof slots> = define
     props,
     slots,
     children: { max: 2, accepts: ["core.filter-tabs", "core.record-list"] },
+    params: ["searchParam"],
 })

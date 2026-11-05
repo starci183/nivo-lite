@@ -48,6 +48,7 @@ const slots: Slots = { counts: { kind: "read", shape: "record", required: true }
 export const filterTabsBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.filter-tabs",
     title: { key: "blockFilterTabs" },
+    params: ["param"],
     props,
     slots,
     children: false,

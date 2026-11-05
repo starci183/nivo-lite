@@ -46,6 +46,7 @@ const slots: Slots = {
 export const recordListBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.record-list",
     title: { key: "blockRecordList" },
+    params: ["selectParam", "searchParam"],
     props,
     slots,
     children: false,
