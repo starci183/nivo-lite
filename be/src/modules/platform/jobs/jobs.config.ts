@@ -8,5 +8,6 @@ export type JobsConfig = Omit<JobsOptions, "connection">
 export const parseJobsConfig = (env: EnvSource): JobsConfig => ({
     workerId: env.optional("JOBS_WORKER_ID") ?? "worker",
     leaseMs: env.duration("JOBS_LEASE", 60000),
+    buildId: env.optional("APP_BUILD_ID"),
     scheduler: { enabled: env.bool("JOBS_SCHEDULER_ENABLED", true) },
 })

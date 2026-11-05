@@ -46,6 +46,18 @@ export interface RenewWrite extends GuardedWrite {
     readonly leaseMs: number
 }
 
+/** A guarded write that parks the job: nothing a retry does can fix it, so it waits for a fix and is resumed. */
+export interface ParkWrite extends GuardedWrite {
+    /** Why it will not run on its own. */
+    readonly failureClass: "transient" | "input" | "code" | "config"
+    /** The reason in a few words. */
+    readonly reason: string
+    /** The build that ran it. */
+    readonly build: string
+    /** The queue to hand it back to when it is resumed. */
+    readonly queue: string
+}
+
 /** A guarded write that fails the job. */
 export interface FailWrite extends GuardedWrite {
     /** Why the job failed. */
@@ -89,3 +101,6 @@ export interface LeaseState {
     /** True once the job ended; no renewal is scheduled after it. */
     stopped: boolean
 }
+
+/** The sweep that hands parked jobs back: its queue, shared by the 15-minute tick, the boot trigger and the consumer. */
+export const PARKED_JOBS_SWEEP = { queue: "parked_jobs_sweep", job: "parked-jobs.sweep" } as const

@@ -1,10 +1,12 @@
 export { JOBS_ERROR_KINDS } from "./errors/jobs.error"
 export { parseJobsConfig } from "./jobs.config"
-export type { ClaimedJob } from "./jobs.contracts"
+export { PARKED_JOBS_SWEEP } from "./jobs.contracts"
+export type { ClaimedJob, ParkWrite } from "./jobs.contracts"
 export {
     InjectJobClaims,
     InjectJobProcessorRegistry,
     InjectJobFence,
+    InjectParkedJobResumer,
     JOB_CLAIMS,
     JOB_FENCE,
     JOB_PROCESSOR_REGISTRY,
@@ -22,3 +24,4 @@ export { JobRunnerService } from "./job-runner.service"
 export { JobsLogEvent } from "./jobs.log-events"
 export { jobsEntities } from "./persistence/entities"
 export type { AdvanceWrite, JobClaimResult } from "./jobs.contracts"
+export { ParkedJobResumerService } from "./parked-job-resumer.service"

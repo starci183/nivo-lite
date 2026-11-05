@@ -4,6 +4,7 @@ import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { JobsOptions } from "./jobs.options"
 import type { JobClaims, JobProcessorRegistry, JobTickScheduler } from "./jobs.port"
 import type { JobFenceService } from "./job-fence.service"
+import type { ParkedJobResumerService } from "./parked-job-resumer.service"
 
 /** Token of the options of the jobs, exported so a spec can provide it. */
 export const JOBS_OPTIONS: unique symbol = Symbol("platform.jobs.options")
@@ -43,3 +44,10 @@ export const InjectJobsManagers = (): TypedParameterDecorator<ReadonlyArray<Enti
 /** Injects the scheduler that fires the ticks. Parameter type: JobTickScheduler. */
 export const InjectJobTickScheduler = (): TypedParameterDecorator<JobTickScheduler> =>
     injector<JobTickScheduler>(JOB_TICK_SCHEDULER)
+
+/** Token of the service that hands parked jobs back to their queues. */
+export const PARKED_JOB_RESUMER: unique symbol = Symbol("platform.jobs.parked-job-resumer")
+
+/** Injects the parked job resumer. Parameter type: ParkedJobResumerService. */
+export const InjectParkedJobResumer = (): TypedParameterDecorator<ParkedJobResumerService> =>
+    injector<ParkedJobResumerService>(PARKED_JOB_RESUMER)

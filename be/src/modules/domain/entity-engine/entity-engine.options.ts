@@ -8,9 +8,11 @@ export interface EntityEngineOptions {
     readonly entities: ReadonlyArray<EntityDefinition>
     /** Every job the modules declare; the module-job processor runs a delivery by name. */
     readonly jobs: ReadonlyArray<JobDefinition>
+    /** Names the running build; a job parked under another build is handed back to its queue when this one starts. */
+    readonly buildId?: string | undefined
     /** A 32-byte base64 key; cursors are signed with a key derived from it. */
     readonly cursorKey: Secret
 }
 
 /** The part of the options the environment supplies. */
-export type EntityEngineConfig = Pick<EntityEngineOptions, "cursorKey">
+export type EntityEngineConfig = Pick<EntityEngineOptions, "cursorKey" | "buildId">

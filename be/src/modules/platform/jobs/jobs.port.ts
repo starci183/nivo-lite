@@ -2,6 +2,7 @@ import type { EntityManager } from "typeorm"
 import type { JobTick } from "./job-ticks.contracts"
 import type {
     AdvanceWrite,
+    ParkWrite,
     ClaimedJob,
     ClaimParams,
     JobClaimResult,
@@ -34,6 +35,8 @@ export interface JobClaims {
     release(write: GuardedWrite): Promise<void>
     /** Fails the job so the queue can retry it; throws `JobFencedOut` when the token is stale. */
     fail(write: FailWrite): Promise<void>
+    /** Parks the job as `failed_awaiting_fix` under the token the caller holds; answers whether its one alert is due (true for the first park since the last resume). Throws `JobFencedOut` when the token is stale. */
+    park(write: ParkWrite): Promise<boolean>
     /** Holds the live job fence across domain effects so a replacement claim cannot overtake them. */
     withFence<T>(job: ClaimedJob, work: JobEffect<T>): Promise<T>
     /** Holds a failed delivery fence only when no successor worker is live. */

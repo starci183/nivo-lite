@@ -184,8 +184,25 @@ export const jobSnapshot = async (manager: EntityManager, key: string): Promise<
         error: job.error,
     }
 }
-/** Removes only this suite's claim rows after its proofs finish. */
+/** Removes only this suite's claim rows after its proofs finish, and the rows of the jobs it parked and resumed (their key is the new delivery's id). */
 export const cleanupJobs = async (manager: EntityManager, prefix: string): Promise<void> => {
+    const resumed = await manager
+        .createQueryBuilder(JobOutboxEntity, "o")
+        .select("o.id", "id")
+        .where("starts_with(o.dedupe_key, :prefix)", { prefix })
+        .getRawMany<{ readonly id: string }>()
+    if (resumed.length > 0) {
+        await manager
+            .createQueryBuilder(JobEntity, "t")
+            .delete()
+            .where("job_key IN (:...keys)", { keys: resumed.map(({ id }) => id) })
+            .execute()
+        await manager
+            .createQueryBuilder(JobOutboxEntity, "o")
+            .delete()
+            .where("starts_with(dedupe_key, :prefix)", { prefix })
+            .execute()
+    }
     await manager
         .createQueryBuilder(JobEntity, "t")
         .delete()
