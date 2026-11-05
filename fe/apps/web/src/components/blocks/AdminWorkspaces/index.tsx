@@ -97,7 +97,8 @@ export const AdminWorkspaces = (props: AdminWorkspacesProps) => {
             props={{
                 slot: slotOfSwr({ data: view, isLoading, error: failure.message }),
                 placeholder,
-                labels: { ...slotLabels(t("empty")), error: failure.message ?? t("loadFailed") },
+                labels: { ...slotLabels(t("empty")), error: failure.message ?? t("loadFailedTitle") },
+                errorHint: t("loadFailedHint"),
             }}
             on={{
                 retry: reload,

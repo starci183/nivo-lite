@@ -206,7 +206,9 @@
     "planStart": "Start",
     "planTeam": "Team",
     "planPro_v1": "Pro (legacy)",
-    "planMax_v1": "Max (legacy)"
+    "planMax_v1": "Max (legacy)",
+    "loadFailedTitle": "This page could not be loaded",
+    "loadFailedHint": "Try again."
   },
   "agentChat": {
     "pageLabel": "Agent chat",

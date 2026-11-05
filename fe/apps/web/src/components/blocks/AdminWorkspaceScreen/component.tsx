@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
-import { Badge, Button, Grid, Page, Section, Stack } from "@starci/grammar/common"
+import { Badge, Button, Grid, Icon, Page, Section, Stack } from "@starci/grammar/common"
 import type { BadgeTone, Figure } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { AdminRowsCard } from "@/components/composites/AdminRowsCard"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import type { AdminCardView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** The name, summary line and billing state of the workspace, as the page header draws them. */
@@ -33,6 +34,8 @@ export interface AdminWorkspaceScreenBaseProps {
         /** The same screen with its words and no data: the labels stay real while the read is on its way. */
         readonly placeholder: AdminWorkspaceScreenData
         readonly labels: SlotLabels
+        /** The line under the failure: what to do about it. */
+        readonly errorHint: string
     }
     readonly on: {
         readonly retry: () => void
@@ -53,7 +56,7 @@ interface BodyProps {
 const Body = (props: BodyProps) => (
     <Stack gap="section">
         <Section kind="figures" title={props.overviewTitle} items={props.view.figures} isLoading={props.isLoading} />
-        <Grid kind="sections">
+        <Grid kind="cards" columns={3}>
             {props.view.cards.map((card) => (
                 <AdminRowsCard key={card.id} card={card} isLoading={props.isLoading} />
             ))}
@@ -92,7 +95,11 @@ export const AdminWorkspaceScreenBase = (props: AdminWorkspaceScreenBaseProps) =
                           ),
                       }),
                 actions: (
-                    <Button intent="neutral" onPress={props.on.openSupport}>
+                    <Button
+                        intent="neutral"
+                        startContent={<Icon source={nivoIconSource("more", "leading")} />}
+                        onPress={props.on.openSupport}
+                    >
                         {props.props.supportLabel}
                     </Button>
                 ),
@@ -102,6 +109,8 @@ export const AdminWorkspaceScreenBase = (props: AdminWorkspaceScreenBaseProps) =
                 slot={props.props.slot}
                 placeholder={props.props.placeholder}
                 labels={props.props.labels}
+                errorDescription={props.props.errorHint}
+                errorLayout="band"
                 onRetry={props.on.retry}
                 render={(view, loading) => (
                     <Body view={view} overviewTitle={props.props.overviewTitle} isLoading={loading} />

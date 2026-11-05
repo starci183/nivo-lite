@@ -20,8 +20,10 @@ const ACTIVITY_TERMS: ReadonlyArray<readonly [string, string]> = [
     ["decisions", "factDecisions"],
     ["knowledge", "factKnowledge"],
 ]
+/** The width of a value the skeleton draws while the facts load. */
+const BLANK_VALUE = "000000000"
 const BLANK_FACTS = (text: AdminText, terms: ReadonlyArray<readonly [string, string]>): ReadonlyArray<AdminFactView> =>
-    terms.map(([id, key]) => ({ id, term: text(key), value: "" }))
+    terms.map(([id, key]) => ({ id, term: text(key), value: BLANK_VALUE }))
 
 /** The overview terms of a workspace: billing on one side, activity on the other. */
 const detailFacts = (

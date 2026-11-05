@@ -77,7 +77,7 @@ type AdminWorkspacesDrawProps = AdminWorkspacesViewProps & {
 
 /** The search and the filters above the table: the search keeps the chosen filter, the filters keep the search. */
 const Controls = (props: AdminWorkspacesDrawProps) => (
-    <Stack gap="row">
+    <Cluster gap="section" align="center">
         <SearchField
             label={props.props.searchLabel}
             isLabelHidden
@@ -96,7 +96,7 @@ const Controls = (props: AdminWorkspacesDrawProps) => (
             items={props.props.filters.map((filter) => ({ id: filter.id, label: filter.label, count: filter.count }))}
             onSelect={props.on.filter}
         />
-    </Stack>
+    </Cluster>
 )
 
 /** The table of workspaces, or the empty notice with the way out when the filter and the search keep none. */
@@ -143,6 +143,8 @@ export interface AdminWorkspacesBaseProps {
         readonly slot: DataSlot<AdminWorkspacesViewProps["props"]>
         readonly placeholder: AdminWorkspacesViewProps["props"]
         readonly labels: SlotLabels
+        /** The line under the failure: what to do about it. */
+        readonly errorHint: string
     }
     readonly on: AdminWorkspacesActions
 }
@@ -153,7 +155,11 @@ export const AdminWorkspacesBase = (props: AdminWorkspacesBaseProps) => {
     return (
         <Page measure="full" header={{ title: words.title, description: words.description }}>
             <SlotView
-                {...props.props}
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.labels}
+                errorDescription={props.props.errorHint}
+                errorLayout="band"
                 onRetry={props.on.retry}
                 render={(view, isLoading) => (
                     <Stack gap="section">

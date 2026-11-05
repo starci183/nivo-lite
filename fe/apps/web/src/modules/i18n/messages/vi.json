@@ -206,7 +206,9 @@
     "planStart": "Start",
     "planTeam": "Team",
     "planPro_v1": "Pro (bản cũ)",
-    "planMax_v1": "Max (bản cũ)"
+    "planMax_v1": "Max (bản cũ)",
+    "loadFailedTitle": "Không tải được trang này",
+    "loadFailedHint": "Hãy thử lại."
   },
   "agentChat": {
     "pageLabel": "Trò chuyện với trợ lý",

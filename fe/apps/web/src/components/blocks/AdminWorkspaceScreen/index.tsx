@@ -23,6 +23,11 @@ interface AdminWorkspaceScreenProps {
     readonly children: ReactNode
 }
 
+/** The words the header skeleton measures while the workspace is read: a name, a summary line and a state of the usual length (any text of that length). */
+const BLANK_NAME = "Sample business name"
+const BLANK_LINE = "Owner someone@example.com · created 05/08/2026 · id ws_8f3k2a"
+const BLANK_STATUS = "Sample state"
+
 /** The connected workspace screen: one read of the workspace draws its header, overview and lists, and one drawer holds the support actions. */
 export const AdminWorkspaceScreen = (props: AdminWorkspaceScreenProps) => {
     const { text: t, format } = useAdminFormat()
@@ -40,7 +45,7 @@ export const AdminWorkspaceScreen = (props: AdminWorkspaceScreenProps) => {
     const placeholder: AdminWorkspaceScreenData = { figures, cards }
     const head: AdminWorkspaceScreenHead =
         detail === undefined
-            ? { name: "...", description: "...", status: null }
+            ? { name: BLANK_NAME, description: BLANK_LINE, status: { label: BLANK_STATUS, tone: "neutral" } }
             : {
                   name: detail.workspace.name,
                   description: t("workspaceDescription", {
@@ -71,7 +76,8 @@ export const AdminWorkspaceScreen = (props: AdminWorkspaceScreenProps) => {
                     isValidating: read.isValidating,
                 }),
                 placeholder,
-                labels: slotLabels(t("loadFailed")),
+                labels: slotLabels(t("loadFailedTitle")),
+                errorHint: t("loadFailedHint"),
             }}
             on={{ retry: reload, openSupport: () => drawer.setOpen(true) }}
             children={props.children}

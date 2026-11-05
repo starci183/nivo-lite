@@ -30,6 +30,8 @@ export interface AdminHealthBaseProps {
         readonly slot: DataSlot<AdminHealthViewProps["props"]>
         readonly placeholder: AdminHealthViewProps["props"]
         readonly labels: SlotLabels
+        /** The line under the failure: what to do about it. */
+        readonly errorHint: string
     }
     readonly on: {
         readonly retry: () => void
@@ -42,7 +44,11 @@ export const AdminHealthBase = (props: AdminHealthBaseProps) => {
     return (
         <Page measure="full" header={{ title: words.title, description: words.description }}>
             <SlotView
-                {...props.props}
+                slot={props.props.slot}
+                placeholder={props.props.placeholder}
+                labels={props.props.labels}
+                errorDescription={props.props.errorHint}
+                errorLayout="band"
                 onRetry={props.on.retry}
                 render={(view, isLoading) => <AdminHealthView props={view} isLoading={isLoading} />}
             />
