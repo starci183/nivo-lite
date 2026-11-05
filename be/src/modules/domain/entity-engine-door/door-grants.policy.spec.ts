@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { isDoorTool } from "@nivo-lite/agent-sdk/mutation"
 import * as policy from "./door-grants.policy"
 
 /** The policy as one provider, read through the Nest testing module. */
@@ -30,6 +31,11 @@ describe("door grants", () => {
         for (const tool of subject.DOOR_GRANTS) expect(subject.isDoorGranted(tool)).toBe(true)
         for (const tool of ["chat.zalo.send", "ledger.void", "ai.agent", "", "ai.agent.turn.x"])
             expect(subject.isDoorGranted(tool)).toBe(false)
+    })
+
+    it("names every granted tool in the door grammar, so the door never meets a granted name it cannot read", async () => {
+        const subject = await build()
+        for (const tool of subject.DOOR_GRANTS) expect(isDoorTool(tool)).toBe(true)
     })
 
     it("answers forbidden, not granted, for a tool it denies", async () => {

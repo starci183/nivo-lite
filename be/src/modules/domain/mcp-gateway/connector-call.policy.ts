@@ -5,6 +5,7 @@ import type {
     GatewayCaller,
     GatewayJson,
     GatewayToolSpec,
+    OptionalToolName,
     RoleResolution,
     WorkspaceConnector,
 } from "./mcp-gateway.contracts"
@@ -36,6 +37,21 @@ export const roleIn = (connectors: ReadonlyArray<WorkspaceConnector>, role: Capa
                 })),
         )
     return tool === undefined ? { ok: false, code: "no_capability", role } : { ok: true, tool }
+}
+
+/**
+ * The full tool name that plays a domain tool among connectors: the first tool declaring the domain among those not disabled
+ * (natives first, then remotes by key) that may run; null when the workspace has none.
+ */
+export const domainNameIn = (connectors: ReadonlyArray<WorkspaceConnector>, domain: string): OptionalToolName => {
+    const [name] = connectors
+        .filter((connector) => connector.status !== "disabled")
+        .flatMap((connector) =>
+            connector.manifest.tools
+                .filter((spec) => spec.domain === domain && usable(connector, spec.name))
+                .map((spec) => fullNameOf(connector.manifest.key, spec.name)),
+        )
+    return name ?? null
 }
 
 /** True for the gateway's own time-limit errors and the remote client's. */
