@@ -77,6 +77,36 @@ describe("historyOf", () => {
     })
 })
 
+describe("historyOf positions", () => {
+    it("starts a page that begins at sequence 41 at position 40, so a sliding window keeps each index", async () => {
+        const subject = await build()
+        const turns = subject.historyOf(
+            {
+                messages: [
+                    { role: "user", content: "a", __openclaw: { seq: 41 } },
+                    { role: "assistant", content: "b", __openclaw: { seq: 42 } },
+                ],
+            },
+            FALLBACK,
+        )
+        expect(turns.map((turn) => turn.index)).toEqual([40, 41])
+    })
+
+    it("starts at 0 when the first message carries no usable sequence", async () => {
+        const subject = await build()
+        const starts = [
+            { role: "user", content: "a" },
+            { role: "user", content: "a", __openclaw: { id: "e1" } },
+            { role: "user", content: "a", __openclaw: { seq: 0 } },
+            { role: "user", content: "a", __openclaw: { seq: 1.5 } },
+            { role: "user", content: "a", __openclaw: "x" },
+        ]
+        for (const first of starts) {
+            expect(subject.historyOf({ messages: [first] }, FALLBACK).map((turn) => turn.index)).toEqual([0])
+        }
+    })
+})
+
 describe("historyOf tool calls and payloads", () => {
     it("ignores tool call parts that are malformed and bounds long ones", async () => {
         const subject = await build()

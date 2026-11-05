@@ -2,7 +2,11 @@ import { isRecord } from "@modules/platform/primitives"
 import { textOf } from "./gateway-frame.mapper"
 import type { HistoryTurn, HistoryToolCall } from "./openclaw.contracts"
 
-/** The gateway request that lists the messages of a thread, oldest first. */
+/**
+ * The gateway request that lists the messages of a thread: `chat.history` (scope operator.read) with `{ sessionKey, limit }`, `limit`
+ * at most 1000, answering the newest `limit` messages oldest first as `{ messages: [...] }` (starci183/openclaw 0a956010,
+ * src/gateway/methods/core-descriptors.ts and packages/gateway-protocol/src/schema/logs-chat.ts).
+ */
 export const HISTORY_METHOD = "chat.history"
 
 /** The most messages one history read asks for. */
@@ -35,6 +39,18 @@ const toolCallsOf = (content: unknown): ReadonlyArray<HistoryToolCall> => {
         .slice(0, CALLS_MAX)
 }
 
+/**
+ * The 0-based thread position of the first message of the page. The gateway answers the newest messages of a long thread and numbers
+ * every message in `__openclaw.seq` (1-based, from the start), so a page that starts at sequence 41 starts at position 40 and a turn
+ * keeps its index when the page window slides; a page whose first message has no sequence starts at 0.
+ */
+const baseOf = (messages: ReadonlyArray<unknown>): number => {
+    const first = messages[0]
+    const meta = isRecord(first) && isRecord(first.__openclaw) ? first.__openclaw : null
+    const seq = meta === null ? null : meta.seq
+    return typeof seq === "number" && Number.isSafeInteger(seq) && seq > 0 ? seq - 1 : 0
+}
+
 /** The instant of a message: epoch milliseconds or an ISO text; the fallback when it carries neither. */
 const instantOf = (value: unknown, fallback: Date): string => {
     const parsed = typeof value === "number" || typeof value === "string" ? new Date(value) : fallback
@@ -42,19 +58,20 @@ const instantOf = (value: unknown, fallback: Date): string => {
 }
 
 /**
- * The turns of a `chat.history` answer, `{ messages: [...] }` oldest first. A turn's index is its position in the thread, so a
- * message with a role the record does not keep leaves a gap and the others keep their index.
+ * The turns of a `chat.history` answer, `{ messages: [...] }` oldest first. A turn's index is its position in the thread (see
+ * `baseOf`), so a message with a role the record does not keep leaves a gap and the others keep their index.
  */
 export const historyOf = (payload: unknown, fallback: Date): ReadonlyArray<HistoryTurn> => {
     const messages: ReadonlyArray<unknown> =
         isRecord(payload) && Array.isArray(payload.messages) ? payload.messages : []
-    return messages.flatMap((message: unknown, index): ReadonlyArray<HistoryTurn> => {
+    const base = baseOf(messages)
+    return messages.flatMap((message: unknown, position): ReadonlyArray<HistoryTurn> => {
         if (!isRecord(message) || typeof message.role !== "string") return []
         const role = ROLES[message.role]
         if (role === undefined) return []
         return [
             {
-                index,
+                index: base + position,
                 role,
                 text: textOf(message.content ?? message) ?? "",
                 toolCalls: toolCallsOf(message.content),
