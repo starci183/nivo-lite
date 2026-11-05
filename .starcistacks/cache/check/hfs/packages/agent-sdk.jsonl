@@ -1,5 +1,5 @@
 {"data":{},"findings":[],"hash":"adde25a6c8f0157dc022f58b7d1a35fd7b9f818800dc6c67b60c5856792f401d","path":"packages/agent-sdk/README.md","step":"file-rules"}
-{"data":{},"findings":[],"hash":"a2a6ca7e9cd899ad4cd705487e1fe138bac26fc960a4a522ab22492f597a8642","path":"packages/agent-sdk/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"660c467656abb8bb2aa9110f696c3c5abdf4139c31a937180a0e253bbf80aa52","path":"packages/agent-sdk/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5ce9f03ee475390207a49a2be5970d0dbf47c66689605b9ddb1408fa39f354c7","path":"packages/agent-sdk/src/block/block.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d4aef55d739c31daaecd9cb67cb69c40a4f52e2466cf6b19793daf9df8a2351b","path":"packages/agent-sdk/src/block/block.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"7bb5493c6b6b9d085537a56072abadaa0379ceab4eb674d024344b7a6817e522","path":"packages/agent-sdk/src/block/block.types.ts","step":"file-rules"}
@@ -22,8 +22,8 @@
 {"data":{},"findings":[],"hash":"8f9a62321a6401de898bb7a70784d2d0e060865141f08eca850ef57bdfd09750","path":"packages/agent-sdk/src/client/renderer/inert.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1486145ad950b089e6342b0240c0371a15cef01c71aa1f5410ae0f4fd21b6563","path":"packages/agent-sdk/src/client/renderer/renderer-error.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"7a3fe16000c9dc4a9947f87cfdb543b79f764106a9741136aca0c21b97c1c2bb","path":"packages/agent-sdk/src/client/renderer/renderer.types.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"1ed75f86676b561230e5e281aecaca838422bfcab6eb496d8ddf1e8e58bd77f7","path":"packages/agent-sdk/src/graph/graph-burst.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"a3646fc43e641f38380ac1b2094f5e90e8d1a59a6ecc7bd05cd9a8200a838842","path":"packages/agent-sdk/src/graph/graph-burst.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"cad8e65d544565ecd27a1e9a14fe6dbad196de8ac85eb3762253835e4cc69536","path":"packages/agent-sdk/src/graph/graph-burst.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"8b2baf942e9caa2d89bbd594f8c4ddc78bf83f8ddf856e5d888c8cb393a3b07b","path":"packages/agent-sdk/src/graph/graph-burst.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"10aafdff0a53184ab867f0d4560ffaa19a7d61406adc029e42e533df0c4cdb2d","path":"packages/agent-sdk/src/graph/graph-spec.schema.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"fd432f29ff8639e31abdbb25c12e37f905947be5986ee8c65334fbc7b4e297bd","path":"packages/agent-sdk/src/graph/graph-spec.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"fdb33a3ef8b0d7dee2afc402b3a65502e5189fb4daf9ef0f34d25cf76385ad84","path":"packages/agent-sdk/src/graph/graph-spec.ts","step":"file-rules"}
@@ -120,11 +120,13 @@
 {"data":{},"findings":[],"hash":"3fe29ff1ea0c5402a2f1e1d7b79a3153d079ca135d87813a869a58590706a4e0","path":"packages/agent-sdk/src/tests/fixtures/fakes.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"84c741b6494078e5c3bc54c7599bb6e8ff9598c324f2ff4129e8936dc818bab1","path":"packages/agent-sdk/src/tests/fixtures/fixture-error.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1e3403cd95b68a8bf761a56421336d45a7171337f15b9a811a03db7d908d0411","path":"packages/agent-sdk/src/tests/fixtures/graph.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"a72051b5602954ee92d6b334d73507a1c29c79579df796dfcdd54fe50abe7596","path":"packages/agent-sdk/src/tests/fixtures/index.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a138187727fb61caa4a71340d5ab907d8275c5d61168947ef70a14e332d9aae8","path":"packages/agent-sdk/src/tests/fixtures/index.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"71859de5e1d3e6d60dde92ff4ebf03bdf08eef85de349898fe3e6dbe3b05961b","path":"packages/agent-sdk/src/tests/fixtures/node-examples.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a6a66f908251d20fc3276419e7e915c9b2429e7d42ba683d4da774e3d804f0e5","path":"packages/agent-sdk/src/tests/fixtures/node-examples.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1e80632e54d0d811a74a7e93e650ff0f0a680abbb4a25cc9d71588623b4f2456","path":"packages/agent-sdk/src/tests/fixtures/node-ports.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"bf99af67df6ed064f026735367ec42e2e8653e6f162e467ed7dfe6f1e62cb6d5","path":"packages/agent-sdk/src/tests/fixtures/package.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a58de0a7d605d43d65911403e4252a80c22d31b8fe7fac8543e44e93eda0eb31","path":"packages/agent-sdk/src/tests/fixtures/probe-nodes.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9f6428be02fa943fde4074c581bf5011b43b1ceb5ada7f9f7f9b37764d6c2977","path":"packages/agent-sdk/src/tests/fixtures/probe-nodes.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"93f46a01a995975b0d44d0c4d59cf16bd6e3980c9968adf934aaae4f1a08282d","path":"packages/agent-sdk/src/tests/fixtures/template-fixtures.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0b8353a5347a2b6fcc454d7b4ebc1f9e08f816256b1b92c76ea0e7c2d05fb499","path":"packages/agent-sdk/src/tests/fixtures/vocabulary.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"ffe3184b7b491b91e291d4f62681affa81923035e7699cf7e7e06072ac7a0153","path":"packages/agent-sdk/src/workbench/contract/index.ts","step":"file-rules"}

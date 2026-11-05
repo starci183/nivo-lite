@@ -176,7 +176,7 @@
 {"findings":[],"hash":"1f4ff00f10ee121b8b205484431b54011f300bfd98ebd5021a25a152eb28af0c","path":"be/src/modules/domain/agent-graphs/agent-graph-flow.service.ts","step":"prettier"}
 {"findings":[],"hash":"3017a5139851a6975a4858e2845454a6d5c24dcc35279824087d2ac0a7097a43","path":"be/src/modules/domain/agent-graphs/agent-graph-node-step.schema.spec.ts","step":"prettier"}
 {"findings":[],"hash":"22e656fc533e1d10e63471d1ff2f0904e83008ea8d4a32cc98f57e78b3ce4ca1","path":"be/src/modules/domain/agent-graphs/agent-graph-node-step.schema.ts","step":"prettier"}
-{"findings":[],"hash":"6a928e803c05974aad3d7b399105376b3864668539830653a72a3dadcc13dee6","path":"be/src/modules/domain/agent-graphs/agent-graph-node-step.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"fbc9482124ff51f281328c55e08cecf4749643cf1429e124c3fdec9a98e48595","path":"be/src/modules/domain/agent-graphs/agent-graph-node-step.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"1593043d31190fd5816aaf29f36c53b524cf7a22a023cf545c366377c67dedc6","path":"be/src/modules/domain/agent-graphs/agent-graph-node-step.service.ts","step":"prettier"}
 {"findings":[],"hash":"42fe957863ba3d50eac59d2f8449073b63f3926668182529c62cf500d9fe1101","path":"be/src/modules/domain/agent-graphs/agent-graph-output-nodes.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"bd5b746d954f94d49d337fdcb672686e3d5c65480f7d63c6819829d88b1657ca","path":"be/src/modules/domain/agent-graphs/agent-graph-output-nodes.service.ts","step":"prettier"}
@@ -380,7 +380,7 @@
 {"findings":[],"hash":"0462de0ae3dc5a7317a96346c35e78aa746fa39d6b545d6667ed9f6552439172","path":"be/src/modules/domain/agent-messages/agent-messages.module.ts","step":"prettier"}
 {"findings":[],"hash":"0767f7fc6d61f991ddb5727d65aabc34c7ab3c1a6d45bafebe786ab479e3a4af","path":"be/src/modules/domain/agent-messages/agent-messages.options.ts","step":"prettier"}
 {"findings":[],"hash":"591b898df349c730d49c5b895032e673ea24595e77b20fc900fcece823d473e4","path":"be/src/modules/domain/agent-messages/agent-messages.policy.spec.ts","step":"prettier"}
-{"findings":[],"hash":"27b45559723f54d4ffd7aa899cc8087e7b009df6b58032ff57f6655b76a00a1b","path":"be/src/modules/domain/agent-messages/agent-messages.policy.ts","step":"prettier"}
+{"findings":[],"hash":"78fbeca2d1eb7d7f5b50ee5a4c33486e3288f477ebf9875623552e0fd685b9e1","path":"be/src/modules/domain/agent-messages/agent-messages.policy.ts","step":"prettier"}
 {"findings":[],"hash":"2feab3dc76bfb15512523245971e09ccb13886f25f2e7f4b5dd91db4999e0efb","path":"be/src/modules/domain/agent-messages/agent-messages.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"172c46dbaf857d35e9d4baca2a5cff0f9c9b92c34063677672e19bec400b9ce2","path":"be/src/modules/domain/agent-messages/agent-messages.service.ts","step":"prettier"}
 {"findings":[],"hash":"8f3a3e205b74e6fd827d4d504e5cc55c6ce710076ccabf15784102d81ed09893","path":"be/src/modules/domain/agent-messages/agent-tag-conversation.service.spec.ts","step":"prettier"}
@@ -458,7 +458,7 @@
 {"findings":[],"hash":"932f23a14ced70d59af867d4ae049c5872675ff48397e24674e24324ab69577d","path":"be/src/modules/domain/agent-runs/agent-runs.module-definition.ts","step":"prettier"}
 {"findings":[],"hash":"360667091e53cfe6b386c52991d8190cca7a51384fb12235fd6efee6283f7a64","path":"be/src/modules/domain/agent-runs/agent-runs.module.ts","step":"prettier"}
 {"findings":[],"hash":"28991d96a1d47fa17351c74ed096d0c3b332741ec955fd9ccfd3a907069b2a86","path":"be/src/modules/domain/agent-runs/agent-runs.options.ts","step":"prettier"}
-{"findings":[],"hash":"14d571d1e5bbb419eca0dc0e0d30d24e6b2a875e15ac839c951072ae648f7143","path":"be/src/modules/domain/agent-runs/agent-runs.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"b65b72fedd889fea182a05020be7f5dee933090e38b2a93dfc94dd17304a18f0","path":"be/src/modules/domain/agent-runs/agent-runs.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"3417107dda2019019a0f7fc3f1454f4ead793a78918e5016289bb179c6ee6c74","path":"be/src/modules/domain/agent-runs/agent-runs.service.ts","step":"prettier"}
 {"findings":[],"hash":"59900ce0546f638a80a759752737e474195af5509cc0656735dfe1d0ef998adb","path":"be/src/modules/domain/agent-runs/agent-step-job.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"08baa82be26014a3aa1bb33e115d0737fba4ac446b911aafb5f889f553ada736","path":"be/src/modules/domain/agent-runs/agent-step-job.service.ts","step":"prettier"}
@@ -644,8 +644,8 @@
 {"findings":[],"hash":"f30ea33df0dd76700bd7d938b0f262f8f75917fde9efbd664af0c0da074fad25","path":"be/src/modules/domain/agent-work/agent-tag.contracts.ts","step":"prettier"}
 {"findings":[],"hash":"f554c519b8b3fe40236cbe493125255ff82b428b7a3929af7bd2e2eb83df5e60","path":"be/src/modules/domain/agent-work/agent-tag.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"ffea580bda507ba3c751a14e1fc70e161a29b6675564230c72a0bae74622d894","path":"be/src/modules/domain/agent-work/agent-tag.policy.ts","step":"prettier"}
-{"findings":[],"hash":"f2520bd8e276e683a52e2d0a97ab93a9583c1667417a7811164f5057afe80f22","path":"be/src/modules/domain/agent-work/agent-tag.service.spec.ts","step":"prettier"}
-{"findings":[],"hash":"3fc60b7f8d965041ebebaa354d856758b021b02c3fda107504bfd9ec372c5864","path":"be/src/modules/domain/agent-work/agent-tag.service.ts","step":"prettier"}
+{"findings":[],"hash":"6e198ea6b53f7d14f63cca3c80a61abbec6ddec80d3995803131938d8fe7ab5f","path":"be/src/modules/domain/agent-work/agent-tag.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"1025f1e4dfe69759b4868f34fa9de9f02fff02ef689e3245e33192c0445a8d92","path":"be/src/modules/domain/agent-work/agent-tag.service.ts","step":"prettier"}
 {"findings":[],"hash":"132e080a0f1451415b6e1b25031bcf3614a80d70d22300410ac4324dcac85f5b","path":"be/src/modules/domain/agent-work/agent-tasks.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"54868fb3576a43cf43220461538b448ce32b3248436d31b08b1ef6dc17b75ad0","path":"be/src/modules/domain/agent-work/agent-tasks.service.ts","step":"prettier"}
 {"findings":[],"hash":"9388b943bcee4d7b9f2cf6af5005bc33252b973715d5995798b9b163fe0e3071","path":"be/src/modules/domain/agent-work/agent-trigger.policy.spec.ts","step":"prettier"}
@@ -823,8 +823,8 @@
 {"findings":[],"hash":"998e34cc8e38e29be9a487840eef20e391068ace24e482b0de05cf013bd2700b","path":"be/src/modules/domain/ai-tasks/lead-turn-prompt.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"d33176419872067a33655fa9c66ee725586aa16e95ff9f8e4087f42177114368","path":"be/src/modules/domain/ai-tasks/lead-turn-prompt.policy.ts","step":"prettier"}
 {"findings":[],"hash":"e7ba1f1baa42a8cb18c2e5c6884912c67a38d842e97043287ca68ac21df19e11","path":"be/src/modules/domain/ai-tasks/messages/ai-tasks.messages.ts","step":"prettier"}
-{"findings":[],"hash":"d67f875a304a9f3c0db615ced37c4a7185527b93c60b3b021bb38f903062ec46","path":"be/src/modules/domain/ai-tasks/node-images.service.spec.ts","step":"prettier"}
-{"findings":[],"hash":"0c82f89ad4d23a7a4d62015c6d8ded13d08f87c50ca37b59d2506f53383bd53a","path":"be/src/modules/domain/ai-tasks/node-images.service.ts","step":"prettier"}
+{"findings":[],"hash":"459dfc8c8aace3d02729aeaff7d21df48183c87d4e415e75adcd1bf3df0204f3","path":"be/src/modules/domain/ai-tasks/node-images.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"b797c57fa36751c479c7396caf92c9a2bbfc2b5de2c787f807a3ac0f4ae242c8","path":"be/src/modules/domain/ai-tasks/node-images.service.ts","step":"prettier"}
 {"findings":[],"hash":"ab733945f3fe6bc65bdc54af34613ae96f345fad596bd697b9fc561a974da3d7","path":"be/src/modules/domain/ai-tasks/node-prompt.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"2241f01056eb8cee313aec3ba0ed67f7d9813893d6a5f5f62f2bcdc961f22999","path":"be/src/modules/domain/ai-tasks/node-prompt.policy.ts","step":"prettier"}
 {"findings":[],"hash":"319d25aa8373ae1f6be1d95f09aae6ecc28ec0ccf551a4d41a0890bea26d8244","path":"be/src/modules/domain/ai-tasks/notes.service.spec.ts","step":"prettier"}
@@ -1505,7 +1505,7 @@
 {"findings":[],"hash":"6e8f059e7d5e238a03d24f4d963d13324261d92511ec9f1d548dcc294c112863","path":"be/src/modules/domain/channel-connections/channel-seed.contracts.ts","step":"prettier"}
 {"findings":[],"hash":"3601473dd1478eaaa9ea690311935daddd0ba570d9c14eaa0c3f94ccba125f08","path":"be/src/modules/domain/channel-connections/channel-seed.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"e7eea82ad277186f6d823e4f9a02c02ffa906964823e26a5957b2bac6d641a76","path":"be/src/modules/domain/channel-connections/channel-seed.policy.ts","step":"prettier"}
-{"findings":[],"hash":"470e5a12eada49170020887880e31a52c360dda53aa6d9904a1c85d5f3e6e291","path":"be/src/modules/domain/channel-connections/channel-seed.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"78cf0454970d47b886d4c55ae4999dcdbcfa3aa06dfefc64f86604a95d48cb9c","path":"be/src/modules/domain/channel-connections/channel-seed.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"435ec69374522f5bcce22e327a22bca607aa58d4ec4fc4f4ddb1584dc9a3bcf6","path":"be/src/modules/domain/channel-connections/channel-seed.service.ts","step":"prettier"}
 {"findings":[],"hash":"8584c35529de3ecb5c710fa6ace08cfb8777aefd256ca20d0bc11a13d0c3b2da","path":"be/src/modules/domain/channel-connections/errors/channel-connections.error.ts","step":"prettier"}
 {"findings":[],"hash":"afd6b96edf0bd7932c422bc243cb8551b8e905e7bfe63bafc03f4d119ec8ba00","path":"be/src/modules/domain/channel-connections/index.ts","step":"prettier"}
@@ -1648,7 +1648,7 @@
 {"findings":[],"hash":"fb3d725d460f0199a4fab6d205f4350e7a3baf0cb9b713581345a72c704eadfd","path":"be/src/modules/domain/chat-files/file-read.templates.ts","step":"prettier"}
 {"findings":[],"hash":"b0c855af3dc53f1721f2f83a5156b223d99a433a169e7411d5ab5a5ac233bb05","path":"be/src/modules/domain/chat-files/host-resolver.client.spec.ts","step":"prettier"}
 {"findings":[],"hash":"f92f3fc047f372dc8040b50ddfdabf432978b07822a37da5bd51eea3294e9e5c","path":"be/src/modules/domain/chat-files/host-resolver.client.ts","step":"prettier"}
-{"findings":[],"hash":"9b3735a6120f18061b01c9695c58e0f17abded9809c3db190bc3fee067960b54","path":"be/src/modules/domain/chat-files/inbound-file.client.spec.ts","step":"prettier"}
+{"findings":[],"hash":"08567487fcf5437f488b343f2700a124719b57886a2e6f5e89919cbc3e345e91","path":"be/src/modules/domain/chat-files/inbound-file.client.spec.ts","step":"prettier"}
 {"findings":[],"hash":"3c34627c8f644ec5a3aec40c9d1949acfe7cff81e54ff568942d350f98cc1ba7","path":"be/src/modules/domain/chat-files/inbound-file.client.ts","step":"prettier"}
 {"findings":[],"hash":"da03c3ceaef36d9c73b35bf0f61038b2ec9d66d74a11b47bc7722d5b7fdf18d7","path":"be/src/modules/domain/chat-files/inbound-file.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"b2e0fe6f6f402ea0b57dfc8a723da0f62717c49636b5c10e6290911f6b8b99a9","path":"be/src/modules/domain/chat-files/inbound-file.policy.ts","step":"prettier"}
@@ -1786,7 +1786,7 @@
 {"findings":[],"hash":"b993faf210fa28daa005eec97916f547bbe9445b9053a604ae0e0a84eb07e7f0","path":"be/src/modules/domain/connection-poll/poll-options.policy.ts","step":"prettier"}
 {"findings":[],"hash":"46cd35317d1d3cfa808d64cbedc8f8f5d2da3fc66fe97433d4ef1936fb0ee46d","path":"be/src/modules/domain/connection-poll/poll-owner-notice.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"2d69e1dfd02ed862eff6c67deacb7906d8e4d4984c8aa02319b4479955505bff","path":"be/src/modules/domain/connection-poll/poll-owner-notice.service.ts","step":"prettier"}
-{"findings":[],"hash":"2b4f482d6d19970b21c8d32b4e0cb8161d54c05c9d29b89f0ed584787f74e4c8","path":"be/src/modules/domain/connection-poll/poll-providers.policy.spec.ts","step":"prettier"}
+{"findings":[],"hash":"39b69665cf2d568e1da91bd865e34881c3430da7ab15e548723d8c1ffcfa64f8","path":"be/src/modules/domain/connection-poll/poll-providers.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"f168f700e750849b8b2749e24f3d6f4ea381b3e3df25dd9309912cbf478389e1","path":"be/src/modules/domain/connection-poll/poll-providers.policy.ts","step":"prettier"}
 {"findings":[],"hash":"b96315424f05c0a3c7754d51dc042413317b82d1cb5a0c1204f7bf6c17941879","path":"be/src/modules/domain/connection-poll/poll-schedule.contracts.ts","step":"prettier"}
 {"findings":[],"hash":"672b15dd1e4b01a91d6ab52bbd5c13da557ad4ed35beebbbb1d206693563cf53","path":"be/src/modules/domain/connection-poll/poll-schedule.policy.spec.ts","step":"prettier"}
@@ -1819,7 +1819,7 @@
 {"findings":[],"hash":"8c17e21dd7919d614f4236b38e241deb1b2a87a1d1a602a230c3d8dfa6503587","path":"be/src/modules/domain/connections/connection-agents.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"4e08d33a34bd8924c13b07dc229a5470d891b5f7de4b24a830e1b4a3073d213f","path":"be/src/modules/domain/connections/connection-agents.policy.ts","step":"prettier"}
 {"findings":[],"hash":"9f9f9c007841949cd159fbb0dd9b1ca7dc23dcdbbe0e7c62887b145e9465ee1b","path":"be/src/modules/domain/connections/connection-bindings-read.contracts.ts","step":"prettier"}
-{"findings":[],"hash":"30efd28fd3a2454c8ad30f89f01c3a90b5a5fbbdafd29d915d1fa56545057551","path":"be/src/modules/domain/connections/connection-bindings-read.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"7ffb1e132d837247fe852068278c1765f3c1d70c547ddcbc3978638fac23d0f1","path":"be/src/modules/domain/connections/connection-bindings-read.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"5343fc644569e52965fd423c658f3c147b7502437d35b1526082e91f36a09970","path":"be/src/modules/domain/connections/connection-bindings-read.service.ts","step":"prettier"}
 {"findings":[],"hash":"2555c93a7005d5ba240190a56fe052e7780ed1908da3e2b490d50feab9e42b35","path":"be/src/modules/domain/connections/connection-cipher.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"694120f2d57aa078fc9ec74d18a70aa8d89d0da81a7f2e880b5547afedb01221","path":"be/src/modules/domain/connections/connection-cipher.policy.ts","step":"prettier"}
@@ -2650,10 +2650,10 @@
 {"findings":[],"hash":"1f5d412a9ac2984e31435c3ac8c7de702fbe55340feaff5daffe91b197f2e6ec","path":"be/src/modules/domain/google-connections/google-connections.module-definition.ts","step":"prettier"}
 {"findings":[],"hash":"3ea22f5572bb590e1720aabfd441d338707079af8fa1d3d459d9e6cbe23b71b7","path":"be/src/modules/domain/google-connections/google-connections.module.ts","step":"prettier"}
 {"findings":[],"hash":"1d3b8da4ad71a542a26aebdb1f97b6d97e3a85f3e324b49f979b28a1992dd5c4","path":"be/src/modules/domain/google-connections/google-connections.options.ts","step":"prettier"}
-{"findings":[],"hash":"0053fa7fbda5392cab08f07feea5b7321abb148cdff0667650a8cdd633f37dfe","path":"be/src/modules/domain/google-connections/google-connections.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"7ba69e9ac1d48674d14ae7388c971cbd64eac4dd9e140a73b22272bf93d633e8","path":"be/src/modules/domain/google-connections/google-connections.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"ef76e550556acc5a9fd4ebeb6d39dc7fcf991ba26fd68b3a6e2ca507bb63fae8","path":"be/src/modules/domain/google-connections/google-connections.service.ts","step":"prettier"}
 {"findings":[],"hash":"a7a15d3935ed1cdd3552ec9b304605ffd5d4160ba79b8a08bc5a35a87ad7c55e","path":"be/src/modules/domain/google-connections/google-ledger.service.spec.ts","step":"prettier"}
-{"findings":[],"hash":"b7ade6cb4331d5f4bd0a6faa19d7ffb79fcd35ead38c767384590a4cd56a6557","path":"be/src/modules/domain/google-connections/google-ledger.service.ts","step":"prettier"}
+{"findings":[],"hash":"abcf62185bcae399afed5b5e38e818992c2e6e2c5e7ebfb6864def04f32b5c59","path":"be/src/modules/domain/google-connections/google-ledger.service.ts","step":"prettier"}
 {"findings":[],"hash":"708ce2c73b909cfa8a91c7e65332f4ebb62af116e05ce782a29e1edb6d5a2a5d","path":"be/src/modules/domain/google-connections/google-sheet-automation.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"cc3018d76dfb0b75c26573237d2901a1184beeb442f6cd16b87f7930503afb95","path":"be/src/modules/domain/google-connections/google-sheet-automation.service.ts","step":"prettier"}
 {"findings":[],"hash":"17e2e7b7f3df18478ca59dd0e2fbc6e284179a84470814f946e205380202c343","path":"be/src/modules/domain/google-connections/google-sheets.service.spec.ts","step":"prettier"}
@@ -2666,14 +2666,14 @@
 {"findings":[],"hash":"02e3078edeea2cab84b1ab15dbb0dae6e815d3c7bca181e1a19686b26072db7d","path":"be/src/modules/domain/google-connections/policies/consent-reason.policy.ts","step":"prettier"}
 {"findings":[],"hash":"47ccd4b3eb7a1fbf8fad0b654dfaff58496b8c41f98ee33a1b3fc7e445b48ba1","path":"be/src/modules/domain/google-connections/policies/google-tokens.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"c59e67359378f63d5cebf37c7ae39baa7c9e52374d93bf9b8124f9e4e770463f","path":"be/src/modules/domain/google-connections/policies/google-tokens.policy.ts","step":"prettier"}
-{"findings":[],"hash":"0cb0dfc303098f7e1ca708d056e78bd1609e8ff71f13feda801cfe0a1a09367f","path":"be/src/modules/domain/google-connections/policies/ledger-sheet.policy.spec.ts","step":"prettier"}
-{"findings":[],"hash":"08ad2bf286017f0c5be60e4f34912566ee4da8958002d99be49110ae58f502e0","path":"be/src/modules/domain/google-connections/policies/ledger-sheet.policy.ts","step":"prettier"}
-{"findings":[],"hash":"d8e812096a29950fad8e3d1b77c29b7646b9509513e7e1dff11194ef531d1c64","path":"be/src/modules/domain/google-connections/sheets-grant.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"654625aaff5b5d498b0a265094465f330656d046e71db41048deb9c7bc4b6581","path":"be/src/modules/domain/google-connections/policies/ledger-sheet.policy.spec.ts","step":"prettier"}
+{"findings":[],"hash":"760c8dbc3df65e87ae341078a171b0b3ee0e79567a412b992a5d809c7273758b","path":"be/src/modules/domain/google-connections/policies/ledger-sheet.policy.ts","step":"prettier"}
+{"findings":[],"hash":"f48c7641c5c2ac82f62dd90ea3bf9982521798fbb50ca7178d74393abb423e86","path":"be/src/modules/domain/google-connections/sheets-grant.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"4bbe90c05820bc6de6af3f48b5e65b85b9c5a72d255d9c640d82e369b55fab79","path":"be/src/modules/domain/google-connections/sheets-grant.service.ts","step":"prettier"}
 {"findings":[],"hash":"3c8cb233f748eb9e84721963c5f004fb77a555ad1a72a29a2166bed4d8654a57","path":"be/src/modules/domain/graph-nodes/errors/graph-nodes.error.ts","step":"prettier"}
 {"findings":[],"hash":"59097899a87fce5f52333ece891f16f3dca868f59639bf78ce2bb8c2a3eeacbf","path":"be/src/modules/domain/graph-nodes/graph-node-effects.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"2fb665e4da1e0b5dfae14d999d4e5e4edbf236dc7d9f3b86aa3ab32018cb8f33","path":"be/src/modules/domain/graph-nodes/graph-node-effects.service.ts","step":"prettier"}
-{"findings":[],"hash":"3e31e52c35a33565b92c9cd258b920e9471b78123c9b2beb8e3baf1b0bbda335","path":"be/src/modules/domain/graph-nodes/graph-node-host.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"2dc7bd4596cb9324b929b6845275b3c2d365334f8af22c3b0a41f0eeb6bb647f","path":"be/src/modules/domain/graph-nodes/graph-node-host.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"557df45ea726ba4080324a93cb4338603b47d967f292f499982165df819cc279","path":"be/src/modules/domain/graph-nodes/graph-node-host.service.ts","step":"prettier"}
 {"findings":[],"hash":"85f3a01cd2da51df29a350e4171c443b6f7d1dd8353a99517aecf74eaa8aecc3","path":"be/src/modules/domain/graph-nodes/graph-node-probe.schema.ts","step":"prettier"}
 {"findings":[],"hash":"41ed49b3593353413ccca7773a86ddafd09a235cd02348ce7dc18e527f4df7e6","path":"be/src/modules/domain/graph-nodes/graph-node-registry.service.spec.ts","step":"prettier"}
@@ -2691,7 +2691,7 @@
 {"findings":[],"hash":"8ce14e1b60dec3f4efdc1d75e37f08bc439cb2bb3599ede5c8ba49a38194a505","path":"be/src/modules/domain/graph-nodes/node-rows.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"19243d5102fbba14d23a0d358152b6f941fa2bed0cfb3767e5e0f34af7b5b645","path":"be/src/modules/domain/graph-nodes/node-rows.policy.ts","step":"prettier"}
 {"findings":[],"hash":"0ac953ad716a02dfa7214e6c89c9a02fca5f2e7a4c73f8068afd3ac62b2d79a0","path":"be/src/modules/domain/graph-nodes/node-run-token.contracts.ts","step":"prettier"}
-{"findings":[],"hash":"806610c95bcee54df816d3781ef832ca2a42c4ae1c4dd7c7e5b4a86247aea494","path":"be/src/modules/domain/graph-nodes/node-run-token.policy.spec.ts","step":"prettier"}
+{"findings":[],"hash":"d91123a6009a8acc790c5ab2df487818c6ccce43207e17731e8cabfdf1e00093","path":"be/src/modules/domain/graph-nodes/node-run-token.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"1d4005763349b0ca71287fca5d9bd4fa6c84d4bacae3573da2c6e5f8d1ebed98","path":"be/src/modules/domain/graph-nodes/node-run-token.policy.ts","step":"prettier"}
 {"findings":[],"hash":"da8e8c39d24d41bfbeffab1f55005a596c80e3a7e99d88e674f9c5cdc53a5eba","path":"be/src/modules/domain/graph-nodes/persistence/entities/graph-node-effect.entity.ts","step":"prettier"}
 {"findings":[],"hash":"523b534fe81ce9def138e501b185225a567a03a4c2f5c0d5d6e2ff46c122094d","path":"be/src/modules/domain/graph-nodes/persistence/entities/index.ts","step":"prettier"}
@@ -3587,7 +3587,7 @@
 {"findings":[],"hash":"3e6152c579060e619f5528666c8be9a16cf77bff650c47b631b8e77ee9aaa456","path":"be/src/modules/domain/mcp-gateway/native-adapters.policy.ts","step":"prettier"}
 {"findings":[],"hash":"f1328ad428e0e24ed0c518e13040d434dfd20bcf52ef3baeafc137971c3e0583","path":"be/src/modules/domain/mcp-gateway/native-runner.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"bbabd9fa7c64e91fb577652ec8f357d92ca1dc762a404661e8d7b114ddf7059b","path":"be/src/modules/domain/mcp-gateway/native-runner.service.ts","step":"prettier"}
-{"findings":[],"hash":"4d96273db36ce15f231a91a9c7327b668478b5693d1a77b1cb9bcc92f9979555","path":"be/src/modules/domain/mcp-gateway/node-tool-door.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"b4d04e59347c14234a10cbdf653e9652534280cce2a97b64b841d7abaddcc08b","path":"be/src/modules/domain/mcp-gateway/node-tool-door.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"cc58909292f6ffd34e29bd6015027f9a137cbb67801dedbdb8772a9b836c5bc6","path":"be/src/modules/domain/mcp-gateway/node-tool-door.service.ts","step":"prettier"}
 {"findings":[],"hash":"d65047762a9ad23e77fc06c71eb0dac5818e100b412ba15b535b55f8fa3fbaf9","path":"be/src/modules/domain/mcp-gateway/output-step.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"bc5fb0ab695bdd4c07bd19bf744897677105e77eda7e637595137f5b439b47c3","path":"be/src/modules/domain/mcp-gateway/output-step.policy.ts","step":"prettier"}
@@ -5136,7 +5136,7 @@
 {"findings":[],"hash":"d33d998cccc3d9827238c0ac3d8527c490164e053b234ce0f7c7719ac59567ec","path":"be/src/modules/domain/zalo-inbox/zalo-inbox.module-definition.ts","step":"prettier"}
 {"findings":[],"hash":"c81c5a0aa90d9cfea81f09991f1696a883c99435bfa1e6a9a7134f177ac5243e","path":"be/src/modules/domain/zalo-inbox/zalo-inbox.module.ts","step":"prettier"}
 {"findings":[],"hash":"0c1ad509fa85d2c2707fce706aa932083c0fa28ef97f26013752872e03b6bce7","path":"be/src/modules/domain/zalo-inbox/zalo-inbox.options.ts","step":"prettier"}
-{"findings":[],"hash":"9e9f698e7b1c4c89f05bfcd18a0fd756eb11e66cbd2442fea0d8d1aef0656dc8","path":"be/src/modules/domain/zalo-inbox/zalo-inbox.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"b43a0143e1db51d4e270a10abe7f5f1c208841a4b7b412efc7a5e14ba27b021a","path":"be/src/modules/domain/zalo-inbox/zalo-inbox.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"cfa9e8d5552c2ee1c82ddeed64235ade757523e04ee00bde9d6d26bbe3ca2fb4","path":"be/src/modules/domain/zalo-inbox/zalo-inbox.service.ts","step":"prettier"}
 {"findings":[],"hash":"f2da5a972700cc44faa653549d9554e45ed8d0c602d185dc823935dd4e41a732","path":"be/src/modules/domain/zalo-inbox/zalo-polled-body.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"07980453f540674a4c978bac341c0b6c260aab9a4e731635d019ba9960f1fc2d","path":"be/src/modules/domain/zalo-inbox/zalo-polled-body.policy.ts","step":"prettier"}
@@ -5150,7 +5150,7 @@
 {"findings":[],"hash":"2265f1267c6f6f6c7ab75c65630d366601add887cdf3349bc2c12cd4f8972f7d","path":"be/src/modules/domain/zalo-provider/zalo-poll-trigger.service.ts","step":"prettier"}
 {"findings":[],"hash":"f3412b51ff2ffa777f7e602d4712778e3879dc55d7a4550fbde087edb586702e","path":"be/src/modules/domain/zalo-provider/zalo-poll.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"118e3a10aaecac45fe49d1890b07e9819347cd78abefe7c2ba45be097008b776","path":"be/src/modules/domain/zalo-provider/zalo-poll.policy.ts","step":"prettier"}
-{"findings":[],"hash":"05420dfcda4928c49ed54867d0fd3fe550df1fc2248849e0f0c3fba87c621c55","path":"be/src/modules/domain/zalo-provider/zalo-poll.service.spec.ts","step":"prettier"}
+{"findings":[],"hash":"a6cc1de98bebac94cae01473a55f1293b3b8525df6e942b049d26e71c35681c1","path":"be/src/modules/domain/zalo-provider/zalo-poll.service.spec.ts","step":"prettier"}
 {"findings":[],"hash":"fd59215c753c45b940198db2cab24bc1b03ddc1a3ca20b8187a4d6654f8b643d","path":"be/src/modules/domain/zalo-provider/zalo-poll.service.ts","step":"prettier"}
 {"findings":[],"hash":"2ba69a2b0705c8495d4d2a586f9737b063552f97479f38a02473648c5d9c1b0d","path":"be/src/modules/domain/zalo-provider/zalo-provider.config.ts","step":"prettier"}
 {"findings":[],"hash":"c20b088e6742de3fae29474b0fc6f8262c6da0f11042970f294d33bcbe436739","path":"be/src/modules/domain/zalo-provider/zalo-provider.decorators.ts","step":"prettier"}
@@ -5620,7 +5620,7 @@
 {"findings":[],"hash":"1deaf75dd321a92de682fbc76be317115d65ff83e7770c019f0cc8b6008b4721","path":"be/src/modules/integrations/zalo/zalo-signature.policy.spec.ts","step":"prettier"}
 {"findings":[],"hash":"f3b057800be5f5311f77f90d7c757624c395d1de2d736ba5d29f628cb7741498","path":"be/src/modules/integrations/zalo/zalo-signature.policy.ts","step":"prettier"}
 {"findings":[],"hash":"aa403ba3ce56c24abf05042c81076fdd724bef54d4cf7d8d4ec2b6f4b9bab6c2","path":"be/src/modules/integrations/zalo/zalo.client.spec.ts","step":"prettier"}
-{"findings":[],"hash":"708809320b886327a140ca7088cd8b246dff49f44ca11aed88dd86a83e6fb4f7","path":"be/src/modules/integrations/zalo/zalo.client.ts","step":"prettier"}
+{"findings":[],"hash":"31118d0f10b811e3655d667da8b319cbed78421507740ec042f4ce2a2845d61f","path":"be/src/modules/integrations/zalo/zalo.client.ts","step":"prettier"}
 {"findings":[],"hash":"c4a8de133258f4b156eaa9831a5fa8a2a28f1387da3b58310859d1eb5c5959c8","path":"be/src/modules/integrations/zalo/zalo.config.ts","step":"prettier"}
 {"findings":[],"hash":"cb614a02150df47e1d65b80715ba90888ca7e9f4fdf088fe71a9687f60501ad6","path":"be/src/modules/integrations/zalo/zalo.contracts.ts","step":"prettier"}
 {"findings":[],"hash":"113490e08074c3e642de31815006ee60e654a216d87c82e3971bc53997e37e4a","path":"be/src/modules/integrations/zalo/zalo.decorators.ts","step":"prettier"}

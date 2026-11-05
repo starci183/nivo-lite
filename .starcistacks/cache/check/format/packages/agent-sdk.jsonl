@@ -1,5 +1,5 @@
 {"findings":[],"hash":"b37118654cd5ad03e7f1edcbc8db31db930abe61aa2a9b37870ec2dd52fab028","path":"packages/agent-sdk/README.md","step":"prettier"}
-{"findings":[],"hash":"c42eb228255ebe76e782c27afb19a5d4ba37df0d581695e3e698e113df70d3a8","path":"packages/agent-sdk/package.json","step":"prettier"}
+{"findings":[],"hash":"c31eb69607da714018c39a2e84934d7eacad9fe7b918cd7c536defa4b6a33b49","path":"packages/agent-sdk/package.json","step":"prettier"}
 {"findings":[],"hash":"f8b01f7dfeaf995eb5d512c784087feb6ecf0a2cf58b017e82668a7a3abc20b3","path":"packages/agent-sdk/tsconfig.build.client.json","step":"prettier"}
 {"findings":[],"hash":"6c7443c2394c54304c1468d1c426c5f75282d4b7516c48093866dd357abadf59","path":"packages/agent-sdk/tsconfig.build.json","step":"prettier"}
 {"findings":[],"hash":"7c6305fa928ac1212c5fd25789aa6ee2fc47052734e17ad884a9367c93e3f6bc","path":"packages/agent-sdk/tsconfig.json","step":"prettier"}

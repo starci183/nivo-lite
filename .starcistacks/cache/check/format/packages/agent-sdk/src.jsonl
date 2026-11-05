@@ -20,8 +20,8 @@
 {"findings":[],"hash":"e44ac058bf9d940ab40e5dcdc4e08cb1fb9531d2413682f1968e6b789ce1d70e","path":"packages/agent-sdk/src/client/renderer/inert.ts","step":"prettier"}
 {"findings":[],"hash":"120ffa559d4d1f5bcd98e4de283af7fcd2c7dd49352f4090b20efa80a9b0ca3d","path":"packages/agent-sdk/src/client/renderer/renderer-error.ts","step":"prettier"}
 {"findings":[],"hash":"27e78fddb2454bdfb315384ac4ce97edc4b2ea30a15e5c6a4ca7f616e8c4523c","path":"packages/agent-sdk/src/client/renderer/renderer.types.ts","step":"prettier"}
-{"findings":[],"hash":"a2d928c0676dc7448fe2b67dbabfadc075f379b78d6905a7035c00a137949f2d","path":"packages/agent-sdk/src/graph/graph-burst.spec.ts","step":"prettier"}
-{"findings":[],"hash":"d38f824ac3e0ecbecd0b837d6767cac6fd16ba330beea009c422251985a772f0","path":"packages/agent-sdk/src/graph/graph-burst.ts","step":"prettier"}
+{"findings":[],"hash":"53c15f108b79e19cb234e07d338fcd8b58a0bce4f442b9e34129db03474eccc1","path":"packages/agent-sdk/src/graph/graph-burst.spec.ts","step":"prettier"}
+{"findings":[],"hash":"a6c1b9aa662bdad58813a8f065fac1786431055429c6b207e453ca6a8c29a795","path":"packages/agent-sdk/src/graph/graph-burst.ts","step":"prettier"}
 {"findings":[],"hash":"9cbf46ec1adc2f6fb425d2132c045300d279f7dbeb8a1eb1e866ee2e652ce5c0","path":"packages/agent-sdk/src/graph/graph-spec.schema.ts","step":"prettier"}
 {"findings":[],"hash":"aa2ff39dead20bd987c5dde69edcc1752262e06c751c04e03cb7496463502af6","path":"packages/agent-sdk/src/graph/graph-spec.spec.ts","step":"prettier"}
 {"findings":[],"hash":"bc365923074511bdb41612370f80437386a5a87d590e7f41f77888ce54b65b59","path":"packages/agent-sdk/src/graph/graph-spec.ts","step":"prettier"}
@@ -118,11 +118,13 @@
 {"findings":[],"hash":"be426148bdd9434580fb593c9c3b468e1329e3e97eb337050a76928bf25f9f4b","path":"packages/agent-sdk/src/tests/fixtures/fakes.ts","step":"prettier"}
 {"findings":[],"hash":"b21d15d063852ad6955baec838ed5a626db1c1ade2221620b16cb93271b55c68","path":"packages/agent-sdk/src/tests/fixtures/fixture-error.ts","step":"prettier"}
 {"findings":[],"hash":"645fc1a94233429e8619a4ffb9e9e999a63b65001de7b95f90180897bc075794","path":"packages/agent-sdk/src/tests/fixtures/graph.ts","step":"prettier"}
-{"findings":[],"hash":"52ec285202e3753b3a68215eb59fdb514d718c9824c134f84d8ee8be8bf77e6a","path":"packages/agent-sdk/src/tests/fixtures/index.ts","step":"prettier"}
+{"findings":[],"hash":"546a568f716dde8a0ab9957bd7786ae5f7c9ee886017a0f73413f4f2f4e1555a","path":"packages/agent-sdk/src/tests/fixtures/index.ts","step":"prettier"}
 {"findings":[],"hash":"7667058d747872ae0b56a2086b56802e2ca9c7d50b46822cd557fc32c5e4a0c6","path":"packages/agent-sdk/src/tests/fixtures/node-examples.spec.ts","step":"prettier"}
 {"findings":[],"hash":"01025c5d0ade4ce98a75a0fdd97accd0e352ce7693909022303941f1e261714f","path":"packages/agent-sdk/src/tests/fixtures/node-examples.ts","step":"prettier"}
 {"findings":[],"hash":"3be0dc4e5ffeb65231c50824dc9653a49c972ce9386a828666a4e8ddecd6ba30","path":"packages/agent-sdk/src/tests/fixtures/node-ports.ts","step":"prettier"}
 {"findings":[],"hash":"327776b3634e4a491b932e5b36bca56c9edf9abae2ae625c9190a9aac0c77b76","path":"packages/agent-sdk/src/tests/fixtures/package.ts","step":"prettier"}
+{"findings":[],"hash":"dcd8da0ac03e13248a619677795e7e1900c652af1648186bd7f1e67b3aaed804","path":"packages/agent-sdk/src/tests/fixtures/probe-nodes.spec.ts","step":"prettier"}
+{"findings":[],"hash":"9ce497ce2c7c2b70feeb2b94bc16a95aa668e16d19b82c545d037623a54ee010","path":"packages/agent-sdk/src/tests/fixtures/probe-nodes.ts","step":"prettier"}
 {"findings":[],"hash":"827e944d5929cf4d1c9bc10c085a1b4dd9dea54aeda9c4f2cc6b92aeb1a52875","path":"packages/agent-sdk/src/tests/fixtures/template-fixtures.spec.ts","step":"prettier"}
 {"findings":[],"hash":"798e0423a6b9fe25cfd5f36f4d2a8eaa9a38b8311b30c15e29091aafc20069b4","path":"packages/agent-sdk/src/tests/fixtures/vocabulary.ts","step":"prettier"}
 {"findings":[],"hash":"3f57385a94d1b4df8ec942acd40db69e106caeea5ba719d360584d731303541c","path":"packages/agent-sdk/src/workbench/contract/index.ts","step":"prettier"}

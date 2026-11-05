@@ -227,7 +227,7 @@
 {"findings":[],"hash":"8712846731a72811b0c1b9e22f9c06d15537c074a752d25fe03ddf4488ef4945","path":"be/src/tests/fixtures/builders/workspaces.builder.ts","step":"prettier"}
 {"findings":[],"hash":"f8632e23cdc6b2f689df4bcfa3600be138b385c83c50bf9a2c1b12b246f3fdbf","path":"be/src/tests/fixtures/builders/write-expression.builder.ts","step":"prettier"}
 {"findings":[],"hash":"36053182b8dfa6030079bdeff78d335f1d0c09afc803cbf6e1c7d559a0b3245b","path":"be/src/tests/fixtures/builders/zalo-credentials.builder.ts","step":"prettier"}
-{"findings":[],"hash":"19bfb49c2d2aae202326b1b0d2f4f3ce1bb9a9dfa1963dd7a371b652c3cf04d0","path":"be/src/tests/fixtures/builders/zalo-inbox.builder.ts","step":"prettier"}
+{"findings":[],"hash":"7a40f1b008b8b3e72d1390cabea51aae407783c2f685320d0e630d6857108b58","path":"be/src/tests/fixtures/builders/zalo-inbox.builder.ts","step":"prettier"}
 {"findings":[],"hash":"eb60534549111fb9017e0c6b8715987c5db2f7b9fbb2f25e23a536859412ed39","path":"be/src/tests/fixtures/persistence/proof.rows.ts","step":"prettier"}
 {"findings":[],"hash":"fef64d0521e1eec72e9eecc213e54c89455d83842ce4cd06e7097d82a782f1c4","path":"be/src/tests/fixtures/persistence/queue-cutover.rows.ts","step":"prettier"}
 {"findings":[],"hash":"1a29854ec9379bcefc519ea875c94ff20ff156ddba1910a6a10ad6c1620089f2","path":"be/src/tests/fixtures/persistence/queue-reconciliation.rows.ts","step":"prettier"}
