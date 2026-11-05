@@ -28,6 +28,8 @@ interface SelectableRowsProps {
     /** The paging of the read; null when it is not paged. */
     readonly page: ReadPage | null
     readonly onChoose: (id: string) => void
+    /** Each row starts with the initials of its title. */
+    readonly hasAvatar: boolean
 }
 
 /** The end of a row: its short fact and its badge, one over the other. */
@@ -39,16 +41,21 @@ const trailingOf = (row: RecordRow): ReactNode => (
             </Text>
         )}
         {row.badge === "" ? null : <Badge tone="neutral">{row.badge}</Badge>}
+        {row.chips.map((chip) => (
+            <Badge key={chip} tone="neutral">
+                {chip}
+            </Badge>
+        ))}
     </Stack>
 )
 
 /** The row of the Grammar list for one record: its mark, its title, its line, its short fact and its badge. */
-const itemOf = (row: RecordRow): ListBoxItem => ({
+const itemOf = (row: RecordRow, hasAvatar: boolean): ListBoxItem => ({
     id: row.id,
     label: row.title,
-    leading: <Avatar name={row.title} isDecorative />,
+    ...(hasAvatar ? { leading: <Avatar name={row.title} isDecorative /> } : {}),
     ...(row.description === "" ? {} : { description: row.description }),
-    ...(row.meta === "" && row.badge === "" ? {} : { trailing: trailingOf(row) }),
+    ...(row.meta === "" && row.badge === "" && row.chips.length === 0 ? {} : { trailing: trailingOf(row) }),
 })
 
 /** What the paging control takes. */
@@ -80,7 +87,7 @@ export const SelectableRows = (props: SelectableRowsProps): ReactNode => (
     <Stack gap="row">
         <ListBox
             label={props.words.label}
-            items={props.rows.map(itemOf)}
+            items={props.rows.map((row) => itemOf(row, props.hasAvatar))}
             selectionMode="single"
             selectionIndicator="none"
             selectedIds={selectionOf(props.selected)}

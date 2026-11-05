@@ -11,14 +11,14 @@ describe("rowsOf", () => {
             { id: 2, title: "Second" },
         ]
         expect(rowsOf(records, PATHS, keepRaw)).toEqual([
-            { id: "a", title: "First", description: "n1", badge: "open", meta: "" },
-            { id: "2", title: "Second", description: "", badge: "", meta: "" },
+            { id: "a", title: "First", description: "n1", badge: "open", meta: "", chips: [] },
+            { id: "2", title: "Second", description: "", badge: "", meta: "", chips: [] },
         ])
     })
 
     it("draws no description or badge when their paths are absent", () => {
         expect(rowsOf([{ id: "a", title: "T", note: "n" }], { idPath: "id", titlePath: "title" }, keepRaw)).toEqual([
-            { id: "a", title: "T", description: "", badge: "", meta: "" },
+            { id: "a", title: "T", description: "", badge: "", meta: "", chips: [] },
         ])
     })
 
@@ -29,9 +29,16 @@ describe("rowsOf", () => {
         ])
     })
 
+    it("draws the further chips their paths name and leaves out the empty ones", () => {
+        const paths = { idPath: "id", titlePath: "title", chipPaths: ["channel", "owner"] }
+        expect(rowsOf([{ id: "a", title: "T", channel: "Zalo" }], paths, keepRaw)?.map((row) => row.chips)).toEqual([
+            ["Zalo"],
+        ])
+    })
+
     it("skips a record without a text id", () => {
         expect(rowsOf([{ title: "No id" }, { id: "b", title: "B" }], PATHS, keepRaw)).toEqual([
-            { id: "b", title: "B", description: "", badge: "", meta: "" },
+            { id: "b", title: "B", description: "", badge: "", meta: "", chips: [] },
         ])
     })
 
@@ -71,7 +78,9 @@ describe("RECORD_ROWS_PLACEHOLDER", () => {
             "placeholder-1",
             "placeholder-2",
         ])
-        expect(RECORD_ROWS_PLACEHOLDER.every((row) => row.badge === "" && row.meta === "")).toBe(true)
+        expect(
+            RECORD_ROWS_PLACEHOLDER.every((row) => row.badge === "" && row.meta === "" && row.chips.length === 0),
+        ).toBe(true)
     })
 })
 

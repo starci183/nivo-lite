@@ -15,6 +15,8 @@ export interface RecordRow {
     readonly badge: string
     /** The short fact at the end of the headline line (a time, an amount); empty draws none. */
     readonly meta: string
+    /** The words of the further marks after the badge, one chip each; empty ones are left out. */
+    readonly chips: ReadonlyArray<string>
 }
 
 /** The dotted paths of a record that name the parts of its row. */
@@ -29,6 +31,8 @@ export interface RowPaths {
     readonly badgePath?: string | undefined
     /** The path of the short fact at the end of the headline line; absent draws none. */
     readonly metaPath?: string | undefined
+    /** The paths of the further chips of the row, after the badge. */
+    readonly chipPaths?: ReadonlyArray<string> | undefined
 }
 
 /** The most records one bound list carries; a longer one is a failed read, never a half list. */
@@ -50,6 +54,7 @@ export const RECORD_ROWS_PLACEHOLDER: ReadonlyArray<RecordRow> = Array.from(
         description: BLANK,
         badge: "",
         meta: "",
+        chips: [],
     }),
 )
 
@@ -68,6 +73,7 @@ const rowOf = (record: unknown, paths: RowPaths, relabel: Relabel): ReadonlyArra
             description: textAt(record, paths.descriptionPath, relabel),
             badge: textAt(record, paths.badgePath, relabel),
             meta: textAt(record, paths.metaPath, relabel),
+            chips: (paths.chipPaths ?? []).map((path) => textAt(record, path, relabel)).filter((text) => text !== ""),
         },
     ]
 }

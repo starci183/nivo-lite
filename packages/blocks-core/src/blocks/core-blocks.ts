@@ -1,5 +1,6 @@
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { asideDetailBlock } from "./aside-detail.block"
+import { boardBlock } from "./board.block"
 import { cardGridBlock } from "./card-grid.block"
 import { conversationBlock } from "./conversation.block"
 import { dashboardCardsBlock } from "./dashboard-cards.block"
@@ -32,6 +33,7 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     listPaneBlock,
     filterTabsBlock,
     tableBlock,
+    boardBlock,
     formBlock,
     listEditorBlock,
     tabbedPanelBlock,
