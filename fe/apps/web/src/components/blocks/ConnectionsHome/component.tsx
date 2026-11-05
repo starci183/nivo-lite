@@ -1,4 +1,4 @@
-import { Button, EmptyNotice, Pane, PaneGrid, PaneSection, Section } from "@starci/grammar/common"
+import { EmptyNotice, Pane, PaneGrid, PaneSection, Section } from "@starci/grammar/common"
 import type { Figure, ListRowData } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneBody } from "@/components/frames/PaneBody"
@@ -100,12 +100,16 @@ const nextRowsOf = (on: On, view: ConnectionsOverviewView): ReadonlyArray<ListRo
                 size: "md",
             },
             badges: [{ label: next.status.label, tone: next.status.tone, isDot: next.status.isDot }],
-            detail:
-                action === null ? undefined : (
-                    <Button intent="commit" onPress={() => on.goTo(action.href)}>
-                        {action.label}
-                    </Button>
-                ),
+            ...(action === null
+                ? {}
+                : {
+                      action: {
+                          label: action.label,
+                          intent: "commit" as const,
+                          isPrimary: true,
+                          press: () => on.goTo(action.href),
+                      },
+                  }),
         },
     ]
 }
