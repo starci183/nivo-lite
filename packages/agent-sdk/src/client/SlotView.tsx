@@ -61,7 +61,6 @@ const errorNotice = (
 ) =>
     layout === "band" ? (
         <Alert
-            appearance="soft"
             tone="negative"
             title={message}
             {...(description === undefined ? {} : { description })}
