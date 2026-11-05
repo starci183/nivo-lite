@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { OnApplicationBootstrap } from "@nestjs/common"
 import { nodeIndexOf, nodeListProblems } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition, NodeIndex } from "@nivo-lite/agent-sdk/node"
+import { EntityNodePortsService } from "@modules/domain/entity-engine"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
@@ -17,9 +18,10 @@ import type {
 
 @Injectable()
 /**
- * The installed nodes and who serves them. The app hands in the install it assembled from its node packages; each module that owns
- * a kind of record registers its data port, and each module that acts registers the executor of its effect, when it starts. The core
- * knows only these registrations: no kind, effect or node is named here.
+ * The installed nodes and who serves them. The app hands in the install it assembled from its node packages; the entity engine serves
+ * the data kind of every entity it declares, each module that still owns a kind of record outside the engine registers its data port,
+ * and each module that acts registers the executor of its effect, when it starts. The core knows only these registrations: no kind,
+ * effect or node is named here.
  */
 export class GraphNodeRegistryService implements OnApplicationBootstrap {
     private readonly index: NodeIndex
@@ -30,8 +32,10 @@ export class GraphNodeRegistryService implements OnApplicationBootstrap {
     constructor(
         @InjectGraphNodesOptions() options: GraphNodesOptions,
         @InjectLogger() private readonly logger: Logger,
+        entityPorts: EntityNodePortsService,
     ) {
         this.index = nodeIndexOf(options.install)
+        for (const port of entityPorts.ports()) this.addDataPort(port)
         for (const problem of nodeListProblems(options.install)) {
             this.logger.warn(GraphNodesLogEvent.InstallProblem, { code: problem.code, at: problem.at })
         }
