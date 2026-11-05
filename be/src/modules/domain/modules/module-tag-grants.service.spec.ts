@@ -1,3 +1,4 @@
+import { installationRecordOf } from "@tests/fixtures/builders/module-install.builder"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentsService } from "@modules/domain/agents"
@@ -10,7 +11,7 @@ import { ModulesService } from "./modules.service"
 import { SALES_MODULE } from "./sales.contracts"
 
 const record = (moduleKey: string, agentId: string | null): InstallationRecord =>
-    ({ id: `inst-${moduleKey}`, workspaceId: "ws-1", moduleKey, agentId }) as InstallationRecord
+    installationRecordOf({ id: `inst-${moduleKey}`, moduleKey, agentId })
 
 const build = async (installed: ReadonlyArray<InstallationRecord>) => {
     const installations = mock<InstallationRecordsService>()

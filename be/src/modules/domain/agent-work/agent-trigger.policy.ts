@@ -1,4 +1,4 @@
-import { WAKE_SOURCE_KEY } from "./agent-wake-source.policy"
+import { WAKE_SOURCE_KEY } from "@modules/domain/agent-wake-rules"
 import { DEFAULT_TIME_ZONE } from "./agent-work.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentTriggerKind, AgentTriggerPreset, AgentTriggerWrite } from "./agent-work.contracts"

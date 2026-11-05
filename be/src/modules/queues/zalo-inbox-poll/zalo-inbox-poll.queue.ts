@@ -1,3 +1,5 @@
+import { namesConnectionOrNone } from "@modules/platform/primitives"
+
 /** The queue of the Zalo inbox reconcile job: the contract between the scheduler tick, the connection-ready trigger and the processor. */
 export const ZALO_INBOX_POLL_QUEUE = "zalo-inbox-poll"
 
@@ -13,8 +15,4 @@ export interface ZaloInboxPollPayload {
 }
 
 /** True when a job payload is the payload of a Zalo inbox reconcile job. */
-export const isZaloInboxPollPayload = (value: unknown): value is ZaloInboxPollPayload => {
-    if (typeof value !== "object" || value === null) return false
-    const named = [Reflect.get(value, "connectionId"), Reflect.get(value, "workspaceId")]
-    return named.every((id) => id === undefined) || named.every((id) => typeof id === "string" && id.length > 0)
-}
+export const isZaloInboxPollPayload = (value: unknown): value is ZaloInboxPollPayload => namesConnectionOrNone(value)

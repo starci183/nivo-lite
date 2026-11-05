@@ -1,21 +1,21 @@
 import { Injectable } from "@nestjs/common"
 import type { OnApplicationBootstrap } from "@nestjs/common"
-import { PollSourceRegistry } from "@modules/domain/connection-poll"
+import { PollSourceRegistryService } from "@modules/domain/connection-poll"
 import type { ConnectionPoller, PollSourceDirectory, ScheduledPollSource } from "@modules/domain/connection-poll"
-import { BankFeedPollerRegistry } from "@modules/domain/provider-registry"
+import { BankFeedPollerRegistryService } from "@modules/domain/provider-registry"
 import type { PolledCredit } from "@modules/domain/provider-registry"
-import { BankFeedService } from "./bank-feed.service"
+import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 
 @Injectable()
 /**
  * Offers the registered bank providers to the poll scheduler: each provider's reader with the one store every bank provider shares (the feed receipt
  * its webhook feeds, under the webhook's key), its limits and its error classes. It joins the scheduler once every provider module has registered.
  */
-export class BankFeedPollSources implements PollSourceDirectory, OnApplicationBootstrap {
+export class BankFeedPollSourcesService implements PollSourceDirectory, OnApplicationBootstrap {
     constructor(
-        private readonly registry: PollSourceRegistry,
-        private readonly pollers: BankFeedPollerRegistry,
-        private readonly feed: BankFeedService,
+        private readonly registry: PollSourceRegistryService,
+        private readonly pollers: BankFeedPollerRegistryService,
+        private readonly feed: BankFeedReceiptsService,
     ) {}
 
     /** Adds this directory to the scheduler. */

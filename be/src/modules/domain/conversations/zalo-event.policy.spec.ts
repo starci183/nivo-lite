@@ -164,7 +164,9 @@ describe("readZaloEvent pictures and files", () => {
         expect(subject.readZaloEvent(imageEvent({ attachments: undefined })).kind).toBe("refused")
         expect(subject.readZaloEvent(imageEvent({}, { message: "x" })).kind).toBe("refused")
     })
+})
 
+describe("readZaloEvent picture refusals and imports", () => {
     it("refuses a picture event that lacks the sender or the message id", async () => {
         const subject = await buildSubject()
 

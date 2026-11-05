@@ -1,9 +1,6 @@
 import { isIP } from "node:net"
 import { resolve, sep } from "node:path"
 
-/** How many redirects a download follows; every hop is checked like the first address. */
-export const INBOUND_FILE_MAX_REDIRECTS = 3
-
 /** The request headers of a download: what a browser fetching a picture sends, which the CDNs of the channels expect. */
 export const INBOUND_FILE_HEADERS: Readonly<Record<string, string>> = {
     accept: "image/*,application/pdf;q=0.9,*/*;q=0.5",
@@ -23,8 +20,7 @@ const INTERNAL_HOST = /^(?:localhost|.*\.local|.*\.internal|.*\.localhost)$/iu
  */
 export const isFetchableFileUrl = (url: string): boolean => {
     const parsed = URL.canParse(url) ? new URL(url) : null
-    if (parsed === null || parsed.protocol !== "https:" || parsed.username !== "" || parsed.password !== "")
-        return false
+    if (parsed?.protocol !== "https:" || parsed.username !== "" || parsed.password !== "") return false
     const host = parsed.hostname.replace(/^\[|\]$/gu, "")
     return host !== "" && isIP(host) === 0 && !INTERNAL_HOST.test(host)
 }
@@ -32,7 +28,8 @@ export const isFetchableFileUrl = (url: string): boolean => {
 /** Whether the type the server declared for a download can be an accepted file; a server that declares none is judged by the bytes alone. */
 export const isAcceptedDeclaredType = (declared: string | undefined): boolean => {
     if (declared === undefined || declared === "") return true
-    const type = declared.replace(/;.*$/u, "").trim().toLowerCase()
+    const [head = ""] = declared.split(";")
+    const type = head.trim().toLowerCase()
     return (
         type.startsWith("image/") ||
         type === "application/pdf" ||
@@ -62,5 +59,6 @@ export const redirectTargetOf = (location: string | undefined, from: string): st
 /** The name a stored file gets when the sender gave none: the id of the message (kept to safe characters) and, when it is not the first file, its place. */
 export const inboundFileNameOf = (given: string, ref: string, index: number, extension: string): string => {
     const stem = ref.replace(/[^A-Za-z0-9_-]/gu, "_").slice(0, 80)
-    return given !== "" ? given : `${stem === "" ? "file" : stem}${index > 0 ? `-${index + 1}` : ""}.${extension}`
+    const place = index > 0 ? `-${index + 1}` : ""
+    return given !== "" ? given : `${stem === "" ? "file" : stem}${place}.${extension}`
 }

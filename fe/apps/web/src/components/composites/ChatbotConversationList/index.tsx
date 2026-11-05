@@ -7,7 +7,7 @@ import {
     ListBox,
     PaneSection,
     SearchField,
-    FilterButtonGroup,
+    Tabs,
     Text,
 } from "@starci/grammar/common"
 import { ChatbotChips } from "@/components/branches/ChatbotChips"
@@ -45,11 +45,12 @@ export const ChatbotConversationList = (props: ChatbotConversationListProps) => 
         </PaneSection>
         <PaneSection bleed="inline">
             <HorizontalScrollRegion overflow="needed" isFocusable={false}>
-                <FilterButtonGroup
+                <Tabs
+                    kind="filter"
                     label={props.listLabel}
-                    options={props.filters}
-                    value={props.selectedFilter}
-                    onValueChange={props.onFilter}
+                    items={props.filters.map((filter) => ({ id: filter.value, label: filter.label }))}
+                    selectedKey={props.selectedFilter}
+                    onSelect={props.onFilter}
                 />
             </HorizontalScrollRegion>
         </PaneSection>

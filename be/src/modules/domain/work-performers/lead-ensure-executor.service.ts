@@ -14,19 +14,13 @@ import { LeadCapturedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
-import { z } from "zod"
 import { WorkPerformersError, WorkPerformersErrorCode } from "./errors/work-performers.error"
+import { ensurePayload } from "./lead-ensure.schema"
+import type { EnsurePayload } from "./lead-ensure.schema"
 import { PerformerKitService } from "./performer-kit.service"
 
 /** The name under which a graph node writes in the Office. */
 const ACTOR = "NIVO"
-
-const ensurePayload = z.object({
-    conversationId: z.string().min(1),
-    name: z.string().min(1).optional(),
-    phone: z.string().min(1).optional(),
-    channel: z.string().min(1),
-})
 
 @Injectable()
 /**
@@ -74,7 +68,7 @@ export class LeadEnsureExecutorService implements OnModuleInit {
      */
     private async leadOf(
         ctx: WorkContext,
-        given: z.infer<typeof ensurePayload>,
+        given: EnsurePayload,
         conversation: TurnConversation,
     ): Promise<LeadRecordRow | { readonly id: string }> {
         const contactLead =

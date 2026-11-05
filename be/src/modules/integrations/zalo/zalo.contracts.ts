@@ -142,3 +142,9 @@ export interface ZaloChatMessage {
     /** When it was sent, in epoch milliseconds. */
     readonly sentAt: number
 }
+
+/** The HTTP methods the OA API is called with. */
+export type ZaloMethod = "GET" | "POST"
+
+/** The `data` object of a successful OA API answer, as Zalo sent it. */
+export type ZaloData = Record<string, unknown>

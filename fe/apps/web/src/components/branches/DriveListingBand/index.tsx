@@ -71,7 +71,7 @@ export const DriveListingBand = (props: DriveListingBandProps) => {
                     {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
                     key={notice.id}
                     tone={notice.tone}
-                    appearance="soft"
+
                     title={notice.title}
                 />
             ))}

@@ -75,5 +75,7 @@
   "paymentRequestNoAccount": "Order {{order}} has no payment request: no SePay connection with a full account number",
   "nodeAccountingLedgerAppendTitle": "Write to the ledger",
   "nodeAccountingLedgerReadyTitle": "Is there a ledger to write to",
-  "accountingLedgerReconnectTitle": "Connect Google again (with Sheets access) to keep the ledger"
+  "accountingLedgerReconnectTitle": "Connect Google again (with Sheets access) to keep the ledger",
+  "nodeLeadEnsureTitle": "Make sure the customer is known",
+  "nodePaymentEntryTitle": "A credit arrived or a customer says they paid"
 }

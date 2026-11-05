@@ -13,8 +13,8 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { AGENT_TURN_QUEUE_PRODUCER } from "@modules/queues/agent-turn"
-import type { AgentTurnQueue } from "@modules/queues/agent-turn"
+import { AGENT_TURN_QUEUE_PRODUCER, AgentTurnQueue } from "@modules/queues/agent-turn"
+import { jobRecordingOutbox } from "@tests/fixtures/builders/queue-job-outbox.builder"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
 import { AgentWorkSweepService } from "./agent-work-sweep.service"
@@ -51,7 +51,9 @@ const record = (over: Partial<AgentTriggerRecord> = {}): AgentTriggerRecord => (
 
 const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRecord | null = record()) => {
     const tx = fakeTransaction(mockEntityManager())
-    const queue = mock<AgentTurnQueue>({ enqueueSweepDrain: jest.fn().mockResolvedValue(undefined) })
+    const outbox = jobRecordingOutbox()
+    const real = new AgentTurnQueue(outbox)
+    const queue = mock<AgentTurnQueue>({ enqueueSweepDrain: jest.fn(real.enqueueSweepDrain.bind(real)) })
     const turns = mock<AgentTurnsService>({ due: jest.fn().mockResolvedValue(items) })
     const wakes = mock<AgentWakeService>({ wake: jest.fn().mockResolvedValue(true) })
     const tasks = mock<AgentTasksService>({ markWoken: jest.fn().mockResolvedValue(undefined) })
@@ -91,6 +93,7 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
         sync,
         runSweep,
         queue,
+        outbox,
         logger,
         tx,
     }
@@ -110,6 +113,24 @@ describe("AgentWorkSweepService.sweep, scopes to drain", () => {
             { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "agent" },
             { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" },
         ])
+    })
+})
+
+describe("AgentWorkSweepService.sweep, the drain job it writes", () => {
+    it("writes the sweep drain job of a stuck scope in a transaction, keyed by the scope and the minute", async () => {
+        const { service, outbox } = await build([due({ scopeKey: "conversation:conv-1" })])
+
+        await service.sweep()
+
+        expect(outbox.written).toEqual([
+            {
+                queue: "agent_turn",
+                payload: { workspaceId: "ws-1", agentId: "agent-1", scopeKey: "conversation:conv-1" },
+                job: "agent-turn.drain",
+                dedupeKey: "agent-turn:agent-1:sweep:conversation:conv-1:29904670",
+            },
+        ])
+        expect(outbox.inTransaction).toBe(true)
     })
 })
 

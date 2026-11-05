@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { z } from "zod"
 import { nextKeyOf, STOP_STEP } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { NodeRunError, resolveInput, RightsDeniedError, ToolUndeclaredError } from "@nivo-lite/agent-sdk/node"
@@ -16,11 +15,13 @@ import {
 } from "@modules/domain/graph-nodes"
 import type { NodeToolApproval, NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock } from "@modules/platform/clock"
+import { isDomainError } from "@modules/platform/errors"
 import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
+import { askedSchema, doneSchema, stepInputSchema, subjectSchema } from "./agent-graph-node-step.schema"
 import { APPROVED_STEP_MARK, GRAPH_NODE_STEP_KIND, localeOf, outputsOf } from "./policies/graph-flow.policy"
 import type { GraphNodeApproval, GraphNodeStepInput } from "./policies/graph-flow.policy"
 
@@ -46,29 +47,6 @@ const APPROVAL_UNAVAILABLE = "approval_unavailable"
 /** Why a step cannot run: its row does not hold what a node step needs, or its version holds no such node. */
 const INVALID_INPUT = "invalid_step_input"
 const NODE_MISSING = "graph_node_missing"
-
-/** The effects a done node step ran, as its result keeps them. */
-const doneSchema = z.object({
-    effects: z.array(z.object({ id: z.string(), subject: z.object({ kind: z.string(), id: z.string() }) })),
-})
-
-const subjectSchema = z.object({ kind: z.string().min(1), id: z.string().min(1) })
-
-const approvalSchema: z.ZodType<GraphNodeApproval> = z.object({
-    stepKey: z.string().min(1).max(200),
-    by: z.string().min(1).max(200),
-    fingerprint: z.string().min(1).max(200),
-})
-
-const stepInputSchema: z.ZodType<GraphNodeStepInput> = z.object({
-    versionId: z.string().min(1),
-    nodeKey: z.string().min(1),
-    trigger: z.record(z.string(), z.unknown()),
-    approval: approvalSchema.optional(),
-})
-
-/** The tool call a node asked a person to approve, as the approval item keeps it. */
-const askedSchema = z.object({ fields: z.object({ fingerprint: z.string().min(1).max(200) }) })
 
 /** The tool call a person is asked about: the tool, the fingerprint of the exact call, and why the grant asked. */
 interface ToolAskCall {
@@ -138,6 +116,13 @@ const turnOf = (step: StepView, trigger: StepJson): NodeTurn => ({
     origin: trigger.origin === "channel" ? "customer" : "system",
     memberId: textOf(trigger, "actorMemberId"),
 })
+
+/** The node refusal a capability's domain error reports for an effect it refused (`params.refusal`), or null for any other failure. */
+const domainRefusalOf = (cause: unknown): string | null => {
+    if (!isDomainError(cause)) return null
+    const refusal = cause.params.refusal
+    return typeof refusal === "string" ? refusal : null
+}
 
 /** Whether a node refused in a way no retry changes: a schema, a right, an undeclared effect or tool. */
 const refused = (cause: unknown): cause is NodeRunError | RightsDeniedError | ToolUndeclaredError =>
@@ -305,6 +290,8 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
             })
         } catch (cause) {
             if (refused(cause)) return { code: cause.code }
+            const refusal = domainRefusalOf(cause)
+            if (refusal !== null) return { code: refusal }
             const asked = askOf(cause)
             if (asked !== null) return asked
             throw cause

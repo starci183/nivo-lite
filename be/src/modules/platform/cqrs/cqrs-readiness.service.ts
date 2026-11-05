@@ -1,7 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { ModuleRef } from "@nestjs/core"
+import type { ModulesContainer } from "@nestjs/core"
 import { CqrsModule as NestCqrsModule } from "@nestjs/cqrs"
+import { InjectModulesContainer } from "./cqrs-modules.decorators"
+
+/** The hook of Nest's CQRS module that registers the handlers on their buses. */
+interface BootstrapHook {
+    onApplicationBootstrap(): void
+}
+
+const hasBootstrapHook = (value: unknown): value is BootstrapHook =>
+    typeof value === "object" &&
+    value !== null &&
+    "onApplicationBootstrap" in value &&
+    typeof value.onApplicationBootstrap === "function"
 
 @Injectable()
 /**
@@ -15,21 +27,33 @@ export class CqrsReadinessService implements OnModuleInit {
     private open!: () => void
     private readonly gate: Promise<void>
 
-    constructor(private readonly moduleRef: ModuleRef) {
+    constructor(@InjectModulesContainer() private readonly modules: ModulesContainer) {
         this.gate = new Promise<void>((resolve) => {
             this.open = resolve
         })
     }
 
-    /** Wraps the registration of Nest's CQRS module so that it reports when it is done. */
+    /** Wraps the registration of Nest's CQRS module so that it reports when it is done; an app without that module has nothing to wait for. */
     onModuleInit(): void {
-        const cqrs = this.moduleRef.get(NestCqrsModule, { strict: false })
+        const cqrs = this.cqrsHook()
+        if (cqrs === undefined) {
+            this.ready = true
+            this.open()
+            return
+        }
         const register = cqrs.onApplicationBootstrap.bind(cqrs)
         cqrs.onApplicationBootstrap = (): void => {
             register()
             this.ready = true
             this.open()
         }
+    }
+
+    private cqrsHook(): BootstrapHook | undefined {
+        for (const module of this.modules.values()) {
+            if (module.metatype === NestCqrsModule && hasBootstrapHook(module.instance)) return module.instance
+        }
+        return undefined
     }
 
     /** True once the handlers are registered. */

@@ -1,14 +1,14 @@
 import {
-    BankFeedPollerRegistry,
-    BankTransactionsRegistry,
-    PaymentInstructionRegistry,
+    BankFeedPollerRegistryService,
+    BankTransactionsRegistryService,
+    PaymentInstructionRegistryService,
 } from "./provider-registries.service"
 
 const port = (provider: string) => ({ provider, qrUrl: () => provider })
 
-describe("ProviderRegistry", () => {
+describe("ProviderRegistryService", () => {
     it("finds a registered port by its provider key, lists them in order and knows who is missing", () => {
-        const registry = new PaymentInstructionRegistry()
+        const registry = new PaymentInstructionRegistryService()
         const first = port("sepay")
         const second = port("casso")
 
@@ -23,7 +23,7 @@ describe("ProviderRegistry", () => {
     })
 
     it("lets a second registration under a key replace the first", () => {
-        const registry = new PaymentInstructionRegistry()
+        const registry = new PaymentInstructionRegistryService()
         const replacement = port("sepay")
 
         registry.register(port("sepay"))
@@ -33,7 +33,7 @@ describe("ProviderRegistry", () => {
     })
 
     it("keeps the registries of the capabilities apart", () => {
-        expect(new BankFeedPollerRegistry().all()).toEqual([])
-        expect(new BankTransactionsRegistry().all()).toEqual([])
+        expect(new BankFeedPollerRegistryService().all()).toEqual([])
+        expect(new BankTransactionsRegistryService().all()).toEqual([])
     })
 })

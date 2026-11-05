@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { WorkRaisedHook } from "@modules/domain/decisions"
+import type { WorkRaisedHook } from "@modules/domain/work-items"
 import { PaymentClaimGraphAdapter } from "./payment-claim-graph.adapter"
 
 @Injectable()

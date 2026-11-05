@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
+import { effectRowOf } from "@tests/fixtures/builders/graph-node-effects.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -7,23 +8,9 @@ import type { Logger } from "@modules/platform/logging"
 import { GraphNodeEffectsService, ledgerKeyOf } from "./graph-node-effects.service"
 import { GraphNodeEffectEntity } from "./persistence/entities"
 
-const ROW = {
-    workspaceId: "ws-1",
-    ledgerKey: "call:run:0",
-    effect: "core.send",
-    subjectKind: "message",
-    subjectId: "m-1",
-}
-
-/** The stored row of the ledger, as the database answers it. */
-const stored = (overrides: Partial<GraphNodeEffectEntity> = {}): GraphNodeEffectEntity =>
-    Object.assign(new GraphNodeEffectEntity(), {
-        id: "e-1",
-        createdAt: new Date(0),
-        updatedAt: new Date(0),
-        ...ROW,
-        ...overrides,
-    })
+/** The columns the ledger writes; the database fills the rest. */
+const WRITTEN: ReadonlySet<string> = new Set(["workspaceId", "ledgerKey", "effect", "subjectKind", "subjectId"])
+const ROW = Object.fromEntries(Object.entries(effectRowOf()).filter(([column]) => WRITTEN.has(column)))
 
 const build = async (em: ReturnType<typeof mockEntityManager>) => {
     const logger = mock<Logger>()
@@ -46,7 +33,7 @@ describe("ledgerKeyOf", () => {
 
 describe("GraphNodeEffectsService.once", () => {
     it("acts once, writes the subject, and answers the row that won", async () => {
-        const em = mockEntityManager({ findOneByOrFail: [GraphNodeEffectEntity, stored({ subjectId: "m-0" })] })
+        const em = mockEntityManager({ findOneByOrFail: [GraphNodeEffectEntity, effectRowOf({ subjectId: "m-0" })] })
         em.findOneBy.mockResolvedValue(null)
         const [fake] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
         const { service } = await build(em)
@@ -63,7 +50,7 @@ describe("GraphNodeEffectsService.once", () => {
 
     it("answers the first subject of a key already written and acts no more", async () => {
         const em = mockEntityManager()
-        em.findOneBy.mockResolvedValue(stored({ ledgerKey: "dedupe:pay:o1" }))
+        em.findOneBy.mockResolvedValue(effectRowOf({ ledgerKey: "dedupe:pay:o1" }))
         const { service, logger } = await build(em)
         const act = jest.fn()
 

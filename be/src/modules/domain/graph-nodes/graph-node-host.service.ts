@@ -59,9 +59,7 @@ export class GraphNodeHostService {
                 key: input.key,
             },
             this.portsOf(turn, input.approval ?? null, asks),
-        ).catch((cause: unknown) => {
-            throw asks[0] ?? cause
-        })
+        ).catch((cause: unknown) => Promise.reject(asks[0] ?? cause))
         const [ask] = asks
         if (ask !== undefined) throw ask
         return ran

@@ -1,23 +1,22 @@
-import { randomBytes } from "node:crypto"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { ok, refused } from "@modules/platform/primitives"
 import { entityRowBuilder } from "@tests/fixtures/builders/entity-row.builder"
 import { evaluatedCalls } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { ConnectionApiTokenService } from "./connection-api-token.service"
-import { CONNECTION_SECRETS_OPTIONS } from "./connection-secrets.decorators"
 import { ConnectionSecretsService } from "./connection-secrets.service"
+import { ConnectionSecretsErrorCode } from "./errors/connection-secrets.error"
 import { ConnectionSecretEntity } from "./persistence/entities"
-import { sealSecret } from "./secret-cipher.policy"
 
-const KEY = randomBytes(32)
+/** The sealed form the secrets double writes for a plain token. */
+const sealedOf = (plain: string): string => `sealed(${plain})`
 
-/** One stored secret row; the credential and the token are sealed with the connection key. */
+/** One stored secret row; the credential and the token are sealed. */
 const storedOf = entityRowBuilder<ConnectionSecretEntity>({
     connectionId: "c-1",
-    ciphertext: sealSecret(KEY, "stored-key"),
+    ciphertext: sealedOf("stored-key"),
     apiTokenCiphertext: null,
     webhookSecret: "hook",
     tokenExpiresAt: null,
@@ -27,11 +26,16 @@ const storedOf = entityRowBuilder<ConnectionSecretEntity>({
 })
 
 const build = async (em: MockEntityManager) => {
+    const secrets = mock<ConnectionSecretsService>({
+        seal: jest.fn((plain: string) => sealedOf(plain)),
+        open: jest.fn((sealed: string) =>
+            sealed === sealedOf("tok-1") ? ok("tok-1") : refused(ConnectionSecretsErrorCode.Unreadable),
+        ),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConnectionApiTokenService,
-            ConnectionSecretsService,
-            { provide: CONNECTION_SECRETS_OPTIONS, useValue: { tokenKey: new Secret(KEY.toString("base64")) } },
+            { provide: ConnectionSecretsService, useValue: secrets },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
         ],
     }).compile()
@@ -48,14 +52,13 @@ describe("ConnectionApiTokenService", () => {
 
         const calls = evaluatedCalls(stored.update.mock.calls)
         expect(calls).toEqual([
-            ["ConnectionSecretEntity", { connectionId: "c-1" }, { apiTokenCiphertext: expect.any(String) }],
+            ["ConnectionSecretEntity", { connectionId: "c-1" }, { apiTokenCiphertext: "sealed(tok-1)" }],
         ])
-        expect(JSON.stringify(calls)).not.toContain("tok-1")
     })
 
     it("opens a stored token again", async () => {
         const em = mockEntityManager({
-            findOne: [ConnectionSecretEntity, storedOf({ apiTokenCiphertext: sealSecret(KEY, "tok-1") })],
+            findOne: [ConnectionSecretEntity, storedOf({ apiTokenCiphertext: sealedOf("tok-1") })],
         })
 
         await expect((await build(em)).read("c-1")).resolves.toBe("tok-1")
@@ -64,7 +67,7 @@ describe("ConnectionApiTokenService", () => {
     it.each([
         ["no row", null],
         ["no token", storedOf()],
-        ["a token sealed with another key", storedOf({ apiTokenCiphertext: sealSecret(randomBytes(32), "x") })],
+        ["a token that cannot be opened", storedOf({ apiTokenCiphertext: sealedOf("other") })],
     ])("reads null for %s", async (_name, row) => {
         const em = mockEntityManager({ findOne: [ConnectionSecretEntity, row] })
 
@@ -72,7 +75,7 @@ describe("ConnectionApiTokenService", () => {
     })
 
     it.each([
-        ["a token", storedOf({ apiTokenCiphertext: sealSecret(KEY, "tok-1") }), true],
+        ["a token", storedOf({ apiTokenCiphertext: sealedOf("tok-1") }), true],
         ["no token", storedOf(), false],
         ["no row", null, false],
     ])("tells whether the connection holds a token: %s", async (_name, row, expected) => {

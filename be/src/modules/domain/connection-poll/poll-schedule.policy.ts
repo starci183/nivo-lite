@@ -1,5 +1,6 @@
 import type { AuthFailureReason, PollFailure, UnavailableReason } from "./connection-poll.contracts"
-import type { PollOutcome, PollScheduleOptions, PollScheduleRow } from "./poll-schedule.contracts"
+import type { PollScheduleOptions } from "./connection-poll.options"
+import type { PollOutcome, PollScheduleRow } from "./poll-schedule.contracts"
 
 /** The intervals and caps a scheduler runs with when the environment names none. */
 export const DEFAULT_POLL_SCHEDULE: PollScheduleOptions = {

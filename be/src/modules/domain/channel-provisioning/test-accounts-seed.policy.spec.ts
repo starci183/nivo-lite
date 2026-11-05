@@ -1,6 +1,7 @@
+import { Test } from "@nestjs/testing"
+import { readTestAccountsSeed } from "./test-accounts-seed.policy"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
 import { TEST_ACCOUNTS_SEED_SCHEMA } from "./test-accounts-seed.contracts"
-import { readTestAccountsSeed } from "./test-accounts-seed.policy"
 
 const refused = (field: string) =>
     new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
@@ -30,9 +31,24 @@ const document = (overrides: Record<string, unknown> = {}) => ({
     ...overrides,
 })
 
+const SUBJECT = Symbol("test-accounts-seed.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { readTestAccountsSeed } }],
+    }).compile()
+    return moduleRef.get<typeof import("./test-accounts-seed.policy")>(SUBJECT)
+}
+
 describe("readTestAccountsSeed", () => {
+    let policy: typeof import("./test-accounts-seed.policy")
+
+    beforeAll(async () => {
+        policy = await build()
+    })
+
     it("reads each workspace with its owner first, the addresses lower-cased and the passwords opened from the values", () => {
-        const { workspaces } = readTestAccountsSeed(document())
+        const { workspaces } = policy.readTestAccountsSeed(document())
 
         expect(workspaces.map((workspace) => workspace.name)).toEqual(["Alpha", "Beta"])
         expect(workspaces[0]?.owner).toEqual({
@@ -94,6 +110,6 @@ describe("readTestAccountsSeed", () => {
             "seat.email",
         ],
     ])("refuses %s", (_name, input, field) => {
-        expect(() => readTestAccountsSeed(input)).toThrow(refused(field))
+        expect(() => policy.readTestAccountsSeed(input)).toThrow(refused(field))
     })
 })

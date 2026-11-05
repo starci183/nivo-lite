@@ -1,23 +1,16 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
-import type { EntityManager } from "typeorm"
 import type { RightScope } from "@nivo-lite/agent-sdk/rights"
 import { GraphNodeRegistryService, rowsAnswering } from "@modules/domain/graph-nodes"
 import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectLeadConversations } from "./leads.decorators"
+import type { LeadConversationDirectory } from "./leads.port"
 import type { LeadRecordRow } from "./lead-records.contracts"
 import { LeadRecordsService } from "./lead-records.service"
 
 /** The most leads one workspace read looks through. */
 const WORKSPACE_LIMIT = 500
-
-/**
- * The customer a conversation became, read as a plain query so that leads need not import the conversations capability, which imports
- * leads. The workspace filter keeps another workspace's conversation out of reach.
- */
-export const CONVERSATION_LEAD =
-    "SELECT lead_id FROM public.agent_conversations WHERE workspace_id = $1 AND id = $2 LIMIT 1"
 
 /** The lead as the `sales-lead` data kind names its fields. */
 const rowOf = (lead: LeadRecordRow): NodeRow => ({
@@ -40,7 +33,7 @@ const rowOf = (lead: LeadRecordRow): NodeRow => ({
  */
 export class LeadsGraphService implements OnModuleInit {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectLeadConversations() private readonly conversations: LeadConversationDirectory,
         private readonly records: LeadRecordsService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
@@ -65,11 +58,7 @@ export class LeadsGraphService implements OnModuleInit {
 
     private async subjectOf(turn: NodeTurn): Promise<SubjectRef | null> {
         if (turn.conversationId === null) return null
-        const rows = await this.entityManager.query<Array<{ lead_id: string | null }>>(CONVERSATION_LEAD, [
-            turn.workspaceId,
-            turn.conversationId,
-        ])
-        const leadId = rows[0]?.lead_id ?? null
+        const leadId = await this.conversations.leadIdOf(turn.workspaceId, turn.conversationId)
         return leadId === null ? null : { kind: "sales-lead", id: leadId }
     }
 }

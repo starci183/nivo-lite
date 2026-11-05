@@ -4,9 +4,8 @@ import { mock } from "@starci/jest-preset"
 import { BankFeedPollTriggerService } from "@modules/domain/billing"
 import { ConnectionReadyEvent } from "@modules/events/api"
 import { CONNECTION_READY_BANK_FEED_POLL_TOPIC_QUEUE } from "@modules/platform/event-bus"
-import { EVENT_CONSUMER_REGISTRY } from "@modules/platform/event-bus/event-bus.decorators"
-import type { EventConsumer } from "@modules/platform/event-bus"
-import { BankFeedPollMessageModule } from "@features/reactors/bank-feed-poll/transport/message/bank-feed-poll-message.module"
+import type { BaseEvent, EventConsumer, EventConsumerRegistry } from "@modules/platform/event-bus"
+import { BankFeedPollMessageModule } from "@features/reactors/bank-feed-poll"
 
 const payload = { workspaceId: "ws-1", connectionId: "conn-1", provider: "sepay", dedupeKey: "conn-1:api_token:abc" }
 
@@ -14,20 +13,15 @@ const payload = { workspaceId: "ws-1", connectionId: "conn-1", provider: "sepay"
 const compose = async () => {
     const trigger = mock<BankFeedPollTriggerService>()
     trigger.enqueueFirstPoll.mockResolvedValue(true)
-    const subscriptions: Array<{ queue: string; consumer: EventConsumer<ConnectionReadyEvent> }> = []
-    const registry = {
-        subscribe: (queue: string, consumer: EventConsumer<ConnectionReadyEvent>) => {
-            subscriptions.push({ queue, consumer })
-        },
-    }
+    const subscriptions: Array<{ queue: string; consumer: EventConsumer<BaseEvent> }> = []
+    const shared = mock<EventConsumerRegistry>()
+    shared.subscribe.mockImplementation((queue, consumer) => {
+        subscriptions.push({ queue, consumer })
+    })
     const moduleRef = await Test.createTestingModule({
         imports: [CqrsModule.forRoot(), BankFeedPollMessageModule.register({})],
     })
-        .useMocker((token) => {
-            if (token === BankFeedPollTriggerService) return trigger
-            if (token === EVENT_CONSUMER_REGISTRY) return registry
-            return mock<object>()
-        })
+        .useMocker((dependency) => (dependency === BankFeedPollTriggerService ? trigger : shared))
         .compile()
     await moduleRef.init()
     return { trigger, subscriptions }

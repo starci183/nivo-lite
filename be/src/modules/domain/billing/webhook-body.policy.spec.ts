@@ -4,10 +4,10 @@ import { BillingErrorCode } from "./errors/billing.error"
 
 import {
     isJsonObject as realIsJsonObject,
-    numberOf as realNumberOf,
+    fieldNumberOf as realFieldNumberOf,
     parseJsonObject as realParseJsonObject,
-    textOf as realTextOf,
-    textOrNull as realTextOrNull,
+    fieldTextOf as realFieldTextOf,
+    fieldTextOrNullOf as realFieldTextOrNullOf,
 } from "./webhook-body.policy"
 
 const objectLike = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape)
@@ -26,10 +26,10 @@ const SUBJECT = Symbol("webhook-body.policy")
 
 type Subject = {
     isJsonObject: typeof realIsJsonObject
-    numberOf: typeof realNumberOf
+    fieldNumberOf: typeof realFieldNumberOf
     parseJsonObject: typeof realParseJsonObject
-    textOf: typeof realTextOf
-    textOrNull: typeof realTextOrNull
+    fieldTextOf: typeof realFieldTextOf
+    fieldTextOrNullOf: typeof realFieldTextOrNullOf
 }
 
 const buildSubject = async () => {
@@ -39,10 +39,10 @@ const buildSubject = async () => {
                 provide: SUBJECT,
                 useValue: {
                     isJsonObject: realIsJsonObject,
-                    numberOf: realNumberOf,
+                    fieldNumberOf: realFieldNumberOf,
                     parseJsonObject: realParseJsonObject,
-                    textOf: realTextOf,
-                    textOrNull: realTextOrNull,
+                    fieldTextOf: realFieldTextOf,
+                    fieldTextOrNullOf: realFieldTextOrNullOf,
                 },
             },
         ],
@@ -94,21 +94,21 @@ describe("webhook body policy", () => {
         it("reads text only from a string", async () => {
             const { subject } = await buildSubject()
 
-            expect(subject.textOf("a")).toBe("a")
-            expect(subject.textOf(1)).toBeUndefined()
-            expect(subject.textOrNull("a")).toBe("a")
-            expect(subject.textOrNull(undefined)).toBeNull()
+            expect(subject.fieldTextOf("a")).toBe("a")
+            expect(subject.fieldTextOf(1)).toBeUndefined()
+            expect(subject.fieldTextOrNullOf("a")).toBe("a")
+            expect(subject.fieldTextOrNullOf(undefined)).toBeNull()
         })
 
         it("reads a finite number from a number or numeric text only", async () => {
             const { subject } = await buildSubject()
 
-            expect(subject.numberOf(5)).toBe(5)
-            expect(subject.numberOf("12.5")).toBe(12.5)
-            expect(subject.numberOf("abc")).toBeUndefined()
-            expect(subject.numberOf(Number.POSITIVE_INFINITY)).toBeUndefined()
-            expect(subject.numberOf(null)).toBeUndefined()
-            expect(subject.numberOf({})).toBeUndefined()
+            expect(subject.fieldNumberOf(5)).toBe(5)
+            expect(subject.fieldNumberOf("12.5")).toBe(12.5)
+            expect(subject.fieldNumberOf("abc")).toBeUndefined()
+            expect(subject.fieldNumberOf(Number.POSITIVE_INFINITY)).toBeUndefined()
+            expect(subject.fieldNumberOf(null)).toBeUndefined()
+            expect(subject.fieldNumberOf({})).toBeUndefined()
         })
     })
 })

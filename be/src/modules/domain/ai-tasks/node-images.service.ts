@@ -1,4 +1,6 @@
 import { Injectable } from "@nestjs/common"
+import { InjectRemoteFiles } from "@modules/integrations/remote-files"
+import type { RemoteFiles } from "@modules/integrations/remote-files"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AiTasksLogEvent } from "./ai-tasks.log-events"
@@ -8,6 +10,9 @@ export const IMAGE_MAX_BYTES: number = 5 * 1024 * 1024
 
 /** How long one picture may take to read from the store, milliseconds. */
 const IMAGE_TIMEOUT_MS = 15_000
+
+/** The media type of a `content-type` value, without its parameters. */
+const mediaTypeOf = (declared: string): string => declared.split(";", 1).join("").trim()
 
 /** The pictures a call carries, inlined, and how many were left out. */
 export interface InlinedImages {
@@ -24,7 +29,10 @@ export interface InlinedImages {
  * within the timeout, must say it is an image and stay within the size cap; any other is left out and logged, never sent as an address.
  */
 export class NodeImagesService {
-    constructor(@InjectLogger() private readonly logger: Logger) {}
+    constructor(
+        @InjectRemoteFiles() private readonly files: RemoteFiles,
+        @InjectLogger() private readonly logger: Logger,
+    ) {}
 
     /** The pictures inlined, in order, with the count of those left out. */
     async inline(urls: ReadonlyArray<string>): Promise<InlinedImages> {
@@ -41,14 +49,19 @@ export class NodeImagesService {
 
     private async dataUrlOf(url: string): Promise<string | null> {
         try {
-            const response = await fetch(url, { signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS) })
-            const type = response.headers.get("content-type")?.split(";", 1)[0]?.trim() ?? ""
-            if (!response.ok || !type.startsWith("image/")) return null
-            const bytes = Buffer.from(await response.arrayBuffer())
-            return bytes.length === 0 || bytes.length > IMAGE_MAX_BYTES
+            const file = await this.files.read({
+                url,
+                maxBytes: IMAGE_MAX_BYTES,
+                timeoutMs: IMAGE_TIMEOUT_MS,
+                accepts: (declared) => mediaTypeOf(declared).startsWith("image/"),
+            })
+            return file.bytes === null
                 ? null
-                : `data:${type};base64,${bytes.toString("base64")}`
-        } catch {
+                : `data:${mediaTypeOf(file.contentType)};base64,${file.bytes.toString("base64")}`
+        } catch (cause) {
+            this.logger.warn(AiTasksLogEvent.ImageUnreadable, {
+                error: cause instanceof Error ? cause.name : typeof cause,
+            })
             return null
         }
     }

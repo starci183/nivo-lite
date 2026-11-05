@@ -1,4 +1,4 @@
-import { SegmentedControl } from "@starci/grammar/common"
+import { RadioGroup } from "@starci/grammar/common"
 import { ConnectionStepBand } from "@/components/frames/ConnectionStepBand"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SepayEnvironment, SlotLabels } from "@/modules/types"
@@ -43,7 +43,8 @@ export const SepayEnvironmentPickerBase = (props: SepayEnvironmentPickerBaseProp
             labels={props.props.slotLabels}
             onRetry={props.on.retry}
             render={(view, isLoading) => (
-                <SegmentedControl
+                <RadioGroup
+                    orientation="horizontal"
                     label={props.props.label}
                     isLabelHidden
                     description={view.description}

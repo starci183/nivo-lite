@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectConnectionPollOptions } from "./connection-poll.decorators"
 import { ConnectionPollScheduleEntity } from "./persistence/entities"
 import type { PollPlan } from "./poll-schedule.policy"
-import type { ConnectionPollOptions, PollHotReason, PollScheduleRow } from "./poll-schedule.contracts"
+import type { ConnectionPollOptions } from "./connection-poll.options"
+import type { PollHotReason, PollScheduleRow } from "./poll-schedule.contracts"
 
 /** A connection that is due, with the instant it was due at (the scheduler's lag is how far past that the poll starts). */
 export interface DueConnection {
@@ -32,30 +33,6 @@ const rowOf = (entity: ConnectionPollScheduleEntity): PollScheduleRow => ({
     backfillNewest: entity.backfillNewest,
 })
 
-/** Puts a connection in the schedule, hot, or makes an existing row hot and due sooner; a row that needs the owner stays parked. */
-export const MARK_HOT_SQL = `
-INSERT INTO public.connection_poll_schedule (connection_id, workspace_id, provider, next_poll_at, interval_ms, hot_until, hot_reason)
-SELECT c.id, c.workspace_id, c.provider, now(), $2::integer, now() + make_interval(secs => $3::double precision / 1000), $4
-FROM public.connections c
-WHERE c.id = $1 AND c.status <> 'disconnected'
-ON CONFLICT (connection_id) DO UPDATE SET
-    hot_until = GREATEST(connection_poll_schedule.hot_until, EXCLUDED.hot_until),
-    hot_reason = EXCLUDED.hot_reason,
-    next_poll_at = CASE
-        WHEN connection_poll_schedule.needs_reauth THEN connection_poll_schedule.next_poll_at
-        ELSE LEAST(connection_poll_schedule.next_poll_at, now() + make_interval(secs => $2::double precision / 1000))
-    END
-`
-
-/** Puts every connection of the given providers that has no row into the schedule, spread at random over the healthy interval so tenants never poll in step. */
-export const ENROLL_SQL = `
-INSERT INTO public.connection_poll_schedule (connection_id, workspace_id, provider, next_poll_at, interval_ms)
-SELECT c.id, c.workspace_id, c.provider, now() + make_interval(secs => random() * $2::double precision / 1000), $2::integer
-FROM public.connections c
-WHERE c.provider = ANY($1) AND c.status <> 'disconnected'
-ON CONFLICT (connection_id) DO NOTHING
-`
-
 @Injectable()
 /**
  * The only writer of public.connection_poll_schedule: which connections are due, what each poll planned next, and the signals other modules give
@@ -70,7 +47,10 @@ export class PollScheduleService {
 
     /** Gives every connection of the providers a row in the schedule. */
     async enroll(providers: ReadonlyArray<string>): Promise<void> {
-        await this.entityManager.query(ENROLL_SQL, [[...providers], this.options.schedule.healthyIntervalMs])
+        await callDbFunction(this.entityManager, "public.connection_poll_enroll", [
+            [...providers],
+            this.options.schedule.healthyIntervalMs,
+        ])
     }
 
     /** Claims up to `size` due connections of the providers, oldest first, and holds them for the lease. */
@@ -130,7 +110,12 @@ export class PollScheduleService {
         reason: PollHotReason,
         ttlMs: number = this.options.schedule.hotTtlMs,
     ): Promise<void> {
-        await this.entityManager.query(MARK_HOT_SQL, [connectionId, this.options.schedule.hotIntervalMs, ttlMs, reason])
+        await callDbFunction(this.entityManager, "public.connection_poll_mark_hot", [
+            connectionId,
+            this.options.schedule.hotIntervalMs,
+            ttlMs,
+            reason,
+        ])
     }
 
     /**
@@ -147,10 +132,10 @@ export class PollScheduleService {
     }
 
     /** The webhook of the provider delivered for this connection: it is healthy, so the interval may be long. */
-    async recordWebhook(connectionId: string): Promise<void> {
+    async recordWebhook(connection: string): Promise<void> {
         await this.entityManager.update(
             ConnectionPollScheduleEntity,
-            { connectionId },
+            { connectionId: connection },
             { lastWebhookAt: () => "now()" },
         )
     }

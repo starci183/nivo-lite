@@ -1,4 +1,5 @@
 {"findings":[],"hash":"cc10d981ccc6ed6e4ae6150fe1dcb7d3c11c9b0581ac31d4c55b8cc222e0ba2e","path":"packages/module-loyalty/package.json","step":"prettier"}
+{"findings":[],"hash":"43beb4aaaa4614557488ad0e26086f59338cf9371333dadd826fad72b9ebc637","path":"packages/module-loyalty/package.json","step":"prettier"}
 {"findings":[],"hash":"dd670e0778ed877b5f759976a9e21a9c2c47ac0b8b0958db7daf731fdb485c35","path":"packages/module-loyalty/tsconfig.build.json","step":"prettier"}
 {"findings":[],"hash":"25b9a34cb0a059783fcf4a27f74e8566432048f50abc64060f31da113ba1b451","path":"packages/module-loyalty/tsconfig.build.workbench.json","step":"prettier"}
 {"findings":[],"hash":"ed86a1ed5ca4f4b34849e9141c689bfabf88faa9c00eae6dfed97c9fa4b54d8e","path":"packages/module-loyalty/tsconfig.json","step":"prettier"}

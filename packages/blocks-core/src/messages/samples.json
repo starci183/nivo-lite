@@ -86,5 +86,21 @@
   "sampleShopDaNhanAmountDCho": "Shop đã nhận {amount} đ cho đơn {orderNo}. Cảm ơn bạn!",
   "sampleKiemTraKhoanTien": "Kiểm tra khoản tiền",
   "sampleTenSoTienVaLoiBao2": "Tên, số tiền và lời báo của khách khớp",
-  "sampleShopDaNhan5000D": "Shop đã nhận 5.000 đ cho đơn SO-0001. Cảm ơn bạn!"
+  "sampleShopDaNhan5000D": "Shop đã nhận 5.000 đ cho đơn SO-0001. Cảm ơn bạn!",
+  "sampleDat2ChauGiaoDen12Le": "Đặt 2 chậu, giao đến 12 Lê Lợi, Huế.",
+  "sampleMinhOXaGiaoHangToiDia": "Mình ở xa, giao hàng tới địa chỉ chợ Đông Ba nhé",
+  "sampleChoDongBaNhe": "chợ Đông Ba nhé",
+  "sampleGiaoHangNhanhNhe": "Giao hàng nhanh nhé",
+  "sampleChoMinhDatChauHoa": "Cho mình đặt chậu hoa",
+  "sampleGiaodichXongRoi": "giaodich xong rồi",
+  "sample1LeLoi": "1 Lê Lợi",
+  "sampleGiao25NguyenHue": "giao 25 Nguyễn Huệ",
+  "sample9HangBai": "  9 Hàng Bài ",
+  "sampleDatHoa": "đặt hoa",
+  "sample9HangBai2": "9 Hàng Bài",
+  "sampleDatHoaGiao25NguyenHue": "đặt hoa, giao 25 Nguyễn Huệ",
+  "sampleGiao25NguyenHueDuocKhong": "giao 25 Nguyễn Huệ được không",
+  "sample3TranPhu": "3 Trần Phú",
+  "sampleSoTienKhopLoiBaoCuaKhach": "Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ",
+  "sampleAnhBienLaiMoMoEmDaChuyen": "[ảnh biên lai MoMo] Em đã chuyển 2.000đ"
 }

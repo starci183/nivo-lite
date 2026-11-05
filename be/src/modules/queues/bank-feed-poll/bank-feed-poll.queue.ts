@@ -1,3 +1,5 @@
+import { namesConnectionOrNone } from "@modules/platform/primitives"
+
 /** The queue of the bank-feed reconcile job: the contract between the tick, the connection-ready trigger and the processor. */
 export const BANK_FEED_POLL_QUEUE = "bank-feed-poll"
 
@@ -13,8 +15,4 @@ export interface BankFeedPollPayload {
 }
 
 /** True when a job payload is the payload of a bank-feed reconcile job. */
-export const isBankFeedPollPayload = (value: unknown): value is BankFeedPollPayload => {
-    if (typeof value !== "object" || value === null) return false
-    const named = [Reflect.get(value, "connectionId"), Reflect.get(value, "workspaceId")]
-    return named.every((id) => id === undefined) || named.every((id) => typeof id === "string" && id.length > 0)
-}
+export const isBankFeedPollPayload = (value: unknown): value is BankFeedPollPayload => namesConnectionOrNone(value)

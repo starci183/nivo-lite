@@ -64,3 +64,6 @@ export interface CustomerConversationRow {
 
 /** A customer conversation, or null when the workspace has none under the id. */
 export type OptionalCustomerConversationRow = CustomerConversationRow | null
+
+/** The lead a conversation became, or null when it became none. */
+export type OptionalLeadId = string | null

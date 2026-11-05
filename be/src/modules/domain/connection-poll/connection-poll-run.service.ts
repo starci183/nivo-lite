@@ -51,7 +51,7 @@ export const emptyPollSummary = (): PollSummary => ({ connections: 0, fetched: 0
  * same inbox path and key the webhook uses, so an item the webhook delivered is a no-op), warns for every item the webhook had missed,
  * and moves the cursor only when the whole walk succeeded. A failure is logged and counted, never thrown, so the next connection runs.
  */
-export class ConnectionPollRun {
+export class ConnectionPollRunService {
     constructor(private readonly deps: ConnectionPollDeps) {}
 
     /**

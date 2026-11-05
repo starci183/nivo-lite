@@ -3,6 +3,7 @@ import type { Installation } from "@modules/domain/agents"
 import type { AgentWorkState } from "@modules/domain/agent-work"
 import {
     internalTimeoutMsOf,
+    isBackground,
     proposalTextOf,
     stateBlockOf,
     stoppedBy,
@@ -20,6 +21,7 @@ const build = async () => {
                 provide: SUBJECT,
                 useValue: {
                     internalTimeoutMsOf,
+                    isBackground,
                     proposalTextOf,
                     stateBlockOf,
                     stoppedBy,
@@ -32,6 +34,7 @@ const build = async () => {
     }).compile()
     return moduleRef.get<{
         internalTimeoutMsOf: typeof internalTimeoutMsOf
+        isBackground: typeof isBackground
         proposalTextOf: typeof proposalTextOf
         stateBlockOf: typeof stateBlockOf
         stoppedBy: typeof stoppedBy
@@ -195,5 +198,19 @@ describe("agent turn policy > stoppedBy", () => {
 
         expect(stoppedBy("live", installation({ activeContextVersionId: null }))).toBe("installation_not_running")
         expect(stoppedBy("live", installation({ liveEnabled: false }))).toBe("installation_not_running")
+    })
+})
+
+describe("isBackground", () => {
+    it("is true for the sources nobody waits on, and false for a source the table does not know", async () => {
+        const { isBackground } = await build()
+
+        expect(["customer", "tag", "internal", "schedule", "unrecorded"].map(isBackground)).toEqual([
+            false,
+            false,
+            true,
+            true,
+            false,
+        ])
     })
 })

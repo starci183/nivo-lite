@@ -8,6 +8,7 @@ import { AutomationTemplatesService } from "@modules/domain/automation-templates
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModulesService } from "@modules/domain/modules"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import type { NodeEffectExecutor } from "@modules/domain/graph-nodes"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
@@ -54,6 +55,12 @@ const VERSION = {
     publishedBy: null,
 } as const
 
+/** The module that raises owner work, as the registry hands it to the seed. */
+const raise = mock<NodeEffectExecutor>({
+    effect: "work-item.raise",
+    execute: jest.fn().mockResolvedValue({ kind: "work-item", id: "w-1" }),
+})
+
 const build = async (
     options: {
         agentId?: string | null
@@ -62,7 +69,7 @@ const build = async (
         setup?: ApprovalSetup | null
         rule?: "none"
         action?: string
-        nodes?: GraphNodeRegistryService
+        hosts?: "raising" | "not-raising"
     } = {},
 ) => {
     const existing = options.existing === true ? stateOf() : null
@@ -108,19 +115,37 @@ const build = async (
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const logger = mock<Logger>()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            AgentGraphSeedService,
-            { provide: AgentGraphsService, useValue: graphs },
-            { provide: InstallationRecordsService, useValue: installations },
-            { provide: ModulesService, useValue: modules },
-            { provide: AutomationTemplatesService, useValue: templates },
-            { provide: AuthorityRulesService, useValue: rules },
-            { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: LOGGER, useValue: logger },
-            ...(options.nodes === undefined ? [] : [{ provide: GraphNodeRegistryService, useValue: options.nodes }]),
-        ],
-    }).compile()
+    const nodes = mock<GraphNodeRegistryService>({
+        installed: jest.fn().mockReturnValue(nodeIndexOf({ nodes: [], effects: [], tools: [], dataKinds: [] })),
+        optionalExecutorOf: jest.fn().mockReturnValue(options.hosts === "raising" ? raise : undefined),
+    })
+    const moduleRef =
+        options.hosts === undefined
+            ? await Test.createTestingModule({
+                  providers: [
+                      AgentGraphSeedService,
+                      { provide: AgentGraphsService, useValue: graphs },
+                      { provide: InstallationRecordsService, useValue: installations },
+                      { provide: ModulesService, useValue: modules },
+                      { provide: AutomationTemplatesService, useValue: templates },
+                      { provide: AuthorityRulesService, useValue: rules },
+                      { provide: MESSAGE_CATALOG, useValue: catalog },
+                      { provide: LOGGER, useValue: logger },
+                  ],
+              }).compile()
+            : await Test.createTestingModule({
+                  providers: [
+                      AgentGraphSeedService,
+                      { provide: AgentGraphsService, useValue: graphs },
+                      { provide: InstallationRecordsService, useValue: installations },
+                      { provide: ModulesService, useValue: modules },
+                      { provide: AutomationTemplatesService, useValue: templates },
+                      { provide: AuthorityRulesService, useValue: rules },
+                      { provide: MESSAGE_CATALOG, useValue: catalog },
+                      { provide: LOGGER, useValue: logger },
+                      { provide: GraphNodeRegistryService, useValue: nodes },
+                  ],
+              }).compile()
     return { service: moduleRef.get(AgentGraphSeedService), graphs, rules, templates, logger }
 }
 
@@ -275,17 +300,10 @@ describe("AgentGraphSeedService.refresh of a node graph", () => {
         const document = { ...graphOf(OWNER_EXAMPLE), flow }
         return stateOf({ activeKind, draft: document, active: document })
     }
-    const raise = { effect: "work-item.raise", execute: jest.fn().mockResolvedValue({ kind: "work-item", id: "w-1" }) }
-    const installed = (executor: typeof raise | null = raise): GraphNodeRegistryService =>
-        mock<GraphNodeRegistryService>({
-            installed: jest.fn().mockReturnValue(nodeIndexOf({ nodes: [], effects: [], tools: [], dataKinds: [] })),
-            optionalExecutorOf: jest.fn().mockReturnValue(executor ?? undefined),
-        })
-
     beforeEach(() => raise.execute.mockClear())
 
     it("never replaces a version that holds a flow, whatever its kind, even when the rules changed", async () => {
-        const { service, graphs, rules, logger } = await build({ setup: null, nodes: installed() })
+        const { service, graphs, rules, logger } = await build({ setup: null, hosts: "raising" })
 
         await expect(service.refresh(flowState("seed"), "accounting", "en")).resolves.toBe(false)
         await expect(service.refresh(flowState("spec"), "accounting", "en")).resolves.toBe(false)
@@ -296,7 +314,7 @@ describe("AgentGraphSeedService.refresh of a node graph", () => {
     })
 
     it("names each problem of a flow the installed nodes no longer take, and still leaves it live", async () => {
-        const { service, graphs, logger } = await build({ nodes: installed() })
+        const { service, graphs, logger } = await build({ hosts: "raising" })
         const broken = { ...FLOW, nodes: [{ key: "gone", kind: "output" as const, step: "order.gone" }] }
 
         await expect(service.refresh(flowState("spec", broken), "accounting", "en")).resolves.toBe(false)
@@ -315,18 +333,18 @@ describe("AgentGraphSeedService.refresh of a node graph", () => {
             title: "[agentGraphs.flowUnsound.title]",
             payload: { agentId: "agent-1", problems: "NODE_UNKNOWN gone" },
         })
-        expect(call.dedupeKey).toMatch(/^flow-unsound:agent-1:[0-9a-f]{16}$/)
+        expect(call?.dedupeKey).toMatch(/^flow-unsound:agent-1:[0-9a-f]{16}$/)
     })
 
     it("raises the same review once per agent and set of problems, and only logs where no module raises work", async () => {
-        const { service } = await build({ nodes: installed() })
+        const { service } = await build({ hosts: "raising" })
         const broken = { ...FLOW, nodes: [{ key: "gone", kind: "output" as const, step: "order.gone" }] }
         await service.refresh(flowState("spec", broken), "accounting", "en")
         await service.refresh(flowState("spec", broken), "accounting", "en")
         const keys = raise.execute.mock.calls.map((call) => call[2].dedupeKey)
         expect(new Set(keys).size).toBe(1)
 
-        const bare = await build({ nodes: installed(null) })
+        const bare = await build({ hosts: "not-raising" })
         await expect(bare.service.refresh(flowState("spec", broken), "accounting", "en")).resolves.toBe(false)
         expect(bare.logger.warn).toHaveBeenCalled()
     })

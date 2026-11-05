@@ -1,6 +1,7 @@
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentWakeSource } from "./agent-work.contracts"
-import type { AgentWakeTraits, OptionalAgentWakeTraits } from "./agent-work-source.contracts"
+import { WAKE_SOURCE_KEY } from "@modules/domain/agent-wake-rules"
+import type { AgentWakeTraits, OptionalAgentWakeTraits } from "@modules/domain/agent-wake-rules"
 
 /** The keys of the four sources that existed before adapters, and the traits the work core always gave them. */
 const BUILT_IN: Readonly<Record<string, AgentWakeTraits>> = {
@@ -45,9 +46,6 @@ const sameTraits = (a: AgentWakeTraits, b: AgentWakeTraits): boolean =>
     a.background === b.background &&
     a.restoresHeld === b.restoresHeld &&
     a.awaitsAnswer === b.awaitsAnswer
-
-/** The shape of a source key: it is stored as the wake's source, so the database checks the same shape. */
-export const WAKE_SOURCE_KEY: RegExp = /^[a-z][a-z0-9_]{0,39}$/u
 
 /** The sources the work core knows, each with its traits. The four built-in ones are always there; an inbound adapter adds its own. */
 export class WakeSourcesPolicy {

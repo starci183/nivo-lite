@@ -1,4 +1,4 @@
-import { Grid, Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
+import { Grid, Input, NumberField, Select, ChoiceChips } from "@starci/grammar/common"
 
 import type { HiringJobFieldCommands, HiringViews } from "@/modules/types"
 
@@ -65,8 +65,9 @@ export const HiringJobFields = (props: HiringJobFieldsProps) => {
                 value={values.position}
                 onValueChange={(position) => onText("position", position)}
             />
-            <SegmentedControl
+            <ChoiceChips
                 label={copy.jobEmployment}
+                empty={copy.jobEmployment}
                 options={props.employmentOptions.map((option) => ({ value: option.id, label: option.label }))}
                 value={values.employmentType}
                 onValueChange={(type) => onText("employmentType", type)}

@@ -32,11 +32,12 @@ const ending = (over: Partial<AgentTurnEnding> = {}): AgentTurnEnding => ({
 })
 
 const build = async (em: MockEntityManager, options?: AgentWorkOptions) => {
+    const settings = { debounceMs: options?.debounceMs, debounceMaxMs: options?.debounceMaxMs }
     const container = await Test.createTestingModule({
         providers: [
             AgentTurnsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
-            ...(options === undefined ? [] : [{ provide: AGENT_WORK_OPTIONS, useValue: options }]),
+            { provide: AGENT_WORK_OPTIONS, useValue: settings },
         ],
     }).compile()
     return container.get(AgentTurnsService)
@@ -90,7 +91,9 @@ describe("AgentTurnsService.begin", () => {
             20000,
         ])
     })
+})
 
+describe("AgentTurnsService.begin, the answer it reads", () => {
     it("reads a begun turn", async () => {
         const answer = {
             result: "begun",

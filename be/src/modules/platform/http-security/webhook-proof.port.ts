@@ -10,6 +10,11 @@ export interface WebhookProofRequest {
     readonly timestamp: string | undefined
 }
 
+/** What may be logged of a refused delivery: short plain values by name, never a body, secret, signature or token. */
+export interface WebhookProofFacts {
+    readonly [name: string]: string
+}
+
 /** The proof of one provider whose secret is not one value of the app but belongs to a scope stored in the database. */
 export interface WebhookProof {
     /** The provider key the door names in `verify`. */
@@ -20,7 +25,7 @@ export interface WebhookProof {
      * What may be logged of a refused delivery besides the provider and scope (for example the event name), read without trusting the
      * body. Short plain values only: never the body, a secret, a signature or a token.
      */
-    facts?(request: WebhookProofRequest): Readonly<Record<string, string>>
+    facts?(request: WebhookProofRequest): WebhookProofFacts
 }
 
 /** Where a domain module registers the proof of a provider whose secrets live in the database. */

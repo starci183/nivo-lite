@@ -5,9 +5,9 @@ import { GraphSeedService } from "@modules/domain/workspace-seed"
 import { SeedAgentGraphsCli } from "./seed-agent-graphs.cli"
 
 const build = async () => {
-    jest.spyOn(process, "stdin", "get").mockReturnValue(
-        Object.assign(Readable.from(['{"documents":', "[]}\n"]), { fd: 0 }) as unknown as typeof process.stdin,
-    )
+    const chunks = Readable.from(['{"documents":', "[]}\n"])
+    const stdin = mock<typeof process.stdin>({ [Symbol.asyncIterator]: () => chunks[Symbol.asyncIterator]() })
+    jest.spyOn(process, "stdin", "get").mockReturnValue(stdin)
     const seed = mock<GraphSeedService>()
     seed.run.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
@@ -32,7 +32,7 @@ describe("SeedAgentGraphsCli", () => {
     it("names no workspace when none was given, so the seed refuses it", async () => {
         const { cli, seed } = await build()
 
-        await cli.run([], {})
+        await cli.run([], { workspace: "" })
 
         expect(seed.run.mock.calls).toEqual([['{"documents":[]}\n', ""]])
     })

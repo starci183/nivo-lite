@@ -38,5 +38,3 @@ export { TRIGGER_SOURCE, inputSourcesOf, isInputRef, resolveInput, sourceOfRef }
 export { branchesOf, graphNodeProblems, nodeIndexOf, nodeListProblems } from "./problems"
 export { nodeSagaOf } from "./saga"
 export type { NodeSaga } from "./saga"
-export { NodeVocabulary, VocabularyError } from "./vocabulary"
-export type { FactSchema, NodeKindRegistration, NodeVocabularyManifest } from "./vocabulary"

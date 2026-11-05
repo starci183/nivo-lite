@@ -1,6 +1,6 @@
 import type { HiringViews, HiringActions } from "@/modules/types"
 
-import { Alert, Input, NumberField, SegmentedControl, Select } from "@starci/grammar/common"
+import { Alert, ChoiceChips, Input, NumberField, Select } from "@starci/grammar/common"
 
 import { HiringDialogFooter } from "@/components/branches/HiringDialogFooter"
 import { HiringDialogShell } from "@/components/branches/HiringDialogShell"
@@ -43,8 +43,9 @@ export const HiringInterviewDialog = (props: HiringInterviewDialogProps) => {
                             value={values.interviewerUserId}
                             onValueChange={(id) => on.text("interviewerUserId", id ?? "")}
                         />
-                        <SegmentedControl
+                        <ChoiceChips
                             label={copy.ivModeLabel}
+                            empty={copy.ivModeLabel}
                             options={modes.map((mode) => ({ value: mode.id, label: mode.label }))}
                             value={values.mode}
                             onValueChange={(mode) => on.text("mode", mode)}

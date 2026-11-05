@@ -99,6 +99,8 @@ interface GraphDocument {
         readonly hide: ReadonlyArray<string>
         readonly mask: ReadonlyArray<string>
     }>
+    /** The flow of nodes a version may carry beside its rules. */
+    readonly flow?: DomainGraphDocument["flow"]
 }
 type GraphMode = "shadow" | "enforced"
 type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback" | "spec"

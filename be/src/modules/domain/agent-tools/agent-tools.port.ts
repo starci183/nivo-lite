@@ -10,7 +10,7 @@ import type {
     LeadDraft,
     LeadWriteResult,
     OptionalBridgeTurn,
-    OptionalLeadId,
+    OptionalToolLeadId,
     ToolArgs,
     ToolContext,
     BridgeTurn,
@@ -74,7 +74,7 @@ export interface HandoffTool {
 /** Reads the lead a conversation is tied to (owner: the channels lane), for the evidence trace. */
 export interface ConversationLeads {
     /** The lead of the conversation, or null. */
-    leadIdOf(ctx: ToolContext): Promise<OptionalLeadId>
+    leadIdOf(ctx: ToolContext): Promise<OptionalToolLeadId>
 }
 
 /** The short-lived per-job tool tokens; the app root binds it to the OpenClaw ToolTokenService. */

@@ -1,4 +1,14 @@
+import { Test } from "@nestjs/testing"
 import { wakeOriginOf } from "./wake-origin.policy"
+
+const SUBJECT = Symbol("wake-origin.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { wakeOriginOf } }],
+    }).compile()
+    return moduleRef.get<{ wakeOriginOf: typeof wakeOriginOf }>(SUBJECT)
+}
 
 describe("wakeOriginOf", () => {
     it.each([
@@ -30,7 +40,9 @@ describe("wakeOriginOf", () => {
             "event",
         ],
         ["another agent's end node", { source: "tag", context: { threadId: "t1" }, actorMemberId: null }, "agent"],
-    ] as const)("names %s", (_case, wake, origin) => {
-        expect(wakeOriginOf(wake)).toBe(origin)
+    ] as const)("names %s", async (_case, wake, origin) => {
+        const policy = await build()
+
+        expect(policy.wakeOriginOf(wake)).toBe(origin)
     })
 })

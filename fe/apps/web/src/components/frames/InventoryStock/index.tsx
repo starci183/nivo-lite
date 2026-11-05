@@ -27,17 +27,7 @@ type InventoryStockProps = InventoryStockData & {
 
 type StockRowView = InventoryStockData["rows"][number]
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import {
-    Button,
-    ButtonGroup,
-    Cluster,
-    EmptyNotice,
-    FilterButtonGroup,
-    Section,
-    Stack,
-    Text,
-    type ListRowData,
-} from "@starci/grammar/common"
+import { Button, Cluster, EmptyNotice, Tabs, Section, Stack, Text, type ListRowData } from "@starci/grammar/common"
 import { InventoryAdjustDrawer } from "@/components/composites/InventoryAdjustDrawer"
 import { InventoryItemDrawer } from "@/components/composites/InventoryItemDrawer"
 
@@ -82,12 +72,12 @@ export const InventoryStock = (props: InventoryStockProps) => {
                 items={props.rows.map((row) => itemOf(row, props))}
                 empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
                 filter={
-                    <FilterButtonGroup
-                        isLoading={props.isLoading}
+                    <Tabs
+                        kind="filter"
                         label={props.filterLabel}
-                        options={props.filters}
-                        value={props.filter}
-                        onValueChange={on.filter}
+                        items={props.filters.map((filter) => ({ id: filter.value, label: filter.label }))}
+                        selectedKey={props.filter}
+                        onSelect={on.filter}
                     />
                 }
                 action={
@@ -168,26 +158,24 @@ const itemOf = (row: StockRowView, props: InventoryStockProps): ListRowData => {
         detail: (
             <Cluster gap="inline">
                 <Text isStrong>{row.total}</Text>
-                <ButtonGroup
+                <Button
                     isLoading={props.isLoading}
-                    label={row.stepLabel}
-                    actions={[
-                        {
-                            id: "less",
-                            label: row.lessLabel,
-                            intent: "neutral",
-                            isDisabled: props.isPending,
-                            onPress: () => on.quick(row.id, -1),
-                        },
-                        {
-                            id: "more",
-                            label: row.moreLabel,
-                            intent: "neutral",
-                            isDisabled: props.isPending,
-                            onPress: () => on.quick(row.id, 1),
-                        },
-                    ]}
-                />
+                    intent="neutral"
+                    size="sm"
+                    isDisabled={props.isPending}
+                    onPress={() => on.quick(row.id, -1)}
+                >
+                    {row.lessLabel}
+                </Button>
+                <Button
+                    isLoading={props.isLoading}
+                    intent="neutral"
+                    size="sm"
+                    isDisabled={props.isPending}
+                    onPress={() => on.quick(row.id, 1)}
+                >
+                    {row.moreLabel}
+                </Button>
             </Cluster>
         ),
     }

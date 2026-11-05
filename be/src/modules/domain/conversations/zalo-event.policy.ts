@@ -75,6 +75,11 @@ export const zaloAttachmentShapeOf = (raw?: Buffer): string => {
     if (body.kind !== "ok") return ""
     const message = body.value.message
     const first: unknown = listField(message, "attachments")[0]
-    const keysOf = (value: unknown): string => (isRecord(value) ? Object.keys(value).sort().join(",") : "-")
+    const keysOf = (value: unknown): string =>
+        isRecord(value)
+            ? Object.keys(value)
+                  .sort((a, b) => a.localeCompare(b))
+                  .join(",")
+            : "-"
     return `message[${keysOf(message)}] attachment[${keysOf(first)}] payload[${keysOf(isRecord(first) ? first.payload : undefined)}]`
 }

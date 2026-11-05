@@ -9,7 +9,7 @@ import { sepayPolledCredit } from "./sepay-poll.policy"
 
 @Injectable()
 /** Reads the transactions of a SePay connection's bank account from the SePay user API, with the API token that connection holds. */
-export class SepayFeedPoller implements BankFeedPoller {
+export class SepayFeedPollerService implements BankFeedPoller {
     readonly provider = "sepay"
     readonly inboxProvider = "sepay-feed"
     /**

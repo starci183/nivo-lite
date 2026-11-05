@@ -1,4 +1,4 @@
-import { z } from "../schema/zod.schema"
+import { z } from "../schema/zod-entry"
 import { rightsGaps } from "../rights/rights"
 import type { DataRight, RightsGrant } from "../rights/rights.types"
 import { isNamespaced } from "../schema/namespaced"

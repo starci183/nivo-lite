@@ -3,7 +3,7 @@ import {
     Page,
     Section,
     Stack,
-    FilterButtonGroup,
+    Tabs,
     Text,
     type BadgeTone,
     type BreadcrumbItem,
@@ -100,17 +100,19 @@ export const DecisionsBoardBase = (props: DecisionsBoardBaseProps) => {
                         isLoading={isLoading}
                         filter={
                             <Stack gap="row">
-                                <FilterButtonGroup
+                                <Tabs
+                                    kind="filter"
                                     label={view.kindLabel}
-                                    value={view.kindKey}
-                                    options={view.kinds.map((kind) => ({ value: kind.id, label: kind.label }))}
-                                    onValueChange={props.on.kind}
+                                    selectedKey={view.kindKey}
+                                    items={view.kinds.map((kind) => ({ id: kind.id, label: kind.label }))}
+                                    onSelect={props.on.kind}
                                 />
-                                <FilterButtonGroup
+                                <Tabs
+                                    kind="filter"
                                     label={view.deptLabel}
-                                    value={view.deptKey}
-                                    options={view.depts.map((dept) => ({ value: dept.id, label: dept.label }))}
-                                    onValueChange={props.on.dept}
+                                    selectedKey={view.deptKey}
+                                    items={view.depts.map((dept) => ({ id: dept.id, label: dept.label }))}
+                                    onSelect={props.on.dept}
                                 />
                             </Stack>
                         }

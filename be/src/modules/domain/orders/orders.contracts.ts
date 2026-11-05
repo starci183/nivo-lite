@@ -196,8 +196,12 @@ export interface NewPaymentClaim {
 
 /** The equalities a read of payment claims may name. */
 export interface PaymentClaimWhere {
+    /** The claim id. */
     readonly id?: string
+    /** The customer who said it. */
     readonly leadId?: string
+    /** The conversation it was said in. */
     readonly conversationId?: string
+    /** Where the claim stands. */
     readonly status?: PaymentClaimStatus
 }

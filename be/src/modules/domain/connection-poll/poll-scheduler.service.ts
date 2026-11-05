@@ -8,7 +8,7 @@ import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectTimer } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
-import { ConnectionPollRun, emptyPollSummary } from "./connection-poll-run.service"
+import { ConnectionPollRunService, emptyPollSummary } from "./connection-poll-run.service"
 import { InjectConnectionPollOptions, InjectPollRandom } from "./connection-poll.decorators"
 import type { PollRandom } from "./connection-poll.decorators"
 import { ConnectionPollLogEvent } from "./connection-poll.log-events"
@@ -28,13 +28,9 @@ import type { PollFailure } from "./connection-poll.contracts"
 import type { PollPlan } from "./poll-schedule.policy"
 import { PollScheduleService } from "./poll-schedule.service"
 import type { DueConnection } from "./poll-schedule.service"
-import { PollSourceRegistry } from "./poll-source-registry.service"
-import type {
-    ConnectionPollOptions,
-    PollOutcome,
-    PollWalkOptions,
-    ScheduledPollSource,
-} from "./poll-schedule.contracts"
+import { PollSourceRegistryService } from "./poll-source-registry.service"
+import type { ConnectionPollOptions } from "./connection-poll.options"
+import type { PollOutcome, PollWalkOptions, ScheduledPollSource } from "./poll-schedule.contracts"
 
 /** A busy provider is asked again after this long. */
 const BUSY_RETRY_MS = 5_000
@@ -83,7 +79,7 @@ const emptyTally = (): ProviderTally => ({
  * backoff of a 429 or a transient failure, the breaker, or the owner request of a refused credential. Nothing here names a provider.
  */
 export class PollSchedulerService {
-    private readonly run: ConnectionPollRun
+    private readonly run: ConnectionPollRunService
 
     constructor(
         @InjectClock() private readonly clock: Clock,
@@ -93,11 +89,11 @@ export class PollSchedulerService {
         @InjectConnectionPollOptions() private readonly options: ConnectionPollOptions,
         private readonly connections: ConnectionsService,
         private readonly schedule: PollScheduleService,
-        private readonly sources: PollSourceRegistry,
+        private readonly sources: PollSourceRegistryService,
         private readonly limiter: PollLimiterService,
         private readonly notice: PollOwnerNoticeService,
     ) {
-        this.run = new ConnectionPollRun({
+        this.run = new ConnectionPollRunService({
             clock,
             logger,
             timer,
@@ -169,7 +165,7 @@ export class PollSchedulerService {
         tally: ProviderTally,
     ): Promise<void> {
         const now = this.clock.now().getTime()
-        const unit = this.random()
+        const unit = this.random.next()
         const row = probeOf(item.row)
         if (outcome.kind !== "failed") {
             tally.found += outcome.kind === "skipped" ? 0 : outcome.fetched
@@ -221,7 +217,7 @@ export class PollSchedulerService {
     }
 
     private defer(connectionId: string, afterMs: number): Promise<void> {
-        const at = this.clock.now().getTime() + jittered(afterMs, this.options.schedule.jitterRatio, this.random())
+        const at = this.clock.now().getTime() + jittered(afterMs, this.options.schedule.jitterRatio, this.random.next())
         return this.schedule.defer(connectionId, new Date(at))
     }
 }

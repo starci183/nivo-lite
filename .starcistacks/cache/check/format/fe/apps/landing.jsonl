@@ -1,6 +1,7 @@
 {"findings":[],"hash":"5235f79a28f7bf558e1189c7c630c254e9930a102cf896ffb807a442f9881b55","path":"fe/apps/landing/Dockerfile","step":"prettier"}
 {"findings":[],"hash":"c35e3e8a51308c64ec5f65b5c4e6b1f044924d612f5a5dba6cbfa67ecca7d964","path":"fe/apps/landing/next.config.ts","step":"prettier"}
 {"findings":[],"hash":"4d44316553736be509c5d901b396633da90cc413e7653cc683ee3f713338d7a2","path":"fe/apps/landing/package.json","step":"prettier"}
+{"findings":[],"hash":"663ad0ea2d3c49fbefe923afc51af7304c9155829483e3c466a11ce765006fe9","path":"fe/apps/landing/package.json","step":"prettier"}
 {"findings":[],"hash":"ebd8daf9a019ed1c44a94dea9e6766759ccaf6959c7311be0d57678c90044b12","path":"fe/apps/landing/postcss.config.mjs","step":"prettier"}
 {"findings":[],"hash":"a47964331b9f3b6dc393603f55b00e2b5f0e38f19b1595914fd9ae7aa69b5b27","path":"fe/apps/landing/public/brand/nivo-logo.png","step":"prettier"}
 {"findings":[],"hash":"e204355c78ff5882364ded731d2644b8f76d066d4254e5538b64e398e12396c3","path":"fe/apps/landing/public/brand/nivo-mark.png","step":"prettier"}
@@ -47,7 +48,7 @@
 {"findings":[],"hash":"7e36c708a0348886ee923da50796fdca631902293107e67fe87716ce0125eedf","path":"fe/apps/landing/src/components/blocks/LandingHero/component.tsx","step":"prettier"}
 {"findings":[],"hash":"5fbf30cd852c590e5a018bf9ed9642c93afd66c2f4029d62824af2d21a938a59","path":"fe/apps/landing/src/components/blocks/LandingHero/index.tsx","step":"prettier"}
 {"findings":[],"hash":"31541e952bd7ab73acc79028e7be93e3654807cdb44e7df5cb22583e53bd9821","path":"fe/apps/landing/src/components/blocks/LandingNavActions/classNames.ts","step":"prettier"}
-{"findings":[],"hash":"db1a41f0d70ab1b58d6c2d69ca662f988c30fb1f3c9994fb60ea539b4016025e","path":"fe/apps/landing/src/components/blocks/LandingNavActions/component.tsx","step":"prettier"}
+{"findings":[],"hash":"43d6e3ae54e5fa3403f93b3582f17e1903a2d05d96f092c323438503ebd72ca6","path":"fe/apps/landing/src/components/blocks/LandingNavActions/component.tsx","step":"prettier"}
 {"findings":[],"hash":"32b1c3b83b1de89030c4663da638ab2f4f48ec9295c68c084bbf6fc58cefc549","path":"fe/apps/landing/src/components/blocks/LandingNavActions/index.tsx","step":"prettier"}
 {"findings":[],"hash":"ee755ea61296611f89ecd405d3171cf91591de5344435d3c2146e94e46f89501","path":"fe/apps/landing/src/components/blocks/LandingNavBrand/component.tsx","step":"prettier"}
 {"findings":[],"hash":"70829b25d0098a4b3b52d8a9eb2f83ff95748fd8553a7bb6ee1d32e951aa6958","path":"fe/apps/landing/src/components/blocks/LandingNavBrand/index.tsx","step":"prettier"}

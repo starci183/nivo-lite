@@ -1,8 +1,8 @@
 import { createHmac } from "node:crypto"
 import { Test } from "@nestjs/testing"
 import { SepayConnectionService } from "@modules/domain/channel-connections"
-import { FeedWebhookRegistry } from "@modules/domain/provider-registry"
-import { SepayFeedWebhookService } from "@modules/domain/sepay-provider/sepay-feed-webhook.service"
+import { FeedWebhookRegistryService } from "@modules/domain/provider-registry"
+import { SepayFeedWebhookService } from "@modules/domain/sepay-provider"
 import { builder, mock } from "@starci/jest-preset"
 import { sepayFeedSecret } from "@modules/domain/channel-connections"
 import { Secret } from "@modules/platform/config"
@@ -37,16 +37,16 @@ const OPTIONS: BillingOptions = {
 const build = async (options: Partial<BillingOptions> = {}, loaded: PaymentSecret | null = null) => {
     const secrets = mock<PaymentSecretsService>()
     secrets.load.mockResolvedValue(loaded)
-    const webhooks = new FeedWebhookRegistry()
-    webhooks.register(new SepayFeedWebhookService(mock<SepayConnectionService>()))
     const moduleRef = await Test.createTestingModule({
         providers: [
             PaymentProofService,
             { provide: BILLING_OPTIONS, useValue: builder<BillingOptions>(OPTIONS)(options) },
             { provide: PaymentSecretsService, useValue: secrets },
-            { provide: FeedWebhookRegistry, useValue: webhooks },
+            FeedWebhookRegistryService,
         ],
     }).compile()
+    const webhooks = moduleRef.get(FeedWebhookRegistryService)
+    webhooks.register(new SepayFeedWebhookService(mock<SepayConnectionService>(), webhooks))
     return { proof: moduleRef.get(PaymentProofService), secrets }
 }
 

@@ -4,7 +4,7 @@ import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { SEPAY, SepayError, SepayErrorCode } from "@modules/integrations/sepay"
 import type { SepayClient, SepayTransaction } from "@modules/integrations/sepay"
-import { SepayFeedPoller } from "./sepay-feed-poller.service"
+import { SepayFeedPollerService } from "./sepay-feed-poller.service"
 
 const TOKEN = ["tok", "1"].join("-")
 const WINDOW = { from: new Date("2026-10-28T00:00:00.000Z"), to: undefined, limit: 200 }
@@ -40,15 +40,15 @@ const build = async () => {
     const tokens = mock<ConnectionApiTokenService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
-            SepayFeedPoller,
+            SepayFeedPollerService,
             { provide: SEPAY, useValue: sepay },
             { provide: ConnectionApiTokenService, useValue: tokens },
         ],
     }).compile()
-    return { poller: moduleRef.get(SepayFeedPoller), sepay, tokens }
+    return { poller: moduleRef.get(SepayFeedPollerService), sepay, tokens }
 }
 
-describe("SepayFeedPoller fetch", () => {
+describe("SepayFeedPollerService fetch", () => {
     it("lists the account with the connection token and keeps the rows that moved money, with the page bounds of all rows", async () => {
         const { poller, sepay, tokens } = await build()
         tokens.read.mockResolvedValue(TOKEN)
@@ -102,7 +102,7 @@ describe("SepayFeedPoller fetch", () => {
     })
 })
 
-describe("SepayFeedPoller limits and classification", () => {
+describe("SepayFeedPollerService limits and classification", () => {
     it("declares conservative limits for one credential", async () => {
         const { poller } = await build()
 

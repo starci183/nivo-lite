@@ -1,1 +1,2 @@
 {"data":{"apps":["api","cli","mcp"],"findings":[],"ok":true,"status":"checked"},"findings":[],"hash":"488fe6232bad0cd5f9a84404937bd866be14e63e986992943de5f23c29d0ef2a","path":"be","step":"boot-proof"}
+{"data":{"apps":["api","cli","mcp"],"findings":[],"ok":true,"status":"checked"},"findings":[],"hash":"cf4b8049ba2aabe5392d0861553e2c6bdb06ce44e62e15f3bb34f63d68bbcd16","path":"be","step":"boot-proof"}

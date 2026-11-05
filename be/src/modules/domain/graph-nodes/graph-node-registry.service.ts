@@ -8,7 +8,12 @@ import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error
 import { InjectGraphNodesOptions } from "./graph-nodes.decorators"
 import { GraphNodesLogEvent } from "./graph-nodes.log-events"
 import type { GraphNodesOptions } from "./graph-nodes.options"
-import type { NodeDataPort, NodeEffectExecutor, NodeSubjectResolver } from "./graph-nodes.contracts"
+import type {
+    NodeDataPort,
+    NodeEffectExecutor,
+    NodeSubjectResolver,
+    OptionalNodeEffectExecutor,
+} from "./graph-nodes.contracts"
 
 @Injectable()
 /**
@@ -88,7 +93,7 @@ export class GraphNodeRegistryService implements OnApplicationBootstrap {
     }
 
     /** The executor of an effect, or undefined when no module performs it. */
-    optionalExecutorOf(effect: string): NodeEffectExecutor | undefined {
+    optionalExecutorOf(effect: string): OptionalNodeEffectExecutor {
         return this.executors.get(effect)
     }
 

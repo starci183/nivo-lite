@@ -1,26 +1,36 @@
-import type { ModuleRef } from "@nestjs/core"
-import type { CqrsModule as NestCqrsModule } from "@nestjs/cqrs"
+import { Test } from "@nestjs/testing"
+import { ModulesContainer } from "@nestjs/core"
+import { CqrsModule as NestCqrsModule } from "@nestjs/cqrs"
 import { mock } from "@starci/jest-preset"
 import { CqrsReadinessService } from "./cqrs-readiness.service"
 
-const build = () => {
+const build = async (hosted: boolean) => {
     const registered = jest.fn()
-    const cqrs = { onApplicationBootstrap: registered } as unknown as NestCqrsModule
-    const moduleRef = mock<ModuleRef>()
-    moduleRef.get.mockReturnValue(cqrs)
-    const readiness = new CqrsReadinessService(moduleRef)
-    return { readiness, cqrs, registered, moduleRef }
+    const cqrs = { onApplicationBootstrap: registered }
+    const modules = mock<ModulesContainer>({
+        values: jest.fn().mockReturnValue(
+            hosted
+                ? [
+                      { metatype: class OtherModule {}, instance: {} },
+                      { metatype: NestCqrsModule, instance: cqrs },
+                  ]
+                : [{ metatype: class OtherModule {}, instance: {} }],
+        ),
+    })
+    const moduleRef = await Test.createTestingModule({
+        providers: [CqrsReadinessService, { provide: ModulesContainer, useValue: modules }],
+    }).compile()
+    return { readiness: moduleRef.get(CqrsReadinessService), cqrs, registered }
 }
 
 describe("CqrsReadinessService", () => {
     it("is not ready, and keeps its waiters waiting, until Nest's CQRS module has registered the handlers", async () => {
-        const { readiness, cqrs, registered, moduleRef } = build()
+        const { readiness, cqrs, registered } = await build(true)
         const waited = jest.fn()
         readiness.onModuleInit()
         void readiness.whenReady().then(waited)
 
         await Promise.resolve()
-        expect(moduleRef.get).toHaveBeenCalledWith(expect.anything(), { strict: false })
         expect(readiness.isReady()).toBe(false)
         expect(waited).not.toHaveBeenCalled()
 
@@ -30,5 +40,14 @@ describe("CqrsReadinessService", () => {
         expect(registered).toHaveBeenCalledTimes(1)
         expect(readiness.isReady()).toBe(true)
         expect(waited).toHaveBeenCalledTimes(1)
+    })
+
+    it("is ready at once in an app that holds no CQRS module, because no handlers are coming", async () => {
+        const { readiness } = await build(false)
+
+        readiness.onModuleInit()
+        await readiness.whenReady()
+
+        expect(readiness.isReady()).toBe(true)
     })
 })

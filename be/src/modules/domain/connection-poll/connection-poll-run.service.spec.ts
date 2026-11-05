@@ -2,7 +2,7 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import type { ConnectionRecord, ConnectionsService } from "@modules/domain/connections"
 import type { Logger } from "@modules/platform/logging"
 import type { Timer } from "@modules/platform/retry"
-import { ConnectionPollRun, emptyPollSummary } from "./connection-poll-run.service"
+import { ConnectionPollRunService, emptyPollSummary } from "./connection-poll-run.service"
 import { ConnectionPollLogEvent } from "./connection-poll.log-events"
 import { ConnectionPollError, ConnectionPollErrorCode } from "./errors/connection-poll.error"
 import type { ConnectionPoller, PollPage } from "./connection-poll.contracts"
@@ -48,11 +48,11 @@ const build = () => {
     connections.get.mockResolvedValue(recordOf())
     connections.patch.mockResolvedValue(undefined)
     const poller = mock<ConnectionPoller<string>>()
-    const run = new ConnectionPollRun({ clock: new FakeClock(NOW.toISOString()), logger, timer, connections })
+    const run = new ConnectionPollRunService({ clock: new FakeClock(NOW.toISOString()), logger, timer, connections })
     return { run, logger, timer, connections, poller }
 }
 
-describe("ConnectionPollRun a connection that is read", () => {
+describe("ConnectionPollRunService a connection that is read", () => {
     it("stores each item, warns for the ones the webhook missed and moves the cursor to the newest instant", async () => {
         const { run, logger, connections, poller } = build()
         poller.fetch.mockResolvedValue(pageOf(["a", "b"], 2, T1, T2))
@@ -119,7 +119,9 @@ describe("ConnectionPollRun a connection that is read", () => {
         expect(timer.schedule).toHaveBeenCalledTimes(1)
         expect(timer.schedule).toHaveBeenCalledWith(expect.any(Function), POLL_PAUSE_MS)
     })
+})
 
+describe("ConnectionPollRunService the page budget", () => {
     it("reads no more than the page budget", async () => {
         const { run, poller } = build()
         let oldest = T1.getTime()
@@ -134,7 +136,7 @@ describe("ConnectionPollRun a connection that is read", () => {
     })
 })
 
-describe("ConnectionPollRun a connection that is left out or fails", () => {
+describe("ConnectionPollRunService a connection that is left out or fails", () => {
     it("leaves a test-environment connection out without calling the provider", async () => {
         const { run, logger, poller } = build()
         const summary = emptyPollSummary()
@@ -178,7 +180,7 @@ describe("ConnectionPollRun a connection that is left out or fails", () => {
     })
 })
 
-describe("ConnectionPollRun the outcome a scheduler plans with", () => {
+describe("ConnectionPollRunService the outcome a scheduler plans with", () => {
     it("answers done with what it read and stored", async () => {
         const { run, poller } = build()
         poller.fetch.mockResolvedValue(pageOf(["a", "b"], 2, T1, T2))
@@ -200,7 +202,9 @@ describe("ConnectionPollRun the outcome a scheduler plans with", () => {
             reason: "no_token",
         })
     })
+})
 
+describe("ConnectionPollRunService the gate and the chunks of a backfill", () => {
     it("takes the gate before every call to the provider and ends the poll when the gate refuses", async () => {
         const logger = mock<Logger>()
         const timer = mock<Timer>()
@@ -209,8 +213,9 @@ describe("ConnectionPollRun the outcome a scheduler plans with", () => {
             return () => undefined
         })
         const connections = mock<ConnectionsService>()
-        const gate = jest.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("deferred"))
-        const run = new ConnectionPollRun({
+        const gate = jest.fn<Promise<void>, [ConnectionRecord]>()
+        gate.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("deferred"))
+        const run = new ConnectionPollRunService({
             clock: new FakeClock(NOW.toISOString()),
             logger,
             timer,
@@ -262,13 +267,13 @@ describe("ConnectionPollRun the outcome a scheduler plans with", () => {
 
         expect(poller.fetch).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ to: T2 }))
         expect(outcome.kind).toBe("done")
-        expect(connections.patch).toHaveBeenCalledWith("ws-1", "conn-1", {
-            meta: expect.objectContaining({ [POLL_CURSOR_KEY]: carried.toISOString() }),
-        })
+        const [workspaceId, connectionId, patch] = connections.patch.mock.calls[0] ?? []
+        expect([workspaceId, connectionId]).toEqual(["ws-1", "conn-1"])
+        expect(patch?.meta?.[POLL_CURSOR_KEY]).toBe(carried.toISOString())
     })
 })
 
-describe("ConnectionPollRun why a provider refused", () => {
+describe("ConnectionPollRunService why a provider refused", () => {
     it("logs the code and the params of a domain error next to the connection, so the refusal can be read", async () => {
         const { run, logger, poller } = build()
         const failure = new ConnectionPollError({ code: ConnectionPollErrorCode.Deferred, params: { waitMs: 7000 } })

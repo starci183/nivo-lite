@@ -130,7 +130,7 @@ export const probeNode: NodeDefinition<typeof PROBE_INPUT, typeof PROBE_OUTPUT, 
             text,
             n: json.n,
             seen: tool.seen,
-            at: context.now().getTime() > 0 ? 1 : 0,
+            at: Math.sign(context.now().getTime()),
         }
     },
     examples: [
@@ -170,14 +170,14 @@ export const swallowNode: NodeDefinition<typeof SWALLOW_INPUT, typeof SWALLOW_OU
     effects: ["core.ping"],
     tools: ["core.look"],
     run: async (input, context) => {
-        const fell = await context.tools.call("core.look", {}).then(
-            () => false,
-            () => true,
-        )
-        if (!fell) return { fell }
-        if (input.after === "write") await context.data.write("record", { id: "r" })
-        else if (input.after !== "none") await context.effect("core.ping", { n: 1 })
-        return { fell }
+        try {
+            await context.tools.call("core.look", {})
+            return { fell: false }
+        } catch (cause) {
+            if (input.after === "write") await context.data.write("record", { id: "r" })
+            else if (input.after !== "none") await context.effect("core.ping", { n: 1 })
+            return { fell: cause !== undefined }
+        }
     },
     examples: [
         {
@@ -187,6 +187,27 @@ export const swallowNode: NodeDefinition<typeof SWALLOW_INPUT, typeof SWALLOW_OU
             output: { fell: false },
             effects: [],
             tools: [{ seen: true }],
+        },
+        {
+            name: "falls back to nothing when the tool fails",
+            params: {},
+            input: { after: "none" },
+            output: { fell: true },
+            effects: [],
+        },
+        {
+            name: "falls back to an effect when the tool fails",
+            params: {},
+            input: {},
+            output: { fell: true },
+            effects: ["core.ping"],
+        },
+        {
+            name: "falls back to a write when the tool fails",
+            params: {},
+            input: { after: "write" },
+            output: { fell: true },
+            effects: [],
         },
     ],
 })

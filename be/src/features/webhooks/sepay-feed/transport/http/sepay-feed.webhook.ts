@@ -1,8 +1,7 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req } from "@nestjs/common"
 import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
-import { BankFeedService } from "@modules/domain/billing"
-import { PollScheduleService } from "@modules/domain/connection-poll"
+import { BankFeedIntakeService, BankFeedReceiptsService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 
@@ -20,8 +19,8 @@ export const PROVIDER_ACK = { success: true } as const
  */
 export class SepayFeedWebhook {
     constructor(
-        private readonly feed: BankFeedService,
-        private readonly schedule: PollScheduleService,
+        private readonly feed: BankFeedReceiptsService,
+        private readonly intake: BankFeedIntakeService,
     ) {}
 
     /** Answers `{"success": true}` for every accepted, repeated or ignored delivery, so SePay stops retrying it. */
@@ -35,8 +34,7 @@ export class SepayFeedWebhook {
         @Headers("authorization") authorization: string | undefined,
     ): Promise<typeof PROVIDER_ACK> {
         await this.feed.verifyFeedDelivery(authorization, connectionId, request.rawBody, PROVIDER)
-        await this.feed.acceptFeedDelivery(request.rawBody, connectionId, PROVIDER)
-        await this.schedule.recordWebhook(connectionId)
+        await this.intake.acceptDelivery(request.rawBody, connectionId, PROVIDER)
         return PROVIDER_ACK
     }
 }

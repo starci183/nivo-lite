@@ -1,4 +1,4 @@
-import { Button, SegmentedControl } from "@starci/grammar/common"
+import { Button, ChoiceChips } from "@starci/grammar/common"
 import { NAV_SIGNIN } from "./classNames"
 
 /** The language switch and the sign-in and try actions. */
@@ -23,16 +23,17 @@ interface LandingNavActionsBaseProps {
 /** The actions slot of the top bar: language switch, sign-in and try. The switch gets size="control" once Grammar carries it. */
 export const LandingNavActionsBase = (props: LandingNavActionsBaseProps) => (
     <>
-        <SegmentedControl
+        <ChoiceChips
             label={props.props.language.label}
             isLabelHidden
             value={props.props.language.locale}
-            isDisabled={props.props.language.isPending}
+            empty={props.props.language.label}
             onValueChange={props.on.chooseLocale}
             options={props.props.language.options.map((option) => ({
                 value: option.value,
                 label: option.label,
-                accessibleLabel: option.name,
+                isDisabled: props.props.language.isPending,
+                disabledReason: option.name,
             }))}
         />
         <div className={NAV_SIGNIN}>

@@ -266,6 +266,10 @@ const registerDeliveryFailures = () => {
         expect(turn?.body).toBe("body of msg-1\nbody of msg-2\nbody of msg-3")
     })
 
+    registerLateReplies()
+}
+
+const registerLateReplies = () => {
     it("sends none of the model's text when the final reply is owed, and still shows the lines", async () => {
         const { service, messages, delivery, extensions } = await build()
         const outcomes = mock<CustomerOutcomes>()
@@ -310,10 +314,6 @@ const registerDeliveryFailures = () => {
         expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Waits for approval")
     })
 
-    registerDuplicateReplyGuard()
-}
-
-const registerDuplicateReplyGuard = () => {
     it("never sends a reply twice", async () => {
         const { service, delivery, extensions } = await build({ sent: true })
         extensions.useRuntime(runtimeAnswering(proposal()))
@@ -369,6 +369,10 @@ const registerHoldingReplies = () => {
         },
     )
 
+    registerHoldingRepeats()
+}
+
+const registerHoldingRepeats = () => {
     it("does not repeat the holding line within the hour, but still hands the question over", async () => {
         const { service, messages, delivery, receipts, extensions } = await build({ held: true })
         const outcomes = mock<CustomerOutcomes>()

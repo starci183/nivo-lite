@@ -89,7 +89,7 @@ const MODERN_IMAGE_BRANDS: ReadonlySet<string> = new Set([
 export const sniffUnsupportedImage = (bytes: Uint8Array): string | null => {
     if (GIF_SIGNATURES.some((signature) => startsWith(bytes, signature))) return "image/gif"
     if (!startsWith(bytes, FTYP_MARK, FTYP_OFFSET)) return null
-    const brand = String.fromCharCode(...bytes.slice(BRAND_OFFSET, BRAND_OFFSET + BRAND_LENGTH))
+    const brand = String.fromCodePoint(...bytes.slice(BRAND_OFFSET, BRAND_OFFSET + BRAND_LENGTH))
     return MODERN_IMAGE_BRANDS.has(brand) ? "image/heif" : null
 }
 

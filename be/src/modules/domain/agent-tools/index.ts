@@ -33,7 +33,7 @@ export type {
     LeadDraft,
     LeadWriteResult,
     OptionalAuthorization,
-    OptionalLeadId,
+    OptionalToolLeadId,
     ToolArgs,
     ToolContext,
     ToolManifestEntry,

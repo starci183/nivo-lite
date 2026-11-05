@@ -1,10 +1,12 @@
 import { resolve } from "node:path"
 import { Test } from "@nestjs/testing"
-import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import { fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { EntitlementsService } from "@modules/domain/billing"
 import type { StorageAssetsPort } from "@modules/integrations/object-storage"
-import { HTTP_CLIENT } from "@modules/platform/http"
+import { REMOTE_FILES } from "@modules/integrations/remote-files"
+import type { RemoteFileAnswer, RemoteFileRequest, RemoteFiles } from "@modules/integrations/remote-files"
 import type { HttpClient, HttpResponse } from "@modules/platform/http"
+import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import {
@@ -14,8 +16,9 @@ import {
     CHAT_FILES_RESOLVER,
 } from "./chat-files.decorators"
 import { ChatFilesLogEvent } from "./chat-files.log-events"
-import type { InboundFileReader } from "./inbound-file.reader"
-import type { HostResolver } from "./inbound-file.resolver"
+import type { InboundFileReader } from "./inbound-file.client"
+import type { HostResolver } from "./host-resolver.client"
+import { INBOUND_FILE_HEADERS } from "./inbound-file.policy"
 import { InboundFilesService } from "./inbound-files.service"
 import { AgentMessageAttachmentEntity } from "./persistence/entities"
 
@@ -41,9 +44,39 @@ const answer = (
     body,
 })
 
+/** What the remote files client makes of one HTTP answer: the bytes are kept only for a success of an accepted type within the limit. */
+const answerOf = (request: RemoteFileRequest, response: HttpResponse): RemoteFileAnswer => {
+    const contentType = response.headers?.["content-type"] ?? ""
+    const body = Buffer.isBuffer(response.body) ? response.body : null
+    const length = body?.length ?? 0
+    const kept = body !== null && response.status >= 200 && response.status <= 299 && request.accepts(contentType)
+    return {
+        status: response.status,
+        contentType,
+        location: response.headers?.location,
+        length,
+        bytes: kept && length > 0 && length <= request.maxBytes ? body : null,
+    }
+}
+
 const build = async () => {
     const http = mock<HttpClient>()
     http.request.mockResolvedValue(answer(200, PNG, { "content-type": "image/png" }))
+    const files = mock<RemoteFiles>({ maxRedirects: 3 })
+    files.read.mockImplementation(async (request) =>
+        answerOf(
+            request,
+            await http.request({
+                method: "GET",
+                url: request.url,
+                read: "bytes",
+                timeoutMs: request.timeoutMs,
+                ...(request.headers === undefined ? {} : { headers: request.headers }),
+                ...(request.pin === undefined ? {} : { pin: request.pin }),
+                ...(request.redirect === undefined ? {} : { redirect: request.redirect }),
+            }),
+        ),
+    )
     const assets = mock<StorageAssetsPort>()
     assets.upload.mockResolvedValue({ error: null })
     const reader = mock<InboundFileReader>()
@@ -56,12 +89,13 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             InboundFilesService,
-            { provide: HTTP_CLIENT, useValue: http },
+            { provide: REMOTE_FILES, useValue: files },
             { provide: CHAT_FILES_ASSETS, useValue: assets },
             { provide: CHAT_FILES_IMPORT_ROOT, useValue: ROOT },
             { provide: CHAT_FILES_READER, useValue: reader },
             { provide: CHAT_FILES_RESOLVER, useValue: resolver },
             { provide: LOGGER, useValue: logger },
+            { provide: IDS, useValue: fakeIds() },
             { provide: EntitlementsService, useValue: entitlements },
         ],
     }).compile()
@@ -78,10 +112,7 @@ describe("InboundFilesService download from an address", () => {
         expect(http.request).toHaveBeenCalledWith({
             method: "GET",
             url: LIVE,
-            headers: expect.objectContaining({
-                accept: expect.stringContaining("image/*"),
-                "user-agent": expect.stringContaining("Mozilla/5.0"),
-            }),
+            headers: INBOUND_FILE_HEADERS,
             read: "bytes",
             redirect: "manual",
             pin: PUBLIC_ADDRESS,
@@ -136,7 +167,9 @@ describe("InboundFilesService redirects", () => {
         expect(resolver.resolve).toHaveBeenNthCalledWith(2, "cdn-2.zdn.vn")
         expect(http.request).toHaveBeenNthCalledWith(2, expect.objectContaining({ url: "https://cdn-2.zdn.vn/p/1" }))
     })
+})
 
+describe("InboundFilesService redirects that are followed or refused", () => {
     it("follows a relative location", async () => {
         const { service, http } = await build()
         http.request
@@ -212,7 +245,7 @@ describe("InboundFilesService redirects", () => {
     })
 })
 
-describe("InboundFilesService a file that is left out", () => {
+describe("InboundFilesService a file that is left out before a request", () => {
     it.each([
         ["an address that is not https", { ...remote, url: "http://cdn.test/a" }, "blocked"],
         ["an internal address", { ...remote, url: "https://localhost/a" }, "blocked"],
@@ -227,7 +260,9 @@ describe("InboundFilesService a file that is left out", () => {
         expect(http.request).not.toHaveBeenCalled()
         expect(logger.warn).toHaveBeenCalledWith(ChatFilesLogEvent.InboundSkipped, expect.objectContaining({ reason }))
     })
+})
 
+describe("InboundFilesService a file that is left out after an answer", () => {
     it.each([
         ["a failed request", () => Promise.reject(new Error("timeout")), 0, "", 0],
         [
@@ -279,7 +314,9 @@ describe("InboundFilesService a file that is left out", () => {
             })
         },
     )
+})
 
+describe("InboundFilesService what a left-out file logs", () => {
     it("never logs the address, only its host", async () => {
         const { service, http, logger } = await build()
         http.request.mockResolvedValue(answer(403, "", {}))
@@ -390,7 +427,7 @@ describe("InboundFilesService keep", () => {
         expect(entitlements.requireStorageFor).toHaveBeenCalledWith("ws-1", PNG.length)
         const [bucket, path, body, type] = assets.upload.mock.calls[0] ?? []
         expect(bucket).toBe("media")
-        expect(path).toMatch(/^ws-1\/chat\/conv-1\/[0-9a-f-]{36}\.png$/u)
+        expect(path).toBe("ws-1/chat/conv-1/00000000-0000-4000-8000-000000000001.png")
         expect(Buffer.isBuffer(body)).toBe(true)
         expect(type).toBe("image/png")
         expect(tx.em.insert).toHaveBeenCalledWith(AgentMessageAttachmentEntity, {

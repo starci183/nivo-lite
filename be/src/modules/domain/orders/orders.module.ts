@@ -2,8 +2,9 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./orders.module-definition"
 import { OrderPaymentClaimsService } from "./order-payment-claims.service"
+import { OrderPaymentSettlementService } from "./order-payment-settlement.service"
 import { OrdersService } from "./orders.service"
-import { WORK_RAISED } from "@modules/domain/decisions/work-engine.decorators"
+import { WORK_RAISED } from "@modules/domain/work-items"
 import { PaymentDemandService } from "./payment-demand.service"
 import { PaymentClaimGraphAdapter } from "./payment-claim-graph.adapter"
 import { PaymentClaimWithdrawGraphAdapter } from "./payment-claim-withdraw-graph.adapter"
@@ -29,6 +30,7 @@ export class OrdersModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 OrdersService,
                 OrderPaymentClaimsService,
+                OrderPaymentSettlementService,
                 PaymentDemandService,
                 PaymentClaimGraphAdapter,
                 PaymentClaimWithdrawGraphAdapter,

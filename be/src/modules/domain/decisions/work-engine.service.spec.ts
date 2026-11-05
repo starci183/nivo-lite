@@ -76,6 +76,9 @@ const run = async (options: fx.WorkEngineFixtureOptions = {}, overrides: Partial
     return { built, item: await built.service.runWork(fx.ctx, fx.specOf(overrides)) }
 }
 
+const approve = (built: Awaited<ReturnType<typeof build>>, edits: Work.WorkEdits = {}) =>
+    built.service.resumeWork(fx.ctx, "item-1", "approved", edits, fx.owner)
+
 describe("WorkEngineService / durable execution choices", () => {
     it("uses the exact queued draft without preparation and asks when the producer requires approval", async () => {
         const proposal = fx.approvalMessageOf({ summary: "API message", fields: {} })
@@ -108,7 +111,7 @@ describe("WorkEngineService / durable execution choices", () => {
     it("retains noChain after approving and editing an order that has an invoice successor", async () => {
         const proposal = fx.approvalMessageOf({ draft: "Original" })
         const built = await build(fx.noChainOrderOptions(proposal))
-        const completed = await built.service.resumeWork(fx.ctx, "item-1", "approved", { draft: "Edited" }, fx.owner)
+        const completed = await approve(built, { draft: "Edited" })
         expect(completed.status).toBe("done")
         expect(built.performer?.perform).toHaveBeenCalledWith(
             fx.ctx,
@@ -185,11 +188,7 @@ describe("WorkEngineService / runWork", () => {
     })
 
     it("makes an action nobody listed and nobody gave a rule a generic owner decision, with its name kept", async () => {
-        const { built, item } = await run(
-            { rule: null, action: null, items: { claim: resolved(fx.itemOf({ action: "connect_sepay" })) } },
-            { action: "connect_sepay", preset: true, forceAsk: "branch_ask" },
-        )
-
+        const { built, item } = await run(...harness.genericOwnerRunOf())
         expect(item.status).toBe("waiting_decision")
         expect(built.approval.ask).toHaveBeenCalledWith(fx.ctx, anyValue, anyValue, {
             verdict: objectLike({ verdict: "ask", reason: "branch_ask" }),
@@ -200,8 +199,7 @@ describe("WorkEngineService / runWork", () => {
     it("runs by the tag right when the owner has granted no rule, and leaves a stored ask rule to the owner", async () => {
         const tagged = await run({ rule: null }, { tagGrant: true })
         const stored = await run({ rule: fx.ruleOf({ mode: "ask" }) }, { tagGrant: true })
-
-        expect(tagged.built.modules.tagRuleOf).toHaveBeenCalledWith(expect.any(String))
+        expect(tagged.built.modules.tagRuleOf).toHaveBeenCalledWith("send_quote")
         expect(tagged.built.approval.ask).not.toHaveBeenCalled()
         expect(tagged.built.recorder.finished).toHaveBeenCalledTimes(1)
         expect(stored.built.modules.tagRuleOf).not.toHaveBeenCalled()
@@ -254,9 +252,7 @@ describe("WorkEngineService / the graph of the agent", () => {
         async (_label, outcome, note, inserts) => {
             const built = await build()
             built.branching.consult.mockResolvedValueOnce(outcome())
-
             await expect(built.service.runWork(fx.ctx, fx.specOf())).resolves.toMatchObject({ status: "rejected" })
-
             const summary = { summary: "engine.rejectedResult()" }
             expect(built.items.markRejected).toHaveBeenCalledWith("item-1", fx.quote, summary, expect.anything())
             expect(built.recorder.rejected).toHaveBeenCalledWith(...fx.graphRejectionArgsOf(existingItem, note))
@@ -269,18 +265,14 @@ describe("WorkEngineService / the graph of the agent", () => {
     it("runs the action the graph names on the same subject, with a person to decide it", async () => {
         const built = await build()
         built.branching.consult.mockResolvedValueOnce(fx.divertedByGraph())
-
         await built.service.runWork(fx.ctx, fx.specOf())
-
         expect(built.intake.insert.mock.calls[1]?.[1]).toMatchObject(fx.divertedWork)
     })
 
     it("starts a diverted action that names its own target with no ask and no target of ours", async () => {
         const built = await build()
         const divert = { action: "hand_over_conversation", handoverTo: null, asks: false }
-
         await built.service.runDiverted(fx.ctx, divert, fx.replySource)
-
         const spec = built.intake.insert.mock.calls[0]?.[1]
         expect(spec).toMatchObject(fx.unaskedDivertedWork)
         expect(spec).not.toHaveProperty("forceAsk")
@@ -289,7 +281,6 @@ describe("WorkEngineService / the graph of the agent", () => {
     it("asks the graph about something that leaves with no work item", async () => {
         const built = await build()
         built.branching.check.mockResolvedValue(fx.stopAnswer)
-
         await expect(built.service.checkGraph(fx.replyCheck)).resolves.toBe(fx.stopAnswer)
         expect(built.branching.check).toHaveBeenCalledWith(fx.replyCheck)
     })
@@ -331,15 +322,8 @@ describe("WorkEngineService", () => {
             expect(built.items.nextQueued).not.toHaveBeenCalled()
             expect(built.items.nextInboundQueued).not.toHaveBeenCalled()
             if (claimed) {
-                expect(built.performer?.prepare).toHaveBeenCalledWith(fx.ctx, fx.itemOf())
-                expect(built.items.savePrepared).toHaveBeenCalledWith("item-1", blankPatch)
-                expect(built.access.accessOf).toHaveBeenCalledWith(fx.ctx, fx.itemOf(), fx.quote)
-                expect(built.performer?.perform).toHaveBeenCalledWith(fx.ctx, fx.itemOf(), fx.quote, autoPlan.by)
-                expect(built.items.markDone).toHaveBeenCalledWith("item-1", { ...autoResult, proposal: fx.quote })
-                expect(built.recorder.finished).toHaveBeenCalledWith(
-                    ...fx.autoFinishArgsOf(fx.itemOf(), doneItem, fx.quote),
-                )
-                expect(built.chain.continueChain).toHaveBeenCalledWith(fx.ctx, doneItem)
+                for (const [call, args] of harness.claimedRunCalls(built, doneItem))
+                    expect(call).toHaveBeenCalledWith(...args)
             } else expect(built.performer?.prepare).not.toHaveBeenCalled()
         })
         it.each(fx.inboundBatches)(
@@ -362,9 +346,7 @@ describe("WorkEngineService", () => {
 describe("WorkEngineService / resumeWork", () => {
     it("refuses a decision on an item that no longer waits", async () => {
         const built = await build({ items: { reopen: resolved(null) } })
-        await expect(built.service.resumeWork(fx.ctx, "item-1", "approved", {}, fx.owner)).rejects.toThrow(
-            DecisionsErrorCode.NotWaiting,
-        )
+        await expect(approve(built)).rejects.toThrow(DecisionsErrorCode.NotWaiting)
         expect(built.items.reopen).toHaveBeenCalledWith("ws-1", "item-1")
     })
 
@@ -407,9 +389,7 @@ describe("WorkEngineService / resumeWork", () => {
 
     it("sends the item back to waiting and names the fields that are still missing", async () => {
         const built = await build({ rule: fx.ruleOf({ required_fields: ["need"] }) })
-        await expect(built.service.resumeWork(fx.ctx, "item-1", "approved", {}, fx.owner)).rejects.toMatchObject(
-            fx.missingFieldsError,
-        )
+        await expect(approve(built)).rejects.toMatchObject(fx.missingFieldsError)
         expect(built.items.markStillWaiting).toHaveBeenCalledWith("item-1", fx.stillMissingData)
         expect(built.recorder.finished).not.toHaveBeenCalled()
     })
@@ -418,9 +398,7 @@ describe("WorkEngineService / resumeWork", () => {
 describe("WorkEngineService / candidate decisions", () => {
     it("asks the person to choose among several candidates", async () => {
         const built = await build(fx.ambiguousCandidateOptions())
-        await expect(built.service.resumeWork(fx.ctx, "item-1", "approved", {}, fx.owner)).rejects.toMatchObject(
-            fx.chooseCandidateError,
-        )
+        await expect(approve(built)).rejects.toMatchObject(fx.chooseCandidateError)
         expect(built.items.markStillWaiting).toHaveBeenCalledWith(
             "item-1",
             expect.objectContaining({ proposal: fx.candidateProposal, reason: "unclear_outcome" }),
@@ -429,7 +407,7 @@ describe("WorkEngineService / candidate decisions", () => {
 
     it("accepts the chosen candidate", async () => {
         const built = await build(fx.chosenCandidateOptions())
-        await built.service.resumeWork(fx.ctx, "item-1", "approved", { candidateId: "inv-2" }, fx.owner)
+        await approve(built, { candidateId: "inv-2" })
         const chosen = objectLike({ candidates: [fx.candidates[1]] })
         expect(built.recorder.finished).toHaveBeenCalledWith(
             ...fx.recordedFinishArgsOf(anyValue, anyValue, chosen, anyValue, anyValue),
@@ -461,7 +439,7 @@ describe("WorkEngineService atomic human closure", () => {
             expect(built.tx.commits).toBe(1)
             return Promise.resolve()
         })
-        await built.service.resumeWork(fx.ctx, "item-1", "approved", { draft: "Approved text" }, fx.owner)
+        await approve(built, { draft: "Approved text" })
         const manager = built.items.markDone.mock.calls[0]?.[2]
         const expected = fx.authoritativeFinishArgsOf(
             manager,
@@ -477,9 +455,7 @@ describe("WorkEngineService atomic human closure", () => {
     it("rolls back a close whose authoritative decision cannot be written and never announces it", async () => {
         const built = await build({ rule: fx.ruleOf({ mode: "ask" }) })
         built.recorder.recordFinished.mockRejectedValue(new Error("decision-write-failed"))
-        await expect(built.service.resumeWork(fx.ctx, "item-1", "approved", {}, fx.owner)).rejects.toThrow(
-            "decision-write-failed",
-        )
+        await expect(approve(built)).rejects.toThrow("decision-write-failed")
         expect(built.tx.commits).toBe(0)
         expect(built.finished).not.toHaveBeenCalled()
     })
@@ -487,9 +463,7 @@ describe("WorkEngineService atomic human closure", () => {
     it("keeps a committed approval closed when a later notification fails", async () => {
         const built = await build({ rule: fx.ruleOf({ mode: "ask" }) })
         built.finished.mockRejectedValue(new Error("office-unavailable"))
-        await expect(built.service.resumeWork(fx.ctx, "item-1", "approved", {}, fx.owner)).resolves.toMatchObject(
-            fx.doneState,
-        )
+        await expect(approve(built)).resolves.toMatchObject(fx.doneState)
         expect(built.failed).not.toHaveBeenCalled()
         expect(built.tx.commits).toBe(1)
     })

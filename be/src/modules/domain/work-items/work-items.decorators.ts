@@ -11,3 +11,6 @@ export const InjectWorkItemsLeads = (): TypedParameterDecorator<WorkItemsLeadDir
 
 /** Token of the closed-item hook; the app root binds it to the runs that wait on a decision. */
 export const WORK_ITEM_CLOSED: unique symbol = Symbol("domain.work-items.closed")
+
+/** Token of the raised-for-a-claim hook; the capability that owns claims binds it, and the work engine calls it. */
+export const WORK_RAISED: unique symbol = Symbol("domain.work-items.work-raised")

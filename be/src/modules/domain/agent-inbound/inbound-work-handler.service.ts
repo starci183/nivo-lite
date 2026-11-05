@@ -12,16 +12,17 @@ import {
 import type { AgentGraphBrief } from "@modules/domain/agent-graphs"
 import type { IntentPlan } from "@modules/domain/agent-turns"
 import type { IntentTrigger } from "@modules/domain/intent-contracts"
-import { AgentTurnsService, AgentWorkHandlersService, decodeInbound, wakeSources } from "@modules/domain/agent-work"
+import { AgentTurnsService, AgentWorkHandlersService, wakeSources } from "@modules/domain/agent-work"
+import { decodeInbound } from "@modules/domain/agent-wake-rules"
 import type {
     AgentHandlerEnding,
     AgentTurnPrep,
     AgentTurnView,
-    AgentWakeInbound,
     AgentWakeSource,
     AgentWakeView,
     AgentWorkFallback,
 } from "@modules/domain/agent-work"
+import type { AgentWakeInbound } from "@modules/domain/agent-wake-rules"
 import { AgentDirectoryService, AgentsService, InjectInstallations } from "@modules/domain/agents"
 import type { Installation, InstallationDirectory } from "@modules/domain/agents"
 import { threadKeyFor } from "@modules/integrations/openclaw"

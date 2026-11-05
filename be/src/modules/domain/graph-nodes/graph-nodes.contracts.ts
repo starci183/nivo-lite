@@ -54,6 +54,12 @@ export interface NodeDataPort {
     write?(turn: NodeTurn, record: NodeRow): Promise<SubjectRef>
 }
 
+/** The act of one effect call: it runs the effect and answers the subject it touched. */
+export type EffectAct = () => Promise<SubjectRef>
+
+/** The executor of one effect, or undefined when no module performs it. */
+export type OptionalNodeEffectExecutor = NodeEffectExecutor | undefined
+
 /** The executor of one effect, which the module that acts registers. It runs once per call; the host keeps the ledger. */
 export interface NodeEffectExecutor {
     /** The effect id it runs. */

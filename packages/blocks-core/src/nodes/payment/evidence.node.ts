@@ -118,7 +118,7 @@ const nameOf = async (context: NodeContext, leadId: string): Promise<string | nu
     return lead?.contactName ?? null
 }
 
-const openClaims = async (context: NodeContext): Promise<ReadonlyArray<ClaimRow>> =>
+const openClaims = (context: NodeContext): Promise<ReadonlyArray<ClaimRow>> =>
     context.data.read<ClaimRow>("payment-claim", {
         where: { status: "open" },
         fields: READ_CLAIMS.fields,
@@ -210,7 +210,7 @@ const fromClaim = async (context: NodeContext, claimId: string, windowMs: number
         fields: READ_CLAIMS.fields,
         limit: 1,
     })
-    if (claim === undefined || claim.status !== "open") return NONE
+    if (claim?.status !== "open") return NONE
     const leadId = await leadOf(context, claim)
     const leadName = leadId === null ? null : await nameOf(context, leadId)
     const transaction = bestTransaction(claim, leadName, await feedFor(context, claim), windowMs)

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { WAKE_SOURCE_KEY, wakeInboundSchema } from "@modules/domain/agent-work"
+import { WAKE_SOURCE_KEY, wakeInboundSchema } from "@modules/domain/agent-wake-rules"
 import { INTENT_TRIGGER_MAX, INTENT_TRIGGER_PATTERN } from "@modules/domain/intent-contracts"
 import { TURN_TEXT_MAX } from "./intent-turn.policy"
 import type { WakeRow } from "./agent-turns.contracts"

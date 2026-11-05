@@ -4,11 +4,12 @@ import type { EntityManager } from "typeorm"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { nodeSagaOf } from "@nivo-lite/agent-sdk/node"
 import { AgentRunsService } from "@modules/domain/agent-runs"
-import type { StepJson, StepSpec } from "@modules/domain/agent-runs"
+import type { StepSpec } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import type { AgentHandlerEnding, AgentTurnView, AgentWorkFlow } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { FlowTriggerScope } from "./agent-graphs.contracts"
 import { InjectFlowTriggerMessages } from "./agent-graphs.decorators"
 import type { FlowTriggerMessages } from "./agent-graphs.port"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -48,7 +49,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
     /** True when the agent's active node graph is woken from where this wake came from. */
     async takes(turn: AgentTurnView): Promise<boolean> {
         const active = await this.activeOf(turn.workspaceId, turn.agentId)
-        return active !== null && active.flow.trigger.sources.includes(tagSourceOf(turn))
+        return active?.flow.trigger.sources.includes(tagSourceOf(turn)) === true
     }
 
     /** Opens the wake's run and writes the step of the first node; a replay of the wake finds the run and the step already there. */
@@ -80,7 +81,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
      * with its time and files, `messageIds` their ids, and `leadId` and `channel` come from the conversation. A tag keeps the words its
      * tagger gave.
      */
-    async triggerOf(turn: AgentTurnView): Promise<StepJson> {
+    async triggerOf(turn: AgentTurnView): Promise<FlowTriggerScope> {
         const scope = triggerScopeOf(turn)
         const { conversationId, messageId, mergedMessageIds } = turn.context
         if (

@@ -1,5 +1,6 @@
 import { builder } from "@starci/jest-preset"
 import { agentConversationsEntities } from "@modules/domain/agent-conversations"
+import type { AgentDirectoryService } from "@modules/domain/agents"
 
 const AgentConversationEntity: (typeof agentConversationsEntities)[0] = agentConversationsEntities[0]
 type AgentConversationEntity = InstanceType<typeof AgentConversationEntity>
@@ -124,3 +125,47 @@ export const zaloChatC1 = (): AgentConversationEntity => chatOf({ id: "c1", chan
 
 /** The conversation c1 of the Zalo customer u-1 named An. */
 export const namedZaloChat = (): AgentConversationEntity => chatOf({ id: "c1", externalId: "u-1", visitorName: "An" })
+
+/** The agent that speaks in the turn conversation. */
+export const TURN_AGENT: NonNullable<Awaited<ReturnType<AgentDirectoryService["turnFactsOf"]>>> = {
+    id: "agent-1",
+    name: "Chatbot",
+    handle: "chatbot",
+    role: "Customer chat",
+    module: "chatbot",
+    instructions: "Be kind",
+    knowledge: "Tea",
+    approvalRule: "ask",
+    greeting: "Hi",
+}
+
+/** The chat the owner reads back after a spec opens or lists one: the held website chat of the visitor Minh. */
+export const chat: Record<string, string> = {
+    id: "chat-1",
+    kind: "customer",
+    channel: "website",
+    visitorName: "Minh",
+    leadId: "lead-1",
+    handledBy: "Lan",
+    createdAt: "2026-10-13T02:00:00.000Z",
+}
+
+/** What a spec opens a chat with: the agent of the workspace, the kind of chat and the visitor, when named. */
+export interface ChatInput {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent that answers. */
+    readonly agentId: string
+    /** Whether a customer or the owner testing opened it. */
+    readonly kind: "customer" | "test"
+    /** The visitor, or null when unnamed. */
+    readonly visitorName: string | null
+}
+
+/** The values a chat is opened with, for the kind and the visitor a spec names. */
+export const chatInput = (kind: "customer" | "test", visitorName: string | null): ChatInput => ({
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    kind,
+    visitorName,
+})

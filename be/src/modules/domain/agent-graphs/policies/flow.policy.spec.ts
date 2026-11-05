@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
-import { AgentGraphsErrorCode } from "../errors/agent-graphs.error"
-import type { GraphDocument } from "../agent-graphs.contracts"
+import { nodeOf } from "@tests/fixtures/builders/agent-graph.builder"
+import { AgentGraphsError, AgentGraphsErrorCode } from "../errors/agent-graphs.error"
 import { flowChanged, isFlowOnly, requireSoundFlow, sameFlow } from "./flow.policy"
 
 /** The members of the subject under test. */
@@ -21,21 +21,22 @@ const build = async (): Promise<Subject> => {
     return moduleRef.get<Subject>(SUBJECT)
 }
 
+const NODE_A: GraphSpecNode = {
+    key: "a",
+    kind: "execute",
+    step: "x",
+    input: { text: { $ref: "trigger.text" }, list: [1, null, "b"] },
+    next: "b",
+}
+
+const NODE_B: GraphSpecNode = { key: "b", kind: "output", step: "stop" }
+
 const FLOW: GraphSpec = {
     schema: "nivo/agent-graph@1",
     moduleKey: "sales",
     trigger: { kind: "tag", sources: ["channel"] },
     grant: { rights: [], tools: [], effects: [] },
-    nodes: [
-        {
-            key: "a",
-            kind: "execute",
-            step: "x",
-            input: { text: { $ref: "trigger.text" }, list: [1, null, "b"] },
-            next: "b",
-        },
-        { key: "b", kind: "output", step: "stop" },
-    ],
+    nodes: [NODE_A, NODE_B],
 }
 
 describe("sameFlow", () => {
@@ -47,7 +48,7 @@ describe("sameFlow", () => {
 
     it("is true for the same flow, whatever the order of the keys and an unset key", async () => {
         const subject = await build()
-        const reordered = {
+        const reordered: GraphSpec = {
             nodes: [
                 {
                     next: "b",
@@ -63,25 +64,20 @@ describe("sameFlow", () => {
             trigger: { sources: ["channel"], kind: "tag" },
             moduleKey: "sales",
             schema: "nivo/agent-graph@1",
-        } as GraphSpec
+        }
 
         expect(subject.sameFlow(reordered, FLOW)).toBe(true)
     })
 
     it("is false when a value, a node or an element of a list differs", async () => {
         const subject = await build()
-        const [first, second] = FLOW.nodes
-
         expect(subject.sameFlow({ ...FLOW, moduleKey: "chatbot" }, FLOW)).toBe(false)
-        expect(subject.sameFlow({ ...FLOW, nodes: [first as GraphSpec["nodes"][number]] }, FLOW)).toBe(false)
+        expect(subject.sameFlow({ ...FLOW, nodes: [NODE_A] }, FLOW)).toBe(false)
         expect(
             subject.sameFlow(
                 {
                     ...FLOW,
-                    nodes: [
-                        { ...(first as GraphSpec["nodes"][number]), input: { list: [1, null, "c"] } },
-                        second as GraphSpec["nodes"][number],
-                    ],
+                    nodes: [{ ...NODE_A, input: { list: [1, null, "c"] } }, NODE_B],
                 },
                 FLOW,
             ),
@@ -110,16 +106,23 @@ describe("flowChanged and requireSoundFlow", () => {
                 index,
             ),
         ).not.toThrow()
-        expect(() => requireSoundFlow(FLOW, index)).toThrow(
-            expect.objectContaining({ code: AgentGraphsErrorCode.PublishRefused }),
-        )
+        const refusal = (): unknown => {
+            try {
+                requireSoundFlow(FLOW, index)
+                return null
+            } catch (cause) {
+                return cause
+            }
+        }
+        const refused = refusal()
+        expect(refused instanceof AgentGraphsError ? refused.code : refused).toBe(AgentGraphsErrorCode.PublishRefused)
     })
 })
 
 describe("isFlowOnly", () => {
     it("is true for a graph with a flow and no old node, and false for one with old nodes or with no flow", async () => {
         const subject = await build()
-        const old = { nodes: [{ key: "n" }] } as unknown as GraphDocument
+        const old = { nodes: [nodeOf({ key: "n" })] }
 
         expect(subject.isFlowOnly({ nodes: [], rights: [], flow: FLOW })).toBe(true)
         expect(subject.isFlowOnly({ ...old, rights: [], flow: FLOW })).toBe(false)

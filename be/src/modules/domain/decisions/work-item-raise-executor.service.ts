@@ -3,30 +3,22 @@ import type { OnModuleInit } from "@nestjs/common"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
-import type { SubjectType } from "@modules/domain/work-items"
-import { z } from "zod"
 import type { WorkSpec } from "./decisions.contracts"
 import { InjectWorkRaised } from "./work-engine.decorators"
-import type { WorkRaisedHook } from "./work-engine.port"
+import type { WorkRaisedHook } from "@modules/domain/work-items"
 import { WorkEngineService } from "./work-engine.service"
+import type { PayloadMembers, RaisedSubject } from "./work-item-effects.contracts"
+import { raisePayloadSchema } from "./work-item-effects.schema"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 
 /** The name under which a graph node raises work in the Office. */
 const ACTOR = "NIVO"
 
-const raisePayload = z.object({
-    action: z.string().min(1),
-    title: z.string().min(1),
-    payload: z.record(z.string(), z.unknown()),
-    amountVnd: z.number().nonnegative().optional(),
-    claimId: z.string().min(1).optional(),
-})
-
 /** The text of a payload member, or null when it is not a text. */
 const textOf = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
 
 /** The structured fields a work item keeps: the members of the payload that are text, numbers or null. */
-const fieldsOf = (payload: Readonly<Record<string, unknown>>): Readonly<Record<string, string | number | null>> =>
+const fieldsOf = (payload: PayloadMembers): Readonly<Record<string, string | number | null>> =>
     Object.fromEntries(
         Object.entries(payload).filter(
             (entry): entry is [string, string | number | null] =>
@@ -35,10 +27,7 @@ const fieldsOf = (payload: Readonly<Record<string, unknown>>): Readonly<Record<s
     )
 
 /** What the work is about: the order, else the customer, else the conversation of the turn. */
-const subjectOf = (
-    payload: Readonly<Record<string, unknown>>,
-    turn: NodeTurn,
-): { readonly type: SubjectType; readonly id: string | null } => {
+const subjectOf = (payload: PayloadMembers, turn: NodeTurn): RaisedSubject => {
     const orderId = textOf(payload.orderId)
     if (orderId !== null) return { type: "order", id: orderId }
     const leadId = textOf(payload.leadId)
@@ -70,7 +59,7 @@ export class WorkItemRaiseExecutorService implements OnModuleInit {
     }
 
     private async raise(turn: NodeTurn, payload: EffectPayload, key: string): Promise<SubjectRef> {
-        const given = raisePayload.parse(payload)
+        const given = raisePayloadSchema.parse(payload)
         const subject = subjectOf(given.payload, turn)
         const installation = await this.installations.ofAgent(turn.workspaceId, turn.agentId)
         const spec: WorkSpec = {

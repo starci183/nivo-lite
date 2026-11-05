@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { WorkspacePaymentAccountService, bankNameOf } from "@modules/domain/channel-connections"
+import { WorkspacePaymentAccountService, bankDisplayNameOf } from "@modules/domain/channel-connections"
 import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { PaymentInstructionRegistry } from "@modules/domain/provider-registry"
+import { PaymentInstructionRegistryService } from "@modules/domain/provider-registry"
 import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
 import { PAYMENT_INSTRUCTION_INPUT_SCHEMA, PAYMENT_INSTRUCTION_SCHEMA } from "./payment-native.schema"
 
@@ -35,7 +35,7 @@ export class PaymentNativeService implements NativeAdapter {
 
     constructor(
         private readonly accounts: WorkspacePaymentAccountService,
-        private readonly providers: PaymentInstructionRegistry,
+        private readonly providers: PaymentInstructionRegistryService,
     ) {}
 
     /** Runs `instruction`; any other tool is unknown. */
@@ -46,7 +46,7 @@ export class PaymentNativeService implements NativeAdapter {
         const provider = account === null ? undefined : this.providers.of(account.provider)
         if (account === null || provider === undefined) throw nativeRefusal("not_connected")
         return {
-            bankName: bankNameOf(account.bankCode),
+            bankName: bankDisplayNameOf(account.bankCode),
             bankCode: account.bankCode,
             accountNumber: account.accountNumber,
             accountHolder: account.holder ?? "",

@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto"
 import { sameText } from "./channel-secret.policy"
-import { isJsonObject, textOf } from "./webhook-body.policy"
+import { isJsonObject, fieldTextOf } from "./webhook-body.policy"
 import type { JsonObject } from "./webhook-body.policy"
 
 /** The body payOS posts: a code, a success flag, the payment `data` and the `signature` over it. */
@@ -64,8 +64,8 @@ export const readPayosDelivery = (body: PayosBody): PayosReading => {
 
 /** The fields of a parsed payOS delivery the proof and the reading use; a field of the wrong type counts as absent. */
 export const payosBodyOf = (body: JsonObject): PayosBody => ({
-    code: textOf(body.code),
+    code: fieldTextOf(body.code),
     success: typeof body.success === "boolean" ? body.success : undefined,
     data: isJsonObject(body.data) ? body.data : null,
-    signature: textOf(body.signature),
+    signature: fieldTextOf(body.signature),
 })

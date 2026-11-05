@@ -6,14 +6,11 @@ import {
     TASK_WAKE_MIN_MS,
     attemptBudgetOf,
     awaitsAnswer,
-    backgroundCapSpent,
     boundedWakeAt,
-    breakerOpen,
     debounceMaxMsOf,
     debounceMsOf,
     burstFor,
     burstSourceOf,
-    isBackground,
     priorityOf,
     restoresHeldWake,
     retryWaitOf,
@@ -31,14 +28,11 @@ const buildSubject = async () => {
                 useValue: {
                     attemptBudgetOf,
                     awaitsAnswer,
-                    backgroundCapSpent,
                     boundedWakeAt,
-                    breakerOpen,
                     debounceMaxMsOf,
                     debounceMsOf,
                     burstFor,
                     burstSourceOf,
-                    isBackground,
                     priorityOf,
                     restoresHeldWake,
                     retryWaitOf,
@@ -131,17 +125,6 @@ describe("boundedWakeAt", () => {
     })
 })
 
-describe("isBackground", () => {
-    it("is true for the sources nobody waits on", async () => {
-        const { isBackground } = await buildSubject()
-
-        expect(isBackground("customer")).toBe(false)
-        expect(isBackground("tag")).toBe(false)
-        expect(isBackground("internal")).toBe(true)
-        expect(isBackground("schedule")).toBe(true)
-    })
-})
-
 describe("restoresHeldWake", () => {
     it("runs a customer or tag wake under a day old again", async () => {
         const { restoresHeldWake } = await buildSubject()
@@ -161,37 +144,6 @@ describe("restoresHeldWake", () => {
     })
 })
 
-describe("backgroundCapSpent", () => {
-    it("is spent when today's count reached the cap", async () => {
-        const { backgroundCapSpent } = await buildSubject()
-
-        expect(backgroundCapSpent({ backgroundDay: "2026-11-10", backgroundTurns: 5 }, 5, "2026-11-10")).toBe(true)
-    })
-
-    it("is not spent under the cap, or when the count belongs to another day or to no day", async () => {
-        const { backgroundCapSpent } = await buildSubject()
-
-        expect(backgroundCapSpent({ backgroundDay: "2026-11-10", backgroundTurns: 4 }, 5, "2026-11-10")).toBe(false)
-        expect(backgroundCapSpent({ backgroundDay: "2026-11-09", backgroundTurns: 99 }, 5, "2026-11-10")).toBe(false)
-        expect(backgroundCapSpent({ backgroundDay: null, backgroundTurns: 0 }, 5, "2026-11-10")).toBe(false)
-    })
-})
-
-describe("breakerOpen", () => {
-    it("is open until the moment it names", async () => {
-        const { breakerOpen } = await buildSubject()
-
-        expect(breakerOpen(new Date(NOW.getTime() + 1), NOW)).toBe(true)
-        expect(breakerOpen(NOW, NOW)).toBe(false)
-    })
-
-    it("is closed when it was never opened", async () => {
-        const { breakerOpen } = await buildSubject()
-
-        expect(breakerOpen(null, NOW)).toBe(false)
-    })
-})
-
 describe("wakeProgressOf", () => {
     it("tells waiting, running, done and failed wakes in the words of a job", async () => {
         const { wakeProgressOf } = await buildSubject()
@@ -207,12 +159,11 @@ describe("wakeProgressOf", () => {
 })
 
 describe("a source the table does not know", () => {
-    it("has no priority or budget, is not background, does not restore and does not await an answer", async () => {
-        const { priorityOf, attemptBudgetOf, isBackground, restoresHeldWake, awaitsAnswer } = await buildSubject()
+    it("has no priority or budget, does not restore and does not await an answer", async () => {
+        const { priorityOf, attemptBudgetOf, restoresHeldWake, awaitsAnswer } = await buildSubject()
 
         expect(() => priorityOf("unrecorded")).toThrow()
         expect(() => attemptBudgetOf("unrecorded")).toThrow()
-        expect(isBackground("unrecorded")).toBe(false)
         expect(restoresHeldWake("unrecorded", NOW, NOW)).toBe(false)
         expect(awaitsAnswer("unrecorded")).toBe(false)
     })

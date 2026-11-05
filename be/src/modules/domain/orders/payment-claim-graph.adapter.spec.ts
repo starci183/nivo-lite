@@ -23,7 +23,7 @@ const claimRow: PaymentClaimRow = {
     conversationId: "conversation-dinh",
     amountVnd: 5000,
     names: ["BUI NGUYEN DINH"],
-    body: "Tôi đã chuyển khoản 5k, tên BUI NGUYEN DINH",
+    body: "I transferred 5k, name BUI NGUYEN DINH",
     claimedAt: new Date("2026-11-04T00:54:00.000Z"),
     status: "open",
 }
@@ -31,7 +31,7 @@ const claimRow: PaymentClaimRow = {
 const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
     const claims = mock<OrderPaymentClaimsService>()
-    claims.query.mockResolvedValue([claimRow])
+    claims.matching.mockResolvedValue([claimRow])
     const demand = mock<PaymentDemandService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -64,13 +64,23 @@ describe("PaymentClaimGraphAdapter", () => {
             ),
         ).resolves.toEqual([{ id: "claim-dinh", claimedAt: "2026-11-04T00:54:00.000Z", names: ["BUI NGUYEN DINH"] }])
 
-        expect(claims.query).toHaveBeenCalledWith("ws-1", { status: "open" }, 200)
+        expect(claims.matching).toHaveBeenCalledWith("ws-1", { status: "open" }, 200)
+    })
+
+    it("reads nothing for a status no claim has", async () => {
+        const { adapter, claims } = await build()
+
+        await expect(adapter.read(turn, { where: { status: "bogus" }, fields: ["id"] }, "workspace")).resolves.toEqual(
+            [],
+        )
+
+        expect(claims.matching).not.toHaveBeenCalled()
     })
 
     it("honours the limit of a workspace read", async () => {
         const { adapter, claims } = await build()
         await adapter.read(turn, { fields: ["id"], limit: 3 }, "workspace")
-        expect(claims.query).toHaveBeenCalledWith("ws-1", {}, 3)
+        expect(claims.matching).toHaveBeenCalledWith("ws-1", {}, 3)
     })
 
     it("keeps a turn read to the conversation of the turn, and reads nothing for a turn with none", async () => {
@@ -83,14 +93,16 @@ describe("PaymentClaimGraphAdapter", () => {
         )
         await expect(adapter.read({ ...turn, conversationId: null }, { fields: ["id"] }, "turn")).resolves.toEqual([])
 
-        expect(claims.query).toHaveBeenCalledTimes(1)
-        expect(claims.query).toHaveBeenCalledWith(
+        expect(claims.matching).toHaveBeenCalledTimes(1)
+        expect(claims.matching).toHaveBeenCalledWith(
             "ws-1",
             { leadId: "lead-dinh", id: "claim-dinh", conversationId: "conversation-dinh" },
             5,
         )
     })
+})
 
+describe("PaymentClaimGraphAdapter records", () => {
     it("records what the customer said once per business key, falling back to the step key", async () => {
         const { adapter, claims, demand } = await build()
         claims.record.mockResolvedValue("claim-new")
@@ -106,7 +118,7 @@ describe("PaymentClaimGraphAdapter", () => {
             kind: "payment-claim",
             id: "claim-new",
         })
-        await adapter.execute(turn, { leadId: "lead-dinh", body: "ck rồi" }, { key: "run:2", dedupeKey: null })
+        await adapter.execute(turn, { leadId: "lead-dinh", body: "paid already" }, { key: "run:2", dedupeKey: null })
 
         expect(demand.claimOpen).toHaveBeenCalledWith("ws-1")
         expect(claims.record).toHaveBeenNthCalledWith(1, {
@@ -124,7 +136,7 @@ describe("PaymentClaimGraphAdapter", () => {
             conversationId: null,
             amountVnd: null,
             names: [],
-            body: "ck rồi",
+            body: "paid already",
             dedupeKey: "run:2",
         })
     })
@@ -135,7 +147,7 @@ describe("PaymentClaimGraphAdapter", () => {
 
         await adapter.execute(
             turn,
-            { leadId: null, conversationId: "conversation-new", body: "ck rồi" },
+            { leadId: null, conversationId: "conversation-new", body: "paid already" },
             { key: "run:3", dedupeKey: null },
         )
 

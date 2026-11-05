@@ -27,6 +27,7 @@ import {
     PROVIDER_REGISTRY_MESSAGES,
     ProviderRegistryModule,
 } from "@modules/domain/provider-registry"
+import { RedisModule } from "@modules/integrations/redis"
 import { SepayProviderModule } from "@modules/domain/sepay-provider"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { BillingGraphqlModule } from "@features/api/billing"
@@ -38,6 +39,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const billingModules = (options: ApiOptions): Array<DynamicModule> => [
     PaymentOrdersModule.register({ isGlobal: true }),
     ProviderRegistryModule.register({ isGlobal: true }),
+    RedisModule.register({ isGlobal: true, ...options.redis }),
     ConnectionPollModule.register({ isGlobal: true, ...options.connectionPoll }),
     BankFeedInboxModule.register({ isGlobal: true }),
     SepayProviderModule.register({ isGlobal: true, feedWebhook: true }),

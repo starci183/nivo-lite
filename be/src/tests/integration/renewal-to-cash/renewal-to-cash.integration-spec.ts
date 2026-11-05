@@ -2,7 +2,7 @@ import { CqrsModule } from "@nestjs/cqrs"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
 import { AutomationsService } from "@modules/domain/automations"
-import { BankFeedService } from "@modules/domain/billing"
+import { BankFeedReceiptsService } from "@modules/domain/billing"
 import { ModulesService } from "@modules/domain/modules"
 import { CLOCK } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -19,7 +19,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { BankCreditBookedConsumer } from "../../../features/reactors/bank-credit-settlement/transport/message/bank-credit-booked.consumer"
 import { PaymentReconciledConsumer } from "../../../features/reactors/contract-renewal/transport/message/payment-reconciled.consumer"
 import { BankFeedDeliveryProcessor } from "../../../features/jobs/bank-feed-delivery/transport/queue/bank-feed-delivery.processor"
-import { SepayProviderModule } from "@modules/domain/sepay-provider"
+import { SepayFeedWebhookService } from "@modules/domain/sepay-provider"
 import { WorkPerformersRegistrarService } from "../../../modules/domain/work-performers/work-performers-registrar.service"
 import { persistCustomerContract, persistRenewalWorld } from "../../fixtures/builders/renewal-to-cash.builder"
 import type { RenewalContract, RenewalIdentity } from "../../fixtures/builders/renewal-to-cash.builder"
@@ -188,7 +188,7 @@ const drainEvents = async (): Promise<void> => {
  */
 const deliverSepay = async (id: number, amount: number, content: string): Promise<void> => {
     await world
-        .resolve(BankFeedService)
+        .resolve(BankFeedReceiptsService)
         .acceptFeedDelivery(sepayBody(id, amount, content), identity.connectionId, "sepay")
     await runQueued(await feedReceipts(), world.resolve(BankFeedDeliveryProcessor))
     await drainEvents()
@@ -207,8 +207,8 @@ beforeAll(async () => {
     story.second = yearlyEnding(10, story.second)
     // The world compiles the api without booting it: the performers join the work engine as they do at boot.
     world.resolve(WorkPerformersRegistrarService).onModuleInit()
-    // The SePay provider hands its webhook reader to the feed registry at bootstrap, which the world does not run either.
-    world.resolve(SepayProviderModule).onModuleInit()
+    // The SePay feed webhook hands itself to the feed registry at module init, which the world does not run either.
+    world.resolve(SepayFeedWebhookService).onModuleInit()
     // The command handlers of the reactors register with the bus at bootstrap, which the world does not run.
     world.resolve(CqrsModule).onApplicationBootstrap()
     await world.resolve(ModulesService).sync()

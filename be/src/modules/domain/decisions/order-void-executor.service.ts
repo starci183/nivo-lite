@@ -5,18 +5,17 @@ import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
+import type { SalesOrderRow } from "@modules/domain/orders"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { z } from "zod"
 import { WorkEngineService } from "./work-engine.service"
+import { undoPayloadSchema } from "./work-item-effects.schema"
 
 /** The name under which a graph node raises work in the Office. */
 const ACTOR = "NIVO"
 
 /** The action of the owner decision a voided order opens; no rule is stored for it, so the owner is always asked. */
 const ACTION = "order_failed_system"
-
-const undoPayload = z.object({ id: z.string().min(1) })
 
 @Injectable()
 /**
@@ -39,10 +38,13 @@ export class OrderVoidExecutorService implements OnModuleInit {
     }
 
     private async void(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
-        const { id } = undoPayload.parse(payload)
-        const subject: SubjectRef = { kind: "order", id }
+        const { id } = undoPayloadSchema.parse(payload)
         const failed = await this.orders.markFailedSystem(turn.workspaceId, id)
-        if (failed === null) return subject
+        if (failed !== null) await this.askOwner(turn, failed)
+        return { kind: "order", id }
+    }
+
+    private async askOwner(turn: NodeTurn, failed: SalesOrderRow): Promise<void> {
         const lead = failed.lead_id === null ? null : await this.leads.find(turn.workspaceId, failed.lead_id)
         const customer = lead?.contact_name ?? failed.order_no
         await this.engine.runWork(
@@ -50,18 +52,17 @@ export class OrderVoidExecutorService implements OnModuleInit {
             {
                 action: ACTION,
                 subject_type: "order",
-                subject_id: id,
+                subject_id: failed.id,
                 lead_id: failed.lead_id,
-                dedupeKey: `order-void:${id}`,
+                dedupeKey: `order-void:${failed.id}`,
                 seed: {
                     summary: this.catalog.get("engine.orderFailedSystem", { customer }, turn.locale),
                     amount_vnd: failed.amount_vnd,
-                    fields: { orderId: id, orderNo: failed.order_no },
+                    fields: { orderId: failed.id, orderNo: failed.order_no },
                 },
                 preset: true,
                 forceAsk: "branch_ask",
             },
         )
-        return subject
     }
 }

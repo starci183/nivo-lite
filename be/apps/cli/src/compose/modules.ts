@@ -35,6 +35,7 @@ import { I18nModule } from "@modules/platform/i18n"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { STORAGE_ASSETS, ObjectStorageModule } from "@modules/integrations/object-storage"
 import { IDENTITY_ACCOUNTS, IDENTITY_AUTHENTICATOR, IdentityModule } from "@modules/domain/identity"
+import { InventoryModule } from "@modules/domain/inventory"
 import { MailModule } from "@modules/integrations/mail"
 import { PassportModule } from "@modules/integrations/passport"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
@@ -155,6 +156,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ConnectionGrantsModule.register({ isGlobal: true }),
     ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
     ChannelConnectionsModule.register({ isGlobal: true }),
+    InventoryModule.register({ isGlobal: true, seedOnly: true }),
     ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
     CliModule.register({}),
 ]

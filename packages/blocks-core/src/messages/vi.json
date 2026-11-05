@@ -75,5 +75,7 @@
   "paymentRequestNoAccount": "Đơn {{order}} chưa gửi được thông tin thanh toán: chưa kết nối SePay có đủ số tài khoản",
   "nodeAccountingLedgerAppendTitle": "Ghi sổ kế toán",
   "nodeAccountingLedgerReadyTitle": "Có sổ kế toán để ghi không",
-  "accountingLedgerReconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán"
+  "accountingLedgerReconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán",
+  "nodeLeadEnsureTitle": "Xác định khách hàng",
+  "nodePaymentEntryTitle": "Tiền về hay khách báo đã chuyển"
 }

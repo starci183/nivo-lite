@@ -1,8 +1,8 @@
 import type { StorageAssetsPort, StorageObjectsPort } from "@modules/integrations/object-storage"
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { InboundFileReader } from "./inbound-file.reader"
-import type { HostResolver } from "./inbound-file.resolver"
+import type { InboundFileReader } from "./inbound-file.client"
+import type { HostResolver } from "./host-resolver.client"
 
 /** Token of the storage door selected by the app root. */
 export const CHAT_FILES_STORAGE: unique symbol = Symbol("domain.chat-files.storage")

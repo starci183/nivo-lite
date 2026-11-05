@@ -1,0 +1,41 @@
+import type { EnvSource } from "@modules/platform/config"
+import type { ConnectionPollOptions, PollRedisOptions } from "./connection-poll.options"
+import { DEFAULT_POLL_SCHEDULE } from "./poll-schedule.policy"
+
+/** The Redis of the queues, which the limiter shares; undefined when the limiter is kept in this process. */
+const redisOf = (env: EnvSource): PollRedisOptions | undefined =>
+    env.bool("POLL_LIMITER_REDIS", env.bool("QUEUE_ENABLED", true))
+        ? {
+              host: env.optional("QUEUE_REDIS_HOST") ?? "localhost",
+              port: env.int("QUEUE_REDIS_PORT", 6379),
+              db: env.int("QUEUE_REDIS_DB", 0),
+              prefix: env.optional("QUEUE_REDIS_PREFIX") ?? "nivo",
+              password: env.has("QUEUE_REDIS_PASSWORD") ? env.secret("QUEUE_REDIS_PASSWORD").reveal() : undefined,
+          }
+        : undefined
+
+/** The poll options an environment declares: every interval, threshold and cap from its variable, else the default of the scheduler. */
+export const pollOptionsOf = (env: EnvSource): ConnectionPollOptions => {
+    const d = DEFAULT_POLL_SCHEDULE
+    return {
+        schedule: {
+            healthyIntervalMs: env.duration("POLL_INTERVAL_HEALTHY", d.healthyIntervalMs),
+            silentIntervalMs: env.duration("POLL_INTERVAL_SILENT", d.silentIntervalMs),
+            hotIntervalMs: env.duration("POLL_INTERVAL_HOT", d.hotIntervalMs),
+            webhookSilentAfterMs: env.duration("POLL_WEBHOOK_SILENT_AFTER", d.webhookSilentAfterMs),
+            hotTtlMs: env.duration("POLL_HOT_TTL", d.hotTtlMs),
+            jitterRatio: env.int("POLL_JITTER_PERCENT", d.jitterRatio * 100) / 100,
+            backoffBaseMs: env.duration("POLL_BACKOFF_BASE", d.backoffBaseMs),
+            backoffCapMs: env.duration("POLL_BACKOFF_CAP", d.backoffCapMs),
+            breakerThreshold: env.int("POLL_BREAKER_THRESHOLD", d.breakerThreshold),
+            breakerCooldownMs: env.duration("POLL_BREAKER_COOLDOWN", d.breakerCooldownMs),
+            breakerCooldownCapMs: env.duration("POLL_BREAKER_COOLDOWN_CAP", d.breakerCooldownCapMs),
+            unavailableRecheckMs: env.duration("POLL_UNAVAILABLE_RECHECK", d.unavailableRecheckMs),
+            batchSize: env.int("POLL_BATCH", d.batchSize),
+            leaseMs: env.duration("POLL_LEASE", d.leaseMs),
+            maxInlineWaitMs: env.duration("POLL_MAX_INLINE_WAIT", d.maxInlineWaitMs),
+            backfillChunkPages: env.int("POLL_BACKFILL_CHUNK_PAGES", d.backfillChunkPages),
+        },
+        redis: redisOf(env),
+    }
+}

@@ -1,6 +1,9 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
+import { MAX_ID } from "../../bounds"
+import { boundedJson, boundedRecord } from "../../json.schema"
+import { bilingualOf } from "../../messages/catalog"
 import { CLAIM_DINH, TRANSACTION_DINH } from "./payment.fixtures"
 
 /** What woke Accounting: the subject of the trigger (a `{ kind, id }`, a label, or nothing) and the plain data the tagger handed over. */
@@ -24,16 +27,16 @@ type NoParams = Record<string, never>
 
 const params: z.ZodType<NoParams> = z.object({})
 const input: z.ZodType<EntryInput, EntryInput> = z.object({
-    subject: z.unknown(),
-    context: z.record(z.string(), z.unknown()).nullable(),
+    subject: boundedJson,
+    context: boundedRecord.nullable(),
 })
 const output: z.ZodType<EntryOutput, EntryOutput> = z.object({
     branch: z.enum(["transaction", "claim", "none"]),
-    transactionId: z.string().nullable(),
-    claimId: z.string().nullable(),
+    transactionId: z.string().max(MAX_ID).nullable(),
+    claimId: z.string().max(MAX_ID).nullable(),
 })
 
-const transactionSubject = z.object({ kind: z.literal(TRANSACTION_SUBJECT), id: z.string().min(1) })
+const transactionSubject = z.object({ kind: z.literal(TRANSACTION_SUBJECT), id: z.string().min(1).max(MAX_ID) })
 
 const subjectIdOf = (subject: unknown): string | null => {
     const parsed = transactionSubject.safeParse(subject)
@@ -58,7 +61,7 @@ export const paymentEntryNode: NodeDefinition<
 > = defineNode({
     id: "payment.entry",
     role: "condition",
-    title: { vi: "Tiền về hay khách báo đã chuyển", en: "A credit arrived or a customer says they paid" },
+    title: bilingualOf("nodePaymentEntryTitle"),
     params,
     input,
     output,

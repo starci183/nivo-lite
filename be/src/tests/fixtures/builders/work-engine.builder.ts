@@ -37,7 +37,6 @@ export const messageProposalOf: (overrides?: Partial<Proposal>) => Proposal = bu
     draft: "Exact caller text",
     execution: { preset: true, noChain: true },
 })
-
 /** Builds a message whose admission requires an owner's decision. */
 export const approvalMessageOf: (overrides?: Partial<Proposal>) => Proposal = builder<Proposal>({
     ...messageProposalOf(),

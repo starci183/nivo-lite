@@ -109,3 +109,11 @@ export interface ModelReply {
     /** What the model says each picture is, in the order they were shown. */
     readonly images: ReadonlyArray<ImageKind>
 }
+
+/** The text written after a delivery word, and whether the customer named it an address. */
+export interface DeliveryPlace {
+    /** The place, to the end of the line. */
+    readonly place: string
+    /** Whether the customer said the address word before the place. */
+    readonly named: boolean
+}

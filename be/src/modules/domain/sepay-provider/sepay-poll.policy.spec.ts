@@ -1,5 +1,18 @@
-import type { SepayTransaction } from "@modules/integrations/sepay"
+import { Test } from "@nestjs/testing"
 import { sepayBankTransaction, sepayPolledCredit } from "./sepay-poll.policy"
+import type { SepayTransaction } from "@modules/integrations/sepay"
+
+const SUBJECT = Symbol("sepay-poll.policy")
+
+const build = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { sepayBankTransaction, sepayPolledCredit } }],
+    }).compile()
+    return moduleRef.get<{
+        sepayBankTransaction: typeof sepayBankTransaction
+        sepayPolledCredit: typeof sepayPolledCredit
+    }>(SUBJECT)
+}
 
 /** The transfer the owner made on 2026-11-04 01:06: SePay transaction 95958515, +5000 into account 525209999. */
 const REAL: SepayTransaction = {
@@ -13,8 +26,10 @@ const REAL: SepayTransaction = {
 }
 
 describe("sepayPolledCredit", () => {
-    it("maps a real transfer to the credit and the delivery key the webhook uses for the same transaction", () => {
-        expect(sepayPolledCredit("conn-1", REAL)).toEqual({
+    it("maps a real transfer to the credit and the delivery key the webhook uses for the same transaction", async () => {
+        const subject = await build()
+
+        expect(subject.sepayPolledCredit("conn-1", REAL)).toEqual({
             deliveryId: "conn-1:sepay:95958515",
             credit: {
                 amount: 5000,
@@ -25,29 +40,39 @@ describe("sepayPolledCredit", () => {
         })
     })
 
-    it("maps money out to a debit", () => {
-        expect(sepayPolledCredit("conn-1", { ...REAL, amountIn: 0, amountOut: 120 })?.credit).toMatchObject({
+    it("maps money out to a debit", async () => {
+        const subject = await build()
+
+        expect(subject.sepayPolledCredit("conn-1", { ...REAL, amountIn: 0, amountOut: 120 })?.credit).toMatchObject({
             amount: 120,
             direction: "debit",
         })
     })
 
-    it("falls back to the code for the content and to SePay for the bank", () => {
-        expect(sepayPolledCredit("conn-1", { ...REAL, content: "", code: "DH7", bank: null })?.credit).toMatchObject({
+    it("falls back to the code for the content and to SePay for the bank", async () => {
+        const subject = await build()
+
+        expect(
+            subject.sepayPolledCredit("conn-1", { ...REAL, content: "", code: "DH7", bank: null })?.credit,
+        ).toMatchObject({
             content: "DH7",
             fallbackBankName: "SePay",
         })
-        expect(sepayPolledCredit("conn-1", { ...REAL, content: "", code: null })?.credit.content).toBe("")
+        expect(subject.sepayPolledCredit("conn-1", { ...REAL, content: "", code: null })?.credit.content).toBe("")
     })
 
-    it("maps a row that moved no money to nothing", () => {
-        expect(sepayPolledCredit("conn-1", { ...REAL, amountIn: 0 })).toBeUndefined()
+    it("maps a row that moved no money to nothing", async () => {
+        const subject = await build()
+
+        expect(subject.sepayPolledCredit("conn-1", { ...REAL, amountIn: 0 })).toBeUndefined()
     })
 })
 
 describe("sepayBankTransaction", () => {
-    it("maps the real transfer to the bank-feed shape", () => {
-        expect(sepayBankTransaction(REAL)).toEqual({
+    it("maps the real transfer to the bank-feed shape", async () => {
+        const subject = await build()
+
+        expect(subject.sepayBankTransaction(REAL)).toEqual({
             id: "sepay:95958515",
             direction: "credit",
             amountVnd: 5000,
@@ -57,19 +82,30 @@ describe("sepayBankTransaction", () => {
         })
     })
 
-    it("maps money out to a debit and falls back to the code and to SePay", () => {
+    it("maps money out to a debit and falls back to the code and to SePay", async () => {
+        const subject = await build()
+
         expect(
-            sepayBankTransaction({ ...REAL, amountIn: 0, amountOut: 120, content: "", code: "DH7", bank: null }),
+            subject.sepayBankTransaction({
+                ...REAL,
+                amountIn: 0,
+                amountOut: 120,
+                content: "",
+                code: "DH7",
+                bank: null,
+            }),
         ).toMatchObject({
             direction: "debit",
             amountVnd: 120,
             content: "DH7",
             bankName: "SePay",
         })
-        expect(sepayBankTransaction({ ...REAL, content: "", code: null })?.content).toBe("")
+        expect(subject.sepayBankTransaction({ ...REAL, content: "", code: null })?.content).toBe("")
     })
 
-    it("maps a row that moved no money to nothing", () => {
-        expect(sepayBankTransaction({ ...REAL, amountIn: 0 })).toBeUndefined()
+    it("maps a row that moved no money to nothing", async () => {
+        const subject = await build()
+
+        expect(subject.sepayBankTransaction({ ...REAL, amountIn: 0 })).toBeUndefined()
     })
 })

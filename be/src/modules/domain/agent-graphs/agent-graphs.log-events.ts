@@ -12,4 +12,6 @@ export enum AgentGraphsLogEvent {
     ContractSetupFailed = "agent_graphs.contract_setup_failed",
     /** An intent the published graph reaches has no frame, so a turn is offered the other intents without it. */
     IntentUnframed = "agent_graphs.intent_unframed",
+    /** The flow of the live version could not be read, so its burst setting was not applied and the app default stands. */
+    BurstFlowUnreadable = "agent_graphs.burst_flow_unreadable",
 }

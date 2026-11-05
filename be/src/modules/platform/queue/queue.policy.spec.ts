@@ -11,6 +11,7 @@ import {
     backoffMsOf,
     backoffSecondsOf,
     deferMsOf,
+    deferSecondsOf,
     deliveryOf,
     isExhausted,
     isUnrecoverable,
@@ -54,6 +55,7 @@ class QueuePolicySubject {
     readonly backoffMsOf = backoffMsOf
     readonly backoffSecondsOf = backoffSecondsOf
     readonly deferMsOf = deferMsOf
+    readonly deferSecondsOf = deferSecondsOf
     readonly deliveryOf = deliveryOf
     readonly isExhausted = isExhausted
     readonly isUnrecoverable = isUnrecoverable
@@ -192,6 +194,24 @@ describe("failures", () => {
             subject.retryAfterSecondsOf(queueError(QueueErrorCode.Unrecoverable, { seconds: 7 })),
             subject.retryAfterSecondsOf(new Error("down")),
         ]).toEqual([8, 0, undefined, undefined, undefined])
+    })
+})
+
+describe("queue hand-backs", () => {
+    it("reads a hand-back from a queue deferral or from a domain error that names finite defer seconds", async () => {
+        const subject = await build()
+        const domain = (deferSeconds: number | string): CapabilityError =>
+            new CapabilityError({ code: "CAPABILITY_FAILED", params: { deferSeconds } })
+        expect([
+            subject.deferSecondsOf(queueError(QueueErrorCode.DeferredUntil, { seconds: 27 })),
+            subject.deferSecondsOf(queueError(QueueErrorCode.RetryAfter, { seconds: 27 })),
+            subject.deferSecondsOf(domain(7.2)),
+            subject.deferSecondsOf(domain(0)),
+            subject.deferSecondsOf(domain(3601)),
+            subject.deferSecondsOf(domain("soon")),
+            subject.deferSecondsOf(new CapabilityError({ code: "CAPABILITY_FAILED" })),
+            subject.deferSecondsOf(new Error("down")),
+        ]).toEqual([27, undefined, 8, undefined, undefined, undefined, undefined, undefined])
     })
 
     it("explains a failure by the reason of a queue error, else by its code, else by the message of the failure", async () => {

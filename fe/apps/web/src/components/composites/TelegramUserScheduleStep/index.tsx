@@ -1,4 +1,4 @@
-import { SegmentedControl, Text } from "@starci/grammar/common"
+import { ChoiceChips, Text } from "@starci/grammar/common"
 import type { TelegramUserWizardCopy } from "@/modules/types"
 
 /** The settled sync frequency and its resolved explanation. */
@@ -15,11 +15,11 @@ interface TelegramUserScheduleStepProps {
 /** Draws the same manual, fifteen-minute and hourly sync options. */
 export const TelegramUserScheduleStep = (props: TelegramUserScheduleStepProps) => (
     <>
-        <SegmentedControl
+        <ChoiceChips
             label={props.text.scheduleLabel}
+            empty={props.text.scheduleLabel}
             isLoading={props.isLoading}
             value={props.every}
-            width="fill"
             options={[
                 { value: "0", label: props.text.scheduleManual },
                 { value: "15", label: props.text.schedule15 },

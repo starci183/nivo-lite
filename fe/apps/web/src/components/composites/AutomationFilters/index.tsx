@@ -1,4 +1,4 @@
-import { FilterButtonGroup } from "@starci/grammar/common"
+import { Tabs } from "@starci/grammar/common"
 
 /** One chip of the filter. */
 type AutomationFilterItem = {
@@ -16,10 +16,11 @@ type AutomationFiltersProps = {
 
 /** The filter chips (single selection): pressing the chosen chip again keeps the current filter. */
 export const AutomationFilters = (props: AutomationFiltersProps) => (
-    <FilterButtonGroup
+    <Tabs
+        kind="filter"
         label={props.label}
-        options={props.items.map((item) => ({ value: item.id, label: item.label }))}
-        value={props.selectedId}
-        onValueChange={props.onChange}
+        items={props.items.map((item) => ({ id: item.id, label: item.label }))}
+        selectedKey={props.selectedId}
+        onSelect={props.onChange}
     />
 )

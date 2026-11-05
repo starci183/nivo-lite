@@ -1,7 +1,8 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeDataPort, NodeTurn } from "@modules/domain/graph-nodes"
+import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { PaymentAccountGraphService } from "./payment-account-graph.service"
 import { WorkspacePaymentAccountService } from "./workspace-payment-account.service"
 
@@ -16,29 +17,40 @@ const TURN: NodeTurn = {
 
 const ACCOUNT = { accountNumber: "525209999", bankCode: "MB", holder: "LAN", provider: "sepay", connectionId: "c1" }
 
-const build = async (withRegistry = true) => {
+const build = async () => {
     const accounts = mock<WorkspacePaymentAccountService>()
     const registry = mock<GraphNodeRegistryService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             PaymentAccountGraphService,
             { provide: WorkspacePaymentAccountService, useValue: accounts },
-            ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
+            { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
     moduleRef.get(PaymentAccountGraphService).onModuleInit()
-    return { accounts, registry, port: registry.addDataPort.mock.calls[0]?.[0] as NodeDataPort }
+    const port = registry.addDataPort.mock.calls[0]?.[0]
+    assert(port !== undefined)
+    return { accounts, registry, port }
+}
+
+const buildWithoutRegistry = async () => {
+    const accounts = mock<WorkspacePaymentAccountService>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [PaymentAccountGraphService, { provide: WorkspacePaymentAccountService, useValue: accounts }],
+    }).compile()
+    return moduleRef.get(PaymentAccountGraphService)
 }
 
 const FIELDS = ["provider", "bankCode", "bankName", "accountNumber", "accountHolder", "connectionId"]
 
 describe("PaymentAccountGraphService", () => {
     it("registers the payment-account port, and nothing when the app hosts no graph nodes", async () => {
-        const { port } = await build()
-        const { registry } = await build(false)
+        const { port, registry } = await build()
+        const bare = await buildWithoutRegistry()
 
         expect(port.kind).toBe("payment-account")
-        expect(registry.addDataPort).not.toHaveBeenCalled()
+        expect(registry.addDataPort).toHaveBeenCalledTimes(1)
+        expect(() => bare.onModuleInit()).not.toThrow()
     })
 
     it("reads the account of the turn workspace with the bank name spelled out", async () => {

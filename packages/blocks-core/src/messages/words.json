@@ -5,5 +5,8 @@
   "currencyTail": "vnđ\nvnd\nđ",
   "letterD": "đ",
   "letterDCapital": "Đ",
-  "moneyArrivedWords": "nhận được\nđã nhận\nthành công"
+  "moneyArrivedWords": "nhận được\nđã nhận\nthành công",
+  "deliverGoodsWords": "hàng\nhang",
+  "deliverToWords": "tới\ntoi\nđến\nden\ntại\ntai\nở",
+  "deliverAddressWords": "địa chỉ\ndia chi\nđc\ndc"
 }

@@ -46,6 +46,7 @@ import {
     knowledgeOf,
     totalOf,
 } from "./dashboard.mapper"
+import type { TagGrants } from "./agent-tag-grants.contracts"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
 
@@ -209,10 +210,7 @@ export class AgentsService {
     }
 
     /** Grants the tag rights named, in one workspace (see AgentOwnershipService). */
-    grantTags(
-        workspaceId: string,
-        grants: ReadonlyArray<{ readonly from: string; readonly to: string }>,
-    ): Promise<void> {
+    grantTags(workspaceId: string, grants: TagGrants): Promise<void> {
         return this.ownership.grantTags(workspaceId, grants)
     }
 

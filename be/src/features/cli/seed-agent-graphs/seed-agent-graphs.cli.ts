@@ -5,7 +5,7 @@ import { GraphSeedService } from "@modules/domain/workspace-seed"
 /** What `seed-agent-graphs` is asked to do, as the command line parsed it. */
 export interface SeedAgentGraphsCommand {
     /** The name of the workspace whose agents run the graphs. */
-    readonly workspace?: string
+    readonly workspace: string
 }
 
 @Command({
@@ -21,11 +21,15 @@ export class SeedAgentGraphsCli extends CommandRunner {
 
     /** Hands the whole of stdin and the workspace name to the seed, which prints what it did and never a value. */
     async run(_params: Array<string>, options: SeedAgentGraphsCommand): Promise<void> {
-        await this.seed.run(await text(process.stdin), options.workspace ?? "")
+        await this.seed.run(await text(process.stdin), options.workspace)
     }
 
-    /** The workspace name. */
-    @Option({ flags: "-w, --workspace <name>", description: "The name of the workspace whose agents run the graphs" })
+    /** The workspace name; none given is the empty name, which the seed refuses. */
+    @Option({
+        flags: "-w, --workspace <name>",
+        description: "The name of the workspace whose agents run the graphs",
+        defaultValue: "",
+    })
     parseWorkspace(value: string): string {
         return value
     }

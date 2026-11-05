@@ -8,6 +8,7 @@ import type {
     CustomerConversationRow,
     OptionalCustomerConversationRow,
     OptionalChannelText,
+    OptionalLeadId,
     OptionalCustomerChatRef,
     TestChatRef,
 } from "./agent-conversations-read.contracts"
@@ -55,6 +56,15 @@ export class AgentConversationsReadService {
             where: { workspaceId, kind: "customer", id: conversationId },
         })
         return chat === null ? null : { id: chat.id, leadId: chat.leadId }
+    }
+
+    /** The lead a conversation of the workspace became; null when the conversation is missing, is another workspace's or has no lead. */
+    async leadIdOf(workspaceId: string, conversationId: string): Promise<OptionalLeadId> {
+        const chat = await this.entityManager.findOne(AgentConversationEntity, {
+            select: { leadId: true },
+            where: { workspaceId, id: conversationId },
+        })
+        return chat?.leadId ?? null
     }
 
     /** The latest customer conversation of a customer; null when there is none. */

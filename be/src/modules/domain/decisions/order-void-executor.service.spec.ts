@@ -1,3 +1,4 @@
+import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
@@ -6,6 +7,7 @@ import { LeadRecordsService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { leadOf } from "@tests/fixtures/builders/lead-actions.builder"
 import { orderOf } from "@tests/fixtures/builders/confirm-order-performer.builder"
 import { OrderVoidExecutorService } from "./order-void-executor.service"
 import { WorkEngineService } from "./work-engine.service"
@@ -20,7 +22,14 @@ const TURN: NodeTurn = {
 }
 const CALL = { key: "k", dedupeKey: null }
 
-const build = async (withRegistry = true) => {
+/** The executor the service registered. */
+const registeredBy = (registry: GraphNodeRegistryService): NodeEffectExecutor => {
+    const executor = jest.mocked(registry.addExecutor).mock.calls[0]?.[0]
+    assert(executor !== undefined, "no executor was registered")
+    return executor
+}
+
+const build = async () => {
     const orders = mock<OrdersService>()
     const leads = mock<LeadRecordsService>()
     const engine = mock<WorkEngineService>()
@@ -34,26 +43,40 @@ const build = async (withRegistry = true) => {
             { provide: LeadRecordsService, useValue: leads },
             { provide: WorkEngineService, useValue: engine },
             { provide: MESSAGE_CATALOG, useValue: catalog },
-            ...(withRegistry ? [{ provide: GraphNodeRegistryService, useValue: registry }] : []),
+            { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
     moduleRef.get(OrderVoidExecutorService).onModuleInit()
-    return { orders, leads, engine, registry, executor: registry.addExecutor.mock.calls[0]?.[0] as NodeEffectExecutor }
+    return { orders, leads, engine, registry, executor: registeredBy(registry) }
+}
+
+const buildWithoutRegistry = async (): Promise<OrderVoidExecutorService> => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            OrderVoidExecutorService,
+            { provide: OrdersService, useValue: mock<OrdersService>() },
+            { provide: LeadRecordsService, useValue: mock<LeadRecordsService>() },
+            { provide: WorkEngineService, useValue: mock<WorkEngineService>() },
+            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>() },
+        ],
+    }).compile()
+    return moduleRef.get(OrderVoidExecutorService)
 }
 
 describe("OrderVoidExecutorService", () => {
     it("registers the order.void executor, and nothing when the app hosts no graph nodes", async () => {
         const { executor } = await build()
-        const { registry } = await build(false)
+
+        const bare = await buildWithoutRegistry()
 
         expect(executor.effect).toBe("order.void")
-        expect(registry.addExecutor).not.toHaveBeenCalled()
+        expect(() => bare.onModuleInit()).not.toThrow()
     })
 
     it("marks the order failed_system, keeps it, and raises one owner item keyed by the order", async () => {
         const { orders, leads, engine, executor } = await build()
         orders.markFailedSystem.mockResolvedValue(orderOf({ status: "failed_system" }))
-        leads.find.mockResolvedValue({ contact_name: "Lan" } as never)
+        leads.find.mockResolvedValue(leadOf({ contact_name: "Lan" }))
 
         const subject = await executor.execute(TURN, { id: "ord-1" }, CALL)
 

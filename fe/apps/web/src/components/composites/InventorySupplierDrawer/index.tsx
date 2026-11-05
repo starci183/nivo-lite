@@ -1,6 +1,6 @@
 import type { InventorySupplierEditorData, SupplierFormField } from "@/modules/types"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, Drawer, Input, SegmentedControl, Textarea, Stack, Grid } from "@starci/grammar/common"
+import { Button, ChoiceChips, Drawer, Input, Textarea, Stack, Grid } from "@starci/grammar/common"
 
 /** The words and state of the supplier drawer. */
 interface InventorySupplierDrawerProps {
@@ -40,8 +40,9 @@ export const InventorySupplierDrawer = (props: InventorySupplierDrawerProps) => 
             <Stack gap="row">
                 {text("name", "sup-name", copy.supplierName)}
                 {text("contactName", "sup-contact", copy.supplierContact)}
-                <SegmentedControl
+                <ChoiceChips
                     label={copy.supplierChannel}
+                    empty={copy.supplierChannel}
                     options={p.channels}
                     value={p.values.channel}
                     onValueChange={(value) => on.field("channel", value)}

@@ -143,7 +143,7 @@ export class AgentGraphSeedService {
         if (raise === undefined) return
         const listed = problems
             .map((problem) => `${problem.code} ${problem.at}`)
-            .sort()
+            .sort((left, right) => left.localeCompare(right))
             .join(", ")
         const turn = {
             turnId: `flow-check:${agentId}`,

@@ -6,7 +6,7 @@ interface VideoGoalFormProps extends VideoGoalFormFields {
     readonly isLoading: boolean
     readonly on: VideoGoalFormActions
 }
-import { Button, Input, RadioGroup, SegmentedControl, SurfaceCard, Stack, Cluster } from "@starci/grammar/common"
+import { Button, Input, ChoiceChips, RadioGroup, SurfaceCard, Stack, Cluster } from "@starci/grammar/common"
 import { VideoErrorAlert } from "@/components/leaves/VideoErrorAlert"
 
 /** Draws step one: what the video is for, its frame, its length and its working title. */
@@ -24,20 +24,20 @@ export const VideoGoalForm = (props: VideoGoalFormProps) => (
                     options={props.goals}
                     onValueChange={props.on.goal}
                 />
-                <SegmentedControl
+                <ChoiceChips
                     isLoading={props.isLoading}
                     label={props.aspectLabel}
+                    empty={props.aspectLabel}
                     value={props.aspect}
-                    isDisabled={props.disabled}
-                    options={props.aspects}
+                    options={props.aspects.map((option) => ({ ...option, isDisabled: props.disabled }))}
                     onValueChange={props.on.aspect}
                 />
-                <SegmentedControl
+                <ChoiceChips
                     isLoading={props.isLoading}
                     label={props.durationLabel}
+                    empty={props.durationLabel}
                     value={props.seconds}
-                    isDisabled={props.disabled}
-                    options={props.durations}
+                    options={props.durations.map((option) => ({ ...option, isDisabled: props.disabled }))}
                     onValueChange={props.on.seconds}
                 />
                 <Input

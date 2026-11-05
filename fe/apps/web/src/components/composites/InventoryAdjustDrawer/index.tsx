@@ -2,7 +2,7 @@ import type { InventoryAdjustmentEditorData } from "@/modules/types"
 import { InventorySelect } from "@/components/leaves/InventorySelect"
 import { InventoryField } from "@/components/leaves/InventoryField"
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, Drawer, Input, SegmentedControl, Text, Stack } from "@starci/grammar/common"
+import { Button, ChoiceChips, Drawer, Input, Text, Stack } from "@starci/grammar/common"
 
 /** The words and state of the quantity drawer. */
 interface InventoryAdjustDrawerProps {
@@ -34,7 +34,13 @@ export const InventoryAdjustDrawer = (props: InventoryAdjustDrawerProps) => {
             placement="right"
         >
             <Stack gap="row">
-                <SegmentedControl label={copy.adjustMode} options={p.modes} value={p.mode} onValueChange={on.mode} />
+                <ChoiceChips
+                    label={copy.adjustMode}
+                    empty={copy.adjustMode}
+                    options={p.modes}
+                    value={p.mode}
+                    onValueChange={on.mode}
+                />
                 {p.showPlaces ? (
                     <InventorySelect
                         label={p.isMove ? copy.adjustFrom : copy.adjustAt}

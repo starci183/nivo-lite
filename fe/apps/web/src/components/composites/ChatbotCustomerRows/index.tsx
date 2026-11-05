@@ -1,5 +1,5 @@
 import type { ChatbotCustomerWords, CustomerRowView } from "@/modules/types"
-import { EmptyNotice, FilterButtonGroup, SearchField, Section, Text, type ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, SearchField, Section, Tabs, Text, type ListRowData } from "@starci/grammar/common"
 type CustomerWords = ChatbotCustomerWords
 /** Ready customer data, intrinsic filter values and atomic filter commands. */
 interface ChatbotCustomerRowsProps {
@@ -30,12 +30,12 @@ export const ChatbotCustomerRows = (props: ChatbotCustomerRowsProps) => {
                 onValueChange={props.onQuery}
                 isLoading={props.isLoading}
             />
-            <FilterButtonGroup
+            <Tabs
+                kind="filter"
                 label={words.filtersLabel}
-                isLoading={props.isLoading}
-                options={props.chips.map((chip) => ({ value: chip.id, label: chip.label }))}
-                value={props.filter}
-                onValueChange={props.onFilter}
+                items={props.chips.map((chip) => ({ id: chip.id, label: chip.label }))}
+                selectedKey={props.filter}
+                onSelect={props.onFilter}
             />
             <Section
                 kind="list"

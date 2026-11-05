@@ -1,4 +1,4 @@
-import type { NodeVocabularyManifest } from "@nivo-lite/agent-sdk/node"
+import type { NodeVocabularyManifest } from "@nivo-lite/agent-sdk/node/vocabulary"
 import type { IntentCheck, IntentFrame, IntentResultSchema } from "@modules/domain/intent-contracts"
 
 /**

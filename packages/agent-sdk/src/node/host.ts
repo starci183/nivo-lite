@@ -1,4 +1,4 @@
-import type { z } from "../schema/zod.schema"
+import type { z } from "../schema/zod-entry"
 import { rightsGaps } from "../rights/rights"
 import type { DataAccess, DataRight, RightScope, RightsGrant } from "../rights/rights.types"
 import { isRecord } from "../schema/is-record"

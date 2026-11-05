@@ -6,8 +6,8 @@ import { ContentEngagementDailyService } from "@modules/domain/content-engagemen
 import { parseMetaSecret } from "@modules/domain/meta-connections"
 import { InjectMetaClient } from "@modules/integrations/meta"
 import type { MetaClient, MetaPageCredentials } from "@modules/integrations/meta"
-import { InjectZalo } from "@modules/integrations/zalo"
-import type { ZaloClient } from "@modules/integrations/zalo"
+import { InjectZaloArticles } from "@modules/integrations/zalo"
+import type { ZaloArticleClient } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
@@ -38,7 +38,7 @@ export class MarketingChannelsService {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         @InjectMetaClient() private readonly meta: MetaClient,
-        @InjectZalo() private readonly zalo: ZaloClient,
+        @InjectZaloArticles() private readonly zaloArticles: ZaloArticleClient,
         private readonly connections: ConnectionsService,
         private readonly zaloCredentials: ZaloCredentialsService,
         private readonly daily: ContentEngagementDailyService,
@@ -102,7 +102,7 @@ export class MarketingChannelsService {
     private async zaloPosts(workspaceId: string): Promise<ReadonlyArray<PublishedPost>> {
         const token = await this.zaloToken(workspaceId)
         if (token === null) return []
-        const articles = await this.zalo.articles(token)
+        const articles = await this.zaloArticles.list(token)
         return articles
             .filter((article) => article.status === SHOWN)
             .map((article) => ({

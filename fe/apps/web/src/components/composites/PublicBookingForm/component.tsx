@@ -5,7 +5,7 @@ import {
     Heading,
     HorizontalScrollRegion,
     RadioGroup,
-    SegmentedControl,
+    ChoiceChips,
     SurfaceCard,
     Text,
     TextAction,
@@ -102,8 +102,9 @@ export const PublicBookingForm = (props: PublicBookingFormProps) => {
                 <SurfaceCard ariaLabel={p.labels.step2}>
                     <Stack gap="row">
                         <HorizontalScrollRegion overflow="needed" isFocusable={false}>
-                            <SegmentedControl
+                            <ChoiceChips
                                 label={p.labels.step2}
+                                empty={p.labels.step2}
                                 options={p.days.map((day) => ({ value: day.value, label: day.label }))}
                                 value={p.fields.date}
                                 onValueChange={(date) => on.change({ date })}

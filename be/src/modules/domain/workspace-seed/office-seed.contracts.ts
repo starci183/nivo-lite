@@ -123,28 +123,6 @@ export interface OfficeAuthoritySeed {
     readonly grants: ReadonlyArray<OfficeGrantSeed>
 }
 
-/** An authority rule with every key resolved to the ids of the workspace. */
-export interface ResolvedOfficeRule extends Omit<OfficeRuleSeed, "agents" | "approver_group"> {
-    /** The agents the rule applies to. */
-    readonly agents: ReadonlyArray<string>
-    /** Who is asked, the named people as member ids. */
-    readonly approver_group: Omit<OfficeApproverGroup, "members"> & { readonly members: ReadonlyArray<string> }
-}
-
-/** A grant with the person resolved to their member id. */
-export interface ResolvedOfficeGrant extends Omit<OfficeGrantSeed, "member"> {
-    /** The member (workspace_members.id). */
-    readonly member_id: string
-}
-
-/** What the office authority port is handed. */
-export interface ResolvedOfficeAuthority {
-    /** The rules. */
-    readonly rules: ReadonlyArray<ResolvedOfficeRule>
-    /** The grants. */
-    readonly grants: ReadonlyArray<ResolvedOfficeGrant>
-}
-
 /** What `seed-workspace office` is asked to do, as the command line parsed it: every option may be absent. */
 export interface OfficeCommand {
     /** The owner email the private input must hold; absent matches no owner. */

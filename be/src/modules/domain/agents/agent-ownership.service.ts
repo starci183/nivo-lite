@@ -19,6 +19,7 @@ import {
     rolesOf,
 } from "./agent-ownership.policy"
 import type { AgentOwners, AgentOwnership, OwnershipChange } from "./agents.contracts"
+import type { TagGrants } from "./agent-tag-grants.contracts"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import type { AssignContext, MemberState, TagContext } from "./agents-reads.contracts"
 import { AgentEntity } from "./persistence/entities"
@@ -97,10 +98,7 @@ export class AgentOwnershipService {
     }
 
     /** Adds tag rights to the lists of the tagging agents of one workspace; a right already held stays as it is. */
-    async grantTags(
-        workspaceId: string,
-        grants: ReadonlyArray<{ readonly from: string; readonly to: string }>,
-    ): Promise<void> {
+    async grantTags(workspaceId: string, grants: TagGrants): Promise<void> {
         const taggers = [...new Set(grants.map((grant) => grant.from))]
         if (taggers.length === 0) return
         const rows = await this.entityManager.find(AgentEntity, {

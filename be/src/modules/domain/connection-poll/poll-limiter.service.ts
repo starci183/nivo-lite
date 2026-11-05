@@ -6,17 +6,11 @@ import type { Timer } from "@modules/platform/retry"
 import { InjectConnectionPollOptions, InjectPollLimiterStore } from "./connection-poll.decorators"
 import type { PollLimits } from "./connection-poll.contracts"
 import { ConnectionPollError, ConnectionPollErrorCode } from "./errors/connection-poll.error"
-import type { PollLimiterStore } from "./poll-limiter.contracts"
-import type { ConnectionPollOptions } from "./poll-schedule.contracts"
+import type { OptionalPollSlot, PollLimiterStore } from "./poll-limiter.contracts"
+import type { ConnectionPollOptions } from "./connection-poll.options"
 
 /** How many times a call waits for its token before the poll gives up for now. */
 const MAX_WAITS = 3
-
-/** A held slot of a provider; giving it back is the holder's duty. */
-export interface PollSlot {
-    /** Gives the slot back. */
-    release(): Promise<void>
-}
 
 @Injectable()
 /**
@@ -33,7 +27,7 @@ export class PollLimiterService {
     ) {}
 
     /** Takes one of the provider's concurrency slots for the connection; undefined when all are taken. */
-    async enter(provider: string, connectionId: string, limits: PollLimits): Promise<PollSlot | undefined> {
+    async enter(provider: string, connectionId: string, limits: PollLimits): Promise<OptionalPollSlot> {
         const { leaseMs } = this.options.schedule
         const granted = await this.store.enter(
             provider,
@@ -49,7 +43,11 @@ export class PollLimiterService {
      * Passes when the connection's bucket holds a token, waiting for one when it comes within the inline wait. A wait that is longer, or a bucket that
      * stays empty, ends the poll with a `Deferred` error that names the wait, so the scheduler plans the connection again after it.
      */
-    async pass(provider: string, connectionId: string, limits: PollLimits, waits = 0): Promise<void> {
+    pass(provider: string, connectionId: string, limits: PollLimits): Promise<void> {
+        return this.passAfter(provider, connectionId, limits, 0)
+    }
+
+    private async passAfter(provider: string, connectionId: string, limits: PollLimits, waits: number): Promise<void> {
         const answer = await this.store.take(`${provider}:${connectionId}`, limits, this.clock.now().getTime())
         if (answer.allowed) return
         if (answer.waitMs > this.options.schedule.maxInlineWaitMs || waits >= MAX_WAITS) {
@@ -58,6 +56,6 @@ export class PollLimiterService {
         await new Promise<void>((resolve) => {
             this.timer.schedule(resolve, answer.waitMs)
         })
-        await this.pass(provider, connectionId, limits, waits + 1)
+        await this.passAfter(provider, connectionId, limits, waits + 1)
     }
 }

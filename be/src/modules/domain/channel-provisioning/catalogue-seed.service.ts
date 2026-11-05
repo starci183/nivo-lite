@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { InventoryItemEntity } from "@modules/domain/inventory"
+import { InventorySeedService } from "@modules/domain/inventory"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
-import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
+import { eachInOrder } from "@modules/platform/primitives"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
-import type { CatalogueItem, CatalogueOutcome } from "./catalogue-seed.contracts"
 import { readCatalogueItems } from "./catalogue-seed.policy"
 
 /** The most workspaces looked through for the named one. */
@@ -14,13 +12,6 @@ const WORKSPACE_SCAN_LIMIT = 1000
 
 const refused = (field: string): ConnectionsError =>
     new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
-
-/** True when the stored item already is the wanted one: same name, unit and price, and on. */
-const holds = (stored: InventoryItemEntity, wanted: CatalogueItem): boolean =>
-    stored.name === wanted.name &&
-    stored.unit === wanted.unit &&
-    Number(stored.sellPriceVnd) === wanted.sellPriceVnd &&
-    stored.active
 
 @Injectable()
 /**
@@ -31,7 +22,7 @@ const holds = (stored: InventoryItemEntity, wanted: CatalogueItem): boolean =>
 export class CatalogueSeedService {
     constructor(
         @InjectChannelProvisioningOptions() private readonly options: ChannelProvisioningOptions,
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly inventory: InventorySeedService,
         private readonly workspaces: WorkspacesService,
     ) {}
 
@@ -39,9 +30,9 @@ export class CatalogueSeedService {
     async run(text: string, workspaceName: string): Promise<void> {
         const items = readCatalogueItems(text)
         const workspaceId = await this.workspaceOf(workspaceName)
-        for (const item of items) {
-            this.options.print(`catalogue ${item.sku} ${await this.ensure(workspaceId, item)}`)
-        }
+        await eachInOrder(items, async (item) => {
+            this.options.print(`catalogue ${item.sku} ${await this.inventory.ensureItem(workspaceId, item)}`)
+        })
     }
 
     private async workspaceOf(name: string): Promise<string> {
@@ -49,29 +40,5 @@ export class CatalogueSeedService {
         const [only] = found
         if (only === undefined || found.length > 1) throw refused("workspace")
         return only.id
-    }
-
-    private async ensure(workspaceId: string, item: CatalogueItem): Promise<CatalogueOutcome> {
-        const stored = await this.entityManager.findOne(InventoryItemEntity, { where: { workspaceId, sku: item.sku } })
-        if (stored !== null && holds(stored, item)) return "kept"
-        await callDbFunction(this.entityManager, "public.inventory_save_item", [
-            workspaceId,
-            stored?.id ?? null,
-            item.sku,
-            item.name,
-            item.unit,
-            JSON.stringify(stored?.units ?? []),
-            stored?.category ?? "",
-            stored?.costVnd ?? 0,
-            item.sellPriceVnd,
-            stored?.reorderPoint ?? 0,
-            stored?.reorderQty ?? 0,
-            stored?.supplierId ?? null,
-            stored?.aliases ?? [],
-        ])
-        if (stored !== null && !stored.active) {
-            await callDbFunction(this.entityManager, "public.inventory_set_item_active", [workspaceId, stored.id, true])
-        }
-        return stored === null ? "created" : "updated"
     }
 }

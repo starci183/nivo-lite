@@ -10,6 +10,7 @@ export { InventoryOrdersService } from "./inventory-orders.service"
 export { InventoryReceivingService } from "./inventory-receiving.service"
 export { InventoryReplenishService } from "./inventory-replenish.service"
 export { InventoryStockService } from "./inventory-stock.service"
+export { InventorySeedService } from "./inventory-seed.service"
 export { InventoryWorkbenchService } from "./inventory-workbench.service"
 export type { InventoryTemplateInfo, InventoryWorkbenchView } from "./inventory-workbench.contracts"
 export { InventoryModule } from "./inventory.module"
@@ -43,4 +44,3 @@ export type {
     ReceivePoOutput,
 } from "./inventory-operations.contracts"
 export { inventoryEntities } from "./persistence/entities"
-export { InventoryItemEntity } from "./persistence/entities"

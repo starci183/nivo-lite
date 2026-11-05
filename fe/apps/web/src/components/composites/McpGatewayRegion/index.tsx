@@ -1,5 +1,5 @@
 import {
-    ButtonGroup,
+    Button,
     Cluster,
     EmptyNotice,
     Section,
@@ -9,7 +9,6 @@ import {
     Text,
     type ListRowData,
     type BadgeTone,
-    type ButtonGroupAction,
 } from "@starci/grammar/common"
 
 /** One badge of a gateway row. */
@@ -75,7 +74,6 @@ interface McpGatewayRegionProps {
 
 /** The commands a row draws, named by the row. */
 interface RowActionsProps {
-    readonly label: string
     readonly actions: ReadonlyArray<McpGatewayAction>
     readonly isLoading: boolean
 }
@@ -83,19 +81,21 @@ interface RowActionsProps {
 /** Pending commands retain their own busy state rather than becoming plain navigation data. */
 const RowActions = (props: RowActionsProps) =>
     props.actions.length === 0 ? null : (
-        <ButtonGroup
-            label={props.label}
-            size="sm"
-            isLoading={props.isLoading}
-            actions={props.actions.map((action): ButtonGroupAction => ({
-                id: action.id,
-                label: action.label,
-                intent: "neutral",
-                isPending: action.isPending,
-                isDisabled: action.isDisabled,
-                onPress: action.onPress,
-            }))}
-        />
+        <Cluster gap="inline">
+            {props.actions.map((action) => (
+                <Button
+                    key={action.id}
+                    size="sm"
+                    intent="neutral"
+                    isLoading={props.isLoading}
+                    isPending={action.isPending}
+                    isDisabled={action.isDisabled}
+                    onPress={action.onPress}
+                >
+                    {action.label}
+                </Button>
+            ))}
+        </Cluster>
     )
 
 /** Unpainted tool detail preserves every grant switch inside its containing row. */
@@ -147,7 +147,7 @@ const gatewayItemOf = (row: McpGatewayRow, isLoading: boolean): ListRowData => {
                         ))}
                     </Cluster>
                 )}
-                <RowActions label={row.title} actions={row.actions ?? []} isLoading={isLoading} />
+                <RowActions actions={row.actions ?? []} isLoading={isLoading} />
                 {row.agents === undefined ? null : agentsOf(row.agents, isLoading)}
                 {tools === undefined || tools.rows.length === 0 ? null : (
                     <Section

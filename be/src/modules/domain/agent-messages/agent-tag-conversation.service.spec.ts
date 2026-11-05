@@ -13,7 +13,7 @@ const NOTICE = {
     text: "Order for 5 baskets",
 }
 
-const build = async (bound = true) => {
+const build = async () => {
     const messages = mock<AgentMessagesService>()
     messages.storeLine.mockResolvedValue(undefined)
     const handover = mock<ConversationHandoverService>()
@@ -24,15 +24,20 @@ const build = async (bound = true) => {
         providers: [
             AgentTagConversationService,
             { provide: AgentMessagesService, useValue: messages },
-            ...(bound
-                ? [
-                      { provide: ConversationHandoverService, useValue: handover },
-                      { provide: AgentDirectoryService, useValue: directory },
-                  ]
-                : []),
+            { provide: ConversationHandoverService, useValue: handover },
+            { provide: AgentDirectoryService, useValue: directory },
         ],
     }).compile()
     return { service: moduleRef.get(AgentTagConversationService), messages, handover, directory }
+}
+
+const buildUnbound = async () => {
+    const messages = mock<AgentMessagesService>()
+    messages.storeLine.mockResolvedValue(undefined)
+    const moduleRef = await Test.createTestingModule({
+        providers: [AgentTagConversationService, { provide: AgentMessagesService, useValue: messages }],
+    }).compile()
+    return { service: moduleRef.get(AgentTagConversationService), messages }
 }
 
 describe("AgentTagConversationService", () => {
@@ -46,7 +51,7 @@ describe("AgentTagConversationService", () => {
     })
 
     it("writes the words alone when the agent cannot be named", async () => {
-        const { service, messages } = await build(false)
+        const { service, messages } = await buildUnbound()
         const tx = mockEntityManager()
 
         await service.announce(NOTICE, tx)
@@ -72,14 +77,14 @@ describe("AgentTagConversationService", () => {
     })
 
     it("moves nothing when the handover is not bound", async () => {
-        const { service } = await build(false)
+        const { service } = await buildUnbound()
 
         await expect(service.redirect(NOTICE)).resolves.toBeUndefined()
     })
 
     it("asks the handover who speaks and hands a done speaker's conversation back; knows no speaker unbound", async () => {
         const { service, handover } = await build()
-        const unbound = await build(false)
+        const unbound = await buildUnbound()
         handover.speakerOf.mockResolvedValue("sales")
         handover.returnToFront.mockResolvedValue(true)
 

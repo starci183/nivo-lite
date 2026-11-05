@@ -132,3 +132,4 @@
 {"findings":[],"hash":"1fd6142e75779c9db44d5e74f83f85404c2bc2e295596422fbca8d8014618233","path":"db/migrations/20261111102500_delayed-jobs-and-turn-debounce.sql","step":"prettier"}
 {"findings":[],"hash":"54425d65d2692425aaa391962bc250b3887a3bbf98c05d097170705e3412af92","path":"db/migrations/20261111102510_order-status-failed-system_contract_widen.sql","step":"prettier"}
 {"findings":[],"hash":"e637f2ef41ca1d7e83894783d05fe306413f39738d26e9d5155c3b341a70b20a","path":"db/migrations/20261111102520_agent-graph-spec-versions_contract_widen.sql","step":"prettier"}
+{"findings":[],"hash":"140ce6798756aa5717241af9599865929c5fe875ac5216c65a1ff4e59a46ec2e","path":"db/migrations/20261111103100_connection-poll-functions.sql","step":"prettier"}

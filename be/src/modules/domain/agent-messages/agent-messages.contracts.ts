@@ -56,6 +56,9 @@ export type ApprovedMessageId = string | null
 /** The final reply body already persisted for an item or customer message, or null before one exists. */
 export type StoredReplyBody = string | null
 
+/** When the latest message of a conversation was written, or null when it has none. */
+export type LatestMessageAt = Date | null
+
 /** The proven workspace account that typed a message, or null for channel and automated messages. */
 export type AuthorUserId = string | null
 

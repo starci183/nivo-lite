@@ -18,6 +18,15 @@ export interface PollLimiterStore {
     leave(key: string, member: string): Promise<void>
 }
 
+/** A held slot of a provider; giving it back is the holder's duty. */
+export interface PollSlot {
+    /** Gives the slot back. */
+    release(): Promise<void>
+}
+
+/** The slot a connection was granted, or undefined when all the slots of the provider are taken. */
+export type OptionalPollSlot = PollSlot | undefined
+
 /** The slice of an ioredis client the Redis store uses. */
 export interface PollRedis {
     /** Runs a Lua script atomically (`EVAL script numkeys key... arg...`) and answers what it returns. */

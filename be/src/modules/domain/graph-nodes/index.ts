@@ -19,3 +19,15 @@ export type {
     NodeTurn,
 } from "./graph-nodes.contracts"
 export { rowsAnswering } from "./node-rows.policy"
+export {
+    PROBE_COUNT,
+    PROBE_INPUT,
+    PROBE_LOOK_RESULT,
+    PROBE_NOTHING,
+    PROBE_OUTPUT,
+    PROBE_PING_PAYLOAD,
+    PROBE_RECORD_FIELDS,
+    PROBE_SWALLOW_OUTPUT,
+    PROBE_UNPING_PAYLOAD,
+} from "./graph-node-probe.schema"
+export type { ProbeSchema } from "./graph-node-probe.schema"

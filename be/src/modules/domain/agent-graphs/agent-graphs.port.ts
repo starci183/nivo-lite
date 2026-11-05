@@ -87,6 +87,9 @@ export interface FlowTriggerConversation {
     readonly channel: string
 }
 
+/** The conversation of a wake, or null when it is gone. */
+export type FlowTriggerConversationOrNone = FlowTriggerConversation | null
+
 /**
  * The customer messages a run answers, read from the store: a channel wake carries ids only, never the words. The capability that owns
  * the conversations binds it; without it a channel wake's trigger holds no words.
@@ -99,5 +102,5 @@ export interface FlowTriggerMessages {
         messageIds: ReadonlyArray<string>,
     ): Promise<ReadonlyArray<FlowTriggerMessage>>
     /** The conversation's customer and channel, or null when it is gone. */
-    conversationOf(conversationId: string): Promise<FlowTriggerConversation | null>
+    conversationOf(conversationId: string): Promise<FlowTriggerConversationOrNone>
 }

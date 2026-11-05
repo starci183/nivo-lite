@@ -1,37 +1,19 @@
 import { Test } from "@nestjs/testing"
-import { builder, FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, IsNull, Like, Not } from "typeorm"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { MINH, orderEntityOf, orderOf, writtenOf } from "@tests/fixtures/builders/orders.builder"
+import { NOW, answerWrites, confirmationOf, draftOf, writing } from "@tests/fixtures/builders/orders-service.builder"
 import { LeadReadService } from "@modules/domain/leads"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { normalizePage } from "@modules/platform/pagination"
 import { OrdersErrorCode } from "./errors/orders.error"
-import type { NewOrderDraft, OrderConfirmation, OrdersWorkbenchRow, SalesOrderListRow } from "./orders.contracts"
+import type { OrdersWorkbenchRow, SalesOrderListRow } from "./orders.contracts"
 import { OrdersService } from "./orders.service"
 import { PaymentDemandService } from "./payment-demand.service"
 import { OrderEntity } from "./persistence/entities"
-
-const NOW = "2026-10-13T02:00:00.000Z"
-
-const draftOf = builder<NewOrderDraft>({
-    workspaceId: "ws-1",
-    leadId: "lead-1",
-    inboundEventId: "event-1",
-    orderNo: null,
-    items: "2 x Tea",
-    amountVnd: 90000,
-})
-
-const confirmationOf = builder<OrderConfirmation>({
-    workspaceId: "ws-1",
-    orderId: "order-1",
-    amountVnd: 90000,
-    items: "2 x Tea",
-    confirmedBy: "Lan",
-})
 
 const build = async (entityManager: MockEntityManager, cards: ReadonlyArray<typeof MINH> = [MINH]) => {
     const leads = mock<LeadReadService>({ cardsOf: jest.fn(() => Promise.resolve([...cards])) })
@@ -46,19 +28,6 @@ const build = async (entityManager: MockEntityManager, cards: ReadonlyArray<type
         ],
     }).compile()
     return Object.assign(moduleRef.get(OrdersService), { doubles: { leads, demand } })
-}
-
-/** Makes the successive query builders of `em` each answer a write with the given `RETURNING` rows. */
-const answerWrites = (em: MockEntityManager, ...answers: Array<ReadonlyArray<unknown>>) => {
-    const builders = answers.map((raw) => fakeQueryBuilder({ execute: { raw } }))
-    answerQueryBuilders(em, ...builders)
-    return builders
-}
-
-/** A fresh entity manager answering writes like {@link answerWrites}. */
-const writing = (...answers: Array<ReadonlyArray<unknown>>) => {
-    const em = mockEntityManager()
-    return { em, builders: answerWrites(em, ...answers) }
 }
 
 const registerListPage = () => {
@@ -107,9 +76,8 @@ const registerListPage = () => {
             const em = mockEntityManager()
             const page = fakeQueryBuilder({ getRawMany: [] })
             answerQueryBuilders(em, page)
-            const orders = await build(em)
 
-            await expect(orders.listPage(workspaceId)).resolves.toEqual({
+            await expect((await build(em)).listPage(workspaceId)).resolves.toEqual({
                 nodes: [],
                 pageInfo: { endCursor: null, hasNextPage: false },
             })
@@ -118,9 +86,8 @@ const registerListPage = () => {
 
         it("rejects a malformed cursor before reading any orders", async () => {
             const em = mockEntityManager()
-            const orders = await build(em)
 
-            await expect(orders.listPage(workspaceId, { after: "not-a-cursor" })).rejects.toBeDefined()
+            await expect((await build(em)).listPage(workspaceId, { after: "not-a-cursor" })).rejects.toBeDefined()
             expect(em.createQueryBuilder).not.toHaveBeenCalled()
         })
 
@@ -129,8 +96,7 @@ const registerListPage = () => {
             const page = fakeQueryBuilder({ getRawMany: [orderOf({ id: newestId, created_at: createdAt })] })
             answerQueryBuilders(em, page)
             const orders = await build(em)
-            const other = "44444444-4444-4444-8444-444444444444"
-            const first = await orders.listPage(other, { first: 1 })
+            const first = await orders.listPage("44444444-4444-4444-8444-444444444444", { first: 1 })
 
             await expect(orders.listPage(workspaceId, { after: first.pageInfo.endCursor })).rejects.toBeDefined()
             expect(em.createQueryBuilder).toHaveBeenCalledTimes(1)
@@ -293,10 +259,11 @@ const registerShipAndLabels = () => {
 
         it("keeps an order with no amount unpriced when it ships", async () => {
             const shipped = orderOf({ status: "confirmed", amount_vnd: null, shipped_at: NOW, carrier: "GHN" })
-            const { em: tx } = writing([writtenOf(shipped)])
             const orders = await build(mockEntityManager())
 
-            await expect(orders.ship("ws-1", "order-1", "GHN", "T1", tx)).resolves.toEqual(shipped)
+            await expect(
+                orders.ship("ws-1", "order-1", "GHN", "T1", writing([writtenOf(shipped)]).em),
+            ).resolves.toEqual(shipped)
         })
 
         it("answers null when the order cannot be shipped", async () => {
@@ -307,18 +274,12 @@ const registerShipAndLabels = () => {
     })
 
     describe("labelsOf", () => {
-        it("reads nothing for no orders", async () => {
-            const em = mockEntityManager()
+        it("reads nothing for no orders, else the number and items of the given orders", async () => {
+            const em = mockEntityManager({ find: [OrderEntity, [orderEntityOf(orderOf())]] })
             const orders = await build(em)
 
             await expect(orders.labelsOf("ws-1", [])).resolves.toEqual([])
             expect(em.find).not.toHaveBeenCalled()
-        })
-
-        it("reads the number and items of the given orders", async () => {
-            const em = mockEntityManager({ find: [OrderEntity, [orderEntityOf(orderOf())]] })
-            const orders = await build(em)
-
             await expect(orders.labelsOf("ws-1", ["order-1"])).resolves.toEqual([
                 { id: "order-1", order_no: "DH-20261013-0001", items: "2 x Tea" },
             ])
@@ -476,11 +437,13 @@ const registerSettlement = () => {
                 update: [
                     [OrderEntity, { affected: 1 }],
                     [OrderEntity, { affected: 0 }],
+                    [OrderEntity, { raw: [], generatedMaps: [] }],
                 ],
             })
             const orders = await build(em)
 
             await expect(orders.settle("ws-1", "order-1")).resolves.toBe(true)
+            await expect(orders.settle("ws-1", "order-1")).resolves.toBe(false)
             await expect(orders.settle("ws-1", "order-1")).resolves.toBe(false)
 
             expect(em.update).toHaveBeenCalledWith(
@@ -490,20 +453,20 @@ const registerSettlement = () => {
             )
         })
 
-        it("takes an update that reports no count as nothing settled", async () => {
-            const em = mockEntityManager({ update: [OrderEntity, { raw: [], generatedMaps: [] }] })
-            const orders = await build(em)
-            await expect(orders.settle("ws-1", "order-1")).resolves.toBe(false)
-        })
-
-        it("settles through the manager of the caller's transaction", async () => {
+        it("settles and marks paid through the manager of the caller's transaction", async () => {
             const own = mockEntityManager()
             const callers = mockEntityManager({ update: [OrderEntity, { affected: 1 }] })
             const orders = await build(own)
 
             await orders.settle("ws-1", "order-1", callers)
+            await orders.markPaid("ws-1", "order-1", callers)
 
-            expect(callers.update).toHaveBeenCalledTimes(1)
+            expect(callers.update).toHaveBeenCalledTimes(2)
+            expect(callers.update).toHaveBeenLastCalledWith(
+                OrderEntity,
+                { workspaceId: "ws-1", id: "order-1", status: Not("cancelled") },
+                { status: "paid" },
+            )
             expect(own.update).not.toHaveBeenCalled()
         })
     })
@@ -519,21 +482,6 @@ const registerSettlement = () => {
             const where = { workspaceId: "ws-1", id: "order-1", status: Not("cancelled") }
             expect(em.update).toHaveBeenNthCalledWith(1, OrderEntity, where, { status: "invoiced" })
             expect(em.update).toHaveBeenNthCalledWith(2, OrderEntity, where, { status: "paid" })
-        })
-
-        it("marks the order paid through the manager of the caller's transaction", async () => {
-            const own = mockEntityManager()
-            const callers = mockEntityManager({ update: [OrderEntity, { affected: 1 }] })
-            const orders = await build(own)
-
-            await orders.markPaid("ws-1", "order-1", callers)
-
-            expect(callers.update).toHaveBeenCalledWith(
-                OrderEntity,
-                { workspaceId: "ws-1", id: "order-1", status: Not("cancelled") },
-                { status: "paid" },
-            )
-            expect(own.update).not.toHaveBeenCalled()
         })
     })
 }

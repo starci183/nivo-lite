@@ -1,9 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { RuleChange } from "@modules/domain/authority-rules"
-import type { OfficeAuthorityPort, ResolvedOfficeAuthority } from "@modules/domain/workspace-seed"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { MemberGrantChange } from "./member-grants.contracts"
+import type { ResolvedOfficeAuthority } from "./office-authority.contracts"
+import type { OfficeAuthorityPort } from "./office-authority.port"
 import { MemberGrantsService } from "./member-grants.service"
 
 /** One rule of an office seed. */

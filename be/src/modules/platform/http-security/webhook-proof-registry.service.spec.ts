@@ -79,7 +79,9 @@ describe("WebhookProofRegistryService", () => {
             objectLike({ code: HttpSecurityErrorCode.WebhookProviderUnknown }),
         )
     })
+})
 
+const describeRefusalLog = () => {
     describe("the log of a refused proof", () => {
         const refused = (scope: string) => ({
             scope,
@@ -142,4 +144,6 @@ describe("WebhookProofRegistryService", () => {
             expect(logger.warn).not.toHaveBeenCalled()
         })
     })
-})
+}
+
+describeRefusalLog()

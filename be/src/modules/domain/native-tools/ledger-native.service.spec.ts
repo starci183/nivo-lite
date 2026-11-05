@@ -2,7 +2,11 @@ import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
-import { LedgerRegistry, ProviderRegistryError, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
+import {
+    LedgerRegistryService,
+    ProviderRegistryError,
+    ProviderRegistryErrorCode,
+} from "@modules/domain/provider-registry"
 import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
 import { LEDGER_MANIFEST, LedgerNativeService } from "./ledger-native.service"
 import { NativeViewService } from "./native-view.service"
@@ -41,7 +45,7 @@ const actOnce = (effects: jest.Mocked<GraphNodeEffectsService>): void => {
 /** Arranges the view to let an internal caller in and the registry to hold `port` (none when null). */
 const arrange = (
     views: jest.Mocked<NativeViewService>,
-    providers: jest.Mocked<LedgerRegistry>,
+    providers: jest.Mocked<LedgerRegistryService>,
     port: LedgerPort | null,
 ): void => {
     views.internalOf.mockResolvedValue(mock<NativeView>())
@@ -51,7 +55,7 @@ const arrange = (
 /** The ledger tools over the port, with the ledger of effects. */
 const build = async (port: LedgerPort | null = portOf(true)) => {
     const views = mock<NativeViewService>()
-    const providers = mock<LedgerRegistry>()
+    const providers = mock<LedgerRegistryService>()
     const effects = mock<GraphNodeEffectsService>()
     arrange(views, providers, port)
     actOnce(effects)
@@ -59,7 +63,7 @@ const build = async (port: LedgerPort | null = portOf(true)) => {
         providers: [
             LedgerNativeService,
             { provide: NativeViewService, useValue: views },
-            { provide: LedgerRegistry, useValue: providers },
+            { provide: LedgerRegistryService, useValue: providers },
             { provide: GraphNodeEffectsService, useValue: effects },
         ],
     }).compile()
@@ -69,13 +73,13 @@ const build = async (port: LedgerPort | null = portOf(true)) => {
 /** The ledger tools over the port in an app without the ledger of effects: every call writes. */
 const buildBare = async (port: LedgerPort) => {
     const views = mock<NativeViewService>()
-    const providers = mock<LedgerRegistry>()
+    const providers = mock<LedgerRegistryService>()
     arrange(views, providers, port)
     const moduleRef = await Test.createTestingModule({
         providers: [
             LedgerNativeService,
             { provide: NativeViewService, useValue: views },
-            { provide: LedgerRegistry, useValue: providers },
+            { provide: LedgerRegistryService, useValue: providers },
         ],
     }).compile()
     return { service: moduleRef.get(LedgerNativeService), port }

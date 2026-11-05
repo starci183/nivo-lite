@@ -1,6 +1,13 @@
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import { DomainError } from "@modules/platform/errors"
-import type { QueueDelivery, QueueDeliverySource, QueueHandler, QueueJob, QueueWriteOptions } from "./queue.contracts"
+import type {
+    DeferSeconds,
+    QueueDelivery,
+    QueueDeliverySource,
+    QueueHandler,
+    QueueJob,
+    QueueWriteOptions,
+} from "./queue.contracts"
 
 /** How many starts a job gets before it is dead-lettered as failed. */
 export const ATTEMPTS = 4
@@ -65,6 +72,19 @@ export const retryAfterSecondsOf = (cause: unknown): number | undefined => {
     }
     if (!(cause instanceof DomainError)) return undefined
     const seconds = Number(cause.params.retryAfterSeconds)
+    return Number.isFinite(seconds) && seconds >= 1 && seconds <= 3600 ? Math.ceil(seconds) : undefined
+}
+
+/**
+ * The pause, in seconds, a handler asked for with a typed hand-back, which is no failure and spends no attempt: a queue deferral, or an
+ * owning domain error that names a finite `deferSeconds` of 1 to 3600. Undefined when the failure asks for no pause.
+ */
+export const deferSecondsOf = (cause: unknown): DeferSeconds => {
+    if (cause instanceof QueueError) {
+        return cause.code === QueueErrorCode.DeferredUntil ? Number(cause.params.seconds) : undefined
+    }
+    if (!(cause instanceof DomainError)) return undefined
+    const seconds = Number(cause.params.deferSeconds)
     return Number.isFinite(seconds) && seconds >= 1 && seconds <= 3600 ? Math.ceil(seconds) : undefined
 }
 

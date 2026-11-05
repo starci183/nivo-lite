@@ -26,6 +26,43 @@ import { ZaloInboxLogEvent } from "./zalo-inbox.log-events"
 import { polledRawBody } from "./zalo-polled-body.policy"
 import { ZaloInboxEntity } from "./persistence/entities"
 
+/** The row a claim recorded and the id the delivery was claimed under. */
+interface ClaimedReceipt {
+    /** The inbox row. */
+    readonly id: string
+    /** The id the delivery was claimed under. */
+    readonly deliveryId: string
+}
+
+/** Claims the row of a delivery under its id; undefined when the id was taken (a redelivery, or the other door brought it first). */
+const claimReceipt = async (
+    inbox: EntityInbox,
+    manager: EntityManager,
+    connection: string,
+    rawBody: ZaloRawDelivery,
+    source: "poll" | undefined,
+): Promise<ClaimedReceipt | undefined> => {
+    const payload = {
+        connection,
+        rawBody: rawBody?.toString("utf8") ?? "",
+        ...(source === undefined ? {} : { source }),
+    }
+    const deliveryId = rawBody === undefined ? "" : zaloDeliveryIdOf(connection, rawBody)
+    if (deliveryId === "") return undefined
+    const receipt = {
+        entity: ZaloInboxEntity,
+        row: (id: string) => ({ provider: "zalo", deliveryId: id, payload }),
+    }
+    const id = await inbox.claimRow("zalo", deliveryId, manager, receipt)
+    return id === undefined ? undefined : { id, deliveryId }
+}
+
+/** Queues the consumer that processes a committed receipt. */
+const queueConsumer = (outbox: QueueOutbox, manager: EntityManager, deliveryId: string): Promise<void> => {
+    const message: ZaloDeliveryRecorded = { deliveryId }
+    return outbox.write(manager, ZALO_DELIVERY_QUEUE, message, { dedupeKey: `${ZALO_DELIVERY_QUEUE}:${deliveryId}` })
+}
+
 @Injectable()
 /** Claims each Zalo message once, then publishes its durable receipt; a deferred consumer stores it and queues its answer. */
 export class ZaloInboxService {
@@ -47,7 +84,7 @@ export class ZaloInboxService {
         // A connection that holds no OA secret key yet proved nothing: the call is acknowledged and closed, never read as an event.
         const isProven = await this.gate.holdsProofKey(connection)
         return this.entityManager.transaction(async (manager) => {
-            const receipt = await this.claim(manager, connection, rawBody, undefined)
+            const receipt = await claimReceipt(this.inbox, manager, connection, rawBody, undefined)
             if (receipt === undefined) return
             if (!isProven) {
                 await manager.update(
@@ -57,7 +94,7 @@ export class ZaloInboxService {
                 )
                 return
             }
-            await this.queueConsumer(manager, receipt.deliveryId)
+            await queueConsumer(this.outbox, manager, receipt.deliveryId)
         })
     }
 
@@ -68,10 +105,10 @@ export class ZaloInboxService {
      */
     acceptPolledMessage(connection: string, message: PolledZaloMessage, intake: PolledZaloIntake): Promise<boolean> {
         return this.entityManager.transaction(async (manager) => {
-            const receipt = await this.claim(manager, connection, polledRawBody(message), "poll")
+            const receipt = await claimReceipt(this.inbox, manager, connection, polledRawBody(message), "poll")
             if (receipt === undefined) return false
             if (!intake.stale) {
-                await this.queueConsumer(manager, receipt.deliveryId)
+                await queueConsumer(this.outbox, manager, receipt.deliveryId)
                 return true
             }
             await manager.update(ZaloInboxEntity, { id: receipt.id }, { processedAt: () => "now()", state: "expired" })
@@ -164,34 +201,5 @@ export class ZaloInboxService {
             { id: pending.id },
             { processedAt: () => "now()", state: answered ? "handled" : "received" },
         )
-    }
-
-    /** Claims the row of a delivery under its id; undefined when the id was taken (a redelivery, or the other door brought it first). */
-    private async claim(
-        manager: EntityManager,
-        connection: string,
-        rawBody: ZaloRawDelivery,
-        source: "poll" | undefined,
-    ): Promise<{ readonly id: string; readonly deliveryId: string } | undefined> {
-        const payload = {
-            connection,
-            rawBody: rawBody?.toString("utf8") ?? "",
-            ...(source === undefined ? {} : { source }),
-        }
-        const deliveryId = rawBody === undefined ? "" : zaloDeliveryIdOf(connection, rawBody)
-        if (deliveryId === "") return undefined
-        const receipt = {
-            entity: ZaloInboxEntity,
-            row: (id: string) => ({ provider: "zalo", deliveryId: id, payload }),
-        }
-        const id = await this.inbox.claimRow("zalo", deliveryId, manager, receipt)
-        return id === undefined ? undefined : { id, deliveryId }
-    }
-
-    private async queueConsumer(manager: EntityManager, deliveryId: string): Promise<void> {
-        const message: ZaloDeliveryRecorded = { deliveryId }
-        await this.outbox.write(manager, ZALO_DELIVERY_QUEUE, message, {
-            dedupeKey: `${ZALO_DELIVERY_QUEUE}:${deliveryId}`,
-        })
     }
 }

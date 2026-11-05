@@ -1,31 +1,25 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, fakeInbox, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeInbox, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
+import {
+    BUMPED,
+    IGNORED,
+    INBOUND_NOW as NOW,
+    INSERTED,
+    NOT_BUMPED,
+    bankPaymentEvent,
+    eventEntity,
+    inboundInput,
+    runField,
+} from "@tests/fixtures/builders/inbound-events-service.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { In } from "typeorm"
 import { InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { InboundEventsService } from "./inbound-events.service"
 import { InboundEventEntity } from "./persistence/entities"
-
-/** Matches the `() => "now()"` function a write hands the database for a time column. */
-const ANY_FUNCTION: unknown = expect.any(Function)
-
-/** What the function held by the named field of a value answers when it is called. */
-const runField = (value: unknown, field: string): unknown => {
-    const fn: unknown = Reflect.get(Object(value), field)
-    return typeof fn === "function" ? Reflect.apply(fn, undefined, []) : undefined
-}
-
-const NOW = "2026-10-12T10:00:00.000Z"
-
-const INSERTED = (id: string): QueryBuilderAnswers => ({ execute: { raw: [{ id }] } })
-const IGNORED: QueryBuilderAnswers = { execute: { raw: [] } }
-const BUMPED = (id: string): QueryBuilderAnswers => ({ execute: { raw: [{ id }] } })
-const NOT_BUMPED: QueryBuilderAnswers = { execute: { raw: [] } }
 
 const build = async (stubs: MockEntityManager = mockEntityManager()) => {
     const tx = fakeTransaction(stubs)
@@ -41,42 +35,12 @@ const build = async (stubs: MockEntityManager = mockEntityManager()) => {
     return { events: moduleRef.get(InboundEventsService), tx, inbox }
 }
 
-const eventOf = (manager: MockEntityManager) => ({
-    manager,
-    workspaceId: "ws-1",
-    sender: null,
-    body: "ACB credit",
-    amountVnd: 150000,
-    externalRef: "NIVO8F3K2",
-    providerRef: " casso:7 ",
-})
-
-const eventEntity = builder<InboundEventEntity>({
-    id: "event-1",
-    workspaceId: "ws-1",
-    channel: "zalo",
-    kind: "lead",
-    senderName: "Mai",
-    senderContact: null,
-    body: "Haircut",
-    amountVnd: null,
-    externalRef: null,
-    dedupeKey: "zalo:lead:evt-1",
-    duplicateCount: 0,
-    lastDuplicateAt: null,
-    eventId: "evt-1",
-    leadId: null,
-    status: "received",
-    createdAt: new Date("2026-10-13T10:00:00.000Z"),
-    updatedAt: new Date("2026-10-13T10:00:00.000Z"),
-})
-
 describe("InboundEventsService recordBankPayment", () => {
     it("records the credit as one inbound payment event keyed by its trimmed event id", async () => {
         const { events, tx } = await build()
         const [insert] = queueQueryBuilders(tx.em, [INSERTED("event-1")])
 
-        await expect(events.recordBankPayment(eventOf(tx.em))).resolves.toEqual({
+        await expect(events.recordBankPayment(bankPaymentEvent(tx.em))).resolves.toEqual({
             duplicate: false,
             inboundEventId: "event-1",
         })
@@ -105,14 +69,14 @@ describe("InboundEventsService recordBankPayment", () => {
         const { events, tx } = await build()
         const [, bump] = queueQueryBuilders(tx.em, [IGNORED, BUMPED("event-1")])
 
-        await expect(events.recordBankPayment(eventOf(tx.em))).resolves.toEqual({
+        await expect(events.recordBankPayment(bankPaymentEvent(tx.em))).resolves.toEqual({
             duplicate: true,
             inboundEventId: "event-1",
         })
 
         expect(bump?.callsOf("update")).toEqual([[]])
         expect(runField(bump?.callsOf("set")[0]?.[0], "duplicateCount")).toBe("duplicate_count + 1")
-        expect(bump?.callsOf("set")).toEqual([[{ duplicateCount: ANY_FUNCTION, lastDuplicateAt: new Date(NOW) }]])
+        expect(bump?.callsOf("set")[0]?.[0]).toMatchObject({ lastDuplicateAt: new Date(NOW) })
         expect(bump?.callsOf("where")).toEqual([
             ["workspace_id = :workspaceId AND dedupe_key = :key", { workspaceId: "ws-1", key: "bank:payment:casso:7" }],
         ])
@@ -122,7 +86,7 @@ describe("InboundEventsService recordBankPayment", () => {
         const { events, tx } = await build()
         queueQueryBuilders(tx.em, [IGNORED, NOT_BUMPED])
 
-        await expect(events.recordBankPayment(eventOf(tx.em))).rejects.toMatchObject({
+        await expect(events.recordBankPayment(bankPaymentEvent(tx.em))).rejects.toMatchObject({
             code: InboundEventsErrorCode.Unreadable,
         })
     })
@@ -136,7 +100,7 @@ describe("InboundEventsService keepForOwner", () => {
             workspaceId: "ws-1",
             channel: "zalo",
             sender: "Dinh",
-            body: "Tôi cần tư vấn",
+            body: "I need some advice",
             eventId: "zalo:c-1:m-1",
         })
 
@@ -147,7 +111,7 @@ describe("InboundEventsService keepForOwner", () => {
                     channel: "zalo",
                     kind: "message",
                     senderName: "Dinh",
-                    body: "Tôi cần tư vấn",
+                    body: "I need some advice",
                     eventId: "zalo:c-1:m-1",
                     dedupeKey: "zalo:message:zalo:c-1:m-1",
                     status: "needs_decision",
@@ -158,7 +122,13 @@ describe("InboundEventsService keepForOwner", () => {
 })
 
 describe("InboundEventsService outages of the owner", () => {
-    const outage = { workspaceId: "ws-1", channel: "zalo", sender: "OA", body: "Nâng gói", eventId: "channel-plan:c-1" }
+    const outage = {
+        workspaceId: "ws-1",
+        channel: "zalo",
+        sender: "OA",
+        body: "Upgrade plan",
+        eventId: "channel-plan:c-1",
+    }
 
     it("writes a new item for the outage when its series has none open, keyed by the moment it began", async () => {
         const { events, tx } = await build(mockEntityManager({ findOne: [InboundEventEntity, null] }))
@@ -174,7 +144,7 @@ describe("InboundEventsService outages of the owner", () => {
                     channel: "zalo",
                     kind: "message",
                     senderName: "OA",
-                    body: "Nâng gói",
+                    body: "Upgrade plan",
                     eventId: `channel-plan:c-1:${stamp}`,
                     dedupeKey: `zalo:message:channel-plan:c-1:${stamp}`,
                     status: "needs_decision",
@@ -184,7 +154,7 @@ describe("InboundEventsService outages of the owner", () => {
     })
 
     it("writes nothing while an item of the series is still open, and says so when the key was taken", async () => {
-        const open = await build(mockEntityManager({ findOne: [InboundEventEntity, { id: "ev-0" } as never] }))
+        const open = await build(mockEntityManager({ findOne: [InboundEventEntity, eventEntity({ id: "ev-0" })] }))
         await expect(open.events.keepOutageForOwner(open.tx.em, outage)).resolves.toBe(false)
         expect(open.tx.em.createQueryBuilder).not.toHaveBeenCalled()
 
@@ -255,16 +225,7 @@ describe("InboundEventsService holdForOwnerCheck", () => {
     })
 })
 describe("InboundEventsService recordInput", () => {
-    const input = {
-        workspaceId: "ws-1",
-        channel: "zalo",
-        kind: "lead",
-        senderName: "Mai",
-        senderContact: null,
-        body: "Haircut",
-        externalRef: null,
-        eventId: "evt-1",
-    }
+    const input = inboundInput()
     it("records a new channel input after claiming the event", async () => {
         const { events, tx, inbox } = await build()
         const [insert] = queueQueryBuilders(tx.em, [INSERTED("event-1")])
@@ -321,18 +282,10 @@ describe("InboundEventsService repeated inbox input", () => {
         const { events, tx, inbox } = await build(mockEntityManager({ findOne: [InboundEventEntity, eventEntity()] }))
         inbox.seen("zalo", "ws-1:zalo:lead:evt-1")
 
-        await expect(
-            events.recordInput({
-                workspaceId: "ws-1",
-                channel: "zalo",
-                kind: "lead",
-                senderName: "Mai",
-                senderContact: null,
-                body: "Haircut",
-                externalRef: null,
-                eventId: "evt-1",
-            }),
-        ).resolves.toEqual({ duplicate: true, inboundEventId: "event-1" })
+        await expect(events.recordInput(inboundInput())).resolves.toEqual({
+            duplicate: true,
+            inboundEventId: "event-1",
+        })
 
         expect(inbox.claims).toEqual([{ source: "zalo", eventId: "ws-1:zalo:lead:evt-1" }])
         expect(tx.em.findOne).toHaveBeenCalledTimes(1)
@@ -480,16 +433,7 @@ describe("InboundEventsService handOffOrder", () => {
 })
 
 describe("InboundEventsService consumer transaction", () => {
-    const input = {
-        workspaceId: "ws-1",
-        channel: "manual",
-        kind: "lead",
-        senderName: "Mai",
-        senderContact: null,
-        body: "Haircut",
-        externalRef: "api:CRM",
-        eventId: "request-1",
-    }
+    const input = inboundInput({ channel: "manual", externalRef: "api:CRM", eventId: "request-1" })
 
     it("keeps the input and its inbox receipt in the supplied transaction", async () => {
         const { events, tx, inbox } = await build()
@@ -519,23 +463,12 @@ describe("InboundEventsService repeated transaction input", () => {
     it("resolves a row committed with the original claim through the supplied transaction", async () => {
         const { events, tx, inbox } = await build()
         inbox.seen("manual", "ws-1:manual:lead:request-1")
-        const manager = mockEntityManager({
-            findOne: [InboundEventEntity, Object.assign(eventEntity(), { id: "original-event" })],
-        })
+        const manager = mockEntityManager({ findOne: [InboundEventEntity, eventEntity({ id: "original-event" })] })
         const claim = jest.spyOn(inbox, "claim")
 
         await expect(
             events.recordInputInTransaction(
-                {
-                    workspaceId: "ws-1",
-                    channel: "manual",
-                    kind: "lead",
-                    senderName: "Mai",
-                    senderContact: null,
-                    body: "Haircut",
-                    externalRef: "api:CRM",
-                    eventId: "request-1",
-                },
+                inboundInput({ channel: "manual", externalRef: "api:CRM", eventId: "request-1" }),
                 manager,
             ),
         ).resolves.toEqual({ duplicate: true, inboundEventId: "original-event" })
@@ -553,18 +486,9 @@ describe("InboundEventsService repeated transaction input", () => {
         const { events, tx, inbox } = await build(mockEntityManager({ findOne: [InboundEventEntity, null] }))
         inbox.seen("facebook", "ws-1:facebook:message:evt-1")
 
-        await expect(
-            events.recordInput({
-                workspaceId: "ws-1",
-                channel: "facebook",
-                kind: "message",
-                senderName: "Mai",
-                senderContact: null,
-                body: "Haircut",
-                externalRef: null,
-                eventId: "evt-1",
-            }),
-        ).rejects.toMatchObject({ code: InboundEventsErrorCode.Unreadable })
+        await expect(events.recordInput(inboundInput({ channel: "facebook", kind: "message" }))).rejects.toMatchObject({
+            code: InboundEventsErrorCode.Unreadable,
+        })
 
         expect(tx.outcomes).toEqual(["rollback"])
         expect(tx.em.findOne).toHaveBeenCalledWith(InboundEventEntity, {

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { InjectQueueWorkerRegistry, QueueError, QueueErrorCode } from "@modules/platform/queue"
+import { deferSecondsOf, InjectQueueWorkerRegistry, QueueError, QueueErrorCode } from "@modules/platform/queue"
 import type { QueueDelivery, QueueWorkerRegistry } from "@modules/platform/queue"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { ClaimedJob } from "./jobs.contracts"
@@ -13,10 +13,6 @@ import { JobRenewalService } from "./job-renewal.service"
 import type { FencedProcessor } from "./fenced.processor"
 
 const isFencedOut = (cause: unknown): boolean => cause instanceof JobsError && cause.code === JobsErrorCode.FencedOut
-
-/** Whether a handler asked for its job to run later (a typed hand-back), which is no failure. */
-const isDeferral = (cause: unknown): cause is QueueError =>
-    cause instanceof QueueError && cause.code === QueueErrorCode.DeferredUntil
 
 @Injectable()
 /**
@@ -76,7 +72,8 @@ export class JobRunnerService implements JobProcessorRegistry {
                 this.logger.warn(JobsLogEvent.FencedOut, { jobId: job.jobId })
                 return
             }
-            if (isDeferral(cause)) await this.release(job, cause)
+            const deferSeconds = deferSecondsOf(cause)
+            if (deferSeconds !== undefined) await this.release(job, deferSeconds)
             else await this.recordFailure(job, cause)
             throw cause
         } finally {
@@ -85,8 +82,8 @@ export class JobRunnerService implements JobProcessorRegistry {
     }
 
     /** A handler that asked to run later failed nothing: the job is given back, logged at info, and the queue defers it. */
-    private async release(job: ClaimedJob, cause: QueueError): Promise<void> {
-        this.logger.info(JobsLogEvent.Deferred, { jobId: job.jobId, seconds: Number(cause.params.seconds) })
+    private async release(job: ClaimedJob, seconds: number): Promise<void> {
+        this.logger.info(JobsLogEvent.Deferred, { jobId: job.jobId, seconds })
         await this.claims
             .release({ jobId: job.jobId, expectedFencingToken: job.fencingToken })
             .catch((error_: unknown) => {

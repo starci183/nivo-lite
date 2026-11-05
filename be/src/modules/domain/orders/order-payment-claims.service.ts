@@ -46,7 +46,7 @@ export class OrderPaymentClaimsService {
     }
 
     /** The claims of the workspace that match the equalities, newest first. */
-    async query(workspaceId: string, where: PaymentClaimWhere, limit: number): Promise<Array<PaymentClaimRow>> {
+    async matching(workspaceId: string, where: PaymentClaimWhere, limit: number): Promise<Array<PaymentClaimRow>> {
         const claims = await this.entityManager.find(PaymentClaimEntity, {
             where: { workspaceId, ...where },
             order: { claimedAt: "DESC" },

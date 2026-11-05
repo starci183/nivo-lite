@@ -24,7 +24,7 @@ export const AgentGraphRun = (props: AgentGraphRunProps) => (
         }
         headingLevel={3}
     >
-        {props.view.mismatch === "" ? null : <Alert title={props.view.mismatch} tone="cautionary" appearance="soft" />}
+        {props.view.mismatch === "" ? null : <Alert title={props.view.mismatch} tone="cautionary" />}
         <Timeline
             label={props.view.stepsLabel}
             isLoading={props.isLoading}

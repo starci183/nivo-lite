@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import { GraphNodeRegistryService, rowsAnswering } from "@modules/domain/graph-nodes"
 import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
-import { bankNameOf } from "./bank-name.policy"
+import { bankDisplayNameOf } from "./bank-name.policy"
 import { WorkspacePaymentAccountService } from "./workspace-payment-account.service"
 
 @Injectable()
@@ -30,7 +30,7 @@ export class PaymentAccountGraphService implements OnModuleInit {
                 {
                     provider: account.provider,
                     bankCode: account.bankCode,
-                    bankName: bankNameOf(account.bankCode),
+                    bankName: bankDisplayNameOf(account.bankCode),
                     accountNumber: account.accountNumber,
                     accountHolder: account.holder ?? "",
                     connectionId: account.connectionId,

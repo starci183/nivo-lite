@@ -1,5 +1,5 @@
 import type { AgentTurnView, AgentWake } from "@modules/domain/agent-work"
-import { decodeInbound, encodeInbound } from "@modules/domain/agent-work"
+import { decodeInbound, encodeInbound } from "@modules/domain/agent-wake-rules"
 import { pinnedOf, splitEventKeyOf } from "./intent-turn.policy"
 import type { IntentFileRef, IntentScope, InternalWakeRef, WakeRow } from "./agent-turns.contracts"
 

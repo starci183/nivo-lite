@@ -1,11 +1,28 @@
-import { numberOf, textOf, textOrNull } from "./field-read.policy"
+import { Test } from "@nestjs/testing"
+import { fieldNumberOf, fieldTextOf, fieldTextOrNullOf } from "./field-read.policy"
+
+const SUBJECT = Symbol("field-read.policy")
+interface Subject {
+    readonly fieldTextOf: typeof fieldTextOf
+    readonly fieldTextOrNullOf: typeof fieldTextOrNullOf
+    readonly fieldNumberOf: typeof fieldNumberOf
+}
+
+const buildSubject = async (): Promise<Subject> => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [{ provide: SUBJECT, useValue: { fieldTextOf, fieldTextOrNullOf, fieldNumberOf } }],
+    }).compile()
+    return moduleRef.get<Subject>(SUBJECT)
+}
 
 describe("field readers", () => {
-    it("reads text, or nothing when the value is not text", () => {
-        expect(textOf("a")).toBe("a")
-        expect(textOf(3)).toBeUndefined()
-        expect(textOrNull("a")).toBe("a")
-        expect(textOrNull(null)).toBeNull()
+    it("reads text, or nothing when the value is not text", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.fieldTextOf("a")).toBe("a")
+        expect(subject.fieldTextOf(3)).toBeUndefined()
+        expect(subject.fieldTextOrNullOf("a")).toBe("a")
+        expect(subject.fieldTextOrNullOf(null)).toBeNull()
     })
 
     it.each([
@@ -15,7 +32,9 @@ describe("field readers", () => {
         [Number.NaN, undefined],
         [null, undefined],
         [{}, undefined],
-    ])("reads %j as the number %s", (value, expected) => {
-        expect(numberOf(value)).toBe(expected)
+    ])("reads %j as the number %s", async (value, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.fieldNumberOf(value)).toBe(expected)
     })
 })

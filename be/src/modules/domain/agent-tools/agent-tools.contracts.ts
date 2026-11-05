@@ -211,7 +211,7 @@ export interface ApprovalResult {
 }
 
 /** A lead id, or null when there is none. */
-export type OptionalLeadId = string | null
+export type OptionalToolLeadId = string | null
 
 /** The claims of a tool token: its job and an expiry in unix seconds. */
 export interface TokenClaims extends ToolContext {

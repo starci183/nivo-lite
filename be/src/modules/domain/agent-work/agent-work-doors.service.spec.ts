@@ -10,7 +10,7 @@ import { AgentWorkDoorsService } from "./agent-work-doors.service"
 import { AgentWorkReadService } from "./agent-work-read.service"
 import { AgentWorkSettingsService } from "./agent-work-settings.service"
 import { AgentWorkErrorCode } from "./errors/agent-work.error"
-import type { AgentGoalDraft, AgentTriggerDraft } from "./agent-work.contracts"
+import type { AgentGoalDraft, AgentTriggerDraft } from "./agent-work-drafts.contracts"
 
 const installationOf = (agentId: string | null): InstallationRecord => ({
     id: "inst-1",

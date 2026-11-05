@@ -151,7 +151,9 @@ describe("ReconcilePaymentPerformerService prepare", () => {
             payer: null,
         })
     })
+})
 
+describe("ReconcilePaymentPerformerService prepare from the proposal", () => {
     it("opens a transaction from the proposal's amount when there is no input", async () => {
         const { service, transactions } = await build()
         const item = itemOf({

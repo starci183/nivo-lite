@@ -152,6 +152,11 @@ type BuildWiringProofResultOptionsServerShape = {
     port: number
 }
 
+type BuildWiringProofResultOptionsSepayShape = {
+    apiBase: string
+    timeoutMs: number
+}
+
 type BuildWiringProofResultOptionsShape = {
     server: BuildWiringProofResultOptionsServerShape
     httpSecurity: BuildWiringProofResultOptionsHttpSecurityShape
@@ -160,7 +165,7 @@ type BuildWiringProofResultOptionsShape = {
     connectionSecrets: BuildWiringProofResultOptionsConnectionSecretsShape
     mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
     ai: BuildWiringProofResultOptionsAiShape
-    sepay: { apiBase: string; timeoutMs: number }
+    sepay: BuildWiringProofResultOptionsSepayShape
 }
 
 type BuildWiringProofResultShape = {

@@ -33,7 +33,7 @@ const BANK_NAMES: Readonly<Record<string, string>> = {
 }
 
 /** The human bank name of a bank code; an unlisted code stays as it is (trimmed, upper case). */
-export const bankNameOf = (bankCode: string): string => {
+export const bankDisplayNameOf = (bankCode: string): string => {
     const code = bankCode.trim().toUpperCase()
     return BANK_NAMES[code] ?? code
 }

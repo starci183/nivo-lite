@@ -10,6 +10,7 @@ import { BillingModule } from "@modules/domain/billing"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { ChatFilesModule } from "@modules/domain/chat-files"
+import { RemoteFilesModule, parseRemoteFilesConfig } from "@modules/integrations/remote-files"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
@@ -22,7 +23,7 @@ import { AiModule } from "@modules/integrations/ai"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { DocumentsModule } from "@modules/integrations/documents"
 import { ObjectStorageModule, STORAGE_ASSETS, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
-import { Secret } from "@modules/platform/config"
+import { EnvSource, Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { HttpError, HttpErrorCode } from "@modules/platform/http"
 import { HttpSecurityModule } from "@modules/platform/http-security"
@@ -130,6 +131,7 @@ export const AGENT_TAG_MODULES: Array<DynamicModule> = [
         bankAccount: { account: "", bank: "", holder: "" },
     }),
     AiUsageEventsModule.register({ isGlobal: true }),
+    RemoteFilesModule.register({ isGlobal: true, ...parseRemoteFilesConfig(new EnvSource({})) }),
     ChatFilesModule.register({
         isGlobal: true,
         storage: STORAGE_OBJECTS,

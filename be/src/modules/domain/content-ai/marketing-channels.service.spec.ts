@@ -7,8 +7,8 @@ import type { ConnectionRecord } from "@modules/domain/connections"
 import { ContentEngagementDailyService } from "@modules/domain/content-engagement-daily"
 import { META_CLIENT } from "@modules/integrations/meta"
 import type { MetaClient } from "@modules/integrations/meta"
-import { ZALO } from "@modules/integrations/zalo"
-import type { ZaloClient } from "@modules/integrations/zalo"
+import { ZALO_ARTICLES } from "@modules/integrations/zalo"
+import type { ZaloArticleClient } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -21,7 +21,7 @@ const MESSAGES = [{ channel: "zalo", day: "2026-10-12", messages: 3 }]
 
 const build = async () => {
     const meta = mock<MetaClient>()
-    const zalo = mock<ZaloClient>()
+    const zalo = mock<ZaloArticleClient>()
     const connections = mock<ConnectionsService>()
     const credentials = mock<ZaloCredentialsService>()
     const daily = mock<ContentEngagementDailyService>()
@@ -45,7 +45,7 @@ const build = async () => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: META_CLIENT, useValue: meta },
-            { provide: ZALO, useValue: zalo },
+            { provide: ZALO_ARTICLES, useValue: zalo },
             { provide: ConnectionsService, useValue: connections },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ContentEngagementDailyService, useValue: daily },
@@ -113,7 +113,7 @@ describe("MarketingChannelsService postsOf", () => {
                 engagements: 356,
             },
         ])
-        zalo.articles.mockResolvedValue([
+        zalo.list.mockResolvedValue([
             {
                 id: "art-1",
                 title: "Weekend",
@@ -159,13 +159,13 @@ describe("MarketingChannelsService postsOf", () => {
 
         await expect(service.postsOf("ws-1", "2026-10-12", "2026-10-19")).resolves.toEqual([])
         expect(meta.publishedPosts).not.toHaveBeenCalled()
-        expect(zalo.articles).not.toHaveBeenCalled()
+        expect(zalo.list).not.toHaveBeenCalled()
     })
 
     it("leaves out a channel that fails and logs it", async () => {
         const { service, meta, zalo, logger } = await build()
         meta.publishedPosts.mockRejectedValue(new Error("Meta down"))
-        zalo.articles.mockRejectedValue(new Error("Zalo down"))
+        zalo.list.mockRejectedValue(new Error("Zalo down"))
 
         await expect(service.postsOf("ws-1", "2026-10-12", "2026-10-19")).resolves.toEqual([])
         expect(logger.error).toHaveBeenCalledWith("marketing.insights.posts_failed", new Error("Meta down"), {

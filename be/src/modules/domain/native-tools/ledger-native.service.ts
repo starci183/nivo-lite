@@ -1,7 +1,11 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { LedgerRegistry, ProviderRegistryError, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
+import {
+    LedgerRegistryService,
+    ProviderRegistryError,
+    ProviderRegistryErrorCode,
+} from "@modules/domain/provider-registry"
 import type { LedgerPort } from "@modules/domain/provider-registry"
 import {
     LEDGER_APPEND_INPUT_SCHEMA,
@@ -67,7 +71,7 @@ export class LedgerNativeService implements NativeAdapter {
 
     constructor(
         private readonly views: NativeViewService,
-        private readonly providers: LedgerRegistry,
+        private readonly providers: LedgerRegistryService,
         @Optional() private readonly once?: GraphNodeEffectsService,
     ) {}
 

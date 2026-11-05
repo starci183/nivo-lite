@@ -39,7 +39,7 @@ export const AgentGraphProblems = (props: AgentGraphProblemsProps) => {
         <Alert
             title={props.view.title}
             tone="cautionary"
-            appearance="soft"
+
             description={
                 <Stack gap="row">
                     <ProblemLine {...props} item={first} />

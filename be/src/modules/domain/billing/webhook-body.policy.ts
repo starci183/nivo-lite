@@ -28,4 +28,4 @@ export const parseJsonObject = (raw: RawBody): JsonObject => {
     throw new BillingError({ code: BillingErrorCode.WebhookInvalid })
 }
 
-export { numberOf, textOf, textOrNull } from "@modules/platform/primitives"
+export { fieldNumberOf, fieldTextOf, fieldTextOrNullOf } from "@modules/platform/primitives"

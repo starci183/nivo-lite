@@ -3,14 +3,12 @@ import type { OnModuleInit } from "@nestjs/common"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
-import { z } from "zod"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { WorkEngineService } from "./work-engine.service"
+import { undoPayloadSchema } from "./work-item-effects.schema"
 
 /** The name under which a graph node closes work in the Office. */
 const ACTOR = "NIVO"
-
-const undoPayload = z.object({ id: z.string().min(1) })
 
 @Injectable()
 /**
@@ -32,7 +30,7 @@ export class WorkItemWithdrawExecutorService implements OnModuleInit {
     }
 
     private async withdraw(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
-        const { id } = undoPayload.parse(payload)
+        const { id } = undoPayloadSchema.parse(payload)
         try {
             await this.engine.resumeWork(
                 { workspaceId: turn.workspaceId, actor: ACTOR, locale: turn.locale },

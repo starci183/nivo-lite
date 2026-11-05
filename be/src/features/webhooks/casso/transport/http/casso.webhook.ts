@@ -1,7 +1,7 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req } from "@nestjs/common"
 import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
-import { BankFeedService } from "@modules/domain/billing"
+import { BankFeedReceiptsService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
@@ -15,7 +15,7 @@ import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 export class CassoWebhook {
     constructor(
         private readonly signature: ScopedWebhookVerifier,
-        private readonly feed: BankFeedService,
+        private readonly feed: BankFeedReceiptsService,
     ) {}
 
     /** Proves the delivery before intake and acknowledges accepted deliveries with HTTP 200 and an empty body. */

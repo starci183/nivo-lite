@@ -14,7 +14,7 @@ const buildSubject = async () => {
     return moduleRef.get<typeof import("./inbound-body.policy")>(SUBJECT)
 }
 
-describe("inbound-body policy", () => {
+const describeReading = () => {
     describe("readJsonObject", () => {
         it("reads the JSON object of the delivered bytes", async () => {
             const subject = await buildSubject()
@@ -58,7 +58,9 @@ describe("inbound-body policy", () => {
             expect(subject.numberField(undefined, "a")).toBeNaN()
         })
     })
+}
 
+const describeListsAndTimes = () => {
     describe("listField", () => {
         it("reads a list field of an object", async () => {
             const subject = await buildSubject()
@@ -94,4 +96,9 @@ describe("inbound-body policy", () => {
             expect(subject.epochMillisField("x", "at")).toBeNull()
         })
     })
+}
+
+describe("inbound-body policy", () => {
+    describeReading()
+    describeListsAndTimes()
 })
