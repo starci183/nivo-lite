@@ -1,6 +1,16 @@
 import type { z } from "zod"
-import type { DataShape, JsonSchema, Namespaced, PropsSchema, SpecLocale, SpecText } from "../schema/schema.types"
+import type {
+    DataShape,
+    JsonSchema,
+    JsonValue,
+    Namespaced,
+    PropsSchema,
+    SpecLocale,
+    SpecText,
+} from "../schema/schema.types"
+import type { PortMap, PortProvider, PortsOf, RunContext } from "../port/port.types"
 import type { DataSlot } from "../slot/slot.types"
+import type { ReadListing } from "./list.types"
 
 /** A read slot of a block: the data a spec binds to it. */
 export interface BlockReadSlot {
@@ -76,10 +86,57 @@ export interface ReadConfig<V extends PropsSchema> {
     readonly permission: string
 }
 
+/** Why a raw value was refused as the variables of a read or the input of an action. */
+export interface InputProblem {
+    /** `INPUT_INVALID`: a value the schema refuses; `INPUT_UNKNOWN_KEY`: a key the schema does not declare. */
+    readonly code: "INPUT_INVALID" | "INPUT_UNKNOWN_KEY"
+    /** The dotted path of the value or key, `.` for the whole. */
+    readonly at: string
+}
+
+/** How running a read ended: its data, or the problems of the variables it was given. */
+export type ReadRunResult<R = unknown> =
+    { readonly ok: true; readonly data: R } | { readonly ok: false; readonly problems: ReadonlyArray<InputProblem> }
+
+/**
+ * What `defineRead` takes for a read that RUNS in the package, against typed data ports: the back end implements the ports and
+ * the one generic door calls `execute`; the graph nodes call the same code, so the screen and the agent never differ.
+ */
+export interface RunReadConfig<V extends PropsSchema, P extends PortMap, R> {
+    /** The registry id a spec binds the read by; unique across every package. */
+    readonly id: Namespaced
+    /** The kind of data the read yields, which a slot may demand of the read bound to it. */
+    readonly dataKind: string
+    /** Whether the read yields one record or a list. */
+    readonly shape: DataShape
+    /** What the read returns; a binding path must start with one. */
+    readonly fields: ReadonlyArray<string>
+    /** The dotted paths a binding may narrow to, with the shape at each. */
+    readonly paths: Readonly<Record<string, DataShape>>
+    /** The variables a spec may set and the door accepts; an unknown key is refused. */
+    readonly variables: V
+    /** The member permission a viewer needs. */
+    readonly permission: string
+    /** The ports the read needs, by the name `run` reaches them by. */
+    readonly ports: P
+    /** The read itself: pure business over the ports. */
+    readonly run: (ports: PortsOf<P>, variables: z.infer<V>, context: RunContext) => Promise<R>
+}
+
 /** A registered read, as the registry holds it after `defineRead` checked it. */
 export interface ReadDefinition<V extends PropsSchema = PropsSchema> extends ReadConfig<V> {
     /** Tells a read from a block or an action in the registry. */
     readonly entry: "read"
+    /** The ports of a read that runs in the package; absent on a host-operation read. */
+    readonly ports?: PortMap | undefined
+    /**
+     * Runs a read that runs in the package: parses `raw` against `variables` (an unknown key is refused), builds the ports from
+     * the provider and calls the read's `run`. Absent on a host-operation read. The renderer never calls it.
+     */
+    readonly execute?:
+        ((provider: PortProvider, raw: unknown, context: RunContext) => Promise<ReadRunResult>) | undefined
+    /** Set by `listRead` and `countsRead`: what the read lists or counts. */
+    readonly listing?: ReadListing | undefined
 }
 
 /** What `defineAction` takes: a host command run with the bound record's id. */
@@ -94,10 +151,70 @@ export interface ActionConfig {
     readonly label: SpecText
 }
 
+/** What running an action in the package yields. */
+export type ActionResult =
+    | { readonly ok: true; readonly data?: JsonValue }
+    | {
+          readonly ok: false
+          readonly reason: "invalid"
+          readonly message: SpecText
+          /** The words for each form field the values broke. */
+          readonly fields?: Readonly<Record<string, SpecText>>
+          readonly data?: JsonValue
+      }
+    | {
+          readonly ok: false
+          /** `refused` carries a domain refusal as data (a taken time with the nearest free ones). */
+          readonly reason: "forbidden" | "conflict" | "refused" | "failed"
+          readonly message: SpecText
+          readonly data?: JsonValue
+      }
+
+/**
+ * What `defineAction` takes for an action that RUNS in the package, against typed data ports (see `RunReadConfig`). The payload
+ * the door receives is flat: the `values` of the `ActionInput` with `id` (and `command` when given) merged in.
+ */
+export interface RunActionConfig<I extends PropsSchema, P extends PortMap> {
+    /** The registry id a spec binds the action by; unique across every package. */
+    readonly id: Namespaced
+    /** The member permission a viewer needs to run the action. */
+    readonly permission: string
+    /** The words on the control that runs the action. */
+    readonly label: SpecText
+    /** The payload the door accepts; an unknown key is refused. */
+    readonly input: I
+    /** The ports the action needs, by the name `run` reaches them by. */
+    readonly ports: P
+    /** The action itself: pure business over the ports. */
+    readonly run: (ports: PortsOf<P>, input: z.infer<I>, context: RunContext) => Promise<ActionResult>
+    /** Whether the provider opens one transaction for the run. */
+    readonly transactional?: boolean
+    /** The reads the front end fetches again when the action succeeds. */
+    readonly refreshes: ReadonlyArray<Namespaced>
+    /** Whether the front end shows the effect before the answer and takes it back on a refusal. */
+    readonly optimistic?: boolean
+}
+
 /** A registered action, as the registry holds it after `defineAction` checked it. */
 export interface ActionDefinition extends ActionConfig {
     /** Tells an action from a block or a read in the registry. */
     readonly entry: "action"
+    /** The payload schema of an action that runs in the package; absent on a host-operation action. */
+    readonly input?: PropsSchema | undefined
+    /** The ports of an action that runs in the package; absent on a host-operation action. */
+    readonly ports?: PortMap | undefined
+    /**
+     * Runs an action that runs in the package: parses `raw` against `input` (an unknown key is refused as `invalid`), builds the
+     * ports from the provider and calls the action's `run`. Absent on a host-operation action. The renderer never calls it.
+     */
+    readonly execute?:
+        ((provider: PortProvider, raw: unknown, context: RunContext) => Promise<ActionResult>) | undefined
+    /** Whether the provider opens one transaction for the run; absent means no. */
+    readonly transactional?: boolean | undefined
+    /** The reads the front end fetches again when the action succeeds; absent means none. */
+    readonly refreshes?: ReadonlyArray<Namespaced> | undefined
+    /** Whether the front end shows the effect before the answer; absent means no. */
+    readonly optimistic?: boolean | undefined
 }
 
 /** The variables of a read: literals a spec or a block sets. */
@@ -131,9 +248,21 @@ export interface ReadHandle<T = unknown> {
 
 /** What running an action yields. */
 export type ActionOutcome =
-    | { readonly ok: true }
-    | { readonly ok: false; readonly reason: "invalid"; readonly fields: Readonly<Record<string, SpecText>> }
-    | { readonly ok: false; readonly reason: "forbidden" | "conflict" | "failed"; readonly message: SpecText }
+    | { readonly ok: true; readonly data?: JsonValue }
+    | {
+          readonly ok: false
+          readonly reason: "invalid"
+          readonly fields: Readonly<Record<string, SpecText>>
+          readonly message?: SpecText
+          readonly data?: JsonValue
+      }
+    | {
+          readonly ok: false
+          /** `refused` is a domain refusal; its `data` says what to offer instead. */
+          readonly reason: "forbidden" | "conflict" | "refused" | "failed"
+          readonly message: SpecText
+          readonly data?: JsonValue
+      }
 
 /** What a block hands an action: the record, an optional row command and form values. */
 export interface ActionInput {
