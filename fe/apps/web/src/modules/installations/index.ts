@@ -12,7 +12,7 @@ export {
     installationLifecycleOf,
 } from "./installations.status"
 export type { AgentLifecycle } from "./installations.status"
-export { agentHref, agentListHref } from "./installations.routes"
+export { IDENTITY_PARAM, IDENTITY_QUERY, OWNER_SETUP_NOTICE, agentHref, agentListHref } from "./installations.routes"
 export type { AgentTab } from "./installations.routes"
 export type {
     ContextVersion,

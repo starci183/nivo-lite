@@ -30,7 +30,6 @@ export interface SetupSideGates {
     readonly evidencePlaceholder: string
     readonly isGating: boolean
     readonly confirmLabel: string
-    readonly unconfirmLabel: string
     readonly editLabel: string
     readonly editSaveLabel: string
     readonly editCancelLabel: string

@@ -139,7 +139,6 @@ const setupOf = (
 /** Resolves the gates labels for the current locale. */
 const gatesLabelsOf = (t: ReturnType<typeof useTranslations<"moduleSetup">>) => ({
     confirmLabel: t("confirm"),
-    unconfirmLabel: t("unconfirm"),
     editLabel: t("edit"),
     editSaveLabel: t("editSave"),
     editCancelLabel: t("editCancel"),

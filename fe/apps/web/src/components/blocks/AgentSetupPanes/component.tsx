@@ -227,8 +227,8 @@ const SetupBand = (props: AgentSetupPanesBaseProps) =>
     ))
 
 /**
- * Draws the Setup tab of an agent as one PaneGrid flush under the tab line. On a laptop the work map of the agent (head, what is
- * wrong with the draft, the graph, then the checklist that must be confirmed before it runs) is the main pane, beside a pane whose tabs are the private chat with
+ * Draws the Setup tab of an agent as one PaneGrid flush under the tab line. On a laptop the work map of the agent (head, the checklist that must be
+ * confirmed before it runs, what is wrong with the draft, then the graph and its mode switch) is the main pane, beside a pane whose tabs are the private chat with
  * NIVO, the detail of the selected node, the proposals and the versions, so a selection replaces the chat and never adds a third
  * column. On a phone four lanes cannot be read: one switch picks the list of branches, the graph, the chat or the proposals, and the
  * detail of a node opens in a drawer. Every band is a PaneSection, so all bands of a pane start at its one content edge.
@@ -257,10 +257,10 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                         <GraphHeadBand {...props} />
                     </PaneSection>
                     <PaneSection scroll={{ label: copy.paneLabel }} gap="section">
+                        <SetupBand {...props} />
                         <ProblemsBand {...props} />
                         <GraphCanvasBand {...props} />
                         <GraphModeBand {...props} />
-                        <SetupBand {...props} />
                     </PaneSection>
                 </Pane>
                 <Pane area="tabs" surface>

@@ -1,8 +1,19 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { Badge, Button, DropdownMenu, Icon, Page, Pane, PaneGrid, Cluster } from "@starci/grammar/common"
-import type { BadgeTone, BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
+import {
+    Alert,
+    Badge,
+    Button,
+    DropdownMenu,
+    IconButton,
+    Page,
+    Pane,
+    PaneGrid,
+    PaneSection,
+    Cluster,
+} from "@starci/grammar/common"
+import type { BadgeTone, BreadcrumbItem, DropdownMenuEntry, PageHeaderContent } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -24,6 +35,8 @@ export interface InstanceHeaderView {
     readonly chatHref: string | null
     /** The profile of the agent that drives this instance; null while the instance has no agent. */
     readonly profileHref: string | null
+    /** The packaging page of this agent's workflow; null for a person who may not package. */
+    readonly packageHref: string | null
 }
 
 /** One installed agent the switcher in the header can open. */
@@ -57,6 +70,10 @@ export interface AgentInstanceFrameBaseProps {
         readonly earlyLabel: string
         readonly chatLabel: string
         readonly profileLabel: string
+        readonly packageLabel: string
+        /** A short soft notice carried by a redirect to this tab (staff sent from Setup); empty when none. */
+        readonly notice: string
+        readonly moreLabel: string
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
         readonly tabsLabel: string
@@ -91,55 +108,53 @@ interface HeaderPartProps {
     readonly copy: FrameCopy
 }
 
-/** The installed agents in a menu: the open one checked, a row opens another, the last entry adds one (for a person who may). */
-interface SwitcherProps {
-    readonly switcher: InstanceSwitch
+/** The entries of the heading's menu: the profile, the other agents (the open one checked) with the way to add one, and the packaging. */
+const menuEntriesOf = (copy: FrameCopy): DropdownMenuEntry[] => {
+    const { view, switcher } = copy
+    const hasSwitch = switcher.items.length > 1 || (switcher.items.length > 0 && switcher.add !== null)
+    return [
+        ...(view.profileHref === null ? [] : [{ id: "profile", label: copy.profileLabel, href: view.profileHref }]),
+        ...(view.packageHref === null ? [] : [{ id: "package", label: copy.packageLabel, href: view.packageHref }]),
+        ...(hasSwitch
+            ? [
+                  {
+                      kind: "section" as const,
+                      id: "agents",
+                      label: switcher.label,
+                      selection: {
+                          mode: "single" as const,
+                          selectedIds: [switcher.currentId],
+                          onChange: () => undefined,
+                      },
+                      items: switcher.items.map((item) => ({
+                          id: item.id,
+                          label: item.name,
+                          description: item.description,
+                          href: item.href,
+                          mark: <AgentMark label={item.name} seed={item.seed} src={item.avatarUrl} size="sm" />,
+                      })),
+                  },
+              ]
+            : []),
+        ...(switcher.add === null || !hasSwitch
+            ? []
+            : [
+                  {
+                      id: "add",
+                      label: switcher.add.label,
+                      href: switcher.add.href,
+                      iconSource: nivoIconSource("add", "leading"),
+                  },
+              ]),
+    ]
 }
 
-const Switcher = (props: SwitcherProps) => (
-    <DropdownMenu
-        placement="bottom end"
-        trigger={
-            <Button intent="neutral" endContent={<Icon source={nivoIconSource("expand", "leading")} usage="leading" />}>
-                {props.switcher.label}
-            </Button>
-        }
-        entries={[
-            {
-                kind: "section",
-                id: "agents",
-                label: props.switcher.label,
-                selection: { mode: "single", selectedIds: [props.switcher.currentId], onChange: () => undefined },
-                items: props.switcher.items.map((item) => ({
-                    id: item.id,
-                    label: item.name,
-                    description: item.description,
-                    href: item.href,
-                    mark: <AgentMark label={item.name} seed={item.seed} src={item.avatarUrl} size="sm" />,
-                })),
-            },
-            ...(props.switcher.add === null
-                ? []
-                : [
-                      {
-                          id: "add",
-                          label: props.switcher.add.label,
-                          href: props.switcher.add.href,
-                          iconSource: nivoIconSource("add", "leading"),
-                      },
-                  ]),
-        ]}
-    />
-)
-
-/** The two actions and the switcher at the end of the header. */
+/** The commands at the end of the header: the next setup step when one is owed, the private chat, and a menu of the rest. */
 const HeaderActions = (props: HeaderPartProps) => {
     const { copy } = props
+    const entries = menuEntriesOf(copy)
     return (
         <Cluster gap="inline">
-            {copy.switcher.items.length > 1 || (copy.switcher.items.length > 0 && copy.switcher.add !== null) ? (
-                <Switcher switcher={copy.switcher} />
-            ) : null}
             {copy.view.setup === null ? null : (
                 <Button intent="commit" href={copy.view.setup.href}>
                     {copy.view.setup.label}
@@ -150,10 +165,18 @@ const HeaderActions = (props: HeaderPartProps) => {
                     {copy.chatLabel}
                 </Button>
             )}
-            {copy.view.profileHref === null ? null : (
-                <Button intent="neutral" href={copy.view.profileHref}>
-                    {copy.profileLabel}
-                </Button>
+            {entries.length === 0 ? null : (
+                <DropdownMenu
+                    placement="bottom end"
+                    entries={entries}
+                    trigger={
+                        <IconButton
+                            intent="neutral"
+                            source={nivoIconSource("more", "leading")}
+                            label={copy.moreLabel}
+                        />
+                    }
+                />
             )}
         </Cluster>
     )
@@ -206,6 +229,11 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
                 <PaneGrid label={copy.ariaLabel} areas={["tab"]}>
                     <Pane area="tab" inset="flush">
                         <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+                        {copy.notice === "" ? null : (
+                            <PaneSection>
+                                <Alert tone="informative" title={copy.notice} />
+                            </PaneSection>
+                        )}
                         {props.children}
                     </Pane>
                 </PaneGrid>
@@ -215,6 +243,7 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
     return (
         <Page measure="product" isLoading={copy.isLoading} header={header}>
             <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+            {copy.notice === "" ? null : <Alert tone="informative" title={copy.notice} />}
             {props.children}
         </Page>
     )
