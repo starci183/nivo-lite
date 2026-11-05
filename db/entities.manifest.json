@@ -84,15 +84,24 @@
         "records_chat_conversation_handled_at_chk",
         "records_chat_conversation_handled_by_chk",
         "records_chat_conversation_kind_chk",
+        "records_chat_conversation_last_at_chk",
+        "records_chat_conversation_last_role_chk",
+        "records_chat_conversation_last_text_chk",
+        "records_chat_conversation_message_count_chk",
+        "records_chat_conversation_name_chk",
         "records_chat_conversation_status_chk",
-        "records_chat_conversation_visitor_name_chk"
+        "records_chat_conversation_unanswered_chk",
+        "records_chat_conversation_waiting_chk"
       ],
       "indexes": [
         "records_chat_conversation_channel_external_key",
         "records_chat_conversation_channel_recent",
+        "records_chat_conversation_key",
+        "records_chat_conversation_last_text_trgm_idx",
+        "records_chat_conversation_name_trgm_idx",
         "records_chat_conversation_recent",
-        "records_chat_conversation_status_recent",
-        "records_chat_conversation_visitor_name_trgm_idx"
+        "records_chat_conversation_status_channel_recent",
+        "records_chat_conversation_status_recent"
       ]
     },
     {
