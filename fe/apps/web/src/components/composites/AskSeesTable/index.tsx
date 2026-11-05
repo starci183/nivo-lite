@@ -28,7 +28,7 @@ export const AskSeesTable = (props: AskSeesTableProps) => {
         const cell = row.lane.cells[columnId]
         if (!cell?.isOpen) return <Text tone="muted">–</Text>
         return (
-            <Cluster gap="inline">
+            <Cluster gap="inline" wrap={false}>
                 <Icon props={{ name: "copied", usage: "leading", ariaLabel: copy.seesOpen }} />
                 {cell.count === null ? null : <Text>{String(cell.count)}</Text>}
             </Cluster>

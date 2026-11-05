@@ -1,4 +1,4 @@
-import { Button, IconButton, Page, Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
+import { Button, Cluster, IconButton, Page, Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { BrainHeaderActions, brainHeaderTabs } from "@/components/composites/BrainHeaderActions"
 import { PaneBlank } from "@/components/composites/PaneBlank"
@@ -89,29 +89,31 @@ const Decisions = (props: DecisionsProps) => {
     const pending = form.pendingAction
     return (
         <PaneSection as="footer" align="center">
-            <Button intent="alternative" isDisabled={form.isBusy} onPress={props.on.back}>
-                {copy.laterLabel}
-            </Button>
-            {draft.canEdit ? (
-                <Button intent="neutral" isPending={pending === "save"} onPress={props.on.save}>
-                    {copy.saveLabel}
+            <Cluster gap="inline" justify="end">
+                <Button intent="alternative" isDisabled={form.isBusy} onPress={props.on.back}>
+                    {copy.laterLabel}
                 </Button>
-            ) : null}
-            {draft.redraftLabel === null ? null : (
-                <Button
-                    intent="neutral"
-                    startContent={<Icon props={{ name: "sparkle", usage: "leading" }} />}
-                    isPending={pending === "redraft"}
-                    onPress={props.on.redraft}
-                >
-                    {draft.redraftLabel}
-                </Button>
-            )}
-            {draft.approveLabel === null ? null : (
-                <Button intent="commit" isPending={pending === "approve"} onPress={props.on.approve}>
-                    {draft.approveLabel}
-                </Button>
-            )}
+                {draft.canEdit ? (
+                    <Button intent="neutral" isPending={pending === "save"} onPress={props.on.save}>
+                        {copy.saveLabel}
+                    </Button>
+                ) : null}
+                {draft.redraftLabel === null ? null : (
+                    <Button
+                        intent="neutral"
+                        startContent={<Icon props={{ name: "sparkle", usage: "leading" }} />}
+                        isPending={pending === "redraft"}
+                        onPress={props.on.redraft}
+                    >
+                        {draft.redraftLabel}
+                    </Button>
+                )}
+                {draft.approveLabel === null ? null : (
+                    <Button intent="commit" isPending={pending === "approve"} onPress={props.on.approve}>
+                        {draft.approveLabel}
+                    </Button>
+                )}
+            </Cluster>
         </PaneSection>
     )
 }

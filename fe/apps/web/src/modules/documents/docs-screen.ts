@@ -41,6 +41,7 @@ export const docsCopyOf = (t: KnowledgeTranslate, tp: ReturnType<typeof useTrans
     moduleLabel: t("docsForLabel"),
     modulePlaceholder: t("selectPlaceholder"),
     moreFilters: (count: number) => tp("moreFilters", { count }),
+    moreWord: tp("moreWord"),
     back: tp("backToList"),
     moreActions: tp("moreActions"),
     asideTitle: t("asideTitle"),

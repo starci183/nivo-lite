@@ -132,6 +132,8 @@ export interface DocsCopy {
     readonly moduleLabel: string
     readonly modulePlaceholder: string
     readonly moreFilters: (count: number) => string
+    /** The word on the control that folds the tabs that do not fit. */
+    readonly moreWord: string
     readonly back: string
     readonly moreActions: string
     readonly asideTitle: string
@@ -155,6 +157,7 @@ export type DocListCopy = Pick<
     | "clearSearch"
     | "tabsLabel"
     | "moreFilters"
+    | "moreWord"
     | "noMatchTitle"
     | "noMatchBody"
     | "clearFilters"

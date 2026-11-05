@@ -65,6 +65,7 @@ export const KnowledgeDocList = (props: KnowledgeDocListProps) => {
                 labelVisibility="always"
                 selectedKey={list.tab}
                 moreLabel={copy.moreFilters}
+                overflowLabel={copy.moreWord}
                 items={list.tabs.map((tab) => ({
                     id: tab.id,
                     label: tab.label,

@@ -5530,6 +5530,7 @@
     "errorBody": "Hãy thử lại sau ít phút.",
     "retry": "Thử lại",
     "forbiddenTitle": "Bạn chưa có quyền xem phần này",
+    "moreWord": "Thêm",
     "moreFilters": "{count} bộ lọc nữa"
   },
   "system": {

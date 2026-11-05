@@ -78,12 +78,13 @@ export const KnowledgeDocBody = (props: KnowledgeDocBodyProps) => {
                 items={body.passages.rows.map((row, index) => ({
                     id: row.id,
                     title: row.text,
-                    leading: { position: index + 1 },
+                    leading: { position: index + 1, format: "hash" },
                     badges: [{ label: row.chip, tone: "neutral" }],
                 }))}
                 empty={<EmptyNotice message={body.passages.emptyLabel} />}
             />
             <Disclosure
+                chevron="start"
                 title={body.content.title}
                 body={
                     <Text size="sm" isLoading={props.isLoading}>

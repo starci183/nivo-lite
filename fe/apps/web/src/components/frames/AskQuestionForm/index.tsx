@@ -1,6 +1,6 @@
-import { ChoiceChips, Form, Select, Stack, Textarea } from "@starci/grammar/common"
+import { Alert, Button, ChoiceChips, Cluster, Form, Select, Stack, Textarea } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { FormActions } from "@/components/composites/FormActions"
+import { Icon } from "@/components/leaves/Icon"
 import type { AskAgentOption, BrainAskView } from "@/modules/types"
 
 /** An agent of the same shape as a ready one. */
@@ -73,13 +73,20 @@ export const AskQuestionForm = (props: AskQuestionFormProps) => {
                             isLoading={isLoading}
                             onValueChange={on.setQuestion}
                         />
-                        <FormActions
-                            failTitle={view.copy.failTitle}
-                            error={view.error}
-                            submitLabel={view.copy.submitLabel}
-                            isPending={view.isPending}
-                            isLoading={isLoading}
-                        />
+                        {view.error === undefined ? null : (
+                            <Alert tone="negative" title={view.copy.failTitle} description={view.error} />
+                        )}
+                        <Cluster gap="inline" justify="end">
+                            <Button
+                                type="submit"
+                                intent="commit"
+                                startContent={<Icon props={{ name: "search", usage: "leading" }} />}
+                                isPending={view.isPending}
+                                isLoading={isLoading}
+                            >
+                                {view.copy.submitLabel}
+                            </Button>
+                        </Cluster>
                     </Stack>
                 </Form>
             )}

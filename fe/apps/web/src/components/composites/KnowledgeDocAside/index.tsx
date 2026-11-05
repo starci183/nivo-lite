@@ -18,6 +18,7 @@ const rowOf = (idea: DocIdeaView, ideas: DocIdeasView, onIdea: KnowledgeDocAside
     title: idea.title,
     ...(idea.line === "" ? {} : { description: idea.line }),
     action: { label: ideas.addLabel, href: idea.addHref, isPending: idea.isPending },
+    actionPlacement: "end",
     menu: {
         label: ideas.menuLabel,
         entries: idea.menu.map((item) => ({

@@ -150,6 +150,7 @@ export const publicCopyOf = (t: PublicTranslate, p: PublicPaneTranslate, tp: Pan
     clearSearch: tp("clearSearch"),
     tabsLabel: p("tabsLabel"),
     moreFilters: (count) => tp("moreFilters", { count }),
+    moreWord: tp("moreWord"),
     back: tp("backToList"),
     moreActions: tp("moreActions"),
     closeAside: tp("closeAside"),
