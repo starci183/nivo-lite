@@ -1,10 +1,18 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
+import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
-import { lackOf, pageDays, publicBookingLabels, resultKey, serviceOptionsOf, summaryOf } from "./publicBooking.shared"
+import {
+    calendarLocaleOf,
+    lackOf,
+    pageDays,
+    publicBookingLabels,
+    resultKey,
+    serviceOptionsOf,
+    summaryOf,
+} from "./publicBooking.shared"
 import { usePublicBooking } from "./usePublicBooking"
-import { wallClockText, wallDate, wallMinutes } from "@/modules/i18n"
+import { shortDayText, wallClockText, wallDate, wallMinutes } from "@/modules/i18n"
 import type { PublicBookingPageData } from "@/modules/types"
 import type { PublicBookingFields } from "./usePublicBooking"
 
@@ -28,6 +36,7 @@ type UsePublicBookingFormResult = {
             }[]
         }
         formLabel: string
+        calendarLocale: string
         fields: PublicBookingFields
         services: {
             value: string
@@ -85,6 +94,7 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
     const t = useTranslations("workbenchBooking")
     const pub = useTranslations("publicPages")
     const format = useFormatter()
+    const locale = useLocale()
     const booking = usePublicBooking(page)
     const [missing, setMissing] = useState<"" | "service" | "time">("")
     const { today } = booking
@@ -92,13 +102,7 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
     const money = (value: number) =>
         format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
     const clock = (iso: string) => wallClockText(wallMinutes(Date.parse(iso), zone))
-    const dayText = (date: string) =>
-        format.dateTime(new Date(`${date}T12:00:00Z`), {
-            weekday: "short",
-            day: "2-digit",
-            month: "2-digit",
-            timeZone: "UTC",
-        })
+    const dayText = (date: string) => shortDayText(new Date(`${date}T12:00:00Z`), "UTC", locale)
     const whenText = (iso: string) => `${clock(iso)} ${dayText(wallDate(Date.parse(iso), zone))}`
     const { result } = booking
     const answer = result?.kind === "answered" ? result.answer : null
@@ -130,6 +134,7 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
     return {
         props: {
             formLabel: t("publicFormLabel"),
+            calendarLocale: calendarLocaleOf(locale),
             fields: booking.fields,
             services: serviceOptionsOf(page, t, money),
             noServicesText: t("publicNoServices"),

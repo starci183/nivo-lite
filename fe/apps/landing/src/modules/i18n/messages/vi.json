@@ -22,6 +22,9 @@
     }
   },
   "landing": {
+    "menuTitle": "Menu",
+    "menuOpen": "Mở menu",
+    "menuClose": "Đóng menu",
     "navLabel": "Điều hướng chính",
     "homeLabel": "NIVO trang chủ",
     "navProduct": "Sản phẩm",

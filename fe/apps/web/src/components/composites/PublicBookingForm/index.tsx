@@ -68,6 +68,8 @@ interface PublicBookingDone extends PublicBookingFeedback {
 /** Resolved form values and display state. */
 interface PublicBookingView {
     readonly formLabel: string
+    /** The BCP 47 locale the calendar writes months and weekdays in, and starts its week by. */
+    readonly calendarLocale: string
     readonly fields: PublicBookingFieldValues
     readonly services: ReadonlyArray<PublicBookingServiceOption>
     readonly noServicesText: string

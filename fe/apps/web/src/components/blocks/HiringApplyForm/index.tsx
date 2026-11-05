@@ -1,9 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
 import { CV_ACCEPT, useHiringApply, usePublicHiringJob } from "@/hooks/hiringPublic"
 import type { PublicJobView } from "@/hooks/hiringPublic"
+import type { ApplyValues, HiringSay } from "@/modules/types"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useHiringApplyForm } from "@/hooks/rhf"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
@@ -41,6 +43,14 @@ const experienceTextOf = (
               .filter((part) => part !== "")
               .join(" ")
 
+/** What a send still lacks, in the order the form asks for it: the name, a way to reach the candidate, the CV, the consent. */
+const missingTextOf = (say: HiringSay, values: ApplyValues, cvError: string | undefined): string => {
+    if (values.name.trim() === "") return say("applyNeedName")
+    if (values.phone.trim() === "" && values.email.trim() === "") return say("applyNeedContact")
+    if (cvError !== undefined) return cvError
+    return say("applyNeedConsent")
+}
+
 /** The connected public job page: reads the job without a session, and sends the application (CV first) through the back end GraphQL API. */
 export const HiringApplyForm = (props: HiringApplyFormProps) => {
     const t = useTranslations("hiring")
@@ -48,6 +58,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
     const format = useHiringFormat()
     const slotLabels = useSlotLabels()
     const language = useLocaleSwitch()
+    const [attempted, setAttempted] = useState(false)
     const read = usePublicHiringJob(props.ws, props.job)
     const form = useHiringApplyForm()
     const apply = useHiringApply(form, read.view, props)
@@ -68,12 +79,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                       }),
                 slotLabels: { ...slotLabels(say("applyMissing")), error: say("applyLoadFailed") },
                 failedBody: say("applyLoadFailedBody"),
-                language: {
-                    label: language.label,
-                    locale: language.locale,
-                    isPending: language.isPending,
-                    options: language.options,
-                },
+                language: { ...language },
                 post: {
                     company: job?.company ?? "",
                     title: job?.title ?? "",
@@ -101,7 +107,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                 values: apply.values,
                 cvAccept: CV_ACCEPT,
                 cvError: apply.cvError,
-                canSubmit: apply.canSubmit,
+                missing: attempted && !apply.canSubmit ? missingTextOf(say, apply.values, apply.cvError) : null,
                 isBusy: apply.isPending,
                 submitError: apply.isFailed ? say("applyFailed") : null,
                 doneText,
@@ -112,7 +118,10 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                 list: apply.setList,
                 answer: apply.setAnswer,
                 cv: apply.setCv,
-                submit: apply.submit,
+                submit: () => {
+                    setAttempted(true)
+                    if (apply.canSubmit) apply.submit()
+                },
                 retry: read.reload,
                 chooseLanguage: language.choose,
             }}

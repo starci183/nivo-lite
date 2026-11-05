@@ -82,6 +82,7 @@ const ServiceChoice = (props: PublicBookingFormProps) => {
         <RadioGroup
             label={p.labels.step1}
             isLabelHidden
+            appearance="rows"
             name="service"
             isLoading={props.isLoading === true}
             options={p.services.map((service) => ({
@@ -114,6 +115,8 @@ const timeBand = (props: PublicBookingFormProps): Band => {
             <Stack gap="row">
                 <Calendar
                     label={p.labels.step2}
+                    locale={p.calendarLocale}
+                    isLoading={props.isLoading === true}
                     previousLabel={p.labels.previousMonth}
                     nextLabel={p.labels.nextMonth}
                     value={p.fields.date === "" ? null : parseDate(p.fields.date)}
@@ -144,7 +147,7 @@ const sendBand = (props: PublicBookingFormProps): Band => {
             <Stack gap="row">
                 {p.refusal === undefined ? null : (
                     <>
-                        <Alert tone="negative" appearance="soft" title={p.refusal.message} />
+                        <Alert tone="negative" title={p.refusal.message} />
                         <PublicBookingAlternatives
                             alternatives={p.refusal.alternatives}
                             label={p.labels.alternatives}
@@ -180,7 +183,7 @@ const PublicBookingFormBody = (props: PublicBookingFormProps) => {
         return (
             <SurfaceCard ariaLabel={p.done.title}>
                 <Stack gap="row">
-                    <Alert tone="affirmative" appearance="soft" title={p.done.title} description={p.done.message} />
+                    <Alert tone="affirmative" title={p.done.title} description={p.done.message} />
                     <PublicBookingAlternatives
                         alternatives={p.done.alternatives}
                         label={p.labels.alternatives}

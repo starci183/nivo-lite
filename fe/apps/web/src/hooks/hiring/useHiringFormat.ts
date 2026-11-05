@@ -1,8 +1,8 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
+import { useFormatter, useTranslations, useLocale } from "next-intl"
 import { useMemo } from "react"
-import { i18n } from "@/modules/i18n"
+import { i18n, shortDayText } from "@/modules/i18n"
 
 /** The formatters of the Hiring screens: money, pay ranges, dates on the Vietnam clock, relative times and catalog labels of a value. */
 export interface HiringFormat {
@@ -14,6 +14,8 @@ export interface HiringFormat {
     readonly time: (iso: string) => string
     /** Weekday name and day-month of an instant on the Vietnam clock. */
     readonly dayLabel: (iso: string) => string
+    /** Short weekday and day-month of an instant on the Vietnam clock: "T5, 06/11". */
+    readonly shortDay: (iso: string) => string
     readonly ago: (iso: string, nowIso: string) => string
     /** The catalog label `<prefix>_<value>`, or the value itself when the catalog has none. */
     readonly label: (prefix: string, value: string) => string
@@ -23,6 +25,7 @@ export interface HiringFormat {
 export const useHiringFormat = (): HiringFormat => {
     const t = useTranslations("hiring")
     const format = useFormatter()
+    const locale = useLocale()
     return useMemo<HiringFormat>(() => {
         const money = (value: number): string =>
             format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
@@ -67,8 +70,9 @@ export const useHiringFormat = (): HiringFormat => {
                     month: "2-digit",
                     timeZone: i18n.timeZone,
                 }),
+            shortDay: (iso) => shortDayText(new Date(iso), i18n.timeZone, locale),
             ago: (iso, nowIso) => format.relativeTime(new Date(iso), new Date(nowIso)),
             label,
         }
-    }, [format, t])
+    }, [format, locale, t])
 }

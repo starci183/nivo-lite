@@ -22,6 +22,9 @@
     }
   },
   "landing": {
+    "menuTitle": "Menu",
+    "menuOpen": "Open the menu",
+    "menuClose": "Close the menu",
     "navLabel": "Main navigation",
     "homeLabel": "NIVO home",
     "navProduct": "Product",

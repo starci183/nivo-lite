@@ -105,6 +105,7 @@ const InviteSlots = (props: InviteCardProps) => {
                 label={say("replyPick")}
                 isLabelHidden
                 name="slot"
+                appearance="rows"
                 isLoading={props.isLoading}
                 isDisabled={isBusy}
                 options={props.view.slots.map((slot) => ({ value: slot.start, label: slot.label }))}

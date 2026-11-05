@@ -62,7 +62,7 @@ export const HiringInterviewReply = (props: HiringInterviewReplyProps) => {
                                             : "",
                                         slots: view.slots.map((slot) => ({
                                             start: slot.start,
-                                            label: `${format.dayLabel(slot.start)} \u00b7 ${format.time(slot.start)}`,
+                                            label: `${format.shortDay(slot.start)} \u00b7 ${format.time(slot.start)}`,
                                         })),
                                     },
                           error: read.isFailed ? true : undefined,

@@ -37,7 +37,8 @@ export interface HiringApplyFormBaseProps {
         readonly values: ApplyValues
         readonly cvAccept: string
         readonly cvError: string | undefined
-        readonly canSubmit: boolean
+        /** What a send still lacks, once the candidate pressed it; null when nothing is missing or nothing was pressed. */
+        readonly missing: string | null
         readonly isBusy: boolean
         /** The words of the failed submission; null while none failed. */
         readonly submitError: string | null
@@ -166,7 +167,7 @@ const ApplicantDetails = (props: HiringApplyFormBaseProps) => {
                 name="phone"
                 label={say("applyPhone")}
                 description={say("applyPhoneHint")}
-                isRequired
+                isRequired={values.email.trim() === ""}
                 isDisabled={isBusy}
                 value={values.phone}
                 onValueChange={(phone) => on.text("phone", phone)}
@@ -251,7 +252,8 @@ const ApplicationSubmission = (props: HiringApplyFormBaseProps) => {
                 onSelectedChange={(consent) => on.flag("consent", consent)}
             />
             {p.submitError === null ? null : <Alert tone="negative" title={p.submitError} />}
-            <Button type="submit" intent="commit" isPending={isBusy} isDisabled={isBusy || !p.canSubmit}>
+            {p.missing === null ? null : <Alert tone="negative" title={p.missing} />}
+            <Button type="submit" intent="commit" isPending={isBusy}>
                 {say("applySubmit")}
             </Button>
             <Text size="xs" tone="muted">

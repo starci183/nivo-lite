@@ -159,3 +159,6 @@ export const serviceOptionsOf = (
             .filter((part) => part !== "")
             .join(" \u00b7 "),
     }))
+
+/** The BCP 47 locale of the calendar for the app's language: it writes the months and weekdays and starts its week by it. */
+export const calendarLocaleOf = (locale: string): string => (locale === "vi" ? "vi-VN" : "en-US")
