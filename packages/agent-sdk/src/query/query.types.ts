@@ -1,5 +1,6 @@
 /**
- * The typed query tree over the records model: data only, never SQL text (R334).
+ * Owned by the CORE-BE lead (2026-11-05, plan section 11: one `records` table). The typed query tree: data only, never SQL text
+ * (plan 2.3, R334). Copied verbatim into every wave-2 stream; only E2 (and the lead) change it, announced in CORE-BE.log.md first.
  * A field name is a declared field (stored in `data`), a system field (`id`, `workspaceId`, `version`, `createdAt`, `updatedAt`) or
  * `<jsonbField>.<key>` naming a declared nested key (plan 10). The bounds live in `query-bounds.ts`.
  */
@@ -92,7 +93,7 @@ export interface HasExpr {
 export type FilterExpr =
     CompareExpr | MembershipExpr | NullCheckExpr | SearchExpr | OverlapsExpr | GroupExpr | NotExpr | HasExpr
 
-/** A sort direction. */
+/** The way an order key runs: `asc` smallest first, `desc` largest first (keyset paging reads both). */
 export type SortDirection = "asc" | "desc"
 
 /** One key of an order: a field and its direction. */
