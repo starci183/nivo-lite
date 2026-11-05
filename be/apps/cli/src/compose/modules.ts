@@ -13,6 +13,7 @@ import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
 import { N8nHostModule } from "@modules/integrations/n8n-host"
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { EmailMessagesModule } from "@modules/domain/email-messages"
+import { EntityPlannerModule } from "@modules/domain/entity-planner"
 import { EventsModule } from "@modules/domain/events"
 import { JobOpsModule } from "@modules/domain/job-ops"
 import { StaffModule } from "@modules/domain/staff"
@@ -158,5 +159,6 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ChannelConnectionsModule.register({ isGlobal: true }),
     InventoryModule.register({ isGlobal: true, seedOnly: true }),
     ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
+    EntityPlannerModule.register({ isGlobal: true, entities: [] }),
     CliModule.register({}),
 ]

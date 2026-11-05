@@ -69,6 +69,10 @@
     "./workbench/view": {
       "types": "./dist/workbench/view/index.d.ts",
       "default": "./dist/workbench/view/index.js"
+    },
+    "./entity": {
+      "types": "./dist/entity/index.d.ts",
+      "default": "./dist/entity/index.js"
     }
   },
   "scripts": {
