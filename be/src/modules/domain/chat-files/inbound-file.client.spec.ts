@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import fsPromises, { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Test } from "@nestjs/testing"
@@ -46,5 +46,16 @@ describe("InboundFileReaderClient", () => {
         await expect(reader.read(folder, 10)).resolves.toBeNull()
 
         expect(logger.warn.mock.calls).toEqual([[ChatFilesLogEvent.ImportFileUnreadable, { path: missing }]])
+    })
+
+    it("answers null and logs the file when it passed the checks but could not be read", async () => {
+        const { reader, logger } = await build()
+        const path = join(folder, "a.bin")
+        const read = jest.spyOn(fsPromises, "readFile").mockRejectedValueOnce(new Error("EBUSY"))
+
+        await expect(reader.read(path, 10)).resolves.toBeNull()
+
+        read.mockRestore()
+        expect(logger.warn.mock.calls).toEqual([[ChatFilesLogEvent.ImportFileUnreadable, { path }]])
     })
 })

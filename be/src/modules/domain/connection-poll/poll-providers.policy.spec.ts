@@ -1,4 +1,7 @@
 import { Test } from "@nestjs/testing"
+import { mock } from "@starci/jest-preset"
+import { REDIS_CLIENT } from "@modules/integrations/redis"
+import type { RedisClient } from "@modules/integrations/redis"
 import type { Provider } from "@nestjs/common"
 import { POLL_LIMITER_STORE, POLL_RANDOM, POLL_REDIS, POLL_REDIS_PREFIX } from "./connection-poll.decorators"
 import { MemoryPollLimiterStore } from "./memory-poll-limiter.adapter"
@@ -61,6 +64,27 @@ describe("poll-providers policy the limiter store", () => {
         })
         expect(providerOf(providers, POLL_REDIS_PREFIX)).toEqual({ provide: POLL_REDIS_PREFIX, useValue: "nivo" })
         expect(providerOf(providers, POLL_REDIS)).toHaveProperty("useFactory")
+    })
+
+    it("opens the Redis connection of the app through the shared client", async () => {
+        const { pollProvidersOf } = await build()
+        const client = mock<RedisClient>()
+        const runner = mock<ReturnType<RedisClient["open"]>>()
+        client.open.mockReturnValue(runner)
+        const provider = providerOf(
+            pollProvidersOf({
+                ...options,
+                redis: { host: "cache", port: 6380, db: 2, prefix: "nivo", password: "secret" },
+            }),
+            POLL_REDIS,
+        )
+
+        expect(provider).toMatchObject({ inject: [REDIS_CLIENT] })
+        if (provider === undefined || !("useFactory" in provider)) return expect(provider).toHaveProperty("useFactory")
+        const opened: unknown = provider.useFactory(client)
+
+        expect(opened).toBe(runner)
+        expect(client.open).toHaveBeenCalledWith({ host: "cache", port: 6380, db: 2, password: "secret" })
     })
 })
 
