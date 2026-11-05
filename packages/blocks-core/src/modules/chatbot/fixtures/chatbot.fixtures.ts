@@ -1,4 +1,6 @@
 import type { CountsResult, ListPage } from "@nivo-lite/agent-sdk/block"
+import { chatDecisionQueueOf } from "../../../rules/chatbot/decisions"
+import { chatFiguresOf } from "../../../rules/chatbot/figures"
 import type { ModuleFixtures } from "../../module-fixtures"
 import type { ThreadLine } from "../../../rules/chatbot"
 import type { ThreadRow, ThreadView } from "../chatbot.types"
@@ -183,6 +185,14 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
             empty: EMPTY_COUNTS,
             waiting: { counts: { zalo: 1 }, total: 1 },
         },
+        "chatbot.figures": {
+            ready: chatFiguresOf(STATUS_COUNTS.counts),
+            empty: chatFiguresOf({}),
+        },
+        "chatbot.decisions": {
+            ready: chatDecisionQueueOf(WAITING_THREAD_ROWS, WAITING_THREAD_ROWS.length),
+            empty: chatDecisionQueueOf([], 0),
+        },
         "chatbot.thread": { ready: HANDLED_VIEW, waiting: WAITING_VIEW },
         "chatbot.messages": {
             ready: { rows: READY_LINES, cursor: null },
@@ -194,5 +204,6 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
         "chatbot.reply": { ok: true, data: { messageId: "m9" } },
         "chatbot.handoff": { ok: true, data: { handledBy: "Thu Ha Le" } },
         "chatbot.release": { ok: true, data: { handledBy: null } },
+        "chatbot.decide": { ok: true, data: { handledBy: "Thu Ha Le" } },
     },
 }
