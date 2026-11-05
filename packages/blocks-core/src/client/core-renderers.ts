@@ -6,6 +6,7 @@ import {
     conversationBlock,
     filterTabsBlock,
     formBlock,
+    listEditorBlock,
     listPaneBlock,
     tabbedPanelBlock,
     tableBlock,
@@ -25,6 +26,7 @@ import { CardGridBlock } from "./blocks/CardGridBlock"
 import { ConversationBlock } from "./blocks/ConversationBlock"
 import { FilterTabsBlock } from "./blocks/FilterTabsBlock"
 import { FormBlock } from "./blocks/FormBlock"
+import { ListEditorBlock } from "./blocks/ListEditorBlock"
 import { ListPaneBlock } from "./blocks/ListPaneBlock"
 import { TabbedPanelBlock } from "./blocks/TabbedPanelBlock"
 import { TableBlock } from "./blocks/TableBlock"
@@ -51,6 +53,7 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(filterTabsBlock, FilterTabsBlock),
     defineRenderer(tableBlock, TableBlock),
     defineRenderer(formBlock, FormBlock),
+    defineRenderer(listEditorBlock, ListEditorBlock),
     defineRenderer(tabbedPanelBlock, TabbedPanelBlock),
     defineRenderer(asideDetailBlock, AsideDetailBlock),
     defineRenderer(conversationBlock, ConversationBlock),

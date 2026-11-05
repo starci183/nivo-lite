@@ -113,5 +113,10 @@
   "filtersOverflow": "Khác",
   "listSearchEmpty": "Không có kết quả khớp với tìm kiếm",
   "listLoadMore": "Tải thêm",
-  "listLoadFailed": "Không tải thêm được"
+  "listLoadFailed": "Không tải thêm được",
+  "blockListEditor": "Bảng dòng có thể sửa",
+  "listTooFew": "Hãy thêm dòng trước khi lưu",
+  "listEditorEmpty": "Chưa có dòng nào",
+  "formIdle": "Chọn một mục để sửa",
+  "alertDismiss": "Đóng"
 }

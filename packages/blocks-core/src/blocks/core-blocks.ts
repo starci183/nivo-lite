@@ -9,6 +9,7 @@ import { explanationBlock } from "./explanation.block"
 import { figuresBlock } from "./figures.block"
 import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
+import { listEditorBlock } from "./list-editor.block"
 import { listPaneBlock } from "./list-pane.block"
 import { masterDetailBlock } from "./master-detail.block"
 import { recordListBlock } from "./record-list.block"
@@ -30,6 +31,7 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     filterTabsBlock,
     tableBlock,
     formBlock,
+    listEditorBlock,
     tabbedPanelBlock,
     asideDetailBlock,
     conversationBlock,
