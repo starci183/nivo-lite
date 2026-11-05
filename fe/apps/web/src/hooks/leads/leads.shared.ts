@@ -12,6 +12,8 @@ import type {
 import { type BadgeTone } from "@starci/grammar/common"
 import type { useTranslations } from "next-intl"
 
+/** Whether a queued job has ended, in success or in failure. */
+export const isTerminal = (status: string): boolean => status === "succeeded" || status === "failed"
 /** The owner value of the next-step form that stands for the person, beside the agent ids. */
 export const HUMAN_OWNER = "human"
 

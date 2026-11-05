@@ -6,6 +6,7 @@ import { useActiveWorkspace } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
+import { isTerminal } from "./leads.shared"
 import { useRevalidateLeadViews } from "./useRevalidateLeadViews"
 
 /** The queued job being observed, bound to the workspace it was queued in. */
@@ -13,8 +14,6 @@ interface PendingAction {
     readonly id: string
     readonly workspaceId: string
 }
-
-const isTerminal = (status: string): boolean => status === "succeeded" || status === "failed"
 
 /** The view `useLeadAction` returns. */
 export interface LeadActionView {

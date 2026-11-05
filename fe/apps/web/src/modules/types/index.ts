@@ -31,36 +31,7 @@ export type {
     LeadStepView,
 } from "./lead-panes"
 export type { LeadTimelineEntryView, LeadTimelinePane, LeadTimelineView } from "./lead-panes"
-export type {
-    AccountingCredit,
-    AccountingInvoice,
-    AccountingInvoiceStatus,
-    AccountingLedgerEntry,
-    AccountingLedgerKind,
-    AccountingLedgerStatus,
-    AccountingLineageStep,
-    AccountingMatchState,
-    AccountingMeasure,
-    AccountingOrder,
-    AccountingPeriodKey,
-    AccountingQuestion,
-    AccountingQuestionGroup,
-    AccountingSourceKind,
-    AccountingUpcomingDue,
-    AccountingWorkbenchData,
-} from "./accounting"
-export type {
-    ChatbotChannel,
-    ChatbotConversation,
-    ChatbotLead,
-    ChatbotMessage,
-    ChatbotMetrics,
-    ChatbotOverview,
-    ChatbotRespondent,
-    ChatbotRole,
-    ChatbotThread,
-    ChatbotWaitingReply,
-} from "./chatbot"
+
 export type {
     BookingAction,
     BookingAgendaRowView,
@@ -120,7 +91,7 @@ export type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText, TelegramConn
 export type { TelegramUserChatsView, TelegramUserLoginView, TelegramUserWizardCopy } from "./connection-wizard"
 export type { WebhookView, WizardConnection, WizardNote, WizardResume, ZaloWizardConnection } from "./connection-wizard"
 export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
-export type { DataSlot, SlotLabels, SlotPanelProps, SlotRead } from "./slot"
+export type { DataSlot, SlotLabels, SlotRead } from "./slot"
 export type { InventoryWorkbenchData, InventorySay, InventoryTemplateChoice } from "./inventory"
 export type { ItemView, LocationView, RecipeView, PendingView, PoStatus, PoView, StockStatus } from "./inventory"
 export type { SupplierChannel, SupplierFormField, SupplierFormValues, SupplierView } from "./inventory"
@@ -172,11 +143,7 @@ export type {
     GateReason,
     DecisionHistoryRowView,
 } from "./decisions"
-export type { AttentionKind, AttentionRow, AttentionItemView, ActivityItemView } from "./sales"
-export type { SalesContract, SalesContractStatus, ContractItemView } from "./sales"
-export type { SalesDeal, DealView, LaneView, MoveDialogView, HandoffRow, HandoffItemView, SalesShipping } from "./sales"
-export type { SalesDecision, DecisionRowView, DecisionRowLabels, DecisionRowActions } from "./sales"
-export type { SalesConversion, SalesMetrics, SalesOrderRowView, SalesWorkbenchData } from "./sales"
+
 export type {
     LeadGenComment,
     LeadGenHandoff,
@@ -189,14 +156,7 @@ export type {
     LeadScore,
     LeadSourceKind,
 } from "./leadgen"
-export type {
-    FlowDecisionRow,
-    FlowEvidenceState,
-    FlowRuleMode,
-    FlowWorkItemView,
-    FlowWorkStatus,
-    ReasonCode,
-} from "./flow"
+export type { FlowRuleMode, FlowWorkStatus, ReasonCode } from "./flow"
 export type {
     BrainEvidence,
     BrainExtraction,
@@ -305,12 +265,7 @@ export type {
     DbTarget,
 } from "./database-wizard"
 export type { CreditsData, CreditsOverviewView, CreditsHistoryRow, PayOrder, PayTarget, PlanView } from "./credits"
-export type {
-    AccountingQuestionValues,
-    AccountingQuestionCardData,
-    AccountingQuestionCardView,
-    AccountingQuestionsView,
-} from "./accounting-question-card"
+
 export type { GraphQLResponse } from "./outcome"
 export type { SetupWriteDraft } from "./setup-write-draft"
 export type { ModuleIconName } from "./module-icon"
@@ -371,9 +326,9 @@ export type {
     ContentNoteView,
     ContentTransitionView,
 } from "./content-editor"
-export type { TypedDecisionValues } from "./sales-decision-typed"
+
 export type { InviteAction, InviteRowView, TeamPanesBaseProps } from "./team"
-export type { ContractImportDialogEvents, ContractImportDialogView, ContractImportRowView } from "./contract-import"
+
 export type { AccountSignInView, SessionRowView } from "./account"
 export type {
     ZaloCheckLineView,
@@ -399,15 +354,15 @@ export type {
 export type { AgentWorkGoalView, AgentWorkPreset, AgentWorkStatusView, AgentWorkSwitchView } from "./agentWork"
 export type { AgentWorkTaskView, AgentWorkTriggerView, AgentWorkTurnView, AgentWorkTurnsView } from "./agentWork"
 export type { AgentWorkView, WorkspaceAgentWorkView } from "./agentWork"
-export type { WorkbenchRowView, WorkbenchCommandView, WorkbenchSurface, WorkbenchWhyView } from "./workbench"
-export type { WorkbenchCommandData, WorkbenchRowData } from "./workbench"
+export type { WorkbenchWhyView } from "./workbench"
+export type { WorkbenchRowData } from "./workbench"
 export type { BrainPageHeading, BrainPageHeaderView, FactDrawerView } from "./brain-page"
 export type { QueueActionView, QueueAsideView, QueueDetailView, QueueEntryView, QueueFilterView } from "./brain-queue"
 export type { QueueGlyph, QueueQuoteView, QueueSource, QueueTileView, QueueView } from "./brain-queue"
 export type { BrainChipView, BrainFilterView, BrainHeadView, FactDetailView, FactEntryView } from "./brain-lists"
 export type { FactHistoryView, FactsView, LessonActionView, LessonDetailView, LessonDrawerView } from "./brain-lists"
 export type { LessonEntryView, LessonsView } from "./brain-lists"
-export type { AccountingWorkbenchDataView, AccountingWorkbenchActions } from "./accounting-workbench"
+
 export type { LeadGenWorkbenchDataView, LeadGenWorkbenchActions } from "./leadgen-workbench"
 export type { BookingDetailFact, BookingDeskData, BookingDeskActions } from "./booking-workbench"
 export type { BookingServicesData, BookingServicesActions } from "./booking-workbench"
@@ -431,28 +386,15 @@ export type { InventoryNewPoEditorData, InventoryPoEditorData, InventorySupplier
 export type { InventoryRecipeEditorData } from "./inventory-editors"
 export type { WorkbenchFigureData, WorkbenchWaitingRegionView, WorkbenchExplanationView } from "./workbench-dashboard"
 export type { WorkbenchDashboardRegions, WorkbenchFigureRegion, WorkbenchWhyLabels } from "./workbench-dashboard"
-export type { ChatbotCustomerWords, CustomerFilter, CustomerRowView } from "./chatbot-workbench"
-export type { ChatbotGapRow, ChatbotWorkbenchActions, ChatbotWorkbenchViewData } from "./chatbot-workbench"
 
-export { CHATBOT_CUSTOMER_FILTERS, CHATBOT_WORKBENCH_TABS } from "./chatbot-workbench"
-export type { ChatbotConversationListView, ChatbotConversationView, ChatbotListItem } from "./chatbot-inbox"
-export type { ChatbotSidePanelView, ChatbotStageStepsView, ChatbotThreadViewData } from "./chatbot-inbox"
 export type { ChatMessageFile } from "./chatbot-inbox"
-export type { ChatbotInboxActions } from "./chatbot-inbox-actions"
-export type { SalesActivityRowsView, SalesAttentionView } from "./sales-workbench"
-export type { SalesContractEditorFields, SalesContractsBodyView, SalesDecisionsView } from "./sales-workbench"
-export type { SalesHandoffsView, SalesShipmentDrawerView, SalesPipelineView } from "./sales-workbench"
-export type { SalesWorkbenchViewData } from "./sales-workbench"
-export { SALES_WORKBENCH_TABS } from "./sales-workbench"
-export type { SalesAttentionActions, SalesContractCommonActions } from "./sales-workbench-actions"
-export type { SalesContractEditorActions, SalesHandoffsActions, SalesPipelineActions } from "./sales-workbench-actions"
-export type { SalesShipmentDrawerActions, SalesWorkbenchActions } from "./sales-workbench-actions"
+
 export type { ShiftsWeekViews, ShiftsWeekActions } from "./shifts-workbench-week"
 export type { ShiftsSetupViews, ShiftsSetupActions } from "./shifts-workbench-setup"
 export type { ShiftsRequestViews, ShiftsRequestActions } from "./shifts-workbench-requests"
 export type { ShiftsPersonalViews, ShiftsPersonalActions } from "./shifts-workbench-mine"
 export type { ShiftsWorkbenchData, ShiftsWorkbenchOn } from "./shifts-workbench"
-export { ACCOUNTING_TABS } from "./accounting-workbench"
+
 export { INVENTORY_TABS } from "./inventory-workbench"
 export { LEADGEN_TABS } from "./leadgen-workbench"
 export { BOOKING_TABS } from "./booking-workbench"

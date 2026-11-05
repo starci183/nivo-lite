@@ -21,6 +21,16 @@ const nextConfig: NextConfig = {
             // The Loyalty workbench is drawn from its spec on the one workbench route; its tabs keep their ids (`?tab=`).
             { source: "/agents/loyalty/:installation/workbench", destination: "/w/loyalty", permanent: false },
             { source: "/agents/loyalty/workbench", destination: "/w/loyalty?tab=pending", permanent: false },
+            // The Sales workbench is drawn from its spec on the one workbench route.
+            { source: "/agents/sales/:installation/workbench", destination: "/w/sales", permanent: false },
+            { source: "/agents/sales/workbench", destination: "/w/sales", permanent: false },
+            // The Chatbot inbox and workbench are one spec on the one workbench route.
+            { source: "/agents/chatbot/:installation/workbench", destination: "/w/chatbot", permanent: false },
+            { source: "/agents/chatbot/:installation/inbox", destination: "/w/chatbot", permanent: false },
+            { source: "/agents/chatbot/workbench", destination: "/w/chatbot", permanent: false },
+            // The Accounting workbench is drawn from its spec on the one workbench route.
+            { source: "/agents/accounting/:installation/workbench", destination: "/w/accounting", permanent: false },
+            { source: "/agents/accounting/workbench", destination: "/w/accounting", permanent: false },
         ]
     },
     // The runtime stage of the Dockerfile ships the standalone output.

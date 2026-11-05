@@ -10,7 +10,6 @@ export type {
     WorkbenchKnowledgeGapsView,
     WorkbenchKnowledgeRegionView,
     WorkbenchRegionSlot,
-    WorkbenchWaitingCardView,
     WorkbenchWaitingListWords,
     WorkbenchWaitingRegionView,
     WorkbenchWhyLabels,
