@@ -32,18 +32,6 @@
       "types": "./dist/node/vocabulary.d.ts",
       "default": "./dist/node/vocabulary.js"
     },
-    "./graph": {
-      "types": "./dist/graph/index.d.ts",
-      "default": "./dist/graph/index.js"
-    },
-    "./spec": {
-      "types": "./dist/spec/index.d.ts",
-      "default": "./dist/spec/index.js"
-    },
-    "./module": {
-      "types": "./dist/module/index.d.ts",
-      "default": "./dist/module/index.js"
-    },
     "./entity": {
       "types": "./dist/entity/index.d.ts",
       "default": "./dist/entity/index.js"
@@ -55,6 +43,26 @@
     "./mutation": {
       "types": "./dist/mutation/index.d.ts",
       "default": "./dist/mutation/index.js"
+    },
+    "./port": {
+      "types": "./dist/port/index.d.ts",
+      "default": "./dist/port/index.js"
+    },
+    "./invoke": {
+      "types": "./dist/invoke/index.d.ts",
+      "default": "./dist/invoke/index.js"
+    },
+    "./graph": {
+      "types": "./dist/graph/index.d.ts",
+      "default": "./dist/graph/index.js"
+    },
+    "./spec": {
+      "types": "./dist/spec/index.d.ts",
+      "default": "./dist/spec/index.js"
+    },
+    "./module": {
+      "types": "./dist/module/index.d.ts",
+      "default": "./dist/module/index.js"
     },
     "./template": {
       "types": "./dist/template/index.d.ts",

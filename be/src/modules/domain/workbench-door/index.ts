@@ -1,0 +1,5 @@
+export { WORKBENCH_DOOR_ERROR_KINDS } from "./errors/workbench-door.error"
+export { WORKBENCH_DOOR_MESSAGES } from "./messages/workbench-door.messages"
+export { WorkbenchDoorModule } from "./workbench-door.module"
+export { WorkbenchDoorService } from "./workbench-door.service"
+export type { DoorAnswer } from "./workbench-door.contracts"

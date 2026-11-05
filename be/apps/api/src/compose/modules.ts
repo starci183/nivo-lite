@@ -5,10 +5,16 @@ import { LeadFlowStoreService } from "@modules/domain/lead-flows"
 import { LeadRecordsService } from "@modules/domain/leads"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { ModulesGraphqlModule } from "@features/api/modules"
+import { WorkbenchGraphqlModule } from "@features/api/workbench"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { OverviewModule } from "@modules/domain/overview"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
 import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
+import {
+    WORKBENCH_DOOR_ERROR_KINDS,
+    WORKBENCH_DOOR_MESSAGES,
+    WorkbenchDoorModule,
+} from "@modules/domain/workbench-door"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The modules area of the API, in registration order. */
@@ -32,13 +38,20 @@ export const modulesModules = (): Array<DynamicModule> => [
     ApiKeysModule.register({ isGlobal: true }),
     OverviewModule.register({ isGlobal: true }),
     PublicApiModule.register({ isGlobal: true }),
+    WorkbenchGraphqlModule.register({}),
+    WorkbenchDoorModule.register({ isGlobal: true, modules: [], entities: [], registryHash: "" }),
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */
 export const modulesErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     API_KEYS_ERROR_KINDS,
     PUBLIC_API_ERROR_KINDS,
+    WORKBENCH_DOOR_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
-export const modulesMessages: ReadonlyArray<MessageBundle> = [API_KEYS_MESSAGES, PUBLIC_API_MESSAGES]
+export const modulesMessages: ReadonlyArray<MessageBundle> = [
+    API_KEYS_MESSAGES,
+    PUBLIC_API_MESSAGES,
+    WORKBENCH_DOOR_MESSAGES,
+]

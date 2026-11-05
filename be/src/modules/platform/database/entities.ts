@@ -121,6 +121,7 @@ import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { agentTemplatesEntities } from "@modules/domain/agent-templates"
 import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
 import { agentRunsEntities } from "@modules/domain/agent-runs"
+import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { graphNodesEntities } from "@modules/domain/graph-nodes"
 import { agentWorkEntities } from "@modules/domain/agent-work"
 import { transactionsEntities } from "@modules/domain/transactions"
@@ -272,6 +273,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...agentTemplatesEntities,
     ...templateMarketplaceEntities,
     ...agentRunsEntities,
+    ...entityEngineEntities,
     ...graphNodesEntities,
     ...agentWorkEntities,
     ...transactionsEntities,

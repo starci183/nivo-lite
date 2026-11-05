@@ -5,6 +5,7 @@ import {
     AgentSchedulesModule,
 } from "@modules/domain/agent-schedules"
 import { AGENT_INBOUND_ERROR_KINDS, AGENT_INBOUND_MESSAGES, AgentInboundModule } from "@modules/domain/agent-inbound"
+import { ENTITY_ENGINE_ERROR_KINDS, ENTITY_ENGINE_MESSAGES, EntityEngineModule } from "@modules/domain/entity-engine"
 import { AGENT_RUNS_ERROR_KINDS, AGENT_RUNS_MESSAGES, AgentRunsModule } from "@modules/domain/agent-runs"
 import { AGENT_WORK_ERROR_KINDS, AGENT_WORK_MESSAGES, AgentWorkModule } from "@modules/domain/agent-work"
 import { GRAPH_NODES_ERROR_KINDS, GRAPH_NODES_MESSAGES, GraphNodesModule } from "@modules/domain/graph-nodes"
@@ -41,6 +42,7 @@ const installedNodes: NodeInstall = {
 export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
     AgentWorkModule.register({ isGlobal: true, ...options.agentWork }),
     AgentRunsModule.register({ isGlobal: true, ...options.agentRuns }),
+    EntityEngineModule.register({ isGlobal: true, entities: [], jobs: [], ...options.entityEngine }),
     GraphNodesModule.register({
         isGlobal: true,
         install: installedNodes,
@@ -58,6 +60,7 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
 export const agentWorkErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     AGENT_WORK_ERROR_KINDS,
     AGENT_RUNS_ERROR_KINDS,
+    ENTITY_ENGINE_ERROR_KINDS,
     GRAPH_NODES_ERROR_KINDS,
     CHAT_NODE_PORTS_ERROR_KINDS,
     INTENT_CONTRACTS_ERROR_KINDS,
@@ -71,6 +74,7 @@ export const agentWorkErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
 export const agentWorkMessages: ReadonlyArray<MessageBundle> = [
     AGENT_WORK_MESSAGES,
     AGENT_RUNS_MESSAGES,
+    ENTITY_ENGINE_MESSAGES,
     GRAPH_NODES_MESSAGES,
     CHAT_NODE_PORTS_MESSAGES,
     AGENT_INBOUND_MESSAGES,
