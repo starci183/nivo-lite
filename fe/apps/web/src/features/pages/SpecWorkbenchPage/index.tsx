@@ -18,15 +18,13 @@ type SpecWorkbenchPageProps = {
 }
 
 /** The one workbench page of every module: the spec of the module (published, else seeded) drawn by the spec renderer. */
-export const SpecWorkbenchPage = async (props: SpecWorkbenchPageProps): Promise<ReactElement> => {
+export const SpecWorkbenchPage = (props: SpecWorkbenchPageProps): ReactElement => {
     const resolved = workbenchSpec(props.module)
     if (resolved === null) notFound()
-    const t = await getTranslations("modulesCore")
     return (
         <SpecWorkbenchPageBase
             props={{
                 module: props.module,
-                title: t("tab_workbench"),
                 spec: resolved.spec,
                 fallback: resolved.fallback,
                 tab: props.view,

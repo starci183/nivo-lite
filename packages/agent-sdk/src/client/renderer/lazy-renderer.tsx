@@ -1,5 +1,3 @@
-"use client"
-
 import { createElement, lazy } from "react"
 import type { BlockDefinition } from "../../block/block.types"
 import type { BlockRenderer } from "./define-renderer"

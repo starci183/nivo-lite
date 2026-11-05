@@ -1,5 +1,3 @@
-"use client"
-
 import { useMemo } from "react"
 import type { ReactNode } from "react"
 import { Alert, EmptyNotice, Stack } from "@starci/grammar/common"
@@ -55,8 +53,14 @@ interface Chosen {
 
 const panelId = (id: string): string => `workbench-panel-${id}`
 
+/** What a region of nodes takes. */
+interface NodesProps {
+    readonly nodes: ReadonlyArray<PlanNode>
+    readonly context: SpecContext
+}
+
 /** The nodes of one region, drawn in order. */
-const Nodes = (props: { readonly nodes: ReadonlyArray<PlanNode>; readonly context: SpecContext }): ReactNode =>
+const Nodes = (props: NodesProps): ReactNode =>
     props.nodes.map((node) => <SpecNode key={node.id} node={node} context={props.context} />)
 
 /** The problems as one line of codes. */

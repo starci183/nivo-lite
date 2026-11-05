@@ -5,7 +5,6 @@ import { SpecWorkbenchFrame } from "@/components/blocks/SpecWorkbenchFrame"
 export interface SpecWorkbenchPageBaseProps {
     readonly props: {
         readonly module: string
-        readonly title: string
         readonly spec: StoredSpec
         readonly fallback: StoredSpec | null
         readonly tab: string | null

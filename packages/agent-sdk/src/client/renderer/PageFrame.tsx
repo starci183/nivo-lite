@@ -1,5 +1,3 @@
-"use client"
-
 import type { ReactNode } from "react"
 import { Cluster, Stack, Tabs } from "@starci/grammar/common"
 import type { ParamHandle, ReadDefinition } from "../../block/block.types"
@@ -64,7 +62,7 @@ interface CountChainProps extends Omit<PageFrameProps, "selected" | "panelId" | 
 /** Reads the counts of the tabs one after the other, each in a component of its own so every hook list stays stable. */
 const CountChain = (props: CountChainProps): ReactNode => {
     const [view, ...rest] = props.rest
-    if (view === undefined) return props.done(props.chips)
+    if (view === undefined) return <>{props.done(props.chips)}</>
     return (
         <TabCount
             chrome={props.chrome.find((candidate) => candidate.id === view.id)}

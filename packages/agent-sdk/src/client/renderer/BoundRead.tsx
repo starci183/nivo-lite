@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useLayoutEffect, useState } from "react"
 import type { ReactNode } from "react"
 import type { ParamHandle, ReadDefinition, ReadHandle, ReadVariables } from "../../block/block.types"

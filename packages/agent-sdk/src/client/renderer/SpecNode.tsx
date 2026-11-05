@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import type { ReactNode } from "react"
-import { EmptyNotice } from "@starci/grammar/common"
+import { EmptyNotice, Skeleton } from "@starci/grammar/common"
 import type { ActionHandle, ReadHandle } from "../../block/block.types"
 import type { PlanNode } from "../../spec/render-plan"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
@@ -39,7 +39,7 @@ const slotEntries = (node: PlanNode): ReadonlyArray<SlotEntry> =>
 /** Resolves the slots of a node one after the other, each in a component of its own so every hook list stays stable. */
 const SlotChain = (props: SlotChainProps): ReactNode => {
     const [entry, ...rest] = props.entries
-    if (entry === undefined) return props.done(props.values)
+    if (entry === undefined) return <>{props.done(props.values)}</>
     const next = (value: SlotValue): ReactNode => (
         <SlotChain {...props} entries={rest} values={{ ...props.values, [entry.name]: value }} />
     )
@@ -93,7 +93,7 @@ export const SpecNode = (props: SpecNodeProps): ReactNode => {
     if (renderer === undefined) return <EmptyNotice message={text({ key: "renderer.unavailable" })} />
     const draw = (values: SlotValues): ReactNode =>
         props.node.forbidden === "hide" && hasForbidden(values) ? null : (
-            <Suspense fallback={null}>
+            <Suspense fallback={<Skeleton shape="text" lines={3} />}>
                 <renderer.Component
                     props={props.node.props}
                     slots={values}
