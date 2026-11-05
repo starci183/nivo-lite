@@ -21,6 +21,8 @@ export const dossierRowOf: (overrides?: Partial<BrainDossierEntity>) => BrainDos
         existing: "Certificate",
         missing: null,
         drafts: null,
+        assigneeId: null,
+        dueAt: null,
         createdAt: new Date("2026-10-01T00:00:00.000Z"),
         updatedAt: new Date("2026-10-01T00:00:00.000Z"),
     })

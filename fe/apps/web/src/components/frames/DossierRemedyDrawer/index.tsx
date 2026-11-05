@@ -1,71 +1,15 @@
 import { Alert, Button, Cluster, Drawer, Form, Input, Section, Stack, Text, Textarea } from "@starci/grammar/common"
-import type { PresentationState } from "@starci/grammar/common"
 import { DossierStaticRows } from "@/components/leaves/DossierStaticRows"
-import type { EvidenceItemView } from "@/components/leaves/DossierStaticRows"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DossierRemedyDrawerProps, DraftContent } from "@/hooks/brain"
 
-/** The draft as the drawer draws it. */
-interface DraftContent {
-    readonly id: string
-    readonly findingId: string
-    readonly status: string
-    readonly title: string
-    readonly body: string
-    readonly placeholders: ReadonlyArray<EvidenceItemView>
-}
+export type { DossierRemedyDrawerProps } from "@/hooks/brain"
 
 /** The id of the form the footer commits. */
 const FORM_ID = "dossier-remedy-draft"
 
-/** Where the draft stands when that is worth a line: being written, failed, filed or turned down. */
-interface DraftNoticeView {
-    readonly tone: PresentationState
-    readonly title: string
-    readonly description: string | undefined
-}
-
-/** Copy and values the draft drawer supplies. */
-export interface DossierRemedyDraftBaseProps {
-    readonly props: {
-        readonly isOpen: boolean
-        readonly title: string
-        readonly closeLabel: string
-        readonly note: string
-        readonly titleFieldLabel: string
-        readonly bodyFieldLabel: string
-        readonly placeholdersTitle: string
-        readonly evidenceTitle: string
-        readonly findingTitle: string | null
-        readonly evidence: ReadonlyArray<EvidenceItemView>
-        readonly notice: DraftNoticeView | null
-        readonly slot: DataSlot<DraftContent>
-        readonly placeholder: DraftContent
-        readonly slotLabels: SlotLabels
-        /** The title and body as the person has them now, edits included. */
-        readonly draftTitle: string
-        readonly draftBody: string
-        /** The owner or manager may edit and decide a draft that is proposed; everyone else reads. */
-        readonly canDecide: boolean
-        readonly isDirty: boolean
-        readonly isPending: boolean
-        readonly rejectLabel: string
-        readonly saveLabel: string
-        readonly approveLabel: string
-    }
-    readonly on: {
-        readonly close: () => void
-        readonly setTitle: (value: string) => void
-        readonly setBody: (value: string) => void
-        readonly save: () => void
-        readonly reject: () => void
-        readonly approve: () => void
-        readonly retry: () => void
-    }
-}
-
 /** The decision group: turn the draft down, keep the edits, or file it in the dossier. */
-const Decision = (props: DossierRemedyDraftBaseProps) => {
+const Decision = (props: DossierRemedyDrawerProps) => {
     const view = props.props
     return (
         <Cluster gap="inline" align="center" justify="end">
@@ -83,7 +27,7 @@ const Decision = (props: DossierRemedyDraftBaseProps) => {
 }
 
 /** The base props, the draft that is shown and whether it is drawn as geometry. */
-interface DraftProps extends DossierRemedyDraftBaseProps {
+interface DraftProps extends DossierRemedyDrawerProps {
     readonly draft: DraftContent
     readonly isLoading: boolean
 }
@@ -151,7 +95,7 @@ const Draft = (props: DraftProps) => {
  * places left to fill before signing and the evidence it answers. Owners and managers reject, save or approve it; everyone else
  * reads it.
  */
-export const DossierRemedyDraftBase = (props: DossierRemedyDraftBaseProps) => {
+export const DossierRemedyDrawer = (props: DossierRemedyDrawerProps) => {
     const view = props.props
     return (
         <Drawer

@@ -1326,6 +1326,12 @@ input AssignAgentWorkInput {
   text: String! @inputBounds(maxLength: 4000)
 }
 
+input AssignBrainDossierInput {
+  assigneeId: ID = null @inputBounds(maxLength: 36)
+  dossierId: ID! @inputBounds(maxLength: 36)
+  dueAt: String = null @inputBounds(maxLength: 10)
+}
+
 input AssignDossierFindingInput {
   assigneeId: ID = null @inputBounds(maxLength: 36)
   dueAt: String = null @inputBounds(maxLength: 10)
@@ -1827,11 +1833,19 @@ type BrainDossierImportType {
   skipped: Int!
 }
 
+type BrainDossierOwnerType {
+  assigneeId: ID
+  dueAt: String
+  id: ID!
+}
+
 type BrainDossierType {
+  assigneeId: ID
   category: String!
   categoryOrder: Int!
   documentCount: Int!
   drafts: String
+  dueAt: String
   existing: String
   id: ID!
   missing: String
@@ -5682,6 +5696,7 @@ type Mutation {
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   askGuide(input: AskGuideInput!): GuideAskedType!
   assignAgentWork(input: AssignAgentWorkInput!): AgentAssignmentType!
+  assignBrainDossier(input: AssignBrainDossierInput!): BrainDossierOwnerType!
   assignDossierFinding(input: AssignDossierFindingInput!): DossierFindingType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
   assignWorkItem(input: AssignWorkItemInput!): WorkItemType!

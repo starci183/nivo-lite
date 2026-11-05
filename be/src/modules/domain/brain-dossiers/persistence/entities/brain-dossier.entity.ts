@@ -46,4 +46,12 @@ export class BrainDossierEntity extends UuidAbstractEntity {
     /** The drafts and registers already written. */
     @Column({ name: "drafts", type: "text", nullable: true })
     drafts!: string | null
+
+    /** The member who owns it (a membership id of the workspace), or null while nobody does. */
+    @Column({ name: "assignee_id", type: "uuid", nullable: true })
+    assigneeId!: string | null
+
+    /** When it should be settled, as a date, or null. */
+    @Column({ name: "due_at", type: "date", nullable: true })
+    dueAt!: string | null
 }

@@ -9,6 +9,7 @@ import { ConfirmDossierFindingResolver } from "./confirm-dossier-finding.resolve
 import { DismissDossierFindingResolver } from "./dismiss-dossier-finding.resolver"
 import { ReopenDossierFindingResolver } from "./reopen-dossier-finding.resolver"
 import { ResolveDossierFindingResolver } from "./resolve-dossier-finding.resolver"
+import { AssignBrainDossierResolver } from "./assign-brain-dossier.resolver"
 import { AssignDossierFindingResolver } from "./assign-dossier-finding.resolver"
 import { RequestDossierRemedyDraftResolver } from "./request-dossier-remedy-draft.resolver"
 import { SaveDossierRemedyDraftResolver } from "./save-dossier-remedy-draft.resolver"
@@ -26,6 +27,7 @@ import { RejectDossierRemedyDraftResolver } from "./reject-dossier-remedy-draft.
         DismissDossierFindingResolver,
         ReopenDossierFindingResolver,
         ResolveDossierFindingResolver,
+        AssignBrainDossierResolver,
         AssignDossierFindingResolver,
         RequestDossierRemedyDraftResolver,
         SaveDossierRemedyDraftResolver,

@@ -1,131 +1,293 @@
-import { Button, Cluster, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { Page, Pane, PaneGrid } from "@starci/grammar/common"
 import { ChecklistImportDialog } from "@/components/composites/ChecklistImportDialog"
 import type { ChecklistImportDialogProps } from "@/components/composites/ChecklistImportDialog"
-import { DossierRowsCard } from "@/components/composites/DossierRowsCard"
-import type { DossierRowView } from "@/components/composites/DossierRowsCard"
-import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { DataSlot, SlotLabels } from "@/modules/types"
-import { DOSSIERS_CLASS_NAME } from "./classNames"
+import { brainHeaderTabs } from "@/components/composites/BrainHeaderActions"
+import type { DossierFindingsPane, FindingAction } from "@/components/composites/DossierFindingBoard"
+import type { FindingDialogValues, FindingDialogView } from "@/components/composites/DossierFindingDialogs"
+import { DossierHeaderActions } from "@/components/composites/DossierHeaderActions"
+import { PaneBlank } from "@/components/composites/PaneBlank"
+import { DossierAside } from "@/components/frames/DossierAside"
+import { DossierHeadBand } from "@/components/frames/DossierHeadBand"
+import type { DossierMainCopy } from "@/components/frames/DossierHeadBand"
+import { DossierList } from "@/components/frames/DossierList"
+import type { DossierDeskView, DossierListCopy, DossierMode } from "@/components/frames/DossierList"
+import { DossierMainBody } from "@/components/frames/DossierMainBody"
+import { DossierMapDetail } from "@/components/frames/DossierMapDetail"
+import { DossierMapHead, DossierMapPane } from "@/components/frames/DossierMapPane"
+import type { MapView } from "@/components/frames/DossierMapPane"
+import { DossierNotice } from "@/components/frames/DossierNotice"
+import { DossierRemedyDrawer } from "@/components/frames/DossierRemedyDrawer"
+import type { DossierRemedyDrawerProps } from "@/components/frames/DossierRemedyDrawer"
+import { PaneBody } from "@/components/frames/PaneBody"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { BrainPageHeaderView } from "@/modules/types"
 
-export type { DossierRowView } from "@/components/composites/DossierRowsCard"
+/** The words of the dossiers tab: those of its list, of the open dossier, and of its notices. */
+interface DossierCopy extends DossierMainCopy, DossierListCopy {
+    readonly grid: string
+    readonly detailLabel: string
+    readonly pickTitle: string
+    readonly pickBody: string
+    readonly emptyBody: string
+    readonly emptyAction: string
+    readonly errorBody: string
+    readonly closeAside: string
+    readonly mapDescription: string
+}
 
-/** The entry that loads a checklist workbook and its dialog while open. */
-interface ChecklistImportEntryView {
+/** The import of a checklist: the entry in the head and the dialog it opens. */
+interface ChecklistView {
     readonly label: string
     readonly dialog: ChecklistImportDialogProps["props"] | null
 }
 
-interface ChecklistImportEntryEvents {
-    readonly openImport: () => void
-    readonly pickImport: (files: Array<File>) => void
-    readonly confirmImport: () => void
-    readonly closeImport: () => void
-}
-
-interface ChecklistImportEntryProps {
-    readonly view: ChecklistImportEntryView
-    readonly on: ChecklistImportEntryEvents
-}
-
-/** The unchanged checklist entry and the focused import task it opens. */
-const ChecklistImportEntry = (props: ChecklistImportEntryProps) => (
-    <>
-        <Button intent="neutral" onPress={props.on.openImport}>
-            {props.view.label}
-        </Button>
-        {props.view.dialog === null ? null : (
-            <ChecklistImportDialog
-                props={props.view.dialog}
-                on={{ pick: props.on.pickImport, confirm: props.on.confirmImport, close: props.on.closeImport }}
-            />
-        )}
-    </>
-)
-
-/** One category of the documents, already worded. */
-export interface CategoryRowView {
-    readonly id: string
-    /** The heading of its card. */
-    readonly title: string
-    readonly dossiers: ReadonlyArray<DossierRowView>
-}
-
-/** One figure of the strip: how many dossiers stand at a status, or how many questions wait for the owner. */
-export interface FigureView {
-    readonly id: string
-    readonly label: string
-    readonly value: string
-}
-
-/** The figures and the categories: what the slot of the block carries. */
-export interface DossiersContent {
-    readonly figures: ReadonlyArray<FigureView>
-    readonly categories: ReadonlyArray<CategoryRowView>
-}
-
-/** Copy and values the dossiers block supplies. */
+/** Props for {@link BrainDossiersBase}. */
 export interface BrainDossiersBaseProps {
     readonly props: {
-        readonly figuresLabel: string
-        readonly listFooter: string
-        readonly emptyCategory: string
-        readonly emptyAll: string
-        /** Loads the dossiers of a checklist workbook: the entry above the cards and its dialog; null for a member who may only read. */
-        readonly checklistImport: ChecklistImportEntryView | null
-        readonly slot: DataSlot<DossiersContent>
-        readonly placeholder: DossiersContent
-        readonly slotLabels: SlotLabels
+        readonly header: BrainPageHeaderView
+        readonly panelId: string
+        readonly copy: DossierCopy
+        readonly mode: DossierMode
+        readonly desk: DossierDeskView
+        /** The findings of the open dossier; null while none is open. */
+        readonly findings: DossierFindingsPane | null
+        /** The draft drawer the address may open over the open dossier. */
+        readonly remedy: DossierRemedyDrawerProps
+        readonly checklist: ChecklistView | null
+        /** The map view of the tab; null in the list view. */
+        readonly map: MapView | null
+        /** The task that gives the open dossier to a member with a date; null while it is closed. */
+        readonly ownerDialog: FindingDialogView | null
+        readonly isAsideOpen: boolean
     }
-    readonly on: ChecklistImportEntryEvents & { readonly retry: () => void }
+    readonly on: {
+        readonly reviewAll: () => void
+        readonly selectTab: (id: string) => void
+        readonly setMode: (mode: DossierMode) => void
+        readonly setQuery: (value: string) => void
+        readonly select: (id: string) => void
+        readonly back: () => void
+        readonly retry: () => void
+        readonly closeAside: () => void
+        readonly asideOpenChange: (isOpen: boolean) => void
+        readonly openMap: () => void
+        readonly openSources: () => void
+        readonly openDocument: (id: string) => void
+        readonly openImport: () => void
+        readonly pickImport: (files: Array<File>) => void
+        readonly confirmImport: () => void
+        readonly closeImport: () => void
+        readonly setFilter: (value: string) => void
+        readonly review: () => void
+        readonly act: (findingId: string, action: FindingAction) => void
+        readonly loadMore: () => void
+        readonly submitDialog: (values: FindingDialogValues) => void
+        readonly closeDialog: () => void
+        readonly selectNode: (id: string | null) => void
+        readonly setMapFilter: (value: string | null) => void
+        readonly openHref: (href: string) => void
+        readonly openAssign: () => void
+        readonly submitOwner: (values: FindingDialogValues) => void
+        readonly closeOwner: () => void
+    }
+}
+
+/** The list pane: the switch, the figures, the search and the rows, with the checklist dialog the head opens over it. */
+const ListBody = (props: BrainDossiersBaseProps) => {
+    const { copy, desk, checklist } = props.props
+    const dialog = checklist?.dialog ?? null
+    const on = { pick: props.on.pickImport, confirm: props.on.confirmImport, close: props.on.closeImport }
+    return (
+        <PaneBody
+            isWaiting={desk.isWaiting}
+            overlay={dialog === null ? null : <ChecklistImportDialog props={dialog} on={on} />}
+        >
+            <DossierList
+                view={desk.list}
+                copy={copy}
+                mode={props.props.mode}
+                isWaiting={desk.isWaiting}
+                onMode={props.on.setMode}
+                onQuery={props.on.setQuery}
+                onSelect={props.on.select}
+            />
+        </PaneBody>
+    )
+}
+
+/** The head band over the main pane: the open dossier, or the map and its status filter. */
+const HeadOf = (props: BrainDossiersBaseProps) => {
+    const { copy, desk, findings, map } = props.props
+    const { on } = props
+    if (map !== null) {
+        return (
+            <DossierMapHead
+                view={map}
+                copy={{ title: copy.viewMap, description: copy.mapDescription, back: copy.back }}
+                onFilter={on.setMapFilter}
+                onBack={on.back}
+            />
+        )
+    }
+    return (
+        <DossierHeadBand
+            head={desk.head}
+            findings={findings}
+            copy={copy}
+            isWaiting={desk.isWaiting}
+            onBack={on.back}
+            onReview={on.review}
+            onOpenMap={on.openMap}
+            onAssign={on.openAssign}
+        />
+    )
+}
+
+/** The body of the open dossier: its findings and dialogs, and the draft drawer the address may open over them. */
+const DossierBody = (props: BrainDossiersBaseProps) => {
+    const { copy, desk, findings, remedy, ownerDialog } = props.props
+    const { on } = props
+    if (findings === null) return null
+    return (
+        <PaneBody isWaiting={desk.isWaiting} overlay={<DossierRemedyDrawer {...remedy} />}>
+            <DossierMainBody
+                findings={findings}
+                ownerDialog={ownerDialog}
+                copy={{
+                    statusLine: `${findings.frame.reviewedLine} · ${desk.head?.documentCount ?? ""}`,
+                    findingOptions: copy.findingOptions,
+                    emptyFindings: copy.emptyFindings,
+                    filtersMore: copy.filtersMore,
+                }}
+                isWaiting={desk.isWaiting}
+                onFilter={on.setFilter}
+                onAction={on.act}
+                onLoadMore={on.loadMore}
+                onRetry={on.retry}
+                onSubmitDialog={on.submitDialog}
+                onCloseDialog={on.closeDialog}
+                onSubmitOwner={on.submitOwner}
+                onCloseOwner={on.closeOwner}
+            />
+        </PaneBody>
+    )
+}
+
+/** The main pane: the map, the findings of the open dossier, or the notice that asks for a choice. */
+const MainOf = (props: BrainDossiersBaseProps) => {
+    const { copy, desk, findings, map } = props.props
+    if (map !== null) {
+        return (
+            <PaneBody isWaiting={desk.isWaiting}>
+                <DossierMapPane view={map} onSelect={props.on.selectNode} onRetry={props.on.retry} />
+            </PaneBody>
+        )
+    }
+    if (desk.head === null || findings === null) {
+        return (
+            <PaneBlank
+                message={desk.list.isFiltered ? copy.noMatchTitle : copy.pickTitle}
+                description={desk.list.isFiltered ? copy.noMatchBody : copy.pickBody}
+                iconSource={nivoIconSource("brain", "leading")}
+            />
+        )
+    }
+    return <DossierBody {...props} />
+}
+
+/** The side pane: the selected node of the map, or the open dossier. */
+const AsideOf = (props: BrainDossiersBaseProps) => {
+    const { copy, desk, map } = props.props
+    if (map !== null) {
+        return <DossierMapDetail detail={map.detail} isWaiting={desk.isWaiting} onOpen={props.on.openHref} />
+    }
+    if (desk.aside === null) return null
+    return (
+        <DossierAside
+            aside={desk.aside}
+            isWaiting={desk.isWaiting}
+            close={{ label: copy.closeAside, onPress: props.on.closeAside }}
+            onOpenDocument={props.on.openDocument}
+        />
+    )
 }
 
 /**
- * Draws the dossiers tab: one card of figures (how many dossiers are complete, partly held, missing, and how many questions wait
- * for the owner), then one card of dossiers per category. The findings of an open dossier slide in as a drawer.
+ * Draws the dossiers tab (and its map view) as a panes page: the Second Brain header, then the list of dossiers by category with
+ * the figures of the whole set, beside the open dossier with its findings and side pane, or the map. A phone shows the list, or the
+ * open dossier or node with a way back. Every region draws its skeleton at the first read, together.
  */
 export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
-    const view = props.props
-    return (
-        <div className={DOSSIERS_CLASS_NAME}>
-            {view.checklistImport === null ? null : (
-                <Cluster gap="inline" justify="end">
-                    <ChecklistImportEntry view={view.checklistImport} on={props.on} />
-                </Cluster>
-            )}
-            <SlotView
-                slot={view.slot}
-                placeholder={view.placeholder}
-                labels={view.slotLabels}
-                onRetry={props.on.retry}
-                render={(content, isLoading) => (
-                    <>
-                        <SurfaceCard
-                            kind="figures"
-                            ariaLabel={view.figuresLabel}
-                            isLoading={isLoading}
-                            items={content.figures.map((figure) => ({
-                                id: figure.id,
-                                term: figure.label,
-                                value: figure.value,
-                            }))}
-                        />
-                        {content.categories.length === 0 ? (
-                            <EmptyNotice message={view.emptyAll} />
-                        ) : (
-                            content.categories.map((category, index) => (
-                                <DossierRowsCard
-                                    key={category.id}
-                                    label={category.title}
-                                    emptyLabel={view.emptyCategory}
-                                    rows={category.dossiers}
-                                    footer={index === content.categories.length - 1 ? view.listFooter : undefined}
-                                    isLoading={isLoading}
-                                />
-                            ))
-                        )}
-                    </>
-                )}
+    const { copy, desk, map, checklist } = props.props
+    const { on } = props
+    const grid = map === null || desk.isWhole ? desk.grid : map.grid
+    const aside = map === null ? desk.aside : map.detail
+    const { header } = props.props
+    const head = {
+        ...header.heading,
+        actions: (
+            <DossierHeaderActions
+                importEntry={checklist === null ? null : { label: checklist.label, onPress: on.openImport }}
+                review={header.actions.review}
+                onReview={on.reviewAll}
             />
-        </div>
+        ),
+        tabs: brainHeaderTabs({ tabs: header.tabs, onSelect: on.selectTab }),
+    }
+    return (
+        <Page chrome="panes" header={head} measure="product">
+            <PaneGrid
+                label={copy.grid}
+                role="tabpanel"
+                id={props.props.panelId}
+                areas={grid.areas}
+                columns={grid.columns}
+                rows={grid.rows}
+            >
+                {desk.isWhole ? (
+                    <Pane area="main" label={copy.detailLabel}>
+                        <DossierNotice
+                            list={desk.list}
+                            errorBody={copy.errorBody}
+                            emptyBody={copy.emptyBody}
+                            emptyIconSource={nivoIconSource("brain", "leading")}
+                            emptyAction={{ label: copy.emptyAction, onAction: on.openSources }}
+                            onRetry={on.retry}
+                        />
+                    </Pane>
+                ) : null}
+                {desk.isWhole ? null : (
+                    <Pane area="list" surface scroll label={copy.listLabel}>
+                        <ListBody {...props} />
+                    </Pane>
+                )}
+                {desk.isWhole ? null : (
+                    <Pane area="head" surface>
+                        <HeadOf {...props} />
+                    </Pane>
+                )}
+                {desk.isWhole ? null : (
+                    <Pane area="main" surface scroll label={copy.detailLabel}>
+                        <MainOf {...props} />
+                    </Pane>
+                )}
+                {desk.isWhole || aside === null ? null : (
+                    <Pane
+                        area="aside"
+                        surface
+                        scroll
+                        label={aside.title}
+                        collapse="drawer"
+                        collapseLabel={aside.title}
+                        openLabel={aside.title}
+                        closeLabel={copy.closeAside}
+                        isOpen={props.props.isAsideOpen}
+                        onOpenChange={on.asideOpenChange}
+                    >
+                        <AsideOf {...props} />
+                    </Pane>
+                )}
+            </PaneGrid>
+        </Page>
     )
 }

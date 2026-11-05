@@ -3,17 +3,10 @@ import { BrainAsk } from "@/components/blocks/BrainAsk"
 import { BrainDossiers } from "@/components/blocks/BrainDossiers"
 import { BrainFacts } from "@/components/blocks/BrainFacts"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
-import { BrainMap } from "@/components/blocks/BrainMap"
 import { BrainTodo } from "@/components/blocks/BrainTodo"
-import { DossierFindings } from "@/components/blocks/DossierFindings"
-import { DossierFindingsDrawer } from "@/components/blocks/DossierFindingsDrawer"
-import { DossierRemedyDraft } from "@/components/blocks/DossierRemedyDraft"
-import { BrainPageFrame } from "@/components/blocks/BrainPageFrame"
 import { KnowledgeDocs } from "@/components/blocks/KnowledgeDocs"
 import { PublicBrain } from "@/components/blocks/PublicBrain"
-import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import type { BrainTab } from "@/modules/routes"
-import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
 
 /** Copy and values the Second Brain page supplies. */
 export interface BrainPageBaseProps {
@@ -43,27 +36,10 @@ export interface BrainPageBaseProps {
     }
 }
 
-/** Draws the open tab of the Second Brain. */
-const Panel = (props: BrainPageBaseProps) => {
-    const page = props.props
-    if (page.tab === "dossiers") {
-        return (
-            <>
-                <BrainDossiers dossier={page.dossier} />
-                {page.dossier === undefined ? null : (
-                    <DossierFindingsDrawer dossierId={page.dossier} findingId={page.finding} />
-                )}
-                <DossierRemedyDraft draftId={page.draft} dossierId={page.dossier} findingId={page.finding} />
-            </>
-        )
-    }
-    return null
-}
-
 /**
- * Draws the Second Brain: its tabs on the header band, then the tab the address asks for. The map is a panes page (its grid
- * attaches flush under the tab line), and so are the queue, the facts, the lessons and the documents tab (the list, the open
- * document and its details); every other tab sits in the page measure.
+ * Draws the Second Brain: its tabs on the header band, then the tab the address asks for. Every tab is a panes page (its grid
+ * attaches flush under the tab line): the queue, the dossiers and the map, the facts, the lessons, the documents, the public
+ * documents and the questions.
  */
 export const BrainPageBase = (props: BrainPageBaseProps) => {
     const page = props.props
@@ -87,20 +63,26 @@ export const BrainPageBase = (props: BrainPageBaseProps) => {
         return <BrainFacts header={page.header} fact={page.fact} edit={page.edit} answer={page.answer} />
     }
     if (page.tab === "lessons") return <BrainLessons header={page.header} lesson={page.lesson} />
-    if (page.tab === "map") {
+    if (page.tab === "dossiers") {
         return (
-            <BrainMap header={page.header} node={page.node}>
-                <DossierFindings selection={{ kind: "map", nodeId: page.node }} />
-            </BrainMap>
+            <BrainDossiers
+                header={page.header}
+                mode="list"
+                node={undefined}
+                dossier={page.dossier}
+                finding={page.finding}
+                draft={page.draft}
+            />
         )
     }
     return (
-        <BrainPageFrame selected={page.tab} header={page.header}>
-            <div className={PAGE_CLASS_NAME}>
-                <div className={PANEL_CLASS_NAME} role="tabpanel" id={`${BRAIN_PANEL_PREFIX}${page.tab}`}>
-                    <Panel {...props} />
-                </div>
-            </div>
-        </BrainPageFrame>
+        <BrainDossiers
+            header={page.header}
+            mode="map"
+            node={page.node}
+            dossier={undefined}
+            finding={undefined}
+            draft={undefined}
+        />
     )
 }

@@ -4,7 +4,7 @@ import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In, Not } from "typeorm"
 import { SourceCategoriesService } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { TABLE } from "@modules/integrations/data-sources"
 import type { TableClient } from "@modules/integrations/data-sources"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -22,6 +22,7 @@ const build = async (em: MockEntityManager) => {
     const members = mock<WorkspaceMembersService>()
     const table = mock<TableClient>()
     const sources = mock<SourceCategoriesService>()
+    const lookup = mock<MemberLookupService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainDossiersService,
@@ -29,9 +30,10 @@ const build = async (em: MockEntityManager) => {
             { provide: TABLE, useValue: table },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: SourceCategoriesService, useValue: sources },
+            { provide: MemberLookupService, useValue: lookup },
         ],
     }).compile()
-    return { service: moduleRef.get(BrainDossiersService), members, table, sources }
+    return { service: moduleRef.get(BrainDossiersService), members, table, sources, lookup }
 }
 
 describe("BrainDossiersService list", () => {
@@ -148,5 +150,86 @@ describe("BrainDossiersService importChecklist refusals", () => {
 
         await expect(service.importChecklist("u1", WS, FILE)).rejects.toBe(refusal)
         expect(table.readWorkbookCells).not.toHaveBeenCalled()
+    })
+})
+
+describe("BrainDossiersService assign", () => {
+    const MEMBER = "22222222-2222-4222-8222-222222222222"
+    const input = { dossierId: "d1", assigneeId: MEMBER, dueAt: "2026-12-31" }
+
+    it("gives the dossier to an active member with a due date and answers the dossier as listed", async () => {
+        const em = mockEntityManager({
+            update: [BrainDossierEntity, { affected: 1 }],
+            find: [BrainDossierEntity, [rowOf({ assigneeId: MEMBER, dueAt: "2026-12-31" })]],
+        })
+        const { service, members, sources, lookup } = await build(em)
+        lookup.activeById.mockResolvedValue({ id: MEMBER, displayName: "Lan" })
+        sources.dossierCounts.mockResolvedValue([])
+
+        await expect(service.assign("u1", WS, input)).resolves.toEqual(
+            expect.objectContaining({ id: "d1", assigneeId: MEMBER, dueAt: "2026-12-31" }),
+        )
+        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
+        expect(lookup.activeById).toHaveBeenCalledWith(WS, MEMBER)
+        expect(em.update).toHaveBeenCalledWith(
+            BrainDossierEntity,
+            { workspaceId: WS, id: "d1" },
+            { assigneeId: MEMBER, dueAt: "2026-12-31" },
+        )
+    })
+
+    it("takes both values back without looking for a member", async () => {
+        const em = mockEntityManager({
+            update: [BrainDossierEntity, { affected: 1 }],
+            find: [BrainDossierEntity, [rowOf()]],
+        })
+        const { service, lookup, sources } = await build(em)
+        sources.dossierCounts.mockResolvedValue([])
+
+        await expect(service.assign("u1", WS, { dossierId: "d1", assigneeId: null, dueAt: null })).resolves.toEqual(
+            expect.objectContaining({ assigneeId: null, dueAt: null }),
+        )
+        expect(lookup.activeById).not.toHaveBeenCalled()
+    })
+
+    it("refuses a member who is not active in the workspace and writes nothing", async () => {
+        const em = mockEntityManager()
+        const { service, lookup } = await build(em)
+        lookup.activeById.mockResolvedValue(null)
+
+        await expect(service.assign("u1", WS, input)).rejects.toMatchObject({
+            code: BrainDossiersErrorCode.OwnerNotMember,
+        })
+        expect(em.update).not.toHaveBeenCalled()
+    })
+
+    it.each([{ affected: 0 }, {}])("refuses a dossier that is not one of the workspace (%j)", async (written) => {
+        const em = mockEntityManager({ update: [BrainDossierEntity, written] })
+        const { service, lookup } = await build(em)
+        lookup.activeById.mockResolvedValue({ id: MEMBER, displayName: "Lan" })
+
+        await expect(service.assign("u1", WS, input)).rejects.toMatchObject({ code: BrainDossiersErrorCode.NotFound })
+    })
+
+    it("refuses a dossier that is gone by the time it is read back", async () => {
+        const em = mockEntityManager({
+            update: [BrainDossierEntity, { affected: 1 }],
+            find: [BrainDossierEntity, []],
+        })
+        const { service, lookup, sources } = await build(em)
+        lookup.activeById.mockResolvedValue({ id: MEMBER, displayName: "Lan" })
+        sources.dossierCounts.mockResolvedValue([])
+
+        await expect(service.assign("u1", WS, input)).rejects.toMatchObject({ code: BrainDossiersErrorCode.NotFound })
+    })
+
+    it("does not write for a caller who is not a manager", async () => {
+        const em = mockEntityManager()
+        const { service, members } = await build(em)
+        const refusal = new Error("role")
+        members.require.mockRejectedValue(refusal)
+
+        await expect(service.assign("u1", WS, input)).rejects.toBe(refusal)
+        expect(em.update).not.toHaveBeenCalled()
     })
 })

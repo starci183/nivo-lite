@@ -1,165 +1,101 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { useState } from "react"
 import {
-    DOSSIER_STATUS_TONE,
-    SEVERITY_TONE,
-    dossierTagOf,
-    reviewedStatusOf,
-    statusCountsOf,
-    useBrainDossiers,
+    useBrainDossierDesk,
+    useBrainMapView,
+    useBrainPageHeader,
     useChecklistImport,
-    useDossierReviewSummary,
-    worstSeverityOf,
+    useDossierCopy,
+    useDossierFindingsView,
+    useDossierRemedyDrawer,
+    waitingFindingsOf,
 } from "@/hooks/brain"
-import type { CategoryView, DossierReviewRecord, DossierView } from "@/hooks/brain"
 import { useWorkspaceMember } from "@/hooks/knowledge"
-import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
-import { brainDossierHref, brainUploadHref } from "@/modules/routes"
-import { placeholderDossierCategory } from "@/components/composites/DossierRowsCard"
+import { navigation } from "@/modules/i18n"
+import { brainTabHref, knowledgeSourceHref } from "@/modules/routes"
+import type { BrainPageHeading } from "@/modules/types"
 import { BrainDossiersBase } from "./component"
-import type { DossierRowView, DossiersContent } from "./component"
 
-type Translate = ReturnType<typeof useTranslations<"secondBrain">>
-type ReviewTranslate = ReturnType<typeof useTranslations<"dossierReview">>
-
-/** What the review knows when a row is worded: its words, what it computed for the dossier, which dossier is open and who may act. */
-interface RowContext {
-    readonly t: Translate
-    readonly review: ReviewTranslate
-    readonly reviewOf: (dossierId: string) => DossierReviewRecord | undefined
-    readonly openId: string | undefined
-    readonly canWrite: boolean
-}
-
-/** Cards of the same shape as a ready page, drawn as geometry while the categories and dossiers are read. */
-const PLACEHOLDER: DossiersContent = {
-    figures: [1, 2, 3, 4].map((n) => ({ id: `placeholder-${n}`, label: "-", value: "0" })),
-    categories: [1, 2].map(placeholderDossierCategory),
-}
-
-/** The one line of a dossier: what is missing, else what is already held; nothing when the checklist says neither. */
-const noteOf = (t: Translate, note: DossierView["note"]): string | null => {
-    if (note === null) return null
-    return note.kind === "missing" ? t("dossierMissing", { text: note.text }) : note.text
-}
-
-/** A line followed by the count of its documents; either may be missing. */
-const withDocuments = (note: string | null, documents: string | null): string | null => {
-    const parts = [note, documents].filter((part) => part !== null)
-    return parts.length === 0 ? null : parts.join(" · ")
-}
-
-/** What a dossier asks of the owner next: look at its findings, or bring the document it lacks. */
-const actionOf = (
-    context: RowContext,
-    category: CategoryView,
-    dossier: DossierView,
-    standing: ReturnType<typeof reviewedStatusOf>,
-    openCount: number,
-): DossierRowView["action"] => {
-    if (openCount > 0) return { label: context.t("dossierSee"), href: brainDossierHref(dossier.id) }
-    if (standing.status !== "missing" || !context.canWrite) return null
-    return { label: context.t("dossierUpload"), href: brainUploadHref(category.id, dossierTagOf(dossier.ref)) }
+/** What the page hands the dossiers tab: the header without its tabs, and what the address has open. */
+interface BrainDossiersProps {
+    readonly header: BrainPageHeading
+    /** The dossier open (its findings, its side pane), the finding in view and the draft open over it. */
+    readonly dossier: string | undefined
+    /** The view of the tab: the list of dossiers or the map; the node the address selects on the map. */
+    readonly mode: "list" | "map"
+    readonly node: string | undefined
+    readonly finding: string | undefined
+    readonly draft: string | undefined
 }
 
 /**
- * A dossier in the words of the list: the status the review stands at (the checklist's own until it has looked), then the count
- * of its active findings in the tone of the worst, or else its documents; the other count goes into the line.
+ * The connected dossiers tab of the Second Brain: the checklist's dossiers by category with the figures of the whole set, the
+ * dossier the address opens with the findings of its review, and the side pane that says what it lacks and what it holds.
  */
-const dossierRowOf = (context: RowContext, category: CategoryView, dossier: DossierView): DossierRowView => {
-    const { t, review } = context
-    const reviewed = context.reviewOf(dossier.id)
-    const standing = reviewedStatusOf(dossier.status, reviewed)
-    const worst = reviewed === undefined ? null : worstSeverityOf(reviewed)
-    const documents = t("dossierDocuments", { count: dossier.documentCount })
-    const note = withDocuments(noteOf(t, dossier.note), dossier.documentCount > 0 ? documents : null)
-    const status = {
-        id: "status",
-        label: t(
-            standing.status === "present" && dossier.documentCount === 0
-                ? "statusPresentNoFile"
-                : `status_${standing.status}`,
-        ),
-        tone: DOSSIER_STATUS_TONE[standing.status],
-    }
-    return {
-        id: dossier.id,
-        name: dossier.name,
-        isSelected: dossier.id === context.openId,
-        note: worst === null ? note : withDocuments(note, documents),
-        badges:
-            reviewed === undefined || worst === null
-                ? [status]
-                : [
-                      status,
-                      {
-                          id: "findings",
-                          label: review("findingsCount", { count: reviewed.openCount }),
-                          tone: SEVERITY_TONE[worst],
-                      },
-                  ],
-        action: actionOf(context, category, dossier, standing, reviewed?.openCount ?? 0),
-    }
-}
-
-/** What the page hands the dossiers tab: what the address has open. */
-interface BrainDossiersProps {
-    /** The dossier open in the drawer. */
-    readonly dossier: string | undefined
-}
-
-/** The dossiers tab of the Second Brain: the figures of the whole set, then the dossiers of each category. */
 export const BrainDossiers = (props: BrainDossiersProps) => {
-    const t = useTranslations("secondBrain")
-    const review = useTranslations("dossierReview")
+    const router = navigation.useRouter()
     const member = useWorkspaceMember()
-    const slotLabels = useSlotLabels()
-    const { categories, slot, reload } = useBrainDossiers()
-    const summary = useDossierReviewSummary()
-    const checklist = useChecklistImport(reload, member.canWrite)
-    const context: RowContext = {
-        t,
-        review,
-        reviewOf: summary.reviewOf,
-        openId: props.dossier,
-        canWrite: member.canWrite,
-    }
-    const counts = statusCountsOf(
-        categories ?? [],
-        (dossier) => reviewedStatusOf(dossier.status, summary.reviewOf(dossier.id)).status,
+    const isMap = props.mode === "map"
+    const header = useBrainPageHeader(isMap ? "map" : "dossiers", props.header)
+    const desk = useBrainDossierDesk({ dossier: isMap ? props.node : props.dossier, mode: props.mode })
+    const map = useBrainMapView({ node: props.node, isWaiting: desk.view.isWaiting })
+    const checklist = useChecklistImport(desk.on.retry, member.canWrite)
+    const findings = useDossierFindingsView(
+        desk.openId === null
+            ? { kind: "map", nodeId: undefined }
+            : { kind: "dossier", dossierId: desk.openId, findingId: props.finding },
     )
-    const figures = [
-        ...counts
-            .filter(
-                (one) =>
-                    one.count > 0 || one.status === "present" || one.status === "partial" || one.status === "missing",
-            )
-            .map((one) => ({ id: one.status, label: t(`status_${one.status}`), value: String(one.count) })),
-        { id: "ask", label: t("figureAsk"), value: String(summary.activeCount) },
-    ]
+    const remedy = useDossierRemedyDrawer({
+        draftId: props.draft,
+        dossierId: props.dossier,
+        findingId: props.finding,
+    })
+    const [isAsideOpen, setAsideOpen] = useState(false)
     return (
         <BrainDossiersBase
             props={{
-                figuresLabel: t("figuresLabel"),
-                listFooter: t("dossiersFooter"),
-                emptyCategory: t("dossiersEmptyCategory"),
-                emptyAll: t("dossiersEmpty"),
-                checklistImport: checklist.view,
-                slot: member.isLoading
-                    ? loadingSlot<DossiersContent>()
-                    : mapSlot(slot, (rows) => ({
-                          figures,
-                          categories: rows.map((category) => ({
-                              id: category.id,
-                              title: category.label,
-                              dossiers: category.dossiers.map((dossier) => dossierRowOf(context, category, dossier)),
-                          })),
-                      })),
-                placeholder: PLACEHOLDER,
-                slotLabels: slotLabels(t("dossiersEmpty")),
+                header: header.props,
+                panelId: `${header.props.tabs.panelPrefix}dossiers`,
+                copy: useDossierCopy(),
+                mode: props.mode,
+                desk: desk.view,
+                findings: waitingFindingsOf(desk.view.isWaiting, findings.props),
+                remedy,
+                checklist: checklist.view,
+                map: isMap ? map.view : null,
+                ownerDialog: desk.owner.dialog,
+                isAsideOpen,
             }}
-            on={{ retry: reload, ...checklist.on }}
+            on={{
+                reviewAll: header.on.reviewAll,
+                selectTab: header.on.selectTab,
+                setMode: (mode) => router.push(brainTabHref(mode === "map" ? "map" : "dossiers")),
+                selectNode: map.on.select,
+                setMapFilter: map.on.setFilter,
+                openHref: (href) => router.push(href),
+                openAssign: desk.owner.open,
+                submitOwner: desk.owner.submit,
+                closeOwner: desk.owner.close,
+                setQuery: desk.on.setQuery,
+                select: desk.on.select,
+                back: desk.on.back,
+                retry: desk.on.retry,
+                closeAside: desk.on.closeAside,
+                asideOpenChange: setAsideOpen,
+                openMap: () => {
+                    if (desk.openId !== null) router.push(brainTabHref("map", { node: desk.openId }))
+                },
+                openSources: () => router.push(brainTabHref("sources")),
+                openDocument: (id) => router.push(knowledgeSourceHref(id)),
+                ...checklist.on,
+                setFilter: findings.on.setFilter,
+                review: findings.on.review,
+                act: findings.on.action,
+                loadMore: findings.on.loadMore,
+                submitDialog: findings.on.submitDialog,
+                closeDialog: findings.on.closeDialog,
+            }}
         />
     )
 }

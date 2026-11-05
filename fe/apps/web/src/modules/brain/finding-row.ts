@@ -40,6 +40,9 @@ export interface FindingRowView {
     readonly evidence: ReadonlyArray<EvidenceItemView>
     readonly sources: ReadonlyArray<EvidenceSourceView>
     readonly actions: ReadonlyArray<FindingActionView>
+    /** The two commands a card draws in the open, and the ones its menu holds. */
+    readonly open: ReadonlyArray<FindingActionView>
+    readonly menu: ReadonlyArray<FindingActionView>
 }
 
 /** The value of the assignee choice that names nobody. */

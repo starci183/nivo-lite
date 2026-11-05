@@ -48,6 +48,17 @@ describe("toDossierRecord", () => {
             missing: null,
             drafts: "03. Decision.docx",
             documentCount: 2,
+            assigneeId: null,
+            dueAt: null,
         })
+    })
+
+    it("carries the owner and the due date when the dossier has them", async () => {
+        const subject = await buildSubject()
+        const row = dossierRowOf({ assigneeId: "m1", dueAt: "2026-12-31" })
+
+        expect(subject.toDossierRecord(row, 0)).toEqual(
+            expect.objectContaining({ assigneeId: "m1", dueAt: "2026-12-31" }),
+        )
     })
 })
