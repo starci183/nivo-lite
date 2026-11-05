@@ -13,6 +13,7 @@ import type { NodeInstall } from "@modules/domain/graph-nodes"
 import { AiTasksService } from "@modules/domain/ai-tasks"
 import { NodeToolDoorService } from "@modules/domain/mcp-gateway"
 import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
+import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
 import {
     CHAT_NODE_PORTS_ERROR_KINDS,
@@ -46,7 +47,7 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
     EntityEngineModule.register({
         isGlobal: true,
         entities: FLOW_F_ENTITIES,
-        jobs: [],
+        jobs: MODULE_JOBS,
         ...options.entityEngine,
     }),
     GraphNodesModule.register({

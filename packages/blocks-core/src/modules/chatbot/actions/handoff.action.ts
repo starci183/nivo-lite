@@ -3,7 +3,8 @@ import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { chatbotText } from "../copy"
-import { CONVERSATIONS, MEMBERS, MESSAGES } from "../ports"
+import { membersPort } from "../../platform/ports"
+import { CONVERSATIONS, MESSAGES } from "../ports"
 import { changeHandling } from "./handling"
 
 /** Hands the conversation to a person: the caller takes it over, so the AI stops answering and the caller may reply. */
@@ -12,7 +13,7 @@ export const HANDOFF: ActionDefinition = defineAction({
     permission: "chatbot.reply",
     label: chatbotText("action_handoff"),
     input: z.object({ id: z.string().min(1).max(MAX_ID), locale: z.enum(["vi", "en"]).optional() }),
-    ports: { conversations: CONVERSATIONS, messages: MESSAGES, members: MEMBERS },
+    ports: { conversations: CONVERSATIONS, messages: MESSAGES, members: membersPort },
     transactional: true,
     refreshes: [
         "chatbot.threads",

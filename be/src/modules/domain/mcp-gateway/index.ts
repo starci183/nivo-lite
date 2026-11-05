@@ -13,6 +13,7 @@ export {
     gatewaySearchSchema,
     gatewayToolNameSchema,
 } from "./gateway-tools.schema"
+export { domainNameIn } from "./connector-call.policy"
 export { outputStepOf } from "./output-step.policy"
 export type {
     CapabilityRole,
@@ -28,6 +29,7 @@ export type {
     GrantView,
     NativeAdapter,
     NativeCaller,
+    WorkspaceConnector,
     NativeConnectorManifest,
     NativeToolSpec,
     RemoteConnectorInput,

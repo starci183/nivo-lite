@@ -81,3 +81,31 @@ describe("MemberLookupService", () => {
         })
     })
 })
+
+describe("MemberLookupService.activeSeatById", () => {
+    it("answers the name and whether the active seat manages, or null", async () => {
+        const manager = await build(
+            mockEntityManager({
+                findOne: [WorkspaceMemberEntity, Object.assign(member(), { role: "manager" })],
+            }),
+        )
+        const staff = await build(
+            mockEntityManager({ findOne: [WorkspaceMemberEntity, Object.assign(member(), { role: "staff" })] }),
+        )
+        const missing = await build(mockEntityManager({ findOne: [WorkspaceMemberEntity, null] }))
+
+        await expect(manager.lookup.activeSeatById("ws-1", "m-1")).resolves.toEqual({
+            displayName: "Lan",
+            isManager: true,
+        })
+        await expect(staff.lookup.activeSeatById("ws-1", "m-1")).resolves.toEqual({
+            displayName: "Lan",
+            isManager: false,
+        })
+        await expect(missing.lookup.activeSeatById("ws-1", "m-1")).resolves.toBeNull()
+        expect(manager.em.findOne).toHaveBeenCalledWith(WorkspaceMemberEntity, {
+            select: { displayName: true, role: true },
+            where: { workspaceId: "ws-1", id: "m-1", status: "active" },
+        })
+    })
+})

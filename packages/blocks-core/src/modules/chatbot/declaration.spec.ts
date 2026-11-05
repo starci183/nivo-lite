@@ -51,7 +51,7 @@ describe("the Chatbot module declaration", () => {
         const portIds = chatbotModule.actions.flatMap((action) =>
             Object.values(action.ports ?? {}).map((port) => port.id),
         )
-        expect(portIds).not.toContain("chatbot.door")
+        expect(portIds).not.toContain("engine.door")
     })
 })
 

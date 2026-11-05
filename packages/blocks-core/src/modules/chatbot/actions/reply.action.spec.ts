@@ -1,11 +1,28 @@
-import { MANAGER_ID, STAFF_CONTEXT, conversationStore, memoryProvider, memoryWorld } from "../fixtures/chatbot.memory"
-import { HANDLED_ROW } from "../fixtures/chatbot.fixtures"
-import { CONVERSATIONS } from "../ports"
 import type { PortProvider } from "@nivo-lite/agent-sdk/port"
+import { HANDLED_ROW } from "../fixtures/chatbot.fixtures"
+import {
+    MANAGER_ID,
+    STAFF_CONTEXT,
+    conversationApi,
+    conversationOf,
+    memoryProvider,
+    memoryWorld,
+    messageApi,
+    putConversation,
+    recordOfThread,
+} from "../fixtures/chatbot.memory"
+import type { MemoryWorld } from "../fixtures/chatbot.memory"
+import { CONVERSATIONS, MESSAGES } from "../ports"
 import { REPLY } from "./reply.action"
 
-const run = (world: ReturnType<typeof memoryWorld>, input: unknown, memberId: string | null = STAFF_CONTEXT.memberId) =>
+const run = (world: MemoryWorld, input: unknown, memberId: string | null = STAFF_CONTEXT.memberId) =>
     REPLY.execute?.(memoryProvider(world), input, { ...STAFF_CONTEXT, memberId })
+
+/** A provider whose port `id` is the given api, every other port the world's. */
+const overriding = (world: MemoryWorld, id: string, api: object): PortProvider => {
+    const base = memoryProvider(world)
+    return { implementationOf: (port) => (port.id === id ? api : base.implementationOf(port)) }
+}
 
 describe("the chatbot.reply action", () => {
     it("stores the reply of the person who holds the conversation and enqueues its delivery, calling no channel", async () => {
@@ -15,21 +32,25 @@ describe("the chatbot.reply action", () => {
         expect(world.lines).toEqual([
             {
                 id: "m1",
+                workspaceId: "w1",
                 version: "1",
-                conversationId: "c2",
-                role: "agent",
-                text: "Invoice is on its way.",
-                sentAt: "2026-11-05T03:00:00.000Z",
-                authorKind: "human",
-                authorName: "Thu Ha Le",
-                authorUserId: "member-staff",
-                deliveryStatus: null,
-                deliveryError: null,
+                createdAt: "2026-11-03T09:00:00.000Z",
+                updatedAt: "2026-11-03T09:00:00.000Z",
+                data: {
+                    conversationId: "c2",
+                    role: "agent",
+                    text: "Invoice is on its way.",
+                    sentAt: "2026-11-05T03:00:00.000Z",
+                    authorKind: "human",
+                    authorName: "Thu Ha Le",
+                    authorUserId: "member-staff",
+                },
             },
         ])
-        expect(world.jobs).toEqual([{ messageId: "m1" }])
+        expect(world.links).toContainEqual({ entity: "chat.message", id: "m1", relation: "conversation", to: "c2" })
+        expect(world.jobs).toEqual([{ job: "chatbot.deliver-reply", input: { messageId: "m1" } }])
         expect(world.sends).toEqual([])
-        expect(world.conversations.get("c2")).toMatchObject({
+        expect(conversationOf(world, "c2")).toMatchObject({
             version: "8",
             lastText: "Invoice is on its way.",
             lastRole: "agent",
@@ -43,12 +64,12 @@ describe("the chatbot.reply action", () => {
     it("lets a manager reply in a conversation another person holds", async () => {
         const world = memoryWorld()
         expect(await run(world, { id: "c2", text: "Hello" }, MANAGER_ID)).toMatchObject({ ok: true })
-        expect(world.lines[0]).toMatchObject({ authorName: "Lan Pham" })
+        expect(world.lines[0]?.data).toMatchObject({ authorName: "Lan Pham" })
     })
 
     it("refuses staff a conversation another person holds", async () => {
         const world = memoryWorld()
-        world.conversations.set("c2", { ...HANDLED_ROW, handledBy: "Minh" })
+        putConversation(world, { ...HANDLED_ROW, handledBy: "Minh" })
         expect(await run(world, { id: "c2", text: "Hello" })).toEqual({
             ok: false,
             reason: "forbidden",
@@ -95,20 +116,40 @@ describe("the chatbot.reply action", () => {
 
     it("changes nothing when the conversation moved meanwhile", async () => {
         const world = memoryWorld()
-        const base = memoryProvider(world)
-        const stale: PortProvider = {
-            implementationOf: (port) =>
-                port.id === CONVERSATIONS.id
-                    ? { ...conversationStore(world), get: () => Promise.resolve({ ...HANDLED_ROW, version: "0" }) }
-                    : base.implementationOf(port),
-        }
+        const stale = overriding(world, CONVERSATIONS.id, {
+            ...conversationApi(world),
+            get: () => Promise.resolve(recordOfThread({ ...HANDLED_ROW, version: "0" })),
+        })
         const result = await REPLY.execute?.(stale, { id: "c2", text: "Hello" }, STAFF_CONTEXT)
-        expect(result).toEqual({
+        expect(result).toEqual({ ok: false, reason: "conflict", message: { key: "handling_conflict" } })
+        expect(world.lines).toEqual([])
+        expect(world.jobs).toEqual([])
+    })
+
+    it("answers not found when the conversation is gone between the read and the write", async () => {
+        const world = memoryWorld()
+        const gone = overriding(world, CONVERSATIONS.id, {
+            ...conversationApi(world),
+            update: () => Promise.resolve({ ok: false, reason: "missing" }),
+        })
+        expect(await REPLY.execute?.(gone, { id: "c2", text: "Hello" }, STAFF_CONTEXT)).toEqual({
+            ok: false,
+            reason: "refused",
+            message: { key: "reply_not_found" },
+        })
+        expect(world.jobs).toEqual([])
+    })
+
+    it("refuses the whole action when the line cannot be stored, enqueuing nothing", async () => {
+        const world = memoryWorld()
+        const refused = overriding(world, MESSAGES.id, {
+            ...messageApi(world),
+            insert: () => Promise.resolve({ ok: false, reason: "invalid" }),
+        })
+        expect(await REPLY.execute?.(refused, { id: "c2", text: "Hello" }, STAFF_CONTEXT)).toMatchObject({
             ok: false,
             reason: "conflict",
-            message: { key: "handling_conflict" },
         })
-        expect(world.lines).toEqual([])
         expect(world.jobs).toEqual([])
     })
 

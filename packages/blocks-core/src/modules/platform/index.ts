@@ -1,7 +1,7 @@
 export { PLATFORM_MODULE_KEY, PLATFORM_VIEW } from "./constants"
 export { platformModule } from "./declaration"
 export { PLATFORM_FIXTURES } from "./fixtures/platform.fixtures"
-export { installationPort } from "./ports"
+export { installationPort, membersPort } from "./ports"
 export { PLATFORM_MESSAGES } from "./platform-messages"
 export type {
     InstallationFacts,
@@ -9,4 +9,6 @@ export type {
     InstallationView,
     InstalledModuleFacts,
     InstalledModuleView,
+    MemberDirectory,
+    MemberFacts,
 } from "./platform.types"

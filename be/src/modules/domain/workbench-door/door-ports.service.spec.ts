@@ -9,6 +9,7 @@ import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
 import type { RunIn, ScopedTx } from "@modules/domain/entity-engine"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { MemberLookupService } from "@modules/domain/workspace-members"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { DoorPortsService } from "./door-ports.service"
 import type { DoorRun } from "./door-ports.service"
@@ -38,6 +39,7 @@ const build = async () => {
     const lists = mock<ListSourceService>()
     const tx = mock<ScopedTx>()
     const installations = mock<InstallationRecordsService>()
+    const seats = mock<MemberLookupService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             DoorPortsService,
@@ -46,11 +48,12 @@ const build = async () => {
             { provide: EntityEngineService, useValue: engine },
             { provide: EntityPortsService, useValue: ports },
             { provide: ListSourceService, useValue: lists },
+            { provide: MemberLookupService, useValue: seats },
         ],
     }).compile()
     const runIn: RunIn = (use) => use(tx)
     const run: DoorRun = { workspaceId: "ws-1", runIn, name: "sales.leads", dataKind: "lead" }
-    return { service: moduleRef.get(DoorPortsService), ports, lists, tx, runIn, run, installations }
+    return { service: moduleRef.get(DoorPortsService), ports, lists, tx, runIn, run, installations, seats }
 }
 
 type PortId = `${string}.${string}`
@@ -151,6 +154,25 @@ const isListSource = (
     readonly counts: (shape: ListShape, by: string, query: typeof QUERY) => Promise<unknown>
 } => typeof value === "object" && value !== null && "page" in value && "counts" in value
 
+describe("DoorPortsService members", () => {
+    it("gives the members port the active seat of the run's workspace", async () => {
+        const { service, seats, run } = await build()
+        seats.activeSeatById.mockResolvedValue({ displayName: "Lan", isManager: true })
+        const directory = service.providerFor(run).implementationOf(portOf("platform.members"))
+
+        const seat = await (isMemberDirectory(directory)
+            ? directory.get("m-1")
+            : Promise.reject(new Error("no directory")))
+
+        expect(seat).toEqual({ displayName: "Lan", isManager: true })
+        expect(seats.activeSeatById).toHaveBeenCalledWith("ws-1", "m-1")
+    })
+})
+
 /** Narrows the implementation of the installation port to its one method. */
 const isInstallationSource = (value: unknown): value is { readonly current: () => Promise<unknown> } =>
     typeof value === "object" && value !== null && "current" in value
+
+/** Narrows the implementation of the members port to its one method. */
+const isMemberDirectory = (value: unknown): value is { readonly get: (memberId: string) => Promise<unknown> } =>
+    typeof value === "object" && value !== null && "get" in value
