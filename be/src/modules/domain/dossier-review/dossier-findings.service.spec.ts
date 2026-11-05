@@ -19,6 +19,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import { DossierFindingInUseService } from "./dossier-finding-in-use.service"
 import { DossierFindingsService } from "./dossier-findings.service"
 import { DossierReviewErrorCode } from "./errors/dossier-review.error"
 import {
@@ -55,10 +56,12 @@ const build = async (em: MockEntityManager) => {
         get: jest.fn((key: string, _params: object, locale: string) => `${locale}:${key}`),
     })
     const chunks = mock<KnowledgeChunksService>({ placesOf: jest.fn().mockResolvedValue(new Map()) })
+    const inUse = mock<DossierFindingInUseService>({ ofFindings: jest.fn().mockResolvedValue(new Map()) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DossierFindingsService,
             { provide: KnowledgeChunksService, useValue: chunks },
+            { provide: DossierFindingInUseService, useValue: inUse },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(AT) },
             { provide: MESSAGE_CATALOG, useValue: catalog },

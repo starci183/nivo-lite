@@ -180,6 +180,12 @@ const registerRead = () => {
             const newer = messageRow("newer", "2026-10-22T09:45:00+07:00")
             const older = messageRow("older", "2026-10-22T09:41:00+07:00")
             const { em, fake } = managerAnswering({ getRawMany: [newer, older] })
+            const involved = fakeQueryBuilder({
+                getRawMany: [
+                    { author_kind: "member", author_id: "member-van", mentions: [{ kind: "agent", id: "agent-1" }] },
+                ],
+            })
+            em.createQueryBuilder.mockReturnValueOnce(involved.builder)
             const { service, threads } = await build(em)
 
             const view = await service.read("van", "ws-1", "thread-1")
@@ -193,6 +199,14 @@ const registerRead = () => {
             expect(fake.callsOf("orderBy")).toEqual([["m.created_at", "DESC"]])
             expect(fake.callsOf("addOrderBy")).toEqual([["m.id", "DESC"]])
             expect(fake.callsOf("limit")).toEqual([[200]])
+            expect(view.participants).toEqual({ people: 1, agents: 1 })
+            expect(involved.callsOf("where")).toEqual([
+                [
+                    "m.workspace_id = :workspaceId AND m.thread_id = :threadId",
+                    { workspaceId: "ws-1", threadId: "thread-1" },
+                ],
+            ])
+            expect(involved.callsOf("limit")).toEqual([[5000]])
         })
 
         it("reads the chain of a thread of the workspace", async () => {
