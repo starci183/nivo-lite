@@ -6,19 +6,18 @@ import { specText } from "../schema/spec-text.schema"
 import type { SpecDocument, SpecNode, SpecParam, SpecView } from "./spec.types"
 
 const variable = z.union([z.string().max(TEXT_MAX), z.number(), z.boolean(), z.null()])
-const binding = z.union([
-    z
-        .object({
-            read: z.string().max(KEY_MAX),
-            path: z.string().max(KEY_MAX).optional(),
-            variables: z
-                .record(z.string().max(KEY_MAX), variable)
-                .refine((entries) => Object.keys(entries).length <= RECORD_MAX)
-                .optional(),
-        })
-        .strict(),
-    z.object({ action: z.string().max(KEY_MAX) }).strict(),
-])
+const readBinding = z
+    .object({
+        read: z.string().max(KEY_MAX),
+        path: z.string().max(KEY_MAX).optional(),
+        variables: z
+            .record(z.string().max(KEY_MAX), variable)
+            .refine((entries) => Object.keys(entries).length <= RECORD_MAX)
+            .optional(),
+    })
+    .strict()
+const actionBinding = z.object({ action: z.string().max(KEY_MAX) }).strict()
+const binding = z.union([readBinding, actionBinding])
 
 /** A JSON value of bounded text, lists and objects: what a stored spec carries as the literal props of a block. */
 const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
@@ -63,6 +62,8 @@ const viewSchema: z.ZodType<SpecView> = z
         root: specNodeSchema,
         hidden: z.boolean().optional(),
         openBy: z.string().min(1).max(KEY_MAX).optional(),
+        count: readBinding.extend({ isAttention: z.boolean().optional() }).optional(),
+        command: actionBinding.optional(),
     })
     .strict()
 

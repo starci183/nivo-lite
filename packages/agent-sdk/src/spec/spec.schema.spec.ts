@@ -20,6 +20,8 @@ describe("specDocumentSchema", () => {
                     label: { vi: "a", en: "b" },
                     hidden: true,
                     openBy: "focus",
+                    count: { read: "a.counts", path: "total", variables: { q: "$q" }, isAttention: true },
+                    command: { action: "a.create" },
                     root: {
                         ...node,
                         children: [
@@ -58,5 +60,20 @@ describe("specDocumentSchema", () => {
         expect(refused({ type: "string", url: "a", default: 1 })).toBe(true)
         expect(refused({ type: "enum", of: [1], url: "a" })).toBe(true)
         expect(refused({ type: "string", url: "a" })).toBe(false)
+    })
+
+    it("refuses a view count or command that is not well formed", () => {
+        const view = { id: "v", label: { key: "k" }, root: { id: "r", block: "test.stack" } }
+        const refused = (extra: object): boolean =>
+            specDocumentSchema.safeParse({
+                schema: "nivo/workbench-spec@2",
+                module: "m",
+                views: [{ ...view, ...extra }],
+            }).success === false
+        expect(refused({ count: { read: "a.counts", isAttention: 1 } })).toBe(true)
+        expect(refused({ count: { action: "a.b" } })).toBe(true)
+        expect(refused({ count: { read: "a.counts", extra: 1 } })).toBe(true)
+        expect(refused({ command: { read: "a.b" } })).toBe(true)
+        expect(refused({ count: { read: "a.counts" }, command: { action: "a.b" } })).toBe(false)
     })
 })
