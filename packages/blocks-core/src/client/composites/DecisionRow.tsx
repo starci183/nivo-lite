@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { Badge, Button, Cluster, DropdownMenu, Stack, Text } from "@starci/grammar/common"
 import type { EditAnswer } from "../../rows/decision-commands"
 import type { FormValues } from "../../rows/form-values"
-import type { DecisionRowView } from "../../views/views.types"
+import type { CommandView, DecisionRowView } from "../../views/views.types"
 import { TraceLine } from "../leaves/TraceLine"
 import { DecisionEditForm } from "./DecisionEditForm"
 import type { DecisionEditFormProps } from "./DecisionEditForm"
@@ -17,6 +17,8 @@ export interface DecisionEdit extends Pick<DecisionEditFormProps, "fields" | "cu
 /** One row of a decision queue and the words that are not the row's own. */
 interface DecisionRowProps {
     readonly row: DecisionRowView
+    /** How large the commands are. */
+    readonly commandSize: "sm" | "md"
     readonly seeWhyLabel: string
     /** The name of the menu at the end of the row. */
     readonly moreLabel: string
@@ -28,15 +30,66 @@ interface DecisionRowProps {
 /** The commands of a row and the words of its menu. */
 interface RowActionsProps {
     readonly row: DecisionRowView
+    readonly commandSize: "sm" | "md"
     readonly moreLabel: string
     /** Opens the inline edit form; absent runs the edit command of the row as any other. */
     readonly onEdit?: (() => void) | undefined
     readonly onCommand: (rowId: string, commandId: string) => void
 }
 
-/** The look of the named command: an alternative button, or the destructive one when the command cannot be taken back. */
-const PLAIN_INTENT = { intent: "alternative" } as const
-const DANGER_INTENT = { intent: "destructive" } as const
+/** What one command button of a row is given. */
+interface RowButtonProps {
+    readonly command: CommandView
+    /** The look when neither the row nor the spec gives the command one. */
+    readonly fallback: "alternative" | "neutral"
+    readonly size: "sm" | "md"
+    readonly onPress: () => void
+}
+
+/** One command of a row as a button: the destructive one when it cannot be taken back, else the look the row or the spec gives it. */
+const RowButton = (props: RowButtonProps): ReactNode => {
+    const { command } = props
+    const shared = {
+        size: props.size,
+        isPending: command.isPending === true,
+        isDisabled: command.isDisabled === true,
+        ...(command.disabledReason === undefined ? {} : { disabledReason: command.disabledReason }),
+        onPress: props.onPress,
+    }
+    if (command.isDanger === true) {
+        return (
+            <Button intent="destructive" {...shared}>
+                {command.label}
+            </Button>
+        )
+    }
+    switch (command.intent ?? props.fallback) {
+        case "commit":
+            return (
+                <Button intent="commit" {...shared}>
+                    {command.label}
+                </Button>
+            )
+        case "dismiss":
+            return (
+                <Button intent="dismiss" {...shared}>
+                    {command.label}
+                </Button>
+            )
+        case "neutral":
+            return (
+                <Button intent="neutral" {...shared}>
+                    {command.label}
+                </Button>
+            )
+        case "alternative":
+            return (
+                <Button intent="alternative" {...shared}>
+                    {command.label}
+                </Button>
+            )
+    }
+}
 
 /** The row whose waiting line is drawn. */
 interface WaitingForProps {
@@ -66,31 +119,25 @@ const RowActions = (props: RowActionsProps): ReactNode => {
     const edit = row.edit
     return (
         <Cluster gap="inline">
-            <Button
-                {...(primary.isDanger === true ? DANGER_INTENT : PLAIN_INTENT)}
-                size="sm"
-                isPending={primary.isPending === true}
-                isDisabled={primary.isDisabled === true}
-                {...(primary.disabledReason === undefined ? {} : { disabledReason: primary.disabledReason })}
+            <RowButton
+                command={primary}
+                fallback="alternative"
+                size={props.commandSize}
                 onPress={() => props.onCommand(row.id, primary.id)}
-            >
-                {primary.label}
-            </Button>
+            />
             {edit === null ? null : (
-                <Button
-                    intent="neutral"
-                    size="sm"
-                    isDisabled={edit.isDisabled === true}
+                <RowButton
+                    command={edit}
+                    fallback="neutral"
+                    size={props.commandSize}
                     onPress={props.onEdit ?? (() => props.onCommand(row.id, edit.id))}
-                >
-                    {edit.label}
-                </Button>
+                />
             )}
             {menu.length === 0 ? null : (
                 <DropdownMenu
                     placement="bottom end"
                     trigger={
-                        <Button intent="neutral" size="sm">
+                        <Button intent="neutral" size={props.commandSize}>
                             {props.moreLabel}
                         </Button>
                     }
@@ -140,6 +187,7 @@ export const DecisionRow = (props: DecisionRowProps): ReactNode => {
             )}
             <RowActions
                 row={row}
+                commandSize={props.commandSize}
                 moreLabel={props.moreLabel}
                 onCommand={props.onCommand}
                 {...(edit === null ? {} : { onEdit: () => setIsEditing(true) })}

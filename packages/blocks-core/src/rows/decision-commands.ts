@@ -6,8 +6,11 @@ import type { FormErrors } from "./form-values"
 /** The command id an edit runs under: the action of the queue is run with `{ id, command: "edit", values }`. */
 export const EDIT_COMMAND = "edit"
 
-/** How a declared command looks: it stays plain, or it is drawn as one that cannot be taken back. */
-export const COMMAND_INTENTS = ["neutral", "danger"] as const
+/**
+ * How a declared command looks: the one that decides (`commit`), an alternative to it, a dismissal, a plain one, or one that
+ * cannot be taken back (`danger`).
+ */
+export const COMMAND_INTENTS = ["commit", "alternative", "dismiss", "neutral", "danger"] as const
 
 /** One look of a command. */
 export type CommandIntent = (typeof COMMAND_INTENTS)[number]
@@ -22,6 +25,10 @@ export interface DeclaredCommand {
     readonly intent?: CommandIntent | undefined
 }
 
+/** The look a declared intent gives a command: the danger tone, or one of the plain looks with no danger. */
+const lookOf = (intent: CommandIntent): Pick<CommandView, "isDanger" | "intent"> =>
+    intent === "danger" ? { isDanger: true } : { isDanger: false, intent }
+
 /** The command as the spec declares it: its words in the viewer's language, its look over the row's. */
 const declaredCommand = (
     command: CommandView,
@@ -33,7 +40,7 @@ const declaredCommand = (
     return {
         ...command,
         label: words(match.label),
-        ...(match.intent === undefined ? {} : { isDanger: match.intent === "danger" }),
+        ...(match.intent === undefined ? {} : lookOf(match.intent)),
     }
 }
 

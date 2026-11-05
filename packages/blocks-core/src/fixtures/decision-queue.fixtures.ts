@@ -75,7 +75,7 @@ export const DECISION_QUEUE_FIXTURE: DecisionQueueView = {
     count: "2",
     more: null,
     rows: [
-        decision("d1", { draft: { amount: 450_000, note: "Khach doi y" } }),
+        decision("d1", { leading: "Sales AI", draft: { amount: 450_000, note: "Khach doi y" } }),
         decision("d2", { title: "Giam gia don 1050", primary: null, edit: null, menu: [], waitingFor: "Chu quan" }),
     ],
 }

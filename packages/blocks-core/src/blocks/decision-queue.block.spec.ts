@@ -38,10 +38,16 @@ describe("decisionQueueBlock", () => {
     it("takes the commands as ids with their words and a look, and refuses what is not a command", () => {
         expect(accepts({ ...QUEUE, commands: [COMMAND, { id: "reject", label: WORD, intent: "danger" }] })).toBe(true)
         expect(accepts({ ...QUEUE, commands: [{ ...COMMAND, intent: "neutral" }] })).toBe(true)
+        expect(accepts({ ...QUEUE, commands: [{ ...COMMAND, intent: "commit" }] })).toBe(true)
         expect(accepts({ ...QUEUE, commands: [{ ...COMMAND, intent: "loud" }] })).toBe(false)
         expect(accepts({ ...QUEUE, commands: [{ id: "approve" }] })).toBe(false)
         expect(accepts({ ...QUEUE, commands: [{ ...COMMAND, id: "" }] })).toBe(false)
         expect(accepts({ ...QUEUE, commands: [{ ...COMMAND, id: "c".repeat(65) }] })).toBe(false)
+    })
+
+    it("takes the size of the commands and refuses another", () => {
+        expect(accepts({ ...QUEUE, commandSize: "md" })).toBe(true)
+        expect(accepts({ ...QUEUE, commandSize: "xl" })).toBe(false)
     })
 
     it("bounds the commands and refuses two of one id", () => {

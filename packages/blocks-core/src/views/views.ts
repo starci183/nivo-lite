@@ -103,6 +103,7 @@ const commandView: z.ZodType<CommandView> = z.object({
     isDisabled: z.boolean().optional(),
     disabledReason: text.optional(),
     isDanger: z.boolean().optional(),
+    intent: z.enum(["commit", "alternative", "dismiss", "neutral"]).optional(),
 })
 
 const badgeView: z.ZodType<BadgeView> = z.object({ label: text, tone: badgeTone })
@@ -111,6 +112,7 @@ const decisionRowView: z.ZodType<DecisionRowView> = z.object({
     id,
     title: text,
     description: text,
+    leading: text.optional(),
     badges: list(badgeView),
     reason: nullableText,
     amount: nullableText,

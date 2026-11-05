@@ -20,6 +20,8 @@ interface DecisionListWords {
 /** The decisions waiting for a person and where they stand. */
 interface DecisionListProps {
     readonly surface: DecisionListSurface
+    /** How large the commands of the rows are. */
+    readonly commandSize: "sm" | "md"
     readonly words: DecisionListWords
     readonly queue: DecisionQueueView
     readonly isLoading: boolean
@@ -35,10 +37,12 @@ const listRowOf = (row: DecisionRowView, props: DecisionListProps): ListRowData 
         id: row.id,
         title: row.title,
         description: row.description,
+        ...(row.leading === undefined || row.leading === "" ? {} : { leading: { avatar: { name: row.leading } } }),
         ...(first === undefined ? {} : { badges: second === undefined ? [first] : [first, second] }),
         detail: (
             <DecisionRow
                 row={row}
+                commandSize={props.commandSize}
                 seeWhyLabel={props.words.seeWhyLabel}
                 moreLabel={props.words.moreLabel}
                 edit={props.edit}

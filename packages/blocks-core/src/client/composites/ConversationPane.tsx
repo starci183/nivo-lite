@@ -12,11 +12,14 @@ import { entriesOf, messagesOf } from "../../rows/conversation"
 import type { MessageRow } from "../../rows/conversation.types"
 import { threadViewOf } from "../../rows/conversation-view"
 import type { ThreadClock, ThreadWords } from "../../rows/conversation-view"
+import { threadHeadOf } from "../../rows/conversation-head"
 import { recordsView } from "../../rows/rows"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import type { RenderOf } from "../render-props"
 import { ConversationComposer } from "./ConversationComposer"
 import { ConversationHead } from "./ConversationHead"
+import { ProposalBand } from "./ProposalBand"
+import type { ProposalBandProps } from "./ProposalBand"
 import type { ConversationHeadAction } from "./ConversationHead"
 import { ConversationThread } from "./ConversationThread"
 import type { ConversationOlder } from "./ConversationThread"
@@ -47,6 +50,17 @@ const headActionsOf = (
 /** The notice of an action on the thread that did not go through. */
 const actionFailed = (host: BlockHost, words: (text: SpecText) => string): void =>
     host.notify("danger", words({ key: "conversationActionFailed" }))
+
+/** The time the thread is read at, in milliseconds: when it opened, then again whenever the window regains focus. */
+const useReadingTime = (): number => {
+    const [nowMs, setNowMs] = useState(() => Date.now())
+    useEffect(() => {
+        const refresh = (): void => setNowMs(Date.now())
+        window.addEventListener("focus", refresh)
+        return () => window.removeEventListener("focus", refresh)
+    }, [])
+    return nowMs
+}
 
 /** The thread keeps its newest message in view: the band scrolls down whenever the last message changes. */
 const useScrolledToEnd = (endKey: string): RefObject<HTMLDivElement | null> => {
@@ -99,6 +113,8 @@ interface ThreadBandProps {
     /** Reads the messages again. */
     readonly onRetry: () => void
     readonly composer: ConversationSend
+    /** The block's props and slots, for the proposed reply that stands under the messages. */
+    readonly proposal: ProposalBandProps
 }
 
 /** The scrolling band of the thread: its messages in the states of the data, and the controls of the failed sends. */
@@ -136,6 +152,7 @@ const ThreadBand = (props: ThreadBandProps): ReactNode => {
                     />
                 )}
             />
+            <ProposalBand {...props.proposal} />
         </PaneSection>
     )
 }
@@ -146,7 +163,7 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
     const words = useBlockWords()
     const labels = useSlotLabels(props.props.empty)
     const threadWords = useThreadWords()
-    const [openedAt] = useState(() => Date.now())
+    const nowMs = useReadingTime()
     const { messages, send, handoff, close } = props.slots
     const maxLength = props.props.maxLength ?? DEFAULT_MAX_LENGTH
     const serverRows = derivedSlot(parsedSlot(messages.slot, recordsView), (records) =>
@@ -167,13 +184,20 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
     }
     const issue = draftIssue(composer.draft, maxLength)
     const label = words(props.props.label)
-    const clock = { locale: host.locale(), zone: undefined, nowMs: openedAt }
+    const clock = { locale: host.locale(), zone: undefined, nowMs }
     const older = olderOf(messages.page, words)
+    const headPaths = props.props.head
+    const threadRecord = props.slots.thread.slot
+    const threadHead =
+        headPaths === undefined || !("items" in threadRecord)
+            ? null
+            : threadHeadOf(threadRecord.items, headPaths.titlePath, headPaths.subtitlePath)
     return (
         <PaneGrid label={label} areas={["thread"]} columns={["fill"]}>
             <Pane area="thread">
                 <ConversationHead
                     label={label}
+                    thread={threadHead}
                     actions={headActionsOf(
                         [
                             ["handoff", handoff],
@@ -193,6 +217,7 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
                     older={older}
                     onRetry={messages.retry}
                     composer={composer}
+                    proposal={{ props: props.props, slots: props.slots }}
                 />
                 {props.props.composer ? (
                     <ConversationComposer
