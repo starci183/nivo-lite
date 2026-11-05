@@ -1,5 +1,6 @@
 "use client"
 
+import { useAgentChatIsPhone } from "./useAgentChatIsPhone"
 import { useAgentChatSetupHref } from "./useAgentChatSetupHref"
 import { useTranslations } from "next-intl"
 import type { useAgentChat } from "./useAgentChat"
@@ -35,11 +36,13 @@ export const useAgentChatHeaderCopy = (chat: AgentChatState): AgentChatHeaderVie
     const t = useTranslations("agentChat")
     const agent = chat.agent
     const setupHref = useAgentChatSetupHref(agent)
+    const isPhone = useAgentChatIsPhone()
     const isLoading = agent === undefined
     const isCustomer = chat.tab === "customer"
     const subtitle = (): string => {
         if (isLoading) return ""
         if (isCustomer) return t(chat.isTakenOver ? "takenOverStatus" : "asVisitor")
+        if (isPhone) return `${t("kindTest")} · ${agent.role}`
         return `${t(agent.isActive ? "statusActive" : "statusPaused")} · ${agent.role}`
     }
     return {

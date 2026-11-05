@@ -1,23 +1,14 @@
 import { useState } from "react"
 import { Page, Pane, PaneGrid, PaneSection, Tabs, type BreadcrumbItem } from "@starci/grammar/common"
-
 import { AgentChatComposer, type AgentChatComposerProps } from "@/components/composites/AgentChatComposer"
-
 import { AgentChatEmpty, type AgentChatEmptyProps } from "@/components/composites/AgentChatEmpty"
-
 import { AgentChatHeader, type AgentChatHeaderProps } from "@/components/composites/AgentChatHeader"
-
 import { AgentChatMessages, type AgentChatMessagesProps } from "@/components/composites/AgentChatMessages"
-
 import { AgentChatRailHead } from "@/components/composites/AgentChatRailHead"
 import { AgentChatRailList, type AgentChatRailRow } from "@/components/composites/AgentChatRailList"
-
 import { AgentChatThread, type AgentChatThreadProps } from "@/components/composites/AgentChatThread"
-
 import { AgentChatRail } from "@/components/frames/AgentChatRail"
-
 import { PromoWelcomeBand, type PromoWelcomeBandProps } from "@/components/composites/PromoWelcomeBand"
-
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
@@ -48,6 +39,8 @@ export interface AgentChatViewProps {
     /** The id of the agent: the one seed of its mark on every screen. */
     readonly seed: string
     readonly railTitle: string
+    /** The title of the list head: empty on a phone, where the drawer already carries the title. */
+    readonly railHeadTitle: string
     /** The control that closes the conversation rail where it is a drawer (the head opens it). */
     readonly historyCloseLabel: string
     readonly newLabel: string
@@ -225,7 +218,7 @@ const RailPane = (props: RailPaneProps) => {
             label={view.railTitle}
             head={
                 <AgentChatRailHead
-                    title={view.railTitle}
+                    title={view.railHeadTitle}
                     newLabel={view.newLabel}
                     isDisabled={view.isStartDisabled}
                     isStarting={view.isStarting}
@@ -271,7 +264,12 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
                 </Pane>
                 <Pane area="thread">
                     <PaneSection
-                        scroll={{ label: view.thread.label, role: "log", tone: "background" }}
+                        scroll={{
+                            label: view.thread.label,
+                            role: "log",
+                            tone: "background",
+                            align: view.hasConversation ? "end" : "center",
+                        }}
                         isLoading={view.isWaiting}
                     >
                         <Thread {...props} />

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useAgentChat, useAgentChatCopy } from "@/hooks/agentChat"
+import { useAgentChat, useAgentChatCopy, useAgentChatIsPhone } from "@/hooks/agentChat"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { AGENTS_ROUTE, agentChatHref, leadHref } from "@/modules/routes"
@@ -27,6 +27,7 @@ export const AgentChat = (props: AgentChatProps) => {
     const router = navigation.useRouter()
     const slotLabels = useSlotLabels()
     const chat = useAgentChat(props)
+    const isPhone = useAgentChatIsPhone()
     const copy = useAgentChatCopy(chat)
     const [isWelcomeOpen, setIsWelcomeOpen] = useState(true)
     const agent = chat.agent
@@ -45,6 +46,7 @@ export const AgentChat = (props: AgentChatProps) => {
                 avatarUrl: agent?.avatarUrl ?? null,
                 seed: agentId,
                 railTitle: t("railTitle"),
+                railHeadTitle: isPhone ? "" : t("railTitle"),
                 historyCloseLabel: t("historyClose"),
                 newLabel: t(chat.tab === "customer" ? "newVisitor" : "newTest"),
                 isStarting: chat.isStarting,

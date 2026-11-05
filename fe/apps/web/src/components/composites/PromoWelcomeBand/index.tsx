@@ -15,7 +15,7 @@ export interface PromoWelcomeBandProps {
  */
 export const PromoWelcomeBand = (props: PromoWelcomeBandProps) => (
     <Alert
-        tone="informative"
+        tone="accent"
         title={props.title}
         description={props.text}
         leading={<IconTile source={nivoIconSource("sparkle", "leading")} tone="neutral" />}
