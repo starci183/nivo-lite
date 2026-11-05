@@ -1,4 +1,4 @@
-import { Alert, Button, Cluster, Divider, Input, Link, Stack, Text } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Divider, Input, Link, Stack, Text, TextAction } from "@starci/grammar/common"
 import { AuthForm } from "@/components/frames/AuthForm"
 import { AuthPanel } from "@/components/frames/AuthPanel"
 import { EmailField } from "@/components/composites/EmailField"
@@ -59,9 +59,17 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
             {view.error === undefined ? null : (
                 <Alert
                     title={view.canResend ? view.unconfirmedTitle : view.failedTitle}
-                    description={view.canResend ? view.unconfirmedBody : view.error}
+                    description={
+                        view.canResend ? (
+                            <Stack gap="row">
+                                <Text>{view.unconfirmedBody}</Text>
+                                <TextAction onPress={props.on.resend}>{view.resendLabel}</TextAction>
+                            </Stack>
+                        ) : (
+                            view.error
+                        )
+                    }
                     tone={view.canResend ? "cautionary" : "negative"}
-                    {...(view.canResend && { action: { label: view.resendLabel, onAction: props.on.resend } })}
                 />
             )}
             <Stack gap="row">
