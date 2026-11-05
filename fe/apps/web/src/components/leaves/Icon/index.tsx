@@ -115,6 +115,8 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     failure: cuts(Outline.XCircleIcon, Solid.XCircleIcon),
     warning: cuts(Outline.ExclamationTriangleIcon, Solid.ExclamationTriangleIcon),
     info: cuts(Outline.InformationCircleIcon, Solid.InformationCircleIcon),
+    sparkle: cuts(Outline.SparklesIcon, Solid.SparklesIcon),
+    handRaised: cuts(Outline.HandRaisedIcon, Solid.HandRaisedIcon),
 }
 
 /** Resolve an app-owned semantic icon name to the glyph cut Grammar's Icon asks for in a given usage. */

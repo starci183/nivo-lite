@@ -4,6 +4,7 @@ import type { useTranslations } from "next-intl"
 import type { useQueryAgentChatPageSwr, useQueryAgentChatConversationsSwr } from "@/hooks/swr"
 import type { useAgentChatActions } from "./useAgentChatActions"
 import type { ChatTab } from "./useAgentChat"
+import type { ChatThreadMessage } from "@/modules/agent-chat"
 
 /** Normalizes a stored conversation kind into its chat channel. */
 export const tabOf = (kind: string): ChatTab => (kind === "customer" ? "customer" : "test")
@@ -12,6 +13,12 @@ export const tabOf = (kind: string): ChatTab => (kind === "customer" ? "customer
 export const roleOf = (role: string): "user" | "system" | "agent" => {
     if (role === "user") return "user"
     return role === "system" ? "system" : "agent"
+}
+
+/** The channel name of a customer conversation, when the product names it. */
+const channelNameOf = (t: ReturnType<typeof useTranslations<"agentChat">>, channel: string): string | null => {
+    if (channel === "telegram") return t("channelTelegram")
+    return channel === "website" ? t("channelWebsite") : null
 }
 
 /** Formats a conversation history row and marks the selected conversation. */
@@ -28,7 +35,8 @@ export const conversationRowMapper = (
 }) => {
     return (item) => {
         const kind = tabOf(item.kind)
-        const customerLabel = item.channel === "telegram" ? `${t("kindCustomer")} · Telegram` : t("kindCustomer")
+        const channel = channelNameOf(t, item.channel)
+        const customerLabel = channel === null ? t("kindCustomer") : `${t("kindCustomer")} · ${channel}`
         const leadSuffix = item.leadId === null ? "" : ` · ${t("leadCaptured")}`
         return {
             id: item.id,
@@ -105,18 +113,7 @@ export interface ViewOfResult {
         description: string
         isSelected: boolean
     }[]
-    thread: {
-        id: string
-        role: "user" | "system" | "agent"
-        body: string
-        timeLabel: string
-        files: {
-            id: string
-            name: string
-            contentType: string
-            url: string
-        }[]
-    }[]
+    thread: ChatThreadMessage[]
     draft: string
     visitorName: string
     error: string | null

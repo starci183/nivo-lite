@@ -1,7 +1,8 @@
 import { Alert, Button, Cluster, Form, Stack, Textarea } from "@starci/grammar/common"
 import { ChatFileChosen } from "@/components/branches/ChatFileChosen"
 import { ChatFilePicker } from "@/components/branches/ChatFilePicker"
-import { COMPOSER_INPUT_CLASS_NAME } from "./classNames"
+import { Icon } from "@/components/leaves/Icon"
+import { COMPOSER_INPUT_CLASS_NAME, PROMPTS_CLASS_NAME } from "./classNames"
 
 /** The words and state of the message composer. */
 export interface AgentChatComposerProps {
@@ -13,6 +14,7 @@ export interface AgentChatComposerProps {
     readonly isSending: boolean
     /** The agent is still loading: the field draws as a waiting shape. */
     readonly isLoading: boolean
+    /** The send control works: nothing is in flight and the agent is in. An empty message answers with its error on use. */
     readonly canSend: boolean
     /** Why the last message was not sent, or null. */
     readonly error: { readonly title: string; readonly text: string } | null
@@ -25,8 +27,6 @@ export interface AgentChatComposerProps {
         readonly accept: string
         /** The name of the file that goes with the message, or null. */
         readonly name: string | null
-        /** A person who took the conversation over sends words only. */
-        readonly isHidden: boolean
     }
     readonly onFile: (file: File) => void
     readonly onFileClear: () => void
@@ -50,19 +50,21 @@ export const AgentChatComposer = (props: AgentChatComposerProps) => (
                 <Alert tone="negative" title={props.error.title} description={props.error.text} />
             )}
             {props.prompts.length === 0 ? null : (
-                <Cluster gap="inline">
-                    {props.prompts.map((prompt) => (
-                        <Button
-                            key={prompt}
-                            intent="neutral"
-                            size="sm"
-                            isDisabled={props.isSending}
-                            onPress={() => props.onPrompt(prompt)}
-                        >
-                            {prompt}
-                        </Button>
-                    ))}
-                </Cluster>
+                <div className={PROMPTS_CLASS_NAME}>
+                    <Cluster gap="inline">
+                        {props.prompts.map((prompt) => (
+                            <Button
+                                key={prompt}
+                                intent="neutral"
+                                size="sm"
+                                isDisabled={props.isSending}
+                                onPress={() => props.onPrompt(prompt)}
+                            >
+                                {prompt}
+                            </Button>
+                        ))}
+                    </Cluster>
+                </div>
             )}
             {props.file.name === null ? null : (
                 <ChatFileChosen
@@ -73,14 +75,12 @@ export const AgentChatComposer = (props: AgentChatComposerProps) => (
                 />
             )}
             <Cluster gap="inline" align="end" wrap={false}>
-                {props.file.isHidden ? null : (
-                    <ChatFilePicker
-                        label={props.file.label}
-                        accept={props.file.accept}
-                        isDisabled={props.isSending || props.isLoading}
-                        onFile={props.onFile}
-                    />
-                )}
+                <ChatFilePicker
+                    label={props.file.label}
+                    accept={props.file.accept}
+                    isDisabled={props.isSending || props.isLoading}
+                    onFile={props.onFile}
+                />
                 {/* The Grammar Textarea owns Enter-to-send (Shift+Enter breaks the line). */}
                 <div className={COMPOSER_INPUT_CLASS_NAME}>
                     <Textarea
@@ -94,11 +94,17 @@ export const AgentChatComposer = (props: AgentChatComposerProps) => (
                         value={props.draft}
                         onValueChange={props.onDraft}
                         onSubmitShortcut={() => {
-                            if (props.canSend) props.onSend()
+                            if (props.canSend && (props.draft.trim() !== "" || props.file.name !== null)) props.onSend()
                         }}
                     />
                 </div>
-                <Button type="submit" intent="commit" isPending={props.isSending} isDisabled={!props.canSend}>
+                <Button
+                    type="submit"
+                    intent="commit"
+                    isPending={props.isSending}
+                    isDisabled={!props.canSend}
+                    startContent={<Icon props={{ name: "send", usage: "leading" }} />}
+                >
                     {props.sendLabel}
                 </Button>
             </Cluster>

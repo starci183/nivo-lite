@@ -203,7 +203,7 @@
     "statusPaused": "Paused",
     "channelLabel": "Chat channel",
     "tabTest": "Test",
-    "tabCustomer": "Website chat (real AI)",
+    "tabCustomer": "Real customers (real AI)",
     "customerPrompt1": "What do you offer?",
     "customerPrompt2": "How much does it cost?",
     "customerPrompt3": "Can you book a call?",
@@ -270,7 +270,13 @@
     "returnSucceeded": "Conversation returned to AI",
     "messageTooLong": "Use 4,000 characters or fewer.",
     "visitorNameTooLong": "Use 80 characters or fewer.",
-    "loadingFailed": "The chat could not be loaded."
+    "loadingFailed": "The chat could not be loaded.",
+    "moreActions": "More options",
+    "dayToday": "Today",
+    "dayYesterday": "Yesterday",
+    "whenYesterday": "yesterday",
+    "channelWebsite": "Website",
+    "channelTelegram": "Telegram"
   },
   "agentDashboard": {
     "tabsLabel": "Workbench areas",
@@ -5060,12 +5066,9 @@
     "nudgeBody": "This lead waited for a reply. A Chatbot would have answered instantly.",
     "nudgeReplied": "First reply was approved {h} h after capture.",
     "nudgeWaiting": "{h} h since capture and no reply approved yet.",
-    "welcomeAria": "Welcome to Founding 50",
     "welcomeClose": "Dismiss welcome",
     "welcomeTitle": "Welcome to Founding 50",
     "welcomeText": "Your founding price is locked. Next: test your Chatbot as a customer.",
-    "welcomeTest": "Test as customer",
-    "welcomeOffice": "Go to Office",
     "summaryTitle": "Order summary"
   },
   "responsibilities": {

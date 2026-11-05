@@ -1,6 +1,6 @@
 "use client"
 
-import { agentSetupHref } from "@/modules/routes"
+import { useAgentChatSetupHref } from "./useAgentChatSetupHref"
 import { useTranslations } from "next-intl"
 import type { useAgentChat } from "./useAgentChat"
 
@@ -23,12 +23,18 @@ export interface AgentChatHeaderView {
         label: string
         href: string
     } | null
+    /** The names of the buttons that open the history drawer and the menu of more commands. */
+    historyLabel: string
+    moreLabel: string
+    /** The test channel names setup in the head; the customer channel keeps it in the menu. */
+    isTest: boolean
 }
 
 /** The words and the state of the header of the agent chat. */
 export const useAgentChatHeaderCopy = (chat: AgentChatState): AgentChatHeaderView => {
     const t = useTranslations("agentChat")
     const agent = chat.agent
+    const setupHref = useAgentChatSetupHref(agent)
     const isLoading = agent === undefined
     const isCustomer = chat.tab === "customer"
     const subtitle = (): string => {
@@ -47,6 +53,9 @@ export const useAgentChatHeaderCopy = (chat: AgentChatState): AgentChatHeaderVie
                 ? { label: t(chat.isTakenOver ? "giveBack" : "takeOver"), isPending: chat.isTakingOver }
                 : null,
         openLeadLabel: chat.leadId === null ? null : t("openLead"),
-        setup: agent === undefined ? null : { label: t("setupLink"), href: agentSetupHref(agent.id) },
+        setup: setupHref === null ? null : { label: t("setupLink"), href: setupHref },
+        historyLabel: t("historyToggle"),
+        moreLabel: t("moreActions"),
+        isTest: !isCustomer,
     }
 }

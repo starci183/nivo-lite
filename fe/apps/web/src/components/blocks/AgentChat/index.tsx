@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useAgentChat, useAgentChatCopy } from "@/hooks/agentChat"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
+import { AGENTS_ROUTE, agentChatHref, leadHref } from "@/modules/routes"
 import { AgentChatBase } from "./component"
 import type { AgentChatTab } from "./component"
 
@@ -45,12 +45,12 @@ export const AgentChat = (props: AgentChatProps) => {
                 avatarUrl: agent?.avatarUrl ?? null,
                 seed: agentId,
                 railTitle: t("railTitle"),
-                historyLabel: t("historyToggle"),
                 historyCloseLabel: t("historyClose"),
                 newLabel: t(chat.tab === "customer" ? "newVisitor" : "newTest"),
                 isStarting: chat.isStarting,
                 railSlot: chat.railSlot,
                 railLabels: slotLabels(t("railEmptyHelp")),
+                isWaiting: "isLoading" in chat.railSlot,
                 header: copy.header,
                 channelTabs: copy.channelTabs,
                 hasConversation: "items" in chat.threadSlot ? chat.threadSlot.items.hasSelection : true,
@@ -60,14 +60,9 @@ export const AgentChat = (props: AgentChatProps) => {
                 welcome:
                     agent?.showWelcome === true && isWelcomeOpen
                         ? {
-                              ariaLabel: promo("welcomeAria"),
                               title: promo("welcomeTitle"),
                               text: promo("welcomeText"),
                               closeLabel: promo("welcomeClose"),
-                              testLabel: promo("welcomeTest"),
-                              testHref: agentChatHref(agentId, "customer"),
-                              officeLabel: promo("welcomeOffice"),
-                              officeHref: CONSOLE_ROUTES.chat,
                           }
                         : null,
                 messages: copy.messages,
@@ -78,7 +73,7 @@ export const AgentChat = (props: AgentChatProps) => {
                 retryRail: chat.retryRail,
                 retryThread: chat.retryThread,
                 toggleTakeover: () => void chat.toggleTakeover(),
-                back: () => router.push(CONSOLE_ROUTES.modules),
+                back: () => router.push(AGENTS_ROUTE),
                 tab: chat.changeTab,
                 draft: chat.setDraft,
                 file: chat.chooseFile,

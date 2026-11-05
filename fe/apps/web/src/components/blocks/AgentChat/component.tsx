@@ -14,6 +14,8 @@ import { AgentChatRailList, type AgentChatRailRow } from "@/components/composite
 
 import { AgentChatThread, type AgentChatThreadProps } from "@/components/composites/AgentChatThread"
 
+import { AgentChatRail } from "@/components/frames/AgentChatRail"
+
 import { PromoWelcomeBand, type PromoWelcomeBandProps } from "@/components/composites/PromoWelcomeBand"
 
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -46,14 +48,18 @@ export interface AgentChatViewProps {
     /** The id of the agent: the one seed of its mark on every screen. */
     readonly seed: string
     readonly railTitle: string
-    /** The trigger that opens the conversation rail where it is a drawer, and the control that closes it. */
-    readonly historyLabel: string
+    /** The control that closes the conversation rail where it is a drawer (the head opens it). */
     readonly historyCloseLabel: string
     readonly newLabel: string
     readonly isStarting: boolean
     readonly railSlot: DataSlot<ReadonlyArray<AgentChatRailRow>>
     readonly railLabels: SlotLabels
-    readonly header: Omit<AgentChatHeaderProps, "glyph" | "module" | "seed" | "onBack" | "onTakeover" | "onOpenLead">
+    /** The first read of the agent and its conversations is not in: every region draws its waiting shape together. */
+    readonly isWaiting: boolean
+    readonly header: Omit<
+        AgentChatHeaderProps,
+        "glyph" | "module" | "seed" | "onBack" | "onHistory" | "onTakeover" | "onOpenLead"
+    >
     readonly channelTabs: ChannelTabsView | null
     /** A conversation is open (or the first read waits): the composer is drawn; with none open the greeting carries the one action. */
     readonly hasConversation: boolean
@@ -134,13 +140,19 @@ const Thread = (props: AgentChatBaseProps) => (
     />
 )
 
-/** The header of the open conversation. */
-const Head = (props: AgentChatBaseProps) => (
+/** The surface and the control that opens the conversation drawer. */
+interface HeadProps extends AgentChatBaseProps {
+    readonly onHistory: () => void
+}
+
+/** The header of the open conversation, with the control that opens the conversation drawer of a phone. */
+const Head = (props: HeadProps) => (
     <AgentChatHeader
         {...props.props.header}
         avatarUrl={props.props.avatarUrl}
         seed={props.props.seed}
         onBack={props.on.back}
+        onHistory={props.onHistory}
         onTakeover={props.on.toggleTakeover}
         onOpenLead={props.on.openLead}
     />
@@ -152,13 +164,14 @@ interface ChannelTabsProps {
     readonly onTab: (tab: AgentChatTab) => void
 }
 
-/** The channel tabs under the header; none when the agent has no customer channel. */
+/** The channel tabs of the conversation list; none when the agent has no customer channel. */
 const ChannelTabs = (props: ChannelTabsProps) => (
     <Tabs
         label={props.tabs.label}
         selectedKey={props.tabs.selectedKey}
         items={[...props.tabs.items]}
         onSelect={(key) => props.onTab(key === "customer" ? "customer" : "test")}
+        kind="filter"
         inset="none"
         labelVisibility="always"
     />
@@ -171,7 +184,7 @@ interface RailListProps {
     readonly onRetry: () => void
 }
 
-/** The conversations of the rail with the pick that also closes the drawer. */
+/** The conversations of the rail. */
 const RailList = (props: RailListProps) => (
     <SlotView
         slot={props.view.railSlot}
@@ -191,9 +204,44 @@ const RailList = (props: RailListProps) => (
     />
 )
 
+/** The areas and tracks: a phone shows the conversation alone (the list is a drawer); from 48rem the list stands beside it. */
+const AREAS = {
+    base: ["head", "thread", "composer"],
+    medium: ["list head", "list thread", "list composer"],
+}
+const COLUMNS = { base: ["fill"], medium: ["wide", "fill"] } as const
+const ROWS = { base: ["auto", "fill", "auto"], medium: ["auto", "fill", "auto"] } as const
+
+/** The surface and what picking a conversation does. */
+interface RailPaneProps extends AgentChatBaseProps {
+    readonly onPick: (id: string, kind: AgentChatTab) => void
+}
+
+/** The conversation list: its head band with the way to start one, the channel tabs and the rows. */
+const RailPane = (props: RailPaneProps) => {
+    const view = props.props
+    return (
+        <AgentChatRail
+            label={view.railTitle}
+            head={
+                <AgentChatRailHead
+                    title={view.railTitle}
+                    newLabel={view.newLabel}
+                    isDisabled={view.isStartDisabled}
+                    isStarting={view.isStarting}
+                    onStart={props.on.start}
+                />
+            }
+            tabs={view.channelTabs === null ? null : <ChannelTabs tabs={view.channelTabs} onTab={props.on.tab} />}
+        >
+            <RailList view={view} onPick={props.onPick} onRetry={props.on.retryRail} />
+        </AgentChatRail>
+    )
+}
+
 /**
- * Presentational agent chat, Zalo style, as panes under the breadcrumb trail: the conversation rail on the surface at the
- * left (a drawer on a phone), and beside it the header, the channel tabs, the thread and the composer pinned under it.
+ * Presentational agent chat, Zalo style, as panes under the breadcrumb trail: the conversation list at the left (a drawer on a
+ * phone, opened from the head), and beside it the head band, the thread and the composer pinned under it.
  */
 export const AgentChatBase = (props: AgentChatBaseProps) => {
     const view = props.props
@@ -204,48 +252,34 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
     }
     return (
         <Page chrome="panes" header={{ breadcrumbs: { label: view.crumbLabel, items: [...view.crumbs] } }}>
-            <PaneGrid
-                label={view.pageLabel}
-                areas={{ base: ["main"], medium: ["list main"] }}
-                columns={{ base: ["fill"], medium: ["standard", "fill"] }}
-            >
+            <PaneGrid label={view.pageLabel} areas={AREAS} columns={COLUMNS} rows={ROWS}>
                 <Pane
                     area="list"
                     surface
+                    inset="flush"
                     collapse="drawer"
+                    trigger="none"
                     collapseLabel={view.railTitle}
-                    openLabel={view.historyLabel}
                     closeLabel={view.historyCloseLabel}
                     isOpen={isListOpen}
                     onOpenChange={setIsListOpen}
                 >
-                    <PaneSection align="center">
-                        <AgentChatRailHead
-                            title={view.railTitle}
-                            newLabel={view.newLabel}
-                            isDisabled={view.isStartDisabled}
-                            isStarting={view.isStarting}
-                            onStart={props.on.start}
-                        />
-                    </PaneSection>
-                    {view.channelTabs === null ? null : (
-                        <PaneSection bleed="inline">
-                            <ChannelTabs tabs={view.channelTabs} onTab={props.on.tab} />
-                        </PaneSection>
-                    )}
-                    <PaneSection scroll={{ label: view.railTitle }}>
-                        <RailList view={view} onPick={onPick} onRetry={props.on.retryRail} />
-                    </PaneSection>
+                    <RailPane {...props} onPick={onPick} />
                 </Pane>
-                <Pane area="main">
-                    <PaneSection align="center">
-                        <Head {...props} />
-                    </PaneSection>
-                    <PaneSection scroll={{ label: view.thread.label, role: "log", tone: "background" }}>
+                <Pane area="head" surface>
+                    <Head {...props} onHistory={() => setIsListOpen(true)} />
+                </Pane>
+                <Pane area="thread">
+                    <PaneSection
+                        scroll={{ label: view.thread.label, role: "log", tone: "background" }}
+                        isLoading={view.isWaiting}
+                    >
                         <Thread {...props} />
                     </PaneSection>
-                    {view.hasConversation ? (
-                        <PaneSection>
+                </Pane>
+                {view.hasConversation ? (
+                    <Pane area="composer" surface>
+                        <PaneSection isLoading={view.isWaiting}>
                             <AgentChatComposer
                                 {...view.composer}
                                 onDraft={props.on.draft}
@@ -255,8 +289,8 @@ export const AgentChatBase = (props: AgentChatBaseProps) => {
                                 onSend={props.on.send}
                             />
                         </PaneSection>
-                    ) : null}
-                </Pane>
+                    </Pane>
+                ) : null}
             </PaneGrid>
         </Page>
     )

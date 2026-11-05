@@ -203,7 +203,7 @@
     "statusPaused": "Tạm dừng",
     "channelLabel": "Kênh trò chuyện",
     "tabTest": "Dùng thử",
-    "tabCustomer": "Website chat (AI thật)",
+    "tabCustomer": "Khách thật (AI thật)",
     "customerPrompt1": "Bên bạn cung cấp dịch vụ gì?",
     "customerPrompt2": "Chi phí là bao nhiêu?",
     "customerPrompt3": "Có thể đặt lịch gọi không?",
@@ -270,7 +270,13 @@
     "returnSucceeded": "Đã giao lại hội thoại cho AI",
     "messageTooLong": "Vui lòng nhập tối đa 4.000 ký tự.",
     "visitorNameTooLong": "Vui lòng nhập tối đa 80 ký tự.",
-    "loadingFailed": "Chưa tải được hội thoại."
+    "loadingFailed": "Chưa tải được hội thoại.",
+    "moreActions": "Tùy chọn",
+    "dayToday": "Hôm nay",
+    "dayYesterday": "Hôm qua",
+    "whenYesterday": "hôm qua",
+    "channelWebsite": "Website",
+    "channelTelegram": "Telegram"
   },
   "agentDashboard": {
     "tabsLabel": "Khu làm việc",
@@ -5065,12 +5071,9 @@
     "nudgeBody": "Khách hàng này phải chờ phản hồi. Chatbot sẽ trả lời ngay lập tức.",
     "nudgeReplied": "Phản hồi đầu tiên được duyệt sau {h} giờ kể từ khi ghi nhận.",
     "nudgeWaiting": "Đã {h} giờ kể từ khi ghi nhận và chưa có phản hồi nào được duyệt.",
-    "welcomeAria": "Chào mừng đến Founding 50",
     "welcomeClose": "Ẩn lời chào",
     "welcomeTitle": "Chào mừng đến Founding 50",
     "welcomeText": "Giá sáng lập của bạn đã được giữ. Bước tiếp theo: dùng thử Chatbot như một khách hàng.",
-    "welcomeTest": "Dùng thử như khách hàng",
-    "welcomeOffice": "Đến Office",
     "summaryTitle": "Tóm tắt đơn hàng"
   },
   "responsibilities": {

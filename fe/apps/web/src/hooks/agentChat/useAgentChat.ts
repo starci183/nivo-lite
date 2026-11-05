@@ -1,6 +1,7 @@
 "use client"
 
 import { viewOf } from "./agentChat.shared"
+import type { ChatThreadMessage } from "@/modules/agent-chat"
 import { useAgentChatNavigation } from "./useAgentChatNavigation"
 import { useAgentChatRoute } from "./useAgentChatRoute"
 import { useAgentChatThreadView } from "./useAgentChatThreadView"
@@ -73,18 +74,7 @@ export interface AgentChatView {
         description: string
         isSelected: boolean
     }[]
-    thread: {
-        id: string
-        role: "user" | "system" | "agent"
-        body: string
-        timeLabel: string
-        files: {
-            id: string
-            name: string
-            contentType: string
-            url: string
-        }[]
-    }[]
+    thread: ChatThreadMessage[]
     draft: string
     visitorName: string
     error: string | null

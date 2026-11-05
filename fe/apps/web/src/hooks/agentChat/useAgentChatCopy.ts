@@ -1,9 +1,10 @@
 "use client"
 
-import { CONSOLE_ROUTES, leadFlowHref } from "@/modules/routes"
+import { AGENTS_ROUTE, CONSOLE_ROUTES, leadFlowHref } from "@/modules/routes"
 import { useTranslations } from "next-intl"
 import { CHAT_FILE_ACCEPT } from "@/hooks/chatFile"
 import type { useAgentChat, ChatTab } from "./useAgentChat"
+import type { ChatThreadMessage } from "@/modules/agent-chat"
 import { useAgentChatEmptyCopy, type AgentChatEmptyView } from "./useAgentChatEmptyCopy"
 import { useAgentChatHeaderCopy, type AgentChatHeaderView } from "./useAgentChatHeaderCopy"
 
@@ -56,18 +57,7 @@ export interface AgentChatCopyView {
         takenOverNotice: string | null
     }
     messages: {
-        messages: {
-            id: string
-            role: "user" | "system" | "agent"
-            body: string
-            timeLabel: string
-            files: {
-                id: string
-                name: string
-                contentType: string
-                url: string
-            }[]
-        }[]
+        messages: ChatThreadMessage[]
         userAuthor: string
         agentName: string
         typing: string | null
@@ -87,7 +77,6 @@ export interface AgentChatCopyView {
             removeLabel: string
             accept: string
             name: string | null
-            isHidden: boolean
         }
         error: {
             title: string
@@ -119,12 +108,12 @@ export const useAgentChatCopy = (chat: AgentChatState): AgentChatCopyView => {
         crumbLabel: shell("crumbLabel"),
         crumbs: [
             { id: "home", label: shell("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-            { id: "modules", label: modules("catalogTitle"), href: "/agents" },
+            { id: "modules", label: modules("catalogTitle"), href: AGENTS_ROUTE },
             isLoading ? { id: "agent", label: "", isLoading: true as const } : { id: "agent", label: name },
         ],
         header,
         channelTabs:
-            agent?.hasCustomerChannel === true
+            isLoading || agent.hasCustomerChannel
                 ? {
                       label: t("channelLabel"),
                       selectedKey: chat.tab,
@@ -145,7 +134,9 @@ export const useAgentChatCopy = (chat: AgentChatState): AgentChatCopyView => {
         },
         messages: {
             messages: chat.thread,
-            userAuthor: t(isCustomer ? "fromVisitor" : "fromYou"),
+            userAuthor: isCustomer
+                ? (chat.rows.find((row) => row.isSelected)?.title ?? t("fromVisitor"))
+                : t("fromYou"),
             agentName: name,
             typing: chat.isAwaitingReply ? t("typing", { name }) : null,
         },
@@ -158,13 +149,12 @@ export const useAgentChatCopy = (chat: AgentChatState): AgentChatCopyView => {
             draft: chat.draft,
             isSending: chat.isSending,
             isLoading: isLoading,
-            canSend: (chat.draft.trim().length > 0 || chat.file !== null) && !chat.isSending && !isLoading,
+            canSend: !chat.isSending && !isLoading,
             file: {
                 label: t("attachFile"),
                 removeLabel: t("removeFile"),
                 accept: CHAT_FILE_ACCEPT,
                 name: chat.file?.name ?? null,
-                isHidden: chat.isTakenOver,
             },
             error: error ? { title: t(isLoading ? "loadingFailed" : "notSent"), text: error } : null,
             prompts: !isCustomer && chat.hasSelection ? prompts : [],
