@@ -143,7 +143,7 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
         phoneView: ui.phoneView,
         phoneLabel: t("phoneLabel"),
         phoneOptions: [
-            { value: "branches", label: t("phoneBranches") },
+            { value: "checklist", label: t("phoneChecklist") },
             { value: "graph", label: t("phoneGraph") },
             { value: "chat", label: t("tabChat") },
             {

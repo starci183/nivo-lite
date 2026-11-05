@@ -32,7 +32,12 @@ export const AgentTemplatePackage = (props: AgentTemplatePackageProps): ReactEle
                 soul: fields.soul,
                 changelogLabel: t("field_changelog"),
                 changelog: fields.changelog,
-                breakingLabel: fields.breaking ? t("breakingOn") : t("breakingOff"),
+                breakingLabel: t("breakingTitle"),
+                breakingHint: t("breakingHint"),
+                isBreaking: fields.breaking,
+                cardTitle: t("cardTitle"),
+                versionTitle: t("versionTitle"),
+                noPreview: t("noPreview"),
                 previewLabel: t("previewLabel"),
                 packageLabel: t("packageLabel"),
                 previewTitle: t("previewTitle"),
@@ -70,6 +75,7 @@ export const AgentTemplatePackage = (props: AgentTemplatePackageProps): ReactEle
                           },
                 canPackage: pkg !== undefined && pkg !== null,
                 isPending: packaging.isPending,
+                previewFailed: packaging.previewFailed,
             }}
             on={{
                 retry: () => undefined,

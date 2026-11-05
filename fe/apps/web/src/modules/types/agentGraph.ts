@@ -30,8 +30,8 @@ export interface AgentGraphLayoutView {
 /** The tabs of the pane beside the graph. */
 export type AgentGraphSideTab = "chat" | "detail" | "proposals" | "versions"
 
-/** The four views the phone offers in place of two panes. */
-export type AgentGraphPhoneView = "branches" | "graph" | "chat" | "proposals" | "versions"
+/** The views the phone offers in place of two panes: what must be done before it runs, the map as branches, the chat, the proposals and the versions. */
+export type AgentGraphPhoneView = "checklist" | "graph" | "chat" | "proposals" | "versions"
 
 /** One line of a list answer: the owner's words and, under them, the technical name. */
 export interface AgentGraphLine {

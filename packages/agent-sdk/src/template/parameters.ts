@@ -17,14 +17,27 @@ export interface ResolvedValues {
     readonly problems: ReadonlyArray<string>
 }
 
+/** A time of day written HH:MM. */
+const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/
+
+const numberFits = (parameter: TemplateParameter, value: ParameterValue): string | null => {
+    if (typeof value !== "number" || !Number.isFinite(value)) return `${parameter.key}: a number is needed`
+    if (parameter.min !== null && value < parameter.min) return `${parameter.key}: below ${parameter.min}`
+    return parameter.max !== null && value > parameter.max ? `${parameter.key}: above ${parameter.max}` : null
+}
+
+const textFits = (parameter: TemplateParameter, value: string): string | null => {
+    if (parameter.kind === "time")
+        return TIME_OF_DAY.test(value) ? null : `${parameter.key}: a time like 09:00 is needed`
+    if (parameter.kind !== "choice") return null
+    const isOption = (parameter.options ?? []).some((option) => option.value === value)
+    return isOption ? null : `${parameter.key}: pick one of the choices`
+}
+
 const fits = (parameter: TemplateParameter, value: ParameterValue): string | null => {
-    if (parameter.kind === "number") {
-        if (typeof value !== "number" || !Number.isFinite(value)) return `${parameter.key}: a number is needed`
-        if (parameter.min !== null && value < parameter.min) return `${parameter.key}: below ${parameter.min}`
-        return parameter.max !== null && value > parameter.max ? `${parameter.key}: above ${parameter.max}` : null
-    }
+    if (parameter.kind === "number") return numberFits(parameter, value)
     if (parameter.kind === "toggle") return typeof value === "boolean" ? null : `${parameter.key}: yes or no is needed`
-    return typeof value === "string" ? null : `${parameter.key}: a text is needed`
+    return typeof value === "string" ? textFits(parameter, value) : `${parameter.key}: a text is needed`
 }
 
 /** Checks the buyer's values against the parameters of the package and fills the gaps with the defaults. */

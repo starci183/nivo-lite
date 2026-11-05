@@ -62,3 +62,34 @@ describe("instantiate: parameter substitution", () => {
         ).toBe(true)
     })
 })
+
+describe("resolveValues: time and choice", () => {
+    const base = { hint: null, min: null, max: null, required: true, label: { vi: "a", en: "a" } }
+    const time = { ...base, key: "opens", kind: "time" as const, default: "09:00" }
+    const choice = {
+        ...base,
+        key: "tone",
+        kind: "choice" as const,
+        default: "friendly",
+        options: [
+            { value: "friendly", label: { vi: "Than thien", en: "Friendly" } },
+            { value: "formal", label: { vi: "Trang trong", en: "Formal" } },
+        ],
+    }
+
+    it("takes a time written HH:MM and a value that is one of the choices", () => {
+        expect(resolveValues([time, choice], { opens: "17:30", tone: "formal" }).problems).toEqual([])
+        expect(resolveValues([time, choice], {}).values).toEqual({ opens: "09:00", tone: "friendly" })
+    })
+
+    it("refuses a time that is not a time of day and a value that is not a choice", () => {
+        expect(resolveValues([time], { opens: "25:00" }).problems).toEqual(["opens: a time like 09:00 is needed"])
+        expect(resolveValues([time], { opens: "9am" }).problems).toEqual(["opens: a time like 09:00 is needed"])
+        expect(resolveValues([choice], { tone: "rude" }).problems).toEqual(["tone: pick one of the choices"])
+        expect(
+            resolveValues([{ ...base, key: "tone", kind: "choice" as const, default: "friendly" }], {
+                tone: "friendly",
+            }).problems,
+        ).toEqual(["tone: pick one of the choices"])
+    })
+})

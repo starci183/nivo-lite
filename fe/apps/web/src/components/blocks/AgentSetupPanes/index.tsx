@@ -7,6 +7,7 @@ import {
     useSetupBrandCards,
     useSetupChat,
     useSetupState,
+    useStaffSetupRedirect,
     useSetupVersions,
     useThreadScroll,
     setupThreadOf,
@@ -157,6 +158,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
             appliedPlain: (version) => t("revisionAppliedPlain", { version }),
         },
     )
+    useStaffSetupRedirect(props.module, props.installationId)
     const gates = ("items" in side.slot ? side.slot.items : undefined)?.gates.gates ?? NO_GATES
     const content = chatContentOf({ t, state, groups, chat, gates, words, typeName, brand })
     return (

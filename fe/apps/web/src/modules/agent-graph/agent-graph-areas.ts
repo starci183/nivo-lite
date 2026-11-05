@@ -5,8 +5,8 @@ const PHONE_SIDE_AREAS: ReadonlyArray<string> = ["phonetabs", "body"]
 
 /** The areas of the Setup grid on a phone: the switch and the one pane it picks; the composer row exists only while the chat shows. */
 export const phoneAreasOf = (phoneView: AgentGraphPhoneView, sideTab: AgentGraphSideTab): ReadonlyArray<string> => {
-    if (phoneView === "branches") return ["phonetabs", "branches"]
-    if (phoneView === "graph") return ["phonetabs", "graph"]
+    if (phoneView === "checklist") return ["phonetabs", "checklist"]
+    if (phoneView === "graph") return ["phonetabs", "branches"]
     return sideTab === "chat" ? [...PHONE_SIDE_AREAS, "foot"] : PHONE_SIDE_AREAS
 }
 

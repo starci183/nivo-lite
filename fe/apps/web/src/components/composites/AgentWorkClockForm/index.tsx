@@ -1,4 +1,5 @@
-import { Button, Input, Select, Cluster, Stack } from "@starci/grammar/common"
+import { AgentWorkFormButtons } from "@/components/branches/AgentWorkFormButtons"
+import { Input, Select, Stack } from "@starci/grammar/common"
 /** The fields and command that add a clock trigger. */
 interface AgentWorkClockFormProps {
     readonly presetLabel: string
@@ -11,17 +12,19 @@ interface AgentWorkClockFormProps {
     readonly atTime: string
     readonly isTimeInvalid: boolean
     readonly addLabel: string
+    readonly cancelLabel: string
     readonly canAdd: boolean
     readonly isSaving: boolean
     readonly isLoading: boolean
     readonly onPreset: (value: string | null) => void
     readonly onTime: (value: string) => void
     readonly onAdd: () => void
+    readonly onCancel: () => void
 }
 
 /** The preset, the time of day when the preset has one, and the command that adds a clock. */
 export const AgentWorkClockForm = (props: AgentWorkClockFormProps) => (
-    <Cluster gap="inline" align="end">
+    <Stack gap="row">
         <Stack gap="identity" measure="full">
             <Select
                 label={props.presetLabel}
@@ -48,14 +51,14 @@ export const AgentWorkClockForm = (props: AgentWorkClockFormProps) => (
                 />
             </Stack>
         ) : null}
-        <Button
-            intent="neutral"
+        <AgentWorkFormButtons
+            addLabel={props.addLabel}
+            cancelLabel={props.cancelLabel}
+            canAdd={props.canAdd}
+            isSaving={props.isSaving}
             isLoading={props.isLoading}
-            isPending={props.isSaving}
-            isDisabled={!props.canAdd}
-            onPress={props.onAdd}
-        >
-            {props.addLabel}
-        </Button>
-    </Cluster>
+            onAdd={props.onAdd}
+            onCancel={props.onCancel}
+        />
+    </Stack>
 )

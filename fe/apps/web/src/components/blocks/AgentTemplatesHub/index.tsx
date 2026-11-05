@@ -1,10 +1,12 @@
 "use client"
 
 import { useLocale, useTranslations } from "next-intl"
+import { useState } from "react"
+import { usePaneCopy } from "@/hooks/paneFrame"
 import { useTemplatesHub } from "@/hooks/templates"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentTemplatesHubBase } from "./component"
-import type { AgentTemplatesHubData } from "./component"
+import type { AgentTemplatesHubData, HubDialog } from "./component"
 
 /** The shape of the hub while its first read loads: the skeleton reuses the ready tree. */
 const PLACEHOLDER: AgentTemplatesHubData = {
@@ -18,6 +20,8 @@ export const AgentTemplatesHub = () => {
     const locale = useLocale()
     const slotLabels = useSlotLabels()
     const hub = useTemplatesHub()
+    const pane = usePaneCopy()
+    const [dialog, setDialog] = useState<HubDialog | null>(null)
     const offerById = hub.offerSlot
     return (
         <AgentTemplatesHubBase
@@ -70,9 +74,13 @@ export const AgentTemplatesHub = () => {
                 noOffers: t("noOffers"),
                 notice: hub.notice,
                 isPending: hub.isPending,
+                cancelLabel: t("cancel"),
+                moreLabel: pane.moreActions,
+                dialog,
             }}
             on={{
                 retry: hub.reload,
+                openDialog: setDialog,
                 setValuesText: hub.setValuesText,
                 setPrice: hub.setPrice,
                 importVersion: (key, version) => void hub.importVersion(key, version),

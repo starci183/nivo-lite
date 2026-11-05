@@ -110,3 +110,27 @@ export const accountHeadingOf = (input: AccountHeadingInput): PageHeaderContent 
         ],
     },
 })
+
+/** The three tabs of the Agent page: the running agents, the marketplace and the caller's own templates (the owner's ruling: templates are a tab of Agent). */
+type AgentPageTab = "running" | "marketplace" | "templates"
+
+/** The words of the three tabs. */
+interface AgentPageTabsInput {
+    readonly label: string
+    readonly selected: AgentPageTab
+    readonly runningLabel: string
+    readonly marketplaceLabel: string
+    readonly templatesLabel: string
+}
+
+/** The `tabs` of the header of the Agent page, a link tab per view. */
+export const agentPageTabsOf = (input: AgentPageTabsInput): NonNullable<PageHeaderContent["tabs"]> => ({
+    label: input.label,
+    labelVisibility: "always",
+    selectedKey: input.selected,
+    items: [
+        { id: "running", label: input.runningLabel, href: AGENTS_ROUTE },
+        { id: "marketplace", label: input.marketplaceLabel, href: `${AGENTS_ROUTE}/marketplace` },
+        { id: "templates", label: input.templatesLabel, href: `${AGENTS_ROUTE}/templates` },
+    ],
+})

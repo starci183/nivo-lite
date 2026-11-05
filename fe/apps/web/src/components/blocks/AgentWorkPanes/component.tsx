@@ -1,6 +1,8 @@
 import { Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
-import type { PaneGridProps } from "@starci/grammar/common"
 import type { ReactNode } from "react"
+import { COLUMNS, ROWS, areasOf } from "./layout"
+import { AgentWorkAddButton } from "@/components/composites/AgentWorkAddButton"
+import { AgentWorkPhoneTabs } from "@/components/composites/AgentWorkPhoneTabs"
 import { AgentWorkClockForm } from "@/components/composites/AgentWorkClockForm"
 import { AgentWorkGoalForm } from "@/components/composites/AgentWorkGoalForm"
 import { AgentWorkGoals } from "@/components/composites/AgentWorkGoals"
@@ -38,6 +40,11 @@ export interface AgentWorkCopy {
     readonly turnsEmpty: string
     readonly turnOpenItem: string
     readonly readOnlyHint: string
+    readonly formOpen: string
+    readonly formCancel: string
+    readonly phoneLabel: string
+    readonly phoneWork: string
+    readonly phoneGoals: string
 }
 
 /** The form fields of the goal and of the clock trigger. */
@@ -50,6 +57,10 @@ export interface AgentWorkDraft {
     readonly atTime: string
     readonly isTimeInvalid: boolean
     readonly canAddClock: boolean
+    /** The add form that is open in place under its list, if any. */
+    readonly openForm: "goal" | "clock" | null
+    /** Which of the two panes the phone shows: the work, or the goals and schedule. */
+    readonly phoneView: "work" | "goals"
 }
 
 /** Copy, the read, the form and the commands of the Work tab. */
@@ -72,23 +83,10 @@ export interface AgentWorkPanesBaseProps {
         readonly switchTrigger: (trigger: AgentWorkTriggerView, enabled: boolean) => void
         readonly removeTrigger: (id: string) => void
         readonly closeTask: (id: string) => void
+        readonly openForm: (form: "goal" | "clock" | null) => void
+        readonly phoneView: (view: "work" | "goals") => void
         readonly retry: () => void
     }
-}
-
-/**
- * The arrangement (pane-grid.choose.frame grid): on a laptop the status band across the top, the two short panes (goals, schedule)
- * side by side under it, then the two lists (open tasks, recent turns) taking the rest of the height; on a phone the same panes stacked
- * in that order. A short pane is sized to its content, so an empty one is a heading, one line and its form.
- */
-const AREAS: PaneGridProps["areas"] = {
-    base: ["status", "goals", "schedule", "tasks", "turns"],
-    medium: ["status status", "goals schedule", "tasks turns"],
-}
-const COLUMNS: PaneGridProps["columns"] = { base: ["fill"], medium: ["fill", "fill"] }
-const ROWS: PaneGridProps["rows"] = {
-    base: ["auto", "auto", "auto", "auto", "auto"],
-    medium: ["auto", "auto", "fill"],
 }
 
 /** The goal field under the goals, or the line saying who may add one. */
@@ -107,11 +105,14 @@ const GoalFooter = (props: FooterProps) => {
             </Text>
         )
     }
+    if (draft.openForm !== "goal") return null
     return (
         <AgentWorkGoalForm
             label={copy.goalNewLabel}
             placeholder={copy.goalNewPlaceholder}
             addLabel={copy.goalAdd}
+            cancelLabel={copy.formCancel}
+            onCancel={() => props.base.on.openForm(null)}
             value={draft.goalTitle}
             canAdd={draft.canAddGoal}
             isSaving={isSaving}
@@ -125,7 +126,7 @@ const GoalFooter = (props: FooterProps) => {
 /** The clock form under the schedule; nothing for a person who may not add one. */
 const ScheduleFooter = (props: FooterProps) => {
     const { copy, draft, isSaving } = props.base.props
-    if (!props.canEdit) return null
+    if (!props.canEdit || draft.openForm !== "clock") return null
     return (
         <AgentWorkClockForm
             presetLabel={copy.presetLabel}
@@ -138,6 +139,8 @@ const ScheduleFooter = (props: FooterProps) => {
             atTime={draft.atTime}
             isTimeInvalid={draft.isTimeInvalid}
             addLabel={copy.scheduleAdd}
+            cancelLabel={copy.formCancel}
+            onCancel={() => props.base.on.openForm(null)}
             canAdd={draft.canAddClock}
             isSaving={isSaving}
             isLoading={props.isLoading}
@@ -170,6 +173,15 @@ const goalFooterOf = (base: AgentWorkPanesBaseProps) =>
 const scheduleFooterOf = (base: AgentWorkPanesBaseProps) =>
     partOf(base, (view, isLoading) => <ScheduleFooter base={base} canEdit={view.canEdit} isLoading={isLoading} />)
 
+/** The command at the end of a list heading that opens its add form in place; nothing for a person who may not edit. */
+const addActionOf = (base: AgentWorkPanesBaseProps, form: "goal" | "clock", canEdit: boolean) =>
+    canEdit ? (
+        <AgentWorkAddButton
+            label={base.props.copy.formOpen}
+            onPress={() => base.on.openForm(base.props.draft.openForm === form ? null : form)}
+        />
+    ) : undefined
+
 /** The goals read, with the command that finishes one. */
 const goalsOf = (base: AgentWorkPanesBaseProps) =>
     partOf(base, (view, isLoading) => (
@@ -179,6 +191,7 @@ const goalsOf = (base: AgentWorkPanesBaseProps) =>
             doneLabel={base.props.copy.goalDone}
             goals={view.goals}
             canEdit={view.canEdit}
+            action={addActionOf(base, "goal", view.canEdit)}
             isSaving={base.props.isSaving}
             isLoading={isLoading}
             onDone={base.on.closeGoal}
@@ -215,6 +228,7 @@ const scheduleOf = (base: AgentWorkPanesBaseProps) =>
             }}
             triggers={view.triggers}
             canEdit={view.canEdit}
+            action={addActionOf(base, "clock", view.canEdit)}
             isSaving={base.props.isSaving}
             isLoading={isLoading}
             onSwitch={base.on.switchTrigger}
@@ -241,7 +255,7 @@ const turnsOf = (base: AgentWorkPanesBaseProps) =>
 export const AgentWorkPanesBase = (props: AgentWorkPanesBaseProps) => {
     const { copy } = props.props
     return (
-        <PaneGrid label={copy.paneLabel} areas={AREAS} columns={COLUMNS} rows={ROWS}>
+        <PaneGrid label={copy.paneLabel} areas={areasOf(props.props.draft.phoneView)} columns={COLUMNS} rows={ROWS}>
             <Pane area="status" surface>
                 <PaneSection align="center" gap="inline">
                     {partOf(props, (view, isLoading) => (
@@ -249,19 +263,30 @@ export const AgentWorkPanesBase = (props: AgentWorkPanesBaseProps) => {
                     ))}
                 </PaneSection>
             </Pane>
-            <Pane area="goals" surface>
-                <PaneSection>{goalsOf(props)}</PaneSection>
-                <PaneSection>{goalFooterOf(props)}</PaneSection>
+            <Pane area="phonetabs" surface>
+                <PaneSection align="center">
+                    <AgentWorkPhoneTabs
+                        label={copy.phoneLabel}
+                        workLabel={copy.phoneWork}
+                        goalsLabel={copy.phoneGoals}
+                        selected={props.props.draft.phoneView}
+                        onSelect={props.on.phoneView}
+                    />
+                </PaneSection>
             </Pane>
-            <Pane area="schedule" surface>
-                <PaneSection>{scheduleOf(props)}</PaneSection>
-                <PaneSection>{scheduleFooterOf(props)}</PaneSection>
+            <Pane area="main" surface>
+                <PaneSection scroll={{ label: copy.tasksTitle }} gap="section">
+                    {tasksOf(props)}
+                    {turnsOf(props)}
+                </PaneSection>
             </Pane>
-            <Pane area="tasks" surface>
-                <PaneSection scroll={{ label: copy.tasksTitle }}>{tasksOf(props)}</PaneSection>
-            </Pane>
-            <Pane area="turns" surface>
-                <PaneSection scroll={{ label: copy.turnsTitle }}>{turnsOf(props)}</PaneSection>
+            <Pane area="aside" surface>
+                <PaneSection scroll={{ label: copy.goalsTitle }} gap="section">
+                    {goalsOf(props)}
+                    {goalFooterOf(props)}
+                    {scheduleOf(props)}
+                    {scheduleFooterOf(props)}
+                </PaneSection>
             </Pane>
         </PaneGrid>
     )

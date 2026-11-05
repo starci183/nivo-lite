@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Switch, Cluster } from "@starci/grammar/common"
 import { AgentWorkRowActions } from "@/components/branches/AgentWorkRowActions"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
@@ -14,6 +15,8 @@ interface AgentWorkScheduleProps {
     readonly canEdit: boolean
     readonly isSaving: boolean
     readonly isLoading: boolean
+    /** The command at the end of the heading. */
+    readonly action?: ReactNode
     readonly onSwitch: (trigger: AgentWorkTriggerView, enabled: boolean) => void
     readonly onRemove: (id: string) => void
 }
@@ -22,6 +25,7 @@ interface AgentWorkScheduleProps {
 export const AgentWorkSchedule = (props: AgentWorkScheduleProps) => (
     <AgentWorkRows
         words={props.words}
+        {...(props.action === undefined ? {} : { action: props.action })}
         isLoading={props.isLoading === true}
         rows={props.triggers.map((trigger) => ({
             id: trigger.id,

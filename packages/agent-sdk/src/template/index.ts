@@ -13,6 +13,7 @@ export type {
     RequiredPlugin,
     StarterKnowledge,
     TemplateListingText,
+    ParameterOption,
     TemplateParameter,
     TemplatePersona,
     TemplatePublisher,

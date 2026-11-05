@@ -9094,7 +9094,18 @@ input TemplateParameterInput {
   label: TemplateTextInput!
   max: Float
   min: Float
+  options: [TemplateParameterOptionInput!] @inputBounds(maxItems: 20)
   required: Boolean!
+}
+
+input TemplateParameterOptionInput {
+  label: TemplateTextInput!
+  value: String! @inputBounds(maxLength: 60)
+}
+
+type TemplateParameterOptionType {
+  label: TemplateTextType!
+  value: String!
 }
 
 type TemplateParameterType {
@@ -9105,6 +9116,7 @@ type TemplateParameterType {
   label: TemplateTextType!
   max: Float
   min: Float
+  options: [TemplateParameterOptionType!]
   required: Boolean!
 }
 

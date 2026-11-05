@@ -80,7 +80,6 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                     { id: "modules", label: t("catalogTitle"), href: AGENTS_ROUTE },
                     { id: "module", label: list.typeName },
                 ],
-                eyebrow: t("eyebrow"),
                 title: list.typeName,
                 description: list.isMulti ? t("instancesDescription", { type: list.typeShort }) : list.typeDescription,
                 addLabel:
@@ -88,11 +87,11 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                         ? t("instanceAdd", { type: list.typeShort })
                         : null,
                 listLabel: t("instancesListLabel", { type: list.typeShort }),
+                singleNote: list.isMulti ? null : t("instanceSingleNote", { type: list.typeShort }),
                 openLabel: t("openModule"),
                 slot: mapSlot(list.slot, () => list.rows.map((row) => toRowView(row, t, needs))),
                 placeholder: PLACEHOLDER,
                 slotLabels: { ...slotLabels(t("yoursEmptyTitle")), error: t("loadFailed") },
-                isAddDisabled: "isLoading" in list.slot,
                 dialog: isOpen
                     ? {
                           props: {

@@ -9,7 +9,6 @@ type SetupGateBodyProps = Pick<
     | "editText"
     | "evidencePlaceholder"
     | "confirmLabel"
-    | "unconfirmLabel"
     | "editSaveLabel"
     | "editCancelLabel"
     | "onEditText"
@@ -80,16 +79,6 @@ const renderEdit = ({ gate, ...props }: SetupGateBodyProps) => (
             <Button intent="neutral" size="sm" onPress={props.onStopEdit}>
                 {props.editCancelLabel}
             </Button>
-            {gate.status === "confirmed" ? (
-                <Button
-                    intent="neutral"
-                    size="sm"
-                    isPending={props.isGating}
-                    onPress={() => props.onGate(gate.key, "reopen")}
-                >
-                    {props.unconfirmLabel}
-                </Button>
-            ) : null}
         </Cluster>
     </>
 )

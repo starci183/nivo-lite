@@ -1,4 +1,5 @@
 import { Field, Float, ObjectType } from "@nestjs/graphql"
+import { TemplateParameterOptionType } from "./template-parameter-option.type"
 import { TemplateTextType } from "./template-text.type"
 
 @ObjectType()
@@ -8,7 +9,7 @@ export class TemplateParameterType {
     @Field(() => String)
     key!: string
 
-    /** `number`, `text`, `toggle` or `textarea`. */
+    /** `number`, `text`, `toggle`, `textarea`, `time` or `choice`. */
     @Field(() => String)
     kind!: string
 
@@ -35,4 +36,8 @@ export class TemplateParameterType {
     /** The default value as text (a number, a text or `true`/`false`). */
     @Field(() => String)
     defaultValue!: string
+
+    /** The choices of a `choice` setting; null for every other kind. */
+    @Field(() => [TemplateParameterOptionType], { nullable: true })
+    options!: ReadonlyArray<TemplateParameterOptionType> | null
 }

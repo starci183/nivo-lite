@@ -1,7 +1,8 @@
-import { Button, EmptyNotice, Page, Stack, SurfaceCard } from "@starci/grammar/common"
+import { Button, EmptyNotice, Icon, Page, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { AddInstanceDialog } from "@/components/composites/AddInstanceDialog"
 import type { AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
@@ -23,14 +24,14 @@ export interface AgentInstancesBaseProps {
     readonly props: {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
-        readonly eyebrow: string
         readonly title: string
         readonly description: string
         /** The add command; null when the person may not add or the type has a single instance. */
         readonly addLabel: string | null
         readonly listLabel: string
         readonly openLabel: string
-        readonly isAddDisabled: boolean
+        /** The line under the list that says why there is no add command (a type with one instance); null otherwise. */
+        readonly singleNote: string | null
         readonly slot: DataSlot<ReadonlyArray<InstanceRowView>>
         readonly placeholder: ReadonlyArray<InstanceRowView>
         readonly slotLabels: SlotLabels
@@ -48,7 +49,19 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
             header={{
                 title: view.title,
                 description: view.description,
-                meta: view.eyebrow,
+                ...(view.addLabel === null
+                    ? {}
+                    : {
+                          actions: (
+                              <Button
+                                  intent="commit"
+                                  onPress={props.on.add}
+                                  startContent={<Icon source={nivoIconSource("add", "leading")} usage="leading" />}
+                              >
+                                  {view.addLabel}
+                              </Button>
+                          ),
+                      }),
                 breadcrumbs: { label: view.crumbLabel, items: view.crumbs },
             }}
             measure="product"
@@ -65,24 +78,14 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
                             empty={<EmptyNotice message={view.slotLabels.empty} />}
                             label={view.listLabel}
                             headingLevel={2}
-                            labelEnd={
-                                view.addLabel === null ? undefined : (
-                                    <Button
-                                        intent="commit"
-                                        size="sm"
-                                        isDisabled={view.isAddDisabled}
-                                        onPress={props.on.add}
-                                    >
-                                        {view.addLabel}
-                                    </Button>
-                                )
-                            }
+                            fact={String(rows.length)}
+                            {...(view.singleNote === null ? {} : { footer: view.singleNote })}
                             items={rows.map((row) => ({
                                 id: row.id,
                                 title: row.title,
                                 description: row.description,
                                 badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: true }],
-                                action: { label: view.openLabel, href: row.openHref },
+                                action: { label: view.openLabel, intent: "neutral" as const, href: row.openHref },
                                 detail: <ConnectionNeeds {...row.needs} />,
                             }))}
                         />

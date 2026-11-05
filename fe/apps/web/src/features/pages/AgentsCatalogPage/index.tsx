@@ -1,6 +1,7 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
+import { agentPageTabsOf } from "@/modules/page-header"
 import { APP_ROUTES } from "@/modules/routes"
 import { AgentsCatalogPageBase } from "./component"
 
@@ -12,7 +13,12 @@ export const agentsCatalogMetadata = async (): Promise<Metadata> => {
 
 /** /agents: the trail and heading; the catalogue block under them reads the installed agents in the browser. */
 export const AgentsCatalogPage = async (): Promise<ReactElement> => {
-    const [t, ts] = await Promise.all([getTranslations("modulesCore"), getTranslations("shell")])
+    const [t, ts, tt, tm] = await Promise.all([
+        getTranslations("modulesCore"),
+        getTranslations("shell"),
+        getTranslations("agentTemplates"),
+        getTranslations("agentMarketplace"),
+    ])
     return (
         <AgentsCatalogPageBase
             props={{
@@ -23,6 +29,13 @@ export const AgentsCatalogPage = async (): Promise<ReactElement> => {
                 ],
                 title: t("catalogTitle"),
                 description: t("catalogDescription"),
+                tabs: agentPageTabsOf({
+                    label: tt("tabsLabel"),
+                    selected: "running",
+                    runningLabel: tt("tabRunning"),
+                    marketplaceLabel: tm("title"),
+                    templatesLabel: tt("title"),
+                }),
             }}
         />
     )

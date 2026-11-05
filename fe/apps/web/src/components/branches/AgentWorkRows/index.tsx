@@ -16,6 +16,8 @@ interface AgentWorkRowsProps {
     readonly words: { readonly label: string; readonly emptyMessage: string }
     readonly rows: ReadonlyArray<AgentWorkRow>
     readonly isLoading: boolean
+    /** The command at the end of the heading (the one that opens the add form); none for a list nobody adds to. */
+    readonly action?: ReactNode
 }
 
 /** Draws one list of the Work tab (goals, tasks, triggers, turns): its rows, or one line saying it is empty. */
@@ -26,6 +28,7 @@ export const AgentWorkRows = (props: AgentWorkRowsProps) => {
             title={props.words.label}
             count={props.rows.length}
             isLoading={props.isLoading}
+            {...(props.action === undefined ? {} : { action: props.action })}
             empty={<EmptyNotice message={props.words.emptyMessage} />}
             items={props.rows.map((row) => ({
                 id: row.id,

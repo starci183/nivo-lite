@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
-import { agentsSubpageCrumbsOf } from "@/modules/page-header"
+import { agentPageTabsOf, agentsSubpageCrumbsOf } from "@/modules/page-header"
 import { AgentTemplatesPageBase } from "./component"
 import type { AgentTemplatesView } from "./component"
 
@@ -26,23 +26,38 @@ export const agentTemplatesMetadataOf =
         return { title: t(WORDS[view].title) }
     }
 
-/** The agent templates page: the trail and heading of the view; the block under them reads its data in the browser. */
+/** The two views that share the page title and its tab line; the packaging view has its own title and no tabs. */
+const isTabbed = (view: AgentTemplatesView): boolean => view !== "package"
+
+/** The agent templates page: the trail and heading of the view, the tab line of the two list views; the block under them reads its data in the browser. */
 export const AgentTemplatesPage = async (props: AgentTemplatesPageProps): Promise<ReactElement> => {
     const words = WORDS[props.view]
-    const [t, ts] = await Promise.all([getTranslations(words.ns), getTranslations("shell")])
+    const [t, tm, tt, ts] = await Promise.all([
+        getTranslations(words.ns),
+        getTranslations("agentMarketplace"),
+        getTranslations("agentTemplates"),
+        getTranslations("shell"),
+    ])
+    const tabbed = isTabbed(props.view)
+    const title = tabbed ? tt("pageTitle") : t(words.title)
     return (
         <AgentTemplatesPageBase
             props={{
                 view: props.view,
                 installationId: props.installationId ?? "",
                 crumbLabel: ts("crumbLabel"),
-                crumbs: agentsSubpageCrumbsOf({
-                    home: ts("crumbHome"),
-                    agents: t("crumbAgents"),
-                    current: t(words.title),
-                }),
-                title: t(words.title),
-                description: t("description"),
+                crumbs: agentsSubpageCrumbsOf({ home: ts("crumbHome"), agents: t("crumbAgents"), current: title }),
+                title,
+                description: tabbed ? tt("pageDescription") : t("description"),
+                tabs: tabbed
+                    ? agentPageTabsOf({
+                          label: tt("tabsLabel"),
+                          selected: props.view === "marketplace" ? "marketplace" : "templates",
+                          runningLabel: tt("tabRunning"),
+                          marketplaceLabel: tm("title"),
+                          templatesLabel: tt("title"),
+                      })
+                    : null,
             }}
         />
     )

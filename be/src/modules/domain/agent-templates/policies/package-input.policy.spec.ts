@@ -109,3 +109,28 @@ describe("package-input.policy", () => {
         expect(request.persona).toEqual({ soul: "Than thien.", likeness })
     })
 })
+
+describe("the time and choice settings", () => {
+    it("reads a time and a choice as text and keeps the options of the choice", async () => {
+        const subject = await build()
+        const label = { vi: "Nhan", en: "Label" }
+        const options = [
+            { value: "friendly", label },
+            { value: "formal", label },
+        ]
+
+        const request = subject.packageRequestOf(
+            WORKSPACE,
+            inputOf({
+                parameters: [
+                    { key: "opens", kind: "time", label, required: true, defaultValue: "09:00" },
+                    { key: "tone", kind: "choice", label, required: true, defaultValue: "friendly", options },
+                ],
+            }),
+        )
+
+        expect(request.parameters.map((parameter) => parameter.default)).toEqual(["09:00", "friendly"])
+        expect(request.parameters[0]).not.toHaveProperty("options")
+        expect(request.parameters[1]?.options).toEqual(options)
+    })
+})

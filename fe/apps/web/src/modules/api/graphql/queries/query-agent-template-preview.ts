@@ -54,6 +54,13 @@ const query1: TypedDocumentNode<
                     max
                     required
                     defaultValue
+                    options {
+                        value
+                        label {
+                            vi
+                            en
+                        }
+                    }
                 }
                 proposedRights {
                     kind
