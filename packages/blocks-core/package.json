@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./entities": {
+      "types": "./dist/entities/index.d.ts",
+      "default": "./dist/entities/index.js"
+    },
     "./client": {
       "types": "./dist/esm/client/index.d.ts",
       "default": "./dist/esm/client/index.js"
