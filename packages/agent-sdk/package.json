@@ -20,6 +20,14 @@
       "types": "./dist/rights/index.d.ts",
       "default": "./dist/rights/index.js"
     },
+    "./mutation": {
+      "types": "./dist/mutation/index.d.ts",
+      "default": "./dist/mutation/index.js"
+    },
+    "./invoke": {
+      "types": "./dist/invoke/index.d.ts",
+      "default": "./dist/invoke/index.js"
+    },
     "./block": {
       "types": "./dist/block/index.d.ts",
       "default": "./dist/block/index.js"
