@@ -8,7 +8,12 @@ import type { PlanNode, RenderPlan } from "../../spec/render-plan"
 import { renderPlan, viewOf } from "../../spec/render-plan"
 import { paramHandleOf } from "../../spec/spec-param"
 import type { SpecProblem, StoredSpec } from "../../spec/spec.types"
-import { useInstalledBlocks, useRegistryCheck, useWorkbenchHost } from "../host/WorkbenchHostProvider"
+import {
+    ModuleNamespaceProvider,
+    useInstalledBlocks,
+    useRegistryCheck,
+    useWorkbenchHost,
+} from "../host/WorkbenchHostProvider"
 import { PageFrame } from "./PageFrame"
 import { PrimaryCommand } from "./PrimaryCommand"
 import type { SpecContext } from "./renderer.types"
@@ -156,5 +161,9 @@ export const SpecWorkbench = (props: SpecWorkbenchProps): ReactNode => {
     const registry = useRegistryCheck()
     if (registry !== null && registry.built !== registry.served)
         return <EmptyNotice message={registry.message} actionLabel={registry.reloadLabel} onAction={registry.reload} />
-    return <DrawnWorkbench {...props} />
+    return (
+        <ModuleNamespaceProvider namespace={props.namespace}>
+            <DrawnWorkbench {...props} />
+        </ModuleNamespaceProvider>
+    )
 }

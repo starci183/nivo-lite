@@ -76,3 +76,17 @@ export const useEnabledModules = (): ReadonlyArray<string> => useHostContext().e
 
 /** The registry comparison of the live host; null in a prototype. */
 export const useRegistryCheck = (): RegistryCheck | null => useHostContext().registry
+
+/** The message namespace of the module whose workbench is drawn below; empty outside a workbench. */
+const ModuleNamespaceContext = createContext<string>("")
+
+/** Marks the namespace of the module the workbench below draws, so the blocks resolve the keys of its spec in the module's words. */
+export const ModuleNamespaceProvider = (props: {
+    readonly namespace: string
+    readonly children: ReactNode
+}): ReactNode => (
+    <ModuleNamespaceContext.Provider value={props.namespace}>{props.children}</ModuleNamespaceContext.Provider>
+)
+
+/** The message namespace of the module whose workbench the block is drawn in. */
+export const useModuleNamespace = (): string => useContext(ModuleNamespaceContext)

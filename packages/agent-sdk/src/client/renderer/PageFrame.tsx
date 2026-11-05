@@ -101,7 +101,7 @@ export const PageFrame = (props: PageFrameProps): ReactNode => {
             chips={{}}
             done={(chips) => (
                 <Stack gap="region">
-                    <Cluster gap="row" align="center" justify="between">
+                    <Cluster gap="row" align="center" justify="between" wrap={false}>
                         <Tabs
                             label={text({ key: "renderer.tabs" })}
                             {...(props.selected === undefined ? {} : { selectedKey: props.selected })}
