@@ -6,6 +6,7 @@
     "noView": "Màn hình này chưa có bố cục để hiện.",
     "tabs": "Các tab",
     "invalid": "Giá trị này chưa hợp lệ.",
-    "unbound": "Thao tác này chưa được cài đặt."
+    "unbound": "Thao tác này chưa được cài đặt.",
+    "unavailable": "Khối này chưa có trong bản đang chạy."
   }
 }
