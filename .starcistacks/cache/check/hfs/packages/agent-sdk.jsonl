@@ -1,5 +1,5 @@
 {"data":{},"findings":[],"hash":"adde25a6c8f0157dc022f58b7d1a35fd7b9f818800dc6c67b60c5856792f401d","path":"packages/agent-sdk/README.md","step":"file-rules"}
-{"data":{},"findings":[],"hash":"5b9a102414db15d8845f89bb8a9b61105bffb4135444d794828a10b08b15dffb","path":"packages/agent-sdk/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a2a6ca7e9cd899ad4cd705487e1fe138bac26fc960a4a522ab22492f597a8642","path":"packages/agent-sdk/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5ce9f03ee475390207a49a2be5970d0dbf47c66689605b9ddb1408fa39f354c7","path":"packages/agent-sdk/src/block/block.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d4aef55d739c31daaecd9cb67cb69c40a4f52e2466cf6b19793daf9df8a2351b","path":"packages/agent-sdk/src/block/block.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"7bb5493c6b6b9d085537a56072abadaa0379ceab4eb674d024344b7a6817e522","path":"packages/agent-sdk/src/block/block.types.ts","step":"file-rules"}

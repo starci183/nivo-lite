@@ -1,4 +1,4 @@
-{"data":{},"findings":[],"hash":"fa6de2f5ff421b5bb31f7455d17f85a254b3b407b43e473bd340629bcc029194","path":"packages/blocks-core/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"5f8c84a3953cb149a0e49de382fa85b88551368b6a85216d9b2a32cbcc3bbba8","path":"packages/blocks-core/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"15abaabe33728d764ba8f1f0d811f161eabaa45a39ec8ceae594b3ebeff067d5","path":"packages/blocks-core/src/blocks/bounds.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"86199fde9506d5574bfb5531b81156954139c5b3ed9675dfc462ff27b956bdf8","path":"packages/blocks-core/src/blocks/card-grid.block.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3787da4212fd5a19552bd34ae307f5927a0aaeed3f8acfaeab5f64311dd8ccd8","path":"packages/blocks-core/src/blocks/core-blocks.spec.ts","step":"file-rules"}

@@ -1,4 +1,4 @@
-{"findings":[],"hash":"1d32140a30c48293a75dba75cbbc45f0e6f4c0e4862568beffae626a142df4eb","path":"packages/blocks-core/package.json","step":"prettier"}
+{"findings":[],"hash":"1c778115442a187fb4e2676062499141a7535531c9fcd5c959f3daab15c94cdd","path":"packages/blocks-core/package.json","step":"prettier"}
 {"findings":[],"hash":"68d9a4f77254d026e1f5b42413d260fc0ed5578ecefb81ecb1ee820504ffa81b","path":"packages/blocks-core/tsconfig.build.client.json","step":"prettier"}
 {"findings":[],"hash":"44d4b0254dec07370f85674851dbf19c2dc0ed0c9260d93a0b65a03a4bed7ca9","path":"packages/blocks-core/tsconfig.build.json","step":"prettier"}
 {"findings":[],"hash":"7c6305fa928ac1212c5fd25789aa6ee2fc47052734e17ad884a9367c93e3f6bc","path":"packages/blocks-core/tsconfig.json","step":"prettier"}

@@ -1,5 +1,6 @@
 {"findings":[],"hash":"57285b15c280869571631ae5636fb0f0f774822a2ae0cea5f4db3d93452c4b5e","path":"be/src/tests/contract/agent-messages/agent-message-entity.contract-spec.ts","step":"prettier"}
 {"findings":[],"hash":"39c9eb050ebd3ff5fee4433ece2f14535c7341e1178e6d27411739d5594cf804","path":"be/src/tests/contract/agent-tools/agent-tools.contract-spec.ts","step":"prettier"}
+{"findings":[],"hash":"bb56b7d71d7d72febbc2cd31c03984278a10f888a45b07aea3ba7e6d9bbd27ba","path":"be/src/tests/contract/agent-work/agent-work-config.contract-spec.ts","step":"prettier"}
 {"findings":[],"hash":"bc32465a762dbbb9e2397e206c886de1768da99f9fd623ed0d8856ff6cb2d0ed","path":"be/src/tests/contract/api/app-lifecycle.contract-spec.ts","step":"prettier"}
 {"findings":[],"hash":"303c8fe21fec4cceb1266128e10e449be476bf99c3944d93b3e4b9a827289df5","path":"be/src/tests/contract/api/google-callback.contract-spec.ts","step":"prettier"}
 {"findings":[],"hash":"f2218ad72d222cc03587b6ac9aede78a0c96f9cde96223572d0e7c55fc89fd03","path":"be/src/tests/contract/bank-feed-delivery/bank-feed-delivery.contract-spec.ts","step":"prettier"}
@@ -170,6 +171,7 @@
 {"findings":[],"hash":"7fdfd52516ed3c3d3eb8e92e74b70513140b5c6cdbbda4ce19bdc15b215f8fe5","path":"be/src/tests/fixtures/builders/public-api.builder.ts","step":"prettier"}
 {"findings":[],"hash":"682ffb13166ea2551358242babec4876833e9be639ba28b7e4459a381e520ca7","path":"be/src/tests/fixtures/builders/public-documents-lifecycle.builder.ts","step":"prettier"}
 {"findings":[],"hash":"a525dd48ee0dba78b872258ea770a87cdfa0fba7bb7345802778023c20b46ee7","path":"be/src/tests/fixtures/builders/public-documents.builder.ts","step":"prettier"}
+{"findings":[],"hash":"03fec8ef39f5afd93ea866909263e55ced661929b80abd4cc7a9bca2e65fa6a0","path":"be/src/tests/fixtures/builders/queue-job-outbox.builder.ts","step":"prettier"}
 {"findings":[],"hash":"421bc94b487d92fc963070ab708874ee7f4d7de68bbf1091d14833bdbfdcafc2","path":"be/src/tests/fixtures/builders/queue-reconciliation.builder.ts","step":"prettier"}
 {"findings":[],"hash":"aad206252cb9116c2d36af3a50bbbe684336af7b53e71b9ee5171a0cb449250d","path":"be/src/tests/fixtures/builders/queue.builder.ts","step":"prettier"}
 {"findings":[],"hash":"6a06c98b3bd56020c430409ac7fce985e8ac6a6f69f73afca93a51dffe02bdb0","path":"be/src/tests/fixtures/builders/rate-limit.builder.ts","step":"prettier"}
@@ -295,7 +297,7 @@
 {"findings":[],"hash":"b84ac82245835006888d7095d4708f5e043bef49f22de0c241eabb0bf15d1388","path":"be/src/tests/integration/queue/queue.integration-spec.ts","step":"prettier"}
 {"findings":[],"hash":"548c040bf7ae4440ed058eaaca928065523f6a3980cccf8d46ac62b363503d8a","path":"be/src/tests/integration/queue/telegram-delivery.integration-spec.ts","step":"prettier"}
 {"findings":[],"hash":"cac3eaf53b43a3210e8c8973b4676433ff2afb7902f490c8bfd6c81b1bee7088","path":"be/src/tests/integration/realtime/chat-typing-sse.integration-spec.ts","step":"prettier"}
-{"findings":[],"hash":"6fa976650cd32360a6c72ba68b3ff5efc012cf2ef870d7540beb2ad445afe69c","path":"be/src/tests/integration/renewal-to-cash/renewal-to-cash.integration-spec.ts","step":"prettier"}
+{"findings":[],"hash":"2122246eddf3d80e6fcbc0fc1e9e77fc566f110b19a3532091a47b9d68333fdf","path":"be/src/tests/integration/renewal-to-cash/renewal-to-cash.integration-spec.ts","step":"prettier"}
 {"findings":[],"hash":"c13daa554e0304be644d014ba37bbf17643e18f334c67cc1249c4dd002bd2e51","path":"be/src/tests/integration/sepay-delivery/sepay-delivery-queue.module.integration-spec.ts","step":"prettier"}
 {"findings":[],"hash":"a296d4e34b43076f69512c66c787045bca46e44153352701d05daa63280e94cb","path":"be/src/tests/integration/sepay-delivery/sepay-delivery.processor.integration-spec.ts","step":"prettier"}
 {"findings":[],"hash":"7dbd85cbc878be1a41745290b3d575cf326af17ed5820a2fc4998661d167c00f","path":"be/src/tests/integration/sepay-delivery/sepay-delivery.queue.integration-spec.ts","step":"prettier"}
