@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
 import type { SlotLabels } from "@nivo-lite/agent-sdk/client"
-import { Alert, Badge, Button, DataTable, EmptyNotice, Stack } from "@starci/grammar/common"
+import { Alert, Badge, Button, DataTable, EmptyNotice, Stack, Text } from "@starci/grammar/common"
 import type { tableBlock } from "../../blocks/table.block"
 import { cellContextOf } from "../../rows/cell-format"
 import { recordsView } from "../../rows/rows"
@@ -15,7 +15,7 @@ import {
     tablePlaceholder,
     tableRowsOf,
 } from "../../rows/table-rows"
-import type { TableRow } from "../../rows/table-rows"
+import type { CellView, TableRow } from "../../rows/table-rows"
 import { queryOf } from "../../rows/search"
 import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
@@ -46,6 +46,28 @@ const MoreRows = (props: MoreRowsProps): ReactNode => {
         <Button intent="neutral" isPending={page.isLoadingMore} onPress={page.loadMore}>
             {props.loadMoreLabel}
         </Button>
+    )
+}
+
+/** What the content of a cell takes. */
+interface TableCellProps {
+    readonly cell: CellView
+}
+
+/** One cell: its text, in a badge of its tone for a badge column, over its note when it has one. */
+const TableCell = (props: TableCellProps): ReactNode => {
+    const { cell } = props
+    if (cell.isBadge) return <Badge tone={cell.tone}>{cell.text}</Badge>
+    if (cell.note === "") return <>{cell.text}</>
+    return (
+        <Stack gap="inline">
+            <Text size="sm" isStrong>
+                {cell.text}
+            </Text>
+            <Text size="sm" tone="muted">
+                {cell.note}
+            </Text>
+        </Stack>
     )
 }
 
@@ -80,10 +102,9 @@ export const TableBlock = (props: RenderOf<typeof tableBlock>): ReactNode => {
                       onAction: () => props.params.set(searchParam, null),
                   },
               }
-    const renderCell = (row: TableRow, columnId: string): ReactNode => {
-        const cell = cellOf(columns, row, columnId)
-        return cell.isBadge ? <Badge tone="neutral">{cell.text}</Badge> : cell.text
-    }
+    const renderCell = (row: TableRow, columnId: string): ReactNode => (
+        <TableCell cell={cellOf(columns, row, columnId)} />
+    )
     return (
         <SlotView
             slot={rows}

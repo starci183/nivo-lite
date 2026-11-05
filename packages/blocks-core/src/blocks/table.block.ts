@@ -4,6 +4,7 @@ import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { CELL_FORMATS } from "../rows/cell-format"
 import type { CellFormat } from "../rows/cell-format"
+import { CELL_TONES } from "../rows/table-rows"
 import { PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
 import { labelsProp } from "./labels-prop"
@@ -18,6 +19,10 @@ export const TABLE_ALIGNS = ["start", "end"] as const
 /** Whether a column stays in the row on a narrow screen (high) or folds into the first column's cell (low). */
 export const TABLE_PRIORITIES = ["high", "low"] as const
 
+/** The longest value a tone is given for, and the most values one column gives a tone. */
+const VALUE_MAX = 64
+const TONES_MAX = 20
+
 /** The most columns one table draws. */
 export const TABLE_COLUMNS_MAX = 12
 
@@ -27,6 +32,8 @@ type ColumnSchema = z.ZodObject<{
     format: z.ZodOptional<EnumSchema<CellFormat>>
     align: z.ZodOptional<EnumSchema<(typeof TABLE_ALIGNS)[number]>>
     priority: z.ZodOptional<EnumSchema<(typeof TABLE_PRIORITIES)[number]>>
+    subPath: z.ZodOptional<z.ZodString>
+    tones: z.ZodOptional<z.ZodRecord<z.ZodString, EnumSchema<(typeof CELL_TONES)[number]>>>
 }>
 
 const column: ColumnSchema = z.object({
@@ -35,6 +42,11 @@ const column: ColumnSchema = z.object({
     format: z.enum(CELL_FORMATS).optional(),
     align: z.enum(TABLE_ALIGNS).optional(),
     priority: z.enum(TABLE_PRIORITIES).optional(),
+    subPath: z.string().max(PATH_MAX).optional(),
+    tones: z
+        .record(z.string().max(VALUE_MAX), z.enum(CELL_TONES))
+        .refine((tones) => Object.keys(tones).length <= TONES_MAX)
+        .optional(),
 })
 
 const props: z.ZodObject<{

@@ -12,12 +12,14 @@ type ItemSchema = z.ZodObject<{
     term: TextSchema
     path: z.ZodString
     format: z.ZodOptional<EnumSchema<FigureFormat>>
+    hintPath: z.ZodOptional<z.ZodString>
 }>
 
 const item: ItemSchema = z.object({
     term: specText,
     path: z.string().max(PATH_MAX),
     format: z.enum(FIGURE_FORMATS).optional(),
+    hintPath: z.string().max(PATH_MAX).optional(),
 })
 
 const props: z.ZodObject<{
@@ -39,7 +41,7 @@ const slots: Slots = { data: { kind: "read", shape: "record", required: true } }
 
 /**
  * A ribbon of figures in one card (kind `tiles`, the default), bars on one scale (`bars`) or one gauge per item sharing the total
- * (`proportion`): each item names its term, the path of its value in the bound record and how the value is drawn.
+ * (`proportion`): each item names its term, the path of its value in the bound record and how the value is drawn and, with a `hintPath`, the path of the line of text under it (tiles only).
  */
 export const figuresBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.figures",

@@ -1,6 +1,7 @@
 import {
     ALL_TAB,
     countsView,
+    EMPTY_TAB_COUNTS,
     moreLabelOf,
     selectedTab,
     tabEntriesOf,
@@ -81,5 +82,13 @@ describe("moreLabelOf", () => {
     it("puts the number of folded tabs where the message asks", () => {
         expect(moreLabelOf("{count} more filters", 3)).toBe("3 more filters")
         expect(moreLabelOf("{count} + {count}", 2)).toBe("2 + 2")
+    })
+})
+
+describe("EMPTY_TAB_COUNTS", () => {
+    it("keeps every tab with a count of zero", () => {
+        const entries = tabEntriesOf("All", SPECS, EMPTY_TAB_COUNTS)
+        expect(entries.length).toBe(SPECS.length + 1)
+        expect(entries.every((entry) => entry.count === 0)).toBe(true)
     })
 })
