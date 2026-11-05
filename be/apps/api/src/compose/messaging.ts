@@ -9,6 +9,12 @@ import {
 } from "@modules/domain/customer-turns"
 import type { DynamicModule } from "@nestjs/common"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
+import {
+    AgentNativeService,
+    ENTITY_ENGINE_DOOR_ERROR_KINDS,
+    ENTITY_ENGINE_DOOR_MESSAGES,
+    EntityEngineDoorModule,
+} from "@modules/domain/entity-engine-door"
 import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "@modules/domain/native-tools"
 import {
     INBOUND_EVENTS_ERROR_KINDS,
@@ -73,8 +79,9 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         ...options.mcpGateway,
         console: true,
         keyCheck: true,
-        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS],
+        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS, AgentNativeService],
     }),
+    EntityEngineDoorModule.register({ isGlobal: true, agentModule: "nivo" }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
     TelegramInboxModule.register({ isGlobal: true }),
     ZaloInboxModule.register({ isGlobal: true }),
@@ -96,6 +103,7 @@ export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     ZALO_ERROR_KINDS,
     CHAT_MARKERS_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
+    ENTITY_ENGINE_DOOR_ERROR_KINDS,
     CUSTOMER_TURNS_ERROR_KINDS,
 ]
 
@@ -114,5 +122,6 @@ export const messagingMessages: ReadonlyArray<MessageBundle> = [
     ZALO_MESSAGES,
     CHAT_MARKERS_MESSAGES,
     MCP_GATEWAY_MESSAGES,
+    ENTITY_ENGINE_DOOR_MESSAGES,
     GATEWAY_TURNS_MESSAGES,
 ]

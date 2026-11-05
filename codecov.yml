@@ -114,6 +114,7 @@ component_management:
         - "be/src/modules/domain/decisions/**"
         - "be/src/modules/domain/dossier-review-ai/**"
         - "be/src/modules/domain/email-messages/**"
+        - "be/src/modules/domain/entity-engine-door/**"
         - "be/src/modules/domain/entity-engine/**"
         - "be/src/modules/domain/entity-planner/**"
         - "be/src/modules/domain/executions/**"

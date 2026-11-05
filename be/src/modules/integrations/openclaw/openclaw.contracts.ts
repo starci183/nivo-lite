@@ -172,3 +172,33 @@ export interface ReceiverOptions {
     /** Arms completion for a candidate reply. */
     readonly settleOn: (reply: string) => void
 }
+
+/** One recorded tool call of a turn: the tool and its arguments as JSON text. */
+export interface HistoryToolCall {
+    /** The tool name. */
+    readonly name: string
+    /** The arguments as JSON text. */
+    readonly argsJson: string
+}
+
+/** One turn of a thread as the gateway keeps it. */
+export interface HistoryTurn {
+    /** The position in the thread, 0 for the first message. */
+    readonly index: number
+    /** Who spoke. */
+    readonly role: "user" | "assistant" | "tool" | "system"
+    /** The text, empty when the message carries none. */
+    readonly text: string
+    /** The tool calls the message made. */
+    readonly toolCalls: ReadonlyArray<HistoryToolCall>
+    /** When it was said, ISO text. */
+    readonly at: string
+}
+
+/** A read of the history of one thread. */
+export interface HistoryRequest {
+    /** The full thread key, `agent:<agentId>:<session>`. */
+    readonly threadKey: string
+    /** How long the read may take, ms. */
+    readonly timeoutMs: number
+}
