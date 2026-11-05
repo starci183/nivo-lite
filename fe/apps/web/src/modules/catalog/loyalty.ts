@@ -13,7 +13,7 @@ type LoyaltyShape = {
     available: true
     knowledgeFolder: string
     workbench: string
-    settingsExtras: string
+    settingsExtras: null
     requires: {
         capabilities: string[]
         connections: never[]
@@ -104,7 +104,7 @@ export const LOYALTY: LoyaltyShape = {
     available: true,
     knowledgeFolder: "loyalty",
     workbench: "loyalty",
-    settingsExtras: "loyalty_program",
+    settingsExtras: null,
     requires: {
         capabilities: ["customer_messaging"],
         connections: [],

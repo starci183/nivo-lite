@@ -1,6 +1,5 @@
 import type { ReactElement } from "react"
 import { InventoryWorkbenchPage as WorkbenchInventory } from "@/features/pages/InventoryWorkbenchPage"
-import { LoyaltyWorkbenchPage as WorkbenchLoyalty } from "@/features/pages/LoyaltyWorkbenchPage"
 import { HiringWorkbenchPage as WorkbenchHiring } from "@/features/pages/HiringWorkbenchPage"
 import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
 import { ShiftsWorkbenchPage as WorkbenchShifts } from "@/features/pages/ShiftsWorkbenchPage"
@@ -29,7 +28,6 @@ type PageProps = {
 const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
     chatbot: WorkbenchChatbot,
     sales: WorkbenchSales,
-    loyalty: WorkbenchLoyalty,
     accounting: WorkbenchAccounting,
     content: WorkbenchContent,
     inventory: WorkbenchInventory,

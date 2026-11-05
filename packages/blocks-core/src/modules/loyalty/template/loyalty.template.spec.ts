@@ -34,7 +34,7 @@ describe("LOYALTY_SERVER", () => {
             order: 70,
             audience: "customer",
             workbench: "loyalty",
-            settingsExtras: "loyalty_program",
+            settingsExtras: null,
         })
     })
 

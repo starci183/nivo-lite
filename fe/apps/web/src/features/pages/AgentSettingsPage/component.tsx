@@ -4,7 +4,6 @@ import { AgentAutomations } from "@/components/blocks/AgentAutomations"
 import { AgentConnectionAccess } from "@/components/blocks/AgentConnectionAccess"
 import { AgentIdentityCard } from "@/components/blocks/AgentIdentityCard"
 import { AgentLiveCard } from "@/components/blocks/AgentLiveCard"
-import { LoyaltyProgramSettings } from "@/components/blocks/LoyaltyProgramSettings"
 import { AgentModeCard } from "@/components/blocks/AgentModeCard"
 import { AgentWorkSwitchCard } from "@/components/blocks/AgentWorkSwitchCard"
 import { AgentRemoveCard } from "@/components/blocks/AgentRemoveCard"
@@ -58,7 +57,6 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
             {props.props.extrasKey === "chatbot_reply" ? (
                 <AgentReplyCard installationId={installationId} module={module} />
             ) : null}
-            {props.props.extrasKey === "loyalty_program" ? <LoyaltyProgramSettings /> : null}
             <AgentAutomations />
             <AgentSyncCard installationId={installationId} />
             <AgentRemoveCard installationId={installationId} module={module} />
