@@ -213,7 +213,6 @@
                     "bind": {
                       "rows": {
                         "read": "chatbot.threads",
-                        "path": "rows",
                         "variables": {
                           "q": "$q",
                           "status": "$status"

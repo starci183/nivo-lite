@@ -172,8 +172,7 @@
                     "key": "reason_owner"
                   }
                 }
-              },
-              "selectParam": "order"
+              }
             },
             "bind": {
               "rows": {

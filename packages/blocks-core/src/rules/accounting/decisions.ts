@@ -10,7 +10,7 @@ const rowOf = (payment: UnmatchedPayment): DecisionRowView => ({
     description: payment.reference ?? "",
     badges: [],
     reason: null,
-    amount: String(payment.amountVnd),
+    amount: `${new Intl.NumberFormat("en-US").format(Math.round(payment.amountVnd))} VND`,
     proposal: payment.reference ?? "",
     trace: null,
     expiry: null,

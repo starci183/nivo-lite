@@ -16,7 +16,7 @@ describe("unmatchedQueueOf", () => {
         expect(queue.rows[0]).toMatchObject({
             title: "Hoa Sen",
             description: "CK HOA SEN",
-            amount: "3500000",
+            amount: "3,500,000 VND",
             primary: null,
             menu: [],
         })
