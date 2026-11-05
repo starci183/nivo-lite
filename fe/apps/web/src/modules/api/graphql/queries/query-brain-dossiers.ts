@@ -19,6 +19,8 @@ const query1: TypedDocumentNode<QueryBrainDossiersResponse> = gql`
             missing
             drafts
             documentCount
+            assigneeId
+            dueAt
         }
     }
 `

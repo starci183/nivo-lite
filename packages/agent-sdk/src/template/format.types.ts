@@ -24,12 +24,20 @@ export interface TemplateListingText {
 /** A value a parameter can hold. */
 export type ParameterValue = number | string | boolean
 
+/** One choice of a `choice` parameter: the value the package keeps and the label the buyer reads. */
+export interface ParameterOption {
+    /** The value kept when the buyer picks it. */
+    readonly value: string
+    /** The label in both product languages. */
+    readonly label: TemplateText
+}
+
 /** One setting the buyer fills in, after the SettingDefinition of an automation template. */
 export interface TemplateParameter {
     /** The key; a `{{key}}` in a text of the graph is replaced by the value. */
     readonly key: string
     /** How the value is entered. */
-    readonly kind: "number" | "text" | "toggle" | "textarea"
+    readonly kind: "number" | "text" | "toggle" | "textarea" | "time" | "choice"
     /** The label. */
     readonly label: TemplateText
     /** A line of help. */
@@ -42,6 +50,8 @@ export interface TemplateParameter {
     readonly required: boolean
     /** The value when the buyer gives none. */
     readonly default: ParameterValue
+    /** The choices of a `choice` parameter; absent for every other kind (and for packages made before choices existed). */
+    readonly options?: ReadonlyArray<ParameterOption> | undefined
 }
 
 /** Which number of the graph a parameter sets: only a value a condition compares with, or a wait; never what a branch does. */

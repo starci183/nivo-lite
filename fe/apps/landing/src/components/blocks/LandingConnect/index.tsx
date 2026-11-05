@@ -1,5 +1,4 @@
-import { getLocale, getTranslations } from "next-intl/server"
-import { CONSOLE_PAGES, appHref } from "@/modules/routes"
+import { getTranslations } from "next-intl/server"
 import { LandingConnectBase } from "./component"
 
 import type { ReactElement } from "react"
@@ -15,8 +14,6 @@ const CHANNELS = [
 /** The landing connect section with its copy resolved on the server. */
 export const LandingConnect = async (): Promise<ReactElement> => {
     const t = await getTranslations("landing")
-
-    const locale = await getLocale()
     return (
         <LandingConnectBase
             props={{
@@ -24,8 +21,6 @@ export const LandingConnect = async (): Promise<ReactElement> => {
                 eyebrow: t("connectEyebrow"),
                 title: t("connectTitle"),
                 lead: t("connectLead"),
-                ctaLabel: t("connectCta"),
-                ctaHref: appHref(CONSOLE_PAGES.login, locale),
                 liveLabel: t("connectAvailable"),
                 roadmapLabel: t("connectRoadmap"),
                 note: t("connectNote"),

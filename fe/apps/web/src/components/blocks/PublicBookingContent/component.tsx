@@ -1,82 +1,112 @@
-import { Stack, Alert, Button, Heading, Page, SurfaceCard, Text, WorkspaceShell } from "@starci/grammar/common"
+import { Avatar, Grid, PageIntro, Page } from "@starci/grammar/common"
+import { SlotView } from "@nivo-lite/agent-sdk/client"
 
 import { PublicBookingForm } from "@/components/composites/PublicBookingForm"
 import type { PublicBookingFormProps } from "@/components/composites/PublicBookingForm"
-import { APP_ROUTES } from "@/modules/routes"
-import type { PublicBookingPageData } from "@/modules/types"
-import { MAIN_CLASS_NAME } from "./classNames"
+import { PublicShell } from "@/components/frames/PublicShell"
+import type { DataSlot, PublicBookingPageData, SlotLabels } from "@/modules/types"
 
 /** Props for {@link PublicBookingContentBase}. */
 interface PublicBookingContentView {
     readonly form: PublicBookingFormProps["props"]
-    readonly title: string
-    readonly page: PublicBookingPageData | null | undefined
-    readonly failed: boolean
-    readonly loadingLabel: string
-    readonly failedTitle: string
-    readonly failedBody: string
-    readonly notFoundTitle: string
-    readonly notFoundText: string
-    readonly homeLabel: string
+    readonly slot: DataSlot<PublicBookingPageData>
+    readonly labels: SlotLabels
+    /** The language menu at the end of the bar. */
+    readonly language: {
+        readonly label: string
+        readonly locale: string
+        readonly isPending: boolean
+        readonly options: ReadonlyArray<{ readonly value: string; readonly label: string; readonly name: string }>
+    }
+    readonly copy: {
+        readonly title: string
+        readonly brandFallback: string
+        readonly foot: string
+        readonly intro: string
+        readonly notFoundBody: string
+        readonly failedBody: string
+    }
 }
 
 /** Inputs for the public booking page and its read states. */
 interface PublicBookingContentBaseProps {
     readonly props: PublicBookingContentView
-    readonly on: PublicBookingFormProps["on"]
+    readonly on: PublicBookingFormProps["on"] & {
+        readonly retry: () => void
+        readonly chooseLanguage: (locale: string) => void
+    }
 }
 
-/** Draws the public booking page: the shop, then the form. */
+/** Unseen text that gives a skeleton line the width of a real one. */
+const GHOST = "M".repeat(16)
+
+/** The shop of the skeleton: the ready tree's own text stays empty so nothing jumps when the shop arrives. */
+const SHOP_PLACEHOLDER: PublicBookingPageData = {
+    shop: GHOST,
+    slug: "",
+    note: GHOST,
+    address: GHOST,
+    timezone: "UTC",
+    services: ["a", "b", "c"].map((id) => ({ id, name: GHOST, description: GHOST, durationMin: 0, priceVnd: null })),
+}
+
+/** What the shop identity draws. */
+interface ShopIdentityProps {
+    readonly page: PublicBookingPageData
+    readonly isLoading: boolean
+    readonly intro: string
+}
+
+/** The shop the visitor books with: its mark, its name as the page's one heading, where it is and when it is open. */
+const ShopIdentity = (props: ShopIdentityProps) => (
+    <PageIntro
+        title={props.page.shop}
+        isLoading={props.isLoading}
+        mark={<Avatar name={props.page.shop} tone="accent" shape="rounded" size="lg" isLoading={props.isLoading} />}
+        lines={[props.page.address, props.page.note].filter((text) => text !== "").map((text) => ({ id: text, text }))}
+        description={props.intro}
+    />
+)
+
+/** Draws the public booking page: the shop beside one card that books. */
 export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) => {
-    const { title, page } = props.props
-    if (page === null) {
-        return (
-            <Page measure="reading" header={{ title: props.props.notFoundTitle }}>
-                <SurfaceCard>
-                    <Text tone="muted">{props.props.notFoundText}</Text>
-                    <Button intent="neutral" href={APP_ROUTES.dashboard}>
-                        {props.props.homeLabel}
-                    </Button>
-                </SurfaceCard>
-            </Page>
-        )
-    }
-    if (page === undefined) {
-        return (
-            <Page measure="reading">
-                <div className={MAIN_CLASS_NAME}>
-                    {props.props.failed ? (
-                        <Alert tone="negative" title={props.props.failedTitle} description={props.props.failedBody} />
-                    ) : (
-                        <Text live="polite">{props.props.loadingLabel}</Text>
-                    )}
-                </div>
-            </Page>
-        )
-    }
+    const { slot, copy, form } = props.props
     return (
-        <Page measure="reading">
-            <WorkspaceShell
-                align="stretch"
-                primaryLabel={title}
-                primary={
-                    <div className={MAIN_CLASS_NAME}>
-                        <Stack gap="section">
-                            <Stack gap="identity">
-                                <Heading level={1}>{title}</Heading>
-                                <Text tone="muted">{page.shop}</Text>
-                                {page.address === "" ? null : (
-                                    <Text size="sm" tone="muted">
-                                        {page.address}
-                                    </Text>
-                                )}
-                                {page.note === "" ? null : <Text size="sm">{page.note}</Text>}
-                            </Stack>
-                            <PublicBookingForm key={page.slug} props={props.props.form} on={props.on} />
-                        </Stack>
-                    </div>
-                }
-            />
+        <Page chrome="bleed" minHeight="none">
+            <PublicShell
+                label={copy.title}
+                foot={copy.foot}
+                measure="narrow"
+                brand={{
+                    name: "items" in slot ? slot.items.shop : null,
+                    isLoading: "isLoading" in slot,
+                    fallbackLabel: copy.brandFallback,
+                }}
+                language={props.props.language}
+                onChooseLanguage={props.on.chooseLanguage}
+            >
+                <SlotView
+                    slot={slot}
+                    placeholder={SHOP_PLACEHOLDER}
+                    labels={props.props.labels}
+                    errorDescription={copy.failedBody}
+                    emptyDescription={copy.notFoundBody}
+                    onRetry={props.on.retry}
+                    render={(page, isLoading) => (
+                        <Grid
+                            kind="main-rail"
+                            railPosition="leading"
+                            collapsedOrder="rail-first"
+                            railWidth="medium"
+                            align="start"
+                            rail={<ShopIdentity page={page} isLoading={isLoading} intro={copy.intro} />}
+                            primary={
+                                <PublicBookingForm key={page.slug} props={form} on={props.on} isLoading={isLoading} />
+                            }
+                        />
+                    )}
+                />
+            </PublicShell>
         </Page>
     )
 }

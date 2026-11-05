@@ -42,6 +42,7 @@ export const AdminRowsCard = (props: AdminRowsCardProps) => (
         label={props.card.label}
         {...(props.card.ariaLabel === undefined ? {} : { ariaLabel: props.card.ariaLabel })}
         headingLevel={2}
+        {...(props.card.count === undefined || props.isLoading === true ? {} : { fact: String(props.card.count) })}
         isLoading={props.isLoading === true}
         labelEnd={
             props.card.labelBadges.length === 0 ? undefined : (

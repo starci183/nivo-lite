@@ -33,7 +33,16 @@ type AutomationMessageProps = {
 
 /** The approved wording: a proposal written from the shop context, editable, always reviewed and saved by the owner, with a live preview. */
 export const AutomationMessage = (props: AutomationMessageProps) => (
-    <Section title={props.title} description={props.help} headingLevel={3}>
+    <Section
+        title={props.title}
+        description={props.help}
+        headingLevel={3}
+        action={
+            <Button intent="neutral" isPending={props.isComposing} isDisabled={props.isBusy} onPress={props.onCompose}>
+                {props.composeLabel}
+            </Button>
+        }
+    >
         {props.staleAlert === undefined ? null : (
             <Alert
                 title={props.staleAlert.title}
@@ -46,7 +55,7 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
             id={props.bodyId}
             name="body"
             label={props.bodyLabel}
-            rows={5}
+            rows={3}
             maxLength={props.maxLength}
             value={props.bodyValue}
             isDisabled={props.isBusy || props.isComposing}
@@ -67,7 +76,6 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
                 items={props.variables.map((variable) => ({ id: variable, label: `{${variable}}` }))}
             />
         </Stack>
-        {renderAutomationMessageActions(props)}
         <Stack gap="identity">
             <Quote source={props.previewTitle} text={props.previewText} />
             {props.toneNote === undefined ? null : (
@@ -76,6 +84,7 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
                 </Text>
             )}
         </Stack>
+        {renderAutomationMessageActions(props)}
     </Section>
 )
 
@@ -83,30 +92,22 @@ export const AutomationMessage = (props: AutomationMessageProps) => (
 const renderAutomationMessageActions = (
     props: Pick<
         AutomationMessageProps,
-        | "enableLabel"
-        | "isBusy"
-        | "canEnable"
-        | "onEnable"
-        | "isFirstApproval"
-        | "canSave"
-        | "onSave"
-        | "saveLabel"
-        | "isComposing"
-        | "onCompose"
-        | "composeLabel"
+        "enableLabel" | "isBusy" | "canEnable" | "onEnable" | "canSave" | "onSave" | "saveLabel"
     >,
 ) => (
-    <Cluster gap="inline">
+    <Cluster gap="inline" justify="end">
         {props.enableLabel === undefined ? null : (
             <Button intent="commit" isPending={props.isBusy} isDisabled={!props.canEnable} onPress={props.onEnable}>
                 {props.enableLabel}
             </Button>
         )}
-        <Button intent="alternative" isPending={props.isBusy} isDisabled={!props.canSave} onPress={props.onSave}>
+        <Button
+            intent={props.enableLabel === undefined ? "commit" : "alternative"}
+            isPending={props.isBusy}
+            isDisabled={!props.canSave}
+            onPress={props.onSave}
+        >
             {props.saveLabel}
-        </Button>
-        <Button intent="neutral" isPending={props.isComposing} isDisabled={props.isBusy} onPress={props.onCompose}>
-            {props.composeLabel}
         </Button>
     </Cluster>
 )

@@ -2,7 +2,8 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { digitsOnly } from "@/hooks/loyalty"
-import { errorKeyOf, usePublicLoyalty } from "@/hooks/publicLoyalty"
+import { errorKeyOf, isLoyaltyPageClosed, usePublicLoyalty } from "@/hooks/publicLoyalty"
+import { useLocaleSwitch } from "@/hooks/locale"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { useQueryPublicLoyaltyPageSwr } from "@/hooks/swr"
 import { LoyaltyCheckFormBase } from "./component"
@@ -16,6 +17,8 @@ interface LoyaltyCheckFormProps {
 /** The connected public points check: the shop comes from `publicLoyaltyPage`, the code is requested and verified through the anonymous GraphQL client. */
 export const LoyaltyCheckForm = (props: LoyaltyCheckFormProps) => {
     const t = useTranslations("loyaltyPublic")
+    const pub = useTranslations("publicPages")
+    const language = useLocaleSwitch()
     const format = useFormatter()
     const page = useQueryPublicLoyaltyPageSwr({ slug: props.slug })
     const check = usePublicLoyalty(props.slug)
@@ -34,13 +37,30 @@ export const LoyaltyCheckForm = (props: LoyaltyCheckFormProps) => {
         <LoyaltyCheckFormBase
             shape={check.step}
             props={{
-                slot: slotOfSwr({
-                    data: page.data === undefined ? undefined : { lead: t("lead", { shop: page.data.shop }) },
-                    error: page.error,
-                    isLoading: page.isLoading,
-                }),
-                slotLabels: { ...slotLabels(t("unavailable")), error: t("unavailable") },
+                slot: isLoyaltyPageClosed(page.error)
+                    ? { isEmpty: true }
+                    : slotOfSwr({
+                          data:
+                              page.data === undefined
+                                  ? undefined
+                                  : { shop: page.data.shop, lead: t("lead", { shop: page.data.shop }) },
+                          error: page.error,
+                          isLoading: page.isLoading,
+                      }),
+                slotLabels: { ...slotLabels(t("unavailable")), error: t("loadFailed") },
                 title: t("title"),
+                shell: {
+                    label: t("title"),
+                    brandFallback: pub("brandFallback"),
+                    foot: pub("foot"),
+                    failedBody: t("loadFailedBody"),
+                },
+                language: {
+                    label: language.label,
+                    locale: language.locale,
+                    isPending: language.isPending,
+                    options: language.options,
+                },
                 phone: {
                     label: t("phoneLabel"),
                     placeholder: t("phonePlaceholder"),
@@ -61,6 +81,7 @@ export const LoyaltyCheckForm = (props: LoyaltyCheckFormProps) => {
                 ...(result === undefined ? {} : { result }),
             }}
             on={{
+                chooseLanguage: language.choose,
                 setPhone: check.setPhone,
                 setCode: (value) => check.setCode(digitsOnly(value, 6)),
                 sendCode: () => void check.sendCode(),

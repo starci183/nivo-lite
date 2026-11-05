@@ -1,21 +1,45 @@
-import { RouteError } from "@/components/blocks/RouteError"
+import { Alert, Page } from "@starci/grammar/common"
 
 /** Copy and retry the failed team route supplies. */
 export interface TeamErrorPageBaseProps {
     readonly props: {
-        readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
         readonly title: string
+        readonly description: string
+        readonly tabsLabel: string
+        readonly membersTab: string
+        readonly permissionsTab: string
+        /** Which of the two team pages failed. */
+        readonly selected: "members" | "permissions"
+        readonly alertTitle: string
         readonly message: string
+        readonly retryLabel: string
     }
     readonly on: { readonly retry: () => void }
 }
 
-/** Draws the team page's trail and heading with one alert and a retry. */
+/** Draws a team page whose data failed: the header and tabs stay, the body is one alert that says what happened, with the retry. */
 export const TeamErrorPageBase = (props: TeamErrorPageBaseProps) => (
-    <RouteError
-        crumbs={props.props.crumbs}
-        title={props.props.title}
-        message={props.props.message}
-        onRetry={props.on.retry}
-    />
+    <Page
+        header={{
+            title: props.props.title,
+            description: props.props.description,
+            tabs: {
+                label: props.props.tabsLabel,
+                selectedKey: props.props.selected,
+                labelVisibility: "always",
+                items: [
+                    { id: "members", label: props.props.membersTab, href: "/team" },
+                    { id: "permissions", label: props.props.permissionsTab, href: "/permissions" },
+                ],
+            },
+        }}
+        measure="product"
+    >
+        <Alert
+            tone="negative"
+            title={props.props.alertTitle}
+            description={props.props.message}
+            action={{ label: props.props.retryLabel, onAction: props.on.retry }}
+        />
+    </Page>
 )

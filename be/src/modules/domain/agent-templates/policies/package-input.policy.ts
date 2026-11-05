@@ -14,6 +14,8 @@ const READERS: Readonly<Record<TemplateParameter["kind"], (text: string) => Para
     toggle: (text) => text === "true",
     text: (text) => text,
     textarea: (text) => text,
+    time: (text) => text,
+    choice: (text) => text,
 }
 
 const parameterOf = (input: ParameterInput): TemplateParameter => ({
@@ -25,6 +27,7 @@ const parameterOf = (input: ParameterInput): TemplateParameter => ({
     max: input.max ?? null,
     required: input.required,
     default: READERS[input.kind](input.defaultValue),
+    ...(input.options === undefined ? {} : { options: input.options }),
 })
 
 const bindingOf = (input: BindingInput): ParameterBinding =>

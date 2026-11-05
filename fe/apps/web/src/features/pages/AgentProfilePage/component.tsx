@@ -13,27 +13,23 @@ export interface AgentProfilePageBaseProps {
 }
 
 /**
- * Draws the profile of an agent: heading with the composer, its picture and name for a manager to edit, owner and rules on the
- * left, who may assign and whom it may tag on the right, recent work below.
+ * Draws the profile of an agent: the heading with the Assign command (a dialog) and its menu (picture and name, in a dialog), the
+ * recent work as the main column, and the owner, who may assign, whom it may tag and its rules as the rail beside it.
  */
 export const AgentProfilePageBase = (props: AgentProfilePageBaseProps) => {
     const { agentId } = props.props
     return (
         <AgentProfileHead agentId={agentId}>
-            <Stack gap="region">
-                <AgentProfileIdentity agentId={agentId} />
-                <Grid kind="cards" columns={2}>
-                    <Stack gap="region">
-                        <AgentProfileOwner agentId={agentId} />
-                        <AgentProfileRules agentId={agentId} />
-                    </Stack>
-                    <Stack gap="region">
-                        <AgentProfileAssignable agentId={agentId} />
-                        <AgentProfileTags agentId={agentId} />
-                    </Stack>
-                </Grid>
+            <AgentProfileIdentity agentId={agentId} />
+            <Grid kind="cards" columns={2}>
                 <AgentProfileRecent agentId={agentId} />
-            </Stack>
+                <Stack gap="region">
+                    <AgentProfileOwner agentId={agentId} />
+                    <AgentProfileAssignable agentId={agentId} />
+                    <AgentProfileTags agentId={agentId} />
+                    <AgentProfileRules agentId={agentId} />
+                </Stack>
+            </Grid>
         </AgentProfileHead>
     )
 }

@@ -12,7 +12,13 @@ import { automationCardOf, automationEmptyText, automationFilterLabel } from "./
 import type { CardContext } from "./cards"
 import { automationDetailOf } from "./detail"
 import type { DetailInput } from "./detail"
-import { automationFiltersFor, automationText, hiddenAutomations } from "./status"
+import {
+    automationFiltersFor,
+    automationText,
+    hiddenAutomations,
+    matchesAutomationFilter,
+    visibleAutomations,
+} from "./status"
 
 /** What the board is drawn from. */
 export interface BoardInput {
@@ -45,6 +51,9 @@ export const automationBoardOf = (input: BoardInput): AutomationsBoardView => {
     const { t, locale, current, open } = input
     const filters = automationFiltersFor(input.cards)
     const hidden = hiddenAutomations(input.scoped)
+    const visible = visibleAutomations(input.scoped)
+    const countOf = (key: string): number =>
+        key === "hidden" ? hidden.length : visible.filter((card) => matchesAutomationFilter(card, key)).length
     const empty = automationEmptyText(input.shown.length, input.filter, input.isNested, t)
     const ctx = { t, locale, selected: input.selected, busyKey: input.busyKey, accounts: input.accounts }
     const detail =
@@ -66,7 +75,11 @@ export const automationBoardOf = (input: BoardInput): AutomationsBoardView => {
     return {
         filters: {
             label: t("filtersLabel"),
-            items: filters.map((key) => ({ id: key, label: automationFilterLabel(key, t, input.moduleNames) })),
+            items: filters.map((key) => ({
+                id: key,
+                label: automationFilterLabel(key, t, input.moduleNames),
+                count: countOf(key),
+            })),
             selectedId: input.filter,
         },
         ...(input.errorText !== undefined && current === null

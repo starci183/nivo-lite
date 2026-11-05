@@ -1,8 +1,11 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
+import { navigation } from "@/modules/i18n"
 import { AGENT_NAME_LIMITS, useAgentIdentity } from "@/hooks/agentProfile"
 import { useAvatarEditorView } from "@/hooks/avatar"
+import { IDENTITY_PARAM } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentProfileIdentityBase } from "./component"
@@ -18,6 +21,9 @@ type AgentProfileIdentityProps = {
 /** The connected identity card: an owner or a manager changes the agent's picture and name; nobody else sees it. */
 export const AgentProfileIdentity = (props: AgentProfileIdentityProps) => {
     const t = useTranslations("agentProfile")
+    const router = navigation.useRouter()
+    const pathname = navigation.usePathname()
+    const isOpen = useSearchParams().get(IDENTITY_PARAM) === "1"
     const member = useMember()
     const slotLabels = useSlotLabels()
     const identity = useAgentIdentity(props.agentId)
@@ -27,6 +33,8 @@ export const AgentProfileIdentity = (props: AgentProfileIdentityProps) => {
     return (
         <AgentProfileIdentityBase
             props={{
+                isOpen,
+                closeLabel: t("assignClose"),
                 title: t("identityTitle"),
                 seed: props.agentId,
                 avatar: editor,
@@ -44,6 +52,7 @@ export const AgentProfileIdentity = (props: AgentProfileIdentityProps) => {
                 slotLabels: slotLabels(t("identityTitle")),
             }}
             on={{
+                close: () => router.replace(pathname),
                 retry: identity.reload,
                 pick: (files) => void avatar.choose(files),
                 remove: () => void avatar.remove(),

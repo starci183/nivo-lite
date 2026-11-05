@@ -6,9 +6,10 @@ import {
     EmptyNotice,
     IconButton,
     Link,
+    Section,
     Stack,
-    SurfaceCard,
     Text,
+    Badge,
     Textarea,
 } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
@@ -61,9 +62,12 @@ const itemOf = (row: AccountingWaitingRow, moreMenuLabel: string, on: Accounting
     id: row.id,
     title: row.title,
     description: row.summary,
-    badges: [{ label: row.status, tone: row.tone }],
     detail: (
         <Stack gap="inline">
+            <Cluster gap="inline">
+                {row.amount === null ? null : <Badge tone="neutral">{row.amount}</Badge>}
+                <Badge tone={row.tone}>{row.status}</Badge>
+            </Cluster>
             {row.canAct ? (
                 <Cluster gap="inline">
                     <Button
@@ -93,11 +97,6 @@ const itemOf = (row: AccountingWaitingRow, moreMenuLabel: string, on: Accounting
             <Text size="sm" tone="muted">
                 {row.reason}
             </Text>
-            {row.amount === null ? null : (
-                <Text size="sm" isStrong>
-                    {row.amount}
-                </Text>
-            )}
             {row.basis !== null && row.canAct ? (
                 <Textarea
                     label={row.basis.label}
@@ -137,16 +136,18 @@ export const AccountingWaitingRows = (props: AccountingWaitingRowsProps) => {
         changeBasis: props.onChangeBasis,
     }
     return (
-        <SurfaceCard
-            kind="list"
-            label={props.view.title}
-            {...(props.view.count === null ? {} : { fact: props.view.count })}
-            isLoading={props.isLoading}
-            items={props.view.rows.map((row) => itemOf(row, props.view.moreMenuLabel, actions))}
-            empty={<EmptyNotice message={props.view.emptyMessage} description={props.view.emptyBody} />}
-            {...(props.view.more === null
-                ? {}
-                : { footer: <Link href={props.view.moreHref}>{`${props.view.more} · ${props.view.moreLabel}`}</Link> })}
-        />
+        <>
+            <Section
+                kind="list"
+                title={props.view.title}
+                headingLevel={3}
+                isLoading={props.isLoading}
+                items={props.view.rows.map((row) => itemOf(row, props.view.moreMenuLabel, actions))}
+                empty={<EmptyNotice message={props.view.emptyMessage} description={props.view.emptyBody} />}
+            />
+            {props.view.more === null ? null : (
+                <Link href={props.view.moreHref}>{`${props.view.more} · ${props.view.moreLabel}`}</Link>
+            )}
+        </>
     )
 }

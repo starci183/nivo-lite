@@ -21,18 +21,18 @@ const voteKey = (status: string): string => `vote${capital(status)}`
 /** The message key that names the status of a chain step. */
 const stepKey = (status: string): string => `step${capital(status)}`
 
-/** The message key that names the rule of an approval. */
-const policyKey = (policy: string): string => {
-    if (policy === "all") return "policyAll"
-    if (policy === "sequential") return "policySequential"
-    return "policyAny"
-}
-
 /** The message key that names why a person was left out of an approval. */
 const excludedKey = (reason: string): string => {
     if (reason === "inactive") return "excludedInactive"
     if (reason === "no_grant") return "excludedNoGrant"
     return "excludedOverLimit"
+}
+
+/** The word on the chip that opens a card: it still needs a decision, or how it ended. */
+const statusLabelOf = (card: NonNullable<ThreadMessageType["approval"]>, t: ThreadWords): string => {
+    if (card.outcome === "pending") return t("cardPending")
+    if (card.outcome === "expired") return t("expiredLine")
+    return t(voteKey(card.outcome))
 }
 
 /** How a settled card reads: who decided it, how and at what time; an empty text while it waits. */
@@ -72,7 +72,7 @@ export const approvalViewOf = (
         messageId: message.id,
         title: t("approvalTitle", { action: card.action }),
         ruleLine: t("ruleLine", { rule: card.rule }),
-        policyLabel: t(policyKey(card.policy)),
+        agentName: message.authorKind === "agent" ? message.authorName : null,
         expiry: expiryOf(card, t, locale),
         approvers: card.approvers.map((approver) => ({
             id: approver.memberId,
@@ -86,6 +86,7 @@ export const approvalViewOf = (
             line: t("excludedLine", { name: left.name, reason: t(excludedKey(left.reason)) }),
         })),
         fallbackLine: card.owner === null ? null : t("fallbackLine", { name: card.owner.name }),
+        statusLabel: statusLabelOf(card, t),
         isPending: card.outcome === "pending",
         decidedLine: decidedLineOf(card, t),
         decidedTone: chainStatusTone(card.outcome),
@@ -116,9 +117,7 @@ export const chainViewOf = (chain: WorkChainType, t: ThreadWords): ChainPanelVie
         steps: chain.steps.map((step) => ({
             id: step.id,
             title: step.action,
-            description: [step.actorName, t(stepKindKey(step.kind)), step.detail]
-                .filter((part) => part !== "")
-                .join(" · "),
+            description: [t(stepKindKey(step.kind)), step.detail].filter((part) => part !== "").join(" · "),
             statusLabel: t(stepKey(step.status)),
             tone: chainStatusTone(step.status),
         })),

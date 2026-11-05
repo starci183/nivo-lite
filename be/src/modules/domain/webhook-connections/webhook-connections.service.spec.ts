@@ -94,7 +94,11 @@ describe("WebhookConnectionsService start", () => {
             name: "Lead feed",
             status: "pending",
             environment: "live",
-            meta: { host: "receiver.test:8443", events: "lead.created,deal.won" },
+            meta: {
+                host: "receiver.test:8443",
+                events: "lead.created,deal.won",
+                url_masked: "https://receiver.test:8443/events",
+            },
             secret: {
                 plain: '{"url":"https://receiver.test:8443/events?source=nivo"}',
                 webhookSecret: stringMatch(GENERATED_SECRET),
@@ -122,7 +126,11 @@ describe("WebhookConnectionsService start", () => {
             name: "Lead feed",
             status: "pending",
             environment: "live",
-            meta: { host: "localhost:5678", events: "lead.created,deal.won" },
+            meta: {
+                host: "localhost:5678",
+                events: "lead.created,deal.won",
+                url_masked: "http://localhost:5678/webhook",
+            },
             secret: {
                 plain: '{"url":"http://localhost:5678/webhook"}',
                 webhookSecret: stringMatch(GENERATED_SECRET),

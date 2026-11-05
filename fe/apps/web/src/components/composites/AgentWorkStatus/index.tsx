@@ -9,8 +9,8 @@ interface AgentWorkStatusProps {
 
 const ALERT_TONE: Readonly<Record<AgentWorkStatusView["tone"], PresentationState>> = {
     neutral: "informative",
-    accent: "informative",
     info: "informative",
+    accent: "informative",
     success: "affirmative",
     warning: "cautionary",
     danger: "negative",

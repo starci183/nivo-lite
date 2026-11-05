@@ -51,6 +51,7 @@ export const useFindingCards = (): FindingCardsView => {
             ],
             meta: meta.length === 0 ? null : meta.join(" · "),
             quotes: quotesOf(finding, placeWordsOf(t)),
+            inUse: finding.inUse,
             actions: cardActionsOf(t, finding, context),
         }
     }

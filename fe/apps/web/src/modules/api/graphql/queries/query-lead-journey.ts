@@ -53,6 +53,7 @@ const query1: Document = gql`
                 id
                 installationId
                 need
+                phone
                 stage
             }
             responsibilities {

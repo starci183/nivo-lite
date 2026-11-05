@@ -25,6 +25,10 @@ export const useAccountSessions = (): {
             const at = new Date(iso)
             return now.getTime() - at.getTime() < JUST_NOW_MS ? t("justNow") : format.relativeTime(at, now)
         }
+        const day = (iso: string | null | undefined): string =>
+            iso === null || iso === undefined
+                ? "-"
+                : format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit" })
         return [...(data?.sessions ?? [])]
             .sort((a, b) => Number(b.isCurrent) - Number(a.isCurrent))
             .map((session): SessionRowView => {
@@ -36,13 +40,14 @@ export const useAccountSessions = (): {
                             ? t("deviceOn", { browser: device.browser, os: device.os })
                             : (device.browser ?? device.os ?? t("deviceUnknown")),
                     facts: [
-                        session.ip === null ? null : `${t("ipLabel")} ${session.ip}`,
-                        t("created", { when: when(session.createdAt) }),
+                        t("created", { when: day(session.createdAt) }),
                         t("lastActive", { when: when(session.lastActiveAt) }),
+                        session.ip === null ? null : `${t("ipLabel")} ${session.ip}`,
                     ]
                         .filter((part) => part !== null)
                         .join(" · "),
                     isCurrent: session.isCurrent,
+                    isPhone: device.os === "iOS" || device.os === "Android",
                 }
             })
     }, [data, format, t])

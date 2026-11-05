@@ -29,7 +29,7 @@ export const AgentCatalogCard = (props: AgentCatalogCardProps) => (
     <SurfaceCard
         kind="tile"
         name={props.name}
-        mark={{ logo: { src: props.mascot, alt: "" } }}
+        mark={{ avatar: { name: props.name, kind: "agent", src: props.mascot } }}
         description={props.description}
         badge={{
             label: props.isEarly ? `${props.stateLabel} · ${props.earlyLabel}` : props.stateLabel,

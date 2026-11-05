@@ -2,13 +2,15 @@
 
 import { useMemo } from "react"
 import { useQueryPublicHiringJobSwr } from "@/hooks/swr"
-import { toPublicJob, type PublicJobView } from "./hiringPublic.shared"
+import { toPublicJob, type PublicJobView, failureFlagsOf } from "./hiringPublic.shared"
 
 /** The view `usePublicHiringJob` returns. */
 export interface PublicHiringJobView {
     view: PublicJobView | undefined
     isLoading: boolean
     isMissing: boolean
+    /** The read failed for a reason other than a missing job (the network, the server). */
+    isFailed: boolean
     reload: () => void
 }
 
@@ -19,7 +21,7 @@ export const usePublicHiringJob = (ws: string, job: string): PublicHiringJobView
     return {
         view,
         isLoading: read.isLoading,
-        isMissing: read.error !== undefined,
+        ...failureFlagsOf(read.error),
         reload: () => {
             void read.mutate()
         },

@@ -37,6 +37,8 @@ export interface BrainEvidence {
     readonly label: string
     readonly quote?: string
     readonly at?: string
+    /** The title of the document the evidence comes from, for document evidence. */
+    readonly sourceTitle?: string
 }
 
 /** One fact of the shared brain. */

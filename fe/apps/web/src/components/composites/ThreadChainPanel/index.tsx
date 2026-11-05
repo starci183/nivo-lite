@@ -1,4 +1,4 @@
-import { Alert, Badge, EmptyNotice, Timeline, Cluster, Stack } from "@starci/grammar/common"
+import { Alert, EmptyNotice, Stack, Text, Timeline } from "@starci/grammar/common"
 import type { PresentationState } from "@starci/grammar/common"
 import type { ChainPanelView, StatusTone, ThreadChainLabels } from "@/modules/types"
 /** What the panel draws. */
@@ -28,22 +28,29 @@ const Steps = (props: Pick<ThreadChainPanelProps, "view" | "labels" | "isLoading
             items={props.view.steps.map((step) => ({
                 id: step.id,
                 title: step.title,
-                description: step.description,
-                timeLabel: step.statusLabel,
+                description: [step.description, step.statusLabel].filter((part) => part !== "").join(" · "),
                 state: STATE_OF_TONE[step.tone],
             }))}
         />
     )
 }
 
-/** The summary line and where the chain stands; nothing while the chain is empty. */
-const Summary = (props: Pick<ThreadChainPanelProps, "view">) => {
+/** The summary line and where the chain stands (a band in the state's tone); nothing while the chain is empty. */
+const Summary = (props: Pick<ThreadChainPanelProps, "view" | "isLoading">) => {
     if (props.view.summaryLine === "") return null
     return (
-        <Cluster gap="inline">
-            <Badge tone="neutral">{props.view.summaryLine}</Badge>
-            {props.view.stateLine === "" ? null : <Badge tone={props.view.stateTone}>{props.view.stateLine}</Badge>}
-        </Cluster>
+        <Stack gap="row">
+            <Text size="sm" tone="muted" isLoading={props.isLoading}>
+                {props.view.summaryLine}
+            </Text>
+            {props.view.stateLine === "" ? null : (
+                <Alert
+                    title={props.view.stateLine}
+                    tone={STATE_OF_TONE[props.view.stateTone]}
+                    isLoading={props.isLoading}
+                />
+            )}
+        </Stack>
     )
 }
 
@@ -56,7 +63,7 @@ const Completion = (props: Pick<ThreadChainPanelProps, "view" | "labels">) => {
 /** The Execution chain: the summary line, where the chain stands, every step in order, and the completion card. */
 export const ThreadChainPanel = (props: ThreadChainPanelProps) => (
     <Stack gap="section">
-        <Summary view={props.view} />
+        <Summary view={props.view} isLoading={props.isLoading} />
         <Steps view={props.view} labels={props.labels} isLoading={props.isLoading} />
         <Completion view={props.view} labels={props.labels} />
     </Stack>

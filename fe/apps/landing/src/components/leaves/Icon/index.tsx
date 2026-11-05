@@ -2,7 +2,7 @@
 
 import * as Outline from "@heroicons/react/24/outline"
 import { Icon as GrammarIcon, IconTile } from "@starci/grammar/common"
-import type { IconUsage } from "@starci/grammar/common"
+import type { IconSource, IconUsage } from "@starci/grammar/common"
 
 import type { ForwardRefExoticComponent, ReactElement, RefAttributes, SVGProps } from "react"
 
@@ -20,6 +20,12 @@ type GlyphsShape = {
         } & RefAttributes<SVGSVGElement>
     >
     readonly complete: ForwardRefExoticComponent<
+        Omit<SVGProps<SVGSVGElement>, "ref"> & {
+            title?: string
+            titleId?: string
+        } & RefAttributes<SVGSVGElement>
+    >
+    readonly menu: ForwardRefExoticComponent<
         Omit<SVGProps<SVGSVGElement>, "ref"> & {
             title?: string
             titleId?: string
@@ -80,6 +86,7 @@ const GLYPHS: GlyphsShape = {
     account: Outline.UserCircleIcon,
     agentos: Outline.CpuChipIcon,
     complete: Outline.CheckCircleIcon,
+    menu: Outline.Bars3Icon,
     next: Outline.ArrowRightIcon,
     notification: Outline.BellIcon,
     pending: Outline.EllipsisHorizontalCircleIcon,
@@ -95,6 +102,9 @@ export type IconGlyphName = keyof typeof GLYPHS
 
 /** The glyph source of a meaning, for the grammar parts that take a source (the icon tile). */
 const iconGlyphOf = (name: IconGlyphName) => GLYPHS[name]
+
+/** The glyph source of a meaning, for a control that takes one (an icon-only button). */
+export const landingIconSource = (name: IconGlyphName): IconSource => iconGlyphOf(name)
 
 /** What the glyph draws: a meaning, never a component, so a Server Component caller crosses the boundary with a plain name. */
 type IconGlyphProps = {

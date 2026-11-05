@@ -16,6 +16,8 @@ import { AgentConnectionAccessBase, type AgentConnectionAccessRow } from "./comp
 
 const NONE = "none"
 const LEVELS = ["read", "ask", "auto"] as const
+/** The level a connection gets when it is attached; the owner then moves it. */
+const ATTACH_LEVEL = "ask"
 const PURPOSES: ReadonlySet<string> = new Set(["inbound_chat", "outbound_chat", "bank_feed", "lead_source"])
 const STATUS_TONE = { connected: "success", error: "danger", pending: "warning", disconnected: "neutral" } as const
 const PLACEHOLDER: ReadonlyArray<AgentConnectionAccessRow> = []
@@ -70,7 +72,13 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
                 manageLabel: t("grantManage"),
                 manageHref: AUTOMATION_ROUTES.connections,
                 ownerOnlyText: t("grantOwnerOnly"),
-                levels: [NONE, ...LEVELS].map((level) => ({ id: level, label: t(`grant_${level}`) })),
+                levels: [
+                    ...LEVELS.map((level) => ({ id: level, label: t(`grant_${level}`) })),
+                    { id: NONE, label: t("grantRemove") },
+                ],
+                levelLabel: t("grantLevelLabel"),
+                attachLabel: t("grantAttach"),
+                noneAttached: t("grantNoneAttached"),
                 canEdit: canGrant,
                 isDisabled: !canGrant || isSaving,
                 notice: isUnbound ? t("shiftsBindChannel") : "",
@@ -78,8 +86,12 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
             on={{
                 pick: (connectionId, level) => {
                     const connection = connections.find((candidate) => candidate.id === connectionId)
-                    if (connection === undefined || level === null || level === levelOf(connection)) return
+                    if (connection === undefined || level === levelOf(connection)) return
                     void change(connection, level)
+                },
+                attach: (connectionId) => {
+                    const connection = connections.find((candidate) => candidate.id === connectionId)
+                    if (connection !== undefined) void change(connection, ATTACH_LEVEL)
                 },
             }}
         />

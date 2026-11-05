@@ -1,72 +1,110 @@
-import { Badge, Button, Cluster, Heading, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { useState } from "react"
+import type { ReactNode } from "react"
+import { Badge, Cluster, Inset, ListBox, Stack, Text } from "@starci/grammar/common"
+import type { ListBoxItem } from "@starci/grammar/common"
+import { DecisionButtons } from "@/components/leaves/DecisionButtons"
 import { ApprovalCountdown } from "@/components/leaves/ApprovalCountdown"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { ThreadApprovalCardView, ThreadApprovalLabels } from "@/modules/types"
 
 /** What the approval card draws and asks. */
-type ThreadApprovalCardProps = {
+interface ThreadApprovalCardProps {
     readonly card: ThreadApprovalCardView
     readonly labels: ThreadApprovalLabels
+    /** What the message says, drawn under the card's label: the card opens the bubble, the words follow it. */
+    readonly words: ReactNode
     /** Whether this card's decision is being sent. */
     readonly isBusy: boolean
     readonly onApprove: (messageId: string) => void
     readonly onReject: (messageId: string) => void
 }
 
-/** The two decision buttons while the card waits, or how it was decided once it did. */
-const Decision = (props: ThreadApprovalCardProps) => {
+/** The two decision buttons while the card waits (the refusal first, the approval last), or how it was decided once it was. */
+const Decision = (props: Omit<ThreadApprovalCardProps, "words">) => {
     const { card } = props
-    if (!card.isPending) return <Badge tone={card.decidedTone}>{card.decidedLine}</Badge>
+    // The button pressed last is the one in flight: the spinner lands on it, not on the other.
+    const [pressed, setPressed] = useState<"approve" | "reject">("approve")
+    if (!card.isPending) return <Text>{card.decidedLine}</Text>
     return (
-        <Cluster gap="inline">
-            <Button intent="commit" size="sm" isPending={props.isBusy} onPress={() => props.onApprove(card.messageId)}>
-                {props.labels.approve}
-            </Button>
-            <Button
-                intent="alternative"
-                size="sm"
-                isDisabled={props.isBusy}
-                onPress={() => props.onReject(card.messageId)}
-            >
-                {props.labels.reject}
-            </Button>
-        </Cluster>
+        <DecisionButtons
+            rejectLook="outlined"
+            pending={props.isBusy ? pressed : null}
+            reject={{
+                label: props.labels.reject,
+                onPress: () => {
+                    setPressed("reject")
+                    props.onReject(card.messageId)
+                },
+            }}
+            approve={{
+                label: props.labels.approve,
+                onPress: () => {
+                    setPressed("approve")
+                    props.onApprove(card.messageId)
+                },
+            }}
+        />
     )
 }
 
-/** The approval card inside a thread message: the rule, the policy, the clock, who is tagged and who is not, and the decision. */
+/** One person who may decide: the name, the role and where their vote stands. */
+const approverItemOf = (person: ThreadApprovalCardView["approvers"][number]): ListBoxItem => ({
+    id: person.id,
+    label: person.name,
+    description: person.roleLabel,
+    leading: <PersonAvatar name={person.name} size="sm" />,
+    trailing: <Badge tone={person.tone}>{person.statusLabel}</Badge>,
+})
+
+/**
+ * The approval of a message, inside its bubble: where it stands and who asks, what is asked, the words of the message, the rule and
+ * the clock, the people who may decide and those left out, and the decision.
+ */
 export const ThreadApprovalCard = (props: ThreadApprovalCardProps) => {
     const { card } = props
     return (
-        <SurfaceCard label={props.labels.cardLabel} {...(card.isPending ? { state: "pending" as const } : {})}>
-            <Stack gap="row">
-                <Heading level={4}>{card.title}</Heading>
-                <Text size="sm" tone="muted">
+        <Stack gap="row">
+            <Cluster gap="inline">
+                <Badge tone={card.decidedTone} isDot>
+                    {card.statusLabel}
+                </Badge>
+                {card.agentName === null ? null : <Badge tone="neutral">{card.agentName}</Badge>}
+            </Cluster>
+            <Text size="xs" tone="muted" isStrong>
+                {card.title}
+            </Text>
+            {props.words}
+            <Cluster gap="inline" justify="between">
+                <Text size="xs" tone="muted">
                     {card.ruleLine}
                 </Text>
-                <Cluster gap="inline" justify="between">
-                    <Text size="sm">{card.policyLabel}</Text>
-                    <ApprovalCountdown expiry={card.expiry} />
-                </Cluster>
-                <Stack gap="inline">
-                    {card.approvers.map((person) => (
-                        <Cluster key={person.id} gap="row" justify="between" wrap={false}>
-                            <Text size="sm">{`${person.name} · ${person.roleLabel}`}</Text>
-                            <Badge tone={person.tone}>{person.statusLabel}</Badge>
-                        </Cluster>
-                    ))}
-                    {card.excluded.map((left) => (
-                        <Text key={left.id} size="xs" tone="muted">
-                            {left.line}
-                        </Text>
-                    ))}
-                </Stack>
-                <Decision {...props} />
-                {card.fallbackLine === null ? null : (
-                    <Text size="xs" tone="muted">
-                        {card.fallbackLine}
-                    </Text>
-                )}
-            </Stack>
-        </SurfaceCard>
+                <ApprovalCountdown expiry={card.expiry} />
+            </Cluster>
+            <Inset>
+                <ListBox
+                    label={props.labels.cardLabel}
+                    size="sm"
+                    selectionMode="none"
+                    items={card.approvers.map(approverItemOf)}
+                />
+            </Inset>
+            {card.excluded.map((left) => (
+                <Text key={left.id} size="xs" tone="muted">
+                    {left.line}
+                </Text>
+            ))}
+            {card.fallbackLine === null ? null : (
+                <Text size="xs" tone="muted">
+                    {card.fallbackLine}
+                </Text>
+            )}
+            <Decision
+                card={card}
+                labels={props.labels}
+                isBusy={props.isBusy}
+                onApprove={props.onApprove}
+                onReject={props.onReject}
+            />
+        </Stack>
     )
 }

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react"
-import { type AccountingWorkbenchDataView, type AccountingWorkbenchActions, ACCOUNTING_TABS } from "@/modules/types"
+import type { AccountingWorkbenchDataView, AccountingWorkbenchActions } from "@/modules/types"
 import { AccountingRecordSection } from "@/components/frames/AccountingRecordSection"
 import { AccountingBlock } from "@/components/frames/AccountingBlock"
 import { AccountingRecordList } from "@/components/leaves/AccountingRecordList"
@@ -7,8 +7,6 @@ import { AccountingAdjustment } from "@/components/branches/AccountingAdjustment
 import { AccountingEvidence, AccountingEvidenceForm } from "@/components/composites/AccountingEvidence"
 import { AccountingLedger, AccountingLedgerLineage } from "@/components/composites/AccountingLedger"
 import { Button, Text } from "@starci/grammar/common"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { AccountingOverview } from "@/components/composites/AccountingOverview"
 import { AccountingQuestions } from "@/components/composites/AccountingQuestions"
@@ -16,12 +14,8 @@ import { AccountingUpcomingRows } from "@/components/composites/AccountingUpcomi
 import { AccountingWaitingRows } from "@/components/composites/AccountingWaitingRows"
 import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
 
-/** The real Accounting areas and the explanation arrangement. */
-export const ACCOUNTING_WORKBENCH_SHAPES: readonly [...typeof ACCOUNTING_TABS, "explanation"] = [
-    ...ACCOUNTING_TABS,
-    "explanation",
-]
-type AccountingWorkbenchShape = (typeof ACCOUNTING_WORKBENCH_SHAPES)[number]
+/** The four Accounting areas, each a tab of the one workbench. */
+type AccountingWorkbenchShape = "overview" | "evidence" | "questions" | "ledger"
 
 /** Resolved read models and atomic commands; no render tree crosses the block boundary. */
 export interface AccountingWorkbenchBaseProps {
@@ -30,7 +24,10 @@ export interface AccountingWorkbenchBaseProps {
     readonly on: AccountingWorkbenchActions
 }
 
-const EvidencePanel = (props: Omit<AccountingWorkbenchBaseProps, "shape">) => (
+/** What a panel reads: the view and the commands of the desk. */
+type PanelProps = Pick<AccountingWorkbenchBaseProps, "props" | "on">
+
+const EvidencePanel = (props: PanelProps) => (
     <SlotView
         {...props.props.evidence}
         onRetry={props.on.retry}
@@ -148,22 +145,22 @@ const ModulePanel = (props: AccountingWorkbenchBaseProps) => {
                     )}
                 />
             )
-        case "explanation":
-            return null
     }
 }
 
-const Overview = (props: AccountingWorkbenchBaseProps) => {
+/** The Accounting workbench: the tabs and the chosen area beside the waiting questions, or beside the explanation of one. */
+export const AccountingWorkbenchBase = (props: AccountingWorkbenchBaseProps): ReactElement => {
     const view = props.props
     return (
         <WorkbenchOverview
             view={view}
             ribbon={view.ribbon}
             on={{ ...props.on, retryRibbon: props.on.retry }}
+            aside={{ view: view.aside, on: props.on.aside }}
             waiting={
                 <SlotView
                     {...view.waiting}
-                    empty="collapse"
+                    emptyDescription={view.waiting.placeholder.emptyBody}
                     onRetry={props.on.retry}
                     render={(waiting, isLoading) => (
                         <AccountingWaitingRows
@@ -180,58 +177,4 @@ const Overview = (props: AccountingWorkbenchBaseProps) => {
             <ModulePanel {...props} />
         </WorkbenchOverview>
     )
-}
-
-const Explanation = (props: Omit<AccountingWorkbenchBaseProps, "shape">) => {
-    const view = props.props
-    const why = view.why
-    return (
-        <WorkbenchWhyFrame
-            label={why.paneLabel}
-            listLabel={why.listLabel}
-            openLabel={why.openLabel}
-            closeLabel={why.closeLabel}
-            view={why.view}
-            labels={why.labels}
-            onClose={props.on.closeWhy}
-        >
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(waiting, isLoading) => (
-                    <WorkbenchPaneRows
-                        label={view.regions.waiting.label}
-                        rows={waiting.rows}
-                        openLabel={waiting.openLabel}
-                        isLoading={isLoading}
-                    />
-                )}
-            />
-            <SlotView
-                {...view.regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <WorkbenchPaneRows
-                        label={view.regions.done.label}
-                        rows={done.rows}
-                        openLabel={null}
-                        isLoading={isLoading}
-                    />
-                )}
-            />
-        </WorkbenchWhyFrame>
-    )
-}
-
-/** Draws each Accounting area or its explanation from the same module-owned world. */
-export const AccountingWorkbenchBase = (props: AccountingWorkbenchBaseProps): ReactElement => {
-    switch (props.shape) {
-        case "overview":
-        case "evidence":
-        case "questions":
-        case "ledger":
-            return <Overview {...props} />
-        case "explanation":
-            return <Explanation props={props.props} on={props.on} />
-    }
 }

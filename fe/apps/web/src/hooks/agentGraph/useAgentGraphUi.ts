@@ -51,7 +51,7 @@ export interface AgentGraphUiView {
 /** The choices a person makes on the graph panes that are not data: what is selected, which tab shows, what is edited or traced. */
 export const useAgentGraphUi = (initialRunId: string): AgentGraphUiView => {
     const [selectedKey, setSelectedKey] = useState("")
-    const [tabs, setTabs] = useState<Tabs>({ sideTab: "chat", phoneView: "branches" })
+    const [tabs, setTabs] = useState<Tabs>({ sideTab: "chat", phoneView: "checklist" })
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const [editing, setEditing] = useState<Editing>({ form: null, start: null })
     const [adder, setAdder] = useState({ action: "", fact: "" })
@@ -95,7 +95,7 @@ export const useAgentGraphUi = (initialRunId: string): AgentGraphUiView => {
         closeDrawer: () => setIsDrawerOpen(false),
         sideTab: (value: string) => showSideTab(SIDE_TABS.find((tab) => tab === value) ?? "chat"),
         phoneView: (value: string) => {
-            const view = PHONE_VIEWS.find((entry) => entry === value) ?? "branches"
+            const view = PHONE_VIEWS.find((entry) => entry === value) ?? "checklist"
             const isSide = view === "chat" || view === "proposals" || view === "versions"
             setTabs((current) => ({ phoneView: view, sideTab: isSide ? view : current.sideTab }))
         },

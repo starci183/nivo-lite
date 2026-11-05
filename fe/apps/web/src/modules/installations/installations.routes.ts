@@ -2,7 +2,7 @@ import type { ModuleKey } from "@/modules/catalog"
 import { AGENTS_ROUTE } from "@/modules/routes"
 
 /** A tab of one agent instance; `performance` (the weekly report) belongs to the AI Marketing (content) agent only. */
-export type AgentTab = "setup" | "workbench" | "work" | "performance" | "settings"
+export type AgentTab = "setup" | "workbench" | "inbox" | "work" | "performance" | "settings"
 
 /**
  * The route of an agent instance: /agents/<type>/<installationId>[/workbench|/work|/performance|/settings][?query]. Without an installation id it is the
@@ -36,3 +36,12 @@ export const workbenchPath = (module: ModuleKey, opts: WorkbenchHrefOptions = {}
     if (opts.focus) query.set("focus", opts.focus)
     return agentHref(module, opts.installationId ?? null, "workbench", query.toString())
 }
+
+/** The query word that carries a short notice across a redirect to an agent tab: staff sent from Setup to the workbench. */
+export const OWNER_SETUP_NOTICE = "owner-setup"
+
+/** The query parameter that opens the picture-and-name dialog of an agent's profile while it is `1`. */
+export const IDENTITY_PARAM = "identity"
+
+/** The query a menu link carries to open the picture-and-name dialog; closing the dialog drops it. */
+export const IDENTITY_QUERY: string = `${IDENTITY_PARAM}=1`

@@ -67,7 +67,11 @@ export interface AgentCatalogBaseProps {
         readonly clearLabel: string
         readonly query: string
         readonly categoryLabel: string
-        readonly categoryOptions: ReadonlyArray<{ readonly value: string; readonly label: string }>
+        readonly categoryOptions: ReadonlyArray<{
+            readonly value: string
+            readonly label: string
+            readonly count: number
+        }>
         readonly category: string
         readonly emptyTitle: string
         readonly emptyHint: string
@@ -138,7 +142,11 @@ const Roles = (props: CatalogSectionProps) => (
         <Tabs
             kind="filter"
             label={props.props.categoryLabel}
-            items={props.props.categoryOptions.map((option) => ({ id: option.value, label: option.label }))}
+            items={props.props.categoryOptions.map((option) => ({
+                id: option.value,
+                label: option.label,
+                count: option.count,
+            }))}
             selectedKey={props.props.category}
             onSelect={props.on.category}
         />

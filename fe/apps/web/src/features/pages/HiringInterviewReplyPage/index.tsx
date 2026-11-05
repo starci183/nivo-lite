@@ -17,10 +17,5 @@ export const hiringInterviewReplyMetadata = async (): Promise<Metadata> => {
 /** The candidate's own link: choose one of the proposed interview times. The token in the link is the secret. */
 export const HiringInterviewReplyPage = async (props: HiringInterviewReplyPageProps): Promise<ReactElement> => {
     const params = await props.params
-    const t = await getTranslations("hiring")
-    return (
-        <HiringInterviewReplyPageBase
-            props={{ token: params.token, label: t("replyInterviewTitle"), foot: t("replyFoot") }}
-        />
-    )
+    return <HiringInterviewReplyPageBase props={{ token: params.token }} />
 }

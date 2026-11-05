@@ -38,6 +38,7 @@ export const toSourceSummary = (row: SourceListEntity): SourceSummary => ({
     error: row.error,
     chunkCount: row.chunkCount,
     sizeBytes: row.sizeBytes,
+    origin: row.origin,
     progress: row.progress,
     stage: row.stage,
     stageDone: row.stageDone,

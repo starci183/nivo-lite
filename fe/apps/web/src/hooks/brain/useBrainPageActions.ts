@@ -24,6 +24,7 @@ export interface BrainPageActionsView {
             readonly value: string
         }
         readonly review: {
+            readonly menuLabel: string
             readonly label: string
             readonly isRunning: boolean
             readonly isPending: boolean
@@ -53,7 +54,7 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
     const running = useRef(new Set<string>())
     const [pending, setPending] = useState<ReadonlySet<string>>(() => new Set())
     const mounted = useFeatureLifetime(true, "brain-page-review")
-    const feedbackLifetime = useFeatureLifetime(tab === "dossiers", activeWorkspaceId ?? "")
+    const feedbackLifetime = useFeatureLifetime(true, activeWorkspaceId ?? "")
     const part = brainPartOf(tab)
     const props: BrainPageHeaderView["actions"] = {
         part: {
@@ -61,15 +62,15 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
             options: BRAIN_PARTS.map((one) => ({ id: one, label: t(`part_${one}`) })),
             value: part,
         },
-        review:
-            member.canWrite && tab === "dossiers"
-                ? {
-                      label: review("reviewAll"),
-                      isRunning: summary.isRunning,
-                      isPending: commands.isPending || pending.has(activeWorkspaceId ?? ""),
-                      runningLabel: review("reviewRunning"),
-                  }
-                : null,
+        review: member.canWrite
+            ? {
+                  menuLabel: t("optionsLabel"),
+                  label: review("reviewAll"),
+                  isRunning: summary.isRunning,
+                  isPending: commands.isPending || pending.has(activeWorkspaceId ?? ""),
+                  runningLabel: review("reviewRunning"),
+              }
+            : null,
         add:
             member.canWrite && part === "internal" && tab !== "sources"
                 ? { label: t("addDocuments"), href: brainTabHref("sources") }
@@ -81,7 +82,6 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
             reviewAll: () => {
                 if (
                     !member.canWrite ||
-                    tab !== "dossiers" ||
                     activeWorkspaceId === undefined ||
                     summary.isRunning ||
                     running.current.has(activeWorkspaceId)

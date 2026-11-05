@@ -1,6 +1,5 @@
-import { Form, Input, SurfaceCard, Stack } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Form, Input, Stack, SurfaceCard } from "@starci/grammar/common"
 import { AvatarEditor } from "@/components/composites/AvatarEditor"
-import { FormActions } from "@/components/composites/FormActions"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -15,7 +14,7 @@ export interface AccountProfileBaseProps {
         readonly picture: string | null
         readonly avatar: {
             readonly label: string
-            readonly prompt: string
+            readonly pickLabel: string
             readonly hint: string
             readonly accept: string
             readonly error?: string | undefined
@@ -44,7 +43,60 @@ export interface AccountProfileBaseProps {
     }
 }
 
-/** Draws the profile card (the picture with its live preview, then the display name) without reading copy or data. */
+/** What a band of the card draws: the card's props and whether the account read is still waiting. */
+type BandProps = AccountProfileBaseProps & { readonly isSkeleton: boolean }
+
+/** The first band: the picture with its preview while the read waits as geometry. */
+const PictureBand = (props: BandProps) => (
+    <AvatarEditor
+        preview={
+            <PersonAvatar
+                name={props.isSkeleton ? "" : props.props.name}
+                seed={props.isSkeleton ? undefined : props.props.seed}
+                src={props.isSkeleton ? null : props.props.picture}
+                size="lg"
+                isLoading={props.isSkeleton}
+            />
+        }
+        {...props.props.avatar}
+        isLoading={props.isSkeleton}
+        onPick={props.on.pick}
+        onRemove={props.on.remove}
+    />
+)
+
+/** The second band: the display name, the failure or done note and the one save command at the end. */
+const NameBand = (props: BandProps) => (
+    <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
+        <Stack gap="section">
+            <Input
+                id="account-name"
+                name="name"
+                label={props.props.nameLabel}
+                description={props.props.nameHint}
+                isRequired
+                isDisabled={props.props.isPending}
+                isLoading={props.isSkeleton}
+                value={props.isSkeleton ? "" : props.props.name}
+                onValueChange={props.on.setName}
+            />
+            {props.props.error === undefined ? null : (
+                <Alert tone="negative" title={props.props.failTitle} description={props.props.error} />
+            )}
+            {props.props.done === undefined ? null : <Alert tone="affirmative" title={props.props.done} />}
+            <Cluster gap="row" justify="end">
+                <Button type="submit" intent="commit" isPending={props.props.isPending} isLoading={props.isSkeleton}>
+                    {props.props.saveLabel}
+                </Button>
+            </Cluster>
+        </Stack>
+    </Form>
+)
+
+/**
+ * Draws the profile as one card of two bands under its label: the picture with its live preview, then the display name with
+ * the one save command at the end. Every part of the card is geometry together while the account loads.
+ */
 export const AccountProfileBase = (props: AccountProfileBaseProps) => (
     <SlotView
         slot={props.props.slot}
@@ -52,47 +104,16 @@ export const AccountProfileBase = (props: AccountProfileBaseProps) => (
         labels={props.props.labels}
         onRetry={props.on.retry}
         render={(_, isSkeleton) => (
-            <SurfaceCard label={props.props.title} headingLevel={2} isLoading={isSkeleton}>
-                <Stack gap="region">
-                    <AvatarEditor
-                        id="account-avatar"
-                        preview={
-                            <PersonAvatar
-                                name={props.props.name}
-                                seed={props.props.seed}
-                                src={props.props.picture}
-                                size="lg"
-                            />
-                        }
-                        {...props.props.avatar}
-                        onPick={props.on.pick}
-                        onRemove={props.on.remove}
-                    />
-                    <Form label={props.props.title} onSubmit={props.on.submit} isPending={props.props.isPending}>
-                        <Stack gap="section" measure="form">
-                            <Input
-                                id="account-name"
-                                name="name"
-                                label={props.props.nameLabel}
-                                description={props.props.nameHint}
-                                isRequired
-                                isDisabled={props.props.isPending}
-                                isLoading={isSkeleton}
-                                value={props.props.name}
-                                onValueChange={props.on.setName}
-                            />
-                            <FormActions
-                                failTitle={props.props.failTitle}
-                                error={props.props.error}
-                                done={props.props.done}
-                                submitLabel={props.props.saveLabel}
-                                isPending={props.props.isPending}
-                                isLoading={isSkeleton}
-                            />
-                        </Stack>
-                    </Form>
-                </Stack>
-            </SurfaceCard>
+            <SurfaceCard
+                kind="bands"
+                label={props.props.title}
+                headingLevel={2}
+                isLoading={isSkeleton}
+                bands={[
+                    { kind: "body", children: <PictureBand {...props} isSkeleton={isSkeleton} /> },
+                    { kind: "body", children: <NameBand {...props} isSkeleton={isSkeleton} /> },
+                ]}
+            />
         )}
     />
 )

@@ -17,6 +17,7 @@ export const parameterViewOf = (parameter: TemplateParameter): ParameterView => 
     max: parameter.max,
     required: parameter.required,
     defaultValue: String(parameter.default),
+    options: parameter.options ?? null,
 })
 
 const suggestionOf = (binding: ParameterBinding): SuggestionView => ({

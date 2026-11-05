@@ -1,26 +1,35 @@
 import { useTranslations } from "next-intl"
-import { APP_ROUTES } from "@/modules/routes"
+import { accountHeadingOf } from "@/modules/page-header"
 import { AccountErrorPageBase } from "./component"
 
-/** What the failed account route gives the page. */
+/** What the failed personal route gives the page. */
 type AccountErrorPageProps = {
+    /** Which personal page failed. */
+    readonly selected: "profile" | "account"
     /** Retries the route (Next's error boundary `reset`). */
     readonly onRetry: () => void
 }
 
-/** The account page keeps its trail and heading when its data fails, with one Alert and a retry. */
+/** A personal page keeps its header and tabs when its data fails, with one alert and a retry in place. */
 export const AccountErrorPage = (props: AccountErrorPageProps) => {
     const t = useTranslations("account")
-    const title = t("title")
+    const shell = useTranslations("shell")
+    const isProfile = props.selected === "profile"
     return (
         <AccountErrorPageBase
             props={{
-                crumbs: [
-                    { id: "home", label: t("crumbHome"), href: APP_ROUTES.dashboard },
-                    { id: "account", label: title },
-                ],
-                title,
+                header: accountHeadingOf({
+                    title: isProfile ? t("profilePageTitle") : t("title"),
+                    description: isProfile ? t("profilePageDescription") : t("description"),
+                    tabsLabel: t("tabsLabel"),
+                    profileLabel: t("tabProfile"),
+                    accountLabel: t("tabAccount"),
+                    selected: props.selected,
+                }),
+                measure: isProfile ? "reading" : "product",
+                alertTitle: shell("errorTitle"),
                 message: t("loadFailed"),
+                retryLabel: shell("retry"),
             }}
             on={{ retry: props.onRetry }}
         />

@@ -1,6 +1,5 @@
 import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import { ZaloConnectionLoadingPageBase } from "./component"
 
 const STEPS = ["stepApp", "stepPaste", "stepAuthorize", "stepCheck", "stepAgents"] as const
@@ -11,11 +10,6 @@ export const ZaloConnectionLoadingPage = async (): Promise<ReactElement> => {
     return (
         <ZaloConnectionLoadingPageBase
             props={{
-                crumbLabel: t("crumbLabel"),
-                crumbs: [
-                    { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
-                    { id: "zalo", label: t("crumbZalo") },
-                ],
                 title: t("title"),
                 mainLabel: t("mainLabel"),
                 railLabel: t("eventsTitle"),

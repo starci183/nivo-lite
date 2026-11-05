@@ -1,13 +1,18 @@
-import { Button, EmptyNotice, Link, Page, Section, Stack, SurfaceCard } from "@starci/grammar/common"
+import { Button, EmptyNotice, Icon, Page, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { APP_ROUTES } from "@/modules/routes"
 
 /** One outgoing webhook as the list shows it. */
 export interface DevelopersWebhookRow {
     readonly id: string
     readonly name: string
+    /** The masked address and the chosen events, in one line. */
+    readonly description: string
+    /** The wizard was started and not finished: the row offers to continue it. */
+    readonly isIncomplete: boolean
     readonly statusLabel: string
     readonly tone: "success" | "danger" | "warning" | "neutral"
 }
@@ -25,6 +30,7 @@ export interface DevelopersWebhooksView {
     readonly addLabel: string
     readonly connectLabel: string
     readonly editLabel: string
+    readonly continueLabel: string
 }
 
 /** What the webhook list draws and the commands it offers (both open the wizard drawer through the URL). */
@@ -38,10 +44,28 @@ interface DevelopersWebhooksProps {
     readonly onEdit: (connectionId: string) => void
 }
 
+/** What the connected rows draw: the list's props without the add command, which the section head carries. */
+type ConnectedWebhooksProps = Omit<DevelopersWebhooksProps, "onAdd">
+
 /** The outgoing webhooks: the connected ones as rows of one list, or the provider offered under "Not connected". */
 const DevelopersWebhooks = (props: DevelopersWebhooksProps) => (
     <div data-guide="connections.webhook">
-        {props.rows.length > 0 ? <ConnectedWebhooks {...props} /> : <AvailableWebhook {...props} />}
+        {props.rows.length > 0 ? (
+            <ConnectedWebhooks
+                rows={props.rows}
+                canManage={props.canManage}
+                view={props.view}
+                isLoading={props.isLoading}
+                onEdit={props.onEdit}
+            />
+        ) : (
+            <AvailableWebhook
+                canManage={props.canManage}
+                view={props.view}
+                isLoading={props.isLoading}
+                onAdd={props.onAdd}
+            />
+        )}
     </div>
 )
 
@@ -59,9 +83,9 @@ export interface DevelopersPanelBaseProps {
         readonly webhooksView: DevelopersWebhooksView
         readonly crumbLabel: string
         readonly crumbHome: string
+        readonly crumbAutomations: string
         readonly title: string
         readonly description: string
-        readonly backLabel: string
         readonly eventsTitle: string
         readonly eventsBody: string
         /** The words of the status notice; `forbidden` is what staff read. */
@@ -86,6 +110,7 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
                 label: props.props.crumbLabel,
                 items: [
                     { id: "home", label: props.props.crumbHome, href: APP_ROUTES.dashboard },
+                    { id: "automations", label: props.props.crumbAutomations, href: APP_ROUTES.automations },
                     { id: "developers", label: props.props.title },
                 ],
             },
@@ -99,11 +124,25 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
                 placeholder={true}
                 labels={props.props.slotLabels}
                 render={() => (
-                    <Stack gap="row">
-                        <div>
-                            <Link href={APP_ROUTES.automations}>{props.props.backLabel}</Link>
-                        </div>
-                        <Section title={props.props.eventsTitle} description={props.props.eventsBody}>
+                    <Section
+                        title={props.props.eventsTitle}
+                        {...(props.props.canManageWebhooks && props.props.webhooks.length > 0
+                            ? {
+                                  action: (
+                                      <Button
+                                          intent="neutral"
+                                          startContent={
+                                              <Icon source={nivoIconSource("add", "leading")} usage="leading" />
+                                          }
+                                          onPress={props.on.add}
+                                      >
+                                          {props.props.webhooksView.addLabel}
+                                      </Button>
+                                  ),
+                              }
+                            : {})}
+                    >
+                        <Stack gap="row">
                             <SlotView
                                 slot={props.props.webhooksRead}
                                 placeholder={true}
@@ -121,8 +160,11 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
                                     />
                                 )}
                             />
-                        </Section>
-                    </Stack>
+                            <Text size="xs" tone="muted">
+                                {props.props.eventsBody}
+                            </Text>
+                        </Stack>
+                    </Section>
                 )}
             />
             {props.children}
@@ -131,37 +173,38 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
 )
 
 /** Draws the connected outgoing webhook rows and their available actions. */
-const ConnectedWebhooks = (props: DevelopersWebhooksProps) => (
+const ConnectedWebhooks = (props: ConnectedWebhooksProps) => (
     <SurfaceCard
         kind="list"
-        label={props.view.title}
-        headingLevel={3}
-        fact={props.view.fact}
+        ariaLabel={props.view.title}
         isLoading={props.isLoading}
         items={props.rows.map((row) => ({
             id: row.id,
             title: row.name,
-            badges: [{ label: row.statusLabel, tone: row.tone }],
-            ...(props.canManage
+            description: row.description,
+            ...(props.view.logo === undefined
+                ? {}
+                : { leading: { avatar: { name: props.view.title, src: props.view.logo } } as const }),
+            badges: [{ label: row.statusLabel, tone: row.tone, isDot: true }],
+            ...(props.canManage && row.isIncomplete
                 ? {
                       action: {
-                          label: props.view.editLabel,
+                          label: props.view.continueLabel,
                           intent: "neutral",
                           press: () => props.onEdit(row.id),
                       } as const,
                   }
                 : {}),
+            ...(props.canManage && !row.isIncomplete
+                ? {
+                      menu: {
+                          label: props.view.editLabel,
+                          entries: [{ id: "edit", label: props.view.editLabel, onAction: () => props.onEdit(row.id) }],
+                      },
+                  }
+                : {}),
         }))}
         empty={<EmptyNotice message={props.view.notConnected} />}
-        {...(props.canManage
-            ? {
-                  labelEnd: (
-                      <Button intent="neutral" onPress={props.onAdd}>
-                          {props.view.addLabel}
-                      </Button>
-                  ),
-              }
-            : {})}
     />
 )
 
@@ -170,8 +213,7 @@ const AvailableWebhook = (props: Pick<DevelopersWebhooksProps, "canManage" | "vi
     <SurfaceCard
         kind="list"
         isLoading={props.isLoading}
-        label={props.view.notConnected}
-        headingLevel={3}
+        ariaLabel={props.view.notConnected}
         items={[
             {
                 id: "provider",

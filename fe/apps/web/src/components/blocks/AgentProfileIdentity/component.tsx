@@ -1,4 +1,4 @@
-import { Form, Input, Stack, SurfaceCard } from "@starci/grammar/common"
+import { Dialog, Form, Input, Stack } from "@starci/grammar/common"
 import { AvatarEditor } from "@/components/composites/AvatarEditor"
 import { FormActions } from "@/components/composites/FormActions"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -17,11 +17,14 @@ export interface ProfileIdentityView {
 export interface AgentProfileIdentityBaseProps {
     readonly props: {
         readonly title: string
+        /** The dialog is open while the address asks for it. */
+        readonly isOpen: boolean
+        readonly closeLabel: string
         /** The agent id: the generated avatar of an agent without a picture. */
         readonly seed: string
         readonly avatar: {
             readonly label: string
-            readonly prompt: string
+            readonly pickLabel: string
             readonly hint: string
             readonly accept: string
             readonly error?: string | undefined
@@ -40,6 +43,7 @@ export interface AgentProfileIdentityBaseProps {
     }
     readonly on: {
         readonly retry: () => void
+        readonly close: () => void
         readonly pick: (files: Array<File>) => void
         readonly remove: () => void
         readonly setName: (value: string) => void
@@ -51,7 +55,13 @@ export interface AgentProfileIdentityBaseProps {
 export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) => {
     const view = props.props
     return (
-        <SurfaceCard label={view.title} headingLevel={2}>
+        <Dialog
+            isOpen={view.isOpen}
+            onOpenChange={props.on.close}
+            size="md"
+            title={view.title}
+            closeLabel={view.closeLabel}
+        >
             <SlotView
                 slot={view.slot}
                 placeholder={view.placeholder}
@@ -60,11 +70,11 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                 render={(identity, isLoading) => (
                     <Stack gap="region">
                         <AvatarEditor
-                            id="agent-avatar"
                             preview={
                                 <AgentMark label={identity.name} seed={view.seed} src={identity.picture} size="lg" />
                             }
                             {...view.avatar}
+                            isLoading={isLoading}
                             onPick={props.on.pick}
                             onRemove={props.on.remove}
                         />
@@ -94,6 +104,6 @@ export const AgentProfileIdentityBase = (props: AgentProfileIdentityBaseProps) =
                     </Stack>
                 )}
             />
-        </SurfaceCard>
+        </Dialog>
     )
 }

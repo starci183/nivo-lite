@@ -60,6 +60,7 @@ export interface FindingRecord {
         readonly placeKind?: string | null | undefined
         readonly placeLabel?: string | null | undefined
     }>
+    readonly inUse?: { readonly value: string; readonly sourceTitle: string | null } | null | undefined
     readonly remedyAction: string
     readonly remedyDocumentType?: string | null | undefined
     readonly status: string
@@ -87,6 +88,8 @@ export interface FindingView {
     readonly title: string
     readonly detail: string
     readonly evidence: ReadonlyArray<FindingEvidenceView>
+    /** The value of a contradiction that is in use now, and the document it comes from; null unless exactly one side is active. */
+    readonly inUse: { readonly value: string; readonly sourceTitle: string | null } | null
     readonly remedyAction: RemedyAction
     readonly status: FindingStatus
     readonly resolution: FindingResolution | null
@@ -148,6 +151,7 @@ export const findingViewOf = (record: FindingRecord): FindingView | undefined =>
             quote: one.quote ?? null,
             place: placeOf(one.placeKind, one.placeLabel),
         })),
+        inUse: record.inUse ?? null,
         remedyAction,
         status,
         resolution: orNull(FINDING_RESOLUTIONS, record.resolution),

@@ -11,8 +11,16 @@ import type { ZaloPageData } from "./useZaloPage"
 export interface ZaloStepState {
     readonly id: ZaloStepId
     readonly isDone: boolean
+    /** The step stands on a failure the page knows: the token expired, a check fails. */
+    readonly isProblem: boolean
     readonly summary: string
     readonly isOpen: boolean
+}
+
+/** Whether a step stands on a failure the page read: the authorization when the token expired, the checks when one fails. */
+const problemOf = (id: ZaloStepId, data: ZaloPageData): boolean => {
+    if (id === "authorize") return data.access.state === "expired"
+    return id === "check" && data.checks.some((check) => check.state === "fail")
 }
 
 type UseZaloStepsResult = {
@@ -60,6 +68,7 @@ export const useZaloSteps = (connectionId: string): UseZaloStepsResult => {
     const steps: ReadonlyArray<ZaloStepState> = done.map(([id, isDone]) => ({
         id,
         isDone,
+        isProblem: page !== undefined && problemOf(id, page),
         summary: page === undefined ? "" : summaryOf(id, isDone, page),
         isOpen: toggled[id] ?? id === opensOn,
     }))

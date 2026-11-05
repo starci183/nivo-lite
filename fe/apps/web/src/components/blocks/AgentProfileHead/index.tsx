@@ -2,6 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
+import { IDENTITY_QUERY } from "@/hooks/installations"
+import { usePaneCopy } from "@/hooks/paneFrame"
+import { navigation } from "@/modules/i18n"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { ASSIGN_TEXT_MAX, profileChipsOf, useAgentProfile, useAssignComposer } from "@/hooks/agentProfile"
 import { useOfficeWords } from "@/hooks/office"
@@ -34,6 +37,8 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
     const words = useOfficeWords()
     const { slot, reload } = useAgentProfile(props.agentId)
     const labels = useSlotLabels()
+    const pane = usePaneCopy()
+    const pathname = navigation.usePathname()
     const agent = "items" in slot ? slot.items : undefined
     const composer = useAssignComposer(props.agentId, agent?.rules.items ?? [])
 
@@ -43,6 +48,11 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
             props={{
                 crumbLabel: t("crumbLabel"),
                 assignLabel: t("assignAction"),
+                menu: {
+                    label: pane.moreActions,
+                    identityLabel: t("identityTitle"),
+                    identityHref: `${pathname}?${IDENTITY_QUERY}`,
+                },
                 isLoading: "isLoading" in slot,
                 read: mapSlot(slot, () => true),
                 labels: labels(t("title")),
@@ -64,6 +74,7 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                     placeholder: t("assignPlaceholder"),
                     hint: t("assignHint"),
                     sendLabel: t("assignSend"),
+                    closeLabel: t("assignClose"),
                     text: composer.text,
                     maxLength: ASSIGN_TEXT_MAX,
                     canSend: composer.canSend,

@@ -1,7 +1,7 @@
 import type { AdminHealthQuery, AdminWorkspaceQuery, AdminWorkspacesQuery } from "@/hooks/swr"
 import { isNotFoundFailure } from "@/modules/failure"
 import type { BadgeTone } from "@starci/grammar/common"
-import type { AdminBadgeView } from "@/modules/types"
+import type { AdminBadgeView, AdminCardView, AdminRowView } from "@/modules/types"
 
 export type { AdminBadgeView }
 export type { AdminCardView, AdminRowView, AdminWorkspaceRowView } from "@/modules/types"
@@ -60,6 +60,29 @@ const CREDITS_MAX = 100_000_000
 
 /** The plan codes a workspace can be moved to; the server re-checks that the plan exists and is on sale. */
 export const PLAN_CODES = ["start", "pro", "max", "team", "enterprise", "starter", "pro_v1", "max_v1"] as const
+
+/** The billing states the console has words for. */
+const BILLING_STATUSES: ReadonlySet<string> = new Set(["active", "pending_payment", "past_due", "cancelled"])
+
+/** The words of a billing status; a status the console has no words for is shown as it is. */
+export const billingWord = (text: AdminText, status: string): string =>
+    BILLING_STATUSES.has(status) ? text(`billingStatus_${status}`) : status
+
+/** The plan codes the console has words for. */
+const KNOWN_PLANS: ReadonlySet<string> = new Set(PLAN_CODES)
+
+/** The words of a plan code; a code the console has no words for is shown as it is. */
+export const planWord = (text: AdminText, code: string): string =>
+    KNOWN_PLANS.has(code) ? text(`planName_${code}`) : code
+
+/** One list card of the console; its row count shows beside the label unless the list is a log. */
+export const adminCard = (
+    id: string,
+    label: string,
+    emptyMessage: string,
+    rows: ReadonlyArray<AdminRowView>,
+    counts = true,
+): AdminCardView => ({ id, label, emptyMessage, rows, labelBadges: [], ...(counts ? { count: rows.length } : {}) })
 
 /** The whole days typed, or undefined when the text is not a day count in range. */
 export const parseDays = (text: string): number | undefined => {

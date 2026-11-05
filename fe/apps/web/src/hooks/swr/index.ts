@@ -12,7 +12,11 @@ export { useQueryKnowledgeCategoriesSwr, QUERY_DOSSIER_FINDINGS_SWR_KEY } from "
 export { QUERY_DOSSIER_REMEDY_DRAFT_SWR_KEY, QUERY_DOSSIER_REVIEW_SUMMARY_SWR_KEY } from "./api"
 export { useQueryDossierFindingsSwr, useQueryDossierRemedyDraftSwr, useQueryDossierReviewSummarySwr } from "./api"
 export type { DossierFindingsFilter } from "./api"
-export { useMutateApproveDossierRemedyDraftSwr, useMutateAssignDossierFindingSwr } from "./api"
+export {
+    useMutateApproveDossierRemedyDraftSwr,
+    useMutateAssignBrainDossierSwr,
+    useMutateAssignDossierFindingSwr,
+} from "./api"
 export { useMutateConfirmDossierFindingSwr, useMutateDismissDossierFindingSwr } from "./api"
 export { useMutateRejectDossierRemedyDraftSwr, useMutateReopenDossierFindingSwr } from "./api"
 export { useMutateImportBrainDossiersSwr } from "./api"

@@ -1,8 +1,6 @@
-import { type BookingWorkbenchDataView, type BookingWorkbenchActions, BOOKING_TABS } from "@/modules/types"
+import type { BookingWorkbenchDataView, BookingWorkbenchActions } from "@/modules/types"
 import type { ReactNode, ReactElement } from "react"
 import { Stack } from "@starci/grammar/common"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { BookingSetupSection } from "@/components/frames/BookingSetupSection"
 import { BookingDesk } from "@/components/frames/BookingDesk"
@@ -14,19 +12,17 @@ import { BookingPolicyForm } from "@/components/composites/BookingPolicyForm"
 import { BookingPublicPageForm } from "@/components/composites/BookingPublicPageForm"
 import { BookingWaitlist } from "@/components/composites/BookingWaitlist"
 import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
-/** The five real booking panels and the recorded-explanation arrangement. */
-export const BOOKING_WORKBENCH_SHAPES: readonly [...typeof BOOKING_TABS, "explanation"] = [
-    ...BOOKING_TABS,
-    "explanation",
-]
-type BookingWorkbenchShape = (typeof BOOKING_WORKBENCH_SHAPES)[number]
+/** The five booking panels, each a tab of the one workbench. */
+type BookingWorkbenchShape = "calendar" | "today" | "waitlist" | "stats" | "setup"
 /** Plain booking models and commands; only this module Base renders their canonical read status. */
 export interface BookingWorkbenchBaseProps {
     readonly shape: BookingWorkbenchShape
     readonly props: BookingWorkbenchDataView
     readonly on: BookingWorkbenchActions
 }
-const DeskPanel = (props: Omit<BookingWorkbenchBaseProps, "shape">) => (
+/** What a panel reads: the view and the commands of the workbench. */
+type PanelProps = Pick<BookingWorkbenchBaseProps, "props" | "on">
+const DeskPanel = (props: PanelProps) => (
     <SlotView
         {...props.props.desk}
         onRetry={props.on.retryDesk}
@@ -53,7 +49,7 @@ const SETUP_FORMS: Record<
         <BookingPublicPageForm {...setup.publicPage} {...on.publicPage} isLoading={isLoading} />
     ),
 }
-const SetupPanel = (props: Omit<BookingWorkbenchBaseProps, "shape">) => (
+const SetupPanel = (props: PanelProps) => (
     <Stack gap="section">
         {SETUP_REGIONS.map((region) => (
             <SlotView
@@ -94,68 +90,20 @@ const ModulePanel = (props: BookingWorkbenchBaseProps) => {
                     render={(panel, isLoading) => <BookingStats {...panel.stats} isLoading={isLoading} />}
                 />
             )
-        case "explanation":
-            return null
     }
 }
-const Overview = (props: BookingWorkbenchBaseProps) => {
+/** The booking workbench: the tabs and the chosen panel beside the decisions, or beside the explanation of one. */
+export const BookingWorkbenchBase = (props: BookingWorkbenchBaseProps): ReactElement => {
     const view = props.props
     return (
-        <WorkbenchOverview view={view} ribbon={view.ribbon} on={props.on} forbidden="notice">
+        <WorkbenchOverview
+            view={view}
+            ribbon={view.ribbon}
+            on={props.on}
+            aside={{ view: view.aside, on: props.on.aside }}
+            forbidden="notice"
+        >
             <ModulePanel {...props} />
         </WorkbenchOverview>
     )
-}
-const Explanation = (props: Omit<BookingWorkbenchBaseProps, "shape">) => {
-    const view = props.props,
-        why = view.why
-    return (
-        <WorkbenchWhyFrame
-            label={why.paneLabel}
-            listLabel={why.listLabel}
-            openLabel={why.openLabel}
-            closeLabel={why.closeLabel}
-            view={why.view}
-            labels={why.labels}
-            onClose={props.on.closeWhy}
-        >
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(waiting, isLoading) => (
-                    <WorkbenchPaneRows
-                        label={view.regions.waiting.label}
-                        rows={waiting.rows}
-                        openLabel={waiting.openLabel}
-                        isLoading={isLoading}
-                    />
-                )}
-            />
-            <SlotView
-                {...view.regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <WorkbenchPaneRows
-                        label={view.regions.done.label}
-                        rows={done.rows}
-                        openLabel={null}
-                        isLoading={isLoading}
-                    />
-                )}
-            />
-        </WorkbenchWhyFrame>
-    )
-}
-/** Draws actual booking panels and the original overview/why layouts; statuses never become shapes. */
-export const BookingWorkbenchBase = (props: BookingWorkbenchBaseProps): ReactElement => {
-    switch (props.shape) {
-        case "calendar":
-        case "today":
-        case "waitlist":
-        case "stats":
-        case "setup":
-            return <Overview {...props} />
-        case "explanation":
-            return <Explanation props={props.props} on={props.on} />
-    }
 }

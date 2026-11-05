@@ -1,5 +1,6 @@
 import { SinglePickList } from "@/components/leaves/SinglePickList"
 import { AgentMark } from "@/components/leaves/AgentMark"
+import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 
 /** One conversation of the rail, with every word resolved. */
 export interface AgentChatRailRow {
@@ -24,11 +25,12 @@ interface AgentChatRailListProps {
     readonly onPick: (id: string, kind: "test" | "customer") => void
 }
 
-/** The conversations of the agent, each wearing the agent's mark. */
+/** The conversations of the agent: a test one wears the agent's mark, a customer's the customer's own. */
 export const AgentChatRailList = (props: AgentChatRailListProps) => (
     <SinglePickList
         label={props.label}
         isLoading={props.isLoading === true}
+        descriptionLines={1}
         onPick={(id) => {
             const picked = props.rows.find((row) => row.id === id)
             if (picked) props.onPick(picked.id, picked.kind)
@@ -38,7 +40,12 @@ export const AgentChatRailList = (props: AgentChatRailListProps) => (
             label: row.title,
             description: row.description,
             isSelected: row.isSelected,
-            leading: <AgentMark label={row.title} seed={props.seed} src={props.avatarUrl} size="md" />,
+            leading:
+                row.kind === "customer" ? (
+                    <PersonAvatar name={row.title} seed={row.id} />
+                ) : (
+                    <AgentMark label={row.title} seed={props.seed} src={props.avatarUrl} size="md" />
+                ),
         }))}
     />
 )

@@ -1,13 +1,14 @@
-import { Badge, Button, Stack, Text } from "@starci/grammar/common"
-import type { ComponentProps } from "react"
-import { LabelledSwitch } from "@/components/branches/LabelledSwitch"
+import { Button, Cluster, Stack, Switch, Text } from "@starci/grammar/common"
 
 /** Props for {@link SwitchStatus}. */
-export interface SwitchStatusProps extends ComponentProps<typeof LabelledSwitch> {
-    /** The colour of the status badge. */
-    readonly tone: NonNullable<ComponentProps<typeof Badge>["tone"]>
-    readonly statusLabel: string
-    /** The standing guidance under the status. */
+export interface SwitchStatusProps {
+    /** Names the switch and is drawn beside it, readable even while the switch cannot be moved. */
+    readonly label: string
+    readonly isSelected: boolean
+    readonly isLoading: boolean
+    readonly isDisabled: boolean
+    readonly onChange: (on: boolean) => void
+    /** The standing guidance under the label. */
     readonly help: string
     /** What stands in the way, in the normal text colour; empty when nothing does. */
     readonly blocker: string
@@ -17,32 +18,34 @@ export interface SwitchStatusProps extends ComponentProps<typeof LabelledSwitch>
     readonly quiet: string
 }
 
-/** The body of a settings card for one switch: the switch with its label, the status it stands at, the guidance and what is left to say. */
+/** One settings band for a switch: the switch, then its name with the guidance under it, and what is left to say. */
 export const SwitchStatus = (props: SwitchStatusProps) => (
-    <Stack gap="section">
-        <LabelledSwitch
+    <Cluster gap="row" wrap={false} align="start">
+        <Switch
+            name={props.label}
             label={props.label}
+            isLabelHidden
             isSelected={props.isSelected}
             isLoading={props.isLoading}
             isDisabled={props.isDisabled}
-            onChange={props.onChange}
+            onSelectedChange={props.onChange}
         />
-        <Badge isDot isLoading={props.isLoading} tone={props.tone}>
-            {props.statusLabel}
-        </Badge>
-        <Text size="sm" tone="muted">
-            {props.help}
-        </Text>
-        {props.blocker === "" ? null : <Text size="sm">{props.blocker}</Text>}
-        {props.blockerAction === null ? null : (
-            <Button intent="commit" size="sm" href={props.blockerAction.href}>
-                {props.blockerAction.label}
-            </Button>
-        )}
-        {props.quiet === "" ? null : (
-            <Text size="sm" tone="muted">
-                {props.quiet}
+        <Stack gap="identity">
+            <Text isStrong>{props.label}</Text>
+            <Text size="sm" tone="muted" isLoading={props.isLoading}>
+                {props.help}
             </Text>
-        )}
-    </Stack>
+            {props.blocker === "" ? null : <Text size="sm">{props.blocker}</Text>}
+            {props.blockerAction === null ? null : (
+                <Button intent="commit" size="sm" href={props.blockerAction.href}>
+                    {props.blockerAction.label}
+                </Button>
+            )}
+            {props.quiet === "" ? null : (
+                <Text size="sm" tone="muted">
+                    {props.quiet}
+                </Text>
+            )}
+        </Stack>
+    </Cluster>
 )

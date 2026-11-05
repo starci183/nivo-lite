@@ -4,10 +4,12 @@ import { navigation } from "@/modules/i18n"
 import { agentHref } from "@/modules/installations"
 import type { AgentTab } from "@/modules/installations"
 
-const ALL_TABS: ReadonlyArray<AgentTab> = ["setup", "workbench", "work", "performance", "settings"]
+const ALL_TABS: ReadonlyArray<AgentTab> = ["setup", "workbench", "inbox", "work", "performance", "settings"]
 
 /** The agent types that have the Performance tab: the AI Marketing (content) agent reads its weekly report there. */
 const PERFORMANCE_MODULES: ReadonlySet<ModuleKey> = new Set<ModuleKey>(["content"])
+/** The agent types that have the Inbox tab (the conversations the AI could not answer): the Chatbot. */
+const INBOX_MODULES: ReadonlySet<ModuleKey> = new Set<ModuleKey>(["chatbot"])
 const FIRST_TAB: AgentTab = "setup"
 
 /** The view `useInstanceTabs` returns. */
@@ -24,7 +26,10 @@ export const useInstanceTabs = (module: ModuleKey, installationId: string): Inst
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
     const tabs = ALL_TABS.filter(
-        (tab) => (tab !== FIRST_TAB || isManager(member)) && (tab !== "performance" || PERFORMANCE_MODULES.has(module)),
+        (tab) =>
+            (tab !== FIRST_TAB || isManager(member)) &&
+            (tab !== "performance" || PERFORMANCE_MODULES.has(module)) &&
+            (tab !== "inbox" || INBOX_MODULES.has(module)),
     )
     const selected = tabs.find((tab) => tab !== FIRST_TAB && pathname.endsWith(`/${tab}`)) ?? FIRST_TAB
     const open = (id: string) => {

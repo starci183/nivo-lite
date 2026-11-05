@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import type { ReactNode } from "react"
-import { Link, Text } from "@starci/grammar/common"
+import { Badge, Link, Text } from "@starci/grammar/common"
 import { NOTICE_ROW_CLASS_NAME } from "./classNames"
 
 /** What the open conversation says besides its messages. */
@@ -35,9 +35,7 @@ export const AgentChatThread = (props: AgentChatThreadProps) => {
             )}
             {props.takenOverNotice === null ? null : (
                 <div className={NOTICE_ROW_CLASS_NAME} data-testid="takeover-notice">
-                    <Text size="xs" tone="muted">
-                        {props.takenOverNotice}
-                    </Text>
+                    <Badge tone="neutral">{props.takenOverNotice}</Badge>
                 </div>
             )}
             <div ref={endRef} />

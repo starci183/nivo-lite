@@ -20,5 +20,15 @@ export const telegramConnectionMetadata = async (): Promise<Metadata> => {
  */
 export const TelegramConnectionPage = async (props: TelegramConnectionPageProps): Promise<ReactElement> => {
     const { id } = await props.params
-    return <TelegramConnectionPageBase props={{ connectionId: id }} />
+    const t = await getTranslations("telegramConnection")
+    return (
+        <TelegramConnectionPageBase
+            props={{
+                connectionId: id,
+                gridLabel: t("title"),
+                mainLabel: t("mainLabel"),
+                rail: { label: t("eventsTitle"), closeLabel: t("eventsClose") },
+            }}
+        />
+    )
 }

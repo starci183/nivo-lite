@@ -24,7 +24,7 @@ export interface DossierFindingsPane {
         dialog: FindingDialogView | null
     }
     filterLabel: string
-    filters: { value: "open" | "confirmed" | "closed"; label: string }[]
+    filters: { value: "open" | "confirmed" | "closed"; label: string; count: number | undefined }[]
     filter: "open" | "confirmed" | "closed"
     listLabel: string
     slot: DataSlot<FindingRowView[]>

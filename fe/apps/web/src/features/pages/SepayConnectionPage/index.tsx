@@ -1,3 +1,4 @@
+import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { CONSOLE_ROUTES } from "@/modules/routes"
@@ -15,12 +16,17 @@ type SepayConnectionPageProps = {
 }
 
 /** /connections/sepay/[id]: a server shell; the bands read their own data in the browser. */
-export const SepayConnectionPage = (props: SepayConnectionPageProps) => (
-    <SepayConnectionPageBase
-        props={{
-            connectionId: props.connectionId,
-            homeHref: CONSOLE_ROUTES.dashboard,
-            hubHref: CONSOLE_ROUTES.connections,
-        }}
-    />
-)
+export const SepayConnectionPage = async (props: SepayConnectionPageProps): Promise<ReactElement> => {
+    const t = await getTranslations("sepayConnection")
+    return (
+        <SepayConnectionPageBase
+            props={{
+                connectionId: props.connectionId,
+                hubHref: CONSOLE_ROUTES.connections,
+                gridLabel: t("title"),
+                mainLabel: t("mainLabel"),
+                rail: { label: t("eventsTitle"), closeLabel: t("eventsClose") },
+            }}
+        />
+    )
+}

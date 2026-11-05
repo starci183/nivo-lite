@@ -21,7 +21,7 @@ import { workbenchRowDataOf } from "@/hooks/workbench"
 import type { workbenchWaitingDataOf } from "@/hooks/workbench"
 import { SALES_INBOX_TABS, type SalesArea } from "./salesworkbench.shared"
 import type { useSalesOrdersView } from "./useSalesOrdersView"
-import type { SalesWorkbenchViewData } from "@/modules/types"
+import type { SalesWorkbenchViewData, WorkbenchAsideView } from "@/modules/types"
 
 /** The existing Sales route identity and server-resolved tab labels. */
 export interface SalesWorkbenchViewInput {
@@ -48,6 +48,7 @@ interface SalesPropsInput {
     readonly inbox: ReturnType<typeof useChatbotInbox>
     readonly waiting: ReturnType<typeof useSalesWaiting>
     readonly waitingData: ReturnType<typeof workbenchWaitingDataOf>
+    readonly aside: WorkbenchAsideView
 }
 
 /** Resolves the desk's actual data regions, copy and tab strip after its domain owners have been read. */
@@ -75,8 +76,10 @@ export const useSalesProps = (source: SalesPropsInput): SalesWorkbenchViewData =
         inbox,
         waiting,
         waitingData,
+        aside,
     } = source
     return {
+        aside,
         why: frame.why,
         regions: frame.regions,
         selectedTab: tabs.selected,

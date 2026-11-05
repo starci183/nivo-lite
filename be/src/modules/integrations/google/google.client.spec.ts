@@ -258,6 +258,24 @@ describe("GoogleClient spreadsheets", () => {
     })
 })
 
+describe("GoogleClient spreadsheetTitle", () => {
+    it("asks only for the title of the spreadsheet and answers it, blank when Google names none", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce(answer({ properties: { title: "So cai" } }))
+        http.request.mockResolvedValueOnce(answer({}))
+
+        await expect(client.spreadsheetTitle("tok", "id 1")).resolves.toBe("So cai")
+        await expect(client.spreadsheetTitle("tok", "id 1")).resolves.toBe("")
+        expect(http.request).toHaveBeenNthCalledWith(
+            1,
+            objectLike({
+                method: "GET",
+                url: "https://sheets.googleapis.com/v4/spreadsheets/id%201?fields=properties.title",
+            }),
+        )
+    })
+})
+
 describe("GoogleClient sheet operations", () => {
     it("finds the first matching row in priority order, skipping the header", async () => {
         const { client, http } = await build()

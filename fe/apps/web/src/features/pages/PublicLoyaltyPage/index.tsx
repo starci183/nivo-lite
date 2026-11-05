@@ -17,6 +17,5 @@ export const publicLoyaltyMetadata = async (): Promise<Metadata> => {
 /** /l/<slug>: the public points check, no login. The server only mounts the shell; the connected block reads the shop and talks to the API from the browser. */
 export const PublicLoyaltyPage = async (props: PublicLoyaltyPageProps): Promise<ReactElement> => {
     const { slug } = await props.params
-    const t = await getTranslations("loyaltyPublic")
-    return <PublicLoyaltyPageBase props={{ slug, label: t("title") }} />
+    return <PublicLoyaltyPageBase props={{ slug }} />
 }

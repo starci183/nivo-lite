@@ -26,6 +26,9 @@ export interface DossierRecord {
     readonly existing?: string | null | undefined
     readonly missing?: string | null | undefined
     readonly documentCount: number
+    /** The member who owns it, and the date it should be settled by. */
+    readonly assigneeId?: string | null | undefined
+    readonly dueAt?: string | null | undefined
 }
 
 /** What the documents of one category hold, as the back end `knowledgeCategories` query answers it. */
@@ -47,6 +50,10 @@ export interface DossierView {
     /** The first of: what is missing, what is already held; null when the checklist says neither. */
     readonly note: { readonly kind: "missing" | "existing"; readonly text: string } | null
     readonly documentCount: number
+    /** The membership id of its owner, or null while nobody owns it. */
+    readonly assigneeId: string | null
+    /** The date it should be settled by as YYYY-MM-DD, or null. */
+    readonly dueAt: string | null
 }
 
 /** One category of the documents with the dossiers filed under it. */
@@ -102,6 +109,8 @@ const viewOf = (record: DossierRecord): DossierView | undefined =>
               status: record.status,
               note: noteOf((record.missing ?? "").trim(), (record.existing ?? "").trim()),
               documentCount: record.documentCount,
+              assigneeId: record.assigneeId ?? null,
+              dueAt: record.dueAt ?? null,
           }
         : undefined
 

@@ -27,6 +27,8 @@ export interface MemberListing extends WorkspaceMember {
     readonly email: string
     /** The last sign-in, ISO 8601; null when unknown or the viewer is staff. */
     readonly lastSignInAt: string | null
+    /** When the member joined the workspace (the seat's creation), ISO 8601. */
+    readonly joinedAt: string
 }
 
 /** Whether a member can sign in to the workspace. */

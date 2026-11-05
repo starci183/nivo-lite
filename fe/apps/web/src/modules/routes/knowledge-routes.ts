@@ -27,6 +27,20 @@ export const BRAIN_TABS: readonly [
 /** One tab of the Second Brain page. */
 export type BrainTab = (typeof BRAIN_TABS)[number]
 
+/** The tabs the page draws in its one tab strip, in order: the map sits inside the dossiers tab, the customer questions and the customer chat inside the public tab and the agents' view. */
+export const BRAIN_STRIP_TABS = ["todo", "dossiers", "sources", "facts", "lessons", "publicDocs", "agents"] as const
+
+/** One tab of the strip. */
+export type BrainStripTab = (typeof BRAIN_STRIP_TABS)[number]
+
+/** The tab of the strip a page of the Second Brain lights: the map belongs to the dossiers, the customer questions to the public documents, the customer chat to the agents' view. */
+export const brainStripTabOf = (tab: BrainTab): BrainStripTab => {
+    if (tab === "map") return "dossiers"
+    if (tab === "publicAsks") return "publicDocs"
+    if (tab === "publicTry") return "agents"
+    return tab
+}
+
 /** The tab the page opens on when the address names none. */
 export const DEFAULT_BRAIN_TAB: BrainTab = "todo"
 

@@ -1,9 +1,7 @@
 import type { ReactElement } from "react"
 import type { SalesWorkbenchViewData, SalesWorkbenchActions } from "@/modules/types"
 import { Button, Stack, Text } from "@starci/grammar/common"
-import { WorkbenchPaneRows } from "@/components/composites/WorkbenchPaneRows"
 import { WorkbenchWaitingList } from "@/components/composites/WorkbenchWaitingList"
-import { WorkbenchWhyFrame } from "@/components/frames/WorkbenchWhyFrame"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { SalesContractsBody } from "@/components/frames/SalesContractsBody"
 import { SalesDecisionsBody } from "@/components/frames/SalesDecisionsBody"
@@ -14,22 +12,19 @@ import { SalesAttentionRows } from "@/components/composites/SalesAttentionRows"
 import { SalesContractRows } from "@/components/composites/SalesContractRows"
 import { SalesOrderRows } from "@/components/composites/SalesOrderRows"
 import { SalesPipelineBoard } from "@/components/composites/SalesPipelineBoard"
-import { SALES_WORKBENCH_TABS as SALES_TABS } from "@/modules/types"
+import { SALES_WORKBENCH_TABS } from "@/modules/types"
 import { ChatbotInboxSlot } from "@/components/frames/ChatbotConversationBody"
 import { WorkbenchOverview } from "@/components/frames/WorkbenchOverview"
-/** The six Sales areas, optional customer conversation and explanation drawings. */
-export const SALES_WORKBENCH_SHAPES: readonly [...typeof SALES_TABS, "conversation", "explanation"] = [
-    ...SALES_TABS,
-    "conversation",
-    "explanation",
-]
-type SalesWorkbenchShape = (typeof SALES_WORKBENCH_SHAPES)[number]
+/** The six Sales areas and the optional customer conversation, each a tab of the one workbench. */
+type SalesArea = (typeof SALES_WORKBENCH_TABS)[number] | "conversation"
 interface SalesWorkbenchBaseProps {
-    readonly shape: SalesWorkbenchShape
+    readonly shape: SalesArea
     readonly props: SalesWorkbenchViewData
     readonly on: SalesWorkbenchActions
 }
-const Orders = (props: Omit<SalesWorkbenchBaseProps, "shape">) => {
+/** What a panel of one tab reads: the view and the commands of the desk. */
+type PanelProps = Pick<SalesWorkbenchBaseProps, "props" | "on">
+const Orders = (props: PanelProps) => {
     const view = props.props.orders,
         on = props.on.orders
     return (
@@ -62,7 +57,7 @@ const Orders = (props: Omit<SalesWorkbenchBaseProps, "shape">) => {
         </Stack>
     )
 }
-const Contracts = (props: Omit<SalesWorkbenchBaseProps, "shape">) => {
+const Contracts = (props: PanelProps) => {
     const view = props.props.contracts,
         on = props.on.contracts
     return (
@@ -125,7 +120,6 @@ const SalesPanel = (props: SalesWorkbenchBaseProps) => {
                 </Stack>
             )
         case "conversation":
-        case "explanation":
             return null
     }
 }
@@ -139,7 +133,6 @@ const ModulePanel = (props: SalesWorkbenchBaseProps) => {
         case "handoff":
         case "contracts":
         case "activity":
-        case "explanation":
             return (
                 <SlotView
                     {...props.props.gate}
@@ -155,15 +148,15 @@ const ModulePanel = (props: SalesWorkbenchBaseProps) => {
             )
     }
 }
-const WaitingCard = (props: Omit<SalesWorkbenchBaseProps, "shape">) => (
+const WaitingRows = (props: PanelProps) => (
     <SlotView
         {...props.props.waiting}
-        empty="collapse"
+        emptyDescription={props.props.waiting.list.emptyDescription}
         onRetry={props.on.waiting.retry}
         render={(rows, isLoading) => (
             <WorkbenchWaitingList
                 {...props.props.waiting.list}
-                surface="card"
+                surface="pane"
                 items={rows.map((row) => ({ row }))}
                 isSkeleton={isLoading}
                 onCommand={props.on.waiting.command}
@@ -171,68 +164,16 @@ const WaitingCard = (props: Omit<SalesWorkbenchBaseProps, "shape">) => (
         )}
     />
 )
-const Overview = (props: SalesWorkbenchBaseProps) => (
+/** The Sales workbench: the tabs and the chosen tab's panel beside the decisions, or beside the explanation of one. */
+export const SalesWorkbenchBase = (props: SalesWorkbenchBaseProps): ReactElement => (
     <WorkbenchOverview
         view={props.props}
         ribbon={props.props.ribbon}
         on={{ ...props.on, retryRibbon: props.on.retry }}
-        waiting={<WaitingCard props={props.props} on={props.on} />}
+        aside={{ view: props.props.aside, on: props.on.aside }}
+        waiting={<WaitingRows props={props.props} on={props.on} />}
+        decisions={{ slot: props.props.waiting.slot, onCommand: props.on.waiting.command }}
     >
         <ModulePanel {...props} />
     </WorkbenchOverview>
 )
-const Explanation = (props: Omit<SalesWorkbenchBaseProps, "shape">) => {
-    const view = props.props
-    const why = view.why
-    return (
-        <WorkbenchWhyFrame
-            label={why.paneLabel}
-            listLabel={why.listLabel}
-            openLabel={why.openLabel}
-            closeLabel={why.closeLabel}
-            view={why.view}
-            labels={why.labels}
-            onClose={props.on.closeWhy}
-        >
-            <SlotView
-                {...view.regions.waiting}
-                onRetry={props.on.retryDashboard}
-                render={(waiting, isLoading) => (
-                    <WorkbenchPaneRows
-                        label={view.regions.waiting.label}
-                        rows={waiting.rows}
-                        openLabel={waiting.openLabel}
-                        isLoading={isLoading}
-                    />
-                )}
-            />
-            <SlotView
-                {...view.regions.done}
-                onRetry={props.on.retryDashboard}
-                render={(done, isLoading) => (
-                    <WorkbenchPaneRows
-                        label={view.regions.done.label}
-                        rows={done.rows}
-                        openLabel={null}
-                        isLoading={isLoading}
-                    />
-                )}
-            />
-        </WorkbenchWhyFrame>
-    )
-}
-/** Each actual product drawing remains a pure composition of resolved data and native commands. */
-export const SalesWorkbenchBase = (props: SalesWorkbenchBaseProps): ReactElement => {
-    switch (props.shape) {
-        case "attention":
-        case "pipeline":
-        case "decisions":
-        case "handoff":
-        case "contracts":
-        case "activity":
-        case "conversation":
-            return <Overview {...props} />
-        case "explanation":
-            return <Explanation props={props.props} on={props.on} />
-    }
-}

@@ -18,6 +18,8 @@ const toFactEvidenceType = (item: Evidence): BrainEvidenceType => ({
     label: item.label,
     quote: item.quote,
     at: item.at,
+    sourceTitle: item.title,
+    sourceId: item.sourceId,
 })
 
 /** Maps a piece of evidence of a lesson to the GraphQL type. */

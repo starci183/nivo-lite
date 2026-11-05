@@ -2,13 +2,18 @@ import { Injectable } from "@nestjs/common"
 import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { SourceCategoriesService } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectTable } from "@modules/integrations/data-sources"
 import type { TableClient } from "@modules/integrations/data-sources"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { DOSSIERS_MAX } from "./brain-dossiers.contracts"
-import type { DossierImportResult, DossierRecord, DossierWorkbook } from "./brain-dossiers.contracts"
+import type {
+    AssignDossierInput,
+    DossierImportResult,
+    DossierRecord,
+    DossierWorkbook,
+} from "./brain-dossiers.contracts"
 import { documentCountsOf, toDossierRecord } from "./dossier-record.mapper"
 import { dossiersOf, layoutOf } from "./dossier-sheet.policy"
 import { BrainDossiersError, BrainDossiersErrorCode } from "./errors/brain-dossiers.error"
@@ -26,6 +31,7 @@ export class BrainDossiersService {
         @InjectTable() private readonly table: TableClient,
         private readonly members: WorkspaceMembersService,
         private readonly sources: SourceCategoriesService,
+        private readonly lookup: MemberLookupService,
     ) {}
 
     /** The dossiers of the workspace by category and position, each with how many documents of its category name it; any member may read them. */
@@ -72,5 +78,25 @@ export class BrainDossiersService {
             return gone.affected ?? 0
         })
         return { imported: sheet.dossiers.length, skipped: sheet.skipped, removed }
+    }
+
+    /**
+     * Gives a dossier to an active member of the workspace with an optional due date, or takes both back. Only an owner or a manager may
+     * decide it; a checklist import never touches these two values.
+     */
+    async assign(userId: string, workspaceId: string, input: AssignDossierInput): Promise<DossierRecord> {
+        await this.members.require(userId, workspaceId, MANAGERS)
+        if (input.assigneeId !== null && (await this.lookup.activeById(workspaceId, input.assigneeId)) === null) {
+            throw new BrainDossiersError({ code: BrainDossiersErrorCode.OwnerNotMember })
+        }
+        const changed = await this.entityManager.update(
+            BrainDossierEntity,
+            { workspaceId, id: input.dossierId },
+            { assigneeId: input.assigneeId, dueAt: input.dueAt },
+        )
+        if ((changed.affected ?? 0) === 0) throw new BrainDossiersError({ code: BrainDossiersErrorCode.NotFound })
+        const found = (await this.list(userId, workspaceId)).find((record) => record.id === input.dossierId)
+        if (found === undefined) throw new BrainDossiersError({ code: BrainDossiersErrorCode.NotFound })
+        return found
     }
 }

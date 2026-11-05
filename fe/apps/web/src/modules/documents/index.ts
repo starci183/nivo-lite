@@ -21,7 +21,6 @@ export {
     topicsOf,
 } from "./status"
 export type { AgentModule } from "./status"
-export { INGEST_STAGES, ingestStageOf } from "./ingest-stages"
 export { batchBytesOf } from "./queue-bytes"
 export { queueRowOf } from "./queue-rows"
 export { usageMeterOf } from "./usage"
@@ -47,3 +46,15 @@ export { KNOWLEDGE_STAGE_KEYS, liveOf, overlayPush } from "./live-progress"
 export type { KnowledgeProgressRowView, LiveProgress } from "./live-progress"
 export { interruptedUploads, forgetUploads } from "./upload-marker"
 export type { DocumentRowBadgeView, DocumentRowView } from "./document-row"
+export { docBodyOf, docFactsOf, docHeadOf, nivoOpenedOf } from "./docs-opened"
+export {
+    docChipOf,
+    docCountsOf,
+    docRowOf,
+    docTabOf,
+    docsMatching,
+    docsOfAgent,
+    nivoMatching,
+    nivoRowOf,
+} from "./docs-rows"
+export { docsCopyOf, docsListViewOf, docsMainViewOf, docsNivoSlotOf, docsTailOf, docsTrailOf } from "./docs-screen"

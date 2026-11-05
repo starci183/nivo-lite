@@ -2,6 +2,7 @@
 
 import { notFound } from "next/navigation"
 import { useTranslations } from "next-intl"
+import { useState } from "react"
 import { authActionsOf } from "@/hooks/auth"
 import { useSignOut } from "@/hooks/console"
 import { useLocaleSwitch } from "@/hooks/locale"
@@ -33,11 +34,15 @@ export interface AdminHeaderView {
         localeOptions: ReadonlyArray<{ value: string; label: string; name: string }>
         themeLabel: string
         isDark: boolean
+        openMenuLabel: string
+        closeMenuLabel: string
+        isMenuOpen: boolean
     }
     on: {
         chooseLocale: (locale: string) => void
         chooseDark: (isDark: boolean) => void
         signOut: () => void
+        setMenuOpen: (isOpen: boolean) => void
     }
 }
 
@@ -53,6 +58,7 @@ export const useAdminHeader = (): AdminHeaderView => {
     const language = useLocaleSwitch()
     const theme = useThemeSwitch()
     const signOut = useSignOut(authActionsOf().endSession)
+    const [isMenuOpen, setMenuOpen] = useState(false)
     if (session.isMissing) notFound()
     return {
         props: {
@@ -81,7 +87,15 @@ export const useAdminHeader = (): AdminHeaderView => {
             localeOptions: language.options,
             themeLabel: ts("themeLabel"),
             isDark: theme.isDark,
+            openMenuLabel: ts("openMenu"),
+            closeMenuLabel: ts("closeMenu"),
+            isMenuOpen,
         },
-        on: { chooseLocale: language.choose, chooseDark: theme.choose, signOut: signOut.signOut },
+        on: {
+            chooseLocale: language.choose,
+            chooseDark: theme.choose,
+            signOut: signOut.signOut,
+            setMenuOpen,
+        },
     }
 }

@@ -70,6 +70,10 @@ export interface LedgerGrant {
     readonly sheetId: string
     /** The address of that spreadsheet, blank until the owner names one. */
     readonly sheetUrl: string
+    /** The title of that spreadsheet as Google named it when the owner chose it, blank until known. */
+    readonly sheetTitle: string
+    /** When the last row was written to it (ISO 8601), blank until the first row. */
+    readonly lastRowAt: string
 }
 
 /** A consent to start: the Google page the browser must go to. */

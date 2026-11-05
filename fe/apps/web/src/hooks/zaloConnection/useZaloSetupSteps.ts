@@ -25,6 +25,8 @@ type UseZaloSetupStepsResult = {
         summary: string
         hint: string
         isOpen: boolean
+        isDone: boolean
+        isProblem: boolean
     }[]
     authorizeNotice: string
     openZalo: {
@@ -70,6 +72,8 @@ export const useZaloSetupSteps = (connectionId: string): UseZaloSetupStepsResult
             summary: step.summary,
             hint: hintOf(step.id),
             isOpen: step.isOpen,
+            isDone: step.isDone,
+            isProblem: step.isProblem,
         })),
         authorizeNotice: notice,
         openZalo: { label: t("openZalo"), href: PROVIDERS.zalo_oa.dashboard.live ?? "" },

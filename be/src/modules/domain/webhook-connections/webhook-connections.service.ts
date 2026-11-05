@@ -25,6 +25,7 @@ import type {
 import { InjectWebhookConnectionsOptions } from "./webhook-connections.decorators"
 import type { WebhookConnectionsOptions } from "./webhook-connections.options"
 import { eventsOf, pickEvents, signDelivery, workspaceSigningSecret } from "./webhook-signing.policy"
+import { maskedWebhookUrl } from "./webhook-url-mask.policy"
 
 const OWNER = ["owner"] as const
 const MANAGER = ["owner", "manager"] as const
@@ -64,7 +65,7 @@ export class WebhookConnectionsService {
             name,
             status: "pending",
             environment: "live",
-            meta: { host: target.host, events: events.join(",") },
+            meta: { host: target.host, events: events.join(","), url_masked: maskedWebhookUrl(target) },
             secret: { plain: JSON.stringify({ url: target.toString() }), webhookSecret: randomSecret() },
         })
         return { id, name, host: target.host, events, signingSecret, signingSecretLast4: lastFour(signingSecret) }

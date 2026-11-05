@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAgentInstallation, useAgentRights, useChooseLive } from "@/hooks/agentSettings"
-import { agentLifecycleTone, setupLabelKey } from "@/hooks/installations"
+import { setupLabelKey } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentLiveCardBase } from "./component"
 import type { LiveView } from "./component"
@@ -16,8 +16,6 @@ type AgentLiveCardProps = {
 
 const PLACEHOLDER: LiveView = {
     isLive: false,
-    statusLabel: "-",
-    statusTone: "neutral",
     blocker: "",
     blockerAction: null,
 }
@@ -47,8 +45,6 @@ export const AgentLiveCard = (props: AgentLiveCardProps) => {
                 read: {
                     slot: mapSlot(slot, (installation): LiveView => ({
                         isLive,
-                        statusLabel: t(`lifecycle_${installation.lifecycle}`),
-                        statusTone: agentLifecycleTone(installation.lifecycle),
                         blocker: installation.isSetupPending ? t("liveNeedsVersion") : "",
                         blockerAction: installation.isSetupPending
                             ? { label: t(setupLabelKey(installation.lifecycle)), href: installation.setupHref }

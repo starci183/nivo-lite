@@ -2,6 +2,7 @@ import type { ChainActor, ChainStopReason, MentionRef } from "@modules/domain/wo
 import type { WorkThread } from "@modules/domain/work-threads"
 import type { Locale } from "@modules/platform/i18n"
 import type { ApprovalPolicy } from "@modules/domain/authority-rules"
+import type { ThreadParticipants } from "./thread-participants.policy"
 
 /** A member as the authority and approval capabilities name them. */
 export interface MemberRef {
@@ -219,6 +220,8 @@ export interface ThreadView {
     readonly thread: WorkThread
     /** The newest messages, oldest first. */
     readonly messages: ReadonlyArray<ThreadMessage>
+    /** How many distinct people and agents wrote or were tagged in the whole thread. */
+    readonly participants: ThreadParticipants
 }
 
 /** A signed-in account decides an approval card as the member it is in the workspace. */

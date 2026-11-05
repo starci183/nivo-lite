@@ -1,18 +1,8 @@
 import type { ModuleIconName } from "@/modules/types"
-import {
-    Badge,
-    Button,
-    Cluster,
-    Quote,
-    Stack,
-    SurfaceCard,
-    Text,
-    Textarea,
-    type BadgeTone,
-} from "@starci/grammar/common"
+import { Badge, Cluster, Quote, Stack, SurfaceCard, Text, Textarea, type BadgeTone } from "@starci/grammar/common"
 
-import { AgentMark } from "@/components/leaves/AgentMark"
-import { AiMarkChip } from "@/components/leaves/AiMarkChip"
+import { DecisionButtons } from "@/components/leaves/DecisionButtons"
+import { Icon } from "@/components/leaves/Icon"
 import { CopyTextButton } from "@/components/branches/CopyTextButton"
 
 /** The drafting agent: its mark and its spoken name. */
@@ -24,7 +14,7 @@ interface ApprovalAgentView {
 }
 
 /** One drafted message with every word resolved and the state of its controls. */
-export interface ApprovalCardView {
+interface ApprovalCardView {
     readonly nextAction: string
     readonly willSend: string
     /** The agent that drafted it; null for a message a person wrote. */
@@ -44,8 +34,7 @@ export interface ApprovalCardView {
 }
 
 /** The words of the card. */
-export interface ApprovalCardLabels {
-    readonly aiChip: string
+interface ApprovalCardLabels {
     readonly draft: string
     readonly copy: string
     readonly copied: string
@@ -54,6 +43,8 @@ export interface ApprovalCardLabels {
     readonly edit: string
     readonly discardEdits: string
     readonly reject: string
+    /** The one muted note under the draft: the AI drafted it, nothing is sent until the owner approves, every decision is recorded. */
+    readonly note: string
 }
 
 /** What a person can do on the card. */
@@ -70,46 +61,43 @@ interface ApprovalCardProps {
     readonly on: ApprovalCardActions
 }
 
-/** The approval card: pending shows the decision bands, settled shows who decided and the final text. */
+/** The approval card in the mockup form: who drafted it and for whom, the draft in its tinted box, one muted note, and the decision. */
 export const ApprovalCard = (props: ApprovalCardProps) => {
     const { view, labels, on } = props
     const isBusy = view.pendingDecision !== null
     const shownText = view.isWaiting && view.isEditing ? view.editText : view.draft
     return (
         <SurfaceCard
-            kind="bands"
             ariaLabel={view.nextAction}
+            kind="bands"
             bands={[
                 {
                     kind: "body",
                     children: (
-                        <Stack gap="inline">
+                        <Stack gap="row">
                             <Cluster gap="inline">
-                                {view.agent === null ? null : (
-                                    <AgentMark
-                                        label={view.agent.name}
-                                        seed={view.agent.name}
-                                        src={view.agent.avatarUrl}
-                                        size="sm"
-                                    />
-                                )}
                                 <Badge tone={view.status.tone}>{view.status.label}</Badge>
-                                {view.agent === null ? null : <AiMarkChip label={labels.aiChip} />}
+                                {view.agent === null ? null : <Badge tone="neutral">{view.agent.name}</Badge>}
+                                <Text size="xs" tone="muted">
+                                    {view.willSend}
+                                </Text>
                             </Cluster>
-                            <Text isStrong>{view.nextAction}</Text>
-                            <Text size="sm" tone="muted">
-                                {view.willSend}
-                            </Text>
+                            {renderApprovalCardDraft(view, labels, isBusy, on, shownText)}
                         </Stack>
                     ),
                 },
-                { kind: "body", children: renderApprovalCardDraft(view, labels, isBusy, on, shownText) },
             ]}
         />
     )
 }
 
-/** Renders the ApprovalCard draft section. */
+/** The command being sent, in the words of the decision group. */
+const pendingOf = (decision: "approved" | "rejected" | null): "approve" | "reject" | null => {
+    if (decision === null) return null
+    return decision === "approved" ? "approve" : "reject"
+}
+
+/** Renders the ApprovalCard draft, its note and the decision. */
 const renderApprovalCardDraft = (
     view: NonNullable<ApprovalCardProps["view"]>,
     labels: NonNullable<ApprovalCardProps["labels"]>,
@@ -127,53 +115,44 @@ const renderApprovalCardDraft = (
                 onValueChange={on.editChange}
             />
         ) : (
-            <Quote text={view.draft} />
+            <Quote source={labels.draft} text={view.draft} byline={view.characters} />
         )}
-        <Cluster gap="inline" justify="between">
-            <Text size="xs" tone="muted">
-                {view.characters}
-            </Text>
-            <CopyTextButton text={shownText} copyLabel={labels.copy} copiedLabel={labels.copied} />
-        </Cluster>
         {view.error === null ? null : (
             <Text size="sm" live="assertive">
                 {view.error}
             </Text>
         )}
+        <Cluster gap="inline" justify="between">
+            <Text size="xs" tone="muted">
+                {labels.note}
+            </Text>
+            <CopyTextButton text={shownText} copyLabel={labels.copy} copiedLabel={labels.copied} />
+        </Cluster>
         {view.isWaiting && !view.canDecide ? (
             <Text size="sm" isStrong live="polite">
                 {labels.waitingManager}
             </Text>
         ) : null}
         {view.isWaiting && view.canDecide ? (
-            <Cluster gap="row">
-                <Button
-                    intent="commit"
-                    isPending={view.pendingDecision === "approved"}
-                    isDisabled={isBusy || (view.isEditing && view.editText.trim().length === 0)}
-                    onPress={() => on.decide("approved")}
-                >
-                    {labels.approveSend}
-                </Button>
-                <Button intent="alternative" isDisabled={isBusy} onPress={on.toggleEdit}>
-                    {view.isEditing ? labels.discardEdits : labels.edit}
-                </Button>
-                <Button
-                    intent="alternative"
-                    isPending={view.pendingDecision === "rejected"}
-                    isDisabled={isBusy}
-                    onPress={() => on.decide("rejected")}
-                >
-                    {labels.reject}
-                </Button>
-            </Cluster>
+            <DecisionButtons
+                pending={pendingOf(view.pendingDecision)}
+                reject={{ label: labels.reject, onPress: () => on.decide("rejected") }}
+                edit={{
+                    label: view.isEditing ? labels.discardEdits : labels.edit,
+                    onPress: on.toggleEdit,
+                    icon: <Icon props={{ name: "edit", usage: "leading" }} />,
+                }}
+                approve={{
+                    label: labels.approveSend,
+                    onPress: () => on.decide("approved"),
+                    isDisabled: view.isEditing && view.editText.trim().length === 0,
+                }}
+            />
         ) : null}
         {view.isWaiting ? null : (
-            <Cluster gap="inline" justify="between">
-                <Text size="sm" tone="muted">
-                    {view.settledLabel}
-                </Text>
-            </Cluster>
+            <Text size="sm" tone="muted">
+                {view.settledLabel}
+            </Text>
         )}
     </Stack>
 )

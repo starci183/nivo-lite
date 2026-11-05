@@ -57,19 +57,28 @@ const SINGLE_PAGE: Readonly<Partial<Record<Provider, string>>> = { google_drive:
 
 /**
  * The page of one connection when its provider has one (SePay, Zalo OA, Telegram, Google Drive) and the page has something to show,
- * else null. A connection that is still pending is finished in its wizard and a disconnected one has no page, so only a connected or
- * failing one links. Google Drive has one grant per workspace, so its page has no id in the address.
+ * else null. A disconnected connection has no page. The pages of SePay, Zalo OA and Telegram carry their own setup steps, so a
+ * connection that is still pending links to its page too; Google Drive is finished in its wizard first. Google Drive has one grant
+ * per workspace, so its page has no id in the address.
  */
 export const connectionPageHref = (connection: Pick<Connection, "id" | "provider" | "status">): string | null => {
-    if (connection.status !== "connected" && connection.status !== "error") return null
+    if (connection.status === "disconnected") return null
     const single = SINGLE_PAGE[connection.provider]
-    if (single !== undefined) return `${CONNECTION_ROUTES.connections}/${single}`
+    if (single !== undefined) {
+        return connection.status === "pending" ? null : `${CONNECTION_ROUTES.connections}/${single}`
+    }
     const segment = PAGE_SEGMENT[connection.provider]
     return segment === undefined ? null : `${CONNECTION_ROUTES.connections}/${segment}/${connection.id}`
 }
 
 /** The search params the console uses to remember which overlay is open. */
-export const URL_PARAMS = { connect: "connect", connection: "conn", detail: "detail", tab: "tab" } as const
+export const URL_PARAMS = {
+    connect: "connect",
+    connection: "conn",
+    detail: "detail",
+    open: "open",
+    tab: "tab",
+} as const
 
 /**
  * Whether a role may start a connection of a provider: the owner may start every one, and a manager only the workspace's Google Drive

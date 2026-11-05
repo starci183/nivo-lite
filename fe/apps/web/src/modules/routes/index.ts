@@ -6,6 +6,7 @@ export const APP_ROUTES = {
     automations: "/automations",
     chat: "/chat",
     account: "/account",
+    profile: "/profile",
     workspaceNew: "/workspaces/new",
     workspaceChannels: "/workspaces/new/channels",
     workspaceHandover: "/workspaces/new/ai",
@@ -25,12 +26,7 @@ export {
     workspacesPath,
 } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
-export {
-    creditsPath,
-    workspaceBillingPath,
-    workspacePaymentPath,
-    workspaceRenewalPaymentPath,
-} from "./workspace-routes"
+export { creditsPath, workspacePaymentPath, workspaceRenewalPaymentPath } from "./workspace-routes"
 export {
     AGENTS_ROUTE,
     AGENT_ROLES_ANCHOR,
@@ -40,6 +36,7 @@ export {
     agentChatHref,
     agentProfileHref,
     agentSetupHref,
+    authoritySectionPath,
     leadFlowHref,
     leadHref,
     responsibilitiesHref,
@@ -51,13 +48,15 @@ export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automat
 export {
     BRAIN_PARTS,
     BRAIN_PART_TABS,
+    BRAIN_STRIP_TABS,
     BRAIN_TABS,
     DEFAULT_BRAIN_TAB,
     KNOWLEDGE_ROUTES,
     LEGACY_BRAIN_TABS,
     brainDossierHref,
+    brainStripTabOf,
     brainTabHref,
     brainUploadHref,
     knowledgeSourceHref,
 } from "./knowledge-routes"
-export type { BrainPart, BrainTab } from "./knowledge-routes"
+export type { BrainPart, BrainStripTab, BrainTab } from "./knowledge-routes"

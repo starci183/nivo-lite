@@ -2,6 +2,7 @@
 import type {
     PackageReport,
     ParameterBinding,
+    ParameterOption,
     ParameterValue,
     ParameterValues,
     RequiredPlugin,
@@ -87,7 +88,7 @@ export interface ParameterInput {
     /** The key. */
     readonly key: string
     /** How the value is entered. */
-    readonly kind: "number" | "text" | "toggle" | "textarea"
+    readonly kind: "number" | "text" | "toggle" | "textarea" | "time" | "choice"
     /** The label. */
     readonly label: TemplateText
     /** A line of help. */
@@ -100,6 +101,8 @@ export interface ParameterInput {
     readonly required: boolean
     /** The default value as text (a number, a text or `true`/`false`). */
     readonly defaultValue: string
+    /** The choices of a `choice` setting. */
+    readonly options?: ReadonlyArray<ParameterOption> | undefined
 }
 
 /** Where a parameter lands, as the creator types it: a value names its term, a wait does not. */
@@ -151,7 +154,7 @@ export interface ParameterView {
     /** The key. */
     readonly key: string
     /** How the value is entered. */
-    readonly kind: "number" | "text" | "toggle" | "textarea"
+    readonly kind: "number" | "text" | "toggle" | "textarea" | "time" | "choice"
     /** The label. */
     readonly label: TemplateText
     /** A line of help. */
@@ -164,6 +167,8 @@ export interface ParameterView {
     readonly required: boolean
     /** The default value as text (a number, a text or `true`/`false`). */
     readonly defaultValue: string
+    /** The choices of a `choice` setting; null for every other kind. */
+    readonly options: ReadonlyArray<ParameterOption> | null
 }
 
 /** A data right a package proposes. */

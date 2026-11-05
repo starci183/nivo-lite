@@ -1,8 +1,7 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { LEADS_ROUTES, newLeadPath } from "@/modules/routes"
-import { LeadsPageBase } from "./component"
+import { LeadPanes } from "@/components/blocks/LeadPanes"
 
 interface LeadsPageProps {
     readonly query: string
@@ -12,24 +11,7 @@ interface LeadsPageProps {
 /** The Leads page's localized document title. */
 export const leadsPageMetadata = async (): Promise<Metadata> => ({ title: (await getTranslations("leads"))("title") })
 
-/** A server shell for browser-owned lead data and mutations. */
-export const LeadsPage = async (props: LeadsPageProps): Promise<ReactElement> => {
-    const t = await getTranslations("leads")
-    return (
-        <LeadsPageBase
-            props={{
-                query: props.query,
-                isFormOpen: props.openForm,
-                crumbLabel: t("crumbLabel"),
-                crumbs: [
-                    { id: "home", label: t("crumbHome"), href: LEADS_ROUTES.dashboard },
-                    { id: "leads", label: t("title") },
-                ],
-                title: t("title"),
-                description: t("descriptionShort"),
-                newLeadLabel: t("newLead"),
-                newLeadHref: newLeadPath(),
-            }}
-        />
-    )
-}
+/** The leads route: the panes block is its root and draws the one `Page` of the list beside the open customer. */
+export const LeadsPage = (props: LeadsPageProps): ReactElement => (
+    <LeadPanes leadId={null} query={props.query} isFormOpen={props.openForm} />
+)

@@ -1,3 +1,5 @@
+import type { BadgeTone } from "@starci/grammar/common"
+
 /** Who made a decision: the policy alone, or the owner or a staff member. */
 export type DeciderKind = "policy" | "owner" | "staff"
 
@@ -33,4 +35,28 @@ export interface DecisionFilter {
     readonly kind: DecisionKind | null
     readonly department: string | null
     readonly limit: number
+}
+
+/** One decision as the list and the opened detail draw it, in the words of the reader. */
+export interface DecisionHistoryRowView {
+    readonly id: string
+    /** What was decided: the action in plain words. */
+    readonly title: string
+    readonly departmentLabel: string
+    /** Who decided: a person, or the policy. */
+    readonly decider: string
+    readonly isPolicy: boolean
+    readonly outcomeLabel: string
+    readonly outcomeTone: BadgeTone
+    /** The line under the title in the list: the module, the decider and when. */
+    readonly line: string
+    readonly whenShort: string
+    readonly whenLong: string
+    /** Why the gate asked a person, and what that means; absent for routine work. */
+    readonly reasonTitle: string | null
+    readonly reasonHint: string | null
+    readonly basis: string | null
+    readonly note: string | null
+    readonly leadHref: string | null
+    readonly leadLabel: string
 }

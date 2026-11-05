@@ -202,7 +202,11 @@ export type { ApproveLeadGenCommentMutation, ApproveMcpConnectorMutation } from 
 export type { ApprovePublicDocumentMutation, ApproveVideoProjectMutation } from "./graphql/__generated__/graphql"
 export type { ApproverDirectoryQuery, ArchivePublicDocumentMutation } from "./graphql/__generated__/graphql"
 export type { ArchiveVideoProjectMutation, AskGuideMutation, AskKnowledgeQuery } from "./graphql/__generated__/graphql"
-export type { AssignAgentWorkMutation, AssignDossierFindingMutation } from "./graphql/__generated__/graphql"
+export type {
+    AssignAgentWorkMutation,
+    AssignBrainDossierMutation,
+    AssignDossierFindingMutation,
+} from "./graphql/__generated__/graphql"
 export type { AssignResponsibilityMutation, AuthorityQuery } from "./graphql/__generated__/graphql"
 export type { AuthorizeDriveMutation, AuthorizeGoogleMutation } from "./graphql/__generated__/graphql"
 export type { AuthorizeMetaMutation, AuthorizeZaloMutation, BillingPlanQuery } from "./graphql/__generated__/graphql"

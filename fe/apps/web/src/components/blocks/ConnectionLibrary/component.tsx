@@ -87,15 +87,14 @@ export const ConnectionLibraryBase = (props: ConnectionLibraryBaseProps) => (
                 clearLabel={props.props.clearLabel}
             />
             <Tabs
-                kind="filter"
                 label={props.props.filterLabel}
+                selectedKey={props.props.category}
                 items={props.props.categories.map((category) => ({
                     id: category.id,
-                    label: category.label,
-                    count: category.count,
+                    label: `${category.label} ${category.count}`,
                 }))}
-                selectedKey={props.props.category}
                 onSelect={props.on.category}
+                labelVisibility="always"
             />
         </Fieldset>
         {props.props.cards.length === 0 ? (

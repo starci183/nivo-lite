@@ -1,79 +1,96 @@
 "use client"
 
-import { slotOfReads } from "@/hooks/slot"
 import { useTranslations } from "next-intl"
+import { useState } from "react"
 import type { ReactNode } from "react"
-import { ConnectionsHeadContent } from "@/components/composites/ConnectionsHead"
-import {
-    attentionConnections,
-    CONNECTION_ROUTES,
-    liveConnections,
-    URL_PARAMS,
-    useConnectionOverlays,
-    useConnectionsData,
-    useConnectionsRole,
-} from "@/hooks/connections"
+import { URL_PARAMS } from "@/hooks/connections"
+import { useSlotLabels } from "@/hooks/slot"
+import { useConnectionsList, visibleRowsOf } from "@/hooks/connectionsPanes"
+import { connectionsGridOf } from "@/hooks/connectionsRoute"
+import { usePaneCopy } from "@/hooks/paneFrame"
+import { navigation } from "@/modules/i18n"
+import { CONSOLE_ROUTES } from "@/modules/routes"
 import { ConnectionsFrameBase } from "./component"
 
-/** What the route hands the frame: the tab the query string asked for, and the page body. */
+/** What the routed page hands the frame: the page that sits beside the list. */
 interface ConnectionsFrameProps {
-    readonly tab?: string | undefined
     readonly children: ReactNode
 }
 
-/** The Connections `Page`: its header reads the workspace (live count, summary) and selects the Connected / Library tab. */
+/**
+ * The connected frame of the Connections pages: reads the workspace's connections and the viewer's role, keeps the search and the
+ * filter of the list, and draws the page band and the list beside whichever page the route is. The open connection comes from the
+ * address, so a refresh and a shared link keep it.
+ */
 export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
     const t = useTranslations("connections")
-    const { role, isLoading: isRoleLoading } = useConnectionsRole()
-    const data = useConnectionsData()
-    const overlays = useConnectionOverlays()
-    const manager = role === "owner" || role === "manager"
-    const live = liveConnections(data.items)
-    const attention = attentionConnections(data.items)
-    const showsLibrary = props.tab === "library" || (props.tab !== "connected" && live.length === 0)
-    const summarySlot = slotOfReads(data.reads, () => true)
-    const isReady = !isRoleLoading && manager && "items" in summarySlot
-    const summary =
-        attention.length > 0
-            ? t("summary", { live: live.length, attention: attention.length })
-            : t("summaryCalm", { live: live.length })
-    const placeholderView = props.tab === "library" ? "library" : "connected"
-    const readyView = showsLibrary ? "library" : "connected"
+    const shell = useTranslations("shell")
+    const pane = usePaneCopy()
+    const router = navigation.useRouter()
+    const labels = useSlotLabels()
+    const list = useConnectionsList()
+    const [text, setText] = useState("")
+    const [filter, setFilter] = useState("all")
+    const view = "items" in list.slot ? list.slot.items : undefined
+    const rows = view === undefined ? [] : visibleRowsOf(view.rows, filter, text)
     return (
         <ConnectionsFrameBase
-            children={props.children}
             props={{
-                header: ConnectionsHeadContent({
-                    crumbLabel: t("crumbLabel"),
-                    homeLabel: t("crumbHome"),
-                    homeHref: CONNECTION_ROUTES.dashboard,
+                copy: {
+                    grid: t("title"),
+                    listLabel: t("listLabel"),
                     title: t("title"),
-                    ...(role === "owner"
-                        ? {
-                              add: {
-                                  label: t("add"),
-                                  href: `${CONNECTION_ROUTES.connections}?${URL_PARAMS.tab}=library`,
-                              },
-                          }
-                        : {}),
-                    description: t("description"),
-                    ...(isReady ? { meta: summary } : {}),
-                    tabs: {
-                        label: t("title"),
-                        selectedKey: isReady ? readyView : placeholderView,
-                        onSelect: (key) => {
-                            overlays.setTab(key === "library" ? "library" : "connected")
-                        },
-                        items: [
-                            {
-                                id: "connected",
-                                label: isReady ? `${t("tabConnected")} · ${live.length}` : t("tabConnected"),
-                            },
-                            { id: "library", label: t("tabLibrary") },
-                        ],
-                    },
-                }),
+                    crumbLabel: shell("crumbLabel"),
+                    tabsLabel: t("title"),
+                    tabLibrary: t("tabLibrary"),
+                    errorBody: pane.errorBody,
+                    noMatchTitle: pane.noMatchTitle,
+                    noMatchBody: pane.noMatchBody,
+                    clearFilters: pane.clearFilters,
+                },
+                crumbs: [
+                    { id: "home", label: shell("crumbHome"), href: CONSOLE_ROUTES.dashboard },
+                    list.openName === null
+                        ? { id: "connections", label: t("title") }
+                        : { id: "connections", label: t("title"), href: CONSOLE_ROUTES.connections },
+                    ...(list.openName === null ? [] : [{ id: "open", label: list.openName }]),
+                ],
+                tab: list.tab,
+                connectedLabel: view === undefined ? t("tabConnected") : `${t("tabConnected")} · ${view.rows.length}`,
+                tabHrefs: {
+                    connected: CONSOLE_ROUTES.connections,
+                    library: `${CONSOLE_ROUTES.connections}?tab=library`,
+                },
+                slot: list.slot,
+                labels: labels(t("connectedEmpty")),
+                search: {
+                    label: t("libSearch"),
+                    placeholder: t("libSearch"),
+                    clearLabel: t("libClear"),
+                    value: text,
+                    onChange: setText,
+                },
+                choice: {
+                    label: t("filterLabel"),
+                    value: filter,
+                    onChange: setFilter,
+                    moreLabel: pane.moreFilters,
+                },
+                rows,
+                openId: list.openId,
+                isRecordOpen: !list.isRoot,
+                grid: connectionsGridOf({ hasList: view === undefined || view.liveCount > 0, isRoot: list.isRoot }),
             }}
+            on={{
+                open: (row) => router.push(row.href ?? `${CONSOLE_ROUTES.connections}?${URL_PARAMS.open}=${row.id}`),
+                retry: list.retry,
+                continueSetup: (href) => router.push(href),
+                clearFilters: () => {
+                    setText("")
+                    setFilter("all")
+                },
+            }}
+            children={props.children}
         />
     )
 }

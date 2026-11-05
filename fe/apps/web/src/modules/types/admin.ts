@@ -30,6 +30,8 @@ export interface AdminCardView {
     readonly label: string
     readonly ariaLabel?: string
     readonly emptyMessage: string
+    /** How many rows the list holds, beside its label; absent for a list that is a log and not a count. */
+    readonly count?: number
     /** Badges drawn beside the card label. */
     readonly labelBadges: ReadonlyArray<AdminBadgeView>
     readonly rows: ReadonlyArray<AdminRowView>
@@ -52,8 +54,6 @@ export interface AdminWorkspaceRowView {
     readonly statusTone: AdminBadgeView["tone"]
     readonly paidUntil: string | null
     readonly plan: string
-    readonly created: string
-    readonly members: number
     readonly modules: ReadonlyArray<AdminBadgeView>
     readonly connections: ReadonlyArray<AdminBadgeView>
     readonly connectionWarnings: ReadonlyArray<AdminBadgeView>

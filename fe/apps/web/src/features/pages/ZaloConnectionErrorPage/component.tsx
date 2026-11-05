@@ -1,21 +1,23 @@
-import { RouteError } from "@/components/blocks/RouteError"
+import { PaneFailure } from "@/components/composites/PaneFailure"
 
-/** The trail, the heading and the words of the failure. */
+/** The words of the failure of the Zalo connection page. */
 export interface ZaloConnectionErrorPageBaseProps {
     readonly props: {
-        readonly crumbs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href?: string }>
+        readonly label: string
         readonly title: string
-        readonly message: string
+        readonly description: string
+        readonly retryLabel: string
     }
     readonly on: { readonly retry: () => void }
 }
 
-/** The Zalo OA page keeps its trail and heading when its data fails, with one Alert and a retry. */
+/** The Zalo connection page keeps the Connections frame and its list when its data fails: one notice in its pane, with a retry. */
 export const ZaloConnectionErrorPageBase = (props: ZaloConnectionErrorPageBaseProps) => (
-    <RouteError
-        crumbs={props.props.crumbs}
+    <PaneFailure
+        label={props.props.label}
         title={props.props.title}
-        message={props.props.message}
+        description={props.props.description}
+        retryLabel={props.props.retryLabel}
         onRetry={props.on.retry}
     />
 )

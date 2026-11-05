@@ -25,7 +25,7 @@ const ledgerStateOf = (lost: boolean, sheetId: string): LedgerGrant["state"] => 
     return sheetId === "" ? "granted" : "ready"
 }
 
-const NONE: LedgerGrant = { state: "none", email: "", sheetId: "", sheetUrl: "" }
+const NONE: LedgerGrant = { state: "none", email: "", sheetId: "", sheetUrl: "", sheetTitle: "", lastRowAt: "" }
 
 @Injectable()
 /**
@@ -58,6 +58,8 @@ export class SheetsGrantService {
             email: row.meta.email ?? "",
             sheetId,
             sheetUrl: sheetId === "" ? "" : sheetUrlOf(sheetId),
+            sheetTitle: row.meta.ledgerSheetTitle ?? "",
+            lastRowAt: row.meta.ledgerLastRowAt ?? "",
         }
     }
 
@@ -73,8 +75,13 @@ export class SheetsGrantService {
         if (row === undefined) throw new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Missing })
         if (row.meta.ledgerSheet !== sheetId) {
             // A new sheet has no header row yet, so the mark of the old one goes.
-            const kept = Object.fromEntries(Object.entries(row.meta).filter(([key]) => key !== "ledgerHeader"))
-            await this.connections.patch(actor.workspaceId, row.id, { meta: { ...kept, ledgerSheet: sheetId } })
+            const kept = Object.fromEntries(
+                Object.entries(row.meta).filter(([key]) => key !== "ledgerHeader" && key !== "ledgerSheetTitle"),
+            )
+            const { title } = await this.titleOf(row, sheetId)
+            await this.connections.patch(actor.workspaceId, row.id, {
+                meta: { ...kept, ledgerSheet: sheetId, ...(title === "" ? {} : { ledgerSheetTitle: title }) },
+            })
         }
         return this.grant(actor)
     }
@@ -103,6 +110,22 @@ export class SheetsGrantService {
             meta: { ...consentedMeta(row?.meta, account), sheets: SHEETS_GRANTED },
             tokens: { access_token: tokens.accessToken, renewal_token: refresh, expires_at: tokens.expiresAt },
         })
+    }
+
+    /**
+     * The title Google gives the sheet, asked with the grant own token. When it cannot be read the title is blank and the outcome
+     * carries why: the owner can still use the sheet.
+     */
+    private async titleOf(
+        row: ConnectionRecord,
+        sheetId: string,
+    ): Promise<{ readonly title: string; readonly cause?: unknown }> {
+        try {
+            const token = await this.tokens.accessToken({ row, force: false })
+            return { title: (await this.google.spreadsheetTitle(token, sheetId)) || "" }
+        } catch (cause) {
+            return { title: "", cause }
+        }
     }
 
     private rowsOf(workspaceId: string): Promise<ReadonlyArray<ConnectionRecord>> {

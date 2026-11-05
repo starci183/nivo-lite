@@ -48,6 +48,7 @@ const FILTER_LABEL: Readonly<Record<string, string>> = {
     accounting: "filterAccounting",
     workspace: "filterWorkspace",
     on: "filterOn",
+    hidden: "filterHidden",
 }
 
 /** The Google accounts of the workspace a card can write with. */

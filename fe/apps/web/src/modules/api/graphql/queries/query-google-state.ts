@@ -17,6 +17,8 @@ const query1: TypedDocumentNode<QueryGoogleStateResponse> = gql`
                 email
                 sheetId
                 sheetUrl
+                sheetTitle
+                lastRowAt
             }
         }
     }

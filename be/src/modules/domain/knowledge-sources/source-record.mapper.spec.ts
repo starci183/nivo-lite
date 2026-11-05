@@ -103,6 +103,7 @@ const summary = {
     error: null,
     chunkCount: 0,
     sizeBytes: 0,
+    origin: null,
     progress: 0,
     stage: null,
     stageDone: null,
@@ -117,6 +118,15 @@ describe("toSourceSummary", () => {
         const subject = await buildSubject()
 
         expect(subject.toSourceSummary(rowOf())).toEqual(summary)
+    })
+
+    it("carries the origin a document came from", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.toSourceSummary(rowOf({ origin: "google_drive" }))).toEqual({
+            ...summary,
+            origin: "google_drive",
+        })
     })
 })
 

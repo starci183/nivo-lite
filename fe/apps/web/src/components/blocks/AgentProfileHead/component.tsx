@@ -2,12 +2,14 @@ import {
     Badge,
     Button,
     Cluster,
+    Dialog,
+    DropdownMenu,
     Grid,
+    IconButton,
     NumberField,
     Page,
     Select,
     Stack,
-    SurfaceCard,
     Text,
     Textarea,
 } from "@starci/grammar/common"
@@ -16,6 +18,7 @@ import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { AgentMark } from "@/components/leaves/AgentMark"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** What the heading shows once the agent arrived, every word resolved. */
 export interface ProfileHeadView {
@@ -36,11 +39,13 @@ export interface ProfileHeadView {
 
 /** Copy and slot of the heading of an agent profile. */
 export interface AgentProfileHeadBaseProps {
-    /** The page body, drawn under the composer. */
+    /** The page body, drawn under the heading. */
     readonly children: ReactNode
     readonly props: {
         readonly crumbLabel: string
         readonly assignLabel: string
+        /** The heading's menu: its accessible name and the entry that opens the picture-and-name dialog (a link: the dialog is open while the address says so). */
+        readonly menu: { readonly label: string; readonly identityLabel: string; readonly identityHref: string }
         /** The heading once the agent arrived, or the placeholder while it has not. */
         readonly head: ProfileHeadView
         /** True while the agent is unresolved: the heading draws its measured placeholders. */
@@ -53,6 +58,7 @@ export interface AgentProfileHeadBaseProps {
             readonly placeholder: string
             readonly hint: string
             readonly sendLabel: string
+            readonly closeLabel: string
             readonly text: string
             readonly maxLength: number
             readonly canSend: boolean
@@ -128,11 +134,33 @@ const TaskFields = (props: ComposerProps) => {
     )
 }
 
-/** Draws the mini composer that hands the agent work, at the top of the page body while it is open. */
+/** Draws the composer that hands the agent work as a dialog, so opening it never pushes the page. */
 const AssignComposer = (props: ComposerProps) => {
     const { composer, head } = props.props
     return (
-        <SurfaceCard label={head.composerTitle} headingLevel={2}>
+        <Dialog
+            isOpen={composer.isOpen}
+            onOpenChange={props.on.toggle}
+            size="md"
+            title={head.composerTitle}
+            closeLabel={composer.closeLabel}
+            isDismissable={!composer.isPending}
+            footer={
+                <>
+                    <Button intent="neutral" isDisabled={composer.isPending} onPress={props.on.toggle}>
+                        {composer.closeLabel}
+                    </Button>
+                    <Button
+                        intent="commit"
+                        isPending={composer.isPending}
+                        isDisabled={!composer.canSend}
+                        onPress={props.on.send}
+                    >
+                        {composer.sendLabel}
+                    </Button>
+                </>
+            }
+        >
             <Stack gap="row">
                 <Textarea
                     id="agent-assign-text"
@@ -152,17 +180,9 @@ const AssignComposer = (props: ComposerProps) => {
                     <Text size="sm" tone="muted">
                         {composer.hint}
                     </Text>
-                    <Button
-                        intent="commit"
-                        isPending={composer.isPending}
-                        isDisabled={!composer.canSend}
-                        onPress={props.on.send}
-                    >
-                        {composer.sendLabel}
-                    </Button>
                 </Cluster>
             </Stack>
-        </SurfaceCard>
+        </Dialog>
     )
 }
 
@@ -187,14 +207,28 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                     </Badge>
                 )),
                 actions: (
-                    <Button
-                        intent="alternative"
-                        isLoading={isLoading}
-                        isDisabled={!head.canAssign}
-                        onPress={props.on.toggle}
-                    >
-                        {view.assignLabel}
-                    </Button>
+                    <Cluster gap="inline">
+                        <Button intent="commit" isLoading={isLoading} onPress={props.on.toggle}>
+                            {view.assignLabel}
+                        </Button>
+                        <DropdownMenu
+                            placement="bottom end"
+                            entries={[
+                                {
+                                    id: "identity",
+                                    label: view.menu.identityLabel,
+                                    href: view.menu.identityHref,
+                                },
+                            ]}
+                            trigger={
+                                <IconButton
+                                    intent="neutral"
+                                    source={nivoIconSource("more", "leading")}
+                                    label={view.menu.label}
+                                />
+                            }
+                        />
+                    </Cluster>
                 ),
             }}
         >
@@ -204,7 +238,7 @@ export const AgentProfileHeadBase = (props: AgentProfileHeadBaseProps) => {
                     placeholder={false}
                     labels={view.labels}
                     onRetry={props.on.retry}
-                    render={() => (view.composer.isOpen ? <AssignComposer {...props} /> : null)}
+                    render={() => <AssignComposer {...props} />}
                 />
                 {props.children}
             </Stack>

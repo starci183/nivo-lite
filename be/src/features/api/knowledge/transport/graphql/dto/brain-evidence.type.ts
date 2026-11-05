@@ -1,4 +1,4 @@
-import { Field, ObjectType } from "@nestjs/graphql"
+import { Field, ID, ObjectType } from "@nestjs/graphql"
 
 @ObjectType()
 /** Where a fact or a lesson came from. */
@@ -22,4 +22,12 @@ export class BrainEvidenceType {
     /** When it happened, ISO 8601. */
     @Field(() => String, { nullable: true })
     at?: string | null | undefined
+
+    /** Document evidence: the title of the document it was read from; null for any other kind. */
+    @Field(() => String, { nullable: true })
+    sourceTitle?: string | null | undefined
+
+    /** Document evidence: the id of the document it was read from; null for any other kind. */
+    @Field(() => ID, { nullable: true })
+    sourceId?: string | null | undefined
 }

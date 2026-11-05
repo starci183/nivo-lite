@@ -1,3 +1,4 @@
+import { isNotFoundFailure } from "@/modules/failure"
 import type { useMutateVerifyLoyaltyCodeSwr } from "@/hooks/swr"
 
 /** The points the back end shows once the code is right. */
@@ -27,3 +28,6 @@ const ERROR_KEYS: Readonly<Record<PublicLoyaltyFailure, string>> = {
 
 /** The `loyaltyPublic` catalog key of the message under a failure. */
 export const errorKeyOf = (failure: PublicLoyaltyFailure): string => ERROR_KEYS[failure]
+
+/** The page read failed because the shop has no points page (closed or never opened), not because of the network. */
+export const isLoyaltyPageClosed = (error: unknown): boolean => isNotFoundFailure(error)

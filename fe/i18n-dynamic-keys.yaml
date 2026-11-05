@@ -3,6 +3,12 @@ schema: starci/i18n-dynamic-keys@1
 # from a block to a wrapper hook or typed callback. Each reason names the file that reads the key or builds the key family.
 namespaces:
   admin:
+    - prefix: "plan"
+      reason: "Key family built at run time as `plan${Code}` in components/blocks/AdminSupportActions/index.tsx: the plan code comes from the closed PLAN_CODES list of hooks/admin/admin.shared.ts."
+    - prefix: "billingStatus_"
+      reason: "Key family built at run time as `${prefix}${code}` in hooks/admin/useAdminWorkspaceRows.ts: the billing status code comes from data, so the detector cannot enumerate the keys."
+    - prefix: "planName_"
+      reason: "Key family built at run time as `${prefix}${code}` in hooks/admin/useAdminWorkspaceRows.ts: the plan code comes from data, so the detector cannot enumerate the keys."
     - key: "failTitle"
       reason: 'Read as the string "failTitle" in components/blocks/AccountEmail/index.tsx, components/blocks/AccountPassword/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   agentChat:

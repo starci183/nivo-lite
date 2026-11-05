@@ -26,7 +26,7 @@ export const useSignupForm = (initialEmail: string | undefined): UseFormReturn<S
                     name: z.string().trim().min(NAME_MIN_LENGTH, t("errName")),
                     email: z.string().trim().regex(EMAIL_PATTERN, t("errEmail")),
                     password: z.string().min(PASSWORD_MIN_LENGTH, t("errPasswordShort")),
-                    confirm: z.string(),
+                    confirm: z.string().min(1, t("errPasswordMismatch")),
                 })
                 .refine((values) => values.confirm === values.password, {
                     path: ["confirm"],

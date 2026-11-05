@@ -1,7 +1,19 @@
 import { Field, Float, InputType } from "@nestjs/graphql"
 import { Type } from "class-transformer"
-import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, Matches, MaxLength, ValidateNested } from "class-validator"
+import {
+    ArrayMaxSize,
+    IsArray,
+    IsBoolean,
+    IsIn,
+    IsNumber,
+    IsOptional,
+    IsString,
+    Matches,
+    MaxLength,
+    ValidateNested,
+} from "class-validator"
 import { NullAsAbsent } from "@modules/platform/graphql"
+import { TemplateParameterOptionInput } from "./template-parameter-option.input"
 import { TemplateTextInput } from "./template-text.input"
 
 @InputType()
@@ -14,11 +26,11 @@ export class TemplateParameterInput {
     @MaxLength(40)
     key!: string
 
-    /** `number`, `text`, `toggle` or `textarea`. */
+    /** `number`, `text`, `toggle`, `textarea`, `time` or `choice`. */
     @Field(() => String)
-    @IsIn(["number", "text", "toggle", "textarea"])
+    @IsIn(["number", "text", "toggle", "textarea", "time", "choice"])
     @MaxLength(20)
-    kind!: "number" | "text" | "toggle" | "textarea"
+    kind!: "number" | "text" | "toggle" | "textarea" | "time" | "choice"
 
     /** The label. */
     @Field(() => TemplateTextInput)
@@ -58,4 +70,14 @@ export class TemplateParameterInput {
     @IsString()
     @MaxLength(2000)
     defaultValue!: string
+
+    /** The choices of a `choice` setting. */
+    @Field(() => [TemplateParameterOptionInput], { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(20)
+    @ValidateNested({ each: true })
+    @Type(() => TemplateParameterOptionInput)
+    options?: Array<TemplateParameterOptionInput>
 }

@@ -10,6 +10,7 @@ interface DriveSetupStepView {
     readonly summary: string
     readonly hint: string
     readonly isOpen: boolean
+    readonly isDone: boolean
 }
 
 /** The notice and command that stand in place of the steps while there is no grant at all. */

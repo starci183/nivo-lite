@@ -1,7 +1,6 @@
-import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { PermissionsPageBase } from "./component"
+import { PermissionPanes } from "@/components/blocks/PermissionPanes"
 
 /** The document title of the page. */
 export const permissionsMetadata = async (): Promise<Metadata> => {
@@ -9,19 +8,5 @@ export const permissionsMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** The /permissions screen body (owner and manager): static copy; the rules are read in the browser from the back end GraphQL API. */
-export const PermissionsPage = async (): Promise<ReactElement> => {
-    const t = await getTranslations("permissions")
-    return (
-        <PermissionsPageBase
-            props={{
-                heading: {
-                    crumbLabel: t("crumbLabel"),
-                    crumbHome: t("crumbHome"),
-                    title: t("title"),
-                    description: t("description"),
-                },
-            }}
-        />
-    )
-}
+/** The permissions route: the panes block is its root and draws the one `Page` of the rules and the open rule's form. */
+export const PermissionsPage = () => <PermissionPanes />

@@ -96,6 +96,7 @@ export const toThreadMessageType = (message: ThreadMessage): ThreadMessageType =
 /** Maps a thread with its messages to the GraphQL type. */
 export const toWorkThreadViewType = (view: ThreadView): WorkThreadViewType => ({
     thread: { ...view.thread },
+    participants: { ...view.participants },
     messages: view.messages.map((message) => ({ ...message })),
 })
 

@@ -1,4 +1,14 @@
-import { Alert, Button, DescriptionList, Meter, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import {
+    Alert,
+    BarChart,
+    Button,
+    DescriptionList,
+    EmptyNotice,
+    Grid,
+    Stack,
+    SurfaceCard,
+    Text,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, MarketingReportView, SlotLabels } from "@/modules/types"
 
@@ -97,35 +107,31 @@ const Report = (props: ReportProps) => {
                     meta: item.meta,
                 }))}
             />
-            <SurfaceCard label={words.chartTitle}>
-                <Stack gap="section">
-                    <Text size="sm" tone="muted">
-                        {words.chartNote}
-                    </Text>
-                    <Stack gap="row">
-                        {view.days.map((day) => (
-                            <Meter
-                                key={day.id}
-                                label={day.label || words.chartTitle}
-                                value={day.total}
-                                maxValue={view.dayMax}
-                                valueLabel={
-                                    day.breakdown === "" ? String(day.total) : `${day.total} · ${day.breakdown}`
-                                }
-                                isLoading={isLoading}
-                            />
-                        ))}
-                    </Stack>
-                </Stack>
-            </SurfaceCard>
-            {view.channels.length === 0 ? null : (
-                <SurfaceCard label={words.channelsTitle}>
-                    <DescriptionList layout="columns" isDivided items={view.channels} />
+            <Grid kind="cards" columns={2}>
+                <SurfaceCard label={words.chartTitle} footer={words.chartNote}>
+                    <BarChart
+                        label={words.chartTitle}
+                        isLoading={isLoading}
+                        empty={<EmptyNotice message={words.chartTitle} />}
+                        bars={view.days.map((day) => ({
+                            id: day.id,
+                            label: day.label,
+                            value: day.total,
+                            valueLabel: String(day.total),
+                        }))}
+                    />
                 </SurfaceCard>
-            )}
-            {view.insight === "" ? null : (
-                <Alert tone="informative" title={words.insightTitle} description={view.insight} />
-            )}
+                <Stack gap="section">
+                    {view.channels.length === 0 ? null : (
+                        <SurfaceCard label={words.channelsTitle}>
+                            <DescriptionList layout="columns" isDivided items={view.channels} />
+                        </SurfaceCard>
+                    )}
+                    {view.insight === "" ? null : (
+                        <Alert tone="informative" title={words.insightTitle} description={view.insight} />
+                    )}
+                </Stack>
+            </Grid>
             <Suggestion words={words} view={view} />
             <TopPosts words={words} view={view} />
             {props.props.canPost ? (

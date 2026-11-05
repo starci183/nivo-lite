@@ -22,18 +22,12 @@ import {
     connectionPageHref,
     mayConnect,
     useConnectionOverlays,
+    useConnectionsData,
     useConnectionsRole,
     useWantConnector,
 } from "@/hooks/connections"
 import type { Connection, ConnectorCategory, Provider, LibraryCard, LibraryCategory } from "@/modules/types"
 import { ConnectionLibraryBase } from "./component"
-
-/** What the page hands the library. */
-type ConnectionLibraryProps = {
-    readonly items: ReadonlyArray<Connection>
-    /** The workspace reads are not in yet: the tiles keep their shape with blank chips. */
-    readonly isLoading?: boolean
-}
 
 type Translate = ReturnType<typeof useTranslations<"connections">>
 
@@ -129,10 +123,13 @@ const libraryOf = (input: LibraryInput) => {
  * pass both. A tile opens the provider page of the connection when there is one, else the connector drawer through the
  * URL; a planned connector carries the "I need this" command.
  */
-export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
+export const ConnectionLibrary = () => {
     const t = useTranslations("connections")
     const overlays = useConnectionOverlays()
     const { role } = useConnectionsRole()
+    const data = useConnectionsData()
+    const { items } = data
+    const isLoading = "isLoading" in data.slot
     const [text, setText] = useState("")
     const [category, setCategory] = useState<ConnectorCategory | "all">("all")
     const [wants, setWants] = useState<Readonly<Record<string, LibraryCard["want"]>>>({})
@@ -150,8 +147,8 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
         )
     }
     const { categories, cards } = useMemo(
-        () => libraryOf({ t, items: props.items, text, category, wants, role }),
-        [t, props.items, text, category, wants, role],
+        () => libraryOf({ t, items, text, category, wants, role }),
+        [t, items, text, category, wants, role],
     )
     return (
         <ConnectionLibraryBase
@@ -173,7 +170,7 @@ export const ConnectionLibrary = (props: ConnectionLibraryProps) => {
                 currentLabel: t("libCurrent"),
                 othersLabel: t("libOthers"),
                 cards,
-                isLoading: props.isLoading ?? false,
+                isLoading,
             }}
             on={{
                 text: setText,

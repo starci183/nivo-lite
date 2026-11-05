@@ -6,6 +6,7 @@ import {
     DIALOG_OF_ACTION,
     FINDING_FILTERS,
     dossierTagOf,
+    findingCountsOf,
     filterOfStatus,
     queryOfDossier,
     reviewedStatusOf,
@@ -52,11 +53,12 @@ interface PaneContext {
     readonly canWrite: boolean
     readonly isReviewPending: boolean
     readonly filter: FindingFilter
+    readonly counts: ReturnType<typeof findingCountsOf>
 }
 
 /** Words the actual findings read without changing its independent status, failure or paging state. */
 const paneOf = (context: PaneContext): DossierFindingsPane => {
-    const { dossierId, findingId, dossier, summary, list, rowOf, t, brain, format, canWrite, filter } = context
+    const { dossierId, findingId, dossier, summary, list, rowOf, t, brain, format, canWrite, filter, counts } = context
     const review = dossierId === undefined ? undefined : summary.reviewOf(dossierId)
     const standing = reviewedStatusOf(dossier?.status ?? "", review)
     const upload: UploadTarget | null =
@@ -81,7 +83,7 @@ const paneOf = (context: PaneContext): DossierFindingsPane => {
             dialog: context.dialog,
         },
         filterLabel: t("filterLabel"),
-        filters: FINDING_FILTERS.map((one) => ({ value: one, label: t(DOSSIER_FILTER_KEY[one]) })),
+        filters: FINDING_FILTERS.map((one) => ({ value: one, label: t(DOSSIER_FILTER_KEY[one]), count: counts[one] })),
         filter,
         listLabel: t("findingsLabel"),
         slot: mapSlot(list.slot, (all) =>
@@ -101,12 +103,9 @@ const paneOf = (context: PaneContext): DossierFindingsPane => {
     }
 }
 
-/** The props of the findings pane, as `paneOf` words them. */
-type DossierFindingsProps = DossierFindingsPane
-
 /** The view `useDossierFindingsView` returns. */
 export interface DossierFindingsView {
-    props: DossierFindingsProps
+    props: DossierFindingsPane
     on: {
         setFilter: (value: string) => void
         review: () => void
@@ -181,6 +180,7 @@ export const useDossierFindingsView = (input: FindingsSelection): DossierFinding
             canWrite: member.canWrite,
             isReviewPending: commands.isPending,
             filter,
+            counts: findingCountsOf(findings, !list.hasNextPage),
         }),
         on: {
             setFilter: (value: string) => setPicked(dossierFilterOf(value, filter)),

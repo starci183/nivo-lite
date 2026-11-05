@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Badge, Button } from "@starci/grammar/common"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
 import type { AgentWorkGoalView } from "@/modules/types"
@@ -11,6 +12,8 @@ interface AgentWorkGoalsProps {
     readonly canEdit: boolean
     readonly isSaving: boolean
     readonly isLoading: boolean
+    /** The command at the end of the heading. */
+    readonly action?: ReactNode
     readonly onDone: (goal: AgentWorkGoalView) => void
 }
 
@@ -18,6 +21,7 @@ interface AgentWorkGoalsProps {
 export const AgentWorkGoals = (props: AgentWorkGoalsProps) => (
     <AgentWorkRows
         words={{ label: props.label, emptyMessage: props.emptyMessage }}
+        {...(props.action === undefined ? {} : { action: props.action })}
         isLoading={props.isLoading}
         rows={props.goals.map((goal) => ({
             id: goal.id,

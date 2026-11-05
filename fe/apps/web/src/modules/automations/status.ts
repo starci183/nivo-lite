@@ -64,8 +64,8 @@ const STABLE_MODULES: ReadonlyArray<ModuleKey> = MODULES.filter((module) => modu
     (module) => module.key,
 )
 
-/** The chips that always show: all, the stable modules, the whole workspace, what is on. */
-const BASE_FILTERS: ReadonlyArray<string> = ["all", ...STABLE_MODULES, WORKSPACE_SCOPE, "on"]
+/** The chips that always show: all, the stable modules, the whole workspace, what is on, what the owner hid. */
+const BASE_FILTERS: ReadonlyArray<string> = ["all", ...STABLE_MODULES, WORKSPACE_SCOPE, "on", "hidden"]
 
 /** The chips for these cards: the base chips plus any other module that owns a card. */
 export const automationFiltersFor = (cards: ReadonlyArray<AutomationCardView>): ReadonlyArray<string> => {
@@ -79,6 +79,7 @@ export const automationFiltersFor = (cards: ReadonlyArray<AutomationCardView>): 
 /** Whether a card passes the chip. */
 export const matchesAutomationFilter = (card: AutomationCardView, filter: string): boolean => {
     if (filter === "all") return true
+    if (filter === "hidden") return card.dismissed
     return filter === "on" ? card.enabled : automationScopeOf(card.def) === filter
 }
 

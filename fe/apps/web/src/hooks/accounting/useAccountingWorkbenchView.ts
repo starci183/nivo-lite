@@ -10,6 +10,7 @@ import {
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
+import { useWorkbenchAside } from "@/hooks/workbench"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { mapSlot, slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { accountingQuestionsPlaceholderOf } from "@/modules/utils"
@@ -40,7 +41,7 @@ const panelOf = <T>(slot: DataSlot<AccountingWorkbenchData>, view: T, labels: Sl
 
 /** The view `useAccountingWorkbenchView` returns. */
 export interface AccountingWorkbenchViewShape {
-    shape: "questions" | "ledger" | "overview" | "evidence" | "explanation"
+    shape: AccountingTab
     props: AccountingWorkbenchDataView
     on: AccountingWorkbenchActions
 }
@@ -59,23 +60,24 @@ export const useAccountingWorkbenchView = (input: AccountingWorkbenchViewInput):
         installationId: input.installationId,
         hasOwnGaps: false,
     })
-    const isOverview = frame.why.workItemId === null
-    const workbench = useAccountingWorkbench(isOverview)
-    const overview = useAccountingOverview(workbench.data, isOverview && tabs.selected === "overview", scope)
-    const evidence = useAccountingEvidence(workbench.data, isOverview && tabs.selected === "evidence", scope)
-    const ledger = useAccountingLedger(workbench.data, isOverview && tabs.selected === "ledger", scope)
+    const workbench = useAccountingWorkbench(true)
+    const overview = useAccountingOverview(workbench.data, tabs.selected === "overview", scope)
+    const evidence = useAccountingEvidence(workbench.data, tabs.selected === "evidence", scope)
+    const ledger = useAccountingLedger(workbench.data, tabs.selected === "ledger", scope)
     const questions = useAccountingQuestions(
         workbench.data.questions,
         workbench.data.ownerName,
-        isOverview && tabs.selected === "questions",
+        tabs.selected === "questions",
         scope,
     )
     const upcoming = useAccountingUpcoming(workbench.data)
-    const waiting = useAccountingWaiting(workbench.data, isOverview, scope)
+    const waiting = useAccountingWaiting(workbench.data, true, scope)
     const items = accountingFiguresOf(workbench.data, format, t)
+    const aside = useWorkbenchAside(frame.why.workItemId !== null)
     return {
-        shape: isOverview ? tabs.selected : ("explanation" as const),
+        shape: tabs.selected,
         props: {
+            aside: aside.view,
             why: frame.why,
             regions: frame.regions,
             selectedTab: tabs.selected,
@@ -95,7 +97,7 @@ export const useAccountingWorkbenchView = (input: AccountingWorkbenchViewInput):
                     waiting.props.rows.length === 0 ? undefined : waiting.props,
                 ),
                 placeholder: waiting.props,
-                labels: slotLabels(t("questionsEmpty")),
+                labels: slotLabels(dashboard("waitingEmpty")),
             },
             upcoming: panelOf(workbench.slot, upcoming.props, slotLabels(t("loadFailedTitle"))),
             overview: panelOf(workbench.slot, overview.props, slotLabels(t("loadFailedTitle"))),
@@ -107,6 +109,7 @@ export const useAccountingWorkbenchView = (input: AccountingWorkbenchViewInput):
             },
         },
         on: {
+            aside: aside.on,
             selectTab: tabs.select,
             closeWhy: frame.closeWhy,
             retryDashboard: frame.reload,

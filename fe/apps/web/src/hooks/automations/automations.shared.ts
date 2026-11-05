@@ -1,3 +1,4 @@
+import { matchesAutomationFilter } from "@/modules/automations"
 import type { automationBoardOf, AutomationStatus, AutomationValues } from "@/modules/automations"
 import { AUTOMATION_ROUTES } from "@/modules/routes"
 import type {
@@ -189,3 +190,11 @@ export const automationBoardActionsOf = ({
     },
     runNow: detail.startRun,
 })
+
+/** The cards a filter shows: the hidden ones for the hidden filter, else the visible ones that pass it. */
+export const automationShownOf = (
+    visible: ReadonlyArray<AutomationCardView>,
+    hidden: ReadonlyArray<AutomationCardView>,
+    filter: string,
+): Array<AutomationCardView> =>
+    filter === "hidden" ? [...hidden] : visible.filter((card) => matchesAutomationFilter(card, filter))

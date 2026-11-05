@@ -177,6 +177,7 @@ describe("WorkspaceMembersService / list", () => {
                 avatarUrl: "https://cdn.example.test/person.png",
                 email: "an@example.test",
                 lastSignInAt: "2026-10-01T00:00:00.000Z",
+                joinedAt: "2026-10-01T00:00:00.000Z",
             },
         ])
         expect(list.callsOf("where")).toEqual([["m.workspaceId = :workspaceId", { workspaceId: "ws-1" }]])

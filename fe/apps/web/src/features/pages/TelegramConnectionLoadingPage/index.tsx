@@ -1,6 +1,5 @@
 import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import { TelegramConnectionLoadingPageBase } from "./component"
 
 const STEPS = ["stepBot", "stepWebhook", "stepCheck", "stepAgents"] as const
@@ -11,11 +10,6 @@ export const TelegramConnectionLoadingPage = async (): Promise<ReactElement> => 
     return (
         <TelegramConnectionLoadingPageBase
             props={{
-                crumbLabel: t("crumbLabel"),
-                crumbs: [
-                    { id: "connections", label: t("crumbConnections"), href: CONSOLE_ROUTES.connections },
-                    { id: "telegram", label: t("crumbTelegram") },
-                ],
                 title: t("title"),
                 mainLabel: t("mainLabel"),
                 railLabel: t("eventsTitle"),

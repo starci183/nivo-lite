@@ -1,6 +1,5 @@
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { SwitchStatus } from "@/components/composites/SwitchStatus"
-import { SwitchStatusCard } from "@/components/frames/SwitchStatusCard"
 import type { AgentWorkSwitchView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** Copy and slot of the work switch card of one agent. */
@@ -29,8 +28,6 @@ const switchOf = (base: AgentWorkSwitchCardBaseProps) => (view: AgentWorkSwitchV
         isLoading={isLoading}
         isDisabled={base.props.isDisabled || !view.canChange}
         onChange={base.on.change}
-        tone={view.tone}
-        statusLabel={view.statusLabel}
         help={base.props.help}
         blocker={""}
         blockerAction={null}
@@ -38,9 +35,7 @@ const switchOf = (base: AgentWorkSwitchCardBaseProps) => (view: AgentWorkSwitchV
     />
 )
 
-/** Draws the kill switch of one agent: its label stays readable beside the switch, and the card says who may move it. */
+/** Draws the kill switch of one agent (a band of the Activity card): its label stays readable beside the switch, and the card says who may move it. */
 export const AgentWorkSwitchCardBase = (props: AgentWorkSwitchCardBaseProps) => (
-    <SwitchStatusCard title={props.props.title}>
-        <SlotView {...props.props.read} onRetry={props.on.retry} render={switchOf(props)} />
-    </SwitchStatusCard>
+    <SlotView {...props.props.read} onRetry={props.on.retry} render={switchOf(props)} />
 )

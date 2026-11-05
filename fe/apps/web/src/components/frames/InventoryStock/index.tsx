@@ -25,29 +25,14 @@ type InventoryStockProps = InventoryStockData & {
     readonly onAdjustClose: InventoryStockActions["onAdjustClose"]
 }
 
-type StockRowView = InventoryStockData["rows"][number]
 import { InventoryNotices } from "@/components/leaves/InventoryNotices"
-import { Button, Cluster, EmptyNotice, Tabs, Section, Stack, Text, type ListRowData } from "@starci/grammar/common"
+import { Button, Section, Stack, Tabs } from "@starci/grammar/common"
+import { InventoryStockTable } from "@/components/composites/InventoryStockTable"
 import { InventoryAdjustDrawer } from "@/components/composites/InventoryAdjustDrawer"
 import { InventoryItemDrawer } from "@/components/composites/InventoryItemDrawer"
 
 /** The stock tab: every item with its level, quick plus and minus buttons, and the forms that change it. */
 export const InventoryStock = (props: InventoryStockProps) => {
-    const on = {
-        filter: props.onFilter,
-        toggleInactive: props.onToggleInactive,
-        itemField: props.onItemField,
-        itemSave: props.onItemSave,
-        itemToggle: props.onItemToggle,
-        itemClose: props.onItemClose,
-        adjustMode: props.onAdjustMode,
-        adjustFrom: props.onAdjustFrom,
-        adjustTo: props.onAdjustTo,
-        adjustValue: props.onAdjustValue,
-        adjustReason: props.onAdjustReason,
-        adjustSubmit: props.onAdjustSubmit,
-        adjustClose: props.onAdjustClose,
-    }
     return (
         <Stack gap="row">
             <InventoryStockControls
@@ -66,117 +51,61 @@ export const InventoryStock = (props: InventoryStockProps) => {
             <InventoryNotices error={props.error} notice={props.notice} />
             <Section
                 isLoading={props.isLoading}
-                kind="list"
                 title={props.listLabel}
                 count={props.rows.length}
-                items={props.rows.map((row) => itemOf(row, props))}
-                empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
-                filter={
-                    <Tabs
-                        kind="filter"
-                        label={props.filterLabel}
-                        items={props.filters.map((filter) => ({ id: filter.value, label: filter.label }))}
-                        selectedKey={props.filter}
-                        onSelect={on.filter}
-                    />
-                }
                 action={
                     props.toggleInactiveLabel === null ? undefined : (
-                        <Button isLoading={props.isLoading} intent="neutral" size="sm" onPress={on.toggleInactive}>
+                        <Button isLoading={props.isLoading} intent="neutral" size="sm" onPress={props.onToggleInactive}>
                             {props.toggleInactiveLabel}
                         </Button>
                     )
                 }
-            />
+            >
+                <Tabs
+                    kind="filter"
+                    label={props.filterLabel}
+                    items={props.filters.map((filter) => ({ id: filter.value, label: filter.label }))}
+                    selectedKey={props.filter}
+                    onSelect={props.onFilter}
+                />
+                <InventoryStockTable
+                    isLoading={props.isLoading}
+                    label={props.listLabel}
+                    columns={props.columns}
+                    rows={props.rows}
+                    emptyTitle={props.emptyTitle}
+                    emptyBody={props.emptyBody}
+                    adjustLabel={props.adjustLabel}
+                    editLabel={props.editLabel}
+                    isPending={props.isPending}
+                    on={{ quick: props.onQuick, adjust: props.onAdjust, edit: props.onEdit }}
+                />
+            </Section>
             {props.itemDrawer === null ? null : (
                 <InventoryItemDrawer
                     props={props.itemDrawer}
-                    on={{ field: on.itemField, save: on.itemSave, toggleActive: on.itemToggle, close: on.itemClose }}
+                    on={{
+                        field: props.onItemField,
+                        save: props.onItemSave,
+                        toggleActive: props.onItemToggle,
+                        close: props.onItemClose,
+                    }}
                 />
             )}
             {props.adjustDrawer === null ? null : (
                 <InventoryAdjustDrawer
                     props={props.adjustDrawer}
                     on={{
-                        mode: on.adjustMode,
-                        from: on.adjustFrom,
-                        to: on.adjustTo,
-                        value: on.adjustValue,
-                        reason: on.adjustReason,
-                        submit: on.adjustSubmit,
-                        close: on.adjustClose,
+                        mode: props.onAdjustMode,
+                        from: props.onAdjustFrom,
+                        to: props.onAdjustTo,
+                        value: props.onAdjustValue,
+                        reason: props.onAdjustReason,
+                        submit: props.onAdjustSubmit,
+                        close: props.onAdjustClose,
                     }}
                 />
             )}
         </Stack>
     )
-}
-
-/** One stock row as item data: the badges hold the state, the detail keeps the total and the quick stepper, adjust is the visible action and edit sits in the menu. */
-const itemOf = (row: StockRowView, props: InventoryStockProps): ListRowData => {
-    const on = {
-        query: props.onQuery,
-        filter: props.onFilter,
-        add: props.onAdd,
-        draft: props.onDraft,
-        quick: props.onQuick,
-        adjust: props.onAdjust,
-        edit: props.onEdit,
-        toggleInactive: props.onToggleInactive,
-        itemField: props.onItemField,
-        itemSave: props.onItemSave,
-        itemToggle: props.onItemToggle,
-        itemClose: props.onItemClose,
-        adjustMode: props.onAdjustMode,
-        adjustFrom: props.onAdjustFrom,
-        adjustTo: props.onAdjustTo,
-        adjustValue: props.onAdjustValue,
-        adjustReason: props.onAdjustReason,
-        adjustSubmit: props.onAdjustSubmit,
-        adjustClose: props.onAdjustClose,
-    }
-    return {
-        id: row.id,
-        title: row.name,
-        description: row.detail,
-        badges:
-            row.onOrderLabel === null
-                ? [{ label: row.statusLabel, tone: row.statusTone, isDot: true }]
-                : [
-                      { label: row.statusLabel, tone: row.statusTone, isDot: true },
-                      { label: row.onOrderLabel, tone: "accent" as const },
-                  ],
-        action: { label: props.adjustLabel, intent: "neutral", press: () => on.adjust(row.id) },
-        ...(props.editLabel === null
-            ? {}
-            : {
-                  menu: {
-                      label: row.name,
-                      entries: [{ id: "edit", label: props.editLabel, onAction: () => on.edit(row.id) }],
-                  } as const,
-              }),
-        detail: (
-            <Cluster gap="inline">
-                <Text isStrong>{row.total}</Text>
-                <Button
-                    isLoading={props.isLoading}
-                    intent="neutral"
-                    size="sm"
-                    isDisabled={props.isPending}
-                    onPress={() => on.quick(row.id, -1)}
-                >
-                    {row.lessLabel}
-                </Button>
-                <Button
-                    isLoading={props.isLoading}
-                    intent="neutral"
-                    size="sm"
-                    isDisabled={props.isPending}
-                    onPress={() => on.quick(row.id, 1)}
-                >
-                    {row.moreLabel}
-                </Button>
-            </Cluster>
-        ),
-    }
 }
