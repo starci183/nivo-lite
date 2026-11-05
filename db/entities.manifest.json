@@ -92,6 +92,7 @@
         "records_agent_run_resumed_by_chk",
         "records_agent_run_started_at_chk",
         "records_agent_run_status_chk",
+        "records_agent_run_step_seq_chk",
         "records_agent_run_trigger_chk",
         "records_agent_run_wait_deadline_at_chk",
         "records_agent_run_wait_work_item_id_chk",
@@ -99,6 +100,7 @@
       ],
       "indexes": [
         "records_agent_run_agent_started",
+        "records_agent_run_status_dead_lettered",
         "records_agent_run_status_resume",
         "records_agent_run_wait_item",
         "records_agent_run_wake_planning_key"
@@ -111,6 +113,7 @@
       "checks": [
         "records_agent_run_step_attempt_chk",
         "records_agent_run_step_claimed_until_chk",
+        "records_agent_run_step_comp_attempts_chk",
         "records_agent_run_step_deadline_ms_chk",
         "records_agent_run_step_door_calls_chk",
         "records_agent_run_step_duration_ms_chk",
@@ -118,18 +121,29 @@
         "records_agent_run_step_effect_key_chk",
         "records_agent_run_step_ended_at_chk",
         "records_agent_run_step_error_chk",
+        "records_agent_run_step_error_code_chk",
         "records_agent_run_step_input_chk",
         "records_agent_run_step_kind_chk",
         "records_agent_run_step_max_attempts_chk",
         "records_agent_run_step_node_key_chk",
+        "records_agent_run_step_not_before_chk",
         "records_agent_run_step_ordinal_chk",
         "records_agent_run_step_result_chk",
         "records_agent_run_step_run_id_chk",
         "records_agent_run_step_started_at_chk",
         "records_agent_run_step_status_chk",
-        "records_agent_run_step_step_key_chk"
+        "records_agent_run_step_step_key_chk",
+        "records_agent_run_step_wait_item_id_chk",
+        "records_agent_run_step_work_item_id_chk"
       ],
-      "indexes": ["records_agent_run_step_run_ordinal", "records_agent_run_step_run_step_key"]
+      "indexes": [
+        "records_agent_run_step_kind_work_item",
+        "records_agent_run_step_run_ordinal",
+        "records_agent_run_step_run_step_key",
+        "records_agent_run_step_status_claimed",
+        "records_agent_run_step_status_not_before",
+        "records_agent_run_step_wait_item"
+      ]
     },
     {
       "entity": "agent.turn",
