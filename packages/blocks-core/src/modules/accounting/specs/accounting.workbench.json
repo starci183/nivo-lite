@@ -48,7 +48,9 @@
                   "all": { "key": "filter_all" },
                   "items": [
                     { "value": "income", "label": { "key": "kind_income" } },
+                    { "value": "expense", "label": { "key": "kind_expense" } },
                     { "value": "invoice", "label": { "key": "kind_invoice" } },
+                    { "value": "reversal", "label": { "key": "kind_reversal" } },
                     { "value": "adjustment", "label": { "key": "kind_adjustment" } }
                   ]
                 },
@@ -122,6 +124,38 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "id": "settings",
+      "label": { "key": "tab_settings" },
+      "root": {
+        "id": "settings-root",
+        "block": "core.form",
+        "props": {
+          "label": { "key": "settings_title" },
+          "submitLabel": { "key": "settings_submit" },
+          "successNotice": { "key": "settings_done" },
+          "fields": [
+            { "name": "postExpenses", "label": { "key": "settings_post_expenses" }, "kind": "switch" },
+            { "name": "postOutgoing", "label": { "key": "settings_post_outgoing" }, "kind": "switch" },
+            { "name": "postUnmatched", "label": { "key": "settings_post_unmatched" }, "kind": "switch" },
+            {
+              "name": "voidMode",
+              "label": { "key": "settings_void_mode" },
+              "kind": "choice",
+              "options": [
+                { "value": "reversal", "label": { "key": "void_reversal" } },
+                { "value": "none", "label": { "key": "void_none" } }
+              ]
+            }
+          ]
+        },
+        "bind": {
+          "record": { "read": "accounting.settings" },
+          "submit": { "action": "accounting.save-settings" }
+        },
+        "when": { "permission": "accounting.manage" }
       }
     }
   ]

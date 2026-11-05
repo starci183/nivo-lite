@@ -4,8 +4,8 @@ export { SAMPLE_LEADS, SAMPLE_NOW, SAMPLE_ORDERS, sampleState } from "./fixtures
 export { SALES_FIXTURES } from "./fixtures/sales.fixtures"
 export type { MemoryState } from "./memory"
 export { memoryProvider } from "./memory"
-export type { LeadStore, OrderStore, RightsStore } from "./ports"
-export { salesLeadStore, salesLeadsList, salesOrderStore, salesOrdersList, salesRights } from "./ports"
+export type { LeadStore, OrderStore, RightsStore, SettingsStore } from "./ports"
+export { salesLeadStore, salesLeadsList, salesOrderStore, salesOrdersList, salesRights, salesSettings } from "./ports"
 export type {
     LeadDetail,
     LeadPatch,

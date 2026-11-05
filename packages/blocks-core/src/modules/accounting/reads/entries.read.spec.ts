@@ -54,7 +54,7 @@ describe("accounting entries", () => {
 
     it("refuses a kind the list does not know", async () => {
         const { execute } = harness()
-        await expect(execute(entriesRead, { kind: "expense" })).resolves.toMatchObject({ ok: false })
+        await expect(execute(entriesRead, { kind: "refund" })).resolves.toMatchObject({ ok: false })
     })
 
     it("counts the entries per kind under the same search, whatever the kind chosen", async () => {

@@ -1,11 +1,13 @@
 import { ADJUSTMENT, INVOICE, ORDER, TRANSACTION, adjustmentOf, invoiceOf, transactionOf } from "./accounting.fixtures"
+import { ACCOUNTING_SETTINGS_DEFAULTS } from "./settings"
 import { ledgerLineOf, postAdjustment, postInvoice, postTransaction } from "./posting"
 
+const SETTINGS = ACCOUNTING_SETTINGS_DEFAULTS
 const matched = transactionOf({ status: "matched", orderId: ORDER.id })
 
 describe("posting", () => {
     it("posts matched money in as income on the shop day, noted with the payer and the transfer content", () => {
-        expect(postTransaction(matched)).toEqual([
+        expect(postTransaction(matched, SETTINGS)).toEqual([
             {
                 kind: "income",
                 sourceEntity: "payment.transaction",
@@ -18,20 +20,34 @@ describe("posting", () => {
     })
 
     it("leaves the note empty when the transfer names nobody", () => {
-        const [entry] = postTransaction({ ...matched, payer: null, reference: null })
+        const [entry] = postTransaction({ ...matched, payer: null, reference: null }, SETTINGS)
         expect(entry?.note).toBeNull()
-        const [referenceOnly] = postTransaction({ ...matched, payer: "", reference: "ck" })
+        const [referenceOnly] = postTransaction({ ...matched, payer: "", reference: "ck" }, SETTINGS)
         expect(referenceOnly?.note).toBe("ck")
     })
 
-    it("posts nothing for money nobody matched yet, money waiting for review or money out", () => {
-        expect(postTransaction(TRANSACTION)).toEqual([])
-        expect(postTransaction(transactionOf({ status: "needs_review" }))).toEqual([])
-        expect(postTransaction({ ...matched, direction: "debit" })).toEqual([])
+    it("posts nothing for money nobody matched yet or money waiting for review, by default", () => {
+        expect(postTransaction(TRANSACTION, SETTINGS)).toEqual([])
+        expect(postTransaction(transactionOf({ status: "needs_review" }), SETTINGS)).toEqual([])
+    })
+
+    it("posts money nobody matched yet as income when the settings say so", () => {
+        const settings = { ...SETTINGS, postUnmatched: true }
+        expect(postTransaction(TRANSACTION, settings).map((entry) => entry.kind)).toEqual(["income"])
+        expect(postTransaction(transactionOf({ status: "needs_review" }), settings).map((entry) => entry.kind)).toEqual(
+            ["income"],
+        )
+    })
+
+    it("posts money out as an expense, or nothing when the settings do not post expenses", () => {
+        const out = { ...matched, direction: "debit" } as const
+        expect(postTransaction(out, SETTINGS)).toMatchObject([{ kind: "expense", amountVnd: 5_000_000 }])
+        expect(postTransaction(out, { ...SETTINGS, postExpenses: false })).toEqual([])
+        expect(postTransaction({ ...out, status: "unmatched" }, SETTINGS)).toHaveLength(1)
     })
 
     it("posts an issued invoice as what is owed, dated by its issue", () => {
-        expect(postInvoice(INVOICE, false)).toEqual([
+        expect(postInvoice(INVOICE, false, SETTINGS)).toEqual([
             {
                 kind: "invoice",
                 sourceEntity: "accounting.invoice",
@@ -44,13 +60,17 @@ describe("posting", () => {
     })
 
     it("dates an invoice never issued by its creation", () => {
-        const [owed] = postInvoice(invoiceOf({ issuedAt: null, createdAt: "2026-10-30T20:00:00.000Z" }), false)
+        const [owed] = postInvoice(
+            invoiceOf({ issuedAt: null, createdAt: "2026-10-30T20:00:00.000Z" }),
+            false,
+            SETTINGS,
+        )
         expect(owed?.entryDate).toBe("2026-10-31")
     })
 
     it("posts a paid invoice no credit settled as owed and as income, dated by the payment", () => {
         const paid = invoiceOf({ status: "paid", paidAt: "2026-11-03T05:00:00.000Z" })
-        const entries = postInvoice(paid, false)
+        const entries = postInvoice(paid, false, SETTINGS)
         expect(entries.map((entry) => [entry.kind, entry.entryDate])).toEqual([
             ["invoice", "2026-11-01"],
             ["income", "2026-11-03"],
@@ -58,19 +78,47 @@ describe("posting", () => {
     })
 
     it("dates that income by the issue, then the creation, when the payment time is unknown", () => {
-        const [, byIssue] = postInvoice(invoiceOf({ status: "paid", paidAt: null }), false)
+        const [, byIssue] = postInvoice(invoiceOf({ status: "paid", paidAt: null }), false, SETTINGS)
         expect(byIssue?.entryDate).toBe("2026-11-01")
-        const [, byCreation] = postInvoice(invoiceOf({ status: "paid", paidAt: null, issuedAt: null }), false)
+        const [, byCreation] = postInvoice(invoiceOf({ status: "paid", paidAt: null, issuedAt: null }), false, SETTINGS)
         expect(byCreation?.entryDate).toBe("2026-11-01")
     })
 
     it("leaves the income of a paid invoice to the credit that settled it", () => {
-        expect(postInvoice(invoiceOf({ status: "paid" }), true).map((entry) => entry.kind)).toEqual(["invoice"])
+        expect(postInvoice(invoiceOf({ status: "paid" }), true, SETTINGS).map((entry) => entry.kind)).toEqual([
+            "invoice",
+        ])
     })
 
-    it("posts nothing for a draft or a void invoice", () => {
-        expect(postInvoice(invoiceOf({ status: "draft" }), false)).toEqual([])
-        expect(postInvoice(invoiceOf({ status: "void" }), false)).toEqual([])
+    it("posts only the income of a paid invoice when the settings do not post outgoing invoices", () => {
+        const settings = { ...SETTINGS, postOutgoing: false }
+        expect(postInvoice(INVOICE, false, settings)).toEqual([])
+        expect(postInvoice(invoiceOf({ status: "paid" }), false, settings).map((entry) => entry.kind)).toEqual([
+            "income",
+        ])
+    })
+
+    it("posts nothing for a draft invoice", () => {
+        expect(postInvoice(invoiceOf({ status: "draft" }), false, SETTINGS)).toEqual([])
+    })
+
+    it("reverses a void invoice that was issued, with a negative entry and never a delete", () => {
+        expect(postInvoice(invoiceOf({ status: "void" }), false, SETTINGS)).toEqual([
+            {
+                kind: "reversal",
+                sourceEntity: "accounting.invoice",
+                sourceId: INVOICE.id,
+                entryDate: "2026-11-01",
+                amountVnd: -2_000_000,
+                note: "INV-202611-0001 / Nguyen Van Dinh",
+            },
+        ])
+    })
+
+    it("posts nothing for a void invoice that was never issued, when reversals are off, or when invoices are not posted", () => {
+        expect(postInvoice(invoiceOf({ status: "void", issuedAt: null }), false, SETTINGS)).toEqual([])
+        expect(postInvoice(invoiceOf({ status: "void" }), false, { ...SETTINGS, voidMode: "none" })).toEqual([])
+        expect(postInvoice(invoiceOf({ status: "void" }), false, { ...SETTINGS, postOutgoing: false })).toEqual([])
     })
 
     it("posts a correction with its corrected amount and its author and note", () => {

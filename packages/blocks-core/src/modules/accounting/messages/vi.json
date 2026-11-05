@@ -15,6 +15,8 @@
   "kind_income": "Thu",
   "kind_invoice": "Hóa đơn",
   "kind_adjustment": "Điều chỉnh",
+  "kind_expense": "Chi",
+  "kind_reversal": "Hoàn bút toán",
   "entry": "Chi tiết bút toán",
   "entry_idle": "Chọn một bút toán để xem chi tiết.",
   "entry_empty_title": "Chưa chọn bút toán",
@@ -41,5 +43,16 @@
   "settle_stale": "Dữ liệu vừa thay đổi. Tải lại rồi thử lại.",
   "settle_confirmation": "Shop đã nhận {amount} cho đơn {orderNo}. Cảm ơn bạn!",
   "lineage": "Nguồn gốc",
-  "lineage_empty": "Chưa có nguồn gốc nào."
+  "lineage_empty": "Chưa có nguồn gốc nào.",
+  "save_settings": "Lưu cài đặt kế toán",
+  "tab_settings": "Cài đặt",
+  "settings_title": "Quy tắc kế toán",
+  "settings_submit": "Lưu",
+  "settings_done": "Đã lưu cài đặt kế toán",
+  "settings_post_expenses": "Ghi tiền chi ra thành khoản chi",
+  "settings_post_outgoing": "Ghi hóa đơn đã phát hành thành khoản phải thu",
+  "settings_post_unmatched": "Ghi tiền thu vào thành khoản thu trước khi đối soát",
+  "settings_void_mode": "Hóa đơn đã ghi sổ bị hủy",
+  "void_reversal": "Được ghi một bút toán hoàn",
+  "void_none": "Giữ nguyên sổ"
 }

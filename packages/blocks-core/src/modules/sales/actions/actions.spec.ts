@@ -1,11 +1,14 @@
 import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
 import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import { SALES_SETTINGS_DEFAULTS } from "../../../rules/sales/settings"
+import type { SalesSettings } from "../../../rules/sales/settings"
 import { LEAD_NEW, ORDER_WAITING, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
 import { memoryProvider } from "../memory"
 import type { MemoryState } from "../memory"
 import { cancelOrderAction } from "./cancel-order.action"
 import { confirmOrderAction } from "./confirm-order.action"
 import { moveStageAction } from "./move-stage.action"
+import { saveSettingsAction } from "./save-settings.action"
 
 const OWNER = "owner-1"
 const STAFF = "staff-1"
@@ -43,6 +46,12 @@ const failingUpdate = (state: MemoryState, portId: string, reason: "conflict" | 
         },
     }
 }
+
+/** A state whose workspace saved the defaults changed by the given settings. */
+const withSettings = (changes: Partial<SalesSettings>): MemoryState => ({
+    ...sampleState([]),
+    settings: { ...SALES_SETTINGS_DEFAULTS, ...changes },
+})
 
 const stageOf = (state: MemoryState, id: string): string | undefined =>
     state.leads.find((lead) => lead.id === id)?.stage
@@ -84,9 +93,35 @@ describe("sales.move-stage", () => {
             message: { key: "refusal_same_stage" },
         })
         expect(await run(moveStageAction, { id: "lead-5", to: "new" }, state)).toMatchObject({
-            message: { key: "refusal_stage_not_allowed" },
+            message: { key: "refusal_reopen_needs_owner" },
         })
         expect(stageOf(state, "lead-4")).toBe("proposal")
+    })
+
+    it("lets the owner reopen a closed deal, and anyone when the settings do not ask for the owner", async () => {
+        const state = sampleState([OWNER])
+        expect(await run(moveStageAction, { id: "lead-5", to: "new" }, state, OWNER)).toEqual({
+            ok: true,
+            data: { stage: "new" },
+        })
+        const open = withSettings({ reopenNeedsApproval: false })
+        expect(await run(moveStageAction, { id: "lead-5", to: "qualified" }, open)).toEqual({
+            ok: true,
+            data: { stage: "qualified" },
+        })
+    })
+
+    it("refuses to switch a closed deal between won and lost when the settings forbid it", async () => {
+        expect(
+            await run(
+                moveStageAction,
+                { id: "lead-5", to: "lost", reason: "refunded" },
+                withSettings({ closedDealsCanFlip: false }),
+            ),
+        ).toMatchObject({ message: { key: "refusal_stage_not_allowed" } })
+        expect(
+            await run(moveStageAction, { id: "lead-5", to: "lost", reason: "refunded" }, sampleState([])),
+        ).toMatchObject({ ok: true })
     })
 
     it("refuses a lead that does not exist", async () => {
@@ -151,6 +186,31 @@ describe("sales.confirm-order", () => {
         })
         expect(statusOf(state, "order-1")).toBe("draft")
         expect(stageOf(state, "lead-4")).toBe("proposal")
+    })
+
+    it("follows the threshold the workspace saved, and tells it", async () => {
+        const state = withSettings({ approvalThresholdVnd: 300_000 })
+        expect(await run(confirmOrderAction, { id: "order-2" }, state)).toEqual({
+            ok: false,
+            reason: "refused",
+            message: { key: "refusal_order_waits_owner" },
+            data: { waiting: true, thresholdVnd: 300_000 },
+        })
+        expect(
+            await run(confirmOrderAction, { id: "order-1" }, withSettings({ approvalThresholdVnd: 7_000_000 })),
+        ).toEqual({
+            ok: true,
+            data: { changed: true },
+        })
+    })
+
+    it("lets staff confirm an order with no total when the settings say it need not wait", async () => {
+        const state = withSettings({ draftWithoutTotalNeedsApproval: false })
+        state.orders.push({ ...ORDER_WAITING, id: "order-9", leadId: null, amountVnd: null })
+        expect(await run(confirmOrderAction, { id: "order-9" }, state)).toEqual({ ok: true, data: { changed: true } })
+        const strict = sampleState([])
+        strict.orders.push({ ...ORDER_WAITING, id: "order-9", leadId: null, amountVnd: null })
+        expect(await run(confirmOrderAction, { id: "order-9" }, strict)).toMatchObject({ ok: false })
     })
 
     it("makes the agent's confirmation of a big order wait too", async () => {
@@ -265,5 +325,58 @@ describe("sales.cancel-order", () => {
         expect(
             await execute(cancelOrderAction, failingUpdate(state, "sales.order-store", "missing"), input, STAFF),
         ).toMatchObject({ message: { key: "refusal_missing" } })
+    })
+})
+
+describe("sales.save-settings", () => {
+    it("saves the values given and keeps the saved ones for what is left empty", async () => {
+        const state = sampleState([])
+        expect(
+            await run(saveSettingsAction, { approvalThresholdVnd: 1_000_000, closedDealsCanFlip: false }, state),
+        ).toEqual({
+            ok: true,
+        })
+        expect(state.settings).toEqual({
+            ...SALES_SETTINGS_DEFAULTS,
+            approvalThresholdVnd: 1_000_000,
+            closedDealsCanFlip: false,
+        })
+        expect(
+            await run(
+                saveSettingsAction,
+                {
+                    id: "",
+                    approvalThresholdVnd: null,
+                    draftWithoutTotalNeedsApproval: false,
+                    reopenNeedsApproval: null,
+                },
+                state,
+            ),
+        ).toEqual({ ok: true })
+        expect(state.settings).toEqual({
+            approvalThresholdVnd: 1_000_000,
+            draftWithoutTotalNeedsApproval: false,
+            closedDealsCanFlip: false,
+            reopenNeedsApproval: true,
+        })
+    })
+
+    it("takes effect on the next confirmation", async () => {
+        const state = sampleState([])
+        await run(saveSettingsAction, { approvalThresholdVnd: 100_000 }, state)
+        expect(await run(confirmOrderAction, { id: "order-2" }, state)).toMatchObject({ ok: false })
+    })
+
+    it("refuses a threshold out of range", async () => {
+        expect(await run(saveSettingsAction, { approvalThresholdVnd: -1 }, sampleState([]))).toMatchObject({
+            ok: false,
+            reason: "invalid",
+        })
+    })
+
+    it("declares who may save it and what it refreshes", () => {
+        expect(saveSettingsAction).toMatchObject({ permission: "sales.manage", transactional: true })
+        expect(saveSettingsAction.refreshes).toContain("sales.settings")
+        expect(saveSettingsAction.refreshes).toContain("sales.orders-waiting")
     })
 })

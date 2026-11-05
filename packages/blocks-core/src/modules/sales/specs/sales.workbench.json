@@ -261,6 +261,40 @@
           }
         ]
       }
+    },
+    {
+      "id": "settings",
+      "label": { "key": "tab_settings" },
+      "root": {
+        "id": "settings-root",
+        "block": "core.form",
+        "props": {
+          "label": { "key": "settings_title" },
+          "submitLabel": { "key": "settings_submit" },
+          "successNotice": { "key": "settings_done" },
+          "currency": "VND",
+          "fields": [
+            {
+              "name": "approvalThresholdVnd",
+              "label": { "key": "settings_threshold" },
+              "hint": { "key": "settings_threshold_hint" },
+              "kind": "money"
+            },
+            {
+              "name": "draftWithoutTotalNeedsApproval",
+              "label": { "key": "settings_draft_without_total" },
+              "kind": "switch"
+            },
+            { "name": "closedDealsCanFlip", "label": { "key": "settings_closed_flip" }, "kind": "switch" },
+            { "name": "reopenNeedsApproval", "label": { "key": "settings_reopen" }, "kind": "switch" }
+          ]
+        },
+        "bind": {
+          "record": { "read": "sales.settings" },
+          "submit": { "action": "sales.save-settings" }
+        },
+        "when": { "permission": "sales.manage" }
+      }
     }
   ]
 }

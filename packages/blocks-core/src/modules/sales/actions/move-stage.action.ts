@@ -3,9 +3,10 @@ import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { LEAD_STAGES, MAX_REASON_CHARS, planMove } from "../../../rules/sales/stage"
-import { SALES_MANAGE } from "../constants"
-import { salesLeadStore } from "../ports"
+import { SALES_APPROVE, SALES_MANAGE } from "../constants"
+import { salesLeadStore, salesRights, salesSettings } from "../ports"
 import { CONFLICT, refusedWith } from "../refusals"
+import { settingsOf } from "../settings-store"
 
 const input: z.ZodObject<{
     id: z.ZodString
@@ -19,7 +20,8 @@ const input: z.ZodObject<{
 
 /**
  * `sales.move-stage`: moves a deal to another stage. Closing it (won or lost) takes a reason, which the lead keeps; the move is
- * refused as data when the flow does not allow it. Written under the version the lead was read at, so two people never overwrite
+ * refused as data when the workspace's settings do not allow it (a closed deal that may not flip, or one reopened without the
+ * owner's right). Written under the version the lead was read at, so two people never overwrite
  * each other.
  */
 export const moveStageAction: ActionDefinition = defineAction({
@@ -27,12 +29,18 @@ export const moveStageAction: ActionDefinition = defineAction({
     permission: SALES_MANAGE,
     label: { key: "action_move_stage" },
     input,
-    ports: { leads: salesLeadStore },
+    ports: { leads: salesLeadStore, rights: salesRights, settings: salesSettings },
     transactional: true,
-    run: async ({ leads }, { id, to, reason }) => {
+    run: async ({ leads, rights, settings }, { id, to, reason }, context) => {
         const lead = await leads.get(id)
         if (lead === null) return refusedWith("missing")
-        const plan = planMove(lead.stage, to, reason ?? null)
+        const plan = planMove(
+            lead.stage,
+            to,
+            reason ?? null,
+            await settingsOf(settings),
+            await rights.holds(context.memberId, SALES_APPROVE),
+        )
         if (plan.kind === "refused") return refusedWith(plan.reason)
         const written = await leads.update(lead.id, lead.version, {
             stage: plan.stage,

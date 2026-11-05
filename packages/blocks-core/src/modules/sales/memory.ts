@@ -3,11 +3,12 @@ import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
 import { waitsForOwner } from "../../rules/sales/order-confirm"
 import { matchesQuery } from "../../rules/sales/search"
-import { salesLeadStore, salesLeadsList, salesOrderStore, salesOrdersList, salesRights } from "./ports"
-import type { LeadStore, OrderStore, RightsStore } from "./ports"
+import type { SalesSettings } from "../../rules/sales/settings"
+import { salesLeadStore, salesLeadsList, salesOrderStore, salesOrdersList, salesRights, salesSettings } from "./ports"
+import type { LeadStore, OrderStore, RightsStore, SettingsStore } from "./ports"
 import type { LeadPatch, LeadRow, OrderPatch, OrderRow, StoreResult } from "./sales.types"
 
-/** What the in-memory provider holds: the rows, the members who hold the owner's right and the clock. */
+/** What the in-memory provider holds: the rows, the saved settings, the members who hold the owner's right and the clock. */
 export interface MemoryState {
     /** The leads; updates replace the entries. */
     readonly leads: Array<LeadRow>
@@ -15,6 +16,8 @@ export interface MemoryState {
     readonly orders: Array<OrderRow>
     /** The ids of the members who hold every permission; any other member holds none. */
     readonly holders: ReadonlyArray<string>
+    /** The saved sales settings, or null before the first save; a save replaces them. */
+    settings: SalesSettings | null
     /** The instant an update stamps on a row, ISO text. */
     readonly now: string
 }
@@ -126,9 +129,9 @@ const orderStore = (state: MemoryState): OrderStore => ({
                 .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
                 .slice(0, limit),
         ),
-    waiting: (thresholdVnd, limit) => {
+    waiting: (settings, limit) => {
         const rows = state.orders
-            .filter((order) => waitsForOwner(order, thresholdVnd))
+            .filter((order) => waitsForOwner(order, settings))
             .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
         return Promise.resolve({ rows: rows.slice(0, limit), total: rows.length })
     },
@@ -138,9 +141,17 @@ const rightsStore = (state: MemoryState): RightsStore => ({
     holds: (memberId) => Promise.resolve(memberId !== null && state.holders.includes(memberId)),
 })
 
+const settingsStore = (state: MemoryState): SettingsStore => ({
+    get: () => Promise.resolve(state.settings),
+    save: (settings) => {
+        state.settings = settings
+        return Promise.resolve(settings)
+    },
+})
+
 /**
  * A port provider over rows in memory: the leads and orders lists (search, enumerated filters, sort, paging, counts), the two
- * stores with version checks, and the rights. It stands in for the entity engine in specs and in the prototype data port.
+ * stores with version checks, the settings and the rights. It stands in for the entity engine in specs and in the prototype data port.
  */
 export const memoryProvider = (state: MemoryState): PortProvider => ({
     implementationOf: (port: PortDefinition<unknown>): unknown => {
@@ -149,6 +160,7 @@ export const memoryProvider = (state: MemoryState): PortProvider => ({
         if (port.id === salesLeadStore.id) return leadStore(state)
         if (port.id === salesOrderStore.id) return orderStore(state)
         if (port.id === salesRights.id) return rightsStore(state)
+        if (port.id === salesSettings.id) return settingsStore(state)
         return unprovided(port)
     },
 })

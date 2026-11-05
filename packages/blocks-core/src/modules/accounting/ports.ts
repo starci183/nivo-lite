@@ -13,6 +13,7 @@ import type {
     OrderStore,
     Outbox,
     QuestionCounter,
+    SettingsStore,
     TransactionStore,
 } from "./accounting.types"
 
@@ -59,3 +60,6 @@ export const outboxPort: PortDefinition<Outbox> = definePort<Outbox>("accounting
 
 /** The NIVO MCP door, for jobs only. */
 export const doorPort: PortDefinition<Door> = definePort<Door>("accounting.door")
+
+/** The rules the workspace chose for its books. */
+export const accountingSettingsPort: PortDefinition<SettingsStore> = definePort<SettingsStore>("accounting.settings")

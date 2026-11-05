@@ -12,6 +12,7 @@ import type {
     TransactionRecord,
 } from "../../rules/accounting/accounting.types"
 import type { Measure, OpenInvoice } from "../../rules/accounting/figures"
+import type { AccountingSettings } from "../../rules/accounting/settings"
 import type { NormalizedAdjustment } from "../../rules/accounting/adjustment"
 
 /*
@@ -115,6 +116,14 @@ export interface BookEntryStore {
     readonly upsert: (values: BookEntryValues) => Promise<WriteResult<BookEntryRecord>>
     /** The sum of the entries of a range, by kind. */
     readonly totals: (range: DayRange) => Promise<ReadonlyArray<{ kind: BookEntryKind; vnd: number; count: number }>>
+}
+
+/** The rules the workspace chose for its books. */
+export interface SettingsStore {
+    /** The saved settings, or null before the first save. */
+    readonly get: () => Promise<AccountingSettings | null>
+    /** Saves the settings; the settings as saved. */
+    readonly save: (settings: AccountingSettings) => Promise<AccountingSettings>
 }
 
 /** A row of the entries list. */

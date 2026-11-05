@@ -3,6 +3,7 @@ import { ADJUSTMENT, INVOICE, ORDER, TRANSACTION, transactionOf } from "../../..
 import { figuresOf } from "../../../rules/accounting/figures"
 import { lineageOf } from "../../../rules/accounting/lineage"
 import { closeVerdict, periodOf } from "../../../rules/accounting/period"
+import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../../rules/accounting/settings"
 import type { ModuleFixtures } from "../../module-fixtures"
 import type { EntryRow } from "../accounting.types"
 import type { CloseView } from "../reads/close-check.read"
@@ -137,10 +138,12 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.entry-counts": { ready: ENTRY_COUNTS, empty: ENTRY_COUNTS_NONE },
         "accounting.entry": { ready: ENTRY_DETAIL, empty: null },
         "accounting.figures": { ready: FIGURES_VIEW, empty: FIGURES_NONE },
+        "accounting.settings": { ready: ACCOUNTING_SETTINGS_DEFAULTS, empty: null },
         "accounting.close-check": { ready: CLOSE_READY, waiting: CLOSE_WAITING },
     },
     actions: {
         "accounting.adjust": { ok: true, data: { id: "00000000-0000-4000-8000-0000000001a2" } },
+        "accounting.save-settings": { ok: true },
     },
 }
 

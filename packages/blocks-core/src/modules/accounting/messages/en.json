@@ -15,6 +15,8 @@
   "kind_income": "Income",
   "kind_invoice": "Invoice",
   "kind_adjustment": "Adjustment",
+  "kind_expense": "Expense",
+  "kind_reversal": "Reversal",
   "entry": "Entry detail",
   "entry_idle": "Choose an entry to see its detail.",
   "entry_empty_title": "No entry chosen",
@@ -41,5 +43,16 @@
   "settle_stale": "The data just changed. Reload and try again.",
   "settle_confirmation": "The shop received {amount} for order {orderNo}. Thank you!",
   "lineage": "Where it came from",
-  "lineage_empty": "No source yet."
+  "lineage_empty": "No source yet.",
+  "save_settings": "Save accounting settings",
+  "tab_settings": "Settings",
+  "settings_title": "Accounting rules",
+  "settings_submit": "Save",
+  "settings_done": "Accounting settings saved",
+  "settings_post_expenses": "Post money out as expenses",
+  "settings_post_outgoing": "Post issued invoices as what is owed",
+  "settings_post_unmatched": "Post money in as income before it is matched",
+  "settings_void_mode": "A voided invoice that was posted",
+  "void_reversal": "Gets a reversal entry",
+  "void_none": "Leaves the books as they are"
 }

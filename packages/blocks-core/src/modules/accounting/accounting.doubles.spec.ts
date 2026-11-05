@@ -1,3 +1,4 @@
+import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../rules/accounting/settings"
 import {
     adjustmentStore,
     bookEntryStore,
@@ -11,6 +12,7 @@ import {
     questionCounter,
     recordingOutbox,
     scriptedDoor,
+    settingsStore,
     transactionStore,
 } from "./accounting.doubles"
 import { ordersPort, transactionsPort } from "./ports"
@@ -27,6 +29,8 @@ describe("accounting doubles", () => {
             () => conversationFinder().latestOfLead("x"),
             () => questionCounter().waiting(),
             () => bookEntryStore().get("x"),
+            () => settingsStore().get(),
+            () => settingsStore().save(ACCOUNTING_SETTINGS_DEFAULTS),
             () =>
                 entriesSource().counts(
                     { sort: { recent: [["id", "asc"]] }, page: { size: 1 }, row: { id: "id", title: "id" } },

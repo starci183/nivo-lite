@@ -84,6 +84,13 @@ const totalOf = (totals: ReadonlyArray<KindTotal>, kind: BookEntryKind): Measure
     return found.reduce((sum, total) => ({ vnd: sum.vnd + total.vnd, count: sum.count + total.count }), NONE)
 }
 
+/** What was invoiced: the invoices posted less the reversals of the ones voided, so a voided invoice counts for nothing. */
+const invoicedOf = (totals: ReadonlyArray<KindTotal>): Measure => {
+    const posted = totalOf(totals, "invoice")
+    const reversed = totalOf(totals, "reversal")
+    return { vnd: posted.vnd + reversed.vnd, count: posted.count - reversed.count }
+}
+
 /** The bucket an open invoice of this many days falls into. */
 export const ageingSlotOf = (days: number): keyof Ageing => {
     if (days > AGEING_SECOND_DAYS) return "d60"
@@ -105,7 +112,7 @@ export const ageingOf = (invoices: ReadonlyArray<OpenInvoice>, now: Date): Agein
 /** The figures of one period from the sums of its book entries, its unmatched payments and the open invoices. */
 export const figuresOf = (input: FiguresInput): AccountingFigures => ({
     income: totalOf(input.totals, "income"),
-    invoiced: totalOf(input.totals, "invoice"),
+    invoiced: invoicedOf(input.totals),
     adjustments: totalOf(input.totals, "adjustment"),
     unmatched: input.unmatched,
     receivable: input.openInvoices.reduce((sum, invoice) => add(sum, invoice.amountVnd), NONE),

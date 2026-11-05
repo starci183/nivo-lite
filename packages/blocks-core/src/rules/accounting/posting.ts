@@ -5,6 +5,7 @@ import type {
     OrderRecord,
     TransactionRecord,
 } from "./accounting.types"
+import type { AccountingSettings } from "./settings"
 import { shopDayOf } from "./shop-time"
 import type { LedgerEntry } from "../../vocabulary"
 
@@ -22,30 +23,43 @@ const noteOf = (...parts: ReadonlyArray<string | null>): string | null => {
 }
 
 /**
- * The book entries a payment transaction posts. Only money in that a person or a rule tied to what it paid is income; a transfer
- * nobody matched yet, or one that waits for review, is not in the books until it is, and money out is no entry of this book.
+ * The book entries a payment transaction posts. Money in that a person or a rule tied to what it paid is income; money in nobody
+ * matched yet, or that waits for review, is income only when the settings post unmatched money. Money out is an expense when the
+ * settings post expenses, and nothing otherwise.
  */
-export const postTransaction = (transaction: TransactionRecord): ReadonlyArray<BookEntryValues> =>
-    transaction.direction === "credit" && transaction.status === "matched"
-        ? [
-              {
-                  kind: "income",
-                  sourceEntity: SOURCE_TRANSACTION,
-                  sourceId: transaction.id,
-                  entryDate: shopDayOf(transaction.occurredAt),
-                  amountVnd: transaction.amountVnd,
-                  note: noteOf(transaction.payer, transaction.reference),
-              },
-          ]
-        : []
+export const postTransaction = (
+    transaction: TransactionRecord,
+    settings: AccountingSettings,
+): ReadonlyArray<BookEntryValues> => {
+    const posted =
+        transaction.direction === "credit"
+            ? transaction.status === "matched" || settings.postUnmatched
+            : settings.postExpenses
+    if (!posted) return []
+    return [
+        {
+            kind: transaction.direction === "credit" ? "income" : "expense",
+            sourceEntity: SOURCE_TRANSACTION,
+            sourceId: transaction.id,
+            entryDate: shopDayOf(transaction.occurredAt),
+            amountVnd: transaction.amountVnd,
+            note: noteOf(transaction.payer, transaction.reference),
+        },
+    ]
+}
 
 /**
- * The book entries an invoice posts. A draft or a void invoice posts nothing. An issued or paid invoice posts what is owed
- * (`invoice`). A paid invoice that no bank credit settled (a customer's claim a person confirmed) also posts the income itself, so
- * money is never counted twice: an invoice with a matched credit leaves the income to the credit.
+ * The book entries an invoice posts. A draft invoice posts nothing. An issued or paid invoice posts what is owed (`invoice`) when
+ * the settings post outgoing invoices. A paid invoice that no bank credit settled (a customer's claim a person confirmed) also posts
+ * the income itself, so money is never counted twice: an invoice with a matched credit leaves the income to the credit. A void
+ * invoice that was issued, and so posted, gets a reversal of what it owed when the settings say so; the entry it reverses stays.
  */
-export const postInvoice = (invoice: InvoiceRecord, settledByTransaction: boolean): ReadonlyArray<BookEntryValues> => {
-    if (invoice.status === "draft" || invoice.status === "void") return []
+export const postInvoice = (
+    invoice: InvoiceRecord,
+    settledByTransaction: boolean,
+    settings: AccountingSettings,
+): ReadonlyArray<BookEntryValues> => {
+    if (invoice.status === "draft") return []
     const owed: BookEntryValues = {
         kind: "invoice",
         sourceEntity: SOURCE_INVOICE,
@@ -54,11 +68,18 @@ export const postInvoice = (invoice: InvoiceRecord, settledByTransaction: boolea
         amountVnd: invoice.amountVnd,
         note: noteOf(invoice.invoiceNo, invoice.customer),
     }
-    if (invoice.status !== "paid" || settledByTransaction) return [owed]
-    return [
-        owed,
-        { ...owed, kind: "income", entryDate: shopDayOf(invoice.paidAt ?? invoice.issuedAt ?? invoice.createdAt) },
-    ]
+    if (invoice.status === "void") {
+        const reversed = settings.voidMode === "reversal" && settings.postOutgoing && invoice.issuedAt !== null
+        return reversed ? [{ ...owed, kind: "reversal", amountVnd: -invoice.amountVnd }] : []
+    }
+    const entries: Array<BookEntryValues> = settings.postOutgoing ? [owed] : []
+    if (invoice.status === "paid" && !settledByTransaction)
+        entries.push({
+            ...owed,
+            kind: "income",
+            entryDate: shopDayOf(invoice.paidAt ?? invoice.issuedAt ?? invoice.createdAt),
+        })
+    return entries
 }
 
 /** The book entry a correction posts: its corrected amount (nothing when it is only a note) and its note. */

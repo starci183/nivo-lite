@@ -1,11 +1,11 @@
 import { defineRead } from "@nivo-lite/agent-sdk/block"
 import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
-import { DEFAULT_THRESHOLD_VND } from "../../../nodes/order/needs-approval.node"
 import { waitingViewOf } from "../../../rules/sales/waiting"
 import type { WaitingOrder, WaitingView } from "../../../rules/sales/waiting"
 import { ORDER_QUERY_KEY, ORDERS_VIEW_ID, SALES_VIEW, WAITING_SHOWN } from "../constants"
-import { salesLeadStore, salesOrderStore } from "../ports"
+import { salesLeadStore, salesOrderStore, salesSettings } from "../ports"
+import { settingsOf } from "../settings-store"
 
 const variables: z.ZodObject<Record<string, never>> = z.object({})
 
@@ -22,9 +22,9 @@ export const ordersWaitingRead: ReadDefinition = defineRead({
     paths: {},
     variables,
     permission: SALES_VIEW,
-    ports: { leads: salesLeadStore, orders: salesOrderStore },
-    run: async ({ leads, orders }): Promise<WaitingView> => {
-        const page = await orders.waiting(DEFAULT_THRESHOLD_VND, WAITING_SHOWN)
+    ports: { leads: salesLeadStore, orders: salesOrderStore, settings: salesSettings },
+    run: async ({ leads, orders, settings }): Promise<WaitingView> => {
+        const page = await orders.waiting(await settingsOf(settings), WAITING_SHOWN)
         const leadIds = page.rows.flatMap((order) => (order.leadId === null ? [] : [order.leadId]))
         const names: Readonly<Record<string, string>> =
             leadIds.length === 0 ? {} : await leads.names([...new Set(leadIds)])

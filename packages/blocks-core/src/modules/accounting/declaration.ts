@@ -1,24 +1,27 @@
 import { defineModule } from "@nivo-lite/agent-sdk/module"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { adjustAction } from "./actions/adjust.action"
+import { saveSettingsAction } from "./actions/save-settings.action"
 import { settleAction } from "./actions/settle.action"
 import { closeCheckRead } from "./reads/close-check.read"
 import { entriesRead, entryCountsRead } from "./reads/entries.read"
 import { entryRead } from "./reads/entry.read"
 import { figuresRead } from "./reads/figures.read"
+import { settingsRead } from "./reads/settings.read"
 import { accountingSpecDocument } from "./specs/accounting.spec-document"
 
 /**
  * The Accounting module: the books (figures, the entries with search and a kind filter, an entry's lineage), the correction an
- * accountant records, and the check that a period may close. Its seed spec draws the workbench; the graph and the jobs run the same
+ * accountant records, and the check that a period may close. What becomes an entry (expenses, outgoing invoices, unmatched money,
+ * voided invoices) is the workspace's own setting, edited in the settings view. Its seed spec draws the workbench; the graph and the jobs run the same
  * reads and actions.
  */
 export const accountingModule: ModuleDeclaration = defineModule({
     key: "accounting",
     namespace: "accounting",
     permissions: ["accounting.view", "accounting.manage"],
-    reads: [entriesRead, entryCountsRead, entryRead, figuresRead, closeCheckRead],
-    actions: [adjustAction],
+    reads: [entriesRead, entryCountsRead, entryRead, figuresRead, closeCheckRead, settingsRead],
+    actions: [adjustAction, saveSettingsAction],
     tools: ["ledger.status", "ledger.append"],
     specs: [accountingSpecDocument],
 })

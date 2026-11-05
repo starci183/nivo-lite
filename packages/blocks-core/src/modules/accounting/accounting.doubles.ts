@@ -15,6 +15,7 @@ import type {
     OrderStore,
     Outbox,
     QuestionCounter,
+    SettingsStore,
     TransactionStore,
 } from "./accounting.types"
 
@@ -84,6 +85,13 @@ export const bookEntryStore = (changes: Partial<BookEntryStore> = {}): BookEntry
     get: unused,
     upsert: unused,
     totals: unused,
+    ...changes,
+})
+
+/** A settings store; the first save of a workspace has none yet, so a spec says what `get` finds. */
+export const settingsStore = (changes: Partial<SettingsStore> = {}): SettingsStore => ({
+    get: unused,
+    save: unused,
     ...changes,
 })
 

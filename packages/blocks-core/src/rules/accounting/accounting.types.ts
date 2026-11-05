@@ -112,8 +112,8 @@ export interface AdjustmentRecord {
     readonly createdAt: string
 }
 
-/** What a book entry records: money in, an invoice issued, a correction. */
-export type BookEntryKind = "income" | "invoice" | "adjustment"
+/** What a book entry records: money in, money out, an invoice issued, the reversal of a voided one, a correction. */
+export type BookEntryKind = "income" | "expense" | "invoice" | "reversal" | "adjustment"
 
 /** The values of a book entry (entity `accounting.book-entry`, a projection written by declared jobs only). */
 export interface BookEntryValues {
