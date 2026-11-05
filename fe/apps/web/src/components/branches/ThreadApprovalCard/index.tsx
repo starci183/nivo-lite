@@ -1,5 +1,7 @@
-import { Badge, Button, Cluster, Inset, ListBox, Stack, Text } from "@starci/grammar/common"
+import { useState } from "react"
+import { Badge, Cluster, Inset, ListBox, Stack, Text } from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
+import { DecisionButtons } from "@/components/leaves/DecisionButtons"
 import { ApprovalCountdown } from "@/components/leaves/ApprovalCountdown"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
 import type { ThreadApprovalCardView, ThreadApprovalLabels } from "@/modules/types"
@@ -17,16 +19,28 @@ interface ThreadApprovalCardProps {
 /** The two decision buttons while the card waits (the refusal first, the approval last), or how it was decided once it was. */
 const Decision = (props: ThreadApprovalCardProps) => {
     const { card } = props
+    // The button pressed last is the one in flight: the spinner lands on it, not on the other.
+    const [pressed, setPressed] = useState<"approve" | "reject">("approve")
     if (!card.isPending) return <Text>{card.decidedLine}</Text>
     return (
-        <Cluster gap="inline">
-            <Button intent="alternative" isDisabled={props.isBusy} onPress={() => props.onReject(card.messageId)}>
-                {props.labels.reject}
-            </Button>
-            <Button intent="commit" isPending={props.isBusy} onPress={() => props.onApprove(card.messageId)}>
-                {props.labels.approve}
-            </Button>
-        </Cluster>
+        <DecisionButtons
+            size="sm"
+            pending={props.isBusy ? pressed : null}
+            reject={{
+                label: props.labels.reject,
+                onPress: () => {
+                    setPressed("reject")
+                    props.onReject(card.messageId)
+                },
+            }}
+            approve={{
+                label: props.labels.approve,
+                onPress: () => {
+                    setPressed("approve")
+                    props.onApprove(card.messageId)
+                },
+            }}
+        />
     )
 }
 

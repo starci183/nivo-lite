@@ -121,6 +121,8 @@ const ICON_SOURCES: Readonly<Record<IconName, GlyphCuts>> = {
     document: cuts(Outline.DocumentTextIcon, Solid.DocumentTextIcon),
     clock: cuts(Outline.ClockIcon, Solid.ClockIcon),
     remove: cuts(Outline.MinusIcon, Solid.MinusIcon),
+    link: cuts(Outline.LinkIcon, Solid.LinkIcon),
+    textNote: cuts(Outline.Bars3BottomLeftIcon, Solid.Bars3BottomLeftIcon),
 }
 
 /** Resolve an app-owned semantic icon name to the glyph cut Grammar's Icon asks for in a given usage. */

@@ -42,6 +42,8 @@ export type IconName =
     | "document"
     | "clock"
     | "remove"
+    | "link"
+    | "textNote"
     | "trigger"
     | "disclosure"
     | "edit"
