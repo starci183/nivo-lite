@@ -12,7 +12,7 @@ export const IMAGE_MAX_BYTES: number = 5 * 1024 * 1024
 const IMAGE_TIMEOUT_MS = 15_000
 
 /** The media type of a `content-type` value, without its parameters. */
-const mediaTypeOf = (declared: string): string => declared.split(";", 1)[0]?.trim() ?? ""
+const mediaTypeOf = (declared: string): string => declared.split(";", 1).join("").trim()
 
 /** The pictures a call carries, inlined, and how many were left out. */
 export interface InlinedImages {
