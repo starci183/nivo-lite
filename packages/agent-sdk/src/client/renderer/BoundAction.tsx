@@ -13,7 +13,10 @@ export interface BoundActionProps {
 export const BoundAction = (props: BoundActionProps): ReactNode => {
     const host = useWorkbenchHost()
     const isAllowed = host.useCan(props.action.permission)
-    const action = host.useAction(props.action.operation)
+    const action = host.useAction(props.action.operation, {
+        refreshes: props.action.refreshes ?? [],
+        optimistic: props.action.optimistic ?? false,
+    })
     return props.children({
         run: action.run,
         isAllowed,

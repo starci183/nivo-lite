@@ -7,6 +7,7 @@ import type { ActionDefinition, ReadDefinition } from "../../block/block.types"
 import { wordsOf } from "../../schema/namespaced"
 import type { PlanNode, RenderPlan } from "../../spec/render-plan"
 import { renderPlan, viewOf } from "../../spec/render-plan"
+import { paramHandleOf } from "../../spec/spec-param"
 import type { SpecProblem, StoredSpec } from "../../spec/spec.types"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
 import type { BlockRenderer } from "./define-renderer"
@@ -79,14 +80,20 @@ export const SpecWorkbench = (props: SpecWorkbenchProps): ReactNode => {
         )
     }, [props.spec, props.fallback, renderers, reads, actions, permissions])
     if (!plan.ok) return <EmptyNotice message={text({ key: "renderer.noView" })} description={codesOf(plan.problems)} />
+    const navigation = host.block.navigation
     const context: SpecContext = {
         renderers: new Map(renderers.map((renderer) => [renderer.id, renderer])),
         reads,
         actions,
         namespace: props.namespace,
         installationId: props.route.installationId,
+        params: paramHandleOf({
+            params: plan.params,
+            reads,
+            queryValue: navigation.queryValue,
+            setQueryValues: navigation.setQueryValues,
+        }),
     }
-    const navigation = host.block.navigation
     const view = viewOf(plan.views, props.route.tab, navigation.queryValue)
     const locale = host.block.locale()
     return (

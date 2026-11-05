@@ -7,6 +7,11 @@ describe("specDocumentSchema", () => {
         const document = {
             schema: "nivo/workbench-spec@2",
             module: "sales",
+            params: {
+                q: { type: "string", url: "q" },
+                stage: { type: "enum", of: "sales.leads.stage", url: "stage", default: "all" },
+                pane: { type: "enum", of: ["list", "detail"], url: "pane" },
+            },
             head: [node],
             foot: [{ ...node, id: "f", forbidden: "hide", when: { permission: "p" } }],
             views: [
@@ -40,5 +45,18 @@ describe("specDocumentSchema", () => {
         expect(specDocumentSchema.safeParse({ ...base, extra: 1 }).success).toBe(false)
         const view = { id: "v", label: { key: "k" }, root: { id: "r", block: "plain" } }
         expect(specDocumentSchema.safeParse({ ...base, views: [view] }).success).toBe(false)
+    })
+
+    it("refuses a param that is not well formed", () => {
+        const base = { schema: "nivo/workbench-spec@2", module: "m", views: [] }
+        const refused = (param: unknown): boolean =>
+            specDocumentSchema.safeParse({ ...base, params: { a: param } }).success === false
+        expect(refused({ type: "number", url: "a" })).toBe(true)
+        expect(refused({ type: "string" })).toBe(true)
+        expect(refused({ type: "string", url: "" })).toBe(true)
+        expect(refused({ type: "string", url: "a", extra: 1 })).toBe(true)
+        expect(refused({ type: "string", url: "a", default: 1 })).toBe(true)
+        expect(refused({ type: "enum", of: [1], url: "a" })).toBe(true)
+        expect(refused({ type: "string", url: "a" })).toBe(false)
     })
 })

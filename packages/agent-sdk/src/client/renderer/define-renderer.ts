@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import type { BlockDefinition, BlockSlots, SlotValues } from "../../block/block.types"
+import type { BlockDefinition, BlockSlots, ParamHandle, SlotValues } from "../../block/block.types"
 import type { PropsSchema } from "../../schema/schema.types"
 import type { z } from "zod"
 import { RendererError } from "./renderer-error"
@@ -14,6 +14,8 @@ export interface BlockRenderProps<P extends PropsSchema, S extends BlockSlots> {
     readonly children: ReactNode
     /** The spec node id: a stable address for tests and the composer. */
     readonly nodeId: string
+    /** The spec params of the drawn spec, by param name (not URL key). */
+    readonly params: ParamHandle
 }
 
 /** A block component: drawn only with Grammar components, through `SlotView` for every read status. */
@@ -29,6 +31,8 @@ export interface ErasedRenderProps {
     readonly children: ReactNode
     /** The id of the spec node. */
     readonly nodeId: string
+    /** The spec params of the drawn spec. */
+    readonly params: ParamHandle
 }
 
 /** A block with the component that draws it. */
@@ -62,6 +66,7 @@ export const defineRenderer = <P extends PropsSchema, S extends BlockSlots>(
             slots: erased.slots,
             children: erased.children,
             nodeId: erased.nodeId,
+            params: erased.params,
         })
     },
 })

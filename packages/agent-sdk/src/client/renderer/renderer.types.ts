@@ -1,4 +1,4 @@
-import type { ActionDefinition, ReadDefinition } from "../../block/block.types"
+import type { ActionDefinition, ParamHandle, ReadDefinition } from "../../block/block.types"
 import type { BlockRenderer } from "./define-renderer"
 
 /** What every node of one drawn spec shares. */
@@ -13,4 +13,6 @@ export interface SpecContext {
     readonly namespace: string
     /** The installation whose data the reads run against; it fills `$installationId`. */
     readonly installationId: string
+    /** The spec params of the drawn spec: what the reads take as `$name` variables and what the blocks read and write. */
+    readonly params: ParamHandle
 }

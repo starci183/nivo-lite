@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { defineBlock } from "../../block/block"
+import { sampleParamHandle } from "../../tests/fixtures/fakes"
 import { UNBOUND_ACTION, UNBOUND_READ, MISSING_READ } from "./inert"
 import { defineRenderer } from "./define-renderer"
 import { RendererError } from "./renderer-error"
@@ -15,20 +16,27 @@ const BLOCK = defineBlock({
 describe("defineRenderer", () => {
     it("pairs a block with a component that receives props parsed by the block schema", () => {
         const seen: Array<unknown> = []
+        const params = sampleParamHandle({ q: "an" })
         const renderer = defineRenderer(BLOCK, (props) => {
-            seen.push(props.props.label, props.nodeId, props.slots.rows)
+            seen.push(props.props.label, props.nodeId, props.slots.rows, props.params.value("q"))
             return null
         })
         expect(renderer.id).toBe("test.label")
         expect(renderer.block).toBe(BLOCK)
-        const drawn = renderer.Component({ props: {}, slots: { rows: UNBOUND_READ }, children: null, nodeId: "n1" })
+        const drawn = renderer.Component({
+            props: {},
+            slots: { rows: UNBOUND_READ },
+            children: null,
+            nodeId: "n1",
+            params,
+        })
         expect(drawn).toBeNull()
-        expect(seen).toEqual(["none", "n1", UNBOUND_READ])
+        expect(seen).toEqual(["none", "n1", UNBOUND_READ, "an"])
     })
 
     it("refuses to draw a block whose declared slots are not all handed over", () => {
         const renderer = defineRenderer(BLOCK, () => null)
-        const bare = { props: {}, slots: {}, children: null, nodeId: "n1" }
+        const bare = { props: {}, slots: {}, children: null, nodeId: "n1", params: sampleParamHandle() }
         expect(() => renderer.Component(bare)).toThrow(RendererError)
         expect(() => renderer.Component(bare)).toThrow("RENDERER_SLOTS_MISSING: test.label")
     })

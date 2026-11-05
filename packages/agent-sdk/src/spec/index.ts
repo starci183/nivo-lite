@@ -4,6 +4,7 @@ export type {
     SpecDocument,
     SpecForbidden,
     SpecNode,
+    SpecParam,
     SpecProblem,
     SpecProblemCode,
     SpecReadBinding,
@@ -17,4 +18,7 @@ export type { PlanNode, PlanView, RenderPlan } from "./render-plan"
 export { SPEC_MAX_DEPTH, specProblems } from "./spec"
 export { renderPlan, viewOf } from "./render-plan"
 export { specDocumentSchema, specNodeSchema } from "./spec.schema"
-export { INSTALLATION_VARIABLE, textOf, valueAt, variablesOf } from "./spec-value"
+export type { ResolvedVariables } from "./spec-value"
+export { INSTALLATION_VARIABLE, paramNameOf, resolveVariables, textOf, valueAt, variablesOf } from "./spec-value"
+export type { ParamSource } from "./spec-param"
+export { CURSOR_PARAM, allowedValuesOf, enumValuesOf, paramHandleOf, paramProblems } from "./spec-param"

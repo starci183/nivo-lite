@@ -2,7 +2,7 @@ export type { DataSlot, ForbiddenTest, SlotLabels, SlotPanelProps, SlotRead } fr
 export { loadingSlot, mapSlot, slotOfRead, slotOfReads } from "../slot/slot"
 export type { SlotViewProps } from "./SlotView"
 export { SlotView } from "./SlotView"
-export type { HostAction, HostRead, WorkbenchHost } from "../host/host.types"
+export type { HostAction, HostActionOptions, HostRead, HostReadOptions, WorkbenchHost } from "../host/host.types"
 export type { WorkbenchHostProviderProps } from "./host/WorkbenchHostProvider"
 export { WorkbenchHostProvider, useBlockHost, useWorkbenchHost } from "./host/WorkbenchHostProvider"
 export type { BlockComponent, BlockRenderProps, BlockRenderer, ErasedRenderProps } from "./renderer/define-renderer"
