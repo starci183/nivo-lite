@@ -1,6 +1,8 @@
+import type { ReactElement } from "react"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
-import { DropdownMenu, IconButton } from "@starci/grammar/common"
+import { Button, DropdownMenu, Icon, IconButton } from "@starci/grammar/common"
 import { nivoIconSource } from "../../leaves/Icon"
+import { NAME_ONLY_CLASS_NAME, PHONE_ONLY_CLASS_NAME } from "./classNames"
 
 /** One language the menu offers: its code and spoken name. */
 type LanguageMenuOption = {
@@ -15,6 +17,8 @@ type LanguageMenuProps = {
     readonly options: ReadonlyArray<LanguageMenuOption>
     readonly isDisabled: boolean
     readonly onChange: (value: string) => void
+    /** Wide screens name the chosen language beside the globe (a phone keeps the globe alone). */
+    readonly isNamed?: boolean
 }
 
 /** The single-select list of spoken languages with the chosen one checked; the bar's menu and the drawer's menu both open it. */
@@ -35,18 +39,44 @@ export const languageMenuEntries = (props: LanguageMenuProps): ReadonlyArray<Dro
     },
 ]
 
-/** The language menu: an icon-only button that opens a single-select list with the chosen language checked. */
-export const LanguageMenu = (props: LanguageMenuProps) => (
-    <DropdownMenu
-        placement="bottom end"
-        entries={languageMenuEntries(props)}
-        trigger={
-            <IconButton
-                source={nivoIconSource("locale", "leading")}
-                label={props.label}
-                intent="dismiss"
-                isDisabled={props.isDisabled}
-            />
-        }
-    />
-)
+/** The language menu: a globe button that opens a single-select list with the chosen language checked; `isNamed` adds the language's name on a wide screen. */
+export const LanguageMenu = (props: LanguageMenuProps): ReactElement => {
+    const entries = languageMenuEntries(props)
+    const chosen = props.options.find((option) => option.value === props.value)?.name ?? props.label
+    const globe = (
+        <DropdownMenu
+            placement="bottom end"
+            entries={entries}
+            trigger={
+                <IconButton
+                    source={nivoIconSource("locale", "leading")}
+                    label={props.label}
+                    intent="dismiss"
+                    isDisabled={props.isDisabled}
+                />
+            }
+        />
+    )
+    if (props.isNamed !== true) return globe
+    return (
+        <>
+            <div className={PHONE_ONLY_CLASS_NAME}>{globe}</div>
+            <div className={NAME_ONLY_CLASS_NAME}>
+                <DropdownMenu
+                    placement="bottom end"
+                    entries={entries}
+                    trigger={
+                        <Button
+                            intent="dismiss"
+                            size="md"
+                            isDisabled={props.isDisabled}
+                            startContent={<Icon source={nivoIconSource("locale", "leading")} usage="leading" />}
+                        >
+                            {chosen}
+                        </Button>
+                    }
+                />
+            </div>
+        </>
+    )
+}

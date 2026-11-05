@@ -25,5 +25,5 @@ export const PublicBrand = (props: PublicBrandProps) => {
         )
     }
     if (props.name === null) return <NivoLogo label={props.fallbackLabel} />
-    return <IdentityLockup title={props.name} markShape="rounded" size="control" />
+    return <IdentityLockup title={props.name} markShape="rounded" markTone="accent" size="control" />
 }

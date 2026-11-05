@@ -1,8 +1,8 @@
-import { getTranslations } from "next-intl/server"
+"use client"
+
+import { useTranslations } from "next-intl"
 import type { IconGlyphName } from "@/components/leaves/Icon"
 import { LandingFlowBase } from "./component"
-
-import type { ReactElement } from "react"
 
 type StepsShape = ReadonlyArray<{
     readonly n: number
@@ -22,9 +22,9 @@ const STEPS: StepsShape = [
     { n: 4, icon: "wallet", ai: true, human: false },
 ]
 
-/** The landing flow section with its copy resolved on the server. */
-export const LandingFlow = async (): Promise<ReactElement> => {
-    const t = await getTranslations("landing")
+/** The landing flow section; the Grammar parts it draws read the loading region (client), so the block is a client block. */
+export const LandingFlow = () => {
+    const t = useTranslations("landing")
     return (
         <LandingFlowBase
             props={{

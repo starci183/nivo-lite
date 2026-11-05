@@ -1,14 +1,17 @@
-import { getTranslations } from "next-intl/server"
-import { LandingCommitmentBase } from "./component"
+"use client"
 
-import type { ReactElement } from "react"
+import { useTranslations } from "next-intl"
+import { LandingCommitmentBase } from "./component"
 
 /** The approved NIVO mark raster used as the author's decorative avatar. */
 const AUTHOR_MARK_SRC = "/brand/nivo-mark.png"
 
-/** The landing commitment section with its copy resolved on the server. */
-export const LandingCommitment = async (): Promise<ReactElement> => {
-    const t = await getTranslations("landingBottom")
+/**
+ * The landing commitment section. The Grammar parts it draws read the loading region (a client context), so the block
+ * resolves its copy in the browser bundle, like the other landing blocks that hold Grammar parts.
+ */
+export const LandingCommitment = () => {
+    const t = useTranslations("landingBottom")
     return (
         <LandingCommitmentBase
             props={{

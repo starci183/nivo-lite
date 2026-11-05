@@ -1,9 +1,9 @@
-import { getLocale, getTranslations } from "next-intl/server"
+"use client"
+
+import { useLocale, useTranslations } from "next-intl"
 import { FOUNDING_OFFER, LANDING_ANCHORS } from "@/hooks/landing"
 import { CONSOLE_PAGES, appHref } from "@/modules/routes"
 import { LandingHeroBase } from "./component"
-
-import type { ReactElement } from "react"
 
 /** Demo avatars and badge tones of the hero card rows. */
 const HERO_ROWS = [
@@ -11,11 +11,10 @@ const HERO_ROWS = [
     { id: "second", name: "Lan", badgeTone: "success" },
 ] as const
 
-/** The landing hero with its copy resolved on the server. */
-export const LandingHero = async (): Promise<ReactElement> => {
-    const t = await getTranslations("landing")
-
-    const locale = await getLocale()
+/** The landing hero; the Grammar parts it draws read the loading region (client), so the block is a client block. */
+export const LandingHero = () => {
+    const t = useTranslations("landing")
+    const locale = useLocale()
     return (
         <LandingHeroBase
             props={{

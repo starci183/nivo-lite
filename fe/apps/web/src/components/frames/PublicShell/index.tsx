@@ -53,6 +53,7 @@ export const PublicShell = (props: PublicShellProps) => (
                         value={props.language.locale}
                         options={props.language.options}
                         isDisabled={props.language.isPending}
+                        isNamed
                         onChange={props.onChooseLanguage}
                     />
                 }

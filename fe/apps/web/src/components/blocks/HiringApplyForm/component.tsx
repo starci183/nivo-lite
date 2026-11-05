@@ -21,6 +21,13 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { ApplyValues, DataSlot, FieldOf, HiringSay, PublicQuestionView, SlotLabels } from "@/modules/types"
 import { HONEYPOT_CLASS_NAME } from "./classNames"
 
+/** The notice shown once an application is in: a confirmation, or a plain note that one was already sent. */
+export interface HiringApplyDone {
+    readonly tone: "affirmative" | "informative"
+    readonly title: string
+    readonly body: string
+}
+
 /** What the connected block settled for the public job page. */
 export interface HiringApplyFormBaseProps {
     readonly props: {
@@ -42,7 +49,7 @@ export interface HiringApplyFormBaseProps {
         readonly isBusy: boolean
         /** The words of the failed submission; null while none failed. */
         readonly submitError: string | null
-        readonly doneText: string | null
+        readonly done: HiringApplyDone | null
         readonly language: {
             readonly label: string
             readonly locale: string
@@ -83,8 +90,10 @@ const ApplyCard = (props: ApplyBodyProps) => {
                         <Text tone="muted">{say("applyClosedBody", { company: p.company })}</Text>
                     </Stack>
                 )}
-                {isOpen && p.doneText !== null ? <Alert tone="affirmative" title={p.doneText} /> : null}
-                {isOpen && p.doneText === null ? (
+                {isOpen && p.done !== null ? (
+                    <Alert tone={p.done.tone} title={p.done.title} description={p.done.body} />
+                ) : null}
+                {isOpen && p.done === null ? (
                     <Form
                         label={say("applyTitle")}
                         validationBehavior="aria"

@@ -10,6 +10,7 @@ import { useLocaleSwitch } from "@/hooks/locale"
 import { useHiringApplyForm } from "@/hooks/rhf"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { HiringApplyFormBase } from "./component"
+import type { HiringApplyDone } from "./component"
 
 /** The workspace slug and the job slug of the public link. */
 interface HiringApplyFormProps {
@@ -19,13 +20,20 @@ interface HiringApplyFormProps {
 
 type HiringTranslator = ReturnType<typeof useTranslations<"hiring">>
 
-/** What the candidate reads once the application is in; null while none was sent. */
-const doneTextOf = (t: HiringTranslator, done: ReturnType<typeof useHiringApply>["done"]): string | null =>
+/** What the candidate reads once the application is in; null while none was sent. A repeat is a plain notice, a first send a confirmation. */
+const doneOf = (t: HiringTranslator, done: ReturnType<typeof useHiringApply>["done"]): HiringApplyDone | null =>
     done === null
         ? null
-        : [t(done.duplicate ? "applyDuplicate" : "applyDone"), done.cvSkipped ? t("applyCvSkipped") : ""]
-              .filter((part) => part !== "")
-              .join(" ")
+        : {
+              tone: done.duplicate ? "informative" : "affirmative",
+              title: t(done.duplicate ? "applyDuplicateTitle" : "applyDoneTitle"),
+              body: [
+                  t(done.duplicate ? "applyDuplicateBody" : "applyDoneBody"),
+                  done.cvSkipped ? t("applyCvSkipped") : "",
+              ]
+                  .filter((part) => part !== "")
+                  .join(" "),
+          }
 
 /** The experience line of the job post; null when the job asks for none. */
 const experienceTextOf = (
@@ -64,7 +72,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
     const apply = useHiringApply(form, read.view, props)
     const job: PublicJobView | undefined = read.view
     const requirements = job?.requirements
-    const doneText = doneTextOf(t, apply.done)
+    const done = doneOf(t, apply.done)
     const experience = experienceTextOf(t, requirements)
     return (
         <HiringApplyFormBase
@@ -110,7 +118,7 @@ export const HiringApplyForm = (props: HiringApplyFormProps) => {
                 missing: attempted && !apply.canSubmit ? missingTextOf(say, apply.values, apply.cvError) : null,
                 isBusy: apply.isPending,
                 submitError: apply.isFailed ? say("applyFailed") : null,
-                doneText,
+                done,
             }}
             on={{
                 text: apply.setText,
