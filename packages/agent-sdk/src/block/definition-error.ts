@@ -20,9 +20,10 @@ export type DefinitionErrorCode =
     | "MODULE_PERMISSION_UNDECLARED"
     | "MODULE_REFRESH_UNKNOWN"
     | "MODULE_COUNTS_UNKNOWN"
+    | "INSTALLATION_ID_DUPLICATE"
 
 /**
- * Thrown at module load by `defineBlock`, `defineRead`, `defineAction`, `defineNode`, `defineEffect`, `definePort`, `defineModule`, `listRead`, `countsRead` and `defineDataKind`, so a bad
+ * Thrown at module load by `defineBlock`, `defineRead`, `defineAction`, `defineNode`, `defineEffect`, `definePort`, `defineModule`, `listRead`, `countsRead`, `defineInstallation` and `defineDataKind`, so a bad
  * definition fails its own package.
  */
 export class SdkDefinitionError extends SdkError<DefinitionErrorCode> {}

@@ -5461,7 +5461,9 @@
   "workbenchHost": {
     "failed": "Không thực hiện được. Hãy thử lại.",
     "forbidden": "Bạn không có quyền làm việc này.",
-    "unreadable": "Không đọc được kết quả."
+    "unreadable": "Không đọc được kết quả.",
+    "stale": "Có bản mới, tải lại",
+    "reload": "Tải lại"
   },
   "slot": {
     "forbidden": "Bạn chưa có quyền xem phần này.",
