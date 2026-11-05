@@ -1,7 +1,7 @@
 export { actionResultOf } from "./action-answer"
 export { specLocaleOf, spokenText } from "./block-text"
 export { reportDefect } from "./defect"
-export { FixtureTablesContext } from "./fixture-context"
+export { FixtureInstallationContext, FixtureTablesContext } from "./fixture-context"
 export { valueOfJsonText } from "./json-text"
 export type { FixtureTables } from "./fixture-state"
 export { FIXTURE_QUERY_KEY, SUCCEEDED, fixtureModeOf, fixtureReadOf } from "./fixture-state"

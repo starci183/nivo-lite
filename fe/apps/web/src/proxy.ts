@@ -1,6 +1,6 @@
 import { createProxy } from "@starci/next-i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
-import { sessionCookieOptions } from "./modules/config"
+import { isPrototypeMode, sessionCookieOptions } from "./modules/config"
 import { checkSession, onPublicOrigin } from "./modules/auth-session"
 import { i18n } from "./modules/i18n"
 
@@ -28,6 +28,8 @@ const PUBLIC_PATHS = [
     "/j",
     "/l",
     "/health",
+    // A prototype build answers the workbench from fixtures, with no back end to sign in to.
+    ...(isPrototypeMode() ? ["/w"] : []),
 ] // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
 
 // Every path is served from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides);
