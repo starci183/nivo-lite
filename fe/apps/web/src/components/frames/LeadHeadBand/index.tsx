@@ -23,13 +23,47 @@ interface LeadHeadBandProps {
 const entriesOf = (props: LeadHeadBandProps): ReadonlyArray<DropdownMenuEntry> => {
     const { labels, on } = props
     return [
-        { id: "office", label: labels.office, href: labels.officeHref },
-        { id: "refresh", label: labels.menuRefresh, onAction: on.refresh },
-        { id: "outcome", label: labels.menuOutcome, onAction: on.outcomeOpen },
-        { id: "reassign", label: labels.menuReassign, onAction: () => on.stepOpen("reassign") },
-        { id: "due", label: labels.menuDue, onAction: () => on.stepOpen("due") },
-        { id: "copy", label: labels.menuCopy, onAction: on.copy },
-        ...(props.hasBrief ? [{ id: "copyBrief", label: labels.menuCopyBrief, onAction: on.copyBrief }] : []),
+        {
+            id: "office",
+            label: labels.office,
+            href: labels.officeHref,
+            iconSource: nivoIconSource("community", "leading"),
+        },
+        {
+            id: "refresh",
+            label: labels.menuRefresh,
+            onAction: on.refresh,
+            iconSource: nivoIconSource("retry", "leading"),
+        },
+        {
+            id: "outcome",
+            label: labels.menuOutcome,
+            onAction: on.outcomeOpen,
+            iconSource: nivoIconSource("complete", "leading"),
+        },
+        {
+            id: "reassign",
+            label: labels.menuReassign,
+            onAction: () => on.stepOpen("reassign"),
+            iconSource: nivoIconSource("account", "leading"),
+        },
+        {
+            id: "due",
+            label: labels.menuDue,
+            onAction: () => on.stepOpen("due"),
+            iconSource: nivoIconSource("clock", "leading"),
+        },
+        { id: "copy", label: labels.menuCopy, onAction: on.copy, iconSource: nivoIconSource("link", "leading") },
+        ...(props.hasBrief
+            ? [
+                  {
+                      id: "copyBrief",
+                      label: labels.menuCopyBrief,
+                      onAction: on.copyBrief,
+                      iconSource: nivoIconSource("copy", "leading"),
+                  },
+              ]
+            : []),
     ]
 }
 
