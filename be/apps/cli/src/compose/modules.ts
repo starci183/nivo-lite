@@ -1,6 +1,7 @@
 import type { DynamicModule, Type } from "@nestjs/common"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import { CliModule } from "@features/cli"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelProvisioningModule } from "@modules/domain/channel-provisioning"
@@ -159,6 +160,6 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ChannelConnectionsModule.register({ isGlobal: true }),
     InventoryModule.register({ isGlobal: true, seedOnly: true }),
     ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
-    EntityPlannerModule.register({ isGlobal: true, entities: [] }),
+    EntityPlannerModule.register({ isGlobal: true, entities: FLOW_F_ENTITIES }),
     CliModule.register({}),
 ]
