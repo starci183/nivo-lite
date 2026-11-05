@@ -142,6 +142,8 @@ export interface AdminWorkspacesBaseProps {
     readonly props: {
         readonly slot: DataSlot<AdminWorkspacesViewProps["props"]>
         readonly placeholder: AdminWorkspacesViewProps["props"]
+        /** The page title with the real count once the read is in; the placeholder's while it waits or failed. */
+        readonly title: string
         readonly labels: SlotLabels
         /** The line under the failure: what to do about it. */
         readonly errorHint: string
@@ -153,7 +155,11 @@ export interface AdminWorkspacesBaseProps {
 export const AdminWorkspacesBase = (props: AdminWorkspacesBaseProps) => {
     const words = props.props.placeholder
     return (
-        <Page measure="full" header={{ title: words.title, description: words.description }}>
+        <Page
+            measure="full"
+            isLoading={"isLoading" in props.props.slot}
+            header={{ title: props.props.title, description: words.description }}
+        >
             <SlotView
                 slot={props.props.slot}
                 placeholder={props.props.placeholder}
