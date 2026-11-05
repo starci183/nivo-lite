@@ -170,3 +170,9 @@ export interface OrderDetail {
     /** The tracking reference, or null. */
     readonly trackingCode: string | null
 }
+
+/** The input of an action on one order. */
+export interface OrderIdInput {
+    /** The order id. */
+    readonly id: string
+}

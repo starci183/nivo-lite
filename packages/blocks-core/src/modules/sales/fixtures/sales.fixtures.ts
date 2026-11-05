@@ -1,4 +1,6 @@
 import type { CountsResult, ListPage } from "@nivo-lite/agent-sdk/block"
+import { attentionRowsOf, salesDecisionQueueOf } from "../../../rules/sales/decisions"
+import { salesFiguresOf } from "../../../rules/sales/figures"
 import { orderSummaryOf } from "../../../rules/sales/lead-orders"
 import { waitsForOwner } from "../../../rules/sales/order-confirm"
 import { ORDER_STATUSES } from "../../../rules/sales/order-status"
@@ -35,6 +37,19 @@ const zeroCounts = (keys: ReadonlyArray<string>): CountsResult => ({
 })
 
 const NO_ROWS: ListPage<never> = { rows: [], cursor: null }
+
+const WAITING_ORDERS = waitingOrders.map((order) => ({
+    id: order.id,
+    orderNo: order.orderNo,
+    items: order.items,
+    amountVnd: order.amountVnd,
+    customer: customerOf(order),
+}))
+
+const STAGE_COUNTS = countsOf(
+    SAMPLE_LEADS.map((lead) => lead.stage),
+    LEAD_STAGES,
+).counts
 
 const WAITING_VIEW: WaitingView = waitingViewOf(
     waitingOrders.map((order) => ({
@@ -83,6 +98,18 @@ export const SALES_FIXTURES: ModuleFixtures = {
             empty: null,
             waiting: orderDetailOf(ORDER_WAITING, customerOf(ORDER_WAITING), SALES_SETTINGS_DEFAULTS),
         },
+        "sales.figures": {
+            ready: salesFiguresOf(STAGE_COUNTS, SAMPLE_ORDERS),
+            empty: salesFiguresOf({}, []),
+        },
+        "sales.attention": {
+            ready: { rows: attentionRowsOf(WAITING_ORDERS), cursor: null },
+            empty: NO_ROWS,
+        },
+        "sales.decisions": {
+            ready: salesDecisionQueueOf(WAITING_ORDERS, WAITING_ORDERS.length),
+            empty: salesDecisionQueueOf([], 0),
+        },
         "sales.settings": { ready: SALES_SETTINGS_DEFAULTS, empty: null },
         "sales.orders-waiting": { ready: WAITING_VIEW, empty: waitingViewOf([], 0, WAITING_SHOWN, waitingHrefOf) },
     },
@@ -91,5 +118,6 @@ export const SALES_FIXTURES: ModuleFixtures = {
         "sales.confirm-order": { ok: true, data: { changed: true } },
         "sales.cancel-order": { ok: true },
         "sales.save-settings": { ok: true },
+        "sales.decide": { ok: true, data: { changed: true } },
     },
 }
