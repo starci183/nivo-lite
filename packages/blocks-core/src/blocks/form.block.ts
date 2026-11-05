@@ -24,7 +24,8 @@ type OptionSchema = z.ZodObject<{ value: z.ZodString; label: TextSchema }>
 
 const option: OptionSchema = z.object({ value: z.string().min(1).max(FORM_NAME_MAX), label: specText })
 
-type FieldSchema = z.ZodObject<{
+/** The zod type of one field of a form. */
+export type FormFieldSchema = z.ZodObject<{
     name: z.ZodString
     label: TextSchema
     kind: EnumSchema<FormKind>
@@ -34,7 +35,8 @@ type FieldSchema = z.ZodObject<{
     max: z.ZodOptional<z.ZodNumber>
 }>
 
-const field: FieldSchema = z.object({
+/** One field of a form, as the form block and the blocks that edit values declare it. */
+export const formField: FormFieldSchema = z.object({
     name: z
         .string()
         .regex(/^[A-Za-z]\w*$/)
@@ -51,16 +53,20 @@ const props: z.ZodObject<{
     label: TextSchema
     submitLabel: TextSchema
     successNotice: z.ZodOptional<TextSchema>
+    requireRecord: z.ZodOptional<z.ZodBoolean>
+    idle: z.ZodOptional<TextSchema>
     idPath: z.ZodOptional<z.ZodString>
     currency: z.ZodOptional<z.ZodString>
-    fields: z.ZodArray<FieldSchema>
+    fields: z.ZodArray<FormFieldSchema>
 }> = z.object({
     label: specText,
     submitLabel: specText,
     successNotice: specText.optional(),
+    requireRecord: z.boolean().optional(),
+    idle: specText.optional(),
     idPath: z.string().max(PATH_MAX).optional(),
     currency: currencyCode.optional(),
-    fields: z.array(field).min(1).max(FORM_FIELDS_MAX),
+    fields: z.array(formField).min(1).max(FORM_FIELDS_MAX),
 })
 
 /** A read slot that a spec may leave unbound. */
@@ -83,7 +89,10 @@ const slots: Slots = {
     submit: { kind: "action", required: true },
 }
 
-/** Fields as data, filled from an optional record, validated per field and submitted through one action with the record's id and the values. */
+/**
+ * Fields as data, filled from an optional record, validated per field and submitted through one action with the record's id and the
+ * values. With `requireRecord` a form that has no record draws the `idle` notice instead of a blank form.
+ */
 export const formBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.form",
     title: { key: "blockForm" },
