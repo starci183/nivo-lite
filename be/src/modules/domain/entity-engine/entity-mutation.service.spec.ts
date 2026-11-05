@@ -14,6 +14,7 @@ import { EntityEngineService } from "./entity-engine.service"
 import { EntityMutationService } from "./entity-mutation.service"
 import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
 import { RecordEntity, RecordLinkEntity } from "./persistence/entities"
+import type { ScopedTx } from "./policies/scoped-tx.contracts"
 import { mintScopedTx } from "./policies/scoped-tx.policy"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -131,6 +132,10 @@ const build = async (em: MockEntityManager) => {
     return { mutations: moduleRef.get(EntityMutationService), em, failures }
 }
 
+const ANY_FUNCTION: unknown = expect.any(Function)
+
+const txOf = (manager: MockEntityManager): ScopedTx => mintScopedTx({ manager, workspaceId: WS })
+
 describe("EntityMutationService insert", () => {
     it("inserts the record with a minted id, links its toOne relations and answers the record after it", async () => {
         const { mutations, em } = await build(mockEntityManager())
@@ -140,12 +145,13 @@ describe("EntityMutationService insert", () => {
             { execute: {} },
         ])
 
-        const result = await mutations.mutate(mintScopedTx(em, WS), { ...INSERT, links: { owner: OWNER_ID } }, "action")
+        const result = await mutations.mutate(txOf(em), { ...INSERT, links: { owner: OWNER_ID } }, "action")
 
         expect(result).toEqual({ ok: true, row: rowOf(NEW_ID, { contactName: "An", stage: "new" }), version: "1" })
         expect(insert?.callsOf("values")).toEqual([
-            [{ id: NEW_ID, workspaceId: WS, entity: "sales.lead", data: { stage: "new", contactName: "An" } }],
+            [{ id: NEW_ID, workspaceId: WS, entity: "sales.lead", data: ANY_FUNCTION }],
         ])
+        expect(insert?.callsOf("setParameter")).toEqual([["data", '{"stage":"new","contactName":"An"}']])
         expect(unlink?.callsOf("from")).toEqual([[RecordLinkEntity]])
         expect(link?.callsOf("values")).toEqual([
             [
@@ -165,14 +171,14 @@ describe("EntityMutationService insert", () => {
         const { mutations, em } = await build(mockEntityManager())
         queueQueryBuilders(em, [{ execute: { raw: [rawRecord(NEW_ID, { contactName: "An", stage: "new" })] } }])
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), INSERT, "action")).resolves.toMatchObject({ ok: true })
+        await expect(mutations.mutate(txOf(em), INSERT, "action")).resolves.toMatchObject({ ok: true })
     })
 
     it("refuses a mutation the catalog rejects, before any statement", async () => {
         const { mutations, em } = await build(mockEntityManager())
         const owned: Insert = { ...INSERT, values: { contactName: "An", workspaceId: WS } }
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), owned, "action")).rejects.toMatchObject({
+        await expect(mutations.mutate(txOf(em), owned, "action")).rejects.toMatchObject({
             code: EntityEngineErrorCode.MutationInvalid,
             params: { problem: "MUTATION_OWNER_FIELD", at: "sales.lead.workspaceId" },
         })
@@ -190,7 +196,7 @@ describe("EntityMutationService database failures", () => {
     it("answers taken with the declared refusal when a declared unique constraint is violated", async () => {
         const { mutations, em } = await failing(pgError("23505", "records_sales_lead_phone_taken"))
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), INSERT, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), INSERT, "action")).resolves.toEqual({
             ok: false,
             reason: "taken",
             constraint: "phone_taken",
@@ -201,7 +207,7 @@ describe("EntityMutationService database failures", () => {
     it("answers invalid with the constraint when a check refuses the value", async () => {
         const { mutations, em } = await failing(pgError("23514", "records_sales_lead_stage_chk"))
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), INSERT, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), INSERT, "action")).resolves.toEqual({
             ok: false,
             reason: "invalid",
             constraint: "records_sales_lead_stage_chk",
@@ -211,7 +217,7 @@ describe("EntityMutationService database failures", () => {
     it("answers invalid without a constraint when the error names none", async () => {
         const { mutations, em } = await failing(pgError("22P02"))
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), INSERT, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), INSERT, "action")).resolves.toEqual({
             ok: false,
             reason: "invalid",
         })
@@ -221,7 +227,7 @@ describe("EntityMutationService database failures", () => {
         const cause = pgError("42501")
         const { mutations, em, failures } = await failing(cause)
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), INSERT, "action")).rejects.toMatchObject({
+        await expect(mutations.mutate(txOf(em), INSERT, "action")).rejects.toMatchObject({
             code: EntityEngineErrorCode.Failed,
         })
         expect(failures.fail).toHaveBeenCalledWith(cause, { kind: "scope" })
@@ -235,7 +241,7 @@ describe("EntityMutationService update", () => {
             { execute: { raw: [rawRecord(LEAD_ID, { contactName: "An", stage: "won" }, "4")] } },
         ])
 
-        const result = await mutations.mutate(mintScopedTx(em, WS), UPDATE, "action")
+        const result = await mutations.mutate(txOf(em), UPDATE, "action")
 
         expect(result).toEqual({
             ok: true,
@@ -249,7 +255,7 @@ describe("EntityMutationService update", () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
         queueQueryBuilders(em, [{ execute: { raw: [] } }])
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), UPDATE, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), UPDATE, "action")).resolves.toEqual({
             ok: false,
             reason: "stale",
         })
@@ -259,7 +265,7 @@ describe("EntityMutationService update", () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, null] }))
         queueQueryBuilders(em, [{ execute: { raw: [] } }])
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), UPDATE, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), UPDATE, "action")).resolves.toEqual({
             ok: false,
             reason: "missing",
         })
@@ -282,7 +288,7 @@ describe("EntityMutationService upsert and ensure", () => {
         ])
 
         const result = await mutations.mutate(
-            mintScopedTx(em, WS),
+            txOf(em),
             { op: "upsert", entity: "sales.lead", on: "phone_taken", values: { contactName: "An", phone: "0900" } },
             "action",
         )
@@ -294,7 +300,7 @@ describe("EntityMutationService upsert and ensure", () => {
         const { mutations, em } = await build(mockEntityManager(LOCKS))
         queueQueryBuilders(em, [{ getOne: storedLead }])
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), ENSURE, "job")).resolves.toMatchObject({
+        await expect(mutations.mutate(txOf(em), ENSURE, "job")).resolves.toMatchObject({
             ok: true,
             version: "3",
             created: false,
@@ -308,7 +314,7 @@ describe("EntityMutationService upsert and ensure", () => {
             { execute: { raw: [rawRecord(NEW_ID, { contactName: "An", phone: "0900", stage: "new" })] } },
         ])
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), ENSURE, "job")).resolves.toMatchObject({
+        await expect(mutations.mutate(txOf(em), ENSURE, "job")).resolves.toMatchObject({
             ok: true,
             version: "1",
             created: true,
@@ -325,7 +331,7 @@ describe("EntityMutationService delete", () => {
         )
         queueQueryBuilders(em, deletes)
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), DELETE, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), DELETE, "action")).resolves.toEqual({
             ok: true,
             row: rowOf(LEAD_ID, { contactName: "An", phone: "0900" }, "3"),
             version: "3",
@@ -338,7 +344,7 @@ describe("EntityMutationService delete", () => {
         )
         queueQueryBuilders(em, deletes)
 
-        const result = await mutations.mutate(mintScopedTx(em, WS), { ...DELETE, expected: "3" }, "action")
+        const result = await mutations.mutate(txOf(em), { ...DELETE, expected: "3" }, "action")
 
         expect(result.ok).toBe(true)
     })
@@ -346,7 +352,7 @@ describe("EntityMutationService delete", () => {
     it("answers stale when the expected version moved, without deleting", async () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), { ...DELETE, expected: "2" }, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), { ...DELETE, expected: "2" }, "action")).resolves.toEqual({
             ok: false,
             reason: "stale",
         })
@@ -356,7 +362,7 @@ describe("EntityMutationService delete", () => {
     it("answers missing when the record is not there", async () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, null] }))
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), DELETE, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), DELETE, "action")).resolves.toEqual({
             ok: false,
             reason: "missing",
         })
@@ -367,7 +373,7 @@ describe("EntityMutationService delete", () => {
             mockEntityManager({ findOne: [RecordEntity, storedLead], exists: [RecordLinkEntity, true] }),
         )
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), DELETE, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), DELETE, "action")).resolves.toEqual({
             ok: false,
             reason: "invalid",
             constraint: "lead",
@@ -380,7 +386,7 @@ describe("EntityMutationService delete", () => {
         )
         queueQueryBuilders(em, [{ execute: {} }, { execute: {} }, { execute: { raw: [] } }])
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), DELETE, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), DELETE, "action")).resolves.toEqual({
             ok: false,
             reason: "missing",
         })
@@ -392,7 +398,7 @@ describe("EntityMutationService link and unlink", () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
         const [, insert] = queueQueryBuilders(em, [{ execute: {} }, { execute: {} }])
 
-        const result = await mutations.mutate(mintScopedTx(em, WS), LINK, "action")
+        const result = await mutations.mutate(txOf(em), LINK, "action")
 
         expect(result).toMatchObject({ ok: true, version: "3" })
         expect(insert?.callsOf("values")).toEqual([
@@ -416,7 +422,7 @@ describe("EntityMutationService link and unlink", () => {
             { execute: () => Promise.reject(pgError("23503", "record_links_to_fkey")) },
         ])
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), LINK, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), LINK, "action")).resolves.toEqual({
             ok: false,
             reason: "invalid",
             constraint: "record_links_to_fkey",
@@ -427,7 +433,7 @@ describe("EntityMutationService link and unlink", () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
         const [remove] = queueQueryBuilders(em, [{ execute: {} }])
 
-        const result = await mutations.mutate(mintScopedTx(em, WS), UNLINK, "action")
+        const result = await mutations.mutate(txOf(em), UNLINK, "action")
 
         expect(result).toMatchObject({ ok: true, version: "3" })
         expect(remove?.callsOf("where")).toEqual([
@@ -447,11 +453,11 @@ describe("EntityMutationService link and unlink", () => {
     it("answers missing for a link or an unlink from a record that is not there", async () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, null] }))
 
-        await expect(mutations.mutate(mintScopedTx(em, WS), LINK, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), LINK, "action")).resolves.toEqual({
             ok: false,
             reason: "missing",
         })
-        await expect(mutations.mutate(mintScopedTx(em, WS), UNLINK, "action")).resolves.toEqual({
+        await expect(mutations.mutate(txOf(em), UNLINK, "action")).resolves.toEqual({
             ok: false,
             reason: "missing",
         })

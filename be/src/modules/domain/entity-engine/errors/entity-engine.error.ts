@@ -31,6 +31,20 @@ export enum EntityEngineErrorCode {
     JobInputInvalid = "ENTITY_ENGINE_JOB_INPUT_INVALID",
     /** A job or action asks for a port the engine does not provide. */
     PortUnprovided = "ENTITY_ENGINE_PORT_UNPROVIDED",
+    /** A field is neither a system field, a declared field nor a declared nested key of a jsonb field. */
+    FieldUnknown = "ENTITY_ENGINE_FIELD_UNKNOWN",
+    /** A relation is not declared on the entity. */
+    RelationUnknown = "ENTITY_ENGINE_RELATION_UNKNOWN",
+    /** A match key or unique constraint is not declared on the entity. */
+    KeyUnknown = "ENTITY_ENGINE_KEY_UNKNOWN",
+    /** A value is not of the shape its field or column needs. */
+    ValueInvalid = "ENTITY_ENGINE_VALUE_INVALID",
+    /** A cursor position does not match the order of the query. */
+    PositionMismatch = "ENTITY_ENGINE_POSITION_MISMATCH",
+    /** The entity does not declare that its records may be deleted. */
+    NotDeletable = "ENTITY_ENGINE_NOT_DELETABLE",
+    /** A statement answered no row where it must answer one. */
+    ResultMissing = "ENTITY_ENGINE_RESULT_MISSING",
 }
 
 /** How each entity engine code travels. */
@@ -49,6 +63,13 @@ export const ENTITY_ENGINE_ERROR_KINDS: Record<EntityEngineErrorCode, ErrorKind>
     [EntityEngineErrorCode.JobUnknown]: "internal",
     [EntityEngineErrorCode.JobInputInvalid]: "invalid",
     [EntityEngineErrorCode.PortUnprovided]: "internal",
+    [EntityEngineErrorCode.FieldUnknown]: "internal",
+    [EntityEngineErrorCode.RelationUnknown]: "internal",
+    [EntityEngineErrorCode.KeyUnknown]: "internal",
+    [EntityEngineErrorCode.ValueInvalid]: "invalid",
+    [EntityEngineErrorCode.PositionMismatch]: "invalid",
+    [EntityEngineErrorCode.NotDeletable]: "forbidden",
+    [EntityEngineErrorCode.ResultMissing]: "internal",
 }
 
 /** The one error class of the entity engine capability. */

@@ -175,7 +175,9 @@ export class EntityMutationService {
     private async write(tx: ScopedTx, entity: string, work: ScopedWork<EngineResult>): Promise<EngineResult> {
         const declared = declaredConstraintsOf(this.engine.definition(entity))
         try {
-            return await tx.manager.transaction((manager) => work(mintScopedTx(manager, tx.workspaceId)))
+            return await tx.manager.transaction((manager) =>
+                work(mintScopedTx({ manager, workspaceId: tx.workspaceId })),
+            )
         } catch (cause) {
             const failure = pgFailureOf(cause, declared)
             if (failure.kind === "taken")

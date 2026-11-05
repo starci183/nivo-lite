@@ -7,7 +7,6 @@ import { EngineFailureService } from "./engine-failure.service"
 import { EntityEngineLogEvent } from "./entity-engine.log-events"
 import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
 import { pgFailureOf } from "./pg-failure.policy"
-import { EntityCompilerError, EntityCompilerErrorCode } from "./policies/compiler.error"
 
 const CORRELATION_ID = "00000000-0000-4000-8000-000000000001"
 
@@ -35,13 +34,6 @@ describe("EngineFailureService fail", () => {
     it("throws a domain error as it is", async () => {
         const { failures } = await build()
         const cause = new EntityEngineError({ code: EntityEngineErrorCode.JobUnknown })
-
-        expect(thrownBy(() => failures.fail(cause, { kind: "unknown" }))).toBe(cause)
-    })
-
-    it("throws an error of the compiler as it is", async () => {
-        const { failures } = await build()
-        const cause = new EntityCompilerError({ code: EntityCompilerErrorCode.FieldUnknown })
 
         expect(thrownBy(() => failures.fail(cause, { kind: "unknown" }))).toBe(cause)
     })

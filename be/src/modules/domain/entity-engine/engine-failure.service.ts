@@ -7,7 +7,6 @@ import { EntityEngineLogEvent } from "./entity-engine.log-events"
 import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
 import { pgFailureOf } from "./pg-failure.policy"
 import type { PgFailure } from "./pg-failure.policy"
-import { EntityCompilerError } from "./policies/compiler.error"
 
 @Injectable()
 /**
@@ -29,7 +28,7 @@ export class EngineFailureService {
 
     /** Throws the engine error a failure stands for. */
     fail(cause: unknown, failure: PgFailure): never {
-        if (cause instanceof EntityEngineError || cause instanceof EntityCompilerError) throw cause
+        if (cause instanceof EntityEngineError) throw cause
         const correlationId = this.ids.next()
         if (failure.kind === "scope") {
             this.logger.error(EntityEngineLogEvent.ScopeViolation, cause, { correlationId })

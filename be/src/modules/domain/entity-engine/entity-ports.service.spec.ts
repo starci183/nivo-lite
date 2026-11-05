@@ -18,7 +18,7 @@ import { mintScopedTx } from "./policies/scoped-tx.policy"
 type ParseFailure = Extract<ReturnType<JobDefinition["input"]["safeParse"]>, { success: false }>["error"]
 
 const WS = "11111111-1111-4111-8111-111111111111"
-const TX = mintScopedTx(mockEntityManager(), WS)
+const TX = mintScopedTx({ manager: mockEntityManager(), workspaceId: WS })
 const RUN_IN: RunIn = (use) => use(TX)
 const MISSING = { ok: false, reason: "missing" } as const
 

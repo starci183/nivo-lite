@@ -58,7 +58,7 @@ export class EntityEngineService {
             throw new EntityEngineError({ code: EntityEngineErrorCode.ScopeInvalid, params: { workspaceId } })
         return await this.entityManager.transaction(async (manager) => {
             await callDbFunction(manager, "public.engine_scope_enter", [workspaceId])
-            return work(mintScopedTx(manager, workspaceId))
+            return work(mintScopedTx({ manager, workspaceId }))
         })
     }
 

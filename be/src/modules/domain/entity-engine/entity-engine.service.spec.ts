@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { queueSubQueryBuilders } from "@tests/fixtures/builders/sub-query-builder.builder"
 import { Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { deriveStateKey } from "@modules/platform/primitives"
@@ -14,6 +15,7 @@ import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityEngineErrorCode } from "./errors/entity-engine.error"
 import { RecordEntity } from "./persistence/entities"
+import type { ScopedTx } from "./policies/scoped-tx.contracts"
 import { mintScopedTx } from "./policies/scoped-tx.policy"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -91,6 +93,8 @@ const build = async (em: MockEntityManager, overrides: Partial<EntityEngineOptio
     return { engine: moduleRef.get(EntityEngineService), em, failures }
 }
 
+const txOf = (manager: MockEntityManager): ScopedTx => mintScopedTx({ manager, workspaceId: WS })
+
 describe("EntityEngineService construction", () => {
     it("refuses a cursor key that is not 32 bytes", async () => {
         await expect(build(mockEntityManager(), { cursorKey: new Secret("c2hvcnQ=") })).rejects.toMatchObject({
@@ -138,7 +142,7 @@ describe("EntityEngineService definition and get", () => {
     it("reads one record of the scope's workspace", async () => {
         const { engine, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
 
-        const row = await engine.get(mintScopedTx(em, WS), "sales.lead", LEAD_ID)
+        const row = await engine.get(txOf(em), "sales.lead", LEAD_ID)
 
         expect(row).toEqual(rowOf(LEAD_ID, { contactName: "An" }, "3"))
         expect(em.findOne).toHaveBeenCalledWith(RecordEntity, {
@@ -149,13 +153,13 @@ describe("EntityEngineService definition and get", () => {
     it("answers null for a record that is not there", async () => {
         const { engine, em } = await build(mockEntityManager({ findOne: [RecordEntity, null] }))
 
-        await expect(engine.get(mintScopedTx(em, WS), "sales.lead", LEAD_ID)).resolves.toBeNull()
+        await expect(engine.get(txOf(em), "sales.lead", LEAD_ID)).resolves.toBeNull()
     })
 
     it("refuses an entity the catalog does not hold", async () => {
         const { engine, em } = await build(mockEntityManager())
 
-        await expect(engine.get(mintScopedTx(em, WS), "sales.nothing", LEAD_ID)).rejects.toMatchObject({
+        await expect(engine.get(txOf(em), "sales.nothing", LEAD_ID)).rejects.toMatchObject({
             code: EntityEngineErrorCode.EntityUnknown,
         })
     })
@@ -175,7 +179,7 @@ describe("EntityEngineService list", () => {
 
     it("answers a page with the signed cursor of the next one and the toMany records of its rows", async () => {
         const { engine, em } = await build(mockEntityManager())
-        queueQueryBuilders(em, [
+        queueSubQueryBuilders(em, [
             {
                 getRawMany: [
                     rawRecord("r-1", { contactName: "An" }, { pk0: "t-1", pk1: "r-1" }),
@@ -189,7 +193,7 @@ describe("EntityEngineService list", () => {
             include: [{ relation: "tasks", select: ["title"], order: [["id", "asc"]], latest: 2 }],
         }
 
-        const page = await engine.list(mintScopedTx(em, WS), query, "scope-1")
+        const page = await engine.list(txOf(em), query, "scope-1")
 
         expect(page.rows.map((listed) => [listed.row.id, listed.included])).toEqual([
             ["r-1", { tasks: [rowOf("k-1", { title: "Call" })] }],
@@ -201,7 +205,7 @@ describe("EntityEngineService list", () => {
         const { engine, em } = await build(mockEntityManager())
         queueQueryBuilders(em, [{ getRawMany: [rawRecord("r-1", { contactName: "An" }, { pk0: "t-1", pk1: "r-1" })] }])
 
-        const page = await engine.list(mintScopedTx(em, WS), LIST, "scope-1")
+        const page = await engine.list(txOf(em), LIST, "scope-1")
 
         expect(page.rows.map((listed) => [listed.row.id, listed.included])).toEqual([["r-1", {}]])
         expect(page.next).toBeNull()
@@ -212,7 +216,7 @@ describe("EntityEngineService list", () => {
         const [fake] = queueQueryBuilders(em, [{ getRawMany: [] }])
         const after = signCursor(cursorKey, "scope-1", ["t-1", "r-1"])
 
-        const page = await engine.list(mintScopedTx(em, WS), { ...LIST, page: { size: 1, after } }, "scope-1")
+        const page = await engine.list(txOf(em), { ...LIST, page: { size: 1, after } }, "scope-1")
 
         expect(page).toEqual({ rows: [], next: null })
         expect(fake?.callsOf("andWhere")).toHaveLength(1)
@@ -222,17 +226,15 @@ describe("EntityEngineService list", () => {
         const { engine, em } = await build(mockEntityManager())
         const after = signCursor(cursorKey, "scope-2", ["t-1", "r-1"])
 
-        await expect(
-            engine.list(mintScopedTx(em, WS), { ...LIST, page: { size: 1, after } }, "scope-1"),
-        ).rejects.toMatchObject({ code: EntityEngineErrorCode.CursorInvalid })
+        await expect(engine.list(txOf(em), { ...LIST, page: { size: 1, after } }, "scope-1")).rejects.toMatchObject({
+            code: EntityEngineErrorCode.CursorInvalid,
+        })
     })
 
     it("refuses a query tree the catalog rejects, before any statement", async () => {
         const { engine, em } = await build(mockEntityManager())
 
-        await expect(
-            engine.list(mintScopedTx(em, WS), { ...LIST, from: "sales.nothing" }, "scope-1"),
-        ).rejects.toMatchObject({
+        await expect(engine.list(txOf(em), { ...LIST, from: "sales.nothing" }, "scope-1")).rejects.toMatchObject({
             code: EntityEngineErrorCode.QueryInvalid,
             params: { problem: "QUERY_ENTITY_UNKNOWN", at: "from" },
         })
@@ -247,7 +249,7 @@ describe("EntityEngineService aggregate", () => {
         const { engine, em } = await build(mockEntityManager())
         queueQueryBuilders(em, [{ getRawMany: [{ g0: "new", m0: "4" }] }])
 
-        await expect(engine.aggregate(mintScopedTx(em, WS), COUNT)).resolves.toEqual([
+        await expect(engine.aggregate(txOf(em), COUNT)).resolves.toEqual([
             { groups: { stage: "new" }, measures: { n: 4 } },
         ])
     })
@@ -255,7 +257,7 @@ describe("EntityEngineService aggregate", () => {
     it("refuses an aggregate the catalog rejects", async () => {
         const { engine, em } = await build(mockEntityManager())
 
-        await expect(engine.aggregate(mintScopedTx(em, WS), { ...COUNT, groupBy: ["nothing"] })).rejects.toMatchObject({
+        await expect(engine.aggregate(txOf(em), { ...COUNT, groupBy: ["nothing"] })).rejects.toMatchObject({
             code: EntityEngineErrorCode.QueryInvalid,
         })
     })
