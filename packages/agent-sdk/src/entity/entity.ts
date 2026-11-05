@@ -19,7 +19,12 @@ interface BaseOptions {
     readonly default?: FieldDefault
 }
 
-type Plain<N extends boolean> = BaseOptions & { readonly nullable?: N }
+/**
+ * The options of a builder: a nullable field must say `nullable: true`; leaving it out (or `false`) is a field that is not nullable.
+ * A bare optional `nullable?: true` would let an options object without `nullable` match the nullable overload first.
+ */
+type Plain<N extends boolean> = BaseOptions &
+    (N extends true ? { readonly nullable: true } : { readonly nullable?: false })
 
 /** The field the options describe, with `nullable` made explicit. */
 const built = <K extends FieldKind>(

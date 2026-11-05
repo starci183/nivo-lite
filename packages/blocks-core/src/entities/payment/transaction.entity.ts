@@ -19,15 +19,15 @@ type TransactionFields = {
 }
 
 const transactionFields: TransactionFields = {
-    channel: field.enum({ nullable: false, of: ["bank", "cash", "card", "ewallet"], default: { literal: "bank" } }),
-    direction: field.enum({ nullable: false, of: ["credit", "debit"], default: { literal: "credit" } }),
+    channel: field.enum({ of: ["bank", "cash", "card", "ewallet"], default: { literal: "bank" } }),
+    direction: field.enum({ of: ["credit", "debit"], default: { literal: "credit" } }),
     amountVnd: field.moneyVnd(),
     reference: field.text({ maxLength: MAX_LINE, nullable: true }),
     payer: field.text({ maxLength: MAX_LINE, nullable: true }),
     orderId: field.uuid({ nullable: true }),
     externalRef: field.text({ maxLength: MAX_ID, nullable: true }),
-    occurredAt: field.timestamptz({ nullable: false, default: "now" }),
-    status: field.enum({ nullable: false, of: TRANSACTION_STATUSES, default: { literal: "unmatched" } }),
+    occurredAt: field.timestamptz({ default: "now" }),
+    status: field.enum({ of: TRANSACTION_STATUSES, default: { literal: "unmatched" } }),
 }
 
 /** One money movement of a workspace. Graph node kind `bank-transaction`. */

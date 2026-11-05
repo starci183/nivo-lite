@@ -20,11 +20,11 @@ type ConversationFields = {
 }
 
 const conversationFields: ConversationFields = {
-    kind: field.enum({ nullable: false, of: ["customer", "test"], default: { literal: "customer" } }),
-    channel: field.enum({ nullable: false, of: LEAD_CHANNELS, default: { literal: "website" } }),
+    kind: field.enum({ of: ["customer", "test"], default: { literal: "customer" } }),
+    channel: field.enum({ of: LEAD_CHANNELS, default: { literal: "website" } }),
     externalId: field.text({ maxLength: MAX_ID, nullable: true }),
     visitorName: field.text({ maxLength: MAX_LINE, searchable: true, nullable: true }),
-    status: field.enum({ nullable: false, of: CONVERSATION_STATUSES, default: { literal: "open" } }),
+    status: field.enum({ of: CONVERSATION_STATUSES, default: { literal: "open" } }),
     handledBy: field.text({ maxLength: MAX_LINE, nullable: true }),
     handledAt: field.timestamptz({ nullable: true }),
     agentId: field.uuid({ nullable: true }),

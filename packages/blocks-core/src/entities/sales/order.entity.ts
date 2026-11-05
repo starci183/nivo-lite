@@ -46,10 +46,10 @@ type OrderFields = {
 
 const orderFields: OrderFields = {
     orderNo: field.sequence({ format: "DH-{yyyy}{mm}{dd}-{n:4}", resets: "day" }),
-    items: field.jsonb({ nullable: false, shape: orderItemsShape }),
-    note: field.text({ nullable: false, maxLength: MAX_BODY, default: "empty" }),
+    items: field.jsonb({ shape: orderItemsShape }),
+    note: field.text({ maxLength: MAX_BODY, default: "empty" }),
     amountVnd: field.moneyVnd({ nullable: true }),
-    status: field.enum({ nullable: false, of: ORDER_STATUSES, default: { literal: "draft" } }),
+    status: field.enum({ of: ORDER_STATUSES, default: { literal: "draft" } }),
     confirmedBy: field.text({ maxLength: MAX_LINE, nullable: true }),
     confirmedAt: field.timestamptz({ nullable: true }),
 }

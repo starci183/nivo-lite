@@ -21,9 +21,9 @@ type MessageFields = {
 
 const messageFields: MessageFields = {
     conversationId: field.uuid(),
-    role: field.enum({ nullable: false, of: ["user", "agent", "system"] }),
-    text: field.text({ nullable: false, maxLength: MAX_BODY }),
-    sentAt: field.timestamptz({ nullable: false, default: "now" }),
+    role: field.enum({ of: ["user", "agent", "system"] }),
+    text: field.text({ maxLength: MAX_BODY }),
+    sentAt: field.timestamptz({ default: "now" }),
     authorKind: field.enum({ of: ["ai", "human"], nullable: true }),
     authorName: field.text({ maxLength: MAX_LINE, nullable: true }),
     authorUserId: field.uuid({ nullable: true }),

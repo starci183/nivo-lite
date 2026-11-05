@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { defineEntity, field } from "./entity"
 import { EntityDefinitionError } from "./entity-error"
-import type { EntityConfig, FieldMap } from "./entity.types"
+import type { EntityConfig, FieldDef, FieldMap } from "./entity.types"
 
 const fields = {
     name: field.text({ maxLength: 120, searchable: true }),
@@ -107,5 +107,21 @@ describe("defineEntity", () => {
             "ENTITY_FIELD_RESERVED",
             "ENTITY_FIELD_NAME_INVALID",
         ])
+    })
+})
+
+describe("field builder nullability", () => {
+    it("types a field with options and no nullable as not nullable", () => {
+        const required: FieldDef<"text", false> = field.text({ maxLength: 10 })
+        const requiredEnum: FieldDef<"enum", false> = field.enum({ of: ["a"] })
+        const explicit: FieldDef<"text", false> = field.text({ maxLength: 10, nullable: false })
+        expect([required.nullable, requiredEnum.nullable, explicit.nullable]).toEqual([false, false, false])
+    })
+
+    it("types a field that says nullable: true as nullable", () => {
+        const optional: FieldDef<"text", true> = field.text({ maxLength: 10, nullable: true })
+        const nullableFlag: true = optional.nullable
+        const requiredFlag: false = field.text({ maxLength: 10 }).nullable
+        expect([nullableFlag, requiredFlag]).toEqual([true, false])
     })
 })

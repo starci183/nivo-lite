@@ -16,12 +16,12 @@ type AdjustmentFields = {
 }
 
 const adjustmentFields: AdjustmentFields = {
-    targetType: field.enum({ nullable: false, of: ["invoice", "transaction"] }),
+    targetType: field.enum({ of: ["invoice", "transaction"] }),
     targetId: field.uuid(),
     /** At least 5 characters once trimmed: no declared check says it (the blocks-core action refuses a short note, there is no declared check. */
-    note: field.text({ nullable: false, maxLength: MAX_NOTE }),
+    note: field.text({ maxLength: MAX_NOTE }),
     correctedAmountVnd: field.moneyVnd({ nullable: true }),
-    createdBy: field.text({ nullable: false, maxLength: MAX_LINE }),
+    createdBy: field.text({ maxLength: MAX_LINE }),
     createdByUser: field.uuid({ nullable: true }),
 }
 
