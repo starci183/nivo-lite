@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { FORM_FIELDS_MAX, FORM_NAME_MAX } from "../blocks/form.block"
 import type {
     ApproverView,
     BadgeView,
@@ -119,6 +120,10 @@ const decisionRowView: z.ZodType<DecisionRowView> = z.object({
     primary: commandView.nullable(),
     edit: commandView.nullable(),
     menu: list(commandView),
+    draft: z
+        .record(z.string().max(FORM_NAME_MAX), z.union([text, z.number(), z.boolean(), z.null()]))
+        .refine((draft) => Object.keys(draft).length <= FORM_FIELDS_MAX)
+        .optional(),
     waitingFor: nullableText,
 })
 

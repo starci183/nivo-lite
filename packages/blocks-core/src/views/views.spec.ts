@@ -56,6 +56,18 @@ describe("the views", () => {
         expect(decisionQueueView.safeParse(view).success).toBe(true)
     })
 
+    it("accept the draft an edit form starts from and refuse one past the bound of a form", () => {
+        const view = (draft: unknown): unknown => ({
+            count: null,
+            more: null,
+            rows: [{ ...DECISION_QUEUE_PLACEHOLDER.rows[0], draft }],
+        })
+        expect(decisionQueueView.safeParse(view({ amount: 5, note: "x", isOn: true, empty: null })).success).toBe(true)
+        expect(decisionQueueView.safeParse(view({ nested: {} })).success).toBe(false)
+        const wide = Object.fromEntries(Array.from({ length: 31 }, (_, index) => [`f${index}`, index]))
+        expect(decisionQueueView.safeParse(view(wide)).success).toBe(false)
+    })
+
     it("refuse a badge tone the Grammar does not have", () => {
         const row = { ...DECISION_QUEUE_PLACEHOLDER.rows[0], badges: [{ label: "New", tone: "pink" }] }
         expect(decisionQueueView.safeParse({ count: null, more: null, rows: [row] }).success).toBe(false)
