@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ModuleJobsQueueModule } from "@modules/queues/module-jobs"
-import { ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
+import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-engine.module-definition"
 import { EngineFailureService } from "./engine-failure.service"
 import { EntityEngineService } from "./entity-engine.service"
@@ -23,6 +23,7 @@ export class EntityEngineModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: ENTITY_ENGINE_OPTIONS, useValue: options },
+                { provide: ENGINE_FAILURE_ALERTS, useClass: options.alerts },
                 EngineFailureService,
                 EntityEngineService,
                 EntityMutationService,
