@@ -1,4 +1,5 @@
-import { Badge, Cluster, EmptyNotice, MessageBubble, Quote, Stack, Text } from "@starci/grammar/common"
+import { Fragment } from "react"
+import { Badge, EmptyNotice, MessageBubble, Quote, Stack, Text } from "@starci/grammar/common"
 import { ThreadApprovalCard } from "@/components/branches/ThreadApprovalCard"
 import { ThreadAuthorMark } from "@/components/branches/ThreadAuthorMark"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -32,20 +33,28 @@ interface BodyProps {
     readonly quotedLabel: string
 }
 
-/** The words of a message: the text with the chips of whom it tags, and the customer words quoted as plain text. */
+/** What the text of a message draws. */
+interface WordsProps {
+    readonly message: ThreadMessageView
+}
+
+/** The text of a message with the names it tags, all in one line of words so a tag stays inline and wraps with the text. */
+const Words = (props: WordsProps) => (
+    <Text as="p">
+        {props.message.segments.map((segment) =>
+            segment.kind === "mention" ? (
+                <ThreadMentionChip key={segment.offset} name={segment.name} />
+            ) : (
+                <Fragment key={segment.offset}>{segment.text}</Fragment>
+            ),
+        )}
+    </Text>
+)
+
+/** The words of a message and the customer words quoted under them as plain text. */
 const Body = (props: BodyProps) => (
     <Stack gap="inline">
-        <Cluster gap="identity">
-            {props.message.segments.map((segment) =>
-                segment.kind === "mention" ? (
-                    <ThreadMentionChip key={segment.offset} name={segment.name} />
-                ) : (
-                    <Text key={segment.offset} as="span">
-                        {segment.text}
-                    </Text>
-                ),
-            )}
-        </Cluster>
+        <Words message={props.message} />
         {props.message.quoted.map((quote) => (
             <Quote key={quote} source={props.quotedLabel} text={quote} />
         ))}
@@ -57,25 +66,29 @@ const Message = (props: MessageProps) => {
     const { message } = props
     return (
         <MessageBubble
-            side="incoming"
+            side={message.isOwn ? "outgoing" : "incoming"}
             author={message.authorName}
             meta={message.time}
             isLoading={props.isLoading}
-            avatar={<ThreadAuthorMark name={message.authorName} glyph={message.glyph} avatarUrl={message.avatarUrl} />}
+            avatar={
+                message.isOwn ? undefined : (
+                    <ThreadAuthorMark name={message.authorName} glyph={message.glyph} avatarUrl={message.avatarUrl} />
+                )
+            }
             status={message.isAgent ? <Badge tone="neutral">{props.aiLabel}</Badge> : undefined}
             body={
-                <Stack gap="row">
+                message.approval === null ? (
                     <Body message={message} quotedLabel={props.quotedLabel} />
-                    {message.approval === null ? null : (
-                        <ThreadApprovalCard
-                            card={message.approval}
-                            labels={props.approvalLabels}
-                            isBusy={props.decidingId === message.id}
-                            onApprove={props.onApprove}
-                            onReject={props.onReject}
-                        />
-                    )}
-                </Stack>
+                ) : (
+                    <ThreadApprovalCard
+                        card={message.approval}
+                        labels={props.approvalLabels}
+                        words={<Body message={message} quotedLabel={props.quotedLabel} />}
+                        isBusy={props.decidingId === message.id}
+                        onApprove={props.onApprove}
+                        onReject={props.onReject}
+                    />
+                )
             }
         />
     )

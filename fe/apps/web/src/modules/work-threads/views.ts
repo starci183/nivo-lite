@@ -21,13 +21,6 @@ const voteKey = (status: string): string => `vote${capital(status)}`
 /** The message key that names the status of a chain step. */
 const stepKey = (status: string): string => `step${capital(status)}`
 
-/** The message key that names the rule of an approval. */
-const policyKey = (policy: string): string => {
-    if (policy === "all") return "policyAll"
-    if (policy === "sequential") return "policySequential"
-    return "policyAny"
-}
-
 /** The message key that names why a person was left out of an approval. */
 const excludedKey = (reason: string): string => {
     if (reason === "inactive") return "excludedInactive"
@@ -79,7 +72,7 @@ export const approvalViewOf = (
         messageId: message.id,
         title: t("approvalTitle", { action: card.action }),
         ruleLine: t("ruleLine", { rule: card.rule }),
-        policyLabel: t(policyKey(card.policy)),
+        agentName: message.authorKind === "agent" ? message.authorName : null,
         expiry: expiryOf(card, t, locale),
         approvers: card.approvers.map((approver) => ({
             id: approver.memberId,
@@ -124,9 +117,7 @@ export const chainViewOf = (chain: WorkChainType, t: ThreadWords): ChainPanelVie
         steps: chain.steps.map((step) => ({
             id: step.id,
             title: step.action,
-            description: [step.actorName, t(stepKindKey(step.kind)), step.detail]
-                .filter((part) => part !== "")
-                .join(" · "),
+            description: [t(stepKindKey(step.kind)), step.detail].filter((part) => part !== "").join(" · "),
             statusLabel: t(stepKey(step.status)),
             tone: chainStatusTone(step.status),
         })),

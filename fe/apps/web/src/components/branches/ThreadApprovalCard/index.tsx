@@ -1,4 +1,5 @@
 import { useState } from "react"
+import type { ReactNode } from "react"
 import { Badge, Cluster, Inset, ListBox, Stack, Text } from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
 import { DecisionButtons } from "@/components/leaves/DecisionButtons"
@@ -10,6 +11,8 @@ import type { ThreadApprovalCardView, ThreadApprovalLabels } from "@/modules/typ
 interface ThreadApprovalCardProps {
     readonly card: ThreadApprovalCardView
     readonly labels: ThreadApprovalLabels
+    /** What the message says, drawn under the card's label: the card opens the bubble, the words follow it. */
+    readonly words: ReactNode
     /** Whether this card's decision is being sent. */
     readonly isBusy: boolean
     readonly onApprove: (messageId: string) => void
@@ -17,14 +20,14 @@ interface ThreadApprovalCardProps {
 }
 
 /** The two decision buttons while the card waits (the refusal first, the approval last), or how it was decided once it was. */
-const Decision = (props: ThreadApprovalCardProps) => {
+const Decision = (props: Omit<ThreadApprovalCardProps, "words">) => {
     const { card } = props
     // The button pressed last is the one in flight: the spinner lands on it, not on the other.
     const [pressed, setPressed] = useState<"approve" | "reject">("approve")
     if (!card.isPending) return <Text>{card.decidedLine}</Text>
     return (
         <DecisionButtons
-            size="sm"
+            rejectLook="outlined"
             pending={props.isBusy ? pressed : null}
             reject={{
                 label: props.labels.reject,
@@ -54,26 +57,27 @@ const approverItemOf = (person: ThreadApprovalCardView["approvers"][number]): Li
 })
 
 /**
- * The approval of a message, inside its bubble: where it stands, what is asked and by which rule, the clock, the people who may
- * decide and those left out, and the decision.
+ * The approval of a message, inside its bubble: where it stands and who asks, what is asked, the words of the message, the rule and
+ * the clock, the people who may decide and those left out, and the decision.
  */
 export const ThreadApprovalCard = (props: ThreadApprovalCardProps) => {
     const { card } = props
     return (
         <Stack gap="row">
-            <Badge tone={card.decidedTone} isDot>
-                {card.statusLabel}
-            </Badge>
-            <Stack gap="identity">
-                <Text size="sm" isStrong>
-                    {card.title}
-                </Text>
+            <Cluster gap="inline">
+                <Badge tone={card.decidedTone} isDot>
+                    {card.statusLabel}
+                </Badge>
+                {card.agentName === null ? null : <Badge tone="neutral">{card.agentName}</Badge>}
+            </Cluster>
+            <Text size="xs" tone="muted" isStrong>
+                {card.title}
+            </Text>
+            {props.words}
+            <Cluster gap="inline" justify="between">
                 <Text size="xs" tone="muted">
                     {card.ruleLine}
                 </Text>
-            </Stack>
-            <Cluster gap="inline" justify="between">
-                <Text size="sm">{card.policyLabel}</Text>
                 <ApprovalCountdown expiry={card.expiry} />
             </Cluster>
             <Inset>
@@ -94,7 +98,13 @@ export const ThreadApprovalCard = (props: ThreadApprovalCardProps) => {
                     {card.fallbackLine}
                 </Text>
             )}
-            <Decision {...props} />
+            <Decision
+                card={card}
+                labels={props.labels}
+                isBusy={props.isBusy}
+                onApprove={props.onApprove}
+                onReject={props.onReject}
+            />
         </Stack>
     )
 }

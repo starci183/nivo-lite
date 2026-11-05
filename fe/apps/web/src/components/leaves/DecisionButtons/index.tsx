@@ -18,6 +18,8 @@ interface DecisionButtonsProps {
     /** Which command is being sent: its button shows the pending state and every button is held until it settles. */
     readonly pending: "approve" | "reject" | null
     readonly size?: "sm" | "md"
+    /** How Reject draws: `dismiss` (the quiet default) or `outlined` (a bordered pill, as the thread approval card of the mockup). */
+    readonly rejectLook?: "dismiss" | "outlined"
 }
 
 /**
@@ -30,7 +32,7 @@ export const DecisionButtons = (props: DecisionButtonsProps) => {
     return (
         <Cluster gap="row">
             <Button
-                intent="dismiss"
+                intent={props.rejectLook === "outlined" ? "neutral" : "dismiss"}
                 size={size}
                 isPending={props.pending === "reject"}
                 isDisabled={isBusy}

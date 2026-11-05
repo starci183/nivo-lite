@@ -47,6 +47,7 @@ const WAITING_MESSAGE: ThreadMessageView = {
     id: "waiting",
     authorName: "",
     isAgent: false,
+    isOwn: false,
     glyph: null,
     avatarUrl: null,
     time: "",

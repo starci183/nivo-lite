@@ -3,6 +3,7 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
 import { slotOfSwr } from "@/hooks/slot"
+import { useMember } from "@/hooks/member"
 import { moduleGlyphOf, useAgentPictures } from "@/hooks/installations"
 import {
     useQueryMentionDirectorySwr,
@@ -18,6 +19,7 @@ import type {
     ThreadFeedView,
     ThreadRowView,
 } from "@/modules/types"
+import type { ThreadWords } from "@/modules/work-threads"
 import { THREAD_POLL_MS, approvalViewOf, bodySegmentsOf, chainViewOf, composerOptionsOf } from "@/modules/work-threads"
 
 /** What the work threads board reads: the list, the open thread, its chain and who can be tagged, all worded. */
@@ -52,10 +54,25 @@ const STATUS_WORDS = {
 const statusWordOf = (status: string): (typeof STATUS_WORDS)[keyof typeof STATUS_WORDS] =>
     status === "waiting" || status === "done" || status === "stopped" ? STATUS_WORDS[status] : STATUS_WORDS.open
 
+/** One thread of the list as the board words it. */
+const threadRowOf = (
+    row: NonNullable<ReturnType<typeof useQueryWorkThreadsSwr>["data"]>[number],
+    activeId: string | null,
+    t: ThreadWords,
+): ThreadRowView => ({
+    id: row.id,
+    title: row.title,
+    statusLabel: t(statusWordOf(row.waitingApproval ? "waiting" : row.status)),
+    statusTone: statusToneOf(row.waitingApproval ? "waiting" : row.status),
+    isSelected: row.id === activeId,
+    countLabel: t("messageCount", { count: row.messageCount }),
+})
+
 /** The work threads of the workspace, the open one with its chain, read and worded for the board. */
 export const useWorkThreadBoard = (selectedId: string | null): WorkThreadBoardData => {
     const t = useTranslations("workThreads")
     const pictureOf = useAgentPictures()
+    const me = useMember()
     const locale = useLocale()
     const format = useFormatter()
     const list = useQueryWorkThreadsSwr({ refreshInterval: THREAD_POLL_MS })
@@ -74,18 +91,12 @@ export const useWorkThreadBoard = (selectedId: string | null): WorkThreadBoardDa
     const directory = useQueryMentionDirectorySwr()
     const time = (iso: string) => format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit" })
 
-    const rows = list.data?.map((row): ThreadRowView => ({
-        id: row.id,
-        title: row.title,
-        statusLabel: t(statusWordOf(row.waitingApproval ? "waiting" : row.status)),
-        statusTone: statusToneOf(row.waitingApproval ? "waiting" : row.status),
-        isSelected: row.id === activeId,
-        countLabel: t("messageCount", { count: row.messageCount }),
-    }))
+    const rows = list.data?.map((row) => threadRowOf(row, activeId, t))
     const messages = thread.data?.messages.map((message) => ({
         id: message.id,
         authorName: message.authorName,
         isAgent: message.authorKind === "agent",
+        isOwn: message.authorKind === "member" && me !== null && message.authorId === me.userId,
         glyph: message.authorKind === "agent" ? moduleGlyphOf(message.authorRole) : null,
         avatarUrl: message.authorKind === "agent" ? pictureOf({ name: message.authorName }) : null,
         time: time(message.createdAt),

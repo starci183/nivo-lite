@@ -51,7 +51,8 @@ export interface ThreadApprovalCardView {
     readonly messageId: string
     readonly title: string
     readonly ruleLine: string
-    readonly policyLabel: string
+    /** The agent that asked for the decision, as a chip beside the status; null when a person did. */
+    readonly agentName: string | null
     readonly expiry: ApprovalExpiryView
     readonly approvers: ReadonlyArray<ApprovalLineView>
     readonly excluded: ReadonlyArray<{ readonly id: string; readonly line: string }>
@@ -70,6 +71,8 @@ export interface ThreadMessageView {
     readonly id: string
     readonly authorName: string
     readonly isAgent: boolean
+    /** Whether the signed-in person wrote it: it draws on the end side, in the brand colour, with no mark. */
+    readonly isOwn: boolean
     /** The module glyph of an agent author; null for a person. */
     readonly glyph: ModuleIconName | null
     /** The picture the owner gave an agent author; null draws the NIVO unicorn mascot. */
