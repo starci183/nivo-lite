@@ -10,6 +10,7 @@ import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import { isRunKey } from "./jobs.contracts"
 import type {
     AdvanceWrite,
+    ParkWrite,
     ClaimedJob,
     ClaimParams,
     JobClaimResult,
@@ -152,6 +153,47 @@ export class JobClaimService implements JobClaims {
     /** Marks the job failed under the token the caller holds, so the queue can retry it. */
     fail(write: FailWrite): Promise<void> {
         return this.guarded({ status: "failed", error: write.reason, leaseExpiresAt: null }, write)
+    }
+
+    /**
+     * Parks the job under the token the caller holds: `failed_awaiting_fix` with the class and reason of the failure, the build that ran
+     * it and the queue to resume it on. Answers whether the one alert of this park is due (the first park since the last resume).
+     */
+    async park(write: ParkWrite): Promise<boolean> {
+        return await this.writer().transaction(async (manager) => {
+            const held = await manager
+                .createQueryBuilder(JobEntity, "job")
+                .select(["job.id", "job.alertedAt"])
+                .where("job.id = :jobId AND job.fencingToken = :token AND job.status = :running", {
+                    jobId: write.jobId,
+                    token: write.expectedFencingToken,
+                    running: "running" satisfies JobState,
+                })
+                .setLock("pessimistic_write")
+                .getOne()
+            if (held === null) {
+                throw new JobsError({
+                    code: JobsErrorCode.FencedOut,
+                    params: { jobId: write.jobId, token: write.expectedFencingToken },
+                })
+            }
+            const now = this.clock.now()
+            await manager.update(
+                JobEntity,
+                { id: write.jobId },
+                {
+                    status: "failed_awaiting_fix",
+                    failureClass: write.failureClass,
+                    error: write.reason,
+                    parkedBuild: write.build,
+                    queue: write.queue,
+                    parkedAt: now,
+                    alertedAt: held.alertedAt ?? now,
+                    leaseExpiresAt: null,
+                },
+            )
+            return held.alertedAt === null
+        })
     }
 
     /** Holds the live fence across domain effects; no job-row writes may be attempted inside the callback. */

@@ -1,3 +1,5 @@
+import { PARKED_JOBS_SWEEP } from "./jobs.contracts"
+
 /** One recurring tick of platform/jobs: at each minute its cron expression names, one job of `queue` is enqueued with `payload` (R335). */
 export interface JobTick {
     /** The stable name: the advisory lock key, the minute claim and the correlation id carry it. */
@@ -134,6 +136,14 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         timeZone: "UTC",
         queue: "agent_turn",
         job: "agent-turn.sweep",
+        payload: {},
+    },
+    {
+        name: "parked-jobs-sweep",
+        cron: "*/15 * * * *",
+        timeZone: "UTC",
+        queue: PARKED_JOBS_SWEEP.queue,
+        job: PARKED_JOBS_SWEEP.job,
         payload: {},
     },
     {

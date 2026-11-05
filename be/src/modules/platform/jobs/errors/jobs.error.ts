@@ -9,6 +9,8 @@ export enum JobsErrorCode {
     RunKeyInvalid = "JOBS_RUN_KEY_INVALID",
     /** The jobs capability was registered with no connection to hold the job table. */
     ConnectionMissing = "JOBS_CONNECTION_MISSING",
+    /** The queue outbox answered no delivery for a parked job that was to be resumed. */
+    ResumeNotQueued = "JOBS_RESUME_NOT_QUEUED",
 }
 
 /** How each jobs code travels. */
@@ -16,6 +18,7 @@ export const JOBS_ERROR_KINDS: Record<JobsErrorCode, ErrorKind> = {
     [JobsErrorCode.FencedOut]: "conflict",
     [JobsErrorCode.RunKeyInvalid]: "internal",
     [JobsErrorCode.ConnectionMissing]: "internal",
+    [JobsErrorCode.ResumeNotQueued]: "internal",
 }
 
 /** The one error class of the jobs capability. */

@@ -4,12 +4,20 @@ import { ScheduleModule, SchedulerRegistry } from "@nestjs/schedule"
 import { CronJob } from "cron"
 import type { EntityManager } from "typeorm"
 import { JobTickService } from "./job-tick.service"
-import { JOB_CLAIMS, JOB_FENCE, JOB_PROCESSOR_REGISTRY, JOB_TICK_SCHEDULER, JOBS_MANAGERS } from "./jobs.decorators"
+import {
+    JOB_CLAIMS,
+    JOB_FENCE,
+    JOB_PROCESSOR_REGISTRY,
+    JOB_TICK_SCHEDULER,
+    JOBS_MANAGERS,
+    PARKED_JOB_RESUMER,
+} from "./jobs.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./jobs.module-definition"
 import { JobClaimService } from "./job-claim.service"
 import { JobFenceService } from "./job-fence.service"
 import { JobRenewalService } from "./job-renewal.service"
 import { JobRunnerService } from "./job-runner.service"
+import { ParkedJobResumerService } from "./parked-job-resumer.service"
 import type { JobTickScheduler } from "./jobs.port"
 
 /** The scheduler over the Nest registry: one cron job per tick, started when registered, read in the tick's time zone. */
@@ -42,6 +50,7 @@ export class JobsModule extends ConfigurableModuleClass {
                 JobFenceService,
                 JobRenewalService,
                 JobRunnerService,
+                ParkedJobResumerService,
                 ...(options.scheduler.enabled
                     ? [
                           JobTickService,
@@ -51,8 +60,9 @@ export class JobsModule extends ConfigurableModuleClass {
                 { provide: JOB_CLAIMS, useExisting: JobClaimService },
                 { provide: JOB_FENCE, useExisting: JobFenceService },
                 { provide: JOB_PROCESSOR_REGISTRY, useExisting: JobRunnerService },
+                { provide: PARKED_JOB_RESUMER, useExisting: ParkedJobResumerService },
             ],
-            exports: [JOB_CLAIMS, JOB_FENCE, JOB_PROCESSOR_REGISTRY],
+            exports: [JOB_CLAIMS, JOB_FENCE, JOB_PROCESSOR_REGISTRY, PARKED_JOB_RESUMER, ParkedJobResumerService],
         }
     }
 }

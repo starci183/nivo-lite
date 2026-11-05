@@ -39,7 +39,7 @@ const stateOf = (status: "running" | "done" | "failed", leaseExpiresAt: Date | n
 
 /** A manager whose next query builder answers as given. */
 const managerWith = (answers: QueryBuilderAnswers) => {
-    const manager = mockEntityManager()
+    const manager = mockEntityManager({ update: [JobEntity, {}] })
     const [builder] = queueQueryBuilders(manager, [answers])
     return { manager, builder }
 }
@@ -360,5 +360,67 @@ describe("JobClaimService", () => {
                 code: JobsErrorCode.ConnectionMissing,
             })
         })
+    })
+})
+
+describe("JobClaimService park", () => {
+    const PARK = {
+        jobId: "j-1",
+        expectedFencingToken: 3,
+        failureClass: "input",
+        reason: "JOB_INPUT_INVALID",
+        build: "build-1",
+        queue: "module_jobs",
+    } as const
+    const heldBy = (alertedAt: Date | null) => lockOf(true, { alertedAt })
+    const parkedWith = (alertedAt: Date) => ({
+        status: "failed_awaiting_fix",
+        failureClass: "input",
+        error: "JOB_INPUT_INVALID",
+        parkedBuild: "build-1",
+        queue: "module_jobs",
+        parkedAt: new Date(AT),
+        alertedAt,
+        leaseExpiresAt: null,
+    })
+
+    it("parks the job under the live token and says its first alert is due", async () => {
+        const { manager, builder: lock } = heldBy(null)
+        const transaction = fakeTransaction(manager)
+        const { claims } = await build(manager)
+
+        await expect(claims.park(PARK)).resolves.toBe(true)
+
+        expect(lock?.callsOf("where")).toEqual([
+            [
+                "job.id = :jobId AND job.fencingToken = :token AND job.status = :running",
+                { jobId: "j-1", token: 3, running: "running" },
+            ],
+        ])
+        expect(manager.update).toHaveBeenCalledWith(JobEntity, { id: "j-1" }, parkedWith(new Date(AT)))
+        expect(transaction.outcomes).toEqual(["commit"])
+    })
+
+    it("keeps the time of the alert already raised and says no alert is due", async () => {
+        const alerted = new Date("2026-02-01T00:00:00.000Z")
+        const { manager } = heldBy(alerted)
+        fakeTransaction(manager)
+        const { claims } = await build(manager)
+
+        await expect(claims.park(PARK)).resolves.toBe(false)
+
+        expect(manager.update).toHaveBeenCalledWith(JobEntity, { id: "j-1" }, parkedWith(alerted))
+    })
+
+    it("rejects a stale token and writes nothing", async () => {
+        const { manager } = lockOf(false)
+        const transaction = fakeTransaction(manager)
+        const { claims } = await build(manager)
+
+        await expect(claims.park(PARK)).rejects.toMatchObject({
+            code: JobsErrorCode.FencedOut,
+            params: { jobId: "j-1", token: 3 },
+        })
+        expect(transaction.outcomes).toEqual(["rollback"])
     })
 })

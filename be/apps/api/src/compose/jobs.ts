@@ -34,6 +34,7 @@ import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
 import { RunModuleJobQueueModule } from "@features/jobs/module-jobs"
+import { ParkedJobsQueueModule } from "@features/jobs/parked-jobs"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { CreatePaymentOrderQueueModule } from "@features/jobs/create-payment-order"
 import { PublishContentQueueModule } from "@features/jobs/publish-content"
@@ -93,6 +94,7 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RunChatTurnQueueModule.register({}),
     RunLeadActionQueueModule.register({}),
     RunModuleJobQueueModule.register({}),
+    ParkedJobsQueueModule.register({}),
     ProcessPublicApiQueueModule.register({}),
     CreatePaymentOrderQueueModule.register({}),
     PublishContentQueueModule.register({}),

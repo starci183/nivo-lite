@@ -9,6 +9,8 @@ export interface JobsOptions {
     readonly workerId: string
     /** How long a claim lasts: after it a stalled job may be claimed again, and the old worker is fenced out. */
     readonly leaseMs: number
+    /** Names the running build (a git sha or a release tag); a job parked under another build is handed back to its queue when this one starts. Without it no job is resumed by a build change. */
+    readonly buildId?: string | undefined
     /** The recurring ticks of the app. */
     readonly scheduler: JobsSchedulerOptions
 }
