@@ -30,6 +30,7 @@ export const LeadOutcomeSection = (props: LeadOutcomeSectionProps) => {
                 <Section id="outcome" title={l.title} headingLevel={2} isLoading={isLoading}>
                     <Stack gap="row">
                         <Stepper
+                            kind="bar"
                             label={l.stepperLabel}
                             steps={view.steps}
                             currentStepId={view.currentStepId}
