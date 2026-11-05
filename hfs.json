@@ -782,6 +782,12 @@
         "reason": "graph host change 1 moves agent runs, run steps and the node effect ledger onto records (agent.run, agent.run-step, agent.node-effect); no data is carried over (owner 2026-11-05 \"không care prod\")",
         "date": "2026-11-05"
       }
-    ]
+    ],
+    "baselineReset": {
+      "baseline": "db/migrations/20261112000700_baseline.sql",
+      "ruling": "nivo-reset-2026-11-05",
+      "date": "2026-11-05",
+      "reason": "owner: không migrate, reset, làm lại từ đầu (no prod data)"
+    }
   }
 }
