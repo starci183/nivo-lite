@@ -1,5 +1,8 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
+import { ACCOUNTING_FIXTURES, PAYMENT_FIXTURES } from "./accounting"
+import { CHATBOT_FIXTURES } from "./chatbot"
 import { LOYALTY_FIXTURES } from "./loyalty"
+import { SALES_FIXTURES } from "./sales"
 
 /** The data of one read in each state a prototype draws: the answer when ready, and whether each other state exists for it. */
 export interface ReadFixture {
@@ -23,4 +26,10 @@ export interface ModuleFixtures {
  * The fixtures of every module, by module key: what the prototype data port answers, so a screen is drawn and shot in every
  * state without a back end. Imported only by the prototype host; production bundles never reach it.
  */
-export const MODULE_FIXTURES: Readonly<Record<string, ModuleFixtures>> = { loyalty: LOYALTY_FIXTURES }
+export const MODULE_FIXTURES: Readonly<Record<string, ModuleFixtures>> = {
+    loyalty: LOYALTY_FIXTURES,
+    sales: SALES_FIXTURES,
+    chatbot: CHATBOT_FIXTURES,
+    accounting: ACCOUNTING_FIXTURES,
+    payment: PAYMENT_FIXTURES,
+}
