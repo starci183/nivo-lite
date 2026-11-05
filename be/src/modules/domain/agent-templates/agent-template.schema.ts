@@ -13,13 +13,18 @@ const parameterSchema = z
             .string()
             .max(40)
             .regex(/^[a-z]\w{0,39}$/),
-        kind: z.enum(["number", "text", "toggle", "textarea"]),
+        kind: z.enum(["number", "text", "toggle", "textarea", "time", "choice"]),
         label: textSchema,
         hint: textSchema.nullable(),
         min: z.number().nullable(),
         max: z.number().nullable(),
         required: z.boolean(),
         default: parameterValueSchema,
+        options: z
+            .array(z.object({ value: z.string().min(1).max(60), label: textSchema }).strict())
+            .min(1)
+            .max(20)
+            .optional(),
     })
     .strict()
 
