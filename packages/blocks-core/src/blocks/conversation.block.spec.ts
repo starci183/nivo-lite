@@ -18,6 +18,10 @@ describe("conversationBlock", () => {
         expect(Object.keys(conversationBlock.propsJson).length).toBeGreaterThan(0)
     })
 
+    it("names selectParam as the prop that holds a spec param", () => {
+        expect(conversationBlock.params).toEqual(["selectParam"])
+    })
+
     it("takes the required props alone", () => {
         expect(conversationBlock.props.safeParse(BASE).success).toBe(true)
     })

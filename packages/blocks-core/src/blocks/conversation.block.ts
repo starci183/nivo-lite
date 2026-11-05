@@ -61,5 +61,6 @@ export const conversationBlock: BlockDefinition<typeof props, typeof slots> = de
     title: { key: "blockConversation" },
     props,
     slots,
+    params: ["selectParam"],
     children: false,
 })
