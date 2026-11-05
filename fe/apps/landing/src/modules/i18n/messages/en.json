@@ -22,7 +22,7 @@
     }
   },
   "landing": {
-    "menuTitle": "Menu",
+    "menuTitle": "Navigation",
     "menuOpen": "Open the menu",
     "menuClose": "Close the menu",
     "navLabel": "Main navigation",
