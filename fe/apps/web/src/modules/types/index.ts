@@ -204,21 +204,15 @@ export type {
     FactSubjectType,
 } from "./brain"
 export { FACT_SCOPES, FACT_SUBJECT_TYPES } from "./brain"
-export type {
-    DocumentPassage,
-    KnowledgeDocument,
-    KnowledgeDocumentDetail,
-    NivoEntry,
-    NivoItemKind,
-    DocumentKind,
-    DocumentStatus,
-    IdeaDecision,
-    BatchBytesView,
-    LinkRowView,
-    QueueRowView,
-    StoppedUploadsView,
-} from "./knowledge"
-export type { RowActionView, RowPartView, KnowledgeRowView, KnowledgeListView } from "./knowledge"
+export type { DocumentPassage, KnowledgeDocument, KnowledgeDocumentDetail, NivoEntry } from "./knowledge"
+export type { NivoItemKind, DocumentKind, DocumentStatus, IdeaDecision, BatchBytesView } from "./knowledge"
+export type { LinkRowView, QueueRowView, StoppedUploadsView, RowActionView, RowPartView } from "./knowledge"
+export type { KnowledgeRowView, KnowledgeListView } from "./knowledge"
+export type { DocBodyView, DocChipView, DocFactView, DocGlyph, DocHeadView, DocIdeaView } from "./knowledge-docs"
+export type { DocIdeasView, DocListView, DocMainView, DocMenuItemView, DocOpenedView } from "./knowledge-docs"
+export type { DocRowView, DocTabId, DocTabView, DocsCopy, DocsSelection, KnowledgeDocsView } from "./knowledge-docs"
+export type { NivoBodyView } from "./knowledge-docs"
+export type { KnowledgeAddDrawerView } from "./knowledge-add"
 export type {
     ShiftsAvailRowView,
     ShiftsAvailView,

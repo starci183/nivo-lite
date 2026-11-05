@@ -1,5 +1,4 @@
 export {
-    AGENT_MODULES,
     DOCUMENT_STATUS_TONE,
     DOCUMENT_STATUS_KEYS,
     isAgentModule,
@@ -7,14 +6,8 @@ export {
     isDuplicateNote,
     isFinalFailure,
     isReadyNote,
-    moduleFilterOf,
     noteKeyOf,
-    INGEST_STAGES,
-    ingestStageOf,
 } from "@/modules/documents"
-export type { AgentModule } from "@/modules/documents"
-export type { ModuleKey } from "@/modules/catalog"
-export { useKnowledgeIdeas } from "./useKnowledgeIdeas"
 export { useAskKnowledge } from "./useAskKnowledge"
 export type { RetrievedPassage } from "@/modules/documents"
 export { useKnowledgeSource } from "./useKnowledgeSource"
@@ -24,9 +17,11 @@ export { useLibraryCommands } from "./useLibraryCommands"
 export { useNivoKnowledge } from "./useNivoKnowledge"
 export { useSourceCommands } from "./useSourceCommands"
 export { useWorkspaceMember } from "./useWorkspaceMember"
-export { useAddDocumentsView } from "./useAddDocumentsView"
 export { useAddQueue } from "./useAddQueue"
 export { useDriveGrant } from "./useDriveGrant"
 export { useQueueActions } from "./useQueueActions"
 export type { WorkspaceMember } from "./useWorkspaceMember"
-export type { AddPreset } from "@/hooks/knowledgeAddTypes"
+export { useDocsAddress } from "./useDocsAddress"
+export { useKnowledgeDocIdeas } from "./useKnowledgeDocIdeas"
+export { useKnowledgeAddDrawer } from "./useKnowledgeAddDrawer"
+export { useAddPreset } from "./useAddPreset"

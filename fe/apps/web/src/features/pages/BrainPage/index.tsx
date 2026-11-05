@@ -2,12 +2,11 @@ import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { brainPartOf, brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
-import { DOCUMENT_IDEAS, moduleFilterOf } from "@/modules/documents"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { BrainTab } from "@/modules/routes"
 import { BrainPageBase } from "./component"
-import type { AddPresetView, BrainPageBaseProps } from "./component"
+import type { BrainPageBaseProps } from "./component"
 
 /** The document title of the page. */
 export const brainMetadata = async (): Promise<Metadata> => {
@@ -15,34 +14,29 @@ export const brainMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** What the page reads from the address: the tab, the fact being written, a fact to give a new value, a question to answer, the idea the add drawer was opened from and the agent filter. */
+/** What the page reads from the address: the tab, the fact being written, a fact to give a new value, a question to answer, the dossier, the finding, the draft, the node on the map and the public document forms. */
 interface BrainPageProps {
     readonly tab: string | undefined
     readonly fact: string | undefined
     readonly edit: string | undefined
     readonly answer: string | undefined
-    readonly add: string | undefined
-    readonly topic: string | undefined
-    readonly tag: string | undefined
     readonly dossier: string | undefined
     readonly finding: string | undefined
     readonly draft: string | undefined
     readonly node: string | undefined
-    readonly module: string | undefined
     readonly compose: string | undefined
     readonly title: string | undefined
     readonly doc: string | undefined
 }
 
 type Translate = Awaited<ReturnType<typeof getTranslations<"brain">>>
-type KnowledgeTranslate = Awaited<ReturnType<typeof getTranslations<"knowledge">>>
 type SecondBrainTranslate = Awaited<ReturnType<typeof getTranslations<"secondBrain">>>
 
 /** The words and links of the page that do not depend on its data or its address. */
-type Copy = Pick<BrainPageBaseProps["props"], "header" | "nivoLabel" | "nivoHref" | "readOnlyNote">
+type Copy = Pick<BrainPageBaseProps["props"], "header">
 
 /** The words of the page that do not depend on its data. */
-const copyOf = (t: Translate, brain: SecondBrainTranslate, knowledge: KnowledgeTranslate, tab: BrainTab): Copy => ({
+const copyOf = (t: Translate, brain: SecondBrainTranslate, tab: BrainTab): Copy => ({
     header: {
         breadcrumbs: {
             label: t("crumbLabel"),
@@ -54,33 +48,7 @@ const copyOf = (t: Translate, brain: SecondBrainTranslate, knowledge: KnowledgeT
         title: t("title"),
         description: brain(brainPartOf(tab) === "public" ? "introPublic" : "intro"),
     },
-    nivoLabel: knowledge("nivoLink"),
-    nivoHref: KNOWLEDGE_ROUTES.nivo,
-    readOnlyNote: knowledge("readOnlyNote"),
 })
-
-/** The add form, as the address asks for it: with nothing chosen, with the files of a dossier, or with a note about an idea. */
-const addOf = (
-    knowledge: KnowledgeTranslate,
-    props: Pick<BrainPageProps, "add" | "topic" | "tag">,
-): Pick<BrainPageBaseProps["props"], "addKey" | "addPreset"> => {
-    const add = props.add
-    if (add === undefined) return { addKey: "base", addPreset: null }
-    if (add === "upload" && props.topic !== undefined) {
-        const preset: AddPresetView = {
-            topic: props.topic,
-            mode: "files",
-            ...(props.tag === undefined ? {} : { tags: props.tag }),
-        }
-        return { addKey: `upload:${props.topic}:${props.tag ?? ""}`, addPreset: preset }
-    }
-    const idea = DOCUMENT_IDEAS.find((one) => one.key === add)
-    if (idea === undefined) return { addKey: "base", addPreset: null }
-    const preset: AddPresetView = {
-        topic: knowledge(`suggest_${idea.key}_topic`),
-    }
-    return { addKey: add, addPreset: preset }
-}
 
 /** The public document form the address asks for: the picker of internal documents, the written form, or none. */
 const composeOf = (value: string | undefined): "pick" | "write" | undefined => {
@@ -93,16 +61,11 @@ export const BrainPage = async (props: BrainPageProps): Promise<ReactElement> =>
     const legacy = legacyBrainHrefOf(props)
     if (legacy !== null) navigation.redirect({ href: legacy, locale: (await getLocale()) === "en" ? "en" : "vi" })
     const tab = brainTabOf(props)
-    const [t, brain, knowledge] = await Promise.all([
-        getTranslations("brain"),
-        getTranslations("secondBrain"),
-        getTranslations("knowledge"),
-    ])
+    const [t, brain] = await Promise.all([getTranslations("brain"), getTranslations("secondBrain")])
     return (
         <BrainPageBase
             props={{
-                ...copyOf(t, brain, knowledge, tab),
-                ...addOf(knowledge, props),
+                ...copyOf(t, brain, tab),
                 tab,
                 fact: props.fact,
                 edit: props.edit,
@@ -111,7 +74,6 @@ export const BrainPage = async (props: BrainPageProps): Promise<ReactElement> =>
                 finding: props.finding,
                 draft: props.draft,
                 node: props.node,
-                module: moduleFilterOf(props.module),
                 compose: composeOf(props.compose),
                 composeTitle: props.title ?? "",
                 publicDoc: props.doc,
@@ -122,17 +84,11 @@ export const BrainPage = async (props: BrainPageProps): Promise<ReactElement> =>
 
 /** The same page while it loads: the blocks draw their own skeletons. */
 export const BrainLoadingPage = async (): Promise<ReactElement> => {
-    const [t, brain, knowledge] = await Promise.all([
-        getTranslations("brain"),
-        getTranslations("secondBrain"),
-        getTranslations("knowledge"),
-    ])
+    const [t, brain] = await Promise.all([getTranslations("brain"), getTranslations("secondBrain")])
     return (
         <BrainPageBase
             props={{
-                ...copyOf(t, brain, knowledge, "todo"),
-                addKey: "base",
-                addPreset: null,
+                ...copyOf(t, brain, "todo"),
                 tab: "todo",
                 fact: undefined,
                 edit: undefined,
@@ -141,7 +97,6 @@ export const BrainLoadingPage = async (): Promise<ReactElement> => {
                 finding: undefined,
                 draft: undefined,
                 node: undefined,
-                module: "all",
                 compose: undefined,
                 composeTitle: "",
                 publicDoc: undefined,

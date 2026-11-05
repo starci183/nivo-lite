@@ -65,3 +65,4 @@ export {
 export type { PublicBadge, PublicDocument } from "./public-docs"
 export { reviewRowsOf } from "./review-rows"
 export type { ReviewRowsContext } from "./review-rows"
+export { brainHeadingOf } from "./heading"

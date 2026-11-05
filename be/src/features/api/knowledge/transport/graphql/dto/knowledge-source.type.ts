@@ -55,6 +55,10 @@ export class KnowledgeSourceType {
     @Field(() => Int)
     sizeBytes!: number
 
+    /** Where it came from when it was not typed or uploaded by hand (`google_drive`, a seed or a public document), or null. */
+    @Field(() => String, { nullable: true })
+    origin?: string | null
+
     /** How many parts the document is cut into when it is longer than a source may be; 1 otherwise. The list shows the parts as one document. */
     @Field(() => Int)
     partCount!: number

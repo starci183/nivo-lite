@@ -1,18 +1,14 @@
-import { Page, Stack } from "@starci/grammar/common"
-import type { PageHeaderContent } from "@starci/grammar/common"
-import { KnowledgeNivo } from "@/components/blocks/KnowledgeNivo"
-/** The header the base knowledge page supplies. */
+import { KnowledgeDocs } from "@/components/blocks/KnowledgeDocs"
+import type { BrainPageHeading } from "@/modules/types"
+
+/** The heading the base knowledge page supplies. */
 export interface KnowledgeNivoPageBaseProps {
     readonly props: {
-        readonly header: PageHeaderContent
+        readonly heading: BrainPageHeading
     }
 }
 
-/** Draws the base knowledge of NIVO under its trail and heading. */
+/** Draws the base knowledge of NIVO as the NIVO base filter of the documents screen: the same list, read only. */
 export const KnowledgeNivoPageBase = (props: KnowledgeNivoPageBaseProps) => (
-    <Page header={props.props.header} measure="product">
-        <Stack gap="region">
-            <KnowledgeNivo />
-        </Stack>
-    </Page>
+    <KnowledgeDocs heading={props.props.heading} selection={{ kind: "nivo" }} />
 )

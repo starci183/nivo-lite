@@ -52,3 +52,34 @@ export const paneGridOf = (input: PaneGridInput): PaneGridLayout => {
         rows: { base: ["auto", "fill"], medium: ["auto", "fill"], wide: ["auto", "fill"] },
     }
 }
+
+/** What decides the arrangement of a page whose side pane runs the whole height. */
+interface SpanAsideGridInput {
+    /** The page has a side pane: a third column from the wide width, a drawer below it. */
+    readonly hasAside: boolean
+    /** The one pane a phone shows. */
+    readonly phone: "list" | "main"
+}
+
+/**
+ * The panes of a page whose list runs the whole height of its column (search and filters at its top, no band of its own), whose main
+ * pane has its head band, and whose side pane runs both rows with its own head inside. A phone shows the list, or the main pane with
+ * its head.
+ */
+export const spanAsideGridOf = (input: SpanAsideGridInput): PaneGridLayout => ({
+    areas: {
+        base: input.phone === "list" ? ["list"] : ["head", "main"],
+        medium: ["list head", "list main"],
+        wide: input.hasAside ? ["list head aside", "list main aside"] : ["list head", "list main"],
+    },
+    columns: {
+        base: ["fill"],
+        medium: ["wide", "fill"],
+        wide: input.hasAside ? ["wide", "fill", "standard"] : ["wide", "fill"],
+    },
+    rows: {
+        base: input.phone === "list" ? ["fill"] : ["auto", "fill"],
+        medium: ["auto", "fill"],
+        wide: ["auto", "fill"],
+    },
+})

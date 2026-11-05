@@ -1,4 +1,3 @@
-import { Text, Link } from "@starci/grammar/common"
 import type { BrainPageHeading } from "@/modules/types"
 import { BrainDossiers } from "@/components/blocks/BrainDossiers"
 import { BrainAgentView } from "@/components/blocks/BrainAgentView"
@@ -12,36 +11,21 @@ import { DossierFindings } from "@/components/blocks/DossierFindings"
 import { DossierFindingsDrawer } from "@/components/blocks/DossierFindingsDrawer"
 import { DossierRemedyDraft } from "@/components/blocks/DossierRemedyDraft"
 import { BrainPageFrame } from "@/components/blocks/BrainPageFrame"
-import { KnowledgeAdd } from "@/components/blocks/KnowledgeAdd"
 import { KnowledgeAsk } from "@/components/blocks/KnowledgeAsk"
-import { KnowledgeLibrary } from "@/components/blocks/KnowledgeLibrary"
+import { KnowledgeDocs } from "@/components/blocks/KnowledgeDocs"
 import { PublicDocDraft } from "@/components/blocks/PublicDocDraft"
 import { PublicDocs } from "@/components/blocks/PublicDocs"
 import { PublicDraftPicker } from "@/components/blocks/PublicDraftPicker"
 import { PublicWriteForm } from "@/components/blocks/PublicWriteForm"
-import { BrainNextReview } from "@/components/blocks/BrainNextReview"
-import { KnowledgeProcessing } from "@/components/blocks/KnowledgeProcessing"
-import { KnowledgeSuggestions } from "@/components/blocks/KnowledgeSuggestions"
 import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
-import type { ModuleKey } from "@/modules/catalog"
 import type { BrainTab } from "@/modules/routes"
 import { PAGE_CLASS_NAME, PANEL_CLASS_NAME } from "./classNames"
-
-/** What the add form was opened from: the topic to write about, the tags it files under and the mode it opens on. */
-export interface AddPresetView {
-    readonly topic: string
-    readonly tags?: string
-    readonly mode?: "files" | "write"
-}
 
 /** Copy and values the Second Brain page supplies. */
 export interface BrainPageBaseProps {
     readonly props: {
         /** The header without its tabs: the frame adds them. */
         readonly header: BrainPageHeading
-        readonly nivoLabel: string
-        readonly nivoHref: string
-        readonly readOnlyNote: string
         /** The tab the address asks for. */
         readonly tab: BrainTab
         /** What the address asks of the fact form: the fact being written, a fact to give a new value, a question to answer. */
@@ -54,11 +38,6 @@ export interface BrainPageBaseProps {
         readonly draft: string | undefined
         /** The node selected on the map. */
         readonly node: string | undefined
-        /** The agent the documents are filtered to. */
-        readonly module: ModuleKey | "all"
-        /** What the add form was opened from. */
-        readonly addKey: string
-        readonly addPreset: AddPresetView | null
         /** The public document form the address asks for. */
         readonly compose: "pick" | "write" | undefined
         /** The title the written form starts with: the customer question being answered. */
@@ -123,31 +102,17 @@ const Panel = (props: BrainPageBaseProps) => {
             </>
         )
     }
-    return (
-        <>
-            <KnowledgeAdd
-                key={page.addKey}
-                readOnlyNote={page.readOnlyNote}
-                module={page.module}
-                preset={page.addPreset}
-            />
-            <KnowledgeProcessing />
-            <BrainNextReview />
-            <KnowledgeLibrary module={page.module} />
-            <KnowledgeSuggestions />
-            <Text>
-                <Link href={page.nivoHref}>{page.nivoLabel}</Link>
-            </Text>
-        </>
-    )
+    return null
 }
 
 /**
  * Draws the Second Brain: its tabs on the header band, then the tab the address asks for. The map is a panes page (its grid
- * attaches flush under the tab line); every other tab sits in the page measure.
+ * attaches flush under the tab line), and so is the documents tab (the list, the open document and its details); every other tab
+ * sits in the page measure.
  */
 export const BrainPageBase = (props: BrainPageBaseProps) => {
     const page = props.props
+    if (page.tab === "sources") return <KnowledgeDocs heading={page.header} selection={{ kind: "none" }} />
     if (page.tab === "map") {
         return (
             <BrainMap header={page.header} node={page.node}>

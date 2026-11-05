@@ -67,6 +67,7 @@ type SummaryShape = {
     error: null
     chunkCount: number
     sizeBytes: number
+    origin: null
     progress: number
     stage: null
     stageDone: null
@@ -91,6 +92,7 @@ export const summary: SummaryShape = {
     error: null,
     chunkCount: 0,
     sizeBytes: 0,
+    origin: null,
     progress: 0,
     stage: null,
     stageDone: null,

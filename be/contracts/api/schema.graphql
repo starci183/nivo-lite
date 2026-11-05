@@ -4362,6 +4362,7 @@ type KnowledgeSourceTextType {
   installationId: ID
   kind: String!
   module: String
+  origin: String
   partCount: Int!
   progress: Int!
   sizeBytes: Int!
@@ -4385,6 +4386,7 @@ type KnowledgeSourceType {
   installationId: ID
   kind: String!
   module: String
+  origin: String
   partCount: Int!
   progress: Int!
   sizeBytes: Int!

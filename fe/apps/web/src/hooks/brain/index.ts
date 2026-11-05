@@ -1,7 +1,6 @@
 export { SCOPE_KEY, SCOPE_TONE, FACT_SOURCE_KEY, TYPE_KEY, reviewBoardOf } from "@/modules/brain"
 export type { MineOutcome } from "@/modules/brain"
 export { needsMaintenance } from "@/modules/brain"
-export { useWaitingFactCount } from "./useWaitingFactCount"
 export { useBrainCommand } from "./useBrainCommand"
 export { useFailureToast } from "./useFailureToast"
 export { useFactForm } from "./useFactForm"
@@ -63,7 +62,6 @@ export type {
     MapStatusOf,
     TodoFilter,
 } from "@/modules/brain"
-export { useKnowledgeRowOf } from "./useKnowledgeRowOf"
 export { usePublicDocuments } from "./usePublicDocuments"
 export { usePublicDocCommands } from "./usePublicDocCommands"
 export { usePublicDocEditor } from "./usePublicDocEditor"
@@ -72,3 +70,4 @@ export { usePublicWriteController } from "./usePublicWriteController"
 export { publicBadgeOf, failureKeyOf, listedPublicDocs } from "@/modules/brain"
 export type { PublicBadge, PublicDocument } from "@/modules/brain"
 export { useDossierFindingsView } from "./useDossierFindingsView"
+export { useKnowledgeDocs } from "./useKnowledgeDocs"
