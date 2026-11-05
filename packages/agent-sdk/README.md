@@ -8,21 +8,19 @@ are packages built on it, the core ones in `@nivo-lite/blocks-core`.
 
 Each subpath is one entry of the `exports` of the package manifest; a side imports the package by these names and never past them.
 
-| subpath                                   | side                 | holds                                                                                                                                                                                               |
-| ----------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@nivo-lite/agent-sdk`                    | React-free           | the module list checks `moduleListProblems` and `templatesOf`                                                                                                                                       |
-| `@nivo-lite/agent-sdk/schema`             | React-free           | `SpecText`, `Namespaced`, `JsonValue`, the `specText` zod schema, `isNamespaced`, `namespaceOf`, `wordsOf`                                                                                          |
-| `@nivo-lite/agent-sdk/rights`             | React-free           | `DataRight`, `RightsGrant` and `rightsGaps`: default deny, never a wildcard field                                                                                                                   |
-| `@nivo-lite/agent-sdk/block`              | React-free           | `defineBlock`, `defineRead`, `defineAction`, the read and action handles a block receives, `BlockHost`, `SdkDefinitionError`                                                                        |
-| `@nivo-lite/agent-sdk/node`               | React-free           | `defineNode`, the node context, `NodeVocabulary`, `RightsDeniedError`, `VocabularyError`                                                                                                            |
-| `@nivo-lite/agent-sdk/spec`               | React-free           | the spec document (`nivo/workbench-spec@2`): `specDocumentSchema`, `specProblems`, `renderPlan`, `viewOf`                                                                                           |
-| `@nivo-lite/agent-sdk/module`             | React-free           | `ModuleTemplate`, `ModuleServer`, the module document (`nivo/module@1`) with `moduleDocumentSchema` and `moduleProblems`, `templatesOf`                                                             |
-| `@nivo-lite/agent-sdk/template`           | React-free           | the agent template package: `previewPackage`, `instantiate`, `resolveValues`, `updateUnits`, `applyUnits`, `canonicalJson`                                                                          |
-| `@nivo-lite/agent-sdk/testing`            | React-free           | the doubles and builders a spec of a block, a node or a template uses                                                                                                                               |
-| `@nivo-lite/agent-sdk/client`             | React (Grammar only) | the spec renderer: `SpecWorkbench`, `WorkbenchHostProvider`, `SlotView`, `defineRenderer`, the data slots, and the English and Vietnamese message catalogues of the renderer under the same subpath |
-| `@nivo-lite/agent-sdk/workbench/contract` | React-free           | the workbench declaration of a module, the host port types, `defineWorkbench`, `workbenchProblems`, `specRegistryFrom`                                                                              |
-| `@nivo-lite/agent-sdk/workbench/spec`     | React-free           | the earlier spec format with its registry and its own `specProblems`                                                                                                                                |
-| `@nivo-lite/agent-sdk/workbench/view`     | React-free           | the view types of the shared workbench regions                                                                                                                                                      |
+| subpath                               | side                 | holds                                                                                                                                                                                               |
+| ------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@nivo-lite/agent-sdk`                | React-free           | the module list checks `moduleListProblems` and `templatesOf`                                                                                                                                       |
+| `@nivo-lite/agent-sdk/schema`         | React-free           | `SpecText`, `Namespaced`, `JsonValue`, the `specText` zod schema, `isNamespaced`, `namespaceOf`, `wordsOf`                                                                                          |
+| `@nivo-lite/agent-sdk/rights`         | React-free           | `DataRight`, `RightsGrant` and `rightsGaps`: default deny, never a wildcard field                                                                                                                   |
+| `@nivo-lite/agent-sdk/block`          | React-free           | `defineBlock`, `defineRead`, `defineAction`, the read and action handles a block receives, `BlockHost`, `SdkDefinitionError`                                                                        |
+| `@nivo-lite/agent-sdk/node`           | React-free           | `defineNode`, the node context, `NodeVocabulary`, `RightsDeniedError`, `VocabularyError`                                                                                                            |
+| `@nivo-lite/agent-sdk/spec`           | React-free           | the spec document (`nivo/workbench-spec@1`): `specDocumentSchema`, `specProblems`, `renderPlan`, `viewOf`                                                                                           |
+| `@nivo-lite/agent-sdk/module`         | React-free           | `ModuleTemplate`, `ModuleServer`, the module document (`nivo/module@1`) with `moduleDocumentSchema` and `moduleProblems`, `templatesOf`                                                             |
+| `@nivo-lite/agent-sdk/template`       | React-free           | the agent template package: `previewPackage`, `instantiate`, `resolveValues`, `updateUnits`, `applyUnits`, `canonicalJson`                                                                          |
+| `@nivo-lite/agent-sdk/testing`        | React-free           | the doubles and builders a spec of a block, a node or a template uses                                                                                                                               |
+| `@nivo-lite/agent-sdk/client`         | React (Grammar only) | the spec renderer: `SpecWorkbench`, `WorkbenchHostProvider`, `SlotView`, `defineRenderer`, the data slots, and the English and Vietnamese message catalogues of the renderer under the same subpath |
+| `@nivo-lite/agent-sdk/workbench/view` | React-free           | the view types of the shared workbench regions                                                                                                                                                      |
 
 The sources sit under `src` in one folder per subpath (`src/block`, `src/node`, `src/spec`, `src/module`, `src/template`, `src/tests/fixtures`,
 `src/rights`, `src/schema`, `src/client`, `src/workbench`), with `src/slot`, `src/host` and `src/sdk-error.ts` shared between them.
@@ -65,7 +63,7 @@ A spec document names its schema and its module, and holds views; each view is a
 
 ```json
 {
-  "schema": "nivo/workbench-spec@2",
+  "schema": "nivo/workbench-spec@1",
   "module": "sales",
   "views": [
     {

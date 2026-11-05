@@ -79,7 +79,7 @@ const paramSchema: z.ZodType<SpecParam> = z
 /** The zod schema of a spec document: the structure only; blocks, props and bindings are judged by `specProblems`. */
 export const specDocumentSchema: z.ZodType<SpecDocument> = z
     .object({
-        schema: z.literal("nivo/workbench-spec@2"),
+        schema: z.literal("nivo/workbench-spec@1"),
         module: z.string().min(1).max(KEY_MAX),
         params: z
             .record(z.string().max(KEY_MAX), paramSchema)

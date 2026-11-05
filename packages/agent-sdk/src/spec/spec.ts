@@ -196,7 +196,7 @@ export const specProblems = (
     blocks: ReadonlyArray<BlockDefinition>,
     bindings: SpecBindings = {},
 ): ReadonlyArray<SpecProblem> => {
-    if (spec.schema !== "nivo/workbench-spec@2") return [{ code: "SPEC_SCHEMA_UNKNOWN", at: "schema" }]
+    if (spec.schema !== "nivo/workbench-spec@1") return [{ code: "SPEC_SCHEMA_UNKNOWN", at: "schema" }]
     const blocksById = blockIndex(blocks)
     const params = spec.params ?? {}
     const problems: Array<SpecProblem> = [...paramProblems(params, bindings.reads)]

@@ -20,7 +20,7 @@ export const LOYALTY_TEMPLATE: ModuleTemplate = {
     available: true,
     knowledgeFolder: "loyalty",
     workbench: "loyalty",
-    settingsExtras: "loyalty_program",
+    settingsExtras: null,
     requires: {
         capabilities: ["customer_messaging"],
         connections: [],

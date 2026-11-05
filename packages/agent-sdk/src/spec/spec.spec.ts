@@ -20,7 +20,7 @@ describe("specProblems", () => {
     })
 
     it("refuses an unknown schema before anything else", () => {
-        expect(specProblems({ ...docOf(stack("r", [])), schema: "nivo/workbench-spec@1" }, BLOCKS)).toEqual([
+        expect(specProblems({ ...docOf(stack("r", [])), schema: "nivo/workbench-spec@9" }, BLOCKS)).toEqual([
             { code: "SPEC_SCHEMA_UNKNOWN", at: "schema" },
         ])
     })

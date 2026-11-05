@@ -2,7 +2,7 @@ import type { JsonValue, Namespaced, SpecText } from "../schema/schema.types"
 import type { ReadVariables } from "../block/block.types"
 
 /** The schema id of a spec document; a document under another id is refused. */
-export type SpecSchemaId = "nivo/workbench-spec@2"
+export type SpecSchemaId = "nivo/workbench-spec@1"
 
 /** A binding of a read slot to a registered read, narrowed by a dotted path into its data. */
 export interface SpecReadBinding {

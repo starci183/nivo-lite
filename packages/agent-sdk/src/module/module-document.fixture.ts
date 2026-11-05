@@ -138,7 +138,7 @@ export const moduleFixture = (): ModuleDocument => ({
     },
     workbenches: {
         main: {
-            schema: "nivo/workbench-spec@2",
+            schema: "nivo/workbench-spec@1",
             module: "sales",
             views: [
                 {
