@@ -19,6 +19,7 @@ import { stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { AgentGraphsService } from "./agent-graphs.service"
+import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type { GraphDocument } from "./agent-graphs.contracts"
 import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
 
@@ -179,6 +180,15 @@ describe("AgentGraphNodeStepService refusals", () => {
         await expect(steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "PARAMS_INVALID" })
         const bare = await build({ nodes: [], rights: [] })
         await expect(bare.steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "graph_node_missing" })
+    })
+
+    it("fails a step whose effect a capability refused with the node refusal its domain error reports", async () => {
+        const { steps, host } = await build()
+        host.run.mockRejectedValueOnce(
+            new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid, params: { refusal: "RIGHTS_DENIED" } }),
+        )
+
+        await expect(steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "RIGHTS_DENIED" })
     })
 
     it("lets any other failure reach the engine, which tries the step again", async () => {

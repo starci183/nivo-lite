@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common"
-import { BankFeedService } from "@modules/domain/billing"
+import { BankFeedReceiptsService } from "@modules/domain/billing"
 import { ConfigurableModuleClass } from "./sepay-feed-http.module-definition"
 import { SepayFeedWebhook } from "./sepay-feed.webhook"
 
 /** The feed's declared proof checks its connection's stored API-key digest before intake. */
-export const webhookVerifiers: readonly [typeof BankFeedService.prototype.verifyFeedDelivery] = [
-    BankFeedService.prototype.verifyFeedDelivery,
+export const webhookVerifiers: readonly [typeof BankFeedReceiptsService.prototype.verifyFeedDelivery] = [
+    BankFeedReceiptsService.prototype.verifyFeedDelivery,
 ] as const
 
 @Module({ controllers: [SepayFeedWebhook] })

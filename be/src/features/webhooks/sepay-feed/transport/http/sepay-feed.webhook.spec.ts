@@ -4,7 +4,7 @@ import { HTTP_CODE_METADATA } from "@nestjs/common/constants"
 import { Test } from "@nestjs/testing"
 import type { Request } from "express"
 import { mock } from "@starci/jest-preset"
-import { BankFeedIntakeService, BankFeedService, BillingError, BillingErrorCode } from "@modules/domain/billing"
+import { BankFeedIntakeService, BankFeedReceiptsService, BillingError, BillingErrorCode } from "@modules/domain/billing"
 import { PublicReason } from "@modules/domain/identity"
 import { RateTier } from "@modules/platform/http-security"
 import { SepayFeedHttpModule, webhookVerifiers } from "./sepay-feed-http.module"
@@ -13,14 +13,14 @@ import { PROVIDER_ACK, SepayFeedWebhook } from "./sepay-feed.webhook"
 const RAW = Buffer.from(JSON.stringify({ id: 3 }))
 
 const build = async () => {
-    const feed = mock<BankFeedService>()
+    const feed = mock<BankFeedReceiptsService>()
     feed.verifyFeedDelivery.mockResolvedValue(undefined)
     const intake = mock<BankFeedIntakeService>()
     intake.acceptDelivery.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             SepayFeedWebhook,
-            { provide: BankFeedService, useValue: feed },
+            { provide: BankFeedReceiptsService, useValue: feed },
             { provide: BankFeedIntakeService, useValue: intake },
         ],
     }).compile()
@@ -149,7 +149,7 @@ describe("SepayFeedWebhook", () => {
     })
 
     it("declares the connection proof and registers the existing feed door", () => {
-        expect(webhookVerifiers).toEqual([BankFeedService.prototype.verifyFeedDelivery])
+        expect(webhookVerifiers).toEqual([BankFeedReceiptsService.prototype.verifyFeedDelivery])
         expect(Reflect.getMetadata("controllers", SepayFeedHttpModule)).toEqual([SepayFeedWebhook])
         expect(PROVIDER_ACK).toEqual({ success: true })
     })

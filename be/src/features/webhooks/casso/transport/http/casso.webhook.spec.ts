@@ -5,7 +5,7 @@ import { HTTP_CODE_METADATA } from "@nestjs/common/constants"
 import { Test } from "@nestjs/testing"
 import type { Request } from "express"
 import { mock } from "@starci/jest-preset"
-import { BankFeedService } from "@modules/domain/billing"
+import { BankFeedReceiptsService } from "@modules/domain/billing"
 import { ScopedWebhookVerifier } from "@modules/domain/webhook-proofs"
 import { CassoWebhook } from "./casso.webhook"
 
@@ -24,13 +24,13 @@ const DELIVERY = {
 const build = async () => {
     const signature = mock<ScopedWebhookVerifier>()
     signature.verify.mockResolvedValue(undefined)
-    const feed = mock<BankFeedService>()
+    const feed = mock<BankFeedReceiptsService>()
     feed.acceptCassoDelivery.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             { provide: ScopedWebhookVerifier, useValue: signature },
             CassoWebhook,
-            { provide: BankFeedService, useValue: feed },
+            { provide: BankFeedReceiptsService, useValue: feed },
         ],
     }).compile()
     return { door: moduleRef.get(CassoWebhook), signature, feed }

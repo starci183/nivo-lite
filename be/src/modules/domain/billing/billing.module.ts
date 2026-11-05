@@ -6,6 +6,7 @@ import { BankFeedIntakeService } from "./bank-feed-intake.service"
 import { BankFeedPollSourcesService } from "./bank-feed-poll-sources.service"
 import { BankFeedPollService } from "./bank-feed-poll.service"
 import { BankFeedPollTriggerService } from "./bank-feed-poll-trigger.service"
+import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 import { BankFeedService } from "./bank-feed.service"
 import { BillingReadService } from "./billing-read.service"
 import { BillingService } from "./billing.service"
@@ -35,6 +36,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 PayosProofService,
                 PaymentSecretsService,
                 BankFeedService,
+                BankFeedReceiptsService,
                 BankFeedFlowService,
                 BankFeedIntakeService,
                 BankFeedDeliveryService,
@@ -50,6 +52,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 EntitlementsService,
                 PaymentProofService,
                 BankFeedService,
+                BankFeedReceiptsService,
                 BankFeedIntakeService,
                 BankFeedDeliveryService,
                 BankFeedPollService,

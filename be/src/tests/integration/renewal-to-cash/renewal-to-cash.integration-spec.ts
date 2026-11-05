@@ -2,7 +2,7 @@ import { CqrsModule } from "@nestjs/cqrs"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
 import { AutomationsService } from "@modules/domain/automations"
-import { BankFeedService } from "@modules/domain/billing"
+import { BankFeedReceiptsService } from "@modules/domain/billing"
 import { ModulesService } from "@modules/domain/modules"
 import { CLOCK } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -188,7 +188,7 @@ const drainEvents = async (): Promise<void> => {
  */
 const deliverSepay = async (id: number, amount: number, content: string): Promise<void> => {
     await world
-        .resolve(BankFeedService)
+        .resolve(BankFeedReceiptsService)
         .acceptFeedDelivery(sepayBody(id, amount, content), identity.connectionId, "sepay")
     await runQueued(await feedReceipts(), world.resolve(BankFeedDeliveryProcessor))
     await drainEvents()

@@ -15,6 +15,7 @@ import {
 } from "@modules/domain/graph-nodes"
 import type { NodeToolApproval, NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock } from "@modules/platform/clock"
+import { isDomainError } from "@modules/platform/errors"
 import type { Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -115,6 +116,13 @@ const turnOf = (step: StepView, trigger: StepJson): NodeTurn => ({
     origin: trigger.origin === "channel" ? "customer" : "system",
     memberId: textOf(trigger, "actorMemberId"),
 })
+
+/** The node refusal a capability's domain error reports for an effect it refused (`params.refusal`), or null for any other failure. */
+const domainRefusalOf = (cause: unknown): string | null => {
+    if (!isDomainError(cause)) return null
+    const refusal = cause.params.refusal
+    return typeof refusal === "string" ? refusal : null
+}
 
 /** Whether a node refused in a way no retry changes: a schema, a right, an undeclared effect or tool. */
 const refused = (cause: unknown): cause is NodeRunError | RightsDeniedError | ToolUndeclaredError =>
@@ -282,6 +290,8 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
             })
         } catch (cause) {
             if (refused(cause)) return { code: cause.code }
+            const refusal = domainRefusalOf(cause)
+            if (refusal !== null) return { code: refusal }
             const asked = askOf(cause)
             if (asked !== null) return asked
             throw cause

@@ -30,6 +30,8 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_OWNERSHIP_INVALID": "Thiết lập người phụ trách không hợp lệ: {{field}}.",
         "errors.AGENTS_NAME_INVALID": "Tên agent cần từ {{min}} đến {{max}} ký tự.",
         "errors.AGENTS_AVATAR_INVALID": "Ảnh đại diện phải là địa chỉ HTTPS.",
+        "errors.AGENTS_TAG_TARGET_MISSING": "Không tìm thấy agent được gắn thẻ.",
+        "errors.AGENTS_TAG_REFUSED": "Agent này không được gắn thẻ agent kia.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
             "Bản này do NIVO OS đồng bộ một chiều từ cơ sở dữ liệu NIVO. KHÔNG sửa tay: lần đồng bộ sau sẽ ghi đè.",
@@ -83,6 +85,8 @@ export const AGENTS_MESSAGES: MessageBundle = {
         "errors.AGENTS_OWNERSHIP_INVALID": "The ownership settings are not valid: {{field}}.",
         "errors.AGENTS_NAME_INVALID": "An agent name needs {{min}} to {{max}} characters.",
         "errors.AGENTS_AVATAR_INVALID": "The picture must be an HTTPS address.",
+        "errors.AGENTS_TAG_TARGET_MISSING": "The tagged agent was not found.",
+        "errors.AGENTS_TAG_REFUSED": "This agent may not tag that agent.",
         "bundle.title": "# {{name}} (module {{module}})",
         "bundle.syncNote":
             "This copy is synced one way from the NIVO database by NIVO OS. Do NOT edit by hand: the next sync overwrites it.",

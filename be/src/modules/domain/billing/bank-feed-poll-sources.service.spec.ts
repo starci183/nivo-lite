@@ -5,7 +5,7 @@ import { BankFeedPollerRegistryService } from "@modules/domain/provider-registry
 import type { BankFeedPoller } from "@modules/domain/provider-registry"
 import { connectionRecord } from "@tests/fixtures/builders/connection-records.builder"
 import { BankFeedPollSourcesService } from "./bank-feed-poll-sources.service"
-import { BankFeedService } from "./bank-feed.service"
+import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 
 const limits = { ratePerSecond: 2, burst: 2, concurrency: 1 }
 const connection = connectionRecord()
@@ -16,13 +16,13 @@ const build = async () => {
         inboxProvider: "sepay-feed" as const,
         limits,
     })
-    const feed = mock<BankFeedService>()
+    const feed = mock<BankFeedReceiptsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             BankFeedPollSourcesService,
             PollSourceRegistryService,
             BankFeedPollerRegistryService,
-            { provide: BankFeedService, useValue: feed },
+            { provide: BankFeedReceiptsService, useValue: feed },
         ],
     }).compile()
     moduleRef.get(BankFeedPollerRegistryService).register(poller)

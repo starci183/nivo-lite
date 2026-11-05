@@ -2,20 +2,20 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { PollScheduleService } from "@modules/domain/connection-poll"
 import { BankFeedIntakeService } from "./bank-feed-intake.service"
-import { BankFeedService } from "./bank-feed.service"
+import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 
 const RAW = Buffer.from(JSON.stringify({ id: 3 }))
 
 const build = async () => {
-    const feed = mock<BankFeedService>()
+    const feed = mock<BankFeedReceiptsService>()
     feed.acceptFeedDelivery.mockResolvedValue(undefined)
     const schedule = mock<PollScheduleService>()
     schedule.recordWebhook.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             BankFeedIntakeService,
-            { provide: BankFeedService, useValue: feed },
+            { provide: BankFeedReceiptsService, useValue: feed },
             { provide: PollScheduleService, useValue: schedule },
         ],
     }).compile()

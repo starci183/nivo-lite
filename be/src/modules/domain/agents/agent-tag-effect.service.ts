@@ -1,16 +1,20 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { NodeRunError, RightsDeniedError } from "@nivo-lite/agent-sdk/node"
 import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { agentTagEffect } from "@nivo-lite/blocks-core"
 import { AgentTagService } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService, ledgerKeyOf } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
+import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { InjectInstallations } from "./agents.decorators"
 import type { InstallationDirectory } from "./agents.port"
 
 /** The effect this executor runs. */
 const AGENT_TAG = agentTagEffect.id
+
+/** A tag no retry changes, reporting the node refusal the step records (`params.refusal`): no target, or the rights or the door refused it. */
+const refusalOf = (code: AgentsErrorCode, refusal: "EFFECT_PAYLOAD_INVALID" | "RIGHTS_DENIED"): AgentsError =>
+    new AgentsError({ code, params: { refusal, effect: AGENT_TAG } })
 
 /** The kind of subject a tag touches: the wake it wrote in the tagged agent. */
 const WAKE = "wake"
@@ -42,7 +46,7 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
         const tag = agentTagEffect.payload.parse(payload)
         const toAgentId =
             tag.toModuleKey === undefined ? tag.toAgentId : await this.agentOfModule(turn.workspaceId, tag.toModuleKey)
-        if (toAgentId == null) throw new NodeRunError("EFFECT_PAYLOAD_INVALID", AGENT_TAG)
+        if (toAgentId == null) throw refusalOf(AgentsErrorCode.TagTargetMissing, "EFFECT_PAYLOAD_INVALID")
         const eventKey = ledgerKeyOf(call)
         const result = await this.tags.tagAgent({
             fromAgentId: turn.agentId,
@@ -61,8 +65,8 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
         if (result.tagged) return { kind: WAKE, id: result.wakeId }
         // A hand-off that waits for the holder of its conversation is written as its wake later, under the same event key.
         if (result.reason === "duplicate" || result.reason === "queued") return { kind: WAKE, id: eventKey }
-        if (result.reason === "not_allowed") throw new RightsDeniedError(AGENT_TAG)
-        throw new NodeRunError("EFFECT_PAYLOAD_INVALID", AGENT_TAG)
+        if (result.reason === "not_allowed") throw refusalOf(AgentsErrorCode.TagRefused, "RIGHTS_DENIED")
+        throw refusalOf(AgentsErrorCode.TagRefused, "EFFECT_PAYLOAD_INVALID")
     }
 
     private async agentOfModule(workspaceId: string, moduleKey: string): Promise<string | null> {

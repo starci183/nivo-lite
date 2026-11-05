@@ -1,7 +1,7 @@
 import { Controller, Headers, HttpCode, HttpStatus, Param, Post, Req } from "@nestjs/common"
 import type { RawBodyRequest } from "@nestjs/common"
 import type { Request } from "express"
-import { BankFeedIntakeService, BankFeedService } from "@modules/domain/billing"
+import { BankFeedIntakeService, BankFeedReceiptsService } from "@modules/domain/billing"
 import { Public, PublicReason } from "@modules/domain/identity"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 
@@ -19,7 +19,7 @@ export const PROVIDER_ACK = { success: true } as const
  */
 export class SepayFeedWebhook {
     constructor(
-        private readonly feed: BankFeedService,
+        private readonly feed: BankFeedReceiptsService,
         private readonly intake: BankFeedIntakeService,
     ) {}
 

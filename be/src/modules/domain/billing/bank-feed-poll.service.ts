@@ -13,7 +13,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { InjectTimer } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import { isBankFeedPollPayload } from "@modules/queues/bank-feed-poll"
-import { BankFeedService } from "./bank-feed.service"
+import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 
 /** How many connections one page of the connection scan reads. */
 const SCAN_PAGE = 200
@@ -32,7 +32,7 @@ export class BankFeedPollService {
         @InjectTimer() timer: Timer,
         private readonly connections: ConnectionsService,
         private readonly pollers: BankFeedPollerRegistryService,
-        private readonly feed: BankFeedService,
+        private readonly feed: BankFeedReceiptsService,
     ) {
         this.run = new ConnectionPollRunService({ clock, logger, timer, connections })
     }

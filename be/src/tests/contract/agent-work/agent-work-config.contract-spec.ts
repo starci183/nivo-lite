@@ -1,5 +1,5 @@
 import { EnvSource } from "@modules/platform/config"
-import { parseAgentWorkConfig } from "./agent-work.config"
+import { parseAgentWorkConfig } from "@modules/domain/agent-work"
 
 describe("parseAgentWorkConfig", () => {
     it("waits six seconds of quiet and at most twenty seconds in all by default", () => {

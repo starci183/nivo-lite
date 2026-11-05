@@ -11,7 +11,7 @@ import type { Logger } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import { BankFeedPollService } from "./bank-feed-poll.service"
-import { BankFeedService } from "./bank-feed.service"
+import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 
 const recordOf = (
     id: string,
@@ -51,7 +51,7 @@ const build = async () => {
     connections.patch.mockResolvedValue(undefined)
     const sepay = Object.assign(mock<BankFeedPoller>(), { provider: "sepay", inboxProvider: "sepay-feed" as const })
     sepay.fetch.mockResolvedValue({ kind: "skipped", reason: "no_token" })
-    const feed = mock<BankFeedService>()
+    const feed = mock<BankFeedReceiptsService>()
     const logger = mock<Logger>()
     const timer = mock<Timer>()
     const moduleRef = await Test.createTestingModule({
@@ -62,7 +62,7 @@ const build = async () => {
             { provide: TIMER, useValue: timer },
             { provide: ConnectionsService, useValue: connections },
             BankFeedPollerRegistryService,
-            { provide: BankFeedService, useValue: feed },
+            { provide: BankFeedReceiptsService, useValue: feed },
         ],
     }).compile()
     moduleRef.get(BankFeedPollerRegistryService).register(sepay)

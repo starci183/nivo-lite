@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { PollScheduleService } from "@modules/domain/connection-poll"
-import { BankFeedService } from "./bank-feed.service"
+import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 import type { RawBody } from "./billing.contracts"
 
 @Injectable()
@@ -10,7 +10,7 @@ import type { RawBody } from "./billing.contracts"
  */
 export class BankFeedIntakeService {
     constructor(
-        private readonly feed: BankFeedService,
+        private readonly feed: BankFeedReceiptsService,
         private readonly schedule: PollScheduleService,
     ) {}
 

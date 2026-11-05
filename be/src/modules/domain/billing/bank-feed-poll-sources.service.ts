@@ -4,7 +4,7 @@ import { PollSourceRegistryService } from "@modules/domain/connection-poll"
 import type { ConnectionPoller, PollSourceDirectory, ScheduledPollSource } from "@modules/domain/connection-poll"
 import { BankFeedPollerRegistryService } from "@modules/domain/provider-registry"
 import type { PolledCredit } from "@modules/domain/provider-registry"
-import { BankFeedService } from "./bank-feed.service"
+import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 
 @Injectable()
 /**
@@ -15,7 +15,7 @@ export class BankFeedPollSourcesService implements PollSourceDirectory, OnApplic
     constructor(
         private readonly registry: PollSourceRegistryService,
         private readonly pollers: BankFeedPollerRegistryService,
-        private readonly feed: BankFeedService,
+        private readonly feed: BankFeedReceiptsService,
     ) {}
 
     /** Adds this directory to the scheduler. */

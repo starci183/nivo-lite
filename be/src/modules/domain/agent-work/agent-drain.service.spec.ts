@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { fakeIds, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { agentTurnViewOf as turn, agentWakeViewOf as endedWake } from "@tests/fixtures/builders/agent-work.builder"
-import { AGENT_TURN_QUEUE_PRODUCER } from "@modules/queues/agent-turn"
-import type { AgentTurnQueue } from "@modules/queues/agent-turn"
+import { AGENT_TURN_QUEUE_PRODUCER, AgentTurnQueue } from "@modules/queues/agent-turn"
+import { jobRecordingOutbox } from "@tests/fixtures/builders/queue-job-outbox.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
@@ -61,7 +61,9 @@ const build = async ({ handler = true }: Options = {}) => {
         of: jest.fn().mockReturnValue(handler ? registered : undefined),
         executorOf: jest.fn().mockReturnValue(runner),
     })
-    const queue = mock<AgentTurnQueue>({ enqueueNextDrain: jest.fn().mockResolvedValue(undefined) })
+    const outbox = jobRecordingOutbox()
+    const real = new AgentTurnQueue(outbox)
+    const queue = mock<AgentTurnQueue>({ enqueueNextDrain: jest.fn(real.enqueueNextDrain.bind(real)) })
     const endedWakes = mock<AgentEndedWakesService>({ tell: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>()
     const tx = fakeTransaction(mockEntityManager())
@@ -79,7 +81,7 @@ const build = async ({ handler = true }: Options = {}) => {
         ],
     }).compile()
     const service = container.get(AgentDrainService)
-    return { service, turns, handler: registered, handlers, executor: runner, queue, endedWakes, logger, tx }
+    return { service, turns, handler: registered, handlers, executor: runner, queue, outbox, endedWakes, logger, tx }
 }
 
 type Fixture = Awaited<ReturnType<typeof build>>
@@ -303,6 +305,33 @@ describe("AgentDrainService.drain, a turn that fails or leaves more to do", () =
             expect.objectContaining({ status: "failed", errorCode: "AGENT_WORK_UNEXPECTED" }),
         )
     })
+
+    it("starts the next drain in a transaction when another wake of the scope is due", async () => {
+        const { service, turns, outbox } = await build()
+        turns.finish.mockResolvedValue({ fenced: false, more: true })
+
+        await service.drain(PAYLOAD)
+
+        expect(outbox.written).toEqual([
+            {
+                queue: "agent_turn",
+                payload: PAYLOAD,
+                job: "agent-turn.drain",
+                dedupeKey: "agent-turn:agent-1:next:turn-1",
+            },
+        ])
+        expect(outbox.inTransaction).toBe(true)
+    })
+
+    it("starts nothing when the lease was lost before the turn ended, even if wakes are due", async () => {
+        const { service, turns, queue, logger } = await build()
+        turns.finish.mockResolvedValue({ fenced: true, more: true })
+
+        await service.drain(PAYLOAD)
+
+        expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFenced, WAKE_REF)
+        expect(queue.enqueueNextDrain).not.toHaveBeenCalled()
+    })
 })
 
 describe("AgentDrainService.drain, a runtime that is down", () => {
@@ -364,27 +393,11 @@ describe("AgentDrainService.drain, a runtime that is down", () => {
     })
 })
 
-describe("AgentDrainService.drain, a turn that leaves more to do", () => {
-    it("starts the next drain in a transaction when another wake of the scope is due", async () => {
-        const { service, turns, queue, tx } = await build()
-        turns.finish.mockResolvedValue({ fenced: false, more: true })
-
-        await service.drain(PAYLOAD)
-
-        expect(tx.commits).toBe(1)
-        expect(queue.enqueueNextDrain).toHaveBeenCalledWith(PAYLOAD, "turn-1", expect.anything())
-    })
-
-    it("starts nothing when the lease was lost before the turn ended, even if wakes are due", async () => {
-        const { service, turns, queue, logger } = await build()
-        turns.finish.mockResolvedValue({ fenced: true, more: true })
-
-        await service.drain(PAYLOAD)
-
-        expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.TurnFenced, WAKE_REF)
-        expect(queue.enqueueNextDrain).not.toHaveBeenCalled()
-    })
-})
+/** Runs the specs of the enclosing block on fake timers. */
+const fakeTimers = () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => jest.useRealTimers())
+}
 
 const whenAborted = (signal: AbortSignal): Promise<void> =>
     signal.aborted
@@ -406,14 +419,8 @@ const slowRun = (fixture: Fixture) => {
     return { release: () => gate.abort(), seen }
 }
 
-describe("AgentDrainService.drain, the heartbeat", () => {
-    beforeEach(() => {
-        jest.useFakeTimers()
-    })
-
-    afterEach(() => {
-        jest.useRealTimers()
-    })
+describe("AgentDrainService.drain, the heartbeat and its budget", () => {
+    fakeTimers()
 
     it("renews the lease every thirty seconds while the turn runs and stops when it ends", async () => {
         const fixture = await build()
@@ -459,16 +466,6 @@ describe("AgentDrainService.drain, the heartbeat", () => {
         expect(seen.signal?.aborted).toBe(false)
         release()
         await done
-    })
-})
-
-describe("AgentDrainService.drain, the heartbeat budget", () => {
-    beforeEach(() => {
-        jest.useFakeTimers()
-    })
-
-    afterEach(() => {
-        jest.useRealTimers()
     })
 
     it("leaves the lease to lapse and aborts the turn once it has used its beats", async () => {

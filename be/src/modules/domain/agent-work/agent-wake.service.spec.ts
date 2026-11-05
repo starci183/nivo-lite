@@ -8,8 +8,8 @@ import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builde
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { AGENT_TURN_QUEUE_PRODUCER } from "@modules/queues/agent-turn"
-import type { AgentTurnQueue } from "@modules/queues/agent-turn"
+import { AGENT_TURN_QUEUE_PRODUCER, AgentTurnQueue } from "@modules/queues/agent-turn"
+import { jobRecordingOutbox } from "@tests/fixtures/builders/queue-job-outbox.builder"
 import { AgentWakeService } from "./agent-wake.service"
 
 const inserted = (...ids: Array<string>): QueryBuilderAnswers => ({ execute: { raw: ids.map((id) => ({ id })) } })
@@ -18,7 +18,9 @@ const inserted = (...ids: Array<string>): QueryBuilderAnswers => ({ execute: { r
 const build = async (answer: QueryBuilderAnswers, options?: AgentWorkOptions, asked: OptionalBurstSetting = null) => {
     const settings = { debounceMs: options?.debounceMs, debounceMaxMs: options?.debounceMaxMs }
     const bursts = mock<AgentBurstPolicy>({ burstOf: jest.fn().mockResolvedValue(asked) })
-    const queue = mock<AgentTurnQueue>({ enqueueDrain: jest.fn().mockResolvedValue(undefined) })
+    const outbox = jobRecordingOutbox()
+    const real = new AgentTurnQueue(outbox)
+    const queue = mock<AgentTurnQueue>({ enqueueDrain: jest.fn(real.enqueueDrain.bind(real)) })
     const logger = mock<Logger>()
     const tx = mockEntityManager()
     const [fake] = queueQueryBuilders(tx, [answer])
@@ -31,7 +33,7 @@ const build = async (answer: QueryBuilderAnswers, options?: AgentWorkOptions, as
             { provide: AGENT_BURST_POLICY, useValue: bursts },
         ],
     }).compile()
-    return { service: container.get(AgentWakeService), queue, logger, tx, fake, bursts }
+    return { service: container.get(AgentWakeService), queue, outbox, logger, tx, fake, bursts }
 }
 
 describe("AgentWakeService.wake", () => {
@@ -85,6 +87,32 @@ describe("AgentWakeService.wake", () => {
             tx,
             6000,
         )
+    })
+})
+
+describe("AgentWakeService drain job", () => {
+    const job = (scopeKey: string, dedupeKey: string, delayMs: number) => ({
+        queue: "agent_turn",
+        payload: { workspaceId: "ws-1", agentId: "agent-1", scopeKey },
+        job: "agent-turn.drain",
+        dedupeKey,
+        delayMs,
+    })
+
+    it("writes the drain job of a customer wake once per fact, waiting the burst window of its conversation", async () => {
+        const { service, outbox, tx } = await build(inserted("wake-1"), { debounceMs: 3000 })
+
+        await service.wake(tx, wake({ source: "customer", context: { conversationId: "conv-1" } }))
+
+        expect(outbox.written).toEqual([job("conversation:conv-1", "agent-turn:agent-1:customer:msg-1", 3000)])
+    })
+
+    it("writes the drain job of any other wake to run at once", async () => {
+        const { service, outbox, tx } = await build(inserted("wake-1"))
+
+        await service.wake(tx, wake({ source: "tag", eventKey: "evt-1" }))
+
+        expect(outbox.written).toEqual([job("agent", "agent-turn:agent-1:tag:evt-1", 0)])
     })
 })
 
