@@ -1,6 +1,7 @@
 import { z } from "../schema/zod-entry"
 import type { JsonValue } from "../schema/schema.types"
-import type { PortShape } from "./port-shape.mirror.types"
+import { definePort } from "../port/port"
+import type { PortDefinition } from "../port/port.types"
 
 /** The port id of the door: calling a NIVO MCP tool from a job (plan section 9.1). Never inside a transaction (BE-PERSISTENCE-6, R82). */
 export const DOOR_PORT_ID = "engine.door"
@@ -31,4 +32,4 @@ export interface DoorApi {
 }
 
 /** The door port declaration a job lists in its ports. */
-export const doorPort: PortShape<DoorApi> = { entry: "port", id: DOOR_PORT_ID }
+export const doorPort: PortDefinition<DoorApi> = definePort<DoorApi>(DOOR_PORT_ID)
