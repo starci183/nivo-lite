@@ -1,4 +1,4 @@
-import { Alert, Button, Cluster, Divider, Input, Link, Stack, Text } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Divider, Input, Link, Stack, Text, TextAction } from "@starci/grammar/common"
 import { AuthForm } from "@/components/frames/AuthForm"
 import { AuthPanel } from "@/components/frames/AuthPanel"
 import { EmailField } from "@/components/composites/EmailField"
@@ -11,6 +11,9 @@ export interface LoginFormBaseProps {
         readonly title: string
         readonly text: string
         readonly failedTitle: string
+        /** The title and the line of the unconfirmed-address warning, which carries the resend link. */
+        readonly unconfirmedTitle: string
+        readonly unconfirmedBody: string
         readonly resendLabel: string
         readonly googleLabel: string
         readonly orLabel: string
@@ -55,10 +58,18 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
             {view.notice === undefined ? null : <Alert title={view.notice} tone="affirmative" />}
             {view.error === undefined ? null : (
                 <Alert
-                    title={view.failedTitle}
-                    description={view.error}
-                    tone="negative"
-                    {...(view.canResend && { action: { label: view.resendLabel, onAction: props.on.resend } })}
+                    title={view.canResend ? view.unconfirmedTitle : view.failedTitle}
+                    description={
+                        view.canResend ? (
+                            <Stack gap="row">
+                                <Text>{view.unconfirmedBody}</Text>
+                                <TextAction onPress={props.on.resend}>{view.resendLabel}</TextAction>
+                            </Stack>
+                        ) : (
+                            view.error
+                        )
+                    }
+                    tone={view.canResend ? "cautionary" : "negative"}
                 />
             )}
             <Stack gap="row">

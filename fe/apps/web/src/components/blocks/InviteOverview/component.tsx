@@ -1,5 +1,5 @@
-import { Button, Heading, SurfaceCard, Text } from "@starci/grammar/common"
-import { INVITE_STACK_CLASS_NAME } from "./classNames"
+import { Button, DescriptionList, Text } from "@starci/grammar/common"
+import { AuthPanel } from "@/components/frames/AuthPanel"
 
 /** The invitation shapes, in the order the owner approved them. */
 export const INVITE_OVERVIEW_SHAPES = ["unavailable", "signedOut", "mismatch", "ready"] as const
@@ -11,6 +11,8 @@ export interface InviteOverviewView {
     readonly title: string
     readonly body: string
     readonly forEmail: string
+    readonly forTerm: string
+    readonly staffTerm: string
     readonly asStaff?: string | undefined
     readonly signedOutHint: string
     readonly signInLabel: string
@@ -64,7 +66,7 @@ const Actions = (props: InviteOverviewBaseProps) => {
     if (props.shape === "signedOut") {
         return (
             <>
-                <Text size="sm" tone="muted">
+                <Text size="sm" tone="muted" isLoading={props.props.isLoading}>
                     {view.signedOutHint}
                 </Text>
                 <SignLink
@@ -90,7 +92,8 @@ const Actions = (props: InviteOverviewBaseProps) => {
                     {view.mismatchBody}
                 </Text>
                 <Button
-                    intent="neutral"
+                    intent="commit"
+                    width="fill"
                     isPending={props.props.isSwitching}
                     onPress={props.on.switchAccount}
                     isLoading={props.props.isLoading}
@@ -102,11 +105,12 @@ const Actions = (props: InviteOverviewBaseProps) => {
     }
     return (
         <>
-            <Text size="sm" tone="muted">
+            <Text size="sm" tone="muted" isLoading={props.props.isLoading}>
                 {view.signedInAs}
             </Text>
             <Button
                 intent="commit"
+                width="fill"
                 isPending={props.props.isAccepting}
                 onPress={props.on.accept}
                 isLoading={props.props.isLoading}
@@ -117,50 +121,34 @@ const Actions = (props: InviteOverviewBaseProps) => {
     )
 }
 
-/** The words under the heading: what the invitation is for, and for whom. */
-const Details = (props: InviteOverviewBaseProps) => (
-    <>
-        <Text size="sm" tone="muted">
-            {props.props.view.forEmail}
-        </Text>
-        {props.props.view.asStaff === undefined ? null : (
-            <Text size="sm" tone="muted">
-                {props.props.view.asStaff}
-            </Text>
-        )}
-        <Actions {...props} />
-    </>
-)
+/** The words under the heading: for whom the invitation is, and the step the visitor can take. */
+const Details = (props: InviteOverviewBaseProps) => {
+    const view = props.props.view
+    const items = [
+        { id: "for", term: view.forTerm, description: view.forEmail },
+        ...(view.asStaff === undefined ? [] : [{ id: "staff", term: view.staffTerm, description: view.asStaff }]),
+    ]
+    return (
+        <>
+            <DescriptionList items={items} isLoading={props.props.isLoading} />
+            <Actions {...props} />
+        </>
+    )
+}
 
 /** Draws the invitation: what it is for, and the right next step for a signed-out, mismatched or matching visitor. */
 export const InviteOverviewBase = (props: InviteOverviewBaseProps) => {
     const view = props.props.view
-    const isLoading = props.props.isLoading
     const isUsable = props.shape !== "unavailable"
     return (
-        <SurfaceCard ariaLabel={view.title}>
-            <div className={INVITE_STACK_CLASS_NAME}>
-                <Heading level={1} isLoading={isLoading}>
-                    {view.title}
-                </Heading>
-                <Text isLoading={isLoading} {...(isUsable ? {} : { tone: "muted" as const })}>
-                    {view.body}
-                </Text>
-                <InviteStep {...props} isUsable={isUsable} />
-            </div>
-        </SurfaceCard>
+        <AuthPanel label={view.title} title={view.title} text={view.body} level={1} isLoading={props.props.isLoading}>
+            {isUsable ? (
+                <Details {...props} />
+            ) : (
+                <Button intent="commit" width="fill" href={view.loginHref}>
+                    {view.goSignInLabel}
+                </Button>
+            )}
+        </AuthPanel>
     )
 }
-
-/** What the step under the words draws from. */
-type InviteStepProps = InviteOverviewBaseProps & { readonly isUsable: boolean }
-
-/** The step under the words: the way in for a link that cannot be used, or the visitor's own next step. */
-const InviteStep = (props: InviteStepProps) =>
-    props.isUsable ? (
-        <Details {...props} />
-    ) : (
-        <Button intent="neutral" width="fill" href={props.props.view.loginHref} isLoading={props.props.isLoading}>
-            {props.props.view.goSignInLabel}
-        </Button>
-    )
