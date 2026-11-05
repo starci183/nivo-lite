@@ -54,5 +54,9 @@
   "settings_post_unmatched": "Post money in as income before it is matched",
   "settings_void_mode": "A voided invoice that was posted",
   "void_reversal": "Gets a reversal entry",
-  "void_none": "Leaves the books as they are"
+  "void_none": "Leaves the books as they are",
+  "col_date": "Date",
+  "col_entry": "Entry",
+  "col_amount": "Amount",
+  "col_status": "Status"
 }

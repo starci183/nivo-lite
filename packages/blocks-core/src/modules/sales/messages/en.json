@@ -3,6 +3,11 @@
   "action_confirm_order": "Confirm order",
   "action_move_stage": "Move stage",
   "action_save_settings": "Save sales settings",
+  "approval_done": "Confirmed",
+  "approval_owner": "Owner decides",
+  "approval_shop": "Shop",
+  "attention_empty": "Nothing needs your attention",
+  "attention_orders": "Draft orders waiting for you",
   "fact_amount": "Total",
   "fact_approval": "Confirmed by",
   "fact_channel": "Channel",
@@ -82,8 +87,9 @@
   "status_invoiced": "Invoiced",
   "status_label": "Status",
   "status_paid": "Paid",
+  "tab_attention": "Needs attention",
   "tab_orders": "Orders",
-  "tab_pipeline": "Customers",
+  "tab_pipeline": "Sales pipeline",
   "tab_settings": "Settings",
   "waiting_owner": "Orders waiting for the owner"
 }
