@@ -6,7 +6,12 @@ import {
 } from "@modules/domain/agent-schedules"
 import { AGENT_INBOUND_ERROR_KINDS, AGENT_INBOUND_MESSAGES, AgentInboundModule } from "@modules/domain/agent-inbound"
 import { ENTITY_ENGINE_ERROR_KINDS, ENTITY_ENGINE_MESSAGES, EntityEngineModule } from "@modules/domain/entity-engine"
-import { AGENT_RUNS_ERROR_KINDS, AGENT_RUNS_MESSAGES, AgentRunsModule } from "@modules/domain/agent-runs"
+import {
+    AGENT_RUNS_ERROR_KINDS,
+    AGENT_RUNS_MESSAGES,
+    AgentRunEngineAlertsService,
+    AgentRunsModule,
+} from "@modules/domain/agent-runs"
 import { AGENT_WORK_ERROR_KINDS, AGENT_WORK_MESSAGES, AgentWorkModule } from "@modules/domain/agent-work"
 import { GRAPH_NODES_ERROR_KINDS, GRAPH_NODES_MESSAGES, GraphNodesModule } from "@modules/domain/graph-nodes"
 import type { NodeInstall } from "@modules/domain/graph-nodes"
@@ -47,6 +52,7 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
         isGlobal: true,
         entities: FLOW_F_ENTITIES,
         jobs: [],
+        alerts: AgentRunEngineAlertsService,
         ...options.entityEngine,
     }),
     GraphNodesModule.register({
