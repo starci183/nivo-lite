@@ -1,5 +1,5 @@
 import type { WorkbenchDeclaration } from "@nivo-lite/agent-sdk/workbench/contract"
-import { LOYALTY_WORKBENCH } from "@nivo-lite/module-loyalty/manifest"
+import { LOYALTY_WORKBENCH } from "./loyalty/manifest"
 
 /**
  * The workbench declaration of every module built on the SDK. The front end pairs each with how it draws (the module's component, or a

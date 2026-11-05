@@ -320,7 +320,7 @@ export type {
     ProgramValues,
     TierTextField,
     TierValues,
-} from "@nivo-lite/module-loyalty/workbench"
+} from "@nivo-lite/blocks-core/client/loyalty"
 export type { GraphQLResponse } from "./outcome"
 export type { SetupWriteDraft } from "./setup-write-draft"
 export type { ModuleIconName } from "./module-icon"
@@ -363,7 +363,7 @@ export type {
     HiringSay,
     PublicQuestionView,
 } from "./hiring"
-export type { RewardFormValues, RewardTextField } from "@nivo-lite/module-loyalty/workbench"
+export type { RewardFormValues, RewardTextField } from "@nivo-lite/blocks-core/client/loyalty"
 export type {
     ContentChannel,
     ContentT,

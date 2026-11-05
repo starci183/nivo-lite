@@ -1,4 +1,4 @@
-import type { LOYALTY_VIEW_IDS } from "@nivo-lite/module-loyalty/manifest"
+import type { LOYALTY_VIEW_IDS } from "@nivo-lite/blocks-core/modules/loyalty"
 import type { LoyaltyBoardType, LoyaltyConfigType, LoyaltyTierType, useQueryLoyaltyBoardSwr } from "@/hooks/swr"
 import type { BadgeTone } from "@starci/grammar/common"
 

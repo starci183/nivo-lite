@@ -2,8 +2,9 @@ import { moduleListProblems } from "@nivo-lite/agent-sdk/module"
 import { specProblems } from "@nivo-lite/agent-sdk/workbench/spec"
 import type { WorkbenchSpecDocument } from "@nivo-lite/agent-sdk/workbench/spec"
 import { REGISTERED_MODULE_KEYS } from "./registered-module-keys"
-import { MODULE_SERVERS } from "./template"
-import { MODULE_WORKBENCHES, SPEC_REGISTRY } from "./manifest"
+import { MODULE_SERVERS } from "./module-servers"
+import { MODULE_WORKBENCHES } from "./module-workbenches"
+import { SPEC_REGISTRY } from "./spec-registry"
 
 describe("the module registry", () => {
     it("lists a server list the host may load", () => {
