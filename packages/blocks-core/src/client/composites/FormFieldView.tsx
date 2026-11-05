@@ -92,7 +92,7 @@ export const FormFieldView = (props: FormFieldViewProps): ReactNode => {
                 <Input
                     {...common}
                     isLoading={isLoading}
-                    placeholder="YYYY-MM-DD"
+                    placeholder={props.words({ key: "fieldDatePlaceholder" })}
                     value={text}
                     onValueChange={props.onChange}
                 />

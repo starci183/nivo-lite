@@ -13,13 +13,16 @@ import { relabeller } from "../../rows/value-labels"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
-/** The one command of a record that a slot offers: a button that runs the action on the record's id. */
-const RowAction = (props: {
+/** What the command of a record is given: the action, its look, whether it waits for a record, and what runs it. */
+interface RowActionProps {
     readonly action: ActionHandle
     readonly intent: "commit" | "alternative"
     readonly isDisabled: boolean
     readonly onRun: () => void
-}): ReactNode =>
+}
+
+/** The one command of a record that a slot offers: a button that runs the action on the record's id. */
+const RowAction = (props: RowActionProps): ReactNode =>
     props.action.isAllowed ? (
         <Button
             intent={props.intent}
@@ -65,7 +68,7 @@ export const DetailBlock = (props: RenderOf<typeof detailBlock>): ReactNode => {
                 return (
                     <SurfaceCard label={words(props.props.label)} headingLevel={2} isLoading={isLoading}>
                         <Stack gap="section">
-                            {refusal === null || refusal.id !== id ? null : (
+                            {refusal?.id !== id ? null : (
                                 <Alert
                                     tone="negative"
                                     title={words(refusal.text)}

@@ -84,7 +84,7 @@ export const DecisionEditForm = (props: DecisionEditFormProps): ReactNode => {
                 })}
             </Grid>
             <Cluster gap="inline">
-                <Button type="submit" size="sm" isPending={isRunning}>
+                <Button type="submit" intent="commit" size="sm" isPending={isRunning}>
                     {props.words.submit}
                 </Button>
                 <Button intent="neutral" size="sm" isDisabled={isRunning} onPress={props.onClose}>
