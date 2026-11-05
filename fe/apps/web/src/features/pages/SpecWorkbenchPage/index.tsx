@@ -11,11 +11,10 @@ export const specWorkbenchMetadata = async (): Promise<Metadata> => {
     return { title: t("tab_workbench") }
 }
 
-/** What the route hands the page: the module of the url, the view its path names and the installation of its query. */
+/** What the route hands the page: the module of the url and the view its path names. */
 type SpecWorkbenchPageProps = {
     readonly module: string
     readonly view: string | null
-    readonly installationId: string
 }
 
 /** The one workbench page of every module: the spec of the module (published, else seeded) drawn by the spec renderer. */
@@ -30,7 +29,6 @@ export const SpecWorkbenchPage = async (props: SpecWorkbenchPageProps): Promise<
                 title: t("tab_workbench"),
                 spec: resolved.spec,
                 fallback: resolved.fallback,
-                installationId: props.installationId,
                 tab: props.view,
             }}
         />

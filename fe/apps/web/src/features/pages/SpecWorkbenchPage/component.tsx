@@ -8,7 +8,6 @@ export interface SpecWorkbenchPageBaseProps {
         readonly title: string
         readonly spec: StoredSpec
         readonly fallback: StoredSpec | null
-        readonly installationId: string
         readonly tab: string | null
     }
 }
