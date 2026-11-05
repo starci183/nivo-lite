@@ -5,6 +5,7 @@
     "retry": "Try again",
     "noView": "This screen has no layout to show.",
     "tabs": "Views",
+    "invalid": "This value is not valid.",
     "unbound": "This action is not set up."
   }
 }

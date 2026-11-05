@@ -42,4 +42,7 @@ export type {
 } from "./list.types"
 export type { DefinitionErrorCode } from "./definition-error"
 export { SdkDefinitionError } from "./definition-error"
+export type { ParsedInput } from "./input"
+export { actionPayloadOf, parseStrict } from "./input"
+export { outcomeOf } from "./outcome"
 export { defineAction, defineBlock, defineRead } from "./block"
