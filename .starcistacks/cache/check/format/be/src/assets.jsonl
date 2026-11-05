@@ -1,0 +1,4 @@
+{"findings":[],"hash":"cb6f53d6fd56316356c55b067474d9621c27b7182b124063b8f6eab6acef63bd","path":"be/src/assets/fonts/BeVietnamPro_400Regular.ttf","step":"prettier"}
+{"findings":[],"hash":"04db63d2a82dd4bb35ba25e00dab1d12febcd0e917856b174b71a24d6f0c9afa","path":"be/src/assets/fonts/BeVietnamPro_600SemiBold.ttf","step":"prettier"}
+{"findings":[],"hash":"2fe6c3f9dbb65f61554d530c16b2eb4ec32ca437dc8f9999a6ec0f6403b30bfe","path":"be/src/assets/fonts/BeVietnamPro_700Bold.ttf","step":"prettier"}
+{"findings":[],"hash":"10fcb42b9cee8e30918843416676ae059e8f77fe439d0c3a4350617ef9f77a75","path":"be/src/assets/fonts/BeVietnamPro_800ExtraBold.ttf","step":"prettier"}

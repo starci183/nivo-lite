@@ -24,6 +24,7 @@ import type {
 } from "./dossier-review.contracts"
 import { DossierReviewError, DossierReviewErrorCode } from "./errors/dossier-review.error"
 import { toDossierReviewRecord, toFindingRecord, toRunRecord } from "./finding-record.mapper"
+import { DossierFindingInUseService } from "./dossier-finding-in-use.service"
 import { cursorOf, findingPageOf, scopeOf, severityRank } from "./findings-cursor.policy"
 import {
     DossierFindingEntity,
@@ -84,6 +85,7 @@ export class DossierFindingsService {
         private readonly lookup: MemberLookupService,
         private readonly inputs: ReviewInputsService,
         private readonly chunks: KnowledgeChunksService,
+        private readonly inUse: DossierFindingInUseService,
     ) {}
 
     /** One page of findings, the most severe and most recently seen first; rule findings in the reader's locale. */
@@ -329,11 +331,13 @@ export class DossierFindingsService {
         const latestDraft = new Map<string, DossierRemedyDraftEntity>()
         for (const draft of drafts) if (!latestDraft.has(draft.findingId)) latestDraft.set(draft.findingId, draft)
         const places = await this.chunks.placesOf(workspaceId, passageIdsOf(found))
+        const inUse = await this.inUse.ofFindings(workspaceId, found)
         return (row) =>
             withPlaces(
                 toFindingRecord(row, {
                     dossier: row.dossierId === null ? undefined : dossiers.get(row.dossierId),
                     draft: latestDraft.get(row.id),
+                    inUse: inUse.get(row.id),
                     text:
                         row.origin === "rule" && row.code !== null
                             ? {

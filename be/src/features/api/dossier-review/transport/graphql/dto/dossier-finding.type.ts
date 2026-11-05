@@ -1,5 +1,6 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
 import { DossierFindingEvidenceType } from "./dossier-finding-evidence.type"
+import { DossierFindingInUseType } from "./dossier-finding-in-use.type"
 import { DossierFindingParamType } from "./dossier-finding-param.type"
 
 @ObjectType()
@@ -100,6 +101,10 @@ export class DossierFindingType {
     /** The status of that draft, or null. */
     @Field(() => String, { nullable: true })
     draftStatus?: string | null
+
+    /** For a contradiction with exactly one active fact, the value agents read now; null otherwise. Which agents read it is not recorded. */
+    @Field(() => DossierFindingInUseType, { nullable: true })
+    inUse?: DossierFindingInUseType | null
 
     /** When it was first found, ISO 8601. */
     @Field(() => String)

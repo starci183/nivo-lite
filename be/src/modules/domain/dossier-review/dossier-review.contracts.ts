@@ -123,6 +123,14 @@ export const DOSSIER_REVIEW_CAPS = {
     dayMs: 86_400_000,
 } as const
 
+/** The value agents read now for a contradiction, and the document it was read from. */
+export interface FindingInUse {
+    /** The value of the active fact. */
+    readonly value: string
+    /** The title of the document that fact came from, when known. */
+    readonly sourceTitle: string | null
+}
+
 /** One evidence item of a finding. */
 export interface FindingEvidence {
     /** The part it plays. */
@@ -208,6 +216,8 @@ export interface FindingRecord {
     readonly draftId: string | null
     /** That draft's status. */
     readonly draftStatus: DraftStatus | null
+    /** For a contradiction with exactly one active fact, the value agents read now; null otherwise. */
+    readonly inUse: FindingInUse | null
     /** When it was first seen, ISO 8601. */
     readonly firstSeenAt: string
     /** When it was last seen. */

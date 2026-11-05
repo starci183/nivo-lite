@@ -11,6 +11,8 @@ import { MentionDirectoryService } from "./mention-directory.service"
 import { ThreadMessageAuthorsService } from "./thread-message-authors.service"
 import { ThreadMessageEntity } from "./persistence/entities"
 import { selectMessageColumns } from "./persistence/thread-message.query"
+import { participantsOf } from "./thread-participants.policy"
+import type { ParticipantRow } from "./thread-participants.policy"
 import { toListing, toMessage } from "./thread.mapper"
 import type {
     NewThread,
@@ -22,6 +24,9 @@ import type {
 
 /** How many threads one digest read covers. */
 const DIGEST_PAGE = 200
+
+/** How many messages of a thread the participant count reads. */
+const PARTICIPANT_SCAN = 5000
 
 /** How many of the newest messages a thread read answers. */
 const MESSAGE_PAGE = 200
@@ -97,7 +102,13 @@ export class ThreadFeedService {
             .limit(MESSAGE_PAGE)
             .getRawMany<ThreadMessageRead>()
         const newestFirst = await this.authors.withAuthors(this.entityManager, workspaceId, read)
-        return { thread, messages: newestFirst.map(toMessage).reverse() }
+        const involved = await this.entityManager
+            .createQueryBuilder(ThreadMessageEntity, "m")
+            .select(["m.author_kind AS author_kind", "m.author_id AS author_id", "m.mentions AS mentions"])
+            .where("m.workspace_id = :workspaceId AND m.thread_id = :threadId", { workspaceId, threadId })
+            .limit(PARTICIPANT_SCAN)
+            .getRawMany<ParticipantRow>()
+        return { thread, messages: newestFirst.map(toMessage).reverse(), participants: participantsOf(involved) }
     }
 
     /** The chain of one thread: its steps in order and the summary line, for a member of the workspace. */

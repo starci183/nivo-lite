@@ -1,0 +1,3 @@
+{"data":{"digestOf":"sonar-project.properties"},"findings":[],"hash":"bee1f533f72ceb1d22a903257c817bb8963a825be3ce3ac5fcf4a6125b4aa50b","path":"analysis-scope","step":"reference"}
+{"data":{"baseCommit":"2a0277e05bb7606595b63b3c53b1611603449603"},"findings":[],"hash":"2a0277e05bb7606595b63b3c53b1611603449603","path":"new-code-base","step":"reference"}
+{"data":{"coverageMinPercent":100,"duplicationMaxPercent":3,"owner":"runtime/knowledge/sonar-gate.yaml"},"findings":[],"hash":"e05f0ccb6c27e52f6e82507a2873ce4512ef13daf3e61573dcf34c3c43cdb726","path":"quality-gate","step":"reference"}
