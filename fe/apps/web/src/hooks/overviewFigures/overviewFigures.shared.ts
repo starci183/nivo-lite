@@ -69,6 +69,8 @@ export interface WaitingWork {
     readonly reason: ReasonCode | null
     readonly summary: string | null
     readonly leadName: string | null
+    /** When it began to wait (ISO). */
+    readonly createdAt: string
 }
 
 /**

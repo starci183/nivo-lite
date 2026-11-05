@@ -1,1 +1,1 @@
-export { goalLinesOf, statusRowsOf, type GovStatusRow } from "./overviewResults.shared"
+export { goalLinesOf, statusRowsOf, weekFiguresOf } from "./overviewResults.shared"

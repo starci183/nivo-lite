@@ -32,15 +32,6 @@ export interface ResponsibilityRowModel {
     readonly ownerHandle: string | null
 }
 
-/** The owners that hold rows, in display order. */
-export interface OwnerGroupModel {
-    readonly key: string
-    readonly name: string
-    readonly kind: "human" | "agent"
-    readonly handle: string | null
-    readonly rows: Array<ResponsibilityRowModel>
-}
-
 /** One recent event, resolved for display. */
 export interface ActivityModel {
     readonly id: string
@@ -121,26 +112,6 @@ export const toRowModels = (
             ownerHandle: agent?.handle ?? null,
         }
     })
-
-/** Groups rows by owner. Owners with the most rows first, humans before agents on a tie. */
-export const groupByOwner = (rows: ReadonlyArray<ResponsibilityRowModel>): Array<OwnerGroupModel> => {
-    const groups = new Map<string, OwnerGroupModel>()
-    for (const row of rows) {
-        const group = groups.get(row.ownerKey)
-        if (group === undefined) {
-            groups.set(row.ownerKey, {
-                key: row.ownerKey,
-                name: row.ownerName,
-                kind: row.ownerKind,
-                handle: row.ownerHandle,
-                rows: [row],
-            })
-        } else {
-            group.rows.push(row)
-        }
-    }
-    return [...groups.values()].sort((a, b) => b.rows.length - a.rows.length || b.kind.localeCompare(a.kind))
-}
 
 /**
  * The kind of event whose summary is a command key (`sales.send_follow_up`: the module it went to, then the action) and not a

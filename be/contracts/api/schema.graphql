@@ -1847,6 +1847,8 @@ type BrainEvidenceType {
   label: String!
   quote: String
   ref: String!
+  sourceId: ID
+  sourceTitle: String
 }
 
 type BrainExtractionType {
@@ -3396,6 +3398,11 @@ type DossierFindingEvidenceType {
   sourceTitle: String
 }
 
+type DossierFindingInUseType {
+  sourceTitle: String
+  value: String!
+}
+
 input DossierFindingNoteInput {
   findingId: ID! @inputBounds(maxLength: 36)
   note: String = null @inputBounds(maxLength: 500)
@@ -3432,6 +3439,7 @@ type DossierFindingType {
   evidence: [DossierFindingEvidenceType!]!
   firstSeenAt: String!
   id: ID!
+  inUse: DossierFindingInUseType
   kind: String!
   lastSeenAt: String!
   origin: String!
@@ -4473,6 +4481,7 @@ type LeadBoardType {
   need: String!
   nextAction: String
   ownerName: String
+  phone: String
   stage: String!
 }
 
@@ -4752,6 +4761,7 @@ type LeadRecordType {
   id: ID!
   installationId: ID
   need: String!
+  phone: String
   stage: String!
 }
 
@@ -5363,6 +5373,7 @@ type MemberListingType {
   avatarUrl: String
   displayName: String!
   email: String!
+  joinedAt: String!
   lastSignInAt: String
   role: String!
   staffId: ID
@@ -9248,6 +9259,11 @@ type ThreadMessageType {
   threadId: ID!
 }
 
+type ThreadParticipantsType {
+  agents: Int!
+  people: Int!
+}
+
 input ToggleHiringOnboardingInput {
   done: Boolean!
   id: ID! @inputBounds(maxLength: 36)
@@ -9718,6 +9734,7 @@ type WorkThreadType {
 
 type WorkThreadViewType {
   messages: [ThreadMessageType!]!
+  participants: ThreadParticipantsType!
   thread: WorkThreadType!
 }
 

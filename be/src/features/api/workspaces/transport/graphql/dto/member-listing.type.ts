@@ -15,4 +15,8 @@ export class MemberListingType extends MemberType {
     /** The last sign-in, ISO 8601; null when unknown. */
     @Field(() => String, { nullable: true })
     lastSignInAt!: string | null
+
+    /** When the member joined the workspace, ISO 8601. */
+    @Field()
+    joinedAt!: string
 }
