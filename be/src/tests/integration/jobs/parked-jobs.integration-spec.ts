@@ -18,7 +18,8 @@ describe("parked jobs (lite integration)", () => {
 
     it("fenced-job/park-resume: a parked job is handed back under a new build, keeps its steps and completes once", async () => {
         const manager = database.db.primary
-        const { claims, claim, delivery } = jobsBuilder(manager, database.key("park"))
+        // A job key is the dedupe key of its outbox row, which the database requires to hold a colon; the resumed key `<jobKey>-r1` keeps it.
+        const { claims, claim, delivery } = jobsBuilder(manager, database.key("park:delivery"))
         const first = await claim(claims, "worker-1")
         assert(first !== null)
         await claims.advance({ jobId: first.jobId, expectedFencingToken: first.fencingToken, step: "prepared" })
