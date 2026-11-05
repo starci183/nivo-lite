@@ -153,9 +153,6 @@ namespaces:
       reason: "Key family built at run time as `step${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
     - key: "verified"
       reason: 'Read as the string "verified" in components/blocks/ResponsibilitiesBoard/index.tsx, hooks/overview/useOverviewOwners.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  loyalty:
-    - key: "actionFailed"
-      reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   metaWizard:
     - key: "pickPick"
       reason: 'Read as the string "pickPick" through the tm translator in hooks/meta-wizard/useMetaWizardActions.ts, a translator the detector does not bind to this namespace.'
@@ -218,8 +215,6 @@ namespaces:
       reason: "Key family built at run time as `${kind}Body` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
     - key: "draftReady"
       reason: 'Read as the string "draftReady" in components/blocks/ContentPostEditor/index.tsx, hooks/content/useRequestContentDraft.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "nameRequired"
-      reason: 'Read as the string "nameRequired" in hooks/rhf/useLoyaltyMemberForm.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - prefix: "stage_"
       reason: "Key family built at run time as `stage_${candidate.stage}` in components/blocks/HiringCandidate/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   team:

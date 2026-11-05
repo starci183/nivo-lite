@@ -5488,7 +5488,6 @@
     "stage_lost": "lost",
     "takenOver": "{user} took over the conversation; the AI stays quiet",
     "returnedToAi": "{user} handed the conversation back to the AI",
-    "nameRequired": "Enter the customer's name",
     "demoHBody": "Please confirm the showroom furniture order, 45 million VND.",
     "demoPayBody": "Bank transfer received, reference unclear"
   },
