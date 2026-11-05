@@ -28,8 +28,8 @@ interface PublicShellProps {
     readonly onChooseLanguage: (locale: string) => void
     /** The foot line under the page. */
     readonly foot: string
-    /** The page measure: `reading` for one narrow card, `product` for a page with two columns. */
-    readonly measure: "reading" | "product"
+    /** The page measure: `reading` for one narrow card, `narrow` for a card beside a short rail, `product` for a page with two wider columns. */
+    readonly measure: "reading" | "narrow" | "product"
     readonly children: ReactNode
 }
 

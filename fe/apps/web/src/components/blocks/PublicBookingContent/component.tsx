@@ -1,4 +1,4 @@
-import { Avatar, Cluster, Grid, Heading, Page, Stack, Text } from "@starci/grammar/common"
+import { Avatar, Grid, PageIntro, Page } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 
 import { PublicBookingForm } from "@/components/composites/PublicBookingForm"
@@ -59,29 +59,13 @@ interface ShopIdentityProps {
 
 /** The shop the visitor books with: its mark, its name as the page's one heading, where it is and when it is open. */
 const ShopIdentity = (props: ShopIdentityProps) => (
-    <Stack gap="section">
-        <Cluster gap="row" align="center">
-            <Avatar name={props.page.shop} shape="rounded" size="lg" isLoading={props.isLoading} />
-            <Stack gap="identity">
-                <Heading level={1} isLoading={props.isLoading}>
-                    {props.page.shop}
-                </Heading>
-                {props.page.address === "" ? null : (
-                    <Text size="sm" tone="muted" overflow="wrap" isLoading={props.isLoading}>
-                        {props.page.address}
-                    </Text>
-                )}
-                {props.page.note === "" ? null : (
-                    <Text size="xs" tone="muted" isLoading={props.isLoading}>
-                        {props.page.note}
-                    </Text>
-                )}
-            </Stack>
-        </Cluster>
-        <Text size="sm" tone="muted" isLoading={props.isLoading}>
-            {props.intro}
-        </Text>
-    </Stack>
+    <PageIntro
+        title={props.page.shop}
+        isLoading={props.isLoading}
+        mark={<Avatar name={props.page.shop} tone="accent" shape="rounded" size="lg" isLoading={props.isLoading} />}
+        lines={[props.page.address, props.page.note].filter((text) => text !== "").map((text) => ({ id: text, text }))}
+        description={props.intro}
+    />
 )
 
 /** Draws the public booking page: the shop beside one card that books. */
@@ -92,7 +76,7 @@ export const PublicBookingContentBase = (props: PublicBookingContentBaseProps) =
             <PublicShell
                 label={copy.title}
                 foot={copy.foot}
-                measure="product"
+                measure="narrow"
                 brand={{
                     name: "items" in slot ? slot.items.shop : null,
                     isLoading: "isLoading" in slot,

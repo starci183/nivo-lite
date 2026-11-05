@@ -9,6 +9,7 @@ interface AgentWorkStatusProps {
 
 const ALERT_TONE: Readonly<Record<AgentWorkStatusView["tone"], PresentationState>> = {
     neutral: "informative",
+    info: "informative",
     accent: "informative",
     success: "affirmative",
     warning: "cautionary",
@@ -37,7 +38,7 @@ export const AgentWorkStatus = (props: AgentWorkStatusProps) => (
             ))}
         </Cluster>
         {props.status.stopNotice === "" ? null : (
-            <Alert title={props.status.stopNotice} tone={ALERT_TONE[props.status.tone]} appearance="soft" />
+            <Alert title={props.status.stopNotice} tone={ALERT_TONE[props.status.tone]} />
         )}
     </>
 )
