@@ -1,4 +1,4 @@
-import { LanguageMenu } from "@/components/composites/LanguageMenu"
+import { ChoiceChips } from "@starci/grammar/common"
 
 /** The words, options and state of the language switch, resolved by the connected block. */
 export interface LocaleSwitchBaseProps {
@@ -11,13 +11,18 @@ export interface LocaleSwitchBaseProps {
     readonly on: { readonly choose: (locale: string) => void }
 }
 
-/** Draws the language switch from resolved options: the same globe menu as the console bar. */
+/** Draws the language switch from resolved options: the short codes (VI, EN) as one pair of chips with the chosen one checked, as the sign-in and workspaces artboards show. */
 export const LocaleSwitchBase = (props: LocaleSwitchBaseProps) => (
-    <LanguageMenu
+    <ChoiceChips
         label={props.props.label}
+        isLabelHidden
+        options={props.props.options.map((option) => ({
+            value: option.value,
+            label: option.label,
+            isDisabled: props.props.isPending,
+        }))}
         value={props.props.locale}
-        options={props.props.options}
-        isDisabled={props.props.isPending}
-        onChange={props.on.choose}
+        onValueChange={props.on.choose}
+        empty={null}
     />
 )

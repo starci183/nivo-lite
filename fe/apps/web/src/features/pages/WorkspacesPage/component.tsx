@@ -24,7 +24,7 @@ export interface WorkspacesPageBaseProps {
 export const WorkspacesPageBase = (props: WorkspacesPageBaseProps) => (
     <WorkspacesFrame
         mainLabel={props.props.title}
-        logo={<BrandLogo href={AUTH_ROUTES.workspaces} variant="full" height={40} />}
+        logo={<BrandLogo href={AUTH_ROUTES.workspaces} variant="os" height={32} />}
         localeSwitch={<LocaleSwitch />}
         account={<WorkspacesAccount />}
     >
