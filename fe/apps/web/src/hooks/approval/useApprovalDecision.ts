@@ -5,10 +5,19 @@ import { useState } from "react"
 import { useWatch } from "react-hook-form"
 import { canDecideItem, useMember } from "@/hooks/member"
 import { useLeadDraftForm } from "@/hooks/rhf"
-import { useSalesActions } from "@/hooks/sales"
 
 /** The decision a person takes on a drafted message. */
 export type ApprovalDecision = "approved" | "rejected"
+
+/** The write behind the approval controls: queues the decision on a draft and follows its job; answers the queued job, or undefined when the request failed. */
+export interface DraftDecision<Job> {
+    readonly decide: (input: {
+        id: string
+        decision: ApprovalDecision
+        editedDraft?: string | undefined
+    }) => Promise<Job | undefined>
+    readonly isMutating: boolean
+}
 
 /** What the approval controls of one waiting draft need: the draft it starts from and the id the decision is queued for. */
 interface ApprovalTarget {
@@ -31,12 +40,14 @@ export interface ApprovalDecisionView {
 
 /**
  * The approval controls of the draft waiting for a person: editing the text, queuing the approval or rejection and the state of the
- * persisted job (the Sales runner polls it). `target` is `null` while no draft waits.
+ * persisted job (followed until it ends). `target` is `null` while no draft waits.
  */
-export const useApprovalDecision = (target: ApprovalTarget | null): ApprovalDecisionView => {
+export const useApprovalDecision = (
+    target: ApprovalTarget | null,
+    actions: DraftDecision<unknown>,
+): ApprovalDecisionView => {
     const member = useMember()
     const t = useTranslations("approval")
-    const actions = useSalesActions()
     const [isEditing, setIsEditing] = useState(false)
     const [pendingDecision, setPendingDecision] = useState<ApprovalDecision | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -46,7 +57,7 @@ export const useApprovalDecision = (target: ApprovalTarget | null): ApprovalDeci
         if (target === null) return
         setError(null)
         setPendingDecision(decision)
-        const result = await actions.decideDraft({ id: target.id, decision, editedDraft })
+        const result = await actions.decide({ id: target.id, decision, editedDraft })
         if (result === undefined) {
             setPendingDecision(null)
             setError(t("stillWaiting"))

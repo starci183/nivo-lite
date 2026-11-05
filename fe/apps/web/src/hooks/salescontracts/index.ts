@@ -1,1 +1,0 @@
-export { useSalesContractsView } from "./useSalesContractsView"

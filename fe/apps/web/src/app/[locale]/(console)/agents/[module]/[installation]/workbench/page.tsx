@@ -7,7 +7,6 @@ import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
 import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
 import { ContentWorkbenchPage as WorkbenchContent } from "@/features/pages/ContentWorkbenchPage"
 import { LeadGenWorkbenchPage as WorkbenchLeadGen } from "@/features/pages/LeadGenWorkbenchPage"
-import { SalesWorkbenchPage as WorkbenchSales } from "@/features/pages/SalesWorkbenchPage"
 import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
 import { AccountingWorkbenchPage as WorkbenchAccounting } from "@/features/pages/AccountingWorkbenchPage"
 import { ChatbotWorkbenchPage as WorkbenchChatbot } from "@/features/pages/ChatbotWorkbenchPage"
@@ -27,7 +26,6 @@ type PageProps = {
 /** The workbench of each module, by the workbench key of its catalogue entry. A module without a line shows the pending state. */
 const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
     chatbot: WorkbenchChatbot,
-    sales: WorkbenchSales,
     accounting: WorkbenchAccounting,
     content: WorkbenchContent,
     inventory: WorkbenchInventory,

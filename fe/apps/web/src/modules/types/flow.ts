@@ -6,7 +6,7 @@ export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclea
 /** Where a piece of work stands. */
 export type FlowWorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"
 /** How far the proof of a finished piece of work has come. */
-export type FlowEvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
+type FlowEvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
 /** A staff row of the workspace. */
 export type FlowStaff = {
     id: string
@@ -15,38 +15,6 @@ export type FlowStaff = {
     role: string
     email: string | null
     active: boolean
-    created_at: string
-}
-/** An order row. */
-export type FlowOrder = {
-    id: string
-    workspace_id: string
-    lead_id: string | null
-    order_no: string
-    items: string
-    amount_vnd: number | null
-    status: "draft" | "confirmed" | "invoiced" | "paid" | "cancelled"
-    confirmed_by: string | null
-    confirmed_at: string | null
-    created_at: string
-    /** Shipping state, set once by the sales workbench action "mark shipped" (event order.shipped). */
-    shipped_at?: string | null
-    carrier?: string | null
-    tracking_code?: string | null
-}
-/** An invoice row. */
-export type FlowInvoice = {
-    id: string
-    workspace_id: string
-    order_id: string | null
-    lead_id: string | null
-    invoice_no: string
-    amount_vnd: number
-    due_at: string | null
-    status: "draft" | "issued" | "paid" | "void"
-    issued_by: string | null
-    issued_at: string | null
-    paid_at: string | null
     created_at: string
 }
 /** What an agent proposes for a piece of work. */
@@ -101,23 +69,6 @@ export type FlowWorkItemView = WorkItem & {
     href: string
     /** who made the latest decision on this item: only set by `listWorkItems({ withDecider: true })` (embedded in the same request) */
     decidedBy?: string | null
-}
-/** One decision taken on a piece of work. */
-export type FlowDecisionRow = {
-    id: string
-    work_item_id: string | null
-    lead_id: string | null
-    leadName: string | null
-    /** The module that performs the work (a catalog module key). */
-    department: string
-    /** The action it performs (a catalog action key). */
-    action: string
-    decided_by: string
-    decider_kind: "policy" | "owner" | "staff"
-    outcome: "auto_done" | "approved" | "edited" | "rejected"
-    reason: ReasonCode | null
-    note: string | null
-    created_at: string
 }
 /** The edits a person makes before approving a piece of work. */
 export type FlowWorkEdits = {

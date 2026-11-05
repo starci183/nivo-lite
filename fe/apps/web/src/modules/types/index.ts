@@ -172,11 +172,7 @@ export type {
     GateReason,
     DecisionHistoryRowView,
 } from "./decisions"
-export type { AttentionKind, AttentionRow, AttentionItemView, ActivityItemView } from "./sales"
-export type { SalesContract, SalesContractStatus, ContractItemView } from "./sales"
-export type { SalesDeal, DealView, LaneView, MoveDialogView, HandoffRow, HandoffItemView, SalesShipping } from "./sales"
-export type { SalesDecision, DecisionRowView, DecisionRowLabels, DecisionRowActions } from "./sales"
-export type { SalesConversion, SalesMetrics, SalesOrderRowView, SalesWorkbenchData } from "./sales"
+
 export type {
     LeadGenComment,
     LeadGenHandoff,
@@ -189,14 +185,7 @@ export type {
     LeadScore,
     LeadSourceKind,
 } from "./leadgen"
-export type {
-    FlowDecisionRow,
-    FlowEvidenceState,
-    FlowRuleMode,
-    FlowWorkItemView,
-    FlowWorkStatus,
-    ReasonCode,
-} from "./flow"
+export type { FlowRuleMode, FlowWorkItemView, FlowWorkStatus, ReasonCode } from "./flow"
 export type {
     BrainEvidence,
     BrainExtraction,
@@ -371,9 +360,9 @@ export type {
     ContentNoteView,
     ContentTransitionView,
 } from "./content-editor"
-export type { TypedDecisionValues } from "./sales-decision-typed"
+
 export type { InviteAction, InviteRowView, TeamPanesBaseProps } from "./team"
-export type { ContractImportDialogEvents, ContractImportDialogView, ContractImportRowView } from "./contract-import"
+
 export type { AccountSignInView, SessionRowView } from "./account"
 export type {
     ZaloCheckLineView,
@@ -439,14 +428,7 @@ export type { ChatbotConversationListView, ChatbotConversationView, ChatbotListI
 export type { ChatbotSidePanelView, ChatbotStageStepsView, ChatbotThreadViewData } from "./chatbot-inbox"
 export type { ChatMessageFile } from "./chatbot-inbox"
 export type { ChatbotInboxActions } from "./chatbot-inbox-actions"
-export type { SalesActivityRowsView, SalesAttentionView } from "./sales-workbench"
-export type { SalesContractEditorFields, SalesContractsBodyView, SalesDecisionsView } from "./sales-workbench"
-export type { SalesHandoffsView, SalesShipmentDrawerView, SalesPipelineView } from "./sales-workbench"
-export type { SalesWorkbenchViewData } from "./sales-workbench"
-export { SALES_WORKBENCH_TABS } from "./sales-workbench"
-export type { SalesAttentionActions, SalesContractCommonActions } from "./sales-workbench-actions"
-export type { SalesContractEditorActions, SalesHandoffsActions, SalesPipelineActions } from "./sales-workbench-actions"
-export type { SalesShipmentDrawerActions, SalesWorkbenchActions } from "./sales-workbench-actions"
+
 export type { ShiftsWeekViews, ShiftsWeekActions } from "./shifts-workbench-week"
 export type { ShiftsSetupViews, ShiftsSetupActions } from "./shifts-workbench-setup"
 export type { ShiftsRequestViews, ShiftsRequestActions } from "./shifts-workbench-requests"

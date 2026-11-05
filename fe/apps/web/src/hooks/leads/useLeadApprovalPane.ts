@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { approvalAgentGlyph, useApprovalDecision } from "@/hooks/approval"
+import { useDraftDecision } from "./useDraftDecision"
 import { useAgentPictures } from "@/hooks/installations"
 import { executionsOf } from "@/hooks/leadJourney"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
@@ -64,7 +65,8 @@ export const useLeadApprovalPane = (leadId: string | undefined): LeadApprovalPan
     const { pending, earlier, currentStep } =
         detail === null ? { pending: null, earlier: [], currentStep: null } : executionsOf(detail)
     const labels = useApprovalLabels(earlier.length)
-    const approval = useApprovalDecision(pending === null ? null : { id: pending.id, draft: pending.draft })
+    const drafts = useDraftDecision()
+    const approval = useApprovalDecision(pending === null ? null : { id: pending.id, draft: pending.draft }, drafts)
     const agents = detail?.agents ?? []
     const owner = agents.find((agent) => agent.id === currentStep?.owner_agent_id)
 

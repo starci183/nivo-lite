@@ -55,7 +55,6 @@ import type {
     RequestContentDraftMutation,
     RequestDataSyncMutation,
     ReturnZaloAuthorizationMutation,
-    SalesWorkbenchQuery,
     SaveHiringSettingsMutation,
     SaveVideoBrandMutation,
     ShiftsMineQuery,
@@ -73,13 +72,6 @@ import type {
     SaveHiringJobInput,
     SaveHiringSettingsInput,
     DecideSalesDraftInput,
-    DecideSalesWorkItemInput,
-    HandoffToAccountingInput,
-    MarkOrderShippedInput,
-    RetryFailedStepInput,
-    SalesWorkEditsInput,
-    SaveContractInput,
-    StopFailedStepInput,
     MentionDirectoryQuery,
     WorkChainQuery,
     WorkThreadQuery,
@@ -301,8 +293,6 @@ export type RetrievedPassageType = AskKnowledgeQuery["askKnowledge"][number]
 export type RunStepType = AutomationsQuery["automations"]["runs"][number]["steps"][number]
 /** The `SalesActionType` object of the back end contract, as the operations of this app select it. */
 export type SalesActionType = DecideSalesDraftMutation["decideSalesDraft"]
-/** The `SalesWorkbenchType` object of the back end contract, as the operations of this app select it. */
-export type SalesWorkbenchType = SalesWorkbenchQuery["salesWorkbench"]
 /** The `ShiftPositionType` object of the back end contract, as the operations of this app select it. */
 export type ShiftPositionType = ShiftsWorkbenchQuery["shiftsWorkbench"]["setup"]["positions"][number]
 /** The `ShiftStaffType` object of the back end contract, as the operations of this app select it. */
@@ -370,20 +360,6 @@ export type SaveHiringJobRequest = WireInput<SaveHiringJobInput>
 export type SaveHiringSettingsRequest = WireInput<SaveHiringSettingsInput>
 /** The `DecideSalesDraftInput` of the back end contract as callers build it, optional keys optional. */
 export type DecideSalesDraftRequest = WireInput<DecideSalesDraftInput>
-/** The `DecideSalesWorkItemInput` of the back end contract as callers build it, optional keys optional. */
-export type DecideSalesWorkItemRequest = WireInput<DecideSalesWorkItemInput>
-/** The `HandoffToAccountingInput` of the back end contract as callers build it, optional keys optional. */
-export type HandoffToAccountingRequest = WireInput<HandoffToAccountingInput>
-/** The `MarkOrderShippedInput` of the back end contract as callers build it, optional keys optional. */
-export type MarkOrderShippedRequest = WireInput<MarkOrderShippedInput>
-/** The `RetryFailedStepInput` of the back end contract as callers build it, optional keys optional. */
-export type RetryFailedStepRequest = WireInput<RetryFailedStepInput>
-/** The `SalesWorkEditsInput` of the back end contract as callers build it, optional keys optional. */
-export type SalesWorkEditsRequest = WireInput<SalesWorkEditsInput>
-/** The `SaveContractInput` of the back end contract as callers build it, optional keys optional. */
-export type SaveContractRequest = WireInput<SaveContractInput>
-/** The `StopFailedStepInput` of the back end contract as callers build it, optional keys optional. */
-export type StopFailedStepRequest = WireInput<StopFailedStepInput>
 /** The `MentionDirectoryType` object of the back end contract, as the operations of this app select it. */
 export type MentionDirectoryType = MentionDirectoryQuery["mentionDirectory"]
 /** The `WorkChainType` object of the back end contract, as the operations of this app select it. */
