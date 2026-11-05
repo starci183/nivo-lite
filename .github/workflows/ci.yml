@@ -126,6 +126,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: format
         run: npx --no-install starci app check --gate format
+      - name: build the workspace packages
+        run: npm run build:modules --silent
       - name: boot proof
         run: npx --no-install starci app check --gate wiring
         env:
@@ -186,7 +188,7 @@ jobs:
           fi
           echo "STARCI_BASE_REF=$base" >> "$GITHUB_ENV"
       - name: build the lint inputs
-        run: npm run codegen --silent && npx --no-install turbo run build --filter=./fe/packages/*
+        run: npm run build:modules --silent && npm run codegen --silent && npx --no-install turbo run build --filter=./fe/packages/*
       - name: lint with Sonar import
         run: npx --no-install starci app check --gate lint --side ${{ matrix.side }} --out reports/lint.${{ matrix.side }}.sonar.json
         env:
@@ -347,7 +349,7 @@ jobs:
       - name: build be
         run: npm run build:be
       - name: build fe web
-        run: npm run codegen --silent && npx --no-install turbo run build --filter=./fe/apps/web
+        run: npm run build:modules --silent && npm run codegen --silent && npx --no-install turbo run build --filter=./fe/apps/web
         env:
           NEXT_PUBLIC_API_URL: "https://api.nivo.vn"
           NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"
@@ -355,7 +357,7 @@ jobs:
           NEXT_PUBLIC_LANDING_URL: "https://nivo.vn"
           NEXT_PUBLIC_SITE_URL: "https://app.nivo.vn"
       - name: build fe landing
-        run: npm run codegen --silent && npx --no-install turbo run build --filter=./fe/apps/landing
+        run: npm run build:modules --silent && npm run codegen --silent && npx --no-install turbo run build --filter=./fe/apps/landing
         env:
           NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"
           NEXT_PUBLIC_SITE_URL: "https://nivo.vn"
@@ -433,6 +435,9 @@ jobs:
           fs.mkdirSync('reports', { recursive: true });
           fs.writeFileSync('reports/lint.sonar.json', JSON.stringify({ rules, issues }, null, 2) + '\n');
           NODE
+      - name: build the workspace packages
+        if: ${{ !cancelled() && (needs.plan.outputs.full == 'true' || needs.plan.outputs.sonar == 'report') }}
+        run: npm run build:modules --silent
       - uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7.2.1
         if: ${{ !cancelled() && (needs.plan.outputs.full == 'true' || needs.plan.outputs.sonar == 'report') }}
       - uses: SonarSource/sonarqube-quality-gate-action@7a5fffe8e523c40e0c740b6bc2712ab503e52efa # v1.2.1
