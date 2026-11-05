@@ -20,6 +20,8 @@ interface TypeRoute {
     readonly instances: ReadonlyArray<Installation>
     /** A resolved redirect holds the same frame loading until the destination opens. */
     readonly isLeaving: boolean
+    /** The read settled and this type has no instance: an old tab url has nowhere to go but the catalogue. */
+    readonly hasNone: boolean
 }
 
 /**
@@ -32,7 +34,12 @@ export const useTypeRoute = (module: ModuleKey, tab: AgentTab, query: string, mo
     const installed = useInstallations()
     const target =
         installed.installations === undefined ? null : typeTargetOf(installed.installations, module, tab, query)
-    const listed = target ?? (mode === "redirect" ? agentListHref(module) : null)
+    const hasNone =
+        mode === "redirect" &&
+        target === null &&
+        installed.installations !== undefined &&
+        instancesOf(installed.installations, module).length === 0
+    const listed = target ?? (mode === "redirect" && !hasNone ? agentListHref(module) : null)
     const leaveTo = mode === "list" && listed !== AGENTS_ROUTE ? null : listed
     useEffect(() => {
         if (leaveTo !== null) router.replace(leaveTo)
@@ -47,5 +54,6 @@ export const useTypeRoute = (module: ModuleKey, tab: AgentTab, query: string, mo
         read: installed.read,
         instances,
         isLeaving: leaveTo !== null,
+        hasNone,
     }
 }

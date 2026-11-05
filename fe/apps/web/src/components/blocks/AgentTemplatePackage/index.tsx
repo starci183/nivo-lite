@@ -75,6 +75,7 @@ export const AgentTemplatePackage = (props: AgentTemplatePackageProps): ReactEle
                           },
                 canPackage: pkg !== undefined && pkg !== null,
                 isPending: packaging.isPending,
+                previewFailed: packaging.previewFailed,
             }}
             on={{
                 retry: () => undefined,

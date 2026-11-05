@@ -54,6 +54,9 @@ const copyOf = (t: ReturnType<typeof useTranslations<"agentWork">>): AgentWorkCo
     readOnlyHint: t("readOnlyHint"),
     formOpen: t("formOpen"),
     formCancel: t("formCancel"),
+    phoneLabel: t("phoneLabel"),
+    phoneWork: t("phoneWork"),
+    phoneGoals: t("phoneGoals"),
 })
 
 /** The connected Work tab: it reads the work of the instance, keeps the two small forms, and sends the commands. */
@@ -66,6 +69,7 @@ export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
     const [preset, setPreset] = useState<AgentWorkPreset>("daily_at")
     const [atTime, setAtTime] = useState("09:00")
     const [openForm, setOpenForm] = useState<"goal" | "clock" | null>(null)
+    const [phoneView, setPhoneView] = useState<"work" | "goals">("work")
     const needsTime = presetNeedsTime(preset)
     const isTimeInvalid = needsTime && atTime !== "" && !TIME_OF_DAY.test(atTime)
     const title = goalTitle.trim()
@@ -97,6 +101,7 @@ export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
                     isTimeInvalid,
                     canAddClock: !needsTime || TIME_OF_DAY.test(atTime),
                     openForm,
+                    phoneView,
                 },
                 isSaving: actions.isSaving,
             }}
@@ -111,6 +116,7 @@ export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
                     setOpenForm(null)
                 },
                 openForm: setOpenForm,
+                phoneView: setPhoneView,
                 switchTrigger: (trigger, enabled) => void actions.switchTrigger(trigger, enabled),
                 removeTrigger: (id) => void actions.removeClock(id),
                 closeTask: (id) => void actions.closeTask(id),

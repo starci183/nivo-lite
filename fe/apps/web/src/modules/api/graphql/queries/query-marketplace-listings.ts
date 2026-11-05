@@ -43,6 +43,13 @@ const query1: TypedDocumentNode<QueryMarketplaceListingsResponse> = gql`
                 max
                 required
                 defaultValue
+                options {
+                    value
+                    label {
+                        vi
+                        en
+                    }
+                }
             }
             requiredProviders
             requiredAuthorityActions

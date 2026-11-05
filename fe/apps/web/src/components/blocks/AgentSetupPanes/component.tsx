@@ -247,6 +247,13 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                 <Pane area="phonetabs" surface>
                     <PaneSection align="center">{tabsBandOf(props, true)}</PaneSection>
                 </Pane>
+                <Pane area="checklist">
+                    <PaneSection scroll={{ label: copy.paneLabel }} gap="section">
+                        <SetupBand {...props} />
+                        <ProblemsBand {...props} />
+                        <GraphModeBand {...props} />
+                    </PaneSection>
+                </Pane>
                 <Pane area="branches">
                     <PaneSection scroll={{ label: copy.paneLabel }}>
                         <BranchesBand {...props} />

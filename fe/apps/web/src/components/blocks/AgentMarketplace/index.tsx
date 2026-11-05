@@ -14,6 +14,15 @@ const PLACEHOLDER: AgentMarketplaceBaseProps["props"]["placeholder"] = [
     { id: "-", name: "-", summary: "-", meta: "-", priceLabel: "-", isPaid: false, parameters: [], needs: "-" },
 ]
 
+/** What a parameter says about its choices. */
+interface ChoiceSource {
+    readonly options?: ReadonlyArray<{ readonly value: string }> | null
+}
+
+/** The values a choice parameter accepts, none for the other kinds. */
+const choicesOf = (parameter: ChoiceSource): ReadonlyArray<string> =>
+    (parameter.options ?? []).map((option) => option.value)
+
 /** A text in both product languages. */
 interface LocalizedText {
     readonly vi: string
@@ -53,7 +62,8 @@ const listingViewOf = (listing: Listing, lens: ListingLens): ListingViews[number
             hint: parameter.hint === null ? "" : lens.pick(parameter.hint),
             min: parameter.min ?? null,
             max: parameter.max ?? null,
-            error: lens.errorOf(parameter, value),
+            error: lens.errorOf({ ...parameter, choices: choicesOf(parameter) }, value),
+            options: (parameter.options ?? []).map((option) => ({ id: option.value, label: lens.pick(option.label) })),
         }
     }),
     needs: lens.t("needs", {
@@ -75,6 +85,8 @@ export const AgentMarketplace = () => {
     const words: ParameterWords = {
         required: t("fieldRequired"),
         notNumber: t("fieldNumber"),
+        notTime: t("fieldTime"),
+        notChoice: t("fieldChoice"),
         tooSmall: (min) => t("fieldMin", { min }),
         tooLarge: (max) => t("fieldMax", { max }),
     }
@@ -119,7 +131,12 @@ export const AgentMarketplace = () => {
                     // Once asked, a missing required value counts too, so the dialog stays open and shows what is wrong.
                     const isBlocked = found.parameters.some(
                         (parameter) =>
-                            parameterErrorOf(words, true, parameter, valueOf(listingId, parameter.key)) !== "",
+                            parameterErrorOf(
+                                words,
+                                true,
+                                { ...parameter, choices: choicesOf(parameter) },
+                                valueOf(listingId, parameter.key),
+                            ) !== "",
                     )
                     if (isBlocked) return
                     void market.install(listingId, found.parameters)

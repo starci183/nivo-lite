@@ -35,6 +35,8 @@ export interface AgentTemplatePackageBaseProps {
         readonly cardTitle: string
         readonly versionTitle: string
         readonly noPreview: string
+        /** The automatic preview failed: only then the card offers the retry. */
+        readonly previewFailed: boolean
         readonly previewLabel: string
         readonly packageLabel: string
         readonly previewTitle: string
@@ -123,11 +125,15 @@ const PreviewCard = (props: Props): ReactElement => {
         <SurfaceCard
             label={view.previewTitle}
             headingLevel={2}
-            labelEnd={
-                <Button intent="neutral" size="sm" isPending={view.isPending} onPress={props.on.showPreview}>
-                    {view.previewLabel}
-                </Button>
-            }
+            {...(view.previewFailed
+                ? {
+                      labelEnd: (
+                          <Button intent="neutral" size="sm" isPending={view.isPending} onPress={props.on.showPreview}>
+                              {view.previewLabel}
+                          </Button>
+                      ),
+                  }
+                : {})}
         >
             <Stack gap="row">
                 {view.preview === undefined ? (

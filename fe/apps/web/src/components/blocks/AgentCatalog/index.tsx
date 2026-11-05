@@ -102,8 +102,12 @@ export const AgentCatalog = () => {
                 query: view.filters.query,
                 categoryLabel: t("filterCategory"),
                 categoryOptions: [
-                    { value: ALL_CATEGORIES, label: t("filterCategoryAll") },
-                    ...categories.map((category) => ({ value: category.key, label: category.label })),
+                    { value: ALL_CATEGORIES, label: t("filterCategoryAll"), count: items.length },
+                    ...categories.map((category) => ({
+                        value: category.key,
+                        label: category.label,
+                        count: items.filter((item) => item.categoryKey === category.key).length,
+                    })),
                 ],
                 category: view.filters.category,
                 emptyTitle: t("emptyTitle"),

@@ -1,6 +1,8 @@
-import { Button, Icon, Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
-import type { PaneGridProps } from "@starci/grammar/common"
+import { Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
+import { COLUMNS, ROWS, areasOf } from "./layout"
+import { AgentWorkAddButton } from "@/components/composites/AgentWorkAddButton"
+import { AgentWorkPhoneTabs } from "@/components/composites/AgentWorkPhoneTabs"
 import { AgentWorkClockForm } from "@/components/composites/AgentWorkClockForm"
 import { AgentWorkGoalForm } from "@/components/composites/AgentWorkGoalForm"
 import { AgentWorkGoals } from "@/components/composites/AgentWorkGoals"
@@ -8,7 +10,6 @@ import { AgentWorkSchedule } from "@/components/composites/AgentWorkSchedule"
 import { AgentWorkTasks } from "@/components/composites/AgentWorkTasks"
 import { AgentWorkStatus } from "@/components/composites/AgentWorkStatus"
 import { AgentWorkTurns } from "@/components/composites/AgentWorkTurns"
-import { nivoIconSource } from "@/components/leaves/Icon"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { AgentWorkGoalView, AgentWorkTriggerView, AgentWorkView, DataSlot, SlotLabels } from "@/modules/types"
 
@@ -41,6 +42,9 @@ export interface AgentWorkCopy {
     readonly readOnlyHint: string
     readonly formOpen: string
     readonly formCancel: string
+    readonly phoneLabel: string
+    readonly phoneWork: string
+    readonly phoneGoals: string
 }
 
 /** The form fields of the goal and of the clock trigger. */
@@ -55,6 +59,8 @@ export interface AgentWorkDraft {
     readonly canAddClock: boolean
     /** The add form that is open in place under its list, if any. */
     readonly openForm: "goal" | "clock" | null
+    /** Which of the two panes the phone shows: the work, or the goals and schedule. */
+    readonly phoneView: "work" | "goals"
 }
 
 /** Copy, the read, the form and the commands of the Work tab. */
@@ -78,23 +84,9 @@ export interface AgentWorkPanesBaseProps {
         readonly removeTrigger: (id: string) => void
         readonly closeTask: (id: string) => void
         readonly openForm: (form: "goal" | "clock" | null) => void
+        readonly phoneView: (view: "work" | "goals") => void
         readonly retry: () => void
     }
-}
-
-/**
- * The arrangement (pane-grid.choose.frame grid): the status band across the top, under it the work (open tasks, then recent
- * turns) taking the rest of the width, and a standard column of the goals and the schedule, each with its Add command. On a
- * phone the same panes stack in that order.
- */
-const AREAS: PaneGridProps["areas"] = {
-    base: ["status", "main", "aside"],
-    medium: ["status status", "main aside"],
-}
-const COLUMNS: PaneGridProps["columns"] = { base: ["fill"], medium: ["fill", "standard"] }
-const ROWS: PaneGridProps["rows"] = {
-    base: ["auto", "auto", "auto"],
-    medium: ["auto", "fill"],
 }
 
 /** The goal field under the goals, or the line saying who may add one. */
@@ -184,14 +176,10 @@ const scheduleFooterOf = (base: AgentWorkPanesBaseProps) =>
 /** The command at the end of a list heading that opens its add form in place; nothing for a person who may not edit. */
 const addActionOf = (base: AgentWorkPanesBaseProps, form: "goal" | "clock", canEdit: boolean) =>
     canEdit ? (
-        <Button
-            intent="neutral"
-            size="sm"
-            startContent={<Icon source={nivoIconSource("add", "leading")} usage="leading" />}
+        <AgentWorkAddButton
+            label={base.props.copy.formOpen}
             onPress={() => base.on.openForm(base.props.draft.openForm === form ? null : form)}
-        >
-            {base.props.copy.formOpen}
-        </Button>
+        />
     ) : undefined
 
 /** The goals read, with the command that finishes one. */
@@ -267,12 +255,23 @@ const turnsOf = (base: AgentWorkPanesBaseProps) =>
 export const AgentWorkPanesBase = (props: AgentWorkPanesBaseProps) => {
     const { copy } = props.props
     return (
-        <PaneGrid label={copy.paneLabel} areas={AREAS} columns={COLUMNS} rows={ROWS}>
+        <PaneGrid label={copy.paneLabel} areas={areasOf(props.props.draft.phoneView)} columns={COLUMNS} rows={ROWS}>
             <Pane area="status" surface>
                 <PaneSection align="center" gap="inline">
                     {partOf(props, (view, isLoading) => (
                         <AgentWorkStatus status={view.status} isLoading={isLoading} />
                     ))}
+                </PaneSection>
+            </Pane>
+            <Pane area="phonetabs" surface>
+                <PaneSection align="center">
+                    <AgentWorkPhoneTabs
+                        label={copy.phoneLabel}
+                        workLabel={copy.phoneWork}
+                        goalsLabel={copy.phoneGoals}
+                        selected={props.props.draft.phoneView}
+                        onSelect={props.on.phoneView}
+                    />
                 </PaneSection>
             </Pane>
             <Pane area="main" surface>
