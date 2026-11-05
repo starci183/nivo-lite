@@ -143,7 +143,8 @@ const usageOf = (message: unknown): MessageUsage | null => {
 
 const TEXT_KEYS: ReadonlyArray<string> = ["text", "content", "body"]
 
-const textOf = (value: unknown): string | null => {
+/** The text of a message value: a string, the parts of a list joined by lines, or the first of its `text`, `content` or `body`. */
+export const textOf = (value: unknown): string | null => {
     if (typeof value === "string") return value.trim() || null
     if (Array.isArray(value)) {
         const parts = value.map(textOf).filter((part): part is string => part !== null)

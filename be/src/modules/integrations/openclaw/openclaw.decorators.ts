@@ -2,6 +2,7 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentRegistryService } from "./agent-registry.service"
 import type { GatewayAdminClient } from "./gateway-admin.client"
+import type { GatewayHistoryClient } from "./gateway-history.client"
 import type { GatewayClient, GatewaySocketFactory } from "./gateway.client"
 import type { OpenclawFiles } from "./openclaw-files.port"
 import type { OpenclawOptions } from "./openclaw.options"
@@ -54,3 +55,10 @@ export const InjectOpenclawAgentRegistry = (): TypedParameterDecorator<AgentRegi
 /** Injects the workspace writer. Parameter type: WorkspaceWriterService. */
 export const InjectOpenclawWorkspaceWriter = (): TypedParameterDecorator<WorkspaceWriterService> =>
     injector<WorkspaceWriterService>(OPENCLAW_WORKSPACE_WRITER)
+
+/** Token of the gateway history client, for the capabilities that read the turns of a thread. */
+export const OPENCLAW_GATEWAY_HISTORY: unique symbol = Symbol("integrations.openclaw.gateway-history")
+
+/** Injects the gateway history client. Parameter type: GatewayHistoryClient. */
+export const InjectOpenclawGatewayHistory = (): TypedParameterDecorator<GatewayHistoryClient> =>
+    injector<GatewayHistoryClient>(OPENCLAW_GATEWAY_HISTORY)
