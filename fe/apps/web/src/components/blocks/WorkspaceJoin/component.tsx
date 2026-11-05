@@ -46,7 +46,7 @@ export const WorkspaceJoinBase = (props: WorkspaceJoinBaseProps) => (
                                         onValueChange={props.on.setValue}
                                     />
                                 </div>
-                                <Button type="submit" intent="neutral" isDisabled={props.props.value.trim() === ""}>
+                                <Button type="submit" intent="neutral">
                                     {props.props.openLabel}
                                 </Button>
                             </Cluster>

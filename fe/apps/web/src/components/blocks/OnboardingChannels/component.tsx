@@ -1,4 +1,4 @@
-import { Button, Cluster, EmptyNotice } from "@starci/grammar/common"
+import { Button, EmptyNotice } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { FirstRunCard } from "@/components/frames/FirstRunCard"
 
@@ -43,14 +43,9 @@ export const OnboardingChannelsBase = (props: OnboardingChannelsBaseProps) => {
                     <Button intent="neutral" href={view.backHref}>
                         {view.backLabel}
                     </Button>
-                    <Cluster gap="row">
-                        <Button intent="neutral" href={view.nextHref}>
-                            {view.laterLabel}
-                        </Button>
-                        <Button intent="commit" href={view.nextHref}>
-                            {view.continueLabel}
-                        </Button>
-                    </Cluster>
+                    <Button intent="commit" href={view.nextHref}>
+                        {view.channels.some((channel) => channel.isConnected) ? view.continueLabel : view.laterLabel}
+                    </Button>
                 </>
             }
             collection={{

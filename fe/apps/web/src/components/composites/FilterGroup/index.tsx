@@ -1,5 +1,4 @@
-import { FilterButtonGroup, SearchField, Stack } from "@starci/grammar/common"
-import type { FilterOption } from "@starci/grammar/common"
+import { SearchField, Stack, Tabs } from "@starci/grammar/common"
 
 /** The search field of a filter group: its words, its text and the command that changes it. */
 export interface FilterGroupSearch {
@@ -10,28 +9,35 @@ export interface FilterGroupSearch {
     readonly onChange: (value: string) => void
 }
 
-/** The single-choice filter row: its options, the chosen one, and the words of the "+N" overflow list. */
+/** One choice of the filter row: its words and, when known, how many rows it holds. */
+interface FilterGroupOption {
+    readonly value: string
+    readonly label: string
+    readonly count?: number
+}
+
+/** The single-choice filter row, drawn as tabs (owner rule: filters are tabs): its options and the chosen one. */
 export interface FilterGroupChoice {
     readonly label: string
-    readonly options: ReadonlyArray<FilterOption>
+    readonly options: ReadonlyArray<FilterGroupOption>
     readonly value: string
     readonly onChange: (value: string) => void
-    readonly moreLabel: (count: number) => string
-    readonly searchLabel: string
-    readonly emptyLabel: string
+    /** The words of the two scroll carets when the tabs do not fit. */
+    readonly scrollPreviousLabel?: string
+    readonly scrollNextLabel?: string
 }
 
 /** What the filter group draws: either control, or both. */
 interface FilterGroupProps {
     readonly search?: FilterGroupSearch
     readonly choice?: FilterGroupChoice
-    /** The options are still being read: the search keeps its real words and the choice row draws as buttons under a shimmer. */
+    /** The options are still being read: the search draws as its skeleton. */
     readonly isLoading?: boolean
 }
 
 /**
- * The one filter group of every list: a search field over the single-choice filter row, whose options that do not fit
- * collapse into a "+N" list. Both keep their box while the read waits, so the head of a list never shifts when the options land.
+ * The one filter group of every list: a search field over the single-choice filter row, drawn as tabs that scroll when they do
+ * not fit. The search keeps its box while the read waits, so the head of a list never shifts when the options land.
  */
 export const FilterGroup = (props: FilterGroupProps) => (
     <Stack gap="row">
@@ -39,6 +45,7 @@ export const FilterGroup = (props: FilterGroupProps) => (
             <SearchField
                 label={props.search.label}
                 isLabelHidden
+                isLoading={props.isLoading === true}
                 placeholder={props.search.placeholder}
                 clearLabel={props.search.clearLabel}
                 value={props.search.value}
@@ -47,15 +54,20 @@ export const FilterGroup = (props: FilterGroupProps) => (
             />
         )}
         {props.choice === undefined ? null : (
-            <FilterButtonGroup
+            <Tabs
                 label={props.choice.label}
-                options={props.choice.options}
-                value={props.choice.value}
-                onValueChange={props.choice.onChange}
-                moreLabel={props.choice.moreLabel}
-                searchLabel={props.choice.searchLabel}
-                emptyLabel={props.choice.emptyLabel}
-                {...(props.isLoading === true ? { isLoading: true } : {})}
+                selectedKey={props.choice.value}
+                onSelect={props.choice.onChange}
+                items={props.choice.options.map((option) => ({
+                    id: option.value,
+                    label: option.count === undefined ? option.label : `${option.label} ${option.count}`,
+                }))}
+                {...(props.choice.scrollPreviousLabel === undefined
+                    ? {}
+                    : { scrollPreviousLabel: props.choice.scrollPreviousLabel })}
+                {...(props.choice.scrollNextLabel === undefined
+                    ? {}
+                    : { scrollNextLabel: props.choice.scrollNextLabel })}
             />
         )}
     </Stack>

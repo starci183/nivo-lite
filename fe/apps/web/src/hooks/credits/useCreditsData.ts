@@ -15,7 +15,7 @@ import { navigation } from "@/modules/i18n"
 import { creditsDataOf } from "./credits.shared"
 import { useCreditsLedger } from "./useCreditsLedger"
 import type { CreditsData } from "@/modules/types"
-import { workspaceBillingPath } from "@/modules/routes"
+import { workspacePaymentPath } from "@/modules/routes"
 import { readError } from "@/hooks/workspaceread"
 
 const LAST_DAYS = 6
@@ -44,7 +44,7 @@ export const useCreditsData = (contactHref: string): CreditsDataView => {
     const isUnpaid = workspace.data?.status === "pending_payment" || workspace.data?.status === "cancelled"
 
     useEffect(() => {
-        if (workspaceId && isUnpaid) router.replace(workspaceBillingPath(workspaceId))
+        if (workspaceId && isUnpaid) router.replace(workspacePaymentPath(workspaceId))
     }, [workspaceId, isUnpaid, router])
 
     const refresh = useCallback(async () => {

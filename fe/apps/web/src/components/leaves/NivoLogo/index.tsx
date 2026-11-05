@@ -1,6 +1,6 @@
 import Image from "next/image"
 import { Link } from "@starci/grammar/common"
-import { LOGO } from "./classNames"
+import { LINK_BOX, LOGO } from "./classNames"
 
 /** What the logo draws: "full" is the primary colour lockup, "os" the product lockup, "mark" the O mark. */
 type NivoLogoProps = {
@@ -24,21 +24,23 @@ export const NivoLogo = (props: NivoLogoProps) => {
     const height = props.height ?? 28
     if (props.href !== undefined)
         return (
-            <Link
-                href={props.href}
-                label={props.label}
-                visited="uniform"
-                media={{
-                    src: source.src,
-                    alt: props.label,
-                    width: Math.round(height * source.ratio),
-                    height,
-                    aspect: "auto",
-                    fit: "contain",
-                    plate: "none",
-                    loading: "eager",
-                }}
-            />
+            <div className={LINK_BOX} style={{ width: Math.round(height * source.ratio) }}>
+                <Link
+                    href={props.href}
+                    label={props.label}
+                    visited="uniform"
+                    media={{
+                        src: source.src,
+                        alt: props.label,
+                        width: Math.round(height * source.ratio),
+                        height,
+                        aspect: "auto",
+                        fit: "contain",
+                        plate: "none",
+                        loading: "eager",
+                    }}
+                />
+            </div>
         )
     return (
         <Image

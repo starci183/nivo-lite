@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { EmptyNotice } from "@starci/grammar/common"
+import { Alert, EmptyNotice } from "@starci/grammar/common"
 import type { IconSource } from "@starci/grammar/common"
 import type { DataSlot, SlotLabels } from "../slot/slot.types"
 
@@ -25,6 +25,11 @@ export type SlotViewProps<T> = {
     readonly emptyIconSource?: IconSource
     /** The one action of the empty notice: it invites the next step (add the first one, connect, clear the filter). */
     readonly emptyAction?: { readonly label: string; readonly onAction: () => void }
+    /**
+     * How a failed read draws. `auto` (default): the Grammar failure view, a soft danger band inside a pane and a centred notice
+     * elsewhere. `band`: the same soft danger band with its retry in any region (a page body, a section, a card).
+     */
+    readonly errorLayout?: "auto" | "band"
     readonly onRetry?: () => void
     /** The ready tree, drawn once with the placeholder while the first read loads (`render(placeholder, true)`). */
     readonly render: (data: T, isLoading: boolean) => ReactNode
@@ -52,15 +57,25 @@ const errorNotice = (
     description: string | undefined,
     retryLabel: string,
     retry: (() => void) | undefined,
-) => (
-    <EmptyNotice
-        isError
-        message={message}
-        {...(description === undefined ? {} : { description })}
-        actionLabel={retryLabel}
-        {...(retry === undefined ? {} : { onAction: retry })}
-    />
-)
+    layout: "auto" | "band" | undefined,
+) =>
+    layout === "band" ? (
+        <Alert
+            appearance="soft"
+            tone="negative"
+            title={message}
+            {...(description === undefined ? {} : { description })}
+            {...(retry === undefined ? {} : { action: { label: retryLabel, onAction: retry } })}
+        />
+    ) : (
+        <EmptyNotice
+            isError
+            message={message}
+            {...(description === undefined ? {} : { description })}
+            actionLabel={retryLabel}
+            {...(retry === undefined ? {} : { onAction: retry })}
+        />
+    )
 
 /**
  * Composite: the ONE recipe for a slot's data status. No block writes its own
@@ -71,7 +86,8 @@ export const SlotView = <T,>(props: SlotViewProps<T>): ReactNode => {
     if ("isLoading" in slot) return <>{props.render(props.placeholder, true)}</>
     if ("isForbidden" in slot)
         return forbiddenNotice(props.forbidden, labels.forbidden, props.forbiddenDescription, props.forbiddenAction)
-    if ("isError" in slot) return errorNotice(labels.error, props.errorDescription, labels.retry, props.onRetry)
+    if ("isError" in slot)
+        return errorNotice(labels.error, props.errorDescription, labels.retry, props.onRetry, props.errorLayout)
     if ("isEmpty" in slot) {
         return props.empty === "collapse" ? (
             <></>

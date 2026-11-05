@@ -8,9 +8,6 @@ interface PaneCopy {
     readonly refresh: string
     readonly moreActions: string
     readonly closeAside: string
-    readonly filterSearch: string
-    readonly filterNoMatch: string
-    readonly moreFilters: (count: number) => string
     readonly clearFilters: string
     readonly clearSearch: string
     readonly noMatchTitle: string
@@ -21,7 +18,7 @@ interface PaneCopy {
     readonly forbiddenTitle: string
 }
 
-/** The words every list and detail frame shares: back to the list, the filter group, the shared states. */
+/** The words every list and detail frame shares: back to the list, the shared states. */
 export const usePaneCopy = (): PaneCopy => {
     const t = useTranslations("pane")
     return {
@@ -29,9 +26,6 @@ export const usePaneCopy = (): PaneCopy => {
         refresh: t("refresh"),
         moreActions: t("moreActions"),
         closeAside: t("closeAside"),
-        filterSearch: t("filterSearch"),
-        filterNoMatch: t("filterNoMatch"),
-        moreFilters: (count: number): string => t("moreFilters", { count }),
         clearFilters: t("clearFilters"),
         clearSearch: t("clearSearch"),
         noMatchTitle: t("noMatchTitle"),

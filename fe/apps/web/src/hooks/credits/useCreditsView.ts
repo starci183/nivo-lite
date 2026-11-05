@@ -1,6 +1,6 @@
 "use client"
 
-import { workspaceBillingPath } from "@/modules/routes"
+import { creditsPath } from "@/modules/routes"
 import type { CreditsData, CreditsOverviewView, PlanView } from "@/modules/types"
 import { creditsSummaryOf } from "@/modules/utils"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
@@ -49,7 +49,7 @@ export const useCreditsView = (data: CreditsData | null, busy: string | null): C
         topups: data && data.addOns.length > 0 ? t("addOnTitle") : t("topupTitle"),
         topupFact: data && data.addOns.length > 0 ? t("addOnFact") : t("topupFact"),
         ...labelsOf(t),
-        plansHref: data ? workspaceBillingPath(data.workspaceId) : "",
+        plansHref: creditsPath(),
         loading: t("loading"),
         emptyPacks: t("packsEmpty"),
     }
