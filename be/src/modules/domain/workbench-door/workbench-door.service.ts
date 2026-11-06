@@ -88,6 +88,8 @@ export class WorkbenchDoorService {
                     runIn: (use) => use(tx),
                     name: call.name,
                     dataKind: read.dataKind,
+                    memberId: caller.memberId,
+                    locale: call.locale,
                 }),
                 parsed.value,
                 context,
@@ -132,7 +134,13 @@ export class WorkbenchDoorService {
      */
     private async run(call: DoorCall, caller: Caller, action: DoorAction, input: unknown): Promise<ActionResult> {
         const context = await this.contextOf(call, caller)
-        const run = { workspaceId: call.workspaceId, name: action.id, dataKind: null }
+        const run = {
+            workspaceId: call.workspaceId,
+            name: action.id,
+            dataKind: null,
+            memberId: caller.memberId,
+            locale: call.locale,
+        }
         const answered: ActionAnswered = {}
         try {
             if (action.transactional !== true) {

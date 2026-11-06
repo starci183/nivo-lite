@@ -44,6 +44,7 @@ export const ACCOUNTANT_CONTEXT: RunContext = {
     memberId: ACCOUNTANT_ID,
     now: new Date("2026-11-04T12:00:00.000Z"),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 /** A request scope no seat of the workspace acts in (the graph, a job). */
@@ -52,6 +53,7 @@ export const SYSTEM_CONTEXT: RunContext = {
     memberId: null,
     now: ACCOUNTANT_CONTEXT.now,
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 /** The instant every fake record that no spec dated was created and last written at. */

@@ -15,6 +15,7 @@ const context: RunContext = {
     memberId: "owner-1",
     now: new Date(SAMPLE_NOW),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 /** Sixty points of the third member that expire within the warning window. */

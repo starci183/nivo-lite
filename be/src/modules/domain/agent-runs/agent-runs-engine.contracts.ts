@@ -315,3 +315,33 @@ export interface ParkedQuery {
     /** Failure codes that stay with a person. */
     readonly exclude: ReadonlyArray<string>
 }
+
+/** A parked run as a person looks at it: who runs it, where it stopped and why. */
+export interface ParkedFacts {
+    /** The run. */
+    readonly runId: string
+    /** The agent it works for. */
+    readonly agentId: string
+    /** The trigger, intact. */
+    readonly context: StepJson
+    /** The step it stopped at. */
+    readonly stepKey: string
+    /** The code of the failure, or an empty text when none was recorded. */
+    readonly errorCode: string
+    /** When it parked, ISO text. */
+    readonly parkedAt: string
+}
+
+/** Where one run stands, for the person who asks to resume it. */
+export interface RunStanding {
+    /** The agent it works for. */
+    readonly agentId: string
+    /** Whether it is parked now. */
+    readonly parked: boolean
+}
+
+/** Where a run stands, or nothing when the workspace has no such run. */
+export type OptionalRunStanding = RunStanding | null
+
+/** The failed step of a run, or nothing when none failed. */
+export type OptionalFailedStep = RunStepView | null
