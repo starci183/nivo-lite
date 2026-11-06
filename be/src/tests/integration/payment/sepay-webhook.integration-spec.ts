@@ -11,12 +11,7 @@ import { persistPaymentFeed } from "../../fixtures/builders/payment-feed.builder
 import type { PaymentFeedWorld } from "../../fixtures/builders/payment-feed.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
-import {
-    cleanEventClaims,
-    cleanFeedReceipts,
-    cleanJobKeys,
-    feedDeliveries,
-} from "../../world/renewal-to-cash-database.service"
+import { cleanEventClaims, cleanFeedReceipts, cleanJobKeys, feedDeliveries } from "../../world/bank-feed-world.service"
 import { useTestWorld } from "../../world/use-test-world"
 
 const world = useTestWorld({ modules: API_APP_MODULES })
