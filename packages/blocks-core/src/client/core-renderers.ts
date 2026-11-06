@@ -21,9 +21,11 @@ import {
     stackBlock,
     waitingBlock,
 } from "../index"
+import { boardBlock } from "../blocks/board.block"
 import { graphBlock } from "../blocks/graph.block"
 import { runTimelineBlock } from "../blocks/run-timeline.block"
 import { AsideDetailBlock } from "./blocks/AsideDetailBlock"
+import { BoardBlock } from "./blocks/BoardBlock"
 import { CardGridBlock } from "./blocks/CardGridBlock"
 import { ConversationBlock } from "./blocks/ConversationBlock"
 import { FilterTabsBlock } from "./blocks/FilterTabsBlock"
@@ -56,6 +58,7 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(listPaneBlock, ListPaneBlock),
     defineRenderer(filterTabsBlock, FilterTabsBlock),
     defineRenderer(tableBlock, TableBlock),
+    defineRenderer(boardBlock, BoardBlock),
     defineRenderer(formBlock, FormBlock),
     defineRenderer(listEditorBlock, ListEditorBlock),
     defineRenderer(tabbedPanelBlock, TabbedPanelBlock),

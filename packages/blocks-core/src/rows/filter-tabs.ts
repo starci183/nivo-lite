@@ -69,5 +69,8 @@ export const tabParamValue = (key: string): string | null => (key === ALL_TAB ? 
 /** The counts a skeleton draws while the counts read loads: the tabs keep their words and no count. */
 export const TAB_COUNTS_PLACEHOLDER: TabCounts = { counts: {}, total: 0 }
 
+/** The counts of a filter whose read settled with nothing: every tab stays, each with a count of zero. */
+export const EMPTY_TAB_COUNTS: TabCounts = { counts: {}, total: 0 }
+
 /** The name of the menu that holds the folded tabs: the message with its `{count}` replaced by how many tabs fold. */
 export const moreLabelOf = (template: string, count: number): string => template.replaceAll("{count}", String(count))

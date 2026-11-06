@@ -24,6 +24,19 @@ describe("tableBlock", () => {
         expect(accepts({ ...tableFixtureProps, searchParam: "not a param" })).toBe(false)
     })
 
+    it("takes the line under a value and the tones of a badge column, and refuses a tone it does not know", () => {
+        const [first, ...rest] = tableFixtureProps.columns
+        const withColumn = (column: object): boolean =>
+            accepts({ ...tableFixtureProps, columns: [{ ...first, ...column }, ...rest] })
+        expect(withColumn({ subPath: "note", tones: { paid: "success", open: "warning" } })).toBe(true)
+        expect(withColumn({ tones: { paid: "purple" } })).toBe(false)
+        expect(
+            withColumn({
+                tones: Object.fromEntries(Array.from({ length: 21 }, (_, index) => [`v${index}`, "neutral"])),
+            }),
+        ).toBe(false)
+    })
+
     it("names a required rows read of a list and an optional open action", () => {
         expect(tableBlock.slots).toEqual({
             rows: { kind: "read", shape: "list", required: true },

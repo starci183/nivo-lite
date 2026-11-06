@@ -23,6 +23,11 @@ describe("figuresBlock", () => {
         expect(accepts({ ...FIGURES, items: [{ ...ITEM, format: "html" }] })).toBe(false)
     })
 
+    it("takes the path of the line under a value", () => {
+        expect(accepts({ ...FIGURES, items: [{ ...ITEM, hintPath: "note" }] })).toBe(true)
+        expect(accepts({ ...FIGURES, items: [{ ...ITEM, hintPath: "p".repeat(201) }] })).toBe(false)
+    })
+
     it("takes the currency of its money and refuses one that is no ISO code", () => {
         expect(accepts({ ...FIGURES, currency: "USD" })).toBe(true)
         expect(accepts({ ...FIGURES, currency: "dong" })).toBe(false)

@@ -7,7 +7,7 @@ describe("listPaneBlock", () => {
         expect(listPaneBlock.slots).toEqual({})
         expect(listPaneBlock.children).toEqual({
             max: 2,
-            accepts: ["core.filter-tabs", "core.record-list", "core.table"],
+            accepts: ["core.filter-tabs", "core.record-list", "core.table", "core.board"],
         })
     })
 

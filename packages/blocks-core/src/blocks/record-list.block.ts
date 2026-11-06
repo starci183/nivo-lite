@@ -2,7 +2,7 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import { PATH_MAX } from "./bounds"
+import { CHIPS_MAX, PATH_MAX } from "./bounds"
 import { labelsProp } from "./labels-prop"
 import type { LabelsSchema } from "./labels-prop"
 import { paramName } from "./param-name"
@@ -17,6 +17,8 @@ const props: z.ZodObject<{
     descriptionPath: z.ZodOptional<z.ZodString>
     badgePath: z.ZodOptional<z.ZodString>
     metaPath: z.ZodOptional<z.ZodString>
+    chipPaths: z.ZodOptional<z.ZodArray<z.ZodString>>
+    avatar: z.ZodOptional<z.ZodBoolean>
     labels: z.ZodOptional<LabelsSchema>
     emptySearch: z.ZodOptional<TextSchema>
     selectParam: z.ZodOptional<ParamNameSchema>
@@ -29,6 +31,8 @@ const props: z.ZodObject<{
     descriptionPath: z.string().max(PATH_MAX).optional(),
     badgePath: z.string().max(PATH_MAX).optional(),
     metaPath: z.string().max(PATH_MAX).optional(),
+    chipPaths: z.array(z.string().max(PATH_MAX)).max(CHIPS_MAX).optional(),
+    avatar: z.boolean().optional(),
     labels: labelsProp.optional(),
     emptySearch: specText.optional(),
     selectParam: paramName.optional(),
