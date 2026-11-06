@@ -45,10 +45,12 @@ const consoleExitOf = (input: ConsoleExitInput): string | undefined => {
 interface ConsoleGate {
     readonly session: ConsoleSessionView | undefined
     readonly isReady: boolean
+    /** The person has memberships but none in the workspace of the address: it is not theirs to open. */
+    readonly isMissing: boolean
 }
 
 /**
- * Whether the console frame may render for the workspace of the address: the session in it is read. A person with no membership at
+ * Whether the console frame may render for the workspace of the address: the session in it is read; a workspace the person is not a member of is missing (the page answers 404). A person with no membership at
  * all first gets their first workspace from the back end (created only where free signup is allowed: local and demo); when none is
  * created they are sent to the workspaces page, as is a disabled member. An unpaid workspace sends them to its payment step. A
  * workspace that opens is remembered, so the front address and the picker lead back to it.
@@ -69,8 +71,12 @@ export const useConsoleGate = (): ConsoleGate => {
         if (exit !== undefined) router.replace(exit)
     }, [exit, router])
     const isReady = session !== undefined && exit === undefined
+    const isMissing =
+        memberships.data !== undefined &&
+        memberships.data.length > 0 &&
+        !memberships.data.some((entry) => entry.workspace.id === workspaceId)
     useEffect(() => {
         if (isReady) rememberWorkspaceCookie(workspaceId)
     }, [isReady, workspaceId])
-    return { session, isReady }
+    return { session, isReady, isMissing }
 }
