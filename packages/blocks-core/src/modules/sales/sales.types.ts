@@ -1,3 +1,4 @@
+import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { OrderItems } from "../../entities/sales/order.entity"
 import type { LeadStage, OrderStatus } from "../../rules/sales"
 
@@ -144,6 +145,10 @@ export interface OrderDetail {
     readonly status: OrderStatus
     /** `owner` while the order waits for the owner, `shop` when the shop may confirm it, `done` once it is no draft. */
     readonly approval: OrderApproval
+    /** Whether the order may be confirmed now: it is a draft. The block shows the command by this flag and holds no rule. */
+    readonly canConfirm: boolean
+    /** Whether the order may be cancelled now: a draft, or a confirmed order with no payment allocated and no invoice. */
+    readonly canCancel: boolean
     /** From which amount the owner decides, VND. */
     readonly thresholdVnd: number
     /** Who confirmed it, or null. */
@@ -158,6 +163,22 @@ export interface OrderDetail {
     readonly carrier: string | null
     /** The tracking reference, or null. */
     readonly trackingCode: string | null
+}
+
+/** The stores whose records hang on an order: the payments allocated to it and the invoices issued for it. */
+export interface OrderLinkStores {
+    /** The payments. */
+    readonly transactions: EntityApi
+    /** The invoices. */
+    readonly invoices: EntityApi
+}
+
+/** The part of an order a cancellation looks at: who it is and where it stands. */
+export interface OrderStanding {
+    /** The order id. */
+    readonly id: string
+    /** The order status. */
+    readonly status: OrderStatus
 }
 
 /** The input of an action on one order. */

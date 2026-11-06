@@ -94,7 +94,7 @@
   "refusal_conflict": "Bản ghi vừa được người khác thay đổi, hãy tải lại rồi thử lại",
   "refusal_missing": "Không tìm thấy bản ghi này",
   "refusal_not_awaiting": "Khách này không còn chờ phản hồi",
-  "refusal_order_not_cancellable": "Chỉ hủy được đơn nháp",
+  "refusal_order_not_cancellable": "Đơn này không thể hủy",
   "refusal_order_not_confirmable": "Đơn này không thể xác nhận",
   "refusal_order_waits_owner": "Đơn này chờ chủ quyết định",
   "refusal_phone_required": "Cần nhập số điện thoại",
@@ -151,5 +151,9 @@
   "failed_reason_delivery": "Không gửi được tin nhắn",
   "failed_reason_invoice": "Không nối được dịch vụ hóa đơn",
   "failed_reason_timeout": "Kênh không trả lời",
-  "action_resume_run": "Chạy lại"
+  "action_resume_run": "Chạy lại",
+  "refusal_order_paid": "Đơn đã thanh toán nên không thể hủy",
+  "refusal_order_invoiced": "Đơn đã xuất hóa đơn nên không thể hủy",
+  "refusal_order_has_payment": "Đơn đã có khoản thanh toán được gán nên không thể hủy",
+  "refusal_order_has_invoice": "Đơn đã có hóa đơn nên không thể hủy"
 }

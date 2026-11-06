@@ -2,9 +2,11 @@ import { defineRead } from "@nivo-lite/agent-sdk/block"
 import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
+import { cancelVerdictOf } from "../../../rules/sales/order-status"
 import { SALES_VIEW } from "../constants"
 import { orderDetailOf } from "../details"
-import { salesLeads, salesOrders, salesSettings } from "../ports"
+import { cancelFactsOf } from "../order-links"
+import { salesInvoices, salesLeads, salesOrders, salesSettings, salesTransactions } from "../ports"
 import { leadNameOf, orderRowOf } from "../sales-records"
 import { settingsOf } from "../settings-store"
 import type { OrderDetail } from "../sales.types"
@@ -22,6 +24,8 @@ export const ORDER_DETAIL_FIELDS: ReadonlyArray<keyof OrderDetail> = [
     "amountVnd",
     "status",
     "approval",
+    "canConfirm",
+    "canCancel",
     "thresholdVnd",
     "confirmedBy",
     "confirmedAt",
@@ -40,13 +44,20 @@ export const orderRead: ReadDefinition = defineRead({
     paths: {},
     variables,
     permission: SALES_VIEW,
-    ports: { leads: salesLeads, orders: salesOrders, settings: salesSettings },
-    run: async ({ leads, orders, settings }, { id }): Promise<OrderDetail | null> => {
+    ports: {
+        leads: salesLeads,
+        orders: salesOrders,
+        settings: salesSettings,
+        transactions: salesTransactions,
+        invoices: salesInvoices,
+    },
+    run: async ({ leads, orders, settings, transactions, invoices }, { id }): Promise<OrderDetail | null> => {
         const record = await orders.get(id)
         const order = record === null ? null : orderRowOf(record)
         if (order === null) return null
         const buyer = order.leadId === null ? null : await leads.get(order.leadId)
         const customer = buyer === null ? null : leadNameOf(buyer.data)
-        return orderDetailOf(order, customer, await settingsOf(settings))
+        const verdict = cancelVerdictOf(await cancelFactsOf({ transactions, invoices }, order))
+        return orderDetailOf(order, customer, await settingsOf(settings), verdict.ok)
     },
 })
