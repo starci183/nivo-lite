@@ -80,7 +80,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         if (conversation.handledBy !== null) {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.HeldByPerson })
         }
-        if (conversation.agent.id !== turn.agentId) {
+        if (!this.speaks(turn, conversation)) {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.NotSpeaking })
         }
         const linked = recipientLinked(conversation) && !placeholderRecipient(conversation)
@@ -108,6 +108,17 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         })
         if (!receipt.delivered) return this.refused(conversation, messageId, receipt)
         return { kind: "message", id: messageId }
+    }
+
+    /**
+     * Whether the agent of the turn may speak in the conversation: it is the agent of the conversation, or the run was woken by a hand-off
+     * that the agent of the conversation made from that very conversation (the run serves it and its tag named the holder as the author).
+     * Any other agent stays refused. The conversation keeps its agent; the hand-off lends the right to speak for the run, it does not move
+     * the conversation.
+     */
+    private speaks(turn: NodeTurn, conversation: ChatTurnConversation): boolean {
+        if (conversation.agent.id === turn.agentId) return true
+        return turn.conversationId === conversation.id && turn.handedOffBy === conversation.agent.id
     }
 
     /** What a refused push ends the step with: a plan that does not allow the reply, a recipient the channel cannot reach, a channel not taking messages for now (tried again), a rejection, or an outcome nobody knows. */

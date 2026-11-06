@@ -134,6 +134,7 @@ describe("AgentGraphNodeStepService", () => {
                 locale: "en",
                 origin: "system",
                 memberId: null,
+                handedOffBy: null,
             },
             grant: { rights: [], tools: ["order.look"] },
             key: "run-1:keep",
@@ -464,12 +465,12 @@ describe("AgentGraphNodeStepService approval edge cases", () => {
     it("runs a node for a customer when the trigger came from a channel", async () => {
         const { steps, host } = await build()
         host.run.mockResolvedValue({ output: { done: true }, effects: [] })
-        const channel = { ...TRIGGER, origin: "channel", actorMemberId: "member-7" }
+        const channel = { ...TRIGGER, origin: "channel", actorMemberId: "member-7", authorAgentId: "agent-chatbot" }
 
         await steps.run(stepOf("keep", { input: { versionId: "version-1", nodeKey: "keep", trigger: channel } }))
 
         expect(host.run.mock.calls[0]?.[0]).toMatchObject({
-            turn: { origin: "customer", memberId: "member-7", conversationId: "c-1" },
+            turn: { origin: "customer", memberId: "member-7", conversationId: "c-1", handedOffBy: "agent-chatbot" },
         })
     })
 

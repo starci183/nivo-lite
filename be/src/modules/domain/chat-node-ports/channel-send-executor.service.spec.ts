@@ -345,3 +345,73 @@ describe("ChannelSendExecutorService retry and settle", () => {
         }
     })
 })
+
+describe("ChannelSendExecutorService hand-offs", () => {
+    const HOLDER = "a-holder"
+    const SALES = "a-sales"
+    const handOff = (overrides: Partial<NodeTurn> = {}): NodeTurn => ({
+        ...TURN,
+        agentId: SALES,
+        conversationId: "c1",
+        handedOffBy: HOLDER,
+        ...overrides,
+    })
+
+    it("lets the agent that the conversation's agent handed the conversation to speak in it, and the conversation keeps its agent", async () => {
+        const { executor, conversations, messages, delivery } = await build()
+        conversations.turnOf.mockResolvedValue({
+            kind: "ok",
+            value: conversation({ agent: { ...AGENT, id: HOLDER } }),
+        })
+
+        await expect(executor.execute(handOff(), SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+
+        expect(messages.storeAgentLine).toHaveBeenCalledTimes(1)
+        expect(delivery.deliver).toHaveBeenCalledTimes(1)
+    })
+
+    it("refuses a hand-off that was made from another conversation", async () => {
+        const { executor, conversations } = await build()
+        conversations.turnOf.mockResolvedValue({
+            kind: "ok",
+            value: conversation({ agent: { ...AGENT, id: HOLDER } }),
+        })
+
+        await expect(executor.execute(handOff({ conversationId: "c-other" }), SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.WrongConversation,
+        })
+        await expect(executor.execute(handOff({ conversationId: null }), SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.NotSpeaking,
+        })
+    })
+
+    it("refuses an agent that was handed the conversation by someone who does not hold it, and an agent no hand-off woke", async () => {
+        const { executor, conversations, messages } = await build()
+        conversations.turnOf.mockResolvedValue({
+            kind: "ok",
+            value: conversation({ agent: { ...AGENT, id: HOLDER } }),
+        })
+
+        await expect(executor.execute(handOff({ handedOffBy: "a-third" }), SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.NotSpeaking,
+        })
+        await expect(executor.execute(handOff({ handedOffBy: null }), SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.NotSpeaking,
+        })
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
+    })
+
+    it("sends exactly once when the hand-off run resumes: the line is stored under the same key and the push carries the same message", async () => {
+        const { executor, conversations, messages, delivery } = await build()
+        conversations.turnOf.mockResolvedValue({
+            kind: "ok",
+            value: conversation({ agent: { ...AGENT, id: HOLDER } }),
+        })
+
+        await executor.execute(handOff(), SEND, CALL)
+        await executor.execute(handOff(), SEND, CALL)
+
+        expect(messages.storeAgentLine.mock.calls.map(([line]) => line.key)).toEqual(["run:1", "run:1"])
+        expect(delivery.deliver.mock.calls.map(([request]) => request.messageId)).toEqual(["m1", "m1"])
+    })
+})
