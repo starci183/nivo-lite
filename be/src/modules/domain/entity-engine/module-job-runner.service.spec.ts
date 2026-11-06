@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentRunAlertsService } from "@modules/domain/agent-runs"
 import { JOB_CLAIMS } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { Secret } from "@modules/platform/config"
 import type { JobDefinition } from "@nivo-lite/agent-sdk/mutation"
-import { ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
+import type { EngineFailureAlerts } from "./entity-engine.contracts"
+import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityPortsService } from "./entity-ports.service"
@@ -49,7 +49,7 @@ const build = async (buildId?: string) => {
     engine.scoped.mockImplementation((_workspaceId, run) => run(TX))
     ports.portsFor.mockReturnValue({ handle: "ports" })
     const claims = mock<JobClaims>()
-    const alerts = mock<AgentRunAlertsService>()
+    const alerts = mock<EngineFailureAlerts>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleJobRunnerService,
@@ -64,7 +64,7 @@ const build = async (buildId?: string) => {
                 })(buildId === undefined ? {} : { buildId }),
             },
             { provide: JOB_CLAIMS, useValue: claims },
-            { provide: AgentRunAlertsService, useValue: alerts },
+            { provide: ENGINE_FAILURE_ALERTS, useValue: alerts },
         ],
     }).compile()
     return { runner: moduleRef.get(ModuleJobRunnerService), engine, ports, plain, plainInput, calling, claims, alerts }
