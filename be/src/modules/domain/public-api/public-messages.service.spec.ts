@@ -21,12 +21,11 @@ const MESSAGE: AcceptMessageParams = {
     authorization: AUTH,
     text: "hello",
     conversationId: "conv-1",
-    leadId: "",
     requireApproval: true,
     idempotencyKey: "idem-1",
 }
 
-const RECORDED = { id: "request-1", lead_id: null, inserted: true }
+const RECORDED = { id: "request-1", inserted: true }
 
 type Conversation = { readonly id: string; readonly lead_id: string | null } | undefined
 
@@ -47,7 +46,6 @@ const build = async (entityManager: MockEntityManager, conversation?: Conversati
     keys.authenticate.mockResolvedValue(WHO)
     const chats = mock<PublicConversationsService>()
     chats.find.mockResolvedValue(conversation)
-    chats.ofLead.mockResolvedValue(conversation)
     const moduleRef = await Test.createTestingModule({
         providers: [
             PublicMessagesService,
@@ -82,7 +80,6 @@ describe("PublicMessagesService / acceptMessage", () => {
                 suffix: messageDedupeSuffix("idem-1", "conv-1"),
                 body: {
                     conversationId: "conv-1",
-                    leadId: "lead-1",
                     text: "hello",
                     requireApproval: true,
                     source: "api:n8n",
@@ -97,35 +94,8 @@ describe("PublicMessagesService / acceptMessage", () => {
 })
 
 describe("PublicMessagesService / acceptMessage", () => {
-    it("finds the latest conversation of a customer and keys a request without an idempotency key by nothing", async () => {
-        const tx = transactionOf({ id: "conv-2", lead_id: "lead-1" }, [RECORDED])
-        const { service, chats } = await build(tx.em, tx.conversation)
-
-        await service.acceptMessage({ authorization: AUTH, text: "hello", leadId: "lead-1" })
-
-        expect(chats.ofLead).toHaveBeenCalledWith("workspace-1", "lead-1")
-        expect(ledgerWritten(tx.write)).toEqual(
-            ledgerExpected({
-                workspaceId: "workspace-1",
-                keyId: "key-1",
-                kind: "message",
-                prefix: "message:key-1:",
-                suffix: "",
-                body: {
-                    conversationId: "conv-2",
-                    leadId: "lead-1",
-                    text: "hello",
-                    requireApproval: false,
-                    source: "api:n8n",
-                },
-            }),
-        )
-    })
-})
-
-describe("PublicMessagesService / acceptMessage", () => {
     it("answers queued for a repeated idempotency key and enqueues nothing again", async () => {
-        const tx = transactionOf({ id: "conv-1", lead_id: null }, [{ id: "request-1", lead_id: null, inserted: false }])
+        const tx = transactionOf({ id: "conv-1", lead_id: null }, [{ id: "request-1", inserted: false }])
         const { service, outbox } = await build(tx.em, tx.conversation)
 
         await expect(service.acceptMessage(MESSAGE)).resolves.toEqual({
@@ -151,16 +121,6 @@ describe("PublicMessagesService / acceptMessage", () => {
         const { service } = await build(tx.em, tx.conversation)
 
         await expect(service.acceptMessage(MESSAGE)).rejects.toMatchObject({ code: PublicApiErrorCode.NotWritten })
-    })
-    it("refuses a request that names neither a conversation nor a customer", async () => {
-        const em = mockEntityManager()
-        const { service } = await build(em)
-
-        await expect(service.acceptMessage({ authorization: AUTH, text: "hello" })).rejects.toMatchObject({
-            code: PublicApiErrorCode.TargetMissing,
-        })
-
-        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })
 

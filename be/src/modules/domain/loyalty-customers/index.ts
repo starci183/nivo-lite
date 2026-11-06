@@ -1,6 +1,0 @@
-export { LoyaltyCustomersModule } from "./loyalty-customers.module"
-export { LoyaltyCustomersService } from "./loyalty-customers.service"
-export { toLoyaltyPhone } from "./policies/contact.policy"
-export type { CustomerPatch, LoyaltyCustomer } from "./loyalty-customers.contracts"
-export { customerBirthday } from "./policies/customer-birthday.policy"
-export { loyaltyCustomersEntities } from "./persistence/entities"

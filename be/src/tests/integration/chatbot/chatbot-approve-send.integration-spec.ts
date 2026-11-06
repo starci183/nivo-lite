@@ -189,7 +189,7 @@ describe("approving and refusing a proposal", () => {
         await expect(runDeliveries(scene)).rejects.toBeDefined()
         expect(await lineOf(scene, line.id)).not.toMatchObject({ deliveryStatus: "sent" })
 
-        door.answer = { ok: false, reason: "refused", message: "zalo_recipient" }
+        door.answer = { ok: false, reason: "failed", message: "zalo_recipient" }
         await runDeliveries(scene)
         expect(await lineOf(scene, line.id)).toMatchObject({
             deliveryStatus: "failed",

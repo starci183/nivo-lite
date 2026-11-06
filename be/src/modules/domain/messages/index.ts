@@ -1,9 +1,8 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
 export { MessagesReadService } from "./messages-read.service"
 export { MessageCursorsService } from "./message-cursors.service"
-export type { LineActivity, LineReader } from "./messages-read.contracts"
-export type { OptionalAgentIdentity } from "./office-lines.contracts"
-export { AGENT_DIRECTORY, InjectAgentDirectory } from "./office-lines.decorators"
+export type { LineActivity } from "./messages-read.contracts"
+export { AGENT_DIRECTORY } from "./office-lines.decorators"
 export type { AgentDirectory } from "./office-lines.port"
 export { MessagesModule } from "./messages.module"
 export { MessagesService } from "./messages.service"

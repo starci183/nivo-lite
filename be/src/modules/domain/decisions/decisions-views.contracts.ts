@@ -25,52 +25,6 @@ export interface ListWorkItemsQuery {
     readonly limit: number
 }
 
-/** The bank credit, or the customer's claim, behind a waiting reconciliation. */
-export interface ReconcilePayment {
-    /** The money, VND. */
-    readonly amount_vnd: number | null
-    /** Who paid, or who said they paid. */
-    readonly payer: string | null
-    /** The transfer content, or the claim. */
-    readonly reference: string | null
-    /** When it happened, ISO 8601. */
-    readonly occurred_at: string | null
-}
-
-/** One invoice a payment may settle, with the customer, the order and both statuses. */
-export interface ReconcileCandidate {
-    /** The invoice id. */
-    readonly id: string
-    /** The invoice number. */
-    readonly invoice_no: string
-    /** The amount, VND. */
-    readonly amount_vnd: number
-    /** The invoice status. */
-    readonly status: string
-    /** The customer's name. */
-    readonly customer: string | null
-    /** The customer's company. */
-    readonly company: string | null
-    /** The order number. */
-    readonly order_no: string | null
-    /** What the order contains. */
-    readonly order_items: string | null
-    /** The order status. */
-    readonly order_status: string | null
-    /** When the invoice was issued, ISO 8601. */
-    readonly issued_at: string | null
-    /** When the invoice is due, ISO 8601. */
-    readonly due_at: string | null
-}
-
-/** What the owner checks before matching a payment to an invoice. */
-export interface ReconcileDetails {
-    /** The payment or the claim. */
-    readonly payment: ReconcilePayment
-    /** The invoices NIVO proposes, in the proposal's order. */
-    readonly candidates: ReadonlyArray<ReconcileCandidate>
-}
-
 /** One page of work items, newest first. */
 export interface WorkItemPage {
     /** The items of the page. */
@@ -93,9 +47,6 @@ export interface AuthoritySheet {
     readonly rules: ReadonlyArray<AuthorityRuleRecord>
 }
 
-/** Which decisions the history lists. */
-export type DecisionHistoryKind = "all" | "policy" | "human" | "rejected"
-
 /** One line of the decision log. */
 export interface DecisionRecord {
     /** The id. */
@@ -104,8 +55,6 @@ export interface DecisionRecord {
     readonly work_item_id: string | null
     /** The customer it was about. */
     readonly lead_id: string | null
-    /** The customer name, when there is one. */
-    readonly leadName: string | null
     /** The module. */
     readonly department: string
     /** The action key. */

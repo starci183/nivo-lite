@@ -31,8 +31,6 @@ export interface InstanceHeaderView {
     readonly needs: ConnectionNeedsProps
     /** The next step of an agent that is not set up: the button to Setup; null when it is set up, when the owner is already there or may not set up. */
     readonly setup: { readonly label: string; readonly href: string } | null
-    /** The 1:1 chat with the agent; null while the instance has no agent. */
-    readonly chatHref: string | null
     /** The profile of the agent that drives this instance; null while the instance has no agent. */
     readonly profileHref: string | null
     /** The packaging page of this agent's workflow; null for a person who may not package. */
@@ -68,7 +66,6 @@ export interface AgentInstanceFrameBaseProps {
         readonly hasPanes: boolean
         readonly ariaLabel: string
         readonly earlyLabel: string
-        readonly chatLabel: string
         readonly profileLabel: string
         readonly packageLabel: string
         /** A short soft notice carried by a redirect to this tab (staff sent from Setup); empty when none. */
@@ -158,11 +155,6 @@ const HeaderActions = (props: HeaderPartProps) => {
             {copy.view.setup === null ? null : (
                 <Button intent="commit" href={copy.view.setup.href}>
                     {copy.view.setup.label}
-                </Button>
-            )}
-            {copy.view.chatHref === null ? null : (
-                <Button intent="neutral" href={copy.view.chatHref}>
-                    {copy.chatLabel}
                 </Button>
             )}
             {entries.length === 0 ? null : (

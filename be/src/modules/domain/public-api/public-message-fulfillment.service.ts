@@ -35,7 +35,7 @@ export class PublicMessageFulfillmentService {
         manager: EntityManager,
         dedupeKey: string = `api.message:${requestId}`,
         recordEvidence: boolean = true,
-    ): Promise<string | null> {
+    ): Promise<void> {
         const conversation = await this.conversations.find(workspaceId, body.conversationId)
         if (conversation === undefined) throw new PublicApiError({ code: PublicApiErrorCode.ConversationNotFound })
         const ctx: WorkContext = { workspaceId, actor: body.source, locale: "en" }
@@ -81,6 +81,5 @@ export class PublicMessageFulfillmentService {
                 },
                 manager,
             )
-        return conversation.lead_id
     }
 }

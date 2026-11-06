@@ -99,21 +99,6 @@ describe("MessagesReadService > activityOfRooms", () => {
     })
 })
 
-describe("MessagesReadService > unreadOfLeads", () => {
-    it("answers the customer conversations with unread lines in lead order, bounded", async () => {
-        const em = mockEntityManager()
-        const [read] = queueSubQueryBuilders(em, [{ getRawMany: [{ scope: "l-1", unread: 2, mentions: null }] }])
-
-        await expect(
-            (await build(em)).unreadOfLeads("ws-1", READER, [{ key: "l-1", readAt: null }], 500),
-        ).resolves.toEqual([{ lead_id: "l-1", unread: 2 }])
-        expect(read?.argsOf("groupBy")).toContainEqual(["m.lead_id"])
-        expect(read?.argsOf("andWhere")).toContainEqual(["m.lead_id IS NOT NULL"])
-        expect(read?.argsOf("orderBy")).toContainEqual(["m.lead_id"])
-        expect(read?.argsOf("limit")).toContainEqual([500])
-    })
-})
-
 describe("MessagesReadService > page", () => {
     it("reads the newest lines of the workspace, one more than the page size", async () => {
         const em = mockEntityManager()

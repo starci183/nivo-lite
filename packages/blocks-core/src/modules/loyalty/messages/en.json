@@ -84,8 +84,8 @@
   "members_empty": "No members yet. Sync them from your leads.",
   "members_empty_search": "No member matches the search",
   "members_label": "Members",
-  "members_last_purchase": "last bought {count}",
-  "members_points": "{count} points",
+  "members_last_purchase": "last bought '{count}'",
+  "members_points": "'{count}' points",
   "members_sort_label": "Sort:",
   "members_sort_name": "Name A to Z",
   "members_sort_points": "Most points",
@@ -214,5 +214,13 @@
   "tiers_label": "Membership tiers",
   "trigger_order": "A confirmed order",
   "trigger_payment": "A payment",
-  "waiting_owner": "Waiting for you"
+  "waiting_owner": "Waiting for you",
+  "campaign_waiting": "Drafting",
+  "campaign_draft": "Draft",
+  "campaign_waiting_decision": "Waiting for you",
+  "campaign_sending": "Sending",
+  "campaign_done": "Sent",
+  "campaign_failed": "Failed",
+  "state_on": "On",
+  "state_off": "Off"
 }

@@ -3,11 +3,9 @@ import type { DynamicModule } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
-import { LeadReadService } from "@modules/domain/leads"
 import { MessagesReadService, OfficeCardsService } from "@modules/domain/messages"
 import {
     OFFICE_ROOMS_AGENTS,
-    OFFICE_ROOMS_LEADS,
     OfficeRoomMembersService,
     OfficeRoomReadsService,
     OfficeRoomsService,
@@ -31,9 +29,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
         WorkspaceMembersReadService,
         MessagesReadService,
         AgentDirectoryService,
-        LeadReadService,
         { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
-        { provide: OFFICE_ROOMS_LEADS, useExisting: LeadReadService },
         EventsService,
         StaffService,
         StaffDirectoryService,

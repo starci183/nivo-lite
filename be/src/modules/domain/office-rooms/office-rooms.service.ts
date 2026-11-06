@@ -8,14 +8,7 @@ import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/da
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsError, OfficeRoomsErrorCode } from "./errors/office-rooms.error"
-import type {
-    ConversationUnreadFacts,
-    ConversationUnreadListView,
-    RoomChoice,
-    RoomView,
-} from "./office-rooms.contracts"
-import { InjectRoomsAgents, InjectRoomsLeads } from "./office-rooms.decorators"
-import type { RoomsAgents, RoomsLeads } from "./office-rooms.port"
+import type { RoomChoice, RoomView } from "./office-rooms.contracts"
 import { OfficeRoomMembersService } from "./office-room-members.service"
 import { OfficeRoomReadsService } from "./office-room-reads.service"
 
@@ -24,15 +17,9 @@ const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 /** The read marker key of the general Office room. */
 const OFFICE_READ_KEY = ""
 
-/** How a conversation id is written: the lowercase text of a uuid, as the stored ids render. */
-const CONVERSATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
-
 /** The function that records a read marker, and the one that opens the rooms of a workspace. */
 const MARK_READ = "public.mark_office_room_read"
 const ENSURE_ROOMS = "public.ensure_office_rooms"
-
-/** Only the conversations with unseen lines, as the badge contract reads them. */
-const withUnread = (rows: ReadonlyArray<ConversationUnreadFacts>) => rows.filter((row) => row.unread > 0)
 
 @Injectable()
 /** The Hub rooms: the general Office room first, then the department rooms, each with the caller's unread count. */
@@ -45,8 +32,6 @@ export class OfficeRoomsService {
         private readonly activity: ChatActivityService,
         private readonly reads: OfficeRoomReadsService,
         private readonly seats: OfficeRoomMembersService,
-        @InjectRoomsAgents() private readonly agents: RoomsAgents,
-        @InjectRoomsLeads() private readonly leads: RoomsLeads,
     ) {}
 
     /** The rooms the caller sees; a workspace without department rooms answers the Office room alone. */
@@ -73,30 +58,6 @@ export class OfficeRoomsService {
             members: memberViews.get(null) ?? emptyMembers,
         }
         return [office, ...rows.map((row): RoomView => ({ ...row, members: memberViews.get(row.key) ?? emptyMembers }))]
-    }
-
-    /** The caller's direct conversations: the unread customer ones. */
-    async unread(principalId: string, workspaceId: string): Promise<ConversationUnreadListView> {
-        const member = await this.members.require(principalId, workspaceId)
-        const leads = await this.reads.leadConversations(workspaceId, member.userId, member.displayName)
-        return { leads: withUnread(leads) }
-    }
-
-    /** Marks a direct conversation read by the caller up to now; a wrong kind or an id outside the workspace is refused. */
-    async markConversationRead(principalId: string, workspaceId: string, kind: string, id: string): Promise<void> {
-        const member = await this.members.require(principalId, workspaceId)
-        if (!(await this.belongs(workspaceId, kind, id)))
-            throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.ConversationInvalid, params: { id } })
-        await callDbFunction(this.entityManager, MARK_READ, [workspaceId, member.userId, `${kind}:${id}`])
-        await this.activity.unread(workspaceId, `${kind}:${id}`, member.userId)
-    }
-
-    /** Whether the agent or lead of the conversation is one of the workspace; the owner capability answers. */
-    private async belongs(workspaceId: string, kind: string, id: string): Promise<boolean> {
-        if (!CONVERSATION_ID.test(id)) return false
-        if (kind === "agent") return (await this.agents.find(workspaceId, id)) !== null
-        if (kind === "lead") return this.leads.exists(workspaceId, id)
-        return false
     }
 
     /** Marks a room (null = the Office room) read by the caller up to now. */

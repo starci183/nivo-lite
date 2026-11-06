@@ -1,11 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { LeadReadService } from "@modules/domain/leads"
-import { WorkItemsLeadReadService } from "@modules/domain/work-items"
 import { CommandPlannerService } from "./command-planner.service"
 import type { SendCommandInput, WorkContext, WorkItem } from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
-import { InjectLeadGenFlow } from "./work-engine.decorators"
-import type { LeadGenFlow } from "./work-engine.port"
 import { WorkIntakeService } from "./work-intake.service"
 
 @Injectable()
@@ -16,9 +12,6 @@ import { WorkIntakeService } from "./work-intake.service"
  */
 export class WorkChainService {
     constructor(
-        private readonly leads: LeadReadService,
-        private readonly waitingWork: WorkItemsLeadReadService,
-        @InjectLeadGenFlow() private readonly leadGen: LeadGenFlow,
         private readonly modules: ModuleCatalogService,
         private readonly planner: CommandPlannerService,
         private readonly intake: WorkIntakeService,
@@ -26,11 +19,6 @@ export class WorkChainService {
 
     /** Queues the next department's step for a finished item. */
     async continueChain(ctx: WorkContext, item: WorkItem): Promise<void> {
-        // Lead generation steps chain by the lead flow's own state machine; only the hand-off to sales uses the generic loop.
-        if (item.department === "lead_gen" && item.action !== "handoff_to_sales") {
-            await this.leadGen.continueAfter(ctx, item)
-            return
-        }
         const entry = await this.modules.actionOf(item.action)
         await this.each(ctx, item, entry?.next ?? [])
     }
@@ -61,22 +49,7 @@ export class WorkChainService {
             queue: true,
         } as const
         const leadId = item.lead_id
-        if (next === "classify_lead" && leadId !== null) {
-            await this.enqueue(ctx, {
-                ...chain,
-                reason: "handoff",
-                dedupeKey: `classify_lead:after:${item.id}`,
-                payload: { subject_type: "lead", subject_id: leadId, lead_id: leadId },
-            })
-        } else if (next === "send_follow_up" && leadId !== null) {
-            if (!(await this.followUpWanted(ctx, item, leadId))) return
-            await this.enqueue(ctx, {
-                ...chain,
-                reason: "classified",
-                dedupeKey: `send_follow_up:after:${item.id}`,
-                payload: { subject_type: "lead", subject_id: leadId, lead_id: leadId },
-            })
-        } else if (next === "issue_invoice" && item.subject_type === "order" && item.subject_id !== null) {
+        if (next === "issue_invoice" && item.subject_type === "order" && item.subject_id !== null) {
             await this.enqueue(ctx, {
                 ...chain,
                 reason: "order_confirmed",
@@ -103,14 +76,6 @@ export class WorkChainService {
 
     private isPaymentSubject(item: WorkItem): boolean {
         return item.subject_type === "transaction" || item.subject_type === "invoice"
-    }
-
-    /** A lost lead, a customer who already bought and a customer with a follow-up already waiting get no new follow-up. */
-    private async followUpWanted(ctx: WorkContext, item: WorkItem, leadId: string): Promise<boolean> {
-        if (item.proposal.fields.stage === "lost") return false
-        const [lead] = await this.leads.cardsOf(ctx.workspaceId, [leadId])
-        if (lead?.stage === "won") return false
-        return !(await this.waitingWork.hasWaiting(ctx.workspaceId, leadId, "send_follow_up"))
     }
 
     /** A hand-off is a typed command: a refusal is logged by the planner and never stops the finished item. */

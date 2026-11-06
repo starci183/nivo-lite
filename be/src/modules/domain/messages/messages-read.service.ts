@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
-    LeadUnread,
     LineActivity,
     LinePageQuery,
     LineReader,
@@ -100,21 +99,6 @@ export class MessagesReadService {
         const unreadOf = new Map(unread.map((row) => [row.scope, row]))
         const newestOf = new Map(newest.map((row) => [row.room, row]))
         return new Map(rooms.map((room) => [room, activityOf(unreadOf.get(room), newestOf.get(room))]))
-    }
-
-    /** The customer conversations with lines the caller has not read, in lead order, bounded. */
-    async unreadOfLeads(
-        workspaceId: string,
-        reader: LineReader,
-        marks: ReadonlyArray<ReadMark>,
-        limit: number,
-    ): Promise<Array<LeadUnread>> {
-        const rows = await this.unreadBy("m.lead_id", workspaceId, reader, marks)
-            .andWhere("m.lead_id IS NOT NULL")
-            .orderBy("m.lead_id")
-            .limit(limit)
-            .getRawMany<UnreadRaw>()
-        return rows.map((row) => ({ lead_id: row.scope, unread: row.unread }))
     }
 
     /** One page of the thread, newest first: one line more than asked, so the caller can tell whether an older page exists. */

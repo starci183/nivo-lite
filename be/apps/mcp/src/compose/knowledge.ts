@@ -63,7 +63,7 @@ export const mcpKnowledgeModules = (options: McpAppOptions): Array<DynamicModule
         buildId: options.entityEngine.buildId,
     }),
     ChatRecordsModule.register({ isGlobal: true }),
-    NativeToolsModule.register({ isGlobal: true, customer: true, leadReader: true }),
+    NativeToolsModule.register({ isGlobal: true }),
 ]
 
 /** The error kinds of the capabilities this group registers. */

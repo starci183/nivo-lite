@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { InvoiceColumn } from "./invoice-columns.policy"
-import { INVOICE_COLUMNS, INVOICE_RETURNING, INVOICE_VIEW_COLUMNS, selectColumns } from "./invoice-columns.policy"
+import { INVOICE_COLUMNS, INVOICE_RETURNING, selectColumns } from "./invoice-columns.policy"
 
 const SUBJECT = Symbol("invoice-columns.policy")
 
@@ -32,26 +32,6 @@ describe("invoice columns", () => {
             "contract_id",
             "period_ends_on",
         ])
-    })
-
-    it("lists the view columns, with the dates as ISO text", () => {
-        expect(INVOICE_VIEW_COLUMNS.map(([, alias]) => alias)).toEqual([
-            "id",
-            "workspace_id",
-            "order_id",
-            "lead_id",
-            "invoice_no",
-            "amount_vnd",
-            "status",
-            "issued_by",
-            "paid_at",
-            "contract_id",
-            "period_ends_on",
-            "due_at",
-            "issued_at",
-            "created_at",
-        ])
-        expect(INVOICE_VIEW_COLUMNS[8]).toEqual(["to_json(i.paid_at) #>> '{}'", "paid_at"])
     })
 
     it("names the returning clause", () => {

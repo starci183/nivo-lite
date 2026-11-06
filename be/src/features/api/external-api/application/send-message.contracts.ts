@@ -5,9 +5,7 @@ export interface SendMessageRequest {
     /** The text to send. */
     readonly text: string
     /** The customer conversation to message. */
-    readonly conversationId?: string | undefined
-    /** The customer whose latest conversation to use when no conversation is named. */
-    readonly leadId?: string | undefined
+    readonly conversationId: string
     /** True forces a waiting decision whatever the owner's rule says. */
     readonly requireApproval?: boolean | undefined
     /** The caller's Idempotency-Key header. */

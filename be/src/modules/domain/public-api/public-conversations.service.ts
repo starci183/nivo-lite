@@ -19,10 +19,4 @@ export class PublicConversationsService {
         const chat = await this.chats.humanOf(workspaceId, conversationId)
         return chat === null ? undefined : { id: chat.id, lead_id: chat.leadId }
     }
-
-    /** The latest customer conversation of a customer. */
-    async ofLead(workspaceId: string, leadId: string): Promise<PublicConversationRef | undefined> {
-        const [chat] = await this.chats.ofLeads(workspaceId, [leadId])
-        return chat === undefined ? undefined : { id: chat.id, lead_id: chat.leadId }
-    }
 }

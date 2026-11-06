@@ -278,7 +278,12 @@ describe("loyalty.record-purchase", () => {
             points: 200,
             tierKey: "dong",
         })
-        expect(created?.data).toMatchObject({ contact: "84922111000", tier: "\u0110\u1ed3ng", activity: "active" })
+        expect(created?.data).toMatchObject({
+            lastActivityAt: "2026-11-05T05:00:00.000Z",
+            contact: "84922111000",
+            tier: "\u0110\u1ed3ng",
+            activity: "active",
+        })
         expect(lastEntry(world)).toMatchObject({
             kind: "earn",
             points: 200,
