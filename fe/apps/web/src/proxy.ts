@@ -28,8 +28,8 @@ const PUBLIC_PATHS = [
     "/j",
     "/l",
     "/health",
-    // A prototype build answers the workbench from fixtures, with no back end to sign in to.
-    ...(isPrototypeMode() ? ["/w"] : []),
+    // A prototype build answers the agent pages from fixtures, with no back end to sign in to (the url with or without its locale).
+    ...(isPrototypeMode() ? ["/agents", ...i18n.locales.map((locale) => `/${locale}/agents`)] : []),
 ] // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
 
 // Every path is served from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides);
