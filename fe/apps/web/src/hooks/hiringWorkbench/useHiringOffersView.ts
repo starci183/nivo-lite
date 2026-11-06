@@ -92,7 +92,7 @@ export const useHiringOffersView = (input: HiringViewInput): HiringOffersViewSha
     const props = {
         copy: input.copy,
         approveLabel: data.waitingApprovals > 0 ? t("offersApproveAll", { n: data.waitingApprovals }) : null,
-        decisionsHref: workspaceHref(workspaceId, CONSOLE_ROUTES.decisions),
+        decisionsHref: workspaceHref(workspaceId, CONSOLE_ROUTES.chat),
         fact: t("offersFact", { n: data.offers.length }),
         rows: data.offers.map(rowOf),
         isBusy: view.isPending,

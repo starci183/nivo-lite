@@ -19,8 +19,6 @@ export const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
     { id: "overview", path: "/dashboard" },
     { id: "authority", path: "/authority" },
     { id: "inbox", path: "/inbox" },
-    { id: "responsibilities", path: "/responsibilities" },
-    { id: "decisions", path: "/decisions" },
     { id: "automations", path: "/automations", managerOnly: true },
     { id: "knowledge", path: "/knowledge", managerOnly: true },
     { id: "brain", path: "/brain" },

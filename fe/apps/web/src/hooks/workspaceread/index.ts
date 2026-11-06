@@ -1,4 +1,4 @@
-export { jobPolling, noData } from "./workspaceread.shared"
+export { noData } from "./workspaceread.shared"
 
 export type { StatusPollOptions } from "./workspaceread.shared"
 export { answeredData, readError } from "./workspaceread.shared"

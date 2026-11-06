@@ -15,11 +15,8 @@ export type ConsoleDestination = {
     readonly label:
         | "navOverview"
         | "navOffice"
-        | "navThreads"
         | "navAuthority"
         | "navInbox"
-        | "navResponsibilities"
-        | "navDecisions"
         | "navAutomations"
         | "navBrain"
         | "navModules"
@@ -41,18 +38,9 @@ export type ConsoleDestination = {
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "chat", label: "navOffice", route: OFFICE_ROUTE, icon: "community", group: "work" },
     { key: "overview", label: "navOverview", route: "/dashboard", icon: "overview", group: "work" },
-    { key: "threads", label: "navThreads", route: "/threads", icon: "review", group: "work" },
-    {
-        key: "responsibilities",
-        label: "navResponsibilities",
-        route: "/responsibilities",
-        icon: "review",
-        group: "work",
-    },
     { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
     { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
     { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
-    { key: "decisions", label: "navDecisions", route: "/decisions", icon: "saved", group: "operate" },
     {
         key: "automations",
         label: "navAutomations",

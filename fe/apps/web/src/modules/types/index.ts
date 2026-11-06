@@ -123,14 +123,7 @@ export type {
     TemplateExecutor,
     TemplatePack,
 } from "./automations"
-export type {
-    DeciderKind,
-    DecisionKind,
-    DecisionOutcome,
-    DecisionRecord,
-    GateReason,
-    DecisionHistoryRowView,
-} from "./decisions"
+export type { DecisionKind, DecisionOutcome } from "./decisions"
 
 export type {
     LeadGenComment,
@@ -257,27 +250,9 @@ export type { CreditsData, CreditsOverviewView, CreditsHistoryRow, PayOrder, Pay
 export type { GraphQLResponse } from "./outcome"
 export type { SetupWriteDraft } from "./setup-write-draft"
 export type { ModuleIconName } from "./module-icon"
-export type {
-    ApprovalExpiryView,
-    ThreadApprovalCardView,
-    BodySegment,
-    ChainPanelView,
-    ComposerOption,
-    StatusTone,
-    ThreadApprovalLabels,
-    ThreadChainLabels,
-    ThreadFeedView,
-    ThreadMessageView,
-    ThreadRailForm,
-    ThreadRowView,
-    WorkThreadBoardHandlers,
-    WorkThreadBoardView,
-} from "./work-threads"
 export type { ProfileRegionBaseProps } from "./agent-profile"
 export type { AdminBadgeView, AdminCardView, AdminInviteRef, AdminRowView, AdminWorkspaceRowView } from "./admin"
 export type { BillingPlanView, BillingRowView, BillingTone, PlanCardView, PlanGroupView } from "./billing"
-export type { OwnerGroupView, ResponsibilityRowView, RowStatus } from "./responsibilities"
-export type { ResponsibilitiesBoardCopy, ResponsibilityOpenedView } from "./responsibilities"
 export type {
     SetupGatesCardProps,
     SetupSideGate,
