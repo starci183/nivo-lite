@@ -442,6 +442,7 @@
         "records_loyalty_member_contact_chk",
         "records_loyalty_member_email_chk",
         "records_loyalty_member_joined_at_chk",
+        "records_loyalty_member_last_activity_at_chk",
         "records_loyalty_member_last_visit_at_chk",
         "records_loyalty_member_lead_id_chk",
         "records_loyalty_member_lifetime_spend_vnd_chk",
