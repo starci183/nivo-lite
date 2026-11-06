@@ -1,0 +1,66 @@
+import { defineAction } from "@nivo-lite/agent-sdk/block"
+import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
+import { outboxPort } from "@nivo-lite/agent-sdk/mutation"
+import { z } from "zod"
+import { OTHER_INCOME_KIND, RESOLVE_COMMAND, otherIncomeDecision } from "../../../rules/accounting/resolve"
+import type { OtherIncomeRefusal } from "../../../rules/accounting/resolve"
+import { SOURCE_TRANSACTION } from "../../../rules/accounting/posting"
+import { transactionById } from "../accounting-data"
+import { bookProjectJob } from "../jobs/book-project.job"
+import { textOf } from "../messages/copy"
+import { CLAIMS, ORDERS, TRANSACTIONS } from "../ports"
+import { settleOnOrder } from "./settle.action"
+
+const values: z.ZodUnion<
+    readonly [
+        z.ZodObject<{ order: z.ZodUUID }, z.core.$strict>,
+        z.ZodObject<{ kind: z.ZodLiteral<typeof OTHER_INCOME_KIND> }, z.core.$strict>,
+    ]
+> = z.union([z.object({ order: z.uuid() }).strict(), z.object({ kind: z.literal(OTHER_INCOME_KIND) }).strict()])
+
+const input: z.ZodObject<{
+    id: z.ZodUUID
+    command: z.ZodLiteral<typeof RESOLVE_COMMAND>
+    values: typeof values
+}> = z.object({
+    id: z.uuid(),
+    command: z.literal(RESOLVE_COMMAND),
+    values,
+})
+
+const refused = (reason: OtherIncomeRefusal): ActionResult => ({
+    ok: false,
+    reason: "refused",
+    message: textOf(`resolve_${reason}`),
+    data: { reason },
+})
+
+/**
+ * `accounting.resolve-unmatched-payment`: the owner resolves a payment nobody tied to an order, from its approval row. `id` is the bank
+ * transaction. `values: { order }` ties it to that order through the normal payment path (the same writes and refusals as
+ * `payment.settle`); `values: { kind: "other-income" }` records it as other income: the payment leaves the queue and its book entry is
+ * projected. It writes records only: no door and no assistant. A payment that is gone, money out or already resolved is refused as data.
+ */
+export const resolveUnmatchedPaymentAction: ActionDefinition = defineAction({
+    id: "accounting.resolve-unmatched-payment",
+    permission: "accounting.manage",
+    label: textOf("resolve_unmatched"),
+    input,
+    ports: { transactions: TRANSACTIONS, orders: ORDERS, claims: CLAIMS, outbox: outboxPort },
+    transactional: true,
+    refreshes: ["accounting.decisions", "accounting.figures", "accounting.entries", "accounting.ledger"],
+    run: async (ports, { id, values: chosen }): Promise<ActionResult> => {
+        if ("order" in chosen) return settleOnOrder(ports, { transactionId: id, orderId: chosen.order })
+        const decision = otherIncomeDecision(await transactionById(ports.transactions, id))
+        if (decision.kind === "refuse") return refused(decision.reason)
+        const { transaction } = decision
+        const written = await ports.transactions.update(transaction.id, transaction.version, { status: "other_income" })
+        if (!written.ok) return { ok: false, reason: "conflict", message: textOf("settle_stale") }
+        await ports.outbox.enqueue(
+            bookProjectJob,
+            { sourceEntity: SOURCE_TRANSACTION, sourceId: transaction.id },
+            { dedupeKey: `book:${SOURCE_TRANSACTION}:${transaction.id}` },
+        )
+        return { ok: true, data: { result: "other-income", transactionId: transaction.id } }
+    },
+})

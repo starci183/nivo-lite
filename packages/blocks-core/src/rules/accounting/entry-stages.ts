@@ -129,7 +129,7 @@ export const adjustTargetOf = (entry: EntrySource): AdjustTarget | null => {
 const KNOWN_STATES: Readonly<Record<LineageKind, ReadonlyArray<string>>> = {
     order: ["draft", "confirmed", "invoiced", "paid", "cancelled"],
     invoice: ["draft", "issued", "paid", "void"],
-    payment: ["unmatched", "matched", "needs_review"],
+    payment: ["unmatched", "matched", "needs_review", "other_income"],
     adjustment: [],
 }
 

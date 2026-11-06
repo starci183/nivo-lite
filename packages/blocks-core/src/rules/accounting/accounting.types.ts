@@ -1,7 +1,7 @@
 import type { EntryStatus } from "./entry-status"
 
 /** Where a bank transaction stands against what it paid. */
-export type TransactionStatus = "unmatched" | "matched" | "needs_review"
+export type TransactionStatus = "unmatched" | "matched" | "needs_review" | "other_income"
 
 /** Money in (`credit`) or out (`debit`) of the workspace's account. */
 export type TransactionDirection = "credit" | "debit"
