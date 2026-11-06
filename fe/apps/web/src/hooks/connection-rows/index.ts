@@ -1,6 +1,5 @@
 export {
     alertsOf,
-    canReopen,
     dialogOf,
     connectionFactsOf,
     menuOf,

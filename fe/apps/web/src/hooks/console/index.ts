@@ -1,5 +1,4 @@
 export { useConsoleNav } from "./useConsoleNav"
-export { useConsoleShell } from "./useConsoleShell"
 export { useSignOut } from "./useSignOut"
 export { useConsoleSession } from "./useConsoleSession"
 export { useConsoleSessionRead } from "./useConsoleSessionRead"

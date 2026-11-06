@@ -5,7 +5,7 @@ import { BRAIN_STRIP_TABS, brainStripTabOf, brainTabHref, workspaceHref } from "
 import type { BrainStripTab, BrainTab } from "@/modules/routes"
 import type { BrainPageHeading, BrainPageHeaderView } from "@/modules/types"
 import { useBrain } from "./useBrain"
-import { useBrainTodoCount } from "./useBrainTodoCount"
+import { useBrainTodoCount } from "@/hooks/knowledge"
 import { useBrainPageActions } from "./useBrainPageActions"
 import { useWorkspaceId } from "@/hooks/workspaces"
 

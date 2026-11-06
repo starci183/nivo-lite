@@ -2,10 +2,8 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import {
-    DOCUMENT_STATUS_KEYS,
     DOCUMENT_STATUS_TONE,
     isAgentModule,
-    isDocumentActive,
     isDuplicateNote,
     isFinalFailure,
     isReadyNote,
@@ -14,9 +12,10 @@ import {
     useLibraryCommands,
     useWorkspaceMember,
 } from "@/hooks/knowledge"
-import { appliedBatchOf, waitingFactCountOf } from "@/modules/brain"
+import { appliedBatchOf, sourceStatusLabelOf, waitingFactCountOf } from "@/modules/brain"
+import type { SourceStatusInput } from "@/modules/brain"
 import type { DocumentRowBadgeView, DocumentRowView, LiveProgress } from "@/modules/documents"
-import type { BrainExtraction, KnowledgeDocument, RowActionView } from "@/modules/types"
+import type { KnowledgeDocument, RowActionView } from "@/modules/types"
 import { toast } from "@/modules/toast"
 import { useBrainBoard } from "./useBrainBoard"
 import type { BrainBoard } from "./useBrainBoard"
@@ -24,25 +23,7 @@ import type { WorkspaceMember } from "@/hooks/knowledge"
 
 type Translate = ReturnType<typeof useTranslations<"knowledge">>
 
-interface SourceStatusInput {
-    readonly source: KnowledgeDocument
-    readonly reading: BrainExtraction["status"] | undefined
-    readonly learnedFacts: number | null
-}
 type SourceBadgesInput = Pick<SourceStatusInput, "source" | "reading"> & { readonly status: string }
-
-/**
- * Where a document stands in one word: still being read, learnt (with how many facts it gave, when the viewer may see them),
- * failed, or what else holds it back.
- */
-const statusLabelOf = (t: Translate, input: SourceStatusInput): string => {
-    const { source, reading, learnedFacts } = input
-    if (isDocumentActive(source.status)) return t("libReading")
-    if (source.status === "failed") return t("libFailed")
-    if (source.status !== "ready") return t(DOCUMENT_STATUS_KEYS[source.status])
-    if (reading !== "done") return t("libFactsNone")
-    return learnedFacts === null ? t("libLearnedPlain") : t("libLearned", { count: learnedFacts })
-}
 
 /** The agent a document is kept for, or every agent. */
 const moduleLabelOf = (t: Translate, source: KnowledgeDocument): string =>
@@ -138,7 +119,11 @@ export const useKnowledgeRowOf = (live: Readonly<Record<string, LiveProgress>>):
             ...(source.partCount > 1 ? [t("docParts", { count: source.partCount })] : []),
         ]
         const reading = board.extractions.find((one) => one.sourceId === source.id)?.status
-        const status = statusLabelOf(t, { source, reading, learnedFacts: member.canWrite ? factsOf(source) : null })
+        const status = sourceStatusLabelOf(t, {
+            source,
+            reading,
+            learnedFacts: member.canWrite ? factsOf(source) : null,
+        })
         const failedNote = source.status === "failed" ? source.error : null
         const canRetry =
             member.canWrite && failedNote !== null && !isReadyNote(failedNote) && !isFinalFailure(failedNote)

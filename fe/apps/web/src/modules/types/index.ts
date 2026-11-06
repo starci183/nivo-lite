@@ -27,7 +27,7 @@ export type {
 export type { ConsoleIconName, ConsoleNavItem, ConsoleSessionView, ConsoleWorkspace } from "./console"
 export { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "./console"
 export type { Access, Environment, Provider, ProviderKind, Purpose, AgentOption, Connection } from "./connections"
-export type { ConnectionAgentRowView, ConnectionStatus, ConnectionTone, ConnectionCheck } from "./connections"
+export type { ConnectionStatus, ConnectionTone, ConnectionCheck } from "./connections"
 export type { ConnectionFactView, ConnectionHeadView, ConnectionPageHeadView } from "./connections"
 export type { ConnectionPageHeadCommands, ConnectionLineView, ConnectionRailLinesView } from "./connections"
 export type { ConnectionRefusalView, ConnectionNotice, ConnectionTilesView, ConnectorAudience } from "./connections"
