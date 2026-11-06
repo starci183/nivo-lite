@@ -28,6 +28,7 @@ entries:
     mode: upsert
     after: [nivo-workspace]
     schema: be/src/modules/domain/channel-provisioning/catalogue-seed.schema.json
+  # The demo shop "Tiệm hoa Nắng Mai" (a fictional business, no real address, phone or person) for the real flow F walk; four public documents (introduction and hours, products and prices, delivery, payment and returns) and two internal ones (order handling, replying and the discount limit) are kept as knowledge sources and indexed like any document.
   - id: brain-tiem-hoa
     kind: data
     path: data/brain-tiem-hoa.json
@@ -35,7 +36,7 @@ entries:
     mode: upsert
     after: [nivo-workspace]
     schema: be/src/modules/domain/channel-provisioning/brain-seed.schema.json
-    reason: The demo shop "Tiệm hoa Nắng Mai" (a fictional business, no real address, phone or person) for the real flow F walk; four public documents (introduction and hours, products and prices, delivery, payment and returns) and two internal ones (order handling, replying and the discount limit) are kept as knowledge sources and indexed like any document.
+  # The Sales rules of the demo shop written through the entity engine (maxDiscountPct 10 and the 5.000.000 VND owner threshold), so the internal Brain document about the discount limit and the setting cannot drift.
   - id: records-tiem-hoa
     kind: data
     path: data/records-tiem-hoa.json
@@ -43,4 +44,3 @@ entries:
     mode: upsert
     after: [nivo-workspace]
     schema: be/src/modules/domain/channel-provisioning/records-seed.schema.json
-    reason: The Sales rules of the demo shop written through the entity engine (maxDiscountPct 10 and the 5.000.000 VND owner threshold), so the internal Brain document about the discount limit and the setting cannot drift.
