@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { sectionBlock } from "../../blocks/section.block"
-import { InSurfaceProvider } from "../composites/InSurface"
+import { CardScopeProvider } from "../composites/CardScope"
 import { useBlockWords } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
@@ -17,9 +17,9 @@ export const SectionBlock = (props: RenderOf<typeof sectionBlock>): ReactNode =>
                         {words(hint)}
                     </Text>
                 )}
-                <InSurfaceProvider value>
+                <CardScopeProvider>
                     <Stack gap="row">{props.children}</Stack>
-                </InSurfaceProvider>
+                </CardScopeProvider>
             </Stack>
         </SurfaceCard>
     )

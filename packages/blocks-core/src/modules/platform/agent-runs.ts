@@ -24,7 +24,7 @@ export const statusesOf = (filter: RunFilter): ReadonlyArray<string> => FILTER_S
 
 /** The filter a status of the engine belongs to; a status this build does not know reads as running, so the run is still listed. */
 export const filterOf = (status: unknown): RunFilter =>
-    RUN_FILTERS.find((filter) => FILTER_STATUSES[filter].some((held) => held === status)) ?? "running"
+    RUN_FILTERS.find((filter) => typeof status === "string" && FILTER_STATUSES[filter].includes(status)) ?? "running"
 
 /** The state a run is drawn in on its timeline, by the engine status. */
 export const runStateOf = (status: unknown): RunState => {
@@ -119,6 +119,14 @@ export const runRowOf = (run: RecordRow, where: RunLocale): AgentRunRow => {
         when: whenOf(run.data["startedAt"], where),
         duration: durationOf(run.data["startedAt"], run.data["endedAt"], where.now),
     }
+}
+
+/** One page of the runs of an installation: the rows and the cursor of the next page. */
+export interface AgentRunsPage {
+    /** The runs, newest first. */
+    readonly rows: ReadonlyArray<AgentRunRow>
+    /** The cursor of the next page; null on the last. */
+    readonly cursor: string | null
 }
 
 /** The runs of an agent per filter and in all, as the filter tabs read them. */

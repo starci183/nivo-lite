@@ -1,12 +1,11 @@
 import { asideDetailBlock } from "./aside-detail.block"
 import { accountingBlocks } from "./accounting/accounting-blocks"
 import { chatbotBlocks } from "./chatbot/chatbot-blocks"
-import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
 import { listEditorBlock } from "./list-editor.block"
 import { loyaltyBlocks } from "./loyalty/loyalty-blocks"
 import { salesBlocks } from "./sales/sales-blocks"
-import { listPaneBlock } from "./list-pane.block"
+import { listCardBlock } from "./list-card.block"
 import { tabbedPanelBlock } from "./tabbed-panel.block"
 import { tableBlock } from "./table.block"
 import { graphBlock } from "./graph.block"
@@ -48,7 +47,7 @@ describe("coreBlocks", () => {
     it("lists every block once: the core ones under the core namespace, those of each module under its own", () => {
         const ids = coreBlocks.map((block) => block.id)
         expect(new Set(ids).size).toBe(ids.length)
-        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(21)
+        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(20)
         expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(chatbotBlocks.length)
         expect(ids.filter((id) => id.startsWith("accounting."))).toHaveLength(accountingBlocks.length)
     })
@@ -65,8 +64,7 @@ describe("coreBlocks", () => {
             figuresBlock,
             detailBlock,
             recordListBlock,
-            listPaneBlock,
-            filterTabsBlock,
+            listCardBlock,
             tableBlock,
             boardBlock,
             formBlock,

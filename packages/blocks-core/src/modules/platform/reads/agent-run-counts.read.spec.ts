@@ -1,9 +1,9 @@
-import { GRAPH_ROW, INSTALLATION_ID, RUNS_CONTEXT, fakeEntity, runsProvider } from "../fixtures/agent-runs.ports"
+import { GRAPH_ROW, INSTALLATION_ID, RUNS_CONTEXT, recordedEntity, runsProvider } from "../fixtures/agent-runs.ports"
 import { agentRunCountsRead } from "./agent-run-counts.read"
 
 const run = (graphs = [GRAPH_ROW]) => {
-    const graph = fakeEntity(graphs)
-    const runs = fakeEntity([], {
+    const graph = recordedEntity(graphs)
+    const runs = recordedEntity([], {
         groups: [
             { groups: { status: "done" }, measures: { count: 7 } },
             { groups: { status: "parked" }, measures: { count: 2 } },

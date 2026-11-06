@@ -36,19 +36,28 @@ const pageRow = (row: RecordRow): PageRow => ({ row, joined: {}, position: [], i
 
 const unused = (): Promise<never> => Promise.reject(new Error("unused"))
 
-/** What one fake entity answers, and what it was asked. */
-export interface FakeEntity {
+/** What a recorded entity is told to answer besides its rows. */
+export interface RecordedOptions {
+    /** The cursor of the next page; none by default. */
+    readonly next?: string | null
+    /** The groups an aggregate answers; none by default. */
+    readonly groups?: ReadonlyArray<AggregateRow>
+}
+
+/** What one recorded entity answers, and what it was asked. */
+export interface RecordedEntity {
+    /** The entity port the read under test runs on. */
     readonly api: EntityApi
+    /** Every list query the read made. */
     readonly queries: Array<EntityQuery>
+    /** Every aggregate the read asked. */
     readonly aggregates: Array<EntityAggregate>
+    /** Every id the read got. */
     readonly gets: Array<string>
 }
 
 /** An entity that lists the rows given (with `next` as the cursor of the page), answers the groups given and gets the row of an id. */
-export const fakeEntity = (
-    rows: ReadonlyArray<RecordRow>,
-    options: { readonly next?: string | null; readonly groups?: ReadonlyArray<AggregateRow> } = {},
-): FakeEntity => {
+export const recordedEntity = (rows: ReadonlyArray<RecordRow>, options: RecordedOptions = {}): RecordedEntity => {
     const queries: Array<EntityQuery> = []
     const aggregates: Array<EntityAggregate> = []
     const gets: Array<string> = []
@@ -79,12 +88,18 @@ export const fakeEntity = (
 /** The graph that holds the installation of the specs for the agent of the specs. */
 export const GRAPH_ROW: RecordRow = recordRow("g1", { agentId: AGENT_ID, installationId: INSTALLATION_ID })
 
-/** The provider of the three entity ports the runs reads take. */
-export const runsProvider = (entities: {
+/** The three entities the runs reads run on. */
+export interface RunsEntities {
+    /** The graphs: which agent an installation runs. */
     readonly graphs: EntityApi
+    /** The runs. */
     readonly runs: EntityApi
+    /** The steps of the runs. */
     readonly steps: EntityApi
-}): PortProvider => ({
+}
+
+/** The provider of the three entity ports the runs reads take. */
+export const runsProvider = (entities: RunsEntities): PortProvider => ({
     implementationOf: (port) => {
         if (port.id === agentGraphs.id) return entities.graphs
         if (port.id === agentRuns.id) return entities.runs

@@ -3,7 +3,7 @@ import {
     GRAPH_ROW,
     INSTALLATION_ID,
     RUNS_CONTEXT,
-    fakeEntity,
+    recordedEntity,
     recordRow,
     runsProvider,
 } from "../fixtures/agent-runs.ports"
@@ -18,8 +18,8 @@ const RUN = recordRow("run-1", {
 })
 
 const run = (raw: unknown, graphs = [GRAPH_ROW], next: string | null = null) => {
-    const graph = fakeEntity(graphs)
-    const runs = fakeEntity([RUN], { next })
+    const graph = recordedEntity(graphs)
+    const runs = recordedEntity([RUN], { next })
     return {
         graph,
         runs,

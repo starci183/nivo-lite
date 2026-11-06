@@ -489,130 +489,112 @@
             "children": [
               {
                 "id": "order-pane",
-                "block": "core.list-pane",
+                "block": "core.list-card",
                 "props": {
+                  "label": {
+                    "key": "orders"
+                  },
+                  "empty": {
+                    "key": "orders_empty"
+                  },
+                  "emptySearch": {
+                    "key": "orders_empty_search"
+                  },
+                  "idPath": "id",
+                  "titlePath": "orderNo",
+                  "descriptionPath": "itemsText",
+                  "badgePath": "status",
+                  "selectParam": "order",
+                  "labels": {
+                    "status": {
+                      "draft": {
+                        "key": "status_draft"
+                      },
+                      "confirmed": {
+                        "key": "status_confirmed"
+                      },
+                      "invoiced": {
+                        "key": "status_invoiced"
+                      },
+                      "paid": {
+                        "key": "status_paid"
+                      },
+                      "cancelled": {
+                        "key": "status_cancelled"
+                      },
+                      "failed_system": {
+                        "key": "status_failed_system"
+                      }
+                    }
+                  },
                   "search": true,
                   "searchParam": "orderQ",
                   "searchLabel": {
                     "key": "search_orders"
-                  }
-                },
-                "children": [
-                  {
-                    "id": "order-tabs",
-                    "block": "core.filter-tabs",
-                    "props": {
-                      "param": "status",
+                  },
+                  "filterParam": "status",
+                  "filterLabel": {
+                    "key": "status_label"
+                  },
+                  "filterAll": {
+                    "key": "filter_all"
+                  },
+                  "filters": [
+                    {
+                      "value": "draft",
                       "label": {
-                        "key": "status_label"
+                        "key": "status_draft"
                       },
-                      "all": {
-                        "key": "filter_all"
-                      },
-                      "items": [
-                        {
-                          "value": "draft",
-                          "label": {
-                            "key": "status_draft"
-                          },
-                          "attention": true
-                        },
-                        {
-                          "value": "confirmed",
-                          "label": {
-                            "key": "status_confirmed"
-                          }
-                        },
-                        {
-                          "value": "invoiced",
-                          "label": {
-                            "key": "status_invoiced"
-                          }
-                        },
-                        {
-                          "value": "paid",
-                          "label": {
-                            "key": "status_paid"
-                          }
-                        },
-                        {
-                          "value": "cancelled",
-                          "label": {
-                            "key": "status_cancelled"
-                          }
-                        },
-                        {
-                          "value": "failed_system",
-                          "label": {
-                            "key": "status_failed_system"
-                          }
-                        }
-                      ]
+                      "attention": true
                     },
-                    "bind": {
-                      "counts": {
-                        "read": "sales.order-counts",
-                        "variables": {
-                          "q": "$orderQ"
-                        }
+                    {
+                      "value": "confirmed",
+                      "label": {
+                        "key": "status_confirmed"
                       }
+                    },
+                    {
+                      "value": "invoiced",
+                      "label": {
+                        "key": "status_invoiced"
+                      }
+                    },
+                    {
+                      "value": "paid",
+                      "label": {
+                        "key": "status_paid"
+                      }
+                    },
+                    {
+                      "value": "cancelled",
+                      "label": {
+                        "key": "status_cancelled"
+                      }
+                    },
+                    {
+                      "value": "failed_system",
+                      "label": {
+                        "key": "status_failed_system"
+                      }
+                    }
+                  ]
+                },
+                "bind": {
+                  "rows": {
+                    "read": "sales.orders",
+                    "variables": {
+                      "q": "$orderQ",
+                      "status": "$status",
+                      "sort": "$orderSort"
                     }
                   },
-                  {
-                    "id": "order-rows",
-                    "block": "core.record-list",
-                    "props": {
-                      "label": {
-                        "key": "orders"
-                      },
-                      "empty": {
-                        "key": "orders_empty"
-                      },
-                      "emptySearch": {
-                        "key": "orders_empty_search"
-                      },
-                      "idPath": "id",
-                      "titlePath": "orderNo",
-                      "descriptionPath": "itemsText",
-                      "badgePath": "status",
-                      "selectParam": "order",
-                      "searchParam": "orderQ",
-                      "labels": {
-                        "status": {
-                          "draft": {
-                            "key": "status_draft"
-                          },
-                          "confirmed": {
-                            "key": "status_confirmed"
-                          },
-                          "invoiced": {
-                            "key": "status_invoiced"
-                          },
-                          "paid": {
-                            "key": "status_paid"
-                          },
-                          "cancelled": {
-                            "key": "status_cancelled"
-                          },
-                          "failed_system": {
-                            "key": "status_failed_system"
-                          }
-                        }
-                      },
-                      "surface": "card"
-                    },
-                    "bind": {
-                      "rows": {
-                        "read": "sales.orders",
-                        "variables": {
-                          "q": "$orderQ",
-                          "status": "$status",
-                          "sort": "$orderSort"
-                        }
-                      }
+                  "counts": {
+                    "read": "sales.order-counts",
+                    "variables": {
+                      "q": "$orderQ"
                     }
                   }
-                ]
+                }
               },
               {
                 "id": "order-detail",

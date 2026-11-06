@@ -85,6 +85,7 @@ const entryView = (
         <MessageBubble
             key={entry.id}
             side={entry.side}
+            {...(entry.side === "outgoing" ? { tone: entry.tone } : {})}
             body={entry.text}
             {...(entry.author === "" ? {} : { author: entry.author })}
             {...(entry.meta === "" ? {} : { meta: entry.meta })}

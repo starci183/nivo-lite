@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { Divider, EmptyNotice, SearchField, Section, Stack, SurfaceCard, Tabs } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { accountingBookBlock } from "../../blocks/accounting/book.block"
 import { bookPeriodOf, bookRecords, bookRowsOf, bookSubtitleOf, phoneCardOf } from "../../rules/accounting/book-view"
 import type { BookRow } from "../../rules/accounting/book-view"
@@ -16,9 +16,10 @@ import {
 } from "../../rows/filter-tabs"
 import { queryOf } from "../../rows/search"
 import type { TabCounts } from "../../rows/filter-tabs"
+import { paneHeadersOf } from "../../rows/pane-headers"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
-import { useSearchText } from "../composites/useSearchText"
+import { usePaneSearch } from "../composites/usePaneSearch"
 import type { RenderOf } from "../render-props"
 
 /** The rows a skeleton draws while the first read is in flight. */
@@ -44,9 +45,10 @@ export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNod
     const spec = props.props
     const query = queryOf(props.params.value(spec.searchParam))
     const labels = useSlotLabels(query === null ? spec.empty : spec.emptySearch)
-    const search = useSearchText(props.params.value(spec.searchParam), (value) =>
-        props.params.set(spec.searchParam, value),
-    )
+    const searchFields = usePaneSearch(props.params, spec.searchParam, {
+        label: words(spec.searchLabel),
+        clearLabel: words({ key: "searchClear" }),
+    })
     const select = (chosen: string | null): void =>
         props.params.setMany({
             [spec.selectParam]: chosen,
@@ -65,56 +67,46 @@ export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNod
         attention: status === "review",
     }))
     const tabCounts = tabCountsOf(counts)
+    const headers = paneHeadersOf(
+        {
+            label: words({ key: "book_filters" }),
+            moreLabel: (count) => words({ key: "filtersMore" }).replaceAll("{count}", String(count)),
+            overflowLabel: words({ key: "filtersOverflow" }),
+            selectedKey: selectedTab(props.params.value(spec.filterParam), specs),
+            items: tabEntriesOf(words({ key: "filter_all" }), specs, tabCounts ?? TAB_COUNTS_PLACEHOLDER),
+            onSelect: (key) => props.params.set(spec.filterParam, tabParamValue(key)),
+        },
+        searchFields,
+    )
+    const head = {
+        label: words(spec.title),
+        headingLevel: 3 as const,
+        fact: bookSubtitleOf(period, total, words({ key: "book_count" })),
+        headers,
+    }
     return (
-        <SurfaceCard
-            label={words(spec.title)}
-            headingLevel={3}
-            fact={bookSubtitleOf(period, total, words({ key: "book_count" }))}
-        >
-            <Stack gap="row">
-                <Tabs
-                    kind="filter"
-                    label={words({ key: "book_filters" })}
-                    moreLabel={(count) => words({ key: "filtersMore" }).replaceAll("{count}", String(count))}
-                    overflowLabel={words({ key: "filtersOverflow" })}
-                    inset="none"
-                    selectedKey={selectedTab(props.params.value(spec.filterParam), specs)}
-                    items={tabEntriesOf(words({ key: "filter_all" }), specs, tabCounts ?? TAB_COUNTS_PLACEHOLDER)}
-                    onSelect={(key) => props.params.set(spec.filterParam, tabParamValue(key))}
+        <SlotView
+            slot={rows}
+            labels={labels}
+            placeholder={PLACEHOLDER}
+            onRetry={props.slots.rows.retry}
+            frame={(notice) => <SurfaceCard {...head}>{notice}</SurfaceCard>}
+            render={(items, isLoading) => (
+                <SurfaceCard
+                    kind="list"
+                    {...head}
+                    isLoading={isLoading}
+                    items={items.map(phoneCardOf).map((card) => ({
+                        id: card.id,
+                        title: card.title,
+                        description: card.description,
+                        meta: { text: card.amount },
+                        badges: [{ label: card.status, tone: card.tone, isDot: true }],
+                        onPress: () => select(card.id),
+                    }))}
+                    empty={<EmptyNotice message={labels.empty} />}
                 />
-                <SearchField
-                    label={words(spec.searchLabel)}
-                    isLabelHidden
-                    placeholder={words(spec.searchLabel)}
-                    clearLabel={words({ key: "searchClear" })}
-                    value={search.text}
-                    onValueChange={search.type}
-                    onClear={search.clear}
-                />
-                <Divider />
-                <SlotView
-                    slot={rows}
-                    labels={labels}
-                    placeholder={PLACEHOLDER}
-                    onRetry={props.slots.rows.retry}
-                    render={(items, isLoading) => (
-                        <Section
-                            kind="list"
-                            ariaLabel={words(spec.title)}
-                            isLoading={isLoading}
-                            items={items.map(phoneCardOf).map((card) => ({
-                                id: card.id,
-                                title: card.title,
-                                description: card.description,
-                                meta: { text: card.amount },
-                                badges: [{ label: card.status, tone: card.tone, isDot: true }],
-                                onPress: () => select(card.id),
-                            }))}
-                            empty={<EmptyNotice message={labels.empty} />}
-                        />
-                    )}
-                />
-            </Stack>
-        </SurfaceCard>
+            )}
+        />
     )
 }

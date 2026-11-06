@@ -8,16 +8,10 @@ describe("AGENT_RUNS_SPEC", () => {
         expect(params.status).toMatchObject({ type: "enum", default: "all" })
     })
 
-    it("is one view: the list with its filter tabs beside the steps of the chosen run", () => {
+    it("is one view: the list card, with its filter tabs in its header, beside the steps of the chosen run", () => {
         expect(AGENT_RUNS_SPEC.views.map((view) => view.id)).toEqual(["runs"])
         const blocks = JSON.stringify(AGENT_RUNS_SPEC.views[0]?.root)
-        for (const block of [
-            "core.master-detail",
-            "core.list-pane",
-            "core.filter-tabs",
-            "core.record-list",
-            "core.run-timeline",
-        ])
+        for (const block of ["core.master-detail", "core.list-card", "core.run-timeline"])
             expect(blocks).toContain(block)
     })
 
