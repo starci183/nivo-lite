@@ -1,6 +1,8 @@
 export { teamChatEntities } from "./persistence/entities"
 export { TEAM_CHAT_ERROR_KINDS, TeamChatErrorCode } from "./errors/team-chat.error"
 export { TEAM_CHAT_MESSAGES } from "./messages/team-chat.messages"
+export { InjectTeamChatTags, TEAM_CHAT_TAGS } from "./team-chat.decorators"
+export type { TeamChatTags } from "./team-chat.port"
 export { TeamChatNativeService } from "./team-chat-native.service"
 export { TeamChatModule } from "./team-chat.module"
 export { TeamChatService } from "./team-chat.service"

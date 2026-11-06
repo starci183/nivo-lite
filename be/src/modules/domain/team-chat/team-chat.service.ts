@@ -1,10 +1,12 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { In, IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberSeatsService, WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
+import { InjectTeamChatTags } from "./team-chat.decorators"
+import type { TeamChatTags } from "./team-chat.port"
 import { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity, ChatRoomPinEntity } from "./persistence/entities"
 import {
     cursorOf,
@@ -75,6 +77,7 @@ export class TeamChatService {
         private readonly seats: WorkspaceMemberSeatsService,
         private readonly people: WorkspaceMembersReadService,
         private readonly agents: AgentDirectoryService,
+        @Optional() @InjectTeamChatTags() private readonly tags: TeamChatTags | null = null,
     ) {}
 
     /** The rooms the viewer sits in (all of them for an owner), newest message first. */
@@ -264,6 +267,7 @@ export class TeamChatService {
         if (!(await this.allKnown(workspaceId, mentions))) return refused(TeamChatErrorCode.MemberUnknown)
         const retried = await this.sent(workspaceId, found.id, viewerId, input.clientId)
         const message = retried ?? (await this.insertMessage(workspaceId, found.id, viewerId, input, mentions))
+        if (retried === null) await this.tagAgents(workspaceId, viewerId, message, mentions)
         const [view] = await this.messageViews(workspaceId, found.id, [message], viewerId)
         await this.entityManager.query(
             `UPDATE public.chat_room_members SET last_read_at = GREATEST(last_read_at, (SELECT created_at FROM public.chat_room_messages WHERE id = $4))
@@ -271,6 +275,30 @@ export class TeamChatService {
             [found.id, viewerId, workspaceId, message.id],
         )
         return done(view as MessageView)
+    }
+
+    /** A person who mentions an agent starts its graph: the work core writes the tag wake, once per message and agent. */
+    private async tagAgents(
+        workspaceId: string,
+        viewerId: string,
+        message: ChatRoomMessageEntity,
+        mentions: ReadonlyArray<MemberRef>,
+    ): Promise<void> {
+        const tags = this.tags
+        if (tags === null) return
+        await Promise.all(
+            mentions
+                .filter((mention) => mention.memberKind === "agent")
+                .map((mention) =>
+                    tags.handOff(workspaceId, {
+                        userId: viewerId,
+                        agentId: mention.memberId,
+                        roomId: message.roomId,
+                        messageId: message.id,
+                        text: message.body,
+                    }),
+                ),
+        )
     }
 
     /** Moves the viewer's read position to a message (the newest when none is named). */

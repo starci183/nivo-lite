@@ -39,13 +39,21 @@ export const persistTeamChat = (manager: EntityManager, identity: TeamChatIdenti
         for (const userId of [identity.ownerId, ...identity.staffIds, identity.outsiderId]) {
             await tx.insert("auth.users", { id: userId, raw_user_meta_data: {} })
         }
-        await tx.insert(WorkspaceEntity, { id: identity.workspaceId, ownerId: identity.ownerId, name: "Team chat proof" })
+        await tx.insert(WorkspaceEntity, {
+            id: identity.workspaceId,
+            ownerId: identity.ownerId,
+            name: "Team chat proof",
+        })
         await tx.insert(WorkspaceEntity, {
             id: identity.foreignWorkspaceId,
             ownerId: identity.outsiderId,
             name: "Foreign team chat proof",
         })
-        await tx.update(WorkspaceMemberEntity, { workspaceId: identity.workspaceId, userId: identity.ownerId }, { displayName: "Owner" })
+        await tx.update(
+            WorkspaceMemberEntity,
+            { workspaceId: identity.workspaceId, userId: identity.ownerId },
+            { displayName: "Owner" },
+        )
         await tx.insert(AgentEntity, {
             id: identity.agentId,
             workspaceId: identity.workspaceId,

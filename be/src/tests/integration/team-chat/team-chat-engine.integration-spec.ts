@@ -4,7 +4,7 @@ import type { MemberRef, TeamChatResult } from "@modules/domain/team-chat"
 import { persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import type { TeamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
-import { TeamChatProofModule } from "../../world/team-chat-proof.module"
+import { TeamChatProofModule, TeamChatTagRecorder } from "../../world/team-chat-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 
 const world = useTestWorld({ modules: [TeamChatProofModule.register()] })
@@ -319,5 +319,64 @@ describe("postAsAgent", () => {
         expect(
             await chat().postAsAgent(world.id(), { agent: "chatbot", toUserId: null, body: "x", key: null }),
         ).toBeNull()
+    })
+})
+
+describe("the tag trigger", () => {
+    it("hands a message that mentions an agent to the work core once, with the room and the message, and not a retried one", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId, agentId } = identity
+        const recorder = world.resolve(TeamChatTagRecorder)
+        recorder.handed.length = 0
+        recorder.allowed = [agentId]
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, {
+                kind: "group",
+                name: "Ops",
+                members: [{ memberKind: "agent", memberId: agentId }],
+            }),
+        )
+        const send = () =>
+            chat().send(workspaceId, ownerId, {
+                roomId: room.id,
+                to: null,
+                body: "@Bot quote two lanterns",
+                mentions: [{ memberKind: "agent", memberId: agentId }, user(identity.staffIds[0])],
+                fileKeys: [],
+                clientId: "tag-1",
+            })
+        const sent = valueOf(await send())
+        valueOf(await send())
+        expect(recorder.handed).toEqual([
+            {
+                workspaceId,
+                tag: { userId: ownerId, agentId, roomId: room.id, messageId: sent.id, text: "@Bot quote two lanterns" },
+            },
+        ])
+    })
+
+    it("hands nothing over for a message that mentions only people", async () => {
+        const identity = await seed()
+        const recorder = world.resolve(TeamChatTagRecorder)
+        recorder.handed.length = 0
+        const [first] = identity.staffIds
+        const room = valueOf(
+            await chat().createRoom(identity.workspaceId, identity.ownerId, {
+                kind: "direct",
+                name: null,
+                members: [user(first)],
+            }),
+        )
+        valueOf(
+            await chat().send(identity.workspaceId, identity.ownerId, {
+                roomId: room.id,
+                to: null,
+                body: "hi",
+                mentions: [user(first)],
+                fileKeys: [],
+                clientId: null,
+            }),
+        )
+        expect(recorder.handed).toEqual([])
     })
 })
