@@ -69,6 +69,7 @@
   "paymentRequestHolder": "Account holder: {{holder}}",
   "paymentRequestContent": "Transfer content (type exactly): {{content}}",
   "paymentRequestQr": "Or scan the QR code: {{url}}",
+  "paymentRequestHeld": "We have recorded your order: {{items}} · {{amount}}. The shop will send you the payment details as soon as they are ready.",
   "paymentRequestOutro": "Once you have transferred, just message us here.",
   "paymentRequestCurrency": "VND",
   "paymentRequestNoAccount": "Order {{order}} has no payment request: no SePay connection with a full account number",

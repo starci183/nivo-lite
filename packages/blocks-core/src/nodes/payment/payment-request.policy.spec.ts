@@ -1,4 +1,10 @@
-import { itemsTextOf, noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
+import {
+    itemsTextOf,
+    noAccountTitleOf,
+    orderHeldMessageOf,
+    paymentMessageOf,
+    transferContentOf,
+} from "./payment-request.policy"
 import { sampleOf } from "../../messages/catalog"
 
 const instruction = {
@@ -44,5 +50,14 @@ describe("payment request policy", () => {
     it("names the order in the title that tells the owner no payment request could go out", () => {
         expect(noAccountTitleOf("DH-1", "en")).toContain("DH-1")
         expect(noAccountTitleOf("DH-1", "vi")).toContain("SePay")
+    })
+
+    it("tells the customer the order is recorded and the payment details follow, with the items and the amount", () => {
+        const order = { amountVnd: 300_000, lines: [{ name: "tea", qty: 2 }] }
+
+        expect(orderHeldMessageOf(order, "en")).toBe(
+            "We have recorded your order: 2 x tea · 300,000 VND. The shop will send you the payment details as soon as they are ready.",
+        )
+        expect(orderHeldMessageOf({ amountVnd: 300_000, lines: [] }, "vi")).toContain("— · ")
     })
 })

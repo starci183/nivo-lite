@@ -17,6 +17,8 @@ export interface RequestWords {
     readonly content: string
     /** The QR link line; takes `{{url}}`. */
     readonly qr: string
+    /** The line sent when the order is recorded but the payment details cannot be given yet; takes `{{items}}` and `{{amount}}`. */
+    readonly held: string
     /** The closing line. */
     readonly outro: string
     /** The currency suffix after an amount. */
@@ -32,6 +34,7 @@ const requestWordsOf = (locale: RequestLocale): RequestWords => ({
     holder: messageOf(locale, "paymentRequestHolder"),
     content: messageOf(locale, "paymentRequestContent"),
     qr: messageOf(locale, "paymentRequestQr"),
+    held: messageOf(locale, "paymentRequestHeld"),
     outro: messageOf(locale, "paymentRequestOutro"),
     currency: messageOf(locale, "paymentRequestCurrency"),
     noAccount: messageOf(locale, "paymentRequestNoAccount"),
