@@ -16,7 +16,6 @@ import {
     type DossierFindingsPane,
     type FindingView,
 } from "@/modules/brain"
-import { navigation } from "@/modules/i18n"
 import { brainDossierHref } from "@/modules/routes"
 import { toast } from "@/modules/toast"
 import {
@@ -36,6 +35,7 @@ import { useDossierReviewSummary } from "./useDossierReviewSummary"
 import { useFindingDialog } from "./useFindingDialog"
 import { useFindingRows } from "./useFindingRows"
 import type { UploadTarget } from "./useFindingRows"
+import { useWorkspaceRouter } from "@/hooks/workspaces"
 
 /** The real read and its resolved inputs, before the pane's atom projection. */
 interface PaneContext {
@@ -123,7 +123,7 @@ export const useDossierFindingsView = (input: FindingsSelection): DossierFinding
     const brain = useTranslations("secondBrain")
     const feedback = useTranslations("toast")
     const format = useFormatter()
-    const router = navigation.useRouter()
+    const router = useWorkspaceRouter()
     const member = useWorkspaceMember()
     const slotLabels = useSlotLabels()
     const { categories } = useBrainDossiers()

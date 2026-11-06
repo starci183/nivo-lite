@@ -5,9 +5,10 @@ import { useSearchParams } from "next/navigation"
 import { useAutomationsBoard } from "@/hooks/automations"
 
 import { useSlotLabels } from "@/hooks/slot"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { AutomationsBoardBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The query key of the search text: the address is the one place the screen keeps it. */
 const SEARCH_KEY = "q"
@@ -35,6 +36,7 @@ interface AutomationsBoardProps {
  * through SWR and writes every change through the `updateAutomationPipeline` mutation; refusals are toasted.
  */
 export const AutomationsBoard = (props: AutomationsBoardProps) => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("automations")
     const locale = useLocale() === "en" ? "en" : "vi"
     const format = useFormatter()
@@ -59,7 +61,7 @@ export const AutomationsBoard = (props: AutomationsBoardProps) => {
                     slot: { ...slotLabels(t("emptyAll")), forbidden: t("forbiddenTitle"), error: t("loadFailed") },
                     forbiddenDescription: t("forbiddenBody"),
                     backLabel: t("forbiddenBack"),
-                    backHref: CONSOLE_ROUTES.chat,
+                    backHref: workspaceHref(workspaceId, CONSOLE_ROUTES.chat),
                     collection: t("title"),
                     loading: t("loading"),
                     status: t("statusOff"),

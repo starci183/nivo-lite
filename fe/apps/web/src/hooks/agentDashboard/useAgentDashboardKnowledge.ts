@@ -1,9 +1,10 @@
 "use client"
 
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { KNOWLEDGE_ROUTES, workspaceHref } from "@/modules/routes"
 import { maskPhones } from "@/modules/utils"
 import { useTranslations } from "next-intl"
 import type { AgentDashboardView } from "./agentDashboard.shared"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The open gaps of the knowledge region. */
 interface KnowledgeGaps {
@@ -40,6 +41,7 @@ const knowledgeOf = (
     dashboard: AgentDashboardView,
     hasOwnGaps: boolean,
     whenOf: (iso: string | null) => string,
+    workspaceId: string,
 ): KnowledgeBody => {
     const isInternal = dashboard.knowledge.audience === "internal"
     const gaps = dashboard.knowledge.gaps
@@ -52,7 +54,7 @@ const knowledgeOf = (
             ? t("knowSummaryInternal", { n: documents.public + documents.internal })
             : t("knowSummaryPublic", { n: documents.public }),
         openLabel: t("knowOpen"),
-        openHref: KNOWLEDGE_ROUTES.library,
+        openHref: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.library),
         footer: isInternal ? t("knowAudienceInternal") : t("knowAudienceCustomer"),
         publicTitle: t("knowPublic"),
         publicDescription: counts("public"),
@@ -68,7 +70,7 @@ const knowledgeOf = (
                       label: t("gapsTitle"),
                       count: gaps.openCount > 0 ? String(gaps.openCount) : null,
                       openLabel: t("gapsOpen"),
-                      openHref: KNOWLEDGE_ROUTES.library,
+                      openHref: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.library),
                       rows: gaps.items.map((gap) => ({
                           id: gap.id,
                           title: maskPhones(gap.question),
@@ -88,5 +90,6 @@ export const useAgentDashboardKnowledge = (
     whenOf: (iso: string | null) => string,
 ): ((dashboard: AgentDashboardView) => KnowledgeBody) => {
     const t = useTranslations("agentDashboard")
-    return (dashboard) => knowledgeOf(t, dashboard, hasOwnGaps, whenOf)
+    const workspaceId = useWorkspaceId()
+    return (dashboard) => knowledgeOf(t, dashboard, hasOwnGaps, whenOf, workspaceId)
 }

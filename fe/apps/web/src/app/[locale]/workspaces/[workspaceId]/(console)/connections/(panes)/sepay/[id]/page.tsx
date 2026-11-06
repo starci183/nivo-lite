@@ -5,13 +5,13 @@ import { SepayConnectionPage } from "@/features/pages/SepayConnectionPage"
 export { sepayConnectionMetadata as generateMetadata } from "@/features/pages/SepayConnectionPage"
 
 type PageProps = {
-    readonly params: Promise<{ id: string }>
+    readonly params: Promise<{ workspaceId: string; id: string }>
 }
 
 /** One SePay connection: its setup steps in back end order, its health and its live webhook events, on one page. */
 const Page = async (props: PageProps): Promise<ReactElement> => {
-    const { id } = await props.params
-    return <SepayConnectionPage connectionId={id} />
+    const { workspaceId, id } = await props.params
+    return <SepayConnectionPage workspaceId={workspaceId} connectionId={id} />
 }
 
 export default Page

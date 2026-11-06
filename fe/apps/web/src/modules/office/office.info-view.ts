@@ -1,4 +1,4 @@
-import { AGENTS_ROUTE, CONSOLE_ROUTES, agentChatHref } from "@/modules/routes"
+import { agentChatHref, AGENTS_ROUTE, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type {
     OfficeChannelRowView,
     OfficeInfoView,
@@ -129,10 +129,12 @@ const agentMemberOf = (agent: OfficeAgent, words: OfficeWords): OfficeMemberRowV
     isMe: false,
     presence: agent.isActive ? words.t("onDuty") : null,
     mention: agent.isActive ? agent.handle : null,
-    chatHref: agentChatHref(agent.id),
+    chatHref: workspaceHref(words.workspaceId, agentChatHref(agent.id)),
     note: waitsForOf(agent, words),
     noteAction:
-        agent.waitsFor === null ? null : { label: words.t("openConnections"), href: CONSOLE_ROUTES.connections },
+        agent.waitsFor === null
+            ? null
+            : { label: words.t("openConnections"), href: workspaceHref(words.workspaceId, CONSOLE_ROUTES.connections) },
 })
 
 /** What the right column shows about the room on screen. */
@@ -184,7 +186,7 @@ export const infoViewOf = (
             ...unlinked.map((member) => staffRowOf(member, handles.get(member.id) ?? "", words)),
             ...room.agents.map((agent) => agentMemberOf(agent, words)),
         ],
-        addAgentHref: AGENTS_ROUTE,
+        addAgentHref: workspaceHref(words.workspaceId, AGENTS_ROUTE),
         tasksSummary: words.t("tasksSummary", {
             open: tasks.filter((task) => task.status !== "done").length,
             total: tasks.length,

@@ -11,13 +11,14 @@ interface KnowledgeSearch {
 
 /** What the page receives from Next. */
 interface KnowledgeRouteProps {
+    readonly params: Promise<{ readonly workspaceId: string }>
     readonly searchParams: Promise<KnowledgeSearch>
 }
 
 /** Moved: the documents are the sources tab of the Second Brain, so the old address forwards there. */
-const Page = async ({ searchParams }: KnowledgeRouteProps): Promise<ReactElement> => {
-    const { module, add } = await searchParams
-    return <KnowledgeRedirectPage module={module} add={add} />
+const Page = async ({ params, searchParams }: KnowledgeRouteProps): Promise<ReactElement> => {
+    const [{ workspaceId }, { module, add }] = await Promise.all([params, searchParams])
+    return <KnowledgeRedirectPage workspaceId={workspaceId} module={module} add={add} />
 }
 
 export default Page

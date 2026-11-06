@@ -4,7 +4,8 @@ import type { BrainPageHeading } from "@/modules/types"
 interface BrainHeadingInput {
     readonly crumbLabel: string
     readonly crumbHome: string
-    readonly homeHref: string
+    /** Where the first crumb leads; none while the page only draws its skeleton (a loading boundary knows no workspace). */
+    readonly homeHref?: string | undefined
     readonly title: string
     readonly description: string
 }
@@ -14,7 +15,7 @@ export const brainHeadingOf = (input: BrainHeadingInput): BrainPageHeading => ({
     breadcrumbs: {
         label: input.crumbLabel,
         items: [
-            { id: "home", label: input.crumbHome, href: input.homeHref },
+            { id: "home", label: input.crumbHome, ...(input.homeHref === undefined ? {} : { href: input.homeHref }) },
             { id: "brain", label: input.title },
         ],
     },

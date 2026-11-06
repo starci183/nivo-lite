@@ -12,8 +12,6 @@ export const CONSOLE_ROUTES = {
     team: "/team",
     teamInvite: "/team?invite=1",
     permissions: "/permissions",
-    modules: "/modules",
-    newChatbot: "/modules/new?module=chatbot",
 } as const
 
 /** One section of the authority page. */
@@ -46,9 +44,6 @@ export const AGENT_ROLES_ANCHOR = "agent-roles"
 
 /** The roles to add on the agents page, from anywhere. */
 export const AGENT_ROLES_HREF: "/agents#agent-roles" = `${AGENTS_ROUTE}#${AGENT_ROLES_ANCHOR}`
-
-/** The setup page of one module agent. */
-export const agentSetupHref = (agentId: string): string => `${CONSOLE_ROUTES.modules}/${agentId}`
 
 /** The work flow of one lead, where a handed-over customer chat leads. */
 export const leadFlowHref = (leadId: string): string => `${leadHref(leadId)}#flow`

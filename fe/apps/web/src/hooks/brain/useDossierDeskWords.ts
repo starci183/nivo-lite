@@ -9,7 +9,8 @@ import type {
     DossierView,
     Standing,
 } from "@/modules/brain"
-import { knowledgeSourceHref } from "@/modules/routes"
+import { knowledgeSourceHref, workspaceHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 type Translate = ReturnType<typeof useTranslations<"secondBrain">>
 type DeskTranslate = ReturnType<typeof useTranslations<"brainDossiers">>
@@ -83,6 +84,7 @@ export interface DossierDeskWords {
 
 /** The words the dossiers desk draws its rows, figures, head and side pane with, in the active language. */
 export const useDossierDeskWords = (): DossierDeskWords => {
+    const workspaceId = useWorkspaceId()
     const words: DeskWords = {
         t: useTranslations("secondBrain"),
         desk: useTranslations("brainDossiers"),
@@ -111,7 +113,7 @@ export const useDossierDeskWords = (): DossierDeskWords => {
                 kind: kindLabelOf(words.knowledge, source.kind),
                 count: source.chunkCount,
             }),
-            href: knowledgeSourceHref(source.id),
+            href: workspaceHref(workspaceId, knowledgeSourceHref(source.id)),
         }),
     }
 }

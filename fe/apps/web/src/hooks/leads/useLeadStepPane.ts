@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useLeadStepForm } from "@/hooks/rhf"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { LEADS_ROUTES } from "@/modules/routes"
+import { LEADS_ROUTES, workspaceHref } from "@/modules/routes"
 import type {
     LeadJourney,
     LeadStepMode,
@@ -20,6 +20,7 @@ import { useLeadCommands } from "./useLeadCommands"
 import { useLeadJourney } from "./useLeadJourney"
 import { useStepFormView } from "./useStepFormView"
 import { useStepView } from "./useStepView"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The next-step region and its commands. */
 export interface LeadStepPaneView {
@@ -39,6 +40,7 @@ const ownerIdOf = (step: ResponsibilityRecord | null): string =>
 
 /** The words of the next-step region and its dialog. */
 const useStepLabels = (): LeadStepPane["labels"] => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("lead")
     const slotLabels = useSlotLabels()
     return {
@@ -55,7 +57,7 @@ const useStepLabels = (): LeadStepPane["labels"] => {
         reassignLabel: t("reassign"),
         changeDueLabel: t("changeDue"),
         askLabel: t("askInOffice"),
-        askHref: LEADS_ROUTES.chat,
+        askHref: workspaceHref(workspaceId, LEADS_ROUTES.chat),
         addLabel: t("formAdd"),
         form: {
             title: t("fieldTitle"),

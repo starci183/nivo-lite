@@ -5,6 +5,7 @@ import { useSWRConfig } from "swr"
 import { useViewerKeyId } from "@/hooks/workspaceKey"
 import { useActiveWorkspace } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
+import { workspaceHref } from "@/modules/routes"
 import { isWorkspaceSwitchSwrKey } from "@/modules/utils"
 import { OFFICE_ROUTE } from "./console.shared"
 
@@ -23,7 +24,7 @@ export const useSwitchWorkspace = (currentId: string): ((workspaceId: string) =>
         startTransition(() => {
             void mutate(isWorkspaceSwitchSwrKey(viewerKeyId), undefined, { revalidate: false })
             select(workspaceId)
-            router.push(OFFICE_ROUTE)
+            router.push(workspaceHref(workspaceId, OFFICE_ROUTE))
             router.refresh()
         })
     }

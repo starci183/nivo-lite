@@ -8,7 +8,7 @@ import type {
     useOfficeWords,
 } from "@/hooks/office"
 import type { navigation } from "@/modules/i18n"
-import { agentChatHref, leadHref } from "@/modules/routes"
+import { agentChatHref, leadHref, workspaceHref } from "@/modules/routes"
 import type { OfficeListView, DataSlot, OfficeText, OfficeThreadProps } from "@/modules/types"
 import {
     BASIS_MIN_CHARS,
@@ -103,6 +103,7 @@ export const officeSubtitle = (office: ReturnType<typeof useOfficeMessenger>): s
 export const officeMessengerCommands = (
     office: ReturnType<typeof useOfficeMessenger>,
     router: ReturnType<typeof navigation.useRouter>,
+    workspaceId: string,
 ) => ({
     decideCard: (
         kind: "execution" | "work_item",
@@ -123,7 +124,7 @@ export const officeMessengerCommands = (
     },
     openDirect: (kind: "agent" | "lead", id: string): void => {
         void office.markConversationRead(kind, id)
-        router.push(kind === "agent" ? agentChatHref(id) : leadHref(id))
+        router.push(workspaceHref(workspaceId, kind === "agent" ? agentChatHref(id) : leadHref(id)))
     },
 })
 

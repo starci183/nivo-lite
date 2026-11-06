@@ -1,5 +1,5 @@
 import { eventStreamUrl } from "@/modules/config"
-import { LocalStorage, StorageId } from "@/modules/storage"
+import { openWorkspaceId } from "@/modules/routes"
 import type { EventStreamHandle } from "@starci/event-stream"
 import { eventStream } from "../clients/event-stream"
 import type { StreamReporter } from "../clients/event-stream"
@@ -83,7 +83,7 @@ const pushOf = (data: string): KnowledgeProgressPush | null => {
     }
 }
 
-/** Follows the knowledge-progress event stream of the signed-in member (`GET /realtime/knowledge-progress`) in the active workspace until the signal aborts. */
+/** Follows the knowledge-progress event stream of the signed-in member (`GET /realtime/knowledge-progress`) in the workspace of the open address until the signal aborts. */
 export const streamKnowledgeProgress = ({
     signal,
     onOpen,
@@ -91,7 +91,7 @@ export const streamKnowledgeProgress = ({
     onDrop,
     report,
 }: StreamKnowledgeProgressParams): EventStreamHandle => {
-    const workspaceId = LocalStorage.get<string>(StorageId.ActiveWorkspaceId)
+    const workspaceId = openWorkspaceId()
     const headers: Record<string, string> = {}
     if (workspaceId !== undefined) headers["x-workspace-id"] = workspaceId
     const handlers = {

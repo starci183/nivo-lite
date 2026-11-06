@@ -22,6 +22,8 @@ import {
 
 /** What the board is drawn from. */
 export interface BoardInput {
+    /** The workspace the links of the cards lead within. */
+    readonly workspaceId: string
     readonly t: AutomationsTranslator
     readonly locale: AutomationsLanguage
     readonly moduleNames: Readonly<Partial<Record<ModuleKey, string>>>
@@ -55,7 +57,14 @@ export const automationBoardOf = (input: BoardInput): AutomationsBoardView => {
     const countOf = (key: string): number =>
         key === "hidden" ? hidden.length : visible.filter((card) => matchesAutomationFilter(card, key)).length
     const empty = automationEmptyText(input.shown.length, input.filter, input.isNested, t)
-    const ctx = { t, locale, selected: input.selected, busyKey: input.busyKey, accounts: input.accounts }
+    const ctx = {
+        t,
+        locale,
+        workspaceId: input.workspaceId,
+        selected: input.selected,
+        busyKey: input.busyKey,
+        accounts: input.accounts,
+    }
     const detail =
         current === null || open === null
             ? undefined
@@ -70,7 +79,7 @@ export const automationBoardOf = (input: BoardInput): AutomationsBoardView => {
                       isNested: input.isNested,
                       errorText: input.errorText,
                   },
-                  { t, locale, when: input.when },
+                  { t, locale, workspaceId: input.workspaceId, when: input.when },
               )
     return {
         filters: {

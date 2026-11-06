@@ -9,6 +9,7 @@ import type { ConnectionPageHeadCommands, ConnectionPageHeadView } from "@/modul
 import { useTelegramChecks } from "./useTelegramChecks"
 import { useTelegramHead } from "./useTelegramHead"
 import { useTelegramNotices } from "./useTelegramNotices"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 type UseTelegramPageHeadResult = {
     view: ConnectionPageHeadView
@@ -25,6 +26,7 @@ export const useTelegramPageHead = (connectionId: string | undefined): UseTelegr
     const t = useTranslations("telegramConnection")
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const { head, notice, disconnect, isDisconnecting, isMissing, isOwner, isLive } = useTelegramHead(connectionId)
     const { recheck, isRechecking } = useTelegramChecks(connectionId)
     const notices = useTelegramNotices(connectionId, notice)
@@ -36,7 +38,7 @@ export const useTelegramPageHead = (connectionId: string | undefined): UseTelegr
         ...headState,
         icon: "chat",
         crumbLabel: t("crumbLabel"),
-        crumbs: connectionCrumbsOf(t("crumbConnections"), {
+        crumbs: connectionCrumbsOf(workspaceId, t("crumbConnections"), {
             id: "telegram",
             label: headState.head?.name ?? t("crumbTelegram"),
         }),

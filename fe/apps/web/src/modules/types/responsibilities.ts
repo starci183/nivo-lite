@@ -100,4 +100,7 @@ export interface ResponsibilityOpenedView {
     readonly dueDate: string | null
     /** Whether a follow-up draft can be asked for: the responsibility is open. */
     readonly canDraft: boolean
+    /** Where the customer of the responsibility is, and where the Office is: addresses inside the open workspace. */
+    readonly leadHref: string
+    readonly officeHref: string
 }

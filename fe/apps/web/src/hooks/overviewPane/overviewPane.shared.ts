@@ -3,7 +3,7 @@ import { departmentsOf, exceptionChipsOf, exceptionTotalOf, waitingItemsOf } fro
 import type { Governance, WaitingWork } from "@/hooks/overviewFigures"
 import type { ActivityModel, ResponsibilityRowModel } from "@/hooks/overviewRows"
 import { goalLinesOf, statusRowsOf, weekFiguresOf } from "@/hooks/overviewResults"
-import { CONSOLE_ROUTES, agentChatHref, leadHref } from "@/modules/routes"
+import { AGENTS_ROUTE, CONSOLE_ROUTES, agentChatHref, leadHref, workspaceHref } from "@/modules/routes"
 import type { OnboardingStep } from "@/modules/promo"
 import type { AgentLifecycle } from "@/modules/installations"
 import type { OverviewPaneReady } from "@/modules/types"
@@ -23,6 +23,8 @@ export interface PaneAgent {
 
 /** What the pane is built from: the loaded read, or the empty one that gives the skeleton its shape. */
 export interface PaneInput {
+    /** The workspace the overview is opened in: every address it draws is inside it. */
+    readonly workspaceId: string
     readonly t: ReturnType<typeof useTranslations<"overview">>
     readonly g: ReturnType<typeof useTranslations<"governance">>
     readonly lifecycleOf: (lifecycle: AgentLifecycle) => string
@@ -50,12 +52,12 @@ const workOf = (input: PaneInput): OverviewPaneReady["work"] => {
                 ? {
                       description: input.t("emptyWithAgents"),
                       actionLabel: input.t("emptyActionLead"),
-                      href: CONSOLE_ROUTES.newLead,
+                      href: workspaceHref(input.workspaceId, CONSOLE_ROUTES.newLead),
                   }
                 : {
                       description: input.t("emptyNoAgents"),
                       actionLabel: input.t("emptyActionModules"),
-                      href: CONSOLE_ROUTES.modules,
+                      href: workspaceHref(input.workspaceId, AGENTS_ROUTE),
                   },
         rows: active.slice(0, WORK_LIMIT).map((row) => ({
             id: row.id,
@@ -69,7 +71,7 @@ const workOf = (input: PaneInput): OverviewPaneReady["work"] => {
             due: row.dueLabel,
             isOverdue: row.isOverdue,
             status: { label: row.statusLabel, tone: row.status === "waiting_approval" ? "warning" : "neutral" },
-            href: leadHref(row.leadId),
+            href: workspaceHref(input.workspaceId, leadHref(row.leadId)),
         })),
     }
 }
@@ -115,6 +117,15 @@ const setupOf = (input: PaneInput): OverviewPaneReady["setup"] => {
     }
 }
 
+/** The pages the head, the cards and the side pane lead to. */
+const linksOf = (workspaceId: string): OverviewPaneReady["links"] => ({
+    office: workspaceHref(workspaceId, CONSOLE_ROUTES.chat),
+    newLead: workspaceHref(workspaceId, CONSOLE_ROUTES.newLead),
+    responsibilities: workspaceHref(workspaceId, CONSOLE_ROUTES.responsibilities),
+    authority: workspaceHref(workspaceId, CONSOLE_ROUTES.authority),
+    decisions: workspaceHref(workspaceId, CONSOLE_ROUTES.decisions),
+})
+
 /** Resolves every region of the overview from one loaded read (or from the empty one, for the skeleton). */
 export const paneOf = (input: PaneInput): OverviewPaneReady => {
     const { t, governance } = input
@@ -122,6 +133,7 @@ export const paneOf = (input: PaneInput): OverviewPaneReady => {
     const exceptionTotal = exceptionTotalOf(governance)
     return {
         head: { title: input.title, description: t("description", { time: input.stamp }) },
+        links: linksOf(input.workspaceId),
         pending: governance.pendingDecisions,
         setup: setupOf(input),
         week: {
@@ -131,7 +143,7 @@ export const paneOf = (input: PaneInput): OverviewPaneReady => {
             }),
             median: median === null ? t("sumMedianNone") : t("weekMedian", { n: Math.round(median) }),
             checked: t("verified", { time: input.stamp }),
-            figures: weekFiguresOf(input.t, input.rows, input.leads),
+            figures: weekFiguresOf(input.t, input.rows, input.leads, input.workspaceId),
         },
         work: workOf(input),
         departments: departmentsOf(t, input.g, input.format, governance).map((department) => ({
@@ -140,7 +152,7 @@ export const paneOf = (input: PaneInput): OverviewPaneReady => {
             done: department.done,
             waiting: department.waiting,
             last: department.last,
-            href: CONSOLE_ROUTES.chat,
+            href: workspaceHref(input.workspaceId, CONSOLE_ROUTES.chat),
         })),
         results: resultsOf(input),
         waiting: waitingOf(input),
@@ -154,7 +166,7 @@ export const paneOf = (input: PaneInput): OverviewPaneReady => {
             avatarUrl: input.pictureOf({ handle: agent.handle, name: agent.name }),
             isActive: agent.lifecycle === "running",
             statusLabel: input.lifecycleOf(agent.lifecycle),
-            href: agentChatHref(agent.id),
+            href: workspaceHref(input.workspaceId, agentChatHref(agent.id)),
         })),
         activity: input.activity.slice(0, ACTIVITY_LIMIT).map((item) => ({
             id: item.id,
@@ -162,7 +174,7 @@ export const paneOf = (input: PaneInput): OverviewPaneReady => {
             actor: item.actor,
             summary: item.summary,
             time: item.timeLabel,
-            href: item.leadId === null ? null : leadHref(item.leadId),
+            href: item.leadId === null ? null : workspaceHref(input.workspaceId, leadHref(item.leadId)),
         })),
     }
 }

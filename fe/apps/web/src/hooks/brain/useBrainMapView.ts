@@ -16,10 +16,11 @@ import {
 } from "@/modules/brain"
 import type { CategoryView, MapContent, MapStatusFilter, MapStatusOf, MapView } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { useBrainDossiers } from "./useBrainDossiers"
 import { useDossierReviewSummary } from "./useDossierReviewSummary"
 import { useMapDetail } from "./useMapDetail"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** A map of the same shape as a ready one, drawn as geometry while the categories and dossiers are read. */
 const PLACEHOLDER: MapContent = {
@@ -65,6 +66,7 @@ interface BrainMapState {
 export const useBrainMapView = (input: MapViewInput): BrainMapState => {
     const t = useTranslations("secondBrain")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const { categories, slot } = useBrainDossiers()
     const sources = useQueryKnowledgeSourcesSwr({})
@@ -102,7 +104,7 @@ export const useBrainMapView = (input: MapViewInput): BrainMapState => {
         on: {
             select: (picked) => {
                 const id = picked === null ? null : (dossierOfFile(all, filesOf, picked)?.id ?? picked)
-                router.replace(brainTabHref("map", { node: id ?? undefined }))
+                router.replace(workspaceHref(workspaceId, brainTabHref("map", { node: id ?? undefined })))
             },
             setFilter: (value) => setFilter(MAP_STATUS_FILTERS.find((one) => one === value) ?? "all"),
         },

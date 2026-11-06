@@ -62,6 +62,7 @@ export const listRowOf = (
     connection: Connection,
     t: Translate,
     bankName: (code: string) => string,
+    workspaceId: string,
 ): ConnectionListRow => ({
     id: connection.id,
     name: connection.name,
@@ -70,7 +71,7 @@ export const listRowOf = (
         .join(" · "),
     logo: logoOf(connection),
     status: chipOf(connection, t),
-    href: connectionPageHref(connection),
+    href: connectionPageHref(workspaceId, connection),
     groups: groupsOf(connection),
 })
 
@@ -113,8 +114,9 @@ export const nextStepOf = (
     canManage: boolean,
     t: Translate,
     continueLabel: string,
+    workspaceId: string,
 ): ConnectionNextStep => {
-    const href = connectionPageHref(connection)
+    const href = connectionPageHref(workspaceId, connection)
     const body = [
         connection.status === "pending" ? t("attentionPending") : t("attentionError"),
         agentNames.length > 0 ? t("attentionImpact", { names: agentNames.join(", ") }) : "",

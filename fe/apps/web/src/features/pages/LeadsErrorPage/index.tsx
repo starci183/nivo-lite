@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl"
-import { LEADS_ROUTES } from "@/modules/routes"
+import { LEADS_ROUTES, workspaceHref } from "@/modules/routes"
 import { LeadsErrorPageBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the route error boundary hands over. */
 interface LeadsErrorPageProps {
@@ -9,12 +10,13 @@ interface LeadsErrorPageProps {
 
 /** The Leads error page: the words are settled here, the drawing is the pure half. */
 export const LeadsErrorPage = (props: LeadsErrorPageProps) => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("leads")
     return (
         <LeadsErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: LEADS_ROUTES.dashboard },
+                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, LEADS_ROUTES.dashboard) },
                     { id: "leads", label: t("title") },
                 ],
                 title: t("title"),

@@ -3,7 +3,7 @@ import type { useModuleCatalog } from "@/hooks/moduleCatalog"
 import type { MODULE_KEYS } from "@/modules/catalog"
 import { gateEntry, gateHint, gateLabel } from "@/modules/installations"
 import type { ContextVersion, SetupSession } from "@/modules/installations"
-import { KNOWLEDGE_ROUTES, brainTabHref } from "@/modules/routes"
+import { brainTabHref, KNOWLEDGE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { useSetupRequirements } from "@/hooks/setupRequirements"
 import type { SetupSideKnowledge, SetupSideNotice, SetupSideVersions, SetupSideView } from "@/modules/types"
 import type { useFormatter, useTranslations } from "next-intl"
@@ -79,15 +79,16 @@ export const knowledgeOf = (
     t: ReturnType<typeof useTranslations<"moduleSetup">>,
     counts: SetupKnowledgeCounts | null,
     moduleKey: string,
+    workspaceId: string,
 ): SetupSideKnowledge => {
     return {
         title: t("k_cardTitle"),
         businessLine: t("k_cardBusiness", { docs: counts?.documents ?? 0, facts: counts?.facts ?? 0 }),
         publicLine: "",
         emptyHint: counts !== null && counts.documents === 0 && counts.facts === 0 ? t("k_cardEmpty") : "",
-        knowledgeHref: brainTabHref("sources", { module: moduleKey }),
+        knowledgeHref: workspaceHref(workspaceId, brainTabHref("sources", { module: moduleKey })),
         knowledgeLabel: t("k_cardLink"),
-        nivoHref: KNOWLEDGE_ROUTES.nivo,
+        nivoHref: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.nivo),
         nivoLabel: t("k_nivoLink"),
     }
 }

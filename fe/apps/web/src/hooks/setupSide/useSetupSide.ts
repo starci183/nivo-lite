@@ -4,6 +4,7 @@ import { LOADING_SESSION, useSetupGates, useSetupKnowledge, useSetupState, useSe
 import { setupProgressOf } from "@/modules/setup-view"
 import { slotOfReads } from "@/hooks/slot"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useSetupRequirements } from "@/hooks/setupRequirements"
 import { MODULE_KEYS, isModuleKey } from "@/modules/catalog"
 import type { ContextVersion } from "@/modules/installations"
@@ -51,6 +52,7 @@ export const useSetupSide = (module: string, installationId: string): UseSetupSi
     const t = useTranslations("moduleSetup")
     const locale = useLocale() === "en" ? "en" : "vi"
     const format = useFormatter()
+    const workspaceId = useWorkspaceId()
     const moduleKey = isModuleKey(module) ? module : MODULE_KEYS[0]
     const catalog = useModuleCatalog()
     const state = useSetupState(installationId)
@@ -105,7 +107,7 @@ export const useSetupSide = (module: string, installationId: string): UseSetupSi
             applyText:
                 gatesState.applyNote.tone === "applied" ? t("applied", { version: gatesState.applyNote.version }) : "",
         },
-        knowledge: knowledgeOf(t, counts, moduleKey),
+        knowledge: knowledgeOf(t, counts, moduleKey, workspaceId),
         versions: versionsViewOf(versionsOf(t, versions, format, activeVersionId), isLoading),
     }
     const sideSlot = slotOfReads(reads, () => view)

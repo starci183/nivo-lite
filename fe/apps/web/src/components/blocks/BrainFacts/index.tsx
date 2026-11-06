@@ -4,9 +4,10 @@ import { useTranslations } from "next-intl"
 import { useBrainFacts } from "@/hooks/brain"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading } from "@/modules/types"
 import { BrainFactsBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the page hands the facts tab: the header without its tabs, and what the address asks of the fact drawer. */
 interface BrainFactsProps {
@@ -24,6 +25,7 @@ export const BrainFacts = (props: BrainFactsProps) => {
     const f = useTranslations("brainFacts")
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const page = useBrainFacts({ heading: props.header, fact: props.fact, edit: props.edit, answer: props.answer })
     return (
         <BrainFactsBase
@@ -53,7 +55,7 @@ export const BrainFacts = (props: BrainFactsProps) => {
             }}
             on={{
                 ...page.on,
-                add: () => router.push(brainTabHref("facts", { fact: "new" })),
+                add: () => router.push(workspaceHref(workspaceId, brainTabHref("facts", { fact: "new" }))),
             }}
         />
     )

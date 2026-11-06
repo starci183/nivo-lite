@@ -1,6 +1,5 @@
 import { AgentGraphBranchesBand } from "@/components/composites/AgentGraphBranchesBand"
 import { AgentGraphDetailDrawer } from "@/components/frames/AgentGraphDetailDrawer"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import { AgentGraphProblems } from "@/components/branches/AgentGraphProblems"
 import { AgentGraphCanvas } from "@/components/composites/AgentGraphCanvas"
 import { AgentGraphHead } from "@/components/composites/AgentGraphHead"
@@ -67,6 +66,7 @@ export interface AgentSetupPanesBaseProps {
         readonly stopEdit: () => void
         readonly apply: () => void
         readonly open: (href: string) => void
+        readonly grants: () => void
         readonly retryChat: () => void
         readonly retrySide: () => void
         readonly retryGraph: () => void
@@ -157,7 +157,7 @@ const ProblemsBand = (props: AgentSetupPanesBaseProps) =>
         <AgentGraphProblems
             view={view.problems}
             onOpen={(value) => props.on.graph({ kind: "openNode", value })}
-            onGrants={() => props.on.open(CONSOLE_ROUTES.authority)}
+            onGrants={props.on.grants}
         />
     ))
 

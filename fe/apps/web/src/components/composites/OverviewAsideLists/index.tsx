@@ -2,7 +2,6 @@ import { EmptyNotice, Link, Section } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { IconName } from "@/components/leaves/Icon"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { OverviewPaneCopy, OverviewPaneReady } from "@/modules/types"
 
 /** What the agents and activity sections draw. */
@@ -65,7 +64,7 @@ export const OverviewAsideLists = (props: OverviewAsideListsProps) => (
             title={props.copy.activityTitle}
             headingLevel={3}
             isLoading={props.isLoading}
-            action={<Link href={CONSOLE_ROUTES.responsibilities}>{props.copy.activityAll}</Link>}
+            action={<Link href={props.data.links.responsibilities}>{props.copy.activityAll}</Link>}
             empty={<EmptyNotice message={props.copy.activityTitle} />}
             items={props.data.activity.map((item) => activityRowOf(item, props.onGo))}
         />

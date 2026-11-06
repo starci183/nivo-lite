@@ -1,11 +1,11 @@
 import { useTranslations } from "next-intl"
 import { useRef, useState } from "react"
 import { useWorkspaceMember } from "@/hooks/knowledge"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useActiveWorkspace, useWorkspaceId } from "@/hooks/workspaces"
 import { useFeatureLifetime } from "@/hooks/reuseables"
 import { brainPartOf, firstTabOf } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { BRAIN_PARTS, brainTabHref } from "@/modules/routes"
+import { BRAIN_PARTS, brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainTab } from "@/modules/routes"
 import type { BrainPageHeaderView } from "@/modules/types"
 import { toast } from "@/modules/toast"
@@ -47,6 +47,7 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
     const review = useTranslations("dossierReview")
     const feedback = useTranslations("toast")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const member = useWorkspaceMember()
     const summary = useDossierReviewSummary()
     const commands = useDossierReviewCommands()
@@ -73,7 +74,7 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
             : null,
         add:
             member.canWrite && part === "internal" && tab !== "sources"
-                ? { label: t("addDocuments"), href: brainTabHref("sources") }
+                ? { label: t("addDocuments"), href: workspaceHref(workspaceId, brainTabHref("sources")) }
                 : null,
     }
     return {
@@ -107,7 +108,7 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
             },
             setPart: (id: string) => {
                 const next = BRAIN_PARTS.find((one) => one === id)
-                if (next !== undefined) router.push(brainTabHref(firstTabOf(next)))
+                if (next !== undefined) router.push(workspaceHref(workspaceId, brainTabHref(firstTabOf(next))))
             },
         },
     }

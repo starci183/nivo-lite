@@ -1,7 +1,7 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { SepayConnectionPageBase } from "./component"
 
 /** The document title of the SePay connection page. */
@@ -12,6 +12,7 @@ export const sepayConnectionMetadata = async (): Promise<Metadata> => {
 
 /** What the route hands the page: the connection id. */
 type SepayConnectionPageProps = {
+    readonly workspaceId: string
     readonly connectionId: string
 }
 
@@ -22,7 +23,7 @@ export const SepayConnectionPage = async (props: SepayConnectionPageProps): Prom
         <SepayConnectionPageBase
             props={{
                 connectionId: props.connectionId,
-                hubHref: CONSOLE_ROUTES.connections,
+                hubHref: workspaceHref(props.workspaceId, CONSOLE_ROUTES.connections),
                 gridLabel: t("title"),
                 mainLabel: t("mainLabel"),
                 rail: { label: t("eventsTitle"), closeLabel: t("eventsClose") },

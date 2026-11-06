@@ -3,8 +3,9 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { SEVERITY_TONE, findingActionsOf, splitActionsOf } from "@/modules/brain"
 import type { FindingActionView, FindingRowView, FindingView, MemberOption } from "@/modules/brain"
-import { brainDossierHref, brainUploadHref, knowledgeSourceHref } from "@/modules/routes"
+import { brainDossierHref, brainUploadHref, knowledgeSourceHref, workspaceHref } from "@/modules/routes"
 import { ownerPartOf, placeWordsOf, statusPartOf } from "./brain.shared"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The dossier a pane's findings are filed under: what the upload action needs to file a document under it. */
 export interface UploadTarget {
@@ -31,6 +32,7 @@ export interface FindingRowsView {
 
 /** Puts a finding into the words of a row: its badges, the one muted line, its evidence and its actions. */
 export const useFindingRows = (): FindingRowsView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("dossierReview")
     const format = useFormatter()
     const rowOf = (finding: FindingView, context: FindingRowContext): FindingRowView => {
@@ -55,7 +57,7 @@ export const useFindingRows = (): FindingRowsView => {
                     {
                         id: action,
                         label: t(action),
-                        href: brainUploadHref(context.upload.category, context.upload.tag),
+                        href: workspaceHref(workspaceId, brainUploadHref(context.upload.category, context.upload.tag)),
                     },
                 ]
             },
@@ -65,7 +67,7 @@ export const useFindingRows = (): FindingRowsView => {
             title: finding.title,
             titleHref:
                 context.showDossier && finding.dossierId !== null
-                    ? brainDossierHref(finding.dossierId, { finding: finding.id })
+                    ? workspaceHref(workspaceId, brainDossierHref(finding.dossierId, { finding: finding.id }))
                     : null,
             detail: finding.detail,
             badges: [
@@ -90,7 +92,7 @@ export const useFindingRows = (): FindingRowsView => {
             sources: [...sources].map(([id, title]) => ({
                 id,
                 label: t("evidenceFrom", { title }),
-                href: knowledgeSourceHref(id),
+                href: workspaceHref(workspaceId, knowledgeSourceHref(id)),
             })),
             actions,
             ...splitActionsOf(actions),

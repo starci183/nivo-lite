@@ -1,4 +1,4 @@
-import { AUTOMATION_ROUTES } from "@/modules/routes"
+import { AUTOMATION_ROUTES, workspaceHref } from "@/modules/routes"
 import { automationText, automationTimeParts } from "./status"
 import type { AutomationValues } from "./status"
 import { fillBody } from "./preview"
@@ -44,6 +44,7 @@ const GATE_LINE = { auto: "gateAuto", ask: "gateAsk", never: "gateNever" } as co
 
 /** The words every section of the detail needs. */
 export interface DetailContext {
+    readonly workspaceId: string
     readonly t: AutomationsTranslator
     readonly locale: AutomationsLanguage
     /** A moment as the reader reads it. */
@@ -181,7 +182,9 @@ const runRowOf = (run: AutomationRunView, ctx: DetailContext): RunRowView => {
         tone: RUN_TONE[run.status],
         whenText: ctx.when(run.createdAt),
         summary: run.summary,
-        ...(run.status === "waiting_approval" ? { decisionsHref: AUTOMATION_ROUTES.decisions } : {}),
+        ...(run.status === "waiting_approval"
+            ? { decisionsHref: workspaceHref(ctx.workspaceId, AUTOMATION_ROUTES.decisions) }
+            : {}),
         ...(run.error === null ? {} : { errorText: run.error }),
         ...(run.message === null ? {} : { message: run.message }),
         ...(run.evidence === null ? {} : { evidence: run.evidence }),

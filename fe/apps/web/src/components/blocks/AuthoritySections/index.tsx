@@ -2,8 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
-import { authoritySectionPath } from "@/modules/routes"
+import { authoritySectionPath, workspaceHref } from "@/modules/routes"
 import { AuthoritySectionsBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the page tells the list: the section the address names. */
 interface AuthoritySectionsProps {
@@ -16,6 +17,7 @@ interface AuthoritySectionsProps {
 export const AuthoritySections = (props: AuthoritySectionsProps) => {
     const t = useTranslations("authority")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     return (
         <AuthoritySectionsBase
             props={{
@@ -23,7 +25,7 @@ export const AuthoritySections = (props: AuthoritySectionsProps) => {
                 rows: props.sections.map((id) => ({ id, title: t(`${id}Title`), description: t(`${id}Line`) })),
                 selectedId: props.selected,
             }}
-            on={{ select: (id) => router.push(authoritySectionPath(id)) }}
+            on={{ select: (id) => router.push(workspaceHref(workspaceId, authoritySectionPath(id))) }}
         />
     )
 }

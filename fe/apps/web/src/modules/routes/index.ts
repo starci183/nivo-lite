@@ -26,7 +26,8 @@ export {
     workspacesPath,
 } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
-export { workspaceHref } from "./workspace-href"
+export { pathInWorkspace, workspaceHref, workspaceLinkOf } from "./workspace-href"
+export { openWorkspaceId, workspaceIdOfAddress } from "./workspace-address"
 export { creditsPath, workspacePaymentPath, workspaceRenewalPaymentPath } from "./workspace-routes"
 export {
     AGENTS_ROUTE,
@@ -36,7 +37,6 @@ export {
     agentChatConversationHref,
     agentChatHref,
     agentProfileHref,
-    agentSetupHref,
     authoritySectionPath,
     leadFlowHref,
     leadHref,

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ResponsibilitiesErrorPageBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the route error boundary hands over. */
 interface ResponsibilitiesErrorPageProps {
@@ -9,12 +10,13 @@ interface ResponsibilitiesErrorPageProps {
 
 /** The responsibility board keeps its trail and heading when the page fails: the words are settled here. */
 export const ResponsibilitiesErrorPage = (props: ResponsibilitiesErrorPageProps) => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("responsibilities")
     return (
         <ResponsibilitiesErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
+                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) },
                     { id: "responsibilities", label: t("pageTitle") },
                 ],
                 title: t("pageTitle"),

@@ -4,13 +4,14 @@ import { useTranslations } from "next-intl"
 import { useEffect, useRef } from "react"
 import { useBrainTodoCount } from "@/hooks/brain"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { isDocumentActive } from "@/modules/documents"
 import type { KnowledgeAddDrawerView } from "@/modules/types"
 import type { AddPreset } from "@/hooks/knowledgeAddTypes"
 import type { ModuleKey } from "@/modules/catalog"
 import { useAddDocumentsView } from "./useAddDocumentsView"
 import { useKnowledgeSources } from "./useKnowledgeSources"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the drawer needs to know about where it was opened from. */
 interface KnowledgeAddDrawerInput {
@@ -33,6 +34,7 @@ export const useKnowledgeAddDrawer = (input: KnowledgeAddDrawerInput): Knowledge
     const t = useTranslations("knowledge")
     const tp = useTranslations("pane")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const { add, view } = useAddDocumentsView(input)
     const { sources } = useKnowledgeSources()
     const todo = useBrainTodoCount()
@@ -67,7 +69,7 @@ export const useKnowledgeAddDrawer = (input: KnowledgeAddDrawerInput): Knowledge
         on: {
             close: add.close,
             connectDrive: () => drive?.onPress(),
-            seeQuestions: () => router.push(brainTabHref("todo")),
+            seeQuestions: () => router.push(workspaceHref(workspaceId, brainTabHref("todo"))),
             setMode: add.pickMode,
             addFiles: queue.addFiles,
             setLink: add.linkRows.setValue,

@@ -28,14 +28,17 @@ interface BrainSearch {
 
 /** What the page receives from Next. */
 interface BrainRouteProps {
+    readonly params: Promise<{ readonly workspaceId: string }>
     readonly searchParams: Promise<BrainSearch>
 }
 
 /** The Second Brain: the shared memory of the business, its documents and what each agent sees of it. Everyone reads; owners and managers decide. */
-const Page = async ({ searchParams }: BrainRouteProps): Promise<ReactElement> => {
+const Page = async ({ params, searchParams }: BrainRouteProps): Promise<ReactElement> => {
+    const { workspaceId } = await params
     const { tab, fact, edit, answer, lesson, dossier, finding, draft, node, compose, title, doc } = await searchParams
     return (
         <BrainPage
+            workspaceId={workspaceId}
             tab={tab}
             fact={fact}
             edit={edit}

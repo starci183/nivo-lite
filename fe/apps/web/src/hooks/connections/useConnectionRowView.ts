@@ -23,6 +23,7 @@ import { useConnectionRowActions } from "./useConnectionRowActions"
 import { useSetConnectionGrant } from "./useSetConnectionGrant"
 import { useSmtpRowPanel } from "./useSmtpRowPanel"
 import type { SmtpRowPanel } from "./useSmtpRowPanel"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What a connection row is given by the page that read it. */
 export interface ConnectionRowViewInput {
@@ -56,6 +57,7 @@ export interface ConnectionRowHandlers {
 export const useConnectionRowView = (
     input: ConnectionRowViewInput,
 ): { readonly view: RowView; readonly on: ConnectionRowHandlers } => {
+    const workspaceId = useWorkspaceId()
     const { connection: c } = input
     const t = useTranslations("connections")
     const bankName = useBankName()
@@ -91,7 +93,7 @@ export const useConnectionRowView = (
         state: rowState(c.status),
         primary: primaryOf(c, input.canManage, actions.busy, t),
         access: usesAgents(c.provider) && live ? access.view : null,
-        page: pageOf(c, t("openPage")),
+        page: pageOf(workspaceId, c, t("openPage")),
         menuLabel: t("more", { name: c.name }),
         menuIsDisabled: actions.busy === "keys",
         menu: menuOf(c, input.canManage && (c.provider !== "google_drive" || role === "owner"), t),
@@ -118,8 +120,8 @@ export const useConnectionRowView = (
 }
 
 /** The link to the connection's own page, when its provider has one. */
-const pageOf = (c: Connection, label: string): RowView["page"] => {
-    const href = connectionPageHref(c)
+const pageOf = (workspaceId: string, c: Connection, label: string): RowView["page"] => {
+    const href = connectionPageHref(workspaceId, c)
     return href === null ? null : { href, label }
 }
 

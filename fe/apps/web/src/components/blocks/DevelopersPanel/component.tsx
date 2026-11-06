@@ -3,7 +3,6 @@ import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { APP_ROUTES } from "@/modules/routes"
 
 /** One outgoing webhook as the list shows it. */
 export interface DevelopersWebhookRow {
@@ -83,7 +82,9 @@ export interface DevelopersPanelBaseProps {
         readonly webhooksView: DevelopersWebhooksView
         readonly crumbLabel: string
         readonly crumbHome: string
+        readonly homeHref: string
         readonly crumbAutomations: string
+        readonly automationsHref: string
         readonly title: string
         readonly description: string
         readonly eventsTitle: string
@@ -109,8 +110,8 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
             breadcrumbs: {
                 label: props.props.crumbLabel,
                 items: [
-                    { id: "home", label: props.props.crumbHome, href: APP_ROUTES.dashboard },
-                    { id: "automations", label: props.props.crumbAutomations, href: APP_ROUTES.automations },
+                    { id: "home", label: props.props.crumbHome, href: props.props.homeHref },
+                    { id: "automations", label: props.props.crumbAutomations, href: props.props.automationsHref },
                     { id: "developers", label: props.props.title },
                 ],
             },

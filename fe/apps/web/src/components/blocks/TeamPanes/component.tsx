@@ -175,8 +175,8 @@ const headerOf = (props: Props) => {
             selectedKey: "members",
             labelVisibility: "always" as const,
             items: [
-                { id: "members", label: copy.membersTab, href: "/team" },
-                { id: "permissions", label: copy.permissionsTab, href: "/permissions" },
+                { id: "members", label: copy.membersTab, href: copy.membersHref },
+                { id: "permissions", label: copy.permissionsTab, href: copy.permissionsHref },
             ],
         },
     }

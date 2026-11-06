@@ -5,9 +5,10 @@ import { useEffect } from "react"
 import { useWatch } from "react-hook-form"
 import { useLeadCreateForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
-import { LEADS_ROUTES, leadPath } from "@/modules/routes"
+import { leadPath, LEADS_ROUTES, workspaceHref } from "@/modules/routes"
 import type { LeadCreateDialogProps } from "@/modules/types"
 import { useCreateLead } from "./useCreateLead"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 const CHANNEL_KEYS = [
     "channelZalo",
@@ -22,13 +23,14 @@ const CHANNEL_KEYS = [
 export const useLeadCreatePane = (isOpen: boolean): LeadCreateDialogProps => {
     const t = useTranslations("leads")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const form = useLeadCreateForm()
     const values = useWatch({ control: form.control })
     const action = useCreateLead()
     const errors = Object.fromEntries(Object.entries(form.formState.errors).map(([key, error]) => [key, error.message]))
     useEffect(() => {
-        if (action.result?.leadId) router.push(leadPath(action.result.leadId))
-    }, [action.result?.leadId, router])
+        if (action.result?.leadId) router.push(workspaceHref(workspaceId, leadPath(action.result.leadId)))
+    }, [action.result?.leadId, router, workspaceId])
     const submit = form.handleSubmit(async (input) => {
         await action.create(input)
     })
@@ -69,7 +71,7 @@ export const useLeadCreatePane = (isOpen: boolean): LeadCreateDialogProps => {
             submit: () => {
                 void submit()
             },
-            close: () => router.replace(LEADS_ROUTES.leads),
+            close: () => router.replace(workspaceHref(workspaceId, LEADS_ROUTES.leads)),
         },
     }
 }

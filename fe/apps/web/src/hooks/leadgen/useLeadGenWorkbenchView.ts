@@ -9,6 +9,7 @@ import { LEADGEN_PENDING_METRICS, leadGenFiguresOf } from "./leadgen.shared"
 import { useLeadGenComments } from "./useLeadGenComments"
 import { useLeadGenWorkbench } from "./useLeadGenWorkbench"
 import type { Figure } from "@starci/grammar/common"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 type LeadGenTab = (typeof LEADGEN_TABS)[number]
 
@@ -68,6 +69,7 @@ export const useLeadGenWorkbenchView = (input: LeadGenWorkbenchViewInput): LeadG
     const t = useTranslations("workbenchLeadGen")
     const dashboard = useTranslations("agentDashboard")
     const format = useFormatter()
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const tabs = useAgentWorkbenchTabs({ ids: LEADGEN_TABS, initialTab: input.initialTab })
     const frame = useAgentDashboardFrame({
@@ -80,9 +82,9 @@ export const useLeadGenWorkbenchView = (input: LeadGenWorkbenchViewInput): LeadG
     const rows = "items" in workbench.slot ? workbench.slot.items.comments : []
     const comments = useLeadGenComments(rows, isCommentsActive)
     const panel = mapSlot(workbench.slot, (data) => ({
-        leads: leadsViewOf(t, format, data.leads, data.leadsHidden),
+        leads: leadsViewOf(t, format, data.leads, data.leadsHidden, workspaceId),
         sources: sourcesViewOf(t, data.sources),
-        handoffs: handoffsViewOf(t, format, data.handoffs),
+        handoffs: handoffsViewOf(t, format, data.handoffs, workspaceId),
         comments: comments.props,
     }))
     return {
@@ -102,9 +104,9 @@ export const useLeadGenWorkbenchView = (input: LeadGenWorkbenchViewInput): LeadG
             panel: {
                 slot: panel,
                 placeholder: {
-                    leads: leadsViewOf(t, format, [], 0),
+                    leads: leadsViewOf(t, format, [], 0, workspaceId),
                     sources: sourcesViewOf(t, []),
-                    handoffs: handoffsViewOf(t, format, []),
+                    handoffs: handoffsViewOf(t, format, [], workspaceId),
                     comments: comments.props,
                 },
                 labels: slotLabels(input.tabs[tabs.selected]),

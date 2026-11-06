@@ -1,5 +1,5 @@
 import type { useTranslations } from "next-intl"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { KNOWLEDGE_ROUTES, workspaceHref } from "@/modules/routes"
 import { docTabsOf } from "./docs-rows"
 import { AGENT_MODULES } from "./status"
 import type { KnowledgeTranslate } from "./docs-translate"
@@ -68,13 +68,14 @@ export const docsTrailOf = (
     t: KnowledgeTranslate,
     selection: DocsSelection,
     itemTitle: string | undefined,
+    workspaceId: string,
 ): BrainPageHeading => {
     const [home, brain] = heading.breadcrumbs.items
     const open =
         selection.kind === "none"
             ? []
             : [
-                  { id: "documents", label: t("title"), href: KNOWLEDGE_ROUTES.library },
+                  { id: "documents", label: t("title"), href: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.library) },
                   { id: "item", label: tailLabelOf(t, selection, itemTitle) },
               ]
     return {
@@ -83,7 +84,9 @@ export const docsTrailOf = (
             ...heading.breadcrumbs,
             items: [
                 ...(home === undefined ? [] : [home]),
-                ...(brain === undefined ? [] : [{ ...brain, href: KNOWLEDGE_ROUTES.brain }]),
+                ...(brain === undefined
+                    ? []
+                    : [{ ...brain, href: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.brain) }]),
                 ...open,
             ],
         },

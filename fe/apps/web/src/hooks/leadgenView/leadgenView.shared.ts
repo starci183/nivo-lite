@@ -1,6 +1,7 @@
 import type { BadgeTone } from "@starci/grammar/common"
 import type { useFormatter, useTranslations } from "next-intl"
 import type { FlowWorkStatus, LeadGenHandoff, LeadGenLead, LeadGenSource, LeadScore } from "@/modules/types"
+import { workspaceLinkOf } from "@/modules/routes"
 
 /** The translator of the Lead Gen catalog namespace. */
 export type LeadGenTranslator = ReturnType<typeof useTranslations>
@@ -58,6 +59,7 @@ export const leadsViewOf = (
     format: LeadGenFormat,
     rows: ReadonlyArray<LeadGenLead>,
     hidden: number,
+    workspaceId: string,
 ): LeadsViewOfResult => ({
     label: t("leadsLabel"),
     emptyTitle: t("leadsEmptyTitle"),
@@ -66,7 +68,7 @@ export const leadsViewOf = (
     rows: rows.map((row) => ({
         id: row.id,
         title: row.name,
-        href: row.href,
+        href: workspaceLinkOf(workspaceId, row.href),
         description: t("lastLine", { text: row.lastText || "—", when: whenOf(format, row.lastAt) }),
         badges: [
             {
@@ -165,6 +167,7 @@ export const handoffsViewOf = (
     t: LeadGenTranslator,
     format: LeadGenFormat,
     rows: ReadonlyArray<LeadGenHandoff>,
+    workspaceId: string,
 ): HandoffsViewOfResult => ({
     label: t("handoffsLabel"),
     emptyTitle: t("handoffsEmptyTitle"),
@@ -173,7 +176,7 @@ export const handoffsViewOf = (
     rows: rows.map((row) => ({
         id: row.key,
         title: row.name,
-        href: row.href,
+        href: workspaceLinkOf(workspaceId, row.href),
         description: [t("stageLine", { stage: stageNameOf(t, row.stage) }), whenOf(format, row.at)].join(" · "),
         badges: [
             { label: scoreLabelOf(t, row.score), tone: row.score ? SCORE_TONES[row.score] : ("neutral" as const) },

@@ -2,11 +2,12 @@
 
 import { useTranslations } from "next-intl"
 import { useSlotLabels } from "@/hooks/slot"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { PublicPickerDrawerView, PublicWriteDrawerView } from "@/modules/types"
 import { useFailureToast } from "./useFailureToast"
 import { usePublicDraftController } from "./usePublicDraftController"
 import { usePublicWriteController } from "./usePublicWriteController"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the address asks of the two forms that start a public document. */
 interface PublicComposeInput {
@@ -27,6 +28,7 @@ interface PublicComposeDrawers {
  * or the owner writes it by hand (separate from any internal document). Nothing reaches a customer before the owner approves it.
  */
 export const usePublicComposeDrawers = (input: PublicComposeInput): PublicComposeDrawers => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("publicBrain")
     const p = useTranslations("brainPublic")
     const failed = useFailureToast()
@@ -44,7 +46,10 @@ export const usePublicComposeDrawers = (input: PublicComposeInput): PublicCompos
                 cancelLabel: t("cancel"),
                 submitLabel: t("pickSubmit"),
                 note: t("pickNote"),
-                writeInstead: { label: p("writeInstead"), href: brainTabHref("publicDocs", { compose: "write" }) },
+                writeInstead: {
+                    label: p("writeInstead"),
+                    href: workspaceHref(workspaceId, brainTabHref("publicDocs", { compose: "write" })),
+                },
                 titleLabel: t("pickTitleLabel"),
                 sourcesLabel: t("pickSourcesLabel"),
                 sourcesHint: t("pickSourcesHint", { max: picker.maxSources }),

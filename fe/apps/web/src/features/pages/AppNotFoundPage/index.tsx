@@ -13,7 +13,7 @@ export const AppNotFoundPage = async (): Promise<ReactElement> => {
                 title: t("notFoundTitle"),
                 text: t("notFoundText"),
                 homeLabel: t("notFoundHome"),
-                homeHref: APP_ROUTES.dashboard,
+                homeHref: APP_ROUTES.home,
             }}
         />
     )

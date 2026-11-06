@@ -15,10 +15,11 @@ import { paneGridOf, usePaneCopy, usePanePhone } from "@/hooks/paneFrame"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useQueryAgentsSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { DecisionKind, DecisionRecord } from "@/modules/types"
 import { DecisionsBoardBase } from "./component"
 import type { DecisionListView, DecisionsBoardCopy } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 const ALL = "all"
 
@@ -79,12 +80,13 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
     const format = useFormatter()
     const phone = usePanePhone()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const { slot: history, reload } = useDecisionHistory(props.kind, props.department)
     const [chosen, setChosen] = useState<string | null>(null)
     const installed = new Set((useQueryAgentsSwr({}).data ?? []).map((agent) => agent.module))
     const departments = props.departments.filter((key) => installed.has(key) || key === props.department)
     const isFiltered = props.kind !== null || props.department !== null
-    const words = { t, g, format, now: new Date() }
+    const words = { t, g, format, now: new Date(), workspaceId }
     const listOf = (records: ReadonlyArray<DecisionRecord>): DecisionListView => ({
         rows: records.map((row) => decisionRowViewOf(words, row)),
         count: t(records.length >= DECISIONS_LIMIT ? "countCapped" : "count", { n: records.length }),
@@ -117,10 +119,16 @@ export const DecisionsBoard = (props: DecisionsBoardProps) => {
                 grid: paneGridOf({ hasList: true, hasAside: false, phone: phone.phone }),
             }}
             on={{
-                kind: (key) => router.push(decisionsHref(decisionKindOf(key), props.department)),
+                kind: (key) =>
+                    router.push(workspaceHref(workspaceId, decisionsHref(decisionKindOf(key), props.department))),
                 dept: (key) =>
-                    router.push(decisionsHref(props.kind, departments.find((module) => module === key) ?? null)),
-                clear: () => router.push(CONSOLE_ROUTES.decisions),
+                    router.push(
+                        workspaceHref(
+                            workspaceId,
+                            decisionsHref(props.kind, departments.find((module) => module === key) ?? null),
+                        ),
+                    ),
+                clear: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.decisions)),
                 retry: reload,
                 select: (id) => {
                     setChosen(id)

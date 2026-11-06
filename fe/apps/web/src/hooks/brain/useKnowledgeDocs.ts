@@ -6,7 +6,7 @@ import { useDocsAddress, useKnowledgeDocIdeas, useKnowledgeSources, useNivoKnowl
 import { isWaitingOf, loadingSlot } from "@/hooks/slot"
 import { brainGridOf } from "@/modules/brain"
 import { docsCopyOf, docsMainViewOf, docsNivoSlotOf, docsTrailOf, nivoOpenedOf } from "@/modules/documents"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading, DocsSelection, KnowledgeDocsView } from "@/modules/types"
 import { useBrainPageHeader } from "./useBrainPageHeader"
 import { useDocsList } from "./useDocsList"
@@ -15,6 +15,7 @@ import { useKnowledgeDocsCommands } from "./useKnowledgeDocsCommands"
 import { useKnowledgeRowOf } from "./useKnowledgeRowOf"
 import { useOpenedDoc } from "./useOpenedDoc"
 import { useWaitingFactCount } from "./useWaitingFactCount"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the page tells the documents screen. */
 interface KnowledgeDocsInput {
@@ -29,6 +30,7 @@ interface KnowledgeDocsInput {
  * keeps the search, the filter, the agent and the open item.
  */
 export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("knowledge")
     const tp = useTranslations("pane")
     const brain = useTranslations("secondBrain")
@@ -48,10 +50,16 @@ export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView =
     const isDocPending = selection.kind === "doc" && selection.id === undefined
     const main = docsMainViewOf(selection, isDocPending ? loadingSlot() : doc.opened, nivoOpened)
     const selectedKey = `${selection.kind}:${selectedId ?? ""}`
-    const header = useBrainPageHeader("sources", docsTrailOf(input.heading, t, selection, doc.title ?? chosen?.title))
+    const header = useBrainPageHeader(
+        "sources",
+        docsTrailOf(input.heading, t, selection, doc.title ?? chosen?.title, workspaceId),
+    )
     const nextReview =
         "items" in waiting.slot && waiting.slot.items > 0
-            ? { label: brain("nextReview", { count: waiting.slot.items }), href: brainTabHref("todo") }
+            ? {
+                  label: brain("nextReview", { count: waiting.slot.items }),
+                  href: workspaceHref(workspaceId, brainTabHref("todo")),
+              }
             : null
     const hasAside =
         (selection.kind !== "none" || ideas.view !== null || nextReview !== null) && hiddenFor !== selectedKey
@@ -83,7 +91,7 @@ export const useKnowledgeDocs = (input: KnowledgeDocsInput): KnowledgeDocsView =
             hasAside,
             isRemoveOpen,
             canAdd: row.member.canWrite,
-            addHref: brainTabHref("sources", { ...address.carried, add: "upload" }),
+            addHref: workspaceHref(workspaceId, brainTabHref("sources", { ...address.carried, add: "upload" })),
             addLabel: t("addTitle"),
         },
         on,

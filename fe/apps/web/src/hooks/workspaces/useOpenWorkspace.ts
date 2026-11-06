@@ -3,7 +3,7 @@
 import { useTransition } from "react"
 import { useWorkspaceOpenStore } from "@/hooks/zustand/workspaceOpen"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES, workspacePaymentPath } from "@/modules/routes"
+import { APP_ROUTES, workspaceHref, workspacePaymentPath } from "@/modules/routes"
 import type { WorkspaceCardView } from "./workspaces.shared"
 import { useActiveWorkspace } from "./useActiveWorkspace"
 
@@ -31,7 +31,7 @@ export const useOpenWorkspace = (): OpenWorkspace => {
             startTransition(() => {
                 if (card.state !== "active") return router.push(workspacePaymentPath(card.id))
                 select(card.id)
-                router.push(APP_ROUTES.chat)
+                router.push(workspaceHref(card.id, APP_ROUTES.chat))
                 router.refresh()
             })
         },

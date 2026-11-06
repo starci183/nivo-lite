@@ -11,8 +11,9 @@ import {
 } from "@/hooks/agentSettings"
 
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AUTOMATION_ROUTES } from "@/modules/routes"
+import { AUTOMATION_ROUTES, workspaceHref } from "@/modules/routes"
 import { AgentConnectionAccessBase, type AgentConnectionAccessRow } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 const NONE = "none"
 const LEVELS = ["read", "ask", "auto"] as const
@@ -32,6 +33,7 @@ const SHIFTS = "shifts"
 
 /** The connected card of the connections an agent uses: a pick shows at once and goes back when the server refuses it. */
 export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("modulesCore")
     const slotLabels = useSlotLabels()
     const { canGrant } = useAgentRights()
@@ -70,7 +72,7 @@ export const AgentConnectionAccess = (props: AgentConnectionAccessProps) => {
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("grantEmpty")),
                 manageLabel: t("grantManage"),
-                manageHref: AUTOMATION_ROUTES.connections,
+                manageHref: workspaceHref(workspaceId, AUTOMATION_ROUTES.connections),
                 ownerOnlyText: t("grantOwnerOnly"),
                 levels: [
                     ...LEVELS.map((level) => ({ id: level, label: t(`grant_${level}`) })),

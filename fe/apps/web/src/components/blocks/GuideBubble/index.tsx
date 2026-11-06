@@ -5,8 +5,10 @@ import { useState } from "react"
 import { guideKeyOf, pageAt, useGuideConversation, useGuideSpotlight } from "@/hooks/guide"
 
 import { isManager, useMember } from "@/hooks/member"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 import { navigation } from "@/modules/i18n"
+import { pathInWorkspace, workspaceHref } from "@/modules/routes"
 import { GuideBubbleBase } from "./component"
 
 const PHONE_WIDTH = 640
@@ -21,26 +23,28 @@ export const GuideBubble = () => {
     const map = useTranslations("guideMap")
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
+    const workspaceId = useWorkspaceId()
+    const path = pathInWorkspace(pathname)
     const spotlight = useGuideSpotlight(pathname)
     const [isOpen, setIsOpen] = useState(false)
     const { messages, isAsking, ask, restart } = useGuideConversation(isManagerRole)
     const [question, setQuestion] = useState("")
-    const here = pageAt(pathname)
+    const here = pageAt(path)
     const overComposer = pathname.endsWith("/chat") || pathname.endsWith("/brain") || /\/agents\/[^/]+/.test(pathname)
 
     const send = (text: string) => {
         if (text.trim() === "" || isAsking) return
         setQuestion("")
-        void ask(text, pathname)
+        void ask(text, path)
     }
     const go = (messageId: number, linkId: string) => {
         const message = messages.find((entry) => entry.id === messageId)
         const link =
             message?.role === "guide" ? message.reply.links.find((entry) => entry.pageId === linkId) : undefined
         if (link === undefined) return
-        spotlight(link.target, pathname === link.href)
+        spotlight(link.target, path === link.href)
         if (window.innerWidth < PHONE_WIDTH) setIsOpen(false)
-        if (pathname !== link.href) router.push(link.href)
+        if (path !== link.href) router.push(workspaceHref(workspaceId, link.href))
     }
     const suggestions = isManagerRole
         ? [t("suggestSepay"), t("suggestTelegram"), t("suggestTeam"), t("suggestKnowledge")]

@@ -9,8 +9,9 @@ import { useConnectionsList, visibleRowsOf } from "@/hooks/connectionsPanes"
 import { connectionsGridOf } from "@/hooks/connectionsRoute"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ConnectionsFrameBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the routed page hands the frame: the page that sits beside the list. */
 interface ConnectionsFrameProps {
@@ -27,6 +28,8 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
     const shell = useTranslations("shell")
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
+    const hubHref = workspaceHref(workspaceId, CONSOLE_ROUTES.connections)
     const labels = useSlotLabels()
     const list = useConnectionsList()
     const [text, setText] = useState("")
@@ -49,18 +52,19 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
                     clearFilters: pane.clearFilters,
                 },
                 crumbs: [
-                    { id: "home", label: shell("crumbHome"), href: CONSOLE_ROUTES.dashboard },
+                    {
+                        id: "home",
+                        label: shell("crumbHome"),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard),
+                    },
                     list.openName === null
                         ? { id: "connections", label: t("title") }
-                        : { id: "connections", label: t("title"), href: CONSOLE_ROUTES.connections },
+                        : { id: "connections", label: t("title"), href: hubHref },
                     ...(list.openName === null ? [] : [{ id: "open", label: list.openName }]),
                 ],
                 tab: list.tab,
                 connectedLabel: view === undefined ? t("tabConnected") : `${t("tabConnected")} · ${view.rows.length}`,
-                tabHrefs: {
-                    connected: CONSOLE_ROUTES.connections,
-                    library: `${CONSOLE_ROUTES.connections}?tab=library`,
-                },
+                tabHrefs: { connected: hubHref, library: `${hubHref}?tab=library` },
                 slot: list.slot,
                 labels: labels(t("connectedEmpty")),
                 search: {
@@ -82,7 +86,7 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
                 grid: connectionsGridOf({ hasList: view === undefined || view.liveCount > 0, isRoot: list.isRoot }),
             }}
             on={{
-                open: (row) => router.push(row.href ?? `${CONSOLE_ROUTES.connections}?${URL_PARAMS.open}=${row.id}`),
+                open: (row) => router.push(row.href ?? `${hubHref}?${URL_PARAMS.open}=${row.id}`),
                 retry: list.retry,
                 continueSetup: (href) => router.push(href),
                 clearFilters: () => {

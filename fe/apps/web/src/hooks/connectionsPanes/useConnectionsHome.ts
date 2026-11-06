@@ -40,7 +40,10 @@ export const useConnectionsHome = (): ConnectionsHomeRead => {
         attention: attention.length,
         agentCount: agents.length,
         activeAgents: data.activeAgents.length,
-        next: first === undefined ? null : nextStepOf(first, namesOf(first), canManage, t, t("continueSetup")),
+        next:
+            first === undefined
+                ? null
+                : nextStepOf(first, namesOf(first), canManage, t, t("continueSetup"), activeWorkspaceId ?? ""),
         agents,
         canManage,
     }

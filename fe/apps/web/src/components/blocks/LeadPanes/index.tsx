@@ -5,8 +5,9 @@ import { useLeadCreatePane, useLeadDetailPane, useLeadListPane } from "@/hooks/l
 import { paneGridOf, usePaneCopy } from "@/hooks/paneFrame"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { LEADS_ROUTES, leadPath, newLeadPath } from "@/modules/routes"
+import { leadPath, LEADS_ROUTES, newLeadPath, workspaceHref } from "@/modules/routes"
 import { LeadPanesBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the route hands the panes: the open lead (none on the list route), the search and whether the new-lead dialog is open. */
 interface LeadPanesProps {
@@ -23,6 +24,7 @@ export const LeadPanes = (props: LeadPanesProps) => {
     const t = useTranslations("leads")
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const list = useLeadListPane(props.query)
     const create = useLeadCreatePane(props.isFormOpen)
@@ -79,9 +81,9 @@ export const LeadPanes = (props: LeadPanesProps) => {
                 create: create.props,
             }}
             on={{
-                open: (leadId) => router.push(leadPath(leadId)),
-                back: () => router.push(LEADS_ROUTES.leads),
-                newLead: () => router.push(newLeadPath()),
+                open: (leadId) => router.push(workspaceHref(workspaceId, leadPath(leadId))),
+                back: () => router.push(workspaceHref(workspaceId, LEADS_ROUTES.leads)),
+                newLead: () => router.push(workspaceHref(workspaceId, newLeadPath())),
                 query: list.setQuery,
                 stage: list.setStage,
                 clear: list.clear,

@@ -4,7 +4,6 @@ import { PaneHead } from "@/components/composites/PaneHead"
 import type { PanePrimary } from "@/components/composites/PaneHead"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 
 /** What the head band of the opened responsibility draws and asks. */
 interface ResponsibilityMainHeadProps {
@@ -19,6 +18,8 @@ interface ResponsibilityMainHeadProps {
     readonly moreLabel: string
     /** Where the customer of the responsibility is. */
     readonly leadHref: string
+    /** Where the Office is. */
+    readonly officeHref: string
     readonly labels: { readonly openLead: string; readonly openOffice: string; readonly copyLink: string }
     readonly onCopy: () => void
     /** The one filled command: the follow-up draft, when one can be asked for. */
@@ -28,7 +29,7 @@ interface ResponsibilityMainHeadProps {
 /** The commands beyond the draft: the lead, the Office and the copied link. */
 const entriesOf = (props: ResponsibilityMainHeadProps): DropdownMenuEntry[] => [
     { id: "lead", label: props.labels.openLead, href: props.leadHref },
-    { id: "office", label: props.labels.openOffice, href: CONSOLE_ROUTES.chat },
+    { id: "office", label: props.labels.openOffice, href: props.officeHref },
     { id: "copy", label: props.labels.copyLink, onAction: props.onCopy },
 ]
 

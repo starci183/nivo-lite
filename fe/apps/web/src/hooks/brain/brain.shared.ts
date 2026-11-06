@@ -20,7 +20,7 @@ import type {
     ReviewedStatus,
     FindingFilter,
 } from "@/modules/brain"
-import { brainUploadHref } from "@/modules/routes"
+import { brainUploadHref, workspaceHref } from "@/modules/routes"
 import type { DossierIdentity } from "./useDossierIdentities"
 import type { Run } from "./usePublicDocRunner"
 
@@ -126,6 +126,7 @@ export const cardActionsOf = (
     t: Translate,
     finding: FindingView,
     context: FindingCardContext,
+    workspaceId: string,
 ): ReadonlyArray<FindingCardActionView> => {
     const command = (id: FindingAction, label: string, intent: FindingCardActionView["intent"] = "neutral") => ({
         id,
@@ -143,7 +144,10 @@ export const cardActionsOf = (
                       id: "upload",
                       label: t(finding.kind === "contradiction" ? "cardUploadOther" : "cardUpload"),
                       intent: finding.kind === "contradiction" ? "neutral" : "commit",
-                      href: brainUploadHref(context.dossier.category, `dossier:${context.dossier.ref}`),
+                      href: workspaceHref(
+                          workspaceId,
+                          brainUploadHref(context.dossier.category, `dossier:${context.dossier.ref}`),
+                      ),
                       command: null,
                       note: null,
                   },

@@ -4,11 +4,12 @@ import { useTranslations } from "next-intl"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { PROPOSAL_PREVIEW_CHARS, clippedText, leftOutLabelsOf, proposalsOf, sourceTitlesOf } from "@/modules/brain"
 import type { PublicDocument } from "@/modules/brain"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { KnowledgeListView, KnowledgeRowView } from "@/modules/types"
 import { useBrainRowAction } from "./useBrainRowAction"
 import { usePublicDocCommands } from "./usePublicDocCommands"
 import { usePublicDocuments } from "./usePublicDocuments"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `usePublicProposals` returns. */
 export interface PublicProposalsView {
@@ -20,6 +21,7 @@ export interface PublicProposalsView {
 
 /** Owns proposed public answers, retaining their own read status and requiring full revision-bound review before approval. */
 export const usePublicProposals = (): PublicProposalsView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("publicBrain")
     const read = usePublicDocuments()
     const command = usePublicDocCommands()
@@ -47,13 +49,13 @@ export const usePublicProposals = (): PublicProposalsView => {
                           id: "approve",
                           label: t("approveAndPublish"),
                           intent: "neutral",
-                          href: brainTabHref("publicDocs", { doc: doc.id }),
+                          href: workspaceHref(workspaceId, brainTabHref("publicDocs", { doc: doc.id })),
                       },
                       {
                           id: "edit",
                           label: t("edit"),
                           intent: "neutral",
-                          href: brainTabHref("publicDocs", { doc: doc.id }),
+                          href: workspaceHref(workspaceId, brainTabHref("publicDocs", { doc: doc.id })),
                       },
                       {
                           id: "skip",

@@ -17,6 +17,7 @@ import type { DueKey, InitialFilters, RowStatus } from "@/hooks/responsibilities
 import { useAgentPictures } from "@/hooks/installations"
 import { paneGridOf, usePaneCopy, usePanePhone } from "@/hooks/paneFrame"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { ResponsibilitiesBoardCopy } from "@/modules/types"
 import { ResponsibilitiesBoardBase } from "./component"
 import type { ResponsibilityChoiceView } from "./component"
@@ -114,6 +115,7 @@ const copyOf = (t: Translate, pane: ReturnType<typeof usePaneCopy>, facts: Board
 /** The responsibility board: the rows are read here, narrowed by the filters and drawn by the pure half. */
 export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
     const t = useTranslations("responsibilities")
+    const workspaceId = useWorkspaceId()
     const pane = usePaneCopy()
     const format = useFormatter()
     const slotLabels = useSlotLabels()
@@ -126,7 +128,7 @@ export const ResponsibilitiesBoard = (props: ResponsibilitiesBoardProps) => {
     const [isFiltersOpen, setFiltersOpen] = useState(false)
     const hasCounts = "items" in slot || "isEmpty" in slot
     const verified = format.dateTime(new Date(), { hour: "2-digit", minute: "2-digit" })
-    const groups = openedGroupsOf({ t, format, pictureOf }, filters.groups)
+    const groups = openedGroupsOf({ t, format, pictureOf, workspaceId }, filters.groups)
     const opened = groups.flatMap((group) => group.rows)
     const selectedId = opened.some((entry) => entry.row.id === chosen) ? chosen : (opened[0]?.row.id ?? null)
     const countOf = (key: RowStatus | "all"): { readonly count?: number } =>

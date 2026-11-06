@@ -25,6 +25,7 @@ import type { ChatMarkerWire } from "./office.chat-state"
 import { officePreviewOf } from "./office.preview"
 import { avatarOfAgentId, NIVO_AVATAR } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
+import { workspaceLinkOf } from "@/modules/routes"
 
 const CARD_TYPES: ReadonlyArray<OfficeCardPayload["type"]> = [
     "draft_post",
@@ -276,7 +277,7 @@ export const resultCardView = (
                       },
         })),
         lines: card.lines,
-        link: card.link,
+        link: card.link === null ? null : { ...card.link, href: workspaceLinkOf(words.workspaceId, card.link.href) },
         sources: card.sources.map((source) => {
             const layer = words.t(`sourceLayer_${source.layer}`)
             return { label: `${layer}: ${source.label}` }
@@ -347,5 +348,12 @@ export const roomChannelsOf = (
 }
 
 /** The pinned documents of a room. */
-export const roomPinsOf = (room: OfficeRoom | null): ReadonlyArray<OfficePinRowView> =>
-    room === null ? [] : room.pins.map((pin) => ({ id: pin.id, title: pin.title, note: pin.note, href: pin.href }))
+export const roomPinsOf = (room: OfficeRoom | null, workspaceId: string): ReadonlyArray<OfficePinRowView> =>
+    room === null
+        ? []
+        : room.pins.map((pin) => ({
+              id: pin.id,
+              title: pin.title,
+              note: pin.note,
+              href: pin.href === null ? null : workspaceLinkOf(workspaceId, pin.href),
+          }))
