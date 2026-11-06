@@ -90,6 +90,7 @@ export class WorkbenchDoorService {
                     dataKind: read.dataKind,
                     memberId: caller.memberId,
                     locale: call.locale,
+                    fields: read.definition.fields,
                 }),
                 parsed.value,
                 context,
@@ -140,6 +141,7 @@ export class WorkbenchDoorService {
             dataKind: null,
             memberId: caller.memberId,
             locale: call.locale,
+            fields: [],
         }
         const answered: ActionAnswered = {}
         try {

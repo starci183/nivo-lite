@@ -40,7 +40,11 @@ const build = async () => {
     const lead = mock<EntityDefinition>({
         name: "sales.lead",
         dataKind: "lead",
-        fields: { name: { kind: "text", nullable: false }, stage: { kind: "text", nullable: false } },
+        fields: {
+            name: { kind: "text", nullable: false },
+            stage: { kind: "text", nullable: false },
+            phone: { kind: "text", nullable: true },
+        },
     })
     const engine = mock<EntityEngineService>({ catalog: new Map([["sales.lead", lead]]) })
     const ports = mock<EntityPortsService>()
@@ -73,6 +77,7 @@ const build = async () => {
         dataKind: "lead",
         memberId: "m1",
         locale: "vi",
+        fields: ["id", "name", "stage", "unknown"],
     }
     return {
         service: moduleRef.get(DoorPortsService),
@@ -321,6 +326,7 @@ describe("DoorPortsService platform ports", () => {
                 dataKind: null,
                 memberId: null,
                 locale: "vi",
+                fields: [],
             }
             expect(() => service.providerFor(run).implementationOf(portOf(id))).toThrow(SdkDefinitionError)
         },
