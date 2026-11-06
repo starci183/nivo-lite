@@ -864,11 +864,6 @@
     "storageTitle": "Storage",
     "storageUsed": "{used} of {quota} used",
     "storageUsedOnly": "{used} used",
-    "packsTitle": "Buy more credits",
-    "packsFact": "Optional · added to this month's credits · you can buy again any time",
-    "packsRow": "{credits} extra credits",
-    "packsBuy": "Buy",
-    "packsEmpty": "No credit packs are on sale for your plan.",
     "comparePlans": "Compare plans",
     "closeDrawer": "Close"
   },
