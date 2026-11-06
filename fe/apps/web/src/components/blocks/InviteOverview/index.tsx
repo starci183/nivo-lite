@@ -37,7 +37,7 @@ export const InviteOverview = (props: InviteOverviewProps) => {
                 accept: () => {
                     void accept(props.token).then((workspaceId) => {
                         if (workspaceId === undefined) return
-                        router.push(workspaceHref(workspaceId, APP_ROUTES.chat))
+                        router.push(workspaceHref(workspaceId, APP_ROUTES.workspaceHome))
                         router.refresh()
                     })
                 },

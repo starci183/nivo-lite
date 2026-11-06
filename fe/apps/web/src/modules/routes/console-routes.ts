@@ -2,7 +2,7 @@
 export const CONSOLE_ROUTES = {
     login: "/login",
     workspaceHome: "/agents",
-    chat: "/chat",
+    inbox: "/inbox",
     authority: "/authority",
     connections: "/connections",
     team: "/team",

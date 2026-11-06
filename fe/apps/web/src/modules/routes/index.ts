@@ -3,7 +3,6 @@ export const APP_ROUTES = {
     home: "/",
     login: "/login",
     workspaceHome: "/agents",
-    chat: "/chat",
     account: "/account",
     profile: "/profile",
     workspaceNew: "/workspaces/new",
@@ -21,7 +20,7 @@ export {
     workspacesPath,
 } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
-export { pathInWorkspace, workspaceHref, workspaceLinkOf } from "./workspace-href"
+export { pathInWorkspace, workspaceHref } from "./workspace-href"
 export { openWorkspaceId, workspaceIdOfAddress } from "./workspace-address"
 export {
     creditsPath,

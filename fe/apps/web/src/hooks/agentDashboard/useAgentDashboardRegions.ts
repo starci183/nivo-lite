@@ -149,7 +149,7 @@ export const useAgentDashboardRegions = (
     const doneOf = (dashboard: AgentDashboardView) => ({
         count: t("doneCount", { n: dashboard.done.count }),
         logLabel: t("doneLog"),
-        logHref: workspaceHref(workspaceId, CONSOLE_ROUTES.chat),
+        logHref: workspaceHref(workspaceId, CONSOLE_ROUTES.inbox),
         rows: dashboard.done.items.map(rowOf),
         emptyMessage: t("doneEmpty"),
         emptyDescription: t("doneEmptyBody"),

@@ -58,7 +58,7 @@ const onOf = (input: Handling): TeamPanesBaseProps["on"] => {
         inviteCopied: drawer.markCopied,
         linkCopied: interaction.linkCopied,
         goTeamPlan: () => router.push(workspaceHref(workspaceId, creditsPath())),
-        goOffice: () => router.push(workspaceHref(workspaceId, APP_ROUTES.chat)),
+        goHome: () => router.push(workspaceHref(workspaceId, APP_ROUTES.workspaceHome)),
         setRole: (id, role) => {
             if (role === "owner" || role === "manager" || role === "staff") actions.changeRole(id, role)
         },

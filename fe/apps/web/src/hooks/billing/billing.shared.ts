@@ -164,8 +164,8 @@ export const messageOf = (error: unknown, fallback: string): string | undefined 
     return error ? fallback : undefined
 }
 
-/** Where the paid person lands: the billing page after a renewal, else the Office of the workspace; the workspace picker when none is named. */
+/** Where the paid person lands: the billing page after a renewal, else the agents page of the workspace; the workspace picker when none is named. */
 export const returnToOf = (workspaceId: string | undefined, isRenewing: boolean): string => {
     if (workspaceId === undefined || workspaceId === "") return AUTH_ROUTES.workspaces
-    return workspaceHref(workspaceId, isRenewing ? creditsPath() : APP_ROUTES.chat)
+    return workspaceHref(workspaceId, isRenewing ? creditsPath() : APP_ROUTES.workspaceHome)
 }

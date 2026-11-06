@@ -24,5 +24,4 @@ export interface InboxRowView {
     readonly details: ReadonlyArray<{ readonly key: string; readonly term: string; readonly text: string }>
     /** How many repeats of the same event were blocked. */
     readonly duplicates: number
-    readonly office: { readonly href: string; readonly label: string } | null
 }

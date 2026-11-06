@@ -3,9 +3,6 @@ import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import type { ConsoleIconName, ConsoleSessionView, ConsoleWorkspace } from "@/modules/types"
 
-/** The console route of the Office, the page people come to first. */
-export const OFFICE_ROUTE = "/chat"
-
 /** The catalog key that names each role. */
 export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: "roleStaff" } as const
 
@@ -13,7 +10,6 @@ export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: 
 export type ConsoleDestination = {
     readonly key: string
     readonly label:
-        | "navOffice"
         | "navAuthority"
         | "navInbox"
         | "navBrain"
@@ -32,9 +28,8 @@ export type ConsoleDestination = {
     readonly managerOnly?: boolean
 }
 
-/** Office first: it is the page people come to. The Brain owns the business memory, so its documents are no separate destination. */
+/** The Brain owns the business memory, so its documents are no separate destination. */
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
-    { key: "chat", label: "navOffice", route: OFFICE_ROUTE, icon: "community", group: "work" },
     { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
     { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
     { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
@@ -140,22 +135,3 @@ export const accountEntriesOf = (input: AccountEntriesInput): ReadonlyArray<Drop
         ],
     },
 ]
-
-/** Translates one key of the shell catalog. */
-type ShellWords = (key: string, values?: Record<string, string | number>) => string
-
-/** What `notificationsCopyOf` returns. */
-export interface NotificationsCopyOfResult {
-    bell: string
-    title: string
-    nothingWaiting: string
-    openOffice: string
-}
-
-/** The words of the notifications bell and its panel for a number of waiting approvals. */
-export const notificationsCopyOf = (t: ShellWords, pendingCount: number): NotificationsCopyOfResult => ({
-    bell: t("notifications"),
-    title: pendingCount === 0 ? t("notifications") : t("pendingTitle", { count: pendingCount }),
-    nothingWaiting: t("nothingWaiting"),
-    openOffice: t("openOffice"),
-})

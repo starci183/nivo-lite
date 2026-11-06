@@ -1,8 +1,6 @@
 import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
-import { AvatarButton, Cluster, DropdownMenu, IconButton, TopBar, Popover, Switch } from "@starci/grammar/common"
-import type { ConsolePending } from "@/modules/types"
+import { AvatarButton, Cluster, DropdownMenu, IconButton, TopBar, Switch } from "@starci/grammar/common"
 import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
-import { ConsoleNotificationsPanel } from "../../composites/ConsoleNotificationsPanel"
 import { ConsoleWorkspaceMenu } from "../../composites/ConsoleWorkspaceMenu"
 import { FoundingBadge } from "../../composites/FoundingBadge"
 import { languageMenuEntries } from "../../composites/LanguageMenu"
@@ -30,21 +28,10 @@ export interface ConsoleHeaderBaseProps {
         readonly localeOptions: ReadonlyArray<{ readonly value: string; readonly label: string; readonly name: string }>
         readonly themeLabel: string
         readonly isDark: boolean
-        readonly pending: ReadonlyArray<ConsolePending>
-        readonly pendingCount: number
-        readonly isNotificationsOpen: boolean
-        readonly notificationsCopy: {
-            readonly bell: string
-            readonly title: string
-            readonly nothingWaiting: string
-            readonly openOffice: string
-        }
     }
     readonly on: {
         readonly chooseLocale: (locale: string) => void
         readonly chooseDark: (isDark: boolean) => void
-        readonly setNotificationsOpen: (isOpen: boolean) => void
-        readonly openOffice: () => void
     }
 }
 
@@ -120,29 +107,6 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
                 />
             </Cluster>
         </div>
-        <Popover
-            isOpen={props.isNotificationsOpen}
-            onOpenChange={on.setNotificationsOpen}
-            placement="bottom"
-            title={props.notificationsCopy.title}
-            trigger={
-                <IconButton
-                    source={nivoIconSource("notification", "leading")}
-                    label={props.notificationsCopy.bell}
-                    intent="neutral"
-                    badge={Math.max(props.pendingCount, 0)}
-                    badgeLabel={props.notificationsCopy.title}
-                />
-            }
-        >
-            <ConsoleNotificationsPanel
-                count={Math.max(props.pendingCount, 0)}
-                pending={props.pending}
-                copy={props.notificationsCopy}
-                onClose={() => on.setNotificationsOpen(false)}
-                onOpenOffice={on.openOffice}
-            />
-        </Popover>
         <DropdownMenu
             placement="bottom end"
             entries={withLooks(props.accountEntries)}
