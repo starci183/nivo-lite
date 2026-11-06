@@ -20,8 +20,19 @@ describe("valueAt", () => {
         const value = { stats: { members: 3 }, list: [1] }
         expect(valueAt(value, "stats.members")).toBe(3)
         expect(valueAt(value, "stats.gone.deeper")).toBeUndefined()
-        expect(valueAt(value, "list.0")).toBeUndefined()
+        expect(valueAt(value, "list.1")).toBeUndefined()
+        expect(valueAt(null, "a.b")).toBeUndefined()
         expect(valueAt(null, "a")).toBeUndefined()
+    })
+})
+
+describe("valueAt through lists", () => {
+    it("steps into a list by index and is undefined for a name or a missing index", () => {
+        const value = { rows: [{ title: "a" }, { title: "b" }] }
+        expect(valueAt(value, "rows.1.title")).toBe("b")
+        expect(valueAt(value, "rows.0")).toEqual({ title: "a" })
+        expect(valueAt(value, "rows.title")).toBeUndefined()
+        expect(valueAt(value, "rows.5.title")).toBeUndefined()
     })
 })
 
@@ -89,7 +100,7 @@ describe("resolveVariables", () => {
 })
 
 describe("optionalVariable", () => {
-    const read = { variables: z.object({ q: z.string().optional(), id: z.string() }) }
+    const read = { variables: z.object({ q: z.string().max(100).optional(), id: z.string().max(100) }) }
 
     it("is true for an optional variable and false for a required or unknown one", () => {
         expect(optionalVariable(read, "q")).toBe(true)

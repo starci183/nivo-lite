@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 import { EmptyNotice, Skeleton } from "@starci/grammar/common"
 import type { ActionHandle, ReadHandle } from "../../block/block.types"
 import type { PlanNode } from "../../spec/render-plan"
@@ -37,10 +37,10 @@ const slotEntries = (node: PlanNode): ReadonlyArray<SlotEntry> =>
     })
 
 /** Resolves the slots of a node one after the other, each in a component of its own so every hook list stays stable. */
-const SlotChain = (props: SlotChainProps): ReactNode => {
+const SlotChain = (props: SlotChainProps): ReactElement => {
     const [entry, ...rest] = props.entries
     if (entry === undefined) return <>{props.done(props.values)}</>
-    const next = (value: SlotValue): ReactNode => (
+    const next = (value: SlotValue): ReactElement => (
         <SlotChain {...props} entries={rest} values={{ ...props.values, [entry.name]: value }} />
     )
     if (entry.kind === "read") {
@@ -80,7 +80,7 @@ export interface SpecNodeProps {
 }
 
 /**
- * One node: not drawn when the viewer lacks its permission, an "unavailable" notice when its block is not in the bundle, resolved
+ * One node: not drawn when the viewer lacks its permission or the param it shows for holds another value, an "unavailable" notice when its block is not in the bundle, resolved
  * slot by slot, drawn by the block component inside a boundary of its own so a crash, or a component that fails to download, stays
  * in this place. The component of a lazy block loads under a Suspense of its own, while its reads already run.
  */
@@ -90,6 +90,8 @@ export const SpecNode = (props: SpecNodeProps): ReactNode => {
     const text = host.block.text("blocks")
     const renderer = props.context.renderers.get(props.node.block.id)
     if (!canSee) return null
+    const showWhen = props.node.showWhen
+    if (showWhen !== null && !showWhen.is.includes(props.context.params.value(showWhen.param) ?? "")) return null
     if (renderer === undefined) return <EmptyNotice message={text({ key: "renderer.unavailable" })} />
     const draw = (values: SlotValues): ReactNode =>
         props.node.forbidden === "hide" && hasForbidden(values) ? null : (

@@ -18,7 +18,7 @@ import type { SpecContext } from "./renderer.types"
 import { SpecNode } from "./SpecNode"
 import { chromeOf, paneOf } from "./view-chrome"
 import type { ViewChrome } from "./view-chrome"
-import { ViewGate } from "./ViewGate"
+import { ViewBody } from "./ViewBody"
 
 /** What the route gives the workbench. */
 export interface WorkbenchRoute {
@@ -142,13 +142,14 @@ const DrawnWorkbench = (props: SpecWorkbenchProps): ReactNode => {
                     />
                 ) : null}
                 <Nodes nodes={plan.head} context={context} />
-                <div role="tabpanel" id={panelId(view?.id ?? "none")}>
-                    {view === undefined ? null : (
-                        <ViewGate key={view.id}>
-                            <SpecNode node={view.root} context={context} />
-                        </ViewGate>
-                    )}
-                </div>
+                <ViewBody
+                    view={view}
+                    aside={plan.aside}
+                    asideSummary={plan.asideSummary}
+                    context={context}
+                    reads={reads}
+                    panelId={panelId}
+                />
                 <Nodes nodes={plan.foot} context={context} />
             </Stack>
         </PageFrame>

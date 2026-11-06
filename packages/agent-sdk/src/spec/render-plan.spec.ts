@@ -42,6 +42,19 @@ describe("renderPlan", () => {
         expect(renderPlan(docOf(root), BLOCKS)).toMatchObject({ ok: true, params: {} })
     })
 
+    it("plans the aside and its summary, null when the spec has none", () => {
+        const params = { pane: { type: "enum", of: ["list", "queue"], url: "pane" } } as const
+        const summary = { read: "sales.people", label: { key: "queue" }, opens: "queue" }
+        const aside: SpecNode = { ...root, id: "side", showWhen: { param: "pane", is: ["queue"] } }
+        const plan = renderPlan(docOf(listNode("m"), { params, aside, asideSummary: summary }), BLOCKS)
+        expect(plan.ok && plan.aside?.id).toBe("side")
+        expect(plan.ok && plan.aside?.showWhen).toEqual({ param: "pane", is: ["queue"] })
+        expect(plan.ok && plan.asideSummary).toEqual(summary)
+        const bare = renderPlan(docOf(root), BLOCKS)
+        expect(bare).toMatchObject({ ok: true, aside: null, asideSummary: null })
+        expect(bare.ok && bare.views[0]?.root.showWhen).toBeNull()
+    })
+
     it("plans a node given without props", () => {
         const plan = renderPlan(docOf({ id: "free", block: "test.free" }), BLOCKS)
         expect(plan.ok && plan.views[0]?.root.props).toEqual({})

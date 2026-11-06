@@ -7,6 +7,9 @@
     "tabs": "Các tab",
     "invalid": "Giá trị này chưa hợp lệ.",
     "unbound": "Thao tác này chưa được cài đặt.",
-    "unavailable": "Khối này chưa có trong bản đang chạy."
+    "unavailable": "Khối này chưa có trong bản đang chạy.",
+    "back": "Quay lại",
+    "aside": "Việc cần xem",
+    "main": "Nội dung chính"
   }
 }

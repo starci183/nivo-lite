@@ -5,11 +5,13 @@ import type { SpecBindings } from "./spec"
 import { blockIndex, specProblems } from "./spec"
 import type {
     SpecActionBinding,
+    SpecAsideSummary,
     SpecForbidden,
     SpecNode,
     SpecParam,
     SpecProblem,
     SpecReadBinding,
+    SpecShowWhen,
     SpecWhen,
     StoredSpec,
 } from "./spec.types"
@@ -32,6 +34,8 @@ export interface PlanNode {
     readonly when: SpecWhen | null
     /** What the node does when a read of it is forbidden. */
     readonly forbidden: SpecForbidden
+    /** The param values that show the node; null when it is drawn whatever the params hold. */
+    readonly showWhen: SpecShowWhen | null
 }
 
 /** One view ready to draw. */
@@ -59,6 +63,10 @@ export type RenderPlan =
           readonly head: ReadonlyArray<PlanNode>
           /** The blocks drawn below the tabs on every view. */
           readonly foot: ReadonlyArray<PlanNode>
+          /** The region drawn in the pane at the right of every view; null when the spec has none. */
+          readonly aside: PlanNode | null
+          /** What a phone shows of the aside on the main pane; null when the spec gives none. */
+          readonly asideSummary: SpecAsideSummary | null
           /** The views, one tab each. */
           readonly views: ReadonlyArray<PlanView>
       }
@@ -93,6 +101,7 @@ export const planNode = (index: ReadonlyMap<string, BlockDefinition>, node: Spec
         children: (node.children ?? []).map((child) => planNode(index, child)),
         when: node.when ?? null,
         forbidden: node.forbidden ?? "notice",
+        showWhen: node.showWhen ?? null,
     }
 }
 
@@ -110,6 +119,8 @@ export const renderPlan = (
         params: spec.params ?? {},
         head: (spec.head ?? []).map((node) => planNode(index, node)),
         foot: (spec.foot ?? []).map((node) => planNode(index, node)),
+        aside: spec.aside === undefined ? null : planNode(index, spec.aside),
+        asideSummary: spec.asideSummary ?? null,
         views: spec.views.map((view) => ({
             id: view.id,
             label: view.label,
