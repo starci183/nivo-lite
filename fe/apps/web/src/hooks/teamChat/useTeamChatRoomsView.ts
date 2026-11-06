@@ -1,14 +1,17 @@
-import type { useTranslations } from "next-intl"
-import { partyKeyOf } from "@/hooks/teamChat"
-import type { TeamChatListState } from "@/hooks/teamChat"
-import type { ChatParty, SlotLabels } from "@/modules/types"
-import type { TeamChatRoomsViewProps } from "./types"
+"use client"
+
+import { useTranslations } from "next-intl"
+import { partyKeyOf } from "@/modules/teamChat"
+import { usePaneCopy } from "@/hooks/paneFrame"
+import { useSlotLabels } from "@/hooks/slot"
+import type { ChatParty, SlotLabels, TeamChatRoomsViewProps } from "@/modules/types"
+import type { TeamChatListState } from "./useTeamChatListState"
 
 /** The translator of the team chat words. */
 type Words = ReturnType<typeof useTranslations<"teamChat">>
 
 /** What the list is made of: its state, the words, and the open room. */
-export interface RoomsViewContext {
+interface RoomsViewContext {
     readonly list: TeamChatListState
     readonly t: Words
     readonly refreshLabel: string
@@ -51,7 +54,7 @@ const newChatOf = (context: RoomsViewContext): TeamChatRoomsViewProps["newChat"]
 }
 
 /** What the list of rooms draws, from its state. */
-export const roomsViewPropsOf = (context: RoomsViewContext): TeamChatRoomsViewProps => {
+const roomsViewPropsOf = (context: RoomsViewContext): TeamChatRoomsViewProps => {
     const { t } = context
     return {
         copy: {
@@ -69,4 +72,18 @@ export const roomsViewPropsOf = (context: RoomsViewContext): TeamChatRoomsViewPr
         selectedId: context.selectedId,
         newChat: newChatOf(context),
     }
+}
+
+/** What the list of rooms draws, from its state, in the viewer's words. */
+export const useTeamChatRoomsView = (list: TeamChatListState, selectedId: string | null): TeamChatRoomsViewProps => {
+    const t = useTranslations("teamChat")
+    const pane = usePaneCopy()
+    const slotLabels = useSlotLabels()
+    return roomsViewPropsOf({
+        list,
+        t,
+        refreshLabel: pane.refresh,
+        labels: { ...slotLabels(t("roomsEmpty")), error: t("errorTitle") },
+        selectedId,
+    })
 }

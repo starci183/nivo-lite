@@ -3,45 +3,10 @@ import { ChatFileChosen } from "@/components/branches/ChatFileChosen"
 import { ChatFilePicker } from "@/components/branches/ChatFilePicker"
 import { Icon } from "@/components/leaves/Icon"
 import { COMPOSER_INPUT_CLASS_NAME } from "./classNames"
-import type { ChatParty } from "@/modules/types"
+import type { TeamChatComposerProps } from "@/modules/types"
 
 /** The glyph before a mention suggestion. */
 const MENTION_ICON = <Icon props={{ name: "mention", usage: "leading" }} />
-
-/** The words and state of the team chat composer. */
-export interface TeamChatComposerProps {
-    readonly formLabel: string
-    readonly messageLabel: string
-    readonly placeholder: string
-    readonly sendLabel: string
-    readonly draft: string
-    /** The line that says who is typing in the room, or null when nobody is. */
-    readonly typing: string | null
-    /** The file control of the composer. */
-    readonly file: {
-        readonly label: string
-        readonly removeLabel: string
-        readonly accept: string
-        /** The name of the file that goes with the message, or null. */
-        readonly name: string | null
-        /** A room is open to upload to: the first message to an agent opens it, so the control waits until then. */
-        readonly canPick: boolean
-    }
-    readonly isSending: boolean
-    /** The first read is not in: the field draws as a waiting shape. */
-    readonly isLoading: boolean
-    /** Nothing is in flight and a room (or an agent to open one with) is there. */
-    readonly canSend: boolean
-    /** Why the last message was not sent, or null. */
-    readonly error: { readonly title: string; readonly text: string } | null
-    /** The people and agents the open `@` may name: empty when none is being typed. */
-    readonly suggestions: ReadonlyArray<ChatParty>
-    readonly onFile: (file: File) => void
-    readonly onFileClear: () => void
-    readonly onDraft: (value: string) => void
-    readonly onMention: (party: ChatParty) => void
-    readonly onSend: () => void
-}
 
 /** The composer pinned under the thread: an error line, the mention suggestions and the message field with its send button. */
 export const TeamChatComposer = (props: TeamChatComposerProps) => (

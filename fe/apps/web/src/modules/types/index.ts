@@ -205,3 +205,14 @@ export type { HiringCandidateDialog, HiringRequestOutcome } from "./hiring-model
 export type { HiringWorkbenchCopy } from "./hiring-model-workbench-copy"
 export type { ChatParty, ChatPartyKind, TeamChatApprovalStatus, TeamChatApprovalView } from "./team-chat"
 export type { TeamChatMessageRow, TeamChatRoomRow, TeamChatVerdict } from "./team-chat"
+export type {
+    TeamChatComposerProps,
+    TeamChatMessagesCopy,
+    NewChatOption,
+    TeamChatNewChatProps,
+    TeamChatRoomCopy,
+    TeamChatRoomViewProps,
+    TeamChatRoomHandlers,
+    TeamChatRoomsViewProps,
+    TeamChatRoomsHandlers,
+} from "./team-chat"

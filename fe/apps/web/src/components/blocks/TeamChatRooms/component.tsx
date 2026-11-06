@@ -5,8 +5,13 @@ import { TeamChatNewChat } from "@/components/composites/TeamChatNewChat"
 import { PaneBody } from "@/components/frames/PaneBody"
 import { TeamChatRoomList } from "@/components/frames/TeamChatRoomList"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { TeamChatRoomRow } from "@/modules/types"
-import type { TeamChatRoomsBaseProps } from "./types"
+import type { TeamChatRoomRow, TeamChatRoomsHandlers, TeamChatRoomsViewProps } from "@/modules/types"
+
+/** Props for the pure half of the list of rooms. */
+export interface TeamChatRoomsBaseProps {
+    readonly props: TeamChatRoomsViewProps
+    readonly on: TeamChatRoomsHandlers
+}
 
 /** The skeleton of the room list keeps the geometry of the ready rows. */
 const PLACEHOLDER_ROWS: ReadonlyArray<TeamChatRoomRow> = ["a", "b", "c", "d"].map((id) => ({
