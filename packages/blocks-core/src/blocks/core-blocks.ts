@@ -2,7 +2,7 @@ import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { asideDetailBlock } from "./aside-detail.block"
 import { boardBlock } from "./board.block"
 import { cardGridBlock } from "./card-grid.block"
-import { conversationBlock } from "./conversation.block"
+import { chatbotBlocks } from "./chatbot/chatbot-blocks"
 import { dashboardCardsBlock } from "./dashboard-cards.block"
 import { decisionQueueBlock } from "./decision-queue.block"
 import { detailBlock } from "./detail.block"
@@ -38,7 +38,7 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     listEditorBlock,
     tabbedPanelBlock,
     asideDetailBlock,
-    conversationBlock,
+    ...chatbotBlocks,
     waitingBlock,
     decisionQueueBlock,
     dashboardCardsBlock,

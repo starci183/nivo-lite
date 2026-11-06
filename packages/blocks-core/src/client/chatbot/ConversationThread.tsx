@@ -10,7 +10,7 @@ import {
     Stack,
     Text,
 } from "@starci/grammar/common"
-import type { ThreadViewEntry } from "../../rows/conversation-view"
+import type { ThreadViewEntry } from "../../rows/chatbot/conversation-view"
 
 /** The control that loads the messages before the first one drawn. */
 export interface ConversationOlder {

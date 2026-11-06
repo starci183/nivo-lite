@@ -1,4 +1,4 @@
-import { textOf, valueAt } from "../slots/paths"
+import { textOf, valueAt } from "../../slots/paths"
 import type { DayName, DeliveryState, MessagePaths, MessageRow, MessageSide, ThreadEntry } from "./conversation.types"
 
 /** Messages of one author within this gap, on one day, form one group. */

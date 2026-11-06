@@ -1,5 +1,5 @@
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
-import type { MessagePaths, PendingSend } from "../rows/conversation.types"
+import type { MessagePaths, PendingSend } from "../../rows/chatbot/conversation.types"
 
 /** One message record as a thread read yields it. */
 export interface ConversationRecord {
