@@ -62,6 +62,7 @@ export const leadEntity: EntityDefinition<LeadFields> = defineEntity({
     dataKind: "sales-lead",
     fields: leadFields,
     indexes: [
+        { name: "key", on: ["id"] },
         { name: "recent", on: [{ desc: "updatedAt" }, { desc: "id" }] },
         { name: "stage_recent", on: ["stage", { desc: "updatedAt" }, { desc: "id" }] },
         { name: "name", on: ["contactName", "id"] },

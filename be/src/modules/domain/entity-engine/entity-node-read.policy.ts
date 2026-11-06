@@ -23,6 +23,19 @@ const NEWEST_FIRST: OrderBy = [
     ["id", "desc"],
 ]
 
+/**
+ * Whether the fields a read pins by equality name one record: the `id`, or all the fields of a declared unique key. Such a read is a
+ * single-row lookup, not a listing, and has no "newest" to choose.
+ */
+export const isLookup = (entity: EntityDefinition, pinned: ReadonlyArray<string>): boolean =>
+    pinned.includes("id") ||
+    (entity.constraints ?? []).some(
+        (constraint) => constraint.kind === "unique" && constraint.on.every((field) => pinned.includes(field)),
+    )
+
+/** A lookup of one record: by its id, which a `key` index serves. */
+const BY_ID: OrderBy = [["id", "asc"]]
+
 const SYSTEM_FIELDS: ReadonlySet<string> = new Set(["id", "version", "createdAt", "updatedAt"])
 
 /** The most rows the query asks for, within the host's bounds. */
@@ -91,13 +104,15 @@ export const nodeReadPlanOf = (
         path !== null && path.relation === null ? [{ op: "eq", field: "id", value: path.id }] : []
     const via = path?.relation ?? null
     const limit = limitOf(query)
+    const condition = conditionOf([...equalities(query.where), ...own])
+    const pinned = [...Object.keys(query.where ?? {}), ...(path !== null && path.relation === null ? ["id"] : [])]
     return {
         query: {
             from: entity.name,
             select: selectOf(query.fields),
             ...(via === null ? {} : { join: { [via]: [] } }),
-            ...conditionOf([...equalities(query.where), ...own]),
-            order: NEWEST_FIRST,
+            ...condition,
+            order: isLookup(entity, pinned) ? BY_ID : NEWEST_FIRST,
             page: { size: via === null ? limit : NODE_READ_MAX },
         },
         via,
