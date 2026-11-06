@@ -45,8 +45,8 @@ const ports: LedgerAppendPorts = { transactions: TRANSACTIONS, orders: ORDERS, l
  * door), in the domain's words (date, order, customer, amount, transaction), never as cells. It is the outbox job `payment.settle`
  * enqueues in its transaction, so the call to the door happens outside it. A workspace with no ledger connected skips the step; a
  * transaction is recorded once, however often the job is delivered (the provider keys the line by the transaction id). A status probe
- * that fails for good (no such tool, forbidden) counts as no ledger; one that fails for now is delivered again. A failed write ends
- * through `endAfterDoor`: delivered again when the provider was away, parked with one alert otherwise.
+ * that cannot be asked or read ends through `endAfterDoor` like a failed write: delivered again when the provider was away, parked
+ * with one alert otherwise (a ledger that is merely not connected answers `connected: false` and is skipped).
  */
 export const ledgerAppendJob: JobDefinition<typeof input, LedgerAppendPorts> = defineJob({
     name: JOB_NAME,
@@ -60,9 +60,13 @@ export const ledgerAppendJob: JobDefinition<typeof input, LedgerAppendPorts> = d
         ])
         if (transaction === null || order === null) return
         const probe = await door.call(LEDGER_STATUS_TOOL, {})
-        if (!probe.ok && probe.reason === "transient") endAfterDoor(JOB_NAME, LEDGER_STATUS_TOOL, probe)
-        const ledger = probe.ok ? status.safeParse(probe.output) : null
-        if (ledger === null || !ledger.success || !ledger.data.connected) return
+        // A status that cannot be asked (no tool plays it, forbidden, unreadable) is a defect, not a workspace with no ledger: the job
+        // is delivered again when the provider was away, and parked with its alert otherwise, so a payment never goes unwritten unseen.
+        endAfterDoor(JOB_NAME, LEDGER_STATUS_TOOL, probe)
+        const ledger = status.safeParse(probe.ok ? probe.output : null)
+        if (!ledger.success)
+            endAfterDoor(JOB_NAME, LEDGER_STATUS_TOOL, { ok: false, reason: "failed", message: "unreadable" })
+        if (!ledger.success || !ledger.data.connected) return
         const leadName = order.leadId === null ? null : await leadNameById(leads, order.leadId)
         const written = await door.call(LEDGER_APPEND_TOOL, {
             entry: { ...ledgerLineOf(transaction, order, leadName) },

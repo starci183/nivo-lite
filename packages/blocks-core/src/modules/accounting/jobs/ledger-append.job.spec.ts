@@ -84,14 +84,21 @@ describe("accounting.ledger-append", () => {
         expect(noOrder.calls).toEqual([])
     })
 
-    it("skips the step when no ledger is connected, the probe is refused for good, or it answers something unreadable", async () => {
-        const notConnected = harness({ [LEDGER_STATUS_TOOL]: { ok: true, output: { connected: false } } })
+    it("skips the step only when the ledger answers that none is connected", async () => {
+        const { calls, run } = harness({ [LEDGER_STATUS_TOOL]: { ok: true, output: { connected: false } } })
+        await run()
+        expect(calls.map((call) => call.tool)).toEqual([LEDGER_STATUS_TOOL])
+    })
+
+    it("parks the job, never skips it silently, when the status cannot be asked or read", async () => {
+        const unknown = harness({ [LEDGER_STATUS_TOOL]: { ok: false, reason: "unknown_tool", message: "no_provider" } })
         const refused = harness({ [LEDGER_STATUS_TOOL]: { ok: false, reason: "forbidden", message: "403" } })
         const unreadable = harness({ [LEDGER_STATUS_TOOL]: { ok: true, output: { unexpected: true } } })
-        for (const { calls, run } of [notConnected, refused, unreadable]) {
-            await run()
+        await expect(unknown.run()).rejects.toThrow("JOB_REFUSED: ledger.status unknown_tool")
+        await expect(refused.run()).rejects.toThrow("JOB_REFUSED: ledger.status forbidden")
+        await expect(unreadable.run()).rejects.toThrow("JOB_REFUSED: ledger.status failed")
+        for (const { calls } of [unknown, refused, unreadable])
             expect(calls.map((call) => call.tool)).toEqual([LEDGER_STATUS_TOOL])
-        }
     })
 
     it("is delivered again when the probe fails for now", async () => {
