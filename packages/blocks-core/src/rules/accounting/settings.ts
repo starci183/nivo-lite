@@ -12,6 +12,12 @@ export const VAT_PERIODS: readonly ["monthly", "quarterly"] = ["monthly", "quart
 /** One way of filing value added tax. */
 export type VatPeriod = (typeof VAT_PERIODS)[number]
 
+/** The fewest days a payment code looks back. */
+export const REMATCH_DAYS_MIN = 1
+
+/** The most days a payment code looks back. */
+export const REMATCH_DAYS_MAX = 30
+
 /** What each customer decides about their books: which money and documents become entries. */
 export interface AccountingSettings {
     /** Whether money out (a debit payment) is posted as an expense. */
@@ -24,6 +30,8 @@ export interface AccountingSettings {
     readonly voidMode: VoidMode
     /** How often the shop files value added tax; the due-soon list reads it. */
     readonly vatPeriod: VatPeriod
+    /** How many days back a payment code looks for a credit that arrived before it existed. */
+    readonly rematchDays: number
 }
 
 /** The settings of a workspace that never saved any. */
@@ -33,6 +41,7 @@ export const ACCOUNTING_SETTINGS_DEFAULTS: AccountingSettings = {
     postUnmatched: false,
     voidMode: "reversal",
     vatPeriod: "quarterly",
+    rematchDays: 7,
 }
 
 /** The shape of the saved settings. */
@@ -42,10 +51,12 @@ export const accountingSettingsShape: z.ZodObject<{
     postUnmatched: z.ZodBoolean
     voidMode: z.ZodEnum<{ reversal: "reversal"; none: "none" }>
     vatPeriod: z.ZodEnum<{ monthly: "monthly"; quarterly: "quarterly" }>
+    rematchDays: z.ZodNumber
 }> = z.object({
     postExpenses: z.boolean(),
     postOutgoing: z.boolean(),
     postUnmatched: z.boolean(),
     voidMode: z.enum(VOID_MODES),
     vatPeriod: z.enum(VAT_PERIODS),
+    rematchDays: z.number().int().min(REMATCH_DAYS_MIN).max(REMATCH_DAYS_MAX),
 })

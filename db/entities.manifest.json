@@ -77,7 +77,7 @@
         "records_accounting_question_status_chk",
         "records_accounting_question_text_chk"
       ],
-      "indexes": ["records_accounting_question_status_created"]
+      "indexes": ["records_accounting_question_source", "records_accounting_question_status_created"]
     },
     {
       "entity": "accounting.settings",
@@ -86,6 +86,7 @@
         "records_accounting_settings_post_expenses_chk",
         "records_accounting_settings_post_outgoing_chk",
         "records_accounting_settings_post_unmatched_chk",
+        "records_accounting_settings_rematch_days_chk",
         "records_accounting_settings_scope_chk",
         "records_accounting_settings_vat_period_chk",
         "records_accounting_settings_void_mode_chk"

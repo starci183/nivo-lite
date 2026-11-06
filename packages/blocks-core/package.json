@@ -20,6 +20,10 @@
       "types": "./dist/modules/index.d.ts",
       "default": "./dist/modules/index.js"
     },
+    "./modules/accounting": {
+      "types": "./dist/modules/accounting/index.d.ts",
+      "default": "./dist/modules/accounting/index.js"
+    },
     "./modules/sales": {
       "types": "./dist/modules/sales/index.d.ts",
       "default": "./dist/modules/sales/index.js"
@@ -44,8 +48,9 @@
     "typecheck": "tsc --noEmit --pretty false"
   },
   "peerDependencies": {
+    "@heroui/react": "3.2.6",
     "@nivo-lite/agent-sdk": "*",
-    "@starci/grammar": "0.23.2",
+    "@starci/grammar": "0.23.3",
     "react": "19.2.3",
     "zod": "4.6.7"
   },

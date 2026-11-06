@@ -144,5 +144,6 @@
   "blockAccountingAgeing": "Receivable ageing",
   "pickerMatchExact": "Same amount",
   "pickerMatchNear": "Near the amount",
-  "pickerClose": "Close"
+  "pickerClose": "Close",
+  "effectPaymentRematch": "Re-match credits that arrived before the payment code"
 }

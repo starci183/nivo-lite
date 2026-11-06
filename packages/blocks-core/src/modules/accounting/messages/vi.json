@@ -176,5 +176,10 @@
   "picker_empty": "Không có đơn nào đang chờ thanh toán.",
   "picker_cancel": "Huỷ",
   "other_income_title": "Ghi khoản này là thu khác?",
-  "other_income_body": "Khoản tiền sẽ được ghi vào sổ như một khoản thu khác, không gắn với đơn hàng nào."
+  "other_income_body": "Khoản tiền sẽ được ghi vào sổ như một khoản thu khác, không gắn với đơn hàng nào.",
+  "settings_rematch": "Số ngày đối chiếu lại tiền về trước",
+  "settings_rematch_hint": "Khi một mã thanh toán được gửi cho khách, tiền đã về trong số ngày này mà chưa khớp sẽ được đối chiếu lại với mã đó.",
+  "rematch_wrong_amount": "Khoản tiền {amount} đ ({payer}) ghi mã đơn {orderNo} nhưng đơn cần {due} đ. Thanh toán thiếu hoặc thừa không tự khớp: hãy xem và quyết định.",
+  "rematch_ambiguous": "Có {count} khoản tiền cùng ghi mã đơn {orderNo} và đúng số tiền {amount} đ. Không khoản nào được tự khớp: hãy chọn khoản thuộc đơn này.",
+  "rematch_unknown_payer": "không rõ người gửi"
 }
