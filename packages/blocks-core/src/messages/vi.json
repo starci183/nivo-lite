@@ -134,5 +134,12 @@
   "blockAccountingEntryDetail": "Chi tiết chứng từ",
   "blockAccountingQuestions": "Câu hỏi của kế toán",
   "nodeSalesLeadFromMessageTitle": "Xác định khách từ tin nhắn",
-  "nodeSalesOrderFromChatTitle": "Ghi đơn hàng từ cuộc trò chuyện"
+  "nodeSalesOrderFromChatTitle": "Ghi đơn hàng từ cuộc trò chuyện",
+  "nodeOrderRecordTitle": "Ghi đơn hàng",
+  "nodeLeadEnsureTitle": "Xác định khách hàng",
+  "blockAccountingLedger": "Sổ quỹ",
+  "blockAccountingPeriodFigures": "Số liệu kỳ",
+  "blockAccountingDueSoon": "Sắp đến hạn",
+  "blockAccountingWeekly": "Thu nhập theo tuần",
+  "blockAccountingAgeing": "Tuổi nợ"
 }

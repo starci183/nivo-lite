@@ -15,6 +15,7 @@ const props: z.ZodObject<{
     filterParam: ParamNameSchema
     selectParam: ParamNameSchema
     periodParam: ParamNameSchema
+    paneParam: ParamNameSchema
 }> = z.object({
     title: specText,
     searchLabel: specText,
@@ -24,6 +25,7 @@ const props: z.ZodObject<{
     filterParam: paramName,
     selectParam: paramName,
     periodParam: paramName,
+    paneParam: paramName,
 })
 
 /** The slots of the book: the entries it lists and the counts of each status under the same search. */
@@ -38,7 +40,7 @@ const slots: Slots = {
 
 /**
  * The books of the shop: a head with the period and how many entries it holds, a search, the status tabs with their counts, and the
- * entries as rows of a day, two lines, an amount in dong and a status mark. Choosing a row writes its id to `selectParam`.
+ * entries as rows of a day, two lines, an amount in dong and a status mark. Choosing a row writes its id to `selectParam` and opens the aside pane (`paneParam` takes `detail`).
  */
 export const accountingBookBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "accounting.book",
@@ -46,5 +48,5 @@ export const accountingBookBlock: BlockDefinition<typeof props, typeof slots> = 
     props,
     slots,
     children: false,
-    params: ["searchParam", "filterParam", "selectParam", "periodParam"],
+    params: ["searchParam", "filterParam", "selectParam", "periodParam", "paneParam"],
 })

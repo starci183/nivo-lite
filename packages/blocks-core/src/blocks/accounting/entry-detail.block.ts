@@ -11,11 +11,13 @@ const props: z.ZodObject<{
     idle: TextSchema
     kind: TextSchema
     closeParam: ParamNameSchema
+    paneParam: ParamNameSchema
 }> = z.object({
     label: specText,
     idle: specText,
     kind: specText,
     closeParam: paramName,
+    paneParam: paramName,
 })
 
 /** The slots of the entry detail: the entry it shows and the correction it may add to it. */
@@ -31,7 +33,7 @@ const slots: Slots = {
 /**
  * One entry of the books: its note and kind, where it came from as a timeline of order, invoice and payment (a stage that does not
  * exist yet is drawn waiting), and the correction form pinned at the bottom. A correction is added beside the record; the original is
- * never changed. `closeParam` is cleared by the close control.
+ * never changed. The close control clears `closeParam` and takes the aside back to the queue (`paneParam` takes `list`).
  */
 export const accountingEntryDetailBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "accounting.entry-detail",
@@ -39,5 +41,5 @@ export const accountingEntryDetailBlock: BlockDefinition<typeof props, typeof sl
     props,
     slots,
     children: false,
-    params: ["closeParam"],
+    params: ["closeParam", "paneParam"],
 })

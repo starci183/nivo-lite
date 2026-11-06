@@ -127,6 +127,7 @@ const decisionRowView: z.ZodType<DecisionRowView> = z.object({
         .refine((draft) => Object.keys(draft).length <= FORM_FIELDS_MAX)
         .optional(),
     waitingFor: nullableText,
+    askedAt: id.optional(),
 })
 
 /** The shape of the decision queue. */

@@ -37,5 +37,5 @@ export const READ_CONVERSATIONS: DataRight = {
     kind: "conversation",
     access: "read",
     scope: "workspace",
-    fields: ["id", "leadId", "lastMessageAt"],
+    fields: ["id", "leadId", "lastAt"],
 }

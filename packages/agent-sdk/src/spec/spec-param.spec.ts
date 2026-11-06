@@ -210,6 +210,12 @@ describe("paramHandleOf set", () => {
         paramHandleOf(source).set("nope", "x")
         expect(source.writes).toEqual([])
     })
+
+    it("writes several params in one step, skipping those the spec does not declare", () => {
+        const source = sourceOf({ entry: { type: "string", url: "entry" }, pane: { type: "string", url: "pane" } })
+        paramHandleOf(source).setMany({ entry: "e1", pane: "detail", nope: "x" })
+        expect(source.writes).toEqual([{ entry: "e1", pane: "detail" }])
+    })
 })
 
 describe("paramHandleOf setMany", () => {

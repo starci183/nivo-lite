@@ -134,5 +134,12 @@
   "blockAccountingEntryDetail": "Entry detail",
   "blockAccountingQuestions": "Accounting questions",
   "nodeSalesLeadFromMessageTitle": "Find the customer from the message",
-  "nodeSalesOrderFromChatTitle": "Record the order from the chat"
+  "nodeSalesOrderFromChatTitle": "Record the order from the chat",
+  "nodeOrderRecordTitle": "Record the order",
+  "nodeLeadEnsureTitle": "Make sure the customer is known",
+  "blockAccountingLedger": "Cash book",
+  "blockAccountingPeriodFigures": "Period figures",
+  "blockAccountingDueSoon": "Due soon",
+  "blockAccountingWeekly": "Income by week",
+  "blockAccountingAgeing": "Receivable ageing"
 }

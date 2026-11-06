@@ -164,6 +164,8 @@ export interface DecisionRowView {
     readonly draft?: Readonly<Record<string, string | number | boolean | null>> | undefined
     /** The person the decision waits for when it is not the viewer; null otherwise. */
     readonly waitingFor: string | null
+    /** When the decision was asked, ISO text; absent when the read does not say. */
+    readonly askedAt?: string | undefined
 }
 
 /** The decision queue once read. */

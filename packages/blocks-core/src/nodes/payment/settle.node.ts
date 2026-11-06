@@ -61,8 +61,7 @@ const filled = (template: string, orderNo: string, amountVnd: number): string =>
     template.replace("{orderNo}", orderNo).replace("{amount}", AMOUNT.format(amountVnd))
 
 /** When a conversation last had a message; one with none is the oldest. */
-const lastAt = (conversation: ConversationRow): number =>
-    conversation.lastMessageAt === null ? 0 : atOf(conversation.lastMessageAt)
+const lastAt = (conversation: ConversationRow): number => (conversation.lastAt === null ? 0 : atOf(conversation.lastAt))
 
 /** The conversation the customer wrote in last, if they wrote in any. */
 const conversationOf = async (context: NodeContext, leadId: string): Promise<ConversationRow | undefined> => {
