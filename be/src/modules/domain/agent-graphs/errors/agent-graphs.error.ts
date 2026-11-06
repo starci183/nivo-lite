@@ -23,6 +23,8 @@ export enum AgentGraphsErrorCode {
     RunNotFound = "AGENT_GRAPHS_RUN_NOT_FOUND",
     /** The action the owner spoke of has no bands in the graph that a boundary could move. */
     BranchNotApplicable = "AGENT_GRAPHS_BRANCH_NOT_APPLICABLE",
+    /** A stored record is not the shape its entity declares. */
+    RecordUnreadable = "AGENT_GRAPHS_RECORD_UNREADABLE",
 }
 
 /** How each agent-graphs code travels. */
@@ -37,6 +39,7 @@ export const AGENT_GRAPHS_ERROR_KINDS: Record<AgentGraphsErrorCode, ErrorKind> =
     [AgentGraphsErrorCode.Forbidden]: "forbidden",
     [AgentGraphsErrorCode.RunNotFound]: "not-found",
     [AgentGraphsErrorCode.BranchNotApplicable]: "invalid",
+    [AgentGraphsErrorCode.RecordUnreadable]: "internal",
 }
 
 /** The one error class of the agent-graphs capability. */

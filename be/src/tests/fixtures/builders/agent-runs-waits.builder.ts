@@ -1,6 +1,5 @@
 import { builder } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
-import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { authorityRulesEntities } from "@modules/domain/authority-rules"
 import { moduleInstallationsEntities } from "@modules/domain/module-installations"
@@ -9,11 +8,11 @@ import { WorkItemsService } from "@modules/domain/work-items"
 import type { NewWorkItem, WorkItem } from "@modules/domain/work-items"
 import { WorkRecorderService } from "@modules/domain/decisions"
 import { branchOf, approverOf, amountIs, graphOf } from "./agent-graph.builder"
+import { insertDecisionRecord } from "./agent-graphs-persist.builder"
 import { persistGraph } from "./agent-graph-world.builder"
 import { entityOf as authorityRuleOf } from "./authority-rules.builder"
 import { entityOf } from "./entity.builder"
 
-const GraphDecisionEntity: (typeof agentGraphsEntities)[4] = agentGraphsEntities[4]
 const ApprovalRequestEntity: (typeof approvalRequestsEntities)[0] = approvalRequestsEntities[0]
 const AuthorityRuleEntity: (typeof authorityRulesEntities)[0] = authorityRulesEntities[0]
 const InstallationEntity: (typeof moduleInstallationsEntities)[0] = moduleInstallationsEntities[0]
@@ -74,14 +73,6 @@ const requestOf = entityOf(ApprovalRequestEntity, {
     timeoutMinutes: 1,
     status: "pending",
     expiresAt: new Date(0),
-})
-
-const graphDecisionOf = entityOf(GraphDecisionEntity, {
-    action: ACTION,
-    outcome: "ask",
-    mode: "enforced",
-    facts: {},
-    shadowDiff: false,
 })
 
 /** Seeds actual published timeout branches and the authority rule required to open a real backup request. */
@@ -190,18 +181,17 @@ export const persistWaitsAsk = async (
             requestedByAgentId: who.agentId,
         }),
     )
-    await manager.insert(
-        GraphDecisionEntity,
-        graphDecisionOf({
-            workspaceId: who.workspaceId,
-            agentId: who.agentId,
-            workItemId: itemId,
-            versionId: who.versionId,
-            branchKey: branch,
-            path: ["decide", branch],
-            approvalRequestId: ids.requestId,
-        }),
-    )
+    await insertDecisionRecord(manager, {
+        workspaceId: who.workspaceId,
+        agentId: who.agentId,
+        workItemId: itemId,
+        versionId: who.versionId,
+        action: ACTION,
+        branchKey: branch,
+        path: ["decide", branch],
+        outcome: "ask",
+        approvalRequestId: ids.requestId,
+    })
 }
 
 type CommitWaitsDecisionResultShape = {

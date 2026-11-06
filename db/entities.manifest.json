@@ -76,7 +76,7 @@
         "records_agent_graph_mode_set_at_chk",
         "records_agent_graph_mode_set_by_chk"
       ],
-      "indexes": ["records_agent_graph_agent_key", "records_agent_graph_installation"]
+      "indexes": ["records_agent_graph_agent", "records_agent_graph_agent_key", "records_agent_graph_installation"]
     },
     {
       "entity": "agent.graph-decision",
@@ -108,9 +108,10 @@
       ],
       "indexes": [
         "records_agent_graph_decision_agent_recent",
-        "records_agent_graph_decision_closed_recent",
         "records_agent_graph_decision_dedupe_key_key",
+        "records_agent_graph_decision_recent",
         "records_agent_graph_decision_request",
+        "records_agent_graph_decision_work_item",
         "records_agent_graph_decision_work_item_key"
       ]
     },

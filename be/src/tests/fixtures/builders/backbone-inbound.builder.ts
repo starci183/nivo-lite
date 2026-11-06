@@ -6,8 +6,6 @@ import { moduleInstallationsEntities } from "@modules/domain/module-installation
 import type { ConnectionsService } from "@modules/domain/connections"
 import type { AgentTriggersService } from "@modules/domain/agent-work"
 import type { GraphDocument } from "@modules/domain/agent-graphs"
-import { agentGraphsEntities } from "@modules/domain/agent-graphs"
-import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { nodeOf } from "./agent-graph.builder"
 import { persistGraph, persistGraphTenant } from "./agent-graph-world.builder"
 import type { GraphTenant } from "./agent-graph-world.builder"
@@ -15,9 +13,6 @@ import type { GraphTenant } from "./agent-graph-world.builder"
 const ConversationEntity: (typeof agentConversationsEntities)[0] = agentConversationsEntities[0]
 const MessageEntity: (typeof agentMessagesEntities)[0] = agentMessagesEntities[0]
 const InstallationEntity: (typeof moduleInstallationsEntities)[0] = moduleInstallationsEntities[0]
-const GraphEntity: (typeof agentGraphsEntities)[0] = agentGraphsEntities[0]
-const VersionEntity: (typeof agentGraphsEntities)[1] = agentGraphsEntities[1]
-const MemberEntity: (typeof workspaceMembersEntities)[0] = workspaceMembersEntities[0]
 
 /** Actual catalogue action: an untrusted inbound source must request approval before recording a receipt. */
 export const INBOUND_ACTION = "record_receivable_payment"
@@ -86,34 +81,6 @@ export interface InboundEndpoint {
     readonly endpoint: string
     /** An ephemeral per-seed key shared only with the signing fake. */
     readonly signingKey: string
-}
-
-/** Publishes the next actual version between a turn's read and replay, to prove a stale plan cannot rewrite its run. */
-export const publishAlternativeInboundVersion = async (
-    manager: EntityManager,
-    who: InboundIdentity,
-    versionId: string,
-): Promise<void> => {
-    const owner = await manager.findOneByOrFail(MemberEntity, { workspaceId: who.workspaceId, userId: who.userId })
-    await manager.transaction(async (tx) => {
-        await tx.insert(VersionEntity, {
-            id: versionId,
-            workspaceId: who.workspaceId,
-            agentId: who.agentId,
-            version: 2,
-            document: INBOUND_GRAPH,
-            documentHash: "proof-second-version",
-            contextVersionId: null,
-            changeKind: "edit",
-            note: "New contract version",
-            publishedBy: owner.id,
-        })
-        await tx.update(
-            GraphEntity,
-            { agentId: who.agentId, workspaceId: who.workspaceId },
-            { activeVersionId: versionId },
-        )
-    })
 }
 
 /** Seeds a published, installed graph and an actual website conversation; every service under test reads these rows. */

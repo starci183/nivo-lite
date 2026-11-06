@@ -1,6 +1,5 @@
 import { CLOCK } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { DecisionLogReadService, WorkRecorderService } from "@modules/domain/decisions"
@@ -21,11 +20,11 @@ import { WAIT_RUNS_MODULES } from "../../world/agent-runs-capabilities.options"
 import { WaitsExtensionActivity, waitsExtensionStep } from "../../world/agent-runs-waits.module"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { sceneOf } from "@tests/world/agent-runs-scene.service"
+import { decisionRecordOf } from "../../world/agent-graphs-database.service"
 import { stepRecordsOf } from "../../world/agent-runs-database.service"
 
 const world = useTestWorld({ modules: WAIT_RUNS_MODULES })
 const scene = sceneOf(world)
-const [, , , , GraphDecisionEntity] = agentGraphsEntities
 const [ApprovalRequestEntity] = approvalRequestsEntities
 const [MemberEntity] = workspaceMembersEntities
 const who = {
@@ -92,9 +91,7 @@ describe("agent-runs/wait-timeout: an extension wait passes its deadline with no
 
         await world.resolve(AgentRunSweepService).sweep()
 
-        expect(await em().findOneByOrFail(GraphDecisionEntity, { workItemId: itemId })).toMatchObject({
-            closedAs: "expired",
-        })
+        expect(await decisionRecordOf(world, scene.workspaceId, itemId)).toMatchObject({ closedAs: "expired" })
         expect(await scene.runRow(runId)).toMatchObject({ status: "parked", error: { code: "wait_timeout" } })
         expect(activity().told).toEqual(["ask:wait_timeout"])
         expect(await statuses(runId)).toEqual(["ask:failed"])
@@ -103,7 +100,7 @@ describe("agent-runs/wait-timeout: an extension wait passes its deadline with no
         await world.resolve(AgentRunSweepService).sweep()
 
         expect(activity().told).toEqual(["ask:wait_timeout"])
-        expect(await em().count(GraphDecisionEntity, { where: { workItemId: itemId, closedAs: "expired" } })).toBe(1)
+        expect((await decisionRecordOf(world, scene.workspaceId, itemId))?.closedAs).toBe("expired")
     })
 
     it("agent-runs/wait-timeout: a real backup request keeps the wait under its new deadline", async () => {
@@ -113,14 +110,14 @@ describe("agent-runs/wait-timeout: an extension wait passes its deadline with no
         })
 
         await world.resolve(AgentRunSweepService).sweep()
-        const renewed = await em().findOneByOrFail(GraphDecisionEntity, { workItemId: itemId })
-        const request = await em().findOneByOrFail(ApprovalRequestEntity, { id: renewed.approvalRequestId ?? "" })
+        const renewed = await decisionRecordOf(world, scene.workspaceId, itemId)
+        const request = await em().findOneByOrFail(ApprovalRequestEntity, { id: renewed?.approvalRequestId ?? "" })
         const step = (await stepRecordsOf(world, scene.workspaceId, runId)).find((record) => record.stepKey === "ask")
         const owner = await em().findOneByOrFail(MemberEntity, { workspaceId: scene.workspaceId, role: "owner" })
         await world.resolve(AgentRunSweepService).sweep()
 
-        expect(renewed.approvalRequestId).not.toBe(requestId)
-        expect(renewed.closedAs).toBeNull()
+        expect(renewed?.approvalRequestId).not.toBe(requestId)
+        expect(renewed?.closedAs).toBeNull()
         expect(request).toMatchObject({
             workspaceId: scene.workspaceId,
             requestedByAgentId: scene.agentId,
@@ -129,9 +126,7 @@ describe("agent-runs/wait-timeout: an extension wait passes its deadline with no
         expect(request.approvers.map((member) => member.role)).toEqual(["owner"])
         expect(request.approvers.map((member) => member.memberId)).toEqual([owner.id])
         expect(step?.claimedUntil?.getTime()).toBeGreaterThan(after(HOUR_MS).getTime())
-        expect((await em().findOneByOrFail(GraphDecisionEntity, { workItemId: itemId })).approvalRequestId).toBe(
-            request.id,
-        )
+        expect((await decisionRecordOf(world, scene.workspaceId, itemId))?.approvalRequestId).toBe(request.id)
         expect((await scene.runRow(runId)).status).toBe("waiting")
         expect(await statuses(runId)).toEqual(["ask:running"])
         expect(activity().told).toEqual([])
@@ -214,6 +209,6 @@ describe("agent-runs/kill-after-approval: the callback is lost after the owner t
         expect(activity().performed).toEqual([`reply:${wakeId}`])
         expect(activity().told).toEqual([])
         expect((await items().findMany([itemId], 1))[0]?.status).toBe("done")
-        expect((await em().findOneByOrFail(GraphDecisionEntity, { workItemId: itemId })).closedAs).toBeNull()
+        expect((await decisionRecordOf(world, scene.workspaceId, itemId))?.closedAs).toBeNull()
     })
 })

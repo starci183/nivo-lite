@@ -125,7 +125,7 @@ export class TemplateUpdatesService {
     }
 
     private async agentOf(install: TemplateInstallView): Promise<string | null> {
-        const state = await this.graphs.stateOfInstallation(install.installationId)
+        const state = await this.graphs.stateOfInstallation(install.workspaceId, install.installationId)
         return state?.agentId ?? null
     }
 

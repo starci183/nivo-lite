@@ -203,7 +203,7 @@ describe("AgentRunSweepService.sweep waits and failures", () => {
 
         await service.sweep()
 
-        expect(timeouts?.expire).toHaveBeenCalledWith("item-1", expect.anything())
+        expect(timeouts?.expire).toHaveBeenCalledWith("ws-1", "item-1", expect.anything())
         expect(steps.fail).toHaveBeenCalledWith(
             expect.objectContaining({ stepKey: "door" }),
             "wait_timeout",

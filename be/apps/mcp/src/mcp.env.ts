@@ -1,4 +1,5 @@
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
+import { parseEntityEngineConfig } from "@modules/domain/entity-engine"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
 import { parseAiConfig } from "@modules/integrations/ai"
 import { parseMcpConfig } from "@modules/integrations/mcp"
@@ -27,6 +28,8 @@ export interface McpAppOptions {
     readonly ai: ReturnType<typeof parseAiConfig>
     /** The SePay user API host the bank transaction list reads. */
     readonly sepay: ReturnType<typeof parseSepayConfig>
+    /** The key that signs the cursors of the entity engine, which holds the graph of each agent. */
+    readonly entityEngine: ReturnType<typeof parseEntityEngineConfig>
 }
 
 /** Reads the mcp app environment once. */
@@ -39,4 +42,5 @@ export const readMcpEnv = (env: EnvSource): McpAppOptions => ({
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
     ai: parseAiConfig(env),
     sepay: parseSepayConfig(env),
+    entityEngine: parseEntityEngineConfig(env),
 })

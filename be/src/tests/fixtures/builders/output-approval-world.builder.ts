@@ -1,5 +1,4 @@
 import type { EntityManager } from "typeorm"
-import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { agentsEntities } from "@modules/domain/agents"
@@ -7,6 +6,7 @@ import { agentConversationsEntities } from "@modules/domain/agent-conversations"
 import { agentMessagesEntities } from "@modules/domain/agent-messages"
 import { moduleInstallationsEntities } from "@modules/domain/module-installations"
 import { OWNER_EXAMPLE, graphOf } from "./agent-graph.builder"
+import { insertDecisionRecord } from "./agent-graphs-persist.builder"
 import { persistGraph } from "./agent-graph-world.builder"
 
 /** The actual installation and customer turn whose output the person reviews. */
@@ -181,7 +181,6 @@ export const persistOutputGraphStop = async (
     ids: OutputGraphStopIds,
     itemId: string,
 ): Promise<void> => {
-    const [, , , , GraphDecisionEntity] = agentGraphsEntities
     const [ApprovalRequestEntity] = approvalRequestsEntities
     const [MemberEntity] = workspaceMembersEntities
     const member = await manager.findOneOrFail(MemberEntity, {
@@ -229,7 +228,7 @@ export const persistOutputGraphStop = async (
         timeoutMinutes: 1,
         expiresAt: new Date(0),
     })
-    await manager.insert(GraphDecisionEntity, {
+    await insertDecisionRecord(manager, {
         workspaceId: who.workspaceId,
         agentId: who.agentId,
         workItemId: itemId,
@@ -238,9 +237,6 @@ export const persistOutputGraphStop = async (
         branchKey: "middle",
         path: ["decide", "middle"],
         outcome: "ask",
-        mode: "enforced",
-        facts: {},
-        shadowDiff: false,
         approvalRequestId: ids.requestId,
     })
 }

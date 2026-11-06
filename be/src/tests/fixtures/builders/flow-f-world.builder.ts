@@ -1,3 +1,4 @@
+import { EntityNodePortsService } from "@modules/domain/entity-engine"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { Test } from "@nestjs/testing"
@@ -194,6 +195,7 @@ export const flowServicesOf = async (
                 },
             },
             { provide: LOGGER, useValue: mock<Logger>() },
+            { provide: EntityNodePortsService, useValue: mock<EntityNodePortsService>({ ports: () => [] }) },
             { provide: GraphNodeEffectsService, useValue: effects },
             { provide: GRAPH_NODE_MODEL, useValue: ai },
             { provide: GRAPH_NODE_TOOL_DOOR, useValue: DOOR },

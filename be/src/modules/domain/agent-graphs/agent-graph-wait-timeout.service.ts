@@ -24,19 +24,13 @@ export class AgentGraphWaitTimeoutService implements AgentRunWaitTimeout {
     ) {}
 
     /** Applies the branch's timeout to the item: renewed when a backup group was asked, ended otherwise. */
-    async expire(workItemId: string, manager?: EntityManager): Promise<WaitExpiry> {
-        const decision =
-            manager === undefined
-                ? await this.decisions.byItem(workItemId)
-                : await this.decisions.byItem(workItemId, manager)
+    async expire(workspaceId: string, workItemId: string, manager?: EntityManager): Promise<WaitExpiry> {
+        const decision = await this.decisions.byItem(workspaceId, workItemId, manager)
         if (decision === null || decision.closed || decision.approvalRequestId === null) return ENDED
-        const event = { requestId: decision.approvalRequestId, outcome: "expired" }
+        const event = { workspaceId, requestId: decision.approvalRequestId, outcome: "expired" }
         if (manager === undefined) await this.asks.ended(event)
         else await this.asks.ended(event, manager)
-        const after =
-            manager === undefined
-                ? await this.decisions.byItem(workItemId)
-                : await this.decisions.byItem(workItemId, manager)
+        const after = await this.decisions.byItem(workspaceId, workItemId, manager)
         if (after === null || after.closed) return ENDED
         return { kind: "renewed", deadlineAt: new Date(this.clock.now().getTime() + RENEW_MS) }
     }

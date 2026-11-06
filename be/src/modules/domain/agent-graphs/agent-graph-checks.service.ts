@@ -90,7 +90,7 @@ export class AgentGraphChecksService {
     async check(request: GraphCheck): Promise<GraphAnswer> {
         if (request.installationId === null) return RUN
         try {
-            const state = await this.graphs.stateOfInstallation(request.installationId)
+            const state = await this.graphs.stateOfInstallation(request.workspaceId, request.installationId)
             return state === null ? RUN : await this.checked(request, state)
         } catch (cause) {
             this.logger.error(AgentGraphsLogEvent.DecideFailed, cause, { key: request.key })

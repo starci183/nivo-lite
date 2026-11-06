@@ -27,6 +27,8 @@ ALTER TABLE public."records_agent_graph" VALIDATE CONSTRAINT "records_agent_grap
 -- add_check public.records_agent_graph:constraint:records_agent_graph_mode_set_at_chk: added NOT VALID, then validated
 ALTER TABLE public."records_agent_graph" ADD CONSTRAINT "records_agent_graph_mode_set_at_chk" CHECK ((data->>'modeSetAt') IS NULL OR ((data->>'modeSetAt') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$')) NOT VALID;
 ALTER TABLE public."records_agent_graph" VALIDATE CONSTRAINT "records_agent_graph_mode_set_at_chk";
+-- create_index public.records_agent_graph:index:records_agent_graph_agent: on workspace_id, data->>'agentid', id using btree
+CREATE INDEX "records_agent_graph_agent" ON public."records_agent_graph" USING btree (workspace_id, ((data->>'agentId')::uuid), id);
 -- create_index public.records_agent_graph:index:records_agent_graph_installation: on workspace_id, data->>'installationid', id using btree
 CREATE INDEX "records_agent_graph_installation" ON public."records_agent_graph" USING btree (workspace_id, ((data->>'installationId')::uuid), id);
 -- add_unique public.records_agent_graph:index:records_agent_graph_agent_key: on workspace_id, data->>'agentid' using btree
@@ -219,8 +221,10 @@ ALTER TABLE public."records_agent_graph_decision" VALIDATE CONSTRAINT "records_a
 CREATE INDEX "records_agent_graph_decision_agent_recent" ON public."records_agent_graph_decision" USING btree (workspace_id, ((data->>'agentId')::uuid), created_at DESC, id DESC);
 -- create_index public.records_agent_graph_decision:index:records_agent_graph_decision_request: on workspace_id, data->>'approvalrequestid', id using btree
 CREATE INDEX "records_agent_graph_decision_request" ON public."records_agent_graph_decision" USING btree (workspace_id, ((data->>'approvalRequestId')::uuid), id);
--- create_index public.records_agent_graph_decision:index:records_agent_graph_decision_closed_recent: on workspace_id, updated_atdesc, iddesc using btree
-CREATE INDEX "records_agent_graph_decision_closed_recent" ON public."records_agent_graph_decision" USING btree (workspace_id, updated_at DESC, id DESC) WHERE (data->>'closedAs') IS NOT NULL;
+-- create_index public.records_agent_graph_decision:index:records_agent_graph_decision_work_item: on workspace_id, data->>'workitemid', id using btree
+CREATE INDEX "records_agent_graph_decision_work_item" ON public."records_agent_graph_decision" USING btree (workspace_id, ((data->>'workItemId')::uuid), id);
+-- create_index public.records_agent_graph_decision:index:records_agent_graph_decision_recent: on workspace_id, updated_atdesc, iddesc using btree
+CREATE INDEX "records_agent_graph_decision_recent" ON public."records_agent_graph_decision" USING btree (workspace_id, updated_at DESC, id DESC);
 -- add_unique public.records_agent_graph_decision:index:records_agent_graph_decision_work_item_key: on workspace_id, data->>'workitemid' using btree
 CREATE UNIQUE INDEX "records_agent_graph_decision_work_item_key" ON public."records_agent_graph_decision" USING btree (workspace_id, ((data->>'workItemId')::uuid)) WHERE ((data->>'workItemId')::uuid) IS NOT NULL;
 -- add_unique public.records_agent_graph_decision:index:records_agent_graph_decision_dedupe_key_key: on workspace_id, data->>'dedupekey' using btree

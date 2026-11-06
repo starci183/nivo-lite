@@ -94,11 +94,8 @@ export const agentGraphDecisionEntity: EntityDefinition<GraphDecisionFields> = d
     indexes: [
         { name: "agent_recent", on: ["agentId", { desc: "createdAt" }, { desc: "id" }] },
         { name: "request", on: ["approvalRequestId", "id"] },
-        {
-            name: "closed_recent",
-            on: [{ desc: "updatedAt" }, { desc: "id" }],
-            where: { op: "notNull", field: "closedAs" },
-        },
+        { name: "work_item", on: ["workItemId", "id"] },
+        { name: "recent", on: [{ desc: "updatedAt" }, { desc: "id" }] },
     ],
     constraints: [
         {

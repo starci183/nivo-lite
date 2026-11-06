@@ -1,7 +1,7 @@
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import type { DynamicModule, Type } from "@nestjs/common"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
 import type { NodeInstall } from "@nivo-lite/agent-sdk/node"
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import { CliModule } from "@features/cli"
 import { ChannelConnectionsModule } from "@modules/domain/channel-connections"
 import { ChannelProvisioningModule } from "@modules/domain/channel-provisioning"
@@ -57,6 +57,7 @@ import { QueueModule } from "@modules/platform/queue"
 import type { QueueOptions } from "@modules/platform/queue"
 import { LoggingModule, printConsoleLine } from "@modules/platform/logging"
 import type { CliAppOptions } from "../cli.options"
+import { entityEngineStoreModules } from "./entity-engine"
 
 /** The queue of the CLI: producers only, so no worker and no relay run. */
 const CLI_QUEUE: QueueOptions = {
@@ -140,6 +141,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
         print: printConsoleLine,
         ...options.workspaceSeed,
     }),
+    ...entityEngineStoreModules(options),
     AgentGraphsModule.register({ isGlobal: true, storeOnly: true }),
     WorkspaceCleanupModule.register({ isGlobal: true, accounts: IDENTITY_ACCOUNTS, print: printConsoleLine }),
     AuthorityActionsModule.register({ isGlobal: true }),

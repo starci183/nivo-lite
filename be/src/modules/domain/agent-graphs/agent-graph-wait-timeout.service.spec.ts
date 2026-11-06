@@ -44,29 +44,29 @@ describe("AgentGraphWaitTimeoutService.expire", () => {
         const closed = await build([decision({ closed: true })])
         const bare = await build([decision({ approvalRequestId: null })])
 
-        await expect(none.service.expire("item-1")).resolves.toEqual({ kind: "ended" })
-        await expect(closed.service.expire("item-1")).resolves.toEqual({ kind: "ended" })
-        await expect(bare.service.expire("item-1")).resolves.toEqual({ kind: "ended" })
+        await expect(none.service.expire("ws-1", "item-1")).resolves.toEqual({ kind: "ended" })
+        await expect(closed.service.expire("ws-1", "item-1")).resolves.toEqual({ kind: "ended" })
+        await expect(bare.service.expire("ws-1", "item-1")).resolves.toEqual({ kind: "ended" })
         expect(none.asks.ended).not.toHaveBeenCalled()
     })
 
     it("runs the ask road of an expired request and ends the wait when the branch settled it", async () => {
         const { service, asks } = await build([decision(), decision({ closed: true })])
 
-        await expect(service.expire("item-1")).resolves.toEqual({ kind: "ended" })
+        await expect(service.expire("ws-1", "item-1")).resolves.toEqual({ kind: "ended" })
 
-        expect(asks.ended).toHaveBeenCalledWith({ requestId: "req-1", outcome: "expired" })
+        expect(asks.ended).toHaveBeenCalledWith({ workspaceId: "ws-1", requestId: "req-1", outcome: "expired" })
     })
 
     it("renews the wait a day on when the branch asked a backup group, and ends it when the decision is gone", async () => {
         const backup = await build([decision(), decision()])
         const gone = await build([decision(), null])
 
-        await expect(backup.service.expire("item-1")).resolves.toEqual({
+        await expect(backup.service.expire("ws-1", "item-1")).resolves.toEqual({
             kind: "renewed",
             deadlineAt: new Date("2026-11-02T10:00:00.000Z"),
         })
-        await expect(gone.service.expire("item-1")).resolves.toEqual({ kind: "ended" })
+        await expect(gone.service.expire("ws-1", "item-1")).resolves.toEqual({ kind: "ended" })
     })
 })
 
@@ -75,15 +75,18 @@ describe("AgentGraphWaitTimeoutService.expire in an owner transaction", () => {
         const manager = mockEntityManager()
         const { service, asks, decisions } = await build([decision(), decision()])
 
-        await expect(service.expire("item-1", manager)).resolves.toEqual({
+        await expect(service.expire("ws-1", "item-1", manager)).resolves.toEqual({
             kind: "renewed",
             deadlineAt: new Date("2026-11-02T10:00:00.000Z"),
         })
         expect(decisions.byItem.mock.calls).toEqual([
-            ["item-1", manager],
-            ["item-1", manager],
+            ["ws-1", "item-1", manager],
+            ["ws-1", "item-1", manager],
         ])
-        expect(asks.ended).toHaveBeenCalledWith({ requestId: "req-1", outcome: "expired" }, manager)
+        expect(asks.ended).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", requestId: "req-1", outcome: "expired" },
+            manager,
+        )
     })
 
     it.each([null, decision({ closed: true })])(
@@ -92,10 +95,10 @@ describe("AgentGraphWaitTimeoutService.expire in an owner transaction", () => {
             const manager = mockEntityManager()
             const { service, decisions } = await build([decision(), after])
 
-            await expect(service.expire("item-1", manager)).resolves.toEqual({ kind: "ended" })
+            await expect(service.expire("ws-1", "item-1", manager)).resolves.toEqual({ kind: "ended" })
             expect(decisions.byItem.mock.calls).toEqual([
-                ["item-1", manager],
-                ["item-1", manager],
+                ["ws-1", "item-1", manager],
+                ["ws-1", "item-1", manager],
             ])
         },
     )

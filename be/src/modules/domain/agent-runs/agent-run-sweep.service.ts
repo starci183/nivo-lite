@@ -210,7 +210,7 @@ export class AgentRunSweepService {
         )
             return null
         if (owner.kind === "closed") return this.resumeTimeout(manager, workItemId, view, owner.decision)
-        const expiry = await this.timeouts.expire(workItemId, manager)
+        const expiry = await this.timeouts.expire(item.workspaceId, workItemId, manager)
         const after = await this.verdicts.claimTimeout(manager, item.workspaceId, workItemId)
         if (after.kind === "closed") return this.resumeTimeout(manager, workItemId, view, after.decision)
         if (after.kind === "busy") return null

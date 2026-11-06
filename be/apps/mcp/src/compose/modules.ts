@@ -7,10 +7,11 @@ import {
     CONNECTION_SECRETS_ERROR_KINDS,
     ConnectionSecretsModule,
 } from "@modules/domain/connection-secrets"
-import { AgentGraphsModule } from "@modules/domain/agent-graphs"
+import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES, AgentGraphsModule } from "@modules/domain/agent-graphs"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { AgentsModule } from "@modules/domain/agents"
 import { DataRecordsModule } from "@modules/domain/data-records"
+import { ENTITY_ENGINE_ERROR_KINDS, ENTITY_ENGINE_MESSAGES } from "@modules/domain/entity-engine"
 import { EventsModule } from "@modules/domain/events"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
@@ -39,6 +40,7 @@ import { LoggingModule } from "@modules/platform/logging"
 import { QueueModule } from "@modules/platform/queue"
 import { RetryModule } from "@modules/platform/retry"
 import type { McpAppOptions } from "../mcp.options"
+import { entityEngineStoreModules } from "./entity-engine"
 import { mcpKnowledgeErrorKinds, mcpKnowledgeMessages, mcpKnowledgeModules } from "./knowledge"
 
 /**
@@ -55,8 +57,10 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     I18nModule.register({
         isGlobal: true,
         bundles: [
+            AGENT_GRAPHS_MESSAGES,
             API_KEYS_MESSAGES,
             CONNECTION_SECRETS_MESSAGES,
+            ENTITY_ENGINE_MESSAGES,
             ERRORS_MESSAGES,
             HTTP_SECURITY_MESSAGES,
             IDENTITY_MESSAGES,
@@ -71,9 +75,11 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     ErrorsModule.register({
         isGlobal: true,
         kinds: [
+            AGENT_GRAPHS_ERROR_KINDS,
             API_KEYS_ERROR_KINDS,
             CONFIG_ERROR_KINDS,
             CONNECTION_SECRETS_ERROR_KINDS,
+            ENTITY_ENGINE_ERROR_KINDS,
             HTTP_SECURITY_ERROR_KINDS,
             IDENTITY_ERROR_KINDS,
             ...mcpKnowledgeErrorKinds,
@@ -109,6 +115,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     TransactionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     DataRecordsModule.register({ isGlobal: true }),
+    ...entityEngineStoreModules(options),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     ...mcpKnowledgeModules(options),
     ProviderRegistryModule.register({ isGlobal: true }),

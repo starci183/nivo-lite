@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -19,8 +20,10 @@ const PAGES = 10
 /** How far back the closed decisions are looked at, milliseconds (two days), and how many are read. */
 const LEARN_WINDOW_MS = 172_800_000
 const LEARN_READ = 500
-/** How many Brain rules one tick compares. */
+/** How many Brain rules one tick compares in one workspace. */
 const BRAIN_BATCH = 500
+/** How many workspaces the learning and the Brain comparison visit in one tick: the engine scopes a transaction to one workspace. */
+const WORKSPACE_SLICE = 50
 /** The language a graph is seeded in when nothing says otherwise. */
 const SEED_LOCALE = "vi"
 
@@ -43,6 +46,8 @@ export interface WatchReport {
  * force. A changed rule raises a conflict for the owner and changes no graph: the agent keeps running on the version the owner confirmed.
  */
 export class AgentGraphWatchService {
+    private after: string | undefined
+
     constructor(
         @InjectClock() private readonly clock: Clock,
         private readonly installations: InstallationRecordsService,
@@ -51,14 +56,16 @@ export class AgentGraphWatchService {
         private readonly decisions: AgentGraphDecisionsService,
         private readonly proposals: AgentGraphProposalsService,
         private readonly brain: BrainFactsService,
+        private readonly workspaces: WorkspacesService,
     ) {}
 
     /** Runs the four passes. */
     async tick(): Promise<WatchReport> {
         const seeded = await this.seedMissing()
         const refreshed = await this.refreshSeeds()
-        const learned = await this.learn()
-        const conflicts = await this.compareBrain()
+        const slice = await this.nextWorkspaces()
+        const learned = await this.learn(slice)
+        const conflicts = await this.compareBrain(slice)
         return { seeded, refreshed, learned, conflicts }
     }
 
@@ -87,8 +94,10 @@ export class AgentGraphWatchService {
         const rows = await this.installations.page(after, PAGE)
         const last = rows.at(-1)
         if (last === undefined) return seeded
-        const withAgent = rows.flatMap((row) => (row.agentId === null ? [] : [{ id: row.id, agentId: row.agentId }]))
-        const missing = new Set(await this.graphs.missingGraph(withAgent.map((row) => row.agentId)))
+        const withAgent = rows.flatMap((row) =>
+            row.agentId === null ? [] : [{ id: row.id, agentId: row.agentId, workspaceId: row.workspaceId }],
+        )
+        const missing = await this.missingOf(withAgent)
         const wanted = withAgent.filter((entry) => missing.has(entry.agentId)).slice(0, SEED_BATCH - seeded)
         let made = 0
         await eachInOrder(wanted, async (row) => {
@@ -97,25 +106,55 @@ export class AgentGraphWatchService {
         return this.seedMissing(last.id, page + 1, seeded + made)
     }
 
-    private async learn(): Promise<number> {
+    /** The agents of the rows that have no graph yet, asked one workspace at a time. */
+    private async missingOf(
+        rows: ReadonlyArray<{ readonly agentId: string; readonly workspaceId: string }>,
+    ): Promise<ReadonlySet<string>> {
+        const missing = new Set<string>()
+        const workspaceIds = [...new Set(rows.map((row) => row.workspaceId))]
+        await eachInOrder(workspaceIds, async (workspaceId) => {
+            const found = await this.graphs.missingGraph(
+                workspaceId,
+                rows.filter((row) => row.workspaceId === workspaceId).map((row) => row.agentId),
+            )
+            found.forEach((agentId) => missing.add(agentId))
+        })
+        return missing
+    }
+
+    /** The next slice of workspaces by id, the first again after the last: every workspace is reached and no tick reads more than a slice. */
+    private async nextWorkspaces(): Promise<ReadonlyArray<string>> {
+        const found = await this.workspaces.list(WORKSPACE_SLICE, this.after)
+        this.after = found.length < WORKSPACE_SLICE ? undefined : found.at(-1)?.id
+        return found.map((workspace) => workspace.id)
+    }
+
+    private async learn(workspaceIds: ReadonlyArray<string>): Promise<number> {
         const since = new Date(this.clock.now().getTime() - LEARN_WINDOW_MS)
-        const agents = await this.decisions.agentsClosedSince(since, LEARN_READ)
         const counts = await Promise.all(
-            agents.map(async (agentId) => {
-                const state = await this.graphs.statesOfAgent(agentId)
-                const active = state?.active ?? null
-                const versionId = state?.activeVersionId ?? null
-                return state === null || active === null || versionId === null
-                    ? 0
-                    : this.proposals.learn(state.workspaceId, agentId, versionId, active)
+            workspaceIds.map(async (workspaceId) => {
+                const agents = await this.decisions.agentsClosedSince(workspaceId, since, LEARN_READ)
+                const raised = await Promise.all(agents.map((agentId) => this.learnOne(workspaceId, agentId)))
+                return raised.reduce((sum, count) => sum + count, 0)
             }),
         )
         return counts.reduce((sum, count) => sum + count, 0)
     }
 
-    private async compareBrain(): Promise<number> {
-        const sources = await this.graphs.brainSourcesInForce(BRAIN_BATCH)
-        const raised = await Promise.all(sources.map((source) => this.compareOne(source)))
+    private async learnOne(workspaceId: string, agentId: string): Promise<number> {
+        const state = await this.graphs.stateOfAgent(workspaceId, agentId)
+        const active = state?.active ?? null
+        const versionId = state?.activeVersionId ?? null
+        return state === null || active === null || versionId === null
+            ? 0
+            : this.proposals.learn(workspaceId, agentId, versionId, active)
+    }
+
+    private async compareBrain(workspaceIds: ReadonlyArray<string>): Promise<number> {
+        const found = await Promise.all(
+            workspaceIds.map((workspaceId) => this.graphs.brainSourcesInForce(workspaceId, BRAIN_BATCH)),
+        )
+        const raised = await Promise.all(found.flat().map((source) => this.compareOne(source)))
         return raised.filter(Boolean).length
     }
 

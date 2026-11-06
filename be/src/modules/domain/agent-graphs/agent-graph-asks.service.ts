@@ -15,6 +15,8 @@ import type { GraphWorkDecisions } from "./graph-work-decisions.port"
 
 /** What the end of an ask hears of a request that ended. */
 export interface AskEnded {
+    /** The workspace of the request. */
+    readonly workspaceId: string
     /** The request. */
     readonly requestId: string
     /** Approved, rejected or expired; anything else is not an end this road knows. */
@@ -42,8 +44,8 @@ export class AgentGraphAsksService {
     async ended(event: AskEnded, manager?: EntityManager): Promise<void> {
         const decision =
             manager === undefined
-                ? await this.decisions.byRequest(event.requestId)
-                : await this.decisions.byRequest(event.requestId, manager)
+                ? await this.decisions.byRequest(event.workspaceId, event.requestId)
+                : await this.decisions.byRequest(event.workspaceId, event.requestId, manager)
         if (decision === null || decision.closed) return
         if (event.outcome === "approved" || event.outcome === "rejected") {
             await this.settle(decision, event.outcome, event.decidedBy ?? null)
@@ -66,15 +68,15 @@ export class AgentGraphAsksService {
         }
         if (onTimeout?.kind === "stop") {
             await this.work.reject(manager, decision.workspaceId, decision.workItemId)
-            await this.decisions.close(decision.workItemId, "rejected", manager)
+            await this.decisions.close(decision.workspaceId, decision.workItemId, "rejected", manager)
         }
-        await this.decisions.close(decision.workItemId, "expired", manager)
+        await this.decisions.close(decision.workspaceId, decision.workItemId, "expired", manager)
     }
 
     private async closeClaimed(decision: DecisionView, manager: EntityManager): Promise<boolean> {
         const claim = await this.work.claim(manager, decision.workspaceId, decision.workItemId)
         if (claim.kind !== "closed") return false
-        await this.decisions.close(decision.workItemId, claim.outcome, manager)
+        await this.decisions.close(decision.workspaceId, decision.workItemId, claim.outcome, manager)
         return true
     }
 
@@ -94,7 +96,7 @@ export class AgentGraphAsksService {
             branch: { ...branchApprovalOf(approver), group },
         }
         const opened = await this.requests.open(params, manager)
-        await this.decisions.attachRequest(decision.id, opened.requestId, manager)
+        await this.decisions.attachRequest(decision.workspaceId, decision.id, opened.requestId, manager)
     }
 
     private async settle(
@@ -111,10 +113,10 @@ export class AgentGraphAsksService {
         if (!resumed) {
             await this.entityManager.transaction(async (manager) => {
                 const closed = await this.work.closedOutcome(manager, decision.workspaceId, decision.workItemId)
-                await this.decisions.close(decision.workItemId, closed, manager)
+                await this.decisions.close(decision.workspaceId, decision.workItemId, closed, manager)
             })
             return
         }
-        await this.decisions.close(decision.workItemId, outcome)
+        await this.decisions.close(decision.workspaceId, decision.workItemId, outcome)
     }
 }

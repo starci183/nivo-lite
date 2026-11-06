@@ -15,6 +15,7 @@ import { McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { NativeToolsModule, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { AiModule } from "@modules/integrations/ai"
+import { ENGINE_STORE_MODULE } from "./entity-engine-store.options"
 import { MCP_CREDENTIAL_MODULES } from "./mcp-credential-capabilities.options"
 
 /** True for the gateway the credential composition registers, which the native-tools composition replaces with one that has natives. */
@@ -43,6 +44,7 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     AgentConversationsModule.register({ isGlobal: true, readOnly: true }),
     AgentMessagesModule.register({ isGlobal: true, readOnly: true }),
+    ENGINE_STORE_MODULE,
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     NativeToolsModule.register({ isGlobal: true }),
     ProviderRegistryModule.register({ isGlobal: true }),

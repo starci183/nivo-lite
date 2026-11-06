@@ -31,15 +31,12 @@ import { CustomerIntentsService } from "../../modules/domain/customer-turns/cust
 import { CustomerWorkHandlerService } from "../../modules/domain/customer-turns/customer-work-handler.service"
 import { AgentTurnExecutorService } from "../../modules/domain/agent-turns/agent-turn-executor.service"
 import { AccountingPerformersRegistrarService } from "../../modules/domain/accounting/accounting-performers-registrar.service"
-import {
-    INBOUND_EVENT,
-    persistInboundScene,
-    publishAlternativeInboundVersion,
-} from "../fixtures/builders/backbone-inbound.builder"
+import { INBOUND_EVENT, INBOUND_GRAPH, persistInboundScene } from "../fixtures/builders/backbone-inbound.builder"
 import type { InboundIdentity } from "../fixtures/builders/backbone-inbound.builder"
 import { lapseLease, removeDrainJobs, settleAgentWork, wakeOfFact, wakesOfFact } from "./agent-work-database.service"
 import { removeAuthUsers, removeWorkspace } from "./proof-accounts.service"
 import { removeStepJobs } from "./agent-runs-database.service"
+import { publishLaterVersion } from "./agent-graphs-database.service"
 import type { useTestWorld } from "./use-test-world"
 
 const WorkItemEntity: (typeof workItemsEntities)[0] = workItemsEntities[0]
@@ -123,7 +120,19 @@ const turnsOf = (world: World, who: InboundIdentity) => {
             assert(plan !== null, "The persisted graph must offer the actual event contract")
             return world.resolve(IntentPipelineService).storeText(turn, plan, text, NO_ABORT)
         },
-        publishAlternative: (): Promise<void> => publishAlternativeInboundVersion(world.db.primary, who, world.id()),
+        publishAlternative: async (): Promise<void> => {
+            const owner = await world.db.primary.findOneByOrFail(MemberEntity, {
+                workspaceId: who.workspaceId,
+                userId: who.userId,
+            })
+            await publishLaterVersion(world, {
+                workspaceId: who.workspaceId,
+                agentId: who.agentId,
+                publishedBy: owner.id,
+                number: 2,
+                document: INBOUND_GRAPH,
+            })
+        },
         async recover(turn: AgentTurnView, event: InboundEvent): Promise<AgentTurnView> {
             await lapseLease(world.db.primary, turn.agentId, turn.scopeKey)
             return begin(event)

@@ -1,11 +1,13 @@
 import { Injectable, Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentGraphsModule } from "@modules/domain/agent-graphs"
+import { ProposalsProofModule } from "./agent-graph-proposals-proof.module"
 import type { FactSpec, FactSubject, FactValues, GraphFactReader } from "@modules/domain/agent-graphs"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { AMOUNT_FACT } from "../fixtures/builders/agent-graph.builder"
+import { ENGINE_STORE_MODULE } from "./entity-engine-store.options"
 import { QUEUE_MODULES } from "./test-capabilities.options"
 
 const AMOUNT: FactSpec = {
@@ -37,9 +39,16 @@ class BooksProofModule {
 /** The branch decider over the real graph store and the real decision ledger, with the books of the proof as the only reader. */
 export const AGENT_GRAPH_DECIDER_MODULES: ReadonlyArray<DynamicModule> = [
     ...QUEUE_MODULES,
+    ENGINE_STORE_MODULE,
     EventsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true }),
     BooksProofModule.register(),
     AgentGraphsModule.register({ isGlobal: true, deciderOnly: true, readers: [BooksReader] }),
+]
+
+/** The graph store as the apps that edit graphs use it: the decider's modules with the proposals the owner decides. */
+export const AGENT_GRAPH_STORE_MODULES: ReadonlyArray<DynamicModule> = [
+    ...AGENT_GRAPH_DECIDER_MODULES,
+    ProposalsProofModule.register(),
 ]

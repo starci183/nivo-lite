@@ -197,7 +197,7 @@ export type WaitExpiry = { readonly kind: "renewed"; readonly deadlineAt: Date }
 /** What the engine asks of the graph: apply the timeout of the branch a work item waits on. The graph owns the answer; the engine writes no timeout. */
 export interface AgentRunWaitTimeout {
     /** Applies the branch's timeout to the work item (a backup group, a stop, or silence) and says whether a new wait began. */
-    expire(workItemId: string, manager?: EntityManager): Promise<WaitExpiry>
+    expire(workspaceId: string, workItemId: string, manager?: EntityManager): Promise<WaitExpiry>
 }
 
 /** The verdicts already given on work items: the closed item is the durable record of a decision, so a wait is finished from it, never from the clock. */

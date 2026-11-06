@@ -1,4 +1,3 @@
-import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import {
     outputApprovalRequestOf,
     persistOutputGraphStop,
@@ -30,6 +29,7 @@ import { WorkRecorderService } from "../../../modules/domain/decisions/work-reco
 import { WorkPerformersRegistrarService } from "../../../modules/domain/work-performers/work-performers-registrar.service"
 import { GatewayCallPerformerService } from "../../../modules/domain/work-performers/gateway-call-performer.service"
 import { AgentGraphWaitTimeoutService } from "../../../modules/domain/agent-graphs/agent-graph-wait-timeout.service"
+import { decisionRecordOf } from "../../world/agent-graphs-database.service"
 import { outputProofSandbox } from "../../world/output-proof-sandbox.service"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { useTestWorld } from "../../world/use-test-world"
@@ -45,7 +45,6 @@ const world = useTestWorld({ modules: API_APP_MODULES, sandbox: outputProofSandb
 const scene = sceneOf(world)
 const [MessageEntity] = agentMessagesEntities
 const [MemberEntity] = workspaceMembersEntities
-const [, , , , GraphDecisionEntity] = agentGraphsEntities
 const [WorkItemEntity] = workItemsEntities
 const conversationId = world.id()
 const customerMessageId = world.id()
@@ -422,7 +421,7 @@ describe("output approval: published graph stop interleaving", () => {
         expect((await soleStepOfKind(world, scene.workspaceId, runId, "approval")).result).toMatchObject({
             approved: false,
         })
-        expect((await em().findOneByOrFail(GraphDecisionEntity, { workItemId: item.id })).closedAs).toBe("rejected")
+        expect((await decisionRecordOf(world, scene.workspaceId, item.id))?.closedAs).toBe("rejected")
         expect((await stepRecordsOfKind(world, scene.workspaceId, runId, "output")).length).toBe(0)
         expect((await world.resolve(DecisionLogReadService).decidersOf([item.id])).has(item.id)).toBe(true)
     })

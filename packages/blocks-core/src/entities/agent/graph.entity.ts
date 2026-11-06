@@ -41,7 +41,10 @@ export const agentGraphEntity: EntityDefinition<GraphFields> = defineEntity({
     name: "agent.graph",
     dataKind: "agent-graph",
     fields: graphFields,
-    indexes: [{ name: "installation", on: ["installationId", "id"] }],
+    indexes: [
+        { name: "agent", on: ["agentId", "id"] },
+        { name: "installation", on: ["installationId", "id"] },
+    ],
     constraints: [{ kind: "unique", name: "agent_key", on: ["agentId"], refusal: "graph-exists" }],
     matchKeys: [{ name: "agent", on: ["agentId"] }],
     view: true,

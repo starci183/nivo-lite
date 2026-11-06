@@ -16,11 +16,18 @@ export interface EntityEngineOptions {
     readonly cursorKey: Secret
 }
 
-/** What the app root registers: the engine's options and the class that tells the owner of a job the engine parked (the root names it, so the engine never imports its capability). */
-export interface EntityEngineRegistration extends EntityEngineOptions {
-    /** The class that implements the alerts of a parked job. */
-    readonly alerts: Type<EngineFailureAlerts>
-}
+/**
+ * What the app root registers: the engine's options and the class that tells the owner of a job the engine parked (the root names it, so
+ * the engine never imports its capability). An app that only reads and writes records (the gateway, the command line) sets `storeOnly`:
+ * it gets the scoped transactions, the reads and the writes, and no queue, no ports and no job runner, so it names no alerts.
+ */
+export type EntityEngineRegistration =
+    | (EntityEngineOptions & {
+          /** The class that implements the alerts of a parked job. */
+          readonly alerts: Type<EngineFailureAlerts>
+          readonly storeOnly?: false | undefined
+      })
+    | (EntityEngineOptions & { readonly storeOnly: true })
 
 /** The part of the options the environment supplies. */
 export type EntityEngineConfig = Pick<EntityEngineOptions, "cursorKey" | "buildId">
