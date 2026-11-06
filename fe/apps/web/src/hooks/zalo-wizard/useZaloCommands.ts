@@ -6,10 +6,12 @@ import type { Settled } from "@/hooks/connection-wizard"
 import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useConnectionsRefresh } from "@/hooks/connections"
 import { useMutateAuthorizeZaloSwr, useMutateSaveZaloOaSecretSwr, useMutateStartZaloConnectionSwr } from "@/hooks/swr"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { LocalStorage, StorageId } from "@/modules/storage"
 import type { ZaloWizardConnection } from "@/modules/types"
 import type { ZaloFields } from "./zalo-wizard.shared"
 
-/** The GraphQL commands of the Zalo wizard (the active workspace travels in the request header). */
+/** The GraphQL commands of the Zalo wizard (the workspace of the address travels in the request header). */
 export interface ZaloCommands {
     readonly start: (fields: Pick<ZaloFields, "name" | "appId" | "appSecret">) => Promise<Settled<ZaloWizardConnection>>
     readonly saveOaSecret: (connectionId: string, oaSecret: string) => Promise<Settled<ZaloWizardConnection>>
@@ -29,6 +31,7 @@ export const useZaloCommands = (): ZaloCommands => {
         [settleRaw, labelOf],
     )
     const refresh = useConnectionsRefresh()
+    const workspaceId = useWorkspaceId()
     const { trigger: triggerStart } = useMutateStartZaloConnectionSwr()
     const { trigger: triggerSecret } = useMutateSaveZaloOaSecretSwr()
     const { trigger: triggerAuthorize } = useMutateAuthorizeZaloSwr()
@@ -46,9 +49,11 @@ export const useZaloCommands = (): ZaloCommands => {
             },
             authorize: async (connectionId) => {
                 const settled = await settle(() => triggerAuthorize({ connectionId }))
-                return settled.kind === "ok" ? { kind: "ok", value: settled.value.url } : settled
+                if (settled.kind !== "ok") return settled
+                LocalStorage.set(StorageId.ZaloOAuthWorkspace, workspaceId)
+                return { kind: "ok", value: settled.value.url }
             },
         }),
-        [settle, refresh, triggerStart, triggerSecret, triggerAuthorize],
+        [settle, refresh, triggerStart, triggerSecret, triggerAuthorize, workspaceId],
     )
 }

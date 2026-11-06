@@ -180,7 +180,7 @@ const ListBody = (props: Props) => {
             errorDescription={copy.errorBody}
             emptyDescription={copy.emptyBody}
             emptyIconSource={nivoIconSource("email", "leading")}
-            emptyAction={{ label: copy.emptyAction, onAction: () => props.on.go("/connections") }}
+            emptyAction={{ label: copy.emptyAction, onAction: props.on.openConnections }}
             onRetry={props.on.refresh}
             render={(items, loading) => (
                 <PaneList

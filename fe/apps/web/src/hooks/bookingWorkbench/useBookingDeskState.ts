@@ -11,10 +11,12 @@ import {
     useBookingPlacement,
 } from "@/hooks/bookingDesk"
 import { EMPTY_BOOKING_BOARD } from "@/hooks/bookingBoard"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { buildBookingDeskDisplay, type BuildBookingDeskDisplayResult } from "@/hooks/bookingDeskView"
 
 /** Inputs owned by this display/state mapping. */
 interface BuildBookingDeskStateInput {
+    readonly workspaceId: string
     readonly range: ReturnType<typeof useBookingRange> & {
         readonly board: NonNullable<ReturnType<typeof useBookingRange>["board"]>
     }
@@ -33,6 +35,7 @@ interface BuildBookingDeskStateInput {
 
 /** Connects booking data, placement state and agenda commands. */
 const buildBookingDeskState = ({
+    workspaceId,
     range,
     mode,
     t,
@@ -49,6 +52,7 @@ const buildBookingDeskState = ({
     const { board } = range
     const isToday = mode === "today"
     const display = buildBookingDeskDisplay({
+        workspaceId,
         board,
         anchorValue: range.anchor,
         t,
@@ -129,6 +133,7 @@ export interface BookingDeskStateView extends BuildBookingDeskDisplayResult {
 /** Owns the desk's actual range, selection, placement and command lifetime across Calendar and Today. */
 export const useBookingDeskState = (input: BookingDeskStateInput): BookingDeskStateView => {
     const { t, format } = input
+    const workspaceId = useWorkspaceId()
     const range = useBookingRange(input.isActive, input.scope)
 
     const desk = useBookingActions(() => range.reload(), input.isActive, input.scope)
@@ -161,6 +166,7 @@ export const useBookingDeskState = (input: BookingDeskStateInput): BookingDeskSt
     })
 
     const connected = buildBookingDeskState({
+        workspaceId,
         range: { ...range, board: range.board ?? EMPTY_BOOKING_BOARD },
         mode: input.mode,
         t,

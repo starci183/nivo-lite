@@ -1,18 +1,18 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
+import { useWorkspaceCards, useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES } from "@/modules/routes"
+import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { OnboardingReadyBase } from "./component"
 
-/** The connected ready screen: names the workspace just made (the active one) and lands on the Office. */
+/** The connected ready screen: names the workspace just made (the one the address carries) and lands on the Office. */
 export const OnboardingReady = () => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const { cards, status } = useWorkspaceCards()
-    const name = cards.find((card) => card.id === activeWorkspaceId)?.name
+    const name = cards.find((card) => card.id === workspaceId)?.name
     return (
         <OnboardingReadyBase
             props={{
@@ -24,8 +24,7 @@ export const OnboardingReady = () => {
             }}
             on={{
                 enter: () => {
-                    router.push(APP_ROUTES.chat)
-                    router.refresh()
+                    router.push(workspaceHref(workspaceId, APP_ROUTES.chat))
                 },
             }}
         />

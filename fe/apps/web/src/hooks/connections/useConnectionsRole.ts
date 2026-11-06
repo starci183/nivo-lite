@@ -1,7 +1,8 @@
 "use client"
 
-import { useActiveWorkspace, useWorkspaceCards } from "@/hooks/workspaces"
+import { useWorkspaceCards } from "@/hooks/workspaces"
 import type { SWRResponse } from "swr"
+import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 
 /** The view `useConnectionsRole` returns. */
 export interface ConnectionsRoleView {
@@ -33,8 +34,8 @@ export interface ConnectionsRoleView {
 
 /** The viewer's role in the active workspace, and whether the workspaces are still being read. */
 export const useConnectionsRole = (): ConnectionsRoleView => {
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useOpenWorkspaceId()
     const workspaces = useWorkspaceCards()
-    const role = workspaces.cards.find((card) => card.id === activeWorkspaceId)?.role
+    const role = workspaces.cards.find((card) => card.id === workspaceId)?.role
     return { read: workspaces.read, retry: workspaces.reload, role, isLoading: workspaces.status === "loading" }
 }

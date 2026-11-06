@@ -8,6 +8,7 @@ import { isWaitingOf, mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { BrainAskView, BrainPageHeading } from "@/modules/types"
 import { useAgentLenses } from "./useAgentLenses"
 import { useBrainPageHeader } from "./useBrainPageHeader"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** No agents: one array, so a read that has not answered does not change between renders. */
 const NO_AGENTS: ReadonlyArray<AgentLens> = []
@@ -24,6 +25,7 @@ interface BrainAskInput {
  * It only reads: nothing here writes a fact or a test case.
  */
 export const useBrainAsk = (input: BrainAskInput): BrainAskView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("knowledge")
     const p = useTranslations("brainAsk")
     const brain = useTranslations("secondBrain")
@@ -73,7 +75,7 @@ export const useBrainAsk = (input: BrainAskInput): BrainAskView => {
             audience: ask.audience,
             question: ask.question,
             isPending: ask.isPending,
-            results: ask.results === null ? null : ask.results.map((passage) => askPassageOf(t, passage)),
+            results: ask.results === null ? null : ask.results.map((passage) => askPassageOf(t, passage, workspaceId)),
             error: ask.error ?? undefined,
             sees,
             seesLabels: labels(brain("viewEmpty")),

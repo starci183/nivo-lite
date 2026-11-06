@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useState } from "react"
 import { errorKey } from "@/modules/content"
@@ -39,8 +39,8 @@ export interface ContentCommand {
 export const useContentCommand = (isActive = true, ownerScope?: string): ContentCommand => {
     const t = useTranslations("content")
     const { refresh } = useContentRefresh()
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const scope = ownerScope ?? JSON.stringify([activeWorkspaceId])
+    const workspaceId = useWorkspaceId()
+    const scope = ownerScope ?? JSON.stringify([workspaceId])
     const lifetime = useFeatureLifetime(isActive, scope)
     const [isPending, setPending] = useState(false)
     const [busy, setBusy] = useState<string | null>(null)

@@ -1,5 +1,5 @@
 import { exceptionCardAnchor } from "./office.message-view"
-import { leadHref } from "@/modules/routes"
+import { leadHref, workspaceHref } from "@/modules/routes"
 import type { OfficeExceptionView, OfficeMissingField } from "@/modules/types"
 import { fieldTextOf, isOpenWork } from "./office.helpers"
 import type { OfficeWork } from "./office.types"
@@ -130,7 +130,7 @@ export const exceptionView = (work: OfficeWork, words: OfficeWords, context: Off
         decidedBasis: basis === "" || isOpen ? null : words.t("decidedBasis", { basis }),
         heldLine: heldLineOf(work, words),
         footer: workFooterOf(work, words, context),
-        leadHref: work.leadId === null ? null : leadHref(work.leadId),
+        leadHref: work.leadId === null ? null : workspaceHref(words.workspaceId, leadHref(work.leadId)),
         canAct: context.canDecide(work.assignedStaffId),
         isFocused: context.focusedId === work.id,
     }

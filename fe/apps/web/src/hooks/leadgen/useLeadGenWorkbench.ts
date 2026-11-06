@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryLeadGenWorkbenchSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { LeadGenWorkbenchData, DataSlot } from "@/modules/types"
 
 /** The view `useLeadGenWorkbench` returns. */
@@ -23,8 +23,8 @@ export interface LeadGenWorkbenchView {
 /** The prospects, sources, comments and Sales handoffs of one Lead Gen instance, read once through the shared SWR cache. */
 export const useLeadGenWorkbench = (installationId: string | null): LeadGenWorkbenchView => {
     const t = useTranslations("workbenchLeadGen")
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const query = useQueryLeadGenWorkbenchSwr(activeWorkspaceId, installationId)
+    const workspaceId = useWorkspaceId()
+    const query = useQueryLeadGenWorkbenchSwr(workspaceId, installationId)
     return {
         data: query.data,
         /** The read as a slot: items once read, loading while in flight, error when it failed. */

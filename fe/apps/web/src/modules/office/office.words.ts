@@ -14,6 +14,8 @@ export interface OfficeWords {
     readonly money: (amount: number) => string
     /** The module name in the reader language. */
     readonly moduleName: (module: string) => string
+    /** The workspace the links of the Office lead within. */
+    readonly workspaceId: string
 }
 
 /** What the views read besides the data: who is signed in, who is around, what is focused. */

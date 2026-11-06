@@ -2,24 +2,22 @@
 
 import { useMemo } from "react"
 import { useQueryMyAccountSwr, useQueryMyWorkspacesSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
-import { LocalStorage, StorageId } from "@/modules/storage"
+import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 import type { ConsoleSessionView } from "@/modules/types"
 import { sessionRoleOf } from "./console.shared"
 
 /**
- * Reads the signed-in person's workspace session from SWR, choosing the remembered workspace or the first active one.
+ * Reads the signed-in person's session in the workspace of the open address from SWR; none while it is unread and for a workspace the person is not an active member of.
  * Console bootstrap and the onboarding handover share this read; only console bootstrap applies its redirects.
  */
 export const useConsoleSessionRead = (): ConsoleSessionView | undefined => {
     const memberships = useQueryMyWorkspacesSwr()
     const account = useQueryMyAccountSwr()
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const wanted = activeWorkspaceId ?? LocalStorage.get<string>(StorageId.ActiveWorkspaceId)
+    const workspaceId = useOpenWorkspaceId()
     return useMemo(() => {
         if (memberships.data === undefined || account.data === undefined) return undefined
         const active = memberships.data.filter((entry) => entry.member.status === "active")
-        const chosen = active.find((entry) => entry.workspace.id === wanted) ?? active[0]
+        const chosen = active.find((entry) => entry.workspace.id === workspaceId)
         if (chosen === undefined) return undefined
         return {
             member: {
@@ -40,5 +38,5 @@ export const useConsoleSessionRead = (): ConsoleSessionView | undefined => {
             })),
             currentWorkspaceId: chosen.workspace.id,
         }
-    }, [memberships.data, account.data, wanted])
+    }, [memberships.data, account.data, workspaceId])
 }

@@ -17,8 +17,9 @@ import {
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { mutate } from "@/modules/viewer-cache"
 import { navigation } from "@/modules/i18n"
-import { KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { KNOWLEDGE_ROUTES, workspaceHref } from "@/modules/routes"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What a document page can do to the document. */
 export type SourceAction = "reindex" | "delete"
@@ -50,6 +51,7 @@ const revalidateDocuments = (workspaceId: string) =>
 /** Reading a document again and deleting it; each failure is toasted, the lists revalidate. */
 export const useSourceCommands = (sourceId: string): SourceCommands => {
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const workspaceKey = useWorkspaceKey(QUERY_KNOWLEDGE_SOURCES_SWR_KEY, [])
     const runGraphQL = useGraphQLWithToast()
     const feedback = useTranslations("toast")
@@ -95,7 +97,7 @@ export const useSourceCommands = (sourceId: string): SourceCommands => {
             const removed = await act(
                 "delete",
                 () => deleteSource({ id: sourceId }),
-                () => router.push(KNOWLEDGE_ROUTES.library),
+                () => router.push(workspaceHref(workspaceId, KNOWLEDGE_ROUTES.library)),
             )
             if (removed !== true) throw new Error("knowledge source deletion did not succeed")
         },

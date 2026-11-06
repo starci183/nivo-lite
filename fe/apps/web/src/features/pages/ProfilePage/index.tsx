@@ -10,13 +10,19 @@ export const profileMetadata = async (): Promise<Metadata> => {
     return { title: t("profilePageTitle") }
 }
 
+/** What the route hands the page: the workspace it is opened in. */
+interface ProfilePageProps {
+    readonly workspaceId: string
+}
+
 /** The /profile screen body: static copy; the picture and the name are read in the browser from the back end GraphQL API. */
-export const ProfilePage = async (): Promise<ReactElement> => {
+export const ProfilePage = async (props: ProfilePageProps): Promise<ReactElement> => {
     const t = await getTranslations("account")
     return (
         <ProfilePageBase
             props={{
                 header: accountHeadingOf({
+                    workspaceId: props.workspaceId,
                     title: t("profilePageTitle"),
                     description: t("profilePageDescription"),
                     tabsLabel: t("tabsLabel"),

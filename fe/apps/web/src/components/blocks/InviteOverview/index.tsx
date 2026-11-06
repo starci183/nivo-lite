@@ -5,7 +5,7 @@ import { useTransition } from "react"
 import { authActionsOf } from "@/hooks/auth"
 import { useAcceptInvite, useInviteView } from "@/hooks/invite"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES, loginPath } from "@/modules/routes"
+import { APP_ROUTES, loginPath, workspaceHref } from "@/modules/routes"
 import { InviteOverviewBase } from "./component"
 
 /** The invitation the page is about. */
@@ -37,7 +37,7 @@ export const InviteOverview = (props: InviteOverviewProps) => {
                 accept: () => {
                     void accept(props.token).then((workspaceId) => {
                         if (workspaceId === undefined) return
-                        router.push(APP_ROUTES.chat)
+                        router.push(workspaceHref(workspaceId, APP_ROUTES.chat))
                         router.refresh()
                     })
                 },

@@ -1,22 +1,16 @@
 import { Badge, Cluster, DescriptionList, Link, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
-import type { ResponsibilitiesBoardCopy, ResponsibilityRowView } from "@/modules/types"
+import type { ResponsibilitiesBoardCopy, ResponsibilityOpenedView, ResponsibilityRowView } from "@/modules/types"
 
 /** The words of the responsibility detail. */
 type ResponsibilityDetailCopy = ResponsibilitiesBoardCopy["detail"]
 
 /** What the opened responsibility draws below its head. */
 interface ResponsibilityDetailProps {
-    readonly row: ResponsibilityRowView
+    /** The responsibility with its owner's picture and role, its due day and the addresses of its customer and of the Office. */
+    readonly opened: ResponsibilityOpenedView
     readonly copy: ResponsibilityDetailCopy
-    /** The owner's picture, or none (an agent without one draws the NIVO unicorn). */
-    readonly avatarUrl: string | null
-    /** "Agent AI @handle" or the human owner's role. */
-    readonly ownerRole: string
-    /** The due day as a date, or none. */
-    readonly dueDate: string | null
     /** The link of the customer was just copied. */
     readonly isCopied: boolean
     readonly isLoading: boolean
@@ -44,8 +38,14 @@ const OwnerValue = (props: OwnerValueProps) => (
     </Cluster>
 )
 
+/** What the due value draws. */
+interface DueValueProps {
+    readonly row: ResponsibilityRowView
+    readonly dueDate: string | null
+}
+
 /** The due words, strong when it is overdue, with the day beside them. */
-const DueValue = (props: Pick<ResponsibilityDetailProps, "row" | "dueDate">) => (
+const DueValue = (props: DueValueProps) => (
     <Cluster gap="inline">
         <Text as="span" isStrong={props.row.isOverdue} tone={props.row.isOverdue ? "default" : "muted"}>
             {props.row.dueLabel ?? ""}
@@ -60,7 +60,8 @@ const DueValue = (props: Pick<ResponsibilityDetailProps, "row" | "dueDate">) => 
 
 /** The responsibility's facts, the note when a draft waits for the owner, and the two ways to the customer. */
 export const ResponsibilityDetail = (props: ResponsibilityDetailProps) => {
-    const { row, copy } = props
+    const { copy } = props
+    const { row, avatarUrl, ownerRole, dueDate, leadHref, officeHref } = props.opened
     return (
         <Stack gap="section">
             <SurfaceCard label={copy.title} fact={copy.verified} isLoading={props.isLoading}>
@@ -71,14 +72,12 @@ export const ResponsibilityDetail = (props: ResponsibilityDetailProps) => {
                             {
                                 id: "owner",
                                 term: copy.terms.owner,
-                                description: (
-                                    <OwnerValue row={row} role={props.ownerRole} avatarUrl={props.avatarUrl} />
-                                ),
+                                description: <OwnerValue row={row} role={ownerRole} avatarUrl={avatarUrl} />,
                             },
                             {
                                 id: "due",
                                 term: copy.terms.due,
-                                description: <DueValue row={row} dueDate={props.dueDate} />,
+                                description: <DueValue row={row} dueDate={dueDate} />,
                             },
                             { id: "next", term: copy.terms.next, description: row.nextAction },
                             {
@@ -98,8 +97,8 @@ export const ResponsibilityDetail = (props: ResponsibilityDetailProps) => {
                 </Stack>
             </SurfaceCard>
             <Cluster gap="row">
-                <Link href={leadHref(row.leadId)}>{copy.openLead}</Link>
-                <Link href={CONSOLE_ROUTES.chat}>{copy.openOffice}</Link>
+                <Link href={leadHref}>{copy.openLead}</Link>
+                <Link href={officeHref}>{copy.openOffice}</Link>
                 {props.isCopied ? (
                     <Text size="sm" tone="muted" live="polite">
                         {copy.linkCopied}

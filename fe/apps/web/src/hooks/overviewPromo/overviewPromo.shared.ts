@@ -1,13 +1,12 @@
 import type { DashboardType } from "@/hooks/swr"
 import type { OnboardingStep } from "@/modules/promo"
+import { CONSOLE_ROUTES, agentChatHref, newModulePath, workspaceHref } from "@/modules/routes"
 
 /** The promo facts of the dashboard. */
 type Promo = DashboardType["promo"]
 
 /** Translates one key of the promo catalog. */
 export type PromoTranslator = (key: string) => string
-
-const NEW_CHATBOT = "/modules/new?module=chatbot"
 
 /** The three catalog keys of one onboarding step, written out so each key is read as itself. */
 interface StepWords {
@@ -26,12 +25,14 @@ const stepOf = (t: PromoTranslator, key: string, words: StepWords, done: boolean
 })
 
 /** The onboarding steps, each done or not from the real facts of the workspace. */
-export const onboardingStepsOf = (promo: Promo, t: PromoTranslator): Array<OnboardingStep> => {
+export const onboardingStepsOf = (promo: Promo, t: PromoTranslator, workspaceId: string): Array<OnboardingStep> => {
     const chatbot = promo.chatbot
-    const chatHref = chatbot ? `/modules/${chatbot.id}/chat` : NEW_CHATBOT
-    const knowledgeHref = chatbot ? `/modules/${chatbot.id}` : NEW_CHATBOT
+    const at = (path: string): string => workspaceHref(workspaceId, path)
+    const newChatbot = at(newModulePath("chatbot"))
+    const chatHref = chatbot ? at(agentChatHref(chatbot.id)) : newChatbot
+    const knowledgeHref = chatbot ? at(newModulePath("chatbot")) : newChatbot
     return [
-        stepOf(t, "Buy", { label: "stepBuy", hint: "hintBuy", cta: "ctaBuy" }, chatbot !== null, NEW_CHATBOT),
+        stepOf(t, "Buy", { label: "stepBuy", hint: "hintBuy", cta: "ctaBuy" }, chatbot !== null, newChatbot),
         stepOf(
             t,
             "Knowledge",
@@ -52,15 +53,15 @@ export const onboardingStepsOf = (promo: Promo, t: PromoTranslator): Array<Onboa
             "Approve",
             { label: "stepApprove", hint: "hintApprove", cta: "ctaApprove" },
             promo.approvedCount > 0,
-            "/chat",
+            at(CONSOLE_ROUTES.chat),
         ),
-        stepOf(t, "Won", { label: "stepWon", hint: "hintWon", cta: "ctaWon" }, promo.hasWon, "/leads"),
+        stepOf(t, "Won", { label: "stepWon", hint: "hintWon", cta: "ctaWon" }, promo.hasWon, at(CONSOLE_ROUTES.leads)),
         stepOf(
             t,
             "Invoice",
             { label: "stepInvoice", hint: "hintInvoice", cta: "ctaInvoice" },
             promo.invoiceApproved,
-            "/responsibilities",
+            at(CONSOLE_ROUTES.responsibilities),
         ),
     ]
 }

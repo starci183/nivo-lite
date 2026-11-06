@@ -15,13 +15,14 @@ import {
 } from "@/modules/brain"
 import { isWaitingOf, mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading, PublicBrainView } from "@/modules/types"
 import { useBrainPageHeader } from "./useBrainPageHeader"
 import { usePublicAsks } from "./usePublicAsks"
 import { usePublicDocEditor } from "./usePublicDocEditor"
 import { usePublicDocuments } from "./usePublicDocuments"
 import { usePublicDraftCommands } from "./usePublicDraftCommands"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the page tells the public documents screen. */
 interface PublicBrainInput {
@@ -41,12 +42,13 @@ export const usePublicBrain = (input: PublicBrainInput): PublicBrainView => {
     const tp = useTranslations("pane")
     const format = useFormatter()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const labels = useSlotLabels()
     const header = useBrainPageHeader("publicDocs", input.heading)
     const read = usePublicDocuments()
     const editor = usePublicDocEditor(input.docId)
     const asks = usePublicAsks()
-    const close = () => router.replace(brainTabHref("publicDocs"))
+    const close = () => router.replace(workspaceHref(workspaceId, brainTabHref("publicDocs")))
     const draft = usePublicDraftCommands({ docId: input.docId, editor, close })
     const [query, setQuery] = useState("")
     const [tab, setTab] = useState("all")
@@ -86,7 +88,7 @@ export const usePublicBrain = (input: PublicBrainInput): PublicBrainView => {
             asksLabels: labels(p("asksEmpty")),
             isWaiting: isWaitingOf(read.slot, asks.asks),
             canWrite: read.canWrite,
-            composeHref: brainTabHref("publicDocs", { compose: "pick" }),
+            composeHref: workspaceHref(workspaceId, brainTabHref("publicDocs", { compose: "pick" })),
             isRemoveOpen: draft.isRemoveOpen,
             isRemoving: draft.isRemoving,
         },
@@ -94,7 +96,7 @@ export const usePublicBrain = (input: PublicBrainInput): PublicBrainView => {
             ...draft.on,
             reviewAll: header.on.reviewAll,
             selectTab: header.on.selectTab,
-            select: (id) => router.push(brainTabHref("publicDocs", { doc: id })),
+            select: (id) => router.push(workspaceHref(workspaceId, brainTabHref("publicDocs", { doc: id }))),
             search: setQuery,
             setTab,
             clear: () => {
@@ -106,7 +108,7 @@ export const usePublicBrain = (input: PublicBrainInput): PublicBrainView => {
                 read.reload()
                 asks.reload()
             },
-            compose: () => router.push(brainTabHref("publicDocs", { compose: "pick" })),
+            compose: () => router.push(workspaceHref(workspaceId, brainTabHref("publicDocs", { compose: "pick" }))),
             skipAsk: asks.skip,
         },
     }

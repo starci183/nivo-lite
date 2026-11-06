@@ -1,5 +1,5 @@
 import { eventStreamUrl } from "@/modules/config"
-import { LocalStorage, StorageId } from "@/modules/storage"
+import { openWorkspaceId } from "@/modules/routes"
 import type { EventStreamHandle } from "@starci/event-stream"
 import { eventStream } from "../clients/event-stream"
 import type { StreamReporter } from "../clients/event-stream"
@@ -60,7 +60,7 @@ const pushOf = (data: string): ChatTypingPush | null => {
     return isPush(push) ? push : null
 }
 
-/** Follows the chat-typing event stream of one chat (`GET /realtime/chat-typing`) with the active workspace until the signal aborts. */
+/** Follows the chat-typing event stream of one chat (`GET /realtime/chat-typing`) with the workspace of the open address until the signal aborts. */
 export const streamChatTyping = ({
     target,
     signal,
@@ -68,7 +68,7 @@ export const streamChatTyping = ({
     onPush,
     report,
 }: StreamChatTypingParams): EventStreamHandle => {
-    const workspaceId = LocalStorage.get<string>(StorageId.ActiveWorkspaceId)
+    const workspaceId = openWorkspaceId()
     return eventStream.follow<ChatTypingPush | null>(eventStreamUrl("/realtime/chat-typing"), {
         query: { room: target.room, conversationId: target.conversationId },
         headers: workspaceId === undefined ? {} : { "x-workspace-id": workspaceId },

@@ -9,13 +9,11 @@ import {
     useQueryPaymentOrderSwr,
     useQueryPaymentOrdersSwr,
 } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
 import { dayjs } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES, creditsPath } from "@/modules/routes"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
 import { readError } from "@/hooks/workspaceread"
-import { messageOf } from "./billing.shared"
+import { messageOf, returnToOf } from "./billing.shared"
 
 /** Selectors retained by the payment route. */
 export interface WorkspacePaymentSelectors {
@@ -123,7 +121,6 @@ export interface WorkspacePaymentView {
 export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors): WorkspacePaymentView => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
-    const { select } = useActiveWorkspace()
     const workspaces = useQueryBillingWorkspacesSwr()
     const workspaceId = selectors.workspaceId
     const workspace = workspaces.data?.find((item) => item.id === workspaceId)
@@ -143,14 +140,13 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors): Works
     const now = useNow({ updateInterval: 1000 })
     const expiresAt = payment?.expiresAt
     const paid = payment?.status === "paid" || (workspace?.status === "active" && !selectors.renewing)
-    const returnTo = workspaceId && selectors.renewing ? creditsPath() : APP_ROUTES.chat
+    const returnTo = returnToOf(workspaceId, selectors.renewing)
 
     useEffect(() => {
         if (!paid || !workspaceId) return
-        select(workspaceId)
         const timer = setTimeout(() => router.replace(returnTo), 1800)
         return () => clearTimeout(timer)
-    }, [paid, returnTo, router, select, workspaceId])
+    }, [paid, returnTo, router, workspaceId])
 
     const regenerate = () => {
         if (!planCode || plan.data?.isCustom) return

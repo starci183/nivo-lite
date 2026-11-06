@@ -3,8 +3,9 @@
 import { useDocsAddress } from "@/hooks/knowledge"
 import { navigation } from "@/modules/i18n"
 import { docTabOf, docsTailOf } from "@/modules/documents"
-import { KNOWLEDGE_ROUTES, brainTabHref, knowledgeSourceHref } from "@/modules/routes"
+import { brainTabHref, KNOWLEDGE_ROUTES, knowledgeSourceHref, workspaceHref } from "@/modules/routes"
 import type { DocsSelection, KnowledgeDocsView } from "@/modules/types"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the commands of the documents screen act on. */
 interface DocsCommandsInput {
@@ -31,6 +32,7 @@ interface DocsCommandsInput {
 /** The commands of the documents screen: moving between rows and filters (the address keeps them), and what the open document can do. */
 export const useKnowledgeDocsCommands = (input: DocsCommandsInput): KnowledgeDocsView["on"] => {
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const address = useDocsAddress()
     const { selection } = input
     const carried = address.carried
@@ -39,14 +41,18 @@ export const useKnowledgeDocsCommands = (input: DocsCommandsInput): KnowledgeDoc
         reviewAll: input.reviewAll,
         select: (id) =>
             router.push(
-                selection.kind === "nivo"
-                    ? `${KNOWLEDGE_ROUTES.nivo}${docsTailOf({ ...carried, item: id })}`
-                    : `${knowledgeSourceHref(id)}${docsTailOf(carried)}`,
+                workspaceHref(
+                    workspaceId,
+                    selection.kind === "nivo"
+                        ? `${KNOWLEDGE_ROUTES.nivo}${docsTailOf({ ...carried, item: id })}`
+                        : `${knowledgeSourceHref(id)}${docsTailOf(carried)}`,
+                ),
             ),
         search: address.setQuery,
         setTab: (id) => {
-            if (id === "nivo") router.push(`${KNOWLEDGE_ROUTES.nivo}${docsTailOf(carried)}`)
-            else if (selection.kind === "nivo") router.push(brainTabHref("sources", { ...carried, filter: id }))
+            if (id === "nivo") router.push(workspaceHref(workspaceId, `${KNOWLEDGE_ROUTES.nivo}${docsTailOf(carried)}`))
+            else if (selection.kind === "nivo")
+                router.push(workspaceHref(workspaceId, brainTabHref("sources", { ...carried, filter: id })))
             else address.setTab(docTabOf(id))
         },
         setModule: address.setModule,
@@ -57,12 +63,15 @@ export const useKnowledgeDocsCommands = (input: DocsCommandsInput): KnowledgeDoc
         },
         back: () =>
             router.push(
-                selection.kind === "nivo"
-                    ? `${KNOWLEDGE_ROUTES.nivo}${docsTailOf({ ...carried, item: undefined })}`
-                    : brainTabHref("sources", carried),
+                workspaceHref(
+                    workspaceId,
+                    selection.kind === "nivo"
+                        ? `${KNOWLEDGE_ROUTES.nivo}${docsTailOf({ ...carried, item: undefined })}`
+                        : brainTabHref("sources", carried),
+                ),
             ),
         retry: () => input.reloads.forEach((reload) => reload()),
-        add: () => router.push(brainTabHref("sources", { ...carried, add: "upload" })),
+        add: () => router.push(workspaceHref(workspaceId, brainTabHref("sources", { ...carried, add: "upload" }))),
         reindex: input.doc.reindex,
         menu: (id) => {
             if (id === "delete") input.overlays.openRemove()

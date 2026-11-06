@@ -6,6 +6,7 @@ import { useAgentPictures } from "@/hooks/installations"
 import type { Governance } from "@/hooks/overviewFigures"
 import { MODULE_KEYS, MODULE_REGISTRY } from "@/hooks/moduleCatalog"
 import { slotOfSwr } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { DataSlot, OverviewPaneReady } from "@/modules/types"
 import { paneOf } from "./overviewPane.shared"
 import type { PaneInput } from "./overviewPane.shared"
@@ -72,6 +73,7 @@ export const useOverviewPane = (): OverviewPaneRead => {
     const modules = useTranslations("modulesCore")
     const format = useFormatter()
     const now = useNow({ updateInterval: 60_000 })
+    const workspaceId = useWorkspaceId()
     const pictureOf = useAgentPictures()
     const { dashboard, failed, retry, displayName } = useOverviewData()
     const gov = useOverviewGovernance()
@@ -81,6 +83,7 @@ export const useOverviewPane = (): OverviewPaneRead => {
     const name = firstNameOf(displayName)
     const title = name === "" ? t("title") : t(greetingOf(hourInZone(now)), { name })
     const base = {
+        workspaceId,
         t,
         g,
         lifecycleOf: (lifecycle: Parameters<PaneInput["lifecycleOf"]>[0]) => modules(`lifecycle_${lifecycle}`),

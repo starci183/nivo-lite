@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { brainPartOf, brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { BrainTab } from "@/modules/routes"
 import { BrainPageBase } from "./component"
 import type { BrainPageBaseProps } from "./component"
@@ -16,6 +16,8 @@ export const brainMetadata = async (): Promise<Metadata> => {
 
 /** What the page reads from the address: the tab, the fact being written, a fact to give a new value, a question to answer, the dossier, the finding, the draft, the node on the map and the public document forms. */
 interface BrainPageProps {
+    /** The workspace of the address. */
+    readonly workspaceId: string
     readonly tab: string | undefined
     readonly fact: string | undefined
     readonly edit: string | undefined
@@ -37,12 +39,18 @@ type SecondBrainTranslate = Awaited<ReturnType<typeof getTranslations<"secondBra
 type Copy = Pick<BrainPageBaseProps["props"], "header">
 
 /** The words of the page that do not depend on its data. */
-const copyOf = (t: Translate, brain: SecondBrainTranslate, tab: BrainTab): Copy => ({
+const copyOf = (t: Translate, brain: SecondBrainTranslate, tab: BrainTab, workspaceId?: string): Copy => ({
     header: {
         breadcrumbs: {
             label: t("crumbLabel"),
             items: [
-                { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
+                {
+                    id: "home",
+                    label: t("crumbHome"),
+                    ...(workspaceId === undefined
+                        ? {}
+                        : { href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) }),
+                },
                 { id: "brain", label: t("title") },
             ],
         },
@@ -60,13 +68,17 @@ const composeOf = (value: string | undefined): "pick" | "write" | undefined => {
 /** The Second Brain page shell: translates and lays out the page; the connected blocks read their data through GraphQL. */
 export const BrainPage = async (props: BrainPageProps): Promise<ReactElement> => {
     const legacy = legacyBrainHrefOf(props)
-    if (legacy !== null) navigation.redirect({ href: legacy, locale: (await getLocale()) === "en" ? "en" : "vi" })
+    if (legacy !== null)
+        navigation.redirect({
+            href: workspaceHref(props.workspaceId, legacy),
+            locale: (await getLocale()) === "en" ? "en" : "vi",
+        })
     const tab = brainTabOf(props)
     const [t, brain] = await Promise.all([getTranslations("brain"), getTranslations("secondBrain")])
     return (
         <BrainPageBase
             props={{
-                ...copyOf(t, brain, tab),
+                ...copyOf(t, brain, tab, props.workspaceId),
                 tab,
                 fact: props.fact,
                 edit: props.edit,

@@ -10,7 +10,7 @@ import {
     type ConnectionPageKey,
 } from "@/hooks/connectionPages"
 import { noData } from "@/hooks/workspaceread"
-import { useAppSelector } from "@/redux"
+import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 import { queryWorkThreads } from "@/modules/api/graphql/queries/query-work-threads"
 import { GraphQLHeadersKey, type WorkThreadsQuery } from "@/modules/api"
 
@@ -30,7 +30,7 @@ interface WorkThreadsReadOptions {
 export const useQueryWorkThreadsSwr = (
     config?: WorkThreadsReadOptions,
 ): ReturnType<typeof connectionPageView<WorkThreadsNode>> => {
-    const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
+    const workspaceId = useOpenWorkspaceId()
     const getKey: SWRInfiniteKeyLoader<WorkThreadsPage, ConnectionPageKey | null> = (index, previous) =>
         connectionPageKey(QUERY_WORK_THREADS_SWR_KEY, workspaceId, index, previous)
     const query = useSWRInfinite<WorkThreadsPage, Error>(

@@ -1,5 +1,6 @@
 import { agentHref, isSetupPending } from "@/modules/installations"
 import type { Installation, InstallationLifecycle } from "@/modules/installations"
+import { workspaceHref } from "@/modules/routes"
 import type { ConnectionStatus } from "@/modules/types"
 
 /** The shortest name of an agent. */
@@ -146,7 +147,7 @@ export interface AgentInstallationView {
 }
 
 /** The settings facts of an installed agent. */
-export const toAgentInstallationView = (installation: Installation): AgentInstallationView => ({
+export const toAgentInstallationView = (installation: Installation, workspaceId: string): AgentInstallationView => ({
     id: installation.id,
     agentId: installation.agentId,
     name: installation.name,
@@ -157,7 +158,7 @@ export const toAgentInstallationView = (installation: Installation): AgentInstal
     isLive: installation.lifecycle === "running",
     lifecycle: installation.lifecycle,
     isSetupPending: isSetupPending(installation.lifecycle),
-    setupHref: agentHref(installation.moduleKey, installation.id),
+    setupHref: workspaceHref(workspaceId, agentHref(installation.moduleKey, installation.id)),
     hasVersion: !isSetupPending(installation.lifecycle),
     timeoutSec: replyTimeoutOf(installation.settings),
     holdingMessage: holdingMessageOf(installation.settings),

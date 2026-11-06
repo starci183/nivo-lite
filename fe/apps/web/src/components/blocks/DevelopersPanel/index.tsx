@@ -8,6 +8,8 @@ import { useDeveloperWebhooks } from "@/hooks/developers"
 import { isManager, useMember } from "@/hooks/member"
 import { useSlotLabels } from "@/hooks/slot"
 import { DevelopersPanelBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 
 /** The one line under a webhook: its masked address and the events it receives, in the owner's words. */
 const webhookLineOf = (meta: Readonly<Record<string, string>>, eventLabel: (event: string) => string): string =>
@@ -38,6 +40,7 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
     const { webhooks, canManage, read, retry } = useDeveloperWebhooks()
     const slotLabels = useSlotLabels()
     const overlays = useConnectionOverlays()
+    const workspaceId = useWorkspaceId()
     return (
         <DevelopersPanelBase
             children={props.children}
@@ -68,7 +71,9 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                 },
                 crumbLabel: t("crumbLabel"),
                 crumbHome: t("crumbHome"),
+                homeHref: workspaceHref(workspaceId, APP_ROUTES.dashboard),
                 crumbAutomations: ta("title"),
+                automationsHref: workspaceHref(workspaceId, APP_ROUTES.automations),
                 title: t("title"),
                 description: t("description"),
                 eventsTitle: t("eventsTitle"),

@@ -2,6 +2,18 @@
 export const workspacePaymentPath = (workspaceId: string): string =>
     `/workspaces/new/payment?ws=${encodeURIComponent(workspaceId)}`
 
+/** The channels step of the first-run wizard of one workspace; `wizardQuery` opens a connection wizard on it. */
+export const workspaceChannelsPath = (workspaceId: string, wizardQuery = ""): string =>
+    `/workspaces/new/channels?ws=${encodeURIComponent(workspaceId)}${wizardQuery === "" ? "" : "&"}${wizardQuery}`
+
+/** The handover step of the first-run wizard of one workspace. */
+export const workspaceHandoverPath = (workspaceId: string): string =>
+    `/workspaces/new/ai?ws=${encodeURIComponent(workspaceId)}`
+
+/** The last step of the first-run wizard of one workspace. */
+export const workspaceReadyPath = (workspaceId: string): string =>
+    `/workspaces/new/done?ws=${encodeURIComponent(workspaceId)}`
+
 /** A plan renewal payment requested for an existing workspace. */
 export const workspaceRenewalPaymentPath = (workspaceId: string, orderId: string): string =>
     `/workspaces/new/payment?order=${encodeURIComponent(orderId)}&ws=${encodeURIComponent(workspaceId)}&return=billing`

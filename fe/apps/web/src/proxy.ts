@@ -1,12 +1,12 @@
 import { createProxy } from "@starci/next-i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
-import { isPrototypeMode, sessionCookieOptions } from "./modules/config"
+import { PROTOTYPE_WORKSPACE_ID, isPrototypeMode, sessionCookieOptions } from "./modules/config"
 import { checkSession, onPublicOrigin } from "./modules/auth-session"
 import { i18n } from "./modules/i18n"
 
-// The two destinations the proxy redirects to; the proxy cannot evaluate the routes barrel, so it names them itself.
+// The two destinations the proxy redirects to (the sign-in page, and the front address, which forwards a signed-in person into the workspace opened last or to the workspaces page); the proxy cannot evaluate the routes barrel, so it names them itself.
 const LOGIN_PATH = "/login"
-const DASHBOARD_PATH = "/dashboard"
+const HOME_PATH = "/"
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/n8n by a per-run bearer token (hash stored with an expiry).
 const PUBLIC_PATHS = [
@@ -28,9 +28,17 @@ const PUBLIC_PATHS = [
     "/j",
     "/l",
     "/health",
-    // A prototype build answers the agent pages from fixtures, with no back end to sign in to (the url with or without its locale).
-    ...(isPrototypeMode() ? ["/agents", ...i18n.locales.map((locale) => `/${locale}/agents`)] : []),
+    // A prototype build answers the fixture workspace from fixtures, with no back end to sign in to (the url with or without its locale).
+    ...(isPrototypeMode()
+        ? [
+              `/workspaces/${PROTOTYPE_WORKSPACE_ID}`,
+              ...i18n.locales.map((locale) => `/${locale}/workspaces/${PROTOTYPE_WORKSPACE_ID}`),
+          ]
+        : []),
 ] // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
+
+// /workspaces/<company>/jobs/<job>: the public job page, which names the company by its public slug (the proxy cannot load the routes barrel, so it spells the shape again).
+const PUBLIC_JOB_PAGE = /^(?:\/[a-z]{2})?\/workspaces\/[^/]+\/jobs\/[^/]+$/u
 
 // Every path is served from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides);
 // the shared proxy leaves handlers, liveness and framework files (its default roots) alone.
@@ -38,7 +46,7 @@ const negotiateLocale = createProxy(i18n)
 
 /** Segment-aware prefix match, so "/auth" never swallows "/authority". */
 const isPublicPath = (pathname: string): boolean =>
-    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) || PUBLIC_JOB_PAGE.test(pathname)
 
 /** Only same-site paths may come back through `?next=`. */
 const safeNext = (value: string | null): string | null =>
@@ -103,7 +111,7 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     if (pathname === LOGIN_PATH && request.nextUrl.searchParams.get("reason") !== "disabled") {
         const url = request.nextUrl.clone()
         const next = safeNext(request.nextUrl.searchParams.get("next"))
-        url.pathname = DASHBOARD_PATH
+        url.pathname = HOME_PATH
         url.search = ""
         return redirectTo(next ? new URL(next, request.nextUrl.origin) : url)
     }

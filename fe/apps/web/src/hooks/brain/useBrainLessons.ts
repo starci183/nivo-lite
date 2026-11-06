@@ -15,7 +15,7 @@ import {
 } from "@/modules/brain"
 import type { MineOutcome } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { toast } from "@/modules/toast"
 import type { BrainLens, BrainPageHeaderView, BrainPageHeading, LessonDrawerView, LessonsView } from "@/modules/types"
 import { useBrainBoard } from "./useBrainBoard"
@@ -24,6 +24,7 @@ import { useFailureToast } from "./useFailureToast"
 import { useLessonDesk } from "./useLessonDesk"
 import { useLessonDrawer } from "./useLessonDrawer"
 import { usePanePicker } from "./usePanePicker"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the address asks of the lessons tab: the heading of the page and whether the lesson drawer is open. */
 interface BrainLessonsInput {
@@ -105,6 +106,7 @@ const agentOptionsOf = (lenses: ReadonlyArray<BrainLens>, all: string) => [
  * drawer) are the owner's, and a proposed lesson is applied or skipped, a lesson in force is stopped.
  */
 export const useBrainLessons = (input: BrainLessonsInput): BrainLessonsPage => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("brain")
     const l = useTranslations("brainLessons")
     const board = useBrainBoard()
@@ -156,7 +158,7 @@ export const useBrainLessons = (input: BrainLessonsInput): BrainLessonsPage => {
         agent: agentViewOf(l, options, { agent, desk, canWrite: board.canWrite }),
         notice: desk.mined === null ? null : noticeOf(t, desk.mined),
     }
-    const addHref = brainTabHref("lessons", { lesson: "new" })
+    const addHref = workspaceHref(workspaceId, brainTabHref("lessons", { lesson: "new" }))
     return {
         header: headerWithAdd(header.props, { canWrite: board.canWrite, label: l("addLesson"), href: addHref }),
         view,

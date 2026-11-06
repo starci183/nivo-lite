@@ -1,12 +1,12 @@
 import { Cluster, EmptyNotice, IconButton, Link, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { OverviewPaneCopy, OverviewPaneReady } from "@/modules/types"
 
 /** What the results card draws and how its disclosure is driven. */
 interface OverviewResultsCardProps {
     readonly data: OverviewPaneReady["results"]
+    readonly links: OverviewPaneReady["links"]
     readonly copy: OverviewPaneCopy
     readonly isOpen: boolean
     readonly onToggle: () => void
@@ -15,6 +15,7 @@ interface OverviewResultsCardProps {
 
 /** What the notes draw. */
 interface NotesProps {
+    readonly links: OverviewPaneReady["links"]
     readonly goals: OverviewPaneReady["results"]["goals"]
     readonly copy: OverviewPaneCopy
 }
@@ -27,10 +28,10 @@ const Notes = (props: NotesProps) => (
                 <Text size="xs" tone="muted">
                     {goal.text}
                 </Text>
-                {goal.isSet ? null : <Link href={CONSOLE_ROUTES.authority}>{props.copy.goalSet}</Link>}
+                {goal.isSet ? null : <Link href={props.links.authority}>{props.copy.goalSet}</Link>}
             </Cluster>
         ))}
-        <Link href={CONSOLE_ROUTES.decisions}>{props.copy.historyAll}</Link>
+        <Link href={props.links.decisions}>{props.copy.historyAll}</Link>
     </Cluster>
 )
 
@@ -57,7 +58,7 @@ export const OverviewResultsCard = (props: OverviewResultsCardProps) => {
     if (!props.isOpen) {
         return (
             <SurfaceCard label={props.copy.resultsTitle} headingLevel={2} labelEnd={toggle} isLoading={props.isLoading}>
-                <Notes goals={props.data.goals} copy={props.copy} />
+                <Notes goals={props.data.goals} links={props.links} copy={props.copy} />
             </SurfaceCard>
         )
     }
@@ -68,7 +69,7 @@ export const OverviewResultsCard = (props: OverviewResultsCardProps) => {
             headingLevel={2}
             labelEnd={toggle}
             isLoading={props.isLoading}
-            footer={<Notes goals={props.data.goals} copy={props.copy} />}
+            footer={<Notes goals={props.data.goals} links={props.links} copy={props.copy} />}
             empty={<EmptyNotice message={props.copy.resultsTitle} />}
             items={props.data.rows.map(rowOf)}
         />

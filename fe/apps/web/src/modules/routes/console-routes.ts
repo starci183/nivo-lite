@@ -12,8 +12,6 @@ export const CONSOLE_ROUTES = {
     team: "/team",
     teamInvite: "/team?invite=1",
     permissions: "/permissions",
-    modules: "/modules",
-    newChatbot: "/modules/new?module=chatbot",
 } as const
 
 /** One section of the authority page. */
@@ -47,9 +45,6 @@ export const AGENT_ROLES_ANCHOR = "agent-roles"
 /** The roles to add on the agents page, from anywhere. */
 export const AGENT_ROLES_HREF: "/agents#agent-roles" = `${AGENTS_ROUTE}#${AGENT_ROLES_ANCHOR}`
 
-/** The setup page of one module agent. */
-export const agentSetupHref = (agentId: string): string => `${CONSOLE_ROUTES.modules}/${agentId}`
-
 /** The work flow of one lead, where a handed-over customer chat leads. */
 export const leadFlowHref = (leadId: string): string => `${leadHref(leadId)}#flow`
 
@@ -62,6 +57,13 @@ export const agentChatConversationHref = (agentId: string, tab: string, conversa
 
 /** The profile page of one agent: who answers for it, who may give it work, whom it may tag. */
 export const agentProfileHref = (agentId: string): string => `/agents/profile/${agentId}`
+
+/** The page inside a workspace that takes the return of a Zalo OA authorization, with the query Zalo appended. */
+export const zaloReturnPath = (query: Readonly<Record<string, string | undefined>>): string => {
+    const search = new URLSearchParams()
+    for (const [name, value] of Object.entries(query)) if (value !== undefined) search.set(name, value)
+    return search.size === 0 ? "/connections/zalo/callback" : `/connections/zalo/callback?${search.toString()}`
+}
 
 /** The page of one Zalo OA connection, on a tab when one is named. */
 export const zaloConnectionHref = (connectionId: string, tab?: string): string =>

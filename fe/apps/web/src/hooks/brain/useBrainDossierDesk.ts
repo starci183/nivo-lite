@@ -8,13 +8,14 @@ import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
 import { brainGridOf, dossierDocumentsOf, dossierSectionsOf, findOpened, reviewedStatusOf } from "@/modules/brain"
 import type { CategoryView, DossierDeskView, DossierSource, DossierView, Standing } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { brainDossierHref, brainTabHref } from "@/modules/routes"
+import { brainDossierHref, brainTabHref, workspaceHref } from "@/modules/routes"
 import { useDossierAsideWords } from "./useDossierAsideWords"
 import { useDossierDeskWords } from "./useDossierDeskWords"
 import { useDossierOwner } from "./useDossierOwner"
 import type { DossierOwner } from "./useDossierOwner"
 import { useBrainDossiers } from "./useBrainDossiers"
 import { useDossierReviewSummary } from "./useDossierReviewSummary"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** No categories yet: the read has not answered, and the desk is waiting. */
 const NO_CATEGORIES: ReadonlyArray<CategoryView> = []
@@ -60,6 +61,7 @@ export const useBrainDossierDesk = (input: DossierDeskInput): DossierDesk => {
     const desk = w.words.desk
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const member = useWorkspaceMember()
     const slotLabels = useSlotLabels()
     const { categories, slot, reload } = useBrainDossiers()
@@ -120,9 +122,11 @@ export const useBrainDossierDesk = (input: DossierDeskInput): DossierDesk => {
             setQuery,
             select: (id) => {
                 setHiddenId(null)
-                router.push(isMap ? brainTabHref("map", { node: id }) : brainDossierHref(id))
+                router.push(
+                    workspaceHref(workspaceId, isMap ? brainTabHref("map", { node: id }) : brainDossierHref(id)),
+                )
             },
-            back: () => router.push(brainTabHref(isMap ? "map" : "dossiers")),
+            back: () => router.push(workspaceHref(workspaceId, brainTabHref(isMap ? "map" : "dossiers"))),
             closeAside: () => setHiddenId(opened === null ? null : opened.dossier.id),
             retry: reload,
         },

@@ -1,4 +1,5 @@
 import type { useFormatter, useTranslations } from "next-intl"
+import { CONSOLE_ROUTES, leadHref, workspaceHref } from "@/modules/routes"
 import type { OwnerGroupView, ResponsibilityOpenedView } from "@/modules/types"
 
 /** What the owner of a row is called: the role of a person, or the agent and its handle. */
@@ -15,6 +16,7 @@ interface GroupWords {
     readonly t: ReturnType<typeof useTranslations<"responsibilities">>
     readonly format: ReturnType<typeof useFormatter>
     readonly pictureOf: (agent: { readonly handle: string | null; readonly name: string }) => string | null
+    readonly workspaceId: string
 }
 
 /** The owner groups as the list draws them: a caption with the owner, the role and the count, and each row with its owner's words. */
@@ -38,5 +40,7 @@ export const openedGroupsOf = (
                     ? null
                     : words.format.dateTime(new Date(row.dueAt), { day: "2-digit", month: "2-digit", year: "numeric" }),
             canDraft: row.status === "open",
+            leadHref: workspaceHref(words.workspaceId, leadHref(row.leadId)),
+            officeHref: workspaceHref(words.workspaceId, CONSOLE_ROUTES.chat),
         })),
     }))

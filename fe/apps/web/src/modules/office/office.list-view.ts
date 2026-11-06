@@ -1,4 +1,4 @@
-import { leadHref } from "@/modules/routes"
+import { leadHref, workspaceHref } from "@/modules/routes"
 import type {
     OfficeConversationRowView,
     OfficeConversationState,
@@ -177,7 +177,7 @@ export const taskViewsOf = (tasks: ReadonlyArray<OfficeTask>, words: OfficeWords
             owner: task.ownerName,
             due: task.dueAt === null ? words.t("noDue") : words.t("due", { date: words.day(task.dueAt) }),
         }),
-        leadHref: leadHref(task.leadId),
+        leadHref: workspaceHref(words.workspaceId, leadHref(task.leadId)),
     }))
 
 /** The @mention list of the composer: NIVO, the active agents and the staff. */

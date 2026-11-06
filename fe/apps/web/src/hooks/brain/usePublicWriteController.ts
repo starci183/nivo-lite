@@ -4,8 +4,9 @@ import { useTranslations } from "next-intl"
 import { useWorkspaceMember } from "@/hooks/knowledge"
 import { usePublicWriteForm } from "@/hooks/rhf"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { usePublicDocCommands } from "./usePublicDocCommands"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `usePublicWriteController` returns. */
 export interface PublicWriteControllerView {
@@ -24,12 +25,13 @@ export interface PublicWriteControllerView {
 export const usePublicWriteController = (initialTitle: string): PublicWriteControllerView => {
     const t = useTranslations("publicBrain")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const member = useWorkspaceMember()
     const commands = usePublicDocCommands()
     const form = usePublicWriteForm(initialTitle)
     const close = () => {
         form.reset({ title: initialTitle, body: "" })
-        router.replace(brainTabHref("publicDocs"))
+        router.replace(workspaceHref(workspaceId, brainTabHref("publicDocs")))
     }
     const submit = form.handleSubmit(async (values) => {
         const saved = await commands.write(values, t("saved"))

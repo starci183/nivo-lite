@@ -5,8 +5,9 @@ import { useConnectionOpen } from "@/hooks/connectionsPanes"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ConnectionOpenBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The connection the address opens. */
 interface ConnectionOpenProps {
@@ -18,6 +19,7 @@ export const ConnectionOpen = (props: ConnectionOpenProps) => {
     const t = useTranslations("connections")
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const labels = useSlotLabels()
     const open = useConnectionOpen(props.connectionId)
     return (
@@ -31,7 +33,11 @@ export const ConnectionOpen = (props: ConnectionOpenProps) => {
                 placeholder: open.placeholder,
                 labels: labels(t("connectedEmpty")),
             }}
-            on={{ ...open.on, back: () => router.push(CONSOLE_ROUTES.connections), retry: open.retry }}
+            on={{
+                ...open.on,
+                back: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.connections)),
+                retry: open.retry,
+            }}
         />
     )
 }

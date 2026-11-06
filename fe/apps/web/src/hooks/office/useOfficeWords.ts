@@ -4,6 +4,7 @@ import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { actionWordOf } from "@/hooks/actionWord"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { isModuleKey, pickCopy } from "@/modules/catalog"
 import type { OfficeWords } from "@/modules/office"
 
@@ -12,6 +13,7 @@ export const useOfficeWords = (): OfficeWords => {
     const t = useTranslations("office")
     const g = useTranslations("governance")
     const format = useFormatter()
+    const workspaceId = useWorkspaceId()
     const locale = useLocale() === "en" ? "en" : "vi"
     const { modules, slot } = useModuleCatalog()
     const isCatalogError = "isError" in slot
@@ -25,6 +27,7 @@ export const useOfficeWords = (): OfficeWords => {
             time,
             day,
             stamp: (iso) => `${time(iso)}, ${day(iso)}`,
+            workspaceId,
             money: (amount) => format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
             moduleName: (module) => {
                 if (!isModuleKey(module)) return module
@@ -33,5 +36,5 @@ export const useOfficeWords = (): OfficeWords => {
                 return copy === undefined ? fallbackName : pickCopy(copy.name, locale)
             },
         }
-    }, [t, g, format, locale, modules, isCatalogError])
+    }, [t, g, format, locale, modules, isCatalogError, workspaceId])
 }

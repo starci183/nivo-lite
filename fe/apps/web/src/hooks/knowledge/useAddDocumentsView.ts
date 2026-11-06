@@ -2,7 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { useQueryKnowledgeUsageSwr } from "@/hooks/swr"
 import { buildAddDocumentsView, type ZoneView, type AddDocumentsViewInput } from "./knowledge.shared"
 import { useAddDocuments } from "./useAddDocuments"
@@ -20,6 +20,7 @@ import type {
     QueuedDoc,
     AddQueue,
 } from "@/hooks/knowledgeAddTypes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `useAddDocumentsView` returns. */
 export interface AddDocumentsViewShape {
@@ -162,6 +163,7 @@ export interface AddDocumentsViewShape {
  * and Google Drive granted from beside the files.
  */
 export const useAddDocumentsView = (props: AddDocumentsViewInput): AddDocumentsViewShape => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("knowledge")
     const formatter = useFormatter()
     const { data: usage } = useQueryKnowledgeUsageSwr()
@@ -170,7 +172,7 @@ export const useAddDocumentsView = (props: AddDocumentsViewInput): AddDocumentsV
     const actions = useQueueActions()
     const { canWrite, instances } = useAddInstances()
     const moduleParam = props.module === "all" ? undefined : props.module
-    const sourcesHref = () => brainTabHref("sources", { module: moduleParam })
+    const sourcesHref = () => workspaceHref(workspaceId, brainTabHref("sources", { module: moduleParam }))
     const add = useAddDocuments({
         actions,
         instances,

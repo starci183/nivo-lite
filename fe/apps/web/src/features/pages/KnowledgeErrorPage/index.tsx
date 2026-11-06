@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl"
-import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, KNOWLEDGE_ROUTES, workspaceHref } from "@/modules/routes"
 import { KnowledgeErrorPageBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the failed knowledge route gives the page. */
 interface KnowledgeErrorPageProps {
@@ -12,16 +13,17 @@ interface KnowledgeErrorPageProps {
 
 /** A knowledge page keeps its trail and heading when its data fails, with one Alert and a retry. */
 export const KnowledgeErrorPage = (props: KnowledgeErrorPageProps) => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("knowledge")
     const isDeeper = props.current !== undefined
     return (
         <KnowledgeErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-                    { id: "brain", label: t("crumbBrain"), href: KNOWLEDGE_ROUTES.brain },
+                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) },
+                    { id: "brain", label: t("crumbBrain"), href: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.brain) },
                     isDeeper
-                        ? { id: "docs", label: t("title"), href: KNOWLEDGE_ROUTES.library }
+                        ? { id: "docs", label: t("title"), href: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.library) }
                         : { id: "docs", label: t("title") },
                     ...(props.current === "nivo" ? [{ id: "current", label: t("nivoTitle") }] : []),
                 ],

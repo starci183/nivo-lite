@@ -11,7 +11,6 @@ import { PaneHead } from "@/components/composites/PaneHead"
 import type { PanePrimary } from "@/components/composites/PaneHead"
 import { PaneBody } from "@/components/frames/PaneBody"
 import { Icon } from "@/components/leaves/Icon"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import {
     DEPARTMENTS_ORDER_CLASS_NAME,
     DRAWER_OPENER_CLASS_NAME,
@@ -55,8 +54,9 @@ interface HeadCommands {
 /** Which command is the filled one: the Office while decisions wait, a new customer while work is open, none for an empty page. */
 const commandsOf = (view: Props, ready: OverviewPaneReady | null): HeadCommands => {
     const { copy } = view.props
-    const office = { label: copy.openOffice, onPress: () => view.on.go(CONSOLE_ROUTES.chat) }
-    const lead = { label: copy.newLead, onPress: () => view.on.go(CONSOLE_ROUTES.newLead) }
+    const links = (ready ?? view.props.placeholder).links
+    const office = { label: copy.openOffice, onPress: () => view.on.go(links.office) }
+    const lead = { label: copy.newLead, onPress: () => view.on.go(links.newLead) }
     if (ready === null || ready.pending > 0) return { primary: office, other: lead }
     if (ready.work.rows.length > 0) return { primary: lead, other: office }
     return { primary: undefined, other: office }
@@ -88,7 +88,13 @@ const MainSections = (props: MainSectionsProps) => {
                 <OverviewWeekCard data={data.week} copy={copy} isLoading={isLoading} />
             </div>
             <div className={WORK_ORDER_CLASS_NAME}>
-                <OverviewWorkCard data={data.work} copy={copy} onGo={props.view.on.go} isLoading={isLoading} />
+                <OverviewWorkCard
+                    data={data.work}
+                    responsibilitiesHref={data.links.responsibilities}
+                    copy={copy}
+                    onGo={props.view.on.go}
+                    isLoading={isLoading}
+                />
             </div>
             <div className={DEPARTMENTS_ORDER_CLASS_NAME}>
                 <OverviewDepartments data={data.departments} copy={copy} isLoading={isLoading} />
@@ -96,6 +102,7 @@ const MainSections = (props: MainSectionsProps) => {
             <div className={RESULTS_ORDER_CLASS_NAME}>
                 <OverviewResultsCard
                     data={data.results}
+                    links={data.links}
                     copy={copy}
                     isOpen={isResultsOpen}
                     onToggle={props.view.on.toggleResults}

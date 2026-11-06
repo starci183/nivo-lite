@@ -1,4 +1,4 @@
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import {
     useQueryLeadDirectorySwr,
     useQueryModuleInstallationsSwr,
@@ -33,11 +33,11 @@ type UseOfficeTeamResult = {
 
 /** The team around the thread, with the first-load status and failure of every read kept beside its projection. */
 export const useOfficeTeam = (): UseOfficeTeamResult => {
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const installations = useQueryModuleInstallationsSwr()
-    const members = useQueryWorkspaceMembersSwr(activeWorkspaceId)
-    const staff = useQueryWorkspaceStaffSwr(activeWorkspaceId)
-    const leads = useQueryLeadDirectorySwr(activeWorkspaceId)
+    const members = useQueryWorkspaceMembersSwr(workspaceId)
+    const staff = useQueryWorkspaceStaffSwr(workspaceId)
+    const leads = useQueryLeadDirectorySwr(workspaceId)
     const tasks = useQueryResponsibilitiesSwr()
     const error: unknown = installations.error ?? members.error ?? staff.error ?? leads.error ?? tasks.error
     return {
@@ -56,12 +56,7 @@ export const useOfficeTeam = (): UseOfficeTeamResult => {
         leads: leads.data?.map(toOfficeLead) ?? [],
         tasks: tasks.data?.map(toOfficeTask) ?? [],
         isLoading:
-            activeWorkspaceId === undefined ||
-            installations.isLoading ||
-            members.isLoading ||
-            staff.isLoading ||
-            leads.isLoading ||
-            tasks.isLoading,
+            installations.isLoading || members.isLoading || staff.isLoading || leads.isLoading || tasks.isLoading,
         error,
     }
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useMutateDecideShiftsAvailabilitySwr, useMutateDecideWorkItemSwr } from "@/hooks/swr"
@@ -18,7 +18,7 @@ interface ShiftsRequestCommands {
 
 /** The request decisions of the Shifts workbench through the back end GraphQL API, toasted, with the reads revalidated on success. */
 export const useShiftsRequestCommands = (): ShiftsRequestCommands => {
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const tToast = useTranslations("toast")
     const run = useGraphQLWithToast()
     const finish = useShiftsSaved()
@@ -30,10 +30,10 @@ export const useShiftsRequestCommands = (): ShiftsRequestCommands => {
             const result = await run(() => deciding.trigger({ workItemId, decision }), { showSuccessToast: false })
             if (result === undefined) return false
             toast.success(tToast("successTitle"), { description: tToast("defaultSuccess") })
-            await refreshShifts(activeWorkspaceId)
+            await refreshShifts(workspaceId)
             return true
         },
-        [run, deciding, tToast, activeWorkspaceId],
+        [run, deciding, tToast, workspaceId],
     )
     const decideAvailability = useCallback(
         (id: string, approve: boolean): Promise<boolean> => finish(() => availability.trigger({ id, approve })),

@@ -12,7 +12,6 @@ import { ResponsibilityListHead } from "@/components/frames/ResponsibilityListHe
 import { ResponsibilityMainHead } from "@/components/frames/ResponsibilityMainHead"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import { leadHref } from "@/modules/routes"
 import type {
     DataSlot,
     PaneGridLayout,
@@ -99,6 +98,8 @@ const PLACEHOLDER_ROWS: ReadonlyArray<ResponsibilityOpenedView> = ["a", "b", "c"
     ownerRole: "",
     dueDate: null,
     canDraft: false,
+    leadHref: "",
+    officeHref: "",
 }))
 
 /** The list rows: the customer, the next step, and at the end the due words over the state. */
@@ -212,7 +213,8 @@ const MainHead = (props: Props) => {
             backLabel={view.copy.back}
             onBack={props.on.back}
             moreLabel={view.copy.moreActions}
-            leadHref={leadHref(row.leadId)}
+            leadHref={opened.leadHref}
+            officeHref={opened.officeHref}
             labels={{
                 openLead: view.copy.detail.openLead,
                 openOffice: view.copy.detail.openOffice,
@@ -220,6 +222,34 @@ const MainHead = (props: Props) => {
             }}
             onCopy={() => props.on.copy(row.id, row.leadId)}
             primary={draftCommandOf(props, opened)}
+        />
+    )
+}
+
+/** The count, the filters and the sort beside the title of the list. */
+const ListHeadActions = (props: Props) => {
+    const { copy } = props.props
+    const view = props.props
+    return (
+        <ResponsibilityListHead
+            count={copy.count}
+            filtersLabel={copy.filtersLabel}
+            filtersTitle={copy.filtersTitle}
+            isOpen={view.isFiltersOpen}
+            onOpenChange={props.on.filtersOpenChange}
+            filters={{
+                copy: copy.filters,
+                owners: view.owners,
+                owner: view.owner,
+                dues: view.dues,
+                due: view.due,
+                sorts: view.sorts,
+                sort: view.sort,
+                onOwner: props.on.owner,
+                onDue: props.on.due,
+                onSort: props.on.sort,
+                onClear: props.on.clear,
+            }}
         />
     )
 }
@@ -234,31 +264,7 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
         <Page chrome="panes">
             <PaneGrid label={copy.grid} areas={view.grid.areas} columns={view.grid.columns} rows={view.grid.rows}>
                 <Pane area="listHead" surface>
-                    <PaneHead
-                        title={copy.title}
-                        actions={
-                            <ResponsibilityListHead
-                                count={copy.count}
-                                filtersLabel={copy.filtersLabel}
-                                filtersTitle={copy.filtersTitle}
-                                isOpen={view.isFiltersOpen}
-                                onOpenChange={props.on.filtersOpenChange}
-                                filters={{
-                                    copy: copy.filters,
-                                    owners: view.owners,
-                                    owner: view.owner,
-                                    dues: view.dues,
-                                    due: view.due,
-                                    sorts: view.sorts,
-                                    sort: view.sort,
-                                    onOwner: props.on.owner,
-                                    onDue: props.on.due,
-                                    onSort: props.on.sort,
-                                    onClear: props.on.clear,
-                                }}
-                            />
-                        }
-                    />
+                    <PaneHead title={copy.title} actions={<ListHeadActions {...props} />} />
                 </Pane>
                 <Pane area="list" surface scroll label={copy.listLabel}>
                     <PaneBody>
@@ -280,11 +286,8 @@ export const ResponsibilitiesBoardBase = (props: ResponsibilitiesBoardBaseProps)
                     <Pane area="main" scroll label={copy.detailLabel}>
                         <PaneBody {...(primary === undefined ? {} : { phonePrimary: primary })}>
                             <ResponsibilityDetail
-                                row={opened.row}
+                                opened={opened}
                                 copy={copy.detail}
-                                avatarUrl={opened.avatarUrl}
-                                ownerRole={opened.ownerRole}
-                                dueDate={opened.dueDate}
                                 isCopied={view.copiedId === opened.row.id}
                                 isLoading={view.isWaiting}
                             />

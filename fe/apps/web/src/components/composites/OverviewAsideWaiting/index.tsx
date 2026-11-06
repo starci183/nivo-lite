@@ -1,7 +1,6 @@
 import { Badge, Cluster, Link, Section, Stack, Text } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { OverviewPaneCopy, OverviewPaneReady } from "@/modules/types"
 
 /** What the two "needs you" sections draw. */
@@ -12,16 +11,21 @@ interface OverviewAsideWaitingProps {
 }
 
 /** One waiting decision: who asked and why, with the way to decide it in the Office. */
-const rowOf = (item: OverviewPaneReady["waiting"]["items"][number], seeInOffice: string): ListRowData => ({
+const rowOf = (
+    item: OverviewPaneReady["waiting"]["items"][number],
+    seeInOffice: string,
+    officeHref: string,
+): ListRowData => ({
     id: item.id,
     title: item.title,
     description: item.line,
     leading: { icon: nivoIconSource("review", "leading") },
-    action: { label: seeInOffice, href: CONSOLE_ROUTES.chat },
+    action: { label: seeInOffice, href: officeHref },
 })
 
 /** What the exceptions draw. */
 interface ExceptionsProps {
+    readonly officeHref: string
     readonly exceptions: OverviewPaneReady["exceptions"]
     readonly copy: OverviewPaneCopy
     readonly isLoading: boolean
@@ -47,7 +51,7 @@ const Exceptions = (props: ExceptionsProps) => {
                     </Badge>
                 ))}
             </Cluster>
-            <Link href={CONSOLE_ROUTES.chat}>{props.copy.seeInOffice}</Link>
+            <Link href={props.officeHref}>{props.copy.seeInOffice}</Link>
         </Stack>
     )
 }
@@ -66,10 +70,15 @@ export const OverviewAsideWaiting = (props: OverviewAsideWaitingProps) => (
                     {props.copy.waitingNone}
                 </Text>
             }
-            items={props.data.waiting.items.map((item) => rowOf(item, props.copy.seeInOffice))}
+            items={props.data.waiting.items.map((item) => rowOf(item, props.copy.seeInOffice, props.data.links.office))}
         />
         <Section title={props.copy.exceptionsTitle} headingLevel={3} isLoading={props.isLoading}>
-            <Exceptions exceptions={props.data.exceptions} copy={props.copy} isLoading={props.isLoading} />
+            <Exceptions
+                exceptions={props.data.exceptions}
+                officeHref={props.data.links.office}
+                copy={props.copy}
+                isLoading={props.isLoading}
+            />
         </Section>
     </>
 )

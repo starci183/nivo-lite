@@ -1,4 +1,4 @@
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { FACT_SUBJECT_TYPES } from "@/modules/types"
 import type {
     BrainChipView,
@@ -56,6 +56,8 @@ export interface FactEntriesInput {
     /** The fact a stop is being sent for. */
     readonly pending: string | undefined
     readonly words: FactWords
+    /** The workspace the links of the facts lead within. */
+    readonly workspaceId: string
 }
 
 /** The tone of the chip of each scope: only the restricted one asks for a second look. */
@@ -150,7 +152,12 @@ const detailOf = (fact: BrainFact, input: FactEntriesInput): FactDetailView => (
     value: valueOf(fact),
     terms: termsOf(fact, input),
     retire: input.canWrite ? { label: input.words.retireLabel, isPending: input.pending === fact.id } : null,
-    edit: input.canWrite ? { label: input.words.editLabel, href: brainTabHref("facts", { edit: fact.id }) } : null,
+    edit: input.canWrite
+        ? {
+              label: input.words.editLabel,
+              href: workspaceHref(input.workspaceId, brainTabHref("facts", { edit: fact.id })),
+          }
+        : null,
     historyTitle: input.words.historyTitle,
     history: historyOf(fact, input),
 })

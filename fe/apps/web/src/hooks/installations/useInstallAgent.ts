@@ -4,9 +4,11 @@ import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import { mutate } from "@/modules/viewer-cache"
 import { useMutateInstallModuleSwr, QUERY_MODULE_INSTALLATIONS_SWR_KEY } from "@/hooks/swr"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
 import { agentHref } from "@/modules/installations"
+import { workspaceHref } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 
@@ -22,6 +24,7 @@ interface InstallAgent {
 export const useInstallAgent = (): InstallAgent => {
     const t = useTranslations("modulesCore")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const runGraphQL = useGraphQLWithToast()
     const { trigger } = useMutateInstallModuleSwr()
     const [busyKey, setBusyKey] = useState<ModuleKey | null>(null)
@@ -34,9 +37,9 @@ export const useInstallAgent = (): InstallAgent => {
                 return
             }
             await mutate(matchesSwrKey(QUERY_MODULE_INSTALLATIONS_SWR_KEY))
-            router.push(agentHref(key, installed.installationId))
+            router.push(workspaceHref(workspaceId, agentHref(key, installed.installationId)))
         },
-        [runGraphQL, trigger, t, router],
+        [runGraphQL, trigger, t, router, workspaceId],
     )
     return { busyKey, install }
 }

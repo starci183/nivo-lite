@@ -1,12 +1,12 @@
 import { Cluster, EmptyNotice, Link, SurfaceCard, Text } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import { CONSOLE_ROUTES } from "@/modules/routes"
 import type { OverviewPaneCopy, OverviewPaneReady } from "@/modules/types"
 
 /** What the open work card draws. */
 interface OverviewWorkCardProps {
     readonly data: OverviewPaneReady["work"]
+    readonly responsibilitiesHref: string
     readonly copy: OverviewPaneCopy
     readonly onGo: (href: string) => void
     readonly isLoading: boolean
@@ -44,7 +44,7 @@ export const OverviewWorkCard = (props: OverviewWorkCardProps) => (
                 <Text size="xs" tone="muted" isLoading={props.isLoading}>
                     {props.data.count}
                 </Text>
-                <Link href={CONSOLE_ROUTES.responsibilities}>{props.copy.workAll}</Link>
+                <Link href={props.responsibilitiesHref}>{props.copy.workAll}</Link>
             </Cluster>
         }
         empty={

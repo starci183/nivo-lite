@@ -32,7 +32,9 @@ export interface PermissionPanesCopy {
     readonly description: string
     readonly tabsLabel: string
     readonly membersTab: string
+    readonly membersHref: string
     readonly permissionsTab: string
+    readonly permissionsHref: string
     readonly inviteAction: string
     readonly listTitle: string
     readonly listLabel: string
@@ -185,8 +187,8 @@ const headerOf = (props: Props) => {
             selectedKey: "permissions",
             labelVisibility: "always" as const,
             items: [
-                { id: "members", label: copy.membersTab, href: "/team" },
-                { id: "permissions", label: copy.permissionsTab, href: "/permissions" },
+                { id: "members", label: copy.membersTab, href: copy.membersHref },
+                { id: "permissions", label: copy.permissionsTab, href: copy.permissionsHref },
             ],
         },
     }

@@ -3,9 +3,10 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { SEVERITY_TONE, needsDocumentOf, quotesOf } from "@/modules/brain"
 import type { FindingCardView, FindingView } from "@/modules/brain"
-import { brainDossierHref } from "@/modules/routes"
+import { brainDossierHref, workspaceHref } from "@/modules/routes"
 import { cardActionsOf, ownerPartOf, placeWordsOf, statusPartOf } from "./brain.shared"
 import type { FindingCardContext } from "./brain.shared"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `useFindingCards` returns. */
 export interface FindingCardsView {
@@ -14,6 +15,7 @@ export interface FindingCardsView {
 
 /** Puts a finding into the words of a card of the queue: its quotes side by side and the actions that answer it. */
 export const useFindingCards = (): FindingCardsView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("dossierReview")
     const format = useFormatter()
     const cardOf = (finding: FindingView, context: FindingCardContext): FindingCardView => {
@@ -41,7 +43,10 @@ export const useFindingCards = (): FindingCardsView => {
                     ? null
                     : {
                           label: t("cardDossier", { name: dossierName.join(" · ") }),
-                          href: brainDossierHref(finding.dossierId, { finding: finding.id }),
+                          href: workspaceHref(
+                              workspaceId,
+                              brainDossierHref(finding.dossierId, { finding: finding.id }),
+                          ),
                       },
             title: finding.title,
             detail: finding.detail,
@@ -52,7 +57,7 @@ export const useFindingCards = (): FindingCardsView => {
             meta: meta.length === 0 ? null : meta.join(" · "),
             quotes: quotesOf(finding, placeWordsOf(t)),
             inUse: finding.inUse,
-            actions: cardActionsOf(t, finding, context),
+            actions: cardActionsOf(t, finding, context, workspaceId),
         }
     }
     return { cardOf }

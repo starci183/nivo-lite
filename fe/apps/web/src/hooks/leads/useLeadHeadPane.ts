@@ -3,11 +3,12 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { mapSlot } from "@/hooks/slot"
-import { LEADS_ROUTES, leadPath } from "@/modules/routes"
+import { leadPath, LEADS_ROUTES, workspaceHref } from "@/modules/routes"
 import type { LeadHeadLabels, LeadHeadPane, LeadHeadView, LeadJourney } from "@/modules/types"
 import { STAGE_KEYS, STAGE_TONES, primaryActionOf } from "./leads.shared"
 import { useLeadActions } from "./useLeadActions"
 import { useLeadJourney } from "./useLeadJourney"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The head band of one lead: what it says, which command is primary, and the commands of its menu. */
 export interface LeadHeadPaneView {
@@ -22,6 +23,7 @@ export interface LeadHeadPaneView {
 
 /** Reads the lead once and resolves the head band: name, line, stage, the one primary command and the notice of the last command. */
 export const useLeadHeadPane = (leadId: string | undefined): LeadHeadPaneView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("leads")
     const format = useFormatter()
     const query = useLeadJourney(leadId)
@@ -42,7 +44,9 @@ export const useLeadHeadPane = (leadId: string | undefined): LeadHeadPaneView =>
     const copy = async () => {
         if (detail === null) return
         try {
-            await navigator.clipboard.writeText(`${window.location.origin}${leadPath(detail.lead.id)}`)
+            await navigator.clipboard.writeText(
+                `${window.location.origin}${workspaceHref(workspaceId, leadPath(detail.lead.id))}`,
+            )
             setNotice(t("noticeCopied"))
         } catch {
             setNotice(t("noticeCopyFail"))
@@ -60,7 +64,7 @@ export const useLeadHeadPane = (leadId: string | undefined): LeadHeadPaneView =>
         labels: {
             draft: t("draftFollowUp"),
             office: t("openOffice"),
-            officeHref: LEADS_ROUTES.chat,
+            officeHref: workspaceHref(workspaceId, LEADS_ROUTES.chat),
             moreActions: t("menuMore"),
             infoOpen: t("infoOpen"),
             infoClose: t("infoClose"),

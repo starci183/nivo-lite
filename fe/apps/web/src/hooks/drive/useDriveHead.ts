@@ -8,11 +8,12 @@ import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import { mapSlot } from "@/hooks/slot"
 import { useMutateAuthorizeDriveSwr, useMutateDisconnectDriveSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { ConnectionHeadView, ConnectionNotice, ConnectionTone, DataSlot } from "@/modules/types"
 import { DRIVE_PAGE_PATH, driveFailureKeyOf } from "./drive.shared"
 import type { DriveGrantStanding } from "./drive.shared"
 import { useDrivePage } from "./useDrivePage"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 const CHIP_KEYS = { none: "chipNone", connected: "chipOk", lost: "chipCheck" } as const
 const CHIP_TONES: Readonly<Record<DriveGrantStanding, ConnectionTone>> = {
@@ -42,6 +43,7 @@ export const useDriveHead = (enabled = true): DriveHeadView => {
     const tw = useTranslations("driveWizard")
     const settle = useSettledGraphQL()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const params = useSearchParams()
     const { trigger: forget, isMutating: isDisconnecting } = useMutateDisconnectDriveSwr()
     const { trigger: authorize, isMutating: isGranting } = useMutateAuthorizeDriveSwr()
@@ -58,17 +60,17 @@ export const useDriveHead = (enabled = true): DriveHeadView => {
 
     const grant = useCallback(async (): Promise<void> => {
         setNotice("")
-        const result = await settle(() => authorize({ returnTo: DRIVE_PAGE_PATH }))
+        const result = await settle(() => authorize({ returnTo: workspaceHref(workspaceId, DRIVE_PAGE_PATH) }))
         if (result.kind !== "ok") return setNotice(result.message)
         window.location.assign(result.value.url)
-    }, [settle, authorize])
+    }, [settle, authorize, workspaceId])
 
     const disconnect = useCallback(async (): Promise<void> => {
         setNotice("")
         const result = await settle(() => forget(), t("toastDisconnected"))
         if (result.kind !== "ok") return setNotice(result.message)
-        router.replace(CONSOLE_ROUTES.connections)
-    }, [settle, forget, t, router])
+        router.replace(workspaceHref(workspaceId, CONSOLE_ROUTES.connections))
+    }, [settle, forget, t, router, workspaceId])
 
     const standing = ("items" in slot ? slot.items : undefined)?.standing
     const returned = params.get("drive") === "error" ? tw(driveFailureKeyOf(params.get("reason") ?? "")) : ""

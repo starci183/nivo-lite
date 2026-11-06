@@ -2,7 +2,7 @@
 
 import { useCallback } from "react"
 import { useQueryDashboardSwr, useQueryMyWorkspacesSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 type UseOverviewDataResult = {
     dashboard: ReturnType<typeof useQueryDashboardSwr>["data"]
@@ -16,8 +16,8 @@ type UseOverviewDataResult = {
  * the overview calls this and they all share one request. `dashboard` is undefined until the first answer.
  */
 export const useOverviewData = (): UseOverviewDataResult => {
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const query = useQueryDashboardSwr(activeWorkspaceId)
+    const workspaceId = useWorkspaceId()
+    const query = useQueryDashboardSwr(workspaceId)
     const workspaces = useQueryMyWorkspacesSwr()
     const { mutate } = query
     const retry = useCallback((): undefined => void mutate(), [mutate])
@@ -25,6 +25,6 @@ export const useOverviewData = (): UseOverviewDataResult => {
         dashboard: query.data,
         failed: query.data === undefined && query.error !== undefined,
         retry,
-        displayName: workspaces.data?.find((entry) => entry.workspace.id === activeWorkspaceId)?.member.displayName,
+        displayName: workspaces.data?.find((entry) => entry.workspace.id === workspaceId)?.member.displayName,
     }
 }

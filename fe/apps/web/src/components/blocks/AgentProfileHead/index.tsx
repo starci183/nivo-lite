@@ -8,7 +8,8 @@ import { navigation } from "@/modules/i18n"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { ASSIGN_TEXT_MAX, profileChipsOf, useAgentProfile, useAssignComposer } from "@/hooks/agentProfile"
 import { useOfficeWords } from "@/hooks/office"
-import { AGENTS_ROUTE, CONSOLE_ROUTES } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { AGENTS_ROUTE, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { AgentProfileHeadBase } from "./component"
 import type { ProfileHeadView } from "./component"
 
@@ -39,6 +40,7 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
     const labels = useSlotLabels()
     const pane = usePaneCopy()
     const pathname = navigation.usePathname()
+    const workspaceId = useWorkspaceId()
     const agent = "items" in slot ? slot.items : undefined
     const composer = useAssignComposer(props.agentId, agent?.rules.items ?? [])
 
@@ -58,16 +60,8 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                 labels: labels(t("title")),
                 head:
                     agent === undefined
-                        ? {
-                              ...PLACEHOLDER,
-                              title: t("title"),
-                              crumbs: [
-                                  { id: "home", label: t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-                                  { id: "agents", label: t("crumbAgents"), href: AGENTS_ROUTE },
-                                  { id: "agent", label: t("title") },
-                              ],
-                          }
-                        : profileHeadOf(agent, { t, words, agentId: props.agentId }),
+                        ? loadingHeadOf({ t, words, agentId: props.agentId, workspaceId })
+                        : profileHeadOf(agent, { t, words, agentId: props.agentId, workspaceId }),
                 composer: {
                     isOpen: composer.isOpen,
                     label: t("assignLabel"),
@@ -110,15 +104,27 @@ interface ProfileHeadCopy {
     readonly t: ReturnType<typeof useTranslations<"agentProfile">>
     readonly words: ReturnType<typeof useOfficeWords>
     readonly agentId: string
+    readonly workspaceId: string
 }
+/** The band before the profile is read: the page title and the trail, with the placeholder identity. */
+const loadingHeadOf = (copy: ProfileHeadCopy): ProfileHeadView => ({
+    ...PLACEHOLDER,
+    title: copy.t("title"),
+    crumbs: [
+        { id: "home", label: copy.t("crumbHome"), href: workspaceHref(copy.workspaceId, CONSOLE_ROUTES.dashboard) },
+        { id: "agents", label: copy.t("crumbAgents"), href: workspaceHref(copy.workspaceId, AGENTS_ROUTE) },
+        { id: "agent", label: copy.t("title") },
+    ],
+})
+
 /** Resolves the identity band from the ready profile without coupling the composer state. */
 const profileHeadOf = (profile: Parameters<typeof profileChipsOf>[0], copy: ProfileHeadCopy): ProfileHeadView => {
     const name = profile.name
     const handle = profile.handle
     return {
         crumbs: [
-            { id: "home", label: copy.t("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-            { id: "agents", label: copy.t("crumbAgents"), href: AGENTS_ROUTE },
+            { id: "home", label: copy.t("crumbHome"), href: workspaceHref(copy.workspaceId, CONSOLE_ROUTES.dashboard) },
+            { id: "agents", label: copy.t("crumbAgents"), href: workspaceHref(copy.workspaceId, AGENTS_ROUTE) },
             { id: "agent", label: name === "" ? copy.t("title") : name },
         ],
         title: name === "" ? copy.t("title") : name,

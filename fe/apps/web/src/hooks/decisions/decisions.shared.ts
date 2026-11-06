@@ -8,7 +8,7 @@ import type {
     GateReason,
     DecisionHistoryRowView,
 } from "@/modules/types"
-import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
+import { CONSOLE_ROUTES, leadHref, workspaceHref } from "@/modules/routes"
 
 /** The decision history filters, in the order the tabs show them. */
 export const DECISION_KINDS: ReadonlyArray<DecisionKind> = ["policy", "human", "rejected"]
@@ -107,6 +107,8 @@ export interface DecisionWords {
     readonly g: ReturnType<typeof useTranslations>
     readonly format: ReturnType<typeof useFormatter>
     readonly now: Date
+    /** The workspace the links of the rows lead within. */
+    readonly workspaceId: string
 }
 
 /** The calendar day of an instant, as text. */
@@ -146,7 +148,7 @@ export const decisionRowViewOf = (words: DecisionWords, row: DecisionRecord): De
         reasonHint: hasReason ? g(`reasonHint_${row.reason}`) : null,
         basis: parts.basis,
         note: parts.rest,
-        leadHref: row.lead_id === null ? null : leadHref(row.lead_id),
+        leadHref: row.lead_id === null ? null : workspaceHref(words.workspaceId, leadHref(row.lead_id)),
         leadLabel: row.leadName ?? t("openLead"),
     }
 }

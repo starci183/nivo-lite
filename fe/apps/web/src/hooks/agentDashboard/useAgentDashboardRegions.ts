@@ -11,6 +11,8 @@ import { useAgentDashboardConnections } from "./useAgentDashboardConnections"
 import { useAgentDashboardKnowledge, type KnowledgeBody } from "./useAgentDashboardKnowledge"
 import { actionWordOf } from "@/hooks/actionWord"
 import type { BadgeTone } from "@starci/grammar/common"
+import { workspaceHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the regions need from the frame: the module, and whether the module brings its own gaps card. */
 interface RegionsInput {
@@ -96,7 +98,7 @@ interface BlankConnectionRow extends DashboardListRow {
 interface ConnectionsBody extends EmptyWords {
     summary: string
     manageLabel: string
-    manageHref: "/connections"
+    manageHref: string
     rows: ConnectionRowView[]
 }
 
@@ -121,6 +123,7 @@ export const useAgentDashboardRegions = (
     slot: DataSlot<AgentDashboardView>,
     input: RegionsInput,
 ): AgentDashboardRegionsView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("agentDashboard")
     const g = useTranslations("governance")
     const slotLabels = useSlotLabels()
@@ -147,7 +150,7 @@ export const useAgentDashboardRegions = (
     const doneOf = (dashboard: AgentDashboardView) => ({
         count: t("doneCount", { n: dashboard.done.count }),
         logLabel: t("doneLog"),
-        logHref: decisionsHref("policy", input.module),
+        logHref: workspaceHref(workspaceId, decisionsHref("policy", input.module)),
         rows: dashboard.done.items.map(rowOf),
         emptyMessage: t("doneEmpty"),
         emptyDescription: t("doneEmptyBody"),

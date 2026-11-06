@@ -1,4 +1,6 @@
 import { useTranslations } from "next-intl"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { TeamErrorPageBase } from "./component"
 
 /** What the failed team route gives the page. */
@@ -14,6 +16,7 @@ export const TeamErrorPage = (props: TeamErrorPageProps) => {
     const t = useTranslations("team")
     const p = useTranslations("permissions")
     const shell = useTranslations("shell")
+    const workspaceId = useWorkspaceId()
     return (
         <TeamErrorPageBase
             props={{
@@ -21,7 +24,9 @@ export const TeamErrorPage = (props: TeamErrorPageProps) => {
                 description: t("description"),
                 tabsLabel: p("tabsLabel"),
                 membersTab: p("tabMembers"),
+                membersHref: workspaceHref(workspaceId, CONSOLE_ROUTES.team),
                 permissionsTab: p("tabPermissions"),
+                permissionsHref: workspaceHref(workspaceId, CONSOLE_ROUTES.permissions),
                 selected: props.selected,
                 alertTitle: t("loadFailTitle"),
                 message: t("loadFailBody"),

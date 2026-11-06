@@ -1,4 +1,5 @@
 import type { DropdownMenuEntry, DropdownMenuSection } from "@starci/grammar/common"
+import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import type { ConsoleIconName, ConsoleSessionView, ConsoleWorkspace } from "@/modules/types"
 
@@ -86,10 +87,10 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
 ]
 
-/** The destination a path belongs to; an agent chat belongs to Agents, a path outside the rail to none. */
-export const activeDestinationKey = (pathname: string): string | null => {
-    if (pathname.startsWith("/modules/") && pathname.includes("/chat")) return "modules"
-    const found = DESTINATIONS.find((d) => [d.route, ...(d.also ?? [])].some((route) => pathname.startsWith(route)))
+/** The destination a path inside the workspace belongs to; an agent chat belongs to Agents, a path outside the rail to none. */
+export const activeDestinationKey = (path: string): string | null => {
+    if (path.startsWith("/modules/") && path.includes("/chat")) return "modules"
+    const found = DESTINATIONS.find((d) => [d.route, ...(d.also ?? [])].some((route) => path.startsWith(route)))
     return found?.key ?? null
 }
 
@@ -133,6 +134,8 @@ export const sessionRoleOf = (role: string): ConsoleWorkspace["role"] =>
 
 /** The words of the account menu, resolved by the caller. */
 interface AccountEntriesInput {
+    /** The workspace the profile and account pages are opened in. */
+    readonly workspaceId: string
     readonly workspaces: DropdownMenuSection
     /** The profile page item: its label and the line under it. */
     readonly profile: { readonly label: string; readonly description: string }
@@ -149,8 +152,18 @@ export const accountEntriesOf = (input: AccountEntriesInput): ReadonlyArray<Drop
         kind: "section",
         id: "account",
         items: [
-            { id: PROFILE_ITEM, label: input.profile.label, description: input.profile.description, href: "/profile" },
-            { id: ACCOUNT_ITEM, label: input.accountLabel, description: input.accountDescription, href: "/account" },
+            {
+                id: PROFILE_ITEM,
+                label: input.profile.label,
+                description: input.profile.description,
+                href: workspaceHref(input.workspaceId, APP_ROUTES.profile),
+            },
+            {
+                id: ACCOUNT_ITEM,
+                label: input.accountLabel,
+                description: input.accountDescription,
+                href: workspaceHref(input.workspaceId, APP_ROUTES.account),
+            },
             { id: SIGN_OUT_ITEM, label: input.signOutLabel, onAction: input.onSignOut },
         ],
     },

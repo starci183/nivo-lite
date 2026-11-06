@@ -1,5 +1,5 @@
 import { useQueryLeadBoardSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { slotOfSwr } from "@/hooks/slot"
 import type { DataSlot, LeadListItem } from "@/modules/types"
 import { leadRecordOf } from "./leads.shared"
@@ -11,8 +11,8 @@ export interface LeadBoardView extends ReturnType<typeof useQueryLeadBoardSwr> {
 
 /** The browser query mapped to the lead-board display model. */
 export const useLeadBoard = (): LeadBoardView => {
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const query = useQueryLeadBoardSwr(activeWorkspaceId)
+    const workspaceId = useWorkspaceId()
+    const query = useQueryLeadBoardSwr(workspaceId)
     const items: ReadonlyArray<LeadListItem> | undefined = query.data?.map((lead) => ({
         ...leadRecordOf(lead),
         owner_name: lead.ownerName ?? null,

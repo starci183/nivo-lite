@@ -85,7 +85,7 @@ export const useOfficePanels = (
                     agents,
                     cards: pendingCardRowsOf(messages, context),
                     channels: roomChannelsOf(current, channels, board.agents, words),
-                    pins: roomPinsOf(current),
+                    pins: roomPinsOf(current, words.workspaceId),
                 },
             ),
             tasks: taskViewsOf(board.tasks, words),

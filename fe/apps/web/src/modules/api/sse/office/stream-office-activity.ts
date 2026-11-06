@@ -1,5 +1,5 @@
 import { eventStreamUrl } from "@/modules/config"
-import { LocalStorage, StorageId } from "@/modules/storage"
+import { openWorkspaceId } from "@/modules/routes"
 import type { EventStreamHandle } from "@starci/event-stream"
 import { eventStream } from "../clients/event-stream"
 import type { StreamReporter } from "../clients/event-stream"
@@ -56,14 +56,14 @@ const pushOf = (data: string): OfficeActivityPush | null => {
     return isPush(push) ? push : null
 }
 
-/** Follows the office-activity event stream of the signed-in reader (`GET /realtime/office-activity`) in the active workspace until the signal aborts. */
+/** Follows the office-activity event stream of the signed-in reader (`GET /realtime/office-activity`) in the workspace of the open address until the signal aborts. */
 export const streamOfficeActivity = ({
     signal,
     onOpen,
     onPush,
     report,
 }: StreamOfficeActivityParams): EventStreamHandle => {
-    const workspaceId = LocalStorage.get<string>(StorageId.ActiveWorkspaceId)
+    const workspaceId = openWorkspaceId()
     return eventStream.follow<OfficeActivityPush | null>(eventStreamUrl("/realtime/office-activity"), {
         headers: workspaceId === undefined ? {} : { "x-workspace-id": workspaceId },
         signal,

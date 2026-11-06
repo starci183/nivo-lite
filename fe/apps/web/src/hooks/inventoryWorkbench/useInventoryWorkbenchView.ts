@@ -1,6 +1,6 @@
 "use client"
 import { INVENTORY_TABS, type DataSlot, type SlotLabels } from "@/modules/types"
-import { useAppSelector } from "@/redux"
+import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 import { useAgentWorkbenchShell, type AgentWorkbenchFrame } from "@/hooks/agentDashboard"
 import { EMPTY_INVENTORY_BOARD } from "./inventoryWorkbench.shared"
 import { mapSlot, slotOfReads, useSlotLabels } from "@/hooks/slot"
@@ -81,7 +81,7 @@ export interface InventoryWorkbenchView {
 
 /** Owns inventory read scopes, independent common regions and the actual conditional tab lifetimes. */
 export const useInventoryWorkbenchView = (input: InventoryWorkbenchInput): InventoryWorkbenchView => {
-    const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
+    const workspaceId = useOpenWorkspaceId()
     const scope = JSON.stringify([workspaceId ?? null, input.installationId])
     const {
         tabs,

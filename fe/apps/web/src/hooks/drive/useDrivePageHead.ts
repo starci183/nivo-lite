@@ -7,6 +7,7 @@ import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import type { ConnectionPageHeadCommands, ConnectionPageHeadView } from "@/modules/types"
 import { useDriveHead } from "./useDriveHead"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `useDrivePageHead` returns. */
 export interface DrivePageHeadView {
@@ -23,6 +24,7 @@ export const useDrivePageHead = (enabled: boolean): DrivePageHeadView => {
     const t = useTranslations("driveConnection")
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const { head, notices, grant, isGranting, disconnect, isDisconnecting, isOwner, standing } = useDriveHead(enabled)
     const [isAsking, setIsAsking] = useState(false)
     const [isRailOpen, setRailOpen] = useState(false)
@@ -32,7 +34,7 @@ export const useDrivePageHead = (enabled: boolean): DrivePageHeadView => {
         ...connectionHeadStateOf(head),
         icon: "apps",
         crumbLabel: t("crumbLabel"),
-        crumbs: connectionCrumbsOf(t("crumbConnections"), { id: "drive", label: t("crumbDrive") }),
+        crumbs: connectionCrumbsOf(workspaceId, t("crumbConnections"), { id: "drive", label: t("crumbDrive") }),
         gridLabel: t("title"),
         mainLabel: t("mainLabel"),
         rail: {

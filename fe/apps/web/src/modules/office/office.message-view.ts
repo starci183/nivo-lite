@@ -1,4 +1,4 @@
-import { leadHref, workItemHref } from "@/modules/routes"
+import { leadHref, workItemHref, workspaceHref } from "@/modules/routes"
 import type { OfficeApprovalView, OfficeCommandView, OfficeMessageView } from "@/modules/types"
 import { bodyPartsOf, isNivoLine, isOwnAuthor } from "./office.helpers"
 import { threadDayKey } from "./office.thread"
@@ -19,9 +19,11 @@ export const dayLabelOf = (key: string, words: OfficeWords, context: OfficeConte
 const authorOf = (message: OfficeMessage, isNivo: boolean, words: OfficeWords): string =>
     isNivo ? words.t("nivoCore") : message.authorName
 
-const workHrefOf = (message: OfficeMessage, context: OfficeContext): string | null => {
+const workHrefOf = (message: OfficeMessage, words: OfficeWords, context: OfficeContext): string | null => {
     const module = message.workItemId === null ? undefined : context.workModules.get(message.workItemId)
-    return message.workItemId === null || module === undefined ? null : workItemHref(module, message.workItemId)
+    return message.workItemId === null || module === undefined
+        ? null
+        : workspaceHref(words.workspaceId, workItemHref(module, message.workItemId))
 }
 
 /** One chat line as a bubble, or a centred notice for a system line. */
@@ -57,11 +59,11 @@ export const messageView = (
         parts: bodyPartsOf(message.body),
         files: message.files,
         copyText: message.body,
-        leadHref: message.leadId === null ? null : leadHref(message.leadId),
+        leadHref: message.leadId === null ? null : workspaceHref(words.workspaceId, leadHref(message.leadId)),
         leadLabel: isNotice
             ? words.t("noticeLead", { name: leadName ?? words.t("leadFallback") })
             : words.t("openLead"),
-        workHref: workHrefOf(message, context),
+        workHref: workHrefOf(message, words, context),
         replyHandle: isAgent && agent !== undefined ? agent.handle : null,
         status: null,
     }
@@ -107,7 +109,7 @@ export const approvalView = (
         statusLabel: isWaiting ? words.t("approvalWaiting") : statusWord,
         draft: approval.draft,
         settled: isWaiting ? words.t("approvalPolicy") : settled,
-        leadHref: approval.leadId === null ? null : leadHref(approval.leadId),
+        leadHref: approval.leadId === null ? null : workspaceHref(words.workspaceId, leadHref(approval.leadId)),
         canAct: context.canDecide(approval.assignedStaffId),
         isFocused: context.focusedId === approval.id,
     }
@@ -163,7 +165,7 @@ export const commandView = (
         detail: candidate.status === "pending" ? candidate.refusal : null,
         workHref:
             candidate.status === "sent" && candidate.workItemId !== null
-                ? workItemHref(candidate.module, candidate.workItemId)
+                ? workspaceHref(words.workspaceId, workItemHref(candidate.module, candidate.workItemId))
                 : null,
     }
 }

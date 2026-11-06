@@ -16,13 +16,15 @@ import {
 } from "@/hooks/officeMessenger"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { OfficeMessengerBase } from "./component"
 import type { OfficeMessengerBaseProps, OfficeMessengerComposer } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The Office: the team messenger. Its data is read in the browser; the draft lives here, the frame and the jumps in their hooks. */
 export const OfficeMessenger = () => {
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const [draft, setDraft] = useState("")
     const [focusKey, setFocusKey] = useState(0)
     const [room, setRoom] = useState<string | null>(null)
@@ -86,6 +88,7 @@ export const OfficeMessenger = () => {
                 jump,
                 commands,
                 router,
+                workspaceId,
                 conversationView,
                 taskView,
                 setRoom,
@@ -101,6 +104,7 @@ type MessengerActionsContext = {
     readonly jump: ReturnType<typeof useOfficeJump>
     readonly commands: ReturnType<typeof composerCommands>
     readonly router: ReturnType<typeof navigation.useRouter>
+    readonly workspaceId: string
     readonly conversationView: ReturnType<typeof useOfficeConversationView>
     readonly taskView: ReturnType<typeof useOfficeTasksView>
     readonly setRoom: Dispatch<SetStateAction<string | null>>
@@ -108,10 +112,10 @@ type MessengerActionsContext = {
 
 /** Binds the messenger's controls to their existing domain and local owners. */
 const messengerActions = (context: MessengerActionsContext): OfficeMessengerBaseProps["on"] => {
-    const { office, frame, drafts, jump, commands, router, conversationView, taskView, setRoom } = context
+    const { office, frame, drafts, jump, commands, router, workspaceId, conversationView, taskView, setRoom } = context
     const { text } = office
     const { onMention, onSend, onChange } = commands
-    const { openDirect, decideCard } = officeMessengerCommands(office, router)
+    const { openDirect, decideCard } = officeMessengerCommands(office, router, workspaceId)
     return {
         decideApproval: (id, decision, edited) => void office.decisions.decideApproval(id, decision, edited),
         decideWork: (id, choice) => void office.decisions.decideWork(id, choice),
@@ -147,7 +151,7 @@ const messengerActions = (context: MessengerActionsContext): OfficeMessengerBase
         mention: onMention,
         openTasks: frame.showTasks,
         closeInfo: () => frame.setInfoOpen(false),
-        openLeads: () => router.push(CONSOLE_ROUTES.leads),
+        openLeads: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.leads)),
         taskOwner: taskView.onOwner,
         taskStatus: taskView.onStatus,
         clearTasks: taskView.clear,

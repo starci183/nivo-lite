@@ -1,5 +1,6 @@
 import type { BookingAction, BookingDetailFact, BookingView } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
+import { leadHref, workspaceHref } from "@/modules/routes"
 
 /** The notice that follows each successful action. */
 export const NOTICE_OF_ACTION: Readonly<Record<BookingAction, string>> = {
@@ -122,6 +123,8 @@ interface DeskWords {
     readonly say: Say
     readonly resourceName: (id: string) => string
     readonly money: (value: number) => string
+    /** The workspace the links of the desk lead within. */
+    readonly workspaceId: string
 }
 
 const joined = (parts: ReadonlyArray<string>): string => parts.filter((part) => part !== "").join(" · ")
@@ -288,7 +291,7 @@ export const detailOf = (
     statusLabel: words.say(`status_${booking.status}`),
     statusTone: BOOKING_STATUS_TONE[booking.status] ?? ("neutral" as const),
     items: detailItems(booking, words),
-    ...(booking.leadId === null ? {} : { customerHref: `/leads/${booking.leadId}` }),
+    ...(booking.leadId === null ? {} : { customerHref: workspaceHref(words.workspaceId, leadHref(booking.leadId)) }),
     customerLabel: words.say("viewCustomer"),
     ...nextOf(booking, words),
     actions: [

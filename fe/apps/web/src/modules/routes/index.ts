@@ -8,9 +8,6 @@ export const APP_ROUTES = {
     account: "/account",
     profile: "/profile",
     workspaceNew: "/workspaces/new",
-    workspaceChannels: "/workspaces/new/channels",
-    workspaceHandover: "/workspaces/new/ai",
-    workspaceReady: "/workspaces/new/done",
 } as const
 
 export { safeNext } from "./safe-next-path"
@@ -26,7 +23,16 @@ export {
     workspacesPath,
 } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
-export { creditsPath, workspacePaymentPath, workspaceRenewalPaymentPath } from "./workspace-routes"
+export { pathInWorkspace, workspaceHref, workspaceLinkOf } from "./workspace-href"
+export { openWorkspaceId, workspaceIdOfAddress } from "./workspace-address"
+export {
+    creditsPath,
+    workspaceChannelsPath,
+    workspaceHandoverPath,
+    workspacePaymentPath,
+    workspaceReadyPath,
+    workspaceRenewalPaymentPath,
+} from "./workspace-routes"
 export {
     AGENTS_ROUTE,
     AGENT_ROLES_ANCHOR,
@@ -35,7 +41,6 @@ export {
     agentChatConversationHref,
     agentChatHref,
     agentProfileHref,
-    agentSetupHref,
     authoritySectionPath,
     leadFlowHref,
     leadHref,
@@ -43,6 +48,7 @@ export {
     teamInviteHref,
     workItemHref,
     zaloConnectionHref,
+    zaloReturnPath,
 } from "./console-routes"
 export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"
 export {

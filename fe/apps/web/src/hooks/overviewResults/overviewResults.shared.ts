@@ -1,7 +1,7 @@
 import type { Figure } from "@starci/grammar/common"
 import type { GovFormat, GovTranslator } from "@/hooks/overviewGov"
 import type { ResponsibilityRowModel } from "@/hooks/overviewRows"
-import { CONSOLE_ROUTES, responsibilitiesHref } from "@/modules/routes"
+import { CONSOLE_ROUTES, responsibilitiesHref, workspaceHref } from "@/modules/routes"
 import type { Governance } from "@/hooks/overviewFigures"
 
 /** One status: what it is and what it rests on, then its figure and, for money, the record count. */
@@ -100,6 +100,7 @@ export const weekFiguresOf = (
     t: GovTranslator,
     rows: ReadonlyArray<ResponsibilityRowModel>,
     leads: number,
+    workspaceId: string,
 ): ReadonlyArray<Figure> => {
     const active = rows.filter((row) => row.status !== "done")
     return [
@@ -108,35 +109,35 @@ export const weekFiguresOf = (
             term: t("kpiOpen"),
             value: rows.filter((row) => row.status === "open").length,
             meta: t("kpiOpenCtx"),
-            href: responsibilitiesHref("status=open"),
+            href: workspaceHref(workspaceId, responsibilitiesHref("status=open")),
         },
         {
             id: "waiting",
             term: t("kpiWaiting"),
             value: rows.filter((row) => row.status === "waiting_approval").length,
             meta: t("kpiWaitingCtx"),
-            href: responsibilitiesHref("status=waiting_approval"),
+            href: workspaceHref(workspaceId, responsibilitiesHref("status=waiting_approval")),
         },
         {
             id: "today",
             term: t("kpiToday"),
             value: active.filter((row) => row.isDueToday).length,
             meta: t("kpiTodayCtx"),
-            href: responsibilitiesHref("due=today"),
+            href: workspaceHref(workspaceId, responsibilitiesHref("due=today")),
         },
         {
             id: "overdue",
             term: t("kpiOverdue"),
             value: active.filter((row) => row.isOverdue).length,
             meta: t("kpiOverdueCtx"),
-            href: responsibilitiesHref("due=overdue"),
+            href: workspaceHref(workspaceId, responsibilitiesHref("due=overdue")),
         },
         {
             id: "leads",
             term: t("kpiLeads"),
             value: leads,
             meta: t("kpiLeadsCtx"),
-            href: CONSOLE_ROUTES.leads,
+            href: workspaceHref(workspaceId, CONSOLE_ROUTES.leads),
         },
     ]
 }

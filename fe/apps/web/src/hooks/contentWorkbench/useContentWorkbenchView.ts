@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
 import { useContentRibbon, useContentWorkbench } from "@/hooks/content"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 
 import { CONTENT_TABS, type ContentAssembly, type ContentViews } from "@/modules/types"
@@ -27,7 +27,7 @@ export const useContentWorkbenchView = (input: ContentWorkbenchViewInput): Conte
     const dashboard = useTranslations("agentDashboard")
     const slotLabels = useSlotLabels()
     const copy = useContentWorkbenchCopy()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const [startedAt] = useState(() => new Date().toISOString())
     const tabs = useAgentWorkbenchTabs({ ids: CONTENT_TABS, initialTab: input.initialTab })
     const frame = useAgentDashboardFrame({ module: "content", installationId: input.installationId, hasOwnGaps: false })
@@ -36,12 +36,12 @@ export const useContentWorkbenchView = (input: ContentWorkbenchViewInput): Conte
     const data = workbench.data
     const owner = {
         data,
-        workspaceId: activeWorkspaceId,
+        workspaceId: workspaceId,
         startedAt,
         copy,
         isActive,
         isReady: workbench.data !== undefined,
-        scope: JSON.stringify([activeWorkspaceId, input.installationId]),
+        scope: JSON.stringify([workspaceId, input.installationId]),
         focus: input.focus,
         selected: tabs.selected,
     }

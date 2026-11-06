@@ -1,5 +1,5 @@
 import type { ModuleKey } from "@/modules/catalog"
-import { AUTOMATION_ROUTES } from "@/modules/routes"
+import { AUTOMATION_ROUTES, workspaceHref } from "@/modules/routes"
 import {
     automationStatusOf,
     automationText,
@@ -60,6 +60,7 @@ interface GoogleAccountView {
 
 /** What the cards need beyond the card: the words, the language and the state of the screen. */
 export interface CardContext {
+    readonly workspaceId: string
     readonly t: AutomationsTranslator
     readonly locale: AutomationsLanguage
     readonly selected: string | null
@@ -73,13 +74,19 @@ const noteOf = (card: AutomationCardView, status: AutomationStatus, ctx: CardCon
         const items = card.missing.map((item) => automationText(item.label, ctx.locale)).join(", ")
         return {
             text: ctx.t("missingLine", { items }),
-            link: { href: first.href, label: automationText(first.label, ctx.locale) },
+            link: { href: workspaceHref(ctx.workspaceId, first.href), label: automationText(first.label, ctx.locale) },
         }
     }
     if (status === "googleUnavailable") return { text: ctx.t("googleUnavailable") }
     if (status === "googleLost") return { text: ctx.t("googleLost") }
     if (status === "needsWebhook") {
-        return { text: "", link: { href: AUTOMATION_ROUTES.developers, label: ctx.t("connectWebhook") } }
+        return {
+            text: "",
+            link: {
+                href: workspaceHref(ctx.workspaceId, AUTOMATION_ROUTES.developers),
+                label: ctx.t("connectWebhook"),
+            },
+        }
     }
     return undefined
 }

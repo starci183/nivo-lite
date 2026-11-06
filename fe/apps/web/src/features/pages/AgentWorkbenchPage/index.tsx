@@ -5,6 +5,7 @@ import type { ReactNode, ReactElement } from "react"
 import { SpecWorkbenchFrame } from "@/components/blocks/SpecWorkbenchFrame"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
+import { workspaceHref } from "@/modules/routes"
 import { workbenchSpec } from "@/modules/workbench-spec"
 import { AgentWorkbenchPageBase } from "./component"
 
@@ -16,6 +17,8 @@ export const agentWorkbenchMetadata = async (): Promise<Metadata> => {
 
 /** What the route hands the page: the type and the instance of the url and the deep link of the query. */
 type AgentWorkbenchPageProps = {
+    /** The workspace of the url. */
+    readonly workspaceId: string
     readonly module: string
     readonly installationId: string
     /** The `tab` of the query: the workbench area to open (the agent dashboard frame validates it). */
@@ -66,7 +69,7 @@ export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps): Promis
                 title: t("workbenchTitle"),
                 body: t("workbenchBody"),
                 setupLabel: t("workbenchSetup"),
-                setupHref: agentHref(props.module, props.installationId),
+                setupHref: workspaceHref(props.workspaceId, agentHref(props.module, props.installationId)),
             }}
         />
     )

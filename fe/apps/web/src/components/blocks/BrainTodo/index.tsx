@@ -5,9 +5,10 @@ import { useTranslations } from "next-intl"
 import { useBrainPageHeader, useBrainQueue, useFactDrawer } from "@/hooks/brain"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading } from "@/modules/types"
 import { BrainTodoBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the page hands the queue: the header without its tabs. */
 interface BrainTodoProps {
@@ -26,6 +27,7 @@ export const BrainTodo = (props: BrainTodoProps) => {
     const q = useTranslations("brainQueue")
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const header = useBrainPageHeader("todo", props.header)
     const queue = useBrainQueue()
     const factDrawer = useFactDrawer({ tab: "todo", fact: props.fact, edit: props.edit, answer: props.answer })
@@ -65,7 +67,7 @@ export const BrainTodo = (props: BrainTodoProps) => {
                 reviewAll: header.on.reviewAll,
                 selectTab: header.on.selectTab,
                 ...queue.on,
-                openSources: () => router.push(brainTabHref("sources")),
+                openSources: () => router.push(workspaceHref(workspaceId, brainTabHref("sources"))),
                 asideOpenChange: setAsideOpen,
             }}
         />

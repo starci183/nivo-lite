@@ -1,6 +1,7 @@
 "use client"
 
-import { AGENTS_ROUTE, CONSOLE_ROUTES, leadFlowHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { AGENTS_ROUTE, CONSOLE_ROUTES, leadFlowHref, workspaceHref } from "@/modules/routes"
 import { useTranslations } from "next-intl"
 import { CHAT_FILE_ACCEPT } from "@/hooks/chatFile"
 import type { useAgentChat, ChatTab } from "./useAgentChat"
@@ -91,6 +92,7 @@ export const useAgentChatCopy = (chat: AgentChatState): AgentChatCopyView => {
     const t = useTranslations("agentChat")
     const modules = useTranslations("modulesCore")
     const shell = useTranslations("shell")
+    const workspaceId = useWorkspaceId()
     const agent = chat.agent
     const isLoading = agent === undefined
     const isCustomer = chat.tab === "customer"
@@ -107,8 +109,8 @@ export const useAgentChatCopy = (chat: AgentChatState): AgentChatCopyView => {
     return {
         crumbLabel: shell("crumbLabel"),
         crumbs: [
-            { id: "home", label: shell("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-            { id: "modules", label: modules("catalogTitle"), href: AGENTS_ROUTE },
+            { id: "home", label: shell("crumbHome"), href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) },
+            { id: "modules", label: modules("catalogTitle"), href: workspaceHref(workspaceId, AGENTS_ROUTE) },
             isLoading ? { id: "agent", label: "", isLoading: true as const } : { id: "agent", label: name },
         ],
         header,
@@ -128,7 +130,7 @@ export const useAgentChatCopy = (chat: AgentChatState): AgentChatCopyView => {
             scrollKey: `${chat.thread.length}:${chat.isSending}:${chat.hasSelection}`,
             handoff:
                 isCustomer && chat.leadId !== null
-                    ? { label: t("handoffGate"), href: leadFlowHref(chat.leadId) }
+                    ? { label: t("handoffGate"), href: workspaceHref(workspaceId, leadFlowHref(chat.leadId)) }
                     : null,
             takenOverNotice: chat.isTakenOver ? t("takenOverNotice") : null,
         },

@@ -2,6 +2,7 @@
 
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { slotOfReads } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { noData } from "@/hooks/workspaceread"
 import {
     automationBoardOf,
@@ -28,6 +29,7 @@ export interface AutomationsBoardState {
 
 /** The board of automations: the gallery from the back end through SWR, and every change the owner can make. */
 export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBoardState => {
+    const workspaceId = useWorkspaceId()
     const { t, locale } = input
     const connect = useAutomationConnect()
     const automations = useAutomations()
@@ -56,8 +58,8 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
 
     const slot = slotOfReads([automations.reads.overview, automations.reads.accounts, catalog.read], () => {
         const data = automations.data ?? noData("automations")
-        return automationBoardOf(
-            automationBoardInputOf({
+        return automationBoardOf({
+            ...automationBoardInputOf({
                 t,
                 locale,
                 moduleNames,
@@ -74,7 +76,8 @@ export const useAutomationsBoard = (input: AutomationsBoardInput): AutomationsBo
                 detail,
                 awaiting,
             }),
-        )
+            workspaceId,
+        })
     })
     const filters = automationFiltersFor(cards)
 

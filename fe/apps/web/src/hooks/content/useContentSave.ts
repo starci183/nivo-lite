@@ -4,7 +4,7 @@ import { useCallback, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useContentRefresh } from "./useContentRefresh"
 
 /** The real settings surface that owns a configuration command's local pending state. */
@@ -55,9 +55,9 @@ export const useContentSave = <TArgs extends unknown[], TResult>(
     const t = useTranslations("content"),
         runGraphQL = useGraphQLWithToast()
     const { refresh } = useContentRefresh()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const isActive = owner?.isActive ?? true,
-        scope = owner?.scope ?? JSON.stringify([activeWorkspaceId])
+        scope = owner?.scope ?? JSON.stringify([workspaceId])
     const lifetime = useFeatureLifetime(isActive, scope)
     const [pending, setPending] = useState<ReadonlyArray<Operation>>([])
     useFeatureReset({ isActive, isReady: true, scope, onReset: () => setPending([]) })

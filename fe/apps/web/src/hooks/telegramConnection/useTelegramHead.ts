@@ -6,10 +6,11 @@ import { useConnectionsRole, useDisconnectConnection } from "@/hooks/connections
 import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import { mapSlot } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { ConnectionHeadView, DataSlot } from "@/modules/types"
 import { telegramChipToneOf, telegramStatusKindOf } from "./telegramConnection.shared"
 import { useTelegramPage } from "./useTelegramPage"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 const CHIP_KEYS = { ok: "chipOk", check: "chipCheck", off: "chipOff" } as const
 
@@ -28,6 +29,7 @@ export const useTelegramHead = (connectionId: string | undefined): UseTelegramHe
     const t = useTranslations("telegramConnection")
     const settle = useSettledGraphQL()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const { trigger, isMutating } = useDisconnectConnection("telegram")
     const { slot, isMissing } = useTelegramPage(connectionId)
     const page = "items" in slot ? slot.items : undefined
@@ -48,8 +50,8 @@ export const useTelegramHead = (connectionId: string | undefined): UseTelegramHe
         setNotice("")
         const result = await settle(() => trigger(connectionId ?? ""), t("toastDisconnected"))
         if (result.kind !== "ok") return setNotice(result.message)
-        router.replace(CONSOLE_ROUTES.connections)
-    }, [settle, trigger, connectionId, t, router])
+        router.replace(workspaceHref(workspaceId, CONSOLE_ROUTES.connections))
+    }, [settle, trigger, connectionId, t, router, workspaceId])
 
     return {
         head,

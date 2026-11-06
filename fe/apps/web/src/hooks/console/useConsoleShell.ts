@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { useMemo } from "react"
 import { useQueryWorkspaceShellSwr } from "@/hooks/swr"
 import { FOUNDING_OFFER } from "@/modules/promo"
+import { workspaceHref } from "@/modules/routes"
 import type { ConsolePending } from "@/modules/types"
 import { LEADS_ROUTE, OFFICE_ROUTE } from "./console.shared"
 
@@ -34,14 +35,17 @@ export const useConsoleShell = (workspaceId: string): ConsoleShellView => {
             id: approval.id,
             leadName: approval.contactName ?? t("unknownLead"),
             summary: clip(approval.nextAction || approval.draft),
-            href: approval.leadId === null ? LEADS_ROUTE : `${LEADS_ROUTE}/${approval.leadId}`,
+            href: workspaceHref(
+                workspaceId,
+                approval.leadId === null ? LEADS_ROUTE : `${LEADS_ROUTE}/${approval.leadId}`,
+            ),
         }))
         // Exceptions with no approval card of their own (an approval card is already in the list above).
         const exceptions = data.exceptions.map((item): ConsolePending => ({
             id: `wi-${item.id}`,
             leadName: item.contactName ?? t("unknownLead"),
             summary: clip(item.summary || item.error || ""),
-            href: OFFICE_ROUTE,
+            href: workspaceHref(workspaceId, OFFICE_ROUTE),
         }))
         return {
             pending: [...approvals, ...exceptions],
@@ -49,5 +53,5 @@ export const useConsoleShell = (workspaceId: string): ConsoleShellView => {
             chatbotAgentId: data.agents.find((agent) => agent.module === "chatbot")?.id ?? null,
             isFoundingMember: data.isFoundingMember,
         }
-    }, [data, t])
+    }, [data, t, workspaceId])
 }

@@ -71,8 +71,18 @@ export interface OverviewActivityRow {
     readonly href: string | null
 }
 
+/** The pages the overview sends the reader to, as addresses inside the open workspace. */
+export interface OverviewLinks {
+    readonly office: string
+    readonly newLead: string
+    readonly responsibilities: string
+    readonly authority: string
+    readonly decisions: string
+}
+
 /** Everything the overview draws once the dashboard is read, in the words of the reader. */
 export interface OverviewPaneReady {
+    readonly links: OverviewLinks
     readonly head: { readonly title: string; readonly description: string }
     /** How many decisions wait for the owner: decides which command is the primary one. */
     readonly pending: number

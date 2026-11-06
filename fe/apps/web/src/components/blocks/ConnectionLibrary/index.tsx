@@ -28,6 +28,7 @@ import {
 } from "@/hooks/connections"
 import type { Connection, ConnectorCategory, Provider, LibraryCard, LibraryCategory } from "@/modules/types"
 import { ConnectionLibraryBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 type Translate = ReturnType<typeof useTranslations<"connections">>
 
@@ -42,6 +43,7 @@ interface KnownEntry {
 
 /** Everything the library derives from the workspace connections and the controls. */
 interface LibraryInput {
+    readonly workspaceId: string
     readonly t: Translate
     readonly items: ReadonlyArray<Connection>
     readonly text: string
@@ -64,7 +66,7 @@ const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
     const count = connectionCountsOf(mine).get(entry.provider ?? "") ?? 0
     const needsCheck = entry.provider !== undefined && checkProvidersOf(mine).has(entry.provider)
     const [only] = entry.provider !== undefined && SINGLE_GRANT.has(entry.provider) ? mine : []
-    const pageHref = only === undefined ? null : connectionPageHref(only)
+    const pageHref = only === undefined ? null : connectionPageHref(input.workspaceId, only)
     return {
         id: entry.id,
         name,
@@ -127,6 +129,7 @@ export const ConnectionLibrary = () => {
     const t = useTranslations("connections")
     const overlays = useConnectionOverlays()
     const { role } = useConnectionsRole()
+    const workspaceId = useWorkspaceId()
     const data = useConnectionsData()
     const { items } = data
     const isLoading = "isLoading" in data.slot
@@ -147,8 +150,8 @@ export const ConnectionLibrary = () => {
         )
     }
     const { categories, cards } = useMemo(
-        () => libraryOf({ t, items, text, category, wants, role }),
-        [t, items, text, category, wants, role],
+        () => libraryOf({ workspaceId, t, items, text, category, wants, role }),
+        [workspaceId, t, items, text, category, wants, role],
     )
     return (
         <ConnectionLibraryBase

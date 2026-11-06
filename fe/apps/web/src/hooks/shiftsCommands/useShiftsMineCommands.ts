@@ -1,6 +1,6 @@
 "use client"
 
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import {
@@ -33,7 +33,7 @@ interface ShiftsMineCommands {
 
 /** The "my schedule" commands of the Shifts workbench through the back end GraphQL API, toasted, with the reads revalidated. */
 export const useShiftsMineCommands = (): ShiftsMineCommands => {
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("shifts")
     const tToast = useTranslations("toast")
     const run = useGraphQLWithToast()
@@ -45,17 +45,17 @@ export const useShiftsMineCommands = (): ShiftsMineCommands => {
     const tell = useCallback(
         async (status: string, done: string, sent: string): Promise<void> => {
             toast.success(tToast("successTitle"), { description: status === "done" ? done : sent })
-            await refreshShifts(activeWorkspaceId)
+            await refreshShifts(workspaceId)
         },
-        [tToast, activeWorkspaceId],
+        [tToast, workspaceId],
     )
     const checkIn = useCallback(
         async (shiftId: string): Promise<boolean> => {
             const result = await run(() => checking.trigger({ shiftId }), { successMessage: t("checkedInOk") })
-            await refreshShifts(activeWorkspaceId)
+            await refreshShifts(workspaceId)
             return result !== undefined
         },
-        [run, checking, t, activeWorkspaceId],
+        [run, checking, t, workspaceId],
     )
     const requestSwap = useCallback(
         async (shiftId: string, toStaffId: string, reason: string): Promise<boolean> => {
@@ -93,10 +93,10 @@ export const useShiftsMineCommands = (): ShiftsMineCommands => {
     const sendAvailability = useCallback(
         async (input: ShiftsOwnAvailabilityInput): Promise<boolean> => {
             const result = await run(() => availability.trigger(input), { successMessage: t("availSent") })
-            await refreshShifts(activeWorkspaceId)
+            await refreshShifts(workspaceId)
             return result !== undefined
         },
-        [run, availability, t, activeWorkspaceId],
+        [run, availability, t, workspaceId],
     )
     return { checkIn, requestSwap, claimShift, requestLeave, sendAvailability }
 }

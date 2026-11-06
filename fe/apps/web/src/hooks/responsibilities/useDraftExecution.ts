@@ -8,7 +8,7 @@ import {
     useQueryLeadActionStatusSwr,
     QUERY_RESPONSIBILITIES_SWR_KEY,
 } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 
@@ -37,11 +37,11 @@ type UseDraftExecutionResult = {
 export const useDraftExecution = (): UseDraftExecutionResult => {
     const t = useTranslations("responsibilities")
     const runGraphQL = useGraphQLWithToast()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const { trigger } = useMutateDraftLeadExecutionSwr()
     const [starting, setStarting] = useState<string | null>(null)
     const [drafting, setDrafting] = useState<Drafting | null>(null)
-    useQueryLeadActionStatusSwr(activeWorkspaceId, drafting?.actionId, {
+    useQueryLeadActionStatusSwr(workspaceId, drafting?.actionId, {
         refreshInterval: (data: PolledStatus | undefined) => (data !== undefined && ENDED.has(data.status) ? 0 : 2000),
         onSuccess: (data: PolledStatus) => {
             if (!ENDED.has(data.status)) return

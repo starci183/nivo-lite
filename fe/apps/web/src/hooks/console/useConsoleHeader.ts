@@ -6,6 +6,7 @@ import { authActionsOf } from "@/hooks/auth"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useThemeSwitch } from "@/hooks/theme"
 import { navigation } from "@/modules/i18n"
+import { workspaceHref } from "@/modules/routes"
 import {
     LEADS_ROUTE,
     OFFICE_ROUTE,
@@ -100,6 +101,7 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
         switchWorkspace,
     )
     const accountEntries = accountEntriesOf({
+        workspaceId: session.currentWorkspaceId,
         workspaces,
         profile: { label: t("profile"), description: t("profileDescription") },
         accountLabel: session.userName,
@@ -142,14 +144,14 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
             setSearchOpen,
             search: (text: string) => {
                 setSearchOpen(false)
-                router.push(`${LEADS_ROUTE}?q=${encodeURIComponent(text)}`)
+                router.push(workspaceHref(session.currentWorkspaceId, `${LEADS_ROUTE}?q=${encodeURIComponent(text)}`))
             },
             chooseLocale: language.choose,
             chooseDark: theme.choose,
             setNotificationsOpen,
             openOffice: () => {
                 setNotificationsOpen(false)
-                router.push(OFFICE_ROUTE)
+                router.push(workspaceHref(session.currentWorkspaceId, OFFICE_ROUTE))
             },
         },
     }

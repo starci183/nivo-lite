@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useFormatter, useTranslations } from "next-intl"
 import { useMutateAssignBrainDossierSwr, useQueryWorkspaceMembersSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { NO_ASSIGNEE, memberOptionsOf } from "@/modules/brain"
 import type { DossierView, FindingDialogValues, FindingDialogView, MemberOption } from "@/modules/brain"
 import { toast } from "@/modules/toast"
@@ -40,8 +40,8 @@ export const useDossierOwner = (input: DossierOwnerInput): DossierOwner => {
     const desk = useTranslations("brainDossiers")
     const feedback = useTranslations("toast")
     const format = useFormatter()
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const people = useQueryWorkspaceMembersSwr(activeWorkspaceId)
+    const workspaceId = useWorkspaceId()
+    const people = useQueryWorkspaceMembersSwr(workspaceId)
     const save = useMutateAssignBrainDossierSwr()
     const [isOpen, setOpen] = useState(false)
     const options = people.data === undefined ? NO_OPTIONS : memberOptionsOf(people.data)

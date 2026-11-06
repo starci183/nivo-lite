@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl"
 import { DOSSIER_STATUS_TONE, dossierTagOf } from "@/modules/brain"
 import type { DossierAsideView, DossierDeskView, DossierHeadView, DossierView, Opened } from "@/modules/brain"
-import { brainTabHref, brainUploadHref } from "@/modules/routes"
+import { brainTabHref, brainUploadHref, workspaceHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 type Translate = ReturnType<typeof useTranslations<"secondBrain">>
 type DeskTranslate = ReturnType<typeof useTranslations<"brainDossiers">>
@@ -14,6 +15,8 @@ interface AsideWords {
     readonly t: Translate
     readonly desk: DeskTranslate
     readonly review: ReviewTranslate
+    /** The workspace the links of the head lead within. */
+    readonly workspaceId: string
 }
 
 /** What the side pane of an open dossier needs besides the dossier: who may write, and the documents filed under it. */
@@ -37,7 +40,10 @@ const asideOf = (words: AsideWords, opened: Opened, input: AsideInput): DossierA
                       upload: input.canWrite
                           ? {
                                 label: words.t("dossierUpload"),
-                                href: brainUploadHref(category.id, dossierTagOf(dossier.ref)),
+                                href: workspaceHref(
+                                    words.workspaceId,
+                                    brainUploadHref(category.id, dossierTagOf(dossier.ref)),
+                                ),
                             }
                           : null,
                   }
@@ -65,7 +71,7 @@ const headOf = (words: AsideWords, opened: Opened, openCount: number | undefined
         tone: DOSSIER_STATUS_TONE[opened.standing.status],
     },
     documentCount: words.desk("rowDocuments", { count: opened.dossier.documentCount }),
-    mapHref: brainTabHref("map", { node: opened.dossier.id }),
+    mapHref: workspaceHref(words.workspaceId, brainTabHref("map", { node: opened.dossier.id })),
 })
 
 /** The head of the open dossier drawn as geometry while the first reads are in: the same boxes as a ready head. */
@@ -146,10 +152,12 @@ export interface DossierAsideWords {
 
 /** The words the dossiers desk draws its head band and its side pane with, in the active language. */
 export const useDossierAsideWords = (): DossierAsideWords => {
+    const workspaceId = useWorkspaceId()
     const words: AsideWords = {
         t: useTranslations("secondBrain"),
         desk: useTranslations("brainDossiers"),
         review: useTranslations("dossierReview"),
+        workspaceId,
     }
     return {
         headViewOf: (waiting, opened, openCount) => headViewOf(words, waiting, opened, openCount),

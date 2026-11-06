@@ -6,7 +6,7 @@ import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizar
 import { mapSlot } from "@/hooks/slot"
 import { useMutateAuthorizeZaloSwr, useMutateDisconnectConnectionSwr } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { LocalStorage, StorageId } from "@/modules/storage"
 import type { DataSlot, ZaloHeadView } from "@/modules/types"
 import { chipToneOf, zaloStatusKindOf } from "./zaloConnection.shared"
@@ -14,6 +14,7 @@ import { useConnectionsRole } from "@/hooks/connections"
 import { useZaloPage } from "./useZaloPage"
 import type { ZaloPageData } from "./useZaloPage"
 import type { ZaloStatusKind } from "./zaloConnection.shared"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 const CHIP_KEYS = { ok: "chipOk", waiting: "chipWaiting", check: "chipCheck" } as const
 
@@ -33,6 +34,7 @@ export const useZaloHead = (connectionId: string): UseZaloHeadResult => {
     const t = useTranslations("zaloConnection")
     const format = useFormatter()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const settle = useSettledGraphQL()
     const labelOf = useZaloFailureLabel()
     const { trigger: triggerAuthorize } = useMutateAuthorizeZaloSwr()
@@ -62,15 +64,16 @@ export const useZaloHead = (connectionId: string): UseZaloHeadResult => {
         const result = await settle(() => triggerAuthorize({ connectionId }))
         if (result.kind !== "ok") return setNotice(labelOf(result.code, result.message))
         LocalStorage.set(StorageId.ZaloReturn, connectionId)
+        LocalStorage.set(StorageId.ZaloOAuthWorkspace, workspaceId)
         window.location.assign(result.value.url)
-    }, [settle, labelOf, triggerAuthorize, connectionId])
+    }, [settle, labelOf, triggerAuthorize, connectionId, workspaceId])
 
     const disconnect = useCallback(async (): Promise<void> => {
         setNotice("")
         const result = await settle(() => triggerDisconnect({ connectionId }), t("toastDisconnected"))
         if (result.kind !== "ok") return setNotice(labelOf(result.code, result.message))
-        router.replace(CONSOLE_ROUTES.connections)
-    }, [settle, labelOf, triggerDisconnect, connectionId, t, router])
+        router.replace(workspaceHref(workspaceId, CONSOLE_ROUTES.connections))
+    }, [settle, labelOf, triggerDisconnect, connectionId, t, router, workspaceId])
 
     const page = "items" in slot ? slot.items : undefined
     const statusKind = page === undefined ? null : zaloStatusKindOf(page.healthy, page.status, page.access.state)

@@ -3,11 +3,13 @@
 import { useTranslations } from "next-intl"
 import { useConnectionRefusal } from "@/hooks/connections"
 import { useDriveChooserView, useDriveHead, useDriveSteps } from "@/hooks/drive"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { DriveConnectionStepsBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The connected setup steps: done or not from the grant and the sources read, the first one not done opens. */
 export const DriveConnectionSteps = () => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("driveConnection")
     const { steps, toggle, standing } = useDriveSteps()
     const { grant, isGranting } = useDriveHead()
@@ -25,7 +27,7 @@ export const DriveConnectionSteps = () => {
                     ? { ungranted: { message: t("emptyTitle"), description: t("emptyBody"), action: t("grant") } }
                     : {}),
                 ...(standing === "lost" ? { regrant: { label: t("regrant") } } : {}),
-                brain: { label: t("openBrain"), href: brainTabHref("sources") },
+                brain: { label: t("openBrain"), href: workspaceHref(workspaceId, brainTabHref("sources")) },
             }}
             on={{ toggle, grant, ...chooser.on }}
         />

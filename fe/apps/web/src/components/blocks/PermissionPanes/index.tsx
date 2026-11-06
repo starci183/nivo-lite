@@ -6,22 +6,26 @@ import { paneGridOf, usePaneCopy } from "@/hooks/paneFrame"
 import { usePermissionBoard, usePermissionDrawer } from "@/hooks/permissions"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { PermissionPanesBase } from "./component"
 import type { PermissionPanesCopy } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The words of the panes: the page, the list, the search and the blank. */
 const copyOf = (
     t: ReturnType<typeof useTranslations<"permissions">>,
     team: ReturnType<typeof useTranslations<"team">>,
     pane: ReturnType<typeof usePaneCopy>,
+    workspaceId: string,
 ): PermissionPanesCopy => ({
     grid: t("gridLabel"),
     title: team("title"),
     description: team("description"),
     tabsLabel: t("tabsLabel"),
     membersTab: t("tabMembers"),
+    membersHref: workspaceHref(workspaceId, CONSOLE_ROUTES.team),
     permissionsTab: t("tabPermissions"),
+    permissionsHref: workspaceHref(workspaceId, CONSOLE_ROUTES.permissions),
     inviteAction: team("formTitle"),
     listTitle: t("tableTitle"),
     listLabel: t("listLabel"),
@@ -46,6 +50,7 @@ export const PermissionPanes = () => {
     const pane = usePaneCopy()
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const board = usePermissionBoard()
     const drawer = usePermissionDrawer(board)
     const [query, setQuery] = useState("")
@@ -56,7 +61,7 @@ export const PermissionPanes = () => {
     return (
         <PermissionPanesBase
             props={{
-                copy: copyOf(t, team, pane),
+                copy: copyOf(t, team, pane, workspaceId),
                 grid: paneGridOf({ hasList: true, hasAside: false, phone: drawer.openedId === null ? "list" : "main" }),
                 isLocked: board.isLocked,
                 slot: board.slot,
@@ -75,7 +80,7 @@ export const PermissionPanes = () => {
             on={{
                 ...drawer.on,
                 setQuery,
-                openInvite: () => router.push(CONSOLE_ROUTES.teamInvite),
+                openInvite: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.teamInvite)),
                 open,
                 retry: board.reload,
                 retryGrants: drawer.retryGrants,

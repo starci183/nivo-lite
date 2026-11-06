@@ -3,7 +3,7 @@
 import { useQueryLeadJourneySwr } from "@/hooks/swr"
 import { loadingSlot, mapSlot, slotOfSwr } from "@/hooks/slot"
 import type { LeadJourneyType } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { DataSlot, LeadJourney } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { channelLabelOf, leadRecordOf } from "./leads.shared"
@@ -56,8 +56,8 @@ export interface LeadJourneyView extends ReturnType<typeof useQueryLeadJourneySw
 
 /** Reads the lead once through the shared SWR cache and prepares the existing panel view. */
 export const useLeadJourney = (leadId: string | undefined): LeadJourneyView => {
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const query = useQueryLeadJourneySwr(activeWorkspaceId, leadId)
+    const workspaceId = useWorkspaceId()
+    const query = useQueryLeadJourneySwr(workspaceId, leadId)
     const t = useTranslations("leads")
     const detail = query.data === undefined ? null : journeyOf(query.data)
     const slot: DataSlot<LeadJourney> = leadId === undefined ? loadingSlot() : mapSlot(slotOfSwr(query), journeyOf)

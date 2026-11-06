@@ -9,6 +9,8 @@ import { useSearchParams } from "next/navigation"
 import { providerKey } from "@/hooks/connection-providers"
 import { useGoogleLedger } from "@/hooks/googleLedger"
 import { GoogleWizardBase } from "./component"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The reasons the callback puts in the return address. */
 const GOOGLE_FAILURES = ["denied", "unavailable", "state", "no_refresh", "scope"] as const
@@ -57,6 +59,7 @@ interface GoogleWizardProps {
 
 /** Google in the shared wizard frame: what NIVO will be allowed (only files it creates), then Connect Google (OAuth), then Done; also the landing of `?google=ok|error`. */
 export const GoogleWizard = (props: GoogleWizardProps) => {
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const t = useTranslations("googleWizard")
     const tw = useTranslations("connectionWizard")
@@ -120,8 +123,8 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
                 },
             }}
             on={{
-                connect: () => ledger.allow(undefined, "/connections"),
-                allowSheets: () => ledger.allow("sheets", "/connections"),
+                connect: () => ledger.allow(undefined, workspaceHref(workspaceId, CONSOLE_ROUTES.connections)),
+                allowSheets: () => ledger.allow("sheets", workspaceHref(workspaceId, CONSOLE_ROUTES.connections)),
                 sheet: ledger.setSheet,
                 saveSheet: () => ledger.save(t("failGeneric")),
                 close: props.onClose,

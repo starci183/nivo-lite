@@ -104,7 +104,7 @@ export const automationBoardInputOf = ({
     current,
     detail,
     awaiting,
-}: AutomationBoardViewInput): Parameters<typeof automationBoardOf>[0] => {
+}: AutomationBoardViewInput): Omit<Parameters<typeof automationBoardOf>[0], "workspaceId"> => {
     return {
         t,
         locale,

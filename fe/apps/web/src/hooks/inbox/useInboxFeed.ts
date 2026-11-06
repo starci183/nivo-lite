@@ -1,8 +1,8 @@
 "use client"
 
 import { useFormatter, useNow, useTranslations } from "next-intl"
-import { useActiveWorkspace } from "@/hooks/workspaces"
-import { CONSOLE_ROUTES, leadHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { CONSOLE_ROUTES, leadHref, workspaceHref } from "@/modules/routes"
 import { isWaitingOf, mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
 import type { DataSlot, InboxRowView } from "@/modules/types"
@@ -26,6 +26,20 @@ const toneOf = (status: string): "neutral" | "success" | "warning" | "danger" =>
  */
 const READABLE_REFERENCE_KINDS: ReadonlySet<string> = new Set(["payment", "order", "invoice"])
 
+/** The pages a row leads to: its customer, and the Office while a decision waits. */
+const linksOf = (
+    t: ReturnType<typeof useTranslations<"inbox">>,
+    workspaceId: string,
+    leadId: string | null | undefined,
+    status: string,
+): Pick<InboxRowView, "lead" | "office"> => ({
+    lead: leadId == null ? null : { href: workspaceHref(workspaceId, leadHref(leadId)), label: t("openLead") },
+    office:
+        status === "needs_decision"
+            ? { href: workspaceHref(workspaceId, CONSOLE_ROUTES.chat), label: t("openOffice") }
+            : null,
+})
+
 /** The view `useInboxFeed` returns. */
 export interface InboxFeedView {
     slot: DataSlot<InboxRowView[]>
@@ -36,12 +50,12 @@ export interface InboxFeedView {
 
 /** The inbox feed of the active workspace, every row already in the words of the reader. */
 export const useInboxFeed = (): InboxFeedView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("inbox")
     const g = useTranslations("governance")
     const format = useFormatter()
     const now = useNow({ updateInterval: 60_000 })
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const swrRead = useQueryInboundEventsSwr(activeWorkspaceId)
+    const swrRead = useQueryInboundEventsSwr(workspaceId)
     const { mutate } = swrRead
     const minutesSince = (iso: string): number =>
         Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000))
@@ -103,8 +117,7 @@ export const useInboxFeed = (): InboxFeedView => {
             line: line.filter((part) => part !== null).join(" · "),
             details,
             duplicates: event.duplicateCount,
-            lead: event.leadId == null ? null : { href: leadHref(event.leadId), label: t("openLead") },
-            office: event.status === "needs_decision" ? { href: CONSOLE_ROUTES.chat, label: t("openOffice") } : null,
+            ...linksOf(t, workspaceId, event.leadId, event.status),
         }
     }
     const slot = mapSlot(slotOfSwr(swrRead), (events) => events.map(rowOf))

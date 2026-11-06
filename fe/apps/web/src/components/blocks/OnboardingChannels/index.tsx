@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import { liveConnections, useConnectionsData, wizardQuery } from "@/hooks/connections"
-import { APP_ROUTES, AUTH_ROUTES } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { AUTH_ROUTES, workspaceChannelsPath, workspaceHandoverPath } from "@/modules/routes"
 import type { Provider } from "@/modules/types"
 import { OnboardingChannelsBase } from "./component"
 
@@ -17,6 +18,7 @@ const CHANNELS = [
 /** The connected channels step: reads the workspace connections so a channel already linked shows as connected, and opens the wizard drawer in place. */
 export const OnboardingChannels = () => {
     const t = useTranslations("onboarding")
+    const workspaceId = useWorkspaceId()
     const { items } = useConnectionsData()
     const live = new Set(liveConnections(items).map((connection) => connection.provider))
     return (
@@ -30,7 +32,7 @@ export const OnboardingChannels = () => {
                     name: t(channel.name),
                     description: t(channel.description),
                     logo: PROVIDER_LOGO[channel.id],
-                    connectHref: `${APP_ROUTES.workspaceChannels}?${wizardQuery(channel.id)}`,
+                    connectHref: workspaceChannelsPath(workspaceId, wizardQuery(channel.id)),
                     isConnected: live.has(channel.id),
                 })),
                 connectLabel: t("connect"),
@@ -39,7 +41,7 @@ export const OnboardingChannels = () => {
                 backHref: AUTH_ROUTES.workspaces,
                 laterLabel: t("later"),
                 continueLabel: t("continue"),
-                nextHref: APP_ROUTES.workspaceHandover,
+                nextHref: workspaceHandoverPath(workspaceId),
             }}
         />
     )

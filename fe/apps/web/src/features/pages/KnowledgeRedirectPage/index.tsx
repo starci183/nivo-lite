@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { moduleFilterOf } from "@/modules/documents"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 
 /** The document title while the old documents address is forwarded. */
 export const knowledgeRedirectMetadata = async (): Promise<Metadata> => {
@@ -13,6 +13,7 @@ export const knowledgeRedirectMetadata = async (): Promise<Metadata> => {
 
 /** What the old address carried: the agent filter and the idea the add drawer opened on. */
 interface KnowledgeRedirectPageProps {
+    readonly workspaceId: string
     readonly module: string | undefined
     readonly add: string | undefined
 }
@@ -21,7 +22,10 @@ interface KnowledgeRedirectPageProps {
 export const KnowledgeRedirectPage = async (props: KnowledgeRedirectPageProps): Promise<ReactElement> => {
     const filter = moduleFilterOf(props.module)
     return navigation.redirect({
-        href: brainTabHref("sources", { module: filter === "all" ? undefined : filter, add: props.add }),
+        href: workspaceHref(
+            props.workspaceId,
+            brainTabHref("sources", { module: filter === "all" ? undefined : filter, add: props.add }),
+        ),
         locale: (await getLocale()) === "en" ? "en" : "vi",
     })
 }

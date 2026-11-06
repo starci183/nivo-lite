@@ -2,7 +2,7 @@
 
 import { useQueryContentAiStatusSwr } from "@/hooks/swr"
 import type { ContentAiRequestedType, ContentAiStatusType } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
@@ -108,9 +108,9 @@ export const useContentAiJob = <TRequest>(
     const t = useTranslations("content")
     const runGraphQL = useGraphQLWithToast()
     const { refresh } = useContentRefresh()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const isActive = options.isActive ?? true
-    const scope = options.scope ?? JSON.stringify([activeWorkspaceId])
+    const scope = options.scope ?? JSON.stringify([workspaceId])
     const lifetime = useFeatureLifetime(isActive, scope)
     const [job, setJob] = useState<ContentAiJobRef>()
     const [requests, setRequests] = useState<ReadonlyArray<() => boolean>>([])
@@ -125,7 +125,7 @@ export const useContentAiJob = <TRequest>(
             reported.current = undefined
         },
     })
-    const jobId = isActive && job && job.workspaceId === activeWorkspaceId ? job.id : undefined
+    const jobId = isActive && job?.workspaceId === workspaceId ? job.id : undefined
     const { successMessage, onSucceeded } = options
 
     const reportStatus = useCallback(
@@ -173,11 +173,11 @@ export const useContentAiJob = <TRequest>(
                 capture: lifetime.capture,
                 runGraphQL,
                 queuedMessage: t("aiQueued"),
-                workspaceId: activeWorkspaceId,
+                workspaceId: workspaceId,
                 accept: setJob,
                 pending: setRequests,
             }),
-        [activeWorkspaceId, isActive, lifetime, options, runGraphQL, t],
+        [workspaceId, isActive, lifetime, options, runGraphQL, t],
     )
 
     const isTerminal = status?.status === "succeeded" || status?.status === "failed"

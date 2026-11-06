@@ -7,6 +7,7 @@ import type {
 } from "@/hooks/swr"
 import { mapSlot, slotOfReads, slotOfSwr } from "@/hooks/slot"
 import { i18n } from "@/modules/i18n"
+import { APP_ROUTES, AUTH_ROUTES, creditsPath, workspaceHref } from "@/modules/routes"
 import type { BillingPlanView, BillingRowView, BillingTone, DataSlot } from "@/modules/types"
 
 type BillingTranslator = ReturnType<typeof useTranslations<"billing">>
@@ -161,4 +162,10 @@ export const messageOf = (error: unknown, fallback: string): string | undefined 
     if (error instanceof Error) return error.message
     if (typeof error === "string") return error
     return error ? fallback : undefined
+}
+
+/** Where the paid person lands: the billing page after a renewal, else the Office of the workspace; the workspace picker when none is named. */
+export const returnToOf = (workspaceId: string | undefined, isRenewing: boolean): string => {
+    if (workspaceId === undefined || workspaceId === "") return AUTH_ROUTES.workspaces
+    return workspaceHref(workspaceId, isRenewing ? creditsPath() : APP_ROUTES.chat)
 }

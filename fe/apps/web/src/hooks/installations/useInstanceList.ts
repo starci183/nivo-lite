@@ -4,6 +4,7 @@ import { useLocale } from "next-intl"
 import { useEffect } from "react"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { loadingSlot, slotOfReads } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import {
@@ -15,6 +16,7 @@ import {
     type AgentLifecycle,
     type InstallationConnectionNeed,
 } from "@/modules/installations"
+import { workspaceHref } from "@/modules/routes"
 import { useInstanceChannels } from "./useInstanceChannels"
 import { useTypeRoute } from "./useTypeRoute"
 import type { TypeRouteMode } from "./installations.shared"
@@ -45,6 +47,7 @@ export interface InstanceListView {
 /** The instances of one agent type for the list screen, with the names of the type in the reader language. */
 export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRouteMode): InstanceListView => {
     const locale = useLocale() === "en" ? "en" : "vi"
+    const workspaceId = useWorkspaceId()
     const route = useTypeRoute(module, "setup", query, mode)
     const channelsOf = useInstanceChannels()
     const def = MODULE_REGISTRY[module]
@@ -83,7 +86,7 @@ export const useInstanceList = (module: ModuleKey, query: string, mode: TypeRout
                 lifecycle,
                 statusTone: agentLifecycleTone(lifecycle),
                 connectionNeeds: instance.connectionNeeds,
-                openHref: agentHref(module, instance.id),
+                openHref: workspaceHref(workspaceId, agentHref(module, instance.id)),
             }
         }),
     }
