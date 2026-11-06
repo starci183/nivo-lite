@@ -148,3 +148,11 @@ export type ZaloMethod = "GET" | "POST"
 
 /** The `data` object of a successful OA API answer, as Zalo sent it. */
 export type ZaloData = Record<string, unknown>
+
+/** What Zalo says of a customer of the OA. */
+export interface ZaloUserProfile {
+    /** The display name, or the alias the OA gave them; empty when Zalo says neither. */
+    readonly name: string
+    /** The picture link; empty when Zalo gives none. */
+    readonly avatarUrl: string
+}

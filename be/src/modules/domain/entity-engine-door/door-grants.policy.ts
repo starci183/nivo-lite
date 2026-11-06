@@ -2,12 +2,13 @@ import type { DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
 
 /**
  * The door tools the internal "nivo" agent holds, as data: exactly the tools the declared jobs of the flow F modules call (the `tools`
- * of their module declarations and the agent turn and history reads of the turn sync). Every other tool is default deny.
+ * of their module declarations, the agent turn and history reads of the turn sync, and `chat.profile` of the Zalo profile round). Every other tool is default deny.
  */
 export const DOOR_GRANTS: ReadonlyArray<string> = [
     "chat.send",
     "team-chat.post-report",
     "team-chat.post-approval",
+    "chat.profile",
     "ledger.append",
     "ledger.status",
     "ai.agent.turn",

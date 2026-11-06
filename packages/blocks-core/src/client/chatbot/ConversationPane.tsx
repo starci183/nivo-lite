@@ -200,6 +200,7 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
                         ? null
                         : {
                               title: contact.name,
+                              avatar: contact.avatar,
                               subtitle:
                                   contact.channelName === ""
                                       ? ""

@@ -63,6 +63,7 @@ describe("the internal nivo agent of a workspace", () => {
         expect(await grantsOf(who.workspaceId, String(agents[0]?.id))).toEqual([
             { tool: "agent.history", mode: "auto" },
             { tool: "agent.turn", mode: "auto" },
+            { tool: "chat.profile", mode: "auto" },
             { tool: "chat.send", mode: "auto" },
         ])
     })

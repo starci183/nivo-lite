@@ -49,7 +49,12 @@ const ContactBody = (props: ContactBodyProps): ReactNode => {
     return (
         <Stack gap="region">
             <Cluster gap="inline" wrap={false} align="center">
-                <Avatar name={contact.name} size="md" isDecorative />
+                <Avatar
+                    name={contact.name}
+                    {...(contact.avatar === "" ? {} : { src: contact.avatar })}
+                    size="md"
+                    isDecorative
+                />
                 <Stack gap="inline">
                     <Heading level={3} isLoading={props.isLoading}>
                         {contact.name}
@@ -90,6 +95,7 @@ const ContactBody = (props: ContactBodyProps): ReactNode => {
 const PLACEHOLDER: ContactView = {
     name: "........",
     channelName: "........",
+    avatar: "",
     handledBy: "",
     stage: "",
     need: "",
