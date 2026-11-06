@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { McpGatewayError, McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import { McpGatewayError, McpGatewayErrorCode, RoutedNativeAdapter, argumentsOf } from "@modules/domain/mcp-gateway"
+import type { GatewayJson, NativeConnectorManifest, NativeToolHandler } from "@modules/domain/mcp-gateway"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -58,30 +58,28 @@ export const TEAM_CHAT_MANIFEST: NativeConnectorManifest = {
 
 @Injectable()
 /** Runs the tools of the team chat connector for the declared jobs of the engine. */
-export class TeamChatNativeService implements NativeAdapter {
+export class TeamChatNativeService extends RoutedNativeAdapter {
     readonly manifest: NativeConnectorManifest = TEAM_CHAT_MANIFEST
 
     constructor(
         private readonly chat: TeamChatRoomsService,
         private readonly rules: AuthorityRulesService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-    ) {}
-
-    /** Runs one tool. */
-    async invoke(workspaceId: string, tool: string, args: GatewayJson, _caller: NativeCaller): Promise<GatewayJson> {
-        if (tool === "post-report") return this.report(workspaceId, args)
-        if (tool === "post-approval") return this.approval(workspaceId, args)
-        throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
+    ) {
+        super()
     }
 
+    protected readonly handlers: ReadonlyMap<string, NativeToolHandler> = new Map([
+        ["post-report", (workspaceId, args) => this.report(workspaceId, args)],
+        ["post-approval", (workspaceId, args) => this.approval(workspaceId, args)],
+    ])
+
     private async report(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
-        const parsed = POST_REPORT_SCHEMA.safeParse(args)
-        if (!parsed.success)
-            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "post-report" } })
-        const body = this.catalog.get("teamChat.report", { trigger: parsed.data.trigger }, LOCALE)
+        const parsed = argumentsOf("post-report", POST_REPORT_SCHEMA, args)
+        const body = this.catalog.get("teamChat.report", { trigger: parsed.trigger }, LOCALE)
         const posted = await this.chat.postReport(workspaceId, {
-            runId: parsed.data.runId,
-            agentId: parsed.data.agentId,
+            runId: parsed.runId,
+            agentId: parsed.agentId,
             body,
             roomId: null,
         })
@@ -90,10 +88,8 @@ export class TeamChatNativeService implements NativeAdapter {
     }
 
     private async approval(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
-        const parsed = POST_APPROVAL_SCHEMA.safeParse(args)
-        if (!parsed.success)
-            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "post-approval" } })
-        const request = await this.chat.approvalRequest(workspaceId, parsed.data.decisionId)
+        const parsed = argumentsOf("post-approval", POST_APPROVAL_SCHEMA, args)
+        const request = await this.chat.approvalRequest(workspaceId, parsed.decisionId)
         if (request === null) throw noRoom()
         const group =
             groupOf(request.storedGroup) ?? (await this.rules.approvalSetup(workspaceId, request.action))?.group

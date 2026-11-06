@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import { WorkspacePaymentAccountService, bankDisplayNameOf } from "@modules/domain/channel-connections"
 import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
 import { PaymentInstructionRegistryService } from "@modules/domain/provider-registry"
-import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
+import { nativeRefusal } from "./native-refusal.policy"
 import { PAYMENT_INSTRUCTION_INPUT_SCHEMA, PAYMENT_INSTRUCTION_SCHEMA } from "./payment-native.schema"
 
 /** The payment capability: named by what it does, never by the provider that answers it. */
