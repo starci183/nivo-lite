@@ -49,6 +49,7 @@ const LINE = {
     status: "posted",
     deliveryStatus: "sent",
     deliveryError: null,
+    sentBy: "agent-1",
 }
 
 describe("threadRowOf", () => {
@@ -81,8 +82,8 @@ describe("messageRecordOf", () => {
     })
 
     it("reads a nullable field the engine left out as null", () => {
-        const { authorKind, authorName, authorUserId, deliveryStatus, deliveryError, ...required } = LINE
-        expect([authorKind, authorName, authorUserId, deliveryStatus, deliveryError]).toHaveLength(5)
+        const { authorKind, authorName, authorUserId, deliveryStatus, deliveryError, sentBy, ...required } = LINE
+        expect([authorKind, authorName, authorUserId, deliveryStatus, deliveryError, sentBy]).toHaveLength(6)
         const { status, ...withoutStatus } = required
         expect(status).toBe("posted")
         expect(messageRecordOf(recordOf(withoutStatus))).toMatchObject({
@@ -92,6 +93,7 @@ describe("messageRecordOf", () => {
             authorUserId: null,
             deliveryStatus: null,
             deliveryError: null,
+            sentBy: null,
         })
     })
 

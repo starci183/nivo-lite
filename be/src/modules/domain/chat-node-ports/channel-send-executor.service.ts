@@ -97,6 +97,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
             conversationId: conversation.id,
             body: text,
             key: call.dedupeKey ?? call.key,
+            sentBy: turn.agentId,
         })
         const messageId = stored.id
         if (!linked) return this.keptUndelivered(conversation, messageId)

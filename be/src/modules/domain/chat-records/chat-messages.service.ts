@@ -55,6 +55,8 @@ interface NewLine {
     readonly sentAt: string
     readonly channelRef: string | null
     readonly inReplyTo: string | null
+    /** The agent that sent the line, when an agent did. */
+    readonly sentBy?: string | null | undefined
     readonly author: {
         readonly kind: "ai" | "human"
         readonly name: string | null
@@ -159,6 +161,7 @@ export class ChatMessagesService {
                 sentAt,
                 channelRef,
                 inReplyTo: line.inReplyTo ?? null,
+                sentBy: line.sentBy ?? null,
                 author:
                     line.human === undefined
                         ? { kind: "ai", name: null, userId: null }
@@ -383,6 +386,7 @@ export class ChatMessagesService {
                 authorKind: line.author?.kind ?? null,
                 authorName: line.author?.name ?? null,
                 authorUserId: line.author?.userId ?? null,
+                sentBy: line.sentBy ?? null,
             },
             { conversation: line.conversationId },
         )

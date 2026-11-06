@@ -121,6 +121,7 @@ describe("ChatMessagesService: agent and system lines", () => {
             role: "agent",
             authorKind: "ai",
             channelRef: "line:m1",
+            sentBy: null,
         })
         expect(dataOf(chat, "chat.conversation", conversation.id)).toMatchObject({ lastRole: "agent", messageCount: 1 })
     })
@@ -132,11 +133,13 @@ describe("ChatMessagesService: agent and system lines", () => {
             ...agentLine(conversation.id, customer.id, "a"),
             inReplyTo: customer.id,
             human: { name: "Lan", userId: "66666666-6666-4666-8666-666666666666" },
+            sentBy: "77777777-7777-4777-8777-777777777777",
         })
         expect(dataOf(chat, "chat.message", reply.id)).toMatchObject({
             authorKind: "human",
             authorName: "Lan",
             inReplyTo: customer.id,
+            sentBy: "77777777-7777-4777-8777-777777777777",
         })
         expect(await service.replyExists(CHAT_WORKSPACE, conversation.id, customer.id)).toBe(true)
         expect(await service.storedReply(CHAT_WORKSPACE, conversation.id, customer.id, null)).toBe("a")

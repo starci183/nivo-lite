@@ -95,6 +95,7 @@ describe("ChannelSendExecutorService storing", () => {
             conversationId: "c1",
             body: "Hello\nMenu: https://x/menu",
             key: "run:1",
+            sentBy: TURN.agentId,
         })
         expect(delivery.deliver).toHaveBeenCalledWith({
             workspaceId: "ws-1",

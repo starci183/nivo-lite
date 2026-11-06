@@ -56,6 +56,8 @@ export interface MessageRecord {
     readonly deliveryStatus: "sent" | "failed" | null
     /** Why the push failed, as a stable code; null when it did not. */
     readonly deliveryError: string | null
+    /** The agent that sent an agent line (the agent of the turn that wrote it); null for the other lines and for lines from before it was kept. */
+    readonly sentBy: string | null
 }
 
 /** A line to store. */

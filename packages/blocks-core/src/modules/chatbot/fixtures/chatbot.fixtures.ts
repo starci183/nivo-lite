@@ -140,6 +140,7 @@ const line = (
     side,
     state: "",
     mark: "",
+    sentBy: "",
     ...extra,
 })
 
