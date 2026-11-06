@@ -58,14 +58,13 @@ const listRowOf = (row: DecisionRowView, props: DecisionListProps): ListRowData 
 export const DecisionList = (props: DecisionListProps): ReactNode => {
     const rows = props.queue.rows.map((row) => listRowOf(row, props))
     const empty = <EmptyNotice message={props.words.emptyTitle} description={props.words.emptyBody} />
-    const more = props.queue.more
-    const morePlain = more === null ? null : <Link href={more.href}>{more.label}</Link>
+    const more = props.queue.more === null ? null : <Link href={props.queue.more.href}>{props.queue.more.label}</Link>
     if (props.surface === "card") {
         return (
             <SurfaceCard
                 kind="list"
                 label={props.queue.count === null ? props.words.label : `${props.words.label} · ${props.queue.count}`}
-                {...(more === null ? {} : { footers: [{ kind: "more", label: more.label, href: more.href }] })}
+                note={more ?? undefined}
                 isLoading={props.isLoading}
                 items={rows}
                 empty={empty}
@@ -92,7 +91,7 @@ export const DecisionList = (props: DecisionListProps): ReactNode => {
                     empty={empty}
                 />
             )}
-            {morePlain}
+            {more}
         </>
     )
 }

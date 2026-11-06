@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
 import type { DataSlot, SlotLabels } from "@nivo-lite/agent-sdk/client"
-import { Divider, EmptyNotice, Section, Select, Stack, SurfaceCard, Tabs } from "@starci/grammar/common"
+import { EmptyNotice, Section, Select, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { BadgeData, ListRowData } from "@starci/grammar/common"
 import type { loyaltyMembersBlock } from "../../blocks/loyalty/members.block"
 import { cellContextOf, formatValue } from "../../rows/cell-format"
@@ -10,6 +10,7 @@ import type { CellContext } from "../../rows/cell-format"
 import { countedWords } from "../../rows/counted-words"
 import { ALL_TAB, countsView, moreLabelOf, tabParamValue } from "../../rows/filter-tabs"
 import type { TabCounts } from "../../rows/filter-tabs"
+import { paneHeadersOf } from "../../rows/pane-headers"
 import { recordsView } from "../../rows/rows"
 import {
     MEMBER_SORTS,
@@ -24,7 +25,7 @@ import {
 } from "../../rules/loyalty/members-view"
 import type { MemberEntry, MemberTier, TabParams } from "../../rules/loyalty/members-view"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
-import { PaneSearch } from "../composites/PaneSearch"
+import { usePaneSearch } from "../composites/usePaneSearch"
 import { LoadMore } from "../composites/SelectableRows"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
@@ -156,6 +157,10 @@ export const MembersBlock = (props: Props): ReactNode => {
         const list = memberEntriesOf(records)
         return list.length === 0 ? null : list
     })
+    const search = usePaneSearch(props.params, props.props.searchParam, {
+        label: words(props.props.searchLabel),
+        clearLabel: word("searchClear"),
+    })
     const moreTemplate = word("filtersMore")
     const sortOptions = MEMBER_SORTS.map((sort) => ({ id: sort, label: word(sortKeyOf(sort)) }))
     const itemOf = (entry: MemberEntry): ListRowData => memberItemOf(entry, word, context)
@@ -164,6 +169,23 @@ export const MembersBlock = (props: Props): ReactNode => {
             label={words(props.props.label)}
             headingLevel={3}
             {...(tierCounts === null ? {} : { fact: formatValue(tierCounts.total, "number", context) })}
+            headers={paneHeadersOf(
+                {
+                    label: words(props.props.label),
+                    moreLabel: (count) => moreLabelOf(moreTemplate, count),
+                    overflowLabel: word("filtersOverflow"),
+                    selectedKey: selectedMemberTab(params, tiers, showAtRisk),
+                    items: memberTabsOf(
+                        tiers,
+                        tierCounts,
+                        countsOf(props.slots.activityCounts),
+                        { all: words(props.props.all), atRisk: words(props.props.atRisk) },
+                        showAtRisk,
+                    ),
+                    onSelect: (key) => choose(tabParamValue(key) ?? ALL_TAB),
+                },
+                search,
+            )}
             labelEnd={
                 <Select
                     label={words(props.props.sortLabel)}
@@ -176,32 +198,7 @@ export const MembersBlock = (props: Props): ReactNode => {
                 />
             }
         >
-            <Stack gap="row">
-                <Tabs
-                    kind="filter"
-                    label={words(props.props.label)}
-                    moreLabel={(count) => moreLabelOf(moreTemplate, count)}
-                    overflowLabel={word("filtersOverflow")}
-                    inset="none"
-                    selectedKey={selectedMemberTab(params, tiers, showAtRisk)}
-                    items={memberTabsOf(
-                        tiers,
-                        tierCounts,
-                        countsOf(props.slots.activityCounts),
-                        { all: words(props.props.all), atRisk: words(props.props.atRisk) },
-                        showAtRisk,
-                    )}
-                    onSelect={(key) => choose(tabParamValue(key) ?? ALL_TAB)}
-                />
-                <PaneSearch
-                    param={props.props.searchParam}
-                    params={props.params}
-                    label={words(props.props.searchLabel)}
-                    clearLabel={word("searchClear")}
-                />
-                <Divider />
-                <MemberRows blockProps={props} entries={entries} labels={labels} itemOf={itemOf} word={word} />
-            </Stack>
+            <MemberRows blockProps={props} entries={entries} labels={labels} itemOf={itemOf} word={word} />
         </SurfaceCard>
     )
 }
