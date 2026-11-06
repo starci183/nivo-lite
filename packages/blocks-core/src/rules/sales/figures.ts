@@ -40,12 +40,19 @@ export interface SalesFigures {
 }
 
 /** The message keys of the hint lines under the figures. */
-export const FIGURE_HINT_KEYS: {
+export type FigureHintKeys = {
+    /** The line under the open deals. */
     readonly open: string
+    /** The line under the proposals. */
     readonly proposal: string
+    /** The line under the closed deals. */
     readonly closed: string
+    /** The line under the conversion. */
     readonly conversion: string
-} = {
+}
+
+/** The message keys of the hint lines under the figures. */
+export const FIGURE_HINT_KEYS: FigureHintKeys = {
     open: "fig_open_hint",
     proposal: "fig_proposal_hint",
     closed: "fig_closed_hint",

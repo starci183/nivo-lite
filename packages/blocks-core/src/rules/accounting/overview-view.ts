@@ -6,22 +6,42 @@ import type { DueItem } from "./due-soon"
 const measure = z.looseObject({ vnd: z.number(), count: z.number() })
 const ageingBucket = z.looseObject({ count: z.number() })
 
+/** A sum of money and how many entries or invoices it is made of. */
+export interface FigureMeasure {
+    /** The money, in VND. */
+    readonly vnd: number
+    /** How many. */
+    readonly count: number
+}
+
+/** How many open invoices fall in one age bucket. */
+export interface AgeingBucket {
+    /** How many. */
+    readonly count: number
+}
+
+/** The open invoices by age. */
+export interface FigureAgeing {
+    /** Not yet overdue. */
+    readonly d0: AgeingBucket
+    /** Overdue up to 30 days. */
+    readonly d30: AgeingBucket
+    /** Overdue 60 days or more. */
+    readonly d60: AgeingBucket
+}
+
 /** The figures of a period as the figures read answers them, judged by the parts the overview draws. */
 export interface FiguresRecord {
     /** Which period the figures are for. */
     readonly periodKey: "this" | "last"
     /** Money received, and how many entries. */
-    readonly income: { readonly vnd: number; readonly count: number }
+    readonly income: FigureMeasure
     /** Money still owed, and how many invoices. */
-    readonly receivable: { readonly vnd: number; readonly count: number }
+    readonly receivable: FigureMeasure
     /** Payments nobody tied to anything. */
-    readonly unmatched: { readonly vnd: number; readonly count: number }
+    readonly unmatched: FigureMeasure
     /** The open invoices by age. */
-    readonly ageing: {
-        readonly d0: { readonly count: number }
-        readonly d30: { readonly count: number }
-        readonly d60: { readonly count: number }
-    }
+    readonly ageing: FigureAgeing
 }
 
 /** The figures the overview draws; a record that does not fit is a failed read. */

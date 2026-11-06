@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { SegmentedControl } from "@starci/grammar/common"
+import { ChoiceChips } from "@starci/grammar/common"
 import type { BookPeriod } from "../../rules/accounting/book-view"
 import { useBlockWords } from "../composites/useBlockWords"
 
@@ -15,9 +15,10 @@ interface PeriodControlProps {
 export const PeriodControl = (props: PeriodControlProps): ReactNode => {
     const words = useBlockWords()
     return (
-        <SegmentedControl
+        <ChoiceChips
             label={words({ key: "ledger_period" })}
             isLabelHidden
+            empty={null}
             options={[
                 { value: "this", label: words({ key: "book_period_this" }) },
                 { value: "last", label: words({ key: "book_period_last" }) },

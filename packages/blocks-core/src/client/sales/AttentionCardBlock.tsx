@@ -40,6 +40,15 @@ const entriesSlot = (handle: ReadHandle, entriesOf: typeof attentionEntriesOf) =
         return entries.length === 0 ? null : entries
     })
 
+/** The command each kind of attention runs, taken from the slots of the block. */
+const commandsOf = (slots: Props["slots"]): Readonly<Record<AttentionCommand, ActionHandle>> => ({
+    respond: slots.respond,
+    follow: slots.follow,
+    reply: slots.reply,
+    review: slots.review,
+    resume: slots.resume,
+})
+
 /**
  * What needs the owner on the Sales "needs attention" view: customers waiting for a reply, deals past their next step, questions the
  * assistant has for the owner, orders over the limit and steps that failed, each with a chip that says why and one command.
@@ -69,13 +78,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
             })
             .catch(() => host.notify("danger", labels.error))
     }
-    const commands: Readonly<Record<AttentionCommand, ActionHandle>> = {
-        respond: props.slots.respond,
-        follow: props.slots.follow,
-        reply: props.slots.reply,
-        review: props.slots.review,
-        resume: props.slots.resume,
-    }
+    const commands = commandsOf(props.slots)
     const selectParam = props.props.selectParam
     const rowOf = (item: AttentionEntry): ListRowData => {
         const view = ATTENTION_KIND_VIEWS[item.kind]

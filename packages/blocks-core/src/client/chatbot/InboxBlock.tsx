@@ -10,8 +10,14 @@ import { ConversationPick } from "./ConversationPick"
 import { InboxContact } from "./InboxContact"
 import { InboxList } from "./InboxList"
 
+/** What the contact pane is given: the block's own props and how to close the pane. */
+interface ContactPaneProps extends RenderOf<typeof inboxBlock> {
+    /** Closes the pane. */
+    readonly onClose: () => void
+}
+
 /** The contact pane: a head with its name and a close control, then the contact of the customer. */
-const ContactPane = (props: RenderOf<typeof inboxBlock> & { readonly onClose: () => void }): ReactNode => {
+const ContactPane = (props: ContactPaneProps): ReactNode => {
     const words = useBlockWords()
     return (
         <>

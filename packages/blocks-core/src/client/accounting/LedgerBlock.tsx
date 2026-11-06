@@ -5,7 +5,7 @@ import type { accountingLedgerBlock } from "../../blocks/accounting/ledger.block
 import { bookPeriodOf } from "../../rules/accounting/book-view"
 import type { Ledger } from "../../rules/accounting/ledger"
 import { bandOf, ledgerCardOf, ledgerRecord, sectionsOf } from "../../rules/accounting/ledger-view"
-import type { LedgerRow, LedgerSection } from "../../rules/accounting/ledger-view"
+import type { LedgerCardWords, LedgerRow, LedgerSection } from "../../rules/accounting/ledger-view"
 import { parsedSlot } from "../../slots/slots"
 import { PeriodControl } from "./PeriodControl"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -59,7 +59,7 @@ interface DayProps {
     readonly empty: string
     readonly isLoading: boolean
     readonly isPhone: boolean
-    readonly cardWords: { readonly income: string; readonly expense: string }
+    readonly cardWords: LedgerCardWords
 }
 
 /** One day: its date and closing balance over the lines of the day. */
@@ -119,6 +119,13 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
             closing: words({ key: "ledger_closing" }),
         })
     const kindWord = (kind: string): string => words({ key: `kind_${kind}` })
+    const columnLabels = {
+        entry: words({ key: "ledger_col_entry" }),
+        income: words({ key: "ledger_in" }),
+        expense: words({ key: "ledger_out" }),
+        balance: words({ key: "ledger_col_balance" }),
+    }
+    const cardWords: LedgerCardWords = { income: words({ key: "ledger_in" }), expense: words({ key: "ledger_out" }) }
     return (
         <Stack gap="row">
             <Cluster gap="inline" justify="between" align="center">
@@ -163,20 +170,12 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
                             <Day
                                 key={section.day}
                                 section={section}
-                                columnLabels={{
-                                    entry: words({ key: "ledger_col_entry" }),
-                                    income: words({ key: "ledger_in" }),
-                                    expense: words({ key: "ledger_out" }),
-                                    balance: words({ key: "ledger_col_balance" }),
-                                }}
+                                columnLabels={columnLabels}
                                 closingLabel={words({ key: "ledger_day_balance" })}
                                 empty={labels.empty}
                                 isLoading={isLoading}
                                 isPhone={isPhone}
-                                cardWords={{
-                                    income: words({ key: "ledger_in" }),
-                                    expense: words({ key: "ledger_out" }),
-                                }}
+                                cardWords={cardWords}
                             />
                         ))}
                     </Stack>

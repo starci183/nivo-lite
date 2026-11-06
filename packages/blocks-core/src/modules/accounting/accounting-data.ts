@@ -371,7 +371,7 @@ export const answerQuestion = async (
     answeredBy: string,
 ): Promise<{ readonly ok: boolean }> => {
     const found = await questions.get(id)
-    if (found === null || found.data["status"] !== "open") return { ok: false }
+    if (found?.data["status"] !== "open") return { ok: false }
     const written = await questions.update(id, found.version, { status: "answered", answer, answeredBy })
     return { ok: written.ok }
 }

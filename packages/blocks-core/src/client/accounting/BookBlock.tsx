@@ -12,6 +12,7 @@ import {
     Tabs,
     Text,
 } from "@starci/grammar/common"
+import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { accountingBookBlock } from "../../blocks/accounting/book.block"
 import { bookPeriodOf, bookRecords, bookRowsOf, bookSubtitleOf, phoneCardOf } from "../../rules/accounting/book-view"
 import type { BookRow } from "../../rules/accounting/book-view"
@@ -25,6 +26,7 @@ import {
     tabParamValue,
     TAB_COUNTS_PLACEHOLDER,
 } from "../../rows/filter-tabs"
+import type { TabCounts } from "../../rows/filter-tabs"
 import { chosenIdOf, selectedIdsOf } from "../../rows/table-rows"
 import { queryOf } from "../../rows/search"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
@@ -82,6 +84,69 @@ const BookCell = (props: BookCellProps): ReactNode => {
     }
 }
 
+/** What the entries of the book are given. */
+interface BookEntriesProps {
+    readonly items: ReadonlyArray<BookRow>
+    readonly isLoading: boolean
+    readonly isPhone: boolean
+    readonly title: string
+    readonly emptyLabel: string
+    /** The id of the chosen entry, from the address. */
+    readonly selectedId: string | null
+    /** Chooses an entry, or none. */
+    readonly onSelect: (chosen: string | null) => void
+}
+
+/** The entries: a list of cards on a phone, a table of rows elsewhere. */
+const BookEntries = (props: BookEntriesProps): ReactNode => {
+    const words = useBlockWords()
+    if (props.isPhone) {
+        return (
+            <Section
+                kind="list"
+                ariaLabel={props.title}
+                isLoading={props.isLoading}
+                items={props.items.map(phoneCardOf).map((card) => ({
+                    id: card.id,
+                    title: card.title,
+                    description: card.description,
+                    meta: { text: card.amount },
+                    badges: [{ label: card.status, tone: card.tone, isDot: true }],
+                    onPress: () => props.onSelect(card.id),
+                }))}
+                empty={<EmptyNotice message={props.emptyLabel} />}
+            />
+        )
+    }
+    return (
+        <DataTable
+            label={props.title}
+            columns={COLUMNS.map((column, index) => ({
+                id: column,
+                label: words({ key: `col_${column}` }),
+                isRowHeader: index === 1,
+                align: column === "amount" ? "end" : "start",
+                priority: column === "status" || column === "date" ? "low" : "high",
+            }))}
+            rows={props.items}
+            renderCell={(row, column) => (
+                <BookCell row={row} column={COLUMNS.find((candidate) => candidate === column) ?? "date"} />
+            )}
+            isLoading={props.isLoading}
+            emptyContent={<EmptyNotice message={props.emptyLabel} />}
+            selectionMode="single"
+            selectedIds={selectedIdsOf(props.selectedId)}
+            onSelectionChange={(ids) => props.onSelect(chosenIdOf(ids))}
+        />
+    )
+}
+
+/** The counts the status tabs show: the read's own, the empty ones when the book is empty, none while it loads or failed. */
+const tabCountsOf = (counts: DataSlot<TabCounts>): TabCounts | null => {
+    if ("items" in counts) return counts.items
+    return "isEmpty" in counts ? EMPTY_TAB_COUNTS : null
+}
+
 /** The books: the head, the search, the status tabs with their counts and the entries as rows. */
 export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNode => {
     const words = useBlockWords()
@@ -109,7 +174,7 @@ export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNod
         label: words({ key: `tab_${status}` }),
         attention: status === "review",
     }))
-    const tabCounts = "items" in counts ? counts.items : "isEmpty" in counts ? EMPTY_TAB_COUNTS : null
+    const tabCounts = tabCountsOf(counts)
     return (
         <Stack gap="row">
             <Cluster gap="inline" align="center">
@@ -142,47 +207,17 @@ export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNod
                 labels={labels}
                 placeholder={PLACEHOLDER}
                 onRetry={props.slots.rows.retry}
-                render={(items, isLoading) =>
-                    isPhone ? (
-                        <Section
-                            kind="list"
-                            ariaLabel={words(spec.title)}
-                            isLoading={isLoading}
-                            items={items.map(phoneCardOf).map((card) => ({
-                                id: card.id,
-                                title: card.title,
-                                description: card.description,
-                                meta: { text: card.amount },
-                                badges: [{ label: card.status, tone: card.tone, isDot: true }],
-                                onPress: () => select(card.id),
-                            }))}
-                            empty={<EmptyNotice message={labels.empty} />}
-                        />
-                    ) : (
-                        <DataTable
-                            label={words(spec.title)}
-                            columns={COLUMNS.map((column, index) => ({
-                                id: column,
-                                label: words({ key: `col_${column}` }),
-                                isRowHeader: index === 1,
-                                align: column === "amount" ? "end" : "start",
-                                priority: column === "status" || column === "date" ? "low" : "high",
-                            }))}
-                            rows={items}
-                            renderCell={(row, column) => (
-                                <BookCell
-                                    row={row}
-                                    column={COLUMNS.find((candidate) => candidate === column) ?? "date"}
-                                />
-                            )}
-                            isLoading={isLoading}
-                            emptyContent={<EmptyNotice message={labels.empty} />}
-                            selectionMode="single"
-                            selectedIds={selectedIdsOf(props.params.value(spec.selectParam))}
-                            onSelectionChange={(ids) => select(chosenIdOf(ids))}
-                        />
-                    )
-                }
+                render={(items, isLoading) => (
+                    <BookEntries
+                        items={items}
+                        isLoading={isLoading}
+                        isPhone={isPhone}
+                        title={words(spec.title)}
+                        emptyLabel={labels.empty}
+                        selectedId={props.params.value(spec.selectParam)}
+                        onSelect={select}
+                    />
+                )}
             />
         </Stack>
     )
