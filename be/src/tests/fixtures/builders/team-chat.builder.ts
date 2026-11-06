@@ -5,6 +5,7 @@ import { agentsEntities } from "@modules/domain/agents"
 import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
+import { eachInOrder } from "@modules/platform/primitives"
 
 const [WorkspaceEntity] = workspacesEntities
 const ChatRoomEntity: (typeof teamChatEntities)[0] = teamChatEntities[0]
@@ -46,10 +47,8 @@ export const teamChatIdentity = (id: () => string): TeamChatIdentity => ({
 /** Writes the accounts and the two workspaces (the owner seat is the database's), then the staff seats. */
 export const persistTeamChat = (manager: EntityManager, identity: TeamChatIdentity): Promise<void> =>
     manager.transaction(async (tx) => {
-        await Promise.all(
-            [identity.ownerId, ...identity.staffIds, identity.outsiderId].map((userId) =>
-                tx.insert("auth.users", { id: userId, raw_user_meta_data: {} }),
-            ),
+        await eachInOrder([identity.ownerId, ...identity.staffIds, identity.outsiderId], (userId) =>
+            tx.insert("auth.users", { id: userId, raw_user_meta_data: {} }),
         )
         await tx.insert(WorkspaceEntity, {
             id: identity.workspaceId,

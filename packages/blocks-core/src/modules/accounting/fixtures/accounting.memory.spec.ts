@@ -3,7 +3,14 @@ import { portsOf } from "@nivo-lite/agent-sdk/port"
 import { q } from "@nivo-lite/agent-sdk/query"
 import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
-import { ADJUSTMENT, CLAIM, INVOICE, ORDER, TRANSACTION } from "../../../rules/accounting/accounting.fixtures"
+import {
+    ADJUSTMENT,
+    CLAIM,
+    INVOICE,
+    ORDER,
+    TRANSACTION,
+    transactionOf,
+} from "../../../rules/accounting/accounting.fixtures"
 import { membersPort } from "../../platform/ports"
 import { ENTRIES_LIST, ORDERS, TRANSACTIONS } from "../ports"
 import {
@@ -146,6 +153,26 @@ describe("the memory engine lists", () => {
         await expect(ids(q.and(q.eq("kind", "income"), q.gte("entryDate", "2026-11-02")))).resolves.toEqual(["e3"])
         await expect(ids(q.lt("entryDate", "2026-11-02"))).resolves.toEqual(["e1"])
         await expect(ids(q.ne("kind", "income"))).resolves.toEqual([])
+    })
+
+    it("answers a read of the credits of one amount newest first, so the newer of two matching credits comes first", async () => {
+        const world = memoryWorld()
+        putTransaction(world, transactionOf({ id: "t-old", amountVnd: 5_000, occurredAt: "2026-11-05T09:00:00.000Z" }))
+        putTransaction(world, transactionOf({ id: "t-new", amountVnd: 5_000, occurredAt: "2026-11-06T09:00:00.000Z" }))
+        putTransaction(
+            world,
+            transactionOf({ id: "t-other", amountVnd: 7_000, occurredAt: "2026-11-07T09:00:00.000Z" }),
+        )
+        const page = await entityApi(world, "payment.transaction").list({
+            select: ["amountVnd"],
+            where: q.eq("amountVnd", 5_000),
+            order: [
+                ["createdAt", "desc"],
+                ["id", "desc"],
+            ],
+            page: { size: 10 },
+        })
+        expect(page.rows.map((row) => row.row.id)).toEqual(["t-new", "t-old"])
     })
 
     it("refuses what the planner refuses", async () => {

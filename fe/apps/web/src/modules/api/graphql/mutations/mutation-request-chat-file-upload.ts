@@ -5,11 +5,14 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { RequestChatFileUploadMutation, RequestChatFileUploadMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the RequestChatFileUpload mutation. */
-export type MutateRequestChatFileUploadRequest = WireInput<RequestChatFileUploadMutationVariables["input"]>
+type MutateRequestChatFileUploadRequest = WireInput<RequestChatFileUploadMutationVariables["input"]>
 
 type MutateRequestChatFileUploadResponse = RequestChatFileUploadMutation
 
-type Document = TypedDocumentNode<MutateRequestChatFileUploadResponse, InputVariables<MutateRequestChatFileUploadRequest>>
+type Document = TypedDocumentNode<
+    MutateRequestChatFileUploadResponse,
+    InputVariables<MutateRequestChatFileUploadRequest>
+>
 
 const mutation1: Document = gql`
     mutation RequestChatFileUpload($input: RequestChatFileUploadInput!) {
@@ -33,7 +36,9 @@ enum MutationRequestChatFileUpload {
     Mutation1 = "mutation1",
 }
 
-const mutationMap: Record<MutationRequestChatFileUpload, Document> = { [MutationRequestChatFileUpload.Mutation1]: mutation1 }
+const mutationMap: Record<MutationRequestChatFileUpload, Document> = {
+    [MutationRequestChatFileUpload.Mutation1]: mutation1,
+}
 
 /** Parameters of the RequestChatFileUpload mutation. */
 type MutateRequestChatFileUploadParams = MutateParams<MutationRequestChatFileUpload, MutateRequestChatFileUploadRequest>

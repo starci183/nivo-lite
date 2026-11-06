@@ -230,7 +230,6 @@
     "errorBody": "The conversations did not load. Try again in a few minutes.",
     "members": "members",
     "groupLine": "Group",
-    "openFull": "Open in full",
     "noMessageYet": "No messages yet",
     "attachmentLine": "Sent a file",
     "dayToday": "Today",
@@ -3426,12 +3425,13 @@
     "catalogTitle": "Agent catalog",
     "catalogDescription": "Buy an agent to add another operator to your team. Included agents are ready to use.",
     "open": "Open {name}",
-    "statusPaused": "Paused",
     "chat": "Chat",
-    "suggestTitle": "Suggest setup with AI",
-    "kindCustomer": "Customer"
+    "suggestTitle": "Suggest setup with AI"
   },
   "agentWork": {
+    "viewsLabel": "Agent work",
+    "viewWork": "Work",
+    "viewRuns": "Runs",
     "saved": "Saved",
     "paneLabel": "Agent work",
     "emptyWork": "This agent has no work to show yet.",
@@ -3835,9 +3835,7 @@
   },
   "promoAds": {
     "leadsRowTitle": "Website leads can be captured automatically",
-    "welcomeClose": "Dismiss welcome",
     "welcomeTitle": "Welcome to Founding 50",
-    "welcomeText": "Your founding price is locked. Next: test your Chatbot as a customer.",
     "summaryTitle": "Order summary"
   },
   "secondBrain": {
@@ -3975,8 +3973,6 @@
     "stage_proposal": "proposal",
     "stage_won": "won",
     "stage_lost": "lost",
-    "takenOver": "{user} took over the conversation; the AI stays quiet",
-    "returnedToAi": "{user} handed the conversation back to the AI",
     "demoHBody": "Please confirm the showroom furniture order, 45 million VND.",
     "demoPayBody": "Bank transfer received, reference unclear"
   },

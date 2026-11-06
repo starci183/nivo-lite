@@ -50,8 +50,6 @@ const openRequest = (workspaceId: string, seatIds: ReadonlyArray<string>, agentI
         department: "sales",
     })
 
-type SendInput = Parameters<TeamChatRoomsService["send"]>[2]
-
 describe("report cards", () => {
     it("writes one report per run in the direct room of the agent and the owner, opened on demand", async () => {
         const identity = await seed()

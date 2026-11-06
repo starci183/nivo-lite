@@ -3,3 +3,5 @@ export {
     useSubscribeKnowledgeProgressSwr,
 } from "./useSubscribeKnowledgeProgressSwr"
 export type { KnowledgeProgressState } from "./useSubscribeKnowledgeProgressSwr"
+export { useSubscribeChatTypingSwr } from "./useSubscribeChatTypingSwr"
+export type { ChatTypingHints } from "./useSubscribeChatTypingSwr"

@@ -1457,6 +1457,53 @@ type ChannelValueType {
   value: Int!
 }
 
+enum ChatApprovalStatus {
+  approved
+  expired
+  pending
+  refused
+}
+
+type ChatApprovalType {
+  canDecide: Boolean!
+  decidedAt: String
+  decidedByName: String
+  decisionId: ID!
+  status: ChatApprovalStatus!
+}
+
+type ChatAttachmentType {
+  fileKey: String!
+  mimeType: String!
+  name: String!
+  sizeBytes: Int!
+  url: String!
+}
+
+enum ChatAuthorKind {
+  agent
+  system
+  user
+}
+
+type ChatDecisionPayloadType {
+  approval: ChatApprovalType
+  refusal: ChatRefusal
+}
+
+type ChatFileUploadPayloadType {
+  refusal: ChatRefusal
+  upload: ChatFileUploadType
+}
+
+type ChatFileUploadType {
+  expiresAt: String!
+  fileKey: String!
+  headers: [ChatUploadHeaderType!]!
+  method: String!
+  uploadUrl: String!
+}
+
 type ChatLastOwnMessageType {
   id: ID!
   seenBy: [ChatSeenMemberType!]!
@@ -1473,10 +1520,81 @@ type ChatMarkerStateType {
   muted: Boolean!
 }
 
+enum ChatMemberKind {
+  agent
+  user
+}
+
+input ChatMemberRefInput {
+  memberId: ID! @inputBounds(maxLength: 36)
+  memberKind: ChatMemberKind! @inputBounds(maxLength: 10)
+}
+
+enum ChatMemberRole {
+  member
+  owner
+}
+
+type ChatMemberType {
+  lastReadAt: String
+  memberId: ID!
+  memberKind: ChatMemberKind!
+  muted: Boolean!
+  name: String!
+  role: ChatMemberRole!
+}
+
+type ChatMentionType {
+  memberId: ID!
+  memberKind: ChatMemberKind!
+  name: String!
+}
+
+enum ChatMessageKind {
+  approval
+  report
+  system
+  text
+}
+
+type ChatMessagePageType {
+  nodes: [ChatMessageType!]!
+  pageInfo: ChatPageInfoType!
+}
+
+type ChatMessagePayloadType {
+  message: ChatMessageType
+  refusal: ChatRefusal
+}
+
 enum ChatMessageStatus {
   delivered
   seen
   sent
+}
+
+type ChatMessageType {
+  approval: ChatApprovalType
+  attachments: [ChatAttachmentType!]!
+  authorId: ID
+  authorKind: ChatAuthorKind!
+  authorName: String!
+  body: String!
+  createdAt: String!
+  editedAt: String
+  id: ID!
+  kind: ChatMessageKind!
+  mentions: [ChatMentionType!]!
+  pinned: Boolean!
+  report: ChatReportRefType
+  roomId: ID!
+}
+
+input ChatMessagesInput {
+  after: String = null @inputBounds(maxLength: 512)
+  first: Int = 30 @inputBounds(min: 1, max: 100)
+  pinnedOnly: Boolean = false
+  roomId: ID! @inputBounds(maxLength: 36)
 }
 
 input ChatMuteInput {
@@ -1484,9 +1602,95 @@ input ChatMuteInput {
   room: String = null @inputBounds(maxLength: 20)
 }
 
+type ChatPageInfoType {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
+input ChatPinInput {
+  messageId: ID! @inputBounds(maxLength: 36)
+  roomId: ID! @inputBounds(maxLength: 36)
+}
+
+type ChatReadPayloadType {
+  refusal: ChatRefusal
+  unread: ChatRoomUnreadType
+}
+
 input ChatReceiptInput {
   messageId: ID! @inputBounds(maxLength: 36)
   room: String = null @inputBounds(maxLength: 20)
+}
+
+enum ChatRefusal {
+  already_member
+  body_empty
+  body_too_long
+  decision_closed
+  decision_not_found
+  direct_needs_two
+  file_too_large
+  file_type_not_allowed
+  forbidden
+  group_needs_name
+  last_owner
+  member_unknown
+  not_a_member_to_remove
+  not_an_approver
+  not_found
+  not_member
+  storage_unavailable
+  too_many_files
+  too_many_mentions
+}
+
+type ChatReportRefType {
+  agentId: ID!
+  runId: ID!
+}
+
+input ChatRoomInput {
+  roomId: ID! @inputBounds(maxLength: 36)
+}
+
+enum ChatRoomKind {
+  direct
+  group
+}
+
+input ChatRoomMemberInput {
+  member: ChatMemberRefInput!
+  roomId: ID! @inputBounds(maxLength: 36)
+}
+
+type ChatRoomPayloadType {
+  refusal: ChatRefusal
+  room: ChatRoomType
+}
+
+type ChatRoomType {
+  createdAt: String!
+  createdBy: ID!
+  id: ID!
+  kind: ChatRoomKind!
+  lastMessage: ChatMessageType
+  members: [ChatMemberType!]!
+  mentionCount: Int!
+  muted: Boolean!
+  name: String!
+  position: Int!
+  unreadCount: Int!
+}
+
+type ChatRoomUnreadType {
+  mentionCount: Int!
+  roomId: ID!
+  unreadCount: Int!
+}
+
+input ChatRoomsInput {
+  kind: ChatRoomKind = null @inputBounds(maxLength: 10)
+  member: ID = null @inputBounds(maxLength: 36)
 }
 
 type ChatSeenMemberType {
@@ -1510,6 +1714,22 @@ type ChatTypingSignalType {
 
 input ChatTypingTargetInput {
   room: String = null @inputBounds(maxLength: 20)
+}
+
+type ChatUnreadType {
+  mentionTotal: Int!
+  rooms: [ChatRoomUnreadType!]!
+  total: Int!
+}
+
+type ChatUploadHeaderType {
+  name: String!
+  value: String!
+}
+
+enum ChatVerdict {
+  approve
+  reject
 }
 
 input CheckConnectionInput {
@@ -1830,6 +2050,12 @@ input CreateApiKeyInput {
   name: String! @inputBounds(maxLength: 200)
 }
 
+input CreateChatRoomInput {
+  kind: ChatRoomKind! @inputBounds(maxLength: 10)
+  members: [ChatMemberRefInput!]! @inputBounds(maxItems: 200)
+  name: String = null @inputBounds(maxLength: 200)
+}
+
 type CreateCvUploadType {
   contentType: String!
   path: String!
@@ -2056,6 +2282,11 @@ input DecideBrandProposalInput {
   decision: String!
   kit: BrandKitInput
   proposalId: ID! @inputBounds(maxLength: 36)
+}
+
+input DecideChatApprovalInput {
+  decisionId: ID! @inputBounds(maxLength: 36)
+  verdict: ChatVerdict! @inputBounds(maxLength: 10)
 }
 
 input DecideSetupCardInput {
@@ -3051,6 +3282,11 @@ type MarkBookingNoShowType {
   status: String!
 }
 
+input MarkChatRoomReadInput {
+  messageId: ID = null @inputBounds(maxLength: 36)
+  roomId: ID! @inputBounds(maxLength: 36)
+}
+
 input MarkContentPublishedInput {
   channel: String! @inputBounds(maxLength: 20)
   how: String! = "" @inputBounds(maxLength: 1000)
@@ -3394,6 +3630,7 @@ type Mutation {
   acceptInvite(input: InviteTokenInput!): AcceptInviteType!
   acceptTemplateUpdate(input: AcceptTemplateUpdateInput!): UpdateOfferType
   addBooking(input: AddBookingInput!): AddBookingType!
+  addChatRoomMember(input: ChatRoomMemberInput!): ChatRoomPayloadType!
   adminExtendSubscription(input: AdminExtendSubscriptionInput!): AdminSubscriptionExtendedType!
   adminResendWorkspaceInvite(input: AdminResendWorkspaceInviteInput!): AdminInviteResentType!
   adminSetWorkspacePlan(input: AdminSetWorkspacePlanInput!): AdminPlanSetType!
@@ -3436,6 +3673,7 @@ type Mutation {
   copyInviteLink(input: InviteRefInput!): InviteResultType!
   createAgent(input: CreateAgentInput!): AgentSummaryType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
+  createChatRoom(input: CreateChatRoomInput!): ChatRoomPayloadType!
   createHiringCvUpload(input: CreateHiringCvUploadInput!): CreateCvUploadType!
   createInvite(input: CreateInviteInput!): InviteResultType!
   createKnowledgeUpload(input: CreateKnowledgeUploadInput!): UploadAddressType!
@@ -3445,6 +3683,7 @@ type Mutation {
   decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
   decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
   decideBrandProposal(input: DecideBrandProposalInput!): BrandProposalType!
+  decideChatApproval(input: DecideChatApprovalInput!): ChatDecisionPayloadType!
   decideSetupCard(input: DecideSetupCardInput!): SetupCardType!
   declineAgentGraphProposal(input: DeclineAgentGraphProposalInput!): Boolean!
   deleteConnection(input: DeleteConnectionInput!): Boolean!
@@ -3473,12 +3712,14 @@ type Mutation {
   markBookingNoShow(input: MarkBookingNoShowInput!): MarkBookingNoShowType!
   markChatDelivered(input: ChatReceiptInput!): ChatMarkerAckType!
   markChatRead(input: ChatReceiptInput!): ChatMarkerAckType!
+  markChatRoomRead(input: MarkChatRoomReadInput!): ChatReadPayloadType!
   markContentPublished(input: MarkContentPublishedInput!): MarkContentPublishedType!
   markVideoPublished(input: MarkVideoPublishedInput!): VideoProjectType!
   moveBooking(input: MoveBookingInput!): MoveBookingType!
   moveHiringCandidate(input: MoveHiringCandidateInput!): MoveCandidateType!
   orderTemplateListing(input: OrderTemplateListingInput!): TemplateOrderType!
   packageAgentTemplate(input: PackageAgentTemplateInput!): TemplateVersionType!
+  pinChatMessage(input: ChatPinInput!): ChatMessagePayloadType!
   postMarketingWeeklyReport: WeeklyReportType!
   postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
   proposeBrandKit(input: ProposeBrandKitInput!): BrandProposalType!
@@ -3497,6 +3738,7 @@ type Mutation {
   removeBookingResource(input: RemoveBookingResourceInput!): RemoveBookingResourceType!
   removeBookingService(input: RemoveBookingServiceInput!): RemoveBookingServiceType!
   removeBookingWaitlistEntry(input: RemoveBookingWaitlistEntryInput!): RemoveBookingWaitlistEntryType!
+  removeChatRoomMember(input: ChatRoomMemberInput!): ChatRoomPayloadType!
   removeMember(input: MemberRefInput!): Boolean!
   renameAgent(input: RenameAgentInput!): AgentAckType!
   renameInstallationAgent(input: RenameInstallationAgentInput!): ModuleInstallationType!
@@ -3505,6 +3747,7 @@ type Mutation {
   requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
+  requestChatFileUpload(input: RequestChatFileUploadInput!): ChatFileUploadPayloadType!
   requestContentDraft(input: RequestContentDraftInput!): ContentAiRequestedType!
   requestContentMediaUpload(input: RequestContentMediaUploadInput!): ContentMediaUploadType!
   requestContentMonthPlan(input: RequestContentMonthPlanInput!): ContentAiRequestedType!
@@ -3572,6 +3815,7 @@ type Mutation {
   saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
   saveZnsRenewal(input: SaveZnsRenewalInput!): ZnsRenewalType
+  sendChatMessage(input: SendChatMessageInput!): ChatMessagePayloadType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   sendZaloTestMessage(input: SendZaloTestInput!): ZaloTestSendType!
   setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
@@ -3582,6 +3826,7 @@ type Mutation {
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
   setAgentWork(input: SetAgentWorkInput!): AgentWorkStateType!
   setChatMuted(input: ChatMuteInput!): ChatMarkerAckType!
+  setChatRoomMuted(input: SetChatRoomMutedInput!): ChatRoomPayloadType!
   setChatTyping(input: SetChatTypingInput!): ChatTypingSignalType!
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
@@ -3617,6 +3862,7 @@ type Mutation {
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
   toggleHiringOnboarding(input: ToggleHiringOnboardingInput!): Boolean!
   undoBrainFactBatch(input: UndoBrainFactBatchInput!): BrainBulkUndoneType!
+  unpinChatMessage(input: ChatPinInput!): ChatMessagePayloadType!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
   updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
@@ -4023,6 +4269,10 @@ type Query {
   brainTodo: BrainTodoType!
   brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   chatMarkerState(input: ChatTargetInput!): ChatMarkerStateType!
+  chatMessages(input: ChatMessagesInput!): ChatMessagePageType!
+  chatRoom(input: ChatRoomInput!): ChatRoomType
+  chatRooms(input: ChatRoomsInput): [ChatRoomType!]!
+  chatUnread: ChatUnreadType!
   connectionAgents: [ConnectionAgentType!]!
   connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
   connections: [ConnectionType!]!
@@ -4273,6 +4523,13 @@ input RequestAgentGenerationInput {
 input RequestAgentSyncInput {
   force: Boolean
   installationId: ID @inputBounds(maxLength: 36)
+}
+
+input RequestChatFileUploadInput {
+  fileName: String! @inputBounds(maxLength: 300)
+  mimeType: String! @inputBounds(maxLength: 200)
+  roomId: ID! @inputBounds(maxLength: 36)
+  sizeBytes: Int! @inputBounds(min: 1, max: 2147483647)
 }
 
 input RequestContentDraftInput {
@@ -4825,6 +5082,15 @@ type SavedFactType {
   outcome: String!
 }
 
+input SendChatMessageInput {
+  body: String! @inputBounds(maxLength: 16000)
+  clientId: String = null @inputBounds(maxLength: 64)
+  fileKeys: [String!] = null @inputBounds(maxItems: 20, itemMaxLength: 300)
+  mentions: [ChatMemberRefInput!] = null @inputBounds(maxItems: 40)
+  roomId: ID = null @inputBounds(maxLength: 36)
+  to: ChatMemberRefInput = null
+}
+
 input SendSmtpTestInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   makeDefault: Boolean!
@@ -4915,6 +5181,11 @@ input SetAgentTextsInput {
 input SetAgentWorkInput {
   enabled: Boolean!
   installationId: ID! @inputBounds(maxLength: 36)
+}
+
+input SetChatRoomMutedInput {
+  muted: Boolean!
+  roomId: ID! @inputBounds(maxLength: 36)
 }
 
 input SetChatTypingInput {
