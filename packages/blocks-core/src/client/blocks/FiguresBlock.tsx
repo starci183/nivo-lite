@@ -3,6 +3,7 @@ import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { figuresBlock } from "../../blocks/figures.block"
 import { cellContextOf } from "../../rows/cell-format"
 import { chartPointOf, figureTextOf } from "../../rows/figure-format"
+import { messageTextOf } from "../../rows/message-text"
 import { textOf, valueAt } from "../../slots/paths"
 import { FiguresBars, FiguresProportion, FiguresStrip } from "../composites/FiguresStrip"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -55,7 +56,9 @@ export const FiguresBlock = (props: RenderOf<typeof figuresBlock>): ReactNode =>
                         label={label}
                         isLoading={isLoading}
                         items={points.map((point, index) => {
-                            const hint = textOf(valueAt(record, props.props.items[index]?.hintPath))
+                            const hint = messageTextOf(valueAt(record, props.props.items[index]?.hintPath), (key) =>
+                                words({ key }),
+                            )
                             return {
                                 id: point.id,
                                 term: point.label,

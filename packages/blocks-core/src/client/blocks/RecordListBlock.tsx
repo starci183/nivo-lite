@@ -1,7 +1,10 @@
 import type { ReactNode } from "react"
+import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { recordListBlock } from "../../blocks/record-list.block"
 import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "../../rows/rows"
+import { offerFor, offersOf } from "../../rows/row-actions"
+import type { RowActionSlot } from "../../rows/row-actions"
 import { queryOf } from "../../rows/search"
 import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
@@ -10,7 +13,7 @@ import { SelectableRows } from "../composites/SelectableRows"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
-/** Bound records as a card with an action on each row, or as a selectable list that writes the chosen row to a param. */
+/** Bound records as a card with a command pill on each row, or as a selectable list that writes the chosen row to a param. */
 export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
@@ -21,11 +24,14 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
     )
     const read = props.slots.rows
     const open = props.slots.open
+    const boundAction = (slot: RowActionSlot): ActionHandle => props.slots[slot]
+    const offers = offersOf(props.props.actions ?? [], boundAction, open, words)
     const rows = derivedSlot(parsedSlot(read.slot, recordsView), (records) =>
         rowsOf(records, props.props, relabeller(props.props.labels, words), words({ key: "rowUntitled" })),
     )
-    const openRow = (id: string): void => {
-        open.run({ id })
+    const runRow = (handle: ActionHandle, id: string): void => {
+        handle
+            .run({ id })
             .then((outcome) => {
                 if (!outcome.ok) host.notify("danger", labels.error)
             })
@@ -55,7 +61,12 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
                         empty={labels.empty}
                         isLoading={isLoading}
                         hasAvatar={props.props.avatar === true}
-                        action={open.isAllowed ? { label: open.label, press: openRow } : null}
+                        commandOf={(row) => {
+                            const offer = offerFor(offers, row.action)
+                            if (offer === null) return null
+                            const handle = offer.slot === "open" ? open : boundAction(offer.slot)
+                            return { label: offer.label, look: offer.look, press: () => runRow(handle, row.id) }
+                        }}
                     />
                 ) : (
                     <SelectableRows

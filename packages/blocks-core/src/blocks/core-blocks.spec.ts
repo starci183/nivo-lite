@@ -97,6 +97,40 @@ describe("the props of the layout blocks", () => {
         expect(sectionBlock.props.safeParse({ hint: WORD }).success).toBe(false)
     })
 
+    it("takes an optional sort select: a param, its label and one or more options with their words", () => {
+        const sort = { param: "sort", label: WORD, options: [{ value: "points", label: WORD }] }
+        expect(sectionBlock.props.safeParse({ title: WORD, sort }).success).toBe(true)
+        expect(sectionBlock.params).toEqual(["sort.param"])
+    })
+
+    it.each([
+        ["no options", { param: "sort", label: WORD, options: [] }],
+        [
+            "a repeated option value",
+            {
+                param: "sort",
+                label: WORD,
+                options: [
+                    { value: "a", label: WORD },
+                    { value: "a", label: WORD },
+                ],
+            },
+        ],
+        ["an empty option value", { param: "sort", label: WORD, options: [{ value: "", label: WORD }] }],
+        ["a param name that is no name", { param: "no way", label: WORD, options: [{ value: "a", label: WORD }] }],
+        ["no label", { param: "sort", options: [{ value: "a", label: WORD }] }],
+        [
+            "more options than a select lists",
+            {
+                param: "sort",
+                label: WORD,
+                options: Array.from({ length: 11 }, (_, index) => ({ value: `v${index}`, label: WORD })),
+            },
+        ],
+    ])("refuses a section sort with %s", (_name, sort) => {
+        expect(sectionBlock.props.safeParse({ title: WORD, sort }).success).toBe(false)
+    })
+
     it("holds a list and a detail in a master detail", () => {
         expect(masterDetailBlock.props.safeParse({ emptyTitle: WORD, emptyBody: WORD }).success).toBe(true)
         expect(masterDetailBlock.children).toEqual({ max: 2 })
