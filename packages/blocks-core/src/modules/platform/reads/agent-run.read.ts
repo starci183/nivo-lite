@@ -45,7 +45,7 @@ export const agentRunRead: ReadDefinition = defineRead({
     shape: "record",
     fields: ["id", "status", "steps"],
     paths: { steps: "list" },
-    variables: z.object({ installation: z.string().uuid(), id: z.string().min(1).max(MAX_ID) }),
+    variables: z.object({ installation: z.uuid(), id: z.string().min(1).max(MAX_ID) }),
     permission: PLATFORM_VIEW,
     ports: { graphs: agentGraphs, runs: agentRuns, steps: agentRunSteps },
     run: async ({ graphs, runs, steps }, { installation, id }): Promise<RunView | null> => {

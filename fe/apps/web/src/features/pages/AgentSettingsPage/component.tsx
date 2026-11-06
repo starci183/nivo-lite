@@ -36,22 +36,22 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
         <Stack gap="region" measure="form">
             <AgentIdentityCard installationId={installationId} module={module} glyph={props.props.glyph} />
             <SurfaceCard
-                kind="bands"
                 label={props.props.activityTitle}
                 headingLevel={2}
-                bands={[
-                    { kind: "body", children: <AgentWorkSwitchCard installationId={installationId} /> },
+                headers={[
+                    { kind: "custom", children: <AgentWorkSwitchCard installationId={installationId} /> },
                     ...(props.props.answersCustomers
                         ? [
                               {
-                                  kind: "body" as const,
+                                  kind: "custom" as const,
                                   children: <AgentLiveCard installationId={installationId} module={module} />,
                               },
                           ]
                         : []),
-                    { kind: "body", children: <AgentModeCard installationId={installationId} module={module} /> },
                 ]}
-            />
+            >
+                <AgentModeCard installationId={installationId} module={module} />
+            </SurfaceCard>
             <AgentConnectionAccess installationId={installationId} module={module} />
             {props.props.extrasKey === "chatbot_reply" ? (
                 <AgentReplyCard installationId={installationId} module={module} />

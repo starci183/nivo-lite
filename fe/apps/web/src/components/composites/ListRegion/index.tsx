@@ -1,4 +1,4 @@
-import { EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { BadgeTone, ListRowData } from "@starci/grammar/common"
 import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
 import type { ModuleIconName } from "@/modules/types"
@@ -63,13 +63,7 @@ export const ListRegion = (props: ListRegionProps) => (
         items={props.rows.map(listRowOf)}
         empty={<EmptyNotice message={props.empty} />}
         isLoading={props.isLoading}
-        footer={
-            props.footer === null ? undefined : (
-                <Text size="sm" tone="muted">
-                    {props.footer}
-                </Text>
-            )
-        }
+        note={props.footer ?? undefined}
     />
 )
 

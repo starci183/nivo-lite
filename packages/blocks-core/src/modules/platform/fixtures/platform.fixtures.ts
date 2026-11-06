@@ -1,7 +1,7 @@
 import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from "../../../views/views.types"
 import type { ModuleFixtures } from "../../module-fixtures"
 import { RUN_PARKED } from "../../../fixtures/run-timeline.fixtures"
-import type { AgentRunCounts, AgentRunRow } from "../agent-runs"
+import type { AgentRunCounts, AgentRunsPage } from "../agent-runs"
 import { PLATFORM_MESSAGES } from "../platform-messages"
 import type { InstallationFacts, InstallationView, ParkedRunsView } from "../platform.types"
 
@@ -161,7 +161,7 @@ export const PARKED_RUNS_NONE: ParkedRunsView = {
 }
 
 /** The runs of an agent: one parked on a refused send, one failed, one running and one done. */
-export const AGENT_RUNS_VIEW: { readonly rows: ReadonlyArray<AgentRunRow>; readonly cursor: string | null } = {
+export const AGENT_RUNS_VIEW: AgentRunsPage = {
     rows: [
         { id: "run-3", status: "parked", trigger: "zalo.message", when: "05/11/2026 15:00", duration: "1:12" },
         { id: "run-4", status: "failed", trigger: "schedule.daily", when: "05/11/2026 09:00", duration: "0:04" },
@@ -172,7 +172,7 @@ export const AGENT_RUNS_VIEW: { readonly rows: ReadonlyArray<AgentRunRow>; reado
 }
 
 /** The agent has not run yet. */
-export const AGENT_RUNS_NONE: { readonly rows: ReadonlyArray<AgentRunRow>; readonly cursor: string | null } = {
+export const AGENT_RUNS_NONE: AgentRunsPage = {
     rows: [],
     cursor: null,
 }

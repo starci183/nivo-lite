@@ -58,7 +58,7 @@ export const AuthorityStaffBase = (props: AuthorityStaffBaseProps) => {
                               }),
                     }))}
                     empty={<EmptyNotice message={view.slotLabels.empty} />}
-                    footer={`${view.description} ${view.note}`}
+                    note={`${view.description} ${view.note}`}
                 />
             )}
         />

@@ -9,10 +9,9 @@ import { decisionQueueBlock } from "./decision-queue.block"
 import { detailBlock } from "./detail.block"
 import { explanationBlock } from "./explanation.block"
 import { figuresBlock } from "./figures.block"
-import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
+import { listCardBlock } from "./list-card.block"
 import { listEditorBlock } from "./list-editor.block"
-import { listPaneBlock } from "./list-pane.block"
 import { masterDetailBlock } from "./master-detail.block"
 import { recordListBlock } from "./record-list.block"
 import { sectionBlock } from "./section.block"
@@ -33,8 +32,7 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     figuresBlock,
     detailBlock,
     recordListBlock,
-    listPaneBlock,
-    filterTabsBlock,
+    listCardBlock,
     tableBlock,
     boardBlock,
     formBlock,

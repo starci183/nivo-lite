@@ -85,28 +85,25 @@ export const LandingHeroBase = (props: LandingHeroBaseProps) => (
                 }
                 rail={
                     <SurfaceCard
-                        kind="bands"
+                        kind="list"
                         label={props.props.cardTitle}
                         headingLevel={2}
-                        bands={[
+                        headers={[
                             {
-                                kind: "media",
-                                artwork: (
+                                kind: "custom",
+                                children: (
                                     <Image src={props.props.artSrc} alt="" aspect="wide" fit="contain" plate="none" />
                                 ),
                             },
-                            {
-                                kind: "list",
-                                items: props.props.rows.map((row): ListRowData => ({
-                                    id: row.id,
-                                    title: row.title,
-                                    description: row.description,
-                                    leading: { avatar: { name: row.name } },
-                                    badges: [{ label: row.badge, tone: row.badgeTone }],
-                                })),
-                                empty: <EmptyNotice message={props.props.cardListLabel} />,
-                            },
                         ]}
+                        items={props.props.rows.map((row): ListRowData => ({
+                            id: row.id,
+                            title: row.title,
+                            description: row.description,
+                            leading: { avatar: { name: row.name } },
+                            badges: [{ label: row.badge, tone: row.badgeTone }],
+                        }))}
+                        empty={<EmptyNotice message={props.props.cardListLabel} />}
                     />
                 }
             />

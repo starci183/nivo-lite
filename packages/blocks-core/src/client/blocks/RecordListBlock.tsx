@@ -6,7 +6,7 @@ import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
 import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
-import { useInSurface } from "../composites/InSurface"
+import { useInCard } from "../composites/CardScope"
 import { RecordCardList } from "../composites/RecordCardList"
 import { SelectableRows } from "../composites/SelectableRows"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -63,7 +63,7 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
         () => props.params.set(searchParam ?? "", null),
         words({ key: "searchClear" }),
     )
-    const inSurface = useInSurface()
+    const inSurface = useInCard()
     const isCard = props.props.surface === "card" && !inSurface
     const label = words(props.props.label)
     const list = (

@@ -33,110 +33,94 @@
         "children": [
           {
             "id": "runs-pane",
-            "block": "core.list-pane",
+            "block": "core.list-card",
             "props": {
-              "search": false
-            },
-            "children": [
-              {
-                "id": "runs-filter",
-                "block": "core.filter-tabs",
-                "props": {
-                  "param": "status",
-                  "label": {
-                    "key": "status_label"
+              "label": {
+                "key": "runs_title"
+              },
+              "empty": {
+                "key": "runs_empty"
+              },
+              "idPath": "id",
+              "titlePath": "trigger",
+              "descriptionPath": "when",
+              "metaPath": "duration",
+              "badgePath": "status",
+              "selectParam": "run",
+              "badgeTones": {
+                "running": "info",
+                "parked": "warning",
+                "done": "success",
+                "failed": "danger"
+              },
+              "labels": {
+                "status": {
+                  "running": {
+                    "key": "status_running"
                   },
-                  "all": {
-                    "key": "filter_all"
+                  "parked": {
+                    "key": "status_parked"
                   },
-                  "items": [
-                    {
-                      "value": "running",
-                      "label": {
-                        "key": "status_running"
-                      }
-                    },
-                    {
-                      "value": "parked",
-                      "label": {
-                        "key": "status_parked"
-                      },
-                      "attention": true
-                    },
-                    {
-                      "value": "done",
-                      "label": {
-                        "key": "status_done"
-                      }
-                    },
-                    {
-                      "value": "failed",
-                      "label": {
-                        "key": "status_failed"
-                      },
-                      "attention": true
-                    }
-                  ]
-                },
-                "bind": {
-                  "counts": {
-                    "read": "platform.agent-run-counts",
-                    "variables": {
-                      "installation": "$installationId"
-                    }
+                  "done": {
+                    "key": "status_done"
+                  },
+                  "failed": {
+                    "key": "status_failed"
                   }
                 }
               },
-              {
-                "id": "runs-rows",
-                "block": "core.record-list",
-                "props": {
+              "search": false,
+              "filterParam": "status",
+              "filterLabel": {
+                "key": "status_label"
+              },
+              "filterAll": {
+                "key": "filter_all"
+              },
+              "filters": [
+                {
+                  "value": "running",
                   "label": {
-                    "key": "runs_title"
-                  },
-                  "empty": {
-                    "key": "runs_empty"
-                  },
-                  "idPath": "id",
-                  "titlePath": "trigger",
-                  "descriptionPath": "when",
-                  "metaPath": "duration",
-                  "badgePath": "status",
-                  "selectParam": "run",
-                  "badgeTones": {
-                    "running": "info",
-                    "parked": "warning",
-                    "done": "success",
-                    "failed": "danger"
-                  },
-                  "labels": {
-                    "status": {
-                      "running": {
-                        "key": "status_running"
-                      },
-                      "parked": {
-                        "key": "status_parked"
-                      },
-                      "done": {
-                        "key": "status_done"
-                      },
-                      "failed": {
-                        "key": "status_failed"
-                      }
-                    }
+                    "key": "status_running"
                   }
                 },
-                "bind": {
-                  "rows": {
-                    "read": "platform.agent-runs",
-                    "variables": {
-                      "installation": "$installationId",
-                      "status": "$status"
-                    }
+                {
+                  "value": "parked",
+                  "label": {
+                    "key": "status_parked"
+                  },
+                  "attention": true
+                },
+                {
+                  "value": "done",
+                  "label": {
+                    "key": "status_done"
                   }
+                },
+                {
+                  "value": "failed",
+                  "label": {
+                    "key": "status_failed"
+                  },
+                  "attention": true
+                }
+              ]
+            },
+            "bind": {
+              "rows": {
+                "read": "platform.agent-runs",
+                "variables": {
+                  "installation": "$installationId",
+                  "status": "$status"
+                }
+              },
+              "counts": {
+                "read": "platform.agent-run-counts",
+                "variables": {
+                  "installation": "$installationId"
                 }
               }
-            ]
+            }
           },
           {
             "id": "runs-timeline",

@@ -21,7 +21,7 @@ export const agentRunCountsRead: ReadDefinition = defineRead({
     shape: "record",
     fields: ["counts", "total"],
     paths: { counts: "record" },
-    variables: z.object({ installation: z.string().uuid() }),
+    variables: z.object({ installation: z.uuid() }),
     permission: PLATFORM_VIEW,
     ports: { graphs: agentGraphs, runs: agentRuns },
     run: async ({ graphs, runs }, { installation }): Promise<AgentRunCounts> => {

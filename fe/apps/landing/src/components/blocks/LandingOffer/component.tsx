@@ -87,13 +87,12 @@ const renderLandingOfferPrice = (
     campaign: LandingOfferBaseProps["props"]["campaign"],
 ) => (
     <SurfaceCard
-        kind="bands"
         label={props.props.priceLabel}
         headingLevel={3}
         labelEnd={campaign === null ? undefined : <Badge tone="accent">{campaign.tag}</Badge>}
         isHighlight
         height="fill"
-        bands={[
+        headers={[
             {
                 kind: "figures",
                 items: [
@@ -106,41 +105,37 @@ const renderLandingOfferPrice = (
                     },
                 ],
             },
-            {
-                kind: "body",
-                children: (
-                    <Stack gap="row">
-                        {campaign === null ? null : (
-                            <Stack gap="identity">
-                                <Text size="sm" tone="muted" isSuperseded>
-                                    {campaign.basePrice}
-                                </Text>
-                                <Text isStrong>{campaign.saving}</Text>
-                            </Stack>
-                        )}
-                        {campaign === null ? null : (
-                            <>
-                                <div role="timer" aria-label={campaign.countdownLabel}>
-                                    <DescriptionList
-                                        layout="columns"
-                                        isDivided
-                                        items={campaign.countdown.map((unit) => ({
-                                            id: unit.id,
-                                            term: unit.term,
-                                            description: unit.value,
-                                        }))}
-                                    />
-                                </div>
-                                <Text size="xs">{campaign.endsText}</Text>
-                            </>
-                        )}
-                        <Button intent="commit" size="lg" width="fill" href={props.props.ctaHref}>
-                            {props.props.ctaLabel}
-                        </Button>
-                        <Text size="xs">{props.props.fine}</Text>
-                    </Stack>
-                ),
-            },
         ]}
-    />
+    >
+        <Stack gap="row">
+            {campaign === null ? null : (
+                <Stack gap="identity">
+                    <Text size="sm" tone="muted" isSuperseded>
+                        {campaign.basePrice}
+                    </Text>
+                    <Text isStrong>{campaign.saving}</Text>
+                </Stack>
+            )}
+            {campaign === null ? null : (
+                <>
+                    <div role="timer" aria-label={campaign.countdownLabel}>
+                        <DescriptionList
+                            layout="columns"
+                            isDivided
+                            items={campaign.countdown.map((unit) => ({
+                                id: unit.id,
+                                term: unit.term,
+                                description: unit.value,
+                            }))}
+                        />
+                    </div>
+                    <Text size="xs">{campaign.endsText}</Text>
+                </>
+            )}
+            <Button intent="commit" size="lg" width="fill" href={props.props.ctaHref}>
+                {props.props.ctaLabel}
+            </Button>
+            <Text size="xs">{props.props.fine}</Text>
+        </Stack>
+    </SurfaceCard>
 )
