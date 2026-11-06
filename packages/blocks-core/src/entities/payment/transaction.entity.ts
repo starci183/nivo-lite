@@ -15,6 +15,7 @@ type TransactionFields = {
     readonly orderId: FieldDef<"uuid", true>
     readonly invoiceId: FieldDef<"uuid", true>
     readonly externalRef: FieldDef<"text", true>
+    readonly account: FieldDef<"text", true>
     readonly occurredAt: FieldDef<"timestamptz", false>
     readonly status: FieldDef<"enum", false>
 }
@@ -28,6 +29,7 @@ const transactionFields: TransactionFields = {
     orderId: field.uuid({ nullable: true }),
     invoiceId: field.uuid({ nullable: true }),
     externalRef: field.text({ maxLength: MAX_ID, nullable: true }),
+    account: field.text({ maxLength: MAX_ID, nullable: true }),
     occurredAt: field.timestamptz({ default: "now" }),
     status: field.enum({ of: TRANSACTION_STATUSES, default: { literal: "unmatched" } }),
 }
@@ -44,6 +46,8 @@ export const transactionEntity: EntityDefinition<TransactionFields> = defineEnti
     indexes: [
         { name: "occurred", on: [{ desc: "occurredAt" }, { desc: "id" }] },
         { name: "status_occurred", on: ["status", { desc: "occurredAt" }, { desc: "id" }] },
+        { name: "direction_occurred", on: ["direction", { desc: "occurredAt" }, { desc: "id" }] },
+        { name: "direction_status_occurred", on: ["direction", "status", { desc: "occurredAt" }, { desc: "id" }] },
         { name: "invoice", on: ["invoiceId", { desc: "id" }] },
     ],
     constraints: [
@@ -68,4 +72,5 @@ export const transactionEntity: EntityDefinition<TransactionFields> = defineEnti
             refusal: "transaction-amount-negative",
         },
     ],
+    matchKeys: [{ name: "external_ref", on: ["externalRef"] }],
 })

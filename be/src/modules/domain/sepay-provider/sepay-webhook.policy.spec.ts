@@ -1,15 +1,21 @@
 import { Test } from "@nestjs/testing"
-import { isSepayPing, isValidApiKey, presentedApiKey, readSepayPayload } from "./sepay-webhook.policy"
+import { isSepayPing, isValidApiKey, occurredAtOf, presentedApiKey, readSepayPayload } from "./sepay-webhook.policy"
 
 const SUBJECT = Symbol("sepay-webhook.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { isSepayPing, isValidApiKey, presentedApiKey, readSepayPayload } }],
+        providers: [
+            {
+                provide: SUBJECT,
+                useValue: { isSepayPing, isValidApiKey, occurredAtOf, presentedApiKey, readSepayPayload },
+            },
+        ],
     }).compile()
     return moduleRef.get<{
         isSepayPing: typeof isSepayPing
         isValidApiKey: typeof isValidApiKey
+        occurredAtOf: typeof occurredAtOf
         presentedApiKey: typeof presentedApiKey
         readSepayPayload: typeof readSepayPayload
     }>(SUBJECT)
@@ -96,6 +102,8 @@ describe("sepay webhook policy > readSepayPayload", () => {
             code: null,
             description: "BankAPINotify",
             gateway: "MB",
+            accountNumber: "0123456789",
+            transactionDate: "2026-11-05 14:02:37",
         }
         expect(subject.readSepayPayload(body)).toEqual({
             id: 42,
@@ -105,6 +113,8 @@ describe("sepay webhook policy > readSepayPayload", () => {
             content: "NIVO8F3K2",
             code: null,
             description: "BankAPINotify",
+            accountNumber: "0123456789",
+            transactionDate: "2026-11-05 14:02:37",
         })
     })
 
@@ -119,6 +129,8 @@ describe("sepay webhook policy > readSepayPayload", () => {
             content: null,
             code: null,
             description: null,
+            accountNumber: undefined,
+            transactionDate: undefined,
         })
     })
 
@@ -135,6 +147,23 @@ describe("sepay webhook policy > readSepayPayload", () => {
             const subject = await build()
 
             expect(subject.readSepayPayload({ id })).toBeUndefined()
+        },
+    )
+})
+
+describe("sepay webhook policy > occurredAtOf", () => {
+    it("reads the booking time SePay writes in Vietnam time as ISO text", async () => {
+        const subject = await build()
+
+        expect(subject.occurredAtOf("2026-11-05 14:02:37")).toBe("2026-11-05T07:02:37.000Z")
+    })
+
+    it.each([[undefined], [""], ["05/11/2026 14:02"], ["2026-13-45 99:99:99"]])(
+        "reads nothing from %p",
+        async (text) => {
+            const subject = await build()
+
+            expect(subject.occurredAtOf(text)).toBeUndefined()
         },
     )
 })

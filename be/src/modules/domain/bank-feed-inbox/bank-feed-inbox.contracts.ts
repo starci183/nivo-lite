@@ -13,6 +13,12 @@ export interface IncomingCredit {
     readonly fallbackBankName: string
     /** `debit` for money that left the account (a supplier payment); absent for money that came in. */
     readonly direction?: "debit"
+    /** The bank account number the movement belongs to, when the provider says. */
+    readonly account?: string
+    /** Who paid, when the provider says. */
+    readonly payer?: string
+    /** When the bank booked the movement, ISO text, when the provider says. */
+    readonly occurredAt?: string
 }
 
 /** The payload stored for one workspace-feed receipt. */

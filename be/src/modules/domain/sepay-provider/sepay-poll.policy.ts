@@ -9,7 +9,11 @@ const FALLBACK_BANK = "SePay"
  * webhook's (`<connection>:sepay:<id>` and `sepay:<id>`), so the transaction is one inbox row whichever door brought it first. Money in
  * is a credit, money out a debit; a row that moved no money is nothing.
  */
-export const sepayPolledCredit = (connectionId: string, row: SepayTransaction): PolledCredit | undefined => {
+export const sepayPolledCredit = (
+    connectionId: string,
+    row: SepayTransaction,
+    account: string,
+): PolledCredit | undefined => {
     const credit = row.amountIn > 0
     const amount = credit ? row.amountIn : row.amountOut
     if (amount <= 0) return undefined
@@ -21,6 +25,8 @@ export const sepayPolledCredit = (connectionId: string, row: SepayTransaction): 
             eventId: `sepay:${row.id}`,
             fallbackBankName: row.bank ?? FALLBACK_BANK,
             ...(credit ? {} : { direction: "debit" as const }),
+            account,
+            occurredAt: row.occurredAt.toISOString(),
         },
     }
 }

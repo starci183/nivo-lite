@@ -12,6 +12,8 @@ const REAL = {
     content: "BUI NGUYEN DINH Test sepay Chuyen tien dat chau hoa- Ma GD ACSP/ 7o940",
     code: null,
     description: "BankAPINotify",
+    accountNumber: "0123456789",
+    transactionDate: "2026-11-03 18:06:00",
 }
 
 const build = async () => {
@@ -59,6 +61,8 @@ describe("SepayFeedWebhookService", () => {
                 content: "BUI NGUYEN DINH Test sepay Chuyen tien dat chau hoa- Ma GD ACSP/ 7o940",
                 eventId: "sepay:95958515",
                 fallbackBankName: "MBBank",
+                account: "0123456789",
+                occurredAt: "2026-11-03T11:06:00.000Z",
             },
         })
     })

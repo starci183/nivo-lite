@@ -253,6 +253,7 @@
       "entity": "payment.transaction",
       "partition": "records_payment_transaction",
       "checks": [
+        "records_payment_transaction_account_chk",
         "records_payment_transaction_amount_chk",
         "records_payment_transaction_amount_vnd_chk",
         "records_payment_transaction_channel_chk",
@@ -266,6 +267,8 @@
         "records_payment_transaction_status_chk"
       ],
       "indexes": [
+        "records_payment_transaction_direction_occurred",
+        "records_payment_transaction_direction_status_occurred",
         "records_payment_transaction_external_ref_key",
         "records_payment_transaction_invoice",
         "records_payment_transaction_occurred",

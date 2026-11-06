@@ -29,6 +29,7 @@ import {
 } from "@modules/domain/provider-registry"
 import { RedisModule } from "@modules/integrations/redis"
 import { SepayProviderModule } from "@modules/domain/sepay-provider"
+import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { BillingGraphqlModule } from "@features/api/billing"
 import { CreditsGraphqlModule } from "@features/api/credits"
@@ -46,6 +47,7 @@ export const billingModules = (options: ApiOptions): Array<DynamicModule> => [
     BillingModule.register({ isGlobal: true, ...options.billing }),
     BillingGraphqlModule.register({}),
     SepayTransactionsModule.register({ isGlobal: true }),
+    PaymentTransactionsModule.register({ isGlobal: true }),
     AiUsageEventsModule.register({ isGlobal: true }),
     CreditsModule.register({ isGlobal: true }),
     CreditsGraphqlModule.register({}),

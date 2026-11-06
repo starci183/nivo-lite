@@ -259,6 +259,7 @@ component_management:
         - "be/src/modules/domain/native-tools/**"
         - "be/src/modules/domain/nivo-knowledge/**"
         - "be/src/modules/domain/owners/**"
+        - "be/src/modules/domain/payment-transactions/**"
         - "be/src/modules/domain/provider-registry/**"
         - "be/src/modules/domain/sepay-provider/**"
         - "be/src/modules/domain/staff/**"

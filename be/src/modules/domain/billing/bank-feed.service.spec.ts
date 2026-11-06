@@ -60,6 +60,7 @@ const build = async (world: Partial<FeedWorld> = {}) => {
     const flows = mock<BankFeedFlowService>()
     flows.owns.mockResolvedValue(false)
     flows.debit.mockResolvedValue({ status: "debited" })
+    flows.record.mockResolvedValue({ id: "tx-row-1", created: true })
     const feedInbox = mock<BankFeedReceiptService>()
     feedInbox.claim.mockResolvedValue(true)
     feedInbox.lock.mockResolvedValue(receipt)
@@ -361,18 +362,31 @@ describe("BankFeedService hands a new credit to the flow of the bound agent", ()
             { connectionId: "c-1", workspaceId: "ws-1" },
             "agent-1",
             credit,
-            "event-1",
+            { id: "tx-row-1", created: true },
         )
         expect(harness.publish).not.toHaveBeenCalled()
     })
 
-    it("keeps the booking path for an agent with no flow: booked and announced, nothing tagged", async () => {
+    it("keeps the booking path for an agent with no flow: recorded, booked and announced, nothing tagged", async () => {
         const harness = await arrange({}, false)
 
         await expect(consume(harness)).resolves.toEqual([{ status: "booked" }])
 
+        expect(harness.flows.record).toHaveBeenCalledTimes(1)
         expect(harness.flows.tag).not.toHaveBeenCalled()
         expect(harness.publish).toHaveBeenCalledTimes(1)
+    })
+
+    it("tags nobody when the transaction was recorded before, or the engine refused it", async () => {
+        const repeated = await arrange()
+        repeated.flows.record.mockResolvedValue({ id: "tx-row-1", created: false })
+        await consume(repeated)
+        expect(repeated.flows.tag).not.toHaveBeenCalled()
+
+        const refused = await arrange()
+        refused.flows.record.mockResolvedValue(null)
+        await consume(refused)
+        expect(refused.flows.tag).not.toHaveBeenCalled()
     })
 
     it.each([

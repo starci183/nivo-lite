@@ -26,7 +26,11 @@ export const itemLinesOf = (text: string): ReadonlyArray<OrderLineView> =>
         )
 
 /** One line of an order as a record keeps it: the price and what the line comes to. */
-export interface PricedLine extends OrderLineView {
+export type PricedLine = {
+    /** The item name. */
+    readonly name: string
+    /** How many. */
+    readonly qty: number
     /** The price of one, VND. */
     readonly unitVnd: number
     /** What the line comes to, VND. */

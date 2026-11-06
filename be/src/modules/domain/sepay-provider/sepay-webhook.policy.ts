@@ -45,7 +45,19 @@ export const readSepayPayload = (body: SepayBody): OptionalSepayPayload => {
         content: fieldTextOrNullOf(body.content),
         code: fieldTextOrNullOf(body.code),
         description: fieldTextOrNullOf(body.description),
+        accountNumber: fieldTextOf(body.accountNumber),
+        transactionDate: fieldTextOf(body.transactionDate),
     }
+}
+
+/** The shape SePay writes a booking time in: date and time, no zone. */
+const SEPAY_TIME = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})$/u
+
+/** SePay's booking time (Vietnam time, UTC+7) as ISO text; undefined when it is absent or not in that shape. */
+export const occurredAtOf = (transactionDate: string | undefined): string | undefined => {
+    const match = transactionDate === undefined ? null : SEPAY_TIME.exec(transactionDate)
+    const moment = match === null ? Number.NaN : Date.parse(`${match[1] ?? ""}T${match[2] ?? ""}+07:00`)
+    return Number.isNaN(moment) ? undefined : new Date(moment).toISOString()
 }
 
 /**
