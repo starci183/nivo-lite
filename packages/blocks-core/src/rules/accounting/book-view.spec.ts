@@ -26,6 +26,29 @@ describe("bookRecords", () => {
         expect(bookRecords.safeParse([RECORD, bare]).success).toBe(true)
     })
 
+    it("takes the row the walk's read answered: a null counterparty, a string version and the stamps of the record", () => {
+        const answered = {
+            note: "154984752971-Test Sepay",
+            entryDate: "2026-11-03",
+            kind: "income",
+            amountVnd: 2000,
+            status: "paid",
+            counterparty: null,
+            id: "9a6b60ae-dae7-4a1a-a34b-a56e4f21e018",
+            version: "1",
+            createdAt: "2026-11-06T22:25:25.607Z",
+            updatedAt: "2026-11-06T22:25:25.607Z",
+        }
+        const parsed = bookRecords.safeParse([answered])
+        expect(parsed.success).toBe(true)
+        expect(parsed.success ? bookRowsOf(parsed.data, (status) => status)[0] : null).toMatchObject({
+            id: answered.id,
+            date: "03/11",
+            subline: "",
+            status: "paid",
+        })
+    })
+
     it("refuses a status the book has no tab for", () => {
         expect(bookRecords.safeParse([{ ...RECORD, status: "weird" }]).success).toBe(false)
     })

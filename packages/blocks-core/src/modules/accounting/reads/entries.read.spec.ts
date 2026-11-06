@@ -4,10 +4,14 @@ import type { EntryRow } from "../accounting.types"
 import { ENTRY_COUNTS, ENTRY_ROWS } from "../fixtures/accounting.fixtures"
 import { ACCOUNTANT_CONTEXT, memoryProvider, memoryWorld } from "../fixtures/accounting.memory"
 import { ENTRIES_LIST } from "../ports"
+import { bookRecords } from "../../../rules/accounting/book-view"
 import { ENTRY_STATUSES } from "../../../rules/accounting/entry-status"
 import { ENTRIES_SHAPE, ENTRY_KINDS, entriesRead, entryCountsRead, entryStatusCountsRead } from "./entries.read"
 
 const NOT_RUNNABLE: ReadRunResult = { ok: false, problems: [] }
+
+const isListed = (value: unknown): value is { readonly rows: unknown } =>
+    typeof value === "object" && value !== null && "rows" in value
 
 const harness = () => {
     const queries: Array<ListQuery> = []
@@ -39,6 +43,14 @@ describe("accounting entries", () => {
         })
         expect(Object.keys(ENTRIES_SHAPE.sort)).toEqual(["recent", "amount"])
         expect(ENTRIES_SHAPE.page.size).toBe(30)
+    })
+
+    it("answers rows the book view reads, whether the entry has a counterparty or none", async () => {
+        const { execute } = harness()
+        const answer = await execute(entriesRead, {})
+        const rows = answer.ok ? answer.data : null
+        expect(bookRecords.safeParse(isListed(rows) ? rows.rows : null).success).toBe(true)
+        expect(bookRecords.safeParse(ENTRY_ROWS.map((row) => ({ ...row, counterparty: null }))).success).toBe(true)
     })
 
     it("lists the first page with the default sort when nothing is asked", async () => {
