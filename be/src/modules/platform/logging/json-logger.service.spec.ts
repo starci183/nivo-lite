@@ -90,6 +90,28 @@ describe("JsonLoggerService", () => {
     })
 })
 
+describe("JsonLoggerService errors of a capability", () => {
+    it("writes the code and the text parameters of a capability error next to its name", async () => {
+        const { logger, written } = await build()
+        const params = { problem: "QUERY_BOUND_EXCEEDED", at: "page.size" }
+
+        logger.error("db.failed", Object.assign(new Error("SAMPLE_REFUSED"), { code: "SAMPLE_REFUSED", params }))
+
+        expect(written[0]?.line).toBe(
+            `${JSON.stringify({
+                level: "error",
+                event: "db.failed",
+                time: "2026-05-06T07:08:09.000Z",
+                errorName: "Error",
+                errorMessage: "SAMPLE_REFUSED",
+                errorCode: "SAMPLE_REFUSED",
+                errorParams: params,
+            })}
+`,
+        )
+    })
+})
+
 describe("JsonLoggerService", () => {
     it("writes an error line with the text of a cause that is not an Error", async () => {
         const { logger, written } = await build()
