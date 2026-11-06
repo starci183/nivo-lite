@@ -108,6 +108,13 @@ const updateIn = <T extends { readonly id: string; readonly version: string; rea
 }
 
 const leadStore = (state: MemoryState): LeadStore => ({
+    awaitingReply: (limit) =>
+        Promise.resolve(
+            state.leads
+                .filter((lead) => lead.awaitingSince !== null && lead.stage !== "won" && lead.stage !== "lost")
+                .sort((a, b) => (a.awaitingSince ?? "").localeCompare(b.awaitingSince ?? ""))
+                .slice(0, limit),
+        ),
     get: (id) => Promise.resolve(state.leads.find((lead) => lead.id === id) ?? null),
     update: (id, expected, patch: LeadPatch) => Promise.resolve(updateIn(state.leads, id, expected, patch, state.now)),
     names: (ids) =>
@@ -119,6 +126,13 @@ const leadStore = (state: MemoryState): LeadStore => ({
 })
 
 const orderStore = (state: MemoryState): OrderStore => ({
+    failedSteps: (limit) =>
+        Promise.resolve(
+            state.orders
+                .filter((order) => order.status === "failed_system")
+                .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                .slice(0, limit),
+        ),
     get: (id) => Promise.resolve(state.orders.find((order) => order.id === id) ?? null),
     update: (id, expected, patch: OrderPatch) =>
         Promise.resolve(updateIn(state.orders, id, expected, patch, state.now)),

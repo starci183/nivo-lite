@@ -7,6 +7,7 @@ const leadsOf = (names: Readonly<Record<string, string>>): LeadStore => ({
     get: () => Promise.resolve(null),
     update: () => Promise.resolve({ ok: false, reason: "missing" }),
     names: () => Promise.resolve(names),
+    awaitingReply: () => Promise.resolve([]),
 })
 
 const ordersOf = (rows: ReadonlyArray<typeof ORDER_WAITING>): OrderStore => ({
@@ -14,6 +15,7 @@ const ordersOf = (rows: ReadonlyArray<typeof ORDER_WAITING>): OrderStore => ({
     update: () => Promise.resolve({ ok: false, reason: "missing" }),
     ofLead: () => Promise.resolve([]),
     waiting: () => Promise.resolve({ rows, total: rows.length + 2 }),
+    failedSteps: () => Promise.resolve([]),
 })
 
 const SETTINGS: SettingsStore = {

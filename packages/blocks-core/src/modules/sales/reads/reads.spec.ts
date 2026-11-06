@@ -104,7 +104,7 @@ describe("sales.lead", () => {
 describe("sales.orders", () => {
     it("lists the orders narrowed by status and searched by items", async () => {
         expect([...(await idsOf(ordersRead, { status: "draft" }))].sort()).toEqual(["order-1", "order-2"])
-        expect(await idsOf(ordersRead, { q: "tra" })).toEqual(["order-2"])
+        expect(await idsOf(ordersRead, { q: "tra" })).toEqual(["order-2", "order-7"])
     })
 
     it("counts the orders of each status", async () => {

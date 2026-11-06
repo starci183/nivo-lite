@@ -6,6 +6,8 @@ import { confirmOrderAction } from "./actions/confirm-order.action"
 import { moveStageAction } from "./actions/move-stage.action"
 import { saveSettingsAction } from "./actions/save-settings.action"
 import { SALES_PERMISSIONS } from "./constants"
+import { awaitingReplyRead } from "./reads/awaiting-reply.read"
+import { failedStepsRead } from "./reads/failed-steps.read"
 import { attentionRead } from "./reads/attention.read"
 import { decisionsRead } from "./reads/decisions.read"
 import { figuresRead } from "./reads/figures.read"
@@ -41,6 +43,8 @@ export const salesModule: ModuleDeclaration = defineModule({
         figuresRead,
         attentionRead,
         decisionsRead,
+        awaitingReplyRead,
+        failedStepsRead,
     ],
     actions: [moveStageAction, confirmOrderAction, cancelOrderAction, saveSettingsAction, decideAction],
     specs: [SALES_WORKBENCH_SPEC],

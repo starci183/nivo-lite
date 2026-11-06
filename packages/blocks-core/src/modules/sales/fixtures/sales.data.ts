@@ -10,6 +10,7 @@ const lead = (
     stage: LeadRow["stage"],
     need: string,
     closedReason: string | null,
+    awaitingSince: string | null = null,
 ): LeadRow => ({
     id,
     contactName,
@@ -21,6 +22,7 @@ const lead = (
     email: null,
     contextSummary: null,
     closedReason,
+    awaitingSince,
     version: "1",
     createdAt: "2026-11-01T08:00:00.000Z",
     updatedAt: "2026-11-04T08:00:00.000Z",
@@ -33,6 +35,7 @@ export const LEAD_NEW: LeadRow = lead(
     "new",
     "H\u1ecfi gi\u00e1 g\u00f3i 3 th\u00e1ng",
     null,
+    "2026-11-05T07:00:00.000Z",
 )
 
 /** A customer in the proposal stage whose big draft order waits for the owner. */
@@ -125,6 +128,7 @@ export const SAMPLE_ORDERS: ReadonlyArray<OrderRow> = [
     order("order-2", "DH-20261104-0002", "lead-1", "3 x tr\u00e0", 360_000, "draft"),
     ORDER_CONFIRMED,
     order("order-4", "DH-20261102-0001", "lead-5", "1 x b\u1ed9 kh\u1edfi \u0111\u1ea7u", 1_200_000, "paid"),
+    order("order-7", "DH-20261104-0003", "lead-2", "3 x tr\u00e0 \u0111\u1eb7c bi\u1ec7t", 960_000, "failed_system"),
     order("order-5", "DH-20261101-0001", "lead-9", "2 x b\u00e1nh", 240_000, "cancelled"),
     order("order-6", "DH-20261101-0002", null, "1 x b\u00e1n t\u1ea1i qu\u1ea7y", 100_000, "paid"),
 ]
