@@ -17,7 +17,6 @@ export type ConsoleDestination = {
         | "navOffice"
         | "navAuthority"
         | "navInbox"
-        | "navAutomations"
         | "navBrain"
         | "navModules"
         | "navTeam"
@@ -41,14 +40,6 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
     { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
     { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
-    {
-        key: "automations",
-        label: "navAutomations",
-        route: "/automations",
-        icon: "agentos",
-        group: "operate",
-        managerOnly: true,
-    },
     { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },
     { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
     {

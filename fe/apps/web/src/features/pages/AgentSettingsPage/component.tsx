@@ -1,6 +1,5 @@
 import { Stack, SurfaceCard } from "@starci/grammar/common"
 import type { ModuleIconName } from "@/modules/types"
-import { AgentAutomations } from "@/components/blocks/AgentAutomations"
 import { AgentConnectionAccess } from "@/components/blocks/AgentConnectionAccess"
 import { AgentIdentityCard } from "@/components/blocks/AgentIdentityCard"
 import { AgentLiveCard } from "@/components/blocks/AgentLiveCard"
@@ -29,7 +28,7 @@ export interface AgentSettingsPageBaseProps {
 /**
  * Draws the settings of an agent as one narrow column of cards grouped by what the owner is doing: its name and picture; its
  * activity (whether it works, whether it answers customers and its operating mode as three bands of one card); the connections it
- * uses; its automations; the extra card of its type; its copy; and removing it as the last row.
+ * uses; the extra card of its type; its copy; and removing it as the last row.
  */
 export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
     const { module, installationId } = props.props
@@ -57,7 +56,6 @@ export const AgentSettingsPageBase = (props: AgentSettingsPageBaseProps) => {
             {props.props.extrasKey === "chatbot_reply" ? (
                 <AgentReplyCard installationId={installationId} module={module} />
             ) : null}
-            <AgentAutomations />
             <AgentSyncCard installationId={installationId} />
             <AgentRemoveCard installationId={installationId} module={module} />
         </Stack>

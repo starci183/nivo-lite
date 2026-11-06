@@ -83,8 +83,6 @@ export interface DevelopersPanelBaseProps {
         readonly crumbLabel: string
         readonly crumbHome: string
         readonly homeHref: string
-        readonly crumbAutomations: string
-        readonly automationsHref: string
         readonly title: string
         readonly description: string
         readonly eventsTitle: string
@@ -111,7 +109,6 @@ export const DevelopersPanelBase = (props: DevelopersPanelBaseProps) => (
                 label: props.props.crumbLabel,
                 items: [
                     { id: "home", label: props.props.crumbHome, href: props.props.homeHref },
-                    { id: "automations", label: props.props.crumbAutomations, href: props.props.automationsHref },
                     { id: "developers", label: props.props.title },
                 ],
             },

@@ -17,11 +17,6 @@ export interface ApiQuickStartBaseProps {
         readonly isOpen: boolean
         readonly intro: string
         readonly examples: ReadonlyArray<QuickStartExample>
-        readonly n8n: {
-            readonly title: string
-            readonly steps: string
-            readonly examples: ReadonlyArray<QuickStartExample>
-        }
     }
     readonly on: {
         readonly copy: (id: string, code: string) => void
@@ -48,7 +43,7 @@ const example = (item: QuickStartExample, copy: (id: string, code: string) => vo
     </Stack>
 )
 
-/** Draws the quick start as one collapsed row: base address, auth, limits, then copyable curl and n8n examples when opened. */
+/** Draws the quick start as one collapsed row: base address, auth, limits, then copyable curl examples when opened. */
 export const ApiQuickStartBase = (props: ApiQuickStartBaseProps) => (
     <SurfaceCard
         kind="accordion"
@@ -66,13 +61,6 @@ export const ApiQuickStartBase = (props: ApiQuickStartBaseProps) => (
                             {props.props.intro}
                         </Text>
                         {props.props.examples.map((item) => example(item, props.on.copy))}
-                        <Stack gap="inline">
-                            <Heading level={3}>{props.props.n8n.title}</Heading>
-                            <Text size="sm" tone="muted">
-                                {props.props.n8n.steps}
-                            </Text>
-                            {props.props.n8n.examples.map((item) => example(item, props.on.copy))}
-                        </Stack>
                     </Stack>
                 ),
             },

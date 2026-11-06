@@ -8,7 +8,7 @@ import { i18n } from "./modules/i18n"
 const LOGIN_PATH = "/login"
 const HOME_PATH = "/"
 
-// Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/n8n by a per-run bearer token (hash stored with an expiry).
+// Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header.
 const PUBLIC_PATHS = [
     "/login",
     "/signup",
@@ -20,9 +20,7 @@ const PUBLIC_PATHS = [
     "/api/connections",
     "/api/engine",
     "/api/v1",
-    "/api/automation",
     "/api/content",
-    "/api/n8n",
     "/b",
     "/api/b",
     "/j",

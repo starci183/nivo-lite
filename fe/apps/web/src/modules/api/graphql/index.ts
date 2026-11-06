@@ -7,8 +7,6 @@ import type {
     AgentChatTurnStatusQuery,
     VideoProjectQuery,
     AskKnowledgeQuery,
-    AutomationGoogleAccountsQuery,
-    AutomationsQuery,
     BillingPlanQuery,
     BillingWorkspaceQuery,
     BookingBoardQuery,
@@ -58,7 +56,6 @@ import type {
     StartWebhookConnectionMutation,
     TestOpenApiOperationQuery,
     TestWebhookConnectionMutation,
-    UpdateAutomationPipelineMutation,
     VideoMediaQuery,
     VideoRenderStatusQuery,
     VideoScriptStatusQuery,
@@ -85,14 +82,6 @@ export type AgentGenerationStatusType = AgentGenerationStatusQuery["agentGenerat
 export type CreditPackPurchaseType = CreditPacksBoughtQuery["creditPacksBought"][number]
 /** The `AgentChatTurnStatusType` object of the back end contract, as the operations of this app select it. */
 export type AgentChatTurnStatusType = AgentChatTurnStatusQuery["agentChatTurnStatus"]
-/** The `AutomationCardType` object of the back end contract, as the operations of this app select it. */
-export type AutomationCardType = UpdateAutomationPipelineMutation["updateAutomationPipeline"]
-/** The `AutomationGoogleAccountType` object of the back end contract, as the operations of this app select it. */
-export type AutomationGoogleAccountType = AutomationGoogleAccountsQuery["automationGoogleAccounts"][number]
-/** The `AutomationRunType` object of the back end contract, as the operations of this app select it. */
-export type AutomationRunType = AutomationsQuery["automations"]["runs"][number]
-/** The `AutomationsOverviewType` object of the back end contract, as the operations of this app select it. */
-export type AutomationsOverviewType = AutomationsQuery["automations"]
 /** The `BillingPlanType` object of the back end contract, as the operations of this app select it. */
 export type BillingPlanType = NonNullable<BillingPlanQuery["billingPlan"]>
 /** The `BillingWorkspaceType` object of the back end contract, as the operations of this app select it. */
@@ -219,24 +208,18 @@ export type KnowledgeSuggestionContextType = KnowledgeSuggestionsQuery["knowledg
 export type LeadRecordType = LeadJourneyQuery["leadJourney"]["lead"]
 /** The `LessonMiningStatusType` object of the back end contract, as the operations of this app select it. */
 export type LessonMiningStatusType = LessonMiningStatusQuery["lessonMiningStatus"]
-/** The `LocalizedTextType` object of the back end contract, as the operations of this app select it. */
-export type LocalizedTextType = UpdateAutomationPipelineMutation["updateAutomationPipeline"]["missing"][number]["label"]
 /** The `MetaAppObjectType` object of the back end contract, as the operations of this app select it. */
 export type MetaAppObjectType = NonNullable<CheckMetaMutation["checkMeta"]["appPage"]>
 /** The `MetaCheckType` object of the back end contract, as the operations of this app select it. */
 export type MetaCheckType = CheckMetaMutation["checkMeta"]
 /** The `MetaWizardConnectionType` object of the back end contract, as the operations of this app select it. */
 export type MetaWizardConnectionType = ChooseMetaPageMutation["chooseMetaPage"]
-/** The `MissingRequirementType` object of the back end contract, as the operations of this app select it. */
-export type MissingRequirementType = UpdateAutomationPipelineMutation["updateAutomationPipeline"]["missing"][number]
 /** The `ModuleInstallationType` object of the back end contract, as the operations of this app select it. */
 export type ModuleInstallationType = ModuleInstallationsQuery["moduleInstallations"][number]
 /** The `NivoEntryType` object of the back end contract, as the operations of this app select it. */
 export type NivoEntryType = NivoKnowledgeQuery["nivoKnowledge"][number]
 /** The `OpenApiTestType` object of the back end contract, as the operations of this app select it. */
 export type OpenApiTestType = TestOpenApiOperationQuery["testOpenApiOperation"]
-/** The `PreviewSampleType` object of the back end contract, as the operations of this app select it. */
-export type PreviewSampleType = AutomationsQuery["automations"]["sample"]
 /** The `PublicBookingPageType` object of the back end contract, as the operations of this app select it. */
 export type PublicBookingPageType = PublicBookingPageQuery["publicBookingPage"]
 /** The `PublicInterviewType` object of the back end contract, as the operations of this app select it. */
@@ -253,8 +236,6 @@ export type PublicRequirementsType = PublicHiringJobQuery["publicHiringJob"]["re
 export type PublicSlotType = PublicHiringInterviewQuery["publicHiringInterview"]["proposedSlots"][number]
 /** The `RetrievedPassageType` object of the back end contract, as the operations of this app select it. */
 export type RetrievedPassageType = AskKnowledgeQuery["askKnowledge"][number]
-/** The `RunStepType` object of the back end contract, as the operations of this app select it. */
-export type RunStepType = AutomationsQuery["automations"]["runs"][number]["steps"][number]
 /** The `ShiftPositionType` object of the back end contract, as the operations of this app select it. */
 export type ShiftPositionType = ShiftsWorkbenchQuery["shiftsWorkbench"]["setup"]["positions"][number]
 /** The `ShiftStaffType` object of the back end contract, as the operations of this app select it. */
@@ -289,11 +270,6 @@ export type ShiftsSwapType = ShiftsMineQuery["shiftsMine"]["swaps"][number]
 export type ShiftsWeekType = ShiftsWorkbenchQuery["shiftsWorkbench"]["week"]
 /** The `ShiftsWorkItemType` object of the back end contract, as the operations of this app select it. */
 export type ShiftsWorkItemType = NonNullable<ShiftsMineQuery["shiftsMine"]["leaves"][number]["item"]>
-/** The `TemplateDefinitionType` object of the back end contract, as the operations of this app select it. */
-export type TemplateDefinitionType = UpdateAutomationPipelineMutation["updateAutomationPipeline"]["def"]
-/** The `TemplateSettingType` object of the back end contract, as the operations of this app select it. */
-export type TemplateSettingType =
-    UpdateAutomationPipelineMutation["updateAutomationPipeline"]["def"]["settings"][number]
 /** The `VideoBrandType` object of the back end contract, as the operations of this app select it. */
 export type VideoBrandType = SaveVideoBrandMutation["saveVideoBrand"]
 /** The `VideoMediaType` object of the back end contract, as the operations of this app select it. */

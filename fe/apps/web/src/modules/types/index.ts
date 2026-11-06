@@ -84,45 +84,6 @@ export type { AdjustInput, AdjustItem, CountInput, StockTakeItem } from "./inven
 export type { DraftLowItem, DraftPoInput, NewPoInput, ImportItem, StarterItem } from "./inventory-commands"
 export type { ItemInput, SavedItem, ReceiveInput, ReceiveItem, RecipeInput } from "./inventory-commands"
 export type { SendItem, TransferInput, SupplierInput } from "./inventory-commands"
-export type {
-    AccountsView,
-    AutomationCardView,
-    AutomationGateKind,
-    AutomationIconWord,
-    AutomationRunStatus,
-    AutomationRunView,
-    AutomationTone,
-    AutomationsBoardView,
-    AutomationsPanesActions,
-    AutomationsPanesCopy,
-    AutomationsPanesView,
-    AutomationsLanguage,
-    AutomationsTranslator,
-    Capability,
-    CardView,
-    ChannelNeed,
-    ConfigValue,
-    ConnectionNeed,
-    ContentMode,
-    DetailView,
-    FieldDef,
-    GateAction,
-    GateView,
-    GoogleAccount,
-    BilingualLabel,
-    MessageView,
-    Missing,
-    PipelineConfig,
-    PreviewSample,
-    Requires,
-    RunRowView,
-    RunStep,
-    SettingFieldView,
-    ShopContext,
-    TemplateDef,
-    TemplateExecutor,
-    TemplatePack,
-} from "./automations"
 export type { DecisionKind, DecisionOutcome } from "./decisions"
 
 export type {

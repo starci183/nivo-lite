@@ -35,7 +35,6 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
     const t = useTranslations("developers")
     const member = useMember()
     const tc = useTranslations("connections")
-    const ta = useTranslations("automations")
     const tw = useTranslations("webhookWizard")
     const { webhooks, canManage, read, retry } = useDeveloperWebhooks()
     const slotLabels = useSlotLabels()
@@ -72,8 +71,6 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                 crumbLabel: t("crumbLabel"),
                 crumbHome: t("crumbHome"),
                 homeHref: workspaceHref(workspaceId, APP_ROUTES.dashboard),
-                crumbAutomations: ta("title"),
-                automationsHref: workspaceHref(workspaceId, APP_ROUTES.automations),
                 title: t("title"),
                 description: t("description"),
                 eventsTitle: t("eventsTitle"),

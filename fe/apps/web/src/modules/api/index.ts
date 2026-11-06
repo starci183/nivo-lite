@@ -76,10 +76,6 @@ export type {
     AgentChatTurnStatusType,
     AgentGenerationStatusType,
     AgentKnowledgeLensType,
-    AutomationCardType,
-    AutomationGoogleAccountType,
-    AutomationRunType,
-    AutomationsOverviewType,
     BillingPlanType,
     BillingWorkspaceType,
     BookingBoardType,
@@ -102,16 +98,10 @@ export type {
     KnowledgeSuggestionContextType,
     LeadRecordType,
     LessonMiningStatusType,
-    LocalizedTextType,
-    MissingRequirementType,
     ModuleInstallationType,
     NivoEntryType,
     OpenApiTestType,
-    PreviewSampleType,
     RetrievedPassageType,
-    RunStepType,
-    TemplateDefinitionType,
-    TemplateSettingType,
 } from "./graphql/index"
 export { putPresigned } from "./rest/uploads/put-presigned"
 export type {
@@ -257,7 +247,7 @@ export type { PackageAgentTemplateMutation, PaymentOrderQuery } from "./graphql/
 export type { PaymentOrdersQuery, PostMarketingWeeklyReportMutation } from "./graphql/__generated__/graphql"
 export type { PostOfficeMessageMutation, PostSetupMessageMutation } from "./graphql/__generated__/graphql"
 export type { PreviewCsvSourceQuery, PreviewDatabaseTableQuery } from "./graphql/__generated__/graphql"
-export type { ProposeAutomationBodyMutation, ProposeBrandKitMutation } from "./graphql/__generated__/graphql"
+export type { ProposeBrandKitMutation } from "./graphql/__generated__/graphql"
 export type { ProposeOfficeCommandMutation, ProposeShiftsWeekMutation } from "./graphql/__generated__/graphql"
 export type { PublicBookingPageQuery, PublicBookingTimesQuery } from "./graphql/__generated__/graphql"
 export type { PublicDocumentsQuery, PublicHiringInterviewQuery } from "./graphql/__generated__/graphql"
@@ -296,7 +286,7 @@ export type { RestoreAgentGraphVersionMutation } from "./graphql/__generated__/g
 export type { RetryKnowledgeSourceMutation, ReturnZaloAuthorizationMutation } from "./graphql/__generated__/graphql"
 export type { RevealSepayKeyMutation, RevokeAgentConnectionMutation } from "./graphql/__generated__/graphql"
 export type { RevokeApiKeyMutation, RevokeInviteMutation, RevokeSessionMutation } from "./graphql/__generated__/graphql"
-export type { RotateSepayKeyMutation, RunAutomationNowMutation } from "./graphql/__generated__/graphql"
+export type { RotateSepayKeyMutation } from "./graphql/__generated__/graphql"
 export type { RunCsvImportMutation, RunDocumentImportMutation } from "./graphql/__generated__/graphql"
 export type { SaveAgentGoalMutation, SaveAgentGraphDraftMutation } from "./graphql/__generated__/graphql"
 export type { SaveAgentTriggerMutation, SaveAuthorityRuleMutation } from "./graphql/__generated__/graphql"
