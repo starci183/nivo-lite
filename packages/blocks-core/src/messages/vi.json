@@ -48,7 +48,7 @@
   "nodeOrderConfirmTitle": "Xác nhận đơn hàng",
   "nodeOrderNeedsApprovalTitle": "Cần chủ duyệt?",
   "nodePaymentClaimAckTitle": "Ghi nhận và phản hồi khách báo đã chuyển khoản",
-  "nodePaymentRequestSepayTitle": "Yêu cầu chuyển khoản SePay",
+  "nodePaymentRequestTitle": "Yêu cầu chuyển khoản",
   "answerGap": "Em chưa có thông tin về nội dung này ạ.",
   "answerNeutral": "Em đã nhận được tin nhắn của bạn ạ.",
   "claimOrderRecorded": "đã ghi nhận đơn\nđã đặt đơn\nđã tạo đơn\nđã gửi duyệt\nđơn đã được ghi nhận",
