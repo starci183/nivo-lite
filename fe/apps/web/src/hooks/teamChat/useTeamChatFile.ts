@@ -1,13 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { usePutPresignedSwr } from "@/hooks/swr"
-import { mutateRequestChatFileUpload } from "@/modules/api/graphql/mutations/mutation-request-chat-file-upload"
+import { useMutateRequestChatFileUploadSwr, usePutPresignedSwr } from "@/hooks/swr"
 import { chatFileRefusalOf } from "@/modules/teamChat"
-import { useChatMutation } from "./useChatMutation"
 
 /** The view `useTeamChatFile` returns. */
-export interface TeamChatFileView {
+export interface TeamChatFilePicker {
     /** The file that goes with the next message, or null. */
     readonly file: File | null
     /** The refusal code of the last choice or upload (the door's vocabulary, or "failed"), or null. */
@@ -24,13 +22,8 @@ export interface TeamChatFileView {
  * the upload straight to the store through the address the door hands out for that room. The door checks what landed when the message
  * is sent.
  */
-export const useTeamChatFile = (workspaceId: string): TeamChatFileView => {
-    const request = useChatMutation(
-        "chatFileUpload",
-        workspaceId,
-        mutateRequestChatFileUpload,
-        (data) => data.requestChatFileUpload,
-    )
+export const useTeamChatFile = (workspaceId: string): TeamChatFilePicker => {
+    const request = useMutateRequestChatFileUploadSwr(workspaceId)
     const { trigger: putFile } = usePutPresignedSwr()
     const [file, setFile] = useState<File | null>(null)
     const [problem, setProblem] = useState<string | null>(null)
@@ -55,7 +48,7 @@ export const useTeamChatFile = (workspaceId: string): TeamChatFileView => {
                 mimeType: file.type,
                 sizeBytes: file.size,
             })
-            if (answer.upload === null || answer.upload === undefined) {
+            if (answer.upload === null) {
                 setProblem(answer.refusal ?? "failed")
                 return undefined
             }

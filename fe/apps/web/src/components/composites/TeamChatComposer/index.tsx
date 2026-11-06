@@ -3,7 +3,10 @@ import { ChatFileChosen } from "@/components/branches/ChatFileChosen"
 import { ChatFilePicker } from "@/components/branches/ChatFilePicker"
 import { Icon } from "@/components/leaves/Icon"
 import { COMPOSER_INPUT_CLASS_NAME } from "./classNames"
-import type { ChatParty } from "@/modules/teamChat"
+import type { ChatParty } from "@/modules/types"
+
+/** The glyph before a mention suggestion. */
+const MENTION_ICON = <Icon props={{ name: "mention", usage: "leading" }} />
 
 /** The words and state of the team chat composer. */
 export interface TeamChatComposerProps {
@@ -61,7 +64,7 @@ export const TeamChatComposer = (props: TeamChatComposerProps) => (
                             key={`${party.kind}:${party.id}`}
                             intent="neutral"
                             size="sm"
-                            startContent={<Icon props={{ name: "mention", usage: "leading" }} />}
+                            startContent={MENTION_ICON}
                             onPress={() => props.onMention(party)}
                         >
                             {party.name}

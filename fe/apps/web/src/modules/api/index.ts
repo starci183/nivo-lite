@@ -279,3 +279,18 @@ export type { WorkspaceStaffQuery, WritePublicDocumentMutation } from "./graphql
 export type { ZaloConnectionPageQuery } from "./graphql/__generated__/graphql"
 export type { ZaloConnectionQuery } from "./graphql/__generated__/graphql"
 export type { ChatMessagesQuery, ChatRoomsQuery, ChatUnreadQuery } from "./graphql/__generated__/graphql"
+export type {
+    CreateChatRoomMutation,
+    DecideChatApprovalMutation,
+    MarkChatRoomReadMutation,
+} from "./graphql/__generated__/graphql"
+export type {
+    PinChatMessageMutation,
+    RequestChatFileUploadMutation,
+    SendChatMessageMutation,
+} from "./graphql/__generated__/graphql"
+export type {
+    SetChatRoomMutedMutation,
+    SetChatTypingMutation,
+    UnpinChatMessageMutation,
+} from "./graphql/__generated__/graphql"

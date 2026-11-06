@@ -26,6 +26,8 @@ interface StreamChatTypingParams {
     readonly roomId: string
     /** Stops the stream and its reconnects. */
     readonly signal: AbortSignal
+    /** Called each time the stream (re)opens: read the stored state once, which closes the gap since the last frame. */
+    readonly onOpen: () => void
     /** Called for each hint. */
     readonly onPush: (push: ChatTypingPush) => void
     /** Called when an attempt failed and the stream will try again. */
@@ -60,7 +62,14 @@ const pushOf = (data: string): ChatTypingPush | null => {
 }
 
 /** Follows the typing event stream of one room for the signed-in member (`GET /realtime/chat-typing?roomId=`) until the signal aborts. */
-export const streamChatTyping = ({ roomId, signal, onPush, onDrop, report }: StreamChatTypingParams): EventStreamHandle => {
+export const streamChatTyping = ({
+    roomId,
+    signal,
+    onOpen,
+    onPush,
+    onDrop,
+    report,
+}: StreamChatTypingParams): EventStreamHandle => {
     const workspaceId = openWorkspaceId()
     const headers: Record<string, string> = {}
     if (workspaceId !== undefined) headers["x-workspace-id"] = workspaceId
@@ -68,6 +77,7 @@ export const streamChatTyping = ({ roomId, signal, onPush, onDrop, report }: Str
         signal,
         headers,
         parse: pushOf,
+        onOpen,
         onFrame: ({ data }: ChatTypingFrame) => (data === null ? undefined : onPush(data)),
         onError: (error: Error) => {
             onDrop?.()
