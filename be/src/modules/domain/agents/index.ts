@@ -22,7 +22,6 @@ export { AgentLensesService } from "./agent-lenses.service"
 export { AgentsService } from "./agents.service"
 export type {
     AgentCard,
-    AgentHandleCard,
     AgentHeader,
     AgentSheet,
     AgentTurnFacts,
