@@ -140,6 +140,22 @@ describe("seedSpecProblems", () => {
         expect(seedSpecProblems(defineModule({ ...CONFIG, specs: [SOUND] }), BLOCKS)).toEqual([])
     })
 
+    it("lets a spec bind the reads of the shared modules, and refuses them when no module is shared", () => {
+        const other = defineModule({
+            key: "crm",
+            namespace: "crm",
+            permissions: ["crm.view"],
+            reads: [],
+            actions: [],
+            tools: [],
+            specs: [SOUND],
+        })
+        expect(seedSpecProblems(other, BLOCKS)).toEqual([
+            { spec: 0, problem: { code: "SPEC_BINDING_UNKNOWN", at: "main/ok.any" } },
+        ])
+        expect(seedSpecProblems(other, BLOCKS, [defineModule(CONFIG)])).toEqual([])
+    })
+
     it("is empty for a module with no seed specs", () => {
         expect(seedSpecProblems(defineModule(CONFIG), BLOCKS)).toEqual([])
     })
