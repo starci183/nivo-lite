@@ -19,13 +19,13 @@ export class AgentRunItemClosedService {
 
     /** Finishes the step that waits on the item with the verdict; a second call finds no waiting step and does nothing. */
     async closed(
-        _workspaceId: string,
+        workspaceId: string,
         workItemId: string,
         _outcome: "approved" | "rejected",
         _by: string,
     ): Promise<void> {
         const decision = (await this.verdicts.verdictsOf([workItemId])).get(workItemId)
         if (decision === undefined) return
-        await this.entityManager.transaction((tx) => this.runs.resumeWaiting(tx, workItemId, decision))
+        await this.entityManager.transaction((tx) => this.runs.resumeWaiting(workspaceId, tx, workItemId, decision))
     }
 }

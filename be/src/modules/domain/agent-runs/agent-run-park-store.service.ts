@@ -1,45 +1,52 @@
 import { Injectable } from "@nestjs/common"
-import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { EntityManager } from "typeorm"
+import { InjectClock } from "@modules/platform/clock"
+import type { Clock } from "@modules/platform/clock"
+import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import type { ScopedTx } from "@modules/domain/entity-engine"
+import { eachInOrder } from "@modules/platform/primitives"
 import { AgentStepQueue } from "@modules/queues/agent-step"
+import { AgentRunRecordsService } from "./agent-run-records.service"
+import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { stepViewOf } from "./agent-runs.mapper"
-import { parseParked, parseResume } from "./policies/db-results.policy"
-import { AgentRunStepEntity } from "./persistence/entities"
+import { jsonValueOf } from "./policies/json-value.policy"
 import type { ParkedQuery, ParkedRef, ResumeAnswer, ResumeWrite, RunStepView } from "./agent-runs-engine.contracts"
 
-/** One row a database function answered: the value sits under the function's own name. */
-type FunctionRow = Readonly<Record<string, unknown>>
+/** The most parked runs one read looks at before the filters that need their steps cut it to the pass limit. */
+const CANDIDATES_MAX = 100
 
-const rejected = (): AgentRunsError => new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected })
+const MS = 1000
 
 @Injectable()
 /**
- * The rows of the runs that stopped for a fix: note the build a run parked under, read the step it stopped on, list the parked runs a machine may
- * try again, and put one back on that step. The reset and the job that drives it commit together; every write goes through a database function.
+ * The runs that stopped for a fix: note the build a run parked under, read the step it stopped on, list the parked runs a machine may
+ * try again, and put one back on that step. The reset and the job that drives it commit together; every write is an engine update under
+ * the version read.
  */
 export class AgentRunParkStoreService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectClock() private readonly clock: Clock,
+        private readonly store: AgentRunStoreService,
+        private readonly records: AgentRunRecordsService,
         private readonly queue: AgentStepQueue,
     ) {}
 
     /** The first failed step of a run, or null when none failed. */
-    async failedStepOf(runId: string): Promise<RunStepView | null> {
-        const step = await this.entityManager.findOne(AgentRunStepEntity, {
-            where: { runId, status: "failed" },
-            order: { seq: "ASC" },
-        })
-        return step === null ? null : stepViewOf(step)
+    async failedStepOf(workspaceId: string, runId: string): Promise<RunStepView | null> {
+        const steps = await this.store.stepsOf(workspaceId, runId)
+        return steps.find((step) => step.status === "failed") ?? null
     }
 
     /** Records the build a run parked under; false when the run is not parked. */
-    async markParked(runId: string, build: string): Promise<boolean> {
-        const [row] = await callDbFunction<FunctionRow>(this.entityManager, "public.agent_run_park_mark", [
-            runId,
-            build,
-        ])
-        return row?.agent_run_park_mark === true
+    markParked(workspaceId: string, runId: string, build: string): Promise<boolean> {
+        return this.store.at(workspaceId, undefined, async (scoped) => {
+            const marked = await this.store.patchRunWith(scoped, runId, (run) =>
+                run.status === "parked" ? { parkedBuild: build } : null,
+            )
+            return marked !== null
+        })
     }
 
     /**
@@ -48,17 +55,7 @@ export class AgentRunParkStoreService {
      */
     resumeRun(request: ResumeWrite): Promise<ResumeAnswer> {
         return this.entityManager.transaction(async (tx) => {
-            const [row] = await callDbFunction<FunctionRow>(tx, "public.agent_run_resume", [
-                request.runId,
-                request.actor,
-                request.reason,
-                request.input === undefined ? null : JSON.stringify(request.input),
-                request.auto,
-                request.max,
-                request.backoffSeconds,
-            ])
-            const answer = parseResume(row?.agent_run_resume)
-            if (answer === null) throw rejected()
+            const answer = await this.store.at(request.workspaceId, tx, (scoped) => this.resumeIn(scoped, request))
             if (answer.kind === "resumed") {
                 await this.queue.enqueueAdvance(
                     { workspaceId: answer.workspaceId, runId: request.runId },
@@ -71,18 +68,83 @@ export class AgentRunParkStoreService {
         })
     }
 
-    /** The parked runs a machine may run again, at most `limit`. */
-    async parked(query: ParkedQuery): Promise<ReadonlyArray<ParkedRef>> {
-        const rows = await callDbFunction<unknown>(this.entityManager, "public.agent_run_parked", [
-            query.limit,
-            query.build,
-            query.byBuild,
-            query.minAgeSeconds,
-            query.max,
-            query.exclude,
-        ])
-        const parked = parseParked(rows)
-        if (parked === null) throw rejected()
-        return parked
+    private async resumeIn(scoped: ScopedTx, request: ResumeWrite): Promise<ResumeAnswer> {
+        const run = await this.records.run(scoped, request.runId)
+        if (run === null) return { kind: "not_found" }
+        if (run.status === "compensated" || run.status === "compensating") return { kind: "compensated" }
+        if (run.status !== "parked") return { kind: "not_parked" }
+        const failed = (await this.records.stepsOf(scoped, request.runId)).find((step) => step.status === "failed")
+        if (failed === undefined) return { kind: "no_failed_step" }
+        if (request.auto && run.resumeAttempts >= request.max) return { kind: "exhausted" }
+        const now = this.clock.now()
+        const read = request.input === undefined ? null : jsonValueOf(request.input)
+        const input = read?.valid === true ? read.json : undefined
+        const reset = await this.records.patchStep(scoped, failed, {
+            status: "pending",
+            attempt: 0,
+            errorCode: null,
+            claimedUntil: null,
+            waitItemId: null,
+            notBefore: now.toISOString(),
+            ...(input === undefined ? {} : { input }),
+        })
+        if (reset === null) throw new AgentRunsError({ code: AgentRunsErrorCode.RunContended })
+        await this.store.patchRunWith(scoped, request.runId, (fresh) => ({
+            status: "running",
+            error: null,
+            parkReason: null,
+            endedAt: null,
+            deadLetteredAt: null,
+            resumedAt: now.toISOString(),
+            resumedBy: request.actor,
+            resumeReason: request.reason,
+            resumeAttempts: request.auto ? fresh.resumeAttempts + 1 : fresh.resumeAttempts,
+            ...(request.auto
+                ? {
+                      resumeNotBefore: new Date(
+                          now.getTime() + request.backoffSeconds * MS * 2 ** fresh.resumeAttempts,
+                      ).toISOString(),
+                  }
+                : {}),
+        }))
+        return {
+            kind: "resumed",
+            stepKey: failed.stepKey,
+            workspaceId: request.workspaceId,
+            errorCode: failed.errorCode,
+            at: now.getTime(),
+        }
+    }
+
+    /** The parked runs of a workspace a machine may run again, oldest first, at most `limit`. */
+    parked(query: ParkedQuery): Promise<ReadonlyArray<ParkedRef>> {
+        return this.store.at(query.workspaceId, undefined, async (scoped) => {
+            const now = this.clock.now()
+            const runs = await this.records.runsOf(
+                scoped,
+                "parked",
+                null,
+                [
+                    ["resumeNotBefore", "asc"],
+                    ["id", "asc"],
+                ],
+                CANDIDATES_MAX,
+            )
+            const due = runs.filter(
+                (run) =>
+                    run.resumeAttempts < query.max &&
+                    (run.resumeNotBefore === null || run.resumeNotBefore.getTime() < now.getTime()) &&
+                    (run.endedAt === null || run.endedAt.getTime() < now.getTime() - query.minAgeSeconds * MS) &&
+                    (!query.byBuild || run.parkedBuild !== query.build),
+            )
+            const found: Array<ParkedRef> = []
+            await eachInOrder(due, async (run) => {
+                if (found.length >= query.limit) return
+                const steps = (await this.records.stepsOf(scoped, run.id)).map(stepViewOf)
+                if (steps.some((step) => step.status === "failed" && !query.exclude.includes(step.errorCode ?? "")))
+                    found.push({ runId: run.id, workspaceId: query.workspaceId })
+            })
+            return found
+        })
     }
 }

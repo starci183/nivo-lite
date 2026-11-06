@@ -205,7 +205,9 @@ export class TurnGatewayToolsService implements GatewayTools {
             [],
             await this.scopeOf(ctx, conversation, ""),
         )
-        const stored = outputStepFrom(await this.runs.runInline(wakeId, spec, AbortSignal.timeout(OUTPUT_STEP_MS)))
+        const stored = outputStepFrom(
+            await this.runs.runInline(ctx.workspaceId, wakeId, spec, AbortSignal.timeout(OUTPUT_STEP_MS)),
+        )
         if (stored === null) return { error: "unknown_outcome" }
         if (stored.status === "failed") return { error: stored.code ?? "failed", detail: stored.summary }
         if (stored.status === "ok") {

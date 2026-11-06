@@ -68,6 +68,22 @@ export class EntityEngineService {
         })
     }
 
+    /**
+     * Runs `work` in the scope of `workspaceId` on the caller's own transaction `manager`, then leaves the scope (`engine_scope_leave`:
+     * the session role and an empty workspace) even when `work` throws, so the caller's other statements keep their grants. Only for a
+     * transaction that must stay the caller's, such as the one that writes a work item and its wait together.
+     */
+    async within<T>(manager: EntityManager, workspaceId: string, work: ScopedWork<T>): Promise<T> {
+        if (!UUID.test(workspaceId))
+            throw new EntityEngineError({ code: EntityEngineErrorCode.ScopeInvalid, params: { workspaceId } })
+        await callDbFunction(manager, "public.engine_scope_enter", [workspaceId])
+        try {
+            return await work(mintScopedTx({ manager, workspaceId }))
+        } finally {
+            await callDbFunction(manager, "public.engine_scope_leave", [])
+        }
+    }
+
     /** The declaration of an entity, or the engine error of a name the catalog does not hold. */
     definition(name: string): EntityDefinition {
         const entity = this.catalog.get(name)

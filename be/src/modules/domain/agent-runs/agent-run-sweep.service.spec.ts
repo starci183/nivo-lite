@@ -6,11 +6,13 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
+import { AgentRunDueService } from "./agent-run-due.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunSweepService } from "./agent-run-sweep.service"
+import { AgentRunWorkspacesService } from "./agent-run-workspaces.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsService } from "./agent-runs.service"
 import { AGENT_RUN_ITEM_VERDICTS, AGENT_RUN_WAIT_TIMEOUT } from "./agent-runs.decorators"
@@ -57,6 +59,8 @@ const build = async (options: Options) => {
     const logger = mock<Logger>()
     const em = mockEntityManager()
     fakeTransaction(em)
+    const dues = mock<AgentRunDueService>({ due: jest.fn().mockResolvedValue(options.items) })
+    const workspaces = mock<AgentRunWorkspacesService>({ next: jest.fn().mockResolvedValue(["ws-1"]) })
     const handlers = mock<AgentRunHandlersService>({
         of: jest.fn(() => ({
             kind: "ask",
@@ -65,14 +69,13 @@ const build = async (options: Options) => {
         })),
     })
     const store = mock<AgentRunStoreService>({
-        due: jest.fn().mockResolvedValue(options.items),
         stepOf: jest
             .fn()
             .mockResolvedValueOnce(options.step ?? null)
             .mockResolvedValue(options.fresh === undefined ? (options.step ?? null) : options.fresh),
         viewsOf: jest.fn().mockResolvedValue([stepViewOf({ stepKey: "door", fence: 3 })]),
         waitingOn: jest.fn().mockResolvedValue(stepViewOf({ stepKey: "door", fence: 3 })),
-        runById: jest.fn().mockResolvedValue(runViewOf({ status: "dead", errorCode: "boom" })),
+        runById: jest.fn().mockResolvedValue(runViewOf({ status: "parked", errorCode: "boom" })),
     })
     const runs = mock<AgentRunsService>({
         advance: jest.fn().mockResolvedValue({ run: null, retryAfterMs: null }),
@@ -87,13 +90,10 @@ const build = async (options: Options) => {
     })
     const compensation = mock<AgentRunCompensationService>({ run: jest.fn().mockResolvedValue(undefined) })
     const deadLetter = mock<AgentRunDeadLetterService>({ tell: jest.fn().mockResolvedValue(undefined) })
-    verdictPort.claimTimeout.mockReset()
-    verdictPort.claimTimeout.mockResolvedValue({ kind: "open" })
-    verdictPort.verdictsOf.mockReset()
-    verdictPort.verdictsOf.mockResolvedValue(options.verdicts ?? new Map())
+    verdictPort.claimTimeout.mockReset().mockResolvedValue({ kind: "open" })
+    verdictPort.verdictsOf.mockReset().mockResolvedValue(options.verdicts ?? new Map())
     store.openWaits.mockResolvedValue(options.verdicts === undefined ? [] : [waiting()])
-    bound.expire.mockReset()
-    bound.expire.mockResolvedValue(options.expiry ?? { kind: "ended" })
+    bound.expire.mockReset().mockResolvedValue(options.expiry ?? { kind: "ended" })
     const resume = mock<AgentRunResumeService>({
         resumeParked:
             options.parkedFails === true
@@ -113,12 +113,27 @@ const build = async (options: Options) => {
             { provide: AgentRunCompensationService, useValue: compensation },
             { provide: AgentRunDeadLetterService, useValue: deadLetter },
             { provide: AgentRunResumeService, useValue: resume },
+            { provide: AgentRunDueService, useValue: dues },
+            { provide: AgentRunWorkspacesService, useValue: workspaces },
             { provide: AGENT_RUN_ITEM_VERDICTS, useValue: verdictPort },
             { provide: AGENT_RUN_WAIT_TIMEOUT, useValue: bound },
         ],
     }).compile()
     const service = container.get(AgentRunSweepService)
-    return { service, store, runs, steps, ledger, compensation, deadLetter, timeouts: bound, logger, resume }
+    return {
+        service,
+        store,
+        runs,
+        steps,
+        ledger,
+        compensation,
+        deadLetter,
+        timeouts: bound,
+        logger,
+        resume,
+        dues,
+        workspaces,
+    }
 }
 
 describe("AgentRunSweepService.sweep", () => {
@@ -134,7 +149,7 @@ describe("AgentRunSweepService.sweep", () => {
             parked: 0,
         })
 
-        expect(runs.advance).toHaveBeenCalledWith("run-1", expect.any(AbortSignal))
+        expect(runs.advance).toHaveBeenCalledWith("ws-1", "run-1", expect.any(AbortSignal))
     })
 
     it("leaves a step that finished or moved on since it was found", async () => {
@@ -165,8 +180,11 @@ describe("AgentRunSweepService.sweep", () => {
         })
 
         expect(runs.advance).toHaveBeenCalledTimes(1)
-        expect(compensation.run).toHaveBeenCalledWith("run-1", expect.any(AbortSignal))
-        expect(deadLetter.tell).toHaveBeenCalledWith("run-1", null, "boom")
+        expect(compensation.run).toHaveBeenCalledWith(
+            expect.objectContaining({ runId: "run-1", workspaceId: "ws-1" }),
+            expect.any(AbortSignal),
+        )
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", null, "boom")
     })
 
     it("names an unknown reason when the stopped run kept none", async () => {
@@ -175,7 +193,7 @@ describe("AgentRunSweepService.sweep", () => {
 
         await service.sweep()
 
-        expect(deadLetter.tell).toHaveBeenCalledWith("run-1", null, "unknown")
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", null, "unknown")
     })
 })
 
@@ -206,7 +224,7 @@ describe("AgentRunSweepService.sweep recovers waits from their items", () => {
 
         await expect(service.sweep()).resolves.toMatchObject({ recovered: 1 })
 
-        expect(runs.resumeWaiting).toHaveBeenCalledWith(expect.anything(), "item-1", {
+        expect(runs.resumeWaiting).toHaveBeenCalledWith("ws-1", expect.anything(), "item-1", {
             approved: true,
             by: "recovered",
         })
@@ -255,7 +273,10 @@ describe("AgentRunSweepService.sweep waits and failures", () => {
 
         await service.sweep()
 
-        expect(runs.resumeWaiting).toHaveBeenCalledWith(expect.anything(), "item-1", { approved: false, by: "timeout" })
+        expect(runs.resumeWaiting).toHaveBeenCalledWith("ws-1", expect.anything(), "item-1", {
+            approved: false,
+            by: "timeout",
+        })
         expect(steps.fail).not.toHaveBeenCalled()
     })
 
@@ -350,11 +371,11 @@ describe("AgentRunSweepService preserves closed approval truth", () => {
             decision: { approved: true, by: "member-id" },
         })
         await service.sweep()
-        expect(runs.resumeWaiting).toHaveBeenCalledWith(expect.anything(), "item-1", {
+        expect(runs.resumeWaiting).toHaveBeenCalledWith("ws-1", expect.anything(), "item-1", {
             approved: true,
             by: "member-id",
         })
-        expect(runs.resumeWaiting).not.toHaveBeenCalledWith(expect.anything(), "item-1", {
+        expect(runs.resumeWaiting).not.toHaveBeenCalledWith("ws-1", expect.anything(), "item-1", {
             approved: false,
             by: "timeout",
         })
@@ -390,7 +411,7 @@ describe("AgentRunSweepService timeout owner claims", () => {
         await expect(service.sweep()).resolves.toMatchObject({ expired: 1, recovered: 0 })
 
         expect(timeouts.expire).toHaveBeenCalledTimes(1)
-        expect(runs.resumeWaiting).toHaveBeenCalledWith(expect.anything(), "item-1", decision)
+        expect(runs.resumeWaiting).toHaveBeenCalledWith("ws-1", expect.anything(), "item-1", decision)
         expect(steps.fail).not.toHaveBeenCalled()
         expect(ledger.commitIn).not.toHaveBeenCalled()
     })
@@ -419,7 +440,7 @@ describe("AgentRunSweepService.sweep parked runs", () => {
         const { service, resume } = await build({ items: [], parked: 2 })
 
         await expect(service.sweep()).resolves.toMatchObject({ parked: 2 })
-        expect(resume.resumeParked).toHaveBeenCalledWith(false)
+        expect(resume.resumeParked).toHaveBeenCalledWith(false, ["ws-1"])
     })
 
     it("logs a failing parked pass and still answers the rest of the report", async () => {
@@ -428,6 +449,19 @@ describe("AgentRunSweepService.sweep parked runs", () => {
         await expect(service.sweep()).resolves.toMatchObject({ parked: 0 })
         expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.SweepItemFailed, expect.any(Error), {
             kind: "parked",
+        })
+    })
+})
+
+describe("AgentRunSweepService.sweep a failing workspace", () => {
+    it("logs a workspace whose pass fails, reports nothing for it and still reports the rest", async () => {
+        const { service, dues, logger } = await build({ items: [] })
+        dues.due.mockRejectedValueOnce(new Error("db"))
+
+        await expect(service.sweep()).resolves.toMatchObject({ expired: 0, ready: 0, recovered: 0 })
+        expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.SweepItemFailed, expect.any(Error), {
+            kind: "workspace",
+            workspaceId: "ws-1",
         })
     })
 })

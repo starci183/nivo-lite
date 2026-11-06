@@ -67,7 +67,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
                 versionId: active.versionId,
                 context: { ...turn.context },
             })
-            await this.runs.append(tx, opened.id, [
+            await this.runs.append(turn.workspaceId, tx, opened.id, [
                 this.stepOf(first, { versionId: active.versionId, nodeKey: first.key, trigger }),
             ])
             return opened.id

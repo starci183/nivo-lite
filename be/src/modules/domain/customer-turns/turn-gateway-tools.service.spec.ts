@@ -439,6 +439,7 @@ describe("TurnGatewayToolsService on a run of the core road", () => {
         const { service, runs, gateway, notes } = await build()
         await expect(service.run(CORE_CTX, "tool.call", CORE_CALL)).resolves.toEqual({ result: { summary: "ORD-1" } })
         expect(runs.runInline).toHaveBeenCalledWith(
+            "ws",
             "wake-1",
             expect.objectContaining({ kind: "output", nodeKey: "act:gateway_call" }),
             expect.any(AbortSignal),
@@ -490,6 +491,6 @@ describe("TurnGatewayToolsService incomplete stored outcomes without graph bindi
             reason: "",
         })
         expect(approvals.ask.mock.calls[0]?.[1].spec.seed?.fields?.reason).toBe("")
-        expect(runs.runInline.mock.calls[0]?.[1].nodeKey).toBe("")
+        expect(runs.runInline.mock.calls[0]?.[2].nodeKey).toBe("")
     })
 })

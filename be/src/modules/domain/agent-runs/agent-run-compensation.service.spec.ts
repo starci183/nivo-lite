@@ -54,7 +54,7 @@ const build = async (
     claims.forEach((claim) => ledger.claimCompensation.mockResolvedValueOnce(claim))
     ;(over.commits ?? ["ok", "ok", "ok"]).forEach((commit) => ledger.commitCompensation.mockResolvedValueOnce(commit))
     const deadLetter = mock<AgentRunDeadLetterService>({
-        tell: jest.fn((runId: string, stepKey: string | null, code: string) => {
+        tell: jest.fn((_workspaceId: string, runId: string, stepKey: string | null, code: string) => {
             record.told.push(`${runId}:${stepKey ?? "-"}:${code}`)
             return Promise.resolve()
         }),
@@ -88,7 +88,7 @@ describe("AgentRunCompensationService.run when the undo works", () => {
             undoing(record),
         )
 
-        await service.run("run-1", SIGNAL)
+        await service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
 
         expect(record.undone).toEqual(["door-b", "door-a"])
         expect(seen.told).toEqual(["run-1:-:boom"])
@@ -97,7 +97,7 @@ describe("AgentRunCompensationService.run when the undo works", () => {
     it("names the undone run `compensated` when the failure left no code", async () => {
         const { service, record } = await build([{ kind: "finished" }], undefined, { run: null })
 
-        await service.run("run-1", SIGNAL)
+        await service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
 
         expect(record.told).toEqual(["run-1:-:compensated"])
     })
@@ -108,7 +108,7 @@ describe("AgentRunCompensationService.run when the undo works", () => {
         const plain = stepViewOf({ stepKey: "plain", kind: "door" })
         const { service } = await build([{ kind: "claimed", step: plain }, { kind: "finished" }], handler)
 
-        await service.run("run-1", SIGNAL)
+        await service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
 
         expect(record.undone).toEqual(["plain"])
     })
@@ -119,8 +119,8 @@ describe("AgentRunCompensationService.run when it cannot go on", () => {
         const busy = await build([{ kind: "busy" }], undefined)
         const closed = await build([{ kind: "closed" }], undefined)
 
-        await busy.service.run("run-1", SIGNAL)
-        await closed.service.run("run-1", SIGNAL)
+        await busy.service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
+        await closed.service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
 
         expect([...busy.record.told, ...closed.record.told]).toEqual([])
         expect(busy.ledger.commitCompensation).not.toHaveBeenCalled()
@@ -133,7 +133,7 @@ describe("AgentRunCompensationService.run when it cannot go on", () => {
             throwing,
         )
 
-        await service.run("run-1", SIGNAL)
+        await service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
 
         expect(ledger.commitCompensation).toHaveBeenCalledWith(expect.anything(), false, "handler_threw")
         expect(ledger.claimCompensation).toHaveBeenCalledTimes(1)
@@ -145,7 +145,7 @@ describe("AgentRunCompensationService.run when it cannot go on", () => {
             commits: ["dead"],
         })
 
-        await service.run("run-1", SIGNAL)
+        await service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
 
         expect(ledger.commitCompensation).toHaveBeenCalledWith(expect.anything(), false, "no_compensation")
         expect(record.told).toEqual(["run-1:door-a:compensation_failed"])
@@ -154,7 +154,7 @@ describe("AgentRunCompensationService.run when it cannot go on", () => {
     it("fails an undo whose handler has no compensate", async () => {
         const { service, ledger, record } = await build([{ kind: "claimed", step: door("a") }], withoutUndo)
 
-        await service.run("run-1", SIGNAL)
+        await service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
 
         expect(ledger.commitCompensation).toHaveBeenCalledWith(expect.anything(), false, "no_compensation")
         expect(record.told).toEqual([])
@@ -171,7 +171,7 @@ describe("AgentRunCompensationService.run when it cannot go on", () => {
             { commits: ["fenced"] },
         )
 
-        await service.run("run-1", SIGNAL)
+        await service.run({ workspaceId: "ws-1", runId: "run-1" }, SIGNAL)
 
         expect(ledger.claimCompensation).toHaveBeenCalledTimes(1)
     })
@@ -181,7 +181,7 @@ describe("AgentRunCompensationService.run when it cannot go on", () => {
         stop.abort()
         const { service, ledger } = await build([{ kind: "finished" }], undefined)
 
-        await service.run("run-1", stop.signal)
+        await service.run({ workspaceId: "ws-1", runId: "run-1" }, stop.signal)
 
         expect(ledger.claimCompensation).not.toHaveBeenCalled()
     })

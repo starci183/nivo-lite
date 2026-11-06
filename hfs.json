@@ -91,58 +91,6 @@
           "reason": "switches work on or off for one agent of a workspace, creating its state row"
         },
         {
-          "name": "public.agent_run_append",
-          "reason": "writes the steps of a run once under the run lock, so a replay writes none twice"
-        },
-        {
-          "name": "public.agent_step_claim",
-          "reason": "claims one step of a run under a new fence, or answers why it cannot be claimed"
-        },
-        {
-          "name": "public.agent_step_commit",
-          "reason": "commits what a claimed step did under its fence, so a write under an old fence changes nothing"
-        },
-        {
-          "name": "public.agent_step_resume",
-          "reason": "finishes the step that waits on a work item, inside the transaction of the decision that answered it"
-        },
-        {
-          "name": "public.agent_run_park_mark",
-          "reason": "notes the build a run parked under, so a new build can tell which parked runs it may try again"
-        },
-        {
-          "name": "public.agent_run_resume",
-          "reason": "puts a parked run back on its failed step under a row lock, keeping every done step and its result, and records who resumed and why"
-        },
-        {
-          "name": "public.agent_run_parked",
-          "reason": "lists the parked runs a machine may try again, bounded by build, age, tries and the codes that stay with a person"
-        },
-        {
-          "name": "public.agent_run_route",
-          "reason": "moves a run to the status a policy chose, once, and marks the done steps to undo"
-        },
-        {
-          "name": "public.agent_comp_claim",
-          "reason": "claims the last step still to undo under a new fence, or ends the run as compensated"
-        },
-        {
-          "name": "public.agent_comp_commit",
-          "reason": "commits an undo under its fence and sends the run to a person when its tries are spent"
-        },
-        {
-          "name": "public.agent_step_release",
-          "reason": "gives a claim back at once when a worker shuts down, so the sweep takes the step without waiting for its deadline"
-        },
-        {
-          "name": "public.agent_run_spoken",
-          "reason": "marks that a person was told a run stopped, true for the first mark only"
-        },
-        {
-          "name": "public.agent_run_due",
-          "reason": "lists the steps past their deadline, the ready steps nobody picked up and the stopped runs nobody was told about"
-        },
-        {
           "name": "public.engine_catalog",
           "reason": "reads pg_catalog (base tables, records partitions, views, extensions) as one jsonb document for the entity planner; TypeORM cannot express catalog introspection"
         },
@@ -741,6 +689,10 @@
         {
           "name": "public.engine_scope_enter",
           "reason": "enters the entity engine scope of one workspace for the current transaction: sets nivo.workspace_id and switches to the NOBYPASSRLS role app_engine (both transaction-local); TypeORM cannot set a role"
+        },
+        {
+          "name": "public.engine_scope_leave",
+          "reason": "leaves the entity engine scope inside a caller transaction: clears nivo.workspace_id and restores the session role (both transaction-local); TypeORM cannot set a role"
         },
         {
           "name": "public.engine_workspace",

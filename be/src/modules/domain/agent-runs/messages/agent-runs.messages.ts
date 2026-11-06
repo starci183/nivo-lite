@@ -6,6 +6,9 @@ export const AGENT_RUNS_MESSAGES: MessageBundle = {
         "errors.AGENT_RUNS_PLAN_CONFLICT":
             "Lượt làm việc đã gắn với kế hoạch khác. Vui lòng kiểm tra trước khi tiếp tục.",
         "errors.AGENT_RUNS_RESULT_REJECTED": "Hệ thống chưa đọc được kết quả của bước làm việc.",
+        "errors.AGENT_RUNS_RUN_TOO_LONG": "Lượt làm việc đã có số bước tối đa.",
+        "errors.AGENT_RUNS_LINK_KEY_UNSUPPORTED": "Không tra được liên kết theo khóa {{key}}.",
+        "errors.AGENT_RUNS_RUN_CONTENDED": "Lượt làm việc đang được cập nhật, sẽ thử lại.",
         "errors.AGENT_RUNS_HANDLER_DUPLICATE": "Bước loại {{kind}} đã có bộ xử lý.",
         "errors.AGENT_RUNS_RUN_NOT_FOUND": "Lượt làm việc này chưa có tiến trình.",
         "errors.AGENT_RUNS_STEP_FAILED": "Bước làm việc chưa hoàn tất: {{code}}.",
@@ -15,6 +18,9 @@ export const AGENT_RUNS_MESSAGES: MessageBundle = {
     en: {
         "errors.AGENT_RUNS_PLAN_CONFLICT": "This run is bound to a different plan. Review it before continuing.",
         "errors.AGENT_RUNS_RESULT_REJECTED": "The result of the work step could not be read.",
+        "errors.AGENT_RUNS_RUN_TOO_LONG": "The run already holds the most steps a run may have.",
+        "errors.AGENT_RUNS_LINK_KEY_UNSUPPORTED": "No link can be looked up by the key {{key}}.",
+        "errors.AGENT_RUNS_RUN_CONTENDED": "The run is being updated; it will be tried again.",
         "errors.AGENT_RUNS_HANDLER_DUPLICATE": "The step kind {{kind}} already has a handler.",
         "errors.AGENT_RUNS_RUN_NOT_FOUND": "That work turn has no run yet.",
         "errors.AGENT_RUNS_STEP_FAILED": "The work step did not finish: {{code}}.",

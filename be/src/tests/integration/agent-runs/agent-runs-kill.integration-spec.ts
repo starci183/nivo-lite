@@ -24,7 +24,7 @@ describe("agent-runs/kill-mid-turn: the API dies while the model turn runs", () 
     it("agent-runs/kill-mid-turn: the sweep takes the turn over and the chain finishes once, and the dead worker's late write changes nothing", async () => {
         const { runId, wakeId } = await scene.newRun("kill-mid-turn")
         const hang = script().hangOnce("turn", "before")
-        const dying = runs().advance(runId, SIGNAL)
+        const dying = runs().advance(scene.workspaceId, runId, SIGNAL)
         await hang.entered
 
         await scene.expireClaims(runId)
@@ -47,7 +47,7 @@ describe("agent-runs/kill-after-tool: the API dies after the tool acted and befo
     it("agent-runs/kill-after-tool: the retaken step finds the receipt, so the tool acted once and the reply is sent once", async () => {
         const { runId, wakeId } = await scene.newRun("kill-after-tool")
         const hang = script().hangOnce("tool", "after")
-        const dying = runs().advance(runId, SIGNAL)
+        const dying = runs().advance(scene.workspaceId, runId, SIGNAL)
         await hang.entered
         expect(script().performed).toContain(`tool:${wakeId}`)
 
@@ -70,14 +70,13 @@ describe("agent-runs/kill-after-tool: the API dies after the tool acted and befo
         const { runId, wakeId } = await scene.newRun("tool-unknown")
         script().started.add(`tool:${wakeId}`)
 
-        await runs().advance(runId, SIGNAL)
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
         await world.resolve(AgentRunSweepService).sweep()
 
         expect(script().calls.get("tool")).toBe(1)
         expect(script().performed).toEqual([`door:${wakeId}`])
-        expect((await scene.runRow(runId)).status).toBe("dead")
-        expect((await scene.runRow(runId)).errorCode).toBe("tool_outcome_unknown")
+        expect(await scene.runRow(runId)).toMatchObject({ status: "parked", error: { code: "tool_outcome_unknown" } })
         expect(script().told).toEqual(["tool:tool_outcome_unknown"])
     })
 })
@@ -88,7 +87,7 @@ describe("agent-runs/kill-before-reply: the API dies between the tool's result a
         const dying = new AbortController()
         script().afterAnswer.set("tool", () => dying.abort())
 
-        await runs().advance(runId, dying.signal)
+        await runs().advance(scene.workspaceId, runId, dying.signal)
 
         expect(await statuses(runId)).toEqual(["turn:done", "door:done", "tool:done", "reply:pending"])
         expect(script().sent.size).toBe(0)
@@ -107,7 +106,7 @@ describe("agent-runs/kill-before-reply: the API dies between the tool's result a
     it("agent-runs/kill-before-reply: a reply sent and not stored is found sent on the retake, so it is not sent twice", async () => {
         const { runId, wakeId } = await scene.newRun("kill-after-reply")
         const hang = script().hangOnce("reply", "after")
-        const dying = runs().advance(runId, SIGNAL)
+        const dying = runs().advance(scene.workspaceId, runId, SIGNAL)
         await hang.entered
 
         await scene.expireClaims(runId)
@@ -124,13 +123,13 @@ describe("agent-runs/runtime-down: OpenClaw stops while the turn runs", () => {
     it("agent-runs/runtime-down: the held step retries after a backoff and the chain finishes once, and the stopped runtime's late answer changes nothing", async () => {
         const { runId, wakeId } = await scene.newRun("runtime-down")
         const hang = script().hangOnce("turn", "before")
-        const dying = runs().advance(runId, SIGNAL)
+        const dying = runs().advance(scene.workspaceId, runId, SIGNAL)
         await hang.entered
 
-        await runs().interrupted(wakeId, "runtime_down", SIGNAL)
+        await runs().interrupted(scene.workspaceId, wakeId, "runtime_down", SIGNAL)
         expect(await statuses(runId)).toEqual(["turn:pending"])
         await scene.endBackoff(runId)
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
         hang.release()
         await dying
 

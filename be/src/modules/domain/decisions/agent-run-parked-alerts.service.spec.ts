@@ -12,6 +12,7 @@ import { WorkEngineService } from "./work-engine.service"
 const ALERT: ParkedFlowAlert = {
     kind: "flow-parked",
     jobId: "run-1",
+    workspaceId: "ws-1",
     flowKind: "agent-run",
     failureClass: "code",
     reason: "invalid_step_input",

@@ -189,7 +189,7 @@ const toolAndUndo = (world: ScriptedWorld): ReadonlyArray<AgentStepHandler> => [
         run: async (step) => {
             world.called("tool")
             const key = `tool:${wakeOf(step)}`
-            const next = [chainFrom("reply", wakeOf(step))]
+            const next = "reply" in step.earlier ? [] : [chainFrom("reply", wakeOf(step))]
             const receipt = world.receipts.get(key)
             if (receipt !== undefined) return doneBy(world, "tool", receipt, next)
             if (world.started.has(key)) return { kind: "failed", code: TOOL_OUTCOME_UNKNOWN }

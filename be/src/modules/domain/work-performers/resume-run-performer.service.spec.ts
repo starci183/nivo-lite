@@ -77,7 +77,12 @@ describe("ResumeRunPerformerService.perform", () => {
             evidence: "captured",
             lead_id: "lead-1",
         })
-        expect(resumes.resume).toHaveBeenCalledWith({ runId: "run-1", actor: "member-1", reason: "item item-1" })
+        expect(resumes.resume).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            runId: "run-1",
+            actor: "member-1",
+            reason: "item item-1",
+        })
     })
 
     it("records the display name when the actor is not a member", async () => {

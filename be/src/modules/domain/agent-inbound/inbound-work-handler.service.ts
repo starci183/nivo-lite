@@ -162,6 +162,7 @@ export class InboundWorkHandlerService implements AgentWorkFallback, OnModuleIni
     ): Promise<boolean> {
         const keys = await this.intents.nodeKeysOf(turn.workspaceId, turn.agentId, trigger, turn.source)
         await this.runs.runInline(
+            turn.workspaceId,
             turn.wakeId,
             {
                 ...REPLY,

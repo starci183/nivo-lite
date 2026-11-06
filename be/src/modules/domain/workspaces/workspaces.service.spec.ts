@@ -1,7 +1,7 @@
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { In } from "typeorm"
+import { In, MoreThan } from "typeorm"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -186,6 +186,21 @@ describe("WorkspacesService > memberships", () => {
 
         await expect(service.memberships("user-9")).resolves.toEqual([])
         expect(em.find).not.toHaveBeenCalled()
+    })
+})
+
+describe("WorkspacesService > list after an id", () => {
+    it("lists only the workspaces whose id sorts after the one given", async () => {
+        const em = mockEntityManager({ find: [WorkspaceEntity, [workspaceRow()]] })
+
+        await (await serviceOf(em)).list(10, "ws-0")
+
+        expect(em.find).toHaveBeenCalledWith(WorkspaceEntity, {
+            select: { id: true, name: true },
+            where: { id: MoreThan("ws-0") },
+            order: { id: "ASC" },
+            take: 10,
+        })
     })
 })
 

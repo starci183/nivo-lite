@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common"
-import { AgentRunAlertsService } from "@modules/domain/agent-runs"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, ParkWrite } from "@modules/platform/jobs"
 import { classifyFailure } from "@modules/platform/queue"
@@ -7,7 +6,8 @@ import { isModuleJobPayload, MODULE_JOBS_QUEUE } from "@modules/queues/module-jo
 import { DOOR_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
 import type { JobContext, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
 import { runDeclaredJob } from "./declared-job.policy"
-import { InjectEntityEngineOptions } from "./entity-engine.decorators"
+import { InjectEngineFailureAlerts, InjectEntityEngineOptions } from "./entity-engine.decorators"
+import type { EngineFailureAlerts } from "./entity-engine.contracts"
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityPortsService } from "./entity-ports.service"
@@ -28,7 +28,7 @@ export class ModuleJobRunnerService {
     constructor(
         private readonly engine: EntityEngineService,
         private readonly ports: EntityPortsService,
-        private readonly alerts: AgentRunAlertsService,
+        @InjectEngineFailureAlerts() private readonly alerts: EngineFailureAlerts,
         @InjectEntityEngineOptions() private readonly options: EntityEngineOptions,
         @InjectJobClaims() private readonly claims: JobClaims,
     ) {

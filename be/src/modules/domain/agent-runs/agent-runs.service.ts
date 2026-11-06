@@ -23,6 +23,7 @@ import type {
     InlineResult,
     OptionalRunView,
     RunAdvance,
+    RunRef,
     RunView,
     StepEnd,
 } from "./agent-runs-engine.contracts"
@@ -56,27 +57,27 @@ export class AgentRunsService {
     }
 
     /** Writes steps behind the last one of the run and the job that drives them, in `tx`; a step key already written is left as it is. */
-    async append(tx: EntityManager, runId: string, specs: ReadonlyArray<StepSpec>): Promise<void> {
+    async append(workspaceId: string, tx: EntityManager, runId: string, specs: ReadonlyArray<StepSpec>): Promise<void> {
         if (specs.length === 0) return
-        const run = await this.store.runIn(tx, runId)
-        await this.store.append(tx, { runId, workspaceId: run.workspaceId }, specs)
+        await this.store.append(tx, { runId, workspaceId }, specs)
     }
 
     /** The run, or null when there is none: what a notice about it needs to name its workspace, agent and conversation. */
-    runOf(runId: string): Promise<OptionalRunView> {
-        return this.store.runById(runId)
+    runOf(workspaceId: string, runId: string): Promise<OptionalRunView> {
+        return this.store.runById(workspaceId, runId)
     }
 
     /** Registers a durable wait in the work item's transaction; the item cannot become visible before its waiting step. */
     async waitOn(tx: EntityManager, input: RunWait): Promise<void> {
-        const run = await this.store.runOfWake(input.wakeId, tx)
+        const run = await this.store.runOfWake(input.workspaceId, input.wakeId, tx)
         if (run === null) throw new AgentRunsError({ code: AgentRunsErrorCode.RunNotFound })
         if (run.workspaceId !== input.workspaceId) throw this.refused("wait_scope")
-        const waiting = await this.store.waitingOn(tx, input.workItemId)
+        const waiting = await this.store.waitingOn(input.workspaceId, input.workItemId, tx)
         if (waiting?.runId === run.id && waiting.stepKey === input.spec.stepKey) return
         if (waiting !== null) throw this.refused("wait_conflict")
-        await this.store.appendRows(tx, { runId: run.id, workspaceId: run.workspaceId }, [input.spec])
-        const claim = await this.ledger.claimIn(tx, run.id, input.spec.stepKey)
+        const ref = { runId: run.id, workspaceId: run.workspaceId }
+        await this.store.appendRows(tx, ref, [input.spec])
+        const claim = await this.ledger.claimIn(tx, ref, input.spec.stepKey)
         if (claim.kind === "done") return
         if (claim.kind !== "claimed") throw this.refused(refusalOf(claim))
         const committed = await this.ledger.commitIn(tx, claim.step, {
@@ -98,29 +99,28 @@ export class AgentRunsService {
     }
 
     /** The active wait owned by this workspace; its consumer validates its own kind and input. */
-    async waitOf(workspaceId: string, workItemId: string): Promise<OptionalRunWait> {
-        const step = await this.store.waitingOn(this.entityManager, workItemId)
-        return step?.workspaceId === workspaceId ? step : null
+    waitOf(workspaceId: string, workItemId: string): Promise<OptionalRunWait> {
+        return this.store.waitingOn(workspaceId, workItemId)
     }
 
     /**
      * Drives ready steps in order; a wait parks its branch while ready siblings continue. Backoff, failure or no ready step ends the pass;
      * an undo in progress is continued. At most a bounded number of steps run in one call, the rest is the job's. Claims fence other workers.
      */
-    async advance(runId: string, signal: AbortSignal): Promise<RunAdvance> {
-        const retryAfterMs = await this.drive(runId, signal, ADVANCE_MAX_STEPS)
-        return { run: await this.store.runById(runId), retryAfterMs }
+    async advance(workspaceId: string, runId: string, signal: AbortSignal): Promise<RunAdvance> {
+        const retryAfterMs = await this.drive({ workspaceId, runId }, signal, ADVANCE_MAX_STEPS)
+        return { run: await this.store.runById(workspaceId, runId), retryAfterMs }
     }
 
-    private async drive(runId: string, signal: AbortSignal, left: number): Promise<number | null> {
+    private async drive(ref: RunRef, signal: AbortSignal, left: number): Promise<number | null> {
         if (left <= 0 || signal.aborted || this.inflight.closed) return null
-        const claim = await this.ledger.claim(runId, null)
+        const claim = await this.ledger.claim(ref, null)
         if (claim.kind === "claimed") {
             const end = await this.inflight.track(claim.step, () => this.steps.execute(claim.step, signal))
-            return end.kind === "done" || end.kind === "wait" ? this.drive(runId, signal, left - 1) : null
+            return end.kind === "done" || end.kind === "wait" ? this.drive(ref, signal, left - 1) : null
         }
         if (claim.kind === "exhausted") await this.steps.fail(claim.step, STEP_TIMEOUT, false, signal)
-        if (claim.kind === "closed") await this.compensation.run(runId, signal)
+        if (claim.kind === "closed") await this.compensation.run(ref, signal)
         return claim.kind === "later" ? claim.retryAfterMs : null
     }
 
@@ -129,19 +129,18 @@ export class AgentRunsService {
      * A replay of the same step key answers the stored result and never calls the handler. A step that waits answers `{ waiting: true }`; one
      * that does not finish throws with the code that says why.
      */
-    async runInline(wakeId: string, spec: StepSpec, signal: AbortSignal): Promise<InlineResult> {
+    async runInline(workspaceId: string, wakeId: string, spec: StepSpec, signal: AbortSignal): Promise<InlineResult> {
         if (this.inflight.closed) throw this.refused("shutting_down")
-        const run = await this.store.runOfWake(wakeId)
+        const run = await this.store.runOfWake(workspaceId, wakeId)
         if (run === null) throw new AgentRunsError({ code: AgentRunsErrorCode.RunNotFound })
-        const kept = await this.completedResult(run.id, spec.stepKey)
+        const ref = { runId: run.id, workspaceId }
+        const kept = await this.completedResult(ref, spec.stepKey)
         if (kept !== undefined) return kept
-        await this.entityManager.transaction((tx) =>
-            this.store.append(tx, { runId: run.id, workspaceId: run.workspaceId }, [spec]),
-        )
-        const claim = await this.ledger.claim(run.id, spec.stepKey)
+        await this.entityManager.transaction((tx) => this.store.append(tx, ref, [spec]))
+        const claim = await this.ledger.claim(ref, spec.stepKey)
         if (claim.kind === "done") return claim.answer ?? {}
         if (claim.kind === "closed") {
-            const raced = await this.completedResult(run.id, spec.stepKey)
+            const raced = await this.completedResult(ref, spec.stepKey)
             if (raced !== undefined) return raced
         }
         if (claim.kind === "exhausted")
@@ -151,8 +150,8 @@ export class AgentRunsService {
     }
 
     /** A completed inline stage replays its persisted answer even after its run ended, without reopening it. */
-    private async completedResult(runId: string, stepKey: string): Promise<StepJson | undefined> {
-        const kept = await this.store.stepOf(runId, stepKey)
+    private async completedResult(ref: RunRef, stepKey: string): Promise<StepJson | undefined> {
+        const kept = await this.store.stepOf(ref.workspaceId, ref.runId, stepKey)
         return kept?.status === "done" ? (kept.result ?? {}) : undefined
     }
 
@@ -160,13 +159,13 @@ export class AgentRunsService {
      * The runtime that was answering the wake went down: the step it held fails with `code` and goes through the failure policy, so it is tried
      * again after a backoff and, when its tries are spent, a person is told and the customer gets the honest line. Never silent.
      */
-    async interrupted(wakeId: string, code: string, signal: AbortSignal): Promise<void> {
-        const run = await this.store.runOfWake(wakeId)
+    async interrupted(workspaceId: string, wakeId: string, code: string, signal: AbortSignal): Promise<void> {
+        const run = await this.store.runOfWake(workspaceId, wakeId)
         if (run === null) return
-        const heldKey = (await this.store.stepsOf(this.entityManager, run.id)).find(
+        const heldKey = (await this.store.stepsOf(workspaceId, run.id)).find(
             (step) => step.status === "running" && step.waitItemId === null,
         )?.stepKey
-        const held = (await this.store.viewsOf(run.id)).find((step) => step.stepKey === heldKey)
+        const held = (await this.store.viewsOf(workspaceId, run.id)).find((step) => step.stepKey === heldKey)
         if (held !== undefined) await this.steps.fail(held, code, true, signal)
     }
 
@@ -175,8 +174,13 @@ export class AgentRunsService {
      * step's result and the steps that follow (the verdict itself when the handler has no `onDecided`), and they are written with the job that
      * drives them. The engine calls no performer. A second verdict for the same item finds no waiting step and answers false.
      */
-    async resumeWaiting(tx: EntityManager, workItemId: string, decision: StepDecision): Promise<boolean> {
-        const step = await this.store.waitingOn(tx, workItemId)
+    async resumeWaiting(
+        workspaceId: string,
+        tx: EntityManager,
+        workItemId: string,
+        decision: StepDecision,
+    ): Promise<boolean> {
+        const step = await this.store.waitingOn(workspaceId, workItemId, tx)
         if (step === null) return false
         if (decision.approved && decision.by === null) throw this.refused(DECISION_ACTOR_UNKNOWN)
         const answer = this.handlers.of(step.kind)?.onDecided?.(step, decision)
@@ -185,6 +189,7 @@ export class AgentRunsService {
         const verdict = { result: { approved: decision.approved, by: decision.by }, next: [] }
         return this.store.resume(
             tx,
+            workspaceId,
             workItemId,
             answer?.kind === "done" ? { result: answer.result, next: answer.next } : verdict,
         )

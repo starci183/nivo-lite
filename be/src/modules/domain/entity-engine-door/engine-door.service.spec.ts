@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { McpGatewayService, argsHashOf } from "@modules/domain/mcp-gateway"
 import type { GatewayCallResult } from "@modules/domain/mcp-gateway"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import type { DoorApi, DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorApi } from "@nivo-lite/agent-sdk/mutation"
 import { agentIdFor } from "@modules/integrations/openclaw"
 import { ENTITY_ENGINE_DOOR_OPTIONS } from "./entity-engine-door.decorators"
 import type { DoorBinding } from "./entity-engine-door.contracts"
@@ -32,9 +32,11 @@ const build = async (result: GatewayCallResult = { ok: true, value: { sent: true
     return { door: moduleRef.get(EngineDoorService), gateway }
 }
 
-/** The call of a door handle taking any text, as a declared job whose tool name is a plain string makes it. */
-const looseCall = (api: DoorApi): ((tool: string, input: Record<string, JsonValue>) => Promise<DoorCallResult>) =>
-    api.call
+/** Calls a door handle with a tool name read at run time, as a declared job whose tool name is plain text does. */
+const callAtRunTime = async (api: DoorApi, tool: string, input: Record<string, JsonValue>): Promise<unknown> => {
+    const answer: unknown = await Reflect.apply(api.call, api, [tool, input])
+    return answer
+}
 
 /** Arguments nested past what the gateway reads. */
 const deepArgs = (): Record<string, JsonValue> => {
@@ -81,16 +83,20 @@ describe("EngineDoorService", () => {
 
     it("answers forbidden for a tool the internal agent does not hold, and never reaches the gateway", async () => {
         const { door, gateway } = await build()
-        const call = looseCall(door.doorApi(binding()))
+        const api = door.doorApi(binding())
         for (const tool of ["chat.zalo.send", "ai.agent.delete", "Chat.zalo.send"]) {
-            expect(await call(tool, {})).toEqual({ ok: false, reason: "forbidden", message: "not_granted" })
+            expect(await callAtRunTime(api, tool, {})).toEqual({
+                ok: false,
+                reason: "forbidden",
+                message: "not_granted",
+            })
         }
         expect(gateway.call).not.toHaveBeenCalled()
     })
 
     it("answers invalid for a granted tool name that is not <group>.<provider>.<action>", async () => {
         const { door, gateway } = await build()
-        const result = await looseCall(door.doorApi(binding()))("ledger.status", {})
+        const result = await callAtRunTime(door.doorApi(binding()), "ledger.status", {})
         expect(result).toEqual({ ok: false, reason: "invalid", message: "tool_malformed" })
         expect(gateway.call).not.toHaveBeenCalled()
     })
